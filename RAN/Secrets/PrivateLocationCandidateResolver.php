@@ -70,8 +70,7 @@ final class PrivateLocationCandidateResolver {
 	/**
 	 * Validate an operator-configured location without creating or modifying it.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function validateConfigured(
+	public function validate_configured(
 		string $candidate,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		string $wordpressRoot,

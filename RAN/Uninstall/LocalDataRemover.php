@@ -66,7 +66,7 @@ class LocalDataRemover {
 		$sidecar_path = $this->secrets->path();
 		$config_path  = null === $sidecar_path
 			? $this->loaded_wp_config_path_for_retry()
-			: $this->loadedWpConfigPath();
+			: $this->loaded_wp_config_path();
 
 		$this->assert_cleanup_capabilities();
 		if ( null !== $config_path ) {
@@ -87,14 +87,14 @@ class LocalDataRemover {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		$this->debugCapture->deleteManagedStorage();
 		$this->secrets->deleteManagedStorage();
-		$this->clearScheduledWork();
-		$this->clearUpdaterState();
+		$this->clear_scheduled_work();
+		$this->clear_updater_state();
 		if ( ! ( new WorkflowAssistanceState() )->removeDurableState() ) {
 			throw new RuntimeException( 'Bundled GitHub provider state could not be removed.' );
 		}
-		$this->clearUserMetadata();
-		$this->dropTables();
-		$this->deleteOptions();
+		$this->clear_user_metadata();
+		$this->drop_tables();
+		$this->delete_options();
 
 		if ( null !== $config_path ) {
 			if ( null !== $sidecar_path ) {
@@ -107,8 +107,7 @@ class LocalDataRemover {
 		$this->remove_empty_automatic_directories( $sidecar_path );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function clearScheduledWork(): void {
+	protected function clear_scheduled_work(): void {
 		if ( ! function_exists( 'wp_clear_scheduled_hook' ) ) {
 			throw new RuntimeException( 'Booster scheduled work could not be removed.' );
 		}
@@ -117,8 +116,7 @@ class LocalDataRemover {
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function clearUpdaterState(): void {
+	protected function clear_updater_state(): void {
 		if ( ! function_exists( 'delete_option' ) || ! function_exists( 'get_option' ) ) {
 			throw new RuntimeException( 'Booster updater state could not be removed.' );
 		}
@@ -136,8 +134,7 @@ class LocalDataRemover {
 		return 'ran_wp_gh_op_v1_' . substr( hash( 'sha256', $target ), 0, 32 );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function clearUserMetadata(): void {
+	protected function clear_user_metadata(): void {
 		if ( ! isset( $this->database->usermeta )
 			|| ! is_string( $this->database->usermeta )
 			|| ! method_exists( $this->database, 'prepare' )
@@ -158,8 +155,7 @@ class LocalDataRemover {
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function dropTables(): void {
+	protected function drop_tables(): void {
 		if ( null === $this->verified_table_prefix
 			|| ! method_exists( $this->database, 'prepare' )
 			|| ! method_exists( $this->database, 'query' )
@@ -180,8 +176,7 @@ class LocalDataRemover {
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function deleteOptions(): void {
+	protected function delete_options(): void {
 		if ( ! function_exists( 'delete_option' ) || ! function_exists( 'get_option' ) ) {
 			throw new RuntimeException( 'Booster options could not be removed.' );
 		}
@@ -234,8 +229,7 @@ class LocalDataRemover {
 		$this->verified_table_prefix = $this->database->prefix;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function loadedWpConfigPath(): string {
+	protected function loaded_wp_config_path(): string {
 		$root = $this->canonical_directory( defined( 'ABSPATH' ) && is_string( ABSPATH ) ? ABSPATH : '' );
 		if ( null === $root ) {
 			throw new RuntimeException( 'The loaded WordPress configuration could not be verified.' );
@@ -285,14 +279,14 @@ class LocalDataRemover {
 
 	private function loaded_wp_config_path_for_retry(): ?string {
 		try {
-			return $this->loadedWpConfigPath();
+			return $this->loaded_wp_config_path();
 		} catch ( \Throwable ) {
 			return null;
 		}
 	}
 
 	private function remove_empty_automatic_directories( ?string $sidecar_path ): void {
-		$automatic_path = $this->automaticSidecarPath();
+		$automatic_path = $this->automatic_sidecar_path();
 		if ( null === $automatic_path
 			|| ( null !== $sidecar_path && $sidecar_path !== $automatic_path )
 		) {
@@ -337,8 +331,7 @@ class LocalDataRemover {
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	protected function automaticSidecarPath(): ?string {
+	protected function automatic_sidecar_path(): ?string {
 		try {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 			return $this->locationResolver->resolve(
@@ -377,7 +370,7 @@ class LocalDataRemover {
 	}
 
 	private function assert_automatic_directories_removable( ?string $sidecar_path ): void {
-		$automatic_path = $this->automaticSidecarPath();
+		$automatic_path = $this->automatic_sidecar_path();
 		if ( null === $automatic_path
 			|| ( null !== $sidecar_path && $sidecar_path !== $automatic_path )
 		) {

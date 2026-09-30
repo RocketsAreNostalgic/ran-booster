@@ -57,9 +57,9 @@ final class PrivateLocationCandidateResolverSharedHostTest extends TestCase {
 		self::assertIsString( $candidate );
 		self::assertStringStartsWith( $this->root . '/account/.ran-booster/', $candidate );
 		self::assertSame( array(), $discarded );
-		self::assertTrue( $resolver->validateConfigured( $candidate, $wordpress, $content, $plugin, $wordpress ) );
+		self::assertTrue( $resolver->validate_configured( $candidate, $wordpress, $content, $plugin, $wordpress ) );
 		self::assertTrue(
-			$resolver->validateConfigured(
+			$resolver->validate_configured(
 				$this->root . '/account/private/ran-booster/secrets.json',
 				$wordpress,
 				$content,

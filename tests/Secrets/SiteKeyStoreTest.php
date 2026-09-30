@@ -273,18 +273,18 @@ final class TestSiteKeyStore extends SiteKeyStore {
 
 	public function __construct() {
 		parent::__construct();
-		$this->storedValue = $this->missingStoredValue();
+		$this->storedValue = $this->missing_stored_value();
 	}
 
-	protected function readStoredValue(): mixed {
+	protected function read_stored_value(): mixed {
 		if ( $this->staleNegativeCache ) {
-			return $this->missingStoredValue();
+			return $this->missing_stored_value();
 		}
 
 		return $this->storedValue;
 	}
 
-	protected function addStoredValue( #[\SensitiveParameter] string $encoded ): bool {
+	protected function add_stored_value( #[\SensitiveParameter] string $encoded ): bool {
 		++$this->addCalls;
 		if ( null !== $this->raceWinner ) {
 			$this->storedValue        = $this->raceWinner;
@@ -302,18 +302,18 @@ final class TestSiteKeyStore extends SiteKeyStore {
 		return true;
 	}
 
-	protected function readAutoloadValue(): ?string {
+	protected function read_autoload_value(): ?string {
 		return $this->autoloadKnown ? $this->autoload : null;
 	}
 
-	protected function repairAutoloadValue(): void {
+	protected function repair_autoload_value(): void {
 		++$this->repairCalls;
 		if ( ! $this->failRepair ) {
 			$this->autoload = 'off';
 		}
 	}
 
-	protected function deleteStoredValueExact( #[\SensitiveParameter] string $encoded ): int|false {
+	protected function delete_stored_value_exact( #[\SensitiveParameter] string $encoded ): int|false {
 		if ( $this->failDelete ) {
 			return false;
 		}
@@ -321,17 +321,17 @@ final class TestSiteKeyStore extends SiteKeyStore {
 			return 0;
 		}
 
-		$this->storedValue = $this->missingStoredValue();
+		$this->storedValue = $this->missing_stored_value();
 
 		return 1;
 	}
 
-	protected function invalidateOptionCache(): void {
+	protected function invalidate_option_cache(): void {
 		++$this->cacheInvalidations;
 		$this->staleNegativeCache = false;
 	}
 
-	protected function generateKey(): string {
+	protected function generate_key(): string {
 		return $this->generatedKey;
 	}
 }
@@ -346,15 +346,15 @@ final class AtomicFileSiteKeyStore extends SiteKeyStore {
 		parent::__construct();
 	}
 
-	protected function readStoredValue(): mixed {
+	protected function read_stored_value(): mixed {
 		if ( ! is_file( $this->path ) ) {
-			return $this->missingStoredValue();
+			return $this->missing_stored_value();
 		}
 
 		return file_get_contents( $this->path );
 	}
 
-	protected function addStoredValue( #[\SensitiveParameter] string $encoded ): bool {
+	protected function add_stored_value( #[\SensitiveParameter] string $encoded ): bool {
 		$temporary = $this->path . '.candidate-' . bin2hex( random_bytes( 8 ) );
 		try {
 			if ( strlen( $encoded ) !== file_put_contents( $temporary, $encoded, LOCK_EX )
@@ -372,18 +372,18 @@ final class AtomicFileSiteKeyStore extends SiteKeyStore {
 		}
 	}
 
-	protected function readAutoloadValue(): ?string {
+	protected function read_autoload_value(): ?string {
 		return 'off';
 	}
 
-	protected function deleteStoredValueExact( #[\SensitiveParameter] string $encoded ): int|false {
-		if ( $encoded !== $this->readStoredValue() ) {
+	protected function delete_stored_value_exact( #[\SensitiveParameter] string $encoded ): int|false {
+		if ( $encoded !== $this->read_stored_value() ) {
 			return 0;
 		}
 
 		return unlink( $this->path ) ? 1 : false;
 	}
 
-	protected function invalidateOptionCache(): void {
+	protected function invalidate_option_cache(): void {
 	}
 }

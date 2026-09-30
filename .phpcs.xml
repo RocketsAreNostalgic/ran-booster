@@ -28,6 +28,7 @@
 	</rule>
 	<!-- Enforce only the completed, individually audited naming cohorts. -->
 	<rule ref="RANOwnedMethods">
+		<!-- Secure-storage/uninstall/identity protected seams and configured-location callers are audited within the existing file scopes. -->
 		<!-- Connected public/protected naming: complete owned caller cohorts. -->
 		<include-pattern>/RAN/PackageRemoval/PackageRemovalGateway.php</include-pattern>
 		<include-pattern>/RAN/Admin/WebhookManagement/Installation/InstallationStore.php</include-pattern>

@@ -28,7 +28,7 @@ final class DeploymentAdminController {
 		if ( ! check_ajax_referer( self::NONCE_ACTION, 'nonce', false ) ) {
 			return wp_send_json_error( array( 'message' => __( 'The notice dismissal request expired. Reload the page and try again.', 'ran-booster' ) ), 403 );
 		}
-		$user_id     = $this->currentUserId();
+		$user_id     = $this->current_user_id();
 		$fingerprint = $this->monitor?->fingerprint();
 		if ( $user_id < 1 || null === $fingerprint ) {
 			return wp_send_json_error( array( 'message' => __( 'RAN Booster could not identify an active deployment failure.', 'ran-booster' ) ), 409 );
@@ -101,7 +101,7 @@ final class DeploymentAdminController {
 		if ( ! current_user_can( $capability ) ) {
 			wp_die( esc_html__( 'You do not have sufficient permissions to manage this package.', 'ran-booster' ) );
 		}
-		$this->attempts->resolveNeedsAttention( $attempt_id, $correlation_id, $this->currentUserId() );
+		$this->attempts->resolveNeedsAttention( $attempt_id, $correlation_id, $this->current_user_id() );
 		$this->dashboard->addMessage( __( 'Retry is allowed. No package files or settings were changed.', 'ran-booster' ) );
 	}
 
@@ -125,8 +125,7 @@ final class DeploymentAdminController {
 		return $value;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	protected function currentUserId(): int {
+	protected function current_user_id(): int {
 		return (int) get_current_user_id();
 	}
 }

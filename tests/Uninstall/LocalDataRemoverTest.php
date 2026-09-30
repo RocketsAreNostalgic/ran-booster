@@ -361,7 +361,7 @@ final class LocalDataRemoverTest extends TestCase {
 			}
 
 			public function discoveredConfigPath(): string {
-				return $this->loadedWpConfigPath();
+				return $this->loaded_wp_config_path();
 			}
 		};
 
@@ -411,11 +411,11 @@ final class LocalDataRemoverTest extends TestCase {
 				parent::__construct( $secrets, $capture, $writer, database: $database );
 			}
 
-			protected function loadedWpConfigPath(): string {
+			protected function loaded_wp_config_path(): string {
 				return $this->configPath;
 			}
 
-			protected function automaticSidecarPath(): ?string {
+			protected function automatic_sidecar_path(): ?string {
 				return $this->automaticPath;
 			}
 		};

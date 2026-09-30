@@ -53,7 +53,7 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 			)
 		);
 		self::assertTrue(
-			$resolver->validateConfigured(
+			$resolver->validate_configured(
 				(string) $candidate,
 				$this->root . '/account/site/public',
 				$this->root . '/account/site/public/wp-content',
@@ -165,7 +165,7 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 		self::assertTrue( mkdir( $private, 0700 ) );
 
 		self::assertTrue(
-			$resolver->validateConfigured(
+			$resolver->validate_configured(
 				$private . '/secrets.json',
 				$wordpress,
 				$content,
@@ -174,7 +174,7 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 			)
 		);
 		self::assertFalse(
-			$resolver->validateConfigured(
+			$resolver->validate_configured(
 				$content . '/secrets.json',
 				$wordpress,
 				$content,
@@ -184,7 +184,7 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 		);
 		self::assertTrue( chmod( $private, 0770 ) );
 		self::assertFalse(
-			$resolver->validateConfigured(
+			$resolver->validate_configured(
 				$private . '/secrets.json',
 				$wordpress,
 				$content,
@@ -196,7 +196,7 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 
 		self::assertTrue( symlink( $private, $this->root . '/account/private-link' ) );
 		self::assertFalse(
-			$resolver->validateConfigured(
+			$resolver->validate_configured(
 				$this->root . '/account/private-link/secrets.json',
 				$wordpress,
 				$content,

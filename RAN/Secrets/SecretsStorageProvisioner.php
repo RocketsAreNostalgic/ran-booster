@@ -408,7 +408,7 @@ class SecretsStorageProvisioner {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function validateConfiguredCandidate( string $candidate ): bool {
-		return $this->resolver->validateConfigured(
+		return $this->resolver->validate_configured(
 			$candidate,
 			$this->wordpressRoot(),
 			$this->contentDirectory(),

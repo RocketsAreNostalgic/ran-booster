@@ -2020,7 +2020,7 @@ class SecretsFile {
 		$document_root  = $_SERVER['DOCUMENT_ROOT'] ?? null;
 
 		return false !== $plugin_dir
-			&& $this->location_resolver->validateConfigured(
+			&& $this->location_resolver->validate_configured(
 				(string) $this->path,
 				$wordpress_root,
 				$content_dir,

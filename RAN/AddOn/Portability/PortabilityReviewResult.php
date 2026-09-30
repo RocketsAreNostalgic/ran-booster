@@ -38,23 +38,30 @@ final readonly class PortabilityReviewResult {
 			true
 		)
 			|| ! in_array( $reason, $reasons, true )
-			|| ! self::safeMessage( $message )
+			|| ! self::safe_message( $message )
 			|| 1 !== preg_match( '/\Av1:[a-f0-9]{64}\z/D', $fingerprint ) ) {
 			throw new InvalidArgumentException( 'The Portability review result is invalid.' );
 		}
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the published public method and named-parameter contract.
 	public static function fromResolved(
 		PortabilityCandidate $candidate,
 		string $action,
 		string $reason,
 		string $message,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		?string $providerRepositoryId,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		?bool $repositoryPrivate
 	): self {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		if ( null !== $providerRepositoryId
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 			&& ( '' === $providerRepositoryId
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 				|| strlen( $providerRepositoryId ) > 191
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 				|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $providerRepositoryId ) ) ) {
 			throw new InvalidArgumentException( 'The resolved Portability repository identity is invalid.' );
 		}
@@ -66,7 +73,9 @@ final readonly class PortabilityReviewResult {
 					'domain'                 => 'ran-booster-portability-review',
 					'version'                => PortabilityFacade::API_VERSION,
 					'candidate'              => $candidate->toArray(),
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 					'provider_repository_id' => $providerRepositoryId,
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 					'private'                => $repositoryPrivate,
 					'action'                 => $action,
 					'reason'                 => $reason,
@@ -80,7 +89,7 @@ final readonly class PortabilityReviewResult {
 		return new self( $candidate, $action, $reason, $message, 'v1:' . hash( 'sha256', $json ) );
 	}
 
-	private static function safeMessage( string $message ): bool {
+	private static function safe_message( string $message ): bool {
 		return '' !== trim( $message )
 			&& strlen( $message ) <= 255
 			&& 1 === preg_match( '//u', $message )

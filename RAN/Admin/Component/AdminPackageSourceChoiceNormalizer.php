@@ -36,17 +36,17 @@ final class AdminPackageSourceChoiceNormalizer {
 				}
 			}
 
-			$url      = $this->boundedString( $choice['url'] ?? '', 2048, true );
+			$url      = $this->bounded_string( $choice['url'] ?? '', 2048, true );
 			$disabled = true === ( $choice['disabled'] ?? false );
 			if ( ! $disabled ) {
-				$this->assertUrl( $url );
+				$this->assert_url( $url );
 			}
 
 			$normalized[ $key ] = array(
 				'key'               => $key,
-				'heading'           => $this->boundedString( $choice['heading'] ?? null, 96, false ),
-				'description'       => $this->boundedString( $choice['description'] ?? null, 255, false ),
-				'meta'              => $this->boundedString( $choice['meta'] ?? '', 96, true ),
+				'heading'           => $this->bounded_string( $choice['heading'] ?? null, 96, false ),
+				'description'       => $this->bounded_string( $choice['description'] ?? null, 255, false ),
+				'meta'              => $this->bounded_string( $choice['meta'] ?? '', 96, true ),
 				'url'               => $url,
 				'disabled'          => $disabled,
 				'hydrated'          => true === ( $choice['hydrated'] ?? false ),
@@ -61,7 +61,7 @@ final class AdminPackageSourceChoiceNormalizer {
 		return $normalized;
 	}
 
-	private function assertUrl( string $url ): void {
+	private function assert_url( string $url ): void {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Validate before rendering.
 		$parts = parse_url( $url );
 		if ( ! is_array( $parts )
@@ -73,9 +73,9 @@ final class AdminPackageSourceChoiceNormalizer {
 		}
 	}
 
-	private function boundedString( mixed $value, int $maximum, bool $allowEmpty ): string {
+	private function bounded_string( mixed $value, int $maximum, bool $allow_empty ): string {
 		if ( ! is_string( $value )
-			|| ( ! $allowEmpty && '' === trim( $value ) )
+			|| ( ! $allow_empty && '' === trim( $value ) )
 			|| strlen( $value ) > $maximum
 			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $value ) ) {
 			throw new LogicException( 'Package source choices contain an invalid display value.' );

@@ -41,17 +41,17 @@ use Throwable;
  * Core-owned prospective release validation, installation and adoption.
  */
 final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
-	private readonly ProspectiveReleaseCandidateReader $candidateReader;
-	private RepositorySourceGuard $sourceGuard;
+	private readonly ProspectiveReleaseCandidateReader $candidate_reader;
+	private RepositorySourceGuard $source_guard;
 
 	/** @var \Closure(string): bool */
-	private \Closure $canManage;
+	private \Closure $can_manage;
 
 	/** @var \Closure(string, string): bool */
-	private \Closure $verifyNonce;
+	private \Closure $verify_nonce;
 
 	/** @var \Closure(): int */
-	private \Closure $currentUserId;
+	private \Closure $current_user_id;
 
 	/**
 	 * @param callable(string): bool|null         $canManage
@@ -63,27 +63,40 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		private CorePackageExecutor $executor,
 		private PluginRepository $plugins,
 		private ThemeRepository $themes,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		private WordPressUpdaterLock $updaterLock,
 		private ProviderRegistry $providers,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?callable $canManage = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?callable $verifyNonce = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?callable $currentUserId = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?RepositorySourceGuard $sourceGuard = null
 	) {
-		$this->candidateReader = new ProspectiveReleaseCandidateReader( $repositories, $providers );
-		$this->sourceGuard     = $sourceGuard ?? new RepositorySourceGuard();
-		$this->canManage       = null === $canManage
+		$this->candidate_reader = new ProspectiveReleaseCandidateReader( $repositories, $providers );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->source_guard = $sourceGuard ?? new RepositorySourceGuard();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->can_manage = null === $canManage
 			? static fn ( string $type ): bool => current_user_can( 'manage_options' )
 				&& current_user_can( 'plugin' === $type ? 'install_plugins' : 'install_themes' )
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			: \Closure::fromCallable( $canManage );
-		$this->verifyNonce     = null === $verifyNonce
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->verify_nonce = null === $verifyNonce
 			? static fn ( string $nonce, string $action ): bool => false !== wp_verify_nonce( $nonce, $action )
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			: \Closure::fromCallable( $verifyNonce );
-		$this->currentUserId   = null === $currentUserId
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->current_user_id = null === $currentUserId
 			? static fn (): int => get_current_user_id()
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			: \Closure::fromCallable( $currentUserId );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function nonceAction( string $operation, string $type ): string {
 		if ( ! in_array( $operation, array( 'list_candidates', 'inspect', 'install' ), true )
 			|| ! in_array( $type, array( 'plugin', 'theme' ), true ) ) {
@@ -93,6 +106,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		return 'ran-booster-prospective-release-' . $operation . '-' . $type;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function supportedProviderCodes( string $type ): array {
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) ) {
 			return array();
@@ -101,7 +115,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		$supported = array();
 		foreach ( $this->providers->orderedMetadata() as $metadata ) {
 			$provider = $metadata->code->value;
-			if ( ! $this->candidateReader->supportsProviderCode( $provider ) ) {
+			if ( ! $this->candidate_reader->supportsProviderCode( $provider ) ) {
 				continue;
 			}
 
@@ -111,8 +125,10 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		return $supported;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function listCandidates(
 		string $type,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		array $repositoryRequest,
 		string $channel,
 		string $nonce
@@ -120,12 +136,13 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		if ( ! RuntimeSupport::current()->allowsManagedOperations() ) {
 			return ProspectiveReleaseResult::failure( UnsupportedRuntimeException::ERROR_CODE );
 		}
-		if ( ! $this->validChannel( $channel )
+		if ( ! $this->valid_channel( $channel )
 			|| ! $this->authorized( 'list_candidates', $type, $nonce ) ) {
 			return ProspectiveReleaseResult::failure( 'forbidden' );
 		}
 		try {
-			return $this->candidateReader->read( $type, $repositoryRequest, $channel );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+			return $this->candidate_reader->read( $type, $repositoryRequest, $channel );
 		} catch ( Throwable ) {
 			return ProspectiveReleaseResult::failure( 'unable_to_check' );
 		}
@@ -133,7 +150,9 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 
 	public function inspect(
 		string $type,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		array $repositoryRequest,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		string $releaseId,
 		string $tag,
 		string $channel,
@@ -143,25 +162,30 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			return ProspectiveReleaseResult::failure( UnsupportedRuntimeException::ERROR_CODE );
 		}
 
-		if ( ! $this->validChannel( $channel )
+		if ( ! $this->valid_channel( $channel )
 			|| ! $this->authorized( 'inspect', $type, $nonce )
-			|| ! $this->validExactRelease( $releaseId, $tag ) ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+			|| ! $this->valid_exact_release( $releaseId, $tag ) ) {
 			return ProspectiveReleaseResult::failure( 'forbidden' );
 		}
-		$capabilities = $this->releaseInspectionCapabilities( $repositoryRequest );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$capabilities = $this->release_inspection_capabilities( $repositoryRequest );
 		if ( null === $capabilities ) {
 			return ProspectiveReleaseResult::failure( 'unsupported_provider' );
 		}
 
 		try {
-			$repository = $this->repositoryReference( $this->resolveRepository( $repositoryRequest ) );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+			$repository = $this->repository_reference( $this->resolve_repository( $repositoryRequest ) );
 			$inspection = $capabilities['inspector']->inspectRelease(
 				$type,
 				$repository,
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 				$releaseId,
 				$tag,
 				$channel
 			);
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract. Retain the promoted constructor or external DTO property contract.
 			if ( $releaseId !== $inspection->providerReleaseId
 				|| ! hash_equals( $tag, $inspection->tag ) ) {
 				throw RepositoryReleaseInspectionRejected::invalidRelease();
@@ -170,12 +194,16 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			return ProspectiveReleaseResult::success(
 				'release_ready',
 				array(
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 					'release_id'   => $releaseId,
 					'tag'          => $inspection->tag,
 					'version'      => $inspection->version,
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 					'commit'       => $inspection->providerCommitId,
 					'details_url'  => $capabilities['metadata']->releaseDetailsUrl( $repository, $inspection->tag ),
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 					'package_root' => $inspection->packageRoot,
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 					'main_file'    => $inspection->mainFile,
 					'fingerprint'  => $inspection->fingerprint,
 					'channel'      => $channel,
@@ -197,9 +225,12 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 
 	public function install(
 		string $type,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		array $repositoryRequest,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		string $releaseId,
 		string $tag,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		string $expectedFingerprint,
 		string $channel,
 		string $nonce
@@ -208,21 +239,25 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			return ProspectiveReleaseResult::failure( UnsupportedRuntimeException::ERROR_CODE );
 		}
 
-		if ( ! $this->validChannel( $channel )
+		if ( ! $this->valid_channel( $channel )
 			|| ! $this->authorized( 'install', $type, $nonce )
-			|| ! $this->validExactRelease( $releaseId, $tag )
-			|| ! $this->validFingerprint( $expectedFingerprint ) ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+			|| ! $this->valid_exact_release( $releaseId, $tag )
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+			|| ! $this->valid_fingerprint( $expectedFingerprint ) ) {
 			return ProspectiveReleaseResult::failure( 'forbidden' );
 		}
-		$acquirer = $this->releaseAcquirer( $repositoryRequest );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$acquirer = $this->release_acquirer( $repositoryRequest );
 		if ( null === $acquirer ) {
 			return ProspectiveReleaseResult::failure( 'unsupported_provider' );
 		}
 
 		try {
 			PackageMutationGuard::assert_filesystem_mutation_allowed();
-			$repository   = $this->resolveRepository( $repositoryRequest );
-			$availability = $this->prospectiveReleaseSourceAvailable( $type, $repository );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+			$repository   = $this->resolve_repository( $repositoryRequest );
+			$availability = $this->prospective_release_source_available( $type, $repository );
 			if ( true !== $availability ) {
 				return ProspectiveReleaseResult::failure(
 					false === $availability
@@ -230,7 +265,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 						: 'release_unavailable'
 				);
 			}
-			$repositoryReference = $this->repositoryReference( $repository );
+			$repository_reference = $this->repository_reference( $repository );
 		} catch ( Throwable ) {
 			return ProspectiveReleaseResult::failure( 'install_failed' );
 		}
@@ -238,9 +273,11 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		try {
 			$release = $acquirer->acquireRelease(
 				$type,
-				$repositoryReference,
+				$repository_reference,
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 				$releaseId,
 				$tag,
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 				$expectedFingerprint,
 				$channel
 			);
@@ -254,13 +291,13 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			return ProspectiveReleaseResult::failure( 'unable_to_check' );
 		}
 
-		return $this->installExact( $type, $repository, $release, $channel );
+		return $this->install_exact( $type, $repository, $release, $channel );
 	}
 
 	/** @param array<string, mixed> $request
 	 *  @return array<string, mixed>
 	 */
-	private function resolveRepository( array $request ): array {
+	private function resolve_repository( array $request ): array {
 		$request['deployment_policy'] = DeploymentPolicy::MANUAL->value;
 		$request['subdirectory']      = '';
 
@@ -270,22 +307,22 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 	/**
 	 * @param array<string, mixed> $repository
 	 */
-	private function installExact(
+	private function install_exact(
 		string $type,
 		array $repository,
 		RepositoryReleaseArtifact $release,
 		string $channel
 	): ProspectiveReleaseResult {
-		$artifact           = null;
-		$lockToken          = null;
-		$outcome            = ProspectiveReleaseResult::failure( 'install_failed' );
-		$finalizationFailed = false;
+		$artifact            = null;
+		$lock_token          = null;
+		$outcome             = ProspectiveReleaseResult::failure( 'install_failed' );
+		$finalization_failed = false;
 
 		try {
 			$identifier = $release->identifier( $type );
-			$repository = $this->managedRepository( $repository );
+			$repository = $this->managed_repository( $repository );
 			do {
-				$availability = $this->releaseSourceAvailable( $type, $identifier, $repository );
+				$availability = $this->release_source_available( $type, $identifier, $repository );
 				if ( true !== $availability ) {
 					$outcome = ProspectiveReleaseResult::failure( false === $availability ? 'release_repository_conflict' : 'release_unavailable' );
 					break;
@@ -295,49 +332,50 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 					$release->mainFile(),
 					$channel
 				);
-				$userId        = ( $this->currentUserId )();
-				$lockToken     = $this->updaterLock->acquire();
-				$availability  = $this->releaseSourceAvailable( $type, $identifier, $repository );
+				$user_id       = ( $this->current_user_id )();
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
+				$lock_token   = $this->updaterLock->acquire();
+				$availability = $this->release_source_available( $type, $identifier, $repository );
 				if ( true !== $availability ) {
 					$outcome = ProspectiveReleaseResult::failure( false === $availability ? 'release_repository_conflict' : 'release_unavailable' );
 					break;
 				}
-				$wasActive = $this->isActive( $type, $identifier );
-				if ( $this->isInstalled( $type, $identifier )
-					|| $this->hasManagementRecord( $type, $identifier )
-					|| $wasActive ) {
+				$was_active = $this->is_active( $type, $identifier );
+				if ( $this->is_installed( $type, $identifier )
+					|| $this->has_management_record( $type, $identifier )
+					|| $was_active ) {
 					$outcome = ProspectiveReleaseResult::failure( 'package_already_exists' );
 				} else {
 					PackageMutationGuard::assert_filesystem_mutation_allowed();
-					$artifact            = ReleaseArtifactCustodian::claim( $release->handoffToCore() );
-					$result              = 'plugin' === $type
+					$artifact             = ReleaseArtifactCustodian::claim( $release->handoffToCore() );
+					$result               = 'plugin' === $type
 						? $this->executor->installPlugin( $artifact, $release->packageRoot(), null )
 						: $this->executor->installTheme( $artifact, $release->packageRoot(), null );
-					$exists              = $this->installedStateOrNull( $type, $identifier );
-					$package             = true === $exists ? $this->installedPackageOrNull( $type, $identifier ) : null;
-					$isActive            = $this->activeStateOrNull( $type, $identifier );
-					$activationUnchanged = null !== $isActive && $wasActive === $isActive;
+					$exists               = $this->installed_state_or_null( $type, $identifier );
+					$package              = true === $exists ? $this->installed_package_or_null( $type, $identifier ) : null;
+					$is_active            = $this->active_state_or_null( $type, $identifier );
+					$activation_unchanged = null !== $is_active && $was_active === $is_active;
 					if ( null === $exists || ( true === $exists && null === $package ) ) {
 						$outcome = ProspectiveReleaseResult::failure(
 							'management_state_uncertain',
 							array( 'identifier' => $identifier )
 						);
 					} elseif ( null !== $package ) {
-						$actualVersion = $package->getVersion();
+						$actual_version = $package->getVersion();
 						if ( ! $result->is_successful()
-							|| ! hash_equals( $release->version(), $actualVersion )
-							|| ! $activationUnchanged ) {
-							$outcome = $this->installedButUnmanaged( $identifier, $actualVersion );
+							|| ! hash_equals( $release->version(), $actual_version )
+							|| ! $activation_unchanged ) {
+							$outcome = $this->installed_but_unmanaged( $identifier, $actual_version );
 						} else {
 							$package->setRepository( $repository );
 							$package->setSubdirectory( null );
 							$package->setDeploymentPolicy( DeploymentPolicy::MANUAL );
 							$package->setSource( PackageSource::RELEASE_ASSET, 1 );
-							$adoption = $this->adoptRelease(
+							$adoption = $this->adopt_release(
 								$type,
 								$package,
 								$configuration,
-								$userId
+								$user_id
 							);
 							$outcome  = $adoption
 								? ProspectiveReleaseResult::success(
@@ -347,9 +385,9 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 										'version'    => $release->version(),
 									)
 								)
-								: $this->installedButUnmanaged( $identifier, $actualVersion );
+								: $this->installed_but_unmanaged( $identifier, $actual_version );
 						}
-					} elseif ( ! $activationUnchanged ) {
+					} elseif ( ! $activation_unchanged ) {
 						$outcome = ProspectiveReleaseResult::failure(
 							'management_state_uncertain',
 							array( 'identifier' => $identifier )
@@ -370,8 +408,8 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 				}
 			} while ( false );
 		} catch ( ReleaseArtifactCleanupFailure $failure ) {
-			$finalizationFailed = true;
-			$outcome            = ProspectiveReleaseResult::failure( 'install_failed' );
+			$finalization_failed = true;
+			$outcome             = ProspectiveReleaseResult::failure( 'install_failed' );
 			BoosterLogger::logException(
 				'prospective release Core artifact cleanup failed',
 				$failure,
@@ -384,31 +422,32 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 				if ( null !== $artifact ) {
 					$artifact->cleanup();
 				} elseif ( ! $release->discard() ) {
-					$finalizationFailed = true;
+					$finalization_failed = true;
 					BoosterLogger::log(
 						'prospective release artifact cleanup failed',
 						array( 'step' => 'prospective_release_cleanup' )
 					);
 				}
 			} catch ( Throwable $failure ) {
-				$finalizationFailed = true;
+				$finalization_failed = true;
 				BoosterLogger::logException(
 					'prospective release artifact cleanup failed',
 					$failure,
 					array( 'step' => 'prospective_release_cleanup' )
 				);
 			}
-			if ( null !== $lockToken ) {
+			if ( null !== $lock_token ) {
 				try {
-					if ( ! $this->updaterLock->release( $lockToken ) ) {
-						$finalizationFailed = true;
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
+					if ( ! $this->updaterLock->release( $lock_token ) ) {
+						$finalization_failed = true;
 						BoosterLogger::log(
 							'prospective release updater lock release failed',
 							array( 'step' => 'prospective_release_lock_release' )
 						);
 					}
 				} catch ( Throwable $failure ) {
-					$finalizationFailed = true;
+					$finalization_failed = true;
 					BoosterLogger::logException(
 						'prospective release updater lock release failed',
 						$failure,
@@ -418,7 +457,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			}
 		}
 
-		if ( $finalizationFailed ) {
+		if ( $finalization_failed ) {
 			return ProspectiveReleaseResult::failure(
 				'installation_cleanup_failed',
 				$outcome->data()
@@ -429,7 +468,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 	}
 
 	/** @param array<string, mixed> $repository */
-	private function managedRepository( array $repository ): ManagedRepository {
+	private function managed_repository( array $repository ): ManagedRepository {
 		return new ManagedRepository(
 			(string) $repository['provider'],
 			(string) $repository['repository'],
@@ -440,23 +479,23 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		);
 	}
 
-	private function installedPackageOrNull( string $type, string $identifier ): ?Package {
+	private function installed_package_or_null( string $type, string $identifier ): ?Package {
 		try {
-			return $this->installedPackage( $type, $identifier );
+			return $this->installed_package( $type, $identifier );
 		} catch ( Throwable ) {
 			return null;
 		}
 	}
 
-	private function installedStateOrNull( string $type, string $identifier ): ?bool {
+	private function installed_state_or_null( string $type, string $identifier ): ?bool {
 		try {
-			return $this->isInstalled( $type, $identifier );
+			return $this->is_installed( $type, $identifier );
 		} catch ( Throwable ) {
 			return null;
 		}
 	}
 
-	private function isActive( string $type, string $identifier ): bool {
+	private function is_active( string $type, string $identifier ): bool {
 		if ( 'plugin' === $type ) {
 			return in_array( $identifier, (array) get_option( 'active_plugins', array() ), true );
 		}
@@ -468,15 +507,15 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		);
 	}
 
-	private function activeStateOrNull( string $type, string $identifier ): ?bool {
+	private function active_state_or_null( string $type, string $identifier ): ?bool {
 		try {
-			return $this->isActive( $type, $identifier );
+			return $this->is_active( $type, $identifier );
 		} catch ( Throwable ) {
 			return null;
 		}
 	}
 
-	private function installedButUnmanaged( string $identifier, string $version ): ProspectiveReleaseResult {
+	private function installed_but_unmanaged( string $identifier, string $version ): ProspectiveReleaseResult {
 		return ProspectiveReleaseResult::failure(
 			'installed_but_unmanaged',
 			array(
@@ -486,28 +525,28 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		);
 	}
 
-	private function installedPackage( string $type, string $identifier ): Package {
+	private function installed_package( string $type, string $identifier ): Package {
 		return 'plugin' === $type
 			? $this->plugins->installedPluginFromFile( $identifier )
 			: $this->themes->installedThemeFromStylesheet( $identifier );
 	}
 
-	private function isInstalled( string $type, string $identifier ): bool {
+	private function is_installed( string $type, string $identifier ): bool {
 		return 'plugin' === $type
 			? $this->plugins->isInstalled( $identifier )
 			: $this->themes->isInstalled( $identifier );
 	}
 
-	private function hasManagementRecord( string $type, string $identifier ): bool {
+	private function has_management_record( string $type, string $identifier ): bool {
 		return 'plugin' === $type
 			? $this->plugins->hasManagementRecord( $identifier )
 			: $this->themes->hasManagementRecord( $identifier );
 	}
 
 	/** @param array<string, mixed> $repository */
-	private function prospectiveReleaseSourceAvailable( string $type, array $repository ): ?bool {
+	private function prospective_release_source_available( string $type, array $repository ): ?bool {
 		try {
-			$assessment = $this->sourceGuard->assess(
+			$assessment = $this->source_guard->assess(
 				(string) ( $repository['provider'] ?? '' ),
 				(string) ( $repository['provider_repository_id'] ?? '' ),
 				'plugin' === $type ? 1 : 2,
@@ -532,9 +571,9 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		}
 	}
 
-	private function releaseSourceAvailable( string $type, string $identifier, ManagedRepository $repository ): ?bool {
+	private function release_source_available( string $type, string $identifier, ManagedRepository $repository ): ?bool {
 		try {
-			$assessment = $this->sourceGuard->assess(
+			$assessment = $this->source_guard->assess(
 				$repository->provider->value,
 				$repository->reference->providerRepositoryId,
 				'plugin' === $type ? 1 : 2,
@@ -552,17 +591,17 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		}
 	}
 
-	private function adoptRelease(
+	private function adopt_release(
 		string $type,
 		Package $package,
 		ManagedReleaseConfiguration $configuration,
-		int $userId
+		int $user_id
 	): bool {
 		if ( 'plugin' === $type && $package instanceof Plugin ) {
-			return $this->plugins->adoptRelease( $package, $configuration, $userId )->is_successful();
+			return $this->plugins->adoptRelease( $package, $configuration, $user_id )->is_successful();
 		}
 		if ( 'theme' === $type && $package instanceof Theme ) {
-			return $this->themes->adoptRelease( $package, $configuration, $userId )->is_successful();
+			return $this->themes->adoptRelease( $package, $configuration, $user_id )->is_successful();
 		}
 
 		return false;
@@ -570,17 +609,17 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 
 	private function authorized( string $operation, string $type, string $nonce ): bool {
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true )
-			|| ! ( $this->canManage )( $type ) ) {
+			|| ! ( $this->can_manage )( $type ) ) {
 			return false;
 		}
 
 		return '' !== $nonce
-			&& ( $this->verifyNonce )( $nonce, $this->nonceAction( $operation, $type ) );
+			&& ( $this->verify_nonce )( $nonce, $this->nonceAction( $operation, $type ) );
 	}
 
-	/** @param array<string, mixed> $repositoryRequest */
-	private function releaseCandidateListing( array $repositoryRequest ): ?RepositoryReleaseCandidateListing {
-		$provider = $repositoryRequest['provider'] ?? null;
+	/** @param array<string, mixed> $repository_request */
+	private function release_candidate_listing( array $repository_request ): ?RepositoryReleaseCandidateListing {
+		$provider = $repository_request['provider'] ?? null;
 		if ( ! is_string( $provider ) ) {
 			return null;
 		}
@@ -594,9 +633,9 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		return $capability instanceof RepositoryReleaseCandidateListing ? $capability : null;
 	}
 
-	/** @param array<string, mixed> $repositoryRequest */
-	private function releaseAcquirer( array $repositoryRequest ): ?RepositoryReleaseAcquirer {
-		$provider = $repositoryRequest['provider'] ?? null;
+	/** @param array<string, mixed> $repository_request */
+	private function release_acquirer( array $repository_request ): ?RepositoryReleaseAcquirer {
+		$provider = $repository_request['provider'] ?? null;
 		if ( ! is_string( $provider ) ) {
 			return null;
 		}
@@ -611,11 +650,11 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 	}
 
 	/**
-	 * @param array<string, mixed> $repositoryRequest
+	 * @param array<string, mixed> $repository_request
 	 * @return array{inspector: RepositoryReleaseInspector, metadata: RepositoryReleaseMetadata}|null
 	 */
-	private function releaseInspectionCapabilities( array $repositoryRequest ): ?array {
-		$provider = $repositoryRequest['provider'] ?? null;
+	private function release_inspection_capabilities( array $repository_request ): ?array {
+		$provider = $repository_request['provider'] ?? null;
 		if ( ! is_string( $provider ) ) {
 			return null;
 		}
@@ -637,28 +676,28 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 	}
 
 	/** @param array<string, mixed> $repository */
-	private function repositoryReference( array $repository ): RepositoryReference {
-		$repositoryId = $repository['provider_repository_id'] ?? null;
-		$credentialId = $repository['credential_id'] ?? null;
+	private function repository_reference( array $repository ): RepositoryReference {
+		$repository_id = $repository['provider_repository_id'] ?? null;
+		$credential_id = $repository['credential_id'] ?? null;
 
 		return new RepositoryReference(
 			(string) ( $repository['repository'] ?? '' ),
-			is_string( $repositoryId ) && '' !== $repositoryId ? $repositoryId : null,
+			is_string( $repository_id ) && '' !== $repository_id ? $repository_id : null,
 			'1' === ( $repository['private'] ?? null ),
-			is_string( $credentialId ) && '' !== $credentialId ? $credentialId : null
+			is_string( $credential_id ) && '' !== $credential_id ? $credential_id : null
 		);
 	}
 
-	private function validExactRelease( string $releaseId, string $tag ): bool {
-		return 1 === preg_match( '/\A[^\x00-\x1F\x7F]{1,191}\z/D', $releaseId )
+	private function valid_exact_release( string $release_id, string $tag ): bool {
+		return 1 === preg_match( '/\A[^\x00-\x1F\x7F]{1,191}\z/D', $release_id )
 			&& 1 === preg_match( '/\A[^\x00-\x1F\x7F]{1,100}\z/D', $tag );
 	}
 
-	private function validFingerprint( string $fingerprint ): bool {
+	private function valid_fingerprint( string $fingerprint ): bool {
 		return 1 === preg_match( '/\Av2:[a-f0-9]{64}\z/D', $fingerprint );
 	}
 
-	private function validChannel( string $channel ): bool {
+	private function valid_channel( string $channel ): bool {
 		return in_array( $channel, array( 'stable', 'prerelease' ), true );
 	}
 }

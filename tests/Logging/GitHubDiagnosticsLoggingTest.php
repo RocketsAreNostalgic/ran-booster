@@ -110,7 +110,7 @@ final class GitHubDiagnosticsLoggingTest extends TestCase {
 		}
 		self::assertSame( $failure, $result->failure );
 		$service = ( new ReflectionClass( TroubleshootingService::class ) )->newInstanceWithoutConstructor();
-		$method  = new \ReflectionMethod( TroubleshootingService::class, 'recordProviderFailure' );
+		$method  = new \ReflectionMethod( TroubleshootingService::class, 'record_provider_failure' );
 		$method->invoke( $service, $result, ProviderCode::parse( 'gh' ), 'provider_diagnostics' );
 
 		$line = $this->capture->snapshot()['entries'][0]['line'];

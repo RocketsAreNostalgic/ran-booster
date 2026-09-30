@@ -17,13 +17,18 @@ final readonly class CredentialExpiryReport {
 
 	private const UTC_PATTERN = '/\A(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})Z\z/D';
 
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 	private function __construct( public ?string $expiresAt ) {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		if ( null !== $expiresAt ) {
-			self::requireUtcTimestamp( $expiresAt );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
+			self::require_utc_timestamp( $expiresAt );
 		}
 	}
 
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 	public static function known( string $expiresAt ): self {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		return new self( $expiresAt );
 	}
 
@@ -31,11 +36,13 @@ final readonly class CredentialExpiryReport {
 		return new self( null );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function isKnown(): bool {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		return null !== $this->expiresAt;
 	}
 
-	private static function requireUtcTimestamp( string $value ): void {
+	private static function require_utc_timestamp( string $value ): void {
 		if ( 1 !== preg_match( self::UTC_PATTERN, $value, $matches )
 			|| ! checkdate( (int) $matches[2], (int) $matches[3], (int) $matches[1] )
 			|| (int) $matches[4] > 23

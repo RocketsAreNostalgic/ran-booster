@@ -87,7 +87,7 @@ require __DIR__ . '/generated/ran-admin-shell.php';
 	<hr class="wp-header-end">
 	<?php
 	if ( isset( $coreSelfUpdateDevelopmentNotice ) ) {
-		$coreSelfUpdateDevelopmentNotice->renderShellInline();
+		$coreSelfUpdateDevelopmentNotice->render_shell_inline();
 	}
 	?>
 	<?php if ( 'packages/index' !== $view ) { ?>

@@ -64,7 +64,7 @@ final class PurgerSecretsFile extends SecretsFile {
 
 final class PurgerObservations extends CredentialExpiryObservationStore {
 
-	public function clear( string $provider, string $profileId ): void {
+	public function clear( string $provider, string $profile_id ): void {
 	}
 }
 
@@ -77,12 +77,12 @@ final class PurgerLookupProfiles extends PublicRepositoryLookupProfileStore {
 		return $this->profiles[ $provider ] ?? null;
 	}
 
-	public function set( string $provider, ?string $profileId ): void {
-		if ( null === $profileId ) {
+	public function set( string $provider, ?string $profile_id ): void {
+		if ( null === $profile_id ) {
 			unset( $this->profiles[ $provider ] );
 			return;
 		}
-		$this->profiles[ $provider ] = $profileId;
+		$this->profiles[ $provider ] = $profile_id;
 	}
 }
 
@@ -93,22 +93,22 @@ final class PurgerEvidenceStore extends RepositoryBranchCheckEvidenceStore {
 	/** @var list<string> */
 	public array $providers = array();
 
-	public function bumpProfileGeneration( string $provider, string $profileId ): void {
-		$this->profiles[] = $provider . ':' . $profileId;
+	public function bump_profile_generation( string $provider, string $profile_id ): void {
+		$this->profiles[] = $provider . ':' . $profile_id;
 	}
 
-	public function bumpProviderGeneration( string $provider ): void {
+	public function bump_provider_generation( string $provider ): void {
 		$this->providers[] = $provider;
 	}
 }
 
 final class ThrowingPurgerEvidenceStore extends RepositoryBranchCheckEvidenceStore {
 
-	public function bumpProfileGeneration( string $provider, string $profileId ): void {
+	public function bump_profile_generation( string $provider, string $profile_id ): void {
 		throw new \RuntimeException( 'evidence unavailable' );
 	}
 
-	public function bumpProviderGeneration( string $provider ): void {
+	public function bump_provider_generation( string $provider ): void {
 		throw new \RuntimeException( 'evidence unavailable' );
 	}
 }

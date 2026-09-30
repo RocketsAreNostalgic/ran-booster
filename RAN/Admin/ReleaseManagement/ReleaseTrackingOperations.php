@@ -15,6 +15,7 @@ final class ReleaseTrackingOperations {
 	public function __construct( private readonly ReleaseTrackingFacade $releases ) {
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function nonceAction( string $operation, string $type, string $identifier, int $revision, string $channel = '' ): string {
 		return $this->releases->nonceAction( $operation, $type, $identifier, $revision, $channel );
 	}
@@ -30,10 +31,11 @@ final class ReleaseTrackingOperations {
 		return $this->statuses[ $key ];
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function freshStatus( string $type, string $identifier ): ?ReleaseTrackingStatus {
 		$status = $this->releases->status( $type, $identifier );
 
-		return $this->matchesIdentity( $status, $type, $identifier ) ? $status : null;
+		return $this->matches_identity( $status, $type, $identifier ) ? $status : null;
 	}
 
 	/**
@@ -67,7 +69,7 @@ final class ReleaseTrackingOperations {
 		$successful = $result->successful();
 		if ( 'refresh' === $operation && $successful ) {
 			$status = $this->releases->status( $type, $identifier );
-			if ( ! $this->matchesIdentity( $status, $type, $identifier ) ) {
+			if ( ! $this->matches_identity( $status, $type, $identifier ) ) {
 				return $this->outcome( $type, $identifier, 'refresh_failed', false );
 			}
 			if ( '' !== $status->failureCode() ) {
@@ -80,10 +82,10 @@ final class ReleaseTrackingOperations {
 	}
 
 	private function matches( ReleaseTrackingStatus $status, string $type, string $identifier, int $revision ): bool {
-		return $revision === $status->sourceRevision() && $this->matchesIdentity( $status, $type, $identifier );
+		return $revision === $status->sourceRevision() && $this->matches_identity( $status, $type, $identifier );
 	}
 
-	private function matchesIdentity( ReleaseTrackingStatus $status, string $type, string $identifier ): bool {
+	private function matches_identity( ReleaseTrackingStatus $status, string $type, string $identifier ): bool {
 		return hash_equals( $type, $status->type() ) && hash_equals( $identifier, $status->identifier() );
 	}
 

@@ -54,7 +54,7 @@ $packageSettingsLabel = 'theme' === $packageType
 			? __( 'Failure reason', 'ran-booster' )
 			: __( 'Outcome', 'ran-booster' );
 		?>
-		<p><strong><?php echo esc_html( $outcomeLabel ); ?>:</strong> <?php echo esc_html( null === $item['outcome_code'] ? __( 'This operation has not reached a recorded outcome.', 'ran-booster' ) : DeploymentOutcomeMessage::forCode( (string) $item['outcome_code'] ) ); ?></p>
+		<p><strong><?php echo esc_html( $outcomeLabel ); ?>:</strong> <?php echo esc_html( null === $item['outcome_code'] ? __( 'This operation has not reached a recorded outcome.', 'ran-booster' ) : DeploymentOutcomeMessage::for_code( (string) $item['outcome_code'] ) ); ?></p>
 		<?php if ( 'restoration_uncertain' === ( $item['outcome_code'] ?? null ) ) { ?>
 			<section class="notice notice-warning inline" aria-labelledby="ran-booster-historical-uncertainty-heading">
 				<h4 id="ran-booster-historical-uncertainty-heading"><?php esc_html_e( 'Before you retry', 'ran-booster' ); ?></h4>

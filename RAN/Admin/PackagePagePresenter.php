@@ -20,8 +20,8 @@ final class PackagePagePresenter {
 
 	private function __construct(
 		private readonly string $type,
-		private readonly string $identifierField,
-		private readonly string $pageSlug
+		private readonly string $identifierField, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Promoted constructor property preserves its named parameter contract.
+		private readonly string $pageSlug // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Promoted constructor property preserves its named parameter contract.
 	) {
 	}
 
@@ -41,39 +41,39 @@ final class PackagePagePresenter {
 		);
 	}
 
-	public function getType(): string {
+	public function getType(): string { // phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public method preserves the existing caller contract.
 		return $this->type;
 	}
 
-	public function getSingularLabel(): string {
+	public function getSingularLabel(): string { // phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public method preserves the existing caller contract.
 		return 'plugin' === $this->type
 			? _x( 'Plugin', 'Managed package type singular label', 'ran-booster' )
 			: _x( 'Theme', 'Managed package type singular label', 'ran-booster' );
 	}
 
-	public function getPluralLabel(): string {
+	public function getPluralLabel(): string { // phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public method preserves the existing caller contract.
 		return 'plugin' === $this->type
 			? _x( 'Plugins', 'Managed package type plural label', 'ran-booster' )
 			: _x( 'Themes', 'Managed package type plural label', 'ran-booster' );
 	}
 
-	public function getIdentifierField(): string {
-		return $this->identifierField;
+	public function getIdentifierField(): string { // phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public method preserves the existing caller contract.
+		return $this->identifierField; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor property preserves its named parameter contract.
 	}
 
-	public function getPageSlug(): string {
-		return $this->pageSlug;
+	public function getPageSlug(): string { // phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public method preserves the existing caller contract.
+		return $this->pageSlug; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor property preserves its named parameter contract.
 	}
 
-	public function getCreatePageSlug(): string {
-		return $this->pageSlug . '-create';
+	public function getCreatePageSlug(): string { // phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public method preserves the existing caller contract.
+		return $this->pageSlug . '-create'; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor property preserves its named parameter contract.
 	}
 
-	public function getAdminUrl(): string {
+	public function getAdminUrl(): string { // phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public method preserves the existing caller contract.
 		return is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
 	}
 
-	public function getAction( string $operation ): string {
+	public function getAction( string $operation ): string { // phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public method preserves the existing caller contract.
 		if ( ! in_array( $operation, array( 'install', 'edit', 'update', 'unlink', 'unlink-delete', 'bulk' ), true ) ) {
 			throw new InvalidArgumentException( 'Unsupported package action.' );
 		}
@@ -87,74 +87,74 @@ final class PackagePagePresenter {
 	 */
 	public function index(
 		array $packages,
-		array $packageProviders,
-		array $packageListState,
+		array $packageProviders, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		array $packageListState, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
 		DeploymentAdminPresenter $deployments
 	): array {
-		$packageProviderOptions = $this->providerFilterOptions( $packages, $packageProviders );
-		if ( '' !== $packageListState['provider']
-			&& ! in_array( $packageListState['provider'], array_column( $packageProviderOptions, 'code' ), true )
+		$package_provider_options = $this->provider_filter_options( $packages, $packageProviders ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		if ( '' !== $packageListState['provider'] // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			&& ! in_array( $packageListState['provider'], array_column( $package_provider_options, 'code' ), true ) // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
 		) {
-			$packageListState['provider'] = '';
+			$packageListState['provider'] = ''; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
 		}
-		$filteredPackages = $this->filterPackages( $packages, $packageListState, $packageProviderOptions );
+		$filtered_packages = $this->filter_packages( $packages, $packageListState, $package_provider_options ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
 
 		return array(
-			'packages'                => $filteredPackages,
+			'packages'                => $filtered_packages,
 			'packageListTotal'        => count( $packages ),
-			'packageListState'        => $packageListState,
-			'packageProviderOptions'  => $packageProviderOptions,
+			'packageListState'        => $packageListState, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			'packageProviderOptions'  => $package_provider_options,
 			'packageView'             => $this,
-			'packageProviders'        => $packageProviders,
-			'packageActivity'         => $deployments->packageActivity( $filteredPackages, $this->type ),
-			'packageExtensionRows'    => $this->extensionRows( $filteredPackages ),
-			'packageExtensionActions' => $this->extensionActions( $filteredPackages ),
+			'packageProviders'        => $packageProviders, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			'packageActivity'         => $deployments->packageActivity( $filtered_packages, $this->type ),
+			'packageExtensionRows'    => $this->extension_rows( $filtered_packages ),
+			'packageExtensionActions' => $this->extension_actions( $filtered_packages ),
 		);
 	}
 
 	/** @return array<string, mixed> */
 	public function edit(
 		Package $package,
-		array $packageProviderSettings,
-		?array $packageBranchReadiness,
-		string $requestedSourceView,
-		bool $openAdvanced = false
+		array $packageProviderSettings, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		?array $packageBranchReadiness, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		string $requestedSourceView, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		bool $openAdvanced = false // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
 	): array {
 		return array(
-			'packageProviderSettings' => $packageProviderSettings,
-			'packageBranchReadiness'  => $packageBranchReadiness,
+			'packageProviderSettings' => $packageProviderSettings, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			'packageBranchReadiness'  => $packageBranchReadiness, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
 			'package'                 => $package,
 			'packageView'             => $this,
-			'packageExtensionPanels'  => $this->extensionPanels( $package ),
-			'packageSource'           => $this->sourceComposition( 'edit', $requestedSourceView, $package, $openAdvanced ),
+			'packageExtensionPanels'  => $this->extension_panels( $package ),
+			'packageSource'           => $this->source_composition( 'edit', $requestedSourceView, $package, $openAdvanced ), // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
 		);
 	}
 
 	/** @return array<string, mixed> */
 	public function create(
-		array $packageProviderSettings,
-		bool $explicitProvider,
-		bool $openRepositoryPicker,
-		string $requestedSourceView,
-		?string $managedPackageIdentifier = null,
-		bool $openAdvanced = false
+		array $packageProviderSettings, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		bool $explicitProvider, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		bool $openRepositoryPicker, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		string $requestedSourceView, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		?string $managedPackageIdentifier = null, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		bool $openAdvanced = false // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
 	): array {
 		return array(
-			'packageProviderSettings'  => $packageProviderSettings,
+			'packageProviderSettings'  => $packageProviderSettings, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
 			'packageView'              => $this,
-			'explicitProvider'         => $explicitProvider,
-			'openRepositoryPicker'     => $openRepositoryPicker,
-			'packageSource'            => $this->sourceComposition( 'create', $requestedSourceView, null, $openAdvanced ),
-			'managedPackageIdentifier' => $managedPackageIdentifier,
+			'explicitProvider'         => $explicitProvider, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			'openRepositoryPicker'     => $openRepositoryPicker, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			'packageSource'            => $this->source_composition( 'create', $requestedSourceView, null, $openAdvanced ), // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			'managedPackageIdentifier' => $managedPackageIdentifier, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
 		);
 	}
 
 	/** @return array<string, mixed> */
-	public function unavailableCreate( array $packageProviderSettings, bool $explicitProvider ): array {
+	public function unavailableCreate( array $packageProviderSettings, bool $explicitProvider ): array { // phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public method and parameter names preserve caller compatibility.
 		return array(
-			'packageProviderSettings'  => $packageProviderSettings,
+			'packageProviderSettings'  => $packageProviderSettings, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
 			'packageView'              => $this,
-			'explicitProvider'         => $explicitProvider,
+			'explicitProvider'         => $explicitProvider, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
 			'openRepositoryPicker'     => false,
 			'packageMutationAvailable' => false,
 		);
@@ -162,14 +162,14 @@ final class PackagePagePresenter {
 
 	/**
 	 * @param array<string, Package>|list<Package> $packages
-	 * @param list<array<string, mixed>> $packageProviders
+	 * @param list<array<string, mixed>> $package_providers
 	 * @return list<array{code: string, label: string}>
 	 */
-	private function providerFilterOptions( array $packages, array $packageProviders ): array {
-		$providerLabels = array();
-		foreach ( $packageProviders as $provider ) {
+	private function provider_filter_options( array $packages, array $package_providers ): array {
+		$provider_labels = array();
+		foreach ( $package_providers as $provider ) {
 			if ( is_string( $provider['code'] ?? null ) && is_string( $provider['label'] ?? null ) ) {
-				$providerLabels[ $provider['code'] ] = $provider['label'];
+				$provider_labels[ $provider['code'] ] = $provider['label'];
 			}
 		}
 
@@ -182,7 +182,7 @@ final class PackagePagePresenter {
 			if ( '' !== $code && ! isset( $options[ $code ] ) ) {
 				$options[ $code ] = array(
 					'code'  => $code,
-					'label' => $providerLabels[ $code ] ?? $code,
+					'label' => $provider_labels[ $code ] ?? $code,
 				);
 			}
 		}
@@ -195,17 +195,17 @@ final class PackagePagePresenter {
 	/**
 	 * @param array<string, Package>|list<Package> $packages
 	 * @param array{search: string, provider: string, source: string, policy: string} $state
-	 * @param list<array{code: string, label: string}> $providerOptions
+	 * @param list<array{code: string, label: string}> $provider_options
 	 * @return list<Package>
 	 */
-	private function filterPackages( array $packages, array $state, array $providerOptions ): array {
-		$providerLabels = array_column( $providerOptions, 'label', 'code' );
-		$search         = strtolower( $state['search'] );
+	private function filter_packages( array $packages, array $state, array $provider_options ): array {
+		$provider_labels = array_column( $provider_options, 'label', 'code' );
+		$search          = strtolower( $state['search'] );
 
 		return array_values(
 			array_filter(
 				$packages,
-				static function ( mixed $package ) use ( $state, $providerLabels, $search ): bool {
+				static function ( mixed $package ) use ( $state, $provider_labels, $search ): bool {
 					if ( ! $package instanceof Package ) {
 						return false;
 					}
@@ -233,7 +233,7 @@ final class PackagePagePresenter {
 									(string) $package->getIdentifier(),
 									(string) $package->getRepository(),
 									$provider,
-									$providerLabels[ $provider ] ?? '',
+									$provider_labels[ $provider ] ?? '',
 									(string) $package->getBranch(),
 								)
 							)
@@ -261,9 +261,9 @@ final class PackagePagePresenter {
 	 *   unavailable: bool
 	 * }
 	 */
-	private function sourceComposition( string $mode, string $requested, ?Package $package = null, bool $openAdvanced = false ): array {
+	private function source_composition( string $mode, string $requested, ?Package $package = null, bool $open_advanced = false ): array {
 		$projection = null === $package ? null : $this->projection( $package );
-		$pageUrl    = null === $projection
+		$page_url   = null === $projection
 			? add_query_arg( 'page', $this->getCreatePageSlug(), $this->getAdminUrl() )
 			: $projection->settingsUrl();
 		$base       = array(
@@ -272,7 +272,7 @@ final class PackagePagePresenter {
 				'heading'           => __( 'Branch', 'ran-booster' ),
 				'description'       => __( 'Deploy the saved branch manually or on a signed push.', 'ran-booster' ),
 				'meta'              => __( 'Included with Booster', 'ran-booster' ),
-				'url'               => add_query_arg( 'source_view', 'branch', $pageUrl ),
+				'url'               => add_query_arg( 'source_view', 'branch', $page_url ),
 				'disabled'          => false,
 				'hydrated'          => true,
 				'client_hydratable' => false,
@@ -297,12 +297,12 @@ final class PackagePagePresenter {
 					$mode,
 					$this->type,
 					$projection,
-					$pageUrl
+					$page_url
 				)
 			);
 		} catch ( Throwable $failure ) {
 			$choices = ( new AdminPackageSourceChoiceNormalizer() )->normalize( $base );
-			$this->logFailure( 'package source choices unavailable', 'package_source_choices', $failure );
+			$this->log_failure( 'package source choices unavailable', 'package_source_choices', $failure );
 		}
 
 		$current  = null === $package ? PackageSource::BRANCH->value : $package->getSource()->value;
@@ -316,25 +316,25 @@ final class PackagePagePresenter {
 
 		return array(
 			'choices'                     => $choices,
-			'advanced_sections'           => $this->advancedSourceSections( $mode, $selected, $projection, $pageUrl ),
-			'advanced_summary'            => $this->advancedSourceSummary( $mode, $selected, $choices, $projection, $package ),
-			'advanced_summary_projection' => $this->advancedSourceSummaryProjection( $mode, $selected, $package, $projection ),
+			'advanced_sections'           => $this->advanced_source_sections( $mode, $selected, $projection, $page_url ),
+			'advanced_summary'            => $this->advanced_source_summary( $mode, $selected, $choices, $projection, $package ),
+			'advanced_summary_projection' => $this->advanced_source_summary_projection( $mode, $selected, $package, $projection ),
 			'selected'                    => $selected,
 			'current'                     => $current,
-			'advanced_open'               => $openAdvanced,
+			'advanced_open'               => $open_advanced,
 			'unavailable'                 => PackageSource::BRANCH->value !== $current
 				&& ( ! isset( $choices[ $current ] ) || ! $choices[ $current ]['hydrated'] ),
 		);
 	}
 
 	/** @return list<string> */
-	private function advancedSourceSections(
+	private function advanced_source_sections(
 		string $mode,
 		string $selected,
 		?AdminPackageProjection $projection,
-		string $pageUrl
+		string $page_url
 	): array {
-		$bufferLevel = ob_get_level();
+		$buffer_level = ob_get_level();
 		ob_start();
 		try {
 			do_action(
@@ -343,40 +343,40 @@ final class PackagePagePresenter {
 				$this->type,
 				$selected,
 				$projection,
-				$pageUrl
+				$page_url
 			);
 			$content = (string) ob_get_clean();
 
 			return '' === trim( $content ) ? array() : array( $content );
 		} catch ( Throwable $failure ) {
-			$this->cleanBuffer( $bufferLevel );
-			$this->logFailure( 'advanced package source section unavailable', 'advanced_package_source_section', $failure );
+			$this->clean_buffer( $buffer_level );
+			$this->log_failure( 'advanced package source section unavailable', 'advanced_package_source_section', $failure );
 		}
 
 		return array();
 	}
 
 	/** @param array<string, array<string, mixed>> $choices */
-	private function advancedSourceSummary(
+	private function advanced_source_summary(
 		string $mode,
 		string $selected,
 		array $choices,
 		?AdminPackageProjection $projection,
 		?Package $package
 	): string {
-		$sourceLabel = is_string( $choices[ $selected ]['heading'] ?? null )
+		$source_label = is_string( $choices[ $selected ]['heading'] ?? null )
 			? $choices[ $selected ]['heading']
 			: __( 'Update source', 'ran-booster' );
-		$summary     = PackageSource::BRANCH->value === $selected
+		$summary      = PackageSource::BRANCH->value === $selected
 			? sprintf(
 				/* translators: 1: source label, 2: branch. */
 				__( '%1$s · %2$s', 'ran-booster' ),
-				$sourceLabel,
+				$source_label,
 				null !== $package && '' !== (string) $package->getBranch()
 					? (string) $package->getBranch()
 					: __( 'provider default', 'ran-booster' )
 			)
-			: $sourceLabel;
+			: $source_label;
 
 		try {
 			$filtered = apply_filters(
@@ -394,7 +394,7 @@ final class PackagePagePresenter {
 				}
 			}
 		} catch ( Throwable $failure ) {
-			$this->logFailure( 'advanced package source summary unavailable', 'advanced_package_source_summary', $failure );
+			$this->log_failure( 'advanced package source summary unavailable', 'advanced_package_source_summary', $failure );
 		}
 
 		return $summary;
@@ -403,7 +403,7 @@ final class PackagePagePresenter {
 	/**
 	 * @return array{heading:string,badges:list<array{label:string}>,status:string}
 	 */
-	private function advancedSourceSummaryProjection(
+	private function advanced_source_summary_projection(
 		string $mode,
 		string $selected,
 		?Package $package,
@@ -452,7 +452,7 @@ final class PackagePagePresenter {
 				$projection
 			);
 		} catch ( Throwable $failure ) {
-			$this->logFailure( 'advanced package source summary projection unavailable', 'advanced_package_source_summary_projection', $failure );
+			$this->log_failure( 'advanced package source summary projection unavailable', 'advanced_package_source_summary_projection', $failure );
 
 			return array(
 				'heading' => $heading,
@@ -462,8 +462,8 @@ final class PackagePagePresenter {
 		}
 
 		if ( is_array( $baseline ) && isset( $baseline['heading'] ) && is_string( $baseline['heading'] ) ) {
-			$validatedHeading = trim( wp_strip_all_tags( $baseline['heading'], true ) );
-			if ( '' === $validatedHeading || strlen( $validatedHeading ) > 80 ) {
+			$validated_heading = trim( wp_strip_all_tags( $baseline['heading'], true ) );
+			if ( '' === $validated_heading || strlen( $validated_heading ) > 80 ) {
 				return array(
 					'heading' => $heading,
 					'badges'  => $badges,
@@ -486,13 +486,13 @@ final class PackagePagePresenter {
 			} else {
 				$badges = array();
 			}
-			$validatedStatus = is_string( $baseline['status'] ?? null )
+			$validated_status = is_string( $baseline['status'] ?? null )
 				? trim( wp_strip_all_tags( $baseline['status'], true ) )
 				: '';
 			return array(
-				'heading' => $validatedHeading,
+				'heading' => $validated_heading,
 				'badges'  => $badges,
-				'status'  => strlen( $validatedStatus ) <= 40 ? $validatedStatus : '',
+				'status'  => strlen( $validated_status ) <= 40 ? $validated_status : '',
 			);
 		}
 
@@ -504,9 +504,9 @@ final class PackagePagePresenter {
 	}
 
 	/** @return list<string> */
-	private function extensionPanels( Package $package ): array {
-		$projection  = $this->projection( $package );
-		$bufferLevel = ob_get_level();
+	private function extension_panels( Package $package ): array {
+		$projection   = $this->projection( $package );
+		$buffer_level = ob_get_level();
 		ob_start();
 		try {
 			do_action( 'ran_booster_admin_package_settings_sections', $projection, $projection->settingsUrl() );
@@ -514,8 +514,8 @@ final class PackagePagePresenter {
 
 			return '' === trim( $content ) ? array() : array( $content );
 		} catch ( Throwable $failure ) {
-			$this->cleanBuffer( $bufferLevel );
-			$this->logFailure( 'package settings action unavailable', 'package_settings_action', $failure );
+			$this->clean_buffer( $buffer_level );
+			$this->log_failure( 'package settings action unavailable', 'package_settings_action', $failure );
 		}
 
 		return array();
@@ -525,18 +525,18 @@ final class PackagePagePresenter {
 	 * @param array<string, Package>|list<Package> $packages
 	 * @return array<string, array{badges: list<array{label: string, tone: string}>, status: string}>
 	 */
-	private function extensionRows( array $packages ): array {
+	private function extension_rows( array $packages ): array {
 		if ( array() === $packages ) {
 			return array();
 		}
 
 		$projections = array();
-		$baseRows    = array();
+		$base_rows   = array();
 		foreach ( $packages as $package ) {
 			if ( $package instanceof Package ) {
 				$projection                               = $this->projection( $package );
 				$projections[ $projection->identifier() ] = $projection;
-				$baseRows[ $projection->identifier() ]    = array(
+				$base_rows[ $projection->identifier() ]   = array(
 					'badges' => array(),
 					'status' => '',
 				);
@@ -544,18 +544,18 @@ final class PackagePagePresenter {
 		}
 
 		try {
-			return $this->normalizeExtensionRows(
+			return $this->normalize_extension_rows(
 				apply_filters(
 					'ran_booster_admin_package_management_rows',
-					$baseRows,
+					$base_rows,
 					$this->type,
 					$projections
 				),
 				$projections,
-				$baseRows
+				$base_rows
 			);
 		} catch ( Throwable $failure ) {
-			$this->logFailure( 'package management filter unavailable', 'package_management_filter', $failure );
+			$this->log_failure( 'package management filter unavailable', 'package_management_filter', $failure );
 		}
 
 		return array();
@@ -565,7 +565,7 @@ final class PackagePagePresenter {
 	 * @param array<string, Package>|list<Package> $packages
 	 * @return array<string, array<string, array<string, mixed>>>
 	 */
-	private function extensionActions( array $packages ): array {
+	private function extension_actions( array $packages ): array {
 		$actions    = array();
 		$normalizer = new AdminActionNormalizer();
 
@@ -584,7 +584,7 @@ final class PackagePagePresenter {
 					)
 				);
 			} catch ( Throwable $failure ) {
-				$this->logFailure( 'package management actions unavailable', 'package_management_actions', $failure );
+				$this->log_failure( 'package management actions unavailable', 'package_management_actions', $failure );
 			}
 		}
 
@@ -594,15 +594,15 @@ final class PackagePagePresenter {
 	/**
 	 * @param mixed $presented
 	 * @param array<string, AdminPackageProjection> $projections
-	 * @param array<string, array{badges: array<mixed>, status: string}> $baseRows
+	 * @param array<string, array{badges: array<mixed>, status: string}> $base_rows
 	 * @return array<string, array{badges: list<array{label: string, tone: string}>, status: string}>
 	 */
-	private function normalizeExtensionRows( mixed $presented, array $projections, array $baseRows ): array {
+	private function normalize_extension_rows( mixed $presented, array $projections, array $base_rows ): array {
 		if ( ! is_array( $presented ) ) {
 			throw new LogicException( 'Package management rows must be a keyed array.' );
 		}
-		if ( array_diff_key( $presented, $baseRows ) !== array()
-			|| array_diff_key( $baseRows, $presented ) !== array() ) {
+		if ( array_diff_key( $presented, $base_rows ) !== array()
+			|| array_diff_key( $base_rows, $presented ) !== array() ) {
 			throw new LogicException( 'Package management filters must preserve every projected package row.' );
 		}
 
@@ -615,12 +615,12 @@ final class PackagePagePresenter {
 				throw new LogicException( 'Package management rows may contain only badges and status.' );
 			}
 
-			$badges          = array();
-			$presentedBadges = $row['badges'] ?? array();
-			if ( ! is_array( $presentedBadges ) || count( $presentedBadges ) > 20 ) {
+			$badges           = array();
+			$presented_badges = $row['badges'] ?? array();
+			if ( ! is_array( $presented_badges ) || count( $presented_badges ) > 20 ) {
 				throw new LogicException( 'Package management badges must be a bounded list.' );
 			}
-			foreach ( $presentedBadges as $badge ) {
+			foreach ( $presented_badges as $badge ) {
 				if ( ! is_array( $badge )
 					|| ! is_string( $badge['label'] ?? null )
 					|| '' === trim( $badge['label'] )
@@ -665,7 +665,7 @@ final class PackagePagePresenter {
 			$package->getDeploymentPolicy()->value,
 			add_query_arg(
 				array(
-					'page'    => $this->pageSlug,
+					'page'    => $this->pageSlug, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor property preserves its named parameter contract.
 					'package' => (string) $package->getIdentifier(),
 				),
 				$this->getAdminUrl()
@@ -674,13 +674,13 @@ final class PackagePagePresenter {
 		);
 	}
 
-	private function cleanBuffer( int $bufferLevel ): void {
-		while ( ob_get_level() > $bufferLevel ) {
+	private function clean_buffer( int $buffer_level ): void {
+		while ( ob_get_level() > $buffer_level ) {
 			ob_end_clean();
 		}
 	}
 
-	private function logFailure( string $message, string $step, Throwable $failure ): void {
+	private function log_failure( string $message, string $step, Throwable $failure ): void {
 		BoosterLogger::logException(
 			$message,
 			$failure,

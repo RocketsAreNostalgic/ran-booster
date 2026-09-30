@@ -18,13 +18,13 @@ final class AdminStatusSummaryRenderer {
 	public const ATTENTION = 'attention';
 
 	/**
-	 * @param Closure(): void $renderActions
+	 * @param Closure(): void $render_actions
 	 */
 	public function render(
 		string $state,
 		string $heading,
 		string $description,
-		Closure $renderActions
+		Closure $render_actions
 	): void {
 		if ( ! in_array( $state, array( self::NEUTRAL, self::PENDING, self::READY, self::ATTENTION ), true ) ) {
 			throw new InvalidArgumentException( 'Administration status summaries require a supported state.' );
@@ -39,7 +39,7 @@ final class AdminStatusSummaryRenderer {
 				</div>
 			</div>
 			<div class="ran-booster-status-summary__actions">
-				<?php $renderActions(); ?>
+				<?php $render_actions(); ?>
 			</div>
 		</div>
 		<?php

@@ -25,13 +25,15 @@ class WordPressUpdaterLock {
 	 */
 	final public function run(
 		callable $operation,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public named-argument contract.
 		?string $acquireFailureMessage = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public named-argument contract.
 		?string $releaseFailureMessage = null
 	): mixed {
 		try {
 			$token = $this->acquire();
 		} catch ( Throwable $failure ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal lock failures are never rendered directly.
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped, WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Internal lock failures are not rendered; retain the public named-argument contract.
 			throw null === $acquireFailureMessage ? $failure : new RuntimeException( $acquireFailureMessage, 0, $failure );
 		}
 
@@ -41,16 +43,17 @@ class WordPressUpdaterLock {
 			try {
 				$released = $this->release( $token );
 			} catch ( Throwable $failure ) {
-				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal lock failures are never rendered directly.
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped, WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Internal lock failures are not rendered; retain the public named-argument contract.
 				throw null === $releaseFailureMessage ? $failure : new RuntimeException( $releaseFailureMessage, 0, $failure );
 			}
 			if ( ! $released ) {
-				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The caller supplies an internal diagnostic, not rendered output.
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped, WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- The caller supplies an internal diagnostic via the public named-argument contract.
 				throw new RuntimeException( $releaseFailureMessage ?? 'The WordPress updater lock could not be released.' );
 			}
 		}
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public override and connected caller contract.
 	public function currentToken(): ?string {
 		global $wpdb;
 
@@ -118,7 +121,7 @@ class WordPressUpdaterLock {
 			throw DeploymentStorageFailure::unavailable();
 		}
 		if ( 1 === $result ) {
-			$this->invalidateOptionCache();
+			$this->invalidate_option_cache();
 		}
 
 		return 1 === $result;
@@ -140,13 +143,13 @@ class WordPressUpdaterLock {
 			throw DeploymentStorageFailure::unavailable();
 		}
 		if ( 1 === $result ) {
-			$this->invalidateOptionCache();
+			$this->invalidate_option_cache();
 		}
 
 		return 1 === $result;
 	}
 
-	private function invalidateOptionCache(): void {
+	private function invalidate_option_cache(): void {
 		if ( function_exists( 'wp_cache_delete' ) ) {
 			wp_cache_delete( self::NAME, 'options' );
 			wp_cache_delete( 'notoptions', 'options' );

@@ -36,13 +36,14 @@ final readonly class ProviderDiagnosticResult {
 			throw new InvalidArgumentException( 'Provider diagnostic code is invalid.' );
 		}
 
-		$this->assertSafeText( $message );
-		$this->assertSafeText( $remediation );
+		$this->assert_safe_text( $message );
+		$this->assert_safe_text( $remediation );
 	}
 
 	/**
 	 * @return array{status: string, code: string, message: string, remediation: string}
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
 	public function toArray(): array {
 		return array(
 			'status'      => $this->status,
@@ -52,7 +53,7 @@ final readonly class ProviderDiagnosticResult {
 		);
 	}
 
-	private function assertSafeText( string $value ): void {
+	private function assert_safe_text( string $value ): void {
 		if ( '' === trim( $value )
 			|| strlen( $value ) > 512
 			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $value )

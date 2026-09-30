@@ -10,7 +10,7 @@ use InvalidArgumentException;
 final readonly class BulkPackageResult {
 
 	/**
-	 * @param array<string, int> $skippedByReason
+	 * @param array<string, int> $skipped_by_reason
 	 */
 	private function __construct(
 		public string $operation,
@@ -18,24 +18,24 @@ final readonly class BulkPackageResult {
 		public int $changed,
 		public int $unchanged,
 		public int $queued,
-		public array $skippedByReason,
-		public string $runnerStatus,
-		public string $errorCode = ''
+		public array $skipped_by_reason,
+		public string $runner_status,
+		public string $error_code = ''
 	) {
-		$processed = $changed + $unchanged + $queued + array_sum( $skippedByReason );
+		$processed = $changed + $unchanged + $queued + array_sum( $skipped_by_reason );
 		if ( ! in_array( $operation, BulkPackageAction::operations(), true )
-			|| ! in_array( $errorCode, array_merge( array( '' ), self::errorCodes() ), true )
+			|| ! in_array( $error_code, array_merge( array( '' ), self::error_codes() ), true )
 			|| $selected < 0 || $selected > BulkPackageAction::MAX_IDENTIFIERS
 			|| min( $changed, $unchanged, $queued ) < 0
-			|| ( '' === $errorCode && $processed !== $selected )
-			|| ( '' !== $errorCode && 0 !== $processed )
+			|| ( '' === $error_code && $processed !== $selected )
+			|| ( '' !== $error_code && 0 !== $processed )
 			|| ( BulkPackageAction::QUEUE_UPDATE === $operation && ( 0 !== $changed || 0 !== $unchanged ) )
 			|| ( BulkPackageAction::QUEUE_UPDATE !== $operation && 0 !== $queued )
-			|| ! in_array( $runnerStatus, array( 'scheduled', 'already_scheduled', 'unavailable', 'not_required' ), true ) ) {
+			|| ! in_array( $runner_status, array( 'scheduled', 'already_scheduled', 'unavailable', 'not_required' ), true ) ) {
 			throw new InvalidArgumentException( 'The bulk package result is invalid.' );
 		}
-		foreach ( $skippedByReason as $reason => $count ) {
-			if ( ! in_array( $reason, self::skipReasonCodes(), true ) || $count < 1 || $count > BulkPackageAction::MAX_IDENTIFIERS ) {
+		foreach ( $skipped_by_reason as $reason => $count ) {
+			if ( ! in_array( $reason, self::skip_reason_codes(), true ) || $count < 1 || $count > BulkPackageAction::MAX_IDENTIFIERS ) {
 				throw new InvalidArgumentException( 'The bulk package result is invalid.' );
 			}
 		}
@@ -54,9 +54,9 @@ final readonly class BulkPackageResult {
 		);
 	}
 
-	/** @param array<string, int> $skippedByReason */
-	public static function queue( int $selected, int $queued, array $skippedByReason, string $runnerStatus ): self {
-		ksort( $skippedByReason, SORT_STRING );
+	/** @param array<string, int> $skipped_by_reason */
+	public static function queue( int $selected, int $queued, array $skipped_by_reason, string $runner_status ): self {
+		ksort( $skipped_by_reason, SORT_STRING );
 
 		return new self(
 			BulkPackageAction::QUEUE_UPDATE,
@@ -64,23 +64,23 @@ final readonly class BulkPackageResult {
 			0,
 			0,
 			$queued,
-			$skippedByReason,
-			$runnerStatus
+			$skipped_by_reason,
+			$runner_status
 		);
 	}
 
-	/** @param array<string, int> $skippedByReason */
-	public static function pluginActivation(
+	/** @param array<string, int> $skipped_by_reason */
+	public static function plugin_activation(
 		string $operation,
 		int $selected,
 		int $changed,
 		int $unchanged,
-		array $skippedByReason
+		array $skipped_by_reason
 	): self {
-		if ( ! in_array( $operation, BulkPackageAction::pluginActivationOperations(), true ) ) {
+		if ( ! in_array( $operation, BulkPackageAction::plugin_activation_operations(), true ) ) {
 			throw new InvalidArgumentException( 'The plugin activation operation is invalid.' );
 		}
-		ksort( $skippedByReason, SORT_STRING );
+		ksort( $skipped_by_reason, SORT_STRING );
 
 		return new self(
 			$operation,
@@ -88,33 +88,33 @@ final readonly class BulkPackageResult {
 			$changed,
 			$unchanged,
 			0,
-			$skippedByReason,
+			$skipped_by_reason,
 			'not_required'
 		);
 	}
 
-	public static function error( string $operation, int $selected, string $errorCode ): self {
+	public static function error( string $operation, int $selected, string $error_code ): self {
 		if ( ! in_array( $operation, BulkPackageAction::operations(), true ) ) {
 			$operation = BulkPackageAction::QUEUE_UPDATE;
 		}
-		if ( ! in_array( $errorCode, self::errorCodes(), true ) ) {
-			$errorCode = 'unavailable';
+		if ( ! in_array( $error_code, self::error_codes(), true ) ) {
+			$error_code = 'unavailable';
 		}
 
-		return new self( $operation, $selected, 0, 0, 0, array(), 'not_required', $errorCode );
+		return new self( $operation, $selected, 0, 0, 0, array(), 'not_required', $error_code );
 	}
 
 	public function skipped(): int {
-		return array_sum( $this->skippedByReason );
+		return array_sum( $this->skipped_by_reason );
 	}
 
 	/** @return array<string, string> */
-	public function noticeData(): array {
-		$reasons = $this->skippedByReason;
+	public function notice_data(): array {
+		$reasons = $this->skipped_by_reason;
 		ksort( $reasons, SORT_STRING );
-		$encodedReasons = array();
+		$encoded_reasons = array();
 		foreach ( $reasons as $reason => $count ) {
-			$encodedReasons[] = $reason . ':' . $count;
+			$encoded_reasons[] = $reason . ':' . $count;
 		}
 
 		return array(
@@ -123,14 +123,14 @@ final readonly class BulkPackageResult {
 			'changed'   => (string) $this->changed,
 			'unchanged' => (string) $this->unchanged,
 			'queued'    => (string) $this->queued,
-			'skips'     => implode( ',', $encodedReasons ),
-			'runner'    => $this->runnerStatus,
-			'error'     => $this->errorCode,
+			'skips'     => implode( ',', $encoded_reasons ),
+			'runner'    => $this->runner_status,
+			'error'     => $this->error_code,
 		);
 	}
 
 	/** @param array<string, mixed> $data */
-	public static function fromNoticeData( array $data ): self {
+	public static function from_notice_data( array $data ): self {
 		foreach ( array( 'operation', 'selected', 'changed', 'unchanged', 'queued', 'skips', 'runner', 'error' ) as $key ) {
 			if ( ! isset( $data[ $key ] ) || ! is_string( $data[ $key ] ) ) {
 				throw new InvalidArgumentException( 'The bulk package notice is invalid.' );
@@ -169,7 +169,7 @@ final readonly class BulkPackageResult {
 	}
 
 	/** @return list<string> */
-	public static function skipReasonCodes(): array {
+	public static function skip_reason_codes(): array {
 		return array(
 			'active_dependents',
 			'activation_failed',
@@ -187,7 +187,7 @@ final readonly class BulkPackageResult {
 	}
 
 	/** @return list<string> */
-	public static function errorCodes(): array {
+	public static function error_codes(): array {
 		return array(
 			'credential_unavailable',
 			'invalid_request',

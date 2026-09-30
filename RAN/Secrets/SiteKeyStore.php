@@ -19,20 +19,22 @@ class SiteKeyStore {
 
 	public const OPTION_NAME = 'ran_booster_secrets_key_v1';
 	private const KEY_BYTES  = 32;
-	private object $missingValue;
+	private object $missing_value;
 
 	public function __construct() {
-		$this->missingValue = new \stdClass();
+		$this->missing_value = new \stdClass();
 	}
 
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 	public function load( bool $repairAutoload = true ): ?string {
 		$value = $this->readStoredValue();
-		if ( $this->missingValue === $value ) {
+		if ( $this->missing_value === $value ) {
 			return null;
 		}
 
-		$key = $this->decodeStoredKey( $value );
-		$this->verifyNonAutoloaded( $repairAutoload );
+		$key = $this->decode_stored_key( $value );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
+		$this->verify_non_autoloaded( $repairAutoload );
 
 		return $key;
 	}
@@ -40,6 +42,7 @@ class SiteKeyStore {
 	/**
 	 * @return array{key: string, created: bool}
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function loadOrCreate(): array {
 		$existing = $this->load();
 		if ( null !== $existing ) {
@@ -50,7 +53,7 @@ class SiteKeyStore {
 		}
 
 		$key = $this->generateKey();
-		$this->requireRawKey( $key );
+		$this->require_raw_key( $key );
 		$encoded = base64_encode( $key );
 		$created = $this->addStoredValue( $encoded );
 		if ( ! $created ) {
@@ -74,8 +77,9 @@ class SiteKeyStore {
 	/**
 	 * Remove only the exact key supplied by a failed first-write operation.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function deleteExact( #[\SensitiveParameter] string $key ): bool {
-		$this->requireRawKey( $key );
+		$this->require_raw_key( $key );
 		$result = $this->deleteStoredValueExact( base64_encode( $key ) );
 
 		if ( false === $result || $result < 0 || $result > 1 ) {
@@ -90,18 +94,21 @@ class SiteKeyStore {
 		return true;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function readStoredValue(): mixed {
 		if ( ! function_exists( 'get_option' ) ) {
-			return $this->missingValue;
+			return $this->missing_value;
 		}
 
-		return get_option( self::OPTION_NAME, $this->missingValue );
+		return get_option( self::OPTION_NAME, $this->missing_value );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function missingStoredValue(): object {
-		return $this->missingValue;
+		return $this->missing_value;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function addStoredValue( #[\SensitiveParameter] string $encoded ): bool {
 		if ( ! function_exists( 'add_option' ) ) {
 			return false;
@@ -110,6 +117,7 @@ class SiteKeyStore {
 		return add_option( self::OPTION_NAME, $encoded, '', false );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function readAutoloadValue(): ?string {
 		global $wpdb;
 
@@ -133,12 +141,14 @@ class SiteKeyStore {
 		return is_string( $value ) ? $value : null;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function repairAutoloadValue(): void {
 		if ( function_exists( 'wp_set_option_autoload_values' ) ) {
 			wp_set_option_autoload_values( array( self::OPTION_NAME => false ) );
 		}
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function deleteStoredValueExact( #[\SensitiveParameter] string $encoded ): int|false {
 		global $wpdb;
 
@@ -162,6 +172,7 @@ class SiteKeyStore {
 		return $wpdb->query( $query );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function invalidateOptionCache(): void {
 		if ( ! function_exists( 'wp_cache_delete' ) ) {
 			return;
@@ -172,11 +183,12 @@ class SiteKeyStore {
 		wp_cache_delete( 'notoptions', 'options' );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function generateKey(): string {
 		return random_bytes( self::KEY_BYTES );
 	}
 
-	private function decodeStoredKey( #[\SensitiveParameter] mixed $value ): string {
+	private function decode_stored_key( #[\SensitiveParameter] mixed $value ): string {
 		if ( ! is_string( $value ) ) {
 			throw new RuntimeException( 'The Booster site key is invalid.' );
 		}
@@ -192,18 +204,18 @@ class SiteKeyStore {
 		return $key;
 	}
 
-	private function requireRawKey( #[\SensitiveParameter] string $key ): void {
+	private function require_raw_key( #[\SensitiveParameter] string $key ): void {
 		if ( self::KEY_BYTES !== strlen( $key ) ) {
 			throw new RuntimeException( 'The Booster site key is invalid.' );
 		}
 	}
 
-	private function verifyNonAutoloaded( bool $repair ): void {
+	private function verify_non_autoloaded( bool $repair ): void {
 		$autoload = $this->readAutoloadValue();
 		if ( null === $autoload ) {
 			throw new RuntimeException( 'The Booster site key autoload setting could not be verified.' );
 		}
-		if ( ! $this->isAutoloaded( $autoload ) ) {
+		if ( ! $this->is_autoloaded( $autoload ) ) {
 			return;
 		}
 		if ( ! $repair ) {
@@ -212,12 +224,12 @@ class SiteKeyStore {
 
 		$this->repairAutoloadValue();
 		$autoload = $this->readAutoloadValue();
-		if ( null === $autoload || $this->isAutoloaded( $autoload ) ) {
+		if ( null === $autoload || $this->is_autoloaded( $autoload ) ) {
 			throw new RuntimeException( 'The Booster site key autoload setting could not be secured.' );
 		}
 	}
 
-	private function isAutoloaded( string $value ): bool {
+	private function is_autoloaded( string $value ): bool {
 		$autoloaded = function_exists( 'wp_autoload_values_to_autoload' )
 			? wp_autoload_values_to_autoload()
 			: array( 'yes', 'on', 'auto-on', 'auto' );

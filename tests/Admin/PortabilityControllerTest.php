@@ -129,7 +129,7 @@ final class PortabilityControllerTest extends TestCase {
 	}
 
 	public function testPreviewSuccessPreservesJsonForNonHtmxRequests(): void {
-		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'previewSuccess' );
+		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'preview_success' );
 
 		self::assertSame(
 			array(
@@ -142,7 +142,7 @@ final class PortabilityControllerTest extends TestCase {
 
 	public function testPreviewSuccessWritesHtmlForHtmxRequests(): void {
 		$_SERVER['HTTP_HX_REQUEST'] = ' TRUE ';
-		$method                     = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'previewSuccess' );
+		$method                     = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'preview_success' );
 
 		ob_start();
 		try {
@@ -177,7 +177,7 @@ final class PortabilityControllerTest extends TestCase {
 	}
 
 	public function testApplyRowBoundMatchesTheBlueprintPackageBound(): void {
-		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'requestedRow' );
+		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'requested_row' );
 
 		$_POST['row'] = '127';
 		self::assertSame( 127, $method->invoke( $this->controller() ) );
@@ -194,7 +194,7 @@ final class PortabilityControllerTest extends TestCase {
 				'target_id' => 'saved-profile',
 			),
 		);
-		$method                        = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'credentialDecisions' );
+		$method                        = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'credential_decisions' );
 
 		self::assertSame(
 			array(
@@ -210,7 +210,7 @@ final class PortabilityControllerTest extends TestCase {
 	#[DataProvider( 'invalidCredentialDecisions' )]
 	public function testCredentialDecisionParserRejectsAmbiguousOrMalformedInput( mixed $input ): void {
 		$_POST['credential_decisions'] = $input;
-		$method                        = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'credentialDecisions' );
+		$method                        = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'credential_decisions' );
 
 		$this->expectException( InvalidArgumentException::class );
 		$method->invoke( $this->controller(), $this->credentialBlueprint() );
@@ -284,7 +284,7 @@ final class PortabilityControllerTest extends TestCase {
 
 	public function testExportReadsTheCompleteBoundedArchiveBeforeSendingDownloadHeaders(): void {
 		$path   = tempnam( sys_get_temp_dir(), 'ran-booster-controller-archive-' );
-		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'archiveBytes' );
+		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'archive_bytes' );
 		self::assertIsString( $path );
 		self::assertNotFalse( file_put_contents( $path, 'complete-archive-bytes' ) );
 
@@ -501,7 +501,7 @@ final class PortabilityControllerTest extends TestCase {
 			new BlueprintPlanItem( $managed, TargetPackageAction::MANAGED, TargetPackageReason::ALREADY_MANAGED ),
 			new BlueprintPlanItem( $protected, TargetPackageAction::PROTECTED, TargetPackageReason::MANAGEMENT_CONFLICT ),
 		);
-		$method    = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'credentialRows' );
+		$method    = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'credential_rows' );
 
 		$rows = $method->invoke( $this->previewController( new PortabilityReadinessSpySecretsFile( true ) ), $blueprint, array(), $items );
 
@@ -538,7 +538,7 @@ final class PortabilityControllerTest extends TestCase {
 		$package   = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', 'main', null );
 		$blueprint = new PackageBlueprint( array( $package ) );
 		$item      = new BlueprintPlanItem( $package, TargetPackageAction::MANAGED, TargetPackageReason::ALREADY_MANAGED );
-		$method    = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'applyItem' );
+		$method    = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'apply_item' );
 
 		$result = $method->invoke( $this->application(), $blueprint, $item, null, null, null, null, false, false );
 
@@ -568,7 +568,7 @@ final class PortabilityControllerTest extends TestCase {
 			( new ReflectionClass( PackageOperationService::class ) )->newInstanceWithoutConstructor(),
 			$secrets
 		);
-		$method      = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'applyItem' );
+		$method      = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'apply_item' );
 
 		$result = $method->invoke( $application, $blueprint, $item, $credential, 'import', null, null, true, true );
 
@@ -634,7 +634,7 @@ final class PortabilityControllerTest extends TestCase {
 	public function testPublicRepositoryInputKeepsItsCredentialAssociation(): void {
 		$package = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', 'main', null );
 		$item    = new BlueprintPlanItem( $package, TargetPackageAction::INSTALL, TargetPackageReason::NONE );
-		$method  = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'operationInput' );
+		$method  = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'operation_input' );
 
 		$input = $method->invoke( $this->application(), $item, 'imported-pat', false );
 
@@ -646,7 +646,7 @@ final class PortabilityControllerTest extends TestCase {
 
 	public function testBlueprintSuccessRequiresAnExactDisabledReadBack(): void {
 		$blueprint = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', 'main', null );
-		$method    = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'assertDisabledResult' );
+		$method    = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'assert_disabled_result' );
 
 		$method->invoke( $this->application(), array( 'package' => $this->managedPlugin( DeploymentPolicy::DISABLED ) ), $blueprint, null, false );
 		$method->invoke(
@@ -661,7 +661,7 @@ final class PortabilityControllerTest extends TestCase {
 
 	public function testExactTargetPredicateSupportsOnlyVerifiedManagedRetry(): void {
 		$blueprint = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', 'main', null );
-		$method    = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'targetVerified' );
+		$method    = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'target_verified' );
 
 		self::assertTrue( $method->invoke( $this->application(), $this->managedPlugin( DeploymentPolicy::DISABLED ), $blueprint, null, false ) );
 		self::assertFalse( $method->invoke( $this->application(), $this->managedPlugin( DeploymentPolicy::MANUAL ), $blueprint, null, false ) );
@@ -670,7 +670,7 @@ final class PortabilityControllerTest extends TestCase {
 
 	public function testBlueprintSuccessRejectsAManualReadBack(): void {
 		$blueprint = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', 'main', null );
-		$method    = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'assertDisabledResult' );
+		$method    = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'assert_disabled_result' );
 
 		$this->expectException( RuntimeException::class );
 		$method->invoke( $this->application(), array( 'package' => $this->managedPlugin( DeploymentPolicy::MANUAL ) ), $blueprint, null, false );
@@ -678,7 +678,7 @@ final class PortabilityControllerTest extends TestCase {
 
 	public function testBlueprintSuccessRejectsAnyMismatchedManagementField(): void {
 		$blueprint  = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', 'main', null );
-		$method     = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'assertDisabledResult' );
+		$method     = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'assert_disabled_result' );
 		$mismatches = array(
 			'provider'     => $this->managedPlugin( DeploymentPolicy::DISABLED, private: true, credentialId: 'target-profile', provider: 'gitlab' ),
 			'type'         => $this->managedThemeWithPluginIdentifier(),
@@ -710,13 +710,13 @@ final class PortabilityControllerTest extends TestCase {
 		?string $confirmation,
 		?string $expected
 	): void {
-		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'exportPasswordError' );
+		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'export_password_error' );
 
 		self::assertSame( $expected, $method->invoke( $this->controller(), $includeCredentials, $password, $confirmation ) );
 	}
 
 	public function testReleaseManagedExportFailureNamesEveryAffectedPackageAndItsLimitation(): void {
-		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'exportValidationFailureMessage' );
+		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'export_validation_failure_message' );
 
 		self::assertSame(
 			'Transporter Blueprint export cannot include: Plugin “RAN GitHub Updater Dummy” manages its own updates and cannot also be managed by Booster; Theme “Example Theme” manages its own updates and cannot also be managed by Booster. Deselect those packages and try again.',
@@ -734,7 +734,7 @@ final class PortabilityControllerTest extends TestCase {
 
 	public function testInlineExportFailureReturnsTheSpecificMessageAsJson(): void {
 		$_POST['response_format'] = 'json';
-		$method                   = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'exportFailure' );
+		$method                   = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'export_failure' );
 
 		self::assertSame(
 			array(
@@ -1002,28 +1002,28 @@ final class PortabilityControllerTest extends TestCase {
 
 	/** @return list<array{type:string,identifier:string}> */
 	private function selectedPackages(): array {
-		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'selectedPackages' );
+		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'selected_packages' );
 
 		return $method->invoke( $this->controller() );
 	}
 
 	/** @return array<string, list<string>> */
 	private function selectedCredentials(): array {
-		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'selectedCredentials' );
+		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'selected_credentials' );
 
 		return $method->invoke( $this->controller() );
 	}
 
 	/** @return array{status:string,message:string,category?:string} */
 	private function applyFailure( \Throwable $failure ): array {
-		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'applyFailure' );
+		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'apply_failure' );
 
 		return $method->invoke( $this->controller(), $failure );
 	}
 
 	/** @param array<string, mixed> $result @return array{status:string,message:string} */
 	private function deploymentResult( array $result ): array {
-		$method = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'deploymentResult' );
+		$method = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'deployment_result' );
 
 		return $method->invoke( $this->application(), $result );
 	}

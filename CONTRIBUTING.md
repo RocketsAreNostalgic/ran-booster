@@ -58,11 +58,317 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/PackageOperation.php`, `RAN/PackageRemoval/PackageRemovalResult.php`,
 `RAN/WordPress/CorePackageExecutionResult.php`,
 `RAN/WordPress/CorePackageExecutionFailure.php`,
-`RAN/Deployment/PackageMutationGuard.php` and `RAN/WordPress/CoreSelfUpdatePolicy.php`.
+`RAN/Deployment/PackageMutationGuard.php`, `RAN/WordPress/CoreSelfUpdatePolicy.php`,
+`RAN/Admin/BulkPackageAction.php`, `RAN/Admin/BulkPackageActionFailure.php`,
+`RAN/Admin/BulkPackageResult.php`, `RAN/Admin/BulkPackageActionService.php`,
+`RAN/Secrets/SecretsStorageProvisioningResult.php`,
+`RAN/Secrets/WpConfigPathWriteResult.php`,
+`RAN/Secrets/SecretsStorageUnavailable.php`,
+`RAN/Secrets/SecretsRuntimeAvailability.php`,
+`RAN/Webhook/SignedWebhookVerifier.php`, `RAN/Webhook/WebhookController.php`,
+`RAN/Webhook/WebhookProcessor.php`, `RAN/Webhook/WebhookResponse.php`,
+`RAN/Admin/CredentialExpiryObservationStore.php`,
+`RAN/Admin/CredentialExpiryReminder.php`, `RAN/Admin/CredentialExpiryNotice.php`,
+`RAN/Admin/CredentialExpiryNoticeController.php`,
+`RAN/Admin/BackgroundDeploymentFailureMonitor.php`,
+`RAN/Admin/BackgroundDeploymentFailureEmail.php`,
+`RAN/Admin/DeploymentOutcomeMessage.php`, `RAN/Admin/ManagedPluginFailureRows.php`,
+`RAN/Admin/PublicRepositoryLookupProfileStore.php`,
+`RAN/Admin/RepositoryBranchCheckEvidenceStore.php`,
+`RAN/Admin/CredentialSelfDestructPurger.php`,
+`RAN/Admin/PackageRepositoryRequestResolver.php`, `RAN/Admin/BoosterNoticeScope.php`,
+`RAN/Admin/DevelopmentEnvironmentDetector.php`,
+`RAN/Admin/CoreSelfUpdateDevelopmentNotice.php`,
+`RAN/Admin/DevelopmentSafetyNoticeController.php`,
+`RAN/Admin/Component/AdminActionNormalizer.php`,
+`RAN/Admin/Component/AdminActionRenderer.php`,
+`RAN/Admin/Component/AdminPackageSourceChoiceNormalizer.php` and
+`RAN/Admin/Component/AdminStatusSummaryRenderer.php`,
+`RAN/Admin/Component/ProviderManagementTableRenderer.php`,
+`RAN/Admin/Component/RepositoryTableRenderer.php`,
+`RAN/Admin/Component/RepositoryDetailRenderer.php` and
+`RAN/Admin/RepositoryPickerController.php`,
+`RAN/WordPress/CoreSelfUpdateNativeTarget.php`,
+`RAN/WordPress/WordPressOrgUpdateRequestFilter.php`,
+`RAN/WordPress/WordPressUpdaterLock.php` and
+`RAN/Troubleshooting/CoreSelfUpdateStatus.php`,
+`RAN/Secrets/PosixFilesystemProbe.php`,
+`RAN/Secrets/EncryptedSecretsEnvelopeCodec.php`,
+`RAN/Storage/CredentialUsageReader.php` and
+`RAN/RepositoryProvider/InvalidCredentialInput.php`,
+`RAN/Portability/BlueprintReviewer.php`,
+`RAN/Portability/BlueprintRepositoryVerifier.php`,
+`RAN/Portability/ManagedPackageBlueprintExporter.php` and
+`RAN/AddOn/Portability/NativePortabilityFacade.php`,
+`RAN/Admin/Interaction/CoreAdminInteractionFacade.php`,
+`RAN/Admin/Interaction/SignedAdminInteractionFlow.php`,
+`RAN/Admin/Interaction/AdminInteractionTarget.php`,
+`RAN/Admin/Interaction/AdminInteractionRequest.php`,
+`RAN/PackageOperationService.php`,
+`RAN/PackageRemoval/PackageRemovalService.php`,
+`RAN/PackageRemoval/WordPressPackageRemovalGateway.php`,
+`RAN/WordPress/CorePackageExecutor.php`,
+`RAN/Logging/BoosterLogger.php`,
+`RAN/Logging/TemporaryDebugCapture.php`,
+`RAN/RepositoryProvider/ProviderDiagnosticRequest.php`,
+`RAN/RepositoryProvider/ProviderDiagnosticResult.php`,
+`RAN/Portability/BlueprintArchive.php`,
+`RAN/Portability/BlueprintCredential.php`,
+`RAN/Portability/BlueprintPackage.php`,
+`RAN/Portability/PackageBlueprint.php`,
+`RAN/RepositoryProvider/RepositoryReference.php`,
+`RAN/RepositoryProvider/RepositoryDescriptor.php`,
+`RAN/RepositoryProvider/RepositoryBrowseRequest.php` and
+`RAN/Portability/WpPusherCoexistencePolicy.php`.
+The five-slice secrets, credential, webhook, release-evidence and database cohort
+also includes:
+
+- `RAN/Secrets/SiteKeyStore.php`
+- `RAN/Secrets/PrivateLocationCandidateResolver.php`
+- `RAN/RepositoryProvider/CredentialValidationResult.php`
+- `RAN/RepositoryProvider/CredentialExpiryReport.php`
+- `RAN/RepositoryProvider/WebhookRequest.php`
+- `RAN/RepositoryProvider/PushEvent.php`
+- `RAN/RepositoryProvider/RepositoryWebhookFitnessResult.php`
+- `RAN/RepositoryProvider/RepositoryWebhookOperationResult.php`
+- `RAN/RepositoryProvider/RepositoryReleaseInspection.php`
+- `RAN/RepositoryProvider/RepositoryReleaseCandidate.php`
+- `RAN/RepositoryProvider/RepositoryReleaseNativeTargetStatus.php`
+- `RAN/Storage/Database.php`
+
+The backend five-slice cohort also includes:
+
+- `RAN/Portability/PortabilityApplicationService.php`
+- `RAN/Troubleshooting/TroubleshootingService.php`
+- `RAN/Troubleshooting/LocalTroubleshootingService.php`
+- `RAN/Storage/AbstractPackageRepository.php`
+- `RAN/Storage/PluginRepository.php`
+- `RAN/Storage/ThemeRepository.php`
+- `RAN/Secrets/WpConfigSecretsPathWriter.php`
+- `RAN/Secrets/SecretsStorageProvisioner.php`
+
+The release and deployment five-slice cohort also includes:
+
+- `RAN/RepositoryProvider/Admin/ProviderAdminMetadata.php`
+- `RAN/AddOn/WebhookAssistance/WebhookProfileMetadata.php`
+- `RAN/AddOn/ReleaseTracking/ReleaseTrackingPreflight.php`
+- `RAN/Internal/ReleaseManagement/ProspectiveReleaseCandidateReader.php`
+- `RAN/AddOn/WebhookAssistance/AssistedWebhookFacade.php`
+- `RAN/AddOn/WebhookAssistance/WebhookAssistanceReadinessEvaluator.php`
+- `RAN/WordPress/ManagedReleaseStore.php`
+- `RAN/WordPress/ManagedReleaseTargetRegistrar.php`
+- `RAN/Deployment/DeploymentCoordinator.php`
+
+The lifecycle and release service five-slice cohort also includes:
+
+- `RAN/Uninstall/LocalDataRemover.php`
+- `RAN/Runtime/UnsupportedMultisiteBootstrap.php`
+- `RAN/Deployment/DeploymentAttemptRepository.php`
+- `RAN/AddOn/ReleaseTracking/NativeReleaseTrackingFacade.php`
+- `RAN/AddOn/ReleaseTracking/NativeProspectiveReleaseFacade.php`
+
+The request-processing five-slice cohort also includes:
+
+- `RAN/Dispatcher.php`
+- `RAN/Admin/ProviderProfileAdminController.php`
+- `RAN/Admin/PackageAdminController.php`
+- `RAN/Admin/PortabilityController.php`
+- `RAN/Admin/WebhookManagement/Operation/WebhookOperationCoordinator.php`
+
+The deployment recovery and webhook persistence five-slice cohort also includes:
+
+- `RAN/Admin/DeploymentAdminController.php`
+- `RAN/Admin/DeploymentAdminPresenter.php`
+- `RAN/Storage/RepositorySourceGuard.php`
+- `RAN/Admin/WebhookCleanupContext.php`
+- `RAN/Admin/WebhookManagement/Installation/InstallationRecord.php`
+- `RAN/Admin/WebhookManagement/Installation/WordPressInstallationStore.php`
+
+The administrative projection and portability internals five-slice cohort also includes:
+
+- `RAN/Admin/SecretsStorageSetupPresenter.php`
+- `RAN/Admin/DocumentationHookRenderer.php`
+- `RAN/Admin/PackagePagePresenter.php`
+- `RAN/Admin/ProviderRepositoryRowsNormalizer.php`
+- `RAN/AddOn/Portability/PortabilityFacade.php`
+- `RAN/AddOn/Portability/PortabilityReviewResult.php`
+
+The parallel private-naming tranche also includes:
+
+- `RAN/Admin/ReleaseManagement/ManagedReleaseBrowserOperations.php`
+- `RAN/Admin/ReleaseManagement/ProspectiveReleaseOperations.php`
+- `RAN/Admin/ReleaseManagement/ReleaseManagementControls.php`
+- `RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php`
+- `RAN/Admin/ReleaseManagement/ReleaseTrackingOperations.php`
+- `RAN/Admin/ProviderSettingsPresenter.php`
+- `RAN/Dashboard.php`
+- `RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php`
+- `RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php`
+- `RAN/Admin/WebhookManagement/WebhookManagementController.php`
+- `RAN/Deployment/AdmittedBranchHostAdapter.php`
+- `RAN/Deployment/PreparedArtifact.php`
+- `RAN/Deployment/ReleaseArtifactCustodian.php`
+- `RAN/RepositoryProvider/AuthenticatedPreparedArchive.php`
+- `RAN/Secrets/SecretsFile.php`
+- `RAN/RepositoryProvider/ProviderSecretPolicyCatalog.php`
+- `RAN/RepositoryProvider/RepositoryReleaseWorkflowResult.php`
+- `RAN/RepositoryProvider/RepositoryReleaseWorkflowTarget.php`
+
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This twenty-one-file scope does not
-complete Core naming, condition or exception acceptance.
+are unchanged. Callers on other types retain their current contracts until separately audited. This 158-file scope does not
+complete Core naming, condition or exception acceptance. The repository UI quartet
+renames owned renderer and picker helpers and local variables; the public
+`render()`/`handle()` entry points, projected keys, AJAX action/nonce, error statuses,
+URL and form fields, accessibility attributes and rendered markup remain stable.
+The picker retains narrow exceptions for the connected repository metadata and
+browse-result property contracts pending their own audited cohorts.
+The WordPress updater quartet retains public WordPress hook methods, the filter's
+constructor argument, lock methods and their named-argument contracts. Private
+helpers and owned identifiers use
+snake_case while updater status and diagnostic keys, WordPress.org request
+filtering, shared-lock SQL/cache behavior and external receiver contracts stay
+unchanged.
+
+The credential-support quartet renames private helpers and owned identifiers.
+Public parameter names, the promoted `tableName` property and inherited Throwable
+contracts retain narrow documented exceptions where required. Encrypted-envelope
+bytes and validation, Sodium calls and sensitive-parameter attributes, POSIX probe
+ordering and cleanup, credential-usage SQL and projections, and safe failure text
+remain unchanged. Reserved-parameter enforcement is unchanged.
+
+The portability quartet renames private helpers, private properties and owned
+variables. Public methods and named parameters, including by-reference outputs
+and inherited facade contracts, retain narrow documented exceptions. Foreign DTO
+properties, authorization and credential ordering, blueprint bytes and fingerprints,
+provider access and error classifications remain unchanged. Reserved-parameter
+enforcement is unchanged.
+
+The administration interaction quartet renames private helpers, private properties
+and owned variables. Public methods and named parameters, callback strings and
+foreign signed-request DTO fields retain their existing contracts through narrow
+documented exceptions. Nonce inputs, canonical URLs, route validation, response
+headers, fragment validation, rendered markup and error text remain unchanged.
+Reserved-parameter enforcement is unchanged.
+
+The package-operation quartet renames private helpers, private properties and
+owned variables. Public methods, named parameters and promoted constructor
+properties retain their existing caller and gateway/executor override contracts
+through narrow documented exceptions. Operation results, lock/guard/removal
+ordering, WordPress hook installation and restoration, failure mapping and every
+PreparedArtifact custody contract remain unchanged. The executor test's private
+reflection reference follows its renamed helper. Reserved-parameter enforcement
+is unchanged.
+
+The diagnostic safety quartet renames private helpers, private request properties
+and owned variables. Public methods and named parameters retain narrow documented
+exceptions, and public diagnostic-result fields remain unchanged. Diagnostic
+budgets, deadline ordering and sticky exhaustion reasons, result projections,
+log sanitization and exception redaction, capture bytes and limits, lock ordering,
+filesystem permissions, replacement and cleanup behavior remain unchanged.
+Reserved-parameter enforcement is unchanged.
+
+The blueprint format and archive quartet renames private helpers and owned locals.
+Public methods, named parameters, promoted fields and native ZipArchive properties
+retain narrow documented exceptions. SensitiveParameter attributes, canonical
+schema and key ordering, credential associations and fingerprints, resource limits,
+management equality, archive encryption and entry validation, error-handler
+restoration and failed-write cleanup remain unchanged. Reserved-parameter
+enforcement is unchanged.
+
+The repository input trio renames private helpers, private validator parameters
+and owned browse-request properties. Public methods, named parameters and DTO
+fields retain narrow documented exceptions. Opaque locator bytes, repository
+identity casing, slug normalization, array projections, browse scope validation,
+request deadlines, timeout and response-size limits, counters and failure codes
+remain unchanged. The browse test's private reflection reference follows the
+renamed property. Reserved-parameter enforcement is unchanged.
+
+The WP Pusher coexistence policy renames private inventory helpers and owned locals.
+Its public methods and activation callback retain narrow documented exceptions;
+exact plugin identity, option lookup order, malformed-inventory rejection and
+localized activation failures remain unchanged. Reserved-parameter enforcement
+is unchanged.
+
+The five-slice cohort renames private helpers, private state and owned locals.
+Public methods, named and promoted constructor parameters, serialized fields and
+protected override seams retain narrow documented exceptions. The private
+resolver callback follows its helper rename. Key encoding, autoload repair,
+option deletion/cache ordering, path fingerprints and permissions remain intact.
+Credential and release timestamp rules, bounded failure messages, raw/normalized
+webhook headers, verification clones and result projections remain unchanged.
+Database SQL/DDL, migration ordering, capability caching, failure classification
+and wpdb error restoration are preserved. Reserved-parameter scope is unchanged.
+
+The backend five-slice cohort renames private helpers, private repository state
+and owned locals. Public methods, named/promoted constructor parameters and
+protected override seams retain narrow documented exceptions. Existing private
+reflection references follow their helper renames. Portability review fingerprints,
+credential decisions, disabled-package verification and retries remain unchanged.
+Troubleshooting row order, provider budgets, safe reports and marker cleanup,
+repository SQL/transaction/write/read-back order, configuration file bytes and
+lock/replace/rollback behavior, and secrets recovery authority/revisions/order are
+preserved. Reserved-parameter scope is unchanged.
+
+The release and deployment cohort renames 61 private helpers, non-promoted
+private state and owned locals. Public/protected methods, named parameters,
+promoted constructor properties and external DTO fields retain narrow line-local
+exceptions. Metadata validation and projections, candidate ordering/failure mapping,
+webhook capability/nonce/target-lock and profile cleanup order, native authority
+snapshots and hook restoration, and deployment admission/recovery/cleanup remain
+unchanged. WordPress callback strings and every PreparedArtifact call retain their
+existing contracts. Test behavior and reserved-parameter enforcement are unchanged.
+
+The lifecycle and release service cohort renames 83 private helpers, non-promoted
+private state and owned locals. Public/protected methods, constructor and other
+public named parameters, promoted properties and external DTO fields retain narrow
+exceptions. Cleanup ownership, inode/permission checks and deletion order,
+Multisite hook registration and notice behavior, deployment SQL/transactions,
+retention and recovery, native release locking/cache/restoration, and prospective
+release acquisition/custody/cleanup/adoption order remain unchanged. Protected
+uninstall override seams and every PreparedArtifact call retain their contracts.
+Test sources and reserved-parameter enforcement are unchanged.
+
+The request-processing cohort renames 62 private helpers, six non-promoted
+private properties and owned locals. Public/protected callback and caller names,
+constructor parameters, promoted properties and external DTO fields retain narrow
+exceptions. Two portability include-scope variables retain their existing view
+contract. Fifteen private reflection references follow the renamed helpers; all
+other test behavior remains unchanged. Authorization/nonce/capability order,
+credential failure redaction, signed/header/redirect bytes, portability cleanup,
+webhook locking, concurrent-write recovery and durable state remain unchanged.
+Both method and variable naming rules cover this cohort; reserved-parameter scope
+is unchanged.
+
+The deployment recovery and webhook persistence cohort renames 17 private
+helpers, one non-promoted private property and owned locals. Public/protected
+methods, constructor and promoted parameters, and external DTO fields retain
+narrow documented exceptions. Recovery identity and lock checks, activity query
+and projection order, source-authority validation, cleanup capability ordering,
+installation serialization, five compare-and-swap attempts, raw-state preservation
+and cache deletion order remain unchanged. Two private input names remain distinct
+from their serialization locals. Both naming rules cover this cohort; tests and
+reserved-parameter enforcement are unchanged.
+
+The administrative projection and portability internals cohort renames 28
+private helpers and owned locals. Public/protected methods, named constructor and
+promoted parameters, and external DTO members retain narrow documented exceptions.
+Secret redaction and recovery projections, documentation/package callback order
+and output-buffer restoration, repository-row validation and immutable projections,
+and portability canonical JSON, nonce/fingerprint inputs and failure mapping remain
+unchanged. No non-promoted private properties require renaming. Both naming rules
+cover this cohort; test sources and reserved-parameter enforcement are unchanged.
+
+The parallel private-naming tranche covers release operations, administration,
+artifact custody, secrets storage and policy/DTO internals. Its 264 private helpers
+and eligible private state and owned locals use snake_case. Public/protected
+methods, named and promoted parameters, DTO fields, WordPress callbacks and view
+include-scope aliases retain narrow documented exceptions. Release projections,
+request and nonce boundaries, dashboard render order, hook registration/restoration,
+artifact authorization and custody, secure-file locking/replacement/rollback,
+recovery authority and serialized policy/DTO bytes remain unchanged. Necessary
+private reflection references follow their helpers. Both naming rules cover all
+18 types; API12-owned source paths and reserved-parameter scope are unchanged.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
 including `is_private`; its persisted JSON retains the `private` key and exact
@@ -108,3 +414,51 @@ unchanged. Branch Updater's distinct execution result retains its own contract.
 Mutation guard and native self-update policy PHP names use snake_case. Guard
 ordering, runtime restrictions, limits, release-marker schema and diagnostic keys
 remain unchanged. Other policy receivers keep their separately audited contracts.
+
+The bulk-action cohort (`BulkPackageAction`, `BulkPackageActionFailure`,
+`BulkPackageResult` and `BulkPackageActionService`) enforces owned snake_case
+methods and variables. Signed notice keys and ordering, operation/error/skip
+codes, selection limits, guard ordering and updater-lock behavior are unchanged.
+Inherited Throwable methods and separately owned receiver contracts retain their
+names. This naming migration does not change presentation or UI behavior.
+
+The webhook-ingress cohort (`SignedWebhookVerifier`, `WebhookController`,
+`WebhookProcessor` and `WebhookResponse`) enforces owned snake_case methods and
+variables. Raw-body signature verification, authentication and dispatch ordering,
+route and callback strings, response keys, status codes and headers are unchanged.
+Repository-provider contracts, WordPress methods and other service receivers
+retain their existing names.
+
+The credential-expiry cohort enforces owned snake_case methods and variables in
+its observation store, reminder, notice and notice controller. Option schema and
+keys, provider-over-manual precedence, date cutoffs, fingerprints, AJAX and nonce
+actions, capability ordering, rendered HTML and translated strings are unchanged.
+`CredentialExpiryReport::isKnown()` and its `expiresAt` property retain their
+separately scoped provider contract; the single property read has a local naming
+exception. This migration does not change UI behavior.
+
+The background-failure cohort enforces owned snake_case methods and variables in
+its monitor, email, outcome-message catalogue and managed-plugin failure rows.
+Newest-attempt selection, fingerprint inputs, closed outcome messages, email
+filters and payloads, capabilities, hook strings and rendered HTML are unchanged.
+`DeploymentFailureNotifier::notify()` and provider, WordPress and other service
+receiver contracts retain their existing names.
+
+The lookup and branch-evidence cohort enforces owned snake_case names in the
+public lookup profile store, branch-check evidence store, credential expiry purger
+and package repository request resolver. Persisted option keys, fingerprints,
+advisory locking, purge ordering, trusted lookup selection and provider-verified
+request projections are unchanged. Provider contract properties retain their
+existing names with narrowly scoped access exceptions.
+
+The development-notice cohort enforces owned snake_case methods and variables in
+notice scope, environment detection, the Core source-checkout notice and the
+development-safety dismissal controller. Screen selection, detection order,
+capability and nonce checks, action and metadata keys, HTML and translated strings
+are unchanged. WordPress hook event names stay fixed; method callback descriptors
+follow the renamed owned methods.
+
+The administration action, source-choice and status-summary component cohort
+enforces owned snake_case helper, variable and parameter names. Public normalize
+and render method names, structured array keys, URL validation and limits, HTML,
+escaping, ARIA attributes and callback invocation behavior are unchanged.

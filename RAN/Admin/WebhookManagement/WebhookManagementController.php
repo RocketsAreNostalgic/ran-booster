@@ -24,38 +24,50 @@ final class WebhookManagementController {
 	private const NONCE_ACTION_PREFIX = 'ran_booster_repository_webhook_';
 
 	/** @var \Closure(): bool */
-	private \Closure $canManage;
+	private \Closure $can_manage;
 
 	/** @var \Closure(string, string): bool */
-	private \Closure $verifyNonce;
+	private \Closure $verify_nonce;
 
 	/** @var \Closure(string): string */
-	private \Closure $createNonce;
+	private \Closure $create_nonce;
 
-	private ?AdminInteractionFacade $adminInteraction = null;
+	private ?AdminInteractionFacade $admin_interaction = null;
 
 	public function __construct(
 		private readonly WebhookOperationCoordinator $operations,
 		private readonly WebhookDisplayModel $display,
 		private readonly ProviderRegistry $providers,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		private readonly ManagedPackageWebhookAuthorityResolver $packageAuthorities,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?callable $canManage = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?callable $verifyNonce = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?callable $createNonce = null
 	) {
-		$this->canManage   = null === $canManage
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->can_manage = null === $canManage
 			? static fn (): bool => current_user_can( 'manage_options' )
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			: \Closure::fromCallable( $canManage );
-		$this->verifyNonce = null === $verifyNonce
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->verify_nonce = null === $verifyNonce
 			? static fn ( string $nonce, string $action ): bool => 1 === wp_verify_nonce( $nonce, $action )
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			: \Closure::fromCallable( $verifyNonce );
-		$this->createNonce = null === $createNonce
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->create_nonce = null === $createNonce
 			? static fn ( string $action ): string => wp_create_nonce( $action )
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			: \Closure::fromCallable( $createNonce );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
 	public function useAdminInteractionFacade( AdminInteractionFacade $adminInteraction ): void {
-		$this->adminInteraction = $adminInteraction;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->admin_interaction = $adminInteraction;
 	}
 
 	/**
@@ -63,14 +75,15 @@ final class WebhookManagementController {
 	 *
 	 * @param array<string, mixed> $request
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function handleAdminPost( #[\SensitiveParameter] array $request, string $nonce ): string {
-		$operation    = $this->stringValue( $request, 'repository_webhook_management_operation' );
-		$providerCode = $this->stringValue( $request, 'provider_code' );
-		$repositoryId = $this->stringValue( $request, 'repository_id' );
-		$credentialId = $this->stringValue( $request, 'booster_credential_id' );
-		$profileId    = $this->stringValue( $request, 'webhook_profile_id' );
-		$metadata     = $this->providerMetadata( $providerCode );
-		$result       = array(
+		$operation     = $this->string_value( $request, 'repository_webhook_management_operation' );
+		$provider_code = $this->string_value( $request, 'provider_code' );
+		$repository_id = $this->string_value( $request, 'repository_id' );
+		$credential_id = $this->string_value( $request, 'booster_credential_id' );
+		$profile_id    = $this->string_value( $request, 'webhook_profile_id' );
+		$metadata      = $this->providerMetadata( $provider_code );
+		$result        = array(
 			'code'        => 'invalid_request',
 			'recovery'    => null,
 			'remediation' => null,
@@ -78,51 +91,52 @@ final class WebhookManagementController {
 			'inline_safe' => true,
 		);
 
-		if ( ! ( $this->canManage )() ) {
+		if ( ! ( $this->can_manage )() ) {
 			$result['code'] = 'forbidden';
-		} elseif ( 'setup' === $operation && '' === $profileId ) {
+		} elseif ( 'setup' === $operation && '' === $profile_id ) {
 			$result['code'] = 'invalid_request';
 		} elseif ( $metadata instanceof ProviderMetadata
 			&& in_array( $operation, array( 'setup', 'check', 'reconfigure', 'remove', 'test' ), true )
-			&& ( $this->verifyNonce )( $nonce, $this->nonceAction( $operation, $providerCode, $repositoryId ) ) ) {
-			$result = $this->operations->execute( $operation, $providerCode, $repositoryId, '' === $credentialId ? null : $credentialId, 'setup' === $operation ? ( self::CREATE_REPOSITORY_SECRET === $profileId ? null : $profileId ) : null, $nonce );
+			&& ( $this->verify_nonce )( $nonce, $this->nonce_action( $operation, $provider_code, $repository_id ) ) ) {
+			$result = $this->operations->execute( $operation, $provider_code, $repository_id, '' === $credential_id ? null : $credential_id, 'setup' === $operation ? ( self::CREATE_REPOSITORY_SECRET === $profile_id ? null : $profile_id ) : null, $nonce );
 		}
-		$resultCode = $result['code'];
+		$result_code = $result['code'];
 
-		$safeRepositoryId   = strlen( $repositoryId ) <= 191 && 0 === preg_match( '/[\x00-\x1F\x7F]/', $repositoryId ) ? $repositoryId : '';
-		$returnUrl          = $this->safeReturnUrl( $this->stringValue( $request, 'return_url' ), $providerCode, $safeRepositoryId );
-		$interactionRequest = $this->interactionRequest( $returnUrl );
-		if ( null !== $this->adminInteraction
-			&& null !== $interactionRequest
+		$safe_repository_id  = strlen( $repository_id ) <= 191 && 0 === preg_match( '/[\x00-\x1F\x7F]/', $repository_id ) ? $repository_id : '';
+		$return_url          = $this->safe_return_url( $this->string_value( $request, 'return_url' ), $provider_code, $safe_repository_id );
+		$interaction_request = $this->interaction_request( $return_url );
+		if ( null !== $this->admin_interaction
+			&& null !== $interaction_request
 			&& $metadata instanceof ProviderMetadata
 			&& true === $result['inline_safe'] ) {
 			$outcome = true === $result['successful']
-				? AdminInteractionOutcome::success( $interactionRequest, $this->display->notice( $resultCode, $result['recovery'], $result['remediation'] ) )
-				: AdminInteractionOutcome::validationFailure( $interactionRequest, $this->display->notice( $resultCode, $result['recovery'], $result['remediation'] ) );
-			$this->adminInteraction->respond( $outcome );
+				? AdminInteractionOutcome::success( $interaction_request, $this->display->notice( $result_code, $result['recovery'], $result['remediation'] ) )
+				: AdminInteractionOutcome::validationFailure( $interaction_request, $this->display->notice( $result_code, $result['recovery'], $result['remediation'] ) );
+			$this->admin_interaction->respond( $outcome );
 		}
 
-		$remediation = false === $result['inline_safe'] ? $this->safeRemediation( $result['remediation'] ) : null;
-		$args        = array( 'webhook_management_result' => $resultCode );
+		$remediation = false === $result['inline_safe'] ? $this->safe_remediation( $result['remediation'] ) : null;
+		$args        = array( 'webhook_management_result' => $result_code );
 		if ( null !== $result['recovery'] ) {
 			$args['recovery_hook']    = $result['recovery']['hook_id'];
 			$args['recovery_profile'] = $result['recovery']['profile_id'];
 		}
 		if ( null !== $remediation ) {
 			$args['webhook_management_remediation']    = $remediation;
-			$args['webhook_management_provider']       = $providerCode;
-			$args['webhook_management_repository']     = $safeRepositoryId;
-			$args['_ran_booster_webhook_result_nonce'] = ( $this->createNonce )( $this->resultNonceAction( $providerCode, $safeRepositoryId, $resultCode, $remediation ) );
+			$args['webhook_management_provider']       = $provider_code;
+			$args['webhook_management_repository']     = $safe_repository_id;
+			$args['_ran_booster_webhook_result_nonce'] = ( $this->create_nonce )( $this->result_nonce_action( $provider_code, $safe_repository_id, $result_code, $remediation ) );
 		}
 
-		return add_query_arg( $args, $returnUrl );
+		return add_query_arg( $args, $return_url );
 	}
 
 	/** @return list<ProviderMetadata> */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function providerMetadataList(): array {
 		$metadata = array();
 		foreach ( $this->providers->orderedMetadata() as $candidate ) {
-			$capable = $this->capableProviderMetadata( $candidate->code->value );
+			$capable = $this->capable_provider_metadata( $candidate->code->value );
 			if ( $capable instanceof ProviderMetadata ) {
 				$metadata[] = $capable;
 			}
@@ -131,49 +145,52 @@ final class WebhookManagementController {
 		return $metadata;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
 	public function providerMetadata( string $providerCode ): ?ProviderMetadata {
-		return $this->capableProviderMetadata( $providerCode );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		return $this->capable_provider_metadata( $providerCode );
 	}
 
 	/** @return array{result:?string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string} */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function panelContext(): array {
-		$query         = is_array( $_GET ) ? wp_unslash( $_GET ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Bounded display-only context.
-		$code          = $this->stringValue( $query, 'webhook_management_result' );
-		$safeReference = static fn ( mixed $value ): ?string => is_string( $value )
+		$query          = is_array( $_GET ) ? wp_unslash( $_GET ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Bounded display-only context.
+		$code           = $this->string_value( $query, 'webhook_management_result' );
+		$safe_reference = static fn ( mixed $value ): ?string => is_string( $value )
 			&& 1 === preg_match( '/^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/', $value )
 			? $value
 			: null;
-		$hookId        = $safeReference( $query['recovery_hook'] ?? null );
-		$profileId     = $safeReference( $query['recovery_profile'] ?? null );
-		$providerCode  = $this->stringValue( $query, 'webhook_management_provider' );
-		$repositoryId  = $this->stringValue( $query, 'webhook_management_repository' );
-		if ( '' === $providerCode || '' === $repositoryId ) {
-			$providerCode = $this->stringValue( $query, 'tab' );
-			$repositoryId = $this->stringValue( $query, 'repository' );
+		$hook_id        = $safe_reference( $query['recovery_hook'] ?? null );
+		$profile_id     = $safe_reference( $query['recovery_profile'] ?? null );
+		$provider_code  = $this->string_value( $query, 'webhook_management_provider' );
+		$repository_id  = $this->string_value( $query, 'webhook_management_repository' );
+		if ( '' === $provider_code || '' === $repository_id ) {
+			$provider_code = $this->string_value( $query, 'tab' );
+			$repository_id = $this->string_value( $query, 'repository' );
 		}
-		$remediation = $this->safeRemediation( $query['webhook_management_remediation'] ?? null );
-		$resultNonce = $this->stringValue( $query, '_ran_booster_webhook_result_nonce' );
+		$remediation  = $this->safe_remediation( $query['webhook_management_remediation'] ?? null );
+		$result_nonce = $this->string_value( $query, '_ran_booster_webhook_result_nonce' );
 		if ( null === $remediation
 			|| '' === $code
-			|| ! ( $this->verifyNonce )( $resultNonce, $this->resultNonceAction( $providerCode, $repositoryId, $code, $remediation ) ) ) {
+			|| ! ( $this->verify_nonce )( $result_nonce, $this->result_nonce_action( $provider_code, $repository_id, $code, $remediation ) ) ) {
 			$remediation = null;
 		}
 
 		return array(
-			'result'      => '' === $code ? null : $this->safeCode( $code, 'request_completed' ),
-			'recovery'    => null !== $hookId && null !== $profileId ? array(
-				'hook_id'    => $hookId,
-				'profile_id' => $profileId,
+			'result'      => '' === $code ? null : $this->safe_code( $code, 'request_completed' ),
+			'recovery'    => null !== $hook_id && null !== $profile_id ? array(
+				'hook_id'    => $hook_id,
+				'profile_id' => $profile_id,
 			) : null,
 			'remediation' => $remediation,
 		);
 	}
 
-	private function resultNonceAction( string $providerCode, string $repositoryId, string $code, string $remediation ): string {
-		return 'ran_booster_repository_webhook_result_' . hash( 'sha256', implode( "\0", array( $providerCode, $repositoryId, $code, $remediation ) ) );
+	private function result_nonce_action( string $provider_code, string $repository_id, string $code, string $remediation ): string {
+		return 'ran_booster_repository_webhook_result_' . hash( 'sha256', implode( "\0", array( $provider_code, $repository_id, $code, $remediation ) ) );
 	}
 
-	private function safeRemediation( mixed $remediation ): ?string {
+	private function safe_remediation( mixed $remediation ): ?string {
 		return is_string( $remediation )
 			&& '' !== trim( $remediation )
 			&& strlen( $remediation ) <= 255
@@ -182,9 +199,9 @@ final class WebhookManagementController {
 			: null;
 	}
 
-	private function interactionRequest( string $returnUrl ): ?AdminInteractionRequest {
+	private function interaction_request( string $return_url ): ?AdminInteractionRequest {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- The URL has already been reconstructed by safeReturnUrl().
-		$query = parse_url( $returnUrl, PHP_URL_QUERY );
+		$query = parse_url( $return_url, PHP_URL_QUERY );
 		parse_str( is_string( $query ) ? $query : '', $arguments );
 		if ( 'ran-booster' !== ( $arguments['page'] ?? '' ) ) {
 			return null;
@@ -192,14 +209,14 @@ final class WebhookManagementController {
 
 		return AdminInteractionRequest::providerRepositories(
 			'repository-webhook-management:manage-webhook',
-			$returnUrl,
+			$return_url,
 			'repository-webhook-management-error'
 		);
 	}
 
-	private function safeReturnUrl( string $candidate, string $providerCode, string $repositoryId ): string {
-		$fallback = WebhookManagementAdminUrl::forPath( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) ) . '&panel=repositories'
-			. ( '' === $repositoryId ? '' : '&repository=' . rawurlencode( $repositoryId ) );
+	private function safe_return_url( string $candidate, string $provider_code, string $repository_id ): string {
+		$fallback = WebhookManagementAdminUrl::forPath( 'admin.php?page=ran-booster&tab=' . rawurlencode( $provider_code ) ) . '&panel=repositories'
+			. ( '' === $repository_id ? '' : '&repository=' . rawurlencode( $repository_id ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Reconstructs an allowlisted same-admin route; the candidate is never returned directly.
 		$parts = parse_url( $candidate );
 		if ( ! is_array( $parts ) ) {
@@ -213,15 +230,15 @@ final class WebhookManagementController {
 		$target  = is_string( $query['repository'] ?? null ) ? $query['repository'] : '';
 		$view    = is_string( $query['repository_view'] ?? null ) ? $query['repository_view'] : '';
 		if ( 'ran-booster' === $page
-			&& hash_equals( $providerCode, $tab )
+			&& hash_equals( $provider_code, $tab )
 			&& 'repositories' === $panel
-			&& '' !== $repositoryId
-			&& hash_equals( $repositoryId, $target ) ) {
-			return WebhookManagementAdminUrl::forPath( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) . '&panel=repositories&repository=' . rawurlencode( $repositoryId ) . ( in_array( $view, array( 'status', 'branch', 'releases' ), true ) ? '&repository_view=' . rawurlencode( $view ) : '' ) );
+			&& '' !== $repository_id
+			&& hash_equals( $repository_id, $target ) ) {
+			return WebhookManagementAdminUrl::forPath( 'admin.php?page=ran-booster&tab=' . rawurlencode( $provider_code ) . '&panel=repositories&repository=' . rawurlencode( $repository_id ) . ( in_array( $view, array( 'status', 'branch', 'releases' ), true ) ? '&repository_view=' . rawurlencode( $view ) : '' ) );
 		}
 		if ( ! in_array( $page, array( 'ran-booster-plugins', 'ran-booster-themes' ), true )
 			|| '' === $package || strlen( $package ) > 191 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $package )
-			|| ! $this->packageReturnMatchesOperation( $page, $package, $providerCode, $repositoryId ) ) {
+			|| ! $this->package_return_matches_operation( $page, $package, $provider_code, $repository_id ) ) {
 			return $fallback;
 		}
 
@@ -229,41 +246,42 @@ final class WebhookManagementController {
 	}
 
 	/** Prove that a package-settings return URL belongs to this signed repository operation. */
-	private function packageReturnMatchesOperation( string $page, string $package, string $providerCode, string $repositoryId ): bool {
-		$type      = 'ran-booster-plugins' === $page ? 'plugin' : 'theme';
+	private function package_return_matches_operation( string $page, string $package, string $provider_code, string $repository_id ): bool {
+		$type = 'ran-booster-plugins' === $page ? 'plugin' : 'theme';
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		$authority = $this->packageAuthorities->forPackage( $type, $package );
 
 		return null !== $authority
-			&& hash_equals( $providerCode, $authority['provider_code'] )
-			&& hash_equals( $repositoryId, $authority['repository_id'] );
+			&& hash_equals( $provider_code, $authority['provider_code'] )
+			&& hash_equals( $repository_id, $authority['repository_id'] );
 	}
 
-	private function capableProviderMetadata( string $providerCode ): ?ProviderMetadata {
+	private function capable_provider_metadata( string $provider_code ): ?ProviderMetadata {
 		try {
-			$fitness    = $this->providers->requireCapability( $providerCode, RepositoryWebhookFitness::class );
-			$management = $this->providers->requireCapability( $providerCode, RepositoryWebhookManagement::class );
-			$normalizer = $this->providers->requireCapability( $providerCode, WebhookNormalizer::class );
-			$metadata   = $this->providers->metadata()[ $providerCode ] ?? null;
+			$fitness    = $this->providers->requireCapability( $provider_code, RepositoryWebhookFitness::class );
+			$management = $this->providers->requireCapability( $provider_code, RepositoryWebhookManagement::class );
+			$normalizer = $this->providers->requireCapability( $provider_code, WebhookNormalizer::class );
+			$metadata   = $this->providers->metadata()[ $provider_code ] ?? null;
 		} catch ( \Throwable ) {
 			return null;
 		}
 
 		return $fitness === $management && $management === $normalizer && $metadata instanceof ProviderMetadata
-			&& hash_equals( $providerCode, $metadata->code->value )
+			&& hash_equals( $provider_code, $metadata->code->value )
 			? $metadata
 			: null;
 	}
 
-	private function nonceAction( string $operation, string $providerCode, string $repositoryId ): string {
-		return self::NONCE_ACTION_PREFIX . implode( '_', array( $operation, $providerCode, $repositoryId ) );
+	private function nonce_action( string $operation, string $provider_code, string $repository_id ): string {
+		return self::NONCE_ACTION_PREFIX . implode( '_', array( $operation, $provider_code, $repository_id ) );
 	}
 
-	private function safeCode( mixed $code, string $fallback ): string {
+	private function safe_code( mixed $code, string $fallback ): string {
 		return is_string( $code ) && 1 === preg_match( '/^[a-z0-9][a-z0-9._-]{0,95}$/', $code ) ? $code : $fallback;
 	}
 
 	/** @param array<string, mixed> $request */
-	private function stringValue( array $request, string $key ): string {
+	private function string_value( array $request, string $key ): string {
 		return is_string( $request[ $key ] ?? null ) ? trim( $request[ $key ] ) : '';
 	}
 }

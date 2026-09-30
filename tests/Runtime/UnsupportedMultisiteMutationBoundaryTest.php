@@ -278,13 +278,13 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 			)
 		);
 
-		self::assertSame( 503, $response->getStatus() );
+		self::assertSame( 503, $response->get_status() );
 		self::assertSame(
 			array( 'message' => 'Webhook processing is unavailable on WordPress Multisite.' ),
-			$response->getData()
+			$response->get_data()
 		);
 
-		( new WebhookController( $processor ) )->registerRoutes();
+		( new WebhookController( $processor ) )->register_routes();
 		self::assertCount( 1, $GLOBALS['ran_booster_rest_routes'] );
 		self::assertSame( 'ran-booster/v1', $GLOBALS['ran_booster_rest_routes'][0]['namespace'] );
 	}

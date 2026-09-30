@@ -16,7 +16,7 @@ use RAN\Storage\ThemeRepository;
 final class WebhookAssistanceReadinessEvaluator {
 
 	/** @var \Closure(): bool */
-	private \Closure $canManage;
+	private \Closure $can_manage;
 
 	/** @param callable(): bool|null $canManage */
 	public function __construct(
@@ -24,25 +24,30 @@ final class WebhookAssistanceReadinessEvaluator {
 		private ThemeRepository $themes,
 		private SecretsFile $secrets,
 		private Database $database,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?callable $canManage = null
 	) {
-		$this->canManage = null === $canManage
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->can_manage = null === $canManage
 			? static fn (): bool => current_user_can( 'manage_options' )
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			: \Closure::fromCallable( $canManage );
 	}
 
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 	public function evaluate( string $provider, string $callbackUrl ): AssistanceReadiness {
-		if ( ! ( $this->canManage )() ) {
+		if ( ! ( $this->can_manage )() ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			return new AssistanceReadiness( array( 'managed_packages_unavailable' ), $callbackUrl, array() );
 		}
 
-		$siteReasons   = array();
-		$databaseReady = true;
+		$site_reasons   = array();
+		$database_ready = true;
 		try {
 			$this->database->requireReady();
 		} catch ( \Throwable ) {
-			$databaseReady = false;
-			$siteReasons[] = 'database_unavailable';
+			$database_ready = false;
+			$site_reasons[] = 'database_unavailable';
 		}
 
 		$profiles = null;
@@ -50,25 +55,28 @@ final class WebhookAssistanceReadinessEvaluator {
 			$this->secrets->assertManagedStorageReady();
 			$profiles = $this->secrets->webhookProfiles( $provider );
 		} catch ( \Throwable ) {
-			$siteReasons[] = 'secrets_storage_unavailable';
+			$site_reasons[] = 'secrets_storage_unavailable';
 		}
 
-		if ( ! $this->isStructurallyPublicHttps( $callbackUrl ) ) {
-			$siteReasons[] = 'callback_requires_public_https';
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		if ( ! $this->is_structurally_public_https( $callbackUrl ) ) {
+			$site_reasons[] = 'callback_requires_public_https';
 		}
 
 		$repositories = array();
-		if ( $databaseReady ) {
+		if ( $database_ready ) {
 			try {
-				$repositories = $this->repositoryReadiness( $provider, $siteReasons, $profiles );
+				$repositories = $this->repository_readiness( $provider, $site_reasons, $profiles );
 			} catch ( \Throwable ) {
-				$siteReasons[] = 'managed_packages_unavailable';
+				$site_reasons[] = 'managed_packages_unavailable';
 			}
 		}
 
-		return new AssistanceReadiness( $siteReasons, $callbackUrl, $repositories );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		return new AssistanceReadiness( $site_reasons, $callbackUrl, $repositories );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function managedStorageAvailable(): bool {
 		try {
 			$this->database->requireReady();
@@ -88,8 +96,10 @@ final class WebhookAssistanceReadinessEvaluator {
 	 * optional release-package hygiene from removing setup that Branch still
 	 * consumes.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
 	public function cleanupTarget( string $provider, string $repositoryId, string $callbackUrl ): ?AssistanceTarget {
-		if ( ! ( $this->canManage )() || ! $this->validRepositoryId( $repositoryId ) ) {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		if ( ! ( $this->can_manage )() || ! $this->valid_repository_id( $repositoryId ) ) {
 			return null;
 		}
 
@@ -103,35 +113,36 @@ final class WebhookAssistanceReadinessEvaluator {
 			return null;
 		}
 
-		$releasePackages = array();
-		$releaseLocator  = null;
+		$release_packages = array();
+		$release_locator  = null;
 		foreach ( $packages as $package ) {
 			if ( ! $package instanceof Package || $provider !== $package->getProviderCode() ) {
 				continue;
 			}
 
-			$locator         = (string) $package->getRepository();
-			$normalized      = strtolower( trim( $locator, '/' ) );
-			$packageIdentity = $package->getProviderRepositoryId();
-			$identityMatches = is_string( $packageIdentity ) && hash_equals( $repositoryId, $packageIdentity );
-			$locatorMatches  = null !== $releaseLocator && hash_equals( $releaseLocator, $normalized );
+			$locator          = (string) $package->getRepository();
+			$normalized       = strtolower( trim( $locator, '/' ) );
+			$package_identity = $package->getProviderRepositoryId();
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+			$identity_matches = is_string( $package_identity ) && hash_equals( $repositoryId, $package_identity );
+			$locator_matches  = null !== $release_locator && hash_equals( $release_locator, $normalized );
 
-			if ( PackageSource::RELEASE_ASSET === $package->getSource() && $identityMatches ) {
-				if ( ! $this->safeRepository( $locator )
-					|| ( null !== $releaseLocator && ! hash_equals( $releaseLocator, $normalized ) ) ) {
+			if ( PackageSource::RELEASE_ASSET === $package->getSource() && $identity_matches ) {
+				if ( ! $this->safe_repository( $locator )
+					|| ( null !== $release_locator && ! hash_equals( $release_locator, $normalized ) ) ) {
 					return null;
 				}
-				$releaseLocator    = $normalized;
-				$releasePackages[] = $package;
+				$release_locator    = $normalized;
+				$release_packages[] = $package;
 				continue;
 			}
 
-			if ( PackageSource::BRANCH === $package->getSource() && ( $identityMatches || $locatorMatches ) ) {
+			if ( PackageSource::BRANCH === $package->getSource() && ( $identity_matches || $locator_matches ) ) {
 				return null;
 			}
 		}
 
-		if ( array() === $releasePackages || null === $releaseLocator ) {
+		if ( array() === $release_packages || null === $release_locator ) {
 			return null;
 		}
 
@@ -140,7 +151,7 @@ final class WebhookAssistanceReadinessEvaluator {
 			if ( $package instanceof Package
 				&& $provider === $package->getProviderCode()
 				&& PackageSource::BRANCH === $package->getSource()
-				&& hash_equals( $releaseLocator, strtolower( trim( (string) $package->getRepository(), '/' ) ) )
+				&& hash_equals( $release_locator, strtolower( trim( (string) $package->getRepository(), '/' ) ) )
 			) {
 				return null;
 			}
@@ -152,30 +163,32 @@ final class WebhookAssistanceReadinessEvaluator {
 			'manual'    => 0,
 			'disabled'  => 0,
 		);
-		foreach ( $releasePackages as $package ) {
+		foreach ( $release_packages as $package ) {
 			$references[] = (string) $package->getIdentifier();
 			++$policies[ $package->getDeploymentPolicy()->value ];
 		}
 		sort( $references, SORT_STRING );
-		$repository = (string) $releasePackages[0]->getRepository();
+		$repository = (string) $release_packages[0]->getRepository();
 
 		return new AssistanceTarget(
 			$provider,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			$repositoryId,
 			$repository,
 			$repository,
 			$references,
 			$policies,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			$callbackUrl
 		);
 	}
 
 	/**
-	 * @param list<string>                              $siteReasons
+	 * @param list<string>                              $site_reasons
 	 * @param array<string, array<string, mixed>>|null $profiles
 	 * @return list<array<string, mixed>>
 	 */
-	private function repositoryReadiness( string $provider, array $siteReasons, ?array $profiles ): array {
+	private function repository_readiness( string $provider, array $site_reasons, ?array $profiles ): array {
 		$repositories = array();
 		foreach ( array_merge( $this->plugins->allDeploymentPlugins(), $this->themes->allDeploymentThemes() ) as $package ) {
 			if ( ! $package instanceof Package
@@ -194,48 +207,48 @@ final class WebhookAssistanceReadinessEvaluator {
 				'manual'     => 0,
 				'disabled'   => 0,
 			);
-			$repositoryId          = $package->getProviderRepositoryId();
-			$entry['identities'][] = is_string( $repositoryId ) && $this->validRepositoryId( $repositoryId )
-				? $repositoryId
+			$repository_id         = $package->getProviderRepositoryId();
+			$entry['identities'][] = is_string( $repository_id ) && $this->valid_repository_id( $repository_id )
+				? $repository_id
 				: null;
 			$entry['packages'][]   = (string) $package->getIdentifier();
 			++$entry[ $package->getDeploymentPolicy()->value ];
 			$repositories[ $key ] = $entry;
 		}
 
-		$identityOwners = array();
+		$identity_owners = array();
 		foreach ( $repositories as $key => $entry ) {
 			foreach ( array_unique( array_filter( $entry['identities'], 'is_string' ) ) as $identity ) {
-				$identityOwners[ $identity ][ $key ] = true;
+				$identity_owners[ $identity ][ $key ] = true;
 			}
 		}
 
 		ksort( $repositories, SORT_NATURAL | SORT_FLAG_CASE );
 		$readiness = array();
 		foreach ( $repositories as $entry ) {
-			$reasons      = array();
-			$identities   = array_values( array_unique( $entry['identities'], SORT_REGULAR ) );
-			$validIds     = array_values( array_filter( $identities, 'is_string' ) );
-			$repositoryId = 1 === count( $validIds ) ? $validIds[0] : null;
+			$reasons       = array();
+			$identities    = array_values( array_unique( $entry['identities'], SORT_REGULAR ) );
+			$valid_ids     = array_values( array_filter( $identities, 'is_string' ) );
+			$repository_id = 1 === count( $valid_ids ) ? $valid_ids[0] : null;
 
-			if ( ! $this->safeRepository( $entry['repository'] ) ) {
+			if ( ! $this->safe_repository( $entry['repository'] ) ) {
 				$reasons[] = 'repository_locator_invalid';
 			}
-			if ( array() === $validIds ) {
+			if ( array() === $valid_ids ) {
 				$reasons[] = 'repository_identity_unavailable';
 			} elseif ( 1 !== count( $identities )
-				|| 1 !== count( $validIds )
-				|| 1 < count( $identityOwners[ $repositoryId ] ?? array() )
+				|| 1 !== count( $valid_ids )
+				|| 1 < count( $identity_owners[ $repository_id ] ?? array() )
 			) {
-				$reasons[]    = 'repository_identity_conflict';
-				$repositoryId = null;
+				$reasons[]     = 'repository_identity_conflict';
+				$repository_id = null;
 			}
 
 			sort( $entry['packages'], SORT_STRING );
-			$eligible    = array() === $siteReasons && array() === $reasons;
+			$eligible    = array() === $site_reasons && array() === $reasons;
 			$readiness[] = array(
 				'provider_code'         => $provider,
-				'repository_id'         => $repositoryId,
+				'repository_id'         => $repository_id,
 				'repository'            => $entry['repository'],
 				'label'                 => $entry['repository'],
 				'package_references'    => $entry['packages'],
@@ -246,7 +259,7 @@ final class WebhookAssistanceReadinessEvaluator {
 				),
 				'status'                => $eligible ? AssistanceReadiness::READY : AssistanceReadiness::BLOCKED,
 				'reason_codes'          => $reasons,
-				'local_secret_coverage' => $this->localSecretCoverage( $entry['repository'], $repositoryId, $profiles ),
+				'local_secret_coverage' => $this->local_secret_coverage( $entry['repository'], $repository_id, $profiles ),
 				'eligible'              => $eligible,
 			);
 		}
@@ -255,7 +268,7 @@ final class WebhookAssistanceReadinessEvaluator {
 	}
 
 	/** @param array<string, array<string, mixed>>|null $profiles */
-	private function localSecretCoverage( string $repository, ?string $repositoryId, ?array $profiles ): string {
+	private function local_secret_coverage( string $repository, ?string $repository_id, ?array $profiles ): string {
 		if ( null === $profiles ) {
 			return AssistanceReadiness::SECRET_UNKNOWN;
 		}
@@ -268,9 +281,9 @@ final class WebhookAssistanceReadinessEvaluator {
 			}
 			$scope = strtolower( trim( (string) ( $profile['scope'] ?? '' ) ) );
 			if ( 'repository' === $scope
-				&& null !== $repositoryId
+				&& null !== $repository_id
 				&& is_string( $profile['authority_id'] ?? null )
-				&& hash_equals( $repositoryId, $profile['authority_id'] )
+				&& hash_equals( $repository_id, $profile['authority_id'] )
 			) {
 				return AssistanceReadiness::SECRET_REPOSITORY;
 			}
@@ -283,11 +296,11 @@ final class WebhookAssistanceReadinessEvaluator {
 		return $shared ? AssistanceReadiness::SECRET_SHARED : AssistanceReadiness::SECRET_NONE;
 	}
 
-	private function validRepositoryId( string $repositoryId ): bool {
-		return '' !== trim( $repositoryId ) && strlen( $repositoryId ) <= 191 && 1 !== preg_match( '/[\x00-\x1F\x7F]/', $repositoryId );
+	private function valid_repository_id( string $repository_id ): bool {
+		return '' !== trim( $repository_id ) && strlen( $repository_id ) <= 191 && 1 !== preg_match( '/[\x00-\x1F\x7F]/', $repository_id );
 	}
 
-	private function safeRepository( string $repository ): bool {
+	private function safe_repository( string $repository ): bool {
 		try {
 			RepositoryLocator::requireValid( $repository );
 
@@ -297,8 +310,8 @@ final class WebhookAssistanceReadinessEvaluator {
 		}
 	}
 
-	private function isStructurallyPublicHttps( string $callbackUrl ): bool {
-		$parts = wp_parse_url( $callbackUrl );
+	private function is_structurally_public_https( string $callback_url ): bool {
+		$parts = wp_parse_url( $callback_url );
 
 		if ( ! is_array( $parts )
 			|| 'https' !== ( $parts['scheme'] ?? null )
@@ -312,11 +325,11 @@ final class WebhookAssistanceReadinessEvaluator {
 			return false;
 		}
 
-		$host   = strtolower( $parts['host'] );
-		$ipHost = trim( $host, '[]' );
+		$host    = strtolower( $parts['host'] );
+		$ip_host = trim( $host, '[]' );
 
-		return ! in_array( $ipHost, array( 'localhost', '::1' ), true )
+		return ! in_array( $ip_host, array( 'localhost', '::1' ), true )
 			&& ! str_ends_with( $host, '.local' )
-			&& ( ! filter_var( $ipHost, FILTER_VALIDATE_IP ) || false !== filter_var( $ipHost, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) );
+			&& ( ! filter_var( $ip_host, FILTER_VALIDATE_IP ) || false !== filter_var( $ip_host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) );
 	}
 }

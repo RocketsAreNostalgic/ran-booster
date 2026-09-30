@@ -13,13 +13,16 @@ final class UnsupportedMultisiteBootstrap {
 
 	private const RECOVERY_DOCUMENT = 'views/multisite-recovery.html';
 
-	private bool $noticeRendered = false;
+	private bool $notice_rendered = false;
 
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 	public function __construct( private readonly string $pluginFile ) {
 	}
 
 	public function register(): void {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		register_activation_hook( $this->pluginFile, array( $this, 'activate' ) );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		register_deactivation_hook( $this->pluginFile, array( $this, 'deactivate' ) );
 		add_action( 'network_admin_notices', array( $this, 'renderNotice' ) );
 	}
@@ -39,11 +42,12 @@ final class UnsupportedMultisiteBootstrap {
 		}
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function renderNotice(): void {
-		if ( ! current_user_can( 'manage_network_plugins' ) || $this->noticeRendered ) {
+		if ( ! current_user_can( 'manage_network_plugins' ) || $this->notice_rendered ) {
 			return;
 		}
-		$this->noticeRendered = true;
+		$this->notice_rendered = true;
 		?>
 		<div class="notice notice-warning is-dismissible" data-ran-booster-unsupported-multisite-notice>
 			<p>
@@ -59,7 +63,7 @@ final class UnsupportedMultisiteBootstrap {
 				<?php esc_html_e( 'Booster itself may still be updated manually through WordPress Updates. Managed package updates remain paused until the site is restored to single-site WordPress or a future Multisite-compatible Booster release is installed.', 'ran-booster' ); ?>
 			</p>
 			<p>
-				<a href="<?php echo esc_url( $this->recoveryUrl() ); ?>" target="_blank" rel="noopener noreferrer">
+				<a href="<?php echo esc_url( $this->recovery_url() ); ?>" target="_blank" rel="noopener noreferrer">
 					<?php esc_html_e( 'Read the version-specific Multisite recovery guide', 'ran-booster' ); ?>
 				</a>
 			</p>
@@ -67,7 +71,8 @@ final class UnsupportedMultisiteBootstrap {
 		<?php
 	}
 
-	private function recoveryUrl(): string {
+	private function recovery_url(): string {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		return plugin_dir_url( $this->pluginFile ) . self::RECOVERY_DOCUMENT;
 	}
 }

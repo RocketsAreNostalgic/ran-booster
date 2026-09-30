@@ -27,7 +27,9 @@ class WpConfigSecretsPathWriter {
 	private const LOCK_SUFFIX                    = '.ran-booster.lock';
 	private const TEMP_PREFIX                    = '.ran-booster-wp-config-';
 
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 	public function write( string $configPath, string $sidecarPath ): WpConfigPathWriteResult {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		$this->edit( $configPath, $sidecarPath, false, null );
 
 		return new WpConfigPathWriteResult();
@@ -36,15 +38,21 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * Atomically retarget the exact definition previously inserted by this writer.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function retargetOwnedDefinition(
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		string $configPath,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		string $currentSidecarPath,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		string $replacementSidecarPath
 	): WpConfigPathWriteResult|false {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		if ( $currentSidecarPath === $replacementSidecarPath ) {
 			$this->fail( 'sidecar_path_unchanged', 'The encrypted secrets path is already configured.' );
 		}
 
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		if ( ! $this->edit( $configPath, $currentSidecarPath, false, $replacementSidecarPath ) ) {
 			return false;
 		}
@@ -57,7 +65,9 @@ class WpConfigSecretsPathWriter {
 	 *
 	 * @return bool Whether the owned definition block was removed.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase, WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 	public function removeOwnedDefinition( string $configPath, string $sidecarPath ): bool {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		return $this->edit( $configPath, $sidecarPath, true, null );
 	}
 
@@ -66,16 +76,20 @@ class WpConfigSecretsPathWriter {
 	 *
 	 * @return bool Whether the exact owned definition is present.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase, WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 	public function assertOwnedDefinitionRemovable( string $configPath, string $sidecarPath ): bool {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		if ( ! $this->hasOwnedDefinition( $configPath, $sidecarPath ) ) {
 			return false;
 		}
 
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		$directory = dirname( $configPath );
 		if ( ! is_dir( $directory ) || is_link( $directory ) || ! is_writable( $directory ) ) {
 			$this->fail( 'config_directory_invalid', 'The WordPress configuration directory is not safe and writable.' );
 		}
-		$this->inspectConfigPath( $configPath );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
+		$this->inspect_config_path( $configPath );
 
 		return true;
 	}
@@ -83,105 +97,112 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * Report whether the exact directory definition was inserted by this writer.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase, WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 	public function hasOwnedDefinition( string $configPath, string $sidecarPath ): bool {
-		$this->assertAbsoluteSafePath( $configPath, 'config_path_invalid' );
-		$this->assertAbsoluteSafePath( $sidecarPath, 'sidecar_path_invalid' );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
+		$this->assert_absolute_safe_path( $configPath, 'config_path_invalid' );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
+		$this->assert_absolute_safe_path( $sidecarPath, 'sidecar_path_invalid' );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		if ( $configPath === $sidecarPath ) {
 			$this->fail( 'sidecar_path_invalid', 'The encrypted secrets path is not safe for automatic configuration.' );
 		}
 
-		$preflight = $this->inspectConfigPath( $configPath, false );
-		$candidate = $this->buildRemovalCandidate( $preflight['contents'], $sidecarPath );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
+		$preflight = $this->inspect_config_path( $configPath, false );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
+		$candidate = $this->build_removal_candidate( $preflight['contents'], $sidecarPath );
 		if ( null === $candidate ) {
 			return false;
 		}
 
-		$this->validateRemovalCandidate( $candidate, $sidecarPath );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
+		$this->validate_removal_candidate( $candidate, $sidecarPath );
 
 		return true;
 	}
 
 	private function edit(
-		string $configPath,
-		string $sidecarPath,
+		string $config_path,
+		string $sidecar_path,
 		bool $remove,
-		?string $replacementSidecarPath
+		?string $replacement_sidecar_path
 	): bool {
-		$this->assertAbsoluteSafePath( $configPath, 'config_path_invalid' );
-		$this->assertAbsoluteSafePath( $sidecarPath, 'sidecar_path_invalid' );
-		if ( null !== $replacementSidecarPath ) {
-			$this->assertAbsoluteSafePath( $replacementSidecarPath, 'sidecar_path_invalid' );
+		$this->assert_absolute_safe_path( $config_path, 'config_path_invalid' );
+		$this->assert_absolute_safe_path( $sidecar_path, 'sidecar_path_invalid' );
+		if ( null !== $replacement_sidecar_path ) {
+			$this->assert_absolute_safe_path( $replacement_sidecar_path, 'sidecar_path_invalid' );
 		}
-		if ( $configPath === $sidecarPath ) {
+		if ( $config_path === $sidecar_path ) {
 			$this->fail( 'sidecar_path_invalid', 'The encrypted secrets path is not safe for automatic configuration.' );
 		}
-		if ( null !== $replacementSidecarPath
-			&& ( $configPath === $replacementSidecarPath || $sidecarPath === $replacementSidecarPath )
+		if ( null !== $replacement_sidecar_path
+			&& ( $config_path === $replacement_sidecar_path || $sidecar_path === $replacement_sidecar_path )
 		) {
 			$this->fail( 'sidecar_path_invalid', 'The replacement encrypted secrets path is not safe for automatic configuration.' );
 		}
 
 		$preflight = null;
-		if ( $remove || null !== $replacementSidecarPath ) {
-			$preflight = $this->inspectConfigPath( $configPath, false );
+		if ( $remove || null !== $replacement_sidecar_path ) {
+			$preflight = $this->inspect_config_path( $config_path, false );
 			$candidate = $remove
-				? $this->buildRemovalCandidate( $preflight['contents'], $sidecarPath )
-				: $this->buildRetargetCandidate( $preflight['contents'], $sidecarPath, (string) $replacementSidecarPath );
+				? $this->build_removal_candidate( $preflight['contents'], $sidecar_path )
+				: $this->build_retarget_candidate( $preflight['contents'], $sidecar_path, (string) $replacement_sidecar_path );
 			if ( null === $candidate ) {
 				return false;
 			}
 		}
 
-		$directory = dirname( $configPath );
+		$directory = dirname( $config_path );
 		if ( ! is_dir( $directory ) || is_link( $directory ) || ! is_writable( $directory ) ) {
 			$this->fail( 'config_directory_invalid', 'The WordPress configuration directory is not safe and writable.' );
 		}
 
-		$writablePreflight = $this->inspectConfigPath( $configPath );
-		if ( null !== $preflight && ! $this->sameSnapshot( $preflight, $writablePreflight ) ) {
+		$writable_preflight = $this->inspect_config_path( $config_path );
+		if ( null !== $preflight && ! $this->same_snapshot( $preflight, $writable_preflight ) ) {
 			$this->fail( 'config_changed', 'The WordPress configuration changed before it could be edited.' );
 		}
-		$preflight = $writablePreflight;
-		$lockPath  = $configPath . self::LOCK_SUFFIX;
-		$lock      = $this->openLock( $lockPath );
+		$preflight = $writable_preflight;
+		$lock_path = $config_path . self::LOCK_SUFFIX;
+		$lock      = $this->openLock( $lock_path );
 
 		try {
-			$this->assertLockHandle( $lock, $lockPath );
-			if ( ! $this->changePermissions( $lockPath, 0600 ) ) {
+			$this->assert_lock_handle( $lock, $lock_path );
+			if ( ! $this->changePermissions( $lock_path, 0600 ) ) {
 				$this->fail( 'lock_permissions_failed', 'Could not secure the WordPress configuration edit lock.' );
 			}
-			$this->assertLockHandle( $lock, $lockPath );
-			$lockStat = fstat( $lock );
-			if ( false === $lockStat || 0600 !== ( $lockStat['mode'] & 0777 ) ) {
+			$this->assert_lock_handle( $lock, $lock_path );
+			$lock_stat = fstat( $lock );
+			if ( false === $lock_stat || 0600 !== ( $lock_stat['mode'] & 0777 ) ) {
 				$this->fail( 'lock_permissions_failed', 'Could not secure the WordPress configuration edit lock.' );
 			}
 			if ( ! $this->acquireLock( $lock ) ) {
 				$this->fail( 'lock_failed', 'Could not lock the WordPress configuration for editing.' );
 			}
 
-			$locked = $this->inspectConfigPath( $configPath );
-			if ( ! $this->sameSnapshot( $preflight, $locked ) ) {
+			$locked = $this->inspect_config_path( $config_path );
+			if ( ! $this->same_snapshot( $preflight, $locked ) ) {
 				$this->fail( 'config_changed', 'The WordPress configuration changed before it could be edited.' );
 			}
 
 			$original      = $locked['contents'];
 				$candidate = $remove
-					? $this->buildRemovalCandidate( $original, $sidecarPath )
-					: ( null === $replacementSidecarPath
-						? $this->buildCandidate( $original, $sidecarPath )
-						: $this->buildRetargetCandidate( $original, $sidecarPath, $replacementSidecarPath ) );
+					? $this->build_removal_candidate( $original, $sidecar_path )
+					: ( null === $replacement_sidecar_path
+						? $this->build_candidate( $original, $sidecar_path )
+						: $this->build_retarget_candidate( $original, $sidecar_path, $replacement_sidecar_path ) );
 			if ( null === $candidate ) {
 				return false;
 			}
 			if ( $remove ) {
-				$this->validateRemovalCandidate( $candidate, $sidecarPath );
-			} elseif ( null !== $replacementSidecarPath ) {
-				$this->validateRetargetCandidate( $candidate, $sidecarPath, $replacementSidecarPath );
+				$this->validate_removal_candidate( $candidate, $sidecar_path );
+			} elseif ( null !== $replacement_sidecar_path ) {
+				$this->validate_retarget_candidate( $candidate, $sidecar_path, $replacement_sidecar_path );
 			} else {
-				$this->validateCandidate( $candidate );
+				$this->validate_candidate( $candidate );
 			}
 
-			$this->replaceConfig( $configPath, $candidate, $locked );
+			$this->replace_config( $config_path, $candidate, $locked );
 		} finally {
 			$this->releaseLock( $lock );
 			fclose( $lock );
@@ -193,38 +214,38 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * @return array{contents: string, dev: int, ino: int, mode: int, uid: int, gid: int, nlink: int, size: int, mtime: int, ctime: int}
 	 */
-	private function inspectConfigPath( string $path, bool $requireWritable = true ): array {
+	private function inspect_config_path( string $path, bool $require_writable = true ): array {
 		clearstatcache( true, $path );
-		if ( is_link( $path ) || ! is_file( $path ) || ( $requireWritable && ! is_writable( $path ) ) ) {
+		if ( is_link( $path ) || ! is_file( $path ) || ( $require_writable && ! is_writable( $path ) ) ) {
 			$this->fail( 'config_file_invalid', 'The WordPress configuration is not a writable regular file.' );
 		}
 
-		$pathStat = lstat( $path );
-		if ( false === $pathStat
-			|| 0100000 !== ( $pathStat['mode'] & 0170000 )
-			|| 1 !== $pathStat['nlink']
+		$path_stat = lstat( $path );
+		if ( false === $path_stat
+			|| 0100000 !== ( $path_stat['mode'] & 0170000 )
+			|| 1 !== $path_stat['nlink']
 		) {
 			$this->fail( 'config_file_invalid', 'The WordPress configuration is not a private single-link file.' );
 		}
-		if ( 0 !== ( $pathStat['mode'] & 0022 ) ) {
+		if ( 0 !== ( $path_stat['mode'] & 0022 ) ) {
 			$this->fail( 'config_permissions_unsafe', 'The WordPress configuration is group- or world-writable.' );
 		}
-		if ( $pathStat['size'] < 1 || $pathStat['size'] > self::MAX_BYTES ) {
+		if ( $path_stat['size'] < 1 || $path_stat['size'] > self::MAX_BYTES ) {
 			$this->fail( 'config_size_unsupported', 'The WordPress configuration has an unsupported size.' );
 		}
-		if ( function_exists( 'posix_geteuid' ) && posix_geteuid() !== $pathStat['uid'] ) {
+		if ( function_exists( 'posix_geteuid' ) && posix_geteuid() !== $path_stat['uid'] ) {
 			$this->fail( 'config_owner_invalid', 'The WordPress configuration is not owned by the current process owner.' );
 		}
 
 		$handle = $this->openConfigForRead( $path );
 		try {
-			$handleStat = fstat( $handle );
-			if ( false === $handleStat || ! $this->sameIdentity( $pathStat, $handleStat ) ) {
+			$handle_stat = fstat( $handle );
+			if ( false === $handle_stat || ! $this->same_identity( $path_stat, $handle_stat ) ) {
 				$this->fail( 'config_file_invalid', 'The WordPress configuration changed while it was opened.' );
 			}
 
 			$contents = stream_get_contents( $handle, self::MAX_BYTES + 1 );
-			if ( false === $contents || strlen( $contents ) !== $handleStat['size'] ) {
+			if ( false === $contents || strlen( $contents ) !== $handle_stat['size'] ) {
 				$this->fail( 'config_read_failed', 'Could not read the complete WordPress configuration.' );
 			}
 		} finally {
@@ -233,7 +254,7 @@ class WpConfigSecretsPathWriter {
 
 		clearstatcache( true, $path );
 		$after = lstat( $path );
-		if ( false === $after || ! $this->sameMetadata( $pathStat, $after ) ) {
+		if ( false === $after || ! $this->same_metadata( $path_stat, $after ) ) {
 			$this->fail( 'config_changed', 'The WordPress configuration changed while it was read.' );
 		}
 
@@ -251,11 +272,11 @@ class WpConfigSecretsPathWriter {
 		);
 	}
 
-	private function buildCandidate( string $original, string $sidecarPath ): string {
-		$lineEnding = $this->lineEnding( $original );
-		$tokens     = $this->tokens( $original );
-		$offset     = 0;
-		$markerAt   = array();
+	private function build_candidate( string $original, string $sidecar_path ): string {
+		$line_ending = $this->line_ending( $original );
+		$tokens      = $this->tokens( $original );
+		$offset      = 0;
+		$marker_at   = array();
 
 		foreach ( $tokens as $token ) {
 			$text = is_array( $token ) ? $token[1] : $token;
@@ -263,32 +284,32 @@ class WpConfigSecretsPathWriter {
 				&& T_COMMENT === $token[0]
 				&& self::MARKER === trim( $text )
 			) {
-				$lineStart = strrpos( substr( $original, 0, $offset ), "\n" );
-				$lineStart = false === $lineStart ? 0 : $lineStart + 1;
-				$prefix    = substr( $original, $lineStart, $offset - $lineStart );
+				$line_start = strrpos( substr( $original, 0, $offset ), "\n" );
+				$line_start = false === $line_start ? 0 : $line_start + 1;
+				$prefix     = substr( $original, $line_start, $offset - $line_start );
 				if ( '' !== trim( $prefix, " \t\r" ) ) {
 					$this->fail( 'marker_invalid', 'The WordPress stop-editing marker is not on a supported line.' );
 				}
-				$markerAt[] = $lineStart;
+				$marker_at[] = $line_start;
 			}
 			$offset += strlen( $text );
 		}
 
-		if ( 1 !== count( $markerAt ) ) {
+		if ( 1 !== count( $marker_at ) ) {
 			$this->fail( 'marker_invalid', 'The WordPress configuration must contain one standard stop-editing marker.' );
 		}
-		if ( $this->containsLiteralConstantDefinition( $tokens ) ) {
+		if ( $this->contains_literal_constant_definition( $tokens ) ) {
 			$this->fail( 'constant_exists', 'The encrypted secrets path constant is already defined.' );
 		}
 
-		$definition  = self::OWNED_MARKER . $lineEnding;
-		$definition .= "define( '" . self::DIRECTORY_CONSTANT_NAME . "', " . $this->exportPhpString( dirname( $sidecarPath ) ) . ' );' . $lineEnding;
-		$definition .= $lineEnding;
+		$definition  = self::OWNED_MARKER . $line_ending;
+		$definition .= "define( '" . self::DIRECTORY_CONSTANT_NAME . "', " . $this->export_php_string( dirname( $sidecar_path ) ) . ' );' . $line_ending;
+		$definition .= $line_ending;
 
-		return substr( $original, 0, $markerAt[0] ) . $definition . substr( $original, $markerAt[0] );
+		return substr( $original, 0, $marker_at[0] ) . $definition . substr( $original, $marker_at[0] );
 	}
 
-	private function buildRemovalCandidate( string $original, string $sidecarPath ): ?string {
+	private function build_removal_candidate( string $original, string $sidecar_path ): ?string {
 		$tokens  = $this->tokens( $original );
 		$offset  = 0;
 		$matches = array();
@@ -299,8 +320,8 @@ class WpConfigSecretsPathWriter {
 				&& T_COMMENT === $token[0]
 				&& self::OWNED_MARKER === $text
 			) {
-				foreach ( array( "\n", "\r\n" ) as $lineEnding ) {
-					$block = $this->ownedDefinitionBlock( $sidecarPath, $lineEnding );
+				foreach ( array( "\n", "\r\n" ) as $line_ending ) {
+					$block = $this->owned_definition_block( $sidecar_path, $line_ending );
 					if ( $block === substr( $original, $offset, strlen( $block ) ) ) {
 						$matches[] = array( $offset, strlen( $block ) );
 					}
@@ -320,59 +341,59 @@ class WpConfigSecretsPathWriter {
 			. substr( $original, $matches[0][0] + $matches[0][1] );
 	}
 
-	private function ownedDefinitionBlock( string $sidecarPath, string $lineEnding ): string {
-		return self::OWNED_MARKER . $lineEnding
-			. "define( '" . self::DIRECTORY_CONSTANT_NAME . "', " . $this->exportPhpString( dirname( $sidecarPath ) ) . ' );' . $lineEnding
-			. $lineEnding;
+	private function owned_definition_block( string $sidecar_path, string $line_ending ): string {
+		return self::OWNED_MARKER . $line_ending
+			. "define( '" . self::DIRECTORY_CONSTANT_NAME . "', " . $this->export_php_string( dirname( $sidecar_path ) ) . ' );' . $line_ending
+			. $line_ending;
 	}
 
-	private function buildRetargetCandidate(
+	private function build_retarget_candidate(
 		string $original,
-		string $currentSidecarPath,
-		string $replacementSidecarPath
+		string $current_sidecar_path,
+		string $replacement_sidecar_path
 	): ?string {
-		if ( null === $this->buildRemovalCandidate( $original, $currentSidecarPath ) ) {
+		if ( null === $this->build_removal_candidate( $original, $current_sidecar_path ) ) {
 			return null;
 		}
 
-		$lineEnding  = $this->lineEnding( $original );
-		$current     = $this->ownedDefinitionBlock( $currentSidecarPath, $lineEnding );
-		$replacement = $this->ownedDefinitionBlock( $replacementSidecarPath, $lineEnding );
+		$line_ending = $this->line_ending( $original );
+		$current     = $this->owned_definition_block( $current_sidecar_path, $line_ending );
+		$replacement = $this->owned_definition_block( $replacement_sidecar_path, $line_ending );
 		$count       = 0;
 		$candidate   = str_replace( $current, $replacement, $original, $count );
 
 		return 1 === $count ? $candidate : null;
 	}
 
-	private function validateRemovalCandidate( string $candidate, string $sidecarPath ): void {
+	private function validate_removal_candidate( string $candidate, string $sidecar_path ): void {
 		if ( strlen( $candidate ) > self::MAX_BYTES ) {
 			$this->fail( 'config_size_unsupported', 'The edited WordPress configuration would exceed the size limit.' );
 		}
-		if ( null !== $this->buildRemovalCandidate( $candidate, $sidecarPath ) ) {
+		if ( null !== $this->build_removal_candidate( $candidate, $sidecar_path ) ) {
 			$this->fail( 'candidate_parse_failed', 'The edited WordPress configuration retained the automatic definition.' );
 		}
 	}
 
-	private function validateRetargetCandidate(
+	private function validate_retarget_candidate(
 		string $candidate,
-		string $currentSidecarPath,
-		string $replacementSidecarPath
+		string $current_sidecar_path,
+		string $replacement_sidecar_path
 	): void {
-		$this->validateCandidate( $candidate );
-		if ( null !== $this->buildRemovalCandidate( $candidate, $currentSidecarPath )
-			|| null === $this->buildRemovalCandidate( $candidate, $replacementSidecarPath )
+		$this->validate_candidate( $candidate );
+		if ( null !== $this->build_removal_candidate( $candidate, $current_sidecar_path )
+			|| null === $this->build_removal_candidate( $candidate, $replacement_sidecar_path )
 		) {
 			$this->fail( 'candidate_parse_failed', 'The edited WordPress configuration did not contain the expected replacement definition.' );
 		}
 	}
 
-	private function validateCandidate( string $candidate ): void {
+	private function validate_candidate( string $candidate ): void {
 		if ( strlen( $candidate ) > self::MAX_BYTES ) {
 			$this->fail( 'config_size_unsupported', 'The edited WordPress configuration would exceed the size limit.' );
 		}
 
 		$tokens = $this->tokens( $candidate );
-		if ( ! $this->containsLiteralConstantDefinition( $tokens ) ) {
+		if ( ! $this->contains_literal_constant_definition( $tokens ) ) {
 			$this->fail( 'candidate_parse_failed', 'The edited WordPress configuration did not contain the expected definition.' );
 		}
 
@@ -381,7 +402,7 @@ class WpConfigSecretsPathWriter {
 			if ( ! is_array( $token ) || T_STRING !== $token[0] || 0 !== strcasecmp( $token[1], 'define' ) ) {
 				continue;
 			}
-			$name = $this->literalDefineName( $tokens, $index );
+			$name = $this->literal_define_name( $tokens, $index );
 			if ( self::DIRECTORY_CONSTANT_NAME === $name ) {
 				++$definitions;
 			}
@@ -397,23 +418,23 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * @param array{contents: string, dev: int, ino: int, mode: int, uid: int, gid: int, nlink: int, size: int, mtime: int, ctime: int} $original
 	 */
-	private function replaceConfig( string $path, string $candidate, array $original ): void {
+	private function replace_config( string $path, string $candidate, array $original ): void {
 		$temporary = '';
 		$handle    = null;
 		$replaced  = null;
 
 		try {
 			list( $temporary, $handle ) = $this->createTemporary( dirname( $path ) );
-			$this->assertTemporaryHandle( $handle, $temporary );
+			$this->assert_temporary_handle( $handle, $temporary );
 			if ( ! $this->changePermissions( $temporary, 0600 ) ) {
 				$this->fail( 'temporary_permissions_failed', 'Could not secure the temporary WordPress configuration.' );
 			}
-			if ( ! $this->preserveOwnership( $temporary, $original['uid'], $original['gid'] ) ) {
+			if ( ! $this->preserve_ownership( $temporary, $original['uid'], $original['gid'] ) ) {
 				$this->fail( 'temporary_ownership_failed', 'Could not preserve WordPress configuration ownership.' );
 			}
-			$this->assertTemporaryHandle( $handle, $temporary );
+			$this->assert_temporary_handle( $handle, $temporary );
 
-			$this->writeAll( $handle, $candidate );
+			$this->write_all( $handle, $candidate );
 			if ( ! $this->flushHandle( $handle ) ) {
 				$this->fail( 'temporary_flush_failed', 'Could not flush the edited WordPress configuration.' );
 			}
@@ -428,13 +449,13 @@ class WpConfigSecretsPathWriter {
 				$this->fail( 'temporary_permissions_failed', 'Could not preserve WordPress configuration permissions.' );
 			}
 
-			$temporaryStat = fstat( $handle );
-			if ( false === $temporaryStat
-				|| 0100000 !== ( $temporaryStat['mode'] & 0170000 )
-				|| 1 !== $temporaryStat['nlink']
-				|| ( $original['mode'] & 0777 ) !== ( $temporaryStat['mode'] & 0777 )
-				|| $original['uid'] !== $temporaryStat['uid']
-				|| $original['gid'] !== $temporaryStat['gid']
+			$temporary_stat = fstat( $handle );
+			if ( false === $temporary_stat
+				|| 0100000 !== ( $temporary_stat['mode'] & 0170000 )
+				|| 1 !== $temporary_stat['nlink']
+				|| ( $original['mode'] & 0777 ) !== ( $temporary_stat['mode'] & 0777 )
+				|| $original['uid'] !== $temporary_stat['uid']
+				|| $original['gid'] !== $temporary_stat['gid']
 			) {
 				$this->fail( 'temporary_metadata_invalid', 'The edited WordPress configuration metadata could not be verified.' );
 			}
@@ -442,8 +463,8 @@ class WpConfigSecretsPathWriter {
 			$handle = null;
 
 			$this->beforeFinalConfigCheck( $path );
-			$current = $this->inspectConfigPath( $path );
-			if ( ! $this->sameSnapshot( $original, $current ) ) {
+			$current = $this->inspect_config_path( $path );
+			if ( ! $this->same_snapshot( $original, $current ) ) {
 				$this->fail( 'config_changed', 'The WordPress configuration changed while it was being edited.' );
 			}
 
@@ -451,28 +472,28 @@ class WpConfigSecretsPathWriter {
 				$this->fail( 'replace_failed', 'Could not atomically replace the WordPress configuration.' );
 			}
 			$temporary = '';
-			$replaced  = $temporaryStat;
+			$replaced  = $temporary_stat;
 
 			$installed = $this->readInstalled( $path );
 			if ( $candidate !== $installed['contents']
 				|| ( $original['mode'] & 0777 ) !== ( $installed['mode'] & 0777 )
 				|| $original['uid'] !== $installed['uid']
 				|| $original['gid'] !== $installed['gid']
-				|| ! $this->sameIdentity( $replaced, $installed )
+				|| ! $this->same_identity( $replaced, $installed )
 			) {
-				$this->attemptRollback( $path, $original, $replaced );
+				$this->attempt_rollback( $path, $original, $replaced );
 				$this->fail( 'replacement_readback_failed', 'The installed WordPress configuration failed verification.' );
 			}
 			$this->invalidateOpcodeCache( $path );
 		} catch ( WpConfigPathWriteException $exception ) {
 			if ( null !== $replaced ) {
-				$this->attemptRollback( $path, $original, $replaced );
+				$this->attempt_rollback( $path, $original, $replaced );
 			}
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The exception is propagated, not rendered.
 			throw $exception;
 		} catch ( Throwable $exception ) {
 			if ( null !== $replaced ) {
-				$this->attemptRollback( $path, $original, $replaced );
+				$this->attempt_rollback( $path, $original, $replaced );
 			}
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The previous exception is retained, not rendered.
 			throw new WpConfigPathWriteException(
@@ -494,22 +515,22 @@ class WpConfigSecretsPathWriter {
 	 * @param array{contents: string, dev: int, ino: int, mode: int, uid: int, gid: int, nlink: int, size: int, mtime: int, ctime: int} $original
 	 * @param array<string, int> $replaced
 	 */
-	private function attemptRollback( string $path, array $original, array $replaced ): void {
+	private function attempt_rollback( string $path, array $original, array $replaced ): void {
 		try {
 			$current = lstat( $path );
-			if ( false === $current || ! $this->sameIdentity( $replaced, $current ) || 1 !== $current['nlink'] ) {
+			if ( false === $current || ! $this->same_identity( $replaced, $current ) || 1 !== $current['nlink'] ) {
 				return;
 			}
 
 			list( $temporary, $handle ) = $this->createTemporary( dirname( $path ) );
 			try {
-				$this->assertTemporaryHandle( $handle, $temporary );
+				$this->assert_temporary_handle( $handle, $temporary );
 				if ( ! $this->changePermissions( $temporary, 0600 )
-					|| ! $this->preserveOwnership( $temporary, $original['uid'], $original['gid'] )
+					|| ! $this->preserve_ownership( $temporary, $original['uid'], $original['gid'] )
 				) {
 					return;
 				}
-				$this->writeAll( $handle, $original['contents'] );
+				$this->write_all( $handle, $original['contents'] );
 				if ( ! $this->flushHandle( $handle ) || ! $this->syncHandle( $handle ) ) {
 					return;
 				}
@@ -560,12 +581,12 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * @param list<array{0: int, 1: string, 2: int}|string> $tokens
 	 */
-	private function containsLiteralConstantDefinition( array $tokens ): bool {
+	private function contains_literal_constant_definition( array $tokens ): bool {
 		foreach ( $tokens as $index => $token ) {
 			if ( is_array( $token ) && T_CONST === $token[0] ) {
-				$constantAt = $index + 1;
-				$this->skipWhitespace( $tokens, $constantAt );
-				$name = $tokens[ $constantAt ] ?? null;
+				$constant_at = $index + 1;
+				$this->skip_whitespace( $tokens, $constant_at );
+				$name = $tokens[ $constant_at ] ?? null;
 				if ( is_array( $name )
 					&& T_STRING === $name[0]
 					&& in_array( $name[1], array( self::DIRECTORY_CONSTANT_NAME, self::UNSUPPORTED_FILE_CONSTANT_NAME ), true )
@@ -577,7 +598,7 @@ class WpConfigSecretsPathWriter {
 				continue;
 			}
 			if ( in_array(
-				$this->literalDefineName( $tokens, $index ),
+				$this->literal_define_name( $tokens, $index ),
 				array( self::DIRECTORY_CONSTANT_NAME, self::UNSUPPORTED_FILE_CONSTANT_NAME ),
 				true
 			) ) {
@@ -591,20 +612,20 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * @param list<array{0: int, 1: string, 2: int}|string> $tokens
 	 */
-	private function literalDefineName( array $tokens, int $defineAt ): ?string {
-		$index = $defineAt + 1;
-		$this->skipWhitespace( $tokens, $index );
+	private function literal_define_name( array $tokens, int $define_at ): ?string {
+		$index = $define_at + 1;
+		$this->skip_whitespace( $tokens, $index );
 		if ( '(' !== ( $tokens[ $index ] ?? null ) ) {
 			return null;
 		}
 		++$index;
-		$this->skipWhitespace( $tokens, $index );
+		$this->skip_whitespace( $tokens, $index );
 		$literal = $tokens[ $index ] ?? null;
 		if ( ! is_array( $literal ) || T_CONSTANT_ENCAPSED_STRING !== $literal[0] ) {
 			return null;
 		}
 
-		$value = $this->decodePhpStringLiteral( $literal[1] );
+		$value = $this->decode_php_string_literal( $literal[1] );
 
 		return is_string( $value ) ? $value : null;
 	}
@@ -612,7 +633,7 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * @param list<array{0: int, 1: string, 2: int}|string> $tokens
 	 */
-	private function skipWhitespace( array $tokens, int &$index ): void {
+	private function skip_whitespace( array $tokens, int &$index ): void {
 		while ( isset( $tokens[ $index ] )
 			&& is_array( $tokens[ $index ] )
 			&& T_WHITESPACE === $tokens[ $index ][0]
@@ -621,7 +642,7 @@ class WpConfigSecretsPathWriter {
 		}
 	}
 
-	private function decodePhpStringLiteral( string $literal ): ?string {
+	private function decode_php_string_literal( string $literal ): ?string {
 		if ( strlen( $literal ) < 2 ) {
 			return null;
 		}
@@ -640,23 +661,23 @@ class WpConfigSecretsPathWriter {
 		return null;
 	}
 
-	private function exportPhpString( string $value ): string {
+	private function export_php_string( string $value ): string {
 		return "'" . str_replace( array( '\\', "'" ), array( '\\\\', "\\'" ), $value ) . "'";
 	}
 
-	private function lineEnding( string $contents ): string {
-		$withoutCrLf = str_replace( "\r\n", '', $contents );
-		if ( str_contains( $withoutCrLf, "\r" ) ) {
+	private function line_ending( string $contents ): string {
+		$without_cr_lf = str_replace( "\r\n", '', $contents );
+		if ( str_contains( $without_cr_lf, "\r" ) ) {
 			$this->fail( 'line_endings_unsupported', 'The WordPress configuration uses unsupported line endings.' );
 		}
-		if ( str_contains( $contents, "\r\n" ) && str_contains( $withoutCrLf, "\n" ) ) {
+		if ( str_contains( $contents, "\r\n" ) && str_contains( $without_cr_lf, "\n" ) ) {
 			$this->fail( 'line_endings_unsupported', 'The WordPress configuration uses mixed line endings.' );
 		}
 
 		return str_contains( $contents, "\r\n" ) ? "\r\n" : "\n";
 	}
 
-	private function assertAbsoluteSafePath( string $path, string $reason ): void {
+	private function assert_absolute_safe_path( string $path, string $reason ): void {
 		if ( '' === $path
 			|| '/' !== $path[0]
 			|| str_contains( $path, "\0" )
@@ -673,7 +694,7 @@ class WpConfigSecretsPathWriter {
 	 * @param array<string, int|string> $first
 	 * @param array<string, int|string> $second
 	 */
-	private function sameSnapshot( array $first, array $second ): bool {
+	private function same_snapshot( array $first, array $second ): bool {
 		return $first === $second;
 	}
 
@@ -681,7 +702,7 @@ class WpConfigSecretsPathWriter {
 	 * @param array<string, int> $first
 	 * @param array<string, int> $second
 	 */
-	private function sameIdentity( array $first, array $second ): bool {
+	private function same_identity( array $first, array $second ): bool {
 		return $first['dev'] === $second['dev']
 			&& $first['ino'] === $second['ino']
 			&& 0100000 === ( $second['mode'] & 0170000 )
@@ -692,7 +713,7 @@ class WpConfigSecretsPathWriter {
 	 * @param array<string, int> $first
 	 * @param array<string, int> $second
 	 */
-	private function sameMetadata( array $first, array $second ): bool {
+	private function same_metadata( array $first, array $second ): bool {
 		foreach ( array( 'dev', 'ino', 'mode', 'uid', 'gid', 'nlink', 'size', 'mtime', 'ctime' ) as $key ) {
 			if ( $first[ $key ] !== $second[ $key ] ) {
 				return false;
@@ -705,13 +726,13 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * @param resource $lock
 	 */
-	private function assertLockHandle( mixed $lock, string $path ): void {
-		$pathStat = lstat( $path );
-		$lockStat = fstat( $lock );
-		if ( false === $pathStat
-			|| false === $lockStat
-			|| ! $this->sameIdentity( $pathStat, $lockStat )
-			|| ( function_exists( 'posix_geteuid' ) && posix_geteuid() !== $pathStat['uid'] )
+	private function assert_lock_handle( mixed $lock, string $path ): void {
+		$path_stat = lstat( $path );
+		$lock_stat = fstat( $lock );
+		if ( false === $path_stat
+			|| false === $lock_stat
+			|| ! $this->same_identity( $path_stat, $lock_stat )
+			|| ( function_exists( 'posix_geteuid' ) && posix_geteuid() !== $path_stat['uid'] )
 		) {
 			$this->fail( 'lock_invalid', 'The WordPress configuration edit lock is not safe.' );
 		}
@@ -720,7 +741,7 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * @param resource $handle
 	 */
-	private function writeAll( mixed $handle, string $contents ): void {
+	private function write_all( mixed $handle, string $contents ): void {
 		$offset = 0;
 		$length = strlen( $contents );
 		while ( $offset < $length ) {
@@ -735,15 +756,15 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * @param resource $handle
 	 */
-	private function assertTemporaryHandle( mixed $handle, string $path ): void {
-		$pathStat   = lstat( $path );
-		$handleStat = fstat( $handle );
-		if ( false === $pathStat || false === $handleStat || ! $this->sameIdentity( $pathStat, $handleStat ) ) {
+	private function assert_temporary_handle( mixed $handle, string $path ): void {
+		$path_stat   = lstat( $path );
+		$handle_stat = fstat( $handle );
+		if ( false === $path_stat || false === $handle_stat || ! $this->same_identity( $path_stat, $handle_stat ) ) {
 			$this->fail( 'temporary_file_invalid', 'The temporary WordPress configuration is not safe.' );
 		}
 	}
 
-	private function preserveOwnership( string $path, int $uid, int $gid ): bool {
+	private function preserve_ownership( string $path, int $uid, int $gid ): bool {
 		$stat = lstat( $path );
 		if ( false === $stat ) {
 			return false;
@@ -761,11 +782,14 @@ class WpConfigSecretsPathWriter {
 		return false !== $stat && $stat['uid'] === $uid && $stat['gid'] === $gid;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase, WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 	protected function beforeFinalConfigCheck( string $configPath ): void {
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase, WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 	protected function invalidateOpcodeCache( string $configPath ): void {
 		if ( function_exists( 'opcache_invalidate' ) ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 			opcache_invalidate( $configPath, true );
 		}
 	}
@@ -773,6 +797,7 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * @return resource
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function openConfigForRead( string $path ): mixed {
 		$handle = fopen( $path, 'rb' );
 		if ( false === $handle ) {
@@ -785,6 +810,7 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * @return resource
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function openLock( string $path ): mixed {
 		if ( is_link( $path ) ) {
 			$this->fail( 'lock_invalid', 'The WordPress configuration edit lock is not safe.' );
@@ -800,6 +826,7 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * @param resource $lock
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function acquireLock( mixed $lock ): bool {
 		return flock( $lock, LOCK_EX );
 	}
@@ -807,6 +834,7 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * @param resource $lock
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function releaseLock( mixed $lock ): void {
 		flock( $lock, LOCK_UN );
 	}
@@ -814,6 +842,7 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * @return array{0: string, 1: resource}
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function createTemporary( string $directory ): array {
 		for ( $attempt = 0; $attempt < 8; ++$attempt ) {
 			$path   = $directory . '/' . self::TEMP_PREFIX . bin2hex( random_bytes( 12 ) ) . '.php';
@@ -826,14 +855,17 @@ class WpConfigSecretsPathWriter {
 		$this->fail( 'temporary_create_failed', 'Could not create a private temporary WordPress configuration.' );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function changePermissions( string $path, int $mode ): bool {
 		return chmod( $path, $mode );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function changeOwner( string $path, int $uid ): bool {
 		return chown( $path, $uid );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function changeGroup( string $path, int $gid ): bool {
 		return chgrp( $path, $gid );
 	}
@@ -841,6 +873,7 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * @param resource $handle
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function writeHandle( mixed $handle, string $contents ): int|false {
 		return fwrite( $handle, $contents );
 	}
@@ -848,6 +881,7 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * @param resource $handle
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function flushHandle( mixed $handle ): bool {
 		return fflush( $handle );
 	}
@@ -855,14 +889,17 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * @param resource $handle
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function syncHandle( mixed $handle ): bool {
 		return ! function_exists( 'fsync' ) || fsync( $handle );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function readBack( string $path ): string|false {
 		return file_get_contents( $path );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function replacePath( string $source, string $destination ): bool {
 		return rename( $source, $destination );
 	}
@@ -870,8 +907,9 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * @return array{contents: string, dev: int, ino: int, mode: int, uid: int, gid: int, nlink: int, size: int, mtime: int, ctime: int}
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	protected function readInstalled( string $path ): array {
-		$snapshot = $this->inspectConfigPath( $path );
+		$snapshot = $this->inspect_config_path( $path );
 		$this->tokens( $snapshot['contents'] );
 
 		return $snapshot;

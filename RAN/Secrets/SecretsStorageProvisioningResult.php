@@ -27,45 +27,45 @@ final readonly class SecretsStorageProvisioningResult {
 		private string $status,
 		private string $code,
 		private string $message,
-		private ?string $candidatePath,
-		private ?string $pathSource = null,
-		private array $discardedCandidates = array()
+		private ?string $candidate_path,
+		private ?string $path_source = null,
+		private array $discarded_candidates = array()
 	) {
 	}
 
-	public static function pathConfigured( string $candidatePath, string $pathSource ): self {
+	public static function path_configured( string $candidate_path, string $path_source ): self {
 		return new self(
 			self::PATH_CONFIGURED,
 			'path_configured',
 			__( 'The private storage path is configured. Booster will initialize it when you save the first credential.', 'ran-booster' ),
-			$candidatePath,
-			$pathSource
+			$candidate_path,
+			$path_source
 		);
 	}
 
-	public static function storageHealthy( string $candidatePath, string $pathSource ): self {
+	public static function storage_healthy( string $candidate_path, string $path_source ): self {
 		return new self(
 			self::STORAGE_HEALTHY,
 			'storage_healthy',
 			__( 'Encrypted secrets storage is configured and authenticated.', 'ran-booster' ),
-			$candidatePath,
-			$pathSource
+			$candidate_path,
+			$path_source
 		);
 	}
 
-	public static function storageReset( string $candidatePath, string $pathSource ): self {
+	public static function storage_reset( string $candidate_path, string $path_source ): self {
 		return new self(
 			self::PATH_CONFIGURED,
 			'storage_reset',
 			__( 'Incomplete credential storage was reset. Booster will initialize fresh encrypted storage when you next save or import a credential.', 'ran-booster' ),
-			$candidatePath,
-			$pathSource
+			$candidate_path,
+			$path_source
 		);
 	}
 
-	public static function storageNeedsAttention(
-		string $candidatePath,
-		string $pathSource,
+	public static function storage_needs_attention(
+		string $candidate_path,
+		string $path_source,
 		string $code = 'storage_needs_attention',
 		string $message = 'Encrypted secrets storage is incomplete, unreadable or could not be authenticated.'
 	): self {
@@ -77,41 +77,41 @@ final readonly class SecretsStorageProvisioningResult {
 			self::STORAGE_NEEDS_ATTENTION,
 			$code,
 			$message,
-			$candidatePath,
-			$pathSource
+			$candidate_path,
+			$path_source
 		);
 	}
 
-	public static function setupAvailable( string $candidatePath ): self {
+	public static function setup_available( string $candidate_path ): self {
 		return new self(
 			self::SETUP_AVAILABLE,
 			'setup_available',
 			__( 'Booster can create secure encrypted secrets storage.', 'ran-booster' ),
-			$candidatePath,
+			$candidate_path,
 			self::PATH_SOURCE_AUTOMATIC
 		);
 	}
 
-	/** @param list<array{directory:string,code:string,reason:string,component:string|null}> $discardedCandidates */
-	public static function manualRequired(
+	/** @param list<array{directory:string,code:string,reason:string,component:string|null}> $discarded_candidates */
+	public static function manual_required(
 		string $code,
 		string $message,
-		?string $candidatePath = null,
-		array $discardedCandidates = array()
+		?string $candidate_path = null,
+		array $discarded_candidates = array()
 	): self {
-		return new self( self::MANUAL_REQUIRED, $code, $message, $candidatePath, null, $discardedCandidates );
+		return new self( self::MANUAL_REQUIRED, $code, $message, $candidate_path, null, $discarded_candidates );
 	}
 
 	public static function unsupported( string $code, string $message ): self {
 		return new self( self::UNSUPPORTED, $code, $message, null );
 	}
 
-	public static function pendingVerification( string $candidatePath ): self {
+	public static function pending_verification( string $candidate_path ): self {
 		return new self(
 			self::PENDING_VERIFICATION,
 			'pending_verification',
 			__( 'WordPress must reload before the encrypted secrets path can be trusted.', 'ran-booster' ),
-			$candidatePath,
+			$candidate_path,
 			self::PATH_SOURCE_AUTOMATIC
 		);
 	}
@@ -128,20 +128,20 @@ final readonly class SecretsStorageProvisioningResult {
 		return $this->message;
 	}
 
-	public function candidatePath(): ?string {
-		return $this->candidatePath;
+	public function candidate_path(): ?string {
+		return $this->candidate_path;
 	}
 
-	public function pathSource(): ?string {
-		return $this->pathSource;
+	public function path_source(): ?string {
+		return $this->path_source;
 	}
 
 	/** @return list<array{directory:string,code:string,reason:string,component:string|null}> */
-	public function discardedCandidates(): array {
-		return $this->discardedCandidates;
+	public function discarded_candidates(): array {
+		return $this->discarded_candidates;
 	}
 
-	public function hasConfiguredPath(): bool {
+	public function has_configured_path(): bool {
 		return in_array(
 			$this->status,
 			array( self::PATH_CONFIGURED, self::STORAGE_HEALTHY, self::STORAGE_NEEDS_ATTENTION ),
@@ -149,11 +149,11 @@ final readonly class SecretsStorageProvisioningResult {
 		);
 	}
 
-	public function canProvisionAutomatically(): bool {
+	public function can_provision_automatically(): bool {
 		return self::SETUP_AVAILABLE === $this->status;
 	}
 
-	public function requiresNextRequestVerification(): bool {
+	public function requires_next_request_verification(): bool {
 		return self::PENDING_VERIFICATION === $this->status;
 	}
 }

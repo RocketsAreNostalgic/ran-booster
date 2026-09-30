@@ -155,7 +155,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			};
 			self::fail( 'Managed secret use must fail closed when the runtime is unsupported.' );
 		} catch ( SecretsStorageUnavailable $failure ) {
-			self::assertSame( 'local_secret_store_unavailable', $failure->getDiagnosticId() );
+			self::assertSame( 'local_secret_store_unavailable', $failure->get_diagnostic_id() );
 			self::assertStringContainsString( 'Sodium extension is missing', $failure->getMessage() );
 			self::assertStringNotContainsString( 'secret-canary', $failure->getMessage() );
 			self::assertStringNotContainsString( '/srv/', $failure->getMessage() );
@@ -215,12 +215,12 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 	public function testConfirmedUninstallGetsADeletionOnlySingleSiteAvailabilityContext(): void {
 		define( 'WP_UNINSTALL_PLUGIN', 'renamed-booster/ran-booster.php' );
 
-		$availability = SecretsRuntimeAvailability::forConfirmedUninstall(
-			'/srv/wp-content/plugins/renamed-booster/ran-booster.php'
+		$availability = SecretsRuntimeAvailability::for_confirmed_uninstall(
+			plugin_file: '/srv/wp-content/plugins/renamed-booster/ran-booster.php'
 		);
 
 		self::assertSame( 'available', $availability->code() );
-		self::assertTrue( $availability->isAvailable() );
+		self::assertTrue( $availability->is_available() );
 	}
 
 	#[RunInSeparateProcess]
@@ -230,7 +230,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 
 		$this->expectException( \LogicException::class );
 		$this->expectExceptionMessage( 'cleanup context is unavailable' );
-		SecretsRuntimeAvailability::forConfirmedUninstall(
+		SecretsRuntimeAvailability::for_confirmed_uninstall(
 			'/srv/wp-content/plugins/ran-booster/ran-booster.php'
 		);
 	}
@@ -240,7 +240,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 	public function testConfirmedUninstallRejectsAMissingWordPressIdentity(): void {
 		$this->expectException( \LogicException::class );
 		$this->expectExceptionMessage( 'cleanup context is unavailable' );
-		SecretsRuntimeAvailability::forConfirmedUninstall(
+		SecretsRuntimeAvailability::for_confirmed_uninstall(
 			'/srv/wp-content/plugins/ran-booster/ran-booster.php'
 		);
 	}
@@ -271,7 +271,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			$path,
 			$keyStore,
 			$codec,
-			SecretsRuntimeAvailability::forConfirmedUninstall(
+			SecretsRuntimeAvailability::for_confirmed_uninstall(
 				'/srv/wp-content/plugins/renamed-booster/ran-booster.php'
 			)
 		);
@@ -314,7 +314,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 				$path,
 				$keyStore,
 				$codec,
-				SecretsRuntimeAvailability::forConfirmedUninstall(
+				SecretsRuntimeAvailability::for_confirmed_uninstall(
 					'/srv/wp-content/plugins/ran-booster/ran-booster.php'
 				)
 			)->assertManagedStorageDeletable();

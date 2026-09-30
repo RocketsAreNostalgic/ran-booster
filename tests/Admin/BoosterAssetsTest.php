@@ -552,7 +552,7 @@ final class BoosterAssetsTest extends TestCase {
 				public function __construct( private bool $visible, private bool $dismissible ) {
 				}
 
-				public function shouldLoadDismissalScript(): bool {
+				public function should_load_dismissal_script(): bool {
 					return $this->visible && $this->dismissible;
 				}
 			}

@@ -34,15 +34,15 @@ final readonly class ManagedPluginFailureRows {
 			if ( ! $plugin instanceof Package || ! is_string( $plugin->getIdentifier() ) || ! is_string( $plugin->getSlug() ) ) {
 				continue;
 			}
-			$failure = $this->monitor->forPackage( 'plugin', $plugin->getSlug() );
+			$failure = $this->monitor->for_package( 'plugin', $plugin->getSlug() );
 			if ( null === $failure ) {
 				continue;
 			}
 			$file = $plugin->getIdentifier();
 			add_action(
 				'after_plugin_row_' . $file,
-				function ( string $pluginFile ) use ( $failure ): void {
-					$this->render( $pluginFile, $failure );
+				function ( string $plugin_file ) use ( $failure ): void {
+					$this->render( $plugin_file, $failure );
 				},
 				10,
 				1
@@ -51,23 +51,23 @@ final readonly class ManagedPluginFailureRows {
 	}
 
 	/** @param array<string, int|string|null> $failure */
-	private function render( string $pluginFile, array $failure ): void {
+	private function render( string $plugin_file, array $failure ): void {
 		global $wp_list_table;
 
 		$columns = is_object( $wp_list_table ) && method_exists( $wp_list_table, 'get_column_count' )
 			? max( 1, (int) $wp_list_table->get_column_count() )
 			: 4;
-		$active  = function_exists( 'is_plugin_active' ) && is_plugin_active( $pluginFile ) ? ' active' : '';
+		$active  = function_exists( 'is_plugin_active' ) && is_plugin_active( $plugin_file ) ? ' active' : '';
 		?>
-		<tr class="plugin-update-tr<?php echo esc_attr( $active ); ?>" data-plugin="<?php echo esc_attr( $pluginFile ); ?>" data-ran-booster-background-failure-row>
+		<tr class="plugin-update-tr<?php echo esc_attr( $active ); ?>" data-plugin="<?php echo esc_attr( $plugin_file ); ?>" data-ran-booster-background-failure-row>
 			<td colspan="<?php echo esc_attr( (string) $columns ); ?>" class="plugin-update colspanchange">
 				<div class="update-message notice inline notice-error notice-alt">
 					<p>
 						<strong><?php esc_html_e( 'RAN Booster automatic deployment failed.', 'ran-booster' ); ?></strong>
-						<?php echo esc_html( DeploymentOutcomeMessage::forCode( (string) $failure['outcome_code'] ) ); ?>
-						<a href="<?php echo esc_url( $this->activityUrl( $failure ) ); ?>"><?php esc_html_e( 'Review deployment', 'ran-booster' ); ?></a>
+						<?php echo esc_html( DeploymentOutcomeMessage::for_code( (string) $failure['outcome_code'] ) ); ?>
+						<a href="<?php echo esc_url( $this->activity_url( $failure ) ); ?>"><?php esc_html_e( 'Review deployment', 'ran-booster' ); ?></a>
 						<?php if ( is_string( $failure['credential_id'] ) && '' !== $failure['credential_id'] ) { ?>
-							<a href="<?php echo esc_url( $this->credentialUrl( $failure ) ); ?>"><?php esc_html_e( 'Replace credential', 'ran-booster' ); ?></a>
+							<a href="<?php echo esc_url( $this->credential_url( $failure ) ); ?>"><?php esc_html_e( 'Replace credential', 'ran-booster' ); ?></a>
 						<?php } ?>
 					</p>
 				</div>
@@ -77,7 +77,7 @@ final readonly class ManagedPluginFailureRows {
 	}
 
 	/** @param array<string, int|string|null> $failure */
-	private function activityUrl( array $failure ): string {
+	private function activity_url( array $failure ): string {
 		return admin_url(
 			'admin.php?page=ran-booster&tab=troubleshooting&panel=activity'
 			. '&attempt=' . rawurlencode( (string) $failure['attempt_id'] )
@@ -86,7 +86,7 @@ final readonly class ManagedPluginFailureRows {
 	}
 
 	/** @param array<string, int|string|null> $failure */
-	private function credentialUrl( array $failure ): string {
+	private function credential_url( array $failure ): string {
 		return admin_url(
 			'admin.php?page=ran-booster&tab=' . rawurlencode( (string) $failure['provider'] )
 			. '&replace_credential=' . rawurlencode( (string) $failure['credential_id'] )

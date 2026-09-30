@@ -15,6 +15,7 @@ final class WordPressOrgUpdateRequestFilter {
 		private Database $database,
 		private PluginRepository $plugins,
 		private ThemeRepository $themes,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public constructor named-argument contract.
 		private string $boosterPlugin
 	) {
 	}
@@ -30,7 +31,7 @@ final class WordPressOrgUpdateRequestFilter {
 	private function filter( mixed $args, mixed $url, string $type ): mixed {
 		$key = $type . 's';
 		if ( ! is_string( $url )
-			|| ! $this->isUpdateEndpoint( $url, $key )
+			|| ! $this->is_update_endpoint( $url, $key )
 			|| ! is_array( $args )
 			|| ! is_array( $args['body'] ?? null )
 			|| ! is_string( $args['body'][ $key ] ?? null ) ) {
@@ -59,6 +60,7 @@ final class WordPressOrgUpdateRequestFilter {
 		}
 
 		if ( 'plugin' === $type ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- The promoted constructor property retains its public argument name.
 			$managed[] = $this->boosterPlugin;
 			$removed   = false;
 			foreach ( $managed as $package ) {
@@ -91,7 +93,7 @@ final class WordPressOrgUpdateRequestFilter {
 		return $args;
 	}
 
-	private function isUpdateEndpoint( string $url, string $key ): bool {
+	private function is_update_endpoint( string $url, string $key ): bool {
 		$parts = wp_parse_url( $url );
 		if ( false === $parts
 			|| ! isset( $parts['scheme'], $parts['host'], $parts['path'] )

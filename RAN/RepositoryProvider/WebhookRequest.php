@@ -27,7 +27,7 @@ final class WebhookRequest {
 	/**
 	 * @var array<string, list<string>>
 	 */
-	private array $rawHeaders;
+	private array $raw_headers;
 
 	private ?SignedWebhookVerification $verification = null;
 
@@ -39,40 +39,43 @@ final class WebhookRequest {
 		private ProviderCode $provider,
 		private string $body,
 		array $headers,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		array $retainedHeaders
 	) {
 		if ( strlen( $body ) > self::MAX_BODY_BYTES ) {
 			throw new WebhookRejected( 413, 'Webhook request is too large.' );
 		}
 
-		$retainedHeaders = $this->validateRetainedHeaders( $retainedHeaders );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
+		$retainedHeaders = $this->validate_retained_headers( $retainedHeaders );
 		$normalized      = array();
 		$retained        = array();
-		$retainedBytes   = 0;
+		$retained_bytes  = 0;
 
 		foreach ( $headers as $name => $value ) {
 			if ( ! is_string( $name ) ) {
 				throw new InvalidArgumentException( 'Webhook header names must be strings.' );
 			}
 
-			$name = $this->normalizeHeaderName( $name );
+			$name = $this->normalize_header_name( $name );
 
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 			if ( ! in_array( $name, $retainedHeaders, true ) ) {
 				continue;
 			}
 
 			$values = is_array( $value ) ? $value : array( $value );
-			foreach ( $values as $rawValue ) {
-				if ( ! is_string( $rawValue ) || strlen( $rawValue ) > self::MAX_HEADER_BYTES ) {
+			foreach ( $values as $raw_value ) {
+				if ( ! is_string( $raw_value ) || strlen( $raw_value ) > self::MAX_HEADER_BYTES ) {
 					throw new InvalidArgumentException( 'Webhook header values are too large.' );
 				}
 
-				$retainedBytes += strlen( $name ) + strlen( $rawValue );
-				if ( $retainedBytes > self::MAX_RETAINED_BYTES ) {
+				$retained_bytes += strlen( $name ) + strlen( $raw_value );
+				if ( $retained_bytes > self::MAX_RETAINED_BYTES ) {
 					throw new InvalidArgumentException( 'Webhook retained headers are too large.' );
 				}
 			}
-			$value = $this->normalizeHeaderValue( $values );
+			$value = $this->normalize_header_value( $values );
 
 			$retained[ $name ] ??= array();
 			array_push( $retained[ $name ], ...$values );
@@ -84,18 +87,21 @@ final class WebhookRequest {
 			$normalized[ $name ] = $value;
 		}
 
-		$this->headers    = $normalized;
-		$this->rawHeaders = $retained;
+		$this->headers     = $normalized;
+		$this->raw_headers = $retained;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function getProvider(): ProviderCode {
 		return $this->provider;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function getBody(): string {
 		return $this->body;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function withVerification( SignedWebhookVerification $verification ): self {
 		if ( ! $verification->getProvider()->equals( $this->provider ) ) {
 			throw new InvalidArgumentException( 'Webhook verification provider does not match the request.' );
@@ -107,6 +113,7 @@ final class WebhookRequest {
 		return $verified;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function requireVerification(): SignedWebhookVerification {
 		if ( null === $this->verification ) {
 			throw new WebhookRejected( 401, 'Webhook authentication failed.' );
@@ -115,8 +122,9 @@ final class WebhookRequest {
 		return $this->verification;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function getHeader( string $name ): ?string {
-		return $this->headers[ $this->normalizeHeaderName( $name ) ] ?? null;
+		return $this->headers[ $this->normalize_header_name( $name ) ] ?? null;
 	}
 
 	/**
@@ -124,11 +132,12 @@ final class WebhookRequest {
 	 *
 	 * @return list<string>
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function getRawHeaderValues( string $name ): array {
-		return $this->rawHeaders[ $this->normalizeHeaderName( $name ) ] ?? array();
+		return $this->raw_headers[ $this->normalize_header_name( $name ) ] ?? array();
 	}
 
-	private function normalizeHeaderName( string $name ): string {
+	private function normalize_header_name( string $name ): string {
 		return str_replace( '_', '-', strtolower( trim( $name ) ) );
 	}
 
@@ -136,7 +145,7 @@ final class WebhookRequest {
 	 * @param list<string> $headers Provider-owned canonical header names.
 	 * @return list<string>
 	 */
-	private function validateRetainedHeaders( array $headers ): array {
+	private function validate_retained_headers( array $headers ): array {
 		if ( count( $headers ) > self::MAX_RETAINED_HEADERS ) {
 			throw new InvalidArgumentException( 'Webhook header policy is too large.' );
 		}
@@ -144,7 +153,7 @@ final class WebhookRequest {
 		$normalized = array();
 		foreach ( $headers as $header ) {
 			if ( ! is_string( $header )
-				|| $header !== $this->normalizeHeaderName( $header )
+				|| $header !== $this->normalize_header_name( $header )
 				|| 1 !== preg_match( '/\A[a-z0-9]+(?:-[a-z0-9]+)*\z/D', $header )
 				|| in_array( $header, self::SENSITIVE_HEADERS, true )
 				|| isset( $normalized[ $header ] )
@@ -161,7 +170,7 @@ final class WebhookRequest {
 	/**
 	 * @param list<string> $values Header values from WordPress.
 	 */
-	private function normalizeHeaderValue( array $values ): string {
+	private function normalize_header_value( array $values ): string {
 		foreach ( $values as $value ) {
 			if ( ! is_string( $value ) ) {
 				throw new InvalidArgumentException( 'Webhook header values must be strings.' );

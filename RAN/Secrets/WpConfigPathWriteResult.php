@@ -15,7 +15,7 @@ final readonly class WpConfigPathWriteResult {
 		return self::STATUS_PENDING_VERIFICATION;
 	}
 
-	public function requiresNextRequestVerification(): bool {
+	public function requires_next_request_verification(): bool {
 		return true;
 	}
 }

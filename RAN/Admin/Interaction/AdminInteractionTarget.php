@@ -16,22 +16,23 @@ enum AdminInteractionTarget: string {
 	public function key( ?string $instance = null ): string {
 		return match ( $this ) {
 			self::PROVIDER_REPOSITORIES        => $this->value,
-			self::TRANSPORTER_MIGRATION_SOURCE => $this->value . '_' . $this->migrationInstance( $instance ),
+			self::TRANSPORTER_MIGRATION_SOURCE => $this->value . '_' . $this->migration_instance( $instance ),
 		};
 	}
 
 	public function selector( ?string $instance = null ): string {
 		return match ( $this ) {
 			self::PROVIDER_REPOSITORIES        => '#ran-booster-provider-task-panel',
-			self::TRANSPORTER_MIGRATION_SOURCE => '#ran-booster-transporter-migration-source-' . $this->migrationInstance( $instance ),
+			self::TRANSPORTER_MIGRATION_SOURCE => '#ran-booster-transporter-migration-source-' . $this->migration_instance( $instance ),
 		};
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public interaction methods retain the existing connected caller and callback contracts.
 	public function elementId( ?string $instance = null ): string {
 		return substr( $this->selector( $instance ), 1 );
 	}
 
-	private function migrationInstance( ?string $instance ): string {
+	private function migration_instance( ?string $instance ): string {
 		if ( 1 !== preg_match( '/^[a-f0-9]{32}$/', (string) $instance ) ) {
 			throw new \InvalidArgumentException( 'Transporter migration targets require a Core-derived row instance.' );
 		}

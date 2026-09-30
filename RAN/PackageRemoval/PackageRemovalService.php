@@ -26,7 +26,9 @@ final readonly class PackageRemovalService {
 		private ThemeRepository $themes,
 		private PackageRemovalGateway $wordpress,
 		private ?DeploymentAttemptRepository $attempts,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		private WordPressUpdaterLock $updaterLock,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		private ?RepositoryBranchCheckEvidenceStore $branchCheckEvidence = null
 	) {
 	}
@@ -43,9 +45,10 @@ final readonly class PackageRemovalService {
 			PackageMutationGuard::assert_filesystem_mutation_allowed();
 		}
 		try {
-			$lockToken = $this->updaterLock->acquire();
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor properties retain the existing public named-parameter contract.
+			$lock_token = $this->updaterLock->acquire();
 		} catch ( Throwable $failure ) {
-			$this->logFailure( $failure, 'package_removal_lock_acquire' );
+			$this->log_failure( $failure, 'package_removal_lock_acquire' );
 			return PackageRemovalResult::failed( 'operation_in_progress' );
 		}
 
@@ -64,28 +67,29 @@ final readonly class PackageRemovalService {
 				) ) {
 				$result = PackageRemovalResult::failed( 'operation_in_progress' );
 			} else {
-				$blocker = $this->deletionBlocker( $operation->package_type, $identifier );
+				$blocker = $this->deletion_blocker( $operation->package_type, $identifier );
 				if ( null !== $blocker ) {
 					$result = PackageRemovalResult::failed( $blocker );
 				} else {
 					$this->disable( $operation->package_type, $package );
 					$result = 'plugin' === $operation->package_type
-						? $this->deletePlugin( $identifier, $package )
-						: $this->deleteTheme( $identifier, $package );
+						? $this->delete_plugin( $identifier, $package )
+						: $this->delete_theme( $identifier, $package );
 				}
 			}
 		} catch ( Throwable $failure ) {
 			if ( 'unlink' === $operation->operation ) {
 				throw $failure;
 			}
-			$this->logFailure( $failure, 'package_removal_state' );
+			$this->log_failure( $failure, 'package_removal_state' );
 		} finally {
 			try {
-				if ( ! $this->updaterLock->release( $lockToken ) ) {
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor properties retain the existing public named-parameter contract.
+				if ( ! $this->updaterLock->release( $lock_token ) ) {
 					$result = PackageRemovalResult::failed( 'operation_lock_failed' );
 				}
 			} catch ( Throwable $failure ) {
-				$this->logFailure( $failure, 'package_removal_lock_release' );
+				$this->log_failure( $failure, 'package_removal_lock_release' );
 				$result = PackageRemovalResult::failed( 'operation_lock_failed' );
 			}
 		}
@@ -93,19 +97,19 @@ final readonly class PackageRemovalService {
 		return $result;
 	}
 
-	private function deletePlugin( string $identifier, Package $package ): PackageRemovalResult {
+	private function delete_plugin( string $identifier, Package $package ): PackageRemovalResult {
 		if ( $this->wordpress->pluginIsActive( $identifier ) ) {
 			try {
 				$this->wordpress->deactivatePlugin( $identifier );
 			} catch ( Throwable $failure ) {
-				$this->logFailure( $failure, 'plugin_deactivation' );
+				$this->log_failure( $failure, 'plugin_deactivation' );
 			}
 			if ( $this->wordpress->pluginIsActive( $identifier ) ) {
 				return PackageRemovalResult::failed( 'deactivation_failed' );
 			}
 		}
 
-		return $this->deleteFiles(
+		return $this->delete_files(
 			'plugin',
 			$identifier,
 			$package,
@@ -113,8 +117,8 @@ final readonly class PackageRemovalService {
 		);
 	}
 
-	private function deleteTheme( string $stylesheet, Package $package ): PackageRemovalResult {
-		return $this->deleteFiles(
+	private function delete_theme( string $stylesheet, Package $package ): PackageRemovalResult {
+		return $this->delete_files(
 			'theme',
 			$stylesheet,
 			$package,
@@ -125,22 +129,22 @@ final readonly class PackageRemovalService {
 	/**
 	 * @param callable(): bool $delete
 	 */
-	private function deleteFiles( string $type, string $identifier, Package $package, callable $delete ): PackageRemovalResult {
-		$reportedSuccess = false;
+	private function delete_files( string $type, string $identifier, Package $package, callable $delete ): PackageRemovalResult {
+		$reported_success = false;
 		try {
-			$reportedSuccess = $delete();
+			$reported_success = $delete();
 		} catch ( Throwable $failure ) {
-			$this->logFailure( $failure, $type . '_deletion' );
+			$this->log_failure( $failure, $type . '_deletion' );
 		}
 
-		if ( $this->isInstalled( $type, $identifier ) ) {
-			return PackageRemovalResult::failed( $reportedSuccess ? 'files_still_present' : 'deletion_failed' );
+		if ( $this->is_installed( $type, $identifier ) ) {
+			return PackageRemovalResult::failed( $reported_success ? 'files_still_present' : 'deletion_failed' );
 		}
 
 		try {
 			$this->unlink( $type, $identifier, $package );
 		} catch ( Throwable $failure ) {
-			$this->logFailure( $failure, 'management_unlink_after_deletion' );
+			$this->log_failure( $failure, 'management_unlink_after_deletion' );
 
 			return PackageRemovalResult::failed( 'management_state_uncertain' );
 		}
@@ -155,7 +159,7 @@ final readonly class PackageRemovalService {
 		$result->require_success();
 	}
 
-	private function deletionBlocker( string $type, string $identifier ): ?string {
+	private function deletion_blocker( string $type, string $identifier ): ?string {
 		if ( 'plugin' === $type ) {
 			if ( ! $this->wordpress->pluginPathIsSafe( $identifier ) ) {
 				return 'unsafe_path';
@@ -184,6 +188,7 @@ final readonly class PackageRemovalService {
 	}
 
 	private function unlink( string $type, string $identifier, Package $package ): void {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor properties retain the existing public named-parameter contract.
 		$this->branchCheckEvidence?->clear( $type, $package );
 		$result = 'plugin' === $type
 			? $this->plugins->unlink( $identifier )
@@ -191,13 +196,13 @@ final readonly class PackageRemovalService {
 		$result->require_success();
 	}
 
-	private function isInstalled( string $type, string $identifier ): bool {
+	private function is_installed( string $type, string $identifier ): bool {
 		return 'plugin' === $type
 			? $this->plugins->isInstalled( $identifier )
 			: $this->themes->isInstalled( $identifier );
 	}
 
-	private function logFailure( Throwable $failure, string $step ): void {
+	private function log_failure( Throwable $failure, string $step ): void {
 		BoosterLogger::logException(
 			'package removal failed',
 			$failure,

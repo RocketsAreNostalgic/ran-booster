@@ -35,20 +35,20 @@ final class AdminActionNormalizer {
 				throw new LogicException( 'Administration action flags must be booleans.' );
 			}
 
-			$label        = $this->boundedString( $action['label'] ?? null, 96, false );
-			$type         = $action['type'] ?? null;
-			$url          = $this->boundedString( $action['url'] ?? '', 2048, true );
-			$describedBy  = $this->boundedString( $action['described_by'] ?? '', 255, true );
-			$screenReader = $this->boundedString( $action['screen_reader'] ?? '', 255, true );
-			$busyLabel    = $this->boundedString( $action['busy_label'] ?? '', 96, true );
-			$confirm      = $this->boundedString( $action['confirm_message'] ?? '', 255, true );
-			$disabled     = true === ( $action['disabled'] ?? false );
-			$external     = true === ( $action['external'] ?? false );
+			$label         = $this->bounded_string( $action['label'] ?? null, 96, false );
+			$type          = $action['type'] ?? null;
+			$url           = $this->bounded_string( $action['url'] ?? '', 2048, true );
+			$described_by  = $this->bounded_string( $action['described_by'] ?? '', 255, true );
+			$screen_reader = $this->bounded_string( $action['screen_reader'] ?? '', 255, true );
+			$busy_label    = $this->bounded_string( $action['busy_label'] ?? '', 96, true );
+			$confirm       = $this->bounded_string( $action['confirm_message'] ?? '', 255, true );
+			$disabled      = true === ( $action['disabled'] ?? false );
+			$external      = true === ( $action['external'] ?? false );
 
 			if ( ! in_array( $type, array( 'link', 'post' ), true ) ) {
 				throw new LogicException( 'Administration action types must be link or post.' );
 			}
-			if ( '' !== $describedBy && 1 !== preg_match( '/^[A-Za-z][A-Za-z0-9_-]*(?: [A-Za-z][A-Za-z0-9_-]*)*$/', $describedBy ) ) {
+			if ( '' !== $described_by && 1 !== preg_match( '/^[A-Za-z][A-Za-z0-9_-]*(?: [A-Za-z][A-Za-z0-9_-]*)*$/', $described_by ) ) {
 				throw new LogicException( 'Administration action relationships are invalid.' );
 			}
 
@@ -62,7 +62,7 @@ final class AdminActionNormalizer {
 				throw new LogicException( 'Link actions must not contain hidden fields.' );
 			}
 			if ( 'link' === $type && ! $disabled ) {
-				$this->assertLinkUrl( $url );
+				$this->assert_link_url( $url );
 			}
 
 			$normalized[ $key ] = array(
@@ -73,9 +73,9 @@ final class AdminActionNormalizer {
 				'hidden'        => $hidden,
 				'disabled'      => $disabled,
 				'external'      => $external,
-				'described_by'  => $describedBy,
-				'screen_reader' => $screenReader,
-				'busy_label'    => $busyLabel,
+				'described_by'  => $described_by,
+				'screen_reader' => $screen_reader,
+				'busy_label'    => $busy_label,
 				'confirm'       => $confirm,
 			);
 		}
@@ -83,7 +83,7 @@ final class AdminActionNormalizer {
 		return $normalized;
 	}
 
-	private function assertLinkUrl( string $url ): void {
+	private function assert_link_url( string $url ): void {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Validation must happen before rendering.
 		$parts = parse_url( $url );
 		if ( ! is_array( $parts )
@@ -110,7 +110,7 @@ final class AdminActionNormalizer {
 				|| ! is_scalar( $value ) ) {
 				throw new LogicException( 'POST hidden fields must be named scalar values.' );
 			}
-			$normalized[ $name ] = $this->boundedString( (string) $value, 512, true );
+			$normalized[ $name ] = $this->bounded_string( (string) $value, 512, true );
 		}
 
 		if ( ! isset( $normalized['action'], $normalized['_wpnonce'] )
@@ -122,9 +122,9 @@ final class AdminActionNormalizer {
 		return $normalized;
 	}
 
-	private function boundedString( mixed $value, int $maximum, bool $allowEmpty ): string {
+	private function bounded_string( mixed $value, int $maximum, bool $allow_empty ): string {
 		if ( ! is_string( $value )
-			|| ( ! $allowEmpty && '' === trim( $value ) )
+			|| ( ! $allow_empty && '' === trim( $value ) )
 			|| strlen( $value ) > $maximum
 			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $value ) ) {
 			throw new LogicException( 'Administration actions contain an invalid display value.' );

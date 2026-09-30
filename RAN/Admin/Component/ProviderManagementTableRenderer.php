@@ -21,8 +21,8 @@ final class ProviderManagementTableRenderer {
 
 	/**
 	 * @param list<array<string, mixed>> $rows
-	 * @param Closure(array<string, mixed>, string): void $renderCell
-	 * @param array<string,string> $sortUrls
+	 * @param Closure(array<string, mixed>, string): void $render_cell
+	 * @param array<string,string> $sort_urls
 	 * @param array{
 	 *     item_count_label: string,
 	 *     page_label: string,
@@ -38,9 +38,9 @@ final class ProviderManagementTableRenderer {
 	public function render(
 		string $type,
 		array $rows,
-		string $emptyMessage,
-		Closure $renderCell,
-		array $sortUrls,
+		string $empty_message,
+		Closure $render_cell,
+		array $sort_urls,
 		array $pagination
 	): void {
 		$columns = $this->columns( $type );
@@ -53,7 +53,7 @@ final class ProviderManagementTableRenderer {
 							<?php if ( null === $column['sort'] ) { ?>
 								<span class="screen-reader-text"><?php echo esc_html( $column['label'] ); ?></span>
 							<?php } else { ?>
-								<a href="<?php echo esc_url( $sortUrls[ $column['sort'] ] ?? '' ); ?>"><?php echo esc_html( $column['label'] ); ?></a>
+								<a href="<?php echo esc_url( $sort_urls[ $column['sort'] ] ?? '' ); ?>"><?php echo esc_html( $column['label'] ); ?></a>
 							<?php } ?>
 						</th>
 					<?php } ?>
@@ -61,19 +61,19 @@ final class ProviderManagementTableRenderer {
 			</thead>
 			<tbody>
 				<?php if ( array() === $rows ) { ?>
-					<tr><td colspan="<?php echo esc_attr( (string) count( $columns ) ); ?>"><?php echo esc_html( $emptyMessage ); ?></td></tr>
+					<tr><td colspan="<?php echo esc_attr( (string) count( $columns ) ); ?>"><?php echo esc_html( $empty_message ); ?></td></tr>
 				<?php } ?>
 				<?php foreach ( $rows as $row ) { ?>
 					<tr>
 						<?php foreach ( $columns as $column ) { ?>
-							<td<?php echo $column['actions'] ? ' class="ran-booster-actions"' : ''; ?> data-label="<?php echo esc_attr( $column['label'] ); ?>"><?php $renderCell( $row, $column['key'] ); ?></td>
+							<td<?php echo $column['actions'] ? ' class="ran-booster-actions"' : ''; ?> data-label="<?php echo esc_attr( $column['label'] ); ?>"><?php $render_cell( $row, $column['key'] ); ?></td>
 						<?php } ?>
 					</tr>
 				<?php } ?>
 			</tbody>
 		</table>
 		<?php
-		$this->renderPagination( $type, $pagination );
+		$this->render_pagination( $type, $pagination );
 	}
 
 	/**
@@ -172,22 +172,22 @@ final class ProviderManagementTableRenderer {
 	 *     next_url: string
 	 * } $pagination
 	 */
-	private function renderPagination( string $type, array $pagination ): void {
-		$pageSizeId = self::ACCESS === $type
+	private function render_pagination( string $type, array $pagination ): void {
+		$page_size_id = self::ACCESS === $type
 			? 'ran-booster-credential-page-size'
 			: 'ran-booster-secret-page-size';
-		$current    = max( 1, $pagination['current'] );
-		$pages      = max( 1, $pagination['pages'] );
+		$current      = max( 1, $pagination['current'] );
+		$pages        = max( 1, $pagination['pages'] );
 		?>
 		<div class="ran-booster-provider-table-navigation">
 			<span><?php echo esc_html( $pagination['item_count_label'] ); ?></span>
 			<div>
-				<label for="<?php echo esc_attr( $pageSizeId ); ?>"><?php esc_html_e( 'Rows', 'ran-booster' ); ?></label>
+				<label for="<?php echo esc_attr( $page_size_id ); ?>"><?php esc_html_e( 'Rows', 'ran-booster' ); ?></label>
 				<form method="get" action="<?php echo esc_url( $pagination['action_url'] ); ?>" class="ran-booster-inline-form">
 					<?php foreach ( $pagination['hidden_fields'] as $name => $value ) { ?>
 						<input type="hidden" name="<?php echo esc_attr( $name ); ?>" value="<?php echo esc_attr( (string) $value ); ?>">
 					<?php } ?>
-					<select id="<?php echo esc_attr( $pageSizeId ); ?>" name="per_page" onchange="this.form.submit()">
+					<select id="<?php echo esc_attr( $page_size_id ); ?>" name="per_page" onchange="this.form.submit()">
 						<option value="20" <?php selected( 20, $pagination['per_page'] ); ?>>20</option>
 						<option value="50" <?php selected( 50, $pagination['per_page'] ); ?>>50</option>
 					</select>

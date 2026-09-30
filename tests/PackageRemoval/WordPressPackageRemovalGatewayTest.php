@@ -34,7 +34,7 @@ final class WordPressPackageRemovalGatewayTest extends TestCase {
 
 		self::assertSame(
 			$deleted,
-			( new WordPressPackageRemovalGateway() )->deletePlugin( 'example/example.php' )
+			( new WordPressPackageRemovalGateway() )->delete_plugin( 'example/example.php' )
 		);
 		self::assertSame(
 			array(
@@ -57,7 +57,7 @@ final class WordPressPackageRemovalGatewayTest extends TestCase {
 		$GLOBALS['ran_booster_package_removal_gateway_result'] = new RuntimeException( 'Fixture deletion failed.' );
 
 		try {
-			( new WordPressPackageRemovalGateway() )->deletePlugin( 'example/example.php' );
+			( new WordPressPackageRemovalGateway() )->delete_plugin( 'example/example.php' );
 			self::fail( 'Expected the WordPress deletion failure.' );
 		} catch ( RuntimeException $failure ) {
 			self::assertSame( 'Fixture deletion failed.', $failure->getMessage() );

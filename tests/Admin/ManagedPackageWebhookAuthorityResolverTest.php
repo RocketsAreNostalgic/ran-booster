@@ -272,11 +272,11 @@ final class AuthorityInstallationStore implements InstallationStore {
 		return 'gh' === $providerCode ? ( $this->records[ $repositoryId ] ?? null ) : null;
 	}
 
-	public function saveIfCurrent( InstallationRecord $record, ?InstallationRecord $expected ): string {
+	public function save_if_current( InstallationRecord $record, ?InstallationRecord $expected ): string {
 		throw new \LogicException( 'History is read-only.' );
 	}
 
-	public function deleteIfCurrent( string $providerCode, string $repositoryId, ?InstallationRecord $expected ): string {
+	public function delete_if_current( string $providerCode, string $repositoryId, ?InstallationRecord $expected ): string {
 		throw new \LogicException( 'History is read-only.' );
 	}
 }

@@ -35,7 +35,7 @@ final class BootstrapRuntimeQuarantineTest extends TestCase {
 			array_column( $actions, 'hook' )
 		);
 		self::assertInstanceOf( UnsupportedMultisiteBootstrap::class, $actions[1]['callback'][0] );
-		self::assertSame( 'renderNotice', $actions[1]['callback'][1] );
+		self::assertSame( 'render_notice', $actions[1]['callback'][1] );
 		self::assertSame( array(), $GLOBALS['ran_booster_bootstrap_filters'] );
 		self::assertSame( array(), $GLOBALS['ran_booster_fired_actions'] );
 

@@ -196,12 +196,12 @@ final class WebhookOperationCoordinator {
 			$observed
 		);
 
-		$write = $this->records->saveIfCurrent( $record, null );
+		$write = $this->records->save_if_current( $record, null );
 		if ( InstallationStore::WRITE_CONFLICT === $write ) {
 			return $this->outcome( 'record_conflict', $hook_id, $profile->id() );
 		}
 		if ( ! $this->write_succeeded( $write ) ) {
-			$recovery_write = $this->records->saveIfCurrent( $record->withCheck( 'orphaned', $observed ), null );
+			$recovery_write = $this->records->save_if_current( $record->withCheck( 'orphaned', $observed ), null );
 			if ( ! $this->write_succeeded( $recovery_write ) ) {
 				return $this->outcome(
 					InstallationStore::WRITE_CONFLICT === $recovery_write ? 'record_conflict' : 'recovery_record_failed',
@@ -245,19 +245,19 @@ final class WebhookOperationCoordinator {
 			default => $code,
 		};
 
-		return $this->write_result_code( $this->records->saveIfCurrent( $next, $record ), $result_code );
+		return $this->write_result_code( $this->records->save_if_current( $next, $record ), $result_code );
 	}
 
 	/** @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool} */
 	private function record_reconfigure( InstallationRecord $record, AssistanceTarget $target, RepositoryWebhookOperationResult $result, string $management_credential_id, string $state, string $code, string $observed, string $delivery ): array {
 		if ( 'absent' === $delivery ) {
-			return $this->outcome( $this->write_result_code( $this->records->saveIfCurrent( $record->withCheck( 'remote_missing', $observed ), $record ), 'remote_missing' ) );
+			return $this->outcome( $this->write_result_code( $this->records->save_if_current( $record->withCheck( 'remote_missing', $observed ), $record ), 'remote_missing' ) );
 		}
 		if ( 'failed' === $state ) {
 			return $this->outcome( $code );
 		}
 		if ( 'succeeded' !== $state ) {
-			return $this->outcome( $this->write_result_code( $this->records->saveIfCurrent( $record->withCheck( 'needs_verification', $observed ), $record ), $code ) );
+			return $this->outcome( $this->write_result_code( $this->records->save_if_current( $record->withCheck( 'needs_verification', $observed ), $record ), $code ) );
 		}
 
 		$profile = $this->result_profile( $result, $target->providerCode() );
@@ -276,7 +276,7 @@ final class WebhookOperationCoordinator {
 			$observed
 		);
 
-		$write = $this->records->saveIfCurrent( $next, $record );
+		$write = $this->records->save_if_current( $next, $record );
 
 		return $this->outcome(
 			$this->write_result_code( $write, 'verified' === $delivery ? 'verified' : 'configured_pending_delivery' ),
@@ -287,14 +287,14 @@ final class WebhookOperationCoordinator {
 
 	private function record_remove( InstallationRecord $record, RepositoryWebhookOperationResult $result, string $state, string $code, string $observed ): string {
 		if ( $result->confirmsAbsence() ) {
-			return match ( $this->records->deleteIfCurrent( $record->providerCode(), $record->repositoryId(), $record ) ) {
+			return match ( $this->records->delete_if_current( $record->providerCode(), $record->repositoryId(), $record ) ) {
 				InstallationStore::WRITE_APPLIED, InstallationStore::WRITE_UNCHANGED => 'removed',
 				InstallationStore::WRITE_CONFLICT => 'record_conflict',
 				default => 'record_retained',
 			};
 		}
 		if ( in_array( $state, array( 'partial', 'ambiguous' ), true ) ) {
-			return $this->write_result_code( $this->records->saveIfCurrent( $record->withCheck( 'removal_pending', $observed ), $record ), $code );
+			return $this->write_result_code( $this->records->save_if_current( $record->withCheck( 'removal_pending', $observed ), $record ), $code );
 		}
 
 		return $code;
@@ -304,13 +304,13 @@ final class WebhookOperationCoordinator {
 	private function record_test( InstallationRecord $record, string $management_credential_id, string $state, string $code, string $observed, string $delivery, array $configuration ): string {
 		if ( 'absent' === $delivery ) {
 			return $this->write_result_code(
-				$this->records->saveIfCurrent( $record->withManagementCredential( $management_credential_id, 'remote_missing', $observed ), $record ),
+				$this->records->save_if_current( $record->withManagementCredential( $management_credential_id, 'remote_missing', $observed ), $record ),
 				'remote_missing'
 			);
 		}
 		if ( in_array( 'mismatched', $configuration, true ) ) {
 			return $this->write_result_code(
-				$this->records->saveIfCurrent( $record->withManagementCredential( $management_credential_id, 'configuration_drift', $observed ), $record ),
+				$this->records->save_if_current( $record->withManagementCredential( $management_credential_id, 'configuration_drift', $observed ), $record ),
 				'configuration_drift'
 			);
 		}
@@ -322,7 +322,7 @@ final class WebhookOperationCoordinator {
 		$code   = 'ping_verified' === $code ? 'ping_requested' : $code;
 
 		return $this->write_result_code(
-			$this->records->saveIfCurrent( $record->withManagementCredential( $management_credential_id, $status, $observed ), $record ),
+			$this->records->save_if_current( $record->withManagementCredential( $management_credential_id, $status, $observed ), $record ),
 			$code
 		);
 	}

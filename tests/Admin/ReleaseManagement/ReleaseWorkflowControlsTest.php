@@ -699,6 +699,40 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( 'Provider-specific remediation.', $view['result_remediation'] );
 	}
 
+	public function testOnlyBootstrapRecordsExposeOutcomeControlsForTheSamePackage(): void {
+		foreach ( array( '', 'bootstrap' ) as $operation ) {
+			$record          = new \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus(
+				'fixture',
+				'101',
+				false,
+				true,
+				'https://fixture.example/pull/1',
+				'plugin',
+				'example/example.php',
+				2,
+				$operation
+			);
+			$provider        = new RepositoryReleaseWorkflowProviderDouble( status: $record );
+			$workflowViewFor = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'workflowViewFor' );
+			$view            = $workflowViewFor->invoke( $this->presenter( provider: $provider ), 'plugin', 'example/example.php', 3, '', false, '', 'stable' );
+
+			if ( '' === $operation ) {
+				self::assertTrue( $view['unavailable'] );
+				self::assertSame( 'blocked', $view['automation_state'] );
+				self::assertNull( $view['record'] );
+				self::assertSame( array( 'unsupported' => true ), $view['legacy'] );
+				self::assertArrayNotHasKey( 'outcome', $view['forms'] );
+			} else {
+				self::assertFalse( $view['unavailable'] );
+				self::assertSame( 'setup_recorded', $view['automation_state'] );
+				self::assertSame( array( 'pull_request_url' => 'https://fixture.example/pull/1' ), $view['record'] );
+				self::assertNull( $view['legacy'] );
+				self::assertArrayHasKey( 'outcome', $view['forms'] );
+			}
+			self::assertSame( array(), $provider->calls );
+		}
+	}
+
 	public function testEmptyProviderWriteGuidanceUsesTheCoreFallback(): void {
 		$status    = new \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus(
 			'fixture',

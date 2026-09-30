@@ -18,7 +18,7 @@ sanitized Booster-specific evidence.
   same-vendor coexistence behavior without presenting proposed hardening as
   current protection.
 - [Provider release-workflow capability](provider-release-workflow-api.md)
-  records the provider-neutral API 2 v1 baseline, the pre-1.0 API 1 retirement,
+  records the provider-neutral initial-only API 3 contract, the pre-1.0 API 2 retirement,
   and the Provider API 12 registration seam.
 
 Core architecture, release, portability, and security contracts remain in the

@@ -237,7 +237,10 @@ check this exact marker before loading their implementation. API-11 providers
 must remain unregistered on this host; there is no V2 compatibility shim. The
 registration signature and Add-on API 16 are unchanged. See the
 [coordinated compatibility boundary](provider-release-workflow-api.md#provider-api-12-compatibility-boundary).
-The bundled lock is still V2-only; do not independently adopt this draft.
+The bundled lock selects immutable GitHub Provider `v1.0.0-beta.7`
+(`8e0c45cd8a3617be7fd5361ba414041913b63d09`). Cutover remains held until
+its valid-record operation projection across source revisions is corrected in
+a released Provider and the final locked composition passes installed checks.
 
 Check and remove deliberately receive Core's canonical callback URL as well as
 the recorded hook ID. This is the minimum input needed for the provider to

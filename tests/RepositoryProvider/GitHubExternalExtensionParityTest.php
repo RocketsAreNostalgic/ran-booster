@@ -98,6 +98,82 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
+	public function testActualProviderPreservesCoreOutcomeAdmissionForStaleBootstrapButRejectsRetiredRecords(): void {
+		require_once dirname( __DIR__ ) . '/Runtime/Support/GitHubWorkflowAssistanceWordPressFunctions.php';
+		require_once dirname( __DIR__ ) . '/Admin/ReleaseManagement/Support/ReleaseManagementWordPressFunctions.php';
+		require_once dirname( __DIR__ ) . '/Admin/ReleaseManagement/Support/ReleaseManagementFixtures.php';
+		require_once dirname( __DIR__ ) . '/Admin/ReleaseManagement/Support/ReleaseTrackingFacadeDouble.php';
+		require_once dirname( __DIR__ ) . '/Admin/ReleaseManagement/GitHub/Support/PluginRepositoryDouble.php';
+		require_once dirname( __DIR__ ) . '/Admin/ReleaseManagement/GitHub/Support/ThemeRepositoryDouble.php';
+
+		$provider   = GitHubProvider::create( new Phase5CredentialStore(), new Phase5DeliveryEvidenceReader(), new Phase5BundledReleaseUpdater() );
+		$status     = \Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture::status();
+		$tracking   = new \Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble( $status );
+		$plugins    = new \Tests\Admin\ReleaseManagement\GitHub\Support\PluginRepositoryDouble();
+		$themes     = new \Tests\Admin\ReleaseManagement\GitHub\Support\ThemeRepositoryDouble();
+		$registry   = new ProviderRegistry( array( $provider ) );
+		$controller = new \RAN\Admin\ReleaseManagement\ReleaseWorkflowRequestController( $tracking, $plugins, $themes, $registry, new \RAN\Storage\RepositorySourceGuard() );
+		$presenter  = new \RAN\Admin\ReleaseManagement\ReleaseWorkflowPresenter( $tracking, $plugins, $themes, $registry, $controller );
+		$target     = new RepositoryReleaseWorkflowTarget( 'plugin', 'example/example.php', 3, '101' );
+		$record     = array(
+			'schema_version'        => 3,
+			'operation'             => 'bootstrap',
+			'repo_id'               => '101',
+			'repository'            => 'RocketsAreNostalgic/example-plugin',
+			'package_type'          => 'plugin',
+			'package_identifier'    => 'example/example.php',
+			'source_revision'       => 2,
+			'default_branch'        => 'main',
+			'base_sha'              => str_repeat( 'a', 40 ),
+			'setup_branch'          => 'ran-booster/release-setup-v3-aaaaaaaaaaaa-deadbeef',
+			'head_sha'              => str_repeat( 'b', 40 ),
+			'pr_number'             => 42,
+			'profile_id'            => 'source-ready-wordpress-plugin/3',
+			'template_repo_name'    => 'RocketsAreNostalgic/ran-booster-release-bootstrap-templates',
+			'template_repo_id'      => '1322743261',
+			'template_release_id'   => 41,
+			'template_tag'          => 'v1.2.3',
+			'template_commit'       => str_repeat( 'c', 40 ),
+			'template_asset_id'     => 73,
+			'template_asset_name'   => 'ran-booster-release-bootstrap-templates.zip',
+			'template_asset_size'   => 1000,
+			'template_asset_digest' => str_repeat( 'd', 64 ),
+			'manifest_digest'       => str_repeat( 'e', 64 ),
+			'changed_files'         => array(
+				array(
+					'path'   => 'version.txt',
+					'status' => 'added',
+					'sha'    => str_repeat( 'f', 40 ),
+				),
+			),
+			'consumer_api'          => 3,
+			'pack_version'          => '1.2.3',
+			'bundle_hash'           => str_repeat( '1', 64 ),
+			'changed_path_hash'     => str_repeat( '2', 64 ),
+		);
+		foreach ( array( 'current_bootstrap', 'retired_bootstrap', 'retired_update' ) as $case ) {
+			$stored = $record;
+			if ( 'current_bootstrap' !== $case ) {
+				$stored['schema_version'] = 2;
+				$stored['operation']      = 'retired_update' === $case ? 'template_update' : 'bootstrap';
+			}
+			$GLOBALS['ran_booster_release_deployments_test_options'] = array(
+				'ran_booster_github_provider_release_workflow_setup_records' => array( '101' => $stored ),
+			);
+			$before = json_encode( $GLOBALS['ran_booster_release_deployments_test_options'], JSON_THROW_ON_ERROR );
+			$actual = $provider->workflowStatus( $target );
+			self::assertTrue( $actual->recordOccupied(), $case );
+			self::assertFalse( $actual->recordExact(), $case );
+			foreach ( array( $controller, $presenter ) as $consumer ) {
+				$admission = new \ReflectionMethod( $consumer, 'recordMatchesPackageStatus' );
+				self::assertSame( 'current_bootstrap' === $case, $admission->invoke( $consumer, $actual, $status ), $case . ': ' . $consumer::class );
+			}
+			self::assertSame( $before, json_encode( $GLOBALS['ran_booster_release_deployments_test_options'], JSON_THROW_ON_ERROR ), $case );
+		}
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function testReleasedGitHubPackageComposesAsAPhysicallySeparateExternalPlugin(): void {
 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
 		define( 'RAN_BOOSTER_RUNTIME_MODE', 'single_site_supported' );

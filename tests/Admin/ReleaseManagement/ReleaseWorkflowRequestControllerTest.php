@@ -313,6 +313,7 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 			'plugin',
 			'example/example.php',
 			2,
+			'bootstrap',
 			credentialChoices: array(
 				array(
 					'id'    => 'credential_1',
@@ -327,6 +328,33 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 		self::assertSame( array( 'outcome' ), array_column( $provider->calls, 'operation' ) );
 	}
 
+	public function testRetiredWorkflowRecordCannotInvokeOutcomeForTheSamePackage(): void {
+		$record   = new \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus(
+			'fixture',
+			'101',
+			false,
+			true,
+			'https://fixture.example/pull/1',
+			'plugin',
+			'example/example.php',
+			3,
+			'',
+			credentialChoices: array(
+				array(
+					'id'    => 'credential_1',
+					'label' => 'Fixture credential',
+				),
+			)
+		);
+		$provider = new RepositoryReleaseWorkflowProviderDouble( status: $record );
+
+		$url = $this->controller( provider: $provider )->processWorkflowRequest( $this->request( 'outcome' ) );
+
+		self::assertStringContainsString( 'workflow_invalid_request', $url );
+		self::assertStringContainsString( 'package_source_changed', $url );
+		self::assertSame( array(), $provider->calls );
+	}
+
 	public function testDifferentPackageIdentityCannotReconcileAnOccupiedWorkflowRecord(): void {
 		$record   = new \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus(
 			'fixture',
@@ -337,6 +365,7 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 			'plugin',
 			'other/other.php',
 			2,
+			'bootstrap',
 			credentialChoices: array(
 				array(
 					'id'    => 'credential_1',
@@ -373,6 +402,7 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 				'plugin',
 				'example/example.php',
 				3,
+				'bootstrap',
 				credentialChoices: array(
 					array(
 						'id'    => 'credential_1',

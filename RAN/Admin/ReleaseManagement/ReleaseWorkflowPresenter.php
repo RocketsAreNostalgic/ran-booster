@@ -552,6 +552,7 @@ final class ReleaseWorkflowPresenter {
 	private function recordMatchesPackageStatus( ?\RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus $record, ReleaseTrackingStatus $status ): bool {
 		return $record instanceof \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus
 			&& $record->recordOccupied()
+			&& 'bootstrap' === $record->recordOperation()
 			&& hash_equals( $this->workflowProviderCode( $status ), $record->providerCode() )
 			&& hash_equals( $status->providerRepositoryId(), $record->repositoryId() )
 			&& hash_equals( $status->type(), $record->packageType() )

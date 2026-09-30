@@ -45,10 +45,13 @@ tags. The five methods are `workflowStatus`, `workflowPreview`,
 are rejected before provider, credential or preflight access.
 
 The draft helper resolves `RepositoryReleaseWorkflowManagementV3` directly.
-Merged GitHub Provider source `d9f18a10d593d88d0373e377197553c02ee664f2`
-implements it. The production lock still selects the V2-only beta.6 release;
-this draft must not be merged or installed with that composition. Isolated
-exact-source candidate testing does not change the lock or certify a release.
+The production lock selects immutable GitHub Provider `v1.0.0-beta.7`
+(`8e0c45cd8a3617be7fd5361ba414041913b63d09`), which implements V3.
+That release omits the valid record's operation when only its source revision
+differs from the current target. Core requires a current `bootstrap` operation
+before exposing or invoking outcomes, so cutover remains held until a corrected
+Provider release is adopted. Isolated source testing of that correction does
+not qualify the locked composition.
 
 The API 3 facet still requires the same five release-consumption capabilities on
 the registered provider aggregate: `RepositoryReleaseMetadata`,
@@ -85,8 +88,8 @@ update operations alone and mixed with a valid current row.
 
 PR #177 remains draft, incomplete and unmerged. UI/presentation implementation
 and owner interactive/end-to-end acceptance remain deferred under #81/#85.
-Automated candidate checks must identify the exact Core and Provider sources;
-they do not establish qualification of the currently locked bundle. Matching
-immutable Provider adoption, archive/installed proof and API-12 connected compatibility
-remain required before a coherent cutover. Do not alter release/certification
+Automated checks must identify the exact Core and Provider sources and distinguish
+source candidates, installed candidate archives and certified releases. Corrected
+immutable Provider adoption, final archive/installed proof and API-12 connected
+compatibility remain required before a coherent cutover. Do not alter certification
 pins or publish a bridge-only release to make this draft appear complete.

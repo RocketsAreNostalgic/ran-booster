@@ -155,11 +155,11 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 				'current_local_condition' => null,
 				'historical_not_live'     => true,
 			),
-			$history->forPackage( 'plugin', 'plugin/example.php' )?->toArray()
+			$history->for_package( 'plugin', 'plugin/example.php' )?->to_array()
 		);
-		self::assertSame( 'repository-43', $history->forPackage( 'theme', 'example-theme' )?->toArray()['repository_id'] );
-		self::assertNull( $history->forPackage( 'plugin', 'missing/plugin.php' ) );
-		self::assertNull( $history->forPackage( 'other', 'example-theme' ) );
+		self::assertSame( 'repository-43', $history->for_package( 'theme', 'example-theme' )?->to_array()['repository_id'] );
+		self::assertNull( $history->for_package( 'plugin', 'missing/plugin.php' ) );
+		self::assertNull( $history->for_package( 'other', 'example-theme' ) );
 	}
 
 	private function record( string $repositoryId ): InstallationRecord {

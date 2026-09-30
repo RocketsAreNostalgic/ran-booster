@@ -567,7 +567,7 @@ final class WebhookDisplayModel {
 
 	/** @return list<array<string, string>> */
 	private function history_details( string $status_code, ?InstallationRecord $record ): array {
-		$history = null === $record ? null : WebhookHistory::fromRecord( $record )->toArray();
+		$history = null === $record ? null : WebhookHistory::from_record( $record )->to_array();
 		$details = array(
 			array(
 				'key'      => 'core:webhook-recorded-status',
@@ -619,7 +619,7 @@ final class WebhookDisplayModel {
 
 	/** @return list<array<string, string>> */
 	private function historical_details( InstallationRecord $record ): array {
-		$history = WebhookHistory::fromRecord( $record )->toArray();
+		$history = WebhookHistory::from_record( $record )->to_array();
 
 		return array(
 			array(

@@ -167,9 +167,17 @@ The lifecycle and release service five-slice cohort also includes:
 - `RAN/AddOn/ReleaseTracking/NativeReleaseTrackingFacade.php`
 - `RAN/AddOn/ReleaseTracking/NativeProspectiveReleaseFacade.php`
 
+The request-processing five-slice cohort also includes:
+
+- `RAN/Dispatcher.php`
+- `RAN/Admin/ProviderProfileAdminController.php`
+- `RAN/Admin/PackageAdminController.php`
+- `RAN/Admin/PortabilityController.php`
+- `RAN/Admin/WebhookManagement/Operation/WebhookOperationCoordinator.php`
+
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This 123-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This 128-file scope does not
 complete Core naming, condition or exception acceptance. The repository UI quartet
 renames owned renderer and picker helpers and local variables; the public
 `render()`/`handle()` entry points, projected keys, AJAX action/nonce, error statuses,
@@ -281,6 +289,17 @@ retention and recovery, native release locking/cache/restoration, and prospectiv
 release acquisition/custody/cleanup/adoption order remain unchanged. Protected
 uninstall override seams and every PreparedArtifact call retain their contracts.
 Test sources and reserved-parameter enforcement are unchanged.
+
+The request-processing cohort renames 62 private helpers, six non-promoted
+private properties and owned locals. Public/protected callback and caller names,
+constructor parameters, promoted properties and external DTO fields retain narrow
+exceptions. Two portability include-scope variables retain their existing view
+contract. Fifteen private reflection references follow the renamed helpers; all
+other test behavior remains unchanged. Authorization/nonce/capability order,
+credential failure redaction, signed/header/redirect bytes, portability cleanup,
+webhook locking, concurrent-write recovery and durable state remain unchanged.
+Both method and variable naming rules cover this cohort; reserved-parameter scope
+is unchanged.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
 including `is_private`; its persisted JSON retains the `private` key and exact

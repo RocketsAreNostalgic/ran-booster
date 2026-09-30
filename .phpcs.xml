@@ -206,6 +206,12 @@
 		<include-pattern>/RAN/Storage/DatabaseCompatibilityFailure.php</include-pattern>
 	</rule>
 	<rule ref="WordPress.NamingConventions.ValidVariableName">
+		<!-- Internal variables/private properties: public named-parameter and property contracts retain precise exceptions. -->
+		<include-pattern>/RAN/Booster.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/ProviderRegistry.php</include-pattern>
+		<include-pattern>/RAN/Admin/ReleaseManagement/ReleaseWorkflowRequestController.php</include-pattern>
+		<include-pattern>/RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php</include-pattern>
+		<include-pattern>/RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php</include-pattern>
 		<!-- Connected public/protected naming: complete owned caller cohorts. -->
 		<include-pattern>/RAN/PackageRemoval/PackageRemovalGateway.php</include-pattern>
 		<include-pattern>/RAN/Admin/WebhookManagement/Installation/InstallationStore.php</include-pattern>

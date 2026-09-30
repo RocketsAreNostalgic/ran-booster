@@ -391,7 +391,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertStringContainsString( 'repository_source_unavailable', $url );
 		self::assertStringNotContainsString( 'repository_release_owner_exists', $url );
 
-		$workflowViewFor = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'workflowViewFor' );
+		$workflowViewFor = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'workflow_view_for' );
 		$view            = $workflowViewFor->invoke( $presenter, 'plugin', 'example/example.php', 3, '', false, '', 'stable' );
 
 		self::assertTrue( $view['unavailable'] );
@@ -677,7 +677,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( 'Provider-specific workflow message.', $result['message'] );
 		self::assertSame( 'Provider-specific remediation.', $result['remediation'] );
 
-		$workflowViewFor = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'workflowViewFor' );
+		$workflowViewFor = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'workflow_view_for' );
 		$view            = $workflowViewFor->invoke(
 			$this->presenter( provider: $provider ),
 			'plugin',
@@ -713,7 +713,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 				$operation
 			);
 			$provider        = new RepositoryReleaseWorkflowProviderDouble( status: $record );
-			$workflowViewFor = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'workflowViewFor' );
+			$workflowViewFor = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'workflow_view_for' );
 			$view            = $workflowViewFor->invoke( $this->presenter( provider: $provider ), 'plugin', 'example/example.php', 3, '', false, '', 'stable' );
 
 			if ( '' === $operation ) {
@@ -748,7 +748,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		);
 		$presenter = $this->presenter( provider: new RepositoryReleaseWorkflowProviderDouble( status: $status ) );
 
-		$workflowViewFor = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'workflowViewFor' );
+		$workflowViewFor = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'workflow_view_for' );
 		$view            = $workflowViewFor->invoke( $presenter, 'plugin', 'example/example.php', 3, '', false, '', 'stable' );
 
 		self::assertSame(

@@ -67,14 +67,15 @@ final class ProviderRegistry {
 	 *
 	 * @param callable $factory Provider factory.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
 	public function registerWithCredentialStore( ProviderCode|string $code, callable $factory ): void {
-		$this->beginRegistration();
+		$this->begin_registration();
 
 		try {
-			$code = $this->normalizeCode( $code );
-			$this->assertCanRegisterCode( $code );
+			$code = $this->normalize_code( $code );
+			$this->assert_can_register_code( $code );
 
-			$this->assertProviderFactorySignature( $factory );
+			$this->assert_provider_factory_signature( $factory );
 
 			if ( null === $this->credentialStoreFactory ) {
 				throw InvalidProviderPolicy::credentialStoreUnavailable();
@@ -115,32 +116,32 @@ final class ProviderRegistry {
 				throw InvalidProviderPolicy::invalidProviderFactory();
 			}
 
-			$metadata = $this->readMetadata( $provider );
+			$metadata = $this->read_metadata( $provider );
 
 			if ( $code->value !== $metadata->code->value ) {
 				throw InvalidProviderPolicy::mismatchedFactoryProvider();
 			}
 
-			$this->registerProvider( $provider, $metadata );
+			$this->register_provider( $provider, $metadata );
 		} finally {
 			$this->registrationInProgress = false;
 		}
 	}
 
 	public function register( RepositoryProvider $provider ): void {
-		$this->beginRegistration();
+		$this->begin_registration();
 
 		try {
-			$this->assertNotSealed();
-			$this->registerProvider( $provider, $this->readMetadata( $provider ) );
+			$this->assert_not_sealed();
+			$this->register_provider( $provider, $this->read_metadata( $provider ) );
 		} finally {
 			$this->registrationInProgress = false;
 		}
 	}
 
-	private function registerProvider( RepositoryProvider $provider, ProviderMetadata $metadata ): void {
+	private function register_provider( RepositoryProvider $provider, ProviderMetadata $metadata ): void {
 		$code = $metadata->code;
-		$this->assertCanRegisterCode( $code );
+		$this->assert_can_register_code( $code );
 
 		try {
 			$provider->getProviderDiagnostics();
@@ -188,16 +189,17 @@ final class ProviderRegistry {
 	}
 
 	public function seal(): void {
-		$this->assertNotRegistering();
+		$this->assert_not_registering();
 		$this->sealed = true;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
 	public function isSealed(): bool {
 		return $this->sealed;
 	}
 
 	public function get( ProviderCode|string $code ): RepositoryProvider {
-		$code = $this->normalizeCode( $code );
+		$code = $this->normalize_code( $code );
 
 		if ( ! isset( $this->providers[ $code->value ] ) ) {
 			throw UnknownProvider::forCode();
@@ -226,6 +228,7 @@ final class ProviderRegistry {
 	 *
 	 * @return list<ProviderMetadata>
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
 	public function administrationMetadata(): array {
 		return array_values(
 			array_filter(
@@ -236,6 +239,7 @@ final class ProviderRegistry {
 	}
 
 	/** @return list<ProviderMetadata> */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
 	public function orderedMetadata(): array {
 		return ( new ProviderNavigationOrderer() )->orderMetadata( $this->providerMetadata );
 	}
@@ -248,6 +252,7 @@ final class ProviderRegistry {
 	 * @param class-string<TCapability> $capability Capability contract.
 	 * @return TCapability
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
 	public function requireCapability( ProviderCode|string $code, string $capability ): object {
 		if ( RepositoryProvider::class === $capability
 			|| ProviderCapabilityContract::class === $capability
@@ -265,11 +270,11 @@ final class ProviderRegistry {
 		return $provider;
 	}
 
-	private function normalizeCode( ProviderCode|string $code ): ProviderCode {
+	private function normalize_code( ProviderCode|string $code ): ProviderCode {
 		return $code instanceof ProviderCode ? $code : ProviderCode::parse( $code );
 	}
 
-	private function readMetadata( RepositoryProvider $provider ): ProviderMetadata {
+	private function read_metadata( RepositoryProvider $provider ): ProviderMetadata {
 		try {
 			return $provider->getMetadata();
 		} catch ( \Throwable $exception ) {
@@ -278,7 +283,7 @@ final class ProviderRegistry {
 		}
 	}
 
-	private function assertProviderFactorySignature( callable $factory ): void {
+	private function assert_provider_factory_signature( callable $factory ): void {
 		$parameters = ( new \ReflectionFunction( \Closure::fromCallable( $factory ) ) )->getParameters();
 		$types      = array(
 			ProviderCredentialStore::class,
@@ -306,26 +311,26 @@ final class ProviderRegistry {
 	}
 
 
-	private function assertCanRegisterCode( ProviderCode $code ): void {
-		$this->assertNotSealed();
+	private function assert_can_register_code( ProviderCode $code ): void {
+		$this->assert_not_sealed();
 
 		if ( isset( $this->providers[ $code->value ] ) ) {
 			throw new LogicException( 'Repository provider is already registered.' );
 		}
 	}
 
-	private function beginRegistration(): void {
-		$this->assertNotRegistering();
+	private function begin_registration(): void {
+		$this->assert_not_registering();
 		$this->registrationInProgress = true;
 	}
 
-	private function assertNotRegistering(): void {
+	private function assert_not_registering(): void {
 		if ( $this->registrationInProgress ) {
 			throw new LogicException( 'Repository provider registration is already in progress.' );
 		}
 	}
 
-	private function assertNotSealed(): void {
+	private function assert_not_sealed(): void {
 		if ( $this->sealed ) {
 			throw new LogicException( 'Repository provider registration is closed.' );
 		}

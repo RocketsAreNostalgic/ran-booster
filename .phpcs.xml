@@ -28,6 +28,13 @@
 	</rule>
 	<!-- Enforce only the completed, individually audited naming cohorts. -->
 	<rule ref="RANOwnedMethods">
+		<!-- Private API12 helpers: retained public/protected contracts have declaration-local deferrals. -->
+		<include-pattern>/RAN/Booster.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/ProviderRegistry.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryReleaseWorkflowStatus.php</include-pattern>
+		<include-pattern>/RAN/Admin/ReleaseManagement/ReleaseWorkflowRequestController.php</include-pattern>
+		<include-pattern>/RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php</include-pattern>
+		<include-pattern>/RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php</include-pattern>
 		<!-- Runtime slug overrides: retained public contracts have declaration-local deferrals. -->
 		<include-pattern>/RAN/AbstractPackage.php</include-pattern>
 		<include-pattern>/RAN/Plugin.php</include-pattern>

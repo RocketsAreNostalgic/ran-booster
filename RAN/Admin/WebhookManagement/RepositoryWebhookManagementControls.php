@@ -21,41 +21,45 @@ final class RepositoryWebhookManagementControls {
 	private readonly WebhookManagementController $controller;
 
 	private readonly WebhookDisplayModel $display;
-	private readonly WordPressInstallationStore $installationStore;
+	private readonly WordPressInstallationStore $installation_store;
 	private readonly WebhookAssistanceFacade $assistance;
 	private readonly ?ManagedPackageWebhookAuthorityResolver $authorities;
 	private bool $enabled = false;
 
 	public function __construct(
 		WebhookAssistanceFacade $facade,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		private readonly AdminInteractionFacade $adminInteraction,
 		private readonly ProviderRegistry $providers,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		private readonly string $pluginPath,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		private readonly string $pluginUrl,
 		?ManagedPackageWebhookAuthorityResolver $authorities = null
 	) {
-		$this->assistance        = $facade;
-		$this->authorities       = $authorities;
-		$store                   = new WordPressInstallationStore();
-		$this->installationStore = $store;
-		$this->display           = new WebhookDisplayModel( $facade, $store );
-		$this->controller        = new WebhookManagementController(
+		$this->assistance         = $facade;
+		$this->authorities        = $authorities;
+		$store                    = new WordPressInstallationStore();
+		$this->installation_store = $store;
+		$this->display            = new WebhookDisplayModel( $facade, $store );
+		$this->controller         = new WebhookManagementController(
 			new WebhookOperationCoordinator( $facade, $store ),
 			$this->display,
 			$providers,
 			$authorities
 		);
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		$this->controller->useAdminInteractionFacade( $adminInteraction );
 	}
 
 	public function register(): void {
 		$this->enabled = true;
 		foreach ( $this->controller->providerMetadataList() as $metadata ) {
-			$providerCode  = $metadata->code->value;
-			$providerLabel = $metadata->label;
+			$provider_code  = $metadata->code->value;
+			$provider_label = $metadata->label;
 			add_filter(
-				'ran_booster_documentation_sections_after_provider_' . $providerCode,
-				fn ( array $sections ): array => $this->documentationSections( $sections, $providerCode, $providerLabel ),
+				'ran_booster_documentation_sections_after_provider_' . $provider_code,
+				fn ( array $sections ): array => $this->documentationSections( $sections, $provider_code, $provider_label ),
 				10,
 				1
 			);
@@ -66,14 +70,16 @@ final class RepositoryWebhookManagementControls {
 	}
 
 	/** Render the Core webhook control on its Branch package source pane. */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
 	public function renderPackageWebhookSetup( string $mode, string $type, string $selectedSource, ?\RAN\Admin\AdminPackageProjection $package, string $returnUrl ): void {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		if ( 'edit' !== $mode || 'branch' !== $selectedSource || null === $package || 'branch' !== $package->source() ) {
 			return;
 		}
 
 		$authority = null === $this->authorities ? null : $this->authorities->forPackage( $type, $package->identifier() );
 		if ( null === $authority || ! $this->supportsProvider( $authority['provider_code'] ) ) {
-			$this->renderUnavailablePackageWebhookSetup(
+			$this->render_unavailable_package_webhook_setup(
 				null === $authority
 					? __( 'A stable repository identity and a provider with assisted webhook management are required before setup can begin.', 'ran-booster' )
 					: __( 'This provider does not offer the complete assisted webhook-management capability required by Booster.', 'ran-booster' )
@@ -83,17 +89,19 @@ final class RepositoryWebhookManagementControls {
 
 		$metadata = $this->controller->providerMetadata( $authority['provider_code'] );
 		if ( ! $metadata instanceof ProviderMetadata || ! current_user_can( 'manage_options' ) ) {
-			$this->renderUnavailablePackageWebhookSetup( __( 'You are not permitted to manage this package webhook.', 'ran-booster' ) );
+			$this->render_unavailable_package_webhook_setup( __( 'You are not permitted to manage this package webhook.', 'ran-booster' ) );
 			return;
 		}
 
 		$context = $this->controller->panelContext();
-		$model   = $this->display->panel( $authority['provider_code'], $metadata->label, $authority['repository_id'], $returnUrl, $context['result'], $context['recovery'], true, $context['remediation'] );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$model = $this->display->panel( $authority['provider_code'], $metadata->label, $authority['repository_id'], $returnUrl, $context['result'], $context['recovery'], true, $context['remediation'] );
 		if ( null === $model ) {
-			$this->renderUnavailablePackageWebhookSetup( $this->packageWebhookUnavailableReason( $authority['provider_code'], $authority['repository_id'], $package->identifier() ) );
+			$this->render_unavailable_package_webhook_setup( $this->package_webhook_unavailable_reason( $authority['provider_code'], $authority['repository_id'], $package->identifier() ) );
 			return;
 		}
 
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the include-scope view input contract.
 		$formAttributes = '';
 		$open           = null !== $context['result'] || null !== $context['recovery'] || null !== $context['remediation'];
 		?>
@@ -108,7 +116,7 @@ final class RepositoryWebhookManagementControls {
 	}
 
 	/** Explain a failed local readiness projection without probing a provider. */
-	private function packageWebhookUnavailableReason( string $providerCode, string $repositoryId, string $packageIdentifier ): string {
+	private function package_webhook_unavailable_reason( string $provider_code, string $repository_id, string $package_identifier ): string {
 		$messages = array(
 			'callback_requires_public_https'  => __( 'This site needs a public HTTPS URL before a provider can deliver webhooks. Local receivers cannot be reached remotely.', 'ran-booster' ),
 			'database_unavailable'            => __( 'Webhook setup is unavailable because Booster database storage is unavailable.', 'ran-booster' ),
@@ -119,14 +127,14 @@ final class RepositoryWebhookManagementControls {
 			'repository_locator_invalid'      => __( 'Webhook setup is unavailable because the saved repository address is invalid.', 'ran-booster' ),
 		);
 		try {
-			$readiness = $this->assistance->readiness( $providerCode )->toArray();
+			$readiness = $this->assistance->readiness( $provider_code )->toArray();
 			$codes     = $readiness['site']['reason_codes'] ?? array();
 			foreach ( $readiness['repositories'] ?? array() as $repository ) {
 				if ( ! is_array( $repository ) ) {
 					continue;
 				}
 				$references = is_array( $repository['package_references'] ?? null ) ? $repository['package_references'] : array();
-				if ( $repositoryId === ( $repository['repository_id'] ?? null ) || in_array( $packageIdentifier, $references, true ) ) {
+				if ( $repository_id === ( $repository['repository_id'] ?? null ) || in_array( $package_identifier, $references, true ) ) {
 					$codes = array_merge( $codes, is_array( $repository['reason_codes'] ?? null ) ? $repository['reason_codes'] : array() );
 				}
 			}
@@ -142,7 +150,7 @@ final class RepositoryWebhookManagementControls {
 		return __( 'Webhook setup is unavailable until Booster can confirm this managed repository.', 'ran-booster' );
 	}
 
-	private function renderUnavailablePackageWebhookSetup( string $reason ): void {
+	private function render_unavailable_package_webhook_setup( string $reason ): void {
 		?>
 		<details class="ran-booster-package-disclosure ran-booster-package-webhook-setup" data-ran-booster-package-webhook-setup>
 			<summary><strong><?php esc_html_e( 'Webhook setup', 'ran-booster' ); ?></strong></summary>
@@ -154,13 +162,17 @@ final class RepositoryWebhookManagementControls {
 		<?php
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
 	public function supportsProvider( string $providerCode ): bool {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		return $this->enabled && $this->controller->providerMetadata( $providerCode ) instanceof ProviderMetadata;
 	}
 
 	/** Whether a registered provider claims either webhook-management facet. */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
 	public function hasManagementCapability( string $providerCode ): bool {
-		return $this->enabled && $this->claimedProviderMetadata( $providerCode ) instanceof ProviderMetadata;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		return $this->enabled && $this->claimed_provider_metadata( $providerCode ) instanceof ProviderMetadata;
 	}
 
 	/**
@@ -168,43 +180,52 @@ final class RepositoryWebhookManagementControls {
 	 * @param array<string, array<string, mixed>> $repositoryProjections
 	 * @return array<string, array<string, mixed>>
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
 	public function enrichRepositoryRows( array $rows, string $providerCode, array $repositoryProjections, string $returnUrl ): array {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		$metadata = $this->supportsProvider( $providerCode ) ? $this->controller->providerMetadata( $providerCode ) : null;
 		if ( ! $metadata instanceof ProviderMetadata ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			return $this->display->enrichHistoricalRows( $rows, $providerCode, $repositoryProjections );
 		}
 
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the promoted constructor or external DTO property contract. Retain the public named-parameter contract.
 		return $this->display->enrichRows( $rows, $providerCode, $metadata->label, $metadata->repositoryUrlBase, $repositoryProjections, $returnUrl );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
 	public function renderRepositoryPanel( string $providerCode, string $repositoryId, string $returnUrl ): bool {
-		$model = $this->repositoryWebhookPanelModel( $providerCode, $repositoryId, $returnUrl );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$model = $this->repository_webhook_panel_model( $providerCode, $repositoryId, $returnUrl );
 		if ( null === $model ) {
 			return false;
 		}
-		$model['webhooks_url'] = $this->repositoryWebhookSettingsUrl( $providerCode, $repositoryId, $model['repository'] );
-		echo $this->renderRepositoryWebhookPanelModel( $model ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Fixed Core panel template escapes the normalized model.
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$model['webhooks_url'] = $this->repository_webhook_settings_url( $providerCode, $repositoryId, $model['repository'] );
+		echo $this->render_repository_webhook_panel_model( $model ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Fixed Core panel template escapes the normalized model.
 
 		return true;
 	}
 
 	/** @return array<string,mixed>|null */
-	private function repositoryWebhookPanelModel( string $providerCode, string $repositoryId, string $returnUrl ): ?array {
-		$metadata = $this->supportsProvider( $providerCode ) ? $this->controller->providerMetadata( $providerCode ) : null;
+	private function repository_webhook_panel_model( string $provider_code, string $repository_id, string $return_url ): ?array {
+		$metadata = $this->supportsProvider( $provider_code ) ? $this->controller->providerMetadata( $provider_code ) : null;
 		if ( ! $metadata instanceof ProviderMetadata ) {
 			return null;
 		}
 
 		$context = $this->controller->panelContext();
-		return $this->display->panel( $providerCode, $metadata->label, $repositoryId, $returnUrl, $context['result'], $context['recovery'], current_user_can( 'manage_options' ), $context['remediation'] );
+		return $this->display->panel( $provider_code, $metadata->label, $repository_id, $return_url, $context['result'], $context['recovery'], current_user_can( 'manage_options' ), $context['remediation'] );
 	}
 
 	/** @param array<string,mixed> $model */
-	private function renderRepositoryWebhookPanelModel( array $model ): string {
+	private function render_repository_webhook_panel_model( array $model ): string {
 		ob_start();
 		if ( null !== ( $model['interaction_request'] ?? null ) ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 			$this->adminInteraction->renderFormAttributes( $model['interaction_request'] );
 		}
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the include-scope view input contract.
 		$formAttributes = (string) ob_get_clean();
 		ob_start();
 		require __DIR__ . '/views/panel.php';
@@ -212,18 +233,23 @@ final class RepositoryWebhookManagementControls {
 	}
 
 	/** Render the existing webhook setup disclosure on its repository-owned page. */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
 	public function renderRepositoryWebhookSetup( string $providerCode, string $repositoryId, string $returnUrl, bool $hasBranchConsumer = true, string $repository = '' ): void {
-		$claimedMetadata = $this->claimedProviderMetadata( $providerCode );
-		if ( ! $this->supportsProvider( $providerCode ) && $claimedMetadata instanceof ProviderMetadata ) {
-			$this->renderRepositoryWebhookSection(
-				$this->incompleteCapabilityReadinessItems( $hasBranchConsumer ),
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$claimed_metadata = $this->claimed_provider_metadata( $providerCode );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		if ( ! $this->supportsProvider( $providerCode ) && $claimed_metadata instanceof ProviderMetadata ) {
+			$this->render_repository_webhook_section(
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+				$this->incomplete_capability_readiness_items( $hasBranchConsumer ),
 				'',
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 				$hasBranchConsumer,
 				array(
 					array(
 						'class'   => 'notice-warning',
 						/* translators: %s: provider name. */
-						'message' => sprintf( __( '%s webhook configuration is incomplete. Webhook setup is unavailable until the provider supplies its complete management capability.', 'ran-booster' ), $claimedMetadata->label ),
+						'message' => sprintf( __( '%s webhook configuration is incomplete. Webhook setup is unavailable until the provider supplies its complete management capability.', 'ran-booster' ), $claimed_metadata->label ),
 					),
 				),
 				false
@@ -231,22 +257,32 @@ final class RepositoryWebhookManagementControls {
 
 			return;
 		}
-		$readinessItems = $this->repositoryWebhookReadinessItems( $providerCode, $repositoryId, $hasBranchConsumer );
-		$metadata       = $this->controller->providerMetadata( $providerCode );
-		$model          = $hasBranchConsumer ? $this->repositoryWebhookPanelModel( $providerCode, $repositoryId, $returnUrl ) : null;
-		$notices        = array();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$readiness_items = $this->repository_webhook_readiness_items( $providerCode, $repositoryId, $hasBranchConsumer );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$metadata = $this->controller->providerMetadata( $providerCode );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$model   = $hasBranchConsumer ? $this->repository_webhook_panel_model( $providerCode, $repositoryId, $returnUrl ) : null;
+		$notices = array();
 		if ( ! is_array( $model ) && $metadata instanceof ProviderMetadata ) {
-			$reason    = ! $hasBranchConsumer
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+			$reason = ! $hasBranchConsumer
 				? __( 'Webhook operations are unavailable while no eligible Branch package uses this repository.', 'ran-booster' )
-				: $this->repositoryWebhookUnavailableReason( $providerCode, $repositoryId );
-			$model     = $this->display->unavailablePanel(
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+				: $this->repository_webhook_unavailable_reason( $providerCode, $repositoryId );
+			$model = $this->display->unavailablePanel(
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 				$providerCode,
 				$metadata->label,
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 				$repositoryId,
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 				'' !== trim( $repository ) ? $repository : $repositoryId,
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 				$returnUrl,
 				$reason,
-				$this->repositoryWebhookSettingsUrl( $providerCode, $repositoryId, '' !== trim( $repository ) ? $repository : null )
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+				$this->repository_webhook_settings_url( $providerCode, $repositoryId, '' !== trim( $repository ) ? $repository : null )
 			);
 			$notices[] = array(
 				'class'   => 'notice-warning',
@@ -254,7 +290,8 @@ final class RepositoryWebhookManagementControls {
 			);
 		}
 		if ( is_array( $model ) ) {
-			$model['webhooks_url'] = $this->repositoryWebhookSettingsUrl( $providerCode, $repositoryId, $model['repository'] );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+			$model['webhooks_url'] = $this->repository_webhook_settings_url( $providerCode, $repositoryId, $model['repository'] );
 			if ( is_array( $model['result'] ?? null ) ) {
 				$notices[] = $model['result'];
 			}
@@ -268,16 +305,17 @@ final class RepositoryWebhookManagementControls {
 			$model['recovery_warning'] = null;
 		}
 
-		$this->renderRepositoryWebhookSection( $readinessItems, is_array( $model ) ? $this->renderRepositoryWebhookPanelModel( $model ) : '', $hasBranchConsumer, $notices );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->render_repository_webhook_section( $readiness_items, is_array( $model ) ? $this->render_repository_webhook_panel_model( $model ) : '', $hasBranchConsumer, $notices );
 	}
 
-	private function repositoryWebhookSettingsUrl( string $providerCode, string $repositoryId, ?string $fallbackRepository ): ?string {
+	private function repository_webhook_settings_url( string $provider_code, string $repository_id, ?string $fallback_repository ): ?string {
 		try {
-			$repository = $fallbackRepository;
+			$repository = $fallback_repository;
 			if ( null === $repository ) {
 				return null;
 			}
-			$provider = $this->providers->requireCapability( $providerCode, RepositoryWebhookSettingsLink::class );
+			$provider = $this->providers->requireCapability( $provider_code, RepositoryWebhookSettingsLink::class );
 			$url      = null === $repository ? '' : trim( $provider->repositoryWebhookSettingsUrl( $repository ) );
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Provider returns an external display URL which is checked before rendering.
 			$parts = parse_url( $url );
@@ -291,7 +329,7 @@ final class RepositoryWebhookManagementControls {
 		}
 	}
 
-	private function repositoryWebhookUnavailableReason( string $providerCode, string $repositoryId ): string {
+	private function repository_webhook_unavailable_reason( string $provider_code, string $repository_id ): string {
 		$messages = array(
 			'callback_requires_public_https'  => __( 'This site needs a public HTTPS URL before a provider can deliver webhooks. Local receivers cannot be reached remotely.', 'ran-booster' ),
 			'database_unavailable'            => __( 'Webhook setup is unavailable because Booster database storage is unavailable.', 'ran-booster' ),
@@ -302,10 +340,10 @@ final class RepositoryWebhookManagementControls {
 			'repository_locator_invalid'      => __( 'Webhook setup is unavailable because the saved repository address is invalid.', 'ran-booster' ),
 		);
 		try {
-			$readiness = $this->assistance->readiness( $providerCode )->toArray();
+			$readiness = $this->assistance->readiness( $provider_code )->toArray();
 			$codes     = $readiness['site']['reason_codes'] ?? array();
 			foreach ( $readiness['repositories'] ?? array() as $repository ) {
-				if ( is_array( $repository ) && $repositoryId === ( $repository['repository_id'] ?? null ) ) {
+				if ( is_array( $repository ) && $repository_id === ( $repository['repository_id'] ?? null ) ) {
 					$codes = array_merge( $codes, is_array( $repository['reason_codes'] ?? null ) ? $repository['reason_codes'] : array() );
 				}
 			}
@@ -321,7 +359,7 @@ final class RepositoryWebhookManagementControls {
 		return __( 'Webhook setup is unavailable until Booster can confirm this managed repository.', 'ran-booster' );
 	}
 
-	private function renderRepositoryWebhookSetupRegion( string $panel ): void {
+	private function render_repository_webhook_setup_region( string $panel ): void {
 		?>
 		<div class="ran-booster-repository-webhook-setup__content">
 			<?php echo $panel; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captured output is rendered and escaped by the fixed Core panel view. ?>
@@ -330,8 +368,8 @@ final class RepositoryWebhookManagementControls {
 	}
 
 	/** @param list<array{label:string,message:string,state:string}> $items @param list<array{class:string,message:string}> $notices */
-	private function renderRepositoryWebhookSection( array $items, string $panel, bool $hasBranchConsumer, array $notices, bool $setupAvailable = true ): void {
-		$inactive = ! $hasBranchConsumer || ! $setupAvailable;
+	private function render_repository_webhook_section( array $items, string $panel, bool $has_branch_consumer, array $notices, bool $setup_available = true ): void {
+		$inactive = ! $has_branch_consumer || ! $setup_available;
 		?>
 		<section class="ran-booster-settings-section ran-booster-repository-webhook-section" aria-labelledby="ran-booster-repository-webhook-heading">
 			<header class="ran-booster-settings-section__header">
@@ -343,12 +381,12 @@ final class RepositoryWebhookManagementControls {
 						<div class="notice <?php echo esc_attr( $notice['class'] ); ?> inline ran-booster-repository-webhook-management__notice"><p><?php echo esc_html( $notice['message'] ); ?></p></div>
 					<?php } ?>
 				</div>
-				<?php $this->renderRepositoryWebhookLifecycle( $items, $inactive ); ?>
-				<?php $this->renderRepositoryWebhookReadiness( $items, $inactive ); ?>
+				<?php $this->render_repository_webhook_lifecycle( $items, $inactive ); ?>
+				<?php $this->render_repository_webhook_readiness( $items, $inactive ); ?>
 				<section class="ran-booster-readiness-panel ran-booster-repository-webhook-setup<?php echo $inactive ? ' is-inactive' : ''; ?>" aria-labelledby="ran-booster-repository-webhook-setup-heading"<?php echo $inactive ? ' aria-disabled="true"' : ''; ?>>
 					<div class="ran-booster-readiness-panel__top"><div><h4 id="ran-booster-repository-webhook-setup-heading"><?php esc_html_e( 'Webhook setup', 'ran-booster' ); ?></h4><p><?php esc_html_e( 'Sets up this repository’s webhook. Automatic updates remain configured separately for each package.', 'ran-booster' ); ?></p></div></div>
 					<div class="ran-booster-repository-webhook-setup__body">
-						<?php $this->renderRepositoryWebhookSetupRegion( $panel ); ?>
+						<?php $this->render_repository_webhook_setup_region( $panel ); ?>
 					</div>
 				</section>
 			</div>
@@ -357,11 +395,11 @@ final class RepositoryWebhookManagementControls {
 	}
 
 	/** @return list<array{label:string,message:string,state:string}> */
-	private function incompleteCapabilityReadinessItems( bool $hasBranchConsumer ): array {
+	private function incomplete_capability_readiness_items( bool $has_branch_consumer ): array {
 		return array(
 			array(
 				'label'   => __( 'Branch demand', 'ran-booster' ),
-				'message' => $hasBranchConsumer
+				'message' => $has_branch_consumer
 					? __( 'Branch packages can still be updated manually while webhook setup is unavailable.', 'ran-booster' )
 					: __( 'Published-release packages ignore pushes; no Branch package currently uses this repository webhook.', 'ran-booster' ),
 				'state'   => 'is-pending',
@@ -384,16 +422,16 @@ final class RepositoryWebhookManagementControls {
 		);
 	}
 
-	private function claimedProviderMetadata( string $providerCode ): ?ProviderMetadata {
+	private function claimed_provider_metadata( string $provider_code ): ?ProviderMetadata {
 		try {
-			$metadata = $this->providers->metadata()[ $providerCode ] ?? null;
-			$provider = $this->providers->get( $providerCode );
+			$metadata = $this->providers->metadata()[ $provider_code ] ?? null;
+			$provider = $this->providers->get( $provider_code );
 		} catch ( \Throwable ) {
 			return null;
 		}
 
 		return $metadata instanceof ProviderMetadata
-			&& hash_equals( $providerCode, $metadata->code->value )
+			&& hash_equals( $provider_code, $metadata->code->value )
 			&& ( $provider instanceof \RAN\RepositoryProvider\RepositoryWebhookFitness || $provider instanceof \RAN\RepositoryProvider\RepositoryWebhookManagement )
 			? $metadata
 			: null;
@@ -402,14 +440,14 @@ final class RepositoryWebhookManagementControls {
 	/**
 	 * @return list<array{label:string,message:string,state:string}>
 	 */
-	private function repositoryWebhookReadinessItems( string $providerCode, string $repositoryId, bool $hasBranchConsumer ): array {
+	private function repository_webhook_readiness_items( string $provider_code, string $repository_id, bool $has_branch_consumer ): array {
 		$site       = null;
 		$repository = null;
 		try {
-			$readiness = $this->assistance->readiness( $providerCode )->toArray();
+			$readiness = $this->assistance->readiness( $provider_code )->toArray();
 			$site      = is_array( $readiness['site'] ?? null ) ? $readiness['site'] : null;
 			foreach ( is_array( $readiness['repositories'] ?? null ) ? $readiness['repositories'] : array() as $candidate ) {
-				if ( is_array( $candidate ) && $repositoryId === ( $candidate['repository_id'] ?? null ) ) {
+				if ( is_array( $candidate ) && $repository_id === ( $candidate['repository_id'] ?? null ) ) {
 					$repository = $candidate;
 					break;
 				}
@@ -419,14 +457,14 @@ final class RepositoryWebhookManagementControls {
 			$repository = null;
 		}
 
-		$policies       = is_array( $repository['deployment_policies'] ?? null ) ? $repository['deployment_policies'] : array();
-		$automaticCount = is_int( $policies['automatic'] ?? null ) ? $policies['automatic'] : 0;
-		$record         = $this->installationStore->find( $providerCode, $repositoryId );
-		$secretCoverage = is_string( $repository['local_secret_coverage'] ?? null )
+		$policies        = is_array( $repository['deployment_policies'] ?? null ) ? $repository['deployment_policies'] : array();
+		$automatic_count = is_int( $policies['automatic'] ?? null ) ? $policies['automatic'] : 0;
+		$record          = $this->installation_store->find( $provider_code, $repository_id );
+		$secret_coverage = is_string( $repository['local_secret_coverage'] ?? null )
 			? $repository['local_secret_coverage']
 			: ( null === $record ? 'unknown' : 'recorded-' . $record->webhookProfileScope() );
-		$receiverReady  = 'ready' === ( $site['status'] ?? null );
-		$recordHealthy  = null !== $record
+		$receiver_ready  = 'ready' === ( $site['status'] ?? null );
+		$record_healthy  = null !== $record
 			&& 'configured' === $record->status()
 			&& is_string( $site['callback_url'] ?? null )
 			&& hash_equals( $record->endpoint(), (string) $site['callback_url'] );
@@ -434,52 +472,52 @@ final class RepositoryWebhookManagementControls {
 		return array(
 			array(
 				'label'   => __( 'Branch demand', 'ran-booster' ),
-				'message' => ! $hasBranchConsumer
+				'message' => ! $has_branch_consumer
 					? __( 'Published-release packages ignore pushes; no Branch package currently uses this repository webhook.', 'ran-booster' )
-					: ( 0 < $automaticCount
+					: ( 0 < $automatic_count
 					? sprintf(
 						/* translators: %d: number of Automatic Branch packages using the repository webhook. */
-						_n( '%d Automatic Branch package uses this repository webhook.', '%d Automatic Branch packages use this repository webhook.', $automaticCount, 'ran-booster' ),
-						$automaticCount
+						_n( '%d Automatic Branch package uses this repository webhook.', '%d Automatic Branch packages use this repository webhook.', $automatic_count, 'ran-booster' ),
+						$automatic_count
 					)
 					: __( 'No package uses this webhook yet. You can set it up before turning on Automatic updates.', 'ran-booster' ) ),
-				'state'   => 0 < $automaticCount ? 'is-ok' : 'is-pending',
+				'state'   => 0 < $automatic_count ? 'is-ok' : 'is-pending',
 			),
 			array(
 				'label'   => __( 'Signing profile', 'ran-booster' ),
-				'message' => match ( $secretCoverage ) {
+				'message' => match ( $secret_coverage ) {
 					'repository', 'shared' => __( 'A signing secret is ready for this repository.', 'ran-booster' ),
 					'recorded-repository', 'recorded-owner' => __( 'A signing secret was available when Booster last checked.', 'ran-booster' ),
 					'none' => __( 'This repository needs a signing secret.', 'ran-booster' ),
 					default => __( 'Booster could not confirm the signing secret.', 'ran-booster' ),
 				},
-				'state'   => in_array( $secretCoverage, array( 'repository', 'shared', 'recorded-repository', 'recorded-owner' ), true ) ? 'is-ok' : ( 'none' === $secretCoverage ? 'is-warning' : 'is-pending' ),
+				'state'   => in_array( $secret_coverage, array( 'repository', 'shared', 'recorded-repository', 'recorded-owner' ), true ) ? 'is-ok' : ( 'none' === $secret_coverage ? 'is-warning' : 'is-pending' ),
 			),
 			array(
 				'label'   => __( 'Provider receiver', 'ran-booster' ),
-				'message' => $receiverReady
+				'message' => $receiver_ready
 					? __( 'This site can receive webhook deliveries.', 'ran-booster' )
 					: __( 'This site needs a public HTTPS URL to receive webhooks. Manual updates still work.', 'ran-booster' ),
-				'state'   => $receiverReady ? 'is-ok' : ( null === $site ? 'is-pending' : 'is-warning' ),
+				'state'   => $receiver_ready ? 'is-ok' : ( null === $site ? 'is-pending' : 'is-warning' ),
 			),
 			array(
 				'label'   => __( 'Remote hook', 'ran-booster' ),
 				'message' => null === $record
 					? __( 'Booster has not set up a webhook for this repository.', 'ran-booster' )
-					: ( $recordHealthy
+					: ( $record_healthy
 						? sprintf(
 							/* translators: %s: UTC timestamp of the last recorded webhook check. */
 							__( 'Configured at the last recorded check on %s. Run Check to confirm current provider state.', 'ran-booster' ),
 							$record->checkedAt()
 						)
 						: __( 'The recorded remote webhook needs review. Run Check or inspect it at the provider.', 'ran-booster' ) ),
-				'state'   => $recordHealthy ? 'is-ok' : ( null === $record ? 'is-pending' : 'is-warning' ),
+				'state'   => $record_healthy ? 'is-ok' : ( null === $record ? 'is-pending' : 'is-warning' ),
 			),
 		);
 	}
 
 	/** @param list<array{label:string,message:string,state:string}> $items */
-	private function renderRepositoryWebhookLifecycle( array $items, bool $inactive = false ): void {
+	private function render_repository_webhook_lifecycle( array $items, bool $inactive = false ): void {
 		$steps = array(
 			array(
 				'label' => __( 'Site receiver', 'ran-booster' ),
@@ -516,7 +554,7 @@ final class RepositoryWebhookManagementControls {
 	}
 
 	/** @param list<array{label:string,message:string,state:string}> $items */
-	private function renderRepositoryWebhookReadiness( array $items, bool $inactive = false ): void {
+	private function render_repository_webhook_readiness( array $items, bool $inactive = false ): void {
 		?>
 		<div class="ran-booster-readiness-panel ran-booster-repository-webhook-readiness<?php echo $inactive ? ' is-inactive' : ''; ?>"<?php echo $inactive ? ' aria-disabled="true"' : ''; ?>>
 			<div class="ran-booster-readiness-panel__top"><div><h4><?php esc_html_e( 'Webhook readiness', 'ran-booster' ); ?></h4></div></div>
@@ -534,28 +572,35 @@ final class RepositoryWebhookManagementControls {
 	}
 
 	/** @param list<array<string, mixed>> $sections @return list<array<string, mixed>> */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
 	public function documentationSections( array $sections, string $providerCode, string $providerLabel ): array {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		if ( ! $this->enabled || null === $this->controller->providerMetadata( $providerCode ) ) {
 			return $sections;
 		}
 		/* translators: %s: repository provider name. */
-		$summary    = sprintf( __( '%s webhook management', 'ran-booster' ), $providerLabel );
+		$summary    = sprintf( __( '%s webhook management', 'ran-booster' ), $providerLabel ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		$sections[] = array(
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			'id'      => 'ran-booster-repository-webhook-management-guide-' . $providerCode,
 			'summary' => $summary,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			'content' => fn (): null => $this->renderDocumentationContent( $providerLabel ),
 		);
 
 		return $sections;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
 	public function renderDocumentationContent( string $providerLabel ): null {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		$sections = $this->display->documentation( $providerLabel );
 		require __DIR__ . '/views/documentation.php';
 
 		return null;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function handleAdminPost(): void {
 		$request  = is_array( $_POST ) ? wp_unslash( $_POST ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- The controller verifies the operation-bound nonce before dispatch.
 		$query    = is_array( $_GET ) ? wp_unslash( $_GET ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reads the nonce that the controller verifies before dispatch.
@@ -566,28 +611,33 @@ final class RepositoryWebhookManagementControls {
 		exit;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
 	public function enqueueAdminAssets( string $hookSuffix ): void {
-		$query          = wp_unslash( $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only asset routing.
-		$providerCode   = is_array( $query ) && is_string( $query['tab'] ?? null ) ? trim( $query['tab'] ) : '';
-		$providerScreen = 'toplevel_page_ran-booster' === $hookSuffix
+		$query         = wp_unslash( $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only asset routing.
+		$provider_code = is_array( $query ) && is_string( $query['tab'] ?? null ) ? trim( $query['tab'] ) : '';
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$provider_screen = 'toplevel_page_ran-booster' === $hookSuffix
 			&& is_array( $query ) && 'ran-booster' === ( $query['page'] ?? '' )
-			&& null !== $this->controller->providerMetadata( $providerCode );
-		$packageScreen  = is_array( $query ) && in_array( $hookSuffix, array( 'ran-booster_page_ran-booster-plugins', 'ran-booster_page_ran-booster-themes' ), true )
+			&& null !== $this->controller->providerMetadata( $provider_code );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$package_screen = is_array( $query ) && in_array( $hookSuffix, array( 'ran-booster_page_ran-booster-plugins', 'ran-booster_page_ran-booster-themes' ), true )
 			&& in_array( $query['page'] ?? null, array( 'ran-booster-plugins', 'ran-booster-themes' ), true )
 			&& is_string( $query['package'] ?? null ) && '' !== trim( $query['package'] ) && strlen( $query['package'] ) <= 191;
-		if ( ! $providerScreen && ! $packageScreen ) {
+		if ( ! $provider_screen && ! $package_screen ) {
 			return;
 		}
 
-		$relativePath = 'assets/ran-booster-repository-webhook-management.css';
-		$stylePath    = $this->pluginPath . $relativePath;
-		$styleVersion = file_exists( $stylePath ) ? (string) filemtime( $stylePath ) : null;
+		$relative_path = 'assets/ran-booster-repository-webhook-management.css';
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
+		$style_path    = $this->pluginPath . $relative_path;
+		$style_version = file_exists( $style_path ) ? (string) filemtime( $style_path ) : null;
 
 		wp_enqueue_style(
 			self::ADMIN_STYLE_HANDLE,
-			$this->pluginUrl . $relativePath,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
+			$this->pluginUrl . $relative_path,
 			array( 'ran-booster-styles' ),
-			$styleVersion
+			$style_version
 		);
 	}
 }

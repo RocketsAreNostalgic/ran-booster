@@ -389,7 +389,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 	}
 
 	public function testRepositoryWebhookShellKeepsItsChildZonesAndControlLabelsAcrossActiveAndInactiveStates(): void {
-		$method = new \ReflectionMethod( $this->controls(), 'renderRepositoryWebhookSection' );
+		$method = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_section' );
 		$items  = array(
 			array(
 				'label'   => 'Branch demand',
@@ -440,7 +440,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 	}
 
 	public function testWebhookControlTemplateKeepsCredentialSecretAndOperationIdentitiesAcrossRecordStates(): void {
-		$method = new \ReflectionMethod( $this->controls(), 'renderRepositoryWebhookPanelModel' );
+		$method = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_panel_model' );
 		$states = array(
 			'unconfigured'       => $this->webhookPanelModel(
 				false,

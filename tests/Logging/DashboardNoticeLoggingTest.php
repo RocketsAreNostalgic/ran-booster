@@ -109,7 +109,7 @@ final class DashboardNoticeLoggingTest extends TestCase {
 	}
 
 	public function testStorageAttentionLogsOnlyStablePathlessDiagnosticContext(): void {
-		$method = new \ReflectionMethod( Dashboard::class, 'logSecretsStorageDiagnostic' );
+		$method = new \ReflectionMethod( Dashboard::class, 'log_secrets_storage_diagnostic' );
 		$method->invoke(
 			$this->dashboard,
 			SecretsStorageProvisioningResult::storage_needs_attention(

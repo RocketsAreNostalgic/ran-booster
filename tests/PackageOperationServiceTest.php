@@ -866,7 +866,7 @@ final class PackageOperationServiceTest extends TestCase {
 		$dashboard = $this->dashboard( new OperationCoordinator() );
 		$_GET      = array( 'open_picker' => '1' );
 		$_POST     = array( 'ran_booster' => $this->input( 'install-plugin' ) );
-		$method    = new \ReflectionMethod( Dashboard::class, 'requestedOpenPicker' );
+		$method    = new \ReflectionMethod( Dashboard::class, 'requested_open_picker' );
 
 		self::assertFalse( $method->invoke( $dashboard ) );
 
@@ -1380,7 +1380,7 @@ final class PackageOperationServiceTest extends TestCase {
 
 	/** @return array{operation: string, identifier: string}|null */
 	private function invokePackageSuccessNotice( Dashboard $dashboard, string $type ): ?array {
-		$method = new \ReflectionMethod( Dashboard::class, 'addPackageSuccessNotice' );
+		$method = new \ReflectionMethod( Dashboard::class, 'add_package_success_notice' );
 		$result = $method->invoke( $dashboard, $type );
 
 		/** @var array{operation: string, identifier: string}|null $result */

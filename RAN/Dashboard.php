@@ -63,24 +63,24 @@ class Dashboard {
 	 */
 	private $themes;
 
-	private ProviderSettingsPresenter $providerSettings;
+	private ProviderSettingsPresenter $provider_settings;
 	private TroubleshootingService $troubleshooting;
-	private ?array $troubleshootingPayload = null;
+	private ?array $troubleshooting_payload = null;
 
-	private ?AdminTabRegistry $adminTabs;
-	private ?AdminAddOnRegistry $adminAddOns;
-	private ?RepositoryWebhookManagementControls $webhookManagement;
-	private ?ReleaseWorkflowControls $releaseWorkflow;
-	private ?CoreSelfUpdateDevelopmentNotice $coreSelfUpdateDevelopmentNotice;
+	private ?AdminTabRegistry $admin_tabs;
+	private ?AdminAddOnRegistry $admin_add_ons;
+	private ?RepositoryWebhookManagementControls $webhook_management;
+	private ?ReleaseWorkflowControls $release_workflow;
+	private ?CoreSelfUpdateDevelopmentNotice $core_self_update_development_notice;
 
-	private ?ProviderDocumentationPresenter $providerDocumentation;
-	private ?PackageAdminController $packageAdmin = null;
-	private DeploymentAdminPresenter $deploymentAdmin;
-	private PackagePagePresenter $pluginPages;
-	private PackagePagePresenter $themePages;
-	private ?TemporaryDebugCapture $debugCapture                    = null;
-	private ?SecretsStorageProvisioner $secretsStorage              = null;
-	private ?SecretsStorageProvisioningResult $secretsStorageResult = null;
+	private ?ProviderDocumentationPresenter $provider_documentation;
+	private ?PackageAdminController $package_admin = null;
+	private DeploymentAdminPresenter $deployment_admin;
+	private PackagePagePresenter $plugin_pages;
+	private PackagePagePresenter $theme_pages;
+	private ?TemporaryDebugCapture $debug_capture                     = null;
+	private ?SecretsStorageProvisioner $secrets_storage               = null;
+	private ?SecretsStorageProvisioningResult $secrets_storage_result = null;
 
 	/**
 	 * @param Database $db
@@ -102,138 +102,163 @@ class Dashboard {
 		PluginRepository $plugins,
 		Booster $booster,
 		ThemeRepository $themes,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		ProviderSettingsPresenter $providerSettings,
 		TroubleshootingService $troubleshooting,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?AdminTabRegistry $adminTabs = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?ProviderDocumentationPresenter $providerDocumentation = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?PackageOperationService $packageOperations = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?DeploymentAttemptRepository $deploymentAttempts = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?TemporaryDebugCapture $debugCapture = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?SecretsStorageProvisioner $secretsStorage = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?AdminAddOnRegistry $adminAddOns = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?RepositoryWebhookManagementControls $webhookManagement = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?CoreSelfUpdateDevelopmentNotice $coreSelfUpdateDevelopmentNotice = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?ReleaseWorkflowControls $releaseWorkflow = null
 	) {
-		$this->db                    = $db;
-		$this->plugins               = $plugins;
-		$this->booster               = $booster;
-		$this->themes                = $themes;
-		$this->providerSettings      = $providerSettings;
-		$this->troubleshooting       = $troubleshooting;
-		$this->adminTabs             = $adminTabs;
-		$this->providerDocumentation = $providerDocumentation;
-		$this->deploymentAdmin       = new DeploymentAdminPresenter(
+		$this->db      = $db;
+		$this->plugins = $plugins;
+		$this->booster = $booster;
+		$this->themes  = $themes;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->provider_settings = $providerSettings;
+		$this->troubleshooting   = $troubleshooting;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->admin_tabs = $adminTabs;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->provider_documentation = $providerDocumentation;
+		$this->deployment_admin       = new DeploymentAdminPresenter(
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			attempts: $deploymentAttempts,
 			plugins: $plugins,
 			themes: $themes
 		);
-		$this->packageAdmin          = new PackageAdminController( $packageOperations, deployments: $this->deploymentAdmin );
-		$this->pluginPages           = PackagePagePresenter::plugin();
-		$this->themePages            = PackagePagePresenter::theme();
-		$this->debugCapture          = $debugCapture;
-		$this->secretsStorage        = $secretsStorage;
-		$this->adminAddOns           = $adminAddOns;
-		$this->webhookManagement     = $webhookManagement;
-		$this->releaseWorkflow       = $releaseWorkflow;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->package_admin = new PackageAdminController( $packageOperations, deployments: $this->deployment_admin );
+		$this->plugin_pages  = PackagePagePresenter::plugin();
+		$this->theme_pages   = PackagePagePresenter::theme();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->debug_capture = $debugCapture;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->secrets_storage = $secretsStorage;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->admin_add_ons = $adminAddOns;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->webhook_management = $webhookManagement;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->release_workflow = $releaseWorkflow;
 
-		$this->coreSelfUpdateDevelopmentNotice = $coreSelfUpdateDevelopmentNotice;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->core_self_update_development_notice = $coreSelfUpdateDevelopmentNotice;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
 	public function getIndex( ?string $forcedTab = null ) {
-		if ( null === $this->adminTabs ) {
+		if ( null === $this->admin_tabs ) {
 			throw new LogicException( 'Booster admin tabs are not configured.' );
 		}
 
-		$requestedTab = null;
+		$requested_tab = null;
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only allowlisted navigation state.
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		if ( null !== $forcedTab && '' !== $forcedTab ) {
-			$requestedTab = $forcedTab;
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+			$requested_tab = $forcedTab;
 		} elseif ( isset( $_GET['tab'] ) && is_string( $_GET['tab'] ) ) {
 			// Read-only navigation state; no action is performed from this query value.
-			$requestedTab = wp_unslash( $_GET['tab'] );
+			$requested_tab = wp_unslash( $_GET['tab'] );
 		}
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
-		$requestedAddOnKey = is_string( $requestedTab ) ? strtolower( trim( $requestedTab ) ) : '';
-		$selectedAddOn     = '' === $requestedAddOnKey || null === $this->adminAddOns
+		$requested_add_on_key = is_string( $requested_tab ) ? strtolower( trim( $requested_tab ) ) : '';
+		$selected_add_on      = '' === $requested_add_on_key || null === $this->admin_add_ons
 			? null
-			: $this->adminAddOns->get( $requestedAddOnKey );
-		$selectedTab       = null === $selectedAddOn ? $this->adminTabs->resolve( $requestedTab ) : null;
-		$selectedKey       = null === $selectedAddOn ? $selectedTab->getKey() : $selectedAddOn->key();
-		$tabs              = $this->tabNavigation( $selectedKey );
-		$adminUrl          = is_multisite()
+			: $this->admin_add_ons->get( $requested_add_on_key );
+		$selected_tab         = null === $selected_add_on ? $this->admin_tabs->resolve( $requested_tab ) : null;
+		$selected_key         = null === $selected_add_on ? $selected_tab->getKey() : $selected_add_on->key();
+		$tabs                 = $this->tab_navigation( $selected_key );
+		$admin_url            = is_multisite()
 			? network_admin_url( 'admin.php' )
 			: admin_url( 'admin.php' );
-		$data              = array(
-			'tab'  => $selectedKey,
+		$data                 = array(
+			'tab'  => $selected_key,
 			'tabs' => $tabs,
 		);
-		if ( null !== $selectedAddOn && null !== $this->adminAddOns ) {
-			$data['addOnTab']     = $selectedAddOn;
-			$data['addOnContext'] = $this->adminAddOns->contextFor(
-				$selectedAddOn,
-				$adminUrl . '?page=ran-booster&tab=' . rawurlencode( $selectedAddOn->key() ),
+		if ( null !== $selected_add_on && null !== $this->admin_add_ons ) {
+			$data['addOnTab']     = $selected_add_on;
+			$data['addOnContext'] = $this->admin_add_ons->contextFor(
+				$selected_add_on,
+				$admin_url . '?page=ran-booster&tab=' . rawurlencode( $selected_add_on->key() ),
 				is_multisite() ? 'network' : 'site'
 			);
 		} else {
-			$data['tabView'] = $selectedTab->getView();
+			$data['tabView'] = $selected_tab->getView();
 		}
 
-		if ( null !== $selectedTab && 'overview' === $selectedTab->getKey() ) {
+		if ( null !== $selected_tab && 'overview' === $selected_tab->getKey() ) {
 			$data['onboarding'] = ( new OnboardingPresenter() )->build(
 				$tabs,
-				$adminUrl . '?page=ran-booster-plugins-create',
-				$adminUrl . '?page=ran-booster-themes-create'
+				$admin_url . '?page=ran-booster-plugins-create',
+				$admin_url . '?page=ran-booster-themes-create'
 			);
-			if ( null !== $this->secretsStorage ) {
-				$includeStorageDetails = current_user_can( 'manage_options' )
+			if ( null !== $this->secrets_storage ) {
+				$include_storage_details = current_user_can( 'manage_options' )
 					&& current_user_can( 'activate_plugins' );
-				$wordpressRoot         = defined( 'ABSPATH' ) && is_string( ABSPATH )
+				$wordpress_root          = defined( 'ABSPATH' ) && is_string( ABSPATH )
 					? ABSPATH
 					: '';
-				$result                = $this->secretsStorageResult ?? $this->secretsStorage->status();
-				$this->logSecretsStorageDiagnostic( $result );
-				$recovery                              = $includeStorageDetails
-					? $this->secretsStorage->recoveryState( $result )
+				$result                  = $this->secrets_storage_result ?? $this->secrets_storage->status();
+				$this->log_secrets_storage_diagnostic( $result );
+				$recovery                              = $include_storage_details
+					? $this->secrets_storage->recoveryState( $result )
 					: null;
 				$data['onboarding']['secrets_storage'] = ( new SecretsStorageSetupPresenter() )->build(
 					$result,
-					$adminUrl . '?page=ran-booster&tab=overview',
-					$wordpressRoot,
-					$includeStorageDetails,
+					$admin_url . '?page=ran-booster&tab=overview',
+					$wordpress_root,
+					$include_storage_details,
 					$recovery
 				);
 			}
 		}
 
-		if ( null !== $selectedTab && $selectedTab->isProvider() ) {
-			$provider                  = $selectedTab->getProvider();
+		if ( null !== $selected_tab && $selected_tab->isProvider() ) {
+			$provider                  = $selected_tab->getProvider();
 			$data                      = array_merge(
 				$data,
-				$this->providerSettings->build( null === $provider ? null : $provider->value )
+				$this->provider_settings->build( null === $provider ? null : $provider->value )
 			);
-			$data['providerView']      = $this->requestedProviderView();
-			$data['providerTask']      = $this->requestedProviderTask();
-			$data['repositoryView']    = $this->requestedProviderRepositoryView();
-			$data['providerListState'] = $this->requestedProviderListState();
+			$data['providerView']      = $this->requested_provider_view();
+			$data['providerTask']      = $this->requested_provider_task();
+			$data['repositoryView']    = $this->requested_provider_repository_view();
+			$data['providerListState'] = $this->requested_provider_list_state();
 
-			$data['requestedRepositoryId']           = $this->requestedProviderRepositoryId();
-			$data                                    = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->projectPage( $data, $this->webhookManagement, $this->releaseWorkflow ) );
-			$data                                    = array_merge( $data, $this->providerSettings->buildProfileListProjection( $data ) );
-			$data['webhookManagement']               = $this->webhookManagement;
-			$data['releaseWorkflow']                 = $this->releaseWorkflow;
+			$data['requestedRepositoryId']           = $this->requested_provider_repository_id();
+			$data                                    = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->projectPage( $data, $this->webhook_management, $this->release_workflow ) );
+			$data                                    = array_merge( $data, $this->provider_settings->buildProfileListProjection( $data ) );
+			$data['webhookManagement']               = $this->webhook_management;
+			$data['releaseWorkflow']                 = $this->release_workflow;
 			$data['statusSummaryRenderer']           = new AdminStatusSummaryRenderer();
 			$data['providerManagementTableRenderer'] = new ProviderManagementTableRenderer();
 			$data['repositoryDetailRenderer']        = new RepositoryDetailRenderer();
 			$data['repositoryTableRenderer']         = new RepositoryTableRenderer();
-		} elseif ( null !== $selectedTab && 'portability' === $selectedTab->getKey() ) {
+		} elseif ( null !== $selected_tab && 'portability' === $selected_tab->getKey() ) {
 			try {
-				$export                               = $this->portabilityExportData();
+				$export                               = $this->portability_export_data();
 				$data['portabilityExportRows']        = $export['rows'];
 				$data['portabilityExportUnavailable'] = false;
 				try {
-					$data['portabilityExportCredentialGroups']       = $this->providerSettings->buildPortabilityCredentials( $export['credentials'] );
+					$data['portabilityExportCredentialGroups']       = $this->provider_settings->buildPortabilityCredentials( $export['credentials'] );
 					$data['portabilityExportCredentialsUnavailable'] = false;
 				} catch ( Throwable $failure ) {
 					BoosterLogger::logException(
@@ -261,23 +286,23 @@ class Dashboard {
 				$data['portabilityExportCredentialGroups']       = array();
 				$data['portabilityExportCredentialsUnavailable'] = false;
 			}
-		} elseif ( null !== $selectedTab && 'documentation' === $selectedTab->getKey() ) {
-			$data['providerDocumentation'] = null === $this->providerDocumentation
+		} elseif ( null !== $selected_tab && 'documentation' === $selected_tab->getKey() ) {
+			$data['providerDocumentation'] = null === $this->provider_documentation
 				? array()
-				: $this->providerDocumentation->build();
-			$data['documentationUrl']      = $adminUrl . '?page=ran-booster&tab=documentation';
+				: $this->provider_documentation->build();
+			$data['documentationUrl']      = $admin_url . '?page=ran-booster&tab=documentation';
 			$data['documentationScope']    = is_multisite() ? 'network' : 'site';
-		} elseif ( null !== $selectedTab && 'troubleshooting' === $selectedTab->getKey() ) {
-			$panel                        = $this->requestedTroubleshootingPanel();
+		} elseif ( null !== $selected_tab && 'troubleshooting' === $selected_tab->getKey() ) {
+			$panel                        = $this->requested_troubleshooting_panel();
 			$data['troubleshootingPanel'] = $panel;
 			if ( 'debug-capture' === $panel ) {
 				$data['troubleshooting'] = array();
-				$data['debugCapture']    = $this->debugCapturePayload();
+				$data['debugCapture']    = $this->debug_capture_payload();
 			} elseif ( 'activity' === $panel ) {
 				$data['troubleshooting']    = array();
-				$data['deploymentActivity'] = $this->deploymentAdmin->activity();
+				$data['deploymentActivity'] = $this->deployment_admin->activity();
 			} else {
-				$data['troubleshooting'] = $this->troubleshootingPayload ?? $this->troubleshooting->formPayload();
+				$data['troubleshooting'] = $this->troubleshooting_payload ?? $this->troubleshooting->formPayload();
 			}
 		}
 
@@ -285,6 +310,7 @@ class Dashboard {
 	}
 
 	/** Render the native sidebar route through the canonical Transporter tab. */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function getTransporter() {
 		return $this->getIndex( 'portability' );
 	}
@@ -294,8 +320,10 @@ class Dashboard {
 	 * preference mutation. The Dispatcher may return this fragment only after it
 	 * has performed the action's ordinary capability and nonce checks.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
 	public function renderPublicLookupProfileRegion( string $providerCode, ?string $error = null ): string {
-		$settings                             = $this->providerSettings->build( $providerCode );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$settings                             = $this->provider_settings->build( $providerCode );
 		$settings['publicLookupProfileError'] = $error;
 
 		ob_start();
@@ -313,8 +341,11 @@ class Dashboard {
 	 * start or stop. The Dispatcher calls this only after capability and nonce
 	 * checks; an error remains in this persistent local region.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function renderDebugCaptureRegion( ?string $error = null ): string {
-		$debugCapture      = $this->debugCapturePayload();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the include-scope view input contract.
+		$debugCapture = $this->debug_capture_payload();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the include-scope view input contract.
 		$debugCaptureError = $error;
 
 		ob_start();
@@ -323,11 +354,12 @@ class Dashboard {
 		return (string) ob_get_clean();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function setSecretsStorageProvisioningResult( SecretsStorageProvisioningResult $result ): void {
-		$this->secretsStorageResult = $result;
+		$this->secrets_storage_result = $result;
 	}
 
-	private function logSecretsStorageDiagnostic( SecretsStorageProvisioningResult $result ): void {
+	private function log_secrets_storage_diagnostic( SecretsStorageProvisioningResult $result ): void {
 		if ( ! in_array(
 			$result->status(),
 			array(
@@ -354,7 +386,7 @@ class Dashboard {
 	}
 
 	/** @return array{rows:list<array{name:string,identifier:string,type:string}>,credentials:array<string,array<string,list<array{index:int,name:string,type:string}>>>} */
-	private function portabilityExportData(): array {
+	private function portability_export_data(): array {
 		$rows        = array();
 		$credentials = array();
 		foreach ( array(
@@ -365,17 +397,19 @@ class Dashboard {
 				if ( ! $package instanceof Package ) {
 					throw new \UnexpectedValueException();
 				}
-				$blueprint    = BlueprintPackage::fromManagedPackage( $type, $package );
-				$index        = count( $rows );
-				$rows[]       = array(
+				$blueprint     = BlueprintPackage::fromManagedPackage( $type, $package );
+				$index         = count( $rows );
+				$rows[]        = array(
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 					'name'       => $blueprint->displayName,
 					'identifier' => $blueprint->identifier,
 					'type'       => $blueprint->type,
 				);
-				$credentialId = $package->getCredentialId();
-				if ( '' !== $blueprint->provider && '' !== $credentialId ) {
-					$credentials[ $blueprint->provider ][ $credentialId ][] = array(
+				$credential_id = $package->getCredentialId();
+				if ( '' !== $blueprint->provider && '' !== $credential_id ) {
+					$credentials[ $blueprint->provider ][ $credential_id ][] = array(
 						'index' => $index,
+						// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 						'name'  => $blueprint->displayName,
 						'type'  => $blueprint->type,
 					);
@@ -387,8 +421,9 @@ class Dashboard {
 	}
 
 	/** @param array{provider: string, credential_id?: string|null, repository?: string|null} $request */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function postRunTroubleshooting( array $request ): void {
-		$this->troubleshootingPayload = $this->troubleshooting->diagnose(
+		$this->troubleshooting_payload = $this->troubleshooting->diagnose(
 			$request['provider'],
 			$request['credential_id'] ?? null,
 			$request['repository'] ?? null
@@ -396,9 +431,11 @@ class Dashboard {
 	}
 
 	/** Render the Core-owned Diagnostics panel after an explicit HTMX request. */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function renderTroubleshootingDiagnosticsRegion(): string {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the include-scope view input contract.
 		$troubleshootingPanel = 'diagnostics';
-		$troubleshooting      = $this->troubleshootingPayload ?? $this->troubleshooting->formPayload();
+		$troubleshooting      = $this->troubleshooting_payload ?? $this->troubleshooting->formPayload();
 
 		ob_start();
 		require __DIR__ . '/../views/troubleshooting.php';
@@ -407,8 +444,9 @@ class Dashboard {
 	}
 
 	/** Whether the most recent diagnostics result completed without a warning or failure. */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function troubleshootingSucceeded(): bool {
-		$results = $this->troubleshootingPayload['results'] ?? null;
+		$results = $this->troubleshooting_payload['results'] ?? null;
 		if ( ! is_array( $results ) || array() === $results ) {
 			return false;
 		}
@@ -419,72 +457,78 @@ class Dashboard {
 			}
 		}
 
-		return empty( $this->troubleshootingPayload['partial'] );
+		return empty( $this->troubleshooting_payload['partial'] );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function getPlugins() {
-		return $this->renderPackagePage( $this->pluginPages );
+		return $this->render_package_page( $this->plugin_pages );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function getPluginsCreate() {
-		return $this->renderPackageCreate( $this->pluginPages );
+		return $this->render_package_create( $this->plugin_pages );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function getThemes() {
-		return $this->renderPackagePage( $this->themePages );
+		return $this->render_package_page( $this->theme_pages );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function getThemesCreate() {
-		return $this->renderPackageCreate( $this->themePages );
+		return $this->render_package_create( $this->theme_pages );
 	}
 
 	/** @param list<array<string, mixed>> $extensions */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
 	public function getExtensions( array $extensions, string $pluginsUrl ) {
 		return $this->render(
 			'extensions',
 			array(
 				'extensions' => $extensions,
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 				'pluginsUrl' => $pluginsUrl,
 			)
 		);
 	}
 
-	private function renderPackagePage( PackagePagePresenter $packageView ) {
-		$type = $packageView->getType();
-		$this->packageAdmin->addSuccessNotice( $this, $type );
-		$this->addBulkPackageNotice( $type );
+	private function render_package_page( PackagePagePresenter $package_view ) {
+		$type = $package_view->getType();
+		$this->package_admin->addSuccessNotice( $this, $type );
+		$this->add_bulk_package_notice( $type );
 
 		// Read-only package selection; mutations use separately nonce-protected forms.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( isset( $_GET['package'] ) ) {
 			try {
 				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only package selection.
-				$identifier                                = sanitize_text_field( wp_unslash( $_GET['package'] ) );
-				$package                                   = 'plugin' === $type
+				$identifier                                 = sanitize_text_field( wp_unslash( $_GET['package'] ) );
+				$package                                    = 'plugin' === $type
 					? $this->plugins->boosterPluginFromFile( $identifier )
 					: $this->themes->boosterThemeFromStylesheet( $identifier );
-				$repositoryBranchCheckOutcome              = $this->requestedPackageRepositoryBranchCheck( $package, $type );
-				$repositoryBranchCheckEvidence             = null === $repositoryBranchCheckOutcome
-					? $this->providerSettings->packageRepositoryBranchEvidence( $type, $package )
+				$repository_branch_check_outcome            = $this->requested_package_repository_branch_check( $package, $type );
+				$repository_branch_check_evidence           = null === $repository_branch_check_outcome
+					? $this->provider_settings->packageRepositoryBranchEvidence( $type, $package )
 					: null;
-				$editData                                  = $packageView->edit(
+				$edit_data                                  = $package_view->edit(
 					$package,
-					$this->providerSettings->buildExistingPackageForm( (string) ( $package->getProviderCode() ?? '' ) ),
-					$this->providerSettings->buildPackageBranchReadiness( $package ),
-					$this->requestedPackageSourceView(),
-					$this->requestedAdvancedSettingsOpen()
+					$this->provider_settings->buildExistingPackageForm( (string) ( $package->getProviderCode() ?? '' ) ),
+					$this->provider_settings->buildPackageBranchReadiness( $package ),
+					$this->requested_package_source_view(),
+					$this->requested_advanced_settings_open()
 				);
-				$editData['repositoryBranchCheckOutcome']  = $repositoryBranchCheckOutcome;
-				$editData['repositoryBranchCheckEvidence'] = $repositoryBranchCheckEvidence;
+				$edit_data['repositoryBranchCheckOutcome']  = $repository_branch_check_outcome;
+				$edit_data['repositoryBranchCheckEvidence'] = $repository_branch_check_evidence;
 				return $this->render(
 					'packages/edit',
-					$editData
+					$edit_data
 				);
 			// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- A missing package intentionally falls back to the index.
 			} catch ( PluginNotFound | ThemeNotFound $missing ) {
 				// The selected package is absent, so show the matching index instead.
 			} catch ( PackageStorageFailure $failure ) {
-				return $this->packageStorageFailureIndex( $packageView, $type, $failure );
+				return $this->package_storage_failure_index( $package_view, $type, $failure );
 			}
 		}
 
@@ -493,14 +537,14 @@ class Dashboard {
 				? $this->plugins->allBoosterPlugins()
 				: $this->themes->allBoosterThemes();
 		} catch ( PackageStorageFailure $failure ) {
-			return $this->packageStorageFailureIndex( $packageView, $type, $failure );
+			return $this->package_storage_failure_index( $package_view, $type, $failure );
 		}
 
-		return $this->render( 'packages/index', $this->packageIndexData( $packages, $packageView ) );
+		return $this->render( 'packages/index', $this->package_index_data( $packages, $package_view ) );
 	}
 
 	/** @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|null */
-	private function requestedPackageRepositoryBranchCheck( Package $package, string $type ): ?string {
+	private function requested_package_repository_branch_check( Package $package, string $type ): ?string {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- This boundary verifies the action-specific nonce below.
 		if ( ! isset( $_GET['ran_booster_repository_branch_check'] )
 			|| '1' !== (string) $_GET['ran_booster_repository_branch_check']
@@ -519,18 +563,18 @@ class Dashboard {
 		$marker = 'ran_booster_branch_check_' . hash(
 			'sha256',
 			get_current_user_id() . "\0" . $action . "\0" . $nonce . "\0"
-			. $this->providerSettings->packageRepositoryBranchCheckAccessFingerprint( $package )
+			. $this->provider_settings->packageRepositoryBranchCheckAccessFingerprint( $package )
 		);
 		if ( function_exists( __NAMESPACE__ . '\\get_transient' ) || function_exists( 'get_transient' ) ) {
 			$completed = get_transient( $marker );
 			if ( is_string( $completed ) && in_array( $completed, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified', 'unable_to_check', 'provider_unavailable' ), true ) ) {
-				if ( 'verified' !== $completed || null !== $this->providerSettings->packageRepositoryBranchEvidence( $type, $package ) ) {
+				if ( 'verified' !== $completed || null !== $this->provider_settings->packageRepositoryBranchEvidence( $type, $package ) ) {
 					return $completed;
 				}
 			}
 		}
 
-		$outcome = $this->providerSettings->checkPackageRepositoryBranch( $type, $package );
+		$outcome = $this->provider_settings->checkPackageRepositoryBranch( $type, $package );
 		if ( function_exists( __NAMESPACE__ . '\\set_transient' ) || function_exists( 'set_transient' ) ) {
 			set_transient( $marker, $outcome, 3600 );
 		}
@@ -553,12 +597,12 @@ class Dashboard {
 	 * @param array<string, Package>|list<Package> $packages
 	 * @return array<string, mixed>
 	 */
-	private function packageIndexData( array $packages, PackagePagePresenter $packageView ): array {
-		return $packageView->index(
+	private function package_index_data( array $packages, PackagePagePresenter $package_view ): array {
+		return $package_view->index(
 			$packages,
-			$this->providerSettings->buildPackageList(),
-			$this->requestedPackageListState(),
-			$this->deploymentAdmin
+			$this->provider_settings->buildPackageList(),
+			$this->requested_package_list_state(),
+			$this->deployment_admin
 		);
 	}
 
@@ -567,7 +611,7 @@ class Dashboard {
 	 *
 	 * @return array{search: string, provider: string, source: string, policy: string}
 	 */
-	private function requestedPackageListState(): array {
+	private function requested_package_list_state(): array {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only package list filtering.
 		$search   = isset( $_GET['s'] ) && is_string( $_GET['s'] )
 			? sanitize_text_field( wp_unslash( $_GET['s'] ) )
@@ -596,8 +640,8 @@ class Dashboard {
 	}
 
 	/** @return array<string, string> */
-	private function packageListQueryArguments(): array {
-		$state = $this->requestedPackageListState();
+	private function package_list_query_arguments(): array {
+		$state = $this->requested_package_list_state();
 
 		return array_filter(
 			array(
@@ -610,7 +654,7 @@ class Dashboard {
 		);
 	}
 
-	private function requestedPackageSourceView(): string {
+	private function requested_package_source_view(): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only presentation selector.
 		$value = isset( $_GET['source_view'] ) && is_string( $_GET['source_view'] )
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only presentation selector.
@@ -620,50 +664,52 @@ class Dashboard {
 		return in_array( $value, array( 'branch', 'release_asset' ), true ) ? $value : '';
 	}
 
-	private function requestedAdvancedSettingsOpen(): bool {
+	private function requested_advanced_settings_open(): bool {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only presentation selector.
 		$value = isset( $_GET['ran_booster_open_advanced'] ) && is_string( $_GET['ran_booster_open_advanced'] )
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only presentation selector.
 			? sanitize_key( wp_unslash( $_GET['ran_booster_open_advanced'] ) )
 			: '';
 
-		return '1' === $value || '' !== $this->requestedPackageSourceView();
+		return '1' === $value || '' !== $this->requested_package_source_view();
 	}
 
-	private function renderPackageCreate( PackagePagePresenter $packageView ): mixed {
+	private function render_package_create( PackagePagePresenter $package_view ): mixed {
 		try {
 			$this->db->requireReady();
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
-			return $this->databaseUnavailableCreate( $packageView, $packageView->getType() );
+			return $this->database_unavailable_create( $package_view, $package_view->getType() );
 		}
-		$success = $this->packageAdmin->addSuccessNotice( $this, $packageView->getType() );
+		$success = $this->package_admin->addSuccessNotice( $this, $package_view->getType() );
 
 		return $this->render(
 			'packages/create',
-			$packageView->create(
-				$this->providerSettings->buildPackageForm( $this->requestedProvider() ),
-				$this->hasRequestedProvider(),
-				$this->requestedOpenPicker(),
-				$this->requestedPackageSourceView(),
+			$package_view->create(
+				$this->provider_settings->buildPackageForm( $this->requested_provider() ),
+				$this->has_requested_provider(),
+				$this->requested_open_picker(),
+				$this->requested_package_source_view(),
 				in_array( $success['operation'] ?? null, array( 'install', 'already-managed' ), true ) ? $success['identifier'] : null,
-				$this->requestedAdvancedSettingsOpen()
+				$this->requested_advanced_settings_open()
 			)
 		);
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function addMessage( $message ) {
-		$this->recordMessage( $message );
+		$this->record_message( $message );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function addFailureMessage( $message, Throwable $failure, array $context = array() ): void {
-		$this->recordMessage( $message, $failure, $context );
+		$this->record_message( $message, $failure, $context );
 	}
 
-	private function addMessageWithContext( $message, array $context ): void {
-		$this->recordMessage( $message, null, $context );
+	private function add_message_with_context( $message, array $context ): void {
+		$this->record_message( $message, null, $context );
 	}
 
-	private function recordMessage( $message, ?Throwable $failure = null, array $context = array() ): void {
+	private function record_message( $message, ?Throwable $failure = null, array $context = array() ): void {
 		if ( is_wp_error( $message ) ) {
 			$message = array(
 				'type'    => 'error',
@@ -677,10 +723,10 @@ class Dashboard {
 				'message' => $message,
 			);
 		}
-		$severity = $this->messageSeverity( $message );
+		$severity = $this->message_severity( $message );
 		if ( null !== $severity ) {
 			$context = array(
-				'diagnostic_id' => $this->messageDiagnosticId( $message, $severity ),
+				'diagnostic_id' => $this->message_diagnostic_id( $message, $severity ),
 				'event'         => 'admin_notice',
 				'source'        => 'admin',
 			) + $context;
@@ -696,28 +742,29 @@ class Dashboard {
 	}
 
 	/** @param array<string, mixed> $request */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function postPackageOperation( string $action, array $request ): bool|string {
-		$packageAdmin = $this->packageAdmin ?? new PackageAdminController();
+		$package_admin = $this->package_admin ?? new PackageAdminController();
 
-		return $packageAdmin->perform(
+		return $package_admin->perform(
 			$this,
 			$action,
 			$request,
-			$this->packageListQueryArguments(),
+			$this->package_list_query_arguments(),
 			function ( WP_Error|array $message, array $context ): void {
-				$this->addMessageWithContext( $message, $context );
+				$this->add_message_with_context( $message, $context );
 			}
 		);
 	}
 
 	/** @return array{operation: string, identifier: string}|null */
-	private function addPackageSuccessNotice( string $type ): ?array {
-		return $this->packageAdmin->addSuccessNotice( $this, $type );
+	private function add_package_success_notice( string $type ): ?array {
+		return $this->package_admin->addSuccessNotice( $this, $type );
 	}
 
-	private function packageStorageFailureIndex( PackagePagePresenter $packageView, string $type, PackageStorageFailure $failure ): mixed {
+	private function package_storage_failure_index( PackagePagePresenter $package_view, string $type, PackageStorageFailure $failure ): mixed {
 		$this->addFailureMessage(
-			$this->packageStorageError( $failure ),
+			$this->package_storage_error( $failure ),
 			$failure,
 			array(
 				'operation' => 'read-' . $type . '-packages',
@@ -726,13 +773,13 @@ class Dashboard {
 		);
 		$packages = array();
 
-		return $this->render( 'packages/index', $this->packageIndexData( $packages, $packageView ) );
+		return $this->render( 'packages/index', $this->package_index_data( $packages, $package_view ) );
 	}
 
-	private function databaseUnavailableCreate( PackagePagePresenter $packageView, string $type ): mixed {
+	private function database_unavailable_create( PackagePagePresenter $package_view, string $type ): mixed {
 		$failure = PackageStorageFailure::unsupported_database();
 		$this->addFailureMessage(
-			$this->packageStorageError( $failure ),
+			$this->package_storage_error( $failure ),
 			$failure,
 			array(
 				'operation' => 'create-' . $type . '-package',
@@ -742,14 +789,14 @@ class Dashboard {
 
 		return $this->render(
 			'packages/create',
-			$packageView->unavailableCreate(
-				$this->providerSettings->buildPackageForm( $this->requestedProvider() ),
-				$this->hasRequestedProvider()
+			$package_view->unavailableCreate(
+				$this->provider_settings->buildPackageForm( $this->requested_provider() ),
+				$this->has_requested_provider()
 			)
 		);
 	}
 
-	private function packageStorageError( PackageStorageFailure $failure ): WP_Error {
+	private function package_storage_error( PackageStorageFailure $failure ): WP_Error {
 		return new WP_Error(
 			$failure->get_diagnostic_id(),
 			$failure->getMessage(),
@@ -757,21 +804,22 @@ class Dashboard {
 		);
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function bulkPackageRedirect( string $type, BulkPackageResult $result ): string {
-		return $this->packageAdmin->bulkRedirect( $type, $result, $this->packageListQueryArguments() );
+		return $this->package_admin->bulkRedirect( $type, $result, $this->package_list_query_arguments() );
 	}
 
-	private function addBulkPackageNotice( string $type ): void {
-		$this->packageAdmin->addBulkNotice(
+	private function add_bulk_package_notice( string $type ): void {
+		$this->package_admin->addBulkNotice(
 			$this,
 			$type,
 			function ( array $message, array $context ): void {
-				$this->addMessageWithContext( $message, $context );
+				$this->add_message_with_context( $message, $context );
 			}
 		);
 	}
 
-	private function messageSeverity( mixed $message ): ?string {
+	private function message_severity( mixed $message ): ?string {
 		if ( $message instanceof WP_Error ) {
 			return 'error';
 		}
@@ -782,17 +830,17 @@ class Dashboard {
 		return null;
 	}
 
-	private function messageDiagnosticId( mixed $message, string $severity ): string {
-		$diagnosticId = $message instanceof WP_Error
+	private function message_diagnostic_id( mixed $message, string $severity ): string {
+		$diagnostic_id = $message instanceof WP_Error
 			? $message->get_error_code()
 			: ( is_array( $message ) ? ( $message['code'] ?? '' ) : '' );
 
-		return is_string( $diagnosticId ) && preg_match( '/^[a-z0-9][a-z0-9._-]{0,190}$/D', $diagnosticId ) === 1
-			? $diagnosticId
+		return is_string( $diagnostic_id ) && preg_match( '/^[a-z0-9][a-z0-9._-]{0,190}$/D', $diagnostic_id ) === 1
+			? $diagnostic_id
 			: 'ran_booster_admin_' . $severity;
 	}
 
-	private function requestedProvider(): ?string {
+	private function requested_provider(): ?string {
 		// Read-only provider selection for package setup.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		return isset( $_GET['provider'] ) && is_string( $_GET['provider'] )
@@ -801,22 +849,22 @@ class Dashboard {
 			: null;
 	}
 
-	private function hasRequestedProvider(): bool {
+	private function has_requested_provider(): bool {
 		// Read-only provider selection for package setup.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		return isset( $_GET['provider'] ) && is_string( $_GET['provider'] ) && '' !== sanitize_key( wp_unslash( $_GET['provider'] ) );
 	}
 
-	private function requestedOpenPicker(): bool {
+	private function requested_open_picker(): bool {
 		// Read-only presentation state. Repository mutations still require their POST nonce.
-		$postedPackage = isset( $_POST['ran_booster'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- This only suppresses a presentation flag after any package form submission.
+		$posted_package = isset( $_POST['ran_booster'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- This only suppresses a presentation flag after any package form submission.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only presentation flag.
-		$openPicker = isset( $_GET['open_picker'] ) && is_scalar( $_GET['open_picker'] ) && '1' === (string) wp_unslash( $_GET['open_picker'] );
+		$open_picker = isset( $_GET['open_picker'] ) && is_scalar( $_GET['open_picker'] ) && '1' === (string) wp_unslash( $_GET['open_picker'] );
 
-		return ! $postedPackage && $openPicker;
+		return ! $posted_package && $open_picker;
 	}
 
-	private function requestedTroubleshootingPanel(): string {
+	private function requested_troubleshooting_panel(): string {
 		// Read-only allowlisted routing state.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$panel = isset( $_GET['panel'] ) && is_string( $_GET['panel'] )
@@ -831,7 +879,7 @@ class Dashboard {
 		return in_array( $panel, array( 'diagnostics', 'debug-capture', 'activity' ), true ) ? $panel : 'diagnostics';
 	}
 
-	private function requestedProviderView(): string {
+	private function requested_provider_view(): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only provider presentation selector.
 		$view = isset( $_GET['view'] ) && is_string( $_GET['view'] )
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only provider presentation selector.
@@ -841,7 +889,7 @@ class Dashboard {
 		return in_array( $view, array( 'credentials', 'secrets' ), true ) ? $view : 'overview';
 	}
 
-	private function requestedProviderTask(): string {
+	private function requested_provider_task(): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only provider presentation selector.
 		$task = isset( $_GET['panel'] ) && is_string( $_GET['panel'] )
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only provider presentation selector.
@@ -851,7 +899,7 @@ class Dashboard {
 		return in_array( $task, array( 'repositories', 'setup' ), true ) ? $task : 'status';
 	}
 
-	private function requestedProviderRepositoryView(): string {
+	private function requested_provider_repository_view(): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded repository presentation selector.
 		$view = isset( $_GET['repository_view'] ) && is_string( $_GET['repository_view'] )
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded repository presentation selector.
@@ -861,7 +909,7 @@ class Dashboard {
 		return in_array( $view, array( 'status', 'branch', 'releases' ), true ) ? $view : 'status';
 	}
 
-	private function requestedProviderRepositoryId(): string {
+	private function requested_provider_repository_id(): string {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only bounded repository selection.
 		$value = $_GET['repository'] ?? null;
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
@@ -892,28 +940,28 @@ class Dashboard {
 	 *   per_page: int
 	 * }
 	 */
-	private function requestedProviderListState(): array {
+	private function requested_provider_list_state(): array {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only list filtering and pagination.
-		$search  = isset( $_GET['s'] ) && is_string( $_GET['s'] )
+		$search   = isset( $_GET['s'] ) && is_string( $_GET['s'] )
 			? sanitize_text_field( wp_unslash( $_GET['s'] ) )
 			: '';
-		$kind    = isset( $_GET['kind'] ) && is_string( $_GET['kind'] )
+		$kind     = isset( $_GET['kind'] ) && is_string( $_GET['kind'] )
 			? sanitize_key( wp_unslash( $_GET['kind'] ) )
 			: '';
-		$scope   = isset( $_GET['scope'] ) && is_string( $_GET['scope'] )
+		$scope    = isset( $_GET['scope'] ) && is_string( $_GET['scope'] )
 			? sanitize_key( wp_unslash( $_GET['scope'] ) )
 			: '';
-		$status  = isset( $_GET['status'] ) && is_string( $_GET['status'] )
+		$status   = isset( $_GET['status'] ) && is_string( $_GET['status'] )
 			? sanitize_key( wp_unslash( $_GET['status'] ) )
 			: '';
-		$orderby = isset( $_GET['orderby'] ) && is_string( $_GET['orderby'] )
+		$orderby  = isset( $_GET['orderby'] ) && is_string( $_GET['orderby'] )
 			? sanitize_key( wp_unslash( $_GET['orderby'] ) )
 			: 'name';
-		$order   = isset( $_GET['order'] ) && is_string( $_GET['order'] )
+		$order    = isset( $_GET['order'] ) && is_string( $_GET['order'] )
 			? sanitize_key( wp_unslash( $_GET['order'] ) )
 			: 'asc';
-		$paged   = isset( $_GET['paged'] ) ? absint( $_GET['paged'] ) : 1;
-		$perPage = isset( $_GET['per_page'] ) ? absint( $_GET['per_page'] ) : 20;
+		$paged    = isset( $_GET['paged'] ) ? absint( $_GET['paged'] ) : 1;
+		$per_page = isset( $_GET['per_page'] ) ? absint( $_GET['per_page'] ) : 20;
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		return array(
@@ -926,12 +974,12 @@ class Dashboard {
 				: 'name',
 			'order'    => 'desc' === $order ? 'desc' : 'asc',
 			'paged'    => max( 1, $paged ),
-			'per_page' => in_array( $perPage, array( 20, 50 ), true ) ? $perPage : 20,
+			'per_page' => in_array( $per_page, array( 20, 50 ), true ) ? $per_page : 20,
 		);
 	}
 
 	/** @return array<string, mixed> */
-	private function debugCapturePayload(): array {
+	private function debug_capture_payload(): array {
 		$fallback = array(
 			'state'         => 'unavailable',
 			'filename'      => 'ran-booster-debug.php',
@@ -939,12 +987,12 @@ class Dashboard {
 			'delete_after'  => '',
 			'content'       => '',
 		);
-		if ( null === $this->debugCapture ) {
+		if ( null === $this->debug_capture ) {
 			return $fallback;
 		}
 
 		try {
-			$snapshot = $this->debugCapture->snapshot();
+			$snapshot = $this->debug_capture->snapshot();
 		} catch ( Throwable $failure ) {
 			BoosterLogger::logException(
 				'debug capture snapshot unavailable',
@@ -974,35 +1022,35 @@ class Dashboard {
 	/**
 	 * @return list<array{key: string, label: string, url: string, active: bool, provider: bool}>
 	 */
-	private function tabNavigation( string $selectedKey ): array {
-		if ( null === $this->adminTabs ) {
+	private function tab_navigation( string $selected_key ): array {
+		if ( null === $this->admin_tabs ) {
 			return array();
 		}
 
-		$adminUrl = is_multisite()
+		$admin_url = is_multisite()
 			? network_admin_url( 'admin.php' )
 			: admin_url( 'admin.php' );
-		$tabs     = array();
+		$tabs      = array();
 
-		foreach ( $this->adminTabs->all() as $tab ) {
-			$tabKey = $tab->getKey();
-			$tabs[] = array(
-				'key'      => $tabKey,
+		foreach ( $this->admin_tabs->all() as $tab ) {
+			$tab_key = $tab->getKey();
+			$tabs[]  = array(
+				'key'      => $tab_key,
 				'label'    => $tab->getLabel(),
-				'url'      => 'portability' === $tabKey
-					? $adminUrl . '?page=ran-booster-transporter'
-					: $adminUrl . '?page=ran-booster&tab=' . rawurlencode( $tabKey ),
-				'active'   => $selectedKey === $tabKey,
+				'url'      => 'portability' === $tab_key
+					? $admin_url . '?page=ran-booster-transporter'
+					: $admin_url . '?page=ran-booster&tab=' . rawurlencode( $tab_key ),
+				'active'   => $selected_key === $tab_key,
 				'provider' => $tab->isProvider(),
 			);
 		}
-		if ( null !== $this->adminAddOns ) {
-			foreach ( $this->adminAddOns->all() as $tab ) {
+		if ( null !== $this->admin_add_ons ) {
+			foreach ( $this->admin_add_ons->all() as $tab ) {
 				$tabs[] = array(
 					'key'      => $tab->key(),
 					'label'    => $tab->label(),
-					'url'      => $adminUrl . '?page=ran-booster&tab=' . rawurlencode( $tab->key() ),
-					'active'   => $selectedKey === $tab->key(),
+					'url'      => $admin_url . '?page=ran-booster&tab=' . rawurlencode( $tab->key() ),
+					'active'   => $selected_key === $tab->key(),
 					'provider' => false,
 				);
 			}
@@ -1015,15 +1063,18 @@ class Dashboard {
 			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'ran-booster' ) );
 		}
 
-		$developmentEnvironmentDetected         = DevelopmentEnvironmentDetector::is_likely();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the include-scope view input contract.
+		$developmentEnvironmentDetected = DevelopmentEnvironmentDetector::is_likely();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the include-scope view input contract.
 		$data['developmentEnvironmentDetected'] = $developmentEnvironmentDetected;
-		$data['developmentSafetyNotice']        = $this->shouldShowDevelopmentSafetyNotice( $view, $data, $developmentEnvironmentDetected );
-		$data['messages']                       = $this->messages;
-		$data['name']                           = $this->booster->getName();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the include-scope view input contract.
+		$data['developmentSafetyNotice'] = $this->should_show_development_safety_notice( $view, $data, $developmentEnvironmentDetected );
+		$data['messages']                = $this->messages;
+		$data['name']                    = $this->booster->getName();
 
-		$data['coreSelfUpdateDevelopmentNotice'] = $this->coreSelfUpdateDevelopmentNotice;
+		$data['coreSelfUpdateDevelopmentNotice'] = $this->core_self_update_development_notice;
 		if ( ! isset( $data['tabs'] ) ) {
-			$data['tabs'] = $this->tabNavigation( '' );
+			$data['tabs'] = $this->tab_navigation( '' );
 		}
 
 		// Internal controllers provide a fixed set of view locals; no request keys reach extract().
@@ -1034,12 +1085,12 @@ class Dashboard {
 	}
 
 	/** @param array<string, mixed> $data */
-	private function shouldShowDevelopmentSafetyNotice( string $view, array $data, bool $developmentEnvironmentDetected ): bool {
-		$relevantView = 'packages/index' === $view;
-		$userId       = get_current_user_id();
-		$dismissed    = $userId > 0
-			&& '1' === get_user_meta( $userId, DevelopmentSafetyNoticeController::USER_META_KEY, true );
+	private function should_show_development_safety_notice( string $view, array $data, bool $development_environment_detected ): bool {
+		$relevant_view = 'packages/index' === $view;
+		$user_id       = get_current_user_id();
+		$dismissed     = $user_id > 0
+			&& '1' === get_user_meta( $user_id, DevelopmentSafetyNoticeController::USER_META_KEY, true );
 
-		return $relevantView && ! $dismissed && $developmentEnvironmentDetected;
+		return $relevant_view && ! $dismissed && $development_environment_detected;
 	}
 }

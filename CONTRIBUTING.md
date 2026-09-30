@@ -193,9 +193,30 @@ The administrative projection and portability internals five-slice cohort also i
 - `RAN/AddOn/Portability/PortabilityFacade.php`
 - `RAN/AddOn/Portability/PortabilityReviewResult.php`
 
+The parallel private-naming tranche also includes:
+
+- `RAN/Admin/ReleaseManagement/ManagedReleaseBrowserOperations.php`
+- `RAN/Admin/ReleaseManagement/ProspectiveReleaseOperations.php`
+- `RAN/Admin/ReleaseManagement/ReleaseManagementControls.php`
+- `RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php`
+- `RAN/Admin/ReleaseManagement/ReleaseTrackingOperations.php`
+- `RAN/Admin/ProviderSettingsPresenter.php`
+- `RAN/Dashboard.php`
+- `RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php`
+- `RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php`
+- `RAN/Admin/WebhookManagement/WebhookManagementController.php`
+- `RAN/Deployment/AdmittedBranchHostAdapter.php`
+- `RAN/Deployment/PreparedArtifact.php`
+- `RAN/Deployment/ReleaseArtifactCustodian.php`
+- `RAN/RepositoryProvider/AuthenticatedPreparedArchive.php`
+- `RAN/Secrets/SecretsFile.php`
+- `RAN/RepositoryProvider/ProviderSecretPolicyCatalog.php`
+- `RAN/RepositoryProvider/RepositoryReleaseWorkflowResult.php`
+- `RAN/RepositoryProvider/RepositoryReleaseWorkflowTarget.php`
+
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This 140-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This 158-file scope does not
 complete Core naming, condition or exception acceptance. The repository UI quartet
 renames owned renderer and picker helpers and local variables; the public
 `render()`/`handle()` entry points, projected keys, AJAX action/nonce, error statuses,
@@ -337,6 +358,17 @@ and output-buffer restoration, repository-row validation and immutable projectio
 and portability canonical JSON, nonce/fingerprint inputs and failure mapping remain
 unchanged. No non-promoted private properties require renaming. Both naming rules
 cover this cohort; test sources and reserved-parameter enforcement are unchanged.
+
+The parallel private-naming tranche covers release operations, administration,
+artifact custody, secrets storage and policy/DTO internals. Its 264 private helpers
+and eligible private state and owned locals use snake_case. Public/protected
+methods, named and promoted parameters, DTO fields, WordPress callbacks and view
+include-scope aliases retain narrow documented exceptions. Release projections,
+request and nonce boundaries, dashboard render order, hook registration/restoration,
+artifact authorization and custody, secure-file locking/replacement/rollback,
+recovery authority and serialized policy/DTO bytes remain unchanged. Necessary
+private reflection references follow their helpers. Both naming rules cover all
+18 types; API12-owned source paths and reserved-parameter scope are unchanged.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
 including `is_private`; its persisted JSON retains the `private` key and exact

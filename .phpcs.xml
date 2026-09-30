@@ -28,6 +28,25 @@
 	</rule>
 	<!-- Enforce only the completed, individually audited naming cohorts. -->
 	<rule ref="RANOwnedMethods">
+		<!-- Parallel private naming tranche: audited internal contracts only. -->
+		<include-pattern>/RAN/Admin/ReleaseManagement/ManagedReleaseBrowserOperations.php</include-pattern>
+		<include-pattern>/RAN/Admin/ReleaseManagement/ProspectiveReleaseOperations.php</include-pattern>
+		<include-pattern>/RAN/Admin/ReleaseManagement/ReleaseManagementControls.php</include-pattern>
+		<include-pattern>/RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php</include-pattern>
+		<include-pattern>/RAN/Admin/ReleaseManagement/ReleaseTrackingOperations.php</include-pattern>
+		<include-pattern>/RAN/Admin/ProviderSettingsPresenter.php</include-pattern>
+		<include-pattern>/RAN/Dashboard.php</include-pattern>
+		<include-pattern>/RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php</include-pattern>
+		<include-pattern>/RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php</include-pattern>
+		<include-pattern>/RAN/Admin/WebhookManagement/WebhookManagementController.php</include-pattern>
+		<include-pattern>/RAN/Deployment/AdmittedBranchHostAdapter.php</include-pattern>
+		<include-pattern>/RAN/Deployment/PreparedArtifact.php</include-pattern>
+		<include-pattern>/RAN/Deployment/ReleaseArtifactCustodian.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/AuthenticatedPreparedArchive.php</include-pattern>
+		<include-pattern>/RAN/Secrets/SecretsFile.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/ProviderSecretPolicyCatalog.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryReleaseWorkflowResult.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryReleaseWorkflowTarget.php</include-pattern>
 		<include-pattern>/RAN/Admin/DeploymentAdminController.php</include-pattern>
 		<include-pattern>/RAN/Admin/DeploymentAdminPresenter.php</include-pattern>
 		<include-pattern>/RAN/Storage/RepositorySourceGuard.php</include-pattern>
@@ -171,6 +190,25 @@
 		<include-pattern>/RAN/Storage/DatabaseCompatibilityFailure.php</include-pattern>
 	</rule>
 	<rule ref="WordPress.NamingConventions.ValidVariableName">
+		<!-- Parallel private naming tranche: audited internal contracts only. -->
+		<include-pattern>/RAN/Admin/ReleaseManagement/ManagedReleaseBrowserOperations.php</include-pattern>
+		<include-pattern>/RAN/Admin/ReleaseManagement/ProspectiveReleaseOperations.php</include-pattern>
+		<include-pattern>/RAN/Admin/ReleaseManagement/ReleaseManagementControls.php</include-pattern>
+		<include-pattern>/RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php</include-pattern>
+		<include-pattern>/RAN/Admin/ReleaseManagement/ReleaseTrackingOperations.php</include-pattern>
+		<include-pattern>/RAN/Admin/ProviderSettingsPresenter.php</include-pattern>
+		<include-pattern>/RAN/Dashboard.php</include-pattern>
+		<include-pattern>/RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php</include-pattern>
+		<include-pattern>/RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php</include-pattern>
+		<include-pattern>/RAN/Admin/WebhookManagement/WebhookManagementController.php</include-pattern>
+		<include-pattern>/RAN/Deployment/AdmittedBranchHostAdapter.php</include-pattern>
+		<include-pattern>/RAN/Deployment/PreparedArtifact.php</include-pattern>
+		<include-pattern>/RAN/Deployment/ReleaseArtifactCustodian.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/AuthenticatedPreparedArchive.php</include-pattern>
+		<include-pattern>/RAN/Secrets/SecretsFile.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/ProviderSecretPolicyCatalog.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryReleaseWorkflowResult.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryReleaseWorkflowTarget.php</include-pattern>
 		<include-pattern>/RAN/Dispatcher.php</include-pattern>
 		<include-pattern>/RAN/Admin/ProviderProfileAdminController.php</include-pattern>
 		<include-pattern>/RAN/Admin/PackageAdminController.php</include-pattern>

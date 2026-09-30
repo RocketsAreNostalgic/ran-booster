@@ -23,18 +23,24 @@ abstract class PortabilityFacade {
 	 * that digest plus the exact `v1:` review fingerprint. Action strings never
 	 * contain raw candidate values.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the published public method and named-parameter contract.
 	final public function nonceAction(
 		string $operation,
 		PortabilityCandidate $candidate,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		?string $expectedFingerprint = null
 	): string {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		if ( 'review' === $operation && null === $expectedFingerprint ) {
-			return 'ran-booster-portability-review-v1-' . $this->candidateDigest( $candidate );
+			return 'ran-booster-portability-review-v1-' . $this->candidate_digest( $candidate );
 		}
 		if ( 'apply' === $operation
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 			&& is_string( $expectedFingerprint )
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 			&& 1 === preg_match( '/\Av1:[a-f0-9]{64}\z/D', $expectedFingerprint ) ) {
-			return 'ran-booster-portability-apply-v1-' . $this->candidateDigest( $candidate ) . '-' . substr( $expectedFingerprint, 3 );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
+			return 'ran-booster-portability-apply-v1-' . $this->candidate_digest( $candidate ) . '-' . substr( $expectedFingerprint, 3 );
 		}
 
 		throw new InvalidArgumentException( 'The Portability nonce scope is invalid.' );
@@ -44,11 +50,12 @@ abstract class PortabilityFacade {
 
 	abstract public function apply(
 		PortabilityCandidate $candidate,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		string $expectedFingerprint,
 		string $nonce
 	): PortabilityApplyResult;
 
-	private function candidateDigest( PortabilityCandidate $candidate ): string {
+	private function candidate_digest( PortabilityCandidate $candidate ): string {
 		try {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Pure canonical contract with exceptions enabled.
 			$json = json_encode(

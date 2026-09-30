@@ -40,15 +40,19 @@ final readonly class SecretsStorageSetupPresenter {
 	 */
 	public function build(
 		SecretsStorageProvisioningResult $result,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		string $actionUrl,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		string $wordpressRoot = '',
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		bool $includeSensitiveDetails = true,
 		?array $recovery = null
 	): array {
-		$candidate          = $includeSensitiveDetails ? $result->candidate_path() : null;
-		$directoryCommands  = array();
-		$configAlternatives = null;
-		$manualPreflight    = null;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
+		$candidate           = $includeSensitiveDetails ? $result->candidate_path() : null;
+		$directory_commands  = array();
+		$config_alternatives = null;
+		$manual_preflight    = null;
 		if ( null !== $candidate
 			&& ! $result->has_configured_path()
 			&& ! $result->requires_next_request_verification()
@@ -56,17 +60,18 @@ final readonly class SecretsStorageSetupPresenter {
 			$directory = dirname( $candidate );
 			$parent    = dirname( $directory );
 			$quoted    = escapeshellarg( $directory );
-			$phpPath   = str_replace( array( '\\', "'" ), array( '\\\\', "\\'" ), $directory );
-			$root      = realpath( $wordpressRoot );
+			$php_path  = str_replace( array( '\\', "'" ), array( '\\\\', "\\'" ), $directory );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
+			$root = realpath( $wordpressRoot );
 
-			$manualPreflight    = __( 'Before running these commands, verify every existing path component is a real directory owned by the WordPress account and is not a symbolic link.', 'ran-booster' );
-			$directoryCommands  = array(
+			$manual_preflight    = __( 'Before running these commands, verify every existing path component is a real directory owned by the WordPress account and is not a symbolic link.', 'ran-booster' );
+			$directory_commands  = array(
 				'test ! -L ' . escapeshellarg( $parent )
 					. ' && test ! -L ' . escapeshellarg( $directory )
 					. ' && install -d -m 700 -- ' . escapeshellarg( $parent ) . ' ' . escapeshellarg( $directory ),
 			);
-			$configAlternatives = array(
-				'define' => "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '" . $phpPath . "' );",
+			$config_alternatives = array(
+				'define' => "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '" . $php_path . "' );",
 				'wp_cli' => false === $root
 					? ''
 					: 'wp --path=' . escapeshellarg( $root )
@@ -74,36 +79,38 @@ final readonly class SecretsStorageSetupPresenter {
 			);
 		}
 
-		$recoveryPayload = null;
+		$recovery_payload = null;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		if ( $includeSensitiveDetails && null !== $recovery ) {
-			$recoveryCandidate = is_string( $recovery['candidate_path'] ?? null )
+			$recovery_candidate = is_string( $recovery['candidate_path'] ?? null )
 				? $recovery['candidate_path']
 				: null;
-			$recoveryToken     = is_string( $recovery['token'] ?? null )
+			$recovery_token     = is_string( $recovery['token'] ?? null )
 				? $recovery['token']
 				: null;
-			$recoveryState     = is_string( $recovery['state'] ?? null )
+			$recovery_state     = is_string( $recovery['state'] ?? null )
 				? $recovery['state']
 				: 'blocked';
-			$resetConfirmation = is_string( $recovery['confirmation'] ?? null )
+			$reset_confirmation = is_string( $recovery['confirmation'] ?? null )
 				? $recovery['confirmation']
 				: null;
-			$recoveryPayload   = array(
-				'state'               => $recoveryState,
+			$recovery_payload   = array(
+				'state'               => $recovery_state,
 				'message'             => is_string( $recovery['message'] ?? null ) ? $recovery['message'] : '',
-				'candidate_path'      => $recoveryCandidate,
-				'candidate_directory' => null === $recoveryCandidate ? null : dirname( $recoveryCandidate ),
-				'token'               => $recoveryToken,
-				'can_adopt'           => 'available' === $recoveryState
-					&& null !== $recoveryCandidate
-					&& null !== $recoveryToken,
-				'can_reset'           => 'reset_available' === $recoveryState
-					&& null !== $resetConfirmation,
-				'reset_confirmation'  => $resetConfirmation,
+				'candidate_path'      => $recovery_candidate,
+				'candidate_directory' => null === $recovery_candidate ? null : dirname( $recovery_candidate ),
+				'token'               => $recovery_token,
+				'can_adopt'           => 'available' === $recovery_state
+					&& null !== $recovery_candidate
+					&& null !== $recovery_token,
+				'can_reset'           => 'reset_available' === $recovery_state
+					&& null !== $reset_confirmation,
+				'reset_confirmation'  => $reset_confirmation,
 			);
 		}
-		$discardedCandidates = $includeSensitiveDetails
-			? $this->localizedDiscardedCandidates( $result->discarded_candidates() )
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
+		$discarded_candidates = $includeSensitiveDetails
+			? $this->localized_discarded_candidates( $result->discarded_candidates() )
 			: array();
 
 		return array(
@@ -112,14 +119,17 @@ final readonly class SecretsStorageSetupPresenter {
 			'message'              => $result->message(),
 			'candidate_path'       => $candidate,
 			'candidate_directory'  => null === $candidate ? null : dirname( $candidate ),
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 			'path_source'          => $includeSensitiveDetails ? $result->path_source() : null,
-			'discarded_candidates' => $discardedCandidates,
+			'discarded_candidates' => $discarded_candidates,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 			'can_provision'        => $includeSensitiveDetails && $result->can_provision_automatically(),
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 			'action_url'           => $actionUrl,
-			'recovery'             => $recoveryPayload,
-			'manual_preflight'     => $manualPreflight,
-			'directory_commands'   => $directoryCommands,
-			'config_alternatives'  => $configAlternatives,
+			'recovery'             => $recovery_payload,
+			'manual_preflight'     => $manual_preflight,
+			'directory_commands'   => $directory_commands,
+			'config_alternatives'  => $config_alternatives,
 		);
 	}
 
@@ -127,7 +137,7 @@ final readonly class SecretsStorageSetupPresenter {
 	 * @param list<array{directory:string,code:string,reason:string,component:string|null}> $candidates
 	 * @return list<array{directory:string,code:string,reason:string,component:string|null}>
 	 */
-	private function localizedDiscardedCandidates( array $candidates ): array {
+	private function localized_discarded_candidates( array $candidates ): array {
 		foreach ( $candidates as $index => $candidate ) {
 			$candidates[ $index ]['reason'] = match ( $candidate['code'] ) {
 				'invalid_candidate_path' => __( 'The candidate is not a valid absolute secrets.json path.', 'ran-booster' ),

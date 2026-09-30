@@ -34,6 +34,13 @@
 		<include-pattern>/RAN/Admin/WebhookCleanupContext.php</include-pattern>
 		<include-pattern>/RAN/Admin/WebhookManagement/Installation/InstallationRecord.php</include-pattern>
 		<include-pattern>/RAN/Admin/WebhookManagement/Installation/WordPressInstallationStore.php</include-pattern>
+		<!-- Stream D: administrative projections and portability contract internals. -->
+		<include-pattern>/RAN/Admin/SecretsStorageSetupPresenter.php</include-pattern>
+		<include-pattern>/RAN/Admin/DocumentationHookRenderer.php</include-pattern>
+		<include-pattern>/RAN/Admin/PackagePagePresenter.php</include-pattern>
+		<include-pattern>/RAN/Admin/ProviderRepositoryRowsNormalizer.php</include-pattern>
+		<include-pattern>/RAN/AddOn/Portability/PortabilityFacade.php</include-pattern>
+		<include-pattern>/RAN/AddOn/Portability/PortabilityReviewResult.php</include-pattern>
 		<include-pattern>/RAN/Uninstall/LocalDataRemover.php</include-pattern>
 		<include-pattern>/RAN/Runtime/UnsupportedMultisiteBootstrap.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentAttemptRepository.php</include-pattern>
@@ -175,6 +182,13 @@
 		<include-pattern>/RAN/Admin/WebhookCleanupContext.php</include-pattern>
 		<include-pattern>/RAN/Admin/WebhookManagement/Installation/InstallationRecord.php</include-pattern>
 		<include-pattern>/RAN/Admin/WebhookManagement/Installation/WordPressInstallationStore.php</include-pattern>
+		<!-- Stream D: administrative projections and portability contract internals. -->
+		<include-pattern>/RAN/Admin/SecretsStorageSetupPresenter.php</include-pattern>
+		<include-pattern>/RAN/Admin/DocumentationHookRenderer.php</include-pattern>
+		<include-pattern>/RAN/Admin/PackagePagePresenter.php</include-pattern>
+		<include-pattern>/RAN/Admin/ProviderRepositoryRowsNormalizer.php</include-pattern>
+		<include-pattern>/RAN/AddOn/Portability/PortabilityFacade.php</include-pattern>
+		<include-pattern>/RAN/AddOn/Portability/PortabilityReviewResult.php</include-pattern>
 		<include-pattern>/RAN/Uninstall/LocalDataRemover.php</include-pattern>
 		<include-pattern>/RAN/Runtime/UnsupportedMultisiteBootstrap.php</include-pattern>
 		<include-pattern>/RAN/Deployment/DeploymentAttemptRepository.php</include-pattern>

@@ -17,12 +17,17 @@ final class DocumentationHookRenderer {
 	 *
 	 * @param non-empty-string $filterHook
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the published public method and named-parameter contract.
 	public function renderSections(
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		string $filterHook,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		string $documentationUrl,
 		string $scope,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		?string $providerCode = null
 	): void {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		$this->renderPreparedSections( $this->prepareSections( $filterHook, $documentationUrl, $scope, $providerCode ) );
 	}
 
@@ -32,19 +37,24 @@ final class DocumentationHookRenderer {
 	 * @param non-empty-string $filterHook
 	 * @return list<array{id: string, summary: string, content: string, open: bool}>
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the published public method and named-parameter contract.
 	public function prepareSections(
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		string $filterHook,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		string $documentationUrl,
 		string $scope,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		?string $providerCode = null
 	): array {
-		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- Filter is a validated Core-owned documentation extension point.
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound, WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Filter is a validated Core-owned documentation extension point. Public named parameters are retained.
 		$sections = apply_filters( $filterHook, array(), $documentationUrl, $scope );
 		$prepared = array();
 
 		if ( is_array( $sections ) ) {
 			foreach ( $sections as $section ) {
-				$normalized = $this->normalizeSection( $section, $providerCode );
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
+				$normalized = $this->normalize_section( $section, $providerCode );
 				if ( null !== $normalized ) {
 					$prepared[] = $normalized;
 				}
@@ -57,6 +67,7 @@ final class DocumentationHookRenderer {
 	/**
 	 * @param list<array{id: string, summary: string, content: string, open: bool}> $sections
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the published public method and named-parameter contract.
 	public function renderPreparedSections( array $sections ): void {
 		foreach ( $sections as $section ) {
 			?>
@@ -69,7 +80,7 @@ final class DocumentationHookRenderer {
 	}
 
 	/** @return array{id: string, summary: string, content: string, open: bool}|null */
-	private function normalizeSection( mixed $section, ?string $providerCode ): ?array {
+	private function normalize_section( mixed $section, ?string $provider_code ): ?array {
 		if ( ! is_array( $section ) ) {
 			return null;
 		}
@@ -89,7 +100,7 @@ final class DocumentationHookRenderer {
 			return null;
 		}
 
-		$bufferLevel = ob_get_level();
+		$buffer_level = ob_get_level();
 
 		try {
 			if ( is_callable( $content ) ) {
@@ -98,7 +109,7 @@ final class DocumentationHookRenderer {
 				$content = (string) ob_get_clean();
 			}
 		} catch ( Throwable $failure ) {
-			while ( ob_get_level() > $bufferLevel ) {
+			while ( ob_get_level() > $buffer_level ) {
 				ob_end_clean();
 			}
 
@@ -108,7 +119,7 @@ final class DocumentationHookRenderer {
 				array(
 					'source'   => 'admin',
 					'step'     => 'documentation_section_render',
-					'provider' => $providerCode ?? '',
+					'provider' => $provider_code ?? '',
 				)
 			);
 			return array(
@@ -123,7 +134,7 @@ final class DocumentationHookRenderer {
 			return null;
 		}
 
-		$content = wp_kses( $content, $this->documentationContentAllowedHtml() );
+		$content = wp_kses( $content, $this->documentation_content_allowed_html() );
 
 		if ( '' === trim( $content ) ) {
 			return null;
@@ -138,14 +149,14 @@ final class DocumentationHookRenderer {
 	}
 
 	/** @return array<string, array<string, true>> */
-	private function documentationContentAllowedHtml(): array {
-		$allowedHtml = wp_kses_allowed_html( 'post' );
+	private function documentation_content_allowed_html(): array {
+		$allowed_html = wp_kses_allowed_html( 'post' );
 
-		foreach ( $allowedHtml as &$attributes ) {
+		foreach ( $allowed_html as &$attributes ) {
 			unset( $attributes['id'] );
 		}
 		unset( $attributes );
 
-		return $allowedHtml;
+		return $allowed_html;
 	}
 }

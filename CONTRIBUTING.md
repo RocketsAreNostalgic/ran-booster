@@ -184,9 +184,18 @@ The deployment recovery and webhook persistence five-slice cohort also includes:
 - `RAN/Admin/WebhookManagement/Installation/InstallationRecord.php`
 - `RAN/Admin/WebhookManagement/Installation/WordPressInstallationStore.php`
 
+The administrative projection and portability internals five-slice cohort also includes:
+
+- `RAN/Admin/SecretsStorageSetupPresenter.php`
+- `RAN/Admin/DocumentationHookRenderer.php`
+- `RAN/Admin/PackagePagePresenter.php`
+- `RAN/Admin/ProviderRepositoryRowsNormalizer.php`
+- `RAN/AddOn/Portability/PortabilityFacade.php`
+- `RAN/AddOn/Portability/PortabilityReviewResult.php`
+
 Their owned methods use snake_case; PHP-provided enum methods such as `tryFrom()`
 retain their native names. Enum cases, backed values and persisted representations
-are unchanged. Callers on other types retain their current contracts until separately audited. This 134-file scope does not
+are unchanged. Callers on other types retain their current contracts until separately audited. This 140-file scope does not
 complete Core naming, condition or exception acceptance. The repository UI quartet
 renames owned renderer and picker helpers and local variables; the public
 `render()`/`handle()` entry points, projected keys, AJAX action/nonce, error statuses,
@@ -319,6 +328,15 @@ installation serialization, five compare-and-swap attempts, raw-state preservati
 and cache deletion order remain unchanged. Two private input names remain distinct
 from their serialization locals. Both naming rules cover this cohort; tests and
 reserved-parameter enforcement are unchanged.
+
+The administrative projection and portability internals cohort renames 28
+private helpers and owned locals. Public/protected methods, named constructor and
+promoted parameters, and external DTO members retain narrow documented exceptions.
+Secret redaction and recovery projections, documentation/package callback order
+and output-buffer restoration, repository-row validation and immutable projections,
+and portability canonical JSON, nonce/fingerprint inputs and failure mapping remain
+unchanged. No non-promoted private properties require renaming. Both naming rules
+cover this cohort; test sources and reserved-parameter enforcement are unchanged.
 
 DeploymentRequest uses owned snake_case properties and constructor parameters,
 including `is_private`; its persisted JSON retains the `private` key and exact

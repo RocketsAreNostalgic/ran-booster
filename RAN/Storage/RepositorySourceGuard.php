@@ -142,7 +142,7 @@ final class RepositorySourceGuard {
 
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
 		if ( PackageSource::BRANCH === $proposedSource
-			&& ( 0 === count( $releases ) || ( null !== $self && $self->source === PackageSource::BRANCH->value ) || ( null !== $self && $self->source === PackageSource::RELEASE_ASSET->value ) ) ) {
+			&& ( 0 === count( $releases ) || ( null !== $self && PackageSource::BRANCH->value === $self->source ) || ( null !== $self && PackageSource::RELEASE_ASSET->value === $self->source ) ) ) {
 			$result['allowed'] = true;
 			$result['code']    = 'allowed';
 			return $result;

@@ -351,9 +351,40 @@
 		<include-pattern>/RAN/Storage/DatabaseLifecycleFailure.php</include-pattern>
 		<include-pattern>/RAN/Storage/DatabaseCompatibilityFailure.php</include-pattern>
 	</rule>
-	<!-- Yoda rewrites would create a broad semantic diff without improving this inherited code. -->
+	<!-- Audited condition cohorts preserve evaluation order; separately owned API12 paths remain deferred. -->
 	<rule ref="WordPress.PHP.YodaConditions">
-		<severity>0</severity>
+		<include-pattern>/RAN/Admin/RepositoryPickerController.php</include-pattern>
+		<include-pattern>/RAN/Admin/ManagedPackageWebhookAuthorityResolver.php</include-pattern>
+		<include-pattern>/RAN/Deployment/AdmittedBranchHostAdapter.php</include-pattern>
+		<include-pattern>/RAN/WordPress/CorePackageExecutor.php</include-pattern>
+		<include-pattern>/RAN/WordPress/ManagedReleaseStore.php</include-pattern>
+		<include-pattern>/RAN/Admin/ProviderProfileAdminController.php</include-pattern>
+		<include-pattern>/RAN/WordPress/ManagedReleaseTargetRegistrar.php</include-pattern>
+		<include-pattern>/RAN/WordPress/CoreSelfUpdatePolicy.php</include-pattern>
+		<include-pattern>/RAN/Uninstall/LocalDataRemover.php</include-pattern>
+		<include-pattern>/RAN/Admin/Component/AdminActionNormalizer.php</include-pattern>
+		<include-pattern>/RAN/Portability/BlueprintPackage.php</include-pattern>
+		<include-pattern>/RAN/Deployment/ReleaseArtifactCustodian.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/GitReferenceSyntax.php</include-pattern>
+		<include-pattern>/RAN/Secrets/WpConfigSecretsPathWriter.php</include-pattern>
+		<include-pattern>/RAN/Portability/BlueprintArchive.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/ProviderCode.php</include-pattern>
+		<include-pattern>/RAN/Portability/ManagedPackageBlueprintExporter.php</include-pattern>
+		<include-pattern>/RAN/PackageOperation.php</include-pattern>
+		<include-pattern>/RAN/Secrets/PrivateLocationCandidateResolver.php</include-pattern>
+		<include-pattern>/RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php</include-pattern>
+		<include-pattern>/views/portability.php</include-pattern>
+		<include-pattern>/RAN/Secrets/SecretsFile.php</include-pattern>
+		<include-pattern>/RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php</include-pattern>
+		<include-pattern>/RAN/Admin/ReleaseManagement/ReleaseManagementControls.php</include-pattern>
+		<include-pattern>/RAN/Storage/AbstractPackageRepository.php</include-pattern>
+		<include-pattern>/RAN/Storage/Database.php</include-pattern>
+		<include-pattern>/RAN/Storage/RepositorySourceGuard.php</include-pattern>
+		<include-pattern>/RAN/Admin/ReleaseManagement/ProspectiveReleaseOperations.php</include-pattern>
+		<include-pattern>/RAN/Admin/ProviderRepositoryRowsNormalizer.php</include-pattern>
+		<include-pattern>/RAN/Admin/PackageRepositoryRequestResolver.php</include-pattern>
+		<include-pattern>/RAN/Admin/ProviderSettingsPresenter.php</include-pattern>
+		<include-pattern>/RAN/Admin/PortabilityController.php</include-pattern>
 	</rule>
 
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
@@ -374,9 +405,47 @@
 		<severity>0</severity>
 	</rule>
 
-	<!-- Hook and inherited API signatures intentionally retain required or legacy parameter names. -->
+	<!-- Audited owned parameters block the canonical standards command; concrete callback/compact contracts are line-local. -->
 	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter">
-		<severity>0</severity>
+		<type>error</type>
+		<include-pattern>/RAN/WordPress/CorePackageExecutor.php</include-pattern>
+		<include-pattern>/RAN/Admin/DeploymentAdminPresenter.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryDescriptor.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/PushEvent.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryReference.php</include-pattern>
+		<include-pattern>/RAN/Secrets/SecretsStorageProvisioner.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryBrowseRequest.php</include-pattern>
+		<include-pattern>/RAN/AddOn/ReleaseTracking/NativeReleaseTrackingFacade.php</include-pattern>
+		<include-pattern>/RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php</include-pattern>
+	</rule>
+	<!-- WPCS class-wide callback exemptions also hide private helpers; these code overrides inherit the audited nine-path scope above. -->
+	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed">
+		<severity>5</severity>
+		<type>error</type>
+	</rule>
+	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass">
+		<severity>5</severity>
+		<type>error</type>
+	</rule>
+	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassBeforeLastUsed">
+		<severity>5</severity>
+		<type>error</type>
+	</rule>
+	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed">
+		<severity>5</severity>
+		<type>error</type>
+	</rule>
+	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterface">
+		<severity>5</severity>
+		<type>error</type>
+	</rule>
+	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed">
+		<severity>5</severity>
+		<type>error</type>
+	</rule>
+	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed">
+		<severity>5</severity>
+		<type>error</type>
 	</rule>
 	<!-- These request types have no external signature obligation; enforce audited parameter names. -->
 	<rule ref="Universal.NamingConventions.NoReservedKeywordParameterNames">
@@ -420,12 +489,6 @@
 		WP_Filesystem cannot provide the same same-directory atomic replacement contract.
 	-->
 	<rule ref="WordPress.WP.AlternativeFunctions">
-		<exclude-pattern>/RAN/Secrets/SecretsFile.php</exclude-pattern>
-	</rule>
-	<rule ref="WordPress.PHP.NoSilencedErrors">
-		<exclude-pattern>/RAN/Secrets/SecretsFile.php</exclude-pattern>
-	</rule>
-	<rule ref="WordPress.PHP.DevelopmentFunctions.error_log_var_export">
 		<exclude-pattern>/RAN/Secrets/SecretsFile.php</exclude-pattern>
 	</rule>
 	<rule ref="WordPress.WP.I18n">

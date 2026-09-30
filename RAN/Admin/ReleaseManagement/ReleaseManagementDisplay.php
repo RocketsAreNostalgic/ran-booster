@@ -248,7 +248,7 @@ final class ReleaseManagementDisplay {
 				</small>
 			</summary>
 			<div class="ran-booster-settings-disclosure__body">
-				<?php /* phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract. */ $this->render_release_track_settings( $track_mode, $track_disabled, $selectedChannel, $package, $track_nonce_action, $track_form_id, $automatic_policy ); ?>
+				<?php /* phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract. */ $this->render_release_track_settings( $track_mode, $track_disabled, $selectedChannel, $package, $track_nonce_action, $track_form_id ); ?>
 				<?php /* phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract. */ $this->render_managed_candidate_browser( $status, $nonceActions, $browser_enabled ); ?>
 			</div>
 		</details>
@@ -512,7 +512,7 @@ final class ReleaseManagementDisplay {
 		return 'unsupported_provider' !== $status->eligibility()->code();
 	}
 
-	private function render_release_track_settings( string $mode, bool $disabled, ?string $selected_channel, object $package, ?string $nonce_action, string $form_id, bool $automatic_policy ): void {
+	private function render_release_track_settings( string $mode, bool $disabled, ?string $selected_channel, object $package, ?string $nonce_action, string $form_id ): void {
 		$has_mutation = ! $disabled && null !== $nonce_action;
 		?>
 		<form id="<?php echo esc_attr( $form_id ); ?>" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" class="<?php echo esc_attr( 'branch' === $mode ? 'ran-booster-release-switch-form' : 'ran-booster-release-channel-form' ); ?>"<?php echo 'branch' === $mode ? ' data-ran-booster-source-transition' : ''; ?><?php echo $has_mutation ? ' data-ran-booster-package-mutation' : ''; ?>>
@@ -847,7 +847,7 @@ final class ReleaseManagementDisplay {
 		<?php
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- Public and protected methods retain the existing caller and override contracts. The public renderOperationNotice parameter preserves named-argument compatibility for package-specific notice callers.
 	public function renderOperationNotice(
 		string $code,
 		bool $successful,
@@ -860,7 +860,7 @@ final class ReleaseManagementDisplay {
 			return;
 		}
 
-		$message = $this->result_message( $code, $successful, $type, $identifier, $channel, $status );
+		$message = $this->result_message( $code, $successful, $type, $channel, $status );
 		$tone    = $successful
 			? 'notice-success'
 			: ( in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed', 'release_repository_conflict', 'repository_release_owner_exists' ), true )
@@ -876,7 +876,7 @@ final class ReleaseManagementDisplay {
 		<?php
 	}
 
-	private function result_message( string $code, bool $successful, string $type, string $identifier, string $channel, ?ReleaseTrackingStatus $status ): string {
+	private function result_message( string $code, bool $successful, string $type, string $channel, ?ReleaseTrackingStatus $status ): string {
 		if ( ! $successful && $this->is_diagnostic_code( $code ) ) {
 			return $this->diagnostic_message( $code );
 		}

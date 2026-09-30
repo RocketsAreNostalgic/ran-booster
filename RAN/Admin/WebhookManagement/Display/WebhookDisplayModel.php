@@ -423,7 +423,7 @@ final class WebhookDisplayModel {
 		$repositories = array();
 		foreach ( $projection['repositories'] as $repository ) {
 			if ( ! is_array( $repository )
-				|| $provider_code !== ( $repository['provider_code'] ?? null )
+				|| ( $repository['provider_code'] ?? null ) !== $provider_code
 				|| ( null !== ( $repository['repository_id'] ?? null ) && ! is_string( $repository['repository_id'] ) )
 				|| ! is_bool( $repository['eligible'] ?? null )
 				|| ( 'blocked' === $projection['site']['status'] && $repository['eligible'] ) ) {

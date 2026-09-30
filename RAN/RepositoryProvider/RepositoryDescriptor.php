@@ -35,12 +35,12 @@ final readonly class RepositoryDescriptor {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
 		$this->assert_provider_repository_id( $providerRepositoryId );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-		$this->require_value( $defaultBranch, 'Default branch' );
+		$this->require_value( $defaultBranch );
 
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
 		if ( null !== $credentialId ) {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-			$this->require_value( $credentialId, 'Credential ID' );
+			$this->require_value( $credentialId );
 		}
 	}
 
@@ -80,7 +80,7 @@ final readonly class RepositoryDescriptor {
 		}
 	}
 
-	private function require_value( string $value, string $label ): void {
+	private function require_value( string $value ): void {
 		if ( '' === trim( $value ) ) {
 			throw new InvalidArgumentException( 'Required repository data cannot be empty.' );
 		}

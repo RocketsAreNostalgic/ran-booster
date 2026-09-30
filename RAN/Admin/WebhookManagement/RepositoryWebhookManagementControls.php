@@ -134,7 +134,7 @@ final class RepositoryWebhookManagementControls {
 					continue;
 				}
 				$references = is_array( $repository['package_references'] ?? null ) ? $repository['package_references'] : array();
-				if ( $repository_id === ( $repository['repository_id'] ?? null ) || in_array( $package_identifier, $references, true ) ) {
+				if ( ( $repository['repository_id'] ?? null ) === $repository_id || in_array( $package_identifier, $references, true ) ) {
 					$codes = array_merge( $codes, is_array( $repository['reason_codes'] ?? null ) ? $repository['reason_codes'] : array() );
 				}
 			}
@@ -277,12 +277,12 @@ final class RepositoryWebhookManagementControls {
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 				$repositoryId,
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				'' !== trim( $repository ) ? $repository : $repositoryId,
+				( '' !== trim( $repository ) ) ? $repository : $repositoryId,
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 				$returnUrl,
 				$reason,
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				$this->repository_webhook_settings_url( $providerCode, $repositoryId, '' !== trim( $repository ) ? $repository : null )
+				$this->repository_webhook_settings_url( $providerCode, $repositoryId, ( '' !== trim( $repository ) ) ? $repository : null )
 			);
 			$notices[] = array(
 				'class'   => 'notice-warning',
@@ -343,7 +343,7 @@ final class RepositoryWebhookManagementControls {
 			$readiness = $this->assistance->readiness( $provider_code )->toArray();
 			$codes     = $readiness['site']['reason_codes'] ?? array();
 			foreach ( $readiness['repositories'] ?? array() as $repository ) {
-				if ( is_array( $repository ) && $repository_id === ( $repository['repository_id'] ?? null ) ) {
+				if ( is_array( $repository ) && ( $repository['repository_id'] ?? null ) === $repository_id ) {
 					$codes = array_merge( $codes, is_array( $repository['reason_codes'] ?? null ) ? $repository['reason_codes'] : array() );
 				}
 			}
@@ -447,7 +447,7 @@ final class RepositoryWebhookManagementControls {
 			$readiness = $this->assistance->readiness( $provider_code )->toArray();
 			$site      = is_array( $readiness['site'] ?? null ) ? $readiness['site'] : null;
 			foreach ( is_array( $readiness['repositories'] ?? null ) ? $readiness['repositories'] : array() as $candidate ) {
-				if ( is_array( $candidate ) && $repository_id === ( $candidate['repository_id'] ?? null ) ) {
+				if ( is_array( $candidate ) && ( $candidate['repository_id'] ?? null ) === $repository_id ) {
 					$repository = $candidate;
 					break;
 				}

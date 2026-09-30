@@ -108,13 +108,13 @@ final readonly class BlueprintPackage {
 			return false;
 		}
 		if ( 'theme' === $type ) {
-			return $identifier === PackageSubdirectory::normalize_slug( $identifier );
+			return PackageSubdirectory::normalize_slug( $identifier ) === $identifier;
 		}
 		if ( ! str_ends_with( $identifier, '.php' ) ) {
 			return false;
 		}
 		try {
-			return $identifier === PackageSubdirectory::normalize( $identifier );
+			return PackageSubdirectory::normalize( $identifier ) === $identifier;
 		} catch ( InvalidArgumentException ) {
 			return false;
 		}

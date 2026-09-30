@@ -18,13 +18,13 @@ final readonly class PushEvent {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		public string $deliveryId
 	) {
-		$this->require_value( $repository, 'Repository' );
+		$this->require_value( $repository );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		$this->require_value( $providerRepositoryId, 'Provider repository ID' );
-		$this->require_value( $branch, 'Branch' );
-		$this->require_value( $commit, 'Commit' );
+		$this->require_value( $providerRepositoryId );
+		$this->require_value( $branch );
+		$this->require_value( $commit );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		$this->require_value( $deliveryId, 'Delivery ID' );
+		$this->require_value( $deliveryId );
 	}
 
 	/**
@@ -51,7 +51,7 @@ final readonly class PushEvent {
 		);
 	}
 
-	private function require_value( string $value, string $label ): void {
+	private function require_value( string $value ): void {
 		if ( '' === trim( $value ) ) {
 			throw new InvalidArgumentException( 'Required push event data cannot be empty.' );
 		}

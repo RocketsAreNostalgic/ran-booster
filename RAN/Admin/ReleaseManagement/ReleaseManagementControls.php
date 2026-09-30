@@ -953,10 +953,10 @@ final class ReleaseManagementControls {
 		$identifier = wp_unslash( $raw_identifier );
 		$channel    = wp_unslash( $raw_channel );
 		$nonce      = wp_unslash( $raw_nonce );
-		if ( $code !== sanitize_key( $code ) || '' === $code || strlen( $code ) > 64
+		if ( sanitize_key( $code ) !== $code || '' === $code || strlen( $code ) > 64
 			|| ! in_array( $success, array( '0', '1' ), true )
 			|| ! in_array( $type, array( 'plugin', 'theme' ), true )
-			|| $identifier !== sanitize_text_field( $identifier ) || strlen( $identifier ) > 255
+			|| sanitize_text_field( $identifier ) !== $identifier || strlen( $identifier ) > 255
 			|| ! in_array( $channel, array( '', 'stable', 'prerelease' ), true ) ) {
 			return null;
 		}
@@ -1000,7 +1000,7 @@ final class ReleaseManagementControls {
 		}
 
 		return ! is_string( $package ) || '' === $package
-			|| $result['identifier'] === sanitize_text_field( wp_unslash( $package ) );
+			|| sanitize_text_field( wp_unslash( $package ) ) === $result['identifier'];
 	}
 
 	/** @param array<string, mixed> $request */

@@ -221,6 +221,25 @@ complete Core naming, condition or exception acceptance. The repository UI quart
 renames owned renderer and picker helpers and local variables; the public
 `render()`/`handle()` entry points, projected keys, AJAX action/nonce, error statuses,
 URL and form fields, accessibility attributes and rendered markup remain stable.
+The condition and parameter compliance tranche independently enables inherited
+`WordPress.PHP.YodaConditions` on 32 audited source paths and promotes
+`Generic.CodeAnalysis.UnusedFunctionParameter` diagnostics to blocking errors on
+nine audited paths. Inherited class-wide and before-last-parameter exemptions
+are re-enabled within that scope so an interface cannot hide an unused private
+helper parameter. The exact cohorts are the include patterns in `.phpcs.xml`;
+separately owned API12 files remain deferred. Equality rewrites preserve operand
+effects and short-circuit order. Expression grouping may resolve a WPCS token
+heuristic without changing the parsed expression; comparisons that must read
+mutable state before a WordPress filter retain precise site-local explanations.
+Unused private parameters require complete caller, argument-type and evaluation
+proof before removal. Required callbacks, retained named-argument contracts and
+`compact()` recognition gaps use local annotations instead of blanket suppression.
+Exception annotations identify safe message boundaries on the relevant line;
+domain failure messages are not HTML-escaped to satisfy an output sniff.
+SecretsFile retains its atomic native-filesystem exception, while its obsolete
+silenced-error and `var_export()` exclusions are removed. Scoped enforcement does
+not complete the broader public naming or programme acceptance matrix.
+
 The picker retains narrow exceptions for the connected repository metadata and
 browse-result property contracts pending their own audited cohorts.
 The WordPress updater quartet retains public WordPress hook methods, the filter's

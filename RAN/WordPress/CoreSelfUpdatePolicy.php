@@ -138,7 +138,7 @@ final class CoreSelfUpdatePolicy {
 			|| self::MARKER_VERSION !== ( $marker['schema_version'] ?? null )
 			|| ! is_string( $marker['version'] ?? null )
 			|| 1 !== preg_match( '/\A[0-9A-Za-z][0-9A-Za-z.+-]{0,79}\z/D', $marker['version'] )
-			|| $plugin_version !== ( $marker['version'] ?? null )
+			|| ( $marker['version'] ?? null ) !== $plugin_version
 			|| ! is_string( $marker['commit'] ?? null )
 			|| 1 !== preg_match( '/\A[0-9a-f]{40}\z/D', $marker['commit'] )
 		) {

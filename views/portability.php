@@ -97,7 +97,7 @@ $renderPortabilityExtension     = static function ( string $hook, string $step )
 					$sectionCredentialCount = 0;
 					foreach ( $portabilityExportCredentialGroups as $group ) {
 						foreach ( (array) ( $group['credentials'] ?? array() ) as $credential ) {
-							$sectionCredentialCount += $sectionAvailable === ! empty( $credential['available'] ) ? 1 : 0;
+							$sectionCredentialCount += ! empty( $credential['available'] ) === $sectionAvailable ? 1 : 0;
 						}
 					}
 					if ( 0 === $sectionCredentialCount ) {
@@ -110,7 +110,7 @@ $renderPortabilityExtension     = static function ( string $hook, string $step )
 						<?php
 						$providerCode  = is_string( $group['code'] ?? null ) ? $group['code'] : '';
 						$providerLabel = is_string( $group['label'] ?? null ) ? $group['label'] : $providerCode;
-						$credentials   = is_array( $group['credentials'] ?? null ) ? array_filter( $group['credentials'], static fn ( array $credential ): bool => $sectionAvailable === ! empty( $credential['available'] ) ) : array();
+						$credentials   = is_array( $group['credentials'] ?? null ) ? array_filter( $group['credentials'], static fn ( array $credential ): bool => ! empty( $credential['available'] ) === $sectionAvailable ) : array();
 						if ( array() === $credentials ) {
 							continue;
 						}

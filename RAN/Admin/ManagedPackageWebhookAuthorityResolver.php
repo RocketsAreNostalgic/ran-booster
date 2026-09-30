@@ -74,7 +74,7 @@ final readonly class ManagedPackageWebhookAuthorityResolver {
 			$repository = trim( (string) $package->getRepository(), " \t\n\r\0\x0B/" );
 			$parts      = explode( '/', $repository, 2 );
 			if ( 2 === count( $parts )
-				&& $owner === strtolower( $parts[0] )
+				&& strtolower( $parts[0] ) === $owner
 			) {
 				return $parts[0];
 			}

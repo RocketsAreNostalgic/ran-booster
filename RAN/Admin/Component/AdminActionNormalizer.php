@@ -54,7 +54,7 @@ final class AdminActionNormalizer {
 
 			$hidden = array();
 			if ( 'post' === $type ) {
-				if ( $external || $url !== admin_url( 'admin-post.php' ) ) {
+				if ( $external || admin_url( 'admin-post.php' ) !== $url ) {
 					throw new LogicException( 'POST actions must target the canonical WordPress handler.' );
 				}
 				$hidden = $this->hidden( $action['hidden'] ?? null );

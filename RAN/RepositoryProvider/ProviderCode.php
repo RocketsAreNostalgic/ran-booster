@@ -29,7 +29,7 @@ final readonly class ProviderCode {
 	}
 
 	public function equals( self|string $other ): bool {
-		return $this->value === ( $other instanceof self ? $other->value : $other );
+		return ( $other instanceof self ? $other->value : $other ) === $this->value;
 	}
 
 	public function __toString(): string {

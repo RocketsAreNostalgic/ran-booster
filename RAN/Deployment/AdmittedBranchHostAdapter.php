@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 // Internal exception values are control-flow/diagnostic transport, not rendered output.
-// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped
 // Trust-boundary URL parsing and local writability probes intentionally use PHP primitives.
 // phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url
 // phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_is_writable
@@ -124,6 +123,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		try {
 			$this->attempt = $this->attempts->recordResolvedRef( $this->attempt->get_id(), $ref );
 		} catch ( DeploymentStorageFailure $failure ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed failure text and chained exceptions preserve durable failure mapping; they are not output.
 			throw new AdmittedBranchDurabilityFailure( previous: $failure );
 		}
 	}
@@ -132,6 +132,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		try {
 			$this->attempt = $this->attempts->markMutationStarted( $this->attempt->get_id() );
 		} catch ( DeploymentStorageFailure $failure ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed failure text and chained exceptions preserve durable failure mapping; they are not output.
 			throw new AdmittedBranchDurabilityFailure( previous: $failure );
 		}
 	}
@@ -140,6 +141,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		try {
 			$this->attempt = $this->attempts->finish( $this->attempt->get_id(), DeploymentOutcome::from_code( $code ) );
 		} catch ( DeploymentStorageFailure $failure ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed failure text and chained exceptions preserve durable failure mapping; they are not output.
 			throw new AdmittedBranchDurabilityFailure( previous: $failure );
 		}
 	}
@@ -185,7 +187,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		$provider_archive = $this->provider_archive;
 		try {
 			$resolved_ref = $provider_archive->getResolvedRef();
-			if ( '' === $resolved_ref || $resolved_ref !== trim( $resolved_ref ) || strlen( $resolved_ref ) > 191 || preg_match( '/[[:cntrl:]]/', $resolved_ref ) === 1 ) {
+			if ( '' === $resolved_ref || trim( $resolved_ref ) !== $resolved_ref || strlen( $resolved_ref ) > 191 || preg_match( '/[[:cntrl:]]/', $resolved_ref ) === 1 ) {
 				$this->stage( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID );
 			}
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
@@ -410,6 +412,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 			$token = $this->updaterLock->acquire();
 		} catch ( DeploymentStorageFailure $failure ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed failure text and chained exceptions preserve durable failure mapping; they are not output.
 			throw new BranchDeploymentLockStorageFailure( 'The WordPress updater lock storage is uncertain.', 0, $failure );
 		}
 
@@ -420,6 +423,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 				$released = $this->updaterLock->release( $token );
 			} catch ( DeploymentStorageFailure $failure ) {
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed failure text and chained exceptions preserve durable failure mapping; they are not output.
 				throw new BranchDeploymentLockStorageFailure( 'The WordPress updater lock storage is uncertain.', 0, $failure );
 			}
 			if ( ! $released ) {
@@ -672,6 +676,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	}
 
 	private function stage( string $code ): never {
+		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed failure text and chained exceptions preserve durable failure mapping; they are not output.
 		throw new AdmittedBranchStageFailure( $code );
 	}
 }

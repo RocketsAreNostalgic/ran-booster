@@ -318,7 +318,7 @@ final readonly class ProviderSettingsPresenter {
 					$match = $candidate;
 					break;
 				}
-				if ( $repository === strtolower( trim( (string) ( $candidate['repository'] ?? '' ), '/' ) ) ) {
+				if ( strtolower( trim( (string) ( $candidate['repository'] ?? '' ), '/' ) ) === $repository ) {
 					$match = $candidate;
 				}
 			}
@@ -1637,12 +1637,12 @@ final readonly class ProviderSettingsPresenter {
 						return false;
 					}
 					if ( 'credentials' === $view ) {
-						return ( '' === $state['kind'] || $state['kind'] === ( $row['kind'] ?? null ) )
-						&& ( '' === $state['scope'] || $state['scope'] === ( $row['scope_key'] ?? null ) );
+						return ( '' === $state['kind'] || ( $row['kind'] ?? null ) === $state['kind'] )
+						&& ( '' === $state['scope'] || ( $row['scope_key'] ?? null ) === $state['scope'] );
 					}
 
-					return ( '' === $state['scope'] || $state['scope'] === ( $row['scope'] ?? null ) )
-					&& ( '' === $state['status'] || $state['status'] === ( $row['status_key'] ?? null ) );
+					return ( '' === $state['scope'] || ( $row['scope'] ?? null ) === $state['scope'] )
+					&& ( '' === $state['status'] || ( $row['status_key'] ?? null ) === $state['status'] );
 				}
 			)
 		);

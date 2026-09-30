@@ -126,7 +126,7 @@ class LocalDataRemover {
 		$missing = new \stdClass();
 		$option  = $this->package_updater_authority_option();
 		delete_option( $option );
-		if ( $missing !== get_option( $option, $missing ) ) {
+		if ( get_option( $option, $missing ) !== $missing ) {
 			throw new RuntimeException( 'Booster updater state could not be removed.' );
 		}
 	}
@@ -189,7 +189,7 @@ class LocalDataRemover {
 		$missing = new \stdClass();
 		foreach ( array_values( array_unique( self::OPTION_NAMES ) ) as $option ) {
 			delete_option( $option );
-			if ( $missing !== get_option( $option, $missing ) ) {
+			if ( get_option( $option, $missing ) !== $missing ) {
 				throw new RuntimeException( 'Booster options could not be removed.' );
 			}
 		}

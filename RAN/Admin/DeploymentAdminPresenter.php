@@ -266,6 +266,7 @@ final class DeploymentAdminPresenter {
 		return $integer > 0 && (string) $integer === $value ? $integer : null;
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- compact() reads type, code and operation to preserve the outcome and logging context keys.
 	private function outcome( string $type, string $code, string $message, string $correlation_id_input, string $operation, ?string $outcome_code = null ): array {
 		$correlation_id = $correlation_id_input;
 		$step           = 'manual_package_operation';
@@ -278,10 +279,12 @@ final class DeploymentAdminPresenter {
 	}
 
 	/** @param array<string, mixed> $items */
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- compact() reads items and unavailable to build the package activity result.
 	private function package_activity_result( array $items = array(), bool $unavailable = true ): array {
 		return compact( 'items', 'unavailable' );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- compact() reads step and operation for the exception logging context.
 	private function log_read_failure( string $message, Throwable $failure, string $step, ?string $operation = null, mixed $attempt_id_input = null ): void {
 		$source     = 'admin';
 		$attempt_id = $attempt_id_input;

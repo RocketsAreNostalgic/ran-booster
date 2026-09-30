@@ -164,7 +164,7 @@ final readonly class ManagedPackageBlueprintExporter {
 				throw LocalSecretStoreUnavailable::forPortability( $failure );
 			}
 			if ( ! is_array( $material ) || 'file' !== ( $material['source'] ?? null )
-				|| $blueprint->provider !== ( $material['provider'] ?? null ) || true === ( $material['self_destruct'] ?? false ) ) {
+				|| ( $material['provider'] ?? null ) !== $blueprint->provider || true === ( $material['self_destruct'] ?? false ) ) {
 				throw new InvalidArgumentException( 'The managed package credential selection is invalid.' );
 			}
 

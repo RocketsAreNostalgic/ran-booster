@@ -884,6 +884,7 @@ class SecretsStorageProvisioner {
 	}
 
 	/** @return array{code: string, message: string} */
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- compact() reads code and message to preserve the bounded storage diagnostic shape.
 	private function path_failure( string $code, string $message ): array {
 		return compact( 'code', 'message' );
 	}

@@ -1519,38 +1519,38 @@ msgstr ""
 msgid "Booster could not apply this package. Review the Transporter Blueprint again and check repository access."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:62
+#: RAN/Admin/ProviderProfileAdminController.php:61
 msgid "Enter a label for this credential."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:85
+#: RAN/Admin/ProviderProfileAdminController.php:84
 msgid "Choose a repository credential to validate."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:90
+#: RAN/Admin/ProviderProfileAdminController.php:89
 msgid "Credential validation is unavailable for this repository provider."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:110
+#: RAN/Admin/ProviderProfileAdminController.php:109
 msgid "Repository credential validated successfully."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:148
-#: RAN/Admin/ProviderProfileAdminController.php:151
+#: RAN/Admin/ProviderProfileAdminController.php:147
+#: RAN/Admin/ProviderProfileAdminController.php:150
 msgid "A default public repository lookup profile is unavailable for this provider."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:154
-#: RAN/Admin/ProviderProfileAdminController.php:158
-#: RAN/Admin/ProviderProfileAdminController.php:163
+#: RAN/Admin/ProviderProfileAdminController.php:153
+#: RAN/Admin/ProviderProfileAdminController.php:157
+#: RAN/Admin/ProviderProfileAdminController.php:162
 msgid "Choose Anonymous or a saved repository credential."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:170
+#: RAN/Admin/ProviderProfileAdminController.php:169
 msgid "Public repository lookup will use anonymous access."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:171
+#: RAN/Admin/ProviderProfileAdminController.php:170
 msgid "Default public repository lookup profile saved."
 msgstr ""
 
@@ -1558,138 +1558,138 @@ msgstr ""
 msgid "Choose a supported credential type."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:204
+#: RAN/Admin/ProviderProfileAdminController.php:205
 msgid "Complete every required credential field."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:207
+#: RAN/Admin/ProviderProfileAdminController.php:209
 msgid "Enter a valid account email address."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:212
+#: RAN/Admin/ProviderProfileAdminController.php:215
 msgid "Enter the credential secret."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:218
+#: RAN/Admin/ProviderProfileAdminController.php:222
 msgid "Enter a valid credential expiry date."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:225
+#: RAN/Admin/ProviderProfileAdminController.php:230
 msgid "Enter a valid expiry / removal date."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:243
+#: RAN/Admin/ProviderProfileAdminController.php:249
 msgid "The expiry / removal date cannot be later than the expiry reported by the provider."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:247
+#: RAN/Admin/ProviderProfileAdminController.php:254
 msgid "Enter an expiry / removal date before enabling automatic removal."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:288
+#: RAN/Admin/ProviderProfileAdminController.php:296
 msgid "Booster could not verify that the repository credential was saved."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:299
+#: RAN/Admin/ProviderProfileAdminController.php:307
 msgid "Repository credential saved with automatic removal enabled."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:301
+#: RAN/Admin/ProviderProfileAdminController.php:309
 msgid "Repository credential replaced. Validate it to refresh provider expiry information."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:302
+#: RAN/Admin/ProviderProfileAdminController.php:310
 msgid "Repository credential saved."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:319
+#: RAN/Admin/ProviderProfileAdminController.php:328
 msgid "Choose a supported Push-to-Deploy scope."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:323
+#: RAN/Admin/ProviderProfileAdminController.php:333
 msgid "Enter the target for this Push-to-Deploy scope."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:326
+#: RAN/Admin/ProviderProfileAdminController.php:337
 msgid "Enter the Push-to-Deploy secret."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:357
+#: RAN/Admin/ProviderProfileAdminController.php:369
 msgid "Booster could not verify that the Push-to-Deploy secret was saved."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:359
+#: RAN/Admin/ProviderProfileAdminController.php:371
 msgid "Push-to-Deploy secret saved."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:363
+#: RAN/Admin/ProviderProfileAdminController.php:376
 msgid "Choose a repository credential to remove."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:370
+#: RAN/Admin/ProviderProfileAdminController.php:384
 msgid "Choose a saved repository credential to remove."
 msgstr ""
 
 #. translators: %d is the number of managed packages using this repository credential.
-#: RAN/Admin/ProviderProfileAdminController.php:378
+#: RAN/Admin/ProviderProfileAdminController.php:392
 #, php-format
 msgid "This repository credential is used by %d managed package. Assign another credential before deleting it."
 msgid_plural "This repository credential is used by %d managed packages. Assign another credential before deleting it."
 msgstr[0] ""
 msgstr[1] ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:386
+#: RAN/Admin/ProviderProfileAdminController.php:401
 msgid "Booster could not verify that the repository credential was removed."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:412
+#: RAN/Admin/ProviderProfileAdminController.php:427
 msgid "Repository credential removed. Public repository lookup now uses anonymous access."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:413
+#: RAN/Admin/ProviderProfileAdminController.php:428
 msgid "Repository credential removed."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:419
+#: RAN/Admin/ProviderProfileAdminController.php:435
 msgid "Choose a Push-to-Deploy secret to remove."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:423
+#: RAN/Admin/ProviderProfileAdminController.php:440
 msgid "Choose a saved Push-to-Deploy secret to remove."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:426
+#: RAN/Admin/ProviderProfileAdminController.php:444
 msgid "Booster could not verify that the Push-to-Deploy secret was removed."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:428
+#: RAN/Admin/ProviderProfileAdminController.php:446
 msgid "Push-to-Deploy secret removed."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:433
+#: RAN/Admin/ProviderProfileAdminController.php:451
 msgid "You do not have sufficient permissions to manage Booster provider settings."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:434
+#: RAN/Admin/ProviderProfileAdminController.php:452
 msgid "You do not have sufficient permissions to manage Booster credentials."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:444
-#: RAN/Admin/ProviderProfileAdminController.php:448
+#: RAN/Admin/ProviderProfileAdminController.php:463
+#: RAN/Admin/ProviderProfileAdminController.php:468
 msgid "Choose a valid credential profile."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:490
+#: RAN/Admin/ProviderProfileAdminController.php:510
 msgid "Booster could not complete the credential request."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:495
-#: RAN/Admin/ProviderProfileAdminController.php:501
-#: RAN/Admin/ProviderProfileAdminController.php:508
+#: RAN/Admin/ProviderProfileAdminController.php:515
+#: RAN/Admin/ProviderProfileAdminController.php:522
+#: RAN/Admin/ProviderProfileAdminController.php:530
 msgid "Choose a supported repository provider."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:511
+#: RAN/Admin/ProviderProfileAdminController.php:534
 msgid "Repository provider settings are unavailable."
 msgstr ""
 
@@ -4671,8 +4671,8 @@ msgid "The private storage location and WordPress configuration are not on one v
 msgstr ""
 
 #: RAN/Secrets/SecretsStorageProvisioner.php:180
-#: RAN/Secrets/SecretsStorageProvisioner.php:1078
-#: RAN/Secrets/SecretsStorageProvisioner.php:1086
+#: RAN/Secrets/SecretsStorageProvisioner.php:1079
+#: RAN/Secrets/SecretsStorageProvisioner.php:1087
 msgid "The WordPress configuration could not be updated safely."
 msgstr ""
 
@@ -4824,175 +4824,175 @@ msgstr ""
 msgid "The configured secrets %s is not writable by PHP."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:897
+#: RAN/Secrets/SecretsStorageProvisioner.php:898
 msgid "secrets.json and secrets.json.lock exist, but the matching database encryption key is missing. Restore the file and database key from the same backup; Booster will not delete unauthenticated ciphertext."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:901
+#: RAN/Secrets/SecretsStorageProvisioner.php:902
 msgid "The database encryption key exists, but secrets.json is missing. Restore the matching encrypted file from the same backup before using or uninstalling Booster."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:905
+#: RAN/Secrets/SecretsStorageProvisioner.php:906
 msgid "Only secrets.json.lock remains; no secrets file or database encryption key was found."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:909
+#: RAN/Secrets/SecretsStorageProvisioner.php:910
 msgid "Managed secrets material exists, but secrets.json.lock is missing. Restore the matching storage set from one backup."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:913
+#: RAN/Secrets/SecretsStorageProvisioner.php:914
 msgid "Booster could not safely use the encrypted secrets store."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:923
+#: RAN/Secrets/SecretsStorageProvisioner.php:924
 msgid "The secrets file, lock file and database key are incomplete. Restore the matching set from one backup or reset empty storage."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:927
+#: RAN/Secrets/SecretsStorageProvisioner.php:928
 msgid "The secrets file could not be authenticated with this site's database key. Restore both from the same backup."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:932
+#: RAN/Secrets/SecretsStorageProvisioner.php:933
 msgid "The secrets file authenticated but its encrypted document is invalid."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:936
+#: RAN/Secrets/SecretsStorageProvisioner.php:937
 msgid "Booster could not read the database-held encryption key. Restore the database and encrypted files from the same backup."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:942
+#: RAN/Secrets/SecretsStorageProvisioner.php:943
 msgid "The secrets file could not be read safely. Verify its ownership, mode 0600 and that it is a non-empty Booster-managed file."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:950
+#: RAN/Secrets/SecretsStorageProvisioner.php:951
 msgid "The secrets lock file could not be used safely. Verify its ownership and mode 0600."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:954
+#: RAN/Secrets/SecretsStorageProvisioner.php:955
 msgid "Booster could not classify the storage failure. Verify PHP owns the directories, secrets.json and secrets.json.lock; directories require mode 0700 and both files require mode 0600."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1054
+#: RAN/Secrets/SecretsStorageProvisioner.php:1055
 msgid "The encrypted secrets path is already configured."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1055
+#: RAN/Secrets/SecretsStorageProvisioner.php:1056
 msgid "The WordPress configuration directory is not safe and writable."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1056
+#: RAN/Secrets/SecretsStorageProvisioner.php:1057
 msgid "The encrypted secrets path is not safe for automatic configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1057
+#: RAN/Secrets/SecretsStorageProvisioner.php:1058
 msgid "The supplied WordPress configuration path is not an absolute safe POSIX file path."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1058
+#: RAN/Secrets/SecretsStorageProvisioner.php:1059
 msgid "The WordPress configuration changed before it could be edited."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1059
+#: RAN/Secrets/SecretsStorageProvisioner.php:1060
 msgid "Could not secure the WordPress configuration edit lock."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1060
+#: RAN/Secrets/SecretsStorageProvisioner.php:1061
 msgid "Could not lock the WordPress configuration for editing."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1061
+#: RAN/Secrets/SecretsStorageProvisioner.php:1062
 msgid "The WordPress configuration does not pass Booster's writable private regular-file checks."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1062
+#: RAN/Secrets/SecretsStorageProvisioner.php:1063
 msgid "The WordPress configuration is group- or world-writable."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1063
+#: RAN/Secrets/SecretsStorageProvisioner.php:1064
 msgid "The WordPress configuration has an unsupported size."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1064
+#: RAN/Secrets/SecretsStorageProvisioner.php:1065
 msgid "The WordPress configuration is not owned by the current process owner."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1065
+#: RAN/Secrets/SecretsStorageProvisioner.php:1066
 msgid "Could not read the complete WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1066
+#: RAN/Secrets/SecretsStorageProvisioner.php:1067
 msgid "The WordPress configuration must contain one standard stop-editing marker."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1067
+#: RAN/Secrets/SecretsStorageProvisioner.php:1068
 msgid "The encrypted secrets path constant is already defined."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1068
+#: RAN/Secrets/SecretsStorageProvisioner.php:1069
 msgid "The automatic encrypted secrets definition is ambiguous."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1069
+#: RAN/Secrets/SecretsStorageProvisioner.php:1070
 msgid "The edited WordPress configuration did not pass the expected definition check."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1070
+#: RAN/Secrets/SecretsStorageProvisioner.php:1071
 msgid "Could not secure the temporary WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1071
+#: RAN/Secrets/SecretsStorageProvisioner.php:1072
 msgid "Could not preserve WordPress configuration ownership."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1072
+#: RAN/Secrets/SecretsStorageProvisioner.php:1073
 msgid "Could not flush the edited WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1073
+#: RAN/Secrets/SecretsStorageProvisioner.php:1074
 msgid "Could not synchronize the edited WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1074
+#: RAN/Secrets/SecretsStorageProvisioner.php:1075
 msgid "The edited WordPress configuration failed its read-back check."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1075
+#: RAN/Secrets/SecretsStorageProvisioner.php:1076
 msgid "The edited WordPress configuration metadata could not be verified."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1076
+#: RAN/Secrets/SecretsStorageProvisioner.php:1077
 msgid "Could not atomically replace the WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1077
+#: RAN/Secrets/SecretsStorageProvisioner.php:1078
 msgid "The installed WordPress configuration failed verification."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1079
+#: RAN/Secrets/SecretsStorageProvisioner.php:1080
 msgid "The WordPress configuration does not parse as supported PHP."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1080
+#: RAN/Secrets/SecretsStorageProvisioner.php:1081
 msgid "The WordPress configuration uses unsupported line endings."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1081
+#: RAN/Secrets/SecretsStorageProvisioner.php:1082
 msgid "The WordPress configuration edit lock is not safe."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1082
+#: RAN/Secrets/SecretsStorageProvisioner.php:1083
 msgid "Could not write the complete edited WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1083
+#: RAN/Secrets/SecretsStorageProvisioner.php:1084
 msgid "The temporary WordPress configuration is not safe."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1084
+#: RAN/Secrets/SecretsStorageProvisioner.php:1085
 msgid "Could not open the WordPress configuration edit lock."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1085
+#: RAN/Secrets/SecretsStorageProvisioner.php:1086
 msgid "Could not create a private temporary WordPress configuration."
 msgstr ""
 

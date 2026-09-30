@@ -21,7 +21,7 @@ final readonly class RepositoryReference {
 		$this->assert_provider_repository_id( $providerRepositoryId );
 		$this->locator = RepositoryLocator::requireValid( $locator );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-		$this->reject_empty_value( $credentialId, 'Credential ID' );
+		$this->reject_empty_value( $credentialId );
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
@@ -57,15 +57,15 @@ final readonly class RepositoryReference {
 		}
 	}
 
-	private function require_value( string $value, string $label ): void {
+	private function require_value( string $value ): void {
 		if ( '' === trim( $value ) ) {
 			throw new InvalidArgumentException( 'Required repository data cannot be empty.' );
 		}
 	}
 
-	private function reject_empty_value( ?string $value, string $label ): void {
+	private function reject_empty_value( ?string $value ): void {
 		if ( null !== $value ) {
-			$this->require_value( $value, $label );
+			$this->require_value( $value );
 		}
 	}
 }

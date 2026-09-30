@@ -122,7 +122,7 @@ final class ReleaseArtifactCustodian {
 				throw new RuntimeException();
 			}
 			$input_closed = false;
-			if ( $directory_identity !== self::private_directory_identity( $directory ) ) {
+			if ( self::private_directory_identity( $directory ) !== $directory_identity ) {
 				throw new RuntimeException();
 			}
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- The exclusive Core destination is the temporary custody boundary.
@@ -158,8 +158,8 @@ final class ReleaseArtifactCustodian {
 			$copy_digest = hash_file( 'sha256', $path );
 			if ( ! is_string( $copy_digest )
 				|| ! hash_equals( $artifact_sha256, $copy_digest )
-				|| $directory_identity !== self::private_directory_identity( $directory )
-				|| $copy_identity !== self::path_file_identity( $path )
+				|| self::private_directory_identity( $directory ) !== $directory_identity
+				|| self::path_file_identity( $path ) !== $copy_identity
 				|| null === $prepared_identity
 				|| $size !== $prepared_identity['size'] ) {
 				throw new RuntimeException();
@@ -221,11 +221,11 @@ final class ReleaseArtifactCustodian {
 	 * @param array{device:int,inode:int,links:int,owner:int,group:int}|null $copy_identity
 	 */
 	private static function remove_copy( string $path, string $directory, array $directory_identity, ?array $copy_identity ): bool {
-		if ( $directory_identity !== self::private_directory_identity( $directory ) ) {
+		if ( self::private_directory_identity( $directory ) !== $directory_identity ) {
 			return false;
 		}
 		if ( null !== $copy_identity ) {
-			if ( $copy_identity !== self::path_file_identity( $path ) ) {
+			if ( self::path_file_identity( $path ) !== $copy_identity ) {
 				return false;
 			}
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- This removes only the failed Core-owned copy.
@@ -239,7 +239,7 @@ final class ReleaseArtifactCustodian {
 		} elseif ( file_exists( $path ) || is_link( $path ) ) {
 			return false;
 		}
-		if ( $directory_identity !== self::private_directory_identity( $directory ) ) {
+		if ( self::private_directory_identity( $directory ) !== $directory_identity ) {
 			return false;
 		}
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- This removes only the failed Core-owned random directory.

@@ -12,11 +12,11 @@ class Database {
 
 	public const VERSION_OPTION = 'ran_booster_db_version';
 
-	private bool $capabilityChecked                          = false;
-	private ?DatabaseCompatibilityFailure $capabilityFailure = null;
-	private bool $lifecycleChecked                           = false;
-	private bool $lifecycleInspected                         = false;
-	private ?DatabaseLifecycleFailure $lifecycleFailure      = null;
+	private bool $capability_checked                          = false;
+	private ?DatabaseCompatibilityFailure $capability_failure = null;
+	private bool $lifecycle_checked                           = false;
+	private bool $lifecycle_inspected                         = false;
+	private ?DatabaseLifecycleFailure $lifecycle_failure      = null;
 
 	public function __construct( private ?object $database = null ) {
 	}
@@ -29,23 +29,25 @@ class Database {
 	 *
 	 * @throws DatabaseCompatibilityFailure When the server is outside the supported envelope.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function requireSupported(): void {
-		if ( ! $this->capabilityChecked ) {
+		if ( ! $this->capability_checked ) {
 			try {
-				$this->inspectCapabilities();
+				$this->inspect_capabilities();
 			} catch ( DatabaseCompatibilityFailure $failure ) {
-				$this->capabilityFailure = $failure;
+				$this->capability_failure = $failure;
 			} catch ( \Throwable ) {
-				$this->capabilityFailure = new DatabaseCompatibilityFailure( 'capability_probe_failed' );
+				$this->capability_failure = new DatabaseCompatibilityFailure( 'capability_probe_failed' );
 			}
-			$this->capabilityChecked = true;
+			$this->capability_checked = true;
 		}
 
-		if ( null !== $this->capabilityFailure ) {
-			throw $this->capabilityFailure;
+		if ( null !== $this->capability_failure ) {
+			throw $this->capability_failure;
 		}
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function isSupported(): bool {
 		try {
 			$this->requireSupported();
@@ -62,10 +64,11 @@ class Database {
 	 * @throws DatabaseCompatibilityFailure When the server is unsupported.
 	 * @throws DatabaseLifecycleFailure When the schema cannot be prepared safely.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function maybeUpgrade(): void {
 		RuntimeSupport::assertManagedOperationsAllowed();
 
-		$this->runLifecycle( false );
+		$this->run_lifecycle( false );
 	}
 
 	/**
@@ -77,34 +80,34 @@ class Database {
 	public function install(): void {
 		RuntimeSupport::assertManagedOperationsAllowed();
 
-		$this->runLifecycle( true );
+		$this->run_lifecycle( true );
 	}
 
-	private function runLifecycle( bool $inspectCurrentSchema ): void {
-		if ( $this->lifecycleChecked ) {
-			if ( null !== $this->lifecycleFailure ) {
-				throw $this->lifecycleFailure;
+	private function run_lifecycle( bool $inspect_current_schema ): void {
+		if ( $this->lifecycle_checked ) {
+			if ( null !== $this->lifecycle_failure ) {
+				throw $this->lifecycle_failure;
 			}
-			if ( ! $inspectCurrentSchema || $this->lifecycleInspected ) {
+			if ( ! $inspect_current_schema || $this->lifecycle_inspected ) {
 				return;
 			}
 		}
 
 		try {
-			$this->lifecycleInspected = $this->prepareSchema( $inspectCurrentSchema );
-			$this->lifecycleChecked   = true;
+			$this->lifecycle_inspected = $this->prepare_schema( $inspect_current_schema );
+			$this->lifecycle_checked   = true;
 		} catch ( DatabaseCompatibilityFailure $failure ) {
 			throw $failure;
 		} catch ( DatabaseLifecycleFailure $failure ) {
-			$this->lifecycleFailure = $failure;
-			$this->lifecycleChecked = true;
+			$this->lifecycle_failure = $failure;
+			$this->lifecycle_checked = true;
 		} catch ( \Throwable ) {
-			$this->lifecycleFailure = new DatabaseLifecycleFailure( 'schema_operation_failed' );
-			$this->lifecycleChecked = true;
+			$this->lifecycle_failure = new DatabaseLifecycleFailure( 'schema_operation_failed' );
+			$this->lifecycle_checked = true;
 		}
 
-		if ( null !== $this->lifecycleFailure ) {
-			throw $this->lifecycleFailure;
+		if ( null !== $this->lifecycle_failure ) {
+			throw $this->lifecycle_failure;
 		}
 	}
 
@@ -114,6 +117,7 @@ class Database {
 	 * @throws DatabaseCompatibilityFailure When the server is unsupported.
 	 * @throws DatabaseLifecycleFailure When the schema cannot be prepared safely.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function requireReady(): void {
 		$this->maybeUpgrade();
 	}
@@ -124,9 +128,10 @@ class Database {
 	 * This intentionally does not inspect or mutate tables. Normal lifecycle
 	 * hooks call maybeUpgrade() before this status is presented.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function isReady(): bool {
-		if ( $this->lifecycleChecked ) {
-			return null === $this->lifecycleFailure;
+		if ( $this->lifecycle_checked ) {
+			return null === $this->lifecycle_failure;
 		}
 
 		if ( ! $this->isSupported() ) {
@@ -134,40 +139,40 @@ class Database {
 		}
 
 		try {
-			return self::$booster_db_version === $this->installedVersion();
+			return self::$booster_db_version === $this->installed_version();
 		} catch ( DatabaseLifecycleFailure ) {
 			return false;
 		}
 	}
 
-	private function prepareSchema( bool $inspectCurrentSchema ): bool {
+	private function prepare_schema( bool $inspect_current_schema ): bool {
 		$this->requireSupported();
 		$wpdb = $this->connection();
 
-		$installedVersion = $this->installedVersion();
-		if ( ! $inspectCurrentSchema && self::$booster_db_version === $installedVersion ) {
+		$installed_version = $this->installed_version();
+		if ( ! $inspect_current_schema && self::$booster_db_version === $installed_version ) {
 			return false;
 		}
 
-		$packageTable   = ran_booster_table_name();
-		$attemptTable   = self::attemptTableName();
-		$charsetCollate = $wpdb->get_charset_collate();
-		$tables         = array(
-			$packageTable => array(
-				'schema'  => $this->packageSchema( $packageTable, $charsetCollate ),
-				'columns' => $this->packageColumns(),
-				'indexes' => $this->packageIndexes(),
+		$package_table   = ran_booster_table_name();
+		$attempt_table   = self::attemptTableName();
+		$charset_collate = $wpdb->get_charset_collate();
+		$tables          = array(
+			$package_table => array(
+				'schema'  => $this->package_schema( $package_table, $charset_collate ),
+				'columns' => $this->package_columns(),
+				'indexes' => $this->package_indexes(),
 			),
-			$attemptTable => array(
-				'schema'  => $this->attemptSchema( $attemptTable, $charsetCollate ),
-				'columns' => $this->attemptColumns(),
-				'indexes' => $this->attemptIndexes(),
+			$attempt_table => array(
+				'schema'  => $this->attempt_schema( $attempt_table, $charset_collate ),
+				'columns' => $this->attempt_columns(),
+				'indexes' => $this->attempt_indexes(),
 			),
 		);
 
-		$missingTables = array();
+		$missing_tables = array();
 		foreach ( $tables as $table => $contract ) {
-			$missingTables[ $table ] = $this->needsCurrentTableCreation(
+			$missing_tables[ $table ] = $this->needs_current_table_creation(
 				$table,
 				$contract['columns'],
 				$contract['indexes']
@@ -176,13 +181,13 @@ class Database {
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		foreach ( $tables as $table => $contract ) {
-			if ( $missingTables[ $table ] ) {
+			if ( $missing_tables[ $table ] ) {
 				dbDelta( $contract['schema'] );
 			}
 		}
 
 		foreach ( $tables as $table => $contract ) {
-			$this->verifyTable( $table, $contract['columns'], $contract['indexes'] );
+			$this->verify_table( $table, $contract['columns'], $contract['indexes'] );
 		}
 
 		if ( ! update_option( self::VERSION_OPTION, self::$booster_db_version, false )
@@ -197,14 +202,15 @@ class Database {
 		return true;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public static function attemptTableName(): string {
 		global $wpdb;
 
 		return $wpdb->prefix . 'ran_booster_deployment_attempts';
 	}
 
-	private function packageSchema( string $tableName, string $charsetCollate ): string {
-		return "CREATE TABLE $tableName (
+	private function package_schema( string $table_name, string $charset_collate ): string {
+		return "CREATE TABLE $table_name (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             package varchar(255) NOT NULL,
             repository varchar(512) NOT NULL,
@@ -225,11 +231,11 @@ class Database {
             PRIMARY KEY  (id),
             UNIQUE KEY package_type (type, package),
             KEY provider_identity (provider, provider_repository_id)
-        ) ENGINE=InnoDB $charsetCollate;";
+        ) ENGINE=InnoDB $charset_collate;";
 	}
 
-	private function attemptSchema( string $tableName, string $charsetCollate ): string {
-		return "CREATE TABLE $tableName (
+	private function attempt_schema( string $table_name, string $charset_collate ): string {
+		return "CREATE TABLE $table_name (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             correlation_id char(32) NOT NULL,
             source varchar(16) NOT NULL,
@@ -257,21 +263,21 @@ class Database {
             UNIQUE KEY webhook_target (provider, delivery_id, package_type, package_slug),
             KEY queue (state, created_at, id),
             KEY package_history (package_type, package_slug, created_at, id)
-        ) ENGINE=InnoDB $charsetCollate;";
+        ) ENGINE=InnoDB $charset_collate;";
 	}
 
 	/**
-	 * @param array<string, array{type: string, nullable: bool, default: ?string, extra: string}> $expectedColumns
-	 * @param array<string, array{0: bool, 1: list<string>}> $expectedIndexes
+	 * @param array<string, array{type: string, nullable: bool, default: ?string, extra: string}> $expected_columns
+	 * @param array<string, array{0: bool, 1: list<string>}> $expected_indexes
 	 */
-	private function needsCurrentTableCreation(
-		string $tableName,
-		array $expectedColumns,
-		array $expectedIndexes
+	private function needs_current_table_creation(
+		string $table_name,
+		array $expected_columns,
+		array $expected_indexes
 	): bool {
 		$wpdb = $this->connection();
 
-		$query            = $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $tableName ) );
+		$query            = $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table_name ) );
 		$wpdb->last_error = '';
 		// Schema installation must inspect the authoritative database.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
@@ -282,12 +288,12 @@ class Database {
 		if ( ! is_string( $result ) ) {
 			return true;
 		}
-		if ( ! hash_equals( $tableName, $result ) ) {
+		if ( ! hash_equals( $table_name, $result ) ) {
 			throw new DatabaseLifecycleFailure( 'schema_identity_failed' );
 		}
 
-		$actual = $this->inspectTable( $tableName );
-		if ( $actual['columns'] !== $expectedColumns || $actual['indexes'] !== $expectedIndexes ) {
+		$actual = $this->inspect_table( $table_name );
+		if ( $actual['columns'] !== $expected_columns || $actual['indexes'] !== $expected_indexes ) {
 			throw new DatabaseLifecycleFailure( 'incompatible_schema' );
 		}
 
@@ -295,12 +301,12 @@ class Database {
 	}
 
 	/**
-	 * @param array<string, array{type: string, nullable: bool, default: ?string, extra: string}> $expectedColumns
-	 * @param array<string, array{0: bool, 1: list<string>}> $expectedIndexes Index name to unique flag and ordered columns.
+	 * @param array<string, array{type: string, nullable: bool, default: ?string, extra: string}> $expected_columns
+	 * @param array<string, array{0: bool, 1: list<string>}> $expected_indexes Index name to unique flag and ordered columns.
 	 */
-	private function verifyTable( string $tableName, array $expectedColumns, array $expectedIndexes ): void {
-		$actual = $this->inspectTable( $tableName );
-		if ( $actual['columns'] !== $expectedColumns || $actual['indexes'] !== $expectedIndexes ) {
+	private function verify_table( string $table_name, array $expected_columns, array $expected_indexes ): void {
+		$actual = $this->inspect_table( $table_name );
+		if ( $actual['columns'] !== $expected_columns || $actual['indexes'] !== $expected_indexes ) {
 			throw new DatabaseLifecycleFailure( 'schema_verification_failed' );
 		}
 	}
@@ -311,74 +317,93 @@ class Database {
 	 *     indexes: array<string, array{0: bool, 1: list<string>}>
 	 * }
 	 */
-	private function inspectTable( string $tableName ): array {
+	private function inspect_table( string $table_name ): array {
 		$wpdb = $this->connection();
 
-		$statusQuery      = $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', $tableName );
-		$columnsQuery     = $wpdb->prepare( 'SHOW COLUMNS FROM %i', $tableName );
-		$indexesQuery     = $wpdb->prepare( 'SHOW INDEX FROM %i', $tableName );
+		$status_query     = $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', $table_name );
+		$columns_query    = $wpdb->prepare( 'SHOW COLUMNS FROM %i', $table_name );
+		$indexes_query    = $wpdb->prepare( 'SHOW INDEX FROM %i', $table_name );
 		$wpdb->last_error = '';
 		// Schema installation must inspect the authoritative database.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
-		$status = $wpdb->get_row( $statusQuery );
+		$status = $wpdb->get_row( $status_query );
 		// Schema installation must inspect the authoritative database.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
-		$columnRows = $wpdb->get_results( $columnsQuery );
+		$column_rows = $wpdb->get_results( $columns_query );
 		// Schema installation must inspect the authoritative database.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
-		$indexRows = $wpdb->get_results( $indexesQuery );
+		$index_rows = $wpdb->get_results( $indexes_query );
 		if ( '' !== trim( (string) $wpdb->last_error )
-			|| ! is_array( $columnRows )
-			|| ! is_array( $indexRows ) ) {
+			|| ! is_array( $column_rows )
+			|| ! is_array( $index_rows ) ) {
 			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
 		}
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 		if ( ! is_object( $status ) || ! isset( $status->Engine ) || 0 !== strcasecmp( 'InnoDB', (string) $status->Engine ) ) {
 			throw new DatabaseLifecycleFailure( 'wrong_storage_engine' );
 		}
 
 		$columns = array();
-		foreach ( $columnRows as $row ) {
+		foreach ( $column_rows as $row ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 			if ( ! is_object( $row ) || ! isset( $row->Field, $row->Type )
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 				|| ! isset( $row->Null, $row->Extra )
 				|| ! property_exists( $row, 'Default' )
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 				|| '' === (string) $row->Field
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 				|| '' === (string) $row->Type ) {
 				throw new DatabaseLifecycleFailure( 'schema_read_failed' );
 			}
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 			$name = (string) $row->Field;
 			if ( isset( $columns[ $name ] ) ) {
 				throw new DatabaseLifecycleFailure( 'schema_read_failed' );
 			}
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 			$nullable = strtoupper( (string) $row->Null );
 			if ( ! in_array( $nullable, array( 'YES', 'NO' ), true )
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 				|| ( null !== $row->Default && ! is_scalar( $row->Default ) ) ) {
 				throw new DatabaseLifecycleFailure( 'schema_read_failed' );
 			}
 			$columns[ $name ] = array(
-				'type'     => $this->normalizeColumnType( (string) $row->Type ),
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
+				'type'     => $this->normalize_column_type( (string) $row->Type ),
 				'nullable' => 'YES' === $nullable,
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 				'default'  => null === $row->Default ? null : (string) $row->Default,
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 				'extra'    => strtolower( trim( (string) $row->Extra ) ),
 			);
 		}
 
 		$indexes = array();
-		foreach ( $indexRows as $row ) {
+		foreach ( $index_rows as $row ) {
 			if ( ! is_object( $row )
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 				|| ! isset( $row->Key_name, $row->Non_unique, $row->Seq_in_index, $row->Column_name )
 				|| ! property_exists( $row, 'Sub_part' )
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 				|| ! is_numeric( $row->Non_unique )
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 				|| ! is_numeric( $row->Seq_in_index ) ) {
 				throw new DatabaseLifecycleFailure( 'schema_read_failed' );
 			}
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 			if ( null !== $row->Sub_part ) {
 				throw new DatabaseLifecycleFailure( 'incompatible_schema' );
 			}
 
-			$name     = (string) $row->Key_name;
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
+			$name = (string) $row->Key_name;
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 			$sequence = (int) $row->Seq_in_index;
-			$column   = (string) $row->Column_name;
-			$unique   = 0 === (int) $row->Non_unique;
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
+			$column = (string) $row->Column_name;
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
+			$unique = 0 === (int) $row->Non_unique;
 			if ( '' === $name || $sequence < 1 || '' === $column
 				|| ( isset( $indexes[ $name ][0] ) && $indexes[ $name ][0] !== $unique )
 				|| isset( $indexes[ $name ][1][ $sequence ] ) ) {
@@ -405,7 +430,7 @@ class Database {
 	/**
 	 * @return array<string, array{type: string, nullable: bool, default: ?string, extra: string}>
 	 */
-	private function packageColumns(): array {
+	private function package_columns(): array {
 		$columns = array(
 			'id'                     => $this->column( 'bigint(20) unsigned', false, null, 'auto_increment' ),
 			'package'                => $this->column( 'varchar(255)' ),
@@ -433,7 +458,7 @@ class Database {
 	/**
 	 * @return array<string, array{0: bool, 1: list<string>}>
 	 */
-	private function packageIndexes(): array {
+	private function package_indexes(): array {
 		return array(
 			'PRIMARY'           => array( true, array( 'id' ) ),
 			'package_type'      => array( true, array( 'type', 'package' ) ),
@@ -444,7 +469,7 @@ class Database {
 	/**
 	 * @return array<string, array{type: string, nullable: bool, default: ?string, extra: string}>
 	 */
-	private function attemptColumns(): array {
+	private function attempt_columns(): array {
 		$columns = array(
 			'id'                      => $this->column( 'bigint(20) unsigned', false, null, 'auto_increment' ),
 			'correlation_id'          => $this->column( 'char(32)' ),
@@ -477,7 +502,7 @@ class Database {
 	/**
 	 * @return array<string, array{0: bool, 1: list<string>}>
 	 */
-	private function attemptIndexes(): array {
+	private function attempt_indexes(): array {
 		return array(
 			'PRIMARY'         => array( true, array( 'id' ) ),
 			'correlation_id'  => array( true, array( 'correlation_id' ) ),
@@ -497,14 +522,14 @@ class Database {
 		string $extra = ''
 	): array {
 		return array(
-			'type'     => $this->normalizeColumnType( $type ),
+			'type'     => $this->normalize_column_type( $type ),
 			'nullable' => $nullable,
 			'default'  => $default,
 			'extra'    => $extra,
 		);
 	}
 
-	private function installedVersion(): ?string {
+	private function installed_version(): ?string {
 		$value = get_option( self::VERSION_OPTION, false );
 		if ( false === $value ) {
 			return null;
@@ -527,13 +552,13 @@ class Database {
 		return $value;
 	}
 
-	private function normalizeColumnType( string $type ): string {
+	private function normalize_column_type( string $type ): string {
 		$type = strtolower( trim( preg_replace( '/\s+/', ' ', $type ) ?? $type ) );
 
 		return preg_replace( '/^(bigint|tinyint)\([0-9]+\)/', '$1', $type ) ?? $type;
 	}
 
-	private function inspectCapabilities(): void {
+	private function inspect_capabilities(): void {
 		$database = $this->connection();
 		if ( defined( 'WP_CONTENT_DIR' ) && is_string( WP_CONTENT_DIR ) && is_file( rtrim( WP_CONTENT_DIR, '/\\' ) . '/db.php' ) ) {
 			throw new DatabaseCompatibilityFailure( 'database_drop_in' );
@@ -542,21 +567,21 @@ class Database {
 			throw new DatabaseCompatibilityFailure( 'unknown_server' );
 		}
 
-		$previousError    = property_exists( $database, 'last_error' ) ? (string) $database->last_error : null;
-		$errorsSuppressed = null;
-		if ( null !== $previousError ) {
+		$previous_error    = property_exists( $database, 'last_error' ) ? (string) $database->last_error : null;
+		$errors_suppressed = null;
+		if ( null !== $previous_error ) {
 			$database->last_error = '';
 		}
 		try {
 			if ( method_exists( $database, 'suppress_errors' ) ) {
-				$errorsSuppressed = (bool) $database->suppress_errors( true );
+				$errors_suppressed = (bool) $database->suppress_errors( true );
 			}
 
-			$serverInfo = $database->db_server_info();
-			if ( ! is_string( $serverInfo ) ) {
+			$server_info = $database->db_server_info();
+			if ( ! is_string( $server_info ) ) {
 				throw new DatabaseCompatibilityFailure( 'unknown_server' );
 			}
-			$identity = $this->classifyServer( trim( $serverInfo ) );
+			$identity = $this->classify_server( trim( $server_info ) );
 			if ( null === $identity ) {
 				throw new DatabaseCompatibilityFailure( 'unknown_server' );
 			}
@@ -574,8 +599,11 @@ class Database {
 			}
 			foreach ( $engines as $engine ) {
 				if ( is_object( $engine )
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 					&& isset( $engine->Engine, $engine->Support )
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 					&& 0 === strcasecmp( 'InnoDB', (string) $engine->Engine )
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 					&& in_array( strtoupper( (string) $engine->Support ), array( 'YES', 'DEFAULT' ), true ) ) {
 					return;
 				}
@@ -587,12 +615,12 @@ class Database {
 		} catch ( \Throwable ) {
 			throw new DatabaseCompatibilityFailure( 'capability_probe_failed' );
 		} finally {
-			if ( null !== $previousError ) {
-				$database->last_error = $previousError;
+			if ( null !== $previous_error ) {
+				$database->last_error = $previous_error;
 			}
-			if ( null !== $errorsSuppressed ) {
+			if ( null !== $errors_suppressed ) {
 				try {
-					$database->suppress_errors( $errorsSuppressed );
+					$database->suppress_errors( $errors_suppressed );
 				// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Restoring optional wpdb error display must not escape the safe-state probe.
 				} catch ( \Throwable ) {
 					// The compatibility result remains authoritative.
@@ -604,12 +632,12 @@ class Database {
 	/**
 	 * @return array{family: 'mysql'|'mariadb', version: string}|null
 	 */
-	private function classifyServer( string $serverInfo ): ?array {
-		if ( '' === $serverInfo ) {
+	private function classify_server( string $server_info ): ?array {
+		if ( '' === $server_info ) {
 			return null;
 		}
-		if ( false !== stripos( $serverInfo, 'mariadb' ) ) {
-			$prefix = (string) stristr( $serverInfo, 'MariaDB', true );
+		if ( false !== stripos( $server_info, 'mariadb' ) ) {
+			$prefix = (string) stristr( $server_info, 'MariaDB', true );
 			if ( preg_match_all( '/(?<![0-9])([0-9]+\.[0-9]+\.[0-9]+)(?![0-9])/', $prefix, $matches ) < 1 ) {
 				return null;
 			}
@@ -622,10 +650,10 @@ class Database {
 				)
 				: null;
 		}
-		if ( preg_match( '/^(?<version>[0-9]+\.[0-9]+\.[0-9]+)(?:[- ].*)?$/D', $serverInfo, $matches ) !== 1 ) {
+		if ( preg_match( '/^(?<version>[0-9]+\.[0-9]+\.[0-9]+)(?:[- ].*)?$/D', $server_info, $matches ) !== 1 ) {
 			return null;
 		}
-		if ( preg_match( '/(?:postgres|sqlite|tidb|percona)/i', $serverInfo ) === 1 ) {
+		if ( preg_match( '/(?:postgres|sqlite|tidb|percona)/i', $server_info ) === 1 ) {
 			return null;
 		}
 

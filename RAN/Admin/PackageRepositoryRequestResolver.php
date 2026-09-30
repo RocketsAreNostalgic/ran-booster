@@ -27,7 +27,7 @@ final readonly class PackageRepositoryRequestResolver {
 	 * @return array<string, mixed>
 	 */
 	public function resolve( array $request ): array {
-		return $this->resolveRequest( $request );
+		return $this->resolve_request( $request );
 	}
 
 	/**
@@ -36,114 +36,120 @@ final readonly class PackageRepositoryRequestResolver {
 	 * @param array<string, mixed> $request Package form request.
 	 * @return array<string, mixed>
 	 */
-	public function resolveWithTrustedPublicLookupProfile( array $request, ?string $profileId ): array {
-		if ( null !== $profileId && 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/D', $profileId ) ) {
+	public function resolve_with_trusted_public_lookup_profile( array $request, ?string $profile_id ): array {
+		if ( null !== $profile_id && 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/D', $profile_id ) ) {
 			throw new InvalidArgumentException( 'Choose a valid public repository lookup profile.' );
 		}
 
-		return $this->resolveRequest( $request, $profileId, true );
+		return $this->resolve_request( $request, $profile_id, true );
 	}
 
 	/**
 	 * @param array<string, mixed> $request Package form request.
 	 * @return array<string, mixed>
 	 */
-	private function resolveRequest( array $request, ?string $trustedPublicLookupId = null, bool $trustedPublicLookup = false ): array {
-		$providerInput = $request['provider'] ?? null;
-		if ( ! is_string( $providerInput ) ) {
+	private function resolve_request( array $request, ?string $trusted_public_lookup_id = null, bool $trusted_public_lookup = false ): array {
+		$provider_input = $request['provider'] ?? null;
+		if ( ! is_string( $provider_input ) ) {
 			throw new InvalidArgumentException( 'Choose a repository provider.' );
 		}
 
-		$provider  = ProviderCode::parse( wp_unslash( $providerInput ) );
+		$provider  = ProviderCode::parse( wp_unslash( $provider_input ) );
 		$aggregate = $this->providers->get( $provider );
 
-		$deploymentPolicyInput = $request['deployment_policy'] ?? DeploymentPolicy::MANUAL->value;
-		if ( ! is_string( $deploymentPolicyInput ) ) {
+		$deployment_policy_input = $request['deployment_policy'] ?? DeploymentPolicy::MANUAL->value;
+		if ( ! is_string( $deployment_policy_input ) ) {
 			throw new InvalidArgumentException( 'Choose a valid deployment policy.' );
 		}
 		try {
-			$deploymentPolicy = DeploymentPolicy::from_database( $deploymentPolicyInput );
+			$deployment_policy = DeploymentPolicy::from_database( $deployment_policy_input );
 		} catch ( InvalidArgumentException ) {
 			throw new InvalidArgumentException( 'Choose a valid deployment policy.' );
 		}
 
-		if ( DeploymentPolicy::AUTOMATIC === $deploymentPolicy ) {
+		if ( DeploymentPolicy::AUTOMATIC === $deployment_policy ) {
 			$this->providers->requireCapability( $provider, WebhookNormalizer::class );
 		}
 
-		$repositoryInput = $request['repository'] ?? null;
-		if ( ! is_string( $repositoryInput ) ) {
+		$repository_input = $request['repository'] ?? null;
+		if ( ! is_string( $repository_input ) ) {
 			throw new InvalidArgumentException( 'Enter a repository account and name.' );
 		}
-		$subdirectoryInput = $request['subdirectory'] ?? null;
-		$subdirectory      = PackageSubdirectory::normalize( is_string( $subdirectoryInput ) ? wp_unslash( $subdirectoryInput ) : $subdirectoryInput );
+		$subdirectory_input = $request['subdirectory'] ?? null;
+		$subdirectory       = PackageSubdirectory::normalize( is_string( $subdirectory_input ) ? wp_unslash( $subdirectory_input ) : $subdirectory_input );
 
-		$credentialInput = $request['credential_id'] ?? null;
-		$credentialId    = is_string( $credentialInput ) ? trim( wp_unslash( $credentialInput ) ) : '';
-		if ( '' !== $credentialId && 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/', $credentialId ) ) {
+		$credential_input = $request['credential_id'] ?? null;
+		$credential_id    = is_string( $credential_input ) ? trim( wp_unslash( $credential_input ) ) : '';
+		if ( '' !== $credential_id && 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/', $credential_id ) ) {
 			throw new InvalidArgumentException( 'Choose a valid repository credential.' );
 		}
 
-		$publicLookupInput = $request['public_lookup_profile_id'] ?? null;
-		if ( array_key_exists( 'public_lookup_profile_id', $request ) && ! is_string( $publicLookupInput ) ) {
+		$public_lookup_input = $request['public_lookup_profile_id'] ?? null;
+		if ( array_key_exists( 'public_lookup_profile_id', $request ) && ! is_string( $public_lookup_input ) ) {
 			throw new InvalidArgumentException( 'Choose a valid public repository lookup profile.' );
 		}
-		$publicLookupId = is_string( $publicLookupInput ) ? trim( wp_unslash( $publicLookupInput ) ) : '';
-		if ( '' !== $publicLookupId && 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/D', $publicLookupId ) ) {
+		$public_lookup_id = is_string( $public_lookup_input ) ? trim( wp_unslash( $public_lookup_input ) ) : '';
+		if ( '' !== $public_lookup_id && 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/D', $public_lookup_id ) ) {
 			throw new InvalidArgumentException( 'Choose a valid public repository lookup profile.' );
 		}
 
-		$identitySourceInput = $request['provider_repository_identity_source'] ?? '';
-		$identitySource      = is_string( $identitySourceInput ) ? sanitize_key( wp_unslash( $identitySourceInput ) ) : '';
-		$publicPicker        = 'picker' === $identitySource && '' === $credentialId;
+		$identity_source_input = $request['provider_repository_identity_source'] ?? '';
+		$identity_source       = is_string( $identity_source_input ) ? sanitize_key( wp_unslash( $identity_source_input ) ) : '';
+		$public_picker         = 'picker' === $identity_source && '' === $credential_id;
 
-		if ( '' !== $publicLookupId ) {
-			if ( ! $publicPicker ) {
+		if ( '' !== $public_lookup_id ) {
+			if ( ! $public_picker ) {
 				throw new InvalidArgumentException( 'Public repository lookup identity conflicts with package access.' );
 			}
 			$this->providers->requireCapability( $provider, CredentialedPublicRepositoryBrowser::class );
 		}
-		if ( $trustedPublicLookup ) {
+		if ( $trusted_public_lookup ) {
 			$browser = $this->providers->requireCapability( $provider, CredentialedPublicRepositoryBrowser::class );
 			if ( ! $browser->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile ) {
 				throw new InvalidArgumentException( 'A default public repository lookup profile is unavailable for this provider.' );
 			}
-			$publicPicker = true;
+			$public_picker = true;
 		}
 
-		$verificationCredentialId = $trustedPublicLookup
-			? $trustedPublicLookupId
-			: ( '' !== $publicLookupId ? $publicLookupId : $credentialId );
-		$repository               = $aggregate->resolveRepository(
+		$verification_credential_id = $trusted_public_lookup
+			? $trusted_public_lookup_id
+			: ( '' !== $public_lookup_id ? $public_lookup_id : $credential_id );
+		$repository                 = $aggregate->resolveRepository(
 			new RepositoryLookupRequest(
-				wp_unslash( $repositoryInput ),
-				'' === $verificationCredentialId ? null : $verificationCredentialId,
-				$publicPicker
+				wp_unslash( $repository_input ),
+				'' === $verification_credential_id ? null : $verification_credential_id,
+				$public_picker
 			)
 		);
 
 		if ( ! $repository->provider->equals( $provider )
-			|| $repository->credentialId !== ( '' === $verificationCredentialId ? null : $verificationCredentialId )
-			|| ( $publicPicker && $repository->private ) ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
+			|| $repository->credentialId !== ( '' === $verification_credential_id ? null : $verification_credential_id )
+			|| ( $public_picker && $repository->private ) ) {
 			throw new RuntimeException( 'Repository provider returned mismatched repository identity.' );
 		}
 
-		$branchInput = $request['branch'] ?? '';
-		$branch      = is_string( $branchInput ) ? trim( sanitize_text_field( wp_unslash( $branchInput ) ) ) : '';
+		$branch_input = $request['branch'] ?? '';
+		$branch       = is_string( $branch_input ) ? trim( sanitize_text_field( wp_unslash( $branch_input ) ) ) : '';
 
-		$request['provider']                            = $provider->value;
-		$request['repository']                          = $repository->locator;
-		$request['package_slug']                        = PackageSubdirectory::installation_slug( $repository->packageSlug, $subdirectory );
-		$request['subdirectory']                        = $subdirectory ?? '';
+		$request['provider']   = $provider->value;
+		$request['repository'] = $repository->locator;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
+		$request['package_slug'] = PackageSubdirectory::installation_slug( $repository->packageSlug, $subdirectory );
+		$request['subdirectory'] = $subdirectory ?? '';
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
 		$request['provider_repository_id']              = $repository->providerRepositoryId;
 		$request['provider_repository_identity_source'] = 'resolved';
-		$request['repository_default_branch']           = $repository->defaultBranch;
-		$request['private']                             = $repository->private ? '1' : '0';
-		$request['credential_id']                       = $trustedPublicLookup
-			? $credentialId
-			: ( $publicPicker ? '' : $repository->credentialId ?? '' );
-		$request['branch']                              = '' === $branch ? $repository->defaultBranch : $branch;
-		$request['deployment_policy']                   = $deploymentPolicy->value;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
+		$request['repository_default_branch'] = $repository->defaultBranch;
+		$request['private']                   = $repository->private ? '1' : '0';
+		$request['credential_id']             = $trusted_public_lookup
+			? $credential_id
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
+			: ( $public_picker ? '' : $repository->credentialId ?? '' );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
+		$request['branch']            = '' === $branch ? $repository->defaultBranch : $branch;
+		$request['deployment_policy'] = $deployment_policy->value;
 		unset( $request['public_lookup_profile_id'] );
 
 		return $request;

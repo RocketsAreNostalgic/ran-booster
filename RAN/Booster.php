@@ -213,7 +213,7 @@ class Booster {
 	}
 
 	public function registerWebhookRoutes(): void {
-		$this->service( 'RAN\Webhook\WebhookController' )->registerRoutes();
+		$this->service( 'RAN\Webhook\WebhookController' )->register_routes();
 	}
 
 	public function adminMenu() {
@@ -711,7 +711,7 @@ class Booster {
 		unset( $hook );
 
 		$notice = $this->service( \RAN\Admin\CredentialExpiryNotice::class );
-		if ( ! $notice->shouldLoadDismissalScript() ) {
+		if ( ! $notice->should_load_dismissal_script() ) {
 			return;
 		}
 

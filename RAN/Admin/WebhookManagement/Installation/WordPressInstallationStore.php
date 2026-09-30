@@ -12,26 +12,28 @@ final class WordPressInstallationStore implements InstallationStore {
 	private const CAS_ATTEMPTS = 5;
 
 	/** @var Closure(string,mixed,mixed,bool): bool */
-	private Closure $compareAndSwap;
+	private Closure $compare_and_swap;
 
 	/** @param callable(string,mixed,mixed,bool): bool|null $compareAndSwap */
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
 	public function __construct( ?callable $compareAndSwap = null ) {
-		$this->compareAndSwap = null === $compareAndSwap
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
+		$this->compare_and_swap = null === $compareAndSwap
 			? static function ( string $option, mixed $expected, mixed $replacement, bool $exists ): bool {
 				if ( ! $exists ) {
 					return add_option( $option, $replacement, '', false );
 				}
 
 				global $wpdb;
-				$oldValue = maybe_serialize( $expected );
-				$newValue = maybe_serialize( $replacement );
+				$old_value = maybe_serialize( $expected );
+				$new_value = maybe_serialize( $replacement );
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- The old option value is the optimistic concurrency token; update_option() cannot express this CAS.
 				$updated = $wpdb->query(
 					$wpdb->prepare(
 						"UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND BINARY option_value = BINARY %s",
-						$newValue,
+						$new_value,
 						$option,
-						$oldValue
+						$old_value
 					)
 				);
 				if ( 1 !== $updated || '' !== trim( (string) ( $wpdb->last_error ?? '' ) ) ) {
@@ -40,6 +42,7 @@ final class WordPressInstallationStore implements InstallationStore {
 
 				return true;
 			}
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			: Closure::fromCallable( $compareAndSwap );
 	}
 
@@ -47,30 +50,35 @@ final class WordPressInstallationStore implements InstallationStore {
 		return $this->records();
 	}
 
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
 	public function find( string $providerCode, string $repositoryId ): ?InstallationRecord {
 		$records = $this->records();
 
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
 		return $records[ InstallationRecord::key( $providerCode, $repositoryId ) ] ?? null;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
 	public function saveIfCurrent( InstallationRecord $record, ?InstallationRecord $expected ): string {
 		return $this->write( $record, $expected );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public/protected caller contract; retain public named-parameter names.
 	public function deleteIfCurrent( string $providerCode, string $repositoryId, ?InstallationRecord $expected ): string {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
 		return $this->remove( $providerCode, $repositoryId, $expected );
 	}
 
 	/** @return array<string, InstallationRecord> */
 	private function records(): array {
 		$snapshot = $this->snapshot();
-		$parsed   = $this->parseRecords( $snapshot['value'] );
+		$parsed   = $this->parse_records( $snapshot['value'] );
 
 		return $parsed['records'];
 	}
 
 	/** @return array{records:array<string, InstallationRecord>,complete:bool} */
-	private function parseRecords( mixed $raw ): array {
+	private function parse_records( mixed $raw ): array {
 		$records  = array();
 		$complete = true;
 
@@ -111,7 +119,7 @@ final class WordPressInstallationStore implements InstallationStore {
 		$key = $record->storageKey();
 		for ( $attempt = 0; $attempt < self::CAS_ATTEMPTS; ++$attempt ) {
 			$snapshot = $this->snapshot();
-			$parsed   = $this->parseRecords( $snapshot['value'] );
+			$parsed   = $this->parse_records( $snapshot['value'] );
 			if ( ! $parsed['complete'] ) {
 				return self::WRITE_FAILED;
 			}
@@ -125,22 +133,22 @@ final class WordPressInstallationStore implements InstallationStore {
 			}
 
 			$records[ $key ] = $record;
-			if ( ( $this->compareAndSwap )( self::OPTION_NAME, $snapshot['value'], $this->serialize( $records ), $snapshot['exists'] ) ) {
-				$this->refreshOptionCache();
+			if ( ( $this->compare_and_swap )( self::OPTION_NAME, $snapshot['value'], $this->serialize( $records ), $snapshot['exists'] ) ) {
+				$this->refresh_option_cache();
 
 				return self::WRITE_APPLIED;
 			}
-			$this->refreshOptionCache();
+			$this->refresh_option_cache();
 		}
 
 		return self::WRITE_FAILED;
 	}
 
-	private function remove( string $providerCode, string $repositoryId, ?InstallationRecord $expected ): string {
-		$key = InstallationRecord::key( $providerCode, $repositoryId );
+	private function remove( string $provider_code, string $repository_id, ?InstallationRecord $expected ): string {
+		$key = InstallationRecord::key( $provider_code, $repository_id );
 		for ( $attempt = 0; $attempt < self::CAS_ATTEMPTS; ++$attempt ) {
 			$snapshot = $this->snapshot();
-			$parsed   = $this->parseRecords( $snapshot['value'] );
+			$parsed   = $this->parse_records( $snapshot['value'] );
 			if ( ! $parsed['complete'] ) {
 				return self::WRITE_FAILED;
 			}
@@ -154,12 +162,12 @@ final class WordPressInstallationStore implements InstallationStore {
 			}
 
 			unset( $records[ $key ] );
-			if ( ( $this->compareAndSwap )( self::OPTION_NAME, $snapshot['value'], $this->serialize( $records ), $snapshot['exists'] ) ) {
-				$this->refreshOptionCache();
+			if ( ( $this->compare_and_swap )( self::OPTION_NAME, $snapshot['value'], $this->serialize( $records ), $snapshot['exists'] ) ) {
+				$this->refresh_option_cache();
 
 				return self::WRITE_APPLIED;
 			}
-			$this->refreshOptionCache();
+			$this->refresh_option_cache();
 		}
 
 		return self::WRITE_FAILED;
@@ -182,7 +190,7 @@ final class WordPressInstallationStore implements InstallationStore {
 			: $left->toArray() === $right->toArray();
 	}
 
-	private function refreshOptionCache(): void {
+	private function refresh_option_cache(): void {
 		if ( function_exists( 'wp_cache_delete' ) ) {
 			wp_cache_delete( self::OPTION_NAME, 'options' );
 			wp_cache_delete( 'alloptions', 'options' );

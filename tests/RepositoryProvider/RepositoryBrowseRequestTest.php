@@ -48,7 +48,7 @@ final class RepositoryBrowseRequestTest extends TestCase {
 
 	public function testExpiredDeadlineRejectsARequestBeforeNetworkWork(): void {
 		$request = RepositoryBrowseRequest::accessible( 'profile' );
-		$started = new \ReflectionProperty( $request, 'startedAt' );
+		$started = new \ReflectionProperty( $request, 'started_at' );
 		$started->setValue( $request, hrtime( true ) - 9_000_000_000 );
 
 		self::assertFalse( $request->hasCapacity() );

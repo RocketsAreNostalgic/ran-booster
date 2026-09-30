@@ -33,33 +33,34 @@ final class BoosterLogger {
 	);
 
 	public static function log( string $message, array $context = array() ): bool {
-		$wordpressLogging = self::enabled();
-		if ( ! $wordpressLogging && null === self::$capture ) {
+		$wordpress_logging = self::enabled();
+		if ( ! $wordpress_logging && null === self::$capture ) {
 			return false;
 		}
 
-		$line           = self::PREFIX . ' ' . self::oneLine( $message );
-		$sanitized      = self::sanitizeContext( $context );
-		$encodedContext = wp_json_encode(
+		$line            = self::PREFIX . ' ' . self::one_line( $message );
+		$sanitized       = self::sanitize_context( $context );
+		$encoded_context = wp_json_encode(
 			$sanitized,
 			JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE
 		);
 
-		if ( is_string( $encodedContext ) && '{}' !== $encodedContext ) {
-			$line .= ' ' . $encodedContext;
+		if ( is_string( $encoded_context ) && '{}' !== $encoded_context ) {
+			$line .= ' ' . $encoded_context;
 		}
 
-		$wordpressLogged = false;
-		if ( $wordpressLogging ) {
+		$wordpress_logged = false;
+		if ( $wordpress_logging ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- This is the single gated WordPress debug-log boundary for Booster.
-			$wordpressLogged = error_log( $line );
+			$wordpress_logged = error_log( $line );
 		}
 
-		$captureLogged = self::$capture?->append( $line ) ?? false;
+		$capture_logged = self::$capture?->append( $line ) ?? false;
 
-		return $wordpressLogged || $captureLogged;
+		return $wordpress_logged || $capture_logged;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
 	public static function logException( string $message, Throwable $exception, array $context = array() ): void {
 		$context['exception_class'] = $exception::class;
 		$code                       = $exception->getCode();
@@ -70,6 +71,7 @@ final class BoosterLogger {
 		self::log( $message, $context );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
 	public static function configureCapture( ?TemporaryDebugCapture $capture ): void {
 		self::$capture = $capture;
 	}
@@ -78,7 +80,7 @@ final class BoosterLogger {
 		return defined( 'WP_DEBUG_LOG' ) && (bool) WP_DEBUG_LOG;
 	}
 
-	private static function sanitizeContext( array $context ): array {
+	private static function sanitize_context( array $context ): array {
 		$safe = array();
 
 		foreach ( $context as $key => $value ) {
@@ -87,7 +89,7 @@ final class BoosterLogger {
 			}
 
 			if ( is_string( $value ) ) {
-				$safe[ $key ] = self::oneLine( $value );
+				$safe[ $key ] = self::one_line( $value );
 			} elseif ( is_bool( $value ) || is_int( $value ) || is_float( $value ) || null === $value ) {
 				$safe[ $key ] = $value;
 			}
@@ -96,7 +98,7 @@ final class BoosterLogger {
 		return $safe;
 	}
 
-	private static function oneLine( string $value ): string {
+	private static function one_line( string $value ): string {
 		$value      = trim( $value );
 		$normalized = preg_replace( '/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]+/u', ' ', $value );
 		if ( ! is_string( $normalized ) ) {

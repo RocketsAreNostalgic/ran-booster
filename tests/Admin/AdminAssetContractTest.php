@@ -1005,8 +1005,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'data-label="<?php esc_attr_e( \'Activity\'', $view );
 		self::assertStringContainsString( 'data-label="<?php esc_attr_e( \'Outcome\'', $view );
 		self::assertStringContainsString( 'ran-booster-activity__details', $view );
-		self::assertStringContainsString( 'DeploymentOutcomeMessage::forCode', $view );
-		self::assertStringContainsString( 'DeploymentOutcomeMessage::forCode', $detail );
+		self::assertStringContainsString( 'DeploymentOutcomeMessage::for_code', $view );
+		self::assertStringContainsString( 'DeploymentOutcomeMessage::for_code', $detail );
 		self::assertStringContainsString( "<summary><?php esc_html_e( 'View details', 'ran-booster' ); ?></summary>", $view );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-attempt-row__details', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-attempt-row:nth-child(odd)', $css );

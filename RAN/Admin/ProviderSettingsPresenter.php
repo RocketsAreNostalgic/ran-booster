@@ -40,50 +40,67 @@ use Throwable;
 final readonly class ProviderSettingsPresenter {
 	private const MAX_REPOSITORY_PACKAGE_SUMMARIES = 20;
 
-	private PublicRepositoryLookupProfileStore $publicLookupProfiles;
-	private CredentialExpiryObservationStore $expiryObservations;
-	private CredentialExpiryReminder $expiryReminders;
-	private RepositoryBranchCheckEvidenceStore $branchCheckEvidence;
-	private WordPressUpdaterLock $branchCheckLock;
+	private PublicRepositoryLookupProfileStore $public_lookup_profiles;
+	private CredentialExpiryObservationStore $expiry_observations;
+	private CredentialExpiryReminder $expiry_reminders;
+	private RepositoryBranchCheckEvidenceStore $branch_check_evidence;
+	private WordPressUpdaterLock $branch_check_lock;
 
 	public function __construct(
 		private ProviderRegistry $providers,
 		private SecretsFile $secrets,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		private CredentialUsageReader $credentialUsage,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?PublicRepositoryLookupProfileStore $publicLookupProfiles = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?CredentialExpiryObservationStore $expiryObservations = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?CredentialExpiryReminder $expiryReminders = null,
 		private ?PluginRepository $plugins = null,
 		private ?ThemeRepository $themes = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		private ?WebhookAssistanceReadinessEvaluator $webhookAssistance = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?RepositoryBranchCheckEvidenceStore $branchCheckEvidence = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?WordPressUpdaterLock $branchCheckLock = null
 	) {
-		$this->publicLookupProfiles = $publicLookupProfiles ?? new PublicRepositoryLookupProfileStore();
-		$this->expiryObservations   = $expiryObservations ?? new CredentialExpiryObservationStore();
-		$this->expiryReminders      = $expiryReminders ?? new CredentialExpiryReminder(
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->public_lookup_profiles = $publicLookupProfiles ?? new PublicRepositoryLookupProfileStore();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->expiry_observations = $expiryObservations ?? new CredentialExpiryObservationStore();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->expiry_reminders = $expiryReminders ?? new CredentialExpiryReminder(
 			$this->providers,
 			$this->secrets,
-			$this->expiryObservations
+			$this->expiry_observations
 		);
-		$this->branchCheckEvidence  = $branchCheckEvidence ?? new RepositoryBranchCheckEvidenceStore();
-		$this->branchCheckLock      = $branchCheckLock ?? new WordPressUpdaterLock();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->branch_check_evidence = $branchCheckEvidence ?? new RepositoryBranchCheckEvidenceStore();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$this->branch_check_lock = $branchCheckLock ?? new WordPressUpdaterLock();
 	}
 
 	/**
 	 * @return array<string, mixed>
 	 */
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 	public function build( ?string $selectedProvider = null ): array {
-		$available = $this->adminProviders();
+		$available = $this->admin_providers();
 		if ( array() === $available ) {
 			throw new RuntimeException( 'No repository provider settings are available.' );
 		}
 
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		$selectedProvider = is_string( $selectedProvider ) ? trim( $selectedProvider ) : '';
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		if ( ! isset( $available[ $selectedProvider ] ) ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			$selectedProvider = array_key_first( $available );
 		}
 
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		$selected = $available[ $selectedProvider ];
 		$metadata = $selected->getMetadata();
 		$admin    = $metadata->admin;
@@ -92,59 +109,70 @@ final readonly class ProviderSettingsPresenter {
 			throw new RuntimeException( 'Repository provider settings metadata is unavailable.' );
 		}
 
-		$managedRepositories  = $this->managedRepositories( $selectedProvider, $selected, true );
-		$providerRepositories = $this->managedRepositories( $selectedProvider, $selected, false );
-		$webhookReadiness     = $this->webhookAssistanceReadiness( $selectedProvider, $selected );
-		$storageUnavailable   = false;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$managed_repositories = $this->managed_repositories( $selectedProvider, $selected, true );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$provider_repositories = $this->managed_repositories( $selectedProvider, $selected, false );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$webhook_readiness   = $this->webhook_assistance_readiness( $selectedProvider, $selected );
+		$storage_unavailable = false;
 		try {
-			$credentials          = $this->credentialProfiles( $selectedProvider, $admin, true );
-			$webhooks             = $this->webhookProfiles( $selectedProvider, $admin, $managedRepositories );
-			$providerRepositories = $this->withRetainedWebhookEvidence(
-				$providerRepositories,
-				$managedRepositories,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+			$credentials = $this->credential_profiles( $selectedProvider, $admin, true );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+			$webhooks              = $this->webhook_profiles( $selectedProvider, $admin, $managed_repositories );
+			$provider_repositories = $this->with_retained_webhook_evidence(
+				$provider_repositories,
+				$managed_repositories,
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 				$selectedProvider
 			);
-			$publicLookupProfile  = $this->publicLookupProfile( $selected, $selectedProvider, $credentials );
-			if ( null !== $publicLookupProfile ) {
-				$configuredId = $publicLookupProfile['configured_id'];
-				$credentials  = array_map(
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+			$public_lookup_profile = $this->public_lookup_profile( $selected, $selectedProvider, $credentials );
+			if ( null !== $public_lookup_profile ) {
+				$configured_id = $public_lookup_profile['configured_id'];
+				$credentials   = array_map(
 					static fn ( array $profile ): array => $profile + array(
-						'public_lookup_default' => $configuredId === $profile['id'],
+						'public_lookup_default' => $configured_id === $profile['id'],
 					),
 					$credentials
 				);
 			}
 		} catch ( SecretsStorageUnavailable ) {
-			$credentials         = array();
-			$webhooks            = array();
-			$publicLookupProfile = null;
-			$storageUnavailable  = true;
+			$credentials           = array();
+			$webhooks              = array();
+			$public_lookup_profile = null;
+			$storage_unavailable   = true;
 		}
 
 		return array(
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			'selected_provider'            => $selectedProvider,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			'providers'                    => $this->tabs( $available, $selectedProvider ),
 			'provider'                     => $this->provider( $selected, $metadata, $admin ),
 			'credential_profiles'          => $credentials,
 			'webhook_profiles'             => $webhooks,
-			'managed_webhook_repositories' => $managedRepositories,
-			'provider_repositories'        => $providerRepositories,
-			'public_lookup_profile'        => $publicLookupProfile,
-			'secrets_storage_unavailable'  => $storageUnavailable,
-			'webhook_assistance_readiness' => $webhookReadiness,
+			'managed_webhook_repositories' => $managed_repositories,
+			'provider_repositories'        => $provider_repositories,
+			'public_lookup_profile'        => $public_lookup_profile,
+			'secrets_storage_unavailable'  => $storage_unavailable,
+			'webhook_assistance_readiness' => $webhook_readiness,
 		);
 	}
 
 	/** @return array<string, mixed>|null */
-	private function webhookAssistanceReadiness( string $providerCode, RepositoryProvider $provider ): ?array {
+	private function webhook_assistance_readiness( string $provider_code, RepositoryProvider $provider ): ?array {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		if ( null === $this->webhookAssistance || ! $provider instanceof WebhookNormalizer ) {
 			return null;
 		}
 
 		try {
-			$endpoint = rest_url( 'ran-booster/v1/webhooks/' . rawurlencode( $providerCode ) );
+			$endpoint = rest_url( 'ran-booster/v1/webhooks/' . rawurlencode( $provider_code ) );
 
-			return $this->webhookAssistance->evaluate( $providerCode, $endpoint )->toArray();
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
+			return $this->webhookAssistance->evaluate( $provider_code, $endpoint )->toArray();
 		} catch ( Throwable ) {
 			return null;
 		}
@@ -155,21 +183,25 @@ final readonly class ProviderSettingsPresenter {
 	 *
 	 * @return array{default_provider: string, providers: list<array<string, mixed>>}
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
 	public function buildPackageForm( ?string $defaultProvider = null ): array {
-		$providers = $this->packageProviders();
+		$providers = $this->package_providers();
 
-		$packageProviderCodes = array_column(
+		$package_provider_codes = array_column(
 			array_filter( $providers, static fn ( array $provider ): bool => true === $provider['deploy'] ),
 			'code'
 		);
-		if ( array() === $packageProviderCodes ) {
+		if ( array() === $package_provider_codes ) {
 			throw new RuntimeException( 'No repository provider can install packages.' );
 		}
-		if ( ! is_string( $defaultProvider ) || ! in_array( $defaultProvider, $packageProviderCodes, true ) ) {
-			$defaultProvider = $packageProviderCodes[0];
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		if ( ! is_string( $defaultProvider ) || ! in_array( $defaultProvider, $package_provider_codes, true ) ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+			$defaultProvider = $package_provider_codes[0];
 		}
 
 		return array(
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			'default_provider' => $defaultProvider,
 			'providers'        => $providers,
 		);
@@ -184,13 +216,17 @@ final readonly class ProviderSettingsPresenter {
 	 *
 	 * @return array{default_provider: string, providers: list<array<string, mixed>>}
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
 	public function buildExistingPackageForm( string $storedProvider ): array {
-		$providers = $this->packageProviders();
+		$providers = $this->package_providers();
 		$codes     = array_column( $providers, 'code' );
 
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		if ( ! in_array( $storedProvider, $codes, true ) ) {
 			$providers[] = array(
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 				'code'                                   => $storedProvider,
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 				'label'                                  => $storedProvider,
 				'owner_label'                            => '',
 				'repository_url_base'                    => '',
@@ -208,6 +244,7 @@ final readonly class ProviderSettingsPresenter {
 		}
 
 		return array(
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			'default_provider' => $storedProvider,
 			'providers'        => $providers,
 		);
@@ -228,22 +265,24 @@ final readonly class ProviderSettingsPresenter {
 	 *     webhook_settings_url: string
 	 * }|null
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function buildPackageBranchReadiness( Package $package ): ?array {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		if ( ! in_array( $package->getSource(), array( PackageSource::BRANCH, PackageSource::RELEASE_ASSET ), true ) || null === $this->webhookAssistance ) {
 			return null;
 		}
 
-		$providerCode = (string) ( $package->getProviderCode() ?? '' );
-		if ( '' === $providerCode ) {
+		$provider_code = (string) ( $package->getProviderCode() ?? '' );
+		if ( '' === $provider_code ) {
 			return null;
 		}
 
 		try {
-			$provider = $this->providers->get( $providerCode );
+			$provider = $this->providers->get( $provider_code );
 			if ( ! $provider instanceof WebhookNormalizer ) {
 				return null;
 			}
-			$readiness = $this->webhookAssistanceReadiness( $providerCode, $provider );
+			$readiness = $this->webhook_assistance_readiness( $provider_code, $provider );
 			if ( null === $readiness ) {
 				return null;
 			}
@@ -254,7 +293,7 @@ final readonly class ProviderSettingsPresenter {
 				}
 
 				return array(
-					'provider_code'        => $providerCode,
+					'provider_code'        => $provider_code,
 					'retained'             => true,
 					'site'                 => $readiness['site'],
 					'repository'           => array(
@@ -267,15 +306,15 @@ final readonly class ProviderSettingsPresenter {
 				);
 			}
 
-			$repositoryId = $package->getProviderRepositoryId();
-			$repository   = strtolower( trim( (string) $package->getRepository(), '/' ) );
-			$match        = null;
+			$repository_id = $package->getProviderRepositoryId();
+			$repository    = strtolower( trim( (string) $package->getRepository(), '/' ) );
+			$match         = null;
 			foreach ( $readiness['repositories'] as $candidate ) {
 				if ( ! is_array( $candidate ) ) {
 					continue;
 				}
-				$candidateId = $candidate['repository_id'] ?? null;
-				if ( is_string( $repositoryId ) && '' !== $repositoryId && $repositoryId === $candidateId ) {
+				$candidate_id = $candidate['repository_id'] ?? null;
+				if ( is_string( $repository_id ) && '' !== $repository_id && $repository_id === $candidate_id ) {
 					$match = $candidate;
 					break;
 				}
@@ -285,11 +324,11 @@ final readonly class ProviderSettingsPresenter {
 			}
 
 			return array(
-				'provider_code'        => $providerCode,
+				'provider_code'        => $provider_code,
 				'retained'             => false,
 				'site'                 => $readiness['site'],
 				'repository'           => $match,
-				'webhook_settings_url' => (string) ( $this->repositoryWebhookSettingsUrl(
+				'webhook_settings_url' => (string) ( $this->repository_webhook_settings_url(
 					$provider,
 					(string) $package->getRepository()
 				) ?? '' ),
@@ -300,13 +339,14 @@ final readonly class ProviderSettingsPresenter {
 	}
 
 	/** @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable' */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function checkPackageRepositoryBranch( string $type, Package $package ): string {
 		if ( PackageSource::BRANCH !== $package->getSource() ) {
 			return 'unable_to_check';
 		}
 		try {
-			return $this->branchCheckLock->run(
-				fn (): string => $this->checkPackageRepositoryBranchWhileLocked( $type, $package ),
+			return $this->branch_check_lock->run(
+				fn (): string => $this->check_package_repository_branch_while_locked( $type, $package ),
 				'Another package operation is in progress.',
 				'The package operation lock could not be released.'
 			);
@@ -316,16 +356,16 @@ final readonly class ProviderSettingsPresenter {
 	}
 
 	/** @return 'verified'|'unable_to_check'|'provider_unavailable' */
-	private function checkPackageRepositoryBranchWhileLocked( string $type, Package $package ): string {
-		$profileId          = $this->effectiveBranchCheckProfile( $package );
-		$profileFingerprint = $this->branchCheckEvidence->profileFingerprintFor( $package, $profileId );
+	private function check_package_repository_branch_while_locked( string $type, Package $package ): string {
+		$profile_id          = $this->effective_branch_check_profile( $package );
+		$profile_fingerprint = $this->branch_check_evidence->profile_fingerprint_for( $package, $profile_id );
 
 		try {
 			$provider = $this->providers->get( (string) $package->getProviderCode() );
 		} catch ( UnknownProvider ) {
-			return $this->recordPackageRepositoryBranchCheck( $type, $package, $profileId, 'provider_unavailable', $profileFingerprint );
+			return $this->record_package_repository_branch_check( $type, $package, $profile_id, 'provider_unavailable', $profile_fingerprint );
 		} catch ( Throwable ) {
-			return $this->recordPackageRepositoryBranchCheck( $type, $package, $profileId, 'unable_to_check', $profileFingerprint );
+			return $this->record_package_repository_branch_check( $type, $package, $profile_id, 'unable_to_check', $profile_fingerprint );
 		}
 
 		$archive = null;
@@ -333,31 +373,32 @@ final readonly class ProviderSettingsPresenter {
 		try {
 			$repository = $package->getRepository()->reference;
 			if ( ! $repository->private ) {
-				$credentialId = $provider instanceof CredentialedPublicRepositoryBrowser
+				$credential_id = $provider instanceof CredentialedPublicRepositoryBrowser
 					&& $provider->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile
-						? $profileId
+						? $profile_id
 						: null;
 
 				$repository = new RepositoryReference(
 					$repository->locator,
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 					$repository->providerRepositoryId,
 					false,
-					$credentialId
+					$credential_id
 				);
 			}
 
-			$archive     = $provider->prepareArchive( new ArchiveRequest( $repository, (string) $package->getBranch() ) );
-			$resolvedRef = $archive->getResolvedRef();
-			if ( '' !== trim( $resolvedRef )
-				&& strlen( $resolvedRef ) <= 191
-				&& ! preg_match( '/[\x00-\x1F\x7F]/', $resolvedRef )
+			$archive      = $provider->prepareArchive( new ArchiveRequest( $repository, (string) $package->getBranch() ) );
+			$resolved_ref = $archive->getResolvedRef();
+			if ( '' !== trim( $resolved_ref )
+				&& strlen( $resolved_ref ) <= 191
+				&& ! preg_match( '/[\x00-\x1F\x7F]/', $resolved_ref )
 			) {
 				$subdirectory = $package->getSubdirectory();
 				if ( is_string( $subdirectory ) && '' !== $subdirectory
 					&& $provider instanceof RepositoryPathInspector
 				) {
 					try {
-						$result = $provider->repositoryPathExists( $repository, $resolvedRef, $subdirectory )
+						$result = $provider->repositoryPathExists( $repository, $resolved_ref, $subdirectory )
 							? 'verified'
 							: 'subdirectory_unavailable';
 					} catch ( Throwable ) {
@@ -382,19 +423,19 @@ final readonly class ProviderSettingsPresenter {
 			}
 		}
 
-		return $this->recordPackageRepositoryBranchCheck( $type, $package, $profileId, $result, $profileFingerprint );
+		return $this->record_package_repository_branch_check( $type, $package, $profile_id, $result, $profile_fingerprint );
 	}
 
 	/** @param 'verified'|'unable_to_check'|'provider_unavailable' $outcome */
-	private function recordPackageRepositoryBranchCheck(
+	private function record_package_repository_branch_check(
 		string $type,
 		Package $package,
-		?string $profileId,
+		?string $profile_id,
 		string $outcome,
-		string $profileFingerprint
+		string $profile_fingerprint
 	): string {
 		try {
-			$this->branchCheckEvidence->record( $type, $package, $profileId, $outcome, $profileFingerprint );
+			$this->branch_check_evidence->record( $type, $package, $profile_id, $outcome, $profile_fingerprint );
 		} catch ( Throwable ) {
 			return 'unable_to_check';
 		}
@@ -408,20 +449,22 @@ final readonly class ProviderSettingsPresenter {
 	 * The dashboard may cache that result briefly, but credential replacement and
 	 * default public-profile changes must require a fresh remote check.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function packageRepositoryBranchCheckAccessFingerprint( Package $package ): string {
-		return $this->branchCheckEvidence->profileFingerprintFor( $package, $this->effectiveBranchCheckProfile( $package ) );
+		return $this->branch_check_evidence->profile_fingerprint_for( $package, $this->effective_branch_check_profile( $package ) );
 	}
 
 	/** @return array{outcome: 'verified', checked_at: string}|null */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function packageRepositoryBranchEvidence( string $type, Package $package ): ?array {
-		return $this->branchCheckEvidence->find( $type, $package, $this->effectiveBranchCheckProfile( $package ) );
+		return $this->branch_check_evidence->find( $type, $package, $this->effective_branch_check_profile( $package ) );
 	}
 
-	private function effectiveBranchCheckProfile( Package $package ): ?string {
+	private function effective_branch_check_profile( Package $package ): ?string {
 		if ( $package->isPrivate() ) {
 			return $package->getCredentialId();
 		}
-		return $this->publicLookupProfiles->get( (string) $package->getProviderCode() );
+		return $this->public_lookup_profiles->get( (string) $package->getProviderCode() );
 	}
 
 	/**
@@ -439,23 +482,24 @@ final readonly class ProviderSettingsPresenter {
 	 *   provider_webhooks_url: string
 	 * }|null
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function buildPackageWebhookRetention( Package $package ): ?array {
 		if ( PackageSource::RELEASE_ASSET !== $package->getSource() ) {
 			return null;
 		}
 
-		$providerCode = (string) ( $package->getProviderCode() ?? '' );
-		$repositoryId = (string) ( $package->getProviderRepositoryId() ?? '' );
-		$repository   = trim( (string) $package->getRepository() );
-		if ( '' === $providerCode || '' === $repositoryId || '' === $repository ) {
+		$provider_code = (string) ( $package->getProviderCode() ?? '' );
+		$repository_id = (string) ( $package->getProviderRepositoryId() ?? '' );
+		$repository    = trim( (string) $package->getRepository() );
+		if ( '' === $provider_code || '' === $repository_id || '' === $repository ) {
 			return null;
 		}
 
-		$providerWebhooksUrl = '';
+		$provider_webhooks_url = '';
 		try {
-			$provider = $this->providers->get( $providerCode );
+			$provider = $this->providers->get( $provider_code );
 			if ( $provider instanceof RepositoryWebhookSettingsLink ) {
-				$providerWebhooksUrl = (string) ( $this->repositoryWebhookSettingsUrl( $provider, $repository ) ?? '' );
+				$provider_webhooks_url = (string) ( $this->repository_webhook_settings_url( $provider, $repository ) ?? '' );
 			}
 		// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Retained local evidence remains useful while a provider is unavailable.
 		} catch ( Throwable ) {
@@ -463,25 +507,25 @@ final readonly class ProviderSettingsPresenter {
 		}
 
 		try {
-			$profiles  = $this->secrets->webhookProfiles( $providerCode );
-			$coverage  = $this->retainedSecretCoverage( $repository, $repositoryId, $profiles );
+			$profiles  = $this->secrets->webhookProfiles( $provider_code );
+			$coverage  = $this->retained_secret_coverage( $repository, $repository_id, $profiles );
 			$available = true;
 		} catch ( Throwable ) {
 			$coverage  = 'unknown';
 			$available = false;
 		}
 
-		$branchConsumers = $this->branchConsumers( $providerCode, $repositoryId, $repository );
+		$branch_consumers = $this->branch_consumers( $provider_code, $repository_id, $repository );
 
 		return array(
 			'available'                 => $available,
-			'provider_code'             => $providerCode,
-			'repository_id'             => $repositoryId,
+			'provider_code'             => $provider_code,
+			'repository_id'             => $repository_id,
 			'repository'                => $repository,
 			'local_secret_coverage'     => $coverage,
-			'branch_evidence_available' => $branchConsumers['available'],
-			'branch_package_references' => $branchConsumers['references'],
-			'provider_webhooks_url'     => $providerWebhooksUrl,
+			'branch_evidence_available' => $branch_consumers['available'],
+			'branch_package_references' => $branch_consumers['references'],
+			'provider_webhooks_url'     => $provider_webhooks_url,
 		);
 	}
 
@@ -490,6 +534,7 @@ final readonly class ProviderSettingsPresenter {
 	 *
 	 * @return list<array{code: string, label: string, available: bool, deploy: bool, default_credential_id: string, credential_kind_labels: array<string,string>, credentials: list<array{id: string, label: string, source: string}>}>
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function buildPackageList(): array {
 		return array_map(
 			static fn ( array $provider ): array => array(
@@ -508,7 +553,7 @@ final readonly class ProviderSettingsPresenter {
 					$provider['credential_profiles']
 				),
 			),
-			$this->packageProviders()
+			$this->package_providers()
 		);
 	}
 
@@ -518,6 +563,7 @@ final readonly class ProviderSettingsPresenter {
 	 * @param array<string, array<string, list<array{index:int,name:string,type:string}>>> $associations
 	 * @return list<array{code:string,label:string,credentials:list<array<string,mixed>>}>
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function buildPortabilityCredentials( array $associations ): array {
 		$groups = array();
 		foreach ( $this->providers->administrationMetadata() as $metadata ) {
@@ -528,19 +574,19 @@ final readonly class ProviderSettingsPresenter {
 				continue;
 			}
 
-			$profiles   = $this->secrets->credentialProfiles( $code );
-			$profileIds = array_values( array_unique( array_merge( array_keys( $candidates ), array_keys( $profiles ) ) ) );
-			if ( array() === $profileIds ) {
+			$profiles    = $this->secrets->credentialProfiles( $code );
+			$profile_ids = array_values( array_unique( array_merge( array_keys( $candidates ), array_keys( $profiles ) ) ) );
+			if ( array() === $profile_ids ) {
 				continue;
 			}
 			$credentials = array();
-			foreach ( $profileIds as $id ) {
+			foreach ( $profile_ids as $id ) {
 				$profile       = $profiles[ $id ] ?? null;
 				$packages      = $candidates[ $id ] ?? array();
 				$kind          = is_array( $profile ) ? $admin->getCredentialKind( (string) ( $profile['kind'] ?? '' ) ) : null;
 				$source        = is_array( $profile ) && is_string( $profile['source'] ?? null ) ? $profile['source'] : '';
-				$selfDestruct  = is_array( $profile ) && ! empty( $profile['self_destruct'] );
-				$reason        = ! is_array( $profile ) ? 'missing' : ( 'file' !== $source ? 'configuration' : ( $selfDestruct ? 'self_destruct' : ( array() === $packages ? 'unassociated' : '' ) ) );
+				$self_destruct = is_array( $profile ) && ! empty( $profile['self_destruct'] );
+				$reason        = ! is_array( $profile ) ? 'missing' : ( 'file' !== $source ? 'configuration' : ( $self_destruct ? 'self_destruct' : ( array() === $packages ? 'unassociated' : '' ) ) );
 				$credentials[] = array(
 					'id'         => is_array( $profile ) ? $id : '',
 					'label'      => is_array( $profile ) && is_string( $profile['label'] ?? null ) ? $profile['label'] : '',
@@ -567,7 +613,7 @@ final readonly class ProviderSettingsPresenter {
 	 *
 	 * @return list<array<string, mixed>>
 	 */
-	private function packageProviders(): array {
+	private function package_providers(): array {
 		$providers = array();
 
 		foreach ( $this->providers->administrationMetadata() as $metadata ) {
@@ -578,7 +624,7 @@ final readonly class ProviderSettingsPresenter {
 
 			if ( null !== $admin ) {
 				try {
-					$profiles = $this->credentialProfiles( $code, $admin );
+					$profiles = $this->credential_profiles( $code, $admin );
 				} catch ( SecretsStorageUnavailable ) {
 					$profiles = array();
 				}
@@ -610,8 +656,11 @@ final readonly class ProviderSettingsPresenter {
 			$providers[] = array(
 				'code'                                   => $code,
 				'label'                                  => $metadata->label,
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 				'owner_label'                            => $metadata->ownerLabel,
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 				'repository_url_base'                    => $metadata->repositoryUrlBase,
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 				'credentials_url'                        => null !== $admin && array() !== $admin->credentialKinds
 					? 'admin.php?page=ran-booster&tab=' . rawurlencode( $code ) . '&view=credentials'
 					: '',
@@ -622,10 +671,11 @@ final readonly class ProviderSettingsPresenter {
 					&& $provider->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile,
 				'deploy'                                 => true,
 				'webhooks'                               => $provider instanceof WebhookNormalizer,
-				'default_credential_id'                  => $this->defaultCredentialId( $credentials ),
-				'credential_kind_labels'                 => null === $admin ? array() : array_column( array_map( $this->credentialKind( ... ), $admin->credentialKinds ), 'label', 'code' ),
+				'default_credential_id'                  => $this->default_credential_id( $credentials ),
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
+				'credential_kind_labels'                 => null === $admin ? array() : array_column( array_map( $this->credential_kind( ... ), $admin->credentialKinds ), 'label', 'code' ),
 				'credential_profiles'                    => $credentials,
-				'public_lookup'                          => $this->packagePublicLookup( $provider, $code, $credentials ),
+				'public_lookup'                          => $this->package_public_lookup( $provider, $code, $credentials ),
 			);
 		}
 
@@ -635,7 +685,7 @@ final readonly class ProviderSettingsPresenter {
 	/**
 	 * @param list<array<string, mixed>> $credentials Display-safe credential profiles.
 	 */
-	private function defaultCredentialId( array $credentials ): string {
+	private function default_credential_id( array $credentials ): string {
 		foreach ( $credentials as $credential ) {
 			if ( 'constant' === $credential['source'] ) {
 				return (string) $credential['id'];
@@ -649,32 +699,32 @@ final readonly class ProviderSettingsPresenter {
 	 * @param list<array<string, mixed>> $credentials Display-safe credential profiles.
 	 * @return array{supports_default: bool, configured_id: string, configured_label: string, stale: bool}|null
 	 */
-	private function packagePublicLookup( RepositoryProvider $provider, string $providerCode, array $credentials ): ?array {
+	private function package_public_lookup( RepositoryProvider $provider, string $provider_code, array $credentials ): ?array {
 		if ( ! $provider instanceof CredentialedPublicRepositoryBrowser ) {
 			return null;
 		}
 
-		$supportsDefault = $provider->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile;
-		$configuredId    = $supportsDefault ? $this->publicLookupProfiles->get( $providerCode ) ?? '' : '';
-		$configuredLabel = '';
-		$eligibleIds     = array();
+		$supports_default = $provider->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile;
+		$configured_id    = $supports_default ? $this->public_lookup_profiles->get( $provider_code ) ?? '' : '';
+		$configured_label = '';
+		$eligible_ids     = array();
 
 		foreach ( $credentials as $credential ) {
 			if ( false === ( $credential['configured'] ?? false ) ) {
 				continue;
 			}
 
-			$eligibleIds[] = $credential['id'];
-			if ( $configuredId === $credential['id'] ) {
-				$configuredLabel = (string) $credential['label'];
+			$eligible_ids[] = $credential['id'];
+			if ( $configured_id === $credential['id'] ) {
+				$configured_label = (string) $credential['label'];
 			}
 		}
 
 		return array(
-			'supports_default' => $supportsDefault,
-			'configured_id'    => $configuredId,
-			'configured_label' => $configuredLabel,
-			'stale'            => '' !== $configuredId && ! in_array( $configuredId, $eligibleIds, true ),
+			'supports_default' => $supports_default,
+			'configured_id'    => $configured_id,
+			'configured_label' => $configured_label,
+			'stale'            => '' !== $configured_id && ! in_array( $configured_id, $eligible_ids, true ),
 		);
 	}
 
@@ -682,14 +732,14 @@ final readonly class ProviderSettingsPresenter {
 	 * @param list<array<string, mixed>> $credentials Display-safe credential profiles.
 	 * @return array{configured_id: string, stale: bool}|null
 	 */
-	private function publicLookupProfile( RepositoryProvider $provider, string $providerCode, array $credentials ): ?array {
+	private function public_lookup_profile( RepositoryProvider $provider, string $provider_code, array $credentials ): ?array {
 		if ( ! $provider instanceof CredentialedPublicRepositoryBrowser
 			|| ! $provider->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile ) {
 			return null;
 		}
 
-		$configuredId = $this->publicLookupProfiles->get( $providerCode ) ?? '';
-		$eligibleIds  = array_column(
+		$configured_id = $this->public_lookup_profiles->get( $provider_code ) ?? '';
+		$eligible_ids  = array_column(
 			array_filter(
 				$credentials,
 				static fn ( array $profile ): bool => true === $profile['configured']
@@ -698,15 +748,15 @@ final readonly class ProviderSettingsPresenter {
 		);
 
 		return array(
-			'configured_id' => $configuredId,
-			'stale'         => '' !== $configuredId && ! in_array( $configuredId, $eligibleIds, true ),
+			'configured_id' => $configured_id,
+			'stale'         => '' !== $configured_id && ! in_array( $configured_id, $eligible_ids, true ),
 		);
 	}
 
 	/**
 	 * @return array<string, RepositoryProvider>
 	 */
-	private function adminProviders(): array {
+	private function admin_providers(): array {
 		$providers = array();
 		foreach ( $this->providers->administrationMetadata() as $metadata ) {
 			$providers[ $metadata->code->value ] = $this->providers->get( $metadata->code );
@@ -719,14 +769,14 @@ final readonly class ProviderSettingsPresenter {
 	 * @param array<string, RepositoryProvider> $providers Providers with admin metadata.
 	 * @return list<array{code: string, label: string, active: bool}>
 	 */
-	private function tabs( array $providers, string $selectedProvider ): array {
+	private function tabs( array $providers, string $selected_provider ): array {
 		$tabs = array();
 
 		foreach ( $providers as $code => $provider ) {
 			$tabs[] = array(
 				'code'   => $code,
 				'label'  => $provider->getMetadata()->label,
-				'active' => $code === $selectedProvider,
+				'active' => $code === $selected_provider,
 			);
 		}
 
@@ -742,13 +792,20 @@ final readonly class ProviderSettingsPresenter {
 		return array(
 			'code'             => $metadata->code->value,
 			'label'            => $metadata->label,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 			'owner_label'      => $metadata->ownerLabel,
-			'credential_kinds' => array_map( $this->credentialKind( ... ), $admin->credentialKinds ),
-			'webhook_scopes'   => array_map( $this->webhookScope( ... ), $admin->webhookScopes ),
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
+			'credential_kinds' => array_map( $this->credential_kind( ... ), $admin->credentialKinds ),
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
+			'webhook_scopes'   => array_map( $this->webhook_scope( ... ), $admin->webhookScopes ),
 			'webhook_setup'    => null === $setup ? null : array(
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 				'location'                   => $setup->webhookLocation,
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 				'event'                      => $setup->webhookEvent,
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 				'documentation_url'          => $setup->webhookDocumentationUrl,
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 				'delivery_documentation_url' => $setup->deliveryDocumentationUrl,
 			),
 			'capabilities'     => array(
@@ -769,7 +826,7 @@ final readonly class ProviderSettingsPresenter {
 	 *
 	 * @return array{available: bool, owners: list<string>, repositories: list<array<string, mixed>>}
 	 */
-	private function managedRepositories( string $provider, RepositoryProvider $repositoryProvider, bool $branchOnly ): array {
+	private function managed_repositories( string $provider, RepositoryProvider $repository_provider, bool $branch_only ): array {
 		if ( null === $this->plugins || null === $this->themes ) {
 				return array(
 					'available'    => false,
@@ -803,27 +860,27 @@ final readonly class ProviderSettingsPresenter {
 				);
 		}
 
-		$owners                 = array();
-		$repositories           = array();
-		$idsByLocator           = array();
-		$locatorsByRepositoryId = array();
+		$owners                    = array();
+		$repositories              = array();
+		$ids_by_locator            = array();
+		$locators_by_repository_id = array();
 		foreach ( $packages as $entry ) {
 			$package = $entry['package'];
 			$source  = $package->getSource();
 			if ( $package->getProviderCode() !== $provider
-				|| ( $branchOnly && PackageSource::BRANCH !== $source ) ) {
+				|| ( $branch_only && PackageSource::BRANCH !== $source ) ) {
 				continue;
 			}
 
-			$target       = trim( (string) $package->getRepository() );
-			$repositoryId = trim( (string) ( $package->getProviderRepositoryId() ?? '' ) );
+			$target        = trim( (string) $package->getRepository() );
+			$repository_id = trim( (string) ( $package->getProviderRepositoryId() ?? '' ) );
 			if ( '' === $target ) {
 				continue;
 			}
-			$locatorKey = $target;
-			if ( '' !== $repositoryId ) {
-				$idsByLocator[ $locatorKey ][ $repositoryId ]           = true;
-				$locatorsByRepositoryId[ $repositoryId ][ $locatorKey ] = true;
+			$locator_key = $target;
+			if ( '' !== $repository_id ) {
+				$ids_by_locator[ $locator_key ][ $repository_id ]            = true;
+				$locators_by_repository_id[ $repository_id ][ $locator_key ] = true;
 			}
 		}
 
@@ -831,26 +888,26 @@ final readonly class ProviderSettingsPresenter {
 			$package = $entry['package'];
 			$source  = $package->getSource();
 			if ( $package->getProviderCode() !== $provider
-				|| ( $branchOnly && PackageSource::BRANCH !== $source ) ) {
+				|| ( $branch_only && PackageSource::BRANCH !== $source ) ) {
 				continue;
 			}
 
-			$target       = trim( (string) $package->getRepository() );
-			$repositoryId = trim( (string) ( $package->getProviderRepositoryId() ?? '' ) );
+			$target        = trim( (string) $package->getRepository() );
+			$repository_id = trim( (string) ( $package->getProviderRepositoryId() ?? '' ) );
 			if ( '' === $target ) {
 				continue;
 			}
-			$locatorKey       = $target;
-			$identityConflict = '' !== $repositoryId && (
-				1 < count( $idsByLocator[ $locatorKey ] ?? array() )
-				|| 1 < count( $locatorsByRepositoryId[ $repositoryId ] ?? array() )
+			$locator_key       = $target;
+			$identity_conflict = '' !== $repository_id && (
+				1 < count( $ids_by_locator[ $locator_key ] ?? array() )
+				|| 1 < count( $locators_by_repository_id[ $repository_id ] ?? array() )
 			);
 
 			// Provider IDs, not mutable locators or package source, are the live-row
 			// authority. An absent ID stays visible for review but is never operable.
-			$key   = '' === $repositoryId
+			$key   = '' === $repository_id
 				? 'historical:' . hash( 'sha256', $target . '|' . $source->value . '|' . (string) $package->getIdentifier() )
-				: $repositoryId;
+				: $repository_id;
 			$parts = explode( '/', trim( $target, '/' ), 2 );
 			if ( 2 === count( $parts ) && '' !== trim( $parts[0] ) ) {
 				$owners[ strtolower( $parts[0] ) ] = $parts[0];
@@ -858,10 +915,10 @@ final readonly class ProviderSettingsPresenter {
 			if ( ! isset( $repositories[ $key ] ) ) {
 				$repositories[ $key ] = array(
 					'target'                        => $target,
-					'repository_id'                 => $repositoryId,
+					'repository_id'                 => $repository_id,
 					'sources'                       => array( $source->value => true ),
-					'historical'                    => '' === $repositoryId || $identityConflict,
-					'identity_conflict'             => $identityConflict,
+					'historical'                    => '' === $repository_id || $identity_conflict,
+					'identity_conflict'             => $identity_conflict,
 					'package_count'                 => 0,
 					'automatic_count'               => 0,
 					'has_automatic_branch_consumer' => false,
@@ -873,19 +930,19 @@ final readonly class ProviderSettingsPresenter {
 						'manual'    => 0,
 						'disabled'  => 0,
 					),
-					'repository_url'                => $identityConflict ? null : $this->repositoryUrl( $repositoryProvider, $target ),
-					'webhook_settings_url'          => PackageSource::BRANCH === $source && ! $identityConflict
-						? $this->repositoryWebhookSettingsUrl( $repositoryProvider, $target )
+					'repository_url'                => $identity_conflict ? null : $this->repository_url( $repository_provider, $target ),
+					'webhook_settings_url'          => PackageSource::BRANCH === $source && ! $identity_conflict
+						? $this->repository_webhook_settings_url( $repository_provider, $target )
 						: null,
 				);
 			}
-			if ( $identityConflict ) {
+			if ( $identity_conflict ) {
 				$repositories[ $key ]['historical']           = true;
 				$repositories[ $key ]['identity_conflict']    = true;
 				$repositories[ $key ]['repository_url']       = null;
 				$repositories[ $key ]['webhook_settings_url'] = null;
 			} elseif ( PackageSource::BRANCH === $source && null === $repositories[ $key ]['webhook_settings_url'] ) {
-				$repositories[ $key ]['webhook_settings_url'] = $this->repositoryWebhookSettingsUrl( $repositoryProvider, $target );
+				$repositories[ $key ]['webhook_settings_url'] = $this->repository_webhook_settings_url( $repository_provider, $target );
 			}
 
 			$repositories[ $key ]['sources'][ $source->value ] = true;
@@ -898,7 +955,7 @@ final readonly class ProviderSettingsPresenter {
 				}
 			}
 			if ( self::MAX_REPOSITORY_PACKAGE_SUMMARIES > count( $repositories[ $key ]['package_summaries'] ) ) {
-				$repositories[ $key ]['package_summaries'][] = $this->packageSummary( $package, $source, $entry['type'] );
+				$repositories[ $key ]['package_summaries'][] = $this->package_summary( $package, $source, $entry['type'] );
 			}
 			$policy = $package->getDeploymentPolicy()->value;
 			++$repositories[ $key ]['deployment_policies'][ $policy ];
@@ -912,9 +969,9 @@ final readonly class ProviderSettingsPresenter {
 			sort( $repository['branch_package_references'], SORT_STRING );
 			usort( $repository['package_summaries'], static fn ( array $left, array $right ): int => strcmp( $left['identifier'], $right['identifier'] ) );
 			$repository['package_summaries_omitted'] = max( 0, $repository['package_count'] - count( $repository['package_summaries'] ) );
-			$sourceKeys                              = array_keys( $repository['sources'] );
-			sort( $sourceKeys, SORT_STRING );
-			$repository['source'] = 2 === count( $sourceKeys ) ? 'mixed' : ( $sourceKeys[0] ?? PackageSource::BRANCH->value );
+			$source_keys                             = array_keys( $repository['sources'] );
+			sort( $source_keys, SORT_STRING );
+			$repository['source'] = 2 === count( $source_keys ) ? 'mixed' : ( $source_keys[0] ?? PackageSource::BRANCH->value );
 			unset( $repository['sources'] );
 		}
 		unset( $repository );
@@ -930,7 +987,7 @@ final readonly class ProviderSettingsPresenter {
 	}
 
 	/** @return array{type:string,identifier:string,display_name:string,settings_url:string,source:string,source_revision:int,branch:string,subdirectory:string,deployment_policy:string} */
-	private function packageSummary( Package $package, PackageSource $source, string $type ): array {
+	private function package_summary( Package $package, PackageSource $source, string $type ): array {
 		$identifier = (string) $package->getIdentifier();
 		$page       = 'theme' === $type ? 'ran-booster-themes' : 'ran-booster-plugins';
 
@@ -949,45 +1006,45 @@ final readonly class ProviderSettingsPresenter {
 	}
 
 	/**
-	 * @param array<string, mixed> $providerRepositories
-	 * @param array<string, mixed> $branchRepositories
+	 * @param array<string, mixed> $provider_repositories
+	 * @param array<string, mixed> $branch_repositories
 	 * @return array<string, mixed>
 	 */
-	private function withRetainedWebhookEvidence(
-		array $providerRepositories,
-		array $branchRepositories,
-		string $providerCode
+	private function with_retained_webhook_evidence(
+		array $provider_repositories,
+		array $branch_repositories,
+		string $provider_code
 	): array {
 		try {
-			$profiles          = $this->secrets->webhookProfiles( $providerCode );
-			$evidenceAvailable = true;
+			$profiles           = $this->secrets->webhookProfiles( $provider_code );
+			$evidence_available = true;
 		} catch ( Throwable ) {
-			$profiles          = array();
-			$evidenceAvailable = false;
+			$profiles           = array();
+			$evidence_available = false;
 		}
 
-		$branches = is_array( $branchRepositories['repositories'] ?? null )
-			? $branchRepositories['repositories']
+		$branches = is_array( $branch_repositories['repositories'] ?? null )
+			? $branch_repositories['repositories']
 			: array();
-		if ( ! is_array( $providerRepositories['repositories'] ?? null ) ) {
-			return $providerRepositories;
+		if ( ! is_array( $provider_repositories['repositories'] ?? null ) ) {
+			return $provider_repositories;
 		}
-		foreach ( $providerRepositories['repositories'] as &$repository ) {
+		foreach ( $provider_repositories['repositories'] as &$repository ) {
 			if ( ! is_array( $repository ) || PackageSource::RELEASE_ASSET->value !== ( $repository['source'] ?? null ) ) {
 				continue;
 			}
 
-			$locator      = (string) ( $repository['target'] ?? '' );
-			$repositoryId = (string) ( $repository['repository_id'] ?? '' );
-			$references   = array();
+			$locator       = (string) ( $repository['target'] ?? '' );
+			$repository_id = (string) ( $repository['repository_id'] ?? '' );
+			$references    = array();
 			foreach ( $branches as $branch ) {
 				if ( ! is_array( $branch ) ) {
 					continue;
 				}
-				$branchId      = (string) ( $branch['repository_id'] ?? '' );
-				$branchLocator = (string) ( $branch['target'] ?? '' );
-				if ( ( '' !== $repositoryId && '' !== $branchId && hash_equals( $repositoryId, $branchId ) )
-					|| 0 === strcasecmp( trim( $locator, '/' ), trim( $branchLocator, '/' ) )
+				$branch_id      = (string) ( $branch['repository_id'] ?? '' );
+				$branch_locator = (string) ( $branch['target'] ?? '' );
+				if ( ( '' !== $repository_id && '' !== $branch_id && hash_equals( $repository_id, $branch_id ) )
+					|| 0 === strcasecmp( trim( $locator, '/' ), trim( $branch_locator, '/' ) )
 				) {
 					$references = array_merge(
 						$references,
@@ -999,21 +1056,21 @@ final readonly class ProviderSettingsPresenter {
 			sort( $references, SORT_STRING );
 
 			$repository['retained_webhook'] = array(
-				'evidence_available'        => $evidenceAvailable,
-				'local_secret_coverage'     => $evidenceAvailable
-					? $this->retainedSecretCoverage( $locator, $repositoryId, $profiles )
+				'evidence_available'        => $evidence_available,
+				'local_secret_coverage'     => $evidence_available
+					? $this->retained_secret_coverage( $locator, $repository_id, $profiles )
 					: 'unknown',
-				'branch_evidence_available' => ! empty( $branchRepositories['available'] ),
+				'branch_evidence_available' => ! empty( $branch_repositories['available'] ),
 				'branch_package_references' => $references,
 			);
 		}
 		unset( $repository );
 
-		return $providerRepositories;
+		return $provider_repositories;
 	}
 
 	/** @return array{available: bool, references: list<string>} */
-	private function branchConsumers( string $providerCode, string $repositoryId, string $repository ): array {
+	private function branch_consumers( string $provider_code, string $repository_id, string $repository ): array {
 		if ( null === $this->plugins || null === $this->themes ) {
 			return array(
 				'available'  => false,
@@ -1037,11 +1094,11 @@ final readonly class ProviderSettingsPresenter {
 		foreach ( $packages as $package ) {
 			if ( ! $package instanceof Package
 				|| PackageSource::BRANCH !== $package->getSource()
-				|| $providerCode !== $package->getProviderCode() ) {
+				|| $provider_code !== $package->getProviderCode() ) {
 				continue;
 			}
-			$packageId = (string) ( $package->getProviderRepositoryId() ?? '' );
-			if ( ( '' !== $packageId && hash_equals( $repositoryId, $packageId ) )
+			$package_id = (string) ( $package->getProviderRepositoryId() ?? '' );
+			if ( ( '' !== $package_id && hash_equals( $repository_id, $package_id ) )
 				|| 0 === strcasecmp( trim( $repository, '/' ), trim( (string) $package->getRepository(), '/' ) )
 			) {
 				$references[] = (string) $package->getIdentifier();
@@ -1058,7 +1115,7 @@ final readonly class ProviderSettingsPresenter {
 	}
 
 	/** @param array<string, array<string, mixed>> $profiles */
-	private function retainedSecretCoverage( string $repository, string $repositoryId, array $profiles ): string {
+	private function retained_secret_coverage( string $repository, string $repository_id, array $profiles ): string {
 		$owner  = strtolower( explode( '/', trim( $repository, '/' ), 2 )[0] );
 		$shared = false;
 		foreach ( $profiles as $profile ) {
@@ -1068,7 +1125,7 @@ final readonly class ProviderSettingsPresenter {
 			$scope = strtolower( trim( (string) ( $profile['scope'] ?? '' ) ) );
 			if ( 'repository' === $scope
 				&& is_string( $profile['authority_id'] ?? null )
-				&& hash_equals( $repositoryId, $profile['authority_id'] )
+				&& hash_equals( $repository_id, $profile['authority_id'] )
 			) {
 				return 'repository';
 			}
@@ -1081,7 +1138,7 @@ final readonly class ProviderSettingsPresenter {
 		return $shared ? 'shared' : 'none';
 	}
 
-	private function repositoryUrl( RepositoryProvider $provider, string $locator ): ?string {
+	private function repository_url( RepositoryProvider $provider, string $locator ): ?string {
 		$parts = explode( '/', trim( $locator, '/' ), 2 );
 		if ( 2 !== count( $parts ) || '' === $parts[0] || '' === $parts[1] ) {
 			return null;
@@ -1094,7 +1151,7 @@ final readonly class ProviderSettingsPresenter {
 			. rawurlencode( $parts[1] );
 	}
 
-	private function repositoryWebhookSettingsUrl( RepositoryProvider $provider, string $locator ): ?string {
+	private function repository_webhook_settings_url( RepositoryProvider $provider, string $locator ): ?string {
 		if ( ! $provider instanceof RepositoryWebhookSettingsLink ) {
 			return null;
 		}
@@ -1126,21 +1183,24 @@ final readonly class ProviderSettingsPresenter {
 	/**
 	 * @return array<string, mixed>
 	 */
-	private function credentialKind( CredentialKindMetadata $kind ): array {
+	private function credential_kind( CredentialKindMetadata $kind ): array {
 		return array(
 			'code'               => $kind->code,
 			'label'              => $kind->label,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 			'short_label'        => $kind->shortLabel,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 			'secret_label'       => $kind->secretLabel,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 			'secret_placeholder' => $kind->secretPlaceholder,
-			'fields'             => array_map( $this->credentialField( ... ), $kind->fields ),
+			'fields'             => array_map( $this->credential_field( ... ), $kind->fields ),
 		);
 	}
 
 	/**
 	 * @return array<string, mixed>
 	 */
-	private function credentialField( CredentialFieldMetadata $field ): array {
+	private function credential_field( CredentialFieldMetadata $field ): array {
 		return array(
 			'key'         => $field->key,
 			'label'       => $field->label,
@@ -1154,12 +1214,15 @@ final readonly class ProviderSettingsPresenter {
 	/**
 	 * @return array<string, mixed>
 	 */
-	private function webhookScope( WebhookScopeMetadata $scope ): array {
+	private function webhook_scope( WebhookScopeMetadata $scope ): array {
 		return array(
 			'code'               => $scope->code,
 			'label'              => $scope->label,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 			'requires_target'    => $scope->requiresTarget,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 			'target_label'       => $scope->targetLabel,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 			'target_placeholder' => $scope->targetPlaceholder,
 			'description'        => $scope->description,
 		);
@@ -1168,7 +1231,8 @@ final readonly class ProviderSettingsPresenter {
 	/**
 	 * @return list<array<string, mixed>>
 	 */
-	private function credentialProfiles( string $provider, ProviderAdminMetadata $admin, bool $includeUsage = false ): array {
+	private function credential_profiles( string $provider, ProviderAdminMetadata $admin, bool $include_usage = false ): array {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		if ( array() === $admin->credentialKinds ) {
 			return array();
 		}
@@ -1192,8 +1256,9 @@ final readonly class ProviderSettingsPresenter {
 				'total'     => null,
 				'packages'  => array(),
 			);
-			if ( $includeUsage ) {
+			if ( $include_usage ) {
 				try {
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 					$usage = array( 'available' => true ) + $this->credentialUsage->read( $provider, $id );
 				} catch ( RuntimeException ) {
 					$usage['available'] = false;
@@ -1202,9 +1267,9 @@ final readonly class ProviderSettingsPresenter {
 			$immutable = ! empty( $profile['immutable'] );
 			$source    = is_string( $profile['source'] ?? null ) ? $profile['source'] : 'file';
 			try {
-				$expiryObservation = $this->expiryObservations->get( $provider, $id );
+				$expiry_observation = $this->expiry_observations->get( $provider, $id );
 			} catch ( RuntimeException ) {
-				$expiryObservation = array();
+				$expiry_observation = array();
 			}
 			$profiles[] = array(
 				'id'            => $id,
@@ -1218,12 +1283,12 @@ final readonly class ProviderSettingsPresenter {
 				'editable'      => ! $immutable && 'constant' !== $source,
 				'self_destruct' => ! empty( $profile['self_destruct'] ),
 				'destroy_on'    => is_string( $profile['destroy_on'] ?? null ) ? $profile['destroy_on'] : null,
-				'expiry'        => $expiryObservation,
-				'expiry_status' => $this->expiryReminders->status( $provider, $profile ),
+				'expiry'        => $expiry_observation,
+				'expiry_status' => $this->expiry_reminders->status( $provider, $profile ),
 				'usage'         => array(
 					'available' => $usage['available'],
 					'total'     => $usage['total'],
-					'packages'  => array_map( $this->packageUsageLink( ... ), $usage['packages'] ),
+					'packages'  => array_map( $this->package_usage_link( ... ), $usage['packages'] ),
 				),
 			);
 		}
@@ -1235,7 +1300,7 @@ final readonly class ProviderSettingsPresenter {
 	 * @param array{type: string, identifier: string, installed: bool} $package Managed package identity.
 	 * @return array{type: string, identifier: string, installed: bool, edit_url: ?string}
 	 */
-	private function packageUsageLink( array $package ): array {
+	private function package_usage_link( array $package ): array {
 		$page = 'plugin' === $package['type'] ? 'ran-booster-plugins' : 'ran-booster-themes';
 
 		return $package + array(
@@ -1248,11 +1313,12 @@ final readonly class ProviderSettingsPresenter {
 	/**
 	 * @return list<array<string, mixed>>
 	 */
-	private function webhookProfiles(
+	private function webhook_profiles(
 		string $provider,
 		ProviderAdminMetadata $admin,
-		array $managedRepositories
+		array $managed_repositories
 	): array {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		if ( array() === $admin->webhookScopes ) {
 			return array();
 		}
@@ -1279,7 +1345,7 @@ final readonly class ProviderSettingsPresenter {
 				'immutable'  => $immutable,
 				'configured' => ! empty( $profile['configured'] ),
 				'editable'   => ! $immutable && 'constant' !== $source,
-				'usage'      => $this->webhookProfileUsage( $profile, $managedRepositories ),
+				'usage'      => $this->webhook_profile_usage( $profile, $managed_repositories ),
 			);
 		}
 
@@ -1300,7 +1366,7 @@ final readonly class ProviderSettingsPresenter {
 	 *     package_count: int,
 	 *     package_references: list<string>
 	 *   }>
-	 * } $managedRepositories
+	 * } $managed_repositories
 	 * @return array{
 	 *   available: bool,
 	 *   total: int|null,
@@ -1311,8 +1377,8 @@ final readonly class ProviderSettingsPresenter {
 	 *   }>
 	 * }
 	 */
-	private function webhookProfileUsage( array $profile, array $managedRepositories ): array {
-		if ( empty( $managedRepositories['available'] ) ) {
+	private function webhook_profile_usage( array $profile, array $managed_repositories ): array {
+		if ( empty( $managed_repositories['available'] ) ) {
 			return array(
 				'available'    => false,
 				'total'        => null,
@@ -1320,34 +1386,34 @@ final readonly class ProviderSettingsPresenter {
 			);
 		}
 
-		$scope       = is_string( $profile['scope'] ?? null ) ? strtolower( trim( $profile['scope'] ) ) : '';
-		$target      = is_string( $profile['target'] ?? null ) ? strtolower( trim( $profile['target'], '/' ) ) : '';
-		$authorityId = is_string( $profile['authority_id'] ?? null ) ? trim( $profile['authority_id'] ) : '';
-		$matches     = array();
-		$total       = 0;
+		$scope        = is_string( $profile['scope'] ?? null ) ? strtolower( trim( $profile['scope'] ) ) : '';
+		$target       = is_string( $profile['target'] ?? null ) ? strtolower( trim( $profile['target'], '/' ) ) : '';
+		$authority_id = is_string( $profile['authority_id'] ?? null ) ? trim( $profile['authority_id'] ) : '';
+		$matches      = array();
+		$total        = 0;
 
-		foreach ( $managedRepositories['repositories'] as $repository ) {
-			$repositoryTarget = strtolower( trim( (string) ( $repository['target'] ?? '' ), '/' ) );
-			$repositoryId     = is_string( $repository['repository_id'] ?? null )
+		foreach ( $managed_repositories['repositories'] as $repository ) {
+			$repository_target = strtolower( trim( (string) ( $repository['target'] ?? '' ), '/' ) );
+			$repository_id     = is_string( $repository['repository_id'] ?? null )
 				? trim( $repository['repository_id'] )
 				: '';
-			$owner            = strtolower( explode( '/', $repositoryTarget, 2 )[0] ?? '' );
-			$matchesProfile   = match ( $scope ) {
-				'repository' => ( '' !== $authorityId && hash_equals( $authorityId, $repositoryId ) )
-					|| ( '' === $authorityId && '' !== $target && hash_equals( $target, $repositoryTarget ) ),
+			$owner             = strtolower( explode( '/', $repository_target, 2 )[0] ?? '' );
+			$matches_profile   = match ( $scope ) {
+				'repository' => ( '' !== $authority_id && hash_equals( $authority_id, $repository_id ) )
+					|| ( '' === $authority_id && '' !== $target && hash_equals( $target, $repository_target ) ),
 				'owner'      => '' !== $target && hash_equals( $target, $owner ),
 				default      => false,
 			};
 
-			if ( ! $matchesProfile ) {
+			if ( ! $matches_profile ) {
 				continue;
 			}
 
-			$packageCount = max( 0, (int) ( $repository['package_count'] ?? 0 ) );
-			$total       += $packageCount;
-			$matches[]    = array(
+			$package_count = max( 0, (int) ( $repository['package_count'] ?? 0 ) );
+			$total        += $package_count;
+			$matches[]     = array(
 				'target'             => (string) ( $repository['target'] ?? '' ),
-				'package_count'      => $packageCount,
+				'package_count'      => $package_count,
 				'package_references' => is_array( $repository['package_references'] ?? null )
 					? array_values( array_filter( $repository['package_references'], 'is_string' ) )
 					: array(),
@@ -1370,49 +1436,50 @@ final readonly class ProviderSettingsPresenter {
 	 * @param array<string, mixed> $data Provider settings and normalized list state.
 	 * @return array<string, mixed>
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function buildProfileListProjection( array $data ): array {
-		$provider      = is_array( $data['provider'] ?? null ) ? $data['provider'] : array();
-		$credentials   = is_array( $data['credential_profiles'] ?? null ) ? $data['credential_profiles'] : array();
-		$webhooks      = is_array( $data['webhook_profiles'] ?? null ) ? $data['webhook_profiles'] : array();
-		$state         = $data['providerListState'];
-		$providerCode  = is_string( $provider['code'] ?? null ) ? $provider['code'] : '';
-		$providerLabel = is_string( $provider['label'] ?? null ) ? $provider['label'] : '';
-		$ownerLabel    = is_string( $provider['owner_label'] ?? null ) && '' !== trim( $provider['owner_label'] )
+		$provider       = is_array( $data['provider'] ?? null ) ? $data['provider'] : array();
+		$credentials    = is_array( $data['credential_profiles'] ?? null ) ? $data['credential_profiles'] : array();
+		$webhooks       = is_array( $data['webhook_profiles'] ?? null ) ? $data['webhook_profiles'] : array();
+		$state          = $data['providerListState'];
+		$provider_code  = is_string( $provider['code'] ?? null ) ? $provider['code'] : '';
+		$provider_label = is_string( $provider['label'] ?? null ) ? $provider['label'] : '';
+		$owner_label    = is_string( $provider['owner_label'] ?? null ) && '' !== trim( $provider['owner_label'] )
 			? $provider['owner_label']
 			: __( 'Owner', 'ran-booster' );
-		$baseUrl       = admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $providerCode ) );
-		$providerUrl   = static fn ( array $args = array() ): string => add_query_arg( $args, $baseUrl );
-		$kindLabels    = array_column( is_array( $provider['credential_kinds'] ?? null ) ? $provider['credential_kinds'] : array(), 'label', 'code' );
-		$scopeLabels   = array_column( is_array( $provider['webhook_scopes'] ?? null ) ? $provider['webhook_scopes'] : array(), 'label', 'code' );
-		$fieldLabels   = array();
+		$base_url       = admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $provider_code ) );
+		$provider_url   = static fn ( array $args = array() ): string => add_query_arg( $args, $base_url );
+		$kind_labels    = array_column( is_array( $provider['credential_kinds'] ?? null ) ? $provider['credential_kinds'] : array(), 'label', 'code' );
+		$scope_labels   = array_column( is_array( $provider['webhook_scopes'] ?? null ) ? $provider['webhook_scopes'] : array(), 'label', 'code' );
+		$field_labels   = array();
 		foreach ( is_array( $provider['credential_kinds'] ?? null ) ? $provider['credential_kinds'] : array() as $kind ) {
 			foreach ( is_array( $kind['fields'] ?? null ) ? $kind['fields'] : array() as $field ) {
 				if ( is_string( $field['key'] ?? null ) && is_string( $field['label'] ?? null ) ) {
-					$fieldLabels[ $field['key'] ] = $field['label'];
+					$field_labels[ $field['key'] ] = $field['label'];
 				}
 			}
 		}
-		$credentialProjection = $this->credentialRows( $credentials, $kindLabels, $fieldLabels, $ownerLabel );
-		$webhookRows          = $this->webhookRows( $webhooks, $scopeLabels );
-		$credentialList       = $this->filterAndPage( $credentialProjection['rows'], 'credentials', $state );
-		$webhookList          = $this->filterAndPage( $webhookRows, 'secrets', $state );
-		$urls                 = $this->listUrls( $providerUrl, $providerCode, $state, $credentialList, $webhookList );
-		$storageUnavailable   = ! empty( $data['secrets_storage_unavailable'] );
-		$hasCredentials       = ! $storageUnavailable && ! empty( $provider['credential_kinds'] );
-		$providerHasWebhooks  = ! empty( $provider['capabilities']['webhooks'] ) && ! empty( $provider['webhook_scopes'] );
-		$summaries            = $this->profileSummaries(
-			$storageUnavailable,
-			$this->needsAttention( $credentialProjection['rows'] ),
-			$this->needsAttention( $webhookRows ),
-			count( $credentialProjection['rows'] ),
-			count( $webhookRows ),
+		$credential_projection = $this->credential_rows( $credentials, $kind_labels, $field_labels, $owner_label );
+		$webhook_rows          = $this->webhook_rows( $webhooks, $scope_labels );
+		$credential_list       = $this->filter_and_page( $credential_projection['rows'], 'credentials', $state );
+		$webhook_list          = $this->filter_and_page( $webhook_rows, 'secrets', $state );
+		$urls                  = $this->list_urls( $provider_url, $provider_code, $state, $credential_list, $webhook_list );
+		$storage_unavailable   = ! empty( $data['secrets_storage_unavailable'] );
+		$has_credentials       = ! $storage_unavailable && ! empty( $provider['credential_kinds'] );
+		$provider_has_webhooks = ! empty( $provider['capabilities']['webhooks'] ) && ! empty( $provider['webhook_scopes'] );
+		$summaries             = $this->profile_summaries(
+			$storage_unavailable,
+			$this->needs_attention( $credential_projection['rows'] ),
+			$this->needs_attention( $webhook_rows ),
+			count( $credential_projection['rows'] ),
+			count( $webhook_rows ),
 			(int) ( $data['automaticPackageCount'] ?? 0 )
 		);
-		$mutationFields       = array( '_wpnonce' => wp_create_nonce( 'ran-booster-save-secrets' ) );
+		$mutation_fields       = array( '_wpnonce' => wp_create_nonce( 'ran-booster-save-secrets' ) );
 		if ( is_string( $_SERVER['REQUEST_URI'] ?? null ) ) {
-			$mutationFields['_wp_http_referer'] = wp_unslash( $_SERVER['REQUEST_URI'] );
+			$mutation_fields['_wp_http_referer'] = wp_unslash( $_SERVER['REQUEST_URI'] );
 		}
-		$interactionValues = wp_json_encode(
+		$interaction_values = wp_json_encode(
 			array(
 				'ran_booster_interaction[operation]' => 'core:delete-webhook-profile',
 				'ran_booster_interaction[target]'    => ProviderProfileAdminController::TARGET_KEY,
@@ -1424,97 +1491,97 @@ final readonly class ProviderSettingsPresenter {
 			'providerListState'              => $state,
 			'publicLookupProfile'            => is_array( $data['public_lookup_profile'] ?? null ) ? $data['public_lookup_profile'] : null,
 			'webhookSetup'                   => is_array( $provider['webhook_setup'] ?? null ) ? $provider['webhook_setup'] : null,
-			'storageUnavailable'             => $storageUnavailable,
-			'hasCredentialSettings'          => $hasCredentials,
-			'providerHasWebhookSettings'     => $providerHasWebhooks,
-			'hasWebhookSettings'             => ! $storageUnavailable && $providerHasWebhooks,
-			'providerTrustDescription'       => sprintf( /* translators: 1: repository provider name, 2: repository provider code. */ __( 'The active %1$s provider can read every credential saved under provider code %2$s. Install and activate only providers you trust; Booster does not authenticate a third-party publisher.', 'ran-booster' ), $providerLabel, $providerCode ),
+			'storageUnavailable'             => $storage_unavailable,
+			'hasCredentialSettings'          => $has_credentials,
+			'providerHasWebhookSettings'     => $provider_has_webhooks,
+			'hasWebhookSettings'             => ! $storage_unavailable && $provider_has_webhooks,
+			'providerTrustDescription'       => sprintf( /* translators: 1: repository provider name, 2: repository provider code. */ __( 'The active %1$s provider can read every credential saved under provider code %2$s. Install and activate only providers you trust; Booster does not authenticate a third-party publisher.', 'ran-booster' ), $provider_label, $provider_code ),
 			'packageTypeLabels'              => array(
 				'plugin' => __( 'Plugin', 'ran-booster' ),
 				'theme'  => __( 'Theme', 'ran-booster' ),
 			),
-			'overviewUrl'                    => $providerUrl(),
-			'credentialsUrl'                 => $providerUrl( array( 'view' => 'credentials' ) ),
-			'secretsUrl'                     => $providerUrl( array( 'view' => 'secrets' ) ),
+			'overviewUrl'                    => $provider_url(),
+			'credentialsUrl'                 => $provider_url( array( 'view' => 'credentials' ) ),
+			'secretsUrl'                     => $provider_url( array( 'view' => 'secrets' ) ),
 			'providerListActionUrl'          => admin_url( 'admin.php' ),
-			'providerMutationFields'         => $mutationFields,
-			'deleteWebhookInteractionValues' => is_string( $interactionValues ) ? $interactionValues : '{}',
-			'credentialRowCount'             => count( $credentialProjection['rows'] ),
-			'credentialScopes'               => $credentialProjection['scopes'],
-			'webhookRowCount'                => count( $webhookRows ),
-			'readyWebhookProfileCount'       => count( array_filter( $webhookRows, static fn ( array $row ): bool => 'ready' === ( $row['status_key'] ?? null ) ) ),
+			'providerMutationFields'         => $mutation_fields,
+			'deleteWebhookInteractionValues' => is_string( $interaction_values ) ? $interaction_values : '{}',
+			'credentialRowCount'             => count( $credential_projection['rows'] ),
+			'credentialScopes'               => $credential_projection['scopes'],
+			'webhookRowCount'                => count( $webhook_rows ),
+			'readyWebhookProfileCount'       => count( array_filter( $webhook_rows, static fn ( array $row ): bool => 'ready' === ( $row['status_key'] ?? null ) ) ),
 			'credentialSummary'              => $summaries['credential'],
 			'webhookSummary'                 => $summaries['webhook'],
-			'credentialList'                 => $credentialList,
-			'webhookList'                    => $webhookList,
+			'credentialList'                 => $credential_list,
+			'webhookList'                    => $webhook_list,
 			'credentialSortUrls'             => $urls['credentials']['sort'],
 			'webhookSortUrls'                => $urls['secrets']['sort'],
 			'credentialPagination'           => $urls['credentials']['pagination'],
 			'webhookPagination'              => $urls['secrets']['pagination'],
-		) + $this->profileCopy( $providerLabel );
+		) + $this->profile_copy( $provider_label );
 	}
 
 
 
 	/**
 	 * @param list<array<string,mixed>> $profiles
-	 * @param array<string,string> $kindLabels
-	 * @param array<string,string> $fieldLabels
+	 * @param array<string,string> $kind_labels
+	 * @param array<string,string> $field_labels
 	 * @return array{rows:list<array<string,mixed>>,scopes:array<string,string>}
 	 */
-	private function credentialRows( array $profiles, array $kindLabels, array $fieldLabels, string $ownerLabel ): array {
+	private function credential_rows( array $profiles, array $kind_labels, array $field_labels, string $owner_label ): array {
 		$rows   = array();
 		$scopes = array();
-		foreach ( $profiles as $profileIndex => $profile ) {
+		foreach ( $profiles as $profile_index => $profile ) {
 			if ( ! is_array( $profile ) ) {
 				continue;
 			}
 			$configuration = is_array( $profile['configuration'] ?? null ) ? $profile['configuration'] : array();
 			$summary       = array();
-			$scopeValue    = '';
+			$scope_value   = '';
 			foreach ( $configuration as $key => $value ) {
 				if ( ! is_string( $value ) || '' === $value ) {
 					continue;
 				}
-				$summary[] = ( $fieldLabels[ $key ] ?? ucfirst( (string) $key ) ) . ': ' . $value;
-				if ( '' === $scopeValue && in_array( $key, array( 'owner', 'workspace' ), true ) ) {
-					$scopeValue = $value;
+				$summary[] = ( $field_labels[ $key ] ?? ucfirst( (string) $key ) ) . ': ' . $value;
+				if ( '' === $scope_value && in_array( $key, array( 'owner', 'workspace' ), true ) ) {
+					$scope_value = $value;
 				}
 			}
-			$scopeKey            = '' === $scopeValue ? 'account' : sanitize_key( $scopeValue );
-			$scopeLabel          = '' === $scopeValue ? __( 'Account', 'ran-booster' ) : $ownerLabel . ' · ' . $scopeValue;
-			$scopes[ $scopeKey ] = $scopeLabel;
-			$usage               = is_array( $profile['usage'] ?? null ) ? $profile['usage'] : array(
+			$scope_key            = '' === $scope_value ? 'account' : sanitize_key( $scope_value );
+			$scope_label          = '' === $scope_value ? __( 'Account', 'ran-booster' ) : $owner_label . ' · ' . $scope_value;
+			$scopes[ $scope_key ] = $scope_label;
+			$usage                = is_array( $profile['usage'] ?? null ) ? $profile['usage'] : array(
 				'available' => false,
 				'total'     => null,
 				'packages'  => array(),
 			);
-			$usageTotal          = ! empty( $usage['available'] ) ? (int) ( $usage['total'] ?? 0 ) : -1;
-			$usageLabel          = ! empty( $usage['available'] )
-				? sprintf( _nx( '%d package', '%d packages', $usageTotal, 'Packages using a credential', 'ran-booster' ), $usageTotal )
+			$usage_total          = ! empty( $usage['available'] ) ? (int) ( $usage['total'] ?? 0 ) : -1;
+			$usage_label          = ! empty( $usage['available'] )
+				? sprintf( _nx( '%d package', '%d packages', $usage_total, 'Packages using a credential', 'ran-booster' ), $usage_total )
 				: __( 'Usage unavailable', 'ran-booster' );
-			$healthLabel         = ! empty( $profile['configured'] )
+			$health_label         = ! empty( $profile['configured'] )
 				? (string) ( $profile['expiry_status']['badge_label'] ?? __( 'Stored · Validity checked on use', 'ran-booster' ) )
 				: __( 'Not configured', 'ran-booster' );
-			$statusKey           = ! empty( $profile['configured'] )
+			$status_key           = ! empty( $profile['configured'] )
 				&& ! str_contains( (string) ( $profile['expiry_status']['badge_class'] ?? '' ), 'error' )
 				&& ! str_contains( (string) ( $profile['expiry_status']['badge_class'] ?? '' ), 'warning' ) ? 'ready' : 'attention';
-			$kind                = is_string( $profile['kind'] ?? null ) ? $profile['kind'] : '';
-			$label               = is_string( $profile['label'] ?? null ) ? $profile['label'] : '';
-			$rows[]              = $profile + array(
-				'profile_index'       => $profileIndex,
+			$kind                 = is_string( $profile['kind'] ?? null ) ? $profile['kind'] : '';
+			$label                = is_string( $profile['label'] ?? null ) ? $profile['label'] : '';
+			$rows[]               = $profile + array(
+				'profile_index'       => $profile_index,
 				'configuration_json'  => (string) wp_json_encode( $configuration ),
 				'provider_expires_on' => is_string( $profile['expiry']['provider_expires_at'] ?? null ) ? substr( $profile['expiry']['provider_expires_at'], 0, 10 ) : '',
 				'usage_listed'        => count( $usage['packages'] ),
-				'kind_label'          => $kindLabels[ $kind ] ?? $kind,
+				'kind_label'          => $kind_labels[ $kind ] ?? $kind,
 				'configuration_label' => implode( ' · ', $summary ),
-				'scope_key'           => $scopeKey,
-				'scope_label'         => $scopeLabel,
-				'usage_total'         => $usageTotal,
-				'usage_label'         => $usageLabel,
-				'health_label'        => $healthLabel,
-				'status_key'          => $statusKey,
-				'search_value'        => strtolower( implode( ' ', array_merge( array( $label, $kindLabels[ $kind ] ?? $kind, $scopeLabel, $healthLabel ), array_values( array_filter( $configuration, 'is_string' ) ) ) ) ),
+				'scope_key'           => $scope_key,
+				'scope_label'         => $scope_label,
+				'usage_total'         => $usage_total,
+				'usage_label'         => $usage_label,
+				'health_label'        => $health_label,
+				'status_key'          => $status_key,
+				'search_value'        => strtolower( implode( ' ', array_merge( array( $label, $kind_labels[ $kind ] ?? $kind, $scope_label, $health_label ), array_values( array_filter( $configuration, 'is_string' ) ) ) ) ),
 			);
 		}
 
@@ -1524,35 +1591,35 @@ final readonly class ProviderSettingsPresenter {
 		);
 	}
 
-	/** @param list<array<string,mixed>> $profiles @param array<string,string> $scopeLabels @return list<array<string,mixed>> */
-	private function webhookRows( array $profiles, array $scopeLabels ): array {
+	/** @param list<array<string,mixed>> $profiles @param array<string,string> $scope_labels @return list<array<string,mixed>> */
+	private function webhook_rows( array $profiles, array $scope_labels ): array {
 		$rows = array();
 		foreach ( $profiles as $profile ) {
 			if ( ! is_array( $profile ) ) {
 				continue;
 			}
-			$usage              = is_array( $profile['usage'] ?? null ) ? $profile['usage'] : array(
+			$usage               = is_array( $profile['usage'] ?? null ) ? $profile['usage'] : array(
 				'available'    => false,
 				'total'        => null,
 				'repositories' => array(),
 			);
-			$usageTotal         = ! empty( $usage['available'] ) ? (int) ( $usage['total'] ?? 0 ) : -1;
-			$usageLabel         = ! empty( $usage['available'] ) ? sprintf( _nx( '%d package', '%d packages', $usageTotal, 'Packages using a credential', 'ran-booster' ), $usageTotal ) : __( 'Usage unavailable', 'ran-booster' );
-			$scope              = is_string( $profile['scope'] ?? null ) ? $profile['scope'] : '';
-			$label              = is_string( $profile['label'] ?? null ) ? $profile['label'] : '';
-			$target             = is_string( $profile['target'] ?? null ) ? $profile['target'] : '';
-			$health             = ! empty( $profile['configured'] ) ? __( 'Saved · Remote delivery not verified by Core', 'ran-booster' ) : __( 'Local secret not configured', 'ran-booster' );
-			$deleteConfirmation = ! empty( $usage['available'] ) && 0 < $usageTotal
-				? sprintf( _n( /* translators: %d is the number of managed packages that use the local secret. */ 'Remove this local secret? %d managed package may be affected. Remote provider webhooks will not be removed.', 'Remove this local secret? %d managed packages may be affected. Remote provider webhooks will not be removed.', $usageTotal, 'ran-booster' ), $usageTotal )
+			$usage_total         = ! empty( $usage['available'] ) ? (int) ( $usage['total'] ?? 0 ) : -1;
+			$usage_label         = ! empty( $usage['available'] ) ? sprintf( _nx( '%d package', '%d packages', $usage_total, 'Packages using a credential', 'ran-booster' ), $usage_total ) : __( 'Usage unavailable', 'ran-booster' );
+			$scope               = is_string( $profile['scope'] ?? null ) ? $profile['scope'] : '';
+			$label               = is_string( $profile['label'] ?? null ) ? $profile['label'] : '';
+			$target              = is_string( $profile['target'] ?? null ) ? $profile['target'] : '';
+			$health              = ! empty( $profile['configured'] ) ? __( 'Saved · Remote delivery not verified by Core', 'ran-booster' ) : __( 'Local secret not configured', 'ran-booster' );
+			$delete_confirmation = ! empty( $usage['available'] ) && 0 < $usage_total
+				? sprintf( _n( /* translators: %d is the number of managed packages that use the local secret. */ 'Remove this local secret? %d managed package may be affected. Remote provider webhooks will not be removed.', 'Remove this local secret? %d managed packages may be affected. Remote provider webhooks will not be removed.', $usage_total, 'ran-booster' ), $usage_total )
 				: __( 'Remove this local secret? Remote provider webhooks will not be removed.', 'ran-booster' );
-			$rows[]             = $profile + array(
-				'scope_label'         => $scopeLabels[ $scope ] ?? ucfirst( $scope ),
-				'usage_total'         => $usageTotal,
-				'usage_label'         => $usageLabel,
+			$rows[]              = $profile + array(
+				'scope_label'         => $scope_labels[ $scope ] ?? ucfirst( $scope ),
+				'usage_total'         => $usage_total,
+				'usage_label'         => $usage_label,
 				'health_label'        => $health,
-				'delete_confirmation' => $deleteConfirmation,
+				'delete_confirmation' => $delete_confirmation,
 				'status_key'          => ! empty( $profile['configured'] ) && ! empty( $usage['available'] ) ? 'ready' : 'attention',
-				'search_value'        => strtolower( implode( ' ', array( $label, $scope, $target, $usageLabel, $health ) ) ),
+				'search_value'        => strtolower( implode( ' ', array( $label, $scope, $target, $usage_label, $health ) ) ),
 			);
 		}
 
@@ -1560,9 +1627,9 @@ final readonly class ProviderSettingsPresenter {
 	}
 
 	/** @param list<array<string,mixed>> $rows @param array<string,mixed> $state @return array{rows:list<array<string,mixed>>,total:int,pages:int,current:int} */
-	private function filterAndPage( array $rows, string $view, array $state ): array {
-		$search  = strtolower( trim( (string) $state['search'] ) );
-		$rows    = array_values(
+	private function filter_and_page( array $rows, string $view, array $state ): array {
+		$search   = strtolower( trim( (string) $state['search'] ) );
+		$rows     = array_values(
 			array_filter(
 				$rows,
 				static function ( array $row ) use ( $state, $search, $view ): bool {
@@ -1579,14 +1646,14 @@ final readonly class ProviderSettingsPresenter {
 				}
 			)
 		);
-		$sortKey = match ( $state['orderby'] ) {
+		$sort_key = match ( $state['orderby'] ) {
 			'kind' => 'kind_label', 'scope' => 'scope_label', 'usage' => 'usage_total', 'health' => 'health_label', default => 'label' };
 		usort(
 			$rows,
-			static function ( array $left, array $right ) use ( $state, $sortKey ): int {
-				$leftValue  = $left[ $sortKey ] ?? '';
-				$rightValue = $right[ $sortKey ] ?? '';
-				$comparison = is_int( $leftValue ) && is_int( $rightValue ) ? $leftValue <=> $rightValue : strnatcasecmp( (string) $leftValue, (string) $rightValue );
+			static function ( array $left, array $right ) use ( $state, $sort_key ): int {
+				$left_value  = $left[ $sort_key ] ?? '';
+				$right_value = $right[ $sort_key ] ?? '';
+				$comparison  = is_int( $left_value ) && is_int( $right_value ) ? $left_value <=> $right_value : strnatcasecmp( (string) $left_value, (string) $right_value );
 
 				return 'desc' === $state['order'] ? -$comparison : $comparison;
 			}
@@ -1604,25 +1671,25 @@ final readonly class ProviderSettingsPresenter {
 	}
 
 	/** @param list<array<string,mixed>> $rows */
-	private function needsAttention( array $rows ): bool {
+	private function needs_attention( array $rows ): bool {
 		return array() !== array_filter( $rows, static fn ( array $row ): bool => 'attention' === ( $row['status_key'] ?? null ) );
 	}
 
 	/** @return array{credential:array{tone:string,heading:string,description:string},webhook:array{tone:string,heading:string,description:string}} */
-	private function profileSummaries( bool $storageUnavailable, bool $credentialAttention, bool $webhookAttention, int $credentialCount, int $webhookCount, int $automaticCount ): array {
-		$credentialProblem = $storageUnavailable || $credentialAttention;
-		$webhookProblem    = $storageUnavailable || $webhookAttention || ( 0 === $webhookCount && 0 < $automaticCount );
+	private function profile_summaries( bool $storage_unavailable, bool $credential_attention, bool $webhook_attention, int $credential_count, int $webhook_count, int $automatic_count ): array {
+		$credential_problem = $storage_unavailable || $credential_attention;
+		$webhook_problem    = $storage_unavailable || $webhook_attention || ( 0 === $webhook_count && 0 < $automatic_count );
 
 		return array(
 			'credential' => array(
-				'tone'        => $credentialProblem ? 'attention' : ( 0 < $credentialCount ? 'ready' : 'pending' ),
-				'heading'     => $credentialProblem ? __( 'Repository access needs attention', 'ran-booster' ) : ( 0 === $credentialCount ? __( 'No credential saved', 'ran-booster' ) : sprintf( _n( /* translators: %d is the number of saved credentials. */ 'Ready · %d credential', 'Ready · %d credentials', $credentialCount, 'ran-booster' ), $credentialCount ) ),
-				'description' => $storageUnavailable ? __( 'Restore encrypted credential storage before reviewing or changing saved repository access.', 'ran-booster' ) : ( $credentialAttention ? __( 'Review saved credentials that are incomplete, expired, or approaching expiry.', 'ran-booster' ) : ( 0 === $credentialCount ? __( 'Public repositories remain available through anonymous lookup. Add a credential only for private access or steadier API limits.', 'ran-booster' ) : __( 'Private repository access is available. Open credential management to validate, replace, or review usage.', 'ran-booster' ) ) ),
+				'tone'        => $credential_problem ? 'attention' : ( 0 < $credential_count ? 'ready' : 'pending' ),
+				'heading'     => $credential_problem ? __( 'Repository access needs attention', 'ran-booster' ) : ( 0 === $credential_count ? __( 'No credential saved', 'ran-booster' ) : sprintf( _n( /* translators: %d is the number of saved credentials. */ 'Ready · %d credential', 'Ready · %d credentials', $credential_count, 'ran-booster' ), $credential_count ) ),
+				'description' => $storage_unavailable ? __( 'Restore encrypted credential storage before reviewing or changing saved repository access.', 'ran-booster' ) : ( $credential_attention ? __( 'Review saved credentials that are incomplete, expired, or approaching expiry.', 'ran-booster' ) : ( 0 === $credential_count ? __( 'Public repositories remain available through anonymous lookup. Add a credential only for private access or steadier API limits.', 'ran-booster' ) : __( 'Private repository access is available. Open credential management to validate, replace, or review usage.', 'ran-booster' ) ) ),
 			),
 			'webhook'    => array(
-				'tone'        => $webhookProblem ? 'attention' : ( 0 < $webhookCount ? 'ready' : 'pending' ),
-				'heading'     => $webhookProblem ? __( 'Webhook signing · Needs attention', 'ran-booster' ) : ( 0 === $webhookCount ? __( 'Webhook signing · No secret saved', 'ran-booster' ) : __( 'Webhook signing · Ready locally', 'ran-booster' ) ),
-				'description' => $storageUnavailable ? __( 'Restore encrypted credential storage before Push-to-Deploy can verify signed deliveries.', 'ran-booster' ) : ( $webhookAttention ? __( 'Review saved signing material whose configuration or managed-package usage could not be confirmed.', 'ran-booster' ) : ( 0 === $webhookCount ? ( 0 < $automaticCount ? __( 'Automatic branch deployments require local signing material before provider webhooks can be used safely.', 'ran-booster' ) : __( 'Add local signing material before configuring a provider webhook.', 'ran-booster' ) ) : sprintf( _n( /* translators: %d is the number of local secrets that can verify signed deliveries. */ '%d local secret can verify signed deliveries. This does not prove a matching remote webhook exists.', '%d local secrets can verify signed deliveries. This does not prove matching remote webhooks exist.', $webhookCount, 'ran-booster' ), $webhookCount ) ) ),
+				'tone'        => $webhook_problem ? 'attention' : ( 0 < $webhook_count ? 'ready' : 'pending' ),
+				'heading'     => $webhook_problem ? __( 'Webhook signing · Needs attention', 'ran-booster' ) : ( 0 === $webhook_count ? __( 'Webhook signing · No secret saved', 'ran-booster' ) : __( 'Webhook signing · Ready locally', 'ran-booster' ) ),
+				'description' => $storage_unavailable ? __( 'Restore encrypted credential storage before Push-to-Deploy can verify signed deliveries.', 'ran-booster' ) : ( $webhook_attention ? __( 'Review saved signing material whose configuration or managed-package usage could not be confirmed.', 'ran-booster' ) : ( 0 === $webhook_count ? ( 0 < $automatic_count ? __( 'Automatic branch deployments require local signing material before provider webhooks can be used safely.', 'ran-booster' ) : __( 'Add local signing material before configuring a provider webhook.', 'ran-booster' ) ) : sprintf( _n( /* translators: %d is the number of local secrets that can verify signed deliveries. */ '%d local secret can verify signed deliveries. This does not prove a matching remote webhook exists.', '%d local secrets can verify signed deliveries. This does not prove matching remote webhooks exist.', $webhook_count, 'ran-booster' ), $webhook_count ) ) ),
 			),
 		);
 	}
@@ -1631,13 +1698,13 @@ final readonly class ProviderSettingsPresenter {
 
 
 	/**
-	 * @param callable(array<string,mixed>):string $providerUrl
+	 * @param callable(array<string,mixed>):string $provider_url
 	 * @param array<string,mixed> $state
 	 * @param array<string,mixed> $credentials
 	 * @param array<string,mixed> $secrets
 	 * @return array<string,array<string,mixed>>
 	 */
-	private function listUrls( callable $providerUrl, string $providerCode, array $state, array $credentials, array $secrets ): array {
+	private function list_urls( callable $provider_url, string $provider_code, array $state, array $credentials, array $secrets ): array {
 		$result = array();
 		foreach ( array(
 			'credentials' => $credentials,
@@ -1646,7 +1713,7 @@ final readonly class ProviderSettingsPresenter {
 			$sort = array();
 			foreach ( array( 'name', 'kind', 'scope', 'usage', 'health' ) as $orderby ) {
 				$order            = $state['orderby'] === $orderby && 'asc' === $state['order'] ? 'desc' : 'asc';
-				$sort[ $orderby ] = $providerUrl(
+				$sort[ $orderby ] = $provider_url(
 					array_filter(
 						array(
 							'view'     => $view,
@@ -1662,7 +1729,7 @@ final readonly class ProviderSettingsPresenter {
 					)
 				);
 			}
-			$pageUrl         = static fn ( int $page ): string => $providerUrl(
+			$page_url        = static fn ( int $page ): string => $provider_url(
 				array_filter(
 					array(
 						'view'     => $view,
@@ -1690,7 +1757,7 @@ final readonly class ProviderSettingsPresenter {
 					'hidden_fields'    => array_filter(
 						array(
 							'page'    => 'ran-booster',
-							'tab'     => $providerCode,
+							'tab'     => $provider_code,
 							'view'    => $view,
 							's'       => $state['search'],
 							'kind'    => 'credentials' === $view ? $state['kind'] : '',
@@ -1701,8 +1768,8 @@ final readonly class ProviderSettingsPresenter {
 						),
 						static fn ( mixed $value ): bool => '' !== $value
 					),
-					'previous_url'     => $pageUrl( $list['current'] - 1 ),
-					'next_url'         => $pageUrl( $list['current'] + 1 ),
+					'previous_url'     => $page_url( $list['current'] - 1 ),
+					'next_url'         => $page_url( $list['current'] + 1 ),
 				),
 			);
 		}
@@ -1711,7 +1778,7 @@ final readonly class ProviderSettingsPresenter {
 	}
 
 	/** @return array<string,string> */
-	private function profileCopy( string $label ): array {
+	private function profile_copy( string $label ): array {
 		return array(
 			'providerBackLabel'               => sprintf( /* translators: %s is the repository provider name. */ __( 'Back to %s overview', 'ran-booster' ), $label ),
 			'credentialManagementDescription' => sprintf( /* translators: %s is the repository provider name. */ __( 'Manage saved credentials used for %s repository access.', 'ran-booster' ), $label ),

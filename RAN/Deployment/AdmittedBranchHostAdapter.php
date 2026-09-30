@@ -57,8 +57,8 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	private const DOWNLOAD_TIMEOUT  = 120;
 	private const DOWNLOAD_ATTEMPTS = 2;
 
-	private ?ProviderPreparedArchive $providerArchive = null;
-	private bool $providerArchiveCleaned              = false;
+	private ?ProviderPreparedArchive $provider_archive = null;
+	private bool $provider_archive_cleaned             = false;
 
 	public function __construct(
 		private DeploymentAttempt $attempt,
@@ -66,11 +66,15 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		private readonly PluginRepository $plugins,
 		private readonly ThemeRepository $themes,
 		private readonly ProviderRegistry $providers,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		private readonly RepositorySourceGuard $sourceGuard,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		private readonly WordPressUpdaterLock $updaterLock,
 		private readonly WordPressCorePackageExecutor $executor,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		private readonly string $maintenancePath
 	) {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		if ( '' === trim( $maintenancePath ) ) {
 			throw new RuntimeException( 'The WordPress maintenance path is invalid.' );
 		}
@@ -88,9 +92,9 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 		if ( 'update' === $data['operation'] ) {
 			try {
-				$identifier = (string) $this->packageBySlug( (string) $data['package_type'], $request->package_slug )->getIdentifier();
+				$identifier = (string) $this->package_by_slug( (string) $data['package_type'], $request->package_slug )->getIdentifier();
 			} catch ( PackageStorageFailure $failure ) {
-				$this->stagePackageStorageFailure( $failure );
+				$this->stage_package_storage_failure( $failure );
 			} catch ( Throwable ) {
 				$this->stage( DeploymentOutcome::CODE_POLICY_BLOCKED );
 			}
@@ -140,6 +144,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function terminalAttempt(): DeploymentAttempt {
 		if ( ! $this->attempt->get_state()->is_terminal() || null === $this->attempt->get_outcome() ) {
 			throw DeploymentStorageFailure::inconsistent();
@@ -149,16 +154,16 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	}
 
 	public function prepare( BranchDeploymentDeclaration $deployment, ?array $baseline ): AdmittedBranchArtifact {
-		$this->assertDeclaration( $deployment );
-		if ( null !== $this->providerArchive ) {
+		$this->assert_declaration( $deployment );
+		if ( null !== $this->provider_archive ) {
 			throw new RuntimeException( 'The admitted archive source is already consumed.' );
 		}
 
-		$data                 = $this->attempt->safe_data();
-		$request              = $this->attempt->get_request();
-		$maximumArtifactBytes = $request->maximum_artifact_bytes;
-		$provider             = ProviderCode::parse( (string) $data['provider'] );
-		$reference            = new RepositoryReference(
+		$data                   = $this->attempt->safe_data();
+		$request                = $this->attempt->get_request();
+		$maximum_artifact_bytes = $request->maximum_artifact_bytes;
+		$provider               = ProviderCode::parse( (string) $data['provider'] );
+		$reference              = new RepositoryReference(
 			$request->repository,
 			(string) $data['provider_repository_id'],
 			$request->is_private,
@@ -166,7 +171,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		);
 
 		try {
-			$this->providerArchive = $this->providers->get( $provider )->prepareArchive(
+			$this->provider_archive = $this->providers->get( $provider )->prepareArchive(
 				new ArchiveRequest(
 					$reference,
 					(string) $data['requested_ref'],
@@ -177,42 +182,43 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			$this->stage( DeploymentOutcome::from_provider_failure( $failure )->get_code() );
 		}
 
-		$providerArchive = $this->providerArchive;
+		$provider_archive = $this->provider_archive;
 		try {
-			$resolvedRef = $providerArchive->getResolvedRef();
-			if ( '' === $resolvedRef || $resolvedRef !== trim( $resolvedRef ) || strlen( $resolvedRef ) > 191 || preg_match( '/[[:cntrl:]]/', $resolvedRef ) === 1 ) {
+			$resolved_ref = $provider_archive->getResolvedRef();
+			if ( '' === $resolved_ref || $resolved_ref !== trim( $resolved_ref ) || strlen( $resolved_ref ) > 191 || preg_match( '/[[:cntrl:]]/', $resolved_ref ) === 1 ) {
 				$this->stage( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID );
 			}
-			if ( null !== $deployment->expectedHead && ! hash_equals( $deployment->expectedHead, $resolvedRef ) ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
+			if ( null !== $deployment->expectedHead && ! hash_equals( $deployment->expectedHead, $resolved_ref ) ) {
 				$this->stage( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID );
 			}
 		} catch ( AdmittedBranchStageFailure $failure ) {
-			$this->cleanupProviderArchive( $providerArchive );
+			$this->cleanup_provider_archive( $provider_archive );
 			throw $failure;
 		} catch ( Throwable $failure ) {
-			$this->cleanupProviderArchive( $providerArchive );
+			$this->cleanup_provider_archive( $provider_archive );
 			$this->stage( DeploymentOutcome::from_provider_failure( $failure )->get_code() );
 		}
 
 		try {
-			$this->assertLocalReadiness( $deployment, $maximumArtifactBytes );
+			$this->assert_local_readiness( $deployment, $maximum_artifact_bytes );
 		} catch ( Throwable $failure ) {
-			$this->cleanupProviderArchive( $providerArchive );
+			$this->cleanup_provider_archive( $provider_archive );
 			throw $failure;
 		}
 
 		$offer = new ArchiveOffer(
 			$provider->value,
 			(string) $data['provider_repository_id'],
-			$resolvedRef,
-			function ( string $destination, int $providerMaximumArtifactBytes ) use ( $providerArchive, $maximumArtifactBytes ): void {
-				if ( $providerMaximumArtifactBytes !== $maximumArtifactBytes ) {
+			$resolved_ref,
+			function ( string $destination, int $provider_maximum_artifact_bytes ) use ( $provider_archive, $maximum_artifact_bytes ): void {
+				if ( $provider_maximum_artifact_bytes !== $maximum_artifact_bytes ) {
 					$this->stage( DeploymentOutcome::CODE_ARCHIVE_LIMIT_INVALID );
 				}
-				$this->downloadProviderArchive( $providerArchive, $destination, $maximumArtifactBytes );
+				$this->download_provider_archive( $provider_archive, $destination, $maximum_artifact_bytes );
 			},
-			function () use ( $providerArchive ): void {
-				$this->verifyProviderHead( $providerArchive );
+			function () use ( $provider_archive ): void {
+				$this->verify_provider_head( $provider_archive );
 			}
 		);
 
@@ -222,40 +228,43 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 				PreparedArchive::downloadAndValidate(
 					$offer,
 					$deployment,
-					$this->archiveDirectory(),
-					$maximumArtifactBytes
+					$this->archive_directory(),
+					$maximum_artifact_bytes
 				)
 			);
-			$this->assertArtifactCapacity( $artifact, $deployment );
+			$this->assert_artifact_capacity( $artifact, $deployment );
 			return $artifact;
 		} catch ( AdmittedBranchStageFailure $failure ) {
-			$this->cleanupProviderArchive( $providerArchive );
+			$this->cleanup_provider_archive( $provider_archive );
 			if ( $artifact instanceof PreparedArchiveArtifact ) {
-				$this->cleanupArtifactAfterHostFailure( $artifact );
+				$this->cleanup_artifact_after_host_failure( $artifact );
 			}
 			throw $failure;
 		} catch ( Throwable ) {
-			$this->cleanupProviderArchive( $providerArchive );
+			$this->cleanup_provider_archive( $provider_archive );
 			if ( $artifact instanceof PreparedArchiveArtifact ) {
-				$this->cleanupArtifactAfterHostFailure( $artifact );
+				$this->cleanup_artifact_after_host_failure( $artifact );
 			}
 			$this->stage( DeploymentOutcome::CODE_ARCHIVE_INTEGRITY_FAILED );
 		}
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function verifyCurrentHead(): void {
-		if ( null === $this->providerArchive ) {
+		if ( null === $this->provider_archive ) {
 			$this->stage( DeploymentOutcome::CODE_PROVIDER_FAILED );
 		}
-		$this->verifyProviderHead( $this->providerArchive );
+		$this->verify_provider_head( $this->provider_archive );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function assertMutationAllowed(): void {
 		PackageMutationGuard::assert_filesystem_mutation_allowed();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
 	public function frozenTarget( BranchDeploymentDeclaration $deployment, bool $deferExisting ): ?array {
-		$this->assertDeclaration( $deployment );
+		$this->assert_declaration( $deployment );
 		$data    = $this->attempt->safe_data();
 		$request = $this->attempt->get_request();
 
@@ -267,8 +276,9 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 				if ( 'plugin' === $data['package_type'] && 'ran-booster' === $request->package_slug ) {
 					$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_SELF_UPDATE_BLOCKED );
 				}
-				if ( $this->destinationExists( (string) $data['package_type'], $request->package_slug ) ) {
-					if ( $this->existingManagementMatchesInstallTarget() ) {
+				if ( $this->destination_exists( (string) $data['package_type'], $request->package_slug ) ) {
+					if ( $this->existing_management_matches_install_target() ) {
+						// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 						if ( $deferExisting ) {
 							return null;
 						}
@@ -276,6 +286,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 					}
 					$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_DESTINATION_EXISTS );
 				}
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 				$this->sourceGuard->assertAllowed(
 					(string) $data['provider'],
 					(string) $data['provider_repository_id'],
@@ -286,55 +297,63 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 				return null;
 			}
 
-			$package = $this->packageBySlug( (string) $data['package_type'], $request->package_slug );
-			$this->assertPackageSnapshot( $package, $data, $request );
+			$package = $this->package_by_slug( (string) $data['package_type'], $request->package_slug );
+			$this->assert_package_snapshot( $package, $data, $request );
 			$identifier = (string) $package->getIdentifier();
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 			if ( null === $deployment->installedIdentifier || ! hash_equals( $deployment->installedIdentifier, $identifier ) ) {
 				$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED );
 			}
-			return array( 'identifier' => $identifier ) + $this->packageRuntimeState( $package );
+			return array( 'identifier' => $identifier ) + $this->package_runtime_state( $package );
 		} catch ( PackageStorageFailure $failure ) {
-			$this->stagePackageStorageFailure( $failure );
+			$this->stage_package_storage_failure( $failure );
 		}
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function maintenanceActive(): bool {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		return file_exists( $this->maintenancePath );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function recheckManaged( BranchDeploymentDeclaration $deployment ): void {
-		$this->assertDeclaration( $deployment );
+		$this->assert_declaration( $deployment );
 		$data    = $this->attempt->safe_data();
 		$request = $this->attempt->get_request();
 		try {
-			$this->assertPackageSnapshot( $this->packageBySlug( (string) $data['package_type'], $request->package_slug ), $data, $request );
+			$this->assert_package_snapshot( $this->package_by_slug( (string) $data['package_type'], $request->package_slug ), $data, $request );
 		} catch ( PackageStorageFailure $failure ) {
-			$this->stagePackageStorageFailure( $failure );
+			$this->stage_package_storage_failure( $failure );
 		}
 	}
 
 	public function installed( BranchDeploymentDeclaration $deployment ): array {
-		$this->assertDeclaration( $deployment );
-		$package    = $this->installedPackage( $deployment->packageType, $deployment->slug );
+		$this->assert_declaration( $deployment );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
+		$package    = $this->installed_package( $deployment->packageType, $deployment->slug );
 		$identifier = (string) $package->getIdentifier();
 		if ( '' === $identifier ) {
 			throw new RuntimeException( 'The installed package identity is unavailable.' );
 		}
-		return array( 'identifier' => $identifier ) + $this->packageRuntimeState( $package );
+		return array( 'identifier' => $identifier ) + $this->package_runtime_state( $package );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function baselineNow( BranchDeploymentDeclaration $deployment, array $baseline ): ?array {
 		try {
-			$current = $this->packageFromIdentifier( $deployment->packageType, $baseline['identifier'] );
-			return array( 'identifier' => (string) $current->getIdentifier() ) + $this->packageRuntimeState( $current );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
+			$current = $this->package_from_identifier( $deployment->packageType, $baseline['identifier'] );
+			return array( 'identifier' => (string) $current->getIdentifier() ) + $this->package_runtime_state( $current );
 		} catch ( Throwable ) {
 			return null;
 		}
 	}
 
 	public function adopt( BranchDeploymentDeclaration $deployment ): bool {
-		$this->assertDeclaration( $deployment );
-		$installed  = $this->installedPackage( $deployment->packageType, $deployment->slug );
+		$this->assert_declaration( $deployment );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
+		$installed  = $this->installed_package( $deployment->packageType, $deployment->slug );
 		$request    = $this->attempt->get_request();
 		$data       = $this->attempt->safe_data();
 		$repository = new ManagedRepository(
@@ -348,16 +367,17 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		$installed->setRepository( $repository );
 		$installed->setSubdirectory( $request->subdirectory );
 		$installed->setDeploymentPolicy( $request->deployment_policy );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		$result = 'plugin' === $deployment->packageType ? $this->plugins->adopt( $installed ) : $this->themes->adopt( $installed );
 		if ( $result->is_successful() ) {
 			return true;
 		}
 		return 'ran_booster_storage_adoption_conflict' === $result->get_diagnostic_id()
-			&& $this->existingManagementMatchesInstalledTarget( $installed );
+			&& $this->existing_management_matches_installed_target( $installed );
 	}
 
 	public function preflight( BranchDeploymentDeclaration $deployment, AdmittedBranchArtifact $artifact ): void {
-		$this->assertDeclaration( $deployment );
+		$this->assert_declaration( $deployment );
 		if ( ! $artifact instanceof PreparedArchiveArtifact ) {
 			throw new RuntimeException( 'The admitted branch artifact is not a prepared package archive.' );
 		}
@@ -365,12 +385,13 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	}
 
 	public function execute( BranchDeploymentDeclaration $deployment, ?array $baseline, AdmittedBranchArtifact $artifact ): CorePackageExecutionResult {
-		$this->assertDeclaration( $deployment );
+		$this->assert_declaration( $deployment );
 		if ( ! $artifact instanceof PreparedArchiveArtifact ) {
 			throw new RuntimeException( 'The admitted branch artifact is not a prepared package archive.' );
 		}
 		$archive = $artifact->archive();
 		if ( 'install' === $deployment->operation ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 			return 'plugin' === $deployment->packageType
 				? $this->executor->installPlugin( $archive, $deployment->slug, $deployment->subdirectory )
 				: $this->executor->installTheme( $archive, $deployment->slug, $deployment->subdirectory );
@@ -378,6 +399,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		if ( null === $baseline ) {
 			throw new RuntimeException( 'The managed package baseline is unavailable.' );
 		}
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		return 'plugin' === $deployment->packageType
 			? $this->executor->updatePlugin( $archive, $deployment->slug, $deployment->subdirectory, $baseline['identifier'] )
 			: $this->executor->updateTheme( $archive, $deployment->slug, $deployment->subdirectory, $baseline['identifier'] );
@@ -385,6 +407,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	public function run( callable $operation ): mixed {
 		try {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 			$token = $this->updaterLock->acquire();
 		} catch ( DeploymentStorageFailure $failure ) {
 			throw new BranchDeploymentLockStorageFailure( 'The WordPress updater lock storage is uncertain.', 0, $failure );
@@ -394,6 +417,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			return $operation();
 		} finally {
 			try {
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 				$released = $this->updaterLock->release( $token );
 			} catch ( DeploymentStorageFailure $failure ) {
 				throw new BranchDeploymentLockStorageFailure( 'The WordPress updater lock storage is uncertain.', 0, $failure );
@@ -404,17 +428,17 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 	}
 
-	private function assertDeclaration( BranchDeploymentDeclaration $deployment ): void {
+	private function assert_declaration( BranchDeploymentDeclaration $deployment ): void {
 		$expected = $this->declaration();
 		if ( (array) $expected !== (array) $deployment ) {
 			throw new RuntimeException( 'The admitted deployment declaration changed.' );
 		}
 	}
 
-	private function downloadProviderArchive( ProviderPreparedArchive $archive, string $destination, int $maximumArtifactBytes ): void {
+	private function download_provider_archive( ProviderPreparedArchive $archive, string $destination, int $maximum_artifact_bytes ): void {
 		try {
 			$url = $archive->getUrl();
-			$this->assertSafeHttpsUrl( $url );
+			$this->assert_safe_https_url( $url );
 			for ( $attempt = 1; $attempt <= self::DOWNLOAD_ATTEMPTS; ++$attempt ) {
 				$response = wp_safe_remote_get(
 					$url,
@@ -424,7 +448,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 						'reject_unsafe_urls'  => true,
 						'stream'              => true,
 						'filename'            => $destination,
-						'limit_response_size' => $maximumArtifactBytes + 1,
+						'limit_response_size' => $maximum_artifact_bytes + 1,
 					)
 				);
 				if ( is_wp_error( $response ) ) {
@@ -443,11 +467,11 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 				return;
 			}
 		} finally {
-			$this->cleanupProviderArchive( $archive );
+			$this->cleanup_provider_archive( $archive );
 		}
 	}
 
-	private function verifyProviderHead( ProviderPreparedArchive $archive ): void {
+	private function verify_provider_head( ProviderPreparedArchive $archive ): void {
 		try {
 			$archive->verifyCurrentHead();
 		} catch ( StaleDeployment ) {
@@ -457,11 +481,11 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 	}
 
-	private function cleanupProviderArchive( ProviderPreparedArchive $archive ): void {
-		if ( $this->providerArchiveCleaned ) {
+	private function cleanup_provider_archive( ProviderPreparedArchive $archive ): void {
+		if ( $this->provider_archive_cleaned ) {
 			return;
 		}
-		$this->providerArchiveCleaned = true;
+		$this->provider_archive_cleaned = true;
 		try {
 			$archive->cleanup();
 		} catch ( Throwable ) {
@@ -469,7 +493,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 	}
 
-	private function assertLocalReadiness( BranchDeploymentDeclaration $deployment, int $maximumArtifactBytes ): void {
+	private function assert_local_readiness( BranchDeploymentDeclaration $deployment, int $maximum_artifact_bytes ): void {
 		if ( ! class_exists( ZipArchive::class ) ) {
 			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_ZIP_EXTENSION_MISSING );
 		}
@@ -477,33 +501,33 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		if ( 'direct' !== get_filesystem_method() ) {
 			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_FILESYSTEM_UNSUPPORTED );
 		}
-		$tempRoot    = $this->canonicalWritableDirectory( get_temp_dir() );
-		$contentRoot = defined( 'WP_CONTENT_DIR' ) ? $this->canonicalWritableDirectory( WP_CONTENT_DIR ) : null;
-		$destination = $this->canonicalWritableDirectory( $this->destinationRoot( $deployment ) );
-		if ( null === $tempRoot || null === $contentRoot || null === $destination ) {
+		$temp_root    = $this->canonical_writable_directory( get_temp_dir() );
+		$content_root = defined( 'WP_CONTENT_DIR' ) ? $this->canonical_writable_directory( WP_CONTENT_DIR ) : null;
+		$destination  = $this->canonical_writable_directory( $this->destination_root( $deployment ) );
+		if ( null === $temp_root || null === $content_root || null === $destination ) {
 			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_DIRECTORY_UNWRITABLE );
 		}
-		$available = disk_free_space( $tempRoot );
-		if ( false === $available || $available < $maximumArtifactBytes ) {
+		$available = disk_free_space( $temp_root );
+		if ( false === $available || $available < $maximum_artifact_bytes ) {
 			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_DISK_SPACE_LOW );
 		}
 	}
 
-	private function assertArtifactCapacity( PreparedArchiveArtifact $artifact, BranchDeploymentDeclaration $deployment ): void {
+	private function assert_artifact_capacity( PreparedArchiveArtifact $artifact, BranchDeploymentDeclaration $deployment ): void {
 		$expanded = $artifact->archive()->expandedBytes();
 		$overhead = intdiv( $expanded, 10 ) + ( 0 === $expanded % 10 ? 0 : 1 );
 		if ( $expanded > intdiv( PHP_INT_MAX - $overhead, 2 ) ) {
 			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_DISK_SPACE_LOW );
 		}
-		$required             = ( $expanded * 2 ) + $overhead;
-		$upgradeAvailable     = defined( 'WP_CONTENT_DIR' ) ? disk_free_space( WP_CONTENT_DIR ) : false;
-		$destinationAvailable = disk_free_space( $this->destinationRoot( $deployment ) );
-		if ( false === $upgradeAvailable || false === $destinationAvailable || $upgradeAvailable < $required || $destinationAvailable < $required ) {
+		$required              = ( $expanded * 2 ) + $overhead;
+		$upgrade_available     = defined( 'WP_CONTENT_DIR' ) ? disk_free_space( WP_CONTENT_DIR ) : false;
+		$destination_available = disk_free_space( $this->destination_root( $deployment ) );
+		if ( false === $upgrade_available || false === $destination_available || $upgrade_available < $required || $destination_available < $required ) {
 			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_DISK_SPACE_LOW );
 		}
 	}
 
-	private function cleanupArtifactAfterHostFailure( PreparedArchiveArtifact $artifact ): void {
+	private function cleanup_artifact_after_host_failure( PreparedArchiveArtifact $artifact ): void {
 		try {
 			$artifact->cleanup();
 		} catch ( Throwable ) {
@@ -511,7 +535,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 	}
 
-	private function assertSafeHttpsUrl( mixed $url ): void {
+	private function assert_safe_https_url( mixed $url ): void {
 		if ( ! is_string( $url ) || '' === $url || trim( $url ) !== $url ) {
 			$this->stage( DeploymentOutcome::CODE_ARCHIVE_URL_INVALID );
 		}
@@ -521,11 +545,12 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 	}
 
-	private function archiveDirectory(): string {
+	private function archive_directory(): string {
 		return rtrim( get_temp_dir(), '/\\' ) . DIRECTORY_SEPARATOR . 'ran-booster-branch-updater';
 	}
 
-	private function destinationRoot( BranchDeploymentDeclaration $deployment ): string {
+	private function destination_root( BranchDeploymentDeclaration $deployment ): string {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		if ( 'plugin' === $deployment->packageType ) {
 			if ( ! defined( 'WP_PLUGIN_DIR' ) ) {
 				$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_DIRECTORY_UNWRITABLE );
@@ -535,21 +560,21 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		return (string) get_theme_root();
 	}
 
-	private function canonicalWritableDirectory( string $path ): ?string {
+	private function canonical_writable_directory( string $path ): ?string {
 		$canonical = realpath( $path );
 		return false !== $canonical && is_dir( $canonical ) && is_writable( $canonical ) ? $canonical : null;
 	}
 
-	private function existingManagementMatchesInstallTarget(): bool {
+	private function existing_management_matches_install_target(): bool {
 		try {
 			$data       = $this->attempt->safe_data();
 			$request    = $this->attempt->get_request();
-			$installed  = $this->installedPackage( (string) $data['package_type'], $request->package_slug );
+			$installed  = $this->installed_package( (string) $data['package_type'], $request->package_slug );
 			$identifier = (string) $installed->getIdentifier();
 			if ( '' === $identifier ) {
 				return false;
 			}
-			$existing = $this->packageFromIdentifier( (string) $data['package_type'], $identifier );
+			$existing = $this->package_from_identifier( (string) $data['package_type'], $identifier );
 			return hash_equals( $identifier, (string) $existing->getIdentifier() )
 				&& $existing->getProviderCode() === $data['provider']
 				&& hash_equals( (string) $existing->getProviderRepositoryId(), (string) $data['provider_repository_id'] )
@@ -561,7 +586,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 	}
 
-	private function existingManagementMatchesInstalledTarget( Package $installed ): bool {
+	private function existing_management_matches_installed_target( Package $installed ): bool {
 		$identifier = (string) $installed->getIdentifier();
 		if ( '' === $identifier ) {
 			return false;
@@ -569,7 +594,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		try {
 			$data     = $this->attempt->safe_data();
 			$request  = $this->attempt->get_request();
-			$existing = $this->packageFromIdentifier( (string) $data['package_type'], $identifier );
+			$existing = $this->package_from_identifier( (string) $data['package_type'], $identifier );
 			return hash_equals( $identifier, (string) $existing->getIdentifier() )
 				&& PackageSource::BRANCH === $existing->getSource()
 				&& $existing->getProviderCode() === $data['provider']
@@ -586,7 +611,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 	}
 
-	private function assertPackageSnapshot( Package $package, array $data, DeploymentRequest $request ): void {
+	private function assert_package_snapshot( Package $package, array $data, DeploymentRequest $request ): void {
 		if ( $package->getProviderCode() !== $data['provider']
 			|| ! hash_equals( (string) $package->getProviderRepositoryId(), (string) $data['provider_repository_id'] )
 			|| ! hash_equals( (string) $package->getRepository(), $request->repository )
@@ -603,7 +628,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	}
 
 	/** @return array{version:string,active:bool} */
-	private function packageRuntimeState( Package $package ): array {
+	private function package_runtime_state( Package $package ): array {
 		$identifier = (string) $package->getIdentifier();
 		$active     = $package instanceof \RAN\Plugin
 			? in_array( $identifier, (array) get_option( 'active_plugins', array() ), true )
@@ -614,11 +639,11 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		);
 	}
 
-	private function installedPackage( string $type, string $slug ): Package {
+	private function installed_package( string $type, string $slug ): Package {
 		return 'plugin' === $type ? $this->plugins->fromSlug( $slug ) : $this->themes->fromSlug( $slug );
 	}
 
-	private function packageBySlug( string $type, string $slug ): Package {
+	private function package_by_slug( string $type, string $slug ): Package {
 		$matches = array_filter(
 			'plugin' === $type ? $this->plugins->allDeploymentPlugins() : $this->themes->allDeploymentThemes(),
 			static fn ( Package $package ): bool => (string) $package->getSlug() === $slug
@@ -629,16 +654,16 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		return reset( $matches );
 	}
 
-	private function packageFromIdentifier( string $type, string $identifier ): Package {
+	private function package_from_identifier( string $type, string $identifier ): Package {
 		return 'plugin' === $type ? $this->plugins->boosterPluginFromFile( $identifier ) : $this->themes->boosterThemeFromStylesheet( $identifier );
 	}
 
-	private function destinationExists( string $type, string $slug ): bool {
+	private function destination_exists( string $type, string $slug ): bool {
 		$root = 'plugin' === $type ? WP_PLUGIN_DIR : get_theme_root();
 		return file_exists( $root . '/' . $slug ) || is_link( $root . '/' . $slug );
 	}
 
-	private function stagePackageStorageFailure( PackageStorageFailure $failure ): never {
+	private function stage_package_storage_failure( PackageStorageFailure $failure ): never {
 		$this->stage(
 			'ran_booster_repository_source_conflict' === $failure->get_diagnostic_id()
 				? DeploymentOutcome::CODE_REPOSITORY_SOURCE_CONFLICT

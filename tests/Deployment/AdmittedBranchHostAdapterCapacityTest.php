@@ -145,7 +145,7 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 
 	private function invokeCapacityCheck( PreparedArchiveArtifact $artifact, BranchDeploymentDeclaration $deployment ): void {
 		$adapter = ( new ReflectionClass( AdmittedBranchHostAdapter::class ) )->newInstanceWithoutConstructor();
-		$method  = new ReflectionMethod( AdmittedBranchHostAdapter::class, 'assertArtifactCapacity' );
+		$method  = new ReflectionMethod( AdmittedBranchHostAdapter::class, 'assert_artifact_capacity' );
 		$method->invoke( $adapter, $artifact, $deployment );
 	}
 

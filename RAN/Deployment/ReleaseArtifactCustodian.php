@@ -14,21 +14,21 @@ use Throwable;
  */
 final class ReleaseArtifactCustodian {
 	public static function claim( RepositoryReleaseArtifactCustody $custody ): PreparedArtifact {
-		$prepared                = $custody instanceof PreparedArtifact ? $custody : null;
-		$inspectionInvoked       = false;
-		$sourceDiscardAttempted  = false;
-		$sourceDiscardSuccessful = false;
-		$copyCleanupSuccessful   = true;
+		$prepared                  = $custody instanceof PreparedArtifact ? $custody : null;
+		$inspection_invoked        = false;
+		$source_discard_attempted  = false;
+		$source_discard_successful = false;
+		$copy_cleanup_successful   = true;
 
 		try {
-			$maximumArtifactBytes = PackageArtifactLimit::resolve();
-			$resolvedRef          = $custody->resolvedRef();
-			$version              = $custody->version();
-			$size                 = $custody->size();
-			$sha256               = $custody->sha256();
+			$maximum_artifact_bytes = PackageArtifactLimit::resolve();
+			$resolved_ref           = $custody->resolvedRef();
+			$version                = $custody->version();
+			$size                   = $custody->size();
+			$sha256                 = $custody->sha256();
 
 			if ( $size < 1
-				|| $size > $maximumArtifactBytes
+				|| $size > $maximum_artifact_bytes
 				|| 1 !== preg_match( '/\A[a-f0-9]{64}\z/D', $sha256 ) ) {
 				throw new RuntimeException( 'The release artifact custody evidence is invalid.' );
 			}
@@ -43,23 +43,23 @@ final class ReleaseArtifactCustodian {
 			}
 
 			$result = $custody->inspect(
-				function ( string $source ) use ( &$prepared, &$inspectionInvoked, &$copyCleanupSuccessful, $resolvedRef, $version, $size, $maximumArtifactBytes, $sha256 ): PreparedArtifact {
-					if ( $inspectionInvoked ) {
+				function ( string $source ) use ( &$prepared, &$inspection_invoked, &$copy_cleanup_successful, $resolved_ref, $version, $size, $maximum_artifact_bytes, $sha256 ): PreparedArtifact {
+					if ( $inspection_invoked ) {
 						throw new RuntimeException();
 					}
-					$inspectionInvoked = true;
-					$prepared          = self::copyToCore( $source, $resolvedRef, $version, $size, $maximumArtifactBytes, $sha256, $copyCleanupSuccessful );
+					$inspection_invoked = true;
+					$prepared           = self::copy_to_core( $source, $resolved_ref, $version, $size, $maximum_artifact_bytes, $sha256, $copy_cleanup_successful );
 
 					return $prepared;
 				}
 			);
-			if ( ! $inspectionInvoked || ! $prepared instanceof PreparedArtifact || $result !== $prepared ) {
+			if ( ! $inspection_invoked || ! $prepared instanceof PreparedArtifact || $result !== $prepared ) {
 				throw new RuntimeException();
 			}
 
-			$sourceDiscardAttempted  = true;
-			$sourceDiscardSuccessful = true === $custody->discard();
-			if ( ! $sourceDiscardSuccessful ) {
+			$source_discard_attempted  = true;
+			$source_discard_successful = true === $custody->discard();
+			if ( ! $source_discard_successful ) {
 				throw new RuntimeException();
 			}
 
@@ -69,18 +69,18 @@ final class ReleaseArtifactCustodian {
 				try {
 					$prepared->cleanup();
 				} catch ( Throwable ) {
-					$copyCleanupSuccessful = false;
+					$copy_cleanup_successful = false;
 				}
 			}
-			if ( ! $sourceDiscardAttempted ) {
+			if ( ! $source_discard_attempted ) {
 				try {
-					$sourceDiscardSuccessful = true === $custody->discard();
+					$source_discard_successful = true === $custody->discard();
 				} catch ( Throwable ) {
-					$sourceDiscardSuccessful = false;
+					$source_discard_successful = false;
 				}
 			}
 
-			if ( $copyCleanupSuccessful && $sourceDiscardSuccessful ) {
+			if ( $copy_cleanup_successful && $source_discard_successful ) {
 				throw new RuntimeException( 'The release artifact could not be transferred to Core.' );
 			}
 
@@ -88,30 +88,30 @@ final class ReleaseArtifactCustodian {
 		}
 	}
 
-	private static function copyToCore(
+	private static function copy_to_core(
 		string $source,
-		string $resolvedRef,
+		string $resolved_ref,
 		string $version,
-		int $artifactSize,
-		int $maximumArtifactBytes,
-		string $artifactSha256,
-		bool &$copyCleanupSuccessful
+		int $artifact_size,
+		int $maximum_artifact_bytes,
+		string $artifact_sha256,
+		bool &$copy_cleanup_successful
 	): PreparedArtifact {
-		$directory    = sys_get_temp_dir() . '/ran-booster-release-' . bin2hex( random_bytes( 16 ) );
-		$path         = $directory . '/archive.zip';
-		$input        = false;
-		$output       = false;
-		$copyIdentity = null;
-		$inputClosed  = true;
-		$outputClosed = true;
+		$directory     = sys_get_temp_dir() . '/ran-booster-release-' . bin2hex( random_bytes( 16 ) );
+		$path          = $directory . '/archive.zip';
+		$input         = false;
+		$output        = false;
+		$copy_identity = null;
+		$input_closed  = true;
+		$output_closed = true;
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- The random directory is the Core-owned custody boundary.
 		if ( ! mkdir( $directory, 0700 ) ) {
 			throw new RuntimeException();
 		}
-		$directoryIdentity = self::privateDirectoryIdentity( $directory );
-		if ( null === $directoryIdentity ) {
-			$copyCleanupSuccessful = false;
+		$directory_identity = self::private_directory_identity( $directory );
+		if ( null === $directory_identity ) {
+			$copy_cleanup_successful = false;
 			throw new RuntimeException();
 		}
 
@@ -121,8 +121,8 @@ final class ReleaseArtifactCustodian {
 			if ( false === $input ) {
 				throw new RuntimeException();
 			}
-			$inputClosed = false;
-			if ( $directoryIdentity !== self::privateDirectoryIdentity( $directory ) ) {
+			$input_closed = false;
+			if ( $directory_identity !== self::private_directory_identity( $directory ) ) {
 				throw new RuntimeException();
 			}
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- The exclusive Core destination is the temporary custody boundary.
@@ -130,78 +130,78 @@ final class ReleaseArtifactCustodian {
 			if ( false === $output ) {
 				throw new RuntimeException();
 			}
-			$outputClosed = false;
-			$copyIdentity = self::createdFileIdentity( $path, $output );
+			$output_closed = false;
+			$copy_identity = self::created_file_identity( $path, $output );
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- The Core copy must remain private.
-			if ( null === $copyIdentity || ! chmod( $path, 0600 ) ) {
+			if ( null === $copy_identity || ! chmod( $path, 0600 ) ) {
 				throw new RuntimeException();
 			}
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_stream_copy_to_stream -- Copy is fixed-bounded without holding the archive in memory.
-			$size = stream_copy_to_stream( $input, $output, $artifactSize + 1 );
-			if ( false === $size || $artifactSize !== $size || $size > $maximumArtifactBytes ) {
+			$size = stream_copy_to_stream( $input, $output, $artifact_size + 1 );
+			if ( false === $size || $artifact_size !== $size || $size > $maximum_artifact_bytes ) {
 				throw new RuntimeException();
 			}
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close before Core identity capture.
-			$outputClosed = fclose( $output );
-			$output       = false;
-			if ( ! $outputClosed ) {
+			$output_closed = fclose( $output );
+			$output        = false;
+			if ( ! $output_closed ) {
 				throw new RuntimeException();
 			}
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close provider inspection before TOCTOU recheck.
-			$inputClosed = fclose( $input );
-			$input       = false;
-			if ( ! $inputClosed ) {
+			$input_closed = fclose( $input );
+			$input        = false;
+			if ( ! $input_closed ) {
 				throw new RuntimeException();
 			}
-			$preparedIdentity = PreparedArtifact::regularFileIdentity( $path );
+			$prepared_identity = PreparedArtifact::regularFileIdentity( $path );
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- Custody transfer requires source/copy digest continuity.
-			$copyDigest = hash_file( 'sha256', $path );
-			if ( ! is_string( $copyDigest )
-				|| ! hash_equals( $artifactSha256, $copyDigest )
-				|| $directoryIdentity !== self::privateDirectoryIdentity( $directory )
-				|| $copyIdentity !== self::pathFileIdentity( $path )
-				|| null === $preparedIdentity
-				|| $size !== $preparedIdentity['size'] ) {
+			$copy_digest = hash_file( 'sha256', $path );
+			if ( ! is_string( $copy_digest )
+				|| ! hash_equals( $artifact_sha256, $copy_digest )
+				|| $directory_identity !== self::private_directory_identity( $directory )
+				|| $copy_identity !== self::path_file_identity( $path )
+				|| null === $prepared_identity
+				|| $size !== $prepared_identity['size'] ) {
 				throw new RuntimeException();
 			}
 
 			return new PreparedArtifact(
 				$path,
-				$resolvedRef,
+				$resolved_ref,
 				$version,
-				$artifactSha256,
-				$preparedIdentity['device'],
-				$preparedIdentity['inode'],
-				$preparedIdentity['size'],
-				$preparedIdentity['permissions'],
-				$preparedIdentity['links'],
+				$artifact_sha256,
+				$prepared_identity['device'],
+				$prepared_identity['inode'],
+				$prepared_identity['size'],
+				$prepared_identity['permissions'],
+				$prepared_identity['links'],
 				$directory
 			);
 		} catch ( Throwable ) {
 			if ( is_resource( $input ) ) {
 				try {
 					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close failed bounded-copy input before cleanup.
-					$inputClosed = fclose( $input );
+					$input_closed = fclose( $input );
 				} catch ( Throwable ) {
-					$inputClosed = false;
+					$input_closed = false;
 				}
 				$input = false;
 			}
 			if ( is_resource( $output ) ) {
 				try {
 					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close failed bounded-copy output before cleanup.
-					$outputClosed = fclose( $output );
+					$output_closed = fclose( $output );
 				} catch ( Throwable ) {
-					$outputClosed = false;
+					$output_closed = false;
 				}
 				$output = false;
 			}
 
-			$copyCleanupSuccessful = $inputClosed && $outputClosed;
+			$copy_cleanup_successful = $input_closed && $output_closed;
 			try {
-				$copyCleanupSuccessful = self::removeCopy( $path, $directory, $directoryIdentity, $copyIdentity ) && $copyCleanupSuccessful;
+				$copy_cleanup_successful = self::remove_copy( $path, $directory, $directory_identity, $copy_identity ) && $copy_cleanup_successful;
 			} catch ( Throwable ) {
-				$copyCleanupSuccessful = false;
+				$copy_cleanup_successful = false;
 			}
 			throw new RuntimeException();
 		} finally {
@@ -217,15 +217,15 @@ final class ReleaseArtifactCustodian {
 	}
 
 	/**
-	 * @param array{device:int,inode:int,owner:int,group:int}                $directoryIdentity
-	 * @param array{device:int,inode:int,links:int,owner:int,group:int}|null $copyIdentity
+	 * @param array{device:int,inode:int,owner:int,group:int}                $directory_identity
+	 * @param array{device:int,inode:int,links:int,owner:int,group:int}|null $copy_identity
 	 */
-	private static function removeCopy( string $path, string $directory, array $directoryIdentity, ?array $copyIdentity ): bool {
-		if ( $directoryIdentity !== self::privateDirectoryIdentity( $directory ) ) {
+	private static function remove_copy( string $path, string $directory, array $directory_identity, ?array $copy_identity ): bool {
+		if ( $directory_identity !== self::private_directory_identity( $directory ) ) {
 			return false;
 		}
-		if ( null !== $copyIdentity ) {
-			if ( $copyIdentity !== self::pathFileIdentity( $path ) ) {
+		if ( null !== $copy_identity ) {
+			if ( $copy_identity !== self::path_file_identity( $path ) ) {
 				return false;
 			}
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- This removes only the failed Core-owned copy.
@@ -239,7 +239,7 @@ final class ReleaseArtifactCustodian {
 		} elseif ( file_exists( $path ) || is_link( $path ) ) {
 			return false;
 		}
-		if ( $directoryIdentity !== self::privateDirectoryIdentity( $directory ) ) {
+		if ( $directory_identity !== self::private_directory_identity( $directory ) ) {
 			return false;
 		}
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- This removes only the failed Core-owned random directory.
@@ -252,7 +252,7 @@ final class ReleaseArtifactCustodian {
 	}
 
 	/** @return array{device:int,inode:int,owner:int,group:int}|null */
-	private static function privateDirectoryIdentity( string $directory ): ?array {
+	private static function private_directory_identity( string $directory ): ?array {
 		clearstatcache( true, $directory );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_lstat -- Symlink-aware identity is required for the Core-owned directory.
 		$stat = lstat( $directory );
@@ -274,31 +274,31 @@ final class ReleaseArtifactCustodian {
 	}
 
 	/** @param resource $stream @return array{device:int,inode:int,links:int,owner:int,group:int}|null */
-	private static function createdFileIdentity( string $path, $stream ): ?array {
+	private static function created_file_identity( string $path, $stream ): ?array {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fstat -- The exclusive file handle must identify the same Core-owned path.
-		$streamStat = fstat( $stream );
-		$pathStat   = self::pathFileStat( $path );
-		if ( false === $streamStat || null === $pathStat ) {
+		$stream_stat = fstat( $stream );
+		$path_stat   = self::path_file_stat( $path );
+		if ( false === $stream_stat || null === $path_stat ) {
 			return null;
 		}
-		$streamIdentity = self::stableIdentity( $streamStat );
-		$pathIdentity   = self::stableIdentity( $pathStat );
-		if ( $pathIdentity['device'] < 0 || $pathIdentity['inode'] <= 0 || 1 !== $pathIdentity['links'] || $pathIdentity['owner'] < 0 || $pathIdentity['group'] < 0 ) {
+		$stream_identity = self::stable_identity( $stream_stat );
+		$path_identity   = self::stable_identity( $path_stat );
+		if ( $path_identity['device'] < 0 || $path_identity['inode'] <= 0 || 1 !== $path_identity['links'] || $path_identity['owner'] < 0 || $path_identity['group'] < 0 ) {
 			return null;
 		}
 
-		return $streamIdentity === $pathIdentity ? $pathIdentity : null;
+		return $stream_identity === $path_identity ? $path_identity : null;
 	}
 
 	/** @return array{device:int,inode:int,links:int,owner:int,group:int}|null */
-	private static function pathFileIdentity( string $path ): ?array {
-		$stat = self::pathFileStat( $path );
+	private static function path_file_identity( string $path ): ?array {
+		$stat = self::path_file_stat( $path );
 
-		return null === $stat ? null : self::stableIdentity( $stat );
+		return null === $stat ? null : self::stable_identity( $stat );
 	}
 
 	/** @return array<string, int>|null */
-	private static function pathFileStat( string $path ): ?array {
+	private static function path_file_stat( string $path ): ?array {
 		clearstatcache( true, $path );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_lstat -- Symlink-aware identity is required for the exclusive Core-owned file.
 		$stat = lstat( $path );
@@ -308,7 +308,7 @@ final class ReleaseArtifactCustodian {
 	}
 
 	/** @param array<string, int> $stat @return array{device:int,inode:int,links:int,owner:int,group:int} */
-	private static function stableIdentity( array $stat ): array {
+	private static function stable_identity( array $stat ): array {
 		return array(
 			'device' => (int) ( $stat['dev'] ?? -1 ),
 			'inode'  => (int) ( $stat['ino'] ?? 0 ),

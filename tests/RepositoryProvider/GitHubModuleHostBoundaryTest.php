@@ -139,7 +139,7 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		$managed = file_get_contents( $root . '/RAN/WordPress/ManagedReleaseTargetRegistrar.php' );
 		self::assertIsString( $managed );
 		self::assertStringContainsString(
-			'$this->providers->requireCapability( $providerCode, RepositoryReleaseNativeTargets::class );',
+			'$this->providers->requireCapability( $provider_code, RepositoryReleaseNativeTargets::class );',
 			$managed
 		);
 	}

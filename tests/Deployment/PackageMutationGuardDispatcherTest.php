@@ -272,7 +272,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 				self::callback(
 					static fn ( \RAN\Admin\BulkPackageResult $result ): bool => 1 === $result->changed
 						&& 1 === $result->selected
-						&& '' === $result->errorCode
+						&& '' === $result->error_code
 				)
 			)
 			->willReturnCallback(
@@ -315,7 +315,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			->with(
 				'plugin',
 				self::callback(
-					static fn ( \RAN\Admin\BulkPackageResult $result ): bool => 'unavailable' === $result->errorCode
+					static fn ( \RAN\Admin\BulkPackageResult $result ): bool => 'unavailable' === $result->error_code
 						&& 'queue-update' === $result->operation
 				)
 			)

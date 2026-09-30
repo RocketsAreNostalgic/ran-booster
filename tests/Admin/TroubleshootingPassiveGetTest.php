@@ -259,7 +259,7 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 		$container->bind(
 			'RAN\\Webhook\\WebhookController',
 			new class() {
-				public function registerRoutes(): void {
+				public function register_routes(): void {
 				}
 			}
 		);

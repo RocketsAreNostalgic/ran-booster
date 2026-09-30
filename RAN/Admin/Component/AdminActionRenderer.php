@@ -10,20 +10,20 @@ namespace RAN\Admin\Component;
 final class AdminActionRenderer {
 
 	/** @param array<string, array<string, mixed>> $actions */
-	public function render( array $actions, bool $emphasizeFirst = false ): void {
+	public function render( array $actions, bool $emphasize_first = false ): void {
 		$position = 0;
 		foreach ( $actions as $action ) {
 			if ( 'post' === $action['type'] ) {
-				$this->renderPost( $action, $emphasizeFirst && 0 === $position );
+				$this->render_post( $action, $emphasize_first && 0 === $position );
 			} else {
-				$this->renderLink( $action, $emphasizeFirst && 0 === $position );
+				$this->render_link( $action, $emphasize_first && 0 === $position );
 			}
 			++$position;
 		}
 	}
 
 	/** @param array<string, mixed> $action */
-	private function renderLink( array $action, bool $primary ): void {
+	private function render_link( array $action, bool $primary ): void {
 		if ( true === $action['disabled'] || '' === $action['url'] ) {
 			?>
 			<button type="button" class="button" disabled aria-disabled="true"<?php echo '' === $action['described_by'] ? '' : ' aria-describedby="' . esc_attr( $action['described_by'] ) . '"'; ?>><?php echo esc_html( $action['label'] ); ?></button>
@@ -41,29 +41,29 @@ final class AdminActionRenderer {
 	}
 
 	/** @param array<string, mixed> $action */
-	private function renderPost( array $action, bool $primary ): void {
-		$busyLabel    = is_string( $action['busy_label'] ?? null ) ? $action['busy_label'] : '';
-		$confirm      = is_string( $action['confirm'] ?? null ) ? $action['confirm'] : '';
-		$hasBusyState = '' !== $busyLabel;
+	private function render_post( array $action, bool $primary ): void {
+		$busy_label     = is_string( $action['busy_label'] ?? null ) ? $action['busy_label'] : '';
+		$confirm        = is_string( $action['confirm'] ?? null ) ? $action['confirm'] : '';
+		$has_busy_state = '' !== $busy_label;
 		?>
-		<form action="<?php echo esc_url( $action['url'] ); ?>" method="post"<?php echo $hasBusyState ? ' class="ran-booster-package-row__update-form"' : ''; ?> data-ran-booster-enhanced-mutation data-ran-booster-package-mutation hx-post="<?php echo esc_url( wp_make_link_relative( $action['url'] ) ); ?>" hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none" hx-sync="this:drop">
+		<form action="<?php echo esc_url( $action['url'] ); ?>" method="post"<?php echo $has_busy_state ? ' class="ran-booster-package-row__update-form"' : ''; ?> data-ran-booster-enhanced-mutation data-ran-booster-package-mutation hx-post="<?php echo esc_url( wp_make_link_relative( $action['url'] ) ); ?>" hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none" hx-sync="this:drop">
 			<?php foreach ( $action['hidden'] as $name => $value ) { ?>
 				<input type="hidden" name="<?php echo esc_attr( $name ); ?>" value="<?php echo esc_attr( $value ); ?>">
 			<?php } ?>
 			<button
 				type="submit"
-				class="button<?php echo $primary ? ' button-primary' : ''; ?><?php echo $hasBusyState ? ' button-update-package' : ''; ?>"
+				class="button<?php echo $primary ? ' button-primary' : ''; ?><?php echo $has_busy_state ? ' button-update-package' : ''; ?>"
 				<?php disabled( true === $action['disabled'] ); ?>
 				<?php echo '' === $action['described_by'] ? '' : ' aria-describedby="' . esc_attr( $action['described_by'] ) . '"'; ?>
-				<?php if ( $hasBusyState ) { ?>
+				<?php if ( $has_busy_state ) { ?>
 					data-ran-booster-update-button
 					data-idle-label="<?php echo esc_attr( $action['label'] ); ?>"
-					data-busy-label="<?php echo esc_attr( $busyLabel ); ?>"
+					data-busy-label="<?php echo esc_attr( $busy_label ); ?>"
 					data-update-can-run="<?php echo esc_attr( true === $action['disabled'] ? '0' : '1' ); ?>"
 					<?php echo '' === $confirm ? '' : ' data-reinstall-confirm-message="' . esc_attr( $confirm ) . '"'; ?>
 				<?php } ?>
 			>
-				<?php if ( $hasBusyState ) { ?>
+				<?php if ( $has_busy_state ) { ?>
 					<span data-ran-booster-update-label><?php echo esc_html( $action['label'] ); ?></span>
 				<?php } else { ?>
 					<?php echo esc_html( $action['label'] ); ?>

@@ -24,13 +24,13 @@ final class SignedAdminInteractionFlow {
 	private const QUERY_NONCE        = '_ran_booster_interaction_nonce';
 
 	/** @var Closure(string, string, string, string): ?SignedAdminInteractionRequest */
-	private Closure $resolvePendingRequest;
+	private Closure $resolve_pending_request;
 
 	/** @var Closure(string, string): void */
-	private Closure $emitHeader;
+	private Closure $emit_header;
 
 	/** @var Closure(int): void */
-	private Closure $emitStatus;
+	private Closure $emit_status;
 
 	/** @var Closure(string): void */
 	private Closure $redirect;
@@ -42,45 +42,55 @@ final class SignedAdminInteractionFlow {
 	 * @param callable(string, string, string, string): ?SignedAdminInteractionRequest $resolvePendingRequest
 	 */
 	public function __construct(
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		callable $resolvePendingRequest,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		?callable $emitHeader = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		?callable $emitStatus = null,
 		?callable $redirect = null,
 		?callable $terminate = null
 	) {
-		$this->resolvePendingRequest = Closure::fromCallable( $resolvePendingRequest );
-		$this->emitHeader            = null === $emitHeader
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
+		$this->resolve_pending_request = Closure::fromCallable( $resolvePendingRequest );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
+		$this->emit_header = null === $emitHeader
 			? static function ( string $name, string $value ): void {
 				header( $name . ': ' . $value );
 			}
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 			: Closure::fromCallable( $emitHeader );
-		$this->emitStatus            = null === $emitStatus
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
+		$this->emit_status = null === $emitStatus
 			? static function ( int $status ): void {
 				status_header( $status );
 			}
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 			: Closure::fromCallable( $emitStatus );
-		$this->redirect              = null === $redirect
+		$this->redirect  = null === $redirect
 			? static function ( string $url ): void {
 				wp_safe_redirect( $url );
 			}
 			: Closure::fromCallable( $redirect );
-		$this->terminate             = null === $terminate
+		$this->terminate = null === $terminate
 			? static function (): never {
 				exit;
 			}
 			: Closure::fromCallable( $terminate );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public interaction methods retain the existing connected caller and callback contracts.
 	public function isEnhancedRequest( SignedAdminInteractionRequest $request ): bool {
 		// Transport metadata never authorizes an operation.
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$payload = $_POST['ran_booster_interaction'] ?? null;
 
-		return $this->isHtmxTarget( $request )
+		return $this->is_htmx_target( $request )
 			&& is_array( $payload )
 			&& is_string( $payload['operation'] ?? null )
 			&& is_string( $payload['target'] ?? null )
 			&& hash_equals( $request->operation, $payload['operation'] )
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- The signed-request DTO retains its separately owned public property contract.
 			&& hash_equals( $request->targetKey, $payload['target'] );
 	}
 
@@ -88,22 +98,26 @@ final class SignedAdminInteractionFlow {
 		SignedAdminInteractionRequest $request,
 		string $kind,
 		string $message,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		bool $fullPageEnhancedSuccess = false
 	): never {
-		$this->assertOutcome( $kind, $message );
+		$this->assert_outcome( $kind, $message );
 		if ( $this->isEnhancedRequest( $request ) ) {
-			if ( $this->hasSuccessFeedback( $kind ) ) {
-				$outcomeUrl = $this->signedOutcomeUrl( $request, $kind, $message );
+			if ( $this->has_success_feedback( $kind ) ) {
+				$outcome_url = $this->signed_outcome_url( $request, $kind, $message );
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 				if ( $fullPageEnhancedSuccess ) {
-					( $this->emitStatus )( $this->status( $kind ) );
-					( $this->emitHeader )( 'HX-Redirect', $outcomeUrl );
+					( $this->emit_status )( $this->status( $kind ) );
+					( $this->emit_header )( 'HX-Redirect', $outcome_url );
 					( $this->terminate )();
 				}
 
 				$location = wp_json_encode(
 					array(
-						'path'   => wp_make_link_relative( $outcomeUrl ),
+						'path'   => wp_make_link_relative( $outcome_url ),
+						// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- The signed-request DTO retains its separately owned public property contract.
 						'target' => $request->targetSelector,
+						// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- The signed-request DTO retains its separately owned public property contract.
 						'select' => $request->targetSelector,
 						'swap'   => 'outerHTML show:none',
 					)
@@ -112,61 +126,67 @@ final class SignedAdminInteractionFlow {
 					throw new InvalidArgumentException( 'Administration interaction location could not be encoded.' );
 				}
 
-				( $this->emitStatus )( $this->status( $kind ) );
-				( $this->emitHeader )( 'HX-Location', $location );
+				( $this->emit_status )( $this->status( $kind ) );
+				( $this->emit_header )( 'HX-Location', $location );
 				( $this->terminate )();
 			}
 
-			( $this->emitStatus )( $this->status( $kind ) );
-			( $this->emitHeader )( 'HX-Retarget', '#' . $request->errorRegionId );
-			( $this->emitHeader )( 'HX-Reselect', 'unset' );
-			( $this->emitHeader )( 'HX-Reswap', 'outerHTML' );
+			( $this->emit_status )( $this->status( $kind ) );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- The signed-request DTO retains its separately owned public property contract.
+			( $this->emit_header )( 'HX-Retarget', '#' . $request->errorRegionId );
+			( $this->emit_header )( 'HX-Reselect', 'unset' );
+			( $this->emit_header )( 'HX-Reswap', 'outerHTML' );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- The signed-request DTO retains its separately owned public property contract.
 			echo '<div id="' . esc_attr( $request->errorRegionId ) . '" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1"><p>' . esc_html( $message ) . '</p></div>';
 			( $this->terminate )();
 		}
 
-		( $this->redirect )( $this->signedOutcomeUrl( $request, $kind, $message ) );
+		( $this->redirect )( $this->signed_outcome_url( $request, $kind, $message ) );
 		( $this->terminate )();
 	}
 
 	/**
 	 * @param callable(string): void $renderFragment
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public interaction methods retain the existing connected caller and callback contracts.
 	public function respondWithFragment(
 		SignedAdminInteractionRequest $request,
 		string $kind,
 		string $message,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		callable $renderFragment
 	): never {
-		$this->assertOutcome( $kind, $message );
-		if ( ! $this->isEnhancedRequest( $request ) || ! $this->hasSuccessFeedback( $kind ) ) {
+		$this->assert_outcome( $kind, $message );
+		if ( ! $this->isEnhancedRequest( $request ) || ! $this->has_success_feedback( $kind ) ) {
 			$this->respond( $request, $kind, $message );
 		}
 
-		$bufferLevel = ob_get_level();
+		$buffer_level = ob_get_level();
 		try {
 			ob_start();
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 			$renderFragment( $request->targetElementId() );
 			$fragment = (string) ob_get_clean();
-			$this->assertRowFragment( $request, $fragment );
+			$this->assert_row_fragment( $request, $fragment );
 		} catch ( Throwable ) {
-			while ( ob_get_level() > $bufferLevel ) {
+			while ( ob_get_level() > $buffer_level ) {
 				ob_end_clean();
 			}
-			( $this->emitStatus )( $this->status( $kind ) );
-			( $this->emitHeader )( 'HX-Trigger', $this->successTrigger( $request, $message ) );
-			( $this->emitHeader )( 'HX-Refresh', 'true' );
+			( $this->emit_status )( $this->status( $kind ) );
+			( $this->emit_header )( 'HX-Trigger', $this->success_trigger( $request, $message ) );
+			( $this->emit_header )( 'HX-Refresh', 'true' );
 			( $this->terminate )();
 		}
 
-		( $this->emitStatus )( $this->status( $kind ) );
-		( $this->emitHeader )( 'HX-Replace-Url', wp_make_link_relative( $request->canonicalUrl ) );
-		( $this->emitHeader )( 'HX-Trigger-After-Swap', $this->successTrigger( $request, $message ) );
+		( $this->emit_status )( $this->status( $kind ) );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- The signed-request DTO retains its separately owned public property contract.
+		( $this->emit_header )( 'HX-Replace-Url', wp_make_link_relative( $request->canonicalUrl ) );
+		( $this->emit_header )( 'HX-Trigger-After-Swap', $this->success_trigger( $request, $message ) );
 		echo $fragment; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- The add-on renderer owns escaping; the exact row wrapper is validated above.
 		( $this->terminate )();
 	}
 
-	private function successTrigger( SignedAdminInteractionRequest $request, string $message ): string {
+	private function success_trigger( SignedAdminInteractionRequest $request, string $message ): string {
 		$trigger = wp_json_encode(
 			array(
 				'ran-booster:admin-mutation-success' => array(
@@ -182,15 +202,16 @@ final class SignedAdminInteractionFlow {
 		return $trigger;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public interaction methods retain the existing connected caller and callback contracts.
 	public function preparePendingFeedback(): void {
-		$outcome = $this->pendingOutcome();
+		$outcome = $this->pending_outcome();
 		if ( null === $outcome ) {
 			return;
 		}
 
 		$request = $outcome['request'];
-		if ( $this->isHtmxTarget( $request ) ) {
-			if ( $this->hasSuccessFeedback( $outcome['kind'] ) ) {
+		if ( $this->is_htmx_target( $request ) ) {
+			if ( $this->has_success_feedback( $outcome['kind'] ) ) {
 				$trigger = wp_json_encode(
 					array(
 						'ran-booster:admin-mutation-success' => array(
@@ -200,10 +221,11 @@ final class SignedAdminInteractionFlow {
 					)
 				);
 				if ( is_string( $trigger ) ) {
-					( $this->emitHeader )( 'HX-Trigger-After-Swap', $trigger );
+					( $this->emit_header )( 'HX-Trigger-After-Swap', $trigger );
 				}
 			}
-			( $this->emitHeader )( 'HX-Replace-Url', wp_make_link_relative( $request->canonicalUrl ) );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- The signed-request DTO retains its separately owned public property contract.
+			( $this->emit_header )( 'HX-Replace-Url', wp_make_link_relative( $request->canonicalUrl ) );
 
 			return;
 		}
@@ -222,26 +244,30 @@ final class SignedAdminInteractionFlow {
 		);
 	}
 
-	private function signedOutcomeUrl(
+	private function signed_outcome_url(
 		SignedAdminInteractionRequest $request,
 		string $kind,
 		string $message
 	): string {
 		$args                      = array(
 			self::QUERY_OPERATION    => $request->operation,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- The signed-request DTO retains its separately owned public property contract.
 			self::QUERY_TARGET       => $request->targetKey,
 			self::QUERY_OUTCOME      => $kind,
 			self::QUERY_MESSAGE      => $message,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- The signed-request DTO retains its separately owned public property contract.
 			self::QUERY_RETURN       => $request->canonicalUrl,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- The signed-request DTO retains its separately owned public property contract.
 			self::QUERY_ERROR_REGION => $request->errorRegionId,
 		);
-		$args[ self::QUERY_NONCE ] = wp_create_nonce( $this->nonceAction( $args ) );
+		$args[ self::QUERY_NONCE ] = wp_create_nonce( $this->nonce_action( $args ) );
 
 		return add_query_arg(
 			array_map(
 				static fn ( string $value ): string => rawurlencode( $value ),
 				$args
 			),
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- The signed-request DTO retains its separately owned public property contract.
 			$request->canonicalUrl
 		);
 	}
@@ -249,30 +275,30 @@ final class SignedAdminInteractionFlow {
 	/**
 	 * @return array{request: SignedAdminInteractionRequest, kind: string, message: string}|null
 	 */
-	private function pendingOutcome(): ?array {
-		$operation = $this->queryString( self::QUERY_OPERATION );
-		$target    = $this->queryString( self::QUERY_TARGET );
-		$kind      = $this->queryString( self::QUERY_OUTCOME );
-		$message   = $this->queryString( self::QUERY_MESSAGE );
-		$returnUrl = $this->queryString( self::QUERY_RETURN );
-		$errorId   = $this->queryString( self::QUERY_ERROR_REGION );
-		$nonce     = $this->queryString( self::QUERY_NONCE );
+	private function pending_outcome(): ?array {
+		$operation  = $this->query_string( self::QUERY_OPERATION );
+		$target     = $this->query_string( self::QUERY_TARGET );
+		$kind       = $this->query_string( self::QUERY_OUTCOME );
+		$message    = $this->query_string( self::QUERY_MESSAGE );
+		$return_url = $this->query_string( self::QUERY_RETURN );
+		$error_id   = $this->query_string( self::QUERY_ERROR_REGION );
+		$nonce      = $this->query_string( self::QUERY_NONCE );
 		if ( null === $operation
 			|| null === $target
 			|| null === $kind
 			|| null === $message
-			|| null === $returnUrl
-			|| null === $errorId
+			|| null === $return_url
+			|| null === $error_id
 			|| null === $nonce ) {
 			return null;
 		}
 
 		try {
-			$request = ( $this->resolvePendingRequest )( $operation, $target, $returnUrl, $errorId );
+			$request = ( $this->resolve_pending_request )( $operation, $target, $return_url, $error_id );
 		} catch ( \Throwable ) {
 			return null;
 		}
-		if ( null === $request || ! $this->currentRequestMatches( $request ) ) {
+		if ( null === $request || ! $this->current_request_matches( $request ) ) {
 			return null;
 		}
 
@@ -281,15 +307,15 @@ final class SignedAdminInteractionFlow {
 			self::QUERY_TARGET       => $target,
 			self::QUERY_OUTCOME      => $kind,
 			self::QUERY_MESSAGE      => $message,
-			self::QUERY_RETURN       => $returnUrl,
-			self::QUERY_ERROR_REGION => $errorId,
+			self::QUERY_RETURN       => $return_url,
+			self::QUERY_ERROR_REGION => $error_id,
 		);
-		if ( 1 !== wp_verify_nonce( $nonce, $this->nonceAction( $args ) ) ) {
+		if ( 1 !== wp_verify_nonce( $nonce, $this->nonce_action( $args ) ) ) {
 			return null;
 		}
 
 		try {
-			$this->assertOutcome( $kind, $message );
+			$this->assert_outcome( $kind, $message );
 		} catch ( \Throwable ) {
 			return null;
 		}
@@ -301,7 +327,7 @@ final class SignedAdminInteractionFlow {
 		);
 	}
 
-	private function assertOutcome( string $kind, string $message ): void {
+	private function assert_outcome( string $kind, string $message ): void {
 		if ( ! in_array(
 			$kind,
 			array(
@@ -328,13 +354,13 @@ final class SignedAdminInteractionFlow {
 		};
 	}
 
-	private function hasSuccessFeedback( string $kind ): bool {
+	private function has_success_feedback( string $kind ): bool {
 		return in_array( $kind, array( AdminInteractionOutcome::SUCCESS, AdminInteractionOutcome::ACCEPTED ), true );
 	}
 
-	private function assertRowFragment( SignedAdminInteractionRequest $request, string $fragment ): void {
-		$elementId = preg_quote( $request->targetElementId(), '/' );
-		$opening   = "/^\\s*<tr\\b(?=[^>]*\\bid=([\"'])" . $elementId . "\\1)[^>]*>/i";
+	private function assert_row_fragment( SignedAdminInteractionRequest $request, string $fragment ): void {
+		$element_id = preg_quote( $request->targetElementId(), '/' );
+		$opening    = "/^\\s*<tr\\b(?=[^>]*\\bid=([\"'])" . $element_id . "\\1)[^>]*>/i";
 		if ( '' === trim( $fragment )
 			|| strlen( $fragment ) > 524288
 			|| 1 !== preg_match( $opening, $fragment )
@@ -347,33 +373,33 @@ final class SignedAdminInteractionFlow {
 	}
 
 	/** @param array<string, string> $args */
-	private function nonceAction( array $args ): string {
+	private function nonce_action( array $args ): string {
 		$encoded = wp_json_encode( $args );
 
 		return 'ran-booster-admin-interaction|' . hash( 'sha256', is_string( $encoded ) ? $encoded : '' );
 	}
 
-	private function isHtmxTarget( SignedAdminInteractionRequest $request ): bool {
-		$hxRequest = $_SERVER['HTTP_HX_REQUEST'] ?? null;
-		$hxTarget  = $_SERVER['HTTP_HX_TARGET'] ?? null;
+	private function is_htmx_target( SignedAdminInteractionRequest $request ): bool {
+		$hx_request = $_SERVER['HTTP_HX_REQUEST'] ?? null;
+		$hx_target  = $_SERVER['HTTP_HX_TARGET'] ?? null;
 
-		return is_string( $hxRequest )
-			&& 'true' === strtolower( trim( $hxRequest ) )
-			&& is_string( $hxTarget )
-			&& hash_equals( $request->targetElementId(), trim( $hxTarget ) );
+		return is_string( $hx_request )
+			&& 'true' === strtolower( trim( $hx_request ) )
+			&& is_string( $hx_target )
+			&& hash_equals( $request->targetElementId(), trim( $hx_target ) );
 	}
 
-	private function currentRequestMatches( SignedAdminInteractionRequest $request ): bool {
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- The validated URL is projected into read-only route values.
+	private function current_request_matches( SignedAdminInteractionRequest $request ): bool {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Project the validated URL into read-only route values using the existing signed-request DTO contract.
 		$url = parse_url( $request->canonicalUrl );
 		if ( ! is_array( $url ) ) {
 			return false;
 		}
 		parse_str( (string) ( $url['query'] ?? '' ), $expected );
 
-		foreach ( $expected as $key => $expectedValue ) {
+		foreach ( $expected as $key => $expected_value ) {
 			if ( ! is_string( $key )
-				|| ! is_string( $expectedValue )
+				|| ! is_string( $expected_value )
 				|| str_starts_with( $key, 'ran_booster_interaction_' )
 				|| self::QUERY_NONCE === $key ) {
 				return false;
@@ -382,7 +408,7 @@ final class SignedAdminInteractionFlow {
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			$current = $_GET[ $key ] ?? null;
 			if ( ! is_string( $current )
-				|| ! hash_equals( $expectedValue, wp_unslash( $current ) ) ) {
+				|| ! hash_equals( $expected_value, wp_unslash( $current ) ) ) {
 				return false;
 			}
 		}
@@ -390,7 +416,7 @@ final class SignedAdminInteractionFlow {
 		return true;
 	}
 
-	private function queryString( string $key ): ?string {
+	private function query_string( string $key ): ?string {
 		// Display-only values are used only after complete marker verification.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$value = $_GET[ $key ] ?? null;

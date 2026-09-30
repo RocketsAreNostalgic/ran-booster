@@ -18,18 +18,18 @@ final class CredentialExpiryNotice {
 	/** @var list<array<string, mixed>>|null */
 	private ?array $affected = null;
 
-	private bool $storageUnavailable = false;
+	private bool $storage_unavailable = false;
 
 	public function __construct( private CredentialExpiryReminder $reminders ) {
 	}
 
-	public function shouldRender(): bool {
+	public function should_render(): bool {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return false;
 		}
 
 		$affected = $this->snapshot();
-		if ( $this->storageUnavailable ) {
+		if ( $this->storage_unavailable ) {
 			return true;
 		}
 
@@ -38,24 +38,24 @@ final class CredentialExpiryNotice {
 			return false;
 		}
 
-		$userId = get_current_user_id();
+		$user_id = get_current_user_id();
 
-		return $userId > 0
-			&& ! hash_equals( $fingerprint, (string) get_user_meta( $userId, self::USER_META_KEY, true ) );
+		return $user_id > 0
+			&& ! hash_equals( $fingerprint, (string) get_user_meta( $user_id, self::USER_META_KEY, true ) );
 	}
 
-	public function shouldLoadDismissalScript(): bool {
-		return $this->shouldRender() && ! $this->storageUnavailable;
+	public function should_load_dismissal_script(): bool {
+		return $this->should_render() && ! $this->storage_unavailable;
 	}
 
 	public function render(): void {
-		if ( $this->rendered || ! $this->shouldRender() ) {
+		if ( $this->rendered || ! $this->should_render() ) {
 			return;
 		}
 		$this->rendered = true;
 
-		if ( $this->storageUnavailable ) {
-			$this->renderStorageUnavailable();
+		if ( $this->storage_unavailable ) {
+			$this->render_storage_unavailable();
 			return;
 		}
 
@@ -63,7 +63,7 @@ final class CredentialExpiryNotice {
 		$primary     = $affected[0];
 		$count       = count( $affected );
 		$class       = 'warning' === $primary['stage'] ? 'notice-warning' : 'notice-error';
-		$baseUrl     = function_exists( 'is_network_admin' ) && is_network_admin()
+		$base_url    = function_exists( 'is_network_admin' ) && is_network_admin()
 			? network_admin_url( 'admin.php' )
 			: admin_url( 'admin.php' );
 		$providers   = array();
@@ -94,10 +94,10 @@ final class CredentialExpiryNotice {
 			</p>
 			<p>
 				<?php foreach ( $providers as $provider => $label ) { ?>
-					<a href="<?php echo esc_url( $baseUrl . '?page=ran-booster&tab=' . rawurlencode( $provider ) ); ?>"><?php /* translators: %s is a repository provider label. */ echo esc_html( sprintf( __( 'Review %s credentials', 'ran-booster' ), $label ) ); ?></a>
+					<a href="<?php echo esc_url( $base_url . '?page=ran-booster&tab=' . rawurlencode( $provider ) ); ?>"><?php /* translators: %s is a repository provider label. */ echo esc_html( sprintf( __( 'Review %s credentials', 'ran-booster' ), $label ) ); ?></a>
 				<?php } ?>
 				<?php if ( null !== $replacement ) { ?>
-					<a class="button button-primary" href="<?php echo esc_url( $baseUrl . '?page=ran-booster&tab=' . rawurlencode( $replacement['provider'] ) . '&replace_credential=' . rawurlencode( $replacement['id'] ) ); ?>"><?php esc_html_e( 'Replace credential', 'ran-booster' ); ?></a>
+					<a class="button button-primary" href="<?php echo esc_url( $base_url . '?page=ran-booster&tab=' . rawurlencode( $replacement['provider'] ) . '&replace_credential=' . rawurlencode( $replacement['id'] ) ); ?>"><?php esc_html_e( 'Replace credential', 'ran-booster' ); ?></a>
 				<?php } else { ?>
 					<span><?php esc_html_e( 'This credential is managed by deployment configuration; update it there.', 'ran-booster' ); ?></span>
 				<?php } ?>
@@ -112,16 +112,16 @@ final class CredentialExpiryNotice {
 			try {
 				$this->affected = $this->reminders->affected();
 			} catch ( SecretsStorageUnavailable ) {
-				$this->storageUnavailable = true;
-				$this->affected           = array();
+				$this->storage_unavailable = true;
+				$this->affected            = array();
 			}
 		}
 
 		return $this->affected;
 	}
 
-	private function renderStorageUnavailable(): void {
-		$baseUrl = function_exists( 'is_network_admin' ) && is_network_admin()
+	private function render_storage_unavailable(): void {
+		$base_url = function_exists( 'is_network_admin' ) && is_network_admin()
 			? network_admin_url( 'admin.php' )
 			: admin_url( 'admin.php' );
 		?>
@@ -132,7 +132,7 @@ final class CredentialExpiryNotice {
 			</p>
 			<p>
 				<?php esc_html_e( 'Restore the matching sidecar and site key from the same backup before changing credentials.', 'ran-booster' ); ?>
-				<a href="<?php echo esc_url( $baseUrl . '?page=ran-booster&tab=overview' ); ?>"><?php esc_html_e( 'Review encrypted storage', 'ran-booster' ); ?></a>
+				<a href="<?php echo esc_url( $base_url . '?page=ran-booster&tab=overview' ); ?>"><?php esc_html_e( 'Review encrypted storage', 'ran-booster' ); ?></a>
 			</p>
 		</div>
 		<?php

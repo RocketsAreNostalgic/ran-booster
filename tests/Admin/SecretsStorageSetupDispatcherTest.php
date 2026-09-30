@@ -68,7 +68,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 				self::callback(
 					static fn ( SecretsStorageProvisioningResult $result ): bool => $code === $result->code()
 						&& $translatedMessage === $result->message()
-						&& null === $result->candidatePath()
+						&& null === $result->candidate_path()
 				)
 			);
 
@@ -107,7 +107,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		$_POST['ran_booster']['action'] = $action;
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster'][ $sourceMessage ] = $translatedMessage;
 		$provisioner = new SetupActionProvisioner(
-			SecretsStorageProvisioningResult::setupAvailable( '/private/canary/secrets.json' ),
+			SecretsStorageProvisioningResult::setup_available( '/private/canary/secrets.json' ),
 			true
 		);
 		$dashboard   = $this->createMock( Dashboard::class );
@@ -117,7 +117,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 				self::callback(
 					static fn ( SecretsStorageProvisioningResult $result ): bool => $code === $result->code()
 						&& $translatedMessage === $result->message()
-						&& null === $result->candidatePath()
+						&& null === $result->candidate_path()
 						&& ! str_contains( $result->message(), 'canary' )
 				)
 			);
@@ -149,7 +149,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 
 	public function testProtectedPostProvisionsAndRedirectsWithoutResultDataInTheUrl(): void {
 		$provisioner = new SetupActionProvisioner(
-			SecretsStorageProvisioningResult::pendingVerification( '/private/canary/secrets.json' )
+			SecretsStorageProvisioningResult::pending_verification( '/private/canary/secrets.json' )
 		);
 
 		try {
@@ -177,7 +177,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 	public function testGetCannotProvisionOrCheckANonce(): void {
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$provisioner               = new SetupActionProvisioner(
-			SecretsStorageProvisioningResult::pendingVerification( '/private/secrets.json' )
+			SecretsStorageProvisioningResult::pending_verification( '/private/secrets.json' )
 		);
 
 		$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatchPostRequests();
@@ -189,7 +189,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 	public function testBothCapabilitiesAreRequiredBeforeMutation(): void {
 		$GLOBALS['ran_booster_test_capabilities']['activate_plugins'] = false;
 		$provisioner = new SetupActionProvisioner(
-			SecretsStorageProvisioningResult::pendingVerification( '/private/secrets.json' )
+			SecretsStorageProvisioningResult::pending_verification( '/private/secrets.json' )
 		);
 
 		$this->expectException( \RuntimeException::class );
@@ -202,7 +202,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 	}
 
 	public function testFailureStaysOnTheProtectedResponseWithoutRedirectOrGlobalNotice(): void {
-		$result      = SecretsStorageProvisioningResult::manualRequired(
+		$result      = SecretsStorageProvisioningResult::manual_required(
 			'filesystem_probe_failed',
 			'The private storage filesystem could not be verified.',
 			'/private/canary/secrets.json'
@@ -222,7 +222,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 
 	public function testUnexpectedFailureIsReducedToAPathlessProtectedResult(): void {
 		$provisioner = new SetupActionProvisioner(
-			SecretsStorageProvisioningResult::setupAvailable( '/private/canary/secrets.json' ),
+			SecretsStorageProvisioningResult::setup_available( '/private/canary/secrets.json' ),
 			true
 		);
 		$dashboard   = $this->createMock( Dashboard::class );
@@ -231,7 +231,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 			->with(
 				self::callback(
 					static fn ( SecretsStorageProvisioningResult $result ): bool => 'provisioning_failed' === $result->code()
-						&& null === $result->candidatePath()
+						&& null === $result->candidate_path()
 						&& ! str_contains( $result->message(), 'canary' )
 				)
 			);
@@ -249,7 +249,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 			),
 		);
 		$provisioner = new SetupActionProvisioner(
-			SecretsStorageProvisioningResult::pendingVerification( '/private/previous/secrets.json' )
+			SecretsStorageProvisioningResult::pending_verification( '/private/previous/secrets.json' )
 		);
 
 		try {
@@ -278,7 +278,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 			),
 		);
 		$provisioner               = new SetupActionProvisioner(
-			SecretsStorageProvisioningResult::pendingVerification( '/private/previous/secrets.json' )
+			SecretsStorageProvisioningResult::pending_verification( '/private/previous/secrets.json' )
 		);
 
 		$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatchPostRequests();
@@ -295,7 +295,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 			),
 		);
 		$provisioner = new SetupActionProvisioner(
-			SecretsStorageProvisioningResult::storageReset(
+			SecretsStorageProvisioningResult::storage_reset(
 				'/private/current/secrets.json',
 				SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC
 			)
@@ -328,7 +328,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 			),
 		);
 		$provisioner               = new SetupActionProvisioner(
-			SecretsStorageProvisioningResult::storageReset(
+			SecretsStorageProvisioningResult::storage_reset(
 				'/private/current/secrets.json',
 				SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC
 			)
@@ -349,7 +349,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 			),
 		);
 		$provisioner = new SetupActionProvisioner(
-			SecretsStorageProvisioningResult::storageReset(
+			SecretsStorageProvisioningResult::storage_reset(
 				'/private/current/secrets.json',
 				SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC
 			)
@@ -373,7 +373,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 			),
 		);
 		$provisioner                             = new SetupActionProvisioner(
-			SecretsStorageProvisioningResult::storageReset(
+			SecretsStorageProvisioningResult::storage_reset(
 				'/private/current/secrets.json',
 				SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC
 			)
@@ -396,7 +396,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 			),
 		);
 		$provisioner = new SetupActionProvisioner(
-			SecretsStorageProvisioningResult::storageNeedsAttention(
+			SecretsStorageProvisioningResult::storage_needs_attention(
 				'/private/current/secrets.json',
 				SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC
 			),
@@ -408,7 +408,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 			->with(
 				self::callback(
 					static fn ( SecretsStorageProvisioningResult $result ): bool => 'storage_reset_failed' === $result->code()
-						&& null === $result->candidatePath()
+						&& null === $result->candidate_path()
 						&& ! str_contains( $result->message(), 'canary' )
 				)
 			);

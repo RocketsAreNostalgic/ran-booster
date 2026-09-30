@@ -846,7 +846,7 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 			$operation();
 			self::fail( 'The invalid authenticated sidecar must fail closed.' );
 		} catch ( SecretsStorageUnavailable $failure ) {
-			self::assertSame( 'local_secret_store_unavailable', $failure->getDiagnosticId() );
+			self::assertSame( 'local_secret_store_unavailable', $failure->get_diagnostic_id() );
 		}
 	}
 

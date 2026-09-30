@@ -25,11 +25,11 @@ final readonly class SignedWebhookVerifier {
 		try {
 			$materials = $this->secrets->webhookMaterials( $request->getProvider() );
 		} catch ( Throwable ) {
-			throw $this->authenticationFailed();
+			throw $this->authentication_failed();
 		}
 
 		if ( array() === $materials || count( $materials ) > SecretsFile::MAX_WEBHOOK_PROFILES ) {
-			throw $this->authenticationFailed();
+			throw $this->authentication_failed();
 		}
 
 		$matches = array();
@@ -43,7 +43,7 @@ final readonly class SignedWebhookVerifier {
 		}
 
 		if ( array() === $matches ) {
-			throw $this->authenticationFailed();
+			throw $this->authentication_failed();
 		}
 		usort(
 			$matches,
@@ -53,9 +53,9 @@ final readonly class SignedWebhookVerifier {
 					'owner'      => 1,
 				);
 
-				$scopeOrder = ( $priority[ $left['scope'] ] ?? 2 ) <=> ( $priority[ $right['scope'] ] ?? 2 );
+				$scope_order = ( $priority[ $left['scope'] ] ?? 2 ) <=> ( $priority[ $right['scope'] ] ?? 2 );
 
-				return 0 !== $scopeOrder ? $scopeOrder : strcmp( $left['id'], $right['id'] );
+				return 0 !== $scope_order ? $scope_order : strcmp( $left['id'], $right['id'] );
 			}
 		);
 
@@ -65,7 +65,7 @@ final readonly class SignedWebhookVerifier {
 	private function signature( WebhookRequest $request, ProviderWebhookPolicy $policy ): string {
 		$values = $request->getRawHeaderValues( $policy->getSignatureHeader() );
 		if ( 1 !== count( $values ) || 1 !== preg_match( '/\Asha256=[a-f0-9]{64}\z/D', $values[0] ) ) {
-			throw $this->authenticationFailed();
+			throw $this->authentication_failed();
 		}
 
 		return $values[0];
@@ -80,7 +80,7 @@ final readonly class SignedWebhookVerifier {
 			|| ! is_string( $material['target'] ?? null )
 			|| ! is_string( $material['secret'] ?? null )
 		) {
-			throw $this->authenticationFailed();
+			throw $this->authentication_failed();
 		}
 
 		$secret = $material['secret'];
@@ -88,24 +88,24 @@ final readonly class SignedWebhookVerifier {
 			|| strlen( $secret ) > self::MAX_SECRET_BYTES
 			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $secret )
 		) {
-			throw $this->authenticationFailed();
+			throw $this->authentication_failed();
 		}
 
-		$authorityId = $material['authority_id'] ?? '';
-		if ( ! is_string( $authorityId ) ) {
-			throw $this->authenticationFailed();
+		$authority_id = $material['authority_id'] ?? '';
+		if ( ! is_string( $authority_id ) ) {
+			throw $this->authentication_failed();
 		}
 
 		return array(
 			'id'           => $id,
 			'scope'        => $material['scope'],
 			'target'       => $material['target'],
-			'authority_id' => $authorityId,
+			'authority_id' => $authority_id,
 			'secret'       => $secret,
 		);
 	}
 
-	private function authenticationFailed(): WebhookRejected {
+	private function authentication_failed(): WebhookRejected {
 		return new WebhookRejected( 401, 'Webhook authentication failed.' );
 	}
 }

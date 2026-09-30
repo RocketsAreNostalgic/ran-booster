@@ -11,19 +11,29 @@ readonly class RepositoryReleaseWorkflowTarget {
 	public function __construct(
 		private string $type,
 		private string $identifier,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 		private int $sourceRevision,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 		private string $providerRepositoryId,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 		private string $packageRoot = '',
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 		private string $installedVersion = '',
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 		private string $expectedUpdateUri = ''
 	) {
 		if ( ! in_array( $this->type, array( 'plugin', 'theme' ), true )
 			|| ! $this->text( $this->identifier, 255 )
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 			|| $this->sourceRevision < 1
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 			|| ! $this->text( $this->providerRepositoryId, 191 )
-			|| ! $this->optionalText( $this->packageRoot, 255 )
-			|| ! $this->optionalText( $this->installedVersion, 255 )
-			|| ! $this->optionalUrl( $this->expectedUpdateUri ) ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
+			|| ! $this->optional_text( $this->packageRoot, 255 )
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
+			|| ! $this->optional_text( $this->installedVersion, 255 )
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
+			|| ! $this->optional_url( $this->expectedUpdateUri ) ) {
 			throw new InvalidArgumentException( 'Release workflow target is invalid.' );
 		}
 	}
@@ -36,23 +46,33 @@ readonly class RepositoryReleaseWorkflowTarget {
 		return $this->identifier;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 	public function sourceRevision(): int {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 		return $this->sourceRevision;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 	public function providerRepositoryId(): string {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 		return $this->providerRepositoryId;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 	public function packageRoot(): string {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 		return $this->packageRoot;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 	public function installedVersion(): string {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 		return $this->installedVersion;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 	public function expectedUpdateUri(): string {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 		return $this->expectedUpdateUri;
 	}
 
@@ -63,11 +83,11 @@ readonly class RepositoryReleaseWorkflowTarget {
 			&& 0 === preg_match( '/[\x00-\x1F\x7F]/', $value );
 	}
 
-	private function optionalText( string $value, int $limit ): bool {
+	private function optional_text( string $value, int $limit ): bool {
 		return '' === $value || $this->text( $value, $limit );
 	}
 
-	private function optionalUrl( string $value ): bool {
+	private function optional_url( string $value ): bool {
 		if ( '' === $value ) {
 			return true;
 		}

@@ -100,7 +100,7 @@ final class ExecutionBoundaryWorker {
 final class ExecutionBoundaryWebhookController {
 	/** @param list<string> $calls */
 	public function __construct( private array &$calls ) {}
-	public function registerRoutes(): void {
+	public function register_routes(): void {
 		$this->calls[] = 'routes'; }
 }
 // phpcs:enable Generic.Files.OneObjectStructurePerFile

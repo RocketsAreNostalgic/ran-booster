@@ -20,11 +20,11 @@ final readonly class SecretsRuntimeAvailability {
 	 * confirmed uninstall entrypoint. This never creates a key and must not be
 	 * used by normal runtime services.
 	 */
-	public static function forConfirmedUninstall( string $pluginFile ): self {
+	public static function for_confirmed_uninstall( string $plugin_file ): self {
 		$plugin   = defined( 'WP_UNINSTALL_PLUGIN' ) ? WP_UNINSTALL_PLUGIN : null;
 		$expected = function_exists( 'plugin_basename' )
-			? plugin_basename( $pluginFile )
-			: basename( dirname( $pluginFile ) ) . '/' . basename( $pluginFile );
+			? plugin_basename( $plugin_file )
+			: basename( dirname( $plugin_file ) ) . '/' . basename( $plugin_file );
 		if ( ! is_string( $plugin )
 			|| ! is_string( $expected )
 			|| '' === $expected
@@ -39,16 +39,16 @@ final readonly class SecretsRuntimeAvailability {
 		return new self( multisite: false );
 	}
 
-	public function isAvailable(): bool {
-		return $this->sodiumAvailable() && ! $this->isMultisite();
+	public function is_available(): bool {
+		return $this->sodium_available() && ! $this->is_multisite();
 	}
 
 	public function code(): string {
-		if ( ! $this->sodiumAvailable() ) {
+		if ( ! $this->sodium_available() ) {
 			return 'sodium_unavailable';
 		}
 
-		return $this->isMultisite() ? 'multisite_unsupported' : 'available';
+		return $this->is_multisite() ? 'multisite_unsupported' : 'available';
 	}
 
 	public function message(): string {
@@ -59,7 +59,7 @@ final readonly class SecretsRuntimeAvailability {
 		};
 	}
 
-	private function sodiumAvailable(): bool {
+	private function sodium_available(): bool {
 		return $this->sodium ?? (
 			extension_loaded( 'sodium' )
 			&& function_exists( 'sodium_crypto_aead_xchacha20poly1305_ietf_encrypt' )
@@ -67,7 +67,7 @@ final readonly class SecretsRuntimeAvailability {
 		);
 	}
 
-	private function isMultisite(): bool {
+	private function is_multisite(): bool {
 		return $this->multisite ?? ( function_exists( 'is_multisite' ) && is_multisite() );
 	}
 }

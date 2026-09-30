@@ -6,7 +6,7 @@ namespace RAN\Admin;
 
 final class DevelopmentEnvironmentDetector {
 
-	public static function isLikely(): bool {
+	public static function is_likely(): bool {
 		if (
 			in_array( wp_get_environment_type(), array( 'local', 'development' ), true )
 			|| wp_is_development_mode( 'plugin' )
@@ -16,12 +16,12 @@ final class DevelopmentEnvironmentDetector {
 			return true;
 		}
 
-		$siteUrl = wp_parse_url( home_url() );
-		if ( ! is_array( $siteUrl ) ) {
+		$site_url = wp_parse_url( home_url() );
+		if ( ! is_array( $site_url ) ) {
 			return false;
 		}
 
-		$host = strtolower( trim( (string) ( $siteUrl['host'] ?? '' ), '[]' ) );
+		$host = strtolower( trim( (string) ( $site_url['host'] ?? '' ), '[]' ) );
 		if (
 			in_array( $host, array( 'localhost', '127.0.0.1', '::1' ), true )
 			|| str_ends_with( $host, '.localhost' )
@@ -29,14 +29,14 @@ final class DevelopmentEnvironmentDetector {
 			return true;
 		}
 
-		$port = isset( $siteUrl['port'] ) ? (int) $siteUrl['port'] : null;
+		$port = isset( $site_url['port'] ) ? (int) $site_url['port'] : null;
 		if ( null === $port ) {
 			return false;
 		}
 
-		$scheme      = strtolower( (string) ( $siteUrl['scheme'] ?? '' ) );
-		$defaultPort = 'https' === $scheme ? 443 : ( 'http' === $scheme ? 80 : null );
+		$scheme       = strtolower( (string) ( $site_url['scheme'] ?? '' ) );
+		$default_port = 'https' === $scheme ? 443 : ( 'http' === $scheme ? 80 : null );
 
-		return null === $defaultPort || $port !== $defaultPort;
+		return null === $default_port || $port !== $default_port;
 	}
 }

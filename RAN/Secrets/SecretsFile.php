@@ -38,15 +38,15 @@ class SecretsFile {
 
 	/** @var array<string, mixed>|null */
 	private ?array $constants;
-	private ProviderSecretPolicyCatalog $providerPolicies;
-	private SiteKeyStore $keyStore;
+	private ProviderSecretPolicyCatalog $provider_policies;
+	private SiteKeyStore $key_store;
 	private EncryptedSecretsEnvelopeCodec $codec;
-	private PrivateLocationCandidateResolver $locationResolver;
+	private PrivateLocationCandidateResolver $location_resolver;
 	private SecretsRuntimeAvailability $availability;
-	private bool $validateConfiguredPath;
+	private bool $validate_configured_path;
 
 	/** @var array<string, array<string, array<string, mixed>>> */
-	private array $temporaryCredentials = array();
+	private array $temporary_credentials = array();
 
 	/**
 	 * @param string|null                     $path             Absolute encrypted sidecar path. Null reads the encrypted-path constant.
@@ -56,25 +56,32 @@ class SecretsFile {
 	public function __construct(
 		?string $path = null,
 		?array $constants = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
 		?ProviderSecretPolicyCatalog $providerPolicies = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
 		?SiteKeyStore $keyStore = null,
 		?EncryptedSecretsEnvelopeCodec $codec = null,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
 		?PrivateLocationCandidateResolver $locationResolver = null,
 		?SecretsRuntimeAvailability $availability = null
 	) {
-		$this->validateConfiguredPath = null === $path;
-		$this->path                   = null === $path ? $this->defaultPath() : $path;
-		$this->constants              = $constants;
-		$this->providerPolicies       = $providerPolicies ?? new ProviderSecretPolicyCatalog();
-		$this->keyStore               = $keyStore ?? new SiteKeyStore();
-		$this->codec                  = $codec ?? new EncryptedSecretsEnvelopeCodec();
-		$this->locationResolver       = $locationResolver ?? new PrivateLocationCandidateResolver();
-		$this->availability           = $availability ?? new SecretsRuntimeAvailability();
+		$this->validate_configured_path = null === $path;
+		$this->path                     = null === $path ? $this->default_path() : $path;
+		$this->constants                = $constants;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
+		$this->provider_policies = $providerPolicies ?? new ProviderSecretPolicyCatalog();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
+		$this->key_store = $keyStore ?? new SiteKeyStore();
+		$this->codec     = $codec ?? new EncryptedSecretsEnvelopeCodec();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
+		$this->location_resolver = $locationResolver ?? new PrivateLocationCandidateResolver();
+		$this->availability      = $availability ?? new SecretsRuntimeAvailability();
 	}
 
 	/**
 	 * Issue a read-only credential view restricted to one registered provider.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function credentialsFor( ProviderCode|string $provider ): ProviderCredentialStore {
 		$provider = $provider instanceof ProviderCode ? $provider : ProviderCode::parse( $provider );
 
@@ -86,29 +93,30 @@ class SecretsFile {
 	 *
 	 * @return bool True when insecure permissions were repaired.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function verifyAndSecure(): bool {
-		if ( ! $this->availability->isAvailable() || ! $this->hasManagedMaterial() ) {
+		if ( ! $this->availability->is_available() || ! $this->has_managed_material() ) {
 			return false;
 		}
 
-		return $this->withLock(
+		return $this->with_lock(
 			LOCK_EX,
 			false,
 			function (): bool {
-				$key     = $this->loadKey();
-				$hasFile = $this->hasFile();
-				if ( null === $key && ! $hasFile ) {
+				$key      = $this->load_key();
+				$has_file = $this->has_file();
+				if ( null === $key && ! $has_file ) {
 					return false;
 				}
-				if ( null === $key || ! $hasFile ) {
+				if ( null === $key || ! $has_file ) {
 					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Component presence selects one fixed pathless failure.
-					throw $this->incompleteStore( $key, $hasFile );
+					throw $this->incomplete_store( $key, $has_file );
 				}
 
-				$permissionsChanged = $this->secureExistingFile();
-				$this->readEncryptedDocument( $key );
+				$permissions_changed = $this->secure_existing_file();
+				$this->read_encrypted_document( $key );
 
-				return $permissionsChanged;
+				return $permissions_changed;
 			}
 		);
 	}
@@ -117,10 +125,11 @@ class SecretsFile {
 	 * Prove that managed credentials can be read or initialized without mutating
 	 * the key, ciphertext or final lock.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function assertManagedStorageReady(): void {
-		$this->assertAvailable();
-		$this->assertConfiguredLocation();
-		$this->fileDocument();
+		$this->assert_available();
+		$this->assert_configured_location();
+		$this->file_document();
 	}
 
 	/**
@@ -130,19 +139,20 @@ class SecretsFile {
 	 * independently verify the candidate path and its metadata first.
 	 * Authentication failures throw; provider-fitness failures return false.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function recoveryCredentialsFitAt( string $path ): bool {
 		$candidate = new self(
 			$path,
 			$this->constants,
-			$this->providerPolicies,
-			$this->keyStore,
+			$this->provider_policies,
+			$this->key_store,
 			$this->codec,
-			$this->locationResolver,
+			$this->location_resolver,
 			$this->availability
 		);
-		$document  = $candidate->fileDocument();
+		$document  = $candidate->file_document();
 		try {
-			$candidate->assertRecoveryCredentialFitness( $document );
+			$candidate->assert_recovery_credential_fitness( $document );
 
 			return true;
 		} catch ( \Throwable ) {
@@ -156,37 +166,41 @@ class SecretsFile {
 	 * The check is read-only. A later reset must repeat it while holding the
 	 * managed exclusive lock.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function canResetOrphanedKeyAt( string $expectedPath ): bool {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
 		if ( ! $this->canRecoverFromMissingCiphertextAt( $expectedPath ) ) {
 			return false;
 		}
 
-		return null !== $this->loadKey( false );
+		return null !== $this->load_key( false );
 	}
 
 	/**
 	 * Verify that missing ciphertext is paired with no lock or a secure managed lock.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function canRecoverFromMissingCiphertextAt( string $expectedPath ): bool {
-		$this->assertAvailable();
+		$this->assert_available();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
 		if ( ! is_string( $this->path ) || ! hash_equals( $this->path, $expectedPath ) ) {
 			return false;
 		}
 
-		$this->assertConfiguredLocation();
-		if ( $this->hasFile() ) {
+		$this->assert_configured_location();
+		if ( $this->has_file() ) {
 			return false;
 		}
 
-		$lock = $this->lockPath();
+		$lock = $this->lock_path();
 		if ( ! file_exists( $lock ) && ! is_link( $lock ) ) {
 			return true;
 		}
 
-		return $this->withLock(
+		return $this->with_lock(
 			LOCK_SH,
 			false,
-			fn (): bool => ! $this->hasFile()
+			fn (): bool => ! $this->has_file()
 		);
 	}
 
@@ -196,24 +210,26 @@ class SecretsFile {
 	 * The secure lock remains so the next normal credential write can initialize
 	 * a fresh key and authenticated sidecar through the existing first-write path.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function resetOrphanedKeyAt( string $expectedPath ): void {
-		$this->assertAvailable();
+		$this->assert_available();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
 		if ( ! is_string( $this->path ) || ! hash_equals( $this->path, $expectedPath ) ) {
 			throw $this->unavailable( 'The encrypted Booster secrets path changed before reset.' );
 		}
 
-		$lock       = $this->lockPath();
-		$createLock = ! file_exists( $lock ) && ! is_link( $lock );
-		$this->withLock(
+		$lock        = $this->lock_path();
+		$create_lock = ! file_exists( $lock ) && ! is_link( $lock );
+		$this->with_lock(
 			LOCK_EX,
-			$createLock,
+			$create_lock,
 			function (): void {
-				$key = $this->loadKey( false );
-				if ( null === $key || $this->hasFile() ) {
+				$key = $this->load_key( false );
+				if ( null === $key || $this->has_file() ) {
 					throw $this->unavailable( 'The encrypted Booster secrets state changed before reset.' );
 				}
 
-				$this->deleteExactKey( $key );
+				$this->delete_exact_key( $key );
 			}
 		);
 	}
@@ -225,26 +241,28 @@ class SecretsFile {
 	 * verifies only the exact managed path, ownership, inode and permission
 	 * boundaries. A later reset repeats every check under the exclusive lock.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function canResetOrphanedCiphertextAt( string $expectedPath ): bool {
-		$this->assertAvailable();
+		$this->assert_available();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
 		if ( ! is_string( $this->path ) || ! hash_equals( $this->path, $expectedPath ) ) {
 			return false;
 		}
 
-		$this->assertConfiguredLocation();
-		if ( null !== $this->loadKey( false ) || ! $this->hasFile() ) {
+		$this->assert_configured_location();
+		if ( null !== $this->load_key( false ) || ! $this->has_file() ) {
 			return false;
 		}
 
-		return $this->withLock(
+		return $this->with_lock(
 			LOCK_SH,
 			false,
 			function (): bool {
-				if ( null !== $this->loadKey( false ) || ! $this->hasFile() ) {
+				if ( null !== $this->load_key( false ) || ! $this->has_file() ) {
 					return false;
 				}
 
-				$this->deletableFileStat( (string) $this->path, 'encrypted Booster secrets file' );
+				$this->deletable_file_stat( (string) $this->path, 'encrypted Booster secrets file' );
 
 				return true;
 			}
@@ -257,25 +275,27 @@ class SecretsFile {
 	 * The secure lock remains so the next normal credential write can create a
 	 * fresh database key and authenticated sidecar through the first-write path.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function resetOrphanedCiphertextAt( string $expectedPath ): void {
-		$this->assertAvailable();
+		$this->assert_available();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
 		if ( ! is_string( $this->path ) || ! hash_equals( $this->path, $expectedPath ) ) {
 			throw $this->unavailable( 'The encrypted Booster secrets path changed before reset.' );
 		}
 
-		$this->withLock(
+		$this->with_lock(
 			LOCK_EX,
 			false,
 			function (): void {
-				if ( null !== $this->loadKey( false ) || ! $this->hasFile() ) {
+				if ( null !== $this->load_key( false ) || ! $this->has_file() ) {
 					throw $this->unavailable( 'The encrypted Booster secrets state changed before reset.' );
 				}
 
-				$ciphertext = $this->deletableFileStat(
+				$ciphertext = $this->deletable_file_stat(
 					(string) $this->path,
 					'encrypted Booster secrets file'
 				);
-				$this->deleteExactFile(
+				$this->delete_exact_file(
 					(string) $this->path,
 					$ciphertext,
 					'Could not remove the orphaned encrypted Booster secrets file safely.'
@@ -290,29 +310,30 @@ class SecretsFile {
 	 * A configured but pristine location returns false. Incomplete, unsafe or
 	 * unauthenticated material throws the existing typed storage exception.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function hasHealthyManagedStorage(): bool {
-		$this->assertAvailable();
-		$this->assertConfiguredLocation();
+		$this->assert_available();
+		$this->assert_configured_location();
 
-		if ( ! $this->hasManagedMaterial( false ) ) {
+		if ( ! $this->has_managed_material( false ) ) {
 			return false;
 		}
 
-		return $this->withLock(
+		return $this->with_lock(
 			LOCK_SH,
 			false,
 			function (): bool {
-				$key     = $this->loadKey( false );
-				$hasFile = $this->hasFile();
-				if ( null === $key && ! $hasFile ) {
+				$key      = $this->load_key( false );
+				$has_file = $this->has_file();
+				if ( null === $key && ! $has_file ) {
 					return false;
 				}
-				if ( null === $key || ! $hasFile ) {
+				if ( null === $key || ! $has_file ) {
 					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Component presence selects one fixed pathless failure.
-					throw $this->incompleteStore( $key, $hasFile );
+					throw $this->incomplete_store( $key, $has_file );
 				}
 
-				$this->readEncryptedDocument( $key );
+				$this->read_encrypted_document( $key );
 
 				return true;
 			}
@@ -324,26 +345,27 @@ class SecretsFile {
 	 *
 	 * @return array<string, array<string, mixed>>
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function credentialProfiles( ProviderCode|string $provider ): array {
-		if ( ! $this->availability->isAvailable() ) {
+		if ( ! $this->availability->is_available() ) {
 			return array();
 		}
 
-		$providerCode = $this->providerValue( $provider );
-		$profiles     = array();
-		$records      = array();
-		$constant     = $this->constantCredential(
-			$providerCode,
-			$this->providerPolicies->credentialPolicy( $provider )
+		$provider_code = $this->provider_value( $provider );
+		$profiles      = array();
+		$records       = array();
+		$constant      = $this->constant_credential(
+			$provider_code,
+			$this->provider_policies->credentialPolicy( $provider )
 		);
 		if ( null !== $constant ) {
 			$records[ self::CONSTANT_PROFILE ] = $constant;
 		}
 
-		$document = $this->fileDocument();
-		foreach ( $document[ self::CREDENTIALS ][ $providerCode ] ?? array() as $id => $record ) {
-			$runtime = $this->runtimeCredentialRecord( $providerCode, $id, $record );
-			if ( ! $this->credentialDestroyed( $runtime ) ) {
+		$document = $this->file_document();
+		foreach ( $document[ self::CREDENTIALS ][ $provider_code ] ?? array() as $id => $record ) {
+			$runtime = $this->runtime_credential_record( $provider_code, $id, $record );
+			if ( ! $this->credential_destroyed( $runtime ) ) {
 				$records[ $id ] = $runtime;
 			}
 		}
@@ -371,81 +393,82 @@ class SecretsFile {
 	 *
 	 * @return array<string, mixed>|null
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function credentialMaterial( ProviderCode|string $provider, ?string $id = null ): ?array {
-		if ( ! $this->availability->isAvailable() && self::CONSTANT_PROFILE !== $id ) {
-			$this->assertAvailable();
+		if ( ! $this->availability->is_available() && self::CONSTANT_PROFILE !== $id ) {
+			$this->assert_available();
 		}
 
-		$providerCode = $this->providerValue( $provider );
+		$provider_code = $this->provider_value( $provider );
 		if ( null !== $id && '' !== trim( $id ) ) {
 			$id = trim( $id );
 			if ( self::CONSTANT_PROFILE === $id ) {
-				$constant = $this->constantCredential(
-					$providerCode,
-					$this->providerPolicies->credentialPolicy( $provider )
+				$constant = $this->constant_credential(
+					$provider_code,
+					$this->provider_policies->credentialPolicy( $provider )
 				);
 
 				return null === $constant
 					? null
-					: $this->runtimeConstantCredential( $providerCode, $constant );
+					: $this->runtime_constant_credential( $provider_code, $constant );
 			}
-			if ( isset( $this->temporaryCredentials[ $providerCode ][ $id ] ) ) {
-				return $this->temporaryCredentials[ $providerCode ][ $id ];
+			if ( isset( $this->temporary_credentials[ $provider_code ][ $id ] ) ) {
+				return $this->temporary_credentials[ $provider_code ][ $id ];
 			}
 
-			$document = $this->fileDocument();
-			$record   = $document[ self::CREDENTIALS ][ $providerCode ][ $id ] ?? null;
+			$document = $this->file_document();
+			$record   = $document[ self::CREDENTIALS ][ $provider_code ][ $id ] ?? null;
 			if ( ! is_array( $record ) ) {
 				return null;
 			}
 
-			$runtime = $this->runtimeCredentialRecord( $providerCode, $id, $record );
-			if ( $this->credentialDestroyed( $runtime ) ) {
+			$runtime = $this->runtime_credential_record( $provider_code, $id, $record );
+			if ( $this->credential_destroyed( $runtime ) ) {
 				return null;
 			}
 
-			$runtime = $this->runtimeCredentialRecord(
-				$providerCode,
+			$runtime = $this->runtime_credential_record(
+				$provider_code,
 				$id,
-				$this->revalidateStoredCredential( $providerCode, $id, $record )
+				$this->revalidate_stored_credential( $provider_code, $id, $record )
 			);
 
 			return $runtime;
 		}
 
-		$constant = $this->constantCredential(
-			$providerCode,
-			$this->providerPolicies->credentialPolicy( $provider )
+		$constant = $this->constant_credential(
+			$provider_code,
+			$this->provider_policies->credentialPolicy( $provider )
 		);
 		if ( null !== $constant ) {
 			return $constant;
 		}
 
-		$candidates = $this->temporaryCredentials[ $providerCode ] ?? array();
-		$document   = $this->fileDocument();
-		foreach ( $document[ self::CREDENTIALS ][ $providerCode ] ?? array() as $storedId => $record ) {
-			$runtime = $this->runtimeCredentialRecord( $providerCode, $storedId, $record );
-			if ( ! $this->credentialDestroyed( $runtime ) ) {
-				$candidates[ $storedId ] = $runtime;
+		$candidates = $this->temporary_credentials[ $provider_code ] ?? array();
+		$document   = $this->file_document();
+		foreach ( $document[ self::CREDENTIALS ][ $provider_code ] ?? array() as $stored_id => $record ) {
+			$runtime = $this->runtime_credential_record( $provider_code, $stored_id, $record );
+			if ( ! $this->credential_destroyed( $runtime ) ) {
+				$candidates[ $stored_id ] = $runtime;
 			}
 		}
 		if ( 1 !== count( $candidates ) ) {
 			return null;
 		}
 
-		$selectedId = (string) array_key_first( $candidates );
-		$selected   = $candidates[ $selectedId ];
+		$selected_id = (string) array_key_first( $candidates );
+		$selected    = $candidates[ $selected_id ];
 		if ( 'file' !== ( $selected['source'] ?? null ) ) {
 			return $selected;
 		}
 
-		return $this->runtimeCredentialRecord(
-			$providerCode,
-			$selectedId,
-			$this->revalidateStoredCredential(
-				$providerCode,
-				$selectedId,
-				$document[ self::CREDENTIALS ][ $providerCode ][ $selectedId ]
+		return $this->runtime_credential_record(
+			$provider_code,
+			$selected_id,
+			$this->revalidate_stored_credential(
+				$provider_code,
+				$selected_id,
+				$document[ self::CREDENTIALS ][ $provider_code ][ $selected_id ]
 			)
 		);
 	}
@@ -461,20 +484,21 @@ class SecretsFile {
 	 * @param callable(string): TResult $operation
 	 * @return TResult
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function withTemporaryCredential(
 		ProviderCode|string $provider,
 		array $metadata,
 		#[\SensitiveParameter] string $secret,
 		#[\SensitiveParameter] callable $operation
 	): mixed {
-		$this->assertAvailable();
-		$providerCode = $this->providerValue( $provider );
-		$id           = 'tmp_' . bin2hex( random_bytes( 16 ) );
-		$record       = $this->validateCredential( $providerCode, $id, $metadata, $secret, true );
+		$this->assert_available();
+		$provider_code = $this->provider_value( $provider );
+		$id            = 'tmp_' . bin2hex( random_bytes( 16 ) );
+		$record        = $this->validate_credential( $provider_code, $id, $metadata, $secret, true );
 
-		$this->temporaryCredentials[ $providerCode ][ $id ] = array(
+		$this->temporary_credentials[ $provider_code ][ $id ] = array(
 			'id'            => $id,
-			'provider'      => $providerCode,
+			'provider'      => $provider_code,
 			'label'         => $record['label'],
 			'kind'          => $record['kind'],
 			'configuration' => $record['configuration'],
@@ -486,9 +510,9 @@ class SecretsFile {
 		try {
 			return $operation( $id );
 		} finally {
-			unset( $this->temporaryCredentials[ $providerCode ][ $id ] );
-			if ( array() === $this->temporaryCredentials[ $providerCode ] ) {
-				unset( $this->temporaryCredentials[ $providerCode ] );
+			unset( $this->temporary_credentials[ $provider_code ][ $id ] );
+			if ( array() === $this->temporary_credentials[ $provider_code ] ) {
+				unset( $this->temporary_credentials[ $provider_code ] );
 			}
 		}
 	}
@@ -503,6 +527,7 @@ class SecretsFile {
 	 *
 	 * @return list<string>
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function importCredentialsIfAbsent(
 		#[\SensitiveParameter] PackageBlueprint $blueprint,
 		#[\SensitiveParameter] BlueprintCredential ...$credentials
@@ -510,9 +535,9 @@ class SecretsFile {
 		if ( array() === $credentials ) {
 			return array();
 		}
-		$this->assertAvailable();
+		$this->assert_available();
 
-		$records = $this->portableCredentialRecords( $blueprint, $credentials );
+		$records = $this->portable_credential_records( $blueprint, $credentials );
 
 		return $this->mutate(
 			function ( #[\SensitiveParameter] array $document ) use ( $records ): array {
@@ -542,6 +567,7 @@ class SecretsFile {
 	 * @param array<string, mixed> $metadata Non-secret label, kind and configuration.
 	 * @param bool                 $submitted Apply provider checks for a newly submitted admin secret.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function saveCredential(
 		ProviderCode|string $provider,
 		?string $id,
@@ -549,13 +575,13 @@ class SecretsFile {
 		#[\SensitiveParameter] ?string $secret,
 		bool $submitted = false
 	): string {
-		$this->assertAvailable();
-		$providerCode = $this->providerValue( $provider );
-		$id           = $this->writableId( $id, 'cred' );
-		$document     = $this->fileDocument();
-		$existing     = $document[ self::CREDENTIALS ][ $providerCode ][ $id ] ?? null;
-		$retainSecret = null === $secret || '' === $secret;
-		if ( $retainSecret ) {
+		$this->assert_available();
+		$provider_code = $this->provider_value( $provider );
+		$id            = $this->writable_id( $id, 'cred' );
+		$document      = $this->file_document();
+		$existing      = $document[ self::CREDENTIALS ][ $provider_code ][ $id ] ?? null;
+		$retain_secret = null === $secret || '' === $secret;
+		if ( $retain_secret ) {
 			if ( is_array( $existing ) ) {
 				$secret = $existing['secret'];
 				if ( ! array_key_exists( 'provider_destroy_on', $metadata ) && isset( $existing['provider_destroy_on'] ) ) {
@@ -563,34 +589,35 @@ class SecretsFile {
 				}
 			}
 		}
-		$record = $this->validateCredential( $providerCode, $id, $metadata, $secret, $submitted && ! $retainSecret );
+		$record = $this->validate_credential( $provider_code, $id, $metadata, $secret, $submitted && ! $retain_secret );
 
 		return $this->mutate(
-			function ( #[\SensitiveParameter] array $document ) use ( $providerCode, $id, $record, $existing ): array {
-				if ( ( $document[ self::CREDENTIALS ][ $providerCode ][ $id ] ?? null ) !== $existing ) {
+			function ( #[\SensitiveParameter] array $document ) use ( $provider_code, $id, $record, $existing ): array {
+				if ( ( $document[ self::CREDENTIALS ][ $provider_code ][ $id ] ?? null ) !== $existing ) {
 					throw new RuntimeException( 'Credential material changed while it was being validated.' );
 				}
 
-				$document[ self::CREDENTIALS ][ $providerCode ][ $id ] = $record;
+				$document[ self::CREDENTIALS ][ $provider_code ][ $id ] = $record;
 
 				return array( $document, $id );
 			}
 		);
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function deleteCredential( ProviderCode|string $provider, string $id ): bool {
-		$this->assertAvailable();
-		$providerCode = $this->providerValue( $provider );
-		$this->assertWritableId( $id );
+		$this->assert_available();
+		$provider_code = $this->provider_value( $provider );
+		$this->assert_writable_id( $id );
 
 		return $this->mutate(
-			function ( #[\SensitiveParameter] array $document ) use ( $providerCode, $id ): array {
-				if ( ! isset( $document[ self::CREDENTIALS ][ $providerCode ][ $id ] ) ) {
+			function ( #[\SensitiveParameter] array $document ) use ( $provider_code, $id ): array {
+				if ( ! isset( $document[ self::CREDENTIALS ][ $provider_code ][ $id ] ) ) {
 					return array( $document, false, false );
 				}
 
-				unset( $document[ self::CREDENTIALS ][ $providerCode ][ $id ] );
-				$this->removeEmptyProvider( $document[ self::CREDENTIALS ], $providerCode );
+				unset( $document[ self::CREDENTIALS ][ $provider_code ][ $id ] );
+				$this->remove_empty_provider( $document[ self::CREDENTIALS ], $provider_code );
 
 				return array( $document, true );
 			}
@@ -604,20 +631,24 @@ class SecretsFile {
 	 * It remains encrypted with the credential and can only shorten its local
 	 * retention window.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function recordCredentialProviderExpiry( ProviderCode|string $provider, string $id, string $expiresOn ): void {
-		$this->assertAvailable();
-		$providerCode = $this->providerValue( $provider );
-		$this->assertWritableId( $id );
-		$this->requireDate( $expiresOn, 'Credential provider expiry' );
+		$this->assert_available();
+		$provider_code = $this->provider_value( $provider );
+		$this->assert_writable_id( $id );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
+		$this->require_date( $expiresOn, 'Credential provider expiry' );
 
 		$this->mutate(
-			function ( #[\SensitiveParameter] array $document ) use ( $providerCode, $id, $expiresOn ): array {
-				$record = $document[ self::CREDENTIALS ][ $providerCode ][ $id ] ?? null;
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
+			function ( #[\SensitiveParameter] array $document ) use ( $provider_code, $id, $expiresOn ): array {
+				$record = $document[ self::CREDENTIALS ][ $provider_code ][ $id ] ?? null;
 				if ( ! is_array( $record ) || empty( $record['self_destruct'] ) ) {
 					return array( $document, null, false );
 				}
-				$record['provider_destroy_on']                         = $expiresOn;
-				$document[ self::CREDENTIALS ][ $providerCode ][ $id ] = $record;
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
+				$record['provider_destroy_on']                          = $expiresOn;
+				$document[ self::CREDENTIALS ][ $provider_code ][ $id ] = $record;
 
 				return array( $document, null );
 			}
@@ -629,20 +660,21 @@ class SecretsFile {
 	 *
 	 * @return array<string, list<string>> Provider-scoped removed IDs.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function purgeExpiredCredentials(): array {
-		$this->assertAvailable();
+		$this->assert_available();
 
 		return $this->mutate(
 			function ( #[\SensitiveParameter] array $document ): array {
 				$removed = array();
 				foreach ( $document[ self::CREDENTIALS ] as $provider => &$records ) {
 					foreach ( $records as $id => $record ) {
-						if ( $this->credentialDestroyed( $record ) ) {
+						if ( $this->credential_destroyed( $record ) ) {
 							unset( $records[ $id ] );
 							$removed[ $provider ][] = $id;
 						}
 					}
-					$this->removeEmptyProvider( $document[ self::CREDENTIALS ], $provider );
+					$this->remove_empty_provider( $document[ self::CREDENTIALS ], $provider );
 				}
 				unset( $records );
 
@@ -656,32 +688,33 @@ class SecretsFile {
 	 *
 	 * @return array<string, array<string, mixed>>
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function webhookProfiles( ProviderCode|string $provider ): array {
-		if ( ! $this->availability->isAvailable() ) {
+		if ( ! $this->availability->is_available() ) {
 			return array();
 		}
 
-		$profiles     = array();
-		$providerCode = $this->providerValue( $provider );
-		$records      = array();
-		$constant     = $this->constantWebhook(
-			$providerCode,
-			$this->providerPolicies->webhookPolicy( $provider )
+		$profiles      = array();
+		$provider_code = $this->provider_value( $provider );
+		$records       = array();
+		$constant      = $this->constant_webhook(
+			$provider_code,
+			$this->provider_policies->webhookPolicy( $provider )
 		);
 		if ( null !== $constant ) {
 			$records[ self::CONSTANT_PROFILE ] = $constant + array(
 				'id'        => self::CONSTANT_PROFILE,
-				'provider'  => $providerCode,
+				'provider'  => $provider_code,
 				'source'    => 'constant',
 				'immutable' => true,
 			);
 		}
 
-		$document = $this->fileDocument();
-		foreach ( $document[ self::WEBHOOKS ][ $providerCode ] ?? array() as $id => $record ) {
+		$document = $this->file_document();
+		foreach ( $document[ self::WEBHOOKS ][ $provider_code ] ?? array() as $id => $record ) {
 			$records[ $id ] = $record + array(
 				'id'        => $id,
-				'provider'  => $providerCode,
+				'provider'  => $provider_code,
 				'source'    => 'file',
 				'immutable' => false,
 			);
@@ -690,7 +723,7 @@ class SecretsFile {
 		foreach ( $records as $id => $record ) {
 			$profiles[ $id ] = array(
 				'id'           => $id,
-				'provider'     => $providerCode,
+				'provider'     => $provider_code,
 				'label'        => $record['label'],
 				'scope'        => $record['scope'],
 				'target'       => $record['target'],
@@ -711,17 +744,18 @@ class SecretsFile {
 	 *
 	 * @return array<string, array<string, mixed>>
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function webhookMaterials( ProviderCode|string $provider ): array {
-		$this->assertAvailable();
-		$policy       = $this->providerPolicies->webhookPolicy( $provider );
-		$providerCode = $this->providerValue( $provider );
-		$records      = array();
-		$constant     = $this->constantWebhook( $providerCode, $policy );
+		$this->assert_available();
+		$policy        = $this->provider_policies->webhookPolicy( $provider );
+		$provider_code = $this->provider_value( $provider );
+		$records       = array();
+		$constant      = $this->constant_webhook( $provider_code, $policy );
 
 		if ( null !== $constant ) {
 			$records[ self::CONSTANT_PROFILE ] = array(
 				'id'           => self::CONSTANT_PROFILE,
-				'provider'     => $providerCode,
+				'provider'     => $provider_code,
 				'label'        => $constant['label'],
 				'scope'        => $constant['scope'],
 				'target'       => $constant['target'],
@@ -734,14 +768,14 @@ class SecretsFile {
 			);
 		}
 
-		$document = $this->fileDocument();
-		$stored   = $document[ self::WEBHOOKS ][ $providerCode ] ?? array();
+		$document = $this->file_document();
+		$stored   = $document[ self::WEBHOOKS ][ $provider_code ] ?? array();
 
 		foreach ( $stored as $id => $record ) {
-			$record         = $this->revalidateStoredWebhook( $providerCode, $id, $record );
+			$record         = $this->revalidate_stored_webhook( $provider_code, $id, $record );
 			$records[ $id ] = array(
 				'id'           => $id,
-				'provider'     => $providerCode,
+				'provider'     => $provider_code,
 				'label'        => $record['label'],
 				'scope'        => $record['scope'],
 				'target'       => $record['target'],
@@ -762,21 +796,22 @@ class SecretsFile {
 	 *
 	 * @param array<string, mixed> $metadata Non-secret label, scope and target.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function saveWebhook(
 		ProviderCode|string $provider,
 		?string $id,
 		array $metadata,
 		#[\SensitiveParameter] ?string $secret
 	): string {
-		$this->assertAvailable();
-		$providerCode = $this->providerValue( $provider );
-		$id           = $this->writableId( $id, 'wh' );
-		$document     = $this->fileDocument();
-		$existing     = $document[ self::WEBHOOKS ][ $providerCode ][ $id ] ?? null;
+		$this->assert_available();
+		$provider_code = $this->provider_value( $provider );
+		$id            = $this->writable_id( $id, 'wh' );
+		$document      = $this->file_document();
+		$existing      = $document[ self::WEBHOOKS ][ $provider_code ][ $id ] ?? null;
 		if ( ( null === $secret || '' === $secret ) && is_array( $existing ) ) {
 			$secret = $existing['secret'];
 		}
-		$record = $this->validateWebhook( $providerCode, $id, $metadata, $secret, true );
+		$record = $this->validate_webhook( $provider_code, $id, $metadata, $secret, true );
 		if ( is_array( $existing ) ) {
 			foreach ( array( 'scope', 'target', 'authority_id', 'origin' ) as $immutable ) {
 				if ( ! hash_equals( (string) $existing[ $immutable ], (string) $record[ $immutable ] ) ) {
@@ -789,34 +824,35 @@ class SecretsFile {
 		}
 
 		return $this->mutate(
-			function ( #[\SensitiveParameter] array $document ) use ( $providerCode, $id, $record, $existing ): array {
-				if ( ( $document[ self::WEBHOOKS ][ $providerCode ][ $id ] ?? null ) !== $existing ) {
+			function ( #[\SensitiveParameter] array $document ) use ( $provider_code, $id, $record, $existing ): array {
+				if ( ( $document[ self::WEBHOOKS ][ $provider_code ][ $id ] ?? null ) !== $existing ) {
 					throw new RuntimeException( 'Webhook material changed while it was being validated.' );
 				}
 
-				$records        = $document[ self::WEBHOOKS ][ $providerCode ] ?? array();
+				$records        = $document[ self::WEBHOOKS ][ $provider_code ] ?? array();
 				$records[ $id ] = $record;
-				$this->assertWebhookCollection( $records, true );
-				$document[ self::WEBHOOKS ][ $providerCode ] = $records;
+				$this->assert_webhook_collection( $records, true );
+				$document[ self::WEBHOOKS ][ $provider_code ] = $records;
 
 				return array( $document, $id );
 			}
 		);
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function deleteWebhook( ProviderCode|string $provider, string $id ): bool {
-		$this->assertAvailable();
-		$providerCode = $this->providerValue( $provider );
-		$this->assertWritableId( $id );
+		$this->assert_available();
+		$provider_code = $this->provider_value( $provider );
+		$this->assert_writable_id( $id );
 
 		return $this->mutate(
-			function ( #[\SensitiveParameter] array $document ) use ( $providerCode, $id ): array {
-				if ( ! isset( $document[ self::WEBHOOKS ][ $providerCode ][ $id ] ) ) {
+			function ( #[\SensitiveParameter] array $document ) use ( $provider_code, $id ): array {
+				if ( ! isset( $document[ self::WEBHOOKS ][ $provider_code ][ $id ] ) ) {
 					return array( $document, false, false );
 				}
 
-				unset( $document[ self::WEBHOOKS ][ $providerCode ][ $id ] );
-				$this->removeEmptyProvider( $document[ self::WEBHOOKS ], $providerCode );
+				unset( $document[ self::WEBHOOKS ][ $provider_code ][ $id ] );
+				$this->remove_empty_provider( $document[ self::WEBHOOKS ], $provider_code );
 
 				return array( $document, true );
 			}
@@ -828,23 +864,27 @@ class SecretsFile {
 	 *
 	 * @internal Core operation recovery only.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function deleteWebhookIfRevision( ProviderCode|string $provider, string $id, int $expectedRevision ): bool {
-		$this->assertAvailable();
-		$providerCode = $this->providerValue( $provider );
-		$this->assertWritableId( $id );
+		$this->assert_available();
+		$provider_code = $this->provider_value( $provider );
+		$this->assert_writable_id( $id );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
 		if ( $expectedRevision < 1 ) {
 			throw new RuntimeException( 'Webhook secret revision must be positive.' );
 		}
 
 		return $this->mutate(
-			function ( #[\SensitiveParameter] array $document ) use ( $providerCode, $id, $expectedRevision ): array {
-				$record = $document[ self::WEBHOOKS ][ $providerCode ][ $id ] ?? null;
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
+			function ( #[\SensitiveParameter] array $document ) use ( $provider_code, $id, $expectedRevision ): array {
+				$record = $document[ self::WEBHOOKS ][ $provider_code ][ $id ] ?? null;
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
 				if ( ! is_array( $record ) || $expectedRevision !== (int) ( $record['revision'] ?? 0 ) ) {
 					return array( $document, false, false );
 				}
 
-				unset( $document[ self::WEBHOOKS ][ $providerCode ][ $id ] );
-				$this->removeEmptyProvider( $document[ self::WEBHOOKS ], $providerCode );
+				unset( $document[ self::WEBHOOKS ][ $provider_code ][ $id ] );
+				$this->remove_empty_provider( $document[ self::WEBHOOKS ], $provider_code );
 
 				return array( $document, true );
 			}
@@ -858,8 +898,9 @@ class SecretsFile {
 	/**
 	 * Verify exact managed storage ownership without changing the filesystem or key.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function assertManagedStorageDeletable(): void {
-		$key = $this->loadKey( false );
+		$key = $this->load_key( false );
 
 		if ( ! is_string( $this->path ) || '' === $this->path ) {
 			if ( null === $key ) {
@@ -869,46 +910,46 @@ class SecretsFile {
 			throw $this->unavailable( 'The encrypted Booster secrets path is not configured.' );
 		}
 
-		$hasFile  = $this->hasFile();
-		$lockPath = $this->lockPath();
-		$hasLock  = file_exists( $lockPath ) || is_link( $lockPath );
-		if ( ! $hasFile && null === $key && ! $hasLock ) {
+		$has_file  = $this->has_file();
+		$lock_path = $this->lock_path();
+		$has_lock  = file_exists( $lock_path ) || is_link( $lock_path );
+		if ( ! $has_file && null === $key && ! $has_lock ) {
 			$directory = dirname( $this->path );
 			if ( file_exists( $directory ) || is_link( $directory ) ) {
-				$this->assertConfiguredLocation();
+				$this->assert_configured_location();
 			}
 
 			return;
 		}
 
-		$this->assertAvailable();
-		$this->assertConfiguredLocation();
-		if ( ! $hasLock ) {
+		$this->assert_available();
+		$this->assert_configured_location();
+		if ( ! $has_lock ) {
 			throw $this->unavailable(
 				'The encrypted Booster secrets store is incomplete because its lock is missing.',
 				'storage_lock_missing'
 			);
 		}
 
-		$this->withLock(
+		$this->with_lock(
 			LOCK_SH,
 			false,
 			function ( mixed $lock ): void {
-				$key     = $this->loadKey( false );
-				$hasFile = $this->hasFile();
-				if ( $hasFile !== ( null !== $key ) ) {
+				$key      = $this->load_key( false );
+				$has_file = $this->has_file();
+				if ( $has_file !== ( null !== $key ) ) {
 					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Component presence selects one fixed pathless failure.
-					throw $this->incompleteStore( $key, $hasFile );
+					throw $this->incomplete_store( $key, $has_file );
 				}
-				if ( $hasFile ) {
-					$this->deletableFileStat(
+				if ( $has_file ) {
+					$this->deletable_file_stat(
 						(string) $this->path,
 						'encrypted Booster secrets file'
 					);
-					$this->readEncryptedDocument( (string) $key );
+					$this->read_encrypted_document( (string) $key );
 				}
 
-				$this->assertHandleMatchesPath( $lock, $this->lockPath(), 'secrets lock' );
+				$this->assert_handle_matches_path( $lock, $this->lock_path(), 'secrets lock' );
 			}
 		);
 	}
@@ -920,10 +961,11 @@ class SecretsFile {
 	 * secure, process-owned, single-link file that authenticates with the current
 	 * database key. The key is removed only after the ciphertext is gone.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	public function deleteManagedStorage(): void {
 		$this->assertManagedStorageDeletable();
 
-		$key = $this->loadKey( false );
+		$key = $this->load_key( false );
 
 		if ( ! is_string( $this->path ) || '' === $this->path ) {
 			if ( null === $key ) {
@@ -933,41 +975,41 @@ class SecretsFile {
 			throw $this->unavailable( 'The encrypted Booster secrets path is not configured.' );
 		}
 
-		$hasFile  = $this->hasFile();
-		$lockPath = $this->lockPath();
-		$hasLock  = file_exists( $lockPath ) || is_link( $lockPath );
-		if ( ! $hasFile && null === $key && ! $hasLock ) {
+		$has_file  = $this->has_file();
+		$lock_path = $this->lock_path();
+		$has_lock  = file_exists( $lock_path ) || is_link( $lock_path );
+		if ( ! $has_file && null === $key && ! $has_lock ) {
 			$directory = dirname( $this->path );
 			if ( file_exists( $directory ) || is_link( $directory ) ) {
-				$this->assertConfiguredLocation();
+				$this->assert_configured_location();
 			}
 
 			return;
 		}
-		if ( $hasFile ) {
-			$this->assertAvailable();
+		if ( $has_file ) {
+			$this->assert_available();
 		}
 
-		$this->assertConfiguredLocation();
-		$this->withLock(
+		$this->assert_configured_location();
+		$this->with_lock(
 			LOCK_EX,
-			! $hasLock,
+			! $has_lock,
 			function ( mixed $lock ): void {
-				$key     = $this->loadKey( false );
-				$hasFile = $this->hasFile();
+				$key      = $this->load_key( false );
+				$has_file = $this->has_file();
 
-				if ( $hasFile ) {
+				if ( $has_file ) {
 					if ( null === $key ) {
 						// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Component presence selects one fixed pathless failure.
-						throw $this->incompleteStore( $key, $hasFile );
+						throw $this->incomplete_store( $key, $has_file );
 					}
 
-					$authenticated = $this->deletableFileStat(
+					$authenticated = $this->deletable_file_stat(
 						(string) $this->path,
 						'encrypted Booster secrets file'
 					);
-					$this->readEncryptedDocument( $key );
-					$this->deleteExactFile(
+					$this->read_encrypted_document( $key );
+					$this->delete_exact_file(
 						(string) $this->path,
 						$authenticated,
 						'Could not remove the encrypted Booster secrets file safely.'
@@ -975,20 +1017,20 @@ class SecretsFile {
 				}
 
 				if ( null !== $key ) {
-					$this->deleteManagedKey( $key );
+					$this->delete_managed_key( $key );
 				}
 
-				$lockPath = $this->lockPath();
-				$this->assertHandleMatchesPath( $lock, $lockPath, 'secrets lock' );
-				if ( ! $this->removeFile( $lockPath ) ) {
+				$lock_path = $this->lock_path();
+				$this->assert_handle_matches_path( $lock, $lock_path, 'secrets lock' );
+				if ( ! $this->removeFile( $lock_path ) ) {
 					throw $this->unavailable( 'Could not remove the encrypted Booster secrets lock safely.' );
 				}
-				clearstatcache( true, $lockPath );
+				clearstatcache( true, $lock_path );
 			}
 		);
 	}
 
-	private function providerValue( ProviderCode|string $provider ): string {
+	private function provider_value( ProviderCode|string $provider ): string {
 		try {
 			return $provider instanceof ProviderCode ? $provider->value : ProviderCode::parse( $provider )->value;
 		} catch ( InvalidProviderCode ) {
@@ -997,9 +1039,9 @@ class SecretsFile {
 	}
 
 	/** @return array<string, mixed>|null */
-	private function constantCredential( string $provider, ProviderCredentialPolicy $policy ): ?array {
+	private function constant_credential( string $provider, ProviderCredentialPolicy $policy ): ?array {
 		try {
-			$record = $policy->credentialFromConstants( $this->declaredConstants( $policy->getConstantNames() ) );
+			$record = $policy->credentialFromConstants( $this->declared_constants( $policy->getConstantNames() ) );
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'Provider credential constants could not be validated.' );
 		}
@@ -1007,7 +1049,7 @@ class SecretsFile {
 			return null;
 		}
 
-		$record = $this->validateCredential(
+		$record = $this->validate_credential(
 			$provider,
 			self::CONSTANT_PROFILE,
 			$record,
@@ -1027,7 +1069,7 @@ class SecretsFile {
 	}
 
 	/** @param array<string, mixed> $record */
-	private function runtimeConstantCredential( string $provider, #[\SensitiveParameter] array $record ): array {
+	private function runtime_constant_credential( string $provider, #[\SensitiveParameter] array $record ): array {
 		return array(
 			'id'            => self::CONSTANT_PROFILE,
 			'provider'      => $provider,
@@ -1041,9 +1083,9 @@ class SecretsFile {
 	}
 
 	/** @return array<string, string>|null */
-	private function constantWebhook( string $provider, ProviderWebhookPolicy $policy ): ?array {
+	private function constant_webhook( string $provider, ProviderWebhookPolicy $policy ): ?array {
 		try {
-			$record = $policy->webhookFromConstants( $this->declaredConstants( $policy->getConstantNames() ) );
+			$record = $policy->webhookFromConstants( $this->declared_constants( $policy->getConstantNames() ) );
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'Provider webhook constants could not be validated.' );
 		}
@@ -1051,7 +1093,7 @@ class SecretsFile {
 			return null;
 		}
 
-		return $this->validateWebhook(
+		return $this->validate_webhook(
 			$provider,
 			self::CONSTANT_PROFILE,
 			$record,
@@ -1063,7 +1105,7 @@ class SecretsFile {
 	 * @param list<string> $names Provider-declared deployment constants.
 	 * @return array<string, mixed>
 	 */
-	private function declaredConstants( array $names ): array {
+	private function declared_constants( array $names ): array {
 		$values = array();
 
 		foreach ( $names as $name ) {
@@ -1071,14 +1113,14 @@ class SecretsFile {
 				throw new RuntimeException( 'Provider credential constants are invalid.' );
 			}
 
-			$values[ $name ] = $this->rawConstantValue( $name );
+			$values[ $name ] = $this->raw_constant_value( $name );
 		}
 
 		return $values;
 	}
 
 	/** @param array<string, mixed> $record */
-	private function runtimeCredentialRecord( string $provider, string $id, #[\SensitiveParameter] array $record ): array {
+	private function runtime_credential_record( string $provider, string $id, #[\SensitiveParameter] array $record ): array {
 		return array(
 			'id'            => $id,
 			'provider'      => $provider,
@@ -1089,7 +1131,7 @@ class SecretsFile {
 			'source'        => 'file',
 			'immutable'     => false,
 			'self_destruct' => $record['self_destruct'] ?? false,
-			'destroy_on'    => $this->credentialDestroyOn( $record ),
+			'destroy_on'    => $this->credential_destroy_on( $record ),
 		);
 	}
 
@@ -1097,36 +1139,36 @@ class SecretsFile {
 	 * @param array<string, mixed> $metadata Credential metadata.
 	 * @return array<string, mixed>
 	 */
-	private function validateCredential(
+	private function validate_credential(
 		string $provider,
 		string $id,
 		array $metadata,
 		#[\SensitiveParameter] mixed $secret,
 		bool $submitted = false
 	): array {
-		$selfDestruct      = $metadata['self_destruct'] ?? false;
-		$manualDestroyOn   = $metadata['destroy_on'] ?? null;
-		$providerDestroyOn = $metadata['provider_destroy_on'] ?? null;
+		$self_destruct       = $metadata['self_destruct'] ?? false;
+		$manual_destroy_on   = $metadata['destroy_on'] ?? null;
+		$provider_destroy_on = $metadata['provider_destroy_on'] ?? null;
 		unset( $metadata['self_destruct'], $metadata['destroy_on'], $metadata['provider_destroy_on'] );
-		if ( ! is_bool( $selfDestruct ) ) {
+		if ( ! is_bool( $self_destruct ) ) {
 			throw new RuntimeException( 'Credential self-destruction setting is invalid.' );
 		}
-		if ( $selfDestruct ) {
-			if ( null !== $manualDestroyOn ) {
-				$this->requireDate( $manualDestroyOn, 'Credential self-destruction date' );
+		if ( $self_destruct ) {
+			if ( null !== $manual_destroy_on ) {
+				$this->require_date( $manual_destroy_on, 'Credential self-destruction date' );
 			}
-			if ( null !== $providerDestroyOn ) {
-				$this->requireDate( $providerDestroyOn, 'Credential provider expiry' );
+			if ( null !== $provider_destroy_on ) {
+				$this->require_date( $provider_destroy_on, 'Credential provider expiry' );
 			}
-			if ( null === $manualDestroyOn && null === $providerDestroyOn ) {
+			if ( null === $manual_destroy_on && null === $provider_destroy_on ) {
 				throw new RuntimeException( 'Credential self-destruction requires an expiry date.' );
 			}
 		} else {
-			$manualDestroyOn   = null;
-			$providerDestroyOn = null;
+			$manual_destroy_on   = null;
+			$provider_destroy_on = null;
 		}
 
-		$policy = $this->providerPolicies->findCredentialPolicy( $provider );
+		$policy = $this->provider_policies->findCredentialPolicy( $provider );
 		try {
 			$record = null !== $policy
 				? $policy->normalizeCredential( $metadata, $secret )
@@ -1137,17 +1179,17 @@ class SecretsFile {
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'Provider credential material could not be validated.' );
 		}
-		$this->assertOnlyKeys( $record, array( 'label', 'kind', 'configuration', 'secret' ), 'Provider credential policy returned unsupported fields.' );
+		$this->assert_only_keys( $record, array( 'label', 'kind', 'configuration', 'secret' ), 'Provider credential policy returned unsupported fields.' );
 
 		if ( ! is_array( $record['configuration'] ?? null ) ) {
 			throw new RuntimeException( 'Provider credential policy returned an invalid record.' );
 		}
 
 		$validated = array(
-			'label'         => $this->requiredString( $record['label'] ?? null, 'Credential label' ),
-			'kind'          => $this->requiredString( $record['kind'] ?? null, 'Credential kind' ),
+			'label'         => $this->required_string( $record['label'] ?? null, 'Credential label' ),
+			'kind'          => $this->required_string( $record['kind'] ?? null, 'Credential kind' ),
 			'configuration' => $record['configuration'],
-			'secret'        => $this->requiredString( $record['secret'] ?? null, 'Credential secret' ),
+			'secret'        => $this->required_string( $record['secret'] ?? null, 'Credential secret' ),
 		);
 		if ( $submitted && $policy instanceof SubmittedCredentialValidator ) {
 			try {
@@ -1166,13 +1208,13 @@ class SecretsFile {
 				throw new RuntimeException( 'Provider credential material could not be validated.' );
 			}
 		}
-		if ( $selfDestruct ) {
+		if ( $self_destruct ) {
 			$validated['self_destruct'] = true;
-			if ( is_string( $manualDestroyOn ) ) {
-				$validated['destroy_on'] = $manualDestroyOn;
+			if ( is_string( $manual_destroy_on ) ) {
+				$validated['destroy_on'] = $manual_destroy_on;
 			}
-			if ( is_string( $providerDestroyOn ) ) {
-				$validated['provider_destroy_on'] = $providerDestroyOn;
+			if ( is_string( $provider_destroy_on ) ) {
+				$validated['provider_destroy_on'] = $provider_destroy_on;
 			}
 		}
 
@@ -1183,20 +1225,20 @@ class SecretsFile {
 	 * @param list<BlueprintCredential> $credentials
 	 * @return list<array{provider:string,id:string,record:array<string,mixed>}>
 	 */
-	private function portableCredentialRecords(
+	private function portable_credential_records(
 		#[\SensitiveParameter] PackageBlueprint $blueprint,
 		#[\SensitiveParameter] array $credentials
 	): array {
-		$artifactIdentity = hash( 'sha256', $blueprint->canonicalJson() );
-		$records          = array();
+		$artifact_identity = hash( 'sha256', $blueprint->canonicalJson() );
+		$records           = array();
 
 		foreach ( $credentials as $credential ) {
-			if ( ! $this->blueprintContainsCredential( $blueprint, $credential ) ) {
+			if ( ! $this->blueprint_contains_credential( $blueprint, $credential ) ) {
 				throw new RuntimeException( 'The portability credential is not part of this blueprint.' );
 			}
 
-			$provider  = $this->providerValue( $credential->provider );
-			$record    = $this->validateCredential(
+			$provider  = $this->provider_value( $credential->provider );
+			$record    = $this->validate_credential(
 				$provider,
 				'portable',
 				array(
@@ -1209,7 +1251,7 @@ class SecretsFile {
 			);
 			$records[] = array(
 				'provider' => $provider,
-				'id'       => $this->portableCredentialId( $artifactIdentity, $provider, $record ),
+				'id'       => $this->portable_credential_id( $artifact_identity, $provider, $record ),
 				'record'   => $record,
 			);
 		}
@@ -1217,7 +1259,7 @@ class SecretsFile {
 		return $records;
 	}
 
-	private function blueprintContainsCredential(
+	private function blueprint_contains_credential(
 		#[\SensitiveParameter] PackageBlueprint $blueprint,
 		#[\SensitiveParameter] BlueprintCredential $needle
 	): bool {
@@ -1231,41 +1273,41 @@ class SecretsFile {
 	}
 
 	/** @param array<string, mixed> $record */
-	private function portableCredentialId(
-		string $artifactIdentity,
+	private function portable_credential_id(
+		string $artifact_identity,
 		string $provider,
 		#[\SensitiveParameter] array $record
 	): string {
 		try {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Hash input only; exceptions fail closed before mutation.
-			$targetKey = hash( 'sha256', json_encode( array( $provider, $record ), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) );
+			$target_key = hash( 'sha256', json_encode( array( $provider, $record ), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) );
 		} catch ( \JsonException ) {
 			throw new RuntimeException( 'The portability credential could not be identified safely.' );
 		}
 
-		return 'portable_' . substr( hash( 'sha256', $artifactIdentity . "\0" . $targetKey ), 0, 55 );
+		return 'portable_' . substr( hash( 'sha256', $artifact_identity . "\0" . $target_key ), 0, 55 );
 	}
 
 	/**
 	 * @param array<string, mixed> $metadata Webhook metadata.
 	 * @return array<string, string|int>
 	 */
-	private function validateWebhook(
+	private function validate_webhook(
 		string $provider,
 		string $id,
 		array $metadata,
 		#[\SensitiveParameter] mixed $secret,
 		bool $submitted = false
 	): array {
-		$policy     = $this->providerPolicies->findWebhookPolicy( $provider );
-		$policyData = array_intersect_key(
+		$policy      = $this->provider_policies->findWebhookPolicy( $provider );
+		$policy_data = array_intersect_key(
 			$metadata,
 			array_flip( array( 'label', 'scope', 'target', 'authority_id' ) )
 		);
 		try {
 			$record = null !== $policy
-				? $policy->normalizeWebhook( $policyData, $secret )
-				: $policyData + array( 'secret' => $secret );
+				? $policy->normalizeWebhook( $policy_data, $secret )
+				: $policy_data + array( 'secret' => $secret );
 		} catch ( InvalidWebhookInput $failure ) {
 			if ( $submitted ) {
 				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Rebuild the closed failure so provider arguments never cross this boundary.
@@ -1275,7 +1317,7 @@ class SecretsFile {
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'Provider webhook material could not be validated.' );
 		}
-		$this->assertOnlyKeys( $record, array( 'label', 'scope', 'target', 'authority_id', 'secret' ), 'Provider webhook policy returned unsupported fields.' );
+		$this->assert_only_keys( $record, array( 'label', 'scope', 'target', 'authority_id', 'secret' ), 'Provider webhook policy returned unsupported fields.' );
 		$revision = $metadata['revision'] ?? 1;
 		$origin   = $metadata['origin'] ?? 'manual';
 		if ( ! is_int( $revision ) || $revision < 1 || ! is_string( $origin ) || ! in_array( $origin, array( 'manual', 'assisted' ), true ) ) {
@@ -1283,18 +1325,18 @@ class SecretsFile {
 		}
 
 		return array(
-			'label'        => $this->requiredString( $record['label'] ?? null, 'Webhook secret label' ),
-			'scope'        => $this->webhookScope( $record['scope'] ?? null ),
+			'label'        => $this->required_string( $record['label'] ?? null, 'Webhook secret label' ),
+			'scope'        => $this->webhook_scope( $record['scope'] ?? null ),
 			'target'       => isset( $record['target'] ) && is_string( $record['target'] ) ? $record['target'] : '',
 			'authority_id' => isset( $record['authority_id'] ) && is_string( $record['authority_id'] ) ? $record['authority_id'] : '',
 			'revision'     => $revision,
 			'origin'       => $origin,
-			'secret'       => $this->webhookSecretValue( $record['secret'] ?? null ),
+			'secret'       => $this->webhook_secret_value( $record['secret'] ?? null ),
 		);
 	}
 
 	/** @param array<string, array<string, mixed>> $records */
-	private function assertWebhookCollection( array $records, bool $submitted = false ): void {
+	private function assert_webhook_collection( array $records, bool $submitted = false ): void {
 		if ( count( $records ) > self::MAX_WEBHOOK_PROFILES ) {
 			if ( $submitted ) {
 				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed reason maps to fixed administrator-safe copy.
@@ -1305,7 +1347,7 @@ class SecretsFile {
 
 		$targets = array();
 		foreach ( $records as $record ) {
-			$scope = $this->webhookScope( $record['scope'] ?? null );
+			$scope = $this->webhook_scope( $record['scope'] ?? null );
 			$key   = match ( $scope ) {
 				'owner' => 'owner:' . strtolower( trim( (string) ( $record['target'] ?? '' ), " \t\n\r\0\x0B/" ) ),
 				'repository' => 'repository:' . (string) ( $record['authority_id'] ?? '' ),
@@ -1321,8 +1363,8 @@ class SecretsFile {
 		}
 	}
 
-	private function webhookScope( mixed $scope ): string {
-		$scope = $this->requiredString( $scope, 'Webhook secret scope' );
+	private function webhook_scope( mixed $scope ): string {
+		$scope = $this->required_string( $scope, 'Webhook secret scope' );
 		if ( ! in_array( $scope, array( 'owner', 'repository' ), true ) ) {
 			throw new RuntimeException( 'Webhook secret scope must be owner or repository.' );
 		}
@@ -1334,31 +1376,31 @@ class SecretsFile {
 	 * @param callable(array<string, mixed>): array{0: array<string, mixed>, 1: mixed, 2?: bool} $mutation Mutation callback.
 	 */
 	private function mutate( #[\SensitiveParameter] callable $mutation ): mixed {
-		$this->assertConfiguredLocation();
+		$this->assert_configured_location();
 
-		return $this->withLock(
+		return $this->with_lock(
 			LOCK_EX,
 			true,
 			function () use ( $mutation ): mixed {
-				$key                             = $this->loadKey();
-				$hasFile                         = $this->hasFile();
-				$document                        = $this->documentForLockedState( $key, $hasFile );
+				$key                             = $this->load_key();
+				$has_file                        = $this->has_file();
+				$document                        = $this->document_for_locked_state( $key, $has_file );
 				list($document, $result, $write) = array_pad( $mutation( $document ), 3, true );
 
 				if ( $write ) {
-					$document   = $this->validateCanonicalDocument( $document );
-					$keyCreated = false;
+					$document    = $this->validate_canonical_document( $document );
+					$key_created = false;
 					if ( null === $key ) {
-						$keyResult  = $this->loadOrCreateKey();
-						$key        = $keyResult['key'];
-						$keyCreated = $keyResult['created'];
+						$key_result  = $this->load_or_create_key();
+						$key         = $key_result['key'];
+						$key_created = $key_result['created'];
 					}
 
 					try {
-						$this->writeCanonicalFile( $document, $key );
+						$this->write_canonical_file( $document, $key );
 					} catch ( \Throwable $failure ) {
-						if ( $keyCreated && ! $hasFile && ! $this->hasFile() ) {
-							$this->deleteExactKey( $key );
+						if ( $key_created && ! $has_file && ! $this->has_file() ) {
+							$this->delete_exact_key( $key );
 						}
 
 						throw $failure;
@@ -1371,32 +1413,32 @@ class SecretsFile {
 	}
 
 	/** @param array<string, mixed> $providers */
-	private function removeEmptyProvider( #[\SensitiveParameter] array &$providers, string $provider ): void {
+	private function remove_empty_provider( #[\SensitiveParameter] array &$providers, string $provider ): void {
 		if ( isset( $providers[ $provider ] ) && array() === $providers[ $provider ] ) {
 			unset( $providers[ $provider ] );
 		}
 	}
 
 	/** @return array<string, mixed> */
-	private function fileDocument(): array {
-		$this->assertAvailable();
-		if ( ! $this->hasManagedMaterial() ) {
-			return $this->emptyDocument();
+	private function file_document(): array {
+		$this->assert_available();
+		if ( ! $this->has_managed_material() ) {
+			return $this->empty_document();
 		}
 
-		return $this->withLock(
+		return $this->with_lock(
 			LOCK_SH,
 			false,
 			function (): array {
-				$key     = $this->loadKey();
-				$hasFile = $this->hasFile();
+				$key      = $this->load_key();
+				$has_file = $this->has_file();
 
-				return $this->documentForLockedState( $key, $hasFile );
+				return $this->document_for_locked_state( $key, $has_file );
 			}
 		);
 	}
 
-	private function hasFile(): bool {
+	private function has_file(): bool {
 		if ( ! is_string( $this->path ) || '' === $this->path ) {
 			return false;
 		}
@@ -1412,9 +1454,9 @@ class SecretsFile {
 		return true;
 	}
 
-	private function hasManagedMaterial( bool $repairAutoload = true ): bool {
+	private function has_managed_material( bool $repair_autoload = true ): bool {
 		if ( ! is_string( $this->path ) || '' === $this->path ) {
-			$key = $this->loadKey( $repairAutoload );
+			$key = $this->load_key( $repair_autoload );
 			if ( null !== $key ) {
 				throw $this->unavailable( 'The encrypted Booster secrets path is not configured.' );
 			}
@@ -1422,27 +1464,27 @@ class SecretsFile {
 			return false;
 		}
 
-		$hasFile  = $this->hasFile();
-		$lock     = $this->lockPath();
-		$lockStat = file_exists( $lock ) || is_link( $lock )
+		$has_file  = $this->has_file();
+		$lock      = $this->lock_path();
+		$lock_stat = file_exists( $lock ) || is_link( $lock )
 			? lstat( $lock )
 			: false;
-		if ( false !== $lockStat
-			&& ( 0100000 !== ( $lockStat['mode'] & 0170000 ) || 1 !== $lockStat['nlink'] )
+		if ( false !== $lock_stat
+			&& ( 0100000 !== ( $lock_stat['mode'] & 0170000 ) || 1 !== $lock_stat['nlink'] )
 		) {
 			throw $this->unavailable( 'Refusing to use an invalid encrypted Booster secrets lock.' );
 		}
-		if ( false !== $lockStat ) {
+		if ( false !== $lock_stat ) {
 			return true;
 		}
 
-		if ( $hasFile || null !== $this->loadKey( $repairAutoload ) ) {
-			$lockStat = file_exists( $lock ) || is_link( $lock )
+		if ( $has_file || null !== $this->load_key( $repair_autoload ) ) {
+			$lock_stat = file_exists( $lock ) || is_link( $lock )
 				? lstat( $lock )
 				: false;
-			if ( false !== $lockStat
-				&& 0100000 === ( $lockStat['mode'] & 0170000 )
-				&& 1 === $lockStat['nlink']
+			if ( false !== $lock_stat
+				&& 0100000 === ( $lock_stat['mode'] & 0170000 )
+				&& 1 === $lock_stat['nlink']
 			) {
 				return true;
 			}
@@ -1459,21 +1501,21 @@ class SecretsFile {
 	/**
 	 * @return array<string, mixed>
 	 */
-	private function documentForLockedState( #[\SensitiveParameter] ?string $key, bool $hasFile ): array {
-		if ( null === $key && ! $hasFile ) {
-			return $this->emptyDocument();
+	private function document_for_locked_state( #[\SensitiveParameter] ?string $key, bool $has_file ): array {
+		if ( null === $key && ! $has_file ) {
+			return $this->empty_document();
 		}
-		if ( null === $key || ! $hasFile ) {
+		if ( null === $key || ! $has_file ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Component presence selects one fixed pathless failure.
-			throw $this->incompleteStore( $key, $hasFile );
+			throw $this->incomplete_store( $key, $has_file );
 		}
 
-		return $this->readEncryptedDocument( $key );
+		return $this->read_encrypted_document( $key );
 	}
 
 	/** @return array<string, mixed> */
-	private function readEncryptedDocument( #[\SensitiveParameter] string $key ): array {
-		$envelope = $this->readBoundedFile();
+	private function read_encrypted_document( #[\SensitiveParameter] string $key ): array {
+		$envelope = $this->read_bounded_file();
 		try {
 			$plaintext = $this->codec->decrypt( $envelope, $key );
 		} catch ( \Throwable ) {
@@ -1490,8 +1532,8 @@ class SecretsFile {
 		}
 
 		try {
-			$document = $this->validateDocument( $document );
-			if ( ! hash_equals( $this->encodeCanonicalDocument( $document ), $plaintext ) ) {
+			$document = $this->validate_document( $document );
+			if ( ! hash_equals( $this->encode_canonical_document( $document ), $plaintext ) ) {
 				throw $this->unavailable( 'The encrypted Booster secrets payload is not canonical.' );
 			}
 		} catch ( SecretsStorageUnavailable $failure ) {
@@ -1503,7 +1545,7 @@ class SecretsFile {
 		return $document;
 	}
 
-	private function readBoundedFile(): string {
+	private function read_bounded_file(): string {
 		if ( ! is_string( $this->path ) || '' === $this->path ) {
 			throw $this->unavailable( 'The encrypted Booster secrets path is not configured.' );
 		}
@@ -1514,13 +1556,13 @@ class SecretsFile {
 		}
 
 		try {
-			$this->assertHandleMatchesPath( $handle, $this->path, 'secrets file' );
+			$this->assert_handle_matches_path( $handle, $this->path, 'secrets file' );
 			$stat = fstat( $handle );
 			if ( false === $stat
 				|| 0600 !== ( $stat['mode'] & 0777 )
 				|| $stat['size'] < 1
 				|| $stat['size'] > EncryptedSecretsEnvelopeCodec::MAX_BYTES
-				|| ! $this->ownedByProcess( $stat )
+				|| ! $this->owned_by_process( $stat )
 			) {
 				throw $this->unavailable( 'The encrypted Booster secrets file is not a secure bounded file.' );
 			}
@@ -1540,7 +1582,7 @@ class SecretsFile {
 	 * @param array<string, mixed> $raw Raw sidecar document.
 	 * @return array<string, mixed>
 	 */
-	private function validateDocument( #[\SensitiveParameter] array $raw ): array {
+	private function validate_document( #[\SensitiveParameter] array $raw ): array {
 		$allowed = array(
 			'schema_version',
 			self::CREDENTIALS,
@@ -1555,7 +1597,7 @@ class SecretsFile {
 			throw new RuntimeException( 'The Booster secrets file uses an unsupported schema version.' );
 		}
 
-		$document = $this->validateCanonicalDocument(
+		$document = $this->validate_canonical_document(
 			array(
 				'schema_version'  => self::SCHEMA_VERSION,
 				self::CREDENTIALS => $raw[ self::CREDENTIALS ] ?? array(),
@@ -1574,12 +1616,12 @@ class SecretsFile {
 	 * @param array<string, mixed> $document Canonical document.
 	 * @return array<string, mixed>
 	 */
-	private function validateCanonicalDocument( #[\SensitiveParameter] array $document ): array {
+	private function validate_canonical_document( #[\SensitiveParameter] array $document ): array {
 		if ( isset( $document['schema_version'] ) && self::SCHEMA_VERSION !== $document['schema_version'] ) {
 			throw new RuntimeException( 'The Booster secrets file uses an unsupported schema version.' );
 		}
 
-		$normalised = $this->emptyDocument();
+		$normalised = $this->empty_document();
 		foreach ( array( self::CREDENTIALS, self::WEBHOOKS ) as $collection ) {
 			$providers = $document[ $collection ] ?? array();
 			if ( ! is_array( $providers ) ) {
@@ -1591,23 +1633,23 @@ class SecretsFile {
 					throw new RuntimeException( 'Provider secret records are malformed.' );
 				}
 
-				$provider = $this->providerValue( $provider );
+				$provider = $this->provider_value( $provider );
 				foreach ( $records as $id => $record ) {
 					if ( ! is_string( $id ) || ! is_array( $record ) ) {
 						throw new RuntimeException( 'A provider secret record is malformed.' );
 					}
 
-					$this->assertWritableId( $id );
+					$this->assert_writable_id( $id );
 					if ( self::CREDENTIALS === $collection ) {
-						$this->assertOnlyKeys( $record, array( 'label', 'kind', 'configuration', 'secret', 'self_destruct', 'destroy_on', 'provider_destroy_on' ), 'A provider credential contains unsupported fields.' );
-						$normalised[ $collection ][ $provider ][ $id ] = $this->validateStoredCredential( $record );
+						$this->assert_only_keys( $record, array( 'label', 'kind', 'configuration', 'secret', 'self_destruct', 'destroy_on', 'provider_destroy_on' ), 'A provider credential contains unsupported fields.' );
+						$normalised[ $collection ][ $provider ][ $id ] = $this->validate_stored_credential( $record );
 					} else {
-						$normalised[ $collection ][ $provider ][ $id ] = $this->validateStoredWebhook( $record );
+						$normalised[ $collection ][ $provider ][ $id ] = $this->validate_stored_webhook( $record );
 					}
 				}
 				ksort( $normalised[ $collection ][ $provider ], SORT_STRING );
 				if ( self::WEBHOOKS === $collection ) {
-					$this->assertWebhookCollection( $normalised[ $collection ][ $provider ] );
+					$this->assert_webhook_collection( $normalised[ $collection ][ $provider ] );
 				}
 			}
 			ksort( $normalised[ $collection ], SORT_STRING );
@@ -1617,42 +1659,42 @@ class SecretsFile {
 	}
 
 	/** @param array<string, mixed> $record */
-	private function validateStoredCredential( #[\SensitiveParameter] array $record ): array {
-		$this->assertOnlyKeys( $record, array( 'label', 'kind', 'configuration', 'secret', 'self_destruct', 'destroy_on', 'provider_destroy_on' ), 'A provider credential contains unsupported fields.' );
+	private function validate_stored_credential( #[\SensitiveParameter] array $record ): array {
+		$this->assert_only_keys( $record, array( 'label', 'kind', 'configuration', 'secret', 'self_destruct', 'destroy_on', 'provider_destroy_on' ), 'A provider credential contains unsupported fields.' );
 		if ( ! is_array( $record['configuration'] ?? null ) ) {
 			throw new RuntimeException( 'A provider credential contains invalid configuration.' );
 		}
 
-		$selfDestruct      = $record['self_destruct'] ?? false;
-		$manualDestroyOn   = $record['destroy_on'] ?? null;
-		$providerDestroyOn = $record['provider_destroy_on'] ?? null;
-		if ( ! is_bool( $selfDestruct ) ) {
+		$self_destruct       = $record['self_destruct'] ?? false;
+		$manual_destroy_on   = $record['destroy_on'] ?? null;
+		$provider_destroy_on = $record['provider_destroy_on'] ?? null;
+		if ( ! is_bool( $self_destruct ) ) {
 			throw new RuntimeException( 'Credential self-destruction setting is invalid.' );
 		}
 
 		$validated = array(
-			'label'         => $this->requiredString( $record['label'] ?? null, 'Credential label' ),
-			'kind'          => $this->requiredString( $record['kind'] ?? null, 'Credential kind' ),
+			'label'         => $this->required_string( $record['label'] ?? null, 'Credential label' ),
+			'kind'          => $this->required_string( $record['kind'] ?? null, 'Credential kind' ),
 			'configuration' => $record['configuration'],
-			'secret'        => $this->requiredString( $record['secret'] ?? null, 'Credential secret' ),
+			'secret'        => $this->required_string( $record['secret'] ?? null, 'Credential secret' ),
 		);
-		if ( $selfDestruct ) {
-			if ( null !== $manualDestroyOn ) {
-				$this->requireDate( $manualDestroyOn, 'Credential self-destruction date' );
+		if ( $self_destruct ) {
+			if ( null !== $manual_destroy_on ) {
+				$this->require_date( $manual_destroy_on, 'Credential self-destruction date' );
 			}
-			if ( null !== $providerDestroyOn ) {
-				$this->requireDate( $providerDestroyOn, 'Credential provider expiry' );
+			if ( null !== $provider_destroy_on ) {
+				$this->require_date( $provider_destroy_on, 'Credential provider expiry' );
 			}
-			if ( null === $manualDestroyOn && null === $providerDestroyOn ) {
+			if ( null === $manual_destroy_on && null === $provider_destroy_on ) {
 				throw new RuntimeException( 'Credential self-destruction requires an expiry date.' );
 			}
 
 			$validated['self_destruct'] = true;
-			if ( is_string( $manualDestroyOn ) ) {
-				$validated['destroy_on'] = $manualDestroyOn;
+			if ( is_string( $manual_destroy_on ) ) {
+				$validated['destroy_on'] = $manual_destroy_on;
 			}
-			if ( is_string( $providerDestroyOn ) ) {
-				$validated['provider_destroy_on'] = $providerDestroyOn;
+			if ( is_string( $provider_destroy_on ) ) {
+				$validated['provider_destroy_on'] = $provider_destroy_on;
 			}
 		}
 
@@ -1660,8 +1702,8 @@ class SecretsFile {
 	}
 
 	/** @param array<string, mixed> $record */
-	private function validateStoredWebhook( #[\SensitiveParameter] array $record ): array {
-		$this->assertOnlyKeys( $record, array( 'label', 'scope', 'target', 'authority_id', 'revision', 'origin', 'secret' ), 'A provider webhook secret contains unsupported fields.' );
+	private function validate_stored_webhook( #[\SensitiveParameter] array $record ): array {
+		$this->assert_only_keys( $record, array( 'label', 'scope', 'target', 'authority_id', 'revision', 'origin', 'secret' ), 'A provider webhook secret contains unsupported fields.' );
 		$revision = $record['revision'] ?? 1;
 		$origin   = $record['origin'] ?? 'manual';
 		if ( ! is_int( $revision ) || $revision < 1 || ! is_string( $origin ) || ! in_array( $origin, array( 'manual', 'assisted' ), true ) ) {
@@ -1669,19 +1711,19 @@ class SecretsFile {
 		}
 
 		return array(
-			'label'        => $this->requiredString( $record['label'] ?? null, 'Webhook secret label' ),
-			'scope'        => $this->webhookScope( $record['scope'] ?? null ),
+			'label'        => $this->required_string( $record['label'] ?? null, 'Webhook secret label' ),
+			'scope'        => $this->webhook_scope( $record['scope'] ?? null ),
 			'target'       => isset( $record['target'] ) && is_string( $record['target'] ) ? $record['target'] : '',
 			'authority_id' => isset( $record['authority_id'] ) && is_string( $record['authority_id'] ) ? $record['authority_id'] : '',
 			'revision'     => $revision,
 			'origin'       => $origin,
-			'secret'       => $this->webhookSecretValue( $record['secret'] ?? null ),
+			'secret'       => $this->webhook_secret_value( $record['secret'] ?? null ),
 		);
 	}
 
 	/** @param array<string, mixed> $record */
-	private function revalidateStoredCredential( string $provider, string $id, #[\SensitiveParameter] array $record ): array {
-		$validated = $this->validateCredential( $provider, $id, $record, $record['secret'] ?? null );
+	private function revalidate_stored_credential( string $provider, string $id, #[\SensitiveParameter] array $record ): array {
+		$validated = $this->validate_credential( $provider, $id, $record, $record['secret'] ?? null );
 		if ( $validated !== $record ) {
 			throw new RuntimeException( 'Stored provider credential material is no longer canonical under the current policy.' );
 		}
@@ -1690,15 +1732,15 @@ class SecretsFile {
 	}
 
 	/** @param array<string, mixed> $document */
-	private function assertRecoveryCredentialFitness( #[\SensitiveParameter] array $document ): void {
+	private function assert_recovery_credential_fitness( #[\SensitiveParameter] array $document ): void {
 		foreach ( $document[ self::CREDENTIALS ] as $provider => $records ) {
-			$policy = $this->providerPolicies->findCredentialPolicy( $provider );
+			$policy = $this->provider_policies->findCredentialPolicy( $provider );
 			if ( null === $policy ) {
 				throw new RuntimeException( 'Stored credential fitness could not be verified for an unavailable provider.' );
 			}
 
 			foreach ( $records as $id => $record ) {
-				$validated = $this->revalidateStoredCredential( $provider, $id, $record );
+				$validated = $this->revalidate_stored_credential( $provider, $id, $record );
 				if ( $policy instanceof SubmittedCredentialValidator ) {
 					$policy->validateSubmittedCredential(
 						array(
@@ -1714,8 +1756,8 @@ class SecretsFile {
 	}
 
 	/** @param array<string, mixed> $record */
-	private function revalidateStoredWebhook( string $provider, string $id, #[\SensitiveParameter] array $record ): array {
-		$validated = $this->validateWebhook( $provider, $id, $record, $record['secret'] ?? null );
+	private function revalidate_stored_webhook( string $provider, string $id, #[\SensitiveParameter] array $record ): array {
+		$validated = $this->validate_webhook( $provider, $id, $record, $record['secret'] ?? null );
 		if ( $validated !== $record ) {
 			throw new RuntimeException( 'Stored provider webhook material is no longer canonical under the current policy.' );
 		}
@@ -1724,7 +1766,7 @@ class SecretsFile {
 	}
 
 	/** @return array<string, mixed> */
-	private function emptyDocument(): array {
+	private function empty_document(): array {
 		return array(
 			'schema_version'  => self::SCHEMA_VERSION,
 			self::CREDENTIALS => array(),
@@ -1732,18 +1774,18 @@ class SecretsFile {
 		);
 	}
 
-	private function writableId( ?string $id, string $prefix ): string {
+	private function writable_id( ?string $id, string $prefix ): string {
 		if ( null === $id || '' === trim( $id ) ) {
-			$id = $prefix . '_' . $this->opaqueId();
+			$id = $prefix . '_' . $this->opaque_id();
 		}
 
 		$id = trim( $id );
-		$this->assertWritableId( $id );
+		$this->assert_writable_id( $id );
 
 		return $id;
 	}
 
-	private function assertWritableId( mixed $id ): void {
+	private function assert_writable_id( mixed $id ): void {
 		if ( ! is_string( $id )
 			|| self::CONSTANT_PROFILE === $id
 			|| 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/', $id )
@@ -1752,11 +1794,11 @@ class SecretsFile {
 		}
 	}
 
-	private function opaqueId(): string {
+	private function opaque_id(): string {
 		return bin2hex( random_bytes( 12 ) );
 	}
 
-	private function requiredString( #[\SensitiveParameter] mixed $value, string $name ): string {
+	private function required_string( #[\SensitiveParameter] mixed $value, string $name ): string {
 		if ( ! is_string( $value ) || '' === trim( $value ) ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Storage exceptions are caught and escaped at the admin boundary.
 			throw new RuntimeException( $name . ' must be a non-empty string.' );
@@ -1766,14 +1808,14 @@ class SecretsFile {
 	}
 
 	/** @param array<string, mixed> $record */
-	private function credentialDestroyed( array $record ): bool {
-		$destroyOn = $this->credentialDestroyOn( $record );
+	private function credential_destroyed( array $record ): bool {
+		$destroy_on = $this->credential_destroy_on( $record );
 
-		return null !== $destroyOn && gmdate( 'Y-m-d' ) > $destroyOn;
+		return null !== $destroy_on && gmdate( 'Y-m-d' ) > $destroy_on;
 	}
 
 	/** @param array<string, mixed> $record */
-	private function credentialDestroyOn( array $record ): ?string {
+	private function credential_destroy_on( array $record ): ?string {
 		if ( true !== ( $record['self_destruct'] ?? false ) ) {
 			return null;
 		}
@@ -1791,7 +1833,7 @@ class SecretsFile {
 		return $dates[0];
 	}
 
-	private function requireDate( mixed $value, string $name ): void {
+	private function require_date( mixed $value, string $name ): void {
 		if ( ! is_string( $value )
 			|| 1 !== preg_match( '/\\A(\\d{4})-(\\d{2})-(\\d{2})\\z/D', $value, $matches )
 			|| ! checkdate( (int) $matches[2], (int) $matches[3], (int) $matches[1] )
@@ -1801,7 +1843,7 @@ class SecretsFile {
 		}
 	}
 
-	private function webhookSecretValue( #[\SensitiveParameter] mixed $value ): string {
+	private function webhook_secret_value( #[\SensitiveParameter] mixed $value ): string {
 		if ( ! is_string( $value ) || strlen( $value ) < 32 || strlen( $value ) > 512
 			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $value )
 		) {
@@ -1815,7 +1857,7 @@ class SecretsFile {
 	 * @param array<string, mixed> $record  Record to validate.
 	 * @param list<string>         $allowed Allowed keys.
 	 */
-	private function assertOnlyKeys(
+	private function assert_only_keys(
 		#[\SensitiveParameter] array $record,
 		array $allowed,
 		string $message
@@ -1826,7 +1868,7 @@ class SecretsFile {
 		}
 	}
 
-	private function rawConstantValue( string $name ): mixed {
+	private function raw_constant_value( string $name ): mixed {
 		if ( is_array( $this->constants ) ) {
 			return array_key_exists( $name, $this->constants ) ? $this->constants[ $name ] : null;
 		}
@@ -1834,7 +1876,7 @@ class SecretsFile {
 		return defined( $name ) ? constant( $name ) : null;
 	}
 
-	private function defaultPath(): ?string {
+	private function default_path(): ?string {
 		if ( defined( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE' ) ) {
 			return null;
 		}
@@ -1849,12 +1891,12 @@ class SecretsFile {
 				: rtrim( $value, '/' );
 			$path      = $directory . ( '/' === $directory ? '' : '/' ) . 'secrets.json';
 
-			return $this->absoluteCanonicalConfiguredPath( $path ) ? $path : null;
+			return $this->absolute_canonical_configured_path( $path ) ? $path : null;
 		}
 		return null;
 	}
 
-	private function absoluteCanonicalConfiguredPath( string $path ): bool {
+	private function absolute_canonical_configured_path( string $path ): bool {
 		return str_starts_with( $path, '/' )
 			&& ! str_ends_with( $path, '/' )
 			&& ! str_contains( $path, "\0" )
@@ -1869,36 +1911,36 @@ class SecretsFile {
 	 * @param callable(resource): TResult $callback
 	 * @return TResult
 	 */
-	private function withLock(
+	private function with_lock(
 		int $operation,
 		bool $create,
 		#[\SensitiveParameter] callable $callback
 	): mixed {
-		$this->assertConfiguredLocation();
-		$lockPath = $this->lockPath();
+		$this->assert_configured_location();
+		$lock_path = $this->lock_path();
 
-		if ( is_link( $lockPath ) ) {
+		if ( is_link( $lock_path ) ) {
 			throw $this->unavailable( 'Refusing to use an invalid encrypted Booster secrets lock.' );
 		}
 
-		$lock = fopen( $lockPath, $create ? 'c+b' : 'r+b' );
+		$lock = fopen( $lock_path, $create ? 'c+b' : 'r+b' );
 		if ( false === $lock ) {
 			throw $this->unavailable( 'Could not open the encrypted Booster secrets lock.' );
 		}
 
 		try {
-			$this->assertHandleMatchesPath( $lock, $lockPath, 'secrets lock' );
-			$lockStat = fstat( $lock );
-			if ( false === $lockStat ) {
+			$this->assert_handle_matches_path( $lock, $lock_path, 'secrets lock' );
+			$lock_stat = fstat( $lock );
+			if ( false === $lock_stat ) {
 				throw $this->unavailable( 'Could not inspect the encrypted Booster secrets lock.' );
 			}
-			if ( 0600 !== ( $lockStat['mode'] & 0777 ) ) {
-				if ( ! $create || ! $this->changePermissions( $lockPath, 0600 ) ) {
+			if ( 0600 !== ( $lock_stat['mode'] & 0777 ) ) {
+				if ( ! $create || ! $this->changePermissions( $lock_path, 0600 ) ) {
 					throw $this->unavailable( 'Could not secure the encrypted Booster secrets lock.' );
 				}
-				$lockStat = fstat( $lock );
+				$lock_stat = fstat( $lock );
 			}
-			if ( false === $lockStat || 0600 !== ( $lockStat['mode'] & 0777 ) || ! $this->ownedByProcess( $lockStat ) ) {
+			if ( false === $lock_stat || 0600 !== ( $lock_stat['mode'] & 0777 ) || ! $this->owned_by_process( $lock_stat ) ) {
 				throw $this->unavailable( 'Could not secure the encrypted Booster secrets lock.' );
 			}
 
@@ -1906,7 +1948,7 @@ class SecretsFile {
 				throw $this->unavailable( 'Could not lock the encrypted Booster secrets store.' );
 			}
 
-			$this->assertHandleMatchesPath( $lock, $lockPath, 'secrets lock' );
+			$this->assert_handle_matches_path( $lock, $lock_path, 'secrets lock' );
 
 			return $callback( $lock );
 		} finally {
@@ -1916,23 +1958,23 @@ class SecretsFile {
 	}
 
 	/** @param resource $handle */
-	private function assertHandleMatchesPath( mixed $handle, string $path, string $label ): void {
-		$pathStat   = lstat( $path );
-		$handleStat = fstat( $handle );
+	private function assert_handle_matches_path( mixed $handle, string $path, string $label ): void {
+		$path_stat   = lstat( $path );
+		$handle_stat = fstat( $handle );
 
-		if ( false === $pathStat
-			|| false === $handleStat
-			|| 0100000 !== ( $pathStat['mode'] & 0170000 )
-			|| 1 !== $pathStat['nlink']
-			|| $pathStat['dev'] !== $handleStat['dev']
-			|| $pathStat['ino'] !== $handleStat['ino']
+		if ( false === $path_stat
+			|| false === $handle_stat
+			|| 0100000 !== ( $path_stat['mode'] & 0170000 )
+			|| 1 !== $path_stat['nlink']
+			|| $path_stat['dev'] !== $handle_stat['dev']
+			|| $path_stat['ino'] !== $handle_stat['ino']
 		) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal filesystem labels are fixed at each call site.
 			throw $this->unavailable( sprintf( 'Refusing to use an invalid encrypted Booster %s.', $label ) );
 		}
 	}
 
-	private function assertConfiguredLocation(): void {
+	private function assert_configured_location(): void {
 		if ( ! is_string( $this->path ) || '' === $this->path ) {
 			throw $this->unavailable( 'The encrypted Booster secrets path is not configured.' );
 		}
@@ -1943,7 +1985,7 @@ class SecretsFile {
 			throw $this->unavailable( 'The encrypted Booster secrets path is invalid.' );
 		}
 
-		if ( $this->validateConfiguredPath && ! $this->configuredLocationIsPrivate() ) {
+		if ( $this->validate_configured_path && ! $this->configured_location_is_private() ) {
 			throw $this->unavailable( 'The configured encrypted Booster secrets path is not a verified private location.' );
 		}
 
@@ -1952,7 +1994,7 @@ class SecretsFile {
 		if ( false === $stat
 			|| 0040000 !== ( $stat['mode'] & 0170000 )
 			|| 0700 !== ( $stat['mode'] & 0777 )
-			|| ! $this->ownedByProcess( $stat )
+			|| ! $this->owned_by_process( $stat )
 			|| ! is_readable( $directory )
 			|| ! is_writable( $directory )
 		) {
@@ -1964,30 +2006,30 @@ class SecretsFile {
 		}
 	}
 
-	private function assertAvailable(): void {
-		if ( ! $this->availability->isAvailable() ) {
+	private function assert_available(): void {
+		if ( ! $this->availability->is_available() ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Availability exposes one fixed, pathless operator message.
 			throw $this->unavailable( $this->availability->message() );
 		}
 	}
 
-	private function configuredLocationIsPrivate(): bool {
-		$wordpressRoot = defined( 'ABSPATH' ) && is_string( ABSPATH ) ? ABSPATH : '';
-		$contentDir    = defined( 'WP_CONTENT_DIR' ) && is_string( WP_CONTENT_DIR ) ? WP_CONTENT_DIR : '';
-		$pluginDir     = realpath( dirname( __DIR__, 2 ) );
-		$documentRoot  = $_SERVER['DOCUMENT_ROOT'] ?? null;
+	private function configured_location_is_private(): bool {
+		$wordpress_root = defined( 'ABSPATH' ) && is_string( ABSPATH ) ? ABSPATH : '';
+		$content_dir    = defined( 'WP_CONTENT_DIR' ) && is_string( WP_CONTENT_DIR ) ? WP_CONTENT_DIR : '';
+		$plugin_dir     = realpath( dirname( __DIR__, 2 ) );
+		$document_root  = $_SERVER['DOCUMENT_ROOT'] ?? null;
 
-		return false !== $pluginDir
-			&& $this->locationResolver->validateConfigured(
+		return false !== $plugin_dir
+			&& $this->location_resolver->validateConfigured(
 				(string) $this->path,
-				$wordpressRoot,
-				$contentDir,
-				$pluginDir,
-				is_string( $documentRoot ) && '' !== trim( $documentRoot ) ? $documentRoot : null
+				$wordpress_root,
+				$content_dir,
+				$plugin_dir,
+				is_string( $document_root ) && '' !== trim( $document_root ) ? $document_root : null
 			);
 	}
 
-	private function secureExistingFile(): bool {
+	private function secure_existing_file(): bool {
 		if ( ! is_string( $this->path ) || ! file_exists( $this->path ) ) {
 			return false;
 		}
@@ -2014,29 +2056,29 @@ class SecretsFile {
 	}
 
 	/** @param array<string, mixed> $document */
-	private function writeCanonicalFile(
+	private function write_canonical_file(
 		#[\SensitiveParameter] array $document,
 		#[\SensitiveParameter] string $key
 	): void {
-		$this->assertConfiguredLocation();
-		$previousContents = $this->hasFile() ? $this->readBoundedFile() : null;
+		$this->assert_configured_location();
+		$previous_contents = $this->has_file() ? $this->read_bounded_file() : null;
 
 		try {
-			$contents = $this->codec->encrypt( $this->encodeCanonicalDocument( $document ), $key );
+			$contents = $this->codec->encrypt( $this->encode_canonical_document( $document ), $key );
 		} catch ( \Throwable ) {
 			throw $this->unavailable( 'The Booster secrets document could not be encrypted.' );
 		}
 
-		$replacementCompleted = false;
+		$replacement_completed = false;
 		try {
-			$this->replaceCiphertext( $contents );
-			$replacementCompleted = true;
+			$this->replace_ciphertext( $contents );
+			$replacement_completed = true;
 			clearstatcache( true, $this->path );
-			$this->readEncryptedDocument( $key );
+			$this->read_encrypted_document( $key );
 		} catch ( \Throwable $exception ) {
-			if ( $replacementCompleted ) {
+			if ( $replacement_completed ) {
 				try {
-					$this->restorePreviousCiphertext( $previousContents, $key );
+					$this->restore_previous_ciphertext( $previous_contents, $key );
 				} catch ( \Throwable ) {
 					throw $this->unavailable( 'The failed Booster secrets update could not restore the previous encrypted file.' );
 				}
@@ -2046,7 +2088,7 @@ class SecretsFile {
 		}
 	}
 
-	private function replaceCiphertext( #[\SensitiveParameter] string $contents ): void {
+	private function replace_ciphertext( #[\SensitiveParameter] string $contents ): void {
 		$directory = dirname( $this->path );
 		$temporary = tempnam( $directory, '.ran-booster-' );
 		if ( false === $temporary ) {
@@ -2063,9 +2105,9 @@ class SecretsFile {
 				throw $this->unavailable( 'Could not open the temporary encrypted Booster secrets file.' );
 			}
 			try {
-				$this->assertHandleMatchesPath( $handle, $temporary, 'temporary secrets file' );
+				$this->assert_handle_matches_path( $handle, $temporary, 'temporary secrets file' );
 				$stat = fstat( $handle );
-				if ( false === $stat || ! $this->ownedByProcess( $stat ) ) {
+				if ( false === $stat || ! $this->owned_by_process( $stat ) ) {
 					throw $this->unavailable( 'Could not verify the temporary encrypted Booster secrets file.' );
 				}
 				$offset = 0;
@@ -2098,14 +2140,14 @@ class SecretsFile {
 		}
 	}
 
-	private function restorePreviousCiphertext(
-		#[\SensitiveParameter] ?string $previousContents,
+	private function restore_previous_ciphertext(
+		#[\SensitiveParameter] ?string $previous_contents,
 		#[\SensitiveParameter] string $key
 	): void {
-		if ( null !== $previousContents ) {
-			$this->replaceCiphertext( $previousContents );
+		if ( null !== $previous_contents ) {
+			$this->replace_ciphertext( $previous_contents );
 			clearstatcache( true, $this->path );
-			$this->readEncryptedDocument( $key );
+			$this->read_encrypted_document( $key );
 			return;
 		}
 
@@ -2113,7 +2155,7 @@ class SecretsFile {
 		if ( false === $stat
 			|| 0100000 !== ( $stat['mode'] & 0170000 )
 			|| 1 !== $stat['nlink']
-			|| ! $this->ownedByProcess( $stat )
+			|| ! $this->owned_by_process( $stat )
 			|| ! unlink( $this->path )
 		) {
 			throw $this->unavailable( 'Could not remove the failed encrypted Booster secrets file.' );
@@ -2122,7 +2164,7 @@ class SecretsFile {
 	}
 
 	/** @param array<string, mixed> $document */
-	private function encodeCanonicalDocument( #[\SensitiveParameter] array $document ): string {
+	private function encode_canonical_document( #[\SensitiveParameter] array $document ): string {
 		try {
 			return json_encode(
 				$document,
@@ -2134,14 +2176,15 @@ class SecretsFile {
 	}
 
 	/** @param array<string, int> $stat */
-	private function ownedByProcess( array $stat ): bool {
-		$effectiveUserId = $this->effectiveUserId();
+	private function owned_by_process( array $stat ): bool {
+		$effective_user_id = $this->effectiveUserId();
 
-		return null !== $effectiveUserId
+		return null !== $effective_user_id
 			&& isset( $stat['uid'] )
-			&& $stat['uid'] === $effectiveUserId;
+			&& $stat['uid'] === $effective_user_id;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	protected function effectiveUserId(): ?int {
 		return function_exists( 'posix_geteuid' ) ? posix_geteuid() : null;
 	}
@@ -2149,25 +2192,26 @@ class SecretsFile {
 	/**
 	 * @param resource $handle
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	protected function writeHandle( mixed $handle, #[\SensitiveParameter] string $contents ): int|false {
 		return fwrite( $handle, $contents );
 	}
 
-	private function lockPath(): string {
+	private function lock_path(): string {
 		return (string) $this->path . '.lock';
 	}
 
 	/**
 	 * @return array{dev:int,ino:int,mode:int,uid:int,nlink:int}
 	 */
-	private function deletableFileStat( string $path, string $label ): array {
+	private function deletable_file_stat( string $path, string $label ): array {
 		clearstatcache( true, $path );
 		$stat = lstat( $path );
 		if ( false === $stat
 			|| 0100000 !== ( $stat['mode'] & 0170000 )
 			|| 1 !== $stat['nlink']
 			|| 0600 !== ( $stat['mode'] & 0777 )
-			|| ! $this->ownedByProcess( $stat )
+			|| ! $this->owned_by_process( $stat )
 		) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal filesystem labels are fixed at each call site.
 			throw $this->unavailable( sprintf( 'Refusing to remove an invalid %s.', $label ) );
@@ -2179,7 +2223,7 @@ class SecretsFile {
 	/**
 	 * @param array{dev:int,ino:int,mode:int,uid:int,nlink:int} $expected
 	 */
-	private function deleteExactFile( string $path, array $expected, string $message ): void {
+	private function delete_exact_file( string $path, array $expected, string $message ): void {
 		clearstatcache( true, $path );
 		$current = lstat( $path );
 		if ( false === $current
@@ -2196,14 +2240,14 @@ class SecretsFile {
 		clearstatcache( true, $path );
 	}
 
-	private function incompleteStore( #[\SensitiveParameter] ?string $key, bool $hasFile ): SecretsStorageUnavailable {
-		if ( $hasFile && null === $key ) {
+	private function incomplete_store( #[\SensitiveParameter] ?string $key, bool $has_file ): SecretsStorageUnavailable {
+		if ( $has_file && null === $key ) {
 			return $this->unavailable(
 				'The encrypted Booster secrets store is incomplete: secrets.json exists but its database key is missing.',
 				'storage_key_missing'
 			);
 		}
-		if ( ! $hasFile && null !== $key ) {
+		if ( ! $has_file && null !== $key ) {
 			return $this->unavailable(
 				'The encrypted Booster secrets store is incomplete: its database key exists but secrets.json is missing.',
 				'storage_file_missing'
@@ -2220,26 +2264,26 @@ class SecretsFile {
 		return new SecretsStorageUnavailable( $message, $reason );
 	}
 
-	private function loadKey( bool $repairAutoload = true ): ?string {
+	private function load_key( bool $repair_autoload = true ): ?string {
 		try {
-			return $this->keyStore->load( $repairAutoload );
+			return $this->key_store->load( $repair_autoload );
 		} catch ( \Throwable ) {
 			throw $this->unavailable( 'The Booster site key is unavailable.' );
 		}
 	}
 
 	/** @return array{key:string,created:bool} */
-	private function loadOrCreateKey(): array {
+	private function load_or_create_key(): array {
 		try {
-			return $this->keyStore->loadOrCreate();
+			return $this->key_store->loadOrCreate();
 		} catch ( \Throwable ) {
 			throw $this->unavailable( 'The Booster site key could not be initialized.' );
 		}
 	}
 
-	private function deleteExactKey( #[\SensitiveParameter] string $key ): void {
+	private function delete_exact_key( #[\SensitiveParameter] string $key ): void {
 		try {
-			if ( ! $this->keyStore->deleteExact( $key ) ) {
+			if ( ! $this->key_store->deleteExact( $key ) ) {
 				throw $this->unavailable( 'The failed Booster site key could not be removed safely.' );
 			}
 		} catch ( SecretsStorageUnavailable $failure ) {
@@ -2249,13 +2293,13 @@ class SecretsFile {
 		}
 	}
 
-	private function deleteManagedKey( #[\SensitiveParameter] string $key ): void {
+	private function delete_managed_key( #[\SensitiveParameter] string $key ): void {
 		try {
-			if ( $this->keyStore->deleteExact( $key ) ) {
+			if ( $this->key_store->deleteExact( $key ) ) {
 				return;
 			}
 
-			$remaining = $this->keyStore->load( false );
+			$remaining = $this->key_store->load( false );
 			if ( null === $remaining ) {
 				return;
 			}
@@ -2270,14 +2314,17 @@ class SecretsFile {
 	 * Small filesystem seams keep failure-path tests deterministic without
 	 * replacing the native sidecar implementation in production.
 	 */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	protected function changePermissions( string $path, int $mode ): bool {
 		return chmod( $path, $mode );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	protected function replaceFile( string $source, string $destination ): bool {
 		return rename( $source, $destination );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
 	protected function removeFile( string $path ): bool {
 		return unlink( $path );
 	}

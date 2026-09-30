@@ -38,11 +38,11 @@ final readonly class PackageBlueprint {
 			unset( $material['packages'] );
 			try {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Pure canonical contract with exceptions enabled.
-				$encodedMaterial = json_encode( $material, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+				$encoded_material = json_encode( $material, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 			} catch ( JsonException ) {
 				throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
 			}
-			$fingerprint = hash( 'sha256', $encodedMaterial );
+			$fingerprint = hash( 'sha256', $encoded_material );
 			if ( isset( $materials[ $fingerprint ] ) ) {
 				throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
 			}
@@ -57,6 +57,7 @@ final readonly class PackageBlueprint {
 		}
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
 	public static function fromJson( #[\SensitiveParameter] string $json ): self {
 		if ( '' === $json || strlen( $json ) > self::MAX_BYTES || 1 !== preg_match( '//u', $json ) ) {
 			throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
@@ -91,6 +92,7 @@ final readonly class PackageBlueprint {
 		return $blueprint;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
 	public function canonicalJson(): string {
 		$packages    = $this->packages;
 		$credentials = $this->credentials;

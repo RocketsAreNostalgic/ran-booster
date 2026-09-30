@@ -82,7 +82,7 @@ $originLabels = array(
 			<?php
 			foreach ( $items as $item ) {
 				$state                = (string) ( $item['state'] ?? '' );
-				$summary              = DeploymentOutcomeMessage::forCode( (string) ( $item['outcome_code'] ?? 'pending' ) );
+				$summary              = DeploymentOutcomeMessage::for_code( (string) ( $item['outcome_code'] ?? 'pending' ) );
 				$projectLabel         = (string) ( $item['package_slug'] ?? '' );
 				$packageType          = (string) ( $item['package_type'] ?? '' );
 				$packageSettingsUrl   = is_string( $settingsUrls[ $packageType ][ $projectLabel ] ?? null )

@@ -7,7 +7,7 @@ namespace RAN\Admin;
 /** Administrator-facing copy for the closed deployment outcome set. */
 final class DeploymentOutcomeMessage {
 
-	public static function forCode( string $code ): string {
+	public static function for_code( string $code ): string {
 		return match ( $code ) {
 			'deployed'                       => __( 'WordPress completed and Booster verified the package deployment.', 'ran-booster' ),
 			'no_change'                      => __( 'The requested package bytes were already installed.', 'ran-booster' ),

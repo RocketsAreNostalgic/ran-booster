@@ -30,7 +30,7 @@ final class CoreSelfUpdateDevelopmentNoticeTest extends TestCase {
 			dirname( __DIR__, 2 ) . '/ran-booster.php',
 			'0.1.0-alpha.23'
 		);
-		$notice = new CoreSelfUpdateDevelopmentNotice( $policy, 'plugins' );
+		$notice = new CoreSelfUpdateDevelopmentNotice( policy: $policy, screen_id: 'plugins' );
 
 		ob_start();
 		$notice->render();
@@ -52,7 +52,7 @@ final class CoreSelfUpdateDevelopmentNoticeTest extends TestCase {
 		);
 		$notice = new CoreSelfUpdateDevelopmentNotice( $policy, 'plugins' );
 
-		$notice->enqueueStyle();
+		$notice->enqueue_style();
 
 		self::assertSame(
 			array( '[data-ran-booster-core-development-notice] { background-color: #e5f3ff; }' ),
@@ -65,16 +65,16 @@ final class CoreSelfUpdateDevelopmentNoticeTest extends TestCase {
 
 		$pluginsNotice = new CoreSelfUpdateDevelopmentNotice( $policy, 'plugins' );
 		ob_start();
-		$pluginsNotice->renderGlobal();
-		$pluginsNotice->renderShellInline();
+		$pluginsNotice->render_global();
+		$pluginsNotice->render_shell_inline();
 		$pluginsHtml = (string) ob_get_clean();
 		self::assertSame( 1, substr_count( $pluginsHtml, 'data-ran-booster-core-development-notice' ) );
 		self::assertStringContainsString( 'class="notice notice-info"', $pluginsHtml );
 
 		$boosterNotice = new CoreSelfUpdateDevelopmentNotice( $policy, 'toplevel_page_ran-booster' );
 		ob_start();
-		$boosterNotice->renderGlobal();
-		$boosterNotice->renderShellInline();
+		$boosterNotice->render_global();
+		$boosterNotice->render_shell_inline();
 		$boosterHtml = (string) ob_get_clean();
 		self::assertSame( 1, substr_count( $boosterHtml, 'data-ran-booster-core-development-notice' ) );
 		self::assertStringContainsString( 'class="notice notice-info inline"', $boosterHtml );
@@ -87,7 +87,7 @@ final class CoreSelfUpdateDevelopmentNoticeTest extends TestCase {
 		$unverified = CoreSelfUpdatePolicy::detect( $directory . '/ran-booster.php', '1.0.0' );
 
 		self::assertFalse(
-			( new CoreSelfUpdateDevelopmentNotice( $unverified, 'plugins' ) )->shouldRender()
+			( new CoreSelfUpdateDevelopmentNotice( $unverified, 'plugins' ) )->should_render()
 		);
 
 		$source = CoreSelfUpdatePolicy::detect(
@@ -95,13 +95,13 @@ final class CoreSelfUpdateDevelopmentNoticeTest extends TestCase {
 			'0.1.0-alpha.23'
 		);
 		self::assertFalse(
-			( new CoreSelfUpdateDevelopmentNotice( $source, 'dashboard' ) )->shouldRender()
+			( new CoreSelfUpdateDevelopmentNotice( $source, 'dashboard' ) )->should_render()
 		);
 
 		$GLOBALS['ran_booster_repository_admin_allowed'] = false;
 		$unauthorized                                    = new CoreSelfUpdateDevelopmentNotice( $source, 'plugins' );
-		self::assertFalse( $unauthorized->shouldRender() );
-		$unauthorized->enqueueStyle();
+		self::assertFalse( $unauthorized->should_render() );
+		$unauthorized->enqueue_style();
 		self::assertSame( array(), $GLOBALS['ran_booster_repository_admin_inline_styles'] );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Disposable focused fixture cleanup.

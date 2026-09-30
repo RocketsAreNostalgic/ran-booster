@@ -22,7 +22,7 @@ final class SecretsRuntimeAvailabilityNotice {
 	public function shouldRender(): bool {
 		return current_user_can( 'manage_options' )
 			&& BoosterNoticeScope::allows( $this->screenId )
-			&& ! $this->availability->isAvailable();
+			&& ! $this->availability->is_available();
 	}
 
 	public function render(): void {

@@ -65,7 +65,7 @@ final class SecretsRuntimeAvailabilityNoticeTest extends TestCase {
 	public function testMultisiteMessageIsSafeAndSpecific(): void {
 		$availability = new SecretsRuntimeAvailability( true, true );
 
-		self::assertFalse( $availability->isAvailable() );
+		self::assertFalse( $availability->is_available() );
 		self::assertSame( 'multisite_unsupported', $availability->code() );
 		self::assertStringContainsString( 'single-site WordPress only', $availability->message() );
 	}

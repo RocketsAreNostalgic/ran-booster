@@ -15,14 +15,14 @@ final readonly class WebhookResponse {
 	) {
 	}
 
-	public function getStatus(): int {
+	public function get_status(): int {
 		return $this->status;
 	}
 
 	/**
 	 * @return array<string, int|string>
 	 */
-	public function getData(): array {
+	public function get_data(): array {
 		return $this->data;
 	}
 }

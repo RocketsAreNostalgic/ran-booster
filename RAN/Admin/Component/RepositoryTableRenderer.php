@@ -15,9 +15,9 @@ final class RepositoryTableRenderer {
 	/**
 	 * @param list<array<string, mixed>> $rows Display-safe repository rows.
 	 */
-	public function render( string $labelledBy, array $rows ): void {
+	public function render( string $labelled_by, array $rows ): void {
 		?>
-		<div class="ran-booster-repository-list" role="list" aria-labelledby="<?php echo esc_attr( $labelledBy ); ?>">
+		<div class="ran-booster-repository-list" role="list" aria-labelledby="<?php echo esc_attr( $labelled_by ); ?>">
 			<?php foreach ( $rows as $row ) { ?>
 				<article
 					class="ran-booster-repository-record<?php echo 'release_asset' === ( $row['source_key'] ?? '' ) ? ' ran-booster-repository-record--release' : ''; ?>"
@@ -27,23 +27,23 @@ final class RepositoryTableRenderer {
 				>
 					<div class="ran-booster-repository-record__summary">
 						<div class="ran-booster-repository-record__identity">
-							<?php $this->renderRepository( $row ); ?>
-							<span class="ran-booster-repository-record__meta"><?php echo esc_html( $this->identityMeta( $row ) ); ?></span>
+							<?php $this->render_repository( $row ); ?>
+							<span class="ran-booster-repository-record__meta"><?php echo esc_html( $this->identity_meta( $row ) ); ?></span>
 						</div>
 						<div class="ran-booster-repository-record__overview">
 							<strong>
-								<?php echo esc_html( $this->managementLabel( $row ) ); ?>
-								<?php $this->renderManagementDetail( $row ); ?>
+								<?php echo esc_html( $this->management_label( $row ) ); ?>
+								<?php $this->render_management_detail( $row ); ?>
 							</strong>
-							<?php $this->renderConsequence( $row ); ?>
+							<?php $this->render_consequence( $row ); ?>
 						</div>
 						<div class="ran-booster-repository-record__actions">
 							<div class="ran-booster-repository-record__action-group">
-								<?php $this->renderInventoryAction( $row ); ?>
+								<?php $this->render_inventory_action( $row ); ?>
 							</div>
 						</div>
 					</div>
-					<?php $this->renderHistoricalEvidence( $row ); ?>
+					<?php $this->render_historical_evidence( $row ); ?>
 				</article>
 			<?php } ?>
 		</div>
@@ -51,7 +51,7 @@ final class RepositoryTableRenderer {
 	}
 
 	/** @param array<string, mixed> $row */
-	private function renderRepository( array $row ): void {
+	private function render_repository( array $row ): void {
 		$label = is_string( $row['repository'] ?? null ) ? $row['repository'] : '';
 		$url   = is_string( $row['repository_url'] ?? null ) ? $row['repository_url'] : '';
 
@@ -69,13 +69,13 @@ final class RepositoryTableRenderer {
 	}
 
 	/** @param array<string, mixed> $row */
-	private function renderInventoryAction( array $row ): void {
+	private function render_inventory_action( array $row ): void {
 		$historical = true === ( $row['historical'] ?? false );
 		if ( $historical ) {
 			return;
 		}
 		$url = is_string( $row['detail_url'] ?? null ) ? $row['detail_url'] : '';
-		$this->renderAction(
+		$this->render_action(
 			array(
 				'label'         => __( 'Manage repository', 'ran-booster' ),
 				'url'           => $url,
@@ -88,7 +88,7 @@ final class RepositoryTableRenderer {
 	}
 
 	/** @param array<string, mixed> $row */
-	private function renderHistoricalEvidence( array $row ): void {
+	private function render_historical_evidence( array $row ): void {
 		if ( true !== ( $row['historical'] ?? false ) ) {
 			return;
 		}
@@ -101,7 +101,7 @@ final class RepositoryTableRenderer {
 		?>
 		<div class="ran-booster-repository-record__details">
 			<div class="ran-booster-repository-record__details-layout">
-				<?php $this->renderDetails( $details ); ?>
+				<?php $this->render_details( $details ); ?>
 				<?php if ( array() !== $actions ) { ?>
 					<div>
 						<strong><?php esc_html_e( 'Recorded actions', 'ran-booster' ); ?></strong>
@@ -116,7 +116,7 @@ final class RepositoryTableRenderer {
 	}
 
 	/** @param list<array<string, mixed>> $details */
-	private function renderDetails( array $details ): void {
+	private function render_details( array $details ): void {
 		foreach ( $details as $detail ) {
 			$label    = is_string( $detail['label'] ?? null ) ? $detail['label'] : '';
 			$value    = is_string( $detail['value'] ?? null ) ? $detail['value'] : '';
@@ -138,40 +138,40 @@ final class RepositoryTableRenderer {
 	}
 
 	/** @param array<string, mixed> $action */
-	private function renderAction( array $action, bool $button = true ): void {
-		$label        = is_string( $action['label'] ?? null ) ? $action['label'] : '';
-		$url          = is_string( $action['url'] ?? null ) ? $action['url'] : '';
-		$disabled     = true === ( $action['disabled'] ?? false );
-		$external     = true === ( $action['external'] ?? false );
-		$describedBy  = is_string( $action['described_by'] ?? null ) ? $action['described_by'] : '';
-		$screenReader = is_string( $action['screen_reader'] ?? null ) ? $action['screen_reader'] : '';
-		$className    = $button ? 'button' : '';
+	private function render_action( array $action, bool $button = true ): void {
+		$label         = is_string( $action['label'] ?? null ) ? $action['label'] : '';
+		$url           = is_string( $action['url'] ?? null ) ? $action['url'] : '';
+		$disabled      = true === ( $action['disabled'] ?? false );
+		$external      = true === ( $action['external'] ?? false );
+		$described_by  = is_string( $action['described_by'] ?? null ) ? $action['described_by'] : '';
+		$screen_reader = is_string( $action['screen_reader'] ?? null ) ? $action['screen_reader'] : '';
+		$class_name    = $button ? 'button' : '';
 
 		if ( '' === $label ) {
 			return;
 		}
 		if ( $disabled || '' === $url ) {
 			?>
-			<button type="button" class="<?php echo esc_attr( $className ); ?>" disabled aria-disabled="true"<?php echo '' === $describedBy ? '' : ' aria-describedby="' . esc_attr( $describedBy ) . '"'; ?>><?php echo esc_html( $label ); ?></button>
+			<button type="button" class="<?php echo esc_attr( $class_name ); ?>" disabled aria-disabled="true"<?php echo '' === $described_by ? '' : ' aria-describedby="' . esc_attr( $described_by ) . '"'; ?>><?php echo esc_html( $label ); ?></button>
 			<?php
 			return;
 		}
 		?>
-		<a class="<?php echo esc_attr( $className ); ?>" href="<?php echo esc_url( $url ); ?>"<?php echo $external ? ' target="_blank" rel="noopener noreferrer"' : ''; ?>>
+		<a class="<?php echo esc_attr( $class_name ); ?>" href="<?php echo esc_url( $url ); ?>"<?php echo $external ? ' target="_blank" rel="noopener noreferrer"' : ''; ?>>
 			<?php echo esc_html( $label ); ?>
-			<?php if ( '' !== $screenReader ) { ?>
-				<span class="screen-reader-text">: <?php echo esc_html( $screenReader ); ?></span>
+			<?php if ( '' !== $screen_reader ) { ?>
+				<span class="screen-reader-text">: <?php echo esc_html( $screen_reader ); ?></span>
 			<?php } ?>
 		</a>
 		<?php
 	}
 
 	/** @param array<string, mixed> $row */
-	private function identityMeta( array $row ): string {
-		$type       = is_string( $row['package_type_label'] ?? null ) ? $row['package_type_label'] : '';
-		$source     = is_string( $row['source_label'] ?? null ) ? $row['source_label'] : '';
-		$count      = count( $this->strings( $row, 'package_references' ) );
-		$countLabel = 0 < $count
+	private function identity_meta( array $row ): string {
+		$type        = is_string( $row['package_type_label'] ?? null ) ? $row['package_type_label'] : '';
+		$source      = is_string( $row['source_label'] ?? null ) ? $row['source_label'] : '';
+		$count       = count( $this->strings( $row, 'package_references' ) );
+		$count_label = 0 < $count
 			? sprintf(
 				/* translators: %d is the number of managed packages using a repository. */
 				_nx( '%d package', '%d packages', $count, 'Managed packages using a repository', 'ran-booster' ),
@@ -179,11 +179,11 @@ final class RepositoryTableRenderer {
 			)
 			: '';
 
-		return implode( ' · ', array_filter( array( $type, $source, $countLabel ) ) );
+		return implode( ' · ', array_filter( array( $type, $source, $count_label ) ) );
 	}
 
 	/** @param array<string, mixed> $row */
-	private function managementLabel( array $row ): string {
+	private function management_label( array $row ): string {
 		if ( is_string( $row['management_label'] ?? null ) && '' !== $row['management_label'] ) {
 			return $row['management_label'];
 		}
@@ -199,7 +199,7 @@ final class RepositoryTableRenderer {
 	}
 
 	/** @param array<string, mixed> $row */
-	private function renderManagementDetail( array $row ): void {
+	private function render_management_detail( array $row ): void {
 		$label = is_string( $row['management_detail'] ?? null ) ? $row['management_detail'] : '';
 		if ( '' === $label ) {
 			return;
@@ -211,7 +211,7 @@ final class RepositoryTableRenderer {
 	}
 
 	/** @param array<string, mixed> $row */
-	private function renderConsequence( array $row ): void {
+	private function render_consequence( array $row ): void {
 		$message = is_string( $row['consequence'] ?? null ) ? $row['consequence'] : '';
 		$id      = is_string( $row['consequence_id'] ?? null ) ? $row['consequence_id'] : '';
 		if ( '' === $message ) {

@@ -30,8 +30,8 @@ final class EncryptedSecretsEnvelopeCodec {
 		#[\SensitiveParameter] string $plaintext,
 		#[\SensitiveParameter] string $key
 	): string {
-		$this->requireSodium();
-		$this->requireKey( $key );
+		$this->require_sodium();
+		$this->require_key( $key );
 		if ( strlen( $plaintext ) > self::MAX_BYTES ) {
 			throw new RuntimeException( 'The Booster secrets document is too large to encrypt.' );
 		}
@@ -44,7 +44,7 @@ final class EncryptedSecretsEnvelopeCodec {
 				$nonce,
 				$key
 			);
-			$envelope   = $this->canonicalEnvelope(
+			$envelope   = $this->canonical_envelope(
 				base64_encode( $nonce ),
 				base64_encode( $ciphertext )
 			);
@@ -63,8 +63,8 @@ final class EncryptedSecretsEnvelopeCodec {
 		#[\SensitiveParameter] string $envelope,
 		#[\SensitiveParameter] string $key
 	): string {
-		$this->requireSodium();
-		$this->requireKey( $key );
+		$this->require_sodium();
+		$this->require_key( $key );
 		if ( '' === $envelope
 			|| strlen( $envelope ) > self::MAX_BYTES
 			|| 1 !== preg_match( '//u', $envelope )
@@ -89,13 +89,13 @@ final class EncryptedSecretsEnvelopeCodec {
 			throw new RuntimeException( 'The encrypted Booster secrets document is invalid.' );
 		}
 
-		$canonical = $this->canonicalEnvelope( $decoded['nonce'], $decoded['ciphertext'] );
+		$canonical = $this->canonical_envelope( $decoded['nonce'], $decoded['ciphertext'] );
 		if ( ! hash_equals( $canonical, $envelope ) ) {
 			throw new RuntimeException( 'The encrypted Booster secrets document is invalid.' );
 		}
 
-		$nonce      = $this->decodeBase64( $decoded['nonce'] );
-		$ciphertext = $this->decodeBase64( $decoded['ciphertext'] );
+		$nonce      = $this->decode_base64( $decoded['nonce'] );
+		$ciphertext = $this->decode_base64( $decoded['ciphertext'] );
 		if ( SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES !== strlen( $nonce )
 			|| SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_ABYTES > strlen( $ciphertext )
 		) {
@@ -119,7 +119,7 @@ final class EncryptedSecretsEnvelopeCodec {
 		return $plaintext;
 	}
 
-	private function canonicalEnvelope( string $nonce, string $ciphertext ): string {
+	private function canonical_envelope( string $nonce, string $ciphertext ): string {
 		try {
 			$json = json_encode(
 				array(
@@ -138,7 +138,7 @@ final class EncryptedSecretsEnvelopeCodec {
 		return $json . "\n";
 	}
 
-	private function decodeBase64( string $encoded ): string {
+	private function decode_base64( string $encoded ): string {
 		$decoded = base64_decode( $encoded, true );
 		if ( false === $decoded || ! hash_equals( base64_encode( $decoded ), $encoded ) ) {
 			throw new RuntimeException( 'The encrypted Booster secrets document is invalid.' );
@@ -147,7 +147,7 @@ final class EncryptedSecretsEnvelopeCodec {
 		return $decoded;
 	}
 
-	private function requireSodium(): void {
+	private function require_sodium(): void {
 		if ( ! extension_loaded( 'sodium' )
 			|| ! function_exists( 'sodium_crypto_aead_xchacha20poly1305_ietf_encrypt' )
 			|| ! function_exists( 'sodium_crypto_aead_xchacha20poly1305_ietf_decrypt' )
@@ -159,7 +159,7 @@ final class EncryptedSecretsEnvelopeCodec {
 		}
 	}
 
-	private function requireKey( #[\SensitiveParameter] string $key ): void {
+	private function require_key( #[\SensitiveParameter] string $key ): void {
 		if ( SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES !== strlen( $key ) ) {
 			throw new RuntimeException( 'The Booster encryption key is invalid.' );
 		}

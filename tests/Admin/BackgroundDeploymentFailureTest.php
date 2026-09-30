@@ -102,8 +102,8 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		self::assertSame( array( 'uncertain', 'affected' ), array_column( $failures, 'package_slug' ) );
 		self::assertSame( 'needs_attention', $failures[0]['state'] );
 		self::assertSame( 'profile_123', $failures[1]['credential_id'] );
-		self::assertNull( $monitor->forPackage( 'plugin', 'example' ) );
-		self::assertSame( 'affected', $monitor->forPackage( 'plugin', 'affected' )['package_slug'] ?? null );
+		self::assertNull( $monitor->for_package( 'plugin', 'example' ) );
+		self::assertSame( 'affected', $monitor->for_package( package_type: 'plugin', package_slug: 'affected' )['package_slug'] ?? null );
 		self::assertNotNull( $monitor->fingerprint() );
 	}
 

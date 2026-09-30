@@ -437,7 +437,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$interaction        = new CapturingProviderProfileInteraction();
 		$dashboard          = $this->createMock( Dashboard::class );
 		$expiryObservations = new InMemoryCredentialExpiryObservationStore();
-		$expiryObservations->recordProviderExpiry(
+		$expiryObservations->record_provider_expiry(
 			'fixture',
 			'credential_existing',
 			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
@@ -483,7 +483,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$interaction        = new CapturingProviderProfileInteraction();
 		$dashboard          = $this->createMock( Dashboard::class );
 		$expiryObservations = new InMemoryCredentialExpiryObservationStore();
-		$expiryObservations->recordProviderExpiry(
+		$expiryObservations->record_provider_expiry(
 			'fixture',
 			'credential_existing',
 			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
@@ -523,7 +523,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$interaction        = new CapturingProviderProfileInteraction();
 		$dashboard          = $this->createMock( Dashboard::class );
 		$expiryObservations = new InMemoryCredentialExpiryObservationStore();
-		$expiryObservations->recordProviderExpiry(
+		$expiryObservations->record_provider_expiry(
 			'fixture',
 			'credential_existing',
 			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
@@ -881,8 +881,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$interaction        = new CapturingProviderProfileInteraction();
 		$dashboard          = $this->createMock( Dashboard::class );
 		$expiryObservations = new InMemoryCredentialExpiryObservationStore();
-		$expiryObservations->setManualExpiry( 'fixture', 'credential_existing', '2026-09-01' );
-		$expiryObservations->recordProviderExpiry(
+		$expiryObservations->set_manual_expiry( 'fixture', 'credential_existing', '2026-09-01' );
+		$expiryObservations->record_provider_expiry(
 			'fixture',
 			'credential_existing',
 			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
@@ -1177,16 +1177,16 @@ final class ReplacementAwareBranchCheckEvidenceStore extends RepositoryBranchChe
 	/** @param \Closure(): bool $replacementMaterialWasPersisted */
 	public function __construct( private \Closure $replacementMaterialWasPersisted ) {}
 
-	public function bumpProfileGeneration( string $provider, string $profileId ): void {
+	public function bump_profile_generation( string $provider, string $profile_id ): void {
 		$this->replacementWasPersisted = ( $this->replacementMaterialWasPersisted )();
-		$this->invalidatedProfiles[]   = $provider . ':' . $profileId;
+		$this->invalidatedProfiles[]   = $provider . ':' . $profile_id;
 	}
 }
 
 final class ThrowingBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenceStore {
 
-	public function bumpProfileGeneration( string $provider, string $profileId ): void {
-		unset( $provider, $profileId );
+	public function bump_profile_generation( string $provider, string $profile_id ): void {
+		unset( $provider, $profile_id );
 		throw new \RuntimeException( 'Fixture evidence invalidation failed.' );
 	}
 }

@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "30f50a7ed1d8dd7fed8d1c7121e57c58",
+    "content-hash": "9a8006af6d03c4812280fee68d662a8c",
     "packages": [
         {
             "name": "ran/booster-github-provider",
-            "version": "v1.0.0-beta.7",
+            "version": "v1.0.0-beta.8",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider.git",
-                "reference": "8e0c45cd8a3617be7fd5361ba414041913b63d09"
+                "reference": "556f19923f6564f1bbd5cecee089d6b136afc5cd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-booster-github-provider/zipball/8e0c45cd8a3617be7fd5361ba414041913b63d09",
-                "reference": "8e0c45cd8a3617be7fd5361ba414041913b63d09",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-booster-github-provider/zipball/556f19923f6564f1bbd5cecee089d6b136afc5cd",
+                "reference": "556f19923f6564f1bbd5cecee089d6b136afc5cd",
                 "shasum": ""
             },
             "require": {
@@ -99,7 +99,7 @@
                 "security": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider/security/advisories/new",
                 "source": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider"
             },
-            "time": "2026-09-30T12:33:52+00:00"
+            "time": "2026-09-30T17:45:44+00:00"
         },
         {
             "name": "ran/updater-support",
@@ -308,10 +308,10 @@
                 "shasum": ""
             },
             "require": {
-                "php": "^8.2",
                 "ext-hash": "*",
                 "ext-json": "*",
-                "ext-zip": "*"
+                "ext-zip": "*",
+                "php": "^8.2"
             },
             "require-dev": {
                 "phpcompatibility/php-compatibility": "10.0.0-alpha2",

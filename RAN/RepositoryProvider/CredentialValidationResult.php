@@ -30,7 +30,7 @@ final readonly class CredentialValidationResult {
 			if ( null !== $expiry ) {
 				throw new LogicException( 'Failed credential validation cannot report expiry metadata.' );
 			}
-			self::boundedFailureMessage( $reason );
+			self::bounded_failure_message( $reason );
 		}
 	}
 
@@ -46,10 +46,12 @@ final readonly class CredentialValidationResult {
 		return self::failure( self::UNAVAILABLE );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public static function rateLimited(): self {
 		return self::failure( self::RATE_LIMITED );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public static function invalidResponse(): self {
 		return self::failure( self::INVALID_RESPONSE );
 	}
@@ -58,17 +60,19 @@ final readonly class CredentialValidationResult {
 		return new self( $reason );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function isValid(): bool {
 		return self::VALID === $this->reason;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function getDisplayMessage(): ?string {
 		return self::VALID === $this->reason
 			? null
-			: self::boundedFailureMessage( $this->reason );
+			: self::bounded_failure_message( $this->reason );
 	}
 
-	private static function boundedFailureMessage( string $reason ): string {
+	private static function bounded_failure_message( string $reason ): string {
 		$message = self::FAILURE_MESSAGES[ $reason ] ?? null;
 
 		if ( ! is_string( $message )

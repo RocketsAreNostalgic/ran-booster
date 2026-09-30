@@ -172,7 +172,7 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		$review      = $application->review( $imported, $decisions );
 		self::assertSame( TargetPackageAction::MANAGED, $review[0]->action );
 		self::assertFileDoesNotExist( $this->targetPath );
-		$applyItem = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'applyItem' );
+		$applyItem = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'apply_item' );
 		$managed   = $application->apply(
 			$imported,
 			0,

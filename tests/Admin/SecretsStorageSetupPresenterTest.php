@@ -32,7 +32,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		$candidate = "/srv/private site/.ran-booster/0123456789abcdef/secrets'file.json";
 		$root      = (string) realpath( dirname( __DIR__, 2 ) );
 		$payload   = ( new SecretsStorageSetupPresenter() )->build(
-			SecretsStorageProvisioningResult::setupAvailable( $candidate ),
+			SecretsStorageProvisioningResult::setup_available( $candidate ),
 			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview',
 			$root
 		);
@@ -64,7 +64,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		$GLOBALS['ran_booster_repository_admin_translations']['ran-booster'] = $GLOBALS['ran_booster_admin_test_translations']['ran-booster'];
 
 		$payload = ( new SecretsStorageSetupPresenter() )->build(
-			SecretsStorageProvisioningResult::setupAvailable( '/private/.ran-booster/0123456789abcdef/secrets.json' ),
+			SecretsStorageProvisioningResult::setup_available( '/private/.ran-booster/0123456789abcdef/secrets.json' ),
 			'/admin'
 		);
 
@@ -97,7 +97,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		);
 		$candidate = '/private/canary/secrets.json';
 		$payload   = ( new SecretsStorageSetupPresenter() )->build(
-			SecretsStorageProvisioningResult::setupAvailable( $candidate ),
+			SecretsStorageProvisioningResult::setup_available( $candidate ),
 			'/admin'
 		);
 
@@ -108,15 +108,15 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 
 	public function testConfiguredStatusesKeepTheProtectedPathWithoutOfferingSetupCommands(): void {
 		$results = array(
-			SecretsStorageProvisioningResult::pathConfigured(
-				'/private/canary/secrets.json',
-				SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC
+			SecretsStorageProvisioningResult::path_configured(
+				candidate_path: '/private/canary/secrets.json',
+				path_source: SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC
 			),
-			SecretsStorageProvisioningResult::storageHealthy(
+			SecretsStorageProvisioningResult::storage_healthy(
 				'/private/canary/secrets.json',
 				SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL
 			),
-			SecretsStorageProvisioningResult::storageNeedsAttention(
+			SecretsStorageProvisioningResult::storage_needs_attention(
 				'/private/canary/secrets.json',
 				SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL
 			),
@@ -130,7 +130,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 
 			self::assertSame( '/private/canary/secrets.json', $payload['candidate_path'] );
 			self::assertSame( '/private/canary', $payload['candidate_directory'] );
-			self::assertSame( $result->pathSource(), $payload['path_source'] );
+			self::assertSame( $result->path_source(), $payload['path_source'] );
 			self::assertFalse( $payload['can_provision'] );
 			self::assertNull( $payload['manual_preflight'] );
 			self::assertSame( array(), $payload['directory_commands'] );
@@ -140,7 +140,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 
 	public function testSensitiveSetupDetailsAreRedactedForAUserWithoutBothCapabilities(): void {
 		$payload = ( new SecretsStorageSetupPresenter() )->build(
-			SecretsStorageProvisioningResult::manualRequired(
+			SecretsStorageProvisioningResult::manual_required(
 				'location_unavailable',
 				'No safe location.',
 				null,
@@ -189,11 +189,11 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 			),
 		);
 		$payload   = ( new SecretsStorageSetupPresenter() )->build(
-			SecretsStorageProvisioningResult::manualRequired(
-				'location_unavailable',
-				'No safe location.',
-				null,
-				$discarded
+			SecretsStorageProvisioningResult::manual_required(
+				code: 'location_unavailable',
+				message: 'No safe location.',
+				candidate_path: null,
+				discarded_candidates: $discarded
 			),
 			'/admin'
 		);
@@ -236,7 +236,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 	public function testBuildsAnAdoptionOfferOnlyForAnAvailableRecoveryState(): void {
 		$recoveryPath = '/private/.ran-booster/abcdef0123456789/secrets.json';
 		$payload      = ( new SecretsStorageSetupPresenter() )->build(
-			SecretsStorageProvisioningResult::storageNeedsAttention(
+			SecretsStorageProvisioningResult::storage_needs_attention(
 				'/private/.ran-booster/0123456789abcdef/secrets.json',
 				SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC
 			),
@@ -257,7 +257,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		self::assertSame( dirname( $recoveryPath ), $payload['recovery']['candidate_directory'] );
 
 		$blocked = ( new SecretsStorageSetupPresenter() )->build(
-			SecretsStorageProvisioningResult::storageNeedsAttention(
+			SecretsStorageProvisioningResult::storage_needs_attention(
 				'/private/current/secrets.json',
 				SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL
 			),
@@ -279,7 +279,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 	public function testBuildsTheSameExplicitResetOfferForEitherIncompleteStorageHalf(): void {
 		foreach ( array( 'storage_file_missing', 'storage_key_missing' ) as $reason ) {
 			$payload = ( new SecretsStorageSetupPresenter() )->build(
-				SecretsStorageProvisioningResult::storageNeedsAttention(
+				SecretsStorageProvisioningResult::storage_needs_attention(
 					'/private/current/secrets.json',
 					SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC,
 					$reason
@@ -302,7 +302,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		}
 
 		$redacted = ( new SecretsStorageSetupPresenter() )->build(
-			SecretsStorageProvisioningResult::storageNeedsAttention(
+			SecretsStorageProvisioningResult::storage_needs_attention(
 				'/private/current/secrets.json',
 				SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC
 			),

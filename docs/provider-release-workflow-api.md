@@ -45,13 +45,12 @@ tags. The five methods are `workflowStatus`, `workflowPreview`,
 are rejected before provider, credential or preflight access.
 
 The draft helper resolves `RepositoryReleaseWorkflowManagementV3` directly.
-The production lock selects immutable GitHub Provider `v1.0.0-beta.7`
-(`8e0c45cd8a3617be7fd5361ba414041913b63d09`), which implements V3.
-That release omits the valid record's operation when only its source revision
-differs from the current target. Core requires a current `bootstrap` operation
-before exposing or invoking outcomes, so cutover remains held until a corrected
-Provider release is adopted. Isolated source testing of that correction does
-not qualify the locked composition.
+The production lock selects immutable GitHub Provider `v1.0.0-beta.8`
+(`556f19923f6564f1bbd5cecee089d6b136afc5cd`), which implements V3 and preserves
+a valid bootstrap record's operation across source revisions. Core requires a
+`bootstrap` operation before exposing or invoking outcomes. Adoption of the
+corrected release still requires final locked, archive and installed qualification;
+isolated source testing does not qualify the installed composition.
 
 The API 3 facet still requires the same five release-consumption capabilities on
 the registered provider aggregate: `RepositoryReleaseMetadata`,

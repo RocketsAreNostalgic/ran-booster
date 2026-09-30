@@ -32,12 +32,15 @@ final readonly class ManagedPackageBlueprintExporter {
 	 * @param array<string, list<string>>                     $credentialSelection
 	 * @param list<array{type:string,identifier:string}>|null $packageSelection
 	 */
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 	public function export( array $credentialSelection = array(), ?array $packageSelection = null ): PackageBlueprint {
 		$packages    = array();
 		$managed     = array();
 		$unsupported = array();
-		$selected    = $this->selection( $packageSelection );
-		$credentials = $this->credentialSelection( $credentialSelection );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
+		$selected = $this->selection( $packageSelection );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
+		$credentials = $this->credential_selection( $credentialSelection );
 		foreach ( array(
 			'plugin' => $this->plugins->allDeploymentPlugins(),
 			'theme'  => $this->themes->allDeploymentThemes(),
@@ -79,7 +82,7 @@ final readonly class ManagedPackageBlueprintExporter {
 	}
 
 	/** @param array<string, list<string>> $selection @return array<string, true> */
-	private function credentialSelection( array $selection ): array {
+	private function credential_selection( array $selection ): array {
 		$selected = array();
 		foreach ( $selection as $provider => $ids ) {
 			if ( ! is_string( $provider ) || 1 !== preg_match( '/\A[a-z][a-z0-9-]{0,31}\z/', $provider )
@@ -135,27 +138,27 @@ final readonly class ManagedPackageBlueprintExporter {
 	 * @return list<BlueprintCredential>
 	 */
 	private function credentials( array $managed, array $selected ): array {
-		$grouped        = array();
-		$matched        = array();
-		$materials      = array();
-		$storageChecked = false;
+		$grouped         = array();
+		$matched         = array();
+		$materials       = array();
+		$storage_checked = false;
 
 		foreach ( $managed as $entry ) {
-			$package      = $entry['package'];
-			$blueprint    = $entry['blueprint'];
-			$credentialId = $package->getCredentialId();
-			$key          = $blueprint->provider . "\0" . $credentialId;
+			$package       = $entry['package'];
+			$blueprint     = $entry['blueprint'];
+			$credential_id = $package->getCredentialId();
+			$key           = $blueprint->provider . "\0" . $credential_id;
 			if ( ! isset( $selected[ $key ] ) ) {
 				continue;
 			}
 			$matched[ $key ] = true;
 
 			try {
-				if ( ! $storageChecked ) {
+				if ( ! $storage_checked ) {
 					$this->secrets->assertManagedStorageReady();
-					$storageChecked = true;
+					$storage_checked = true;
 				}
-				$material = $materials[ $key ] ??= $this->secrets->credentialMaterial( $blueprint->provider, $credentialId );
+				$material = $materials[ $key ] ??= $this->secrets->credentialMaterial( $blueprint->provider, $credential_id );
 			} catch ( \Throwable $failure ) {
 				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The typed exception is caught at the admin boundary.
 				throw LocalSecretStoreUnavailable::forPortability( $failure );

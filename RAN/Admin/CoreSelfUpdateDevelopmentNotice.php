@@ -15,37 +15,37 @@ final class CoreSelfUpdateDevelopmentNotice {
 
 	public function __construct(
 		private readonly CoreSelfUpdatePolicy $policy,
-		private readonly ?string $screenId = null
+		private readonly ?string $screen_id = null
 	) {
 	}
 
 	public function register(): void {
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueueStyle' ) );
-		add_action( 'admin_notices', array( $this, 'renderGlobal' ) );
-		add_action( 'network_admin_notices', array( $this, 'renderGlobal' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_style' ) );
+		add_action( 'admin_notices', array( $this, 'render_global' ) );
+		add_action( 'network_admin_notices', array( $this, 'render_global' ) );
 	}
 
-	public function enqueueStyle(): void {
-		if ( $this->shouldRender() ) {
+	public function enqueue_style(): void {
+		if ( $this->should_render() ) {
 			wp_add_inline_style( 'common', '[data-ran-booster-core-development-notice] { background-color: #e5f3ff; }' );
 		}
 	}
 
-	public function shouldRender(): bool {
+	public function should_render(): bool {
 		$diagnostics = $this->policy->diagnostics();
 
 		return (
 			current_user_can( 'manage_options' )
 			|| current_user_can( 'manage_network_plugins' )
 		)
-			&& BoosterNoticeScope::allows( $this->screenId )
+			&& BoosterNoticeScope::allows( $this->screen_id )
 			&& 'disabled' === ( $diagnostics['effective_mode'] ?? null )
 			&& 'source_checkout' === ( $diagnostics['reason'] ?? null );
 	}
 
 	/** Render on non-Booster admin screens through WordPress's notice region. */
-	public function renderGlobal(): void {
-		if ( BoosterNoticeScope::isBoosterScreen( $this->screenId ) ) {
+	public function render_global(): void {
+		if ( BoosterNoticeScope::is_booster_screen( $this->screen_id ) ) {
 			return;
 		}
 
@@ -53,20 +53,20 @@ final class CoreSelfUpdateDevelopmentNotice {
 	}
 
 	/** Render on Booster screens immediately after the shared admin shell. */
-	public function renderShellInline(): void {
-		if ( ! BoosterNoticeScope::isBoosterScreen( $this->screenId ) ) {
+	public function render_shell_inline(): void {
+		if ( ! BoosterNoticeScope::is_booster_screen( $this->screen_id ) ) {
 			return;
 		}
 
-		$this->renderNotice( true );
+		$this->render_notice( true );
 	}
 
 	public function render(): void {
-		$this->renderNotice( false );
+		$this->render_notice( false );
 	}
 
-	private function renderNotice( bool $inline ): void {
-		if ( $this->rendered || ! $this->shouldRender() ) {
+	private function render_notice( bool $inline ): void {
+		if ( $this->rendered || ! $this->should_render() ) {
 			return;
 		}
 		$this->rendered = true;

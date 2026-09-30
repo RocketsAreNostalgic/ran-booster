@@ -15,8 +15,10 @@ final readonly class BlueprintPackage {
 	public function __construct(
 		public string $type,
 		public string $identifier,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted fields retain the existing caller contract.
 		public string $displayName,
 		public string $provider,
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted fields retain the existing caller contract.
 		public string $providerRepositoryId,
 		public string $repository,
 		public string $branch,
@@ -25,21 +27,24 @@ final readonly class BlueprintPackage {
 		if ( null !== $subdirectory && strlen( $subdirectory ) > 255 ) {
 			throw new InvalidArgumentException( 'The portability package record is invalid.' );
 		}
-		$normalizedSubdirectory = PackageSubdirectory::normalize( $subdirectory );
+		$normalized_subdirectory = PackageSubdirectory::normalize( $subdirectory );
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true )
-			|| ! self::safePackageIdentifier( $identifier, $type )
+			|| ! self::safe_package_identifier( $identifier, $type )
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted fields retain the existing caller contract.
 			|| '' === $displayName || trim( $displayName ) !== $displayName || strlen( $displayName ) > 191 || 1 !== preg_match( '//u', $displayName ) || preg_match( '/[\x00-\x1F\x7F]/', $displayName )
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted fields retain the existing caller contract.
 			|| '' === $providerRepositoryId || strlen( $providerRepositoryId ) > 191 || 1 !== preg_match( '//u', $providerRepositoryId ) || preg_match( '/[\x00-\x1F\x7F]/', $providerRepositoryId )
 			|| '' === $branch || strlen( $branch ) > 255 || 1 !== preg_match( '//u', $branch ) || preg_match( '/[\x00-\x1F\x7F]/', $branch )
-			|| $subdirectory !== $normalizedSubdirectory ) {
+			|| $subdirectory !== $normalized_subdirectory ) {
 			throw new InvalidArgumentException( 'The portability package record is invalid.' );
 		}
 
 		ProviderCode::parse( $provider );
-		self::safeRepositoryLocator( $repository );
+		self::safe_repository_locator( $repository );
 	}
 
 	/** @param array<string, mixed> $record */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
 	public static function fromArray( array $record ): self {
 		$keys = array(
 			'type',
@@ -58,6 +63,7 @@ final readonly class BlueprintPackage {
 		return new self( $record['type'], $record['identifier'], $record['display_name'], $record['provider'], $record['provider_repository_id'], $record['repository'], $record['branch'], $record['subdirectory'] );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
 	public static function fromManagedPackage( string $type, Package $package ): self {
 		return new self(
 			$type,
@@ -72,12 +78,15 @@ final readonly class BlueprintPackage {
 	}
 
 	/** @return array<string, scalar|null> */
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
 	public function toArray(): array {
 		return array(
 			'type'                   => $this->type,
 			'identifier'             => $this->identifier,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public named parameters and promoted fields retain the existing caller contract.
 			'display_name'           => $this->displayName,
 			'provider'               => $this->provider,
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public named parameters and promoted fields retain the existing caller contract.
 			'provider_repository_id' => $this->providerRepositoryId,
 			'repository'             => $this->repository,
 			'branch'                 => $this->branch,
@@ -85,6 +94,7 @@ final readonly class BlueprintPackage {
 		);
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
 	public function sameManagementAs( self $other ): bool {
 		$left  = $this->toArray();
 		$right = $other->toArray();
@@ -93,7 +103,7 @@ final readonly class BlueprintPackage {
 		return $left === $right;
 	}
 
-	private static function safePackageIdentifier( string $identifier, string $type ): bool {
+	private static function safe_package_identifier( string $identifier, string $type ): bool {
 		if ( '' === $identifier || strlen( $identifier ) > 255 || 1 !== preg_match( '//u', $identifier ) || str_starts_with( $identifier, '/' ) || str_contains( $identifier, '\\' ) || preg_match( '/[\x00-\x1F\x7F]/', $identifier ) ) {
 			return false;
 		}
@@ -110,7 +120,7 @@ final readonly class BlueprintPackage {
 		}
 	}
 
-	private static function safeRepositoryLocator( string $repository ): void {
+	private static function safe_repository_locator( string $repository ): void {
 		RepositoryLocator::requireValid( $repository );
 
 		if ( ! str_contains( $repository, '://' ) ) {

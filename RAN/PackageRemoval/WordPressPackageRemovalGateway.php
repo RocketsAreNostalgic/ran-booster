@@ -9,28 +9,31 @@ namespace RAN\PackageRemoval;
  */
 final class WordPressPackageRemovalGateway implements PackageRemovalGateway {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing gateway and executor override contracts.
 	public function pluginIsActive( string $identifier ): bool {
-		$this->loadPluginFunctions();
+		$this->load_plugin_functions();
 
 		return is_plugin_active( $identifier );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing gateway and executor override contracts.
 	public function pluginHasActiveDependents( string $identifier ): bool {
-		$this->loadPluginFunctions();
+		$this->load_plugin_functions();
 		\WP_Plugin_Dependencies::initialize();
 
 		return \WP_Plugin_Dependencies::has_active_dependents( $identifier );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing gateway and executor override contracts.
 	public function pluginSharesDirectory( string $identifier ): bool {
-		$this->loadPluginFunctions();
+		$this->load_plugin_functions();
 		$directory = dirname( $identifier );
 		if ( '.' === $directory ) {
 			return false;
 		}
 
-		foreach ( array_keys( get_plugins() ) as $pluginFile ) {
-			if ( $pluginFile !== $identifier && dirname( $pluginFile ) === $directory ) {
+		foreach ( array_keys( get_plugins() ) as $plugin_file ) {
+			if ( $plugin_file !== $identifier && dirname( $plugin_file ) === $directory ) {
 				return true;
 			}
 		}
@@ -38,20 +41,23 @@ final class WordPressPackageRemovalGateway implements PackageRemovalGateway {
 		return false;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing gateway and executor override contracts.
 	public function pluginPathIsSafe( string $identifier ): bool {
 		$directory = dirname( $identifier );
 		$relative  = '.' === $directory ? $identifier : $directory;
 
-		return $this->boundedInstalledPath( WP_PLUGIN_DIR, $relative );
+		return $this->bounded_installed_path( WP_PLUGIN_DIR, $relative );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing gateway and executor override contracts.
 	public function deactivatePlugin( string $identifier ): void {
-		$this->loadPluginFunctions();
+		$this->load_plugin_functions();
 		deactivate_plugins( $identifier, false, false );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing gateway and executor override contracts.
 	public function deletePlugin( string $identifier ): bool {
-		$this->loadPluginFunctions();
+		$this->load_plugin_functions();
 
 		try {
 			return true === delete_plugins( array( $identifier ) );
@@ -60,6 +66,7 @@ final class WordPressPackageRemovalGateway implements PackageRemovalGateway {
 		}
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing gateway and executor override contracts.
 	public function themeDeletionBlocker( string $stylesheet ): ?string {
 		if ( get_stylesheet() === $stylesheet ) {
 			return 'theme_active';
@@ -68,8 +75,8 @@ final class WordPressPackageRemovalGateway implements PackageRemovalGateway {
 			return 'theme_parent_in_use';
 		}
 
-		foreach ( wp_get_themes() as $candidateStylesheet => $theme ) {
-			if ( $candidateStylesheet !== $stylesheet && $theme->get_template() === $stylesheet ) {
+		foreach ( wp_get_themes() as $candidate_stylesheet => $theme ) {
+			if ( $candidate_stylesheet !== $stylesheet && $theme->get_template() === $stylesheet ) {
 				return 'theme_has_children';
 			}
 		}
@@ -77,28 +84,30 @@ final class WordPressPackageRemovalGateway implements PackageRemovalGateway {
 		return null;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing gateway and executor override contracts.
 	public function themePathIsSafe( string $stylesheet ): bool {
-		return $this->boundedInstalledPath( get_theme_root( $stylesheet ), $stylesheet );
+		return $this->bounded_installed_path( get_theme_root( $stylesheet ), $stylesheet );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing gateway and executor override contracts.
 	public function deleteTheme( string $stylesheet ): bool {
-		$this->loadThemeFunctions();
+		$this->load_theme_functions();
 
 		return true === delete_theme( $stylesheet );
 	}
 
-	private function loadPluginFunctions(): void {
+	private function load_plugin_functions(): void {
 		require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 	}
 
-	private function loadThemeFunctions(): void {
+	private function load_theme_functions(): void {
 		require_once ABSPATH . 'wp-admin/includes/theme.php';
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 	}
 
-	private function boundedInstalledPath( string $root, string $relative ): bool {
+	private function bounded_installed_path( string $root, string $relative ): bool {
 		$root = realpath( $root );
 		if ( false === $root || is_link( $root ) ) {
 			return false;

@@ -109,10 +109,10 @@ final class DashboardNoticeLoggingTest extends TestCase {
 	}
 
 	public function testStorageAttentionLogsOnlyStablePathlessDiagnosticContext(): void {
-		$method = new \ReflectionMethod( Dashboard::class, 'logSecretsStorageDiagnostic' );
+		$method = new \ReflectionMethod( Dashboard::class, 'log_secrets_storage_diagnostic' );
 		$method->invoke(
 			$this->dashboard,
-			SecretsStorageProvisioningResult::storageNeedsAttention(
+			SecretsStorageProvisioningResult::storage_needs_attention(
 				'/private/path-canary/secrets.json',
 				SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL,
 				'storage_key_missing',

@@ -1,6 +1,6 @@
 # Provider extension contract
 
-RAN Booster Provider API 11 accepts trusted repository providers through its late
+RAN Booster Provider API 12 accepts trusted repository providers through its late
 registration action. A provider plugin attaches a callback from its main plugin
 file during normal plugin loading. Credential-bearing providers use one required
 three-argument factory contract:
@@ -10,7 +10,7 @@ add_action(
 	'ran_booster_register_providers',
 	static function ( \RAN\RepositoryProvider\ProviderRegistry $registry ): void {
 		if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-			|| 11 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+			|| 12 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
 			return;
 		}
 
@@ -33,11 +33,11 @@ add_action(
 ```
 
 Booster defines the integer `RAN_BOOSTER_PROVIDER_API_VERSION` marker before the
-registration action can run. The callback must check for exact Provider API 11.
+registration action can run. The callback must check for exact Provider API 12.
 `Requires Plugins: ran-booster` only tells WordPress about the package
 dependency; it does not replace this exact runtime marker check or make a
 mismatched provider contract safe.
-Provider API 11 publishes no logging facade, generic service resolver, Core
+Provider API 12 publishes no logging facade, generic service resolver, Core
 container, credential writer, sidecar path or database/deployment repository.
 Providers report bounded diagnostics and operation results. Core owns logging
 at its call boundaries and never supplies a logger to provider code.
@@ -75,9 +75,9 @@ returned provider uses the same requested code before atomic registration:
 A provider that retains the host artifact policy should retain the bounded
 supplier and invoke `maximumArtifactBytes()` only when the relevant archive or
 release operation needs the ceiling, not while its registration factory is
-constructing the aggregate. Provider API 11 guarantees that the registration
+constructing the aggregate. Provider API 12 guarantees that the registration
 context is part of the credential-bearing factory contract; providers targeting
-API 11 must not feature-detect or fall back to the retired two-argument shape.
+API 12 must not feature-detect or fall back to the retired two-argument shape.
 The context remains bounded and does not create a generic dependency-injection
 seam.
 
@@ -103,7 +103,7 @@ registration window.
 
 The current collision and same-vendor coexistence behavior is characterized in
 [Provider registration and coexistence](provider-registration-and-coexistence.md).
-Provider API 11 rejects an exact duplicate code but does not reserve vendor
+Provider API 12 rejects an exact duplicate code but does not reserve vendor
 aliases, identify two implementations of the same vendor, or merge their
 capabilities and state.
 
@@ -228,14 +228,15 @@ Deployment tabs and independently supported release consumption remain usable.
 Remote inspection requires an explicit action. Outcomes return to the exact
 repository Releases tab, with diagnostics inside its notice area.
 
-These optional workflow facets do not further widen Provider API 11's bounded
+These optional workflow facets do not further widen Provider API 12's bounded
 registration context and introduce no repository settings object or shared
 workflow storage.
 
-This is the initial-only V3 draft contract, not a qualified Provider API 11
-release promise. The previous API-11 baseline promised V2 to external providers;
-removing it requires explicit coordinator disposition under #81. See the
-[open outer API decision and candidate qualification boundary](provider-release-workflow-api.md#outer-provider-api-decision-remains-open).
+Provider API 12 identifies the breaking initial-only V3 contract. Providers must
+check this exact marker before loading their implementation. API-11 providers
+must remain unregistered on this host; there is no V2 compatibility shim. The
+registration signature and Add-on API 16 are unchanged. See the
+[coordinated compatibility boundary](provider-release-workflow-api.md#provider-api-12-compatibility-boundary).
 The bundled lock is still V2-only; do not independently adopt this draft.
 
 Check and remove deliberately receive Core's canonical callback URL as well as
@@ -365,7 +366,7 @@ archive into its private preflight file; WordPress receives only that verified
 local file. Providers remain responsible for any stricter origin, path and
 signed query policy required by their service.
 
-Provider API 11 owns two shared helpers for ordinary vendor implementations:
+Provider API 12 owns two shared helpers for ordinary vendor implementations:
 
 - `GitReferenceSyntax::isValidNamedReference()` applies Core's bounded generic
   branch/ref syntax check without assuming a particular hosting vendor.

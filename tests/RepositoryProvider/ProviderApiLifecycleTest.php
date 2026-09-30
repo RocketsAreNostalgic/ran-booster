@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\RepositoryProvider;
 
 use LogicException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
@@ -17,12 +18,41 @@ final class ProviderApiLifecycleTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
+	#[DataProvider( 'registrationLoadOrders' )]
+	public function testApiElevenProviderIsRejectedBeforeItsV2ClassLoads( bool $coreFirst ): void {
+		require_once dirname( __DIR__ ) . '/Support/ExternalFixturePluginWordPressFunctions.php';
+		$GLOBALS['ran_booster_external_fixture_actions'] = array();
+		if ( $coreFirst ) {
+			define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
+		}
+		require dirname( __DIR__ ) . '/fixtures/provider-api11-registration/provider.php';
+		if ( ! $coreFirst ) {
+			define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
+		}
+		$registry  = new ProviderRegistry();
+		$callbacks = $GLOBALS['ran_booster_external_fixture_actions']['ran_booster_register_providers'];
+		self::assertCount( 1, $callbacks );
+		$callbacks[0]( $registry );
+		self::assertFalse( class_exists( 'RANBoosterApiElevenWorkflowProvider', false ) );
+		self::assertSame( array(), $registry->all() );
+	}
+
+	/** @return array<string, array{bool}> */
+	public static function registrationLoadOrders(): array {
+		return array(
+			'core first'     => array( true ),
+			'provider first' => array( false ),
+		);
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function testConflictingProviderApiMarkerFailsClearly(): void {
 		define( 'WPINC', 'wpinc' );
 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 1 );
 
 		$this->expectException( LogicException::class );
-		$this->expectExceptionMessage( 'RAN Booster Provider API 11 conflicts with an existing API version marker.' );
+		$this->expectExceptionMessage( 'RAN Booster Provider API 12 conflicts with an existing API version marker.' );
 
 		require dirname( __DIR__, 2 ) . '/ran-booster.php';
 	}

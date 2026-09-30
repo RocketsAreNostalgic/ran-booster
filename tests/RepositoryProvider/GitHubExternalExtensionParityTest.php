@@ -72,6 +72,18 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		$option  = 'ran_booster_github_provider_release_workflow_failure_history';
 		$GLOBALS['ran_booster_release_deployments_test_options'] = array( $option => array( $current ) );
 		self::assertCount( 1, $provider->workflowStatus( $target )->failureHistory() );
+		$GLOBALS['ran_booster_release_deployments_test_options']['ran_booster_github_provider_release_workflow_setup_records'] = array(
+			'123456789' => array(
+				'schema_version' => 2,
+				'operation'      => 'template_update',
+			),
+		);
+		$before = json_encode( $GLOBALS['ran_booster_release_deployments_test_options'], JSON_THROW_ON_ERROR );
+		$status = $provider->workflowStatus( $target );
+		self::assertTrue( $status->recordOccupied() );
+		self::assertFalse( $status->recordExact() );
+		self::assertSame( '', $status->recordOperation() );
+		self::assertSame( $before, json_encode( $GLOBALS['ran_booster_release_deployments_test_options'], JSON_THROW_ON_ERROR ) );
 		foreach ( array( 'update_inspect', 'update_setup' ) as $operation ) {
 			$obsolete              = $current;
 			$obsolete['operation'] = $operation;
@@ -87,7 +99,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testReleasedGitHubPackageComposesAsAPhysicallySeparateExternalPlugin(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 11 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
 		define( 'RAN_BOOSTER_RUNTIME_MODE', 'single_site_supported' );
 		$GLOBALS['ran_booster_external_fixture_actions'] = array();
 

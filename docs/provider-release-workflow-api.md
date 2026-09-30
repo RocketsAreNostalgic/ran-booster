@@ -1,6 +1,6 @@
 # Provider release-workflow capability
 
-Provider API 11 keeps release-workflow setup as an optional, separately versioned
+Provider API 12 keeps release-workflow setup as an optional, separately versioned
 provider facet. The base provider registration seam does not change when this
 facet evolves.
 
@@ -58,18 +58,20 @@ workflow-helper controls and calls also require that aggregate's
 `ProviderMetadata` to expose non-null `ProviderAdminMetadata`. Admin metadata
 remains optional for ordinary provider registration and other capabilities.
 
-## Outer Provider API decision remains open
+## Provider API 12 compatibility boundary
 
-Core still advertises Provider API 11. Its previous published documentation
-promised that API-11 providers could implement V2 directly. Removing V2 while
-keeping that promise is incompatible: an old provider can fail during class
-loading. The synthetic feature-detection fixture does not prove otherwise.
+Provider API 12 identifies this breaking, initial-only V3 contract. API 11
+promised V2 and is no longer advertised by this candidate. External providers
+must check the exact outer API marker before loading their implementation:
+old API-11 providers remain unregistered on API 12, and API-12 providers remain
+unregistered on older or unknown future hosts. Tests cover both plugin load
+orders. No V2 shim, range negotiation or registration redesign is introduced.
 
-The approved sharp cut in organisation #81 forbids a V2 shim and general
-Provider API refactoring. The coordinator must explicitly choose whether to
-accept this pre-release break under API 11 or authorize a narrowly coordinated
-outer API generation change and connected registration guards. This draft
-implements neither a compatibility bridge nor an unapproved API bump.
+Ben approved this narrowly coordinated generation change under organisation
+#81 on 30 September 2026. The registration factory signature and Add-on API 16
+remain unchanged. GitHub Provider host qualification and Bitbucket registration
+must move together with Core; Branch Updater and Release Updater protocols do
+not change as part of this work.
 
 ## Persisted history
 
@@ -85,6 +87,6 @@ PR #177 remains draft, incomplete and unmerged. UI/presentation implementation
 and owner interactive/end-to-end acceptance remain deferred under #81/#85.
 Automated candidate checks must identify the exact Core and Provider sources;
 they do not establish qualification of the currently locked bundle. Matching
-immutable Provider adoption, archive/installed proof and the outer API decision
+immutable Provider adoption, archive/installed proof and API-12 connected compatibility
 remain required before a coherent cutover. Do not alter release/certification
 pins or publish a bridge-only release to make this draft appear complete.

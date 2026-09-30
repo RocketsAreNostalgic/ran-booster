@@ -42,7 +42,7 @@ if ( ! defined( 'RAN_BOOSTER_ADDON_API_VERSION' )
 Add-on API 16 publishes only the named service documented for its surviving
 ready action. Core does not deliver an add-on logging facade, generic resolver
 or container.
-Provider API 11 remains a separate contract. Provider add-ons must continue to
+Provider API 12 remains a separate contract. Provider add-ons must continue to
 perform the exact checks described in the
 [Provider extension contract](provider-extension-contract.md).
 
@@ -493,9 +493,9 @@ back to the Core baseline; invalid badge labels and status values are dropped.
 Repository-scoped release workflow management belongs on the selected repository
 page. Core composes `ReleaseWorkflowControls` directly with the repository
 renderer; there is no provider HTML action or competing provider-rendered shell.
-The optional `RepositoryReleaseWorkflowManagementV2` capability supplies bounded
+The optional `RepositoryReleaseWorkflowManagementV3` capability supplies bounded
 immutable status, preview and result values to the current workflow helper. It is
-the release-workflow management contract in the v1 baseline; the earlier API 1
+the initial-only release-workflow contract in the API12 draft; the earlier API 1
 facet was retired before 1.0 after the maintained-repository audit found no
 current consumer. Core keeps
 the heading, setup-status line, credential selector, labels and help links
@@ -508,7 +508,7 @@ installation and update-policy controls. Repository history uses normalized
 `webhook` and `release_workflow` categories, not provider key prefixes or English
 headings; only exact current summary projections contribute to review counts.
 See the [workflow capability contract](provider-extension-contract.md#optional-release-workflow-management)
-and the [API 2 baseline and feature-detection contract](provider-release-workflow-api.md).
+and the [initial-only V3 and API12 candidate contract](provider-release-workflow-api.md).
 
 ## Structured administration actions
 

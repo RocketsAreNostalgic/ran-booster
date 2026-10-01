@@ -11,7 +11,7 @@ use InvalidArgumentException;
  *
  * Site configuration is resolved once at the relevant Booster composition or
  * admission boundary. Durable requests retain their already-resolved integer
- * and validate it with requireValid(); there is no non-durable per-package
+ * and validate it with require_valid(); there is no non-durable per-package
  * override API.
  */
 final class PackageArtifactLimit {
@@ -26,13 +26,13 @@ final class PackageArtifactLimit {
 	public static function resolve( null $legacyNull = null ): int {
 		unset( $legacyNull );
 		if ( defined( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ) ) {
-			return self::requireValid( constant( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ) );
+			return self::require_valid( constant( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ) );
 		}
 
-		return self::requireValid( self::DEFAULT_MAXIMUM_ARTIFACT_BYTES );
+		return self::require_valid( self::DEFAULT_MAXIMUM_ARTIFACT_BYTES );
 	}
 
-	public static function requireValid( mixed $value ): int {
+	public static function require_valid( mixed $value ): int {
 		if ( ! is_int( $value )
 			|| $value < self::MINIMUM_ARTIFACT_BYTES
 			|| $value > self::MAXIMUM_ARTIFACT_BYTES ) {

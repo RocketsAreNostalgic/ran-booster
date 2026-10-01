@@ -44,6 +44,12 @@ and does not raise the analysis level or certify new dependency/host versions.
 
 ## Audited PHP naming scope
 
+The artifact-ceiling cohort uses `PackageArtifactLimit::require_valid()` in its
+resolver, durable deployment request and tests. Method enforcement includes
+`PackageArtifactLimit`, expanding the scope from 172 to 173 files; variable
+enforcement remains at 166 files. The `resolve()` null-only `legacyNull`
+parameter, constants, integer bounds and failure message remain unchanged.
+
 The internal webhook-history cohort uses `WebhookHistory::for_package()`,
 `WebhookHistory::from_record()` and `WebhookHistoryView::to_array()` throughout
 its owned callers and tests. Method enforcement includes both history classes,

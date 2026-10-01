@@ -51,13 +51,13 @@ final class PackageArtifactLimitTest extends TestCase {
 		self::assertSame( $maximum32BitSafeCompressedBytes, PackageArtifactLimit::MAXIMUM_ARTIFACT_BYTES );
 		self::assertSame(
 			$maximum32BitSafeCompressedBytes,
-			PackageArtifactLimit::requireValid( $maximum32BitSafeCompressedBytes )
+			PackageArtifactLimit::require_valid( $maximum32BitSafeCompressedBytes )
 		);
 	}
 
 	public function testExact512MiBEndpointIsRejected(): void {
 		$this->expectException( InvalidArgumentException::class );
 
-		PackageArtifactLimit::requireValid( 536870912 );
+		PackageArtifactLimit::require_valid( 536870912 );
 	}
 }

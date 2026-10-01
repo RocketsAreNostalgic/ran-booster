@@ -237,11 +237,14 @@ check this exact marker before loading their implementation. API-11 providers
 must remain unregistered on this host; there is no V2 compatibility shim. The
 registration signature and Add-on API 16 are unchanged. See the
 [coordinated compatibility boundary](provider-release-workflow-api.md#provider-api-12-compatibility-boundary).
-The bundled lock selects immutable GitHub Provider `v1.0.0-beta.8`
-(`556f19923f6564f1bbd5cecee089d6b136afc5cd`), which corrects valid bootstrap
-record operation projection across source revisions. Merged Core #177 passed
-locked repository, archive and installed candidate checks. Immutable API-12 Core
-publication and Bitbucket certification against that release remain pending;
+The bundled lock selects immutable GitHub Provider `v1.0.0-beta.9`
+(`82ad810e8cde6a2f54318448e81685a619c2cfc3`), including the Provider-owned
+helper naming migration and preserved bootstrap record operation projection.
+Merged Core #177 passed repository, archive and installed checks for its
+historical beta.8 composition (`556f19923f6564f1bbd5cecee089d6b136afc5cd`).
+That evidence does not qualify this new lock; see the
+[connected naming adoption record](connected-naming-adoption.md).
+Immutable API-12 Core publication and Bitbucket certification remain pending;
 see the [qualification boundary](provider-release-workflow-api.md#qualification-and-delivery-boundary).
 
 Check and remove deliberately receive Core's canonical callback URL as well as

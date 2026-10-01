@@ -1,9 +1,26 @@
 # Connected Branch and Provider naming adoption
 
-This is the accepted #167 preparation tranche, coordinated through the
+This is the accepted #167 connected naming tranche, coordinated through the
 [operative checkpoint](https://github.com/RocketsAreNostalgic/ran-booster/issues/167#issuecomment-5939201056).
-It is not a release or dependency-adoption record. Live exact candidate heads,
-checks and ownership belong in that checkpoint and the receiving PR.
+Live exact Core candidate heads, checks and ownership belong in that checkpoint
+and the receiving PR. Core merge and release remain separate approval gates.
+
+## Verified package publication and selected lock
+
+Both owner-approved producer release PRs were merged with merge commits on
+1 October 2026. Exact-main CI and Profile A publication passed for each.
+
+| Package | Immutable release | Tag/source/dist commit | GitHub release ID |
+| --- | --- | --- | --- |
+| Branch | `v1.0.0-beta.8` | `729a15c30f088236d0702b52d4a9cbe15c851508` | `401363087` |
+| GitHub Provider | `v1.0.0-beta.9` | `82ad810e8cde6a2f54318448e81685a619c2cfc3` | `401363341` |
+
+GitHub reports both releases immutable and published; their tags resolve
+directly to the commits above. Core selects these real released requirements
+and Composer lock identities. Unrelated dependencies remain pinned. This
+supersedes preparation overlays but does not itself establish installed-site
+qualification or a released Core host. The receiving Core PR must qualify its
+exact committed lock, archive and WordPress/database composition independently.
 
 ## Preserved handoffs and scope
 
@@ -82,8 +99,8 @@ does not require the whole Core package. Keep that architecture boundary.
 Core's runtime dependency verifier deliberately requires released semantic
 versions and canonical, matching source/dist commit references. Its archive
 builder installs from the committed lock independently. Do not weaken these
-checks to make a preparation overlay look like adoption. Until publication
-unlocks step 5, archive/native installed qualification remains blocked.
+checks to make a preparation overlay look like adoption. Verified publication
+above unlocks real-lock adoption and its archive/native installed qualification.
 
 ## Follow-on obligations
 

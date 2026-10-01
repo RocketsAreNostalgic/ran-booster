@@ -55,9 +55,10 @@ PHP API. Foreign Core-owned interfaces, persisted/wire fields and runtime
 behavior remain unchanged. The three production consumers already belong to
 the method and variable enforcement scopes, which remain 176 and 166 files.
 
-Source preparation requires matching producer candidates. The old released
-Composer lock cannot qualify the renamed consumers, and a temporary source
-overlay is not released adoption. Follow
+The committed Composer lock pairs these consumers with immutable Branch
+`v1.0.0-beta.8` and GitHub Provider `v1.0.0-beta.9`. Earlier source overlays
+were preparation only; archive and installed qualification must use the real
+released lock. Follow
 [the connected-boundary adoption sequence](docs/connected-naming-adoption.md)
 before landing this composition or claiming installed/archive qualification.
 

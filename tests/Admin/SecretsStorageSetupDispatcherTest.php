@@ -462,7 +462,7 @@ final class SetupActionProvisioner extends SecretsStorageProvisioner {
 		return $this->result;
 	}
 
-	public function adoptRecovery( string $token ): SecretsStorageProvisioningResult {
+	public function adopt_recovery( string $token ): SecretsStorageProvisioningResult {
 		$this->adoptTokens[] = $token;
 		if ( $this->throw ) {
 			throw new \RuntimeException( 'Leaked path: /private/canary/secrets.json' );
@@ -471,7 +471,7 @@ final class SetupActionProvisioner extends SecretsStorageProvisioner {
 		return $this->result;
 	}
 
-	public function resetOrphanedStorage( string $confirmation ): SecretsStorageProvisioningResult {
+	public function reset_orphaned_storage( string $confirmation ): SecretsStorageProvisioningResult {
 		$this->resetConfirmations[] = $confirmation;
 		if ( $this->throw ) {
 			throw new \RuntimeException( 'Leaked path: /private/canary/secrets.json' );

@@ -102,7 +102,7 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 				false
 			);
 
-			self::assertFalse( $secrets->recoveryCredentialsFitAt( $path ) );
+			self::assertFalse( $secrets->recovery_credentials_fit_at( $path ) );
 			$secrets->saveCredential(
 				'gh',
 				$id,
@@ -114,7 +114,7 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 				'ghp_' . str_repeat( 'b', 36 ),
 				true
 			);
-			self::assertTrue( $secrets->recoveryCredentialsFitAt( $path ) );
+			self::assertTrue( $secrets->recovery_credentials_fit_at( $path ) );
 		} finally {
 			InMemorySiteKeyStore::reset( $path );
 			foreach ( array( $path, $path . '.lock' ) as $file ) {

@@ -139,8 +139,7 @@ class SecretsFile {
 	 * independently verify the candidate path and its metadata first.
 	 * Authentication failures throw; provider-fitness failures return false.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function recoveryCredentialsFitAt( string $path ): bool {
+	public function recovery_credentials_fit_at( string $path ): bool {
 		$candidate = new self(
 			$path,
 			$this->constants,
@@ -166,10 +165,10 @@ class SecretsFile {
 	 * The check is read-only. A later reset must repeat it while holding the
 	 * managed exclusive lock.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function canResetOrphanedKeyAt( string $expectedPath ): bool {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
+	public function can_reset_orphaned_key_at( string $expectedPath ): bool {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-		if ( ! $this->canRecoverFromMissingCiphertextAt( $expectedPath ) ) {
+		if ( ! $this->can_recover_from_missing_ciphertext_at( $expectedPath ) ) {
 			return false;
 		}
 
@@ -179,8 +178,8 @@ class SecretsFile {
 	/**
 	 * Verify that missing ciphertext is paired with no lock or a secure managed lock.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function canRecoverFromMissingCiphertextAt( string $expectedPath ): bool {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
+	public function can_recover_from_missing_ciphertext_at( string $expectedPath ): bool {
 		$this->assert_available();
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
 		if ( ! is_string( $this->path ) || ! hash_equals( $this->path, $expectedPath ) ) {
@@ -210,8 +209,8 @@ class SecretsFile {
 	 * The secure lock remains so the next normal credential write can initialize
 	 * a fresh key and authenticated sidecar through the existing first-write path.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function resetOrphanedKeyAt( string $expectedPath ): void {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
+	public function reset_orphaned_key_at( string $expectedPath ): void {
 		$this->assert_available();
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
 		if ( ! is_string( $this->path ) || ! hash_equals( $this->path, $expectedPath ) ) {
@@ -241,8 +240,8 @@ class SecretsFile {
 	 * verifies only the exact managed path, ownership, inode and permission
 	 * boundaries. A later reset repeats every check under the exclusive lock.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function canResetOrphanedCiphertextAt( string $expectedPath ): bool {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
+	public function can_reset_orphaned_ciphertext_at( string $expectedPath ): bool {
 		$this->assert_available();
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
 		if ( ! is_string( $this->path ) || ! hash_equals( $this->path, $expectedPath ) ) {
@@ -275,8 +274,8 @@ class SecretsFile {
 	 * The secure lock remains so the next normal credential write can create a
 	 * fresh database key and authenticated sidecar through the first-write path.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function resetOrphanedCiphertextAt( string $expectedPath ): void {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
+	public function reset_orphaned_ciphertext_at( string $expectedPath ): void {
 		$this->assert_available();
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
 		if ( ! is_string( $this->path ) || ! hash_equals( $this->path, $expectedPath ) ) {

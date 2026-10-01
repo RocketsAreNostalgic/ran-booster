@@ -700,13 +700,13 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$status                           = $provisioner->status();
 
 		self::assertSame( SecretsStorageProvisioningResult::STORAGE_NEEDS_ATTENTION, $status->status() );
-		$recovery = $provisioner->recoveryState( $status );
+		$recovery = $provisioner->recovery_state( $status );
 		self::assertIsArray( $recovery );
 		self::assertSame( 'available', $recovery['state'] );
 		self::assertSame( $old, $recovery['candidate_path'] );
 		self::assertMatchesRegularExpression( '/\A[a-f0-9]{64}\z/D', (string) $recovery['token'] );
 
-		$result = $provisioner->adoptRecovery( (string) $recovery['token'] );
+		$result = $provisioner->adopt_recovery( (string) $recovery['token'] );
 		self::assertTrue( $result->requires_next_request_verification() );
 		$config = (string) file_get_contents( $this->configPath );
 		self::assertStringContainsString( dirname( $old ), $config );
@@ -725,10 +725,10 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$provisioner->writerFailureCode    = 'config_changed';
 		$provisioner->writerFailureMessage = 'Raw recovery writer canary: /private/leaked/wp-config.php';
 		$status                            = $provisioner->status();
-		$recovery                          = $provisioner->recoveryState( $status );
+		$recovery                          = $provisioner->recovery_state( $status );
 		self::assertIsArray( $recovery );
 
-		$result = $provisioner->adoptRecovery( (string) $recovery['token'] );
+		$result = $provisioner->adopt_recovery( (string) $recovery['token'] );
 
 		self::assertSame( 'config_changed', $result->code() );
 		self::assertSame( 'Configuration changed translation.', $result->message() );
@@ -748,7 +748,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$provisioner->healthFailure       = true;
 		$provisioner->healthFailureReason = 'storage_file_missing';
 
-		$recovery = $provisioner->recoveryState( $provisioner->status() );
+		$recovery = $provisioner->recovery_state( $provisioner->status() );
 
 		self::assertIsArray( $recovery );
 		self::assertSame( 'available', $recovery['state'] );
@@ -769,23 +769,23 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$provisioner->orphanedResetAvailable = true;
 		$status                              = $provisioner->status();
 
-		$offer = $provisioner->recoveryState( $status );
+		$offer = $provisioner->recovery_state( $status );
 		self::assertIsArray( $offer );
 		self::assertSame( 'reset_available', $offer['state'] );
 		self::assertSame( 'Clé de stockage orpheline.', $offer['message'] );
 		self::assertSame( SecretsStorageProvisioner::RESET_CONFIRMATION, $offer['confirmation'] );
 
-		$invalid = $provisioner->resetOrphanedStorage( 'reset storage' );
+		$invalid = $provisioner->reset_orphaned_storage( 'reset storage' );
 		self::assertSame( 'storage_reset_request_invalid', $invalid->code() );
 		self::assertSame( array(), $provisioner->resetCandidates );
 
-		$reset = $provisioner->resetOrphanedStorage( SecretsStorageProvisioner::RESET_CONFIRMATION );
+		$reset = $provisioner->reset_orphaned_storage( SecretsStorageProvisioner::RESET_CONFIRMATION );
 		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $reset->status() );
 		self::assertSame( 'storage_reset', $reset->code() );
 		self::assertSame( 'Stockage réinitialisé.', $reset->message() );
 		self::assertSame( array( $this->candidate ), $provisioner->resetCandidates );
 
-		$replay = $provisioner->resetOrphanedStorage( SecretsStorageProvisioner::RESET_CONFIRMATION );
+		$replay = $provisioner->reset_orphaned_storage( SecretsStorageProvisioner::RESET_CONFIRMATION );
 		self::assertSame( 'storage_reset_state_changed', $replay->code() );
 		self::assertSame( array( $this->candidate ), $provisioner->resetCandidates );
 	}
@@ -803,17 +803,17 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$provisioner->healthFailureReason              = 'storage_key_missing';
 		$provisioner->orphanedCiphertextResetAvailable = true;
 
-		$offer = $provisioner->recoveryState( $provisioner->status() );
+		$offer = $provisioner->recovery_state( $provisioner->status() );
 		self::assertIsArray( $offer );
 		self::assertSame( 'reset_available', $offer['state'] );
 		self::assertStringContainsString( 'without its matching database key', $offer['message'] );
 
-		$reset = $provisioner->resetOrphanedStorage( SecretsStorageProvisioner::RESET_CONFIRMATION );
+		$reset = $provisioner->reset_orphaned_storage( SecretsStorageProvisioner::RESET_CONFIRMATION );
 		self::assertSame( 'storage_reset', $reset->code() );
 		self::assertSame( array( $this->candidate ), $provisioner->resetCiphertextCandidates );
 		self::assertSame( array(), $provisioner->resetCandidates );
 
-		$replay = $provisioner->resetOrphanedStorage( SecretsStorageProvisioner::RESET_CONFIRMATION );
+		$replay = $provisioner->reset_orphaned_storage( SecretsStorageProvisioner::RESET_CONFIRMATION );
 		self::assertSame( 'storage_reset_state_changed', $replay->code() );
 	}
 
@@ -831,7 +831,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$provisioner->healthFailureReason              = 'storage_key_missing';
 		$provisioner->orphanedCiphertextResetAvailable = true;
 
-		$offer = $provisioner->recoveryState( $provisioner->status() );
+		$offer = $provisioner->recovery_state( $provisioner->status() );
 
 		self::assertIsArray( $offer );
 		self::assertSame( 'blocked', $offer['state'] );
@@ -839,7 +839,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertStringContainsString( 'no database key is available to authenticate it', $offer['message'] );
 		self::assertSame(
 			'storage_reset_state_changed',
-			$provisioner->resetOrphanedStorage( SecretsStorageProvisioner::RESET_CONFIRMATION )->code()
+			$provisioner->reset_orphaned_storage( SecretsStorageProvisioner::RESET_CONFIRMATION )->code()
 		);
 		self::assertSame( array(), $provisioner->resetCiphertextCandidates );
 	}
@@ -853,11 +853,11 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$provisioner->healthFailureReason    = 'storage_file_missing';
 		$provisioner->orphanedResetAvailable = true;
 
-		$offer = $provisioner->recoveryState( $provisioner->status() );
+		$offer = $provisioner->recovery_state( $provisioner->status() );
 
 		self::assertIsArray( $offer );
 		self::assertSame( 'available', $offer['state'] );
-		$result = $provisioner->resetOrphanedStorage( SecretsStorageProvisioner::RESET_CONFIRMATION );
+		$result = $provisioner->reset_orphaned_storage( SecretsStorageProvisioner::RESET_CONFIRMATION );
 		self::assertSame( 'storage_reset_state_changed', $result->code() );
 		self::assertSame( array(), $provisioner->resetCandidates );
 	}
@@ -869,7 +869,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$provisioner->configured  = $this->candidate;
 		$provisioner->forceUnsafe = true;
 
-		$recovery = $provisioner->recoveryState( $provisioner->status() );
+		$recovery = $provisioner->recovery_state( $provisioner->status() );
 
 		self::assertIsArray( $recovery );
 		self::assertSame( 'blocked', $recovery['state'] );
@@ -885,13 +885,13 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$provisioner             = $this->provisioner();
 		$provisioner->configured = $this->candidate;
 
-		$ambiguous = $provisioner->recoveryState( $provisioner->status() );
+		$ambiguous = $provisioner->recovery_state( $provisioner->status() );
 		self::assertIsArray( $ambiguous );
 		self::assertSame( 'ambiguous', $ambiguous['state'] );
 		self::assertNull( $ambiguous['token'] );
 
 		$provisioner->recoveryAuthenticationFails = true;
-		$blocked                                  = $provisioner->recoveryState( $provisioner->status() );
+		$blocked                                  = $provisioner->recovery_state( $provisioner->status() );
 		self::assertIsArray( $blocked );
 		self::assertSame( 'blocked', $blocked['state'] );
 		self::assertStringContainsString( 'could not inspect completely', $blocked['message'] );
@@ -907,13 +907,13 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$provisioner->healthFailureReason    = 'storage_file_missing';
 		$provisioner->orphanedResetAvailable = true;
 
-		$blocked = $provisioner->recoveryState( $provisioner->status() );
+		$blocked = $provisioner->recovery_state( $provisioner->status() );
 		self::assertIsArray( $blocked );
 		self::assertSame( 'blocked', $blocked['state'] );
 		self::assertNull( $blocked['confirmation'] );
 		self::assertSame(
 			'storage_reset_state_changed',
-			$provisioner->resetOrphanedStorage( SecretsStorageProvisioner::RESET_CONFIRMATION )->code()
+			$provisioner->reset_orphaned_storage( SecretsStorageProvisioner::RESET_CONFIRMATION )->code()
 		);
 		self::assertSame( array(), $provisioner->resetCandidates );
 
@@ -921,7 +921,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		for ( $index = 0; $index <= 64; ++$index ) {
 			self::assertTrue( mkdir( dirname( dirname( $this->candidate ) ) . '/' . sprintf( '%016x', $index ), 0700 ) );
 		}
-		$overflow = $provisioner->recoveryState( $provisioner->status() );
+		$overflow = $provisioner->recovery_state( $provisioner->status() );
 		self::assertIsArray( $overflow );
 		self::assertSame( 'blocked', $overflow['state'] );
 		self::assertNull( $overflow['confirmation'] );
@@ -934,7 +934,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$provisioner->configured             = $this->candidate;
 		$provisioner->recoveryCredentialsFit = false;
 
-		$recovery = $provisioner->recoveryState( $provisioner->status() );
+		$recovery = $provisioner->recovery_state( $provisioner->status() );
 
 		self::assertIsArray( $recovery );
 		self::assertSame( 'blocked', $recovery['state'] );

@@ -204,8 +204,7 @@ class SecretsStorageProvisioner {
 	 *     confirmation: string|null
 	 * }|null
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function recoveryState( SecretsStorageProvisioningResult $status ): ?array {
+	public function recovery_state( SecretsStorageProvisioningResult $status ): ?array {
 		$current            = $status->candidate_path();
 		$missing_ciphertext = null !== $current && $this->current_ciphertext_is_absent( $current );
 		$missing_key        = 'storage_key_missing' === $status->code();
@@ -324,8 +323,7 @@ class SecretsStorageProvisioner {
 		);
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function resetOrphanedStorage( string $confirmation ): SecretsStorageProvisioningResult {
+	public function reset_orphaned_storage( string $confirmation ): SecretsStorageProvisioningResult {
 		$status  = $this->status();
 		$current = $status->candidate_path();
 		$source  = $status->path_source();
@@ -336,7 +334,7 @@ class SecretsStorageProvisioner {
 			return $this->reset_failure( $status, 'storage_reset_request_invalid', __( 'The empty-storage reset request is invalid. Review the current storage state and try again.', 'ran-booster' ) );
 		}
 
-		$offer = $this->recoveryState( $status );
+		$offer = $this->recovery_state( $status );
 		if ( null === $offer || 'reset_available' !== $offer['state'] ) {
 			return $this->reset_failure( $status, 'storage_reset_state_changed', __( 'The credential storage state changed and was not reset. Review it again before continuing.', 'ran-booster' ) );
 		}
@@ -354,15 +352,14 @@ class SecretsStorageProvisioner {
 		return SecretsStorageProvisioningResult::storage_reset( $current, $source );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function adoptRecovery( string $token ): SecretsStorageProvisioningResult {
+	public function adopt_recovery( string $token ): SecretsStorageProvisioningResult {
 		$status  = $this->status();
 		$current = $status->candidate_path();
 		if ( 1 !== preg_match( '/\A[a-f0-9]{64}\z/D', $token ) || null === $current ) {
 			return $this->recovery_failure( $current, 'recovery_request_invalid', __( 'The storage recovery request is invalid. Review the current storage state and try again.', 'ran-booster' ) );
 		}
 
-		$offer = $this->recoveryState( $status );
+		$offer = $this->recovery_state( $status );
 		if ( null === $offer
 			|| 'available' !== $offer['state']
 			|| ! is_string( $offer['candidate_path'] )
@@ -436,11 +433,11 @@ class SecretsStorageProvisioner {
 			throw new SecretsStorageUnavailable( 'Encrypted storage is unavailable.' );
 		}
 
-		return $this->secrets->recoveryCredentialsFitAt( $candidate );
+		return $this->secrets->recovery_credentials_fit_at( $candidate );
 	}
 
 	protected function orphaned_key_reset_available( string $current ): bool {
-		return null !== $this->secrets && $this->secrets->canResetOrphanedKeyAt( $current );
+		return null !== $this->secrets && $this->secrets->can_reset_orphaned_key_at( $current );
 	}
 
 	protected function reset_orphaned_key( string $current ): void {
@@ -448,11 +445,11 @@ class SecretsStorageProvisioner {
 			throw new SecretsStorageUnavailable( 'Encrypted storage is unavailable.' );
 		}
 
-		$this->secrets->resetOrphanedKeyAt( $current );
+		$this->secrets->reset_orphaned_key_at( $current );
 	}
 
 	protected function orphaned_ciphertext_reset_available( string $current ): bool {
-		return null !== $this->secrets && $this->secrets->canResetOrphanedCiphertextAt( $current );
+		return null !== $this->secrets && $this->secrets->can_reset_orphaned_ciphertext_at( $current );
 	}
 
 	protected function reset_orphaned_ciphertext( string $current ): void {
@@ -460,7 +457,7 @@ class SecretsStorageProvisioner {
 			throw new SecretsStorageUnavailable( 'Encrypted storage is unavailable.' );
 		}
 
-		$this->secrets->resetOrphanedCiphertextAt( $current );
+		$this->secrets->reset_orphaned_ciphertext_at( $current );
 	}
 
 	protected function wordpress_root(): string {
@@ -682,7 +679,7 @@ class SecretsStorageProvisioner {
 		}
 
 		try {
-			return $this->secrets->canRecoverFromMissingCiphertextAt( $current );
+			return $this->secrets->can_recover_from_missing_ciphertext_at( $current );
 		} catch ( Throwable ) {
 			return false;
 		}

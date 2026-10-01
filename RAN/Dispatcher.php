@@ -339,7 +339,7 @@ class Dispatcher {
 					'provisioner_unavailable',
 					__( 'Automatic storage recovery is unavailable.', 'ran-booster' )
 				)
-				: $this->secrets_storage->adoptRecovery( $token );
+				: $this->secrets_storage->adopt_recovery( $token );
 		} catch ( \Throwable $failure ) {
 			\RAN\Logging\BoosterLogger::logException(
 				'secrets storage recovery failed',
@@ -395,7 +395,7 @@ class Dispatcher {
 					'provisioner_unavailable',
 					__( 'Empty credential storage reset is unavailable.', 'ran-booster' )
 				)
-				: $this->secrets_storage->resetOrphanedStorage( $confirmation );
+				: $this->secrets_storage->reset_orphaned_storage( $confirmation );
 		} catch ( \Throwable $failure ) {
 			\RAN\Logging\BoosterLogger::logException(
 				'secrets storage reset failed',

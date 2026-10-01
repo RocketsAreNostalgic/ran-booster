@@ -220,7 +220,7 @@ class Dashboard {
 				$result                  = $this->secrets_storage_result ?? $this->secrets_storage->status();
 				$this->log_secrets_storage_diagnostic( $result );
 				$recovery                              = $include_storage_details
-					? $this->secrets_storage->recoveryState( $result )
+					? $this->secrets_storage->recovery_state( $result )
 					: null;
 				$data['onboarding']['secrets_storage'] = ( new SecretsStorageSetupPresenter() )->build(
 					$result,

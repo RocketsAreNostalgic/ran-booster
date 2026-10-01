@@ -104,7 +104,7 @@ foreach ( $providerDocumentation as $providerGuide ) {
 		continue;
 	}
 
-	$sections                        = $documentationHooks->prepareSections( 'ran_booster_documentation_sections_after_provider_' . $providerCode, $documentationUrl, $documentationScope, $providerCode );
+	$sections                        = $documentationHooks->prepare_sections( 'ran_booster_documentation_sections_after_provider_' . $providerCode, $documentationUrl, $documentationScope, $providerCode );
 	$sections                        = array_values(
 		array_filter(
 			$sections,
@@ -121,7 +121,7 @@ foreach ( $providerDocumentation as $providerGuide ) {
 
 $addDocumentationItem( 'ran-booster-installing-and-managing-packages', __( 'Installing and managing packages', 'ran-booster' ) );
 $addDocumentationItem( 'ran-booster-push-to-deploy', __( 'Push-to-deploy', 'ran-booster' ) );
-$preparedGlobalSections = $documentationHooks->prepareSections( 'ran_booster_documentation_sections_before_about', $documentationUrl, $documentationScope );
+$preparedGlobalSections = $documentationHooks->prepare_sections( 'ran_booster_documentation_sections_before_about', $documentationUrl, $documentationScope );
 $preparedGlobalSections = array_values(
 	array_filter(
 		$preparedGlobalSections,
@@ -348,7 +348,7 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 					<?php } ?>
 				</div>
 				</details>
-					<?php $documentationHooks->renderPreparedSections( $preparedProviderGuide['sections'] ); ?>
+					<?php $documentationHooks->render_prepared_sections( $preparedProviderGuide['sections'] ); ?>
 				<?php } ?>
 
 		<details id="ran-booster-installing-and-managing-packages" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section>
@@ -438,7 +438,7 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 			</div>
 			</details>
 
-				<?php $documentationHooks->renderPreparedSections( $preparedGlobalSections ); ?>
+				<?php $documentationHooks->render_prepared_sections( $preparedGlobalSections ); ?>
 
 			<details id="ran-booster-about" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section>
 			<summary><?php esc_html_e( 'About RAN Booster', 'ran-booster' ); ?></summary>

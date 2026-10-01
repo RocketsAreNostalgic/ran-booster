@@ -43,7 +43,7 @@ final class DocumentationHookRendererTest extends TestCase {
 			};
 
 		ob_start();
-		( new DocumentationHookRenderer() )->renderSections(
+		( new DocumentationHookRenderer() )->render_sections(
 			'ran_booster_documentation_sections_after_provider_gh',
 			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=documentation',
 			'network',
@@ -77,7 +77,7 @@ final class DocumentationHookRendererTest extends TestCase {
 			};
 
 		ob_start();
-		( new DocumentationHookRenderer() )->renderSections(
+		( new DocumentationHookRenderer() )->render_sections(
 			'ran_booster_documentation_sections_before_about',
 			'https://example.test/documentation',
 			'site'
@@ -120,7 +120,7 @@ final class DocumentationHookRendererTest extends TestCase {
 				return $sections;
 			};
 
-		$sections = ( new DocumentationHookRenderer() )->prepareSections(
+		$sections = ( new DocumentationHookRenderer() )->prepare_sections(
 			'ran_booster_documentation_sections_before_about',
 			'https://example.test/documentation',
 			'site'
@@ -147,10 +147,10 @@ final class DocumentationHookRendererTest extends TestCase {
 			};
 
 		$renderer = new DocumentationHookRenderer();
-		$sections = $renderer->prepareSections( 'ran_booster_documentation_sections_before_about', 'https://example.test/documentation', 'site' );
+		$sections = $renderer->prepare_sections( 'ran_booster_documentation_sections_before_about', 'https://example.test/documentation', 'site' );
 
 		ob_start();
-		$renderer->renderPreparedSections( $sections );
+		$renderer->render_prepared_sections( $sections );
 		$html = (string) ob_get_clean();
 
 		self::assertSame( array( 'failed-guide' ), array_column( $sections, 'id' ) );

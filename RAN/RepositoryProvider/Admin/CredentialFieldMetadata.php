@@ -23,9 +23,9 @@ final readonly class CredentialFieldMetadata {
 		string $description = ''
 	) {
 		$key         = MetadataRules::identifier( $key );
-		$label       = MetadataRules::requiredText( $label, MetadataRules::LABEL_LENGTH );
-		$placeholder = MetadataRules::optionalText( $placeholder, MetadataRules::DETAIL_LENGTH );
-		$description = MetadataRules::optionalText( $description, MetadataRules::DETAIL_LENGTH );
+		$label       = MetadataRules::required_text( $label, MetadataRules::LABEL_LENGTH );
+		$placeholder = MetadataRules::optional_text( $placeholder, MetadataRules::DETAIL_LENGTH );
+		$description = MetadataRules::optional_text( $description, MetadataRules::DETAIL_LENGTH );
 
 		if ( ! in_array( $this->type, self::TYPES, true ) ) {
 			throw new InvalidArgumentException( 'Credential field types must be text or email.' );

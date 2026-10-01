@@ -72,7 +72,7 @@ final class PackageOperationServiceTest extends TestCase {
 		$coordinator = new OperationCoordinator();
 		$dashboard   = $this->dashboard( $coordinator, $package );
 
-		$redirect = $dashboard->postPackageOperation(
+		$redirect = $dashboard->post_package_operation(
 			'edit-plugin',
 			$this->input(
 				'edit-plugin',
@@ -100,7 +100,7 @@ final class PackageOperationServiceTest extends TestCase {
 		$package   = $this->plugin();
 		$dashboard = $this->dashboard( new OperationCoordinator(), $package );
 
-		$redirect = $dashboard->postPackageOperation(
+		$redirect = $dashboard->post_package_operation(
 			'edit-plugin',
 			$this->input(
 				'edit-plugin',
@@ -126,7 +126,7 @@ final class PackageOperationServiceTest extends TestCase {
 			1,
 			\RAN\wp_verify_nonce(
 				$query['_ran_booster_repository_branch_nonce'],
-				PackageAdminController::repositoryBranchCheckAction( $package, 'plugin' )
+				PackageAdminController::repository_branch_check_action( $package, 'plugin' )
 			)
 		);
 	}
@@ -141,7 +141,7 @@ final class PackageOperationServiceTest extends TestCase {
 			)
 		);
 
-		self::assertFalse( $dashboard->postPackageOperation( 'edit-plugin', $input ) );
+		self::assertFalse( $dashboard->post_package_operation( 'edit-plugin', $input ) );
 		self::assertSame( 409, $GLOBALS['ran_booster_test_status_header'] );
 		self::assertSame( 'ran_booster_package_edit_conflict', $dashboard->messages[0]['code'] );
 		self::assertStringContainsString( 'No settings were saved and no repository check ran.', $dashboard->messages[0]['message'] );
@@ -160,7 +160,7 @@ final class PackageOperationServiceTest extends TestCase {
 		$dashboard           = $this->dashboard( $coordinator );
 
 		self::assertFalse(
-			$dashboard->postPackageOperation(
+			$dashboard->post_package_operation(
 				'edit-plugin',
 				$this->input( 'edit-plugin', array( 'reinstall_after_save' => '1' ) )
 			)
@@ -248,7 +248,7 @@ final class PackageOperationServiceTest extends TestCase {
 			$this->service( $plugins, new OperationThemeRepository( new OperationTheme( 'example' ) ), new OperationCoordinator() )
 		);
 
-		$redirect = $dashboard->postPackageOperation(
+		$redirect = $dashboard->post_package_operation(
 			'install-plugin',
 			$this->input( 'install-plugin', array( 'dry-run' => '1' ) )
 		);
@@ -405,7 +405,7 @@ final class PackageOperationServiceTest extends TestCase {
 		$dashboard = $this->dashboard( new OperationCoordinator() );
 		$input     = $this->input( 'edit-plugin', array( 'expected_branch' => 'older-branch' ) );
 
-		self::assertFalse( $dashboard->postPackageOperation( 'edit-plugin', $input ) );
+		self::assertFalse( $dashboard->post_package_operation( 'edit-plugin', $input ) );
 		self::assertSame( 409, $GLOBALS['ran_booster_test_status_header'] );
 		self::assertCount( 1, $dashboard->messages );
 		self::assertSame( 'error', $dashboard->messages[0]['type'] );
@@ -633,7 +633,7 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 		$dashboard           = $this->dashboard( $coordinator );
 
-		$redirect = $dashboard->postPackageOperation( 'install-plugin', $this->input( 'install-plugin' ) );
+		$redirect = $dashboard->post_package_operation( 'install-plugin', $this->input( 'install-plugin' ) );
 
 		self::assertIsString( $redirect );
 		$query = $this->redirectQuery( $redirect );
@@ -706,7 +706,7 @@ final class PackageOperationServiceTest extends TestCase {
 	): void {
 		$dashboard = $this->dashboard( new OperationCoordinator() );
 
-		$redirect = $dashboard->postPackageOperation( $action, $this->input( $action ) );
+		$redirect = $dashboard->post_package_operation( $action, $this->input( $action ) );
 
 		self::assertIsString( $redirect );
 		$query = $this->redirectQuery( $redirect );
@@ -733,7 +733,7 @@ final class PackageOperationServiceTest extends TestCase {
 	public function testDashboardReturnsSignedCreateRedirectForRepeatInstall( string $action, string $page, string $identifier ): void {
 		$dashboard = $this->dashboard( new OperationCoordinator() );
 
-		$redirect = $dashboard->postPackageOperation(
+		$redirect = $dashboard->post_package_operation(
 			$action,
 			$this->input( $action, array( 'install_another' => '1' ) )
 		);
@@ -761,7 +761,7 @@ final class PackageOperationServiceTest extends TestCase {
 		string $identifier
 	): void {
 		$dashboard = $this->dashboard( new OperationCoordinator() );
-		$redirect  = $dashboard->postPackageOperation(
+		$redirect  = $dashboard->post_package_operation(
 			$action,
 			$this->input( $action, array( 'install_another' => '1' ) )
 		);
@@ -909,7 +909,7 @@ final class PackageOperationServiceTest extends TestCase {
 	public function testUpdatesIgnoreRepeatInstallIntent( string $action, string $page ): void {
 		$dashboard = $this->dashboard( new OperationCoordinator() );
 
-		$redirect = $dashboard->postPackageOperation(
+		$redirect = $dashboard->post_package_operation(
 			$action,
 			$this->input( $action, array( 'install_another' => '1' ) )
 		);
@@ -933,7 +933,7 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 		$dashboard = $this->dashboard( new OperationCoordinator() );
 
-		$redirect = $dashboard->postPackageOperation( $action, $this->input( $action ) );
+		$redirect = $dashboard->post_package_operation( $action, $this->input( $action ) );
 		$_GET     = array();
 
 		self::assertIsString( $redirect );
@@ -950,7 +950,7 @@ final class PackageOperationServiceTest extends TestCase {
 	public function testSettingsReinstallReturnsToTheSamePackageSettingsPage( string $action, string $page ): void {
 		$dashboard = $this->dashboard( new OperationCoordinator() );
 
-		$redirect = $dashboard->postPackageOperation(
+		$redirect = $dashboard->post_package_operation(
 			$action,
 			$this->input( $action, array( 'return_to_settings' => '1' ) )
 		);
@@ -975,7 +975,7 @@ final class PackageOperationServiceTest extends TestCase {
 		$dashboard           = $this->dashboard( $coordinator );
 
 		self::assertFalse(
-			$dashboard->postPackageOperation(
+			$dashboard->post_package_operation(
 				'install-theme',
 				$this->input( 'install-theme', array( 'install_another' => '1' ) )
 			)
@@ -997,7 +997,7 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 		$dashboard           = $this->dashboard( $coordinator );
 
-		self::assertFalse( $dashboard->postPackageOperation( 'update-plugin', $this->input( 'update-plugin' ) ) );
+		self::assertFalse( $dashboard->post_package_operation( 'update-plugin', $this->input( 'update-plugin' ) ) );
 		self::assertSame( 400, $GLOBALS['ran_booster_test_status_header'] );
 		self::assertCount( 1, $dashboard->messages );
 		self::assertSame( 'ran_booster_manual_action_failed', $dashboard->messages[0]['code'] );
@@ -1018,7 +1018,7 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 		$dashboard            = $this->dashboard( $coordinator );
 
-		self::assertFalse( $dashboard->postPackageOperation( 'update-plugin', $this->input( 'update-plugin' ) ) );
+		self::assertFalse( $dashboard->post_package_operation( 'update-plugin', $this->input( 'update-plugin' ) ) );
 		self::assertSame( 409, $GLOBALS['ran_booster_test_status_header'] );
 		self::assertCount( 1, $dashboard->messages );
 		self::assertSame( 'info', $dashboard->messages[0]['type'] );
@@ -1042,7 +1042,7 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 		$dashboard            = $this->dashboard( $coordinator );
 
-		self::assertFalse( $dashboard->postPackageOperation( 'update-plugin', $this->input( 'update-plugin' ) ) );
+		self::assertFalse( $dashboard->post_package_operation( 'update-plugin', $this->input( 'update-plugin' ) ) );
 		self::assertSame( 409, $GLOBALS['ran_booster_test_status_header'] );
 		self::assertSame( 'error', $dashboard->messages[0]['type'] );
 		self::assertSame( 'ran_booster_deployment_active', $dashboard->messages[0]['code'] );
@@ -1067,7 +1067,7 @@ final class PackageOperationServiceTest extends TestCase {
 		string $identifier
 	): void {
 		$standard = $this->dashboard( new OperationCoordinator() );
-		$redirect = $standard->postPackageOperation(
+		$redirect = $standard->post_package_operation(
 			$action,
 			$this->input( $action, array( 'dry-run' => '1' ) )
 		);
@@ -1082,7 +1082,7 @@ final class PackageOperationServiceTest extends TestCase {
 
 	public function testRepeatDryRunLinkRedirectsToCreate(): void {
 		$repeat   = $this->dashboard( new OperationCoordinator() );
-		$redirect = $repeat->postPackageOperation(
+		$redirect = $repeat->post_package_operation(
 			'install-plugin',
 			$this->input(
 				'install-plugin',
@@ -1218,7 +1218,7 @@ final class PackageOperationServiceTest extends TestCase {
 			$service
 		);
 
-		$redirect = $dashboard->postPackageOperation( $action, $this->input( $action ) );
+		$redirect = $dashboard->post_package_operation( $action, $this->input( $action ) );
 		self::assertIsString( $redirect );
 		$query = $this->redirectQuery( $redirect );
 		self::assertSame( $page, $query['page'] );
@@ -1251,7 +1251,7 @@ final class PackageOperationServiceTest extends TestCase {
 			$this->service( $plugins, $themes, new OperationCoordinator() )
 		);
 
-		self::assertFalse( $dashboard->postPackageOperation( 'unlink-plugin', $this->input( 'unlink-plugin' ) ) );
+		self::assertFalse( $dashboard->post_package_operation( 'unlink-plugin', $this->input( 'unlink-plugin' ) ) );
 		self::assertCount( 1, $dashboard->messages );
 		self::assertSame( 'error', $dashboard->messages[0]['type'] );
 		self::assertSame( 'ran_booster_manual_action_failed', $dashboard->messages[0]['code'] );
@@ -1279,7 +1279,7 @@ final class PackageOperationServiceTest extends TestCase {
 		}
 		$dashboard = $this->dashboard( $coordinator );
 
-		self::assertFalse( $dashboard->postPackageOperation( 'install-plugin', $this->input( 'install-plugin', array( 'subdirectory' => 'branch-fixture' ) ) ) );
+		self::assertFalse( $dashboard->post_package_operation( 'install-plugin', $this->input( 'install-plugin', array( 'subdirectory' => 'branch-fixture' ) ) ) );
 		self::assertCount( 1, $dashboard->messages );
 		self::assertSame( 'ran_booster_repository_source_conflict', $dashboard->messages[0]['code'] );
 		self::assertStringContainsString( 'This repository already supplies releases to booster-fixture-plugin/booster-fixture-plugin.php. Additional packages cannot use it.', $dashboard->messages[0]['message'] );

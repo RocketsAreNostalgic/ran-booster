@@ -27,8 +27,7 @@ final class DeploymentAdminPresenter {
 	) {
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function shouldRender(): bool {
+	public function should_render(): bool {
 		if ( ! current_user_can( 'manage_options' ) || null === $this->monitor ) {
 			return false;
 		}
@@ -40,7 +39,7 @@ final class DeploymentAdminPresenter {
 	}
 
 	public function render(): void {
-		if ( $this->rendered || ! $this->shouldRender() ) {
+		if ( $this->rendered || ! $this->should_render() ) {
 			return;
 		}
 		$this->rendered = true;
@@ -64,8 +63,8 @@ final class DeploymentAdminPresenter {
 	}
 
 	/** @return array{message: array<string, string>, context: array<string, string>}|null */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public/protected caller contract; retain public named-parameter names.
-	public function deploymentFailure( mixed $outcomeCode, mixed $reference, string $operation ): ?array {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain public named-parameter names.
+	public function deployment_failure( mixed $outcomeCode, mixed $reference, string $operation ): ?array {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
 		if ( ! is_string( $outcomeCode ) || ! is_string( $reference ) || 1 !== preg_match( '/^[a-f0-9]{32}$/D', $reference ) ) {
 			return null;
@@ -79,8 +78,7 @@ final class DeploymentAdminPresenter {
 	}
 
 	/** @return array{message: array<string, string>, context: array<string, string>}|null */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function activeDeployment( DeploymentStorageFailure $failure, string $operation ): ?array {
+	public function active_deployment( DeploymentStorageFailure $failure, string $operation ): ?array {
 		$attempt = $failure->get_active_attempt();
 		if ( null === $attempt ) {
 			return null;
@@ -173,8 +171,7 @@ final class DeploymentAdminPresenter {
 	}
 
 	/** @param list<Package> $packages */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function packageActivity( array $packages, string $type ): array {
+	public function package_activity( array $packages, string $type ): array {
 		if ( null === $this->attempts || count( $packages ) > 50 ) {
 			return $this->package_activity_result();
 		}
@@ -235,7 +232,7 @@ final class DeploymentAdminPresenter {
 					}
 					$seen[ $slug ]          = true;
 					$query                  = array();
-					$query['page']          = $view->getPageSlug();
+					$query['page']          = $view->get_page_slug();
 					$query['package']       = (string) $package->get_identifier();
 					$urls[ $type ][ $slug ] = add_query_arg( $query, is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) );
 				}

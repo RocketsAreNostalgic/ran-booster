@@ -11,10 +11,10 @@
 
 defined( 'WPINC' ) || die;
 
-$packageTypeLabel  = strtolower( $packageView->getSingularLabel() );
-$unlinkCheckboxId  = 'ran-booster-confirm-unlink-' . $packageView->getType();
-$deleteCheckboxId  = 'ran-booster-confirm-delete-' . $packageView->getType();
-$deleteDescription = 'plugin' === $packageView->getType()
+$packageTypeLabel  = strtolower( $packageView->get_singular_label() );
+$unlinkCheckboxId  = 'ran-booster-confirm-unlink-' . $packageView->get_type();
+$deleteCheckboxId  = 'ran-booster-confirm-delete-' . $packageView->get_type();
+$deleteDescription = 'plugin' === $packageView->get_type()
 	? __( 'WordPress will deactivate the plugin and run its package-defined uninstall before deletion. Settings may be permanently removed, while incomplete cleanup may leave incompatible data. This is not a rollback.', 'ran-booster' )
 	: __( 'WordPress will delete the inactive theme before Booster unlinks it. Active, parent and depended-on themes are protected. Theme deletion is not a database rollback.', 'ran-booster' );
 
@@ -26,9 +26,9 @@ $deleteDescription = 'plugin' === $packageView->getType()
 	</summary>
 	<div class="ran-booster-settings-disclosure__body ran-booster-package-danger-zone__actions">
 		<form action="" method="POST" data-ran-booster-confirmed-package-removal data-ran-booster-package-mutation data-ran-booster-native-submit>
-			<?php wp_nonce_field( $packageView->getAction( 'unlink' ) ); ?>
-			<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $packageView->getAction( 'unlink' ) ); ?>">
-			<input type="hidden" name="ran_booster[<?php echo esc_attr( $packageView->getIdentifierField() ); ?>]" value="<?php echo esc_attr( $identifierValue ); ?>">
+			<?php wp_nonce_field( $packageView->get_action( 'unlink' ) ); ?>
+			<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $packageView->get_action( 'unlink' ) ); ?>">
+			<input type="hidden" name="ran_booster[<?php echo esc_attr( $packageView->get_identifier_field() ); ?>]" value="<?php echo esc_attr( $identifierValue ); ?>">
 			<input type="hidden" name="ran_booster[expected_source_revision]" value="<?php echo esc_attr( (string) $package->get_source_revision() ); ?>">
 			<label for="<?php echo esc_attr( $unlinkCheckboxId ); ?>">
 				<input id="<?php echo esc_attr( $unlinkCheckboxId ); ?>" type="checkbox" name="ran_booster[confirm_package_removal]" value="1" required data-ran-booster-package-removal-confirm>
@@ -41,9 +41,9 @@ $deleteDescription = 'plugin' === $packageView->getType()
 		</form>
 
 		<form action="" method="POST" data-ran-booster-confirmed-package-removal data-ran-booster-package-mutation data-ran-booster-native-submit>
-			<?php wp_nonce_field( $packageView->getAction( 'unlink-delete' ) ); ?>
-			<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $packageView->getAction( 'unlink-delete' ) ); ?>">
-			<input type="hidden" name="ran_booster[<?php echo esc_attr( $packageView->getIdentifierField() ); ?>]" value="<?php echo esc_attr( $identifierValue ); ?>">
+			<?php wp_nonce_field( $packageView->get_action( 'unlink-delete' ) ); ?>
+			<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $packageView->get_action( 'unlink-delete' ) ); ?>">
+			<input type="hidden" name="ran_booster[<?php echo esc_attr( $packageView->get_identifier_field() ); ?>]" value="<?php echo esc_attr( $identifierValue ); ?>">
 			<input type="hidden" name="ran_booster[expected_source_revision]" value="<?php echo esc_attr( (string) $package->get_source_revision() ); ?>">
 			<label for="<?php echo esc_attr( $deleteCheckboxId ); ?>">
 				<input id="<?php echo esc_attr( $deleteCheckboxId ); ?>" type="checkbox" name="ran_booster[confirm_package_removal]" value="1" required data-ran-booster-package-removal-confirm>

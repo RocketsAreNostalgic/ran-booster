@@ -67,7 +67,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			),
 		);
 
-		$result = $display->enrichRows(
+		$result = $display->enrich_rows(
 			$rows,
 			'gh',
 			'GitHub',
@@ -80,7 +80,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( $rows['1234']['actions']['core:manual'], $result['1234']['actions']['core:manual'] );
 		self::assertFalse( $result['1234']['actions']['core:webhook-management']['disabled'] );
 		self::assertStringContainsString( 'repository=1234', $result['1234']['actions']['core:webhook-management']['url'] );
-		self::assertSame( $rows, $display->enrichRows( $rows, 'bb', 'Bitbucket', 'https://bitbucket.org/', array(), 'https://site.example/' ) );
+		self::assertSame( $rows, $display->enrich_rows( $rows, 'bb', 'Bitbucket', 'https://bitbucket.org/', array(), 'https://site.example/' ) );
 	}
 
 	public function testMalformedOrUnavailableCoreReadinessLeavesRowsInert(): void {
@@ -106,7 +106,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			)
 		);
 		$gateway   = new OperationGatewayFixture( $malformed, $this->target(), $this->operationResult() );
-		self::assertSame( $rows, $this->display( $gateway )->enrichRows( $rows, 'gh', 'GitHub', 'https://github.com/', array( '1234' => $this->repositoryProjection() ), 'https://site.example/' ) );
+		self::assertSame( $rows, $this->display( $gateway )->enrich_rows( $rows, 'gh', 'GitHub', 'https://github.com/', array( '1234' => $this->repositoryProjection() ), 'https://site.example/' ) );
 
 		$blocked = new AssistanceReadiness(
 			array( 'database_unavailable' ),
@@ -119,10 +119,10 @@ final class WebhookManagementControllerTest extends TestCase {
 				),
 			)
 		);
-		self::assertSame( $rows, $this->display( new OperationGatewayFixture( $blocked, $this->target(), $this->operationResult() ) )->enrichRows( $rows, 'gh', 'GitHub', 'https://github.com/', array( '1234' => $this->repositoryProjection() ), 'https://site.example/' ) );
+		self::assertSame( $rows, $this->display( new OperationGatewayFixture( $blocked, $this->target(), $this->operationResult() ) )->enrich_rows( $rows, 'gh', 'GitHub', 'https://github.com/', array( '1234' => $this->repositoryProjection() ), 'https://site.example/' ) );
 
 		$gateway->throwOnReadiness = true;
-		self::assertSame( $rows, $this->display( $gateway )->enrichRows( $rows, 'gh', 'GitHub', 'https://github.com/', array( '1234' => $this->repositoryProjection() ), 'https://site.example/' ) );
+		self::assertSame( $rows, $this->display( $gateway )->enrich_rows( $rows, 'gh', 'GitHub', 'https://github.com/', array( '1234' => $this->repositoryProjection() ), 'https://site.example/' ) );
 	}
 
 	public function testBrowserOnlyProfileWarningDoesNotReplaceTheRecordedHistoricalObservation(): void {
@@ -137,7 +137,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			),
 		);
 
-		$result = $this->display( $gateway, $store )->enrichRows(
+		$result = $this->display( $gateway, $store )->enrich_rows(
 			$rows,
 			'gh',
 			'GitHub',
@@ -167,7 +167,7 @@ final class WebhookManagementControllerTest extends TestCase {
 	public function testCurrentRepositoryHistoryResolvesDisplaySafeManagementAndSigningLabels(): void {
 		$store         = new OperationStoreFixture();
 		$store->record = $this->record();
-		$result        = $this->display( $this->gateway(), $store )->enrichRows(
+		$result        = $this->display( $this->gateway(), $store )->enrich_rows(
 			array(
 				'1234' => array(
 					'details' => array(),
@@ -192,7 +192,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$facade->expects( self::never() )->method( 'profile' );
 		$store         = new OperationStoreFixture();
 		$store->record = $this->record( 'needs_verification' );
-		$result        = ( new WebhookDisplayModel( $facade, $store ) )->enrichHistoricalRows(
+		$result        = ( new WebhookDisplayModel( $facade, $store ) )->enrich_historical_rows(
 			array(
 				'1234' => array(
 					'details' => array(),
@@ -228,7 +228,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$facade->expects( self::never() )->method( 'profile' );
 		$store         = new OperationStoreFixture();
 		$store->record = $this->record( 'needs_verification' );
-		$result        = ( new WebhookDisplayModel( $facade, $store ) )->enrichHistoricalRows(
+		$result        = ( new WebhookDisplayModel( $facade, $store ) )->enrich_historical_rows(
 			array(
 				'1234' => array(
 					'source_key'    => 'release_asset',
@@ -294,7 +294,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			$projectionRecord->storage_key() => $projectionRecord,
 			$releaseRecord->storage_key()    => $releaseRecord,
 		);
-		$result           = ( new WebhookDisplayModel( $facade, $store ) )->enrichHistoricalRows(
+		$result           = ( new WebhookDisplayModel( $facade, $store ) )->enrich_historical_rows(
 			array(
 				'projection-row' => array(
 					'details' => array(),
@@ -363,7 +363,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$store         = new OperationStoreFixture();
 		$store->record = $this->record();
 
-		$this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+		$this->controller( gateway: $gateway, store: $store )->handle_admin_post(
 			$this->request(
 				array(
 					'repository_webhook_management_operation' => 'check',
@@ -376,7 +376,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( 'credential_2', $store->record?->management_credential_id() );
 		self::assertSame( 'wh_0123456789abcdef01234567', $store->record?->webhook_profile_id() );
 
-		$this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+		$this->controller( gateway: $gateway, store: $store )->handle_admin_post(
 			$this->request(
 				array(
 					'repository_webhook_management_operation' => 'reconfigure',
@@ -396,7 +396,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			$store           = new OperationStoreFixture();
 			$store->record   = $this->record();
 
-			$this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+			$this->controller( gateway: $gateway, store: $store )->handle_admin_post(
 				$this->request(
 					array(
 						'repository_webhook_management_operation' => 'check',
@@ -414,7 +414,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$gateway    = $this->gateway();
 		$store      = new OperationStoreFixture();
 		$controller = $this->controller( gateway: $gateway, store: $store );
-		$redirect   = $controller->handleAdminPost( $this->request(), 'valid' );
+		$redirect   = $controller->handle_admin_post( $this->request(), 'valid' );
 
 		self::assertSame(
 			array(
@@ -435,7 +435,7 @@ final class WebhookManagementControllerTest extends TestCase {
 	public function testSetupRequiresAnExplicitKnownSigningSecretSelection(): void {
 		foreach ( array( '', 'wh_ffffffffffffffffffffffff' ) as $profileId ) {
 			$gateway  = $this->gateway();
-			$redirect = $this->controller( gateway: $gateway )->handleAdminPost(
+			$redirect = $this->controller( gateway: $gateway )->handle_admin_post(
 				$this->request( array( 'webhook_profile_id' => $profileId ) ),
 				'valid'
 			);
@@ -448,7 +448,7 @@ final class WebhookManagementControllerTest extends TestCase {
 	public function testPackageInitiatedOperationReturnsToTheAllowlistedPackageSettingsRoute(): void {
 		$GLOBALS['ran_booster_package_view_multisite'] = true;
 		$interaction                                   = new CapturingAdminInteractionFacade();
-		$redirect                                      = $this->controller( adminInteraction: $interaction )->handleAdminPost(
+		$redirect                                      = $this->controller( adminInteraction: $interaction )->handle_admin_post(
 			$this->request(
 				array(
 					'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php&source_view=branch&ran_booster_open_advanced=1&unsafe=discarded',
@@ -482,19 +482,19 @@ final class WebhookManagementControllerTest extends TestCase {
 		);
 
 		$controller = $this->controller( authorities: $matching );
-		$plugin     = $controller->handleAdminPost(
+		$plugin     = $controller->handle_admin_post(
 			$this->request( array( 'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php' ) ),
 			'valid'
 		);
-		$theme      = $controller->handleAdminPost(
+		$theme      = $controller->handle_admin_post(
 			$this->request( array( 'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster-themes&package=example-theme' ) ),
 			'valid'
 		);
-		$unrelated  = $controller->handleAdminPost(
+		$unrelated  = $controller->handle_admin_post(
 			$this->request( array( 'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=other%2Fother.php' ) ),
 			'valid'
 		);
-		$otherTheme = $controller->handleAdminPost(
+		$otherTheme = $controller->handle_admin_post(
 			$this->request( array( 'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster-themes&package=other-theme' ) ),
 			'valid'
 		);
@@ -512,7 +512,7 @@ final class WebhookManagementControllerTest extends TestCase {
 	}
 
 	public function testRepositoryInitiatedOperationReturnsToItsExactRepositoryRoute(): void {
-		$redirect = $this->controller()->handleAdminPost(
+		$redirect = $this->controller()->handle_admin_post(
 			$this->request(
 				array(
 					'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=1234&repository_view=branch&unsafe=discarded',
@@ -528,7 +528,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'repository_view=branch', $redirect );
 		self::assertStringNotContainsString( 'unsafe=', $redirect );
 
-		$fallback = $this->controller()->handleAdminPost(
+		$fallback = $this->controller()->handle_admin_post(
 			$this->request(
 				array(
 					'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=other',
@@ -552,7 +552,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			null,
 			true
 		);
-		$unavailable                                   = $display->unavailablePanel(
+		$unavailable                                   = $display->unavailable_panel(
 			'gh',
 			'GitHub',
 			'1234',
@@ -571,7 +571,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			}
 		}
 
-		$redirect = $this->controller()->handleAdminPost(
+		$redirect = $this->controller()->handle_admin_post(
 			$this->request( array( 'return_url' => 'https://untrusted.example.test/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=1234' ) ),
 			'valid'
 		);
@@ -581,7 +581,7 @@ final class WebhookManagementControllerTest extends TestCase {
 
 	public function testWebhookManagementRoutesKeepSingleSiteAdminPaths(): void {
 		$display     = $this->display();
-		$unavailable = $display->unavailablePanel(
+		$unavailable = $display->unavailable_panel(
 			'gh',
 			'GitHub',
 			'1234',
@@ -609,7 +609,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$store         = new OperationStoreFixture();
 		$controller    = $this->controller( $gateway, $store, providerCode: $providerCode, providerLabel: $providerLabel );
 		$request       = $this->request( array( 'provider_code' => $providerCode ) );
-		$redirect      = $controller->handleAdminPost( $request, 'valid' );
+		$redirect      = $controller->handle_admin_post( $request, 'valid' );
 		$display       = $this->display( $gateway, $store );
 		$repositoryRow = array(
 			'fixture-repository' => array(
@@ -626,7 +626,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			),
 		);
 		$projection    = array( 'fixture-repository' => $this->repositoryProjection( $providerCode ) );
-		$enriched      = $display->enrichRows( $repositoryRow, $providerCode, $providerLabel, 'https://fixture-provider.example.test/', $projection, 'https://site.example/provider' );
+		$enriched      = $display->enrich_rows( $repositoryRow, $providerCode, $providerLabel, 'https://fixture-provider.example.test/', $projection, 'https://site.example/provider' );
 		$model         = $display->panel( $providerCode, $providerLabel, '1234', 'https://site.example/provider', null, null, true );
 
 		self::assertSame( array( array( 'setup', 'credential_1', null, 'valid' ) ), $gateway->mutationCalls );
@@ -659,7 +659,7 @@ final class WebhookManagementControllerTest extends TestCase {
 				)
 			);
 
-			$redirect = $controller->handleAdminPost( $request, 'valid' );
+			$redirect = $controller->handle_admin_post( $request, 'valid' );
 
 			self::assertSame( array(), $gateway->calls );
 			self::assertSame( array(), $gateway->assessmentCalls );
@@ -674,7 +674,7 @@ final class WebhookManagementControllerTest extends TestCase {
 	public function testSavedSetupPassesOnlyTheDisplaySafeProfileId(): void {
 		$gateway = $this->gateway();
 		$store   = new OperationStoreFixture();
-		$this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+		$this->controller( gateway: $gateway, store: $store )->handle_admin_post(
 			$this->request(
 				array(
 					'booster_credential_id' => 'credential_1',
@@ -697,7 +697,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$gateway         = $this->gateway();
 		$gateway->result = $this->operationResult( 'partial', 'setup_compensation_incomplete', '77' );
 		$store           = new OperationStoreFixture();
-		$redirect        = $this->controller( gateway: $gateway, store: $store )->handleAdminPost( $this->request(), 'valid' );
+		$redirect        = $this->controller( gateway: $gateway, store: $store )->handle_admin_post( $this->request(), 'valid' );
 
 		self::assertSame( 'orphaned', $store->record?->status() );
 		self::assertStringContainsString( 'webhook_management_result=setup_compensation_incomplete', $redirect );
@@ -710,7 +710,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$store           = new OperationStoreFixture();
 		$controller      = $this->controller( gateway: $gateway, store: $store );
 
-		$redirect = $controller->handleAdminPost( $this->request(), 'valid' );
+		$redirect = $controller->handle_admin_post( $this->request(), 'valid' );
 
 		self::assertStringContainsString( 'webhook_management_result=setup_response_invalid', $redirect );
 		self::assertTrue( $store->record?->requires_hook_identification() );
@@ -718,7 +718,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( 'wh_0123456789abcdef01234567', $store->record?->webhook_profile_id() );
 		self::assertSame( 1, count( $gateway->mutationCalls ) );
 
-		$secondRedirect = $controller->handleAdminPost( $this->request(), 'valid' );
+		$secondRedirect = $controller->handle_admin_post( $this->request(), 'valid' );
 		self::assertStringContainsString( 'webhook_management_result=manual_recovery_required', $secondRedirect );
 		self::assertSame( 1, count( $gateway->mutationCalls ) );
 
@@ -733,7 +733,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$store                        = new OperationStoreFixture();
 		$store->saveFailuresRemaining = 1;
 
-		$redirect = $this->controller( gateway: $gateway, store: $store )->handleAdminPost( $this->request(), 'valid' );
+		$redirect = $this->controller( gateway: $gateway, store: $store )->handle_admin_post( $this->request(), 'valid' );
 
 		self::assertSame( 2, $store->saveAttempts );
 		self::assertSame( '77', $store->record?->hook_id() );
@@ -748,7 +748,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$store->saveFailuresRemaining = 2;
 		$controller                   = $this->controller( gateway: $gateway, store: $store );
 
-		$redirect = $controller->handleAdminPost( $this->request(), 'valid' );
+		$redirect = $controller->handle_admin_post( $this->request(), 'valid' );
 
 		self::assertNull( $store->record );
 		self::assertStringContainsString( 'webhook_management_result=recovery_record_failed', $redirect );
@@ -781,7 +781,7 @@ final class WebhookManagementControllerTest extends TestCase {
 					$store->record = $this->record();
 				}
 				$before   = $store->record?->to_array();
-				$redirect = $this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+				$redirect = $this->controller( gateway: $gateway, store: $store )->handle_admin_post(
 					$this->request( array( 'repository_webhook_management_operation' => $operation ) ),
 					'valid'
 				);
@@ -807,7 +807,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			$interleaved->record = $current;
 		};
 
-		$redirect = $this->controller( gateway: $gateway, store: $store )->handleAdminPost( $this->request(), 'valid' );
+		$redirect = $this->controller( gateway: $gateway, store: $store )->handle_admin_post( $this->request(), 'valid' );
 
 		self::assertSame( $current->to_array(), $store->record?->to_array() );
 		self::assertFalse( $store->record?->requires_hook_identification() );
@@ -822,14 +822,14 @@ final class WebhookManagementControllerTest extends TestCase {
 			array( 'booster_credential_id' => '' ),
 		) as $changes ) {
 			$gateway  = $this->gateway();
-			$redirect = $this->controller( gateway: $gateway )->handleAdminPost( $this->request( $changes ), 'valid' );
+			$redirect = $this->controller( gateway: $gateway )->handle_admin_post( $this->request( $changes ), 'valid' );
 
 			self::assertSame( array(), $gateway->calls );
 			self::assertStringContainsString( 'webhook_management_result=invalid_token', $redirect );
 		}
 
 		$gateway = $this->gateway();
-		$this->controller( gateway: $gateway )->handleAdminPost( $this->request(), 'wrong' );
+		$this->controller( gateway: $gateway )->handle_admin_post( $this->request(), 'wrong' );
 		self::assertSame( array(), $gateway->calls );
 	}
 
@@ -867,7 +867,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$gateway->result = $this->operationResult( 'succeeded', 'configured_pending_delivery', '77' );
 		$store           = new OperationStoreFixture();
 		$store->record   = $this->record( status: 'needs_verification' );
-		$redirect        = $this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+		$redirect        = $this->controller( gateway: $gateway, store: $store )->handle_admin_post(
 			$this->request( array( 'repository_webhook_management_operation' => 'check' ) ),
 			'valid'
 		);
@@ -882,7 +882,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$gateway->result = $this->operationResult( 'succeeded', 'ping_verified', '77' );
 		$store           = new OperationStoreFixture();
 		$store->record   = $this->record( status: 'needs_verification', managementCredentialId: 'credential_old' );
-		$redirect        = $this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+		$redirect        = $this->controller( gateway: $gateway, store: $store )->handle_admin_post(
 			$this->request( array( 'repository_webhook_management_operation' => 'test' ) ),
 			'valid'
 		);
@@ -898,7 +898,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$gateway->result = $this->operationResult( 'succeeded', 'ping_requested', '77' );
 		$store           = new OperationStoreFixture();
 		$store->record   = $this->record( status: 'configured' );
-		$redirect        = $this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+		$redirect        = $this->controller( gateway: $gateway, store: $store )->handle_admin_post(
 			$this->request( array( 'repository_webhook_management_operation' => 'test' ) ),
 			'valid'
 		);
@@ -934,7 +934,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			$gateway->result = $result;
 			$store           = new OperationStoreFixture();
 			$store->record   = $this->record( status: 'configured' );
-			$redirect        = $this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+			$redirect        = $this->controller( gateway: $gateway, store: $store )->handle_admin_post(
 				$this->request( array( 'repository_webhook_management_operation' => 'test' ) ),
 				'valid'
 			);
@@ -960,7 +960,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		);
 		$store           = new OperationStoreFixture();
 		$store->record   = $this->record( status: 'configured' );
-		$redirect        = $this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+		$redirect        = $this->controller( gateway: $gateway, store: $store )->handle_admin_post(
 			$this->request( array( 'repository_webhook_management_operation' => 'test' ) ),
 			'valid'
 		);
@@ -970,7 +970,7 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		$gateway->result = $this->operationResult( 'failed', 'ping_delivery_failed', '77', delivery: 'absent' );
 		$store->record   = $this->record( status: 'configured' );
-		$redirect        = $this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+		$redirect        = $this->controller( gateway: $gateway, store: $store )->handle_admin_post(
 			$this->request( array( 'repository_webhook_management_operation' => 'test' ) ),
 			'valid'
 		);
@@ -986,7 +986,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$store->record   = $this->record();
 
 		$controller = $this->controller( gateway: $gateway, store: $store );
-		$redirect   = $controller->handleAdminPost(
+		$redirect   = $controller->handle_admin_post(
 			$this->request( array( 'repository_webhook_management_operation' => 'remove' ) ),
 			'valid'
 		);
@@ -1011,7 +1011,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$store           = new OperationStoreFixture();
 		$store->record   = $this->record();
 
-		$redirect = $this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+		$redirect = $this->controller( gateway: $gateway, store: $store )->handle_admin_post(
 			$this->request( array( 'repository_webhook_management_operation' => 'remove' ) ),
 			'valid'
 		);
@@ -1030,7 +1030,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			$interleaved->record = $current;
 		};
 
-		$redirect = $this->controller( gateway: $gateway, store: $store )->handleAdminPost(
+		$redirect = $this->controller( gateway: $gateway, store: $store )->handle_admin_post(
 			$this->request( array( 'repository_webhook_management_operation' => 'remove' ) ),
 			'valid'
 		);
@@ -1046,7 +1046,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$store->record   = $this->record();
 		$interaction     = new CapturingAdminInteractionFacade();
 
-		$redirect = $this->controller( gateway: $gateway, store: $store, adminInteraction: $interaction )->handleAdminPost(
+		$redirect = $this->controller( gateway: $gateway, store: $store, adminInteraction: $interaction )->handle_admin_post(
 			$this->request( array( 'repository_webhook_management_operation' => 'reconfigure' ) ),
 			'valid'
 		);
@@ -1064,7 +1064,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$interaction     = new CapturingAdminInteractionFacade();
 		$controller      = $this->controller( gateway: $gateway, store: $store, adminInteraction: $interaction );
 
-		$redirect = $controller->handleAdminPost(
+		$redirect = $controller->handle_admin_post(
 			$this->request( array( 'repository_webhook_management_operation' => 'reconfigure' ) ),
 			'valid'
 		);
@@ -1093,7 +1093,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$store->record   = $this->record( endpoint: 'https://hooks.example.test/previous' );
 		$controller      = $this->controller( gateway: $gateway, store: $store, adminInteraction: new CapturingAdminInteractionFacade() );
 
-		$redirect = $controller->handleAdminPost(
+		$redirect = $controller->handle_admin_post(
 			$this->request( array( 'repository_webhook_management_operation' => 'reconfigure' ) ),
 			'valid'
 		);
@@ -1117,7 +1117,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$store->record   = $this->record( endpoint: 'https://hooks.example.test/previous' );
 		$controller      = $this->controller( gateway: $gateway, store: $store, adminInteraction: new CapturingAdminInteractionFacade() );
 
-		$redirect = $controller->handleAdminPost(
+		$redirect = $controller->handle_admin_post(
 			$this->request(
 				array(
 					'repository_webhook_management_operation' => 'reconfigure',
@@ -1157,7 +1157,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$store->record   = $this->record( status: 'needs_verification' );
 		$controller      = $this->controller( gateway: $gateway, store: $store );
 
-		$redirect = $controller->handleAdminPost(
+		$redirect = $controller->handle_admin_post(
 			$this->request( array( 'repository_webhook_management_operation' => 'check' ) ),
 			'valid'
 		);
@@ -1178,7 +1178,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$store->record   = $this->record();
 		$controller      = $this->controller( gateway: $gateway, store: $store );
 
-		$redirect = $controller->handleAdminPost(
+		$redirect = $controller->handle_admin_post(
 			$this->request( array( 'repository_webhook_management_operation' => 'reconfigure' ) ),
 			'valid'
 		);
@@ -1210,7 +1210,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$interaction     = new CapturingAdminInteractionFacade();
 
 		try {
-			$this->controller( gateway: $gateway, adminInteraction: $interaction )->handleAdminPost( $this->request(), 'valid' );
+			$this->controller( gateway: $gateway, adminInteraction: $interaction )->handle_admin_post( $this->request(), 'valid' );
 			self::fail( 'The shared administration interaction must terminate after responding.' );
 		} catch ( AdminInteractionResponded ) {
 			self::assertInstanceOf( AdminInteractionOutcome::class, $interaction->outcome );
@@ -1228,7 +1228,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$interaction     = new CapturingAdminInteractionFacade();
 
 		try {
-			$this->controller( gateway: $gateway, store: $store, adminInteraction: $interaction )->handleAdminPost( $this->request(), 'valid' );
+			$this->controller( gateway: $gateway, store: $store, adminInteraction: $interaction )->handle_admin_post( $this->request(), 'valid' );
 			self::fail( 'The shared administration interaction must terminate after responding.' );
 		} catch ( AdminInteractionResponded ) {
 			self::assertInstanceOf( AdminInteractionOutcome::class, $interaction->outcome );
@@ -1244,7 +1244,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$gateway->result = $this->operationResult( 'ambiguous', 'setup_response_invalid', null );
 		$interaction     = new CapturingAdminInteractionFacade();
 
-		$redirect = $this->controller( gateway: $gateway, adminInteraction: $interaction )->handleAdminPost( $this->request(), 'valid' );
+		$redirect = $this->controller( gateway: $gateway, adminInteraction: $interaction )->handle_admin_post( $this->request(), 'valid' );
 
 		self::assertNull( $interaction->outcome );
 		self::assertStringContainsString( 'webhook_management_result=setup_response_invalid', $redirect );
@@ -1256,7 +1256,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$store           = new OperationStoreFixture();
 		$interaction     = new CapturingAdminInteractionFacade();
 
-		$redirect = $this->controller( gateway: $gateway, store: $store, adminInteraction: $interaction )->handleAdminPost( $this->request(), 'valid' );
+		$redirect = $this->controller( gateway: $gateway, store: $store, adminInteraction: $interaction )->handle_admin_post( $this->request(), 'valid' );
 
 		self::assertSame( 'orphaned', $store->record?->status() );
 		self::assertNull( $interaction->outcome );
@@ -1407,7 +1407,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$store    ??= new OperationStoreFixture();
 		$display    = $this->display( $gateway, $store );
 		$controller = $this->controller( $gateway, $store );
-		$context    = $controller->panelContext();
+		$context    = $controller->panel_context();
 		$model      = $display->panel( 'gh', 'GitHub', '1234', 'https://site.example/wp-admin/admin.php?page=ran-booster&tab=gh', $context['result'], $context['recovery'], true, $context['remediation'] );
 		self::assertIsArray( $model );
 		$formAttributes = '';
@@ -1441,7 +1441,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			static fn ( string $action ): string => hash_hmac( 'sha256', $action, 'test-result-nonce' )
 		);
 		if ( null !== $adminInteraction ) {
-			$controller->useAdminInteractionFacade( $adminInteraction );
+			$controller->use_admin_interaction_facade( $adminInteraction );
 		}
 
 		return $controller;

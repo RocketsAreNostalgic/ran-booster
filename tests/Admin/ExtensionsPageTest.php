@@ -51,7 +51,7 @@ final class ExtensionsPageTest extends TestCase {
 
 	public function testRegistersTheOverviewAndTransporterRoutesBeforeExtensions(): void {
 		$booster = $this->booster();
-		$booster->adminMenu();
+		$booster->admin_menu();
 
 		self::assertSame(
 			array(
@@ -75,7 +75,7 @@ final class ExtensionsPageTest extends TestCase {
 			),
 			array_diff_key( $GLOBALS['ran_booster_extensions_page_submenus'][0], array( 'callback' => true ) )
 		);
-		self::assertSame( 'getIndex', $GLOBALS['ran_booster_extensions_page_submenus'][0]['callback'][1] );
+		self::assertSame( 'get_index', $GLOBALS['ran_booster_extensions_page_submenus'][0]['callback'][1] );
 		self::assertNull( $GLOBALS['ran_booster_extensions_page_menus'][0]['callback'] );
 		self::assertSame(
 			array(
@@ -87,7 +87,7 @@ final class ExtensionsPageTest extends TestCase {
 			),
 			array_diff_key( $GLOBALS['ran_booster_extensions_page_submenus'][5], array( 'callback' => true ) )
 		);
-		self::assertSame( 'getTransporter', $GLOBALS['ran_booster_extensions_page_submenus'][5]['callback'][1] );
+		self::assertSame( 'get_transporter', $GLOBALS['ran_booster_extensions_page_submenus'][5]['callback'][1] );
 		self::assertSame(
 			array(
 				'parent_slug' => 'ran-booster',
@@ -98,7 +98,7 @@ final class ExtensionsPageTest extends TestCase {
 			),
 			array_diff_key( $GLOBALS['ran_booster_extensions_page_submenus'][6], array( 'callback' => true ) )
 		);
-		self::assertSame( array( $booster, 'renderExtensionsPage' ), $GLOBALS['ran_booster_extensions_page_submenus'][6]['callback'] );
+		self::assertSame( array( $booster, 'render_extensions_page' ), $GLOBALS['ran_booster_extensions_page_submenus'][6]['callback'] );
 	}
 
 	public function testRegistersTranslatedMenuCopyWithoutChangingItsWordPressRouteContract(): void {
@@ -115,7 +115,7 @@ final class ExtensionsPageTest extends TestCase {
 		);
 
 		$booster = $this->booster();
-		$booster->adminMenu();
+		$booster->admin_menu();
 
 		self::assertSame( 'RAN Booster', $GLOBALS['ran_booster_extensions_page_menus'][0]['page_title'] );
 		self::assertSame( 'RAN Booster', $GLOBALS['ran_booster_extensions_page_menus'][0]['menu_title'] );
@@ -124,13 +124,13 @@ final class ExtensionsPageTest extends TestCase {
 
 		self::assertSame(
 			array(
-				array( 'ran-booster', 'RAN Booster', 'Vue d’ensemble', 'manage_options', 'ran-booster', 'getIndex' ),
-				array( 'ran-booster', 'Installer une extension', 'Installer une extension', 'manage_options', 'ran-booster-plugins-create', 'getPluginsCreate' ),
-				array( 'ran-booster', 'Extensions gérées', 'Extensions', 'manage_options', 'ran-booster-plugins', 'getPlugins' ),
-				array( 'ran-booster', 'Installer une apparence', 'Installer une apparence', 'manage_options', 'ran-booster-themes-create', 'getThemesCreate' ),
-				array( 'ran-booster', 'Apparences gérées', 'Apparences', 'manage_options', 'ran-booster-themes', 'getThemes' ),
-				array( 'ran-booster', 'Transfert', 'Transfert', 'manage_options', 'ran-booster-transporter', 'getTransporter' ),
-				array( 'ran-booster', 'Modules', 'Modules', 'manage_options', 'ran-booster-extensions', 'renderExtensionsPage' ),
+				array( 'ran-booster', 'RAN Booster', 'Vue d’ensemble', 'manage_options', 'ran-booster', 'get_index' ),
+				array( 'ran-booster', 'Installer une extension', 'Installer une extension', 'manage_options', 'ran-booster-plugins-create', 'get_plugins_create' ),
+				array( 'ran-booster', 'Extensions gérées', 'Extensions', 'manage_options', 'ran-booster-plugins', 'get_plugins' ),
+				array( 'ran-booster', 'Installer une apparence', 'Installer une apparence', 'manage_options', 'ran-booster-themes-create', 'get_themes_create' ),
+				array( 'ran-booster', 'Apparences gérées', 'Apparences', 'manage_options', 'ran-booster-themes', 'get_themes' ),
+				array( 'ran-booster', 'Transfert', 'Transfert', 'manage_options', 'ran-booster-transporter', 'get_transporter' ),
+				array( 'ran-booster', 'Modules', 'Modules', 'manage_options', 'ran-booster-extensions', 'render_extensions_page' ),
 			),
 			array_map(
 				static fn ( array $submenu ): array => array(
@@ -163,7 +163,7 @@ final class ExtensionsPageTest extends TestCase {
 			}
 		};
 
-		self::assertTrue( $dashboard->getExtensions( array( array( 'id' => 'example' ) ), '/plugins.php' ) );
+		self::assertTrue( $dashboard->get_extensions( array( array( 'id' => 'example' ) ), '/plugins.php' ) );
 		self::assertSame( 'extensions', $dashboard->captured['view'] );
 		self::assertArrayNotHasKey( 'tabs', $dashboard->captured['data'] );
 		self::assertSame( '/plugins.php', $dashboard->captured['data']['pluginsUrl'] );
@@ -359,7 +359,7 @@ final class ExtensionsPageTest extends TestCase {
 
 	private function render(): string {
 		ob_start();
-		$this->booster()->renderExtensionsPage();
+		$this->booster()->render_extensions_page();
 
 		return (string) ob_get_clean();
 	}
@@ -369,14 +369,14 @@ final class ExtensionsPageTest extends TestCase {
 		$container->bind(
 			'RAN\\Dashboard',
 			new class() {
-				public function getIndex(): void {}
-				public function getTransporter(): void {}
-				public function getPluginsCreate(): void {}
-				public function getPlugins(): void {}
-				public function getThemesCreate(): void {}
-				public function getThemes(): void {}
+				public function get_index(): void {}
+				public function get_transporter(): void {}
+				public function get_plugins_create(): void {}
+				public function get_plugins(): void {}
+				public function get_themes_create(): void {}
+				public function get_themes(): void {}
 				/** @param list<array<string, mixed>> $extensions */
-				public function getExtensions( array $extensions, string $pluginsUrl ): void {
+				public function get_extensions( array $extensions, string $pluginsUrl ): void {
 					require dirname( __DIR__, 2 ) . '/views/extensions.php';
 				}
 			}

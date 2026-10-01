@@ -127,7 +127,7 @@ final class BoosterServiceProvider {
 					// The troubleshooting panel reports capture availability.
 				}
 
-				if ( $runtime->isPassiveTroubleshootingRequest() ) {
+				if ( $runtime->is_passive_troubleshooting_request() ) {
 					return;
 				}
 
@@ -138,7 +138,7 @@ final class BoosterServiceProvider {
 					return;
 				} catch ( \Throwable $exception ) {
 					$runtimeDashboard = $container->make( Dashboard::class );
-					$runtimeDashboard->addFailureMessage(
+					$runtimeDashboard->add_failure_message(
 						new \WP_Error(
 							'ran_booster_secrets_validation_error',
 							__( 'Booster could not validate the credentials sidecar.', 'ran-booster' )

@@ -64,8 +64,8 @@ final class WebhookManagementController {
 			: \Closure::fromCallable( $createNonce );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
-	public function useAdminInteractionFacade( AdminInteractionFacade $adminInteraction ): void {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+	public function use_admin_interaction_facade( AdminInteractionFacade $adminInteraction ): void {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		$this->admin_interaction = $adminInteraction;
 	}
@@ -75,14 +75,13 @@ final class WebhookManagementController {
 	 *
 	 * @param array<string, mixed> $request
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function handleAdminPost( #[\SensitiveParameter] array $request, string $nonce ): string {
+	public function handle_admin_post( #[\SensitiveParameter] array $request, string $nonce ): string {
 		$operation     = $this->string_value( $request, 'repository_webhook_management_operation' );
 		$provider_code = $this->string_value( $request, 'provider_code' );
 		$repository_id = $this->string_value( $request, 'repository_id' );
 		$credential_id = $this->string_value( $request, 'booster_credential_id' );
 		$profile_id    = $this->string_value( $request, 'webhook_profile_id' );
-		$metadata      = $this->providerMetadata( $provider_code );
+		$metadata      = $this->provider_metadata( $provider_code );
 		$result        = array(
 			'code'        => 'invalid_request',
 			'recovery'    => null,
@@ -132,8 +131,7 @@ final class WebhookManagementController {
 	}
 
 	/** @return list<ProviderMetadata> */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function providerMetadataList(): array {
+	public function provider_metadata_list(): array {
 		$metadata = array();
 		foreach ( $this->providers->orderedMetadata() as $candidate ) {
 			$capable = $this->capable_provider_metadata( $candidate->code->value );
@@ -145,15 +143,14 @@ final class WebhookManagementController {
 		return $metadata;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
-	public function providerMetadata( string $providerCode ): ?ProviderMetadata {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+	public function provider_metadata( string $providerCode ): ?ProviderMetadata {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		return $this->capable_provider_metadata( $providerCode );
 	}
 
 	/** @return array{result:?string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string} */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function panelContext(): array {
+	public function panel_context(): array {
 		$query          = is_array( $_GET ) ? wp_unslash( $_GET ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Bounded display-only context.
 		$code           = $this->string_value( $query, 'webhook_management_result' );
 		$safe_reference = static fn ( mixed $value ): ?string => is_string( $value )
@@ -215,7 +212,7 @@ final class WebhookManagementController {
 	}
 
 	private function safe_return_url( string $candidate, string $provider_code, string $repository_id ): string {
-		$fallback = WebhookManagementAdminUrl::forPath( 'admin.php?page=ran-booster&tab=' . rawurlencode( $provider_code ) ) . '&panel=repositories'
+		$fallback = WebhookManagementAdminUrl::for_path( 'admin.php?page=ran-booster&tab=' . rawurlencode( $provider_code ) ) . '&panel=repositories'
 			. ( '' === $repository_id ? '' : '&repository=' . rawurlencode( $repository_id ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Reconstructs an allowlisted same-admin route; the candidate is never returned directly.
 		$parts = parse_url( $candidate );
@@ -234,7 +231,7 @@ final class WebhookManagementController {
 			&& 'repositories' === $panel
 			&& '' !== $repository_id
 			&& hash_equals( $repository_id, $target ) ) {
-			return WebhookManagementAdminUrl::forPath( 'admin.php?page=ran-booster&tab=' . rawurlencode( $provider_code ) . '&panel=repositories&repository=' . rawurlencode( $repository_id ) . ( in_array( $view, array( 'status', 'branch', 'releases' ), true ) ? '&repository_view=' . rawurlencode( $view ) : '' ) );
+			return WebhookManagementAdminUrl::for_path( 'admin.php?page=ran-booster&tab=' . rawurlencode( $provider_code ) . '&panel=repositories&repository=' . rawurlencode( $repository_id ) . ( in_array( $view, array( 'status', 'branch', 'releases' ), true ) ? '&repository_view=' . rawurlencode( $view ) : '' ) );
 		}
 		if ( ! in_array( $page, array( 'ran-booster-plugins', 'ran-booster-themes' ), true )
 			|| '' === $package || strlen( $package ) > 191 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $package )
@@ -242,7 +239,7 @@ final class WebhookManagementController {
 			return $fallback;
 		}
 
-		return WebhookManagementAdminUrl::forPath( 'admin.php' ) . '?page=' . $page . '&package=' . rawurlencode( $package ) . '&source_view=branch&ran_booster_open_advanced=1';
+		return WebhookManagementAdminUrl::for_path( 'admin.php' ) . '?page=' . $page . '&package=' . rawurlencode( $package ) . '&source_view=branch&ran_booster_open_advanced=1';
 	}
 
 	/** Prove that a package-settings return URL belongs to this signed repository operation. */

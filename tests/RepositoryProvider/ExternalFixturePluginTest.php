@@ -193,7 +193,7 @@ final class ExternalFixturePluginTest extends TestCase {
 			self::assertFalse( $settings['provider']['capabilities']['credentialed_public_browse'] );
 			self::assertFalse( $settings['provider']['capabilities']['provider_default_public_lookup_profile'] );
 			self::assertTrue( $settings['provider']['capabilities']['webhooks'] );
-			$packageForm     = ( new ProviderSettingsPresenter( $registry, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ) ) )->buildPackageForm( 'fixture-provider' );
+			$packageForm     = ( new ProviderSettingsPresenter( $registry, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ) ) )->build_package_form( 'fixture-provider' );
 			$packageProvider = array_column( $packageForm['providers'], null, 'code' )['fixture-provider'];
 			self::assertSame( 'fixture-provider', $packageForm['default_provider'] );
 			self::assertTrue( $packageProvider['deploy'] );

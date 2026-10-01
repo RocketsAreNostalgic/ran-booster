@@ -63,7 +63,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster'][ $sourceMessage ] = $translatedMessage;
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
-			->method( 'setSecretsStorageProvisioningResult' )
+			->method( 'set_secrets_storage_provisioning_result' )
 			->with(
 				self::callback(
 					static fn ( SecretsStorageProvisioningResult $result ): bool => $code === $result->code()
@@ -72,7 +72,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 				)
 			);
 
-		$this->dispatcher( $dashboard, null )->dispatchPostRequests();
+		$this->dispatcher( $dashboard, null )->dispatch_post_requests();
 	}
 
 	/** @return iterable<string, array{string, string, string, string}> */
@@ -112,7 +112,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		);
 		$dashboard   = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
-			->method( 'setSecretsStorageProvisioningResult' )
+			->method( 'set_secrets_storage_provisioning_result' )
 			->with(
 				self::callback(
 					static fn ( SecretsStorageProvisioningResult $result ): bool => $code === $result->code()
@@ -122,7 +122,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 				)
 			);
 
-		$this->dispatcher( $dashboard, $provisioner )->dispatchPostRequests();
+		$this->dispatcher( $dashboard, $provisioner )->dispatch_post_requests();
 	}
 
 	/** @return iterable<string, array{string, string, string, string}> */
@@ -153,7 +153,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		);
 
 		try {
-			$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatchPostRequests();
+			$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatch_post_requests();
 			self::fail( 'Successful setup must redirect for a fresh configuration load.' );
 		} catch ( SetupActionRedirect $redirect ) {
 			self::assertSame(
@@ -180,7 +180,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 			SecretsStorageProvisioningResult::pending_verification( '/private/secrets.json' )
 		);
 
-		$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatchPostRequests();
+		$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatch_post_requests();
 
 		self::assertSame( 0, $provisioner->provisionCalls );
 		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
@@ -194,7 +194,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 
 		$this->expectException( \RuntimeException::class );
 		try {
-			$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatchPostRequests();
+			$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatch_post_requests();
 		} finally {
 			self::assertSame( 0, $provisioner->provisionCalls );
 			self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
@@ -210,12 +210,12 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		$provisioner = new SetupActionProvisioner( $result );
 		$dashboard   = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
-			->method( 'setSecretsStorageProvisioningResult' )
+			->method( 'set_secrets_storage_provisioning_result' )
 			->with( $result );
-		$dashboard->expects( self::never() )->method( 'addMessage' );
-		$dashboard->expects( self::never() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$dashboard->expects( self::never() )->method( 'add_failure_message' );
 
-		$this->dispatcher( $dashboard, $provisioner )->dispatchPostRequests();
+		$this->dispatcher( $dashboard, $provisioner )->dispatch_post_requests();
 
 		self::assertSame( 1, $provisioner->provisionCalls );
 	}
@@ -227,7 +227,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		);
 		$dashboard   = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
-			->method( 'setSecretsStorageProvisioningResult' )
+			->method( 'set_secrets_storage_provisioning_result' )
 			->with(
 				self::callback(
 					static fn ( SecretsStorageProvisioningResult $result ): bool => 'provisioning_failed' === $result->code()
@@ -235,9 +235,9 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 						&& ! str_contains( $result->message(), 'canary' )
 				)
 			);
-		$dashboard->expects( self::never() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::never() )->method( 'add_failure_message' );
 
-		$this->dispatcher( $dashboard, $provisioner )->dispatchPostRequests();
+		$this->dispatcher( $dashboard, $provisioner )->dispatch_post_requests();
 	}
 
 	public function testProtectedPostAdoptsATokenBoundCandidateAndRedirects(): void {
@@ -253,7 +253,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		);
 
 		try {
-			$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatchPostRequests();
+			$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatch_post_requests();
 			self::fail( 'Successful recovery must redirect for fresh configuration verification.' );
 		} catch ( SetupActionRedirect $redirect ) {
 			self::assertSame(
@@ -281,7 +281,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 			SecretsStorageProvisioningResult::pending_verification( '/private/previous/secrets.json' )
 		);
 
-		$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatchPostRequests();
+		$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatch_post_requests();
 
 		self::assertSame( array(), $provisioner->adoptTokens );
 		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
@@ -302,7 +302,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		);
 
 		try {
-			$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatchPostRequests();
+			$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatch_post_requests();
 			self::fail( 'Successful reset must redirect to a fresh protected Overview response.' );
 		} catch ( SetupActionRedirect $redirect ) {
 			self::assertSame(
@@ -334,7 +334,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 			)
 		);
 
-		$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatchPostRequests();
+		$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatch_post_requests();
 
 		self::assertSame( array(), $provisioner->resetConfirmations );
 		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
@@ -357,7 +357,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 
 		$this->expectException( \RuntimeException::class );
 		try {
-			$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatchPostRequests();
+			$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatch_post_requests();
 		} finally {
 			self::assertSame( array(), $provisioner->resetConfirmations );
 			self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
@@ -381,7 +381,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 
 		$this->expectException( \RuntimeException::class );
 		try {
-			$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatchPostRequests();
+			$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatch_post_requests();
 		} finally {
 			self::assertSame( array(), $provisioner->resetConfirmations );
 			self::assertSame( array( 'ran-booster-reset-empty-storage' ), $GLOBALS['ran_booster_test_nonce_checks'] );
@@ -404,7 +404,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		);
 		$dashboard   = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
-			->method( 'setSecretsStorageProvisioningResult' )
+			->method( 'set_secrets_storage_provisioning_result' )
 			->with(
 				self::callback(
 					static fn ( SecretsStorageProvisioningResult $result ): bool => 'storage_reset_failed' === $result->code()
@@ -413,7 +413,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 				)
 			);
 
-		$this->dispatcher( $dashboard, $provisioner )->dispatchPostRequests();
+		$this->dispatcher( $dashboard, $provisioner )->dispatch_post_requests();
 	}
 
 	private function dispatcher( Dashboard $dashboard, ?SecretsStorageProvisioner $provisioner ): Dispatcher {

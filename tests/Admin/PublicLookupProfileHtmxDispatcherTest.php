@@ -59,7 +59,7 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 		$store     = new InMemoryPublicRepositoryLookupProfileStore();
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
-			->method( 'addMessage' )
+			->method( 'add_message' )
 			->with( 'Public repository lookup will use anonymous access.' );
 		$dispatcher = $this->dispatcher( $dashboard, $store );
 
@@ -69,7 +69,7 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 			'profile_id' => '',
 		);
 
-		$dispatcher->dispatchPostRequests();
+		$dispatcher->dispatch_post_requests();
 
 		self::assertSame( array(), $store->profiles );
 		self::assertNull( $this->controller->response );
@@ -80,7 +80,7 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 	public function testHtmxPostReturnsTheNamedRegionAndSafeSuccessMessage(): void {
 		$store     = new InMemoryPublicRepositoryLookupProfileStore();
 		$dashboard = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'addMessage' );
+		$dashboard->expects( self::never() )->method( 'add_message' );
 		$dispatcher                 = $this->dispatcher( $dashboard, $store );
 		$_SERVER['HTTP_HX_REQUEST'] = 'true';
 		$_POST['ran_booster']       = array(
@@ -90,7 +90,7 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 		);
 
 		try {
-			$dispatcher->dispatchPostRequests();
+			$dispatcher->dispatch_post_requests();
 			self::fail( 'An HTMX response must end the request after rendering its bounded fragment.' );
 		} catch ( HtmxPublicLookupResponse $response ) {
 			self::assertSame( 'fixture', $response->provider );
@@ -104,7 +104,7 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 		$store     = new InMemoryPublicRepositoryLookupProfileStore();
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
-			->method( 'addFailureMessage' )
+			->method( 'add_failure_message' )
 			->with(
 				self::callback(
 					static fn ( mixed $error ): bool => $error instanceof \WP_Error
@@ -125,7 +125,7 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 		);
 
 		try {
-			$dispatcher->dispatchPostRequests();
+			$dispatcher->dispatch_post_requests();
 			self::fail( 'An HTMX validation failure must return the local error fragment.' );
 		} catch ( HtmxPublicLookupResponse $response ) {
 			self::assertSame( 'fixture', $response->provider );

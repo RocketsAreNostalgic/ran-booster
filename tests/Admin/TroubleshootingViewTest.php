@@ -39,8 +39,8 @@ final class TroubleshootingViewTest extends TestCase {
 
 		return array_merge(
 			$data,
-			$presenter->buildProfileListProjection( $data ),
-			( new ProviderRepositoryRowsNormalizer() )->projectPage( $data ),
+			$presenter->build_profile_list_projection( $data ),
+			( new ProviderRepositoryRowsNormalizer() )->project_page( $data ),
 			array(
 				'webhookManagement'               => null,
 				'statusSummaryRenderer'           => new AdminStatusSummaryRenderer(),

@@ -59,13 +59,13 @@ final class RepeatPackageViewTest extends TestCase {
 			$html
 		);
 		self::assertStringContainsString(
-			'name="ran_booster[action]" value="' . $packageView->getAction( 'install' ) . '"',
+			'name="ran_booster[action]" value="' . $packageView->get_action( 'install' ) . '"',
 			$html
 		);
 		self::assertStringNotContainsString( 'ran-booster-page-shell', $html );
-		self::assertStringContainsString( 'Back to Managed ' . $packageView->getPluralLabel(), $html );
+		self::assertStringContainsString( 'Back to Managed ' . $packageView->get_plural_label(), $html );
 		self::assertStringContainsString(
-			'<h2 id="ran-booster-package-create-heading" class="ran-booster-package-settings__heading">Install New ' . $packageView->getSingularLabel() . '</h2>',
+			'<h2 id="ran-booster-package-create-heading" class="ran-booster-package-settings__heading">Install New ' . $packageView->get_singular_label() . '</h2>',
 			$html
 		);
 		self::assertStringContainsString( 'class="ran-booster-package-settings__intro"', $html );
@@ -91,7 +91,7 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertSame(
 			array( 'Repository configuration', 'Advanced settings', 'Update source', 'Package operation' ),
 			$this->h3Headings( $html ),
-			$packageView->getType()
+			$packageView->get_type()
 		);
 		self::assertStringNotContainsString(
 			'<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings" data-ran-booster-package-disclosure data-ran-booster-advanced-source-settings open',
@@ -124,7 +124,7 @@ final class RepeatPackageViewTest extends TestCase {
 		);
 		self::assertLessThan(
 			strpos( $html, 'name="ran_booster[install_another]"' ),
-			strpos( $html, 'Install ' . $packageView->getType() )
+			strpos( $html, 'Install ' . $packageView->get_type() )
 		);
 		self::assertSame( 1, substr_count( $html, 'name="ran_booster[install_another]"' ) );
 	}
@@ -189,15 +189,15 @@ final class RepeatPackageViewTest extends TestCase {
 
 		$baseUrl   = $multisite ? 'https://example.test/wp-admin/network/admin.php' : 'https://example.test/wp-admin/admin.php';
 		$manageUrl = $baseUrl
-			. '?page=' . $packageView->getPageSlug()
+			. '?page=' . $packageView->get_page_slug()
 			. '&amp;package=' . rawurlencode( $managedPackageIdentifier );
 
 		self::assertStringContainsString(
-			'<a class="button button-primary" href="' . $manageUrl . '">Manage ' . $packageView->getType() . '</a>',
+			'<a class="button button-primary" href="' . $manageUrl . '">Manage ' . $packageView->get_type() . '</a>',
 			$form
 		);
 		self::assertMatchesRegularExpression(
-			'/name="ran_booster\[install_another\]" value="1"\s*>Install another ' . $packageView->getType() . '<\/button>/',
+			'/name="ran_booster\[install_another\]" value="1"\s*>Install another ' . $packageView->get_type() . '<\/button>/',
 			$form
 		);
 		self::assertStringNotContainsString( '>Install and add another</button>', $form );
@@ -233,11 +233,11 @@ final class RepeatPackageViewTest extends TestCase {
 
 		$baseUrl            = $multisite ? 'https://example.test/wp-admin/network/admin.php' : 'https://example.test/wp-admin/admin.php';
 		$expectedInstallUrl = $baseUrl
-			. '?page=' . $packageView->getCreatePageSlug()
+			. '?page=' . $packageView->get_create_page_slug()
 			. '&amp;provider=gh&amp;open_picker=1';
-		$expectedBackUrl    = $baseUrl . '?page=' . $packageView->getPageSlug();
-		$installAnotherLink = '<a class="button" href="' . $expectedInstallUrl . '">Install another ' . $packageView->getType() . '</a>';
-		$backLink           = '<a class="button" href="' . $expectedBackUrl . '">Back to Managed ' . $packageView->getPluralLabel() . '</a>';
+		$expectedBackUrl    = $baseUrl . '?page=' . $packageView->get_page_slug();
+		$installAnotherLink = '<a class="button" href="' . $expectedInstallUrl . '">Install another ' . $packageView->get_type() . '</a>';
+		$backLink           = '<a class="button" href="' . $expectedBackUrl . '">Back to Managed ' . $packageView->get_plural_label() . '</a>';
 
 		self::assertStringNotContainsString( 'ran-booster-package-settings__install-another', $html );
 		self::assertStringNotContainsString( '>Cancel</a>', $html );
@@ -260,7 +260,7 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertMatchesRegularExpression(
 				'/<p class="ran-booster-package-summary__meta">\s*<code>owner\/example<\/code>/',
 				$html,
-				$packageView->getType()
+				$packageView->get_type()
 			);
 		} else {
 			self::assertStringContainsString(
@@ -293,9 +293,9 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertTrue( $reinstallPosition < $operationEnd );
 			self::assertTrue( $operationEnd < $saveActionsPosition );
 			self::assertStringContainsString(
-				'Save ' . $packageView->getType() . ' settings',
+				'Save ' . $packageView->get_type() . ' settings',
 				$html,
-				$packageView->getType()
+				$packageView->get_type()
 			);
 			self::assertStringNotContainsString( 'id="ran-booster-package-reinstall-heading"', $html );
 			self::assertStringContainsString( 'id="ran-booster-advanced-source-settings"', $html );
@@ -311,37 +311,37 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertSame(
 				array( 'Repository configuration', 'Advanced settings', 'Update source', 'Package operation', 'Danger zone' ),
 				$this->h3Headings( $html ),
-				$packageView->getType()
+				$packageView->get_type()
 			);
 		}
 
 		$dangerZone = $this->dangerZone( $html );
-		$type       = $packageView->getType();
+		$type       = $packageView->get_type();
 		self::assertStringStartsWith( '<details id="ran-booster-package-danger-zone"', $dangerZone );
 		self::assertStringNotContainsString( 'data-ran-booster-package-disclosure open', $dangerZone );
 		self::assertLessThan( strpos( $dangerZone, '<form' ), strpos( $dangerZone, '<summary>' ) );
 		self::assertSame( 2, substr_count( $dangerZone, 'data-ran-booster-confirmed-package-removal' ) );
 		self::assertStringContainsString(
-			'name="ran_booster[action]" value="' . $packageView->getAction( 'unlink' ) . '"',
+			'name="ran_booster[action]" value="' . $packageView->get_action( 'unlink' ) . '"',
 			$dangerZone
 		);
 		self::assertStringContainsString(
-			'name="ran_booster[action]" value="' . $packageView->getAction( 'unlink-delete' ) . '"',
+			'name="ran_booster[action]" value="' . $packageView->get_action( 'unlink-delete' ) . '"',
 			$dangerZone
 		);
 		self::assertStringContainsString(
-			'name="_wpnonce" value="' . $packageView->getAction( 'unlink' ) . '"',
+			'name="_wpnonce" value="' . $packageView->get_action( 'unlink' ) . '"',
 			$dangerZone
 		);
 		self::assertStringContainsString(
-			'name="_wpnonce" value="' . $packageView->getAction( 'unlink-delete' ) . '"',
+			'name="_wpnonce" value="' . $packageView->get_action( 'unlink-delete' ) . '"',
 			$dangerZone
 		);
 		self::assertSame( 2, substr_count( $dangerZone, 'name="ran_booster[expected_source_revision]" value="1"' ) );
 		self::assertSame( 2, substr_count( $dangerZone, 'name="ran_booster[confirm_package_removal]" value="1" required' ) );
 		self::assertSame( 2, substr_count( $dangerZone, 'disabled data-ran-booster-package-removal-submit' ) );
 		self::assertStringContainsString(
-			'name="ran_booster[' . $packageView->getIdentifierField() . ']" value="' . $package->get_identifier() . '"',
+			'name="ran_booster[' . $packageView->get_identifier_field() . ']" value="' . $package->get_identifier() . '"',
 			$dangerZone
 		);
 		self::assertMatchesRegularExpression( '/Unlink ' . preg_quote( $type, '/' ) . '\\s*<\\/button>/', $dangerZone );
@@ -365,14 +365,14 @@ final class RepeatPackageViewTest extends TestCase {
 			$html = (string) ob_get_clean();
 
 			$baseUrl            = 'https://example.test/wp-admin/admin.php';
-			$installAnotherLink = '<a class="button" href="' . $baseUrl . '?page=' . $packageView->getCreatePageSlug() . '&amp;provider=gh&amp;open_picker=1">Install another ' . $packageView->getType() . '</a>';
-			$backLink           = '<a class="button" href="' . $baseUrl . '?page=' . $packageView->getPageSlug() . '">Back to Managed ' . $packageView->getPluralLabel() . '</a>';
+			$installAnotherLink = '<a class="button" href="' . $baseUrl . '?page=' . $packageView->get_create_page_slug() . '&amp;provider=gh&amp;open_picker=1">Install another ' . $packageView->get_type() . '</a>';
+			$backLink           = '<a class="button" href="' . $baseUrl . '?page=' . $packageView->get_page_slug() . '">Back to Managed ' . $packageView->get_plural_label() . '</a>';
 			$actions            = $this->actionGroupByClass( $html, 'ran-booster-settings-actions' );
 
-			self::assertStringNotContainsString( 'data-ran-booster-package-settings-save', $html, $packageView->getType() );
-			self::assertStringContainsString( $installAnotherLink, $actions, $packageView->getType() );
-			self::assertStringContainsString( $backLink, $actions, $packageView->getType() );
-			self::assertLessThan( strpos( $actions, $backLink ), strpos( $actions, $installAnotherLink ), $packageView->getType() );
+			self::assertStringNotContainsString( 'data-ran-booster-package-settings-save', $html, $packageView->get_type() );
+			self::assertStringContainsString( $installAnotherLink, $actions, $packageView->get_type() );
+			self::assertStringContainsString( $backLink, $actions, $packageView->get_type() );
+			self::assertLessThan( strpos( $actions, $backLink ), strpos( $actions, $installAnotherLink ), $packageView->get_type() );
 		}
 	}
 
@@ -381,7 +381,7 @@ final class RepeatPackageViewTest extends TestCase {
 			foreach ( array( 'unlink', 'unlink-delete' ) as $action ) {
 				$package                 = $this->package( $packageView );
 				$packageProviderSettings = $this->providerSettings( true );
-				$_POST['ran_booster']    = array( 'action' => $packageView->getAction( $action ) );
+				$_POST['ran_booster']    = array( 'action' => $packageView->get_action( $action ) );
 
 				ob_start();
 				require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
@@ -390,11 +390,11 @@ final class RepeatPackageViewTest extends TestCase {
 				self::assertStringContainsString(
 					'data-ran-booster-package-disclosure open',
 					$this->dangerZone( $html ),
-					$packageView->getType() . ' ' . $action
+					$packageView->get_type() . ' ' . $action
 				);
 			}
 
-			$_POST['ran_booster'] = array( 'action' => $packageView->getAction( 'edit' ) );
+			$_POST['ran_booster'] = array( 'action' => $packageView->get_action( 'edit' ) );
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 			$html = (string) ob_get_clean();
@@ -402,7 +402,7 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertStringNotContainsString(
 				'data-ran-booster-package-disclosure open',
 				$this->dangerZone( $html ),
-				$packageView->getType()
+				$packageView->get_type()
 			);
 		}
 	}
@@ -420,7 +420,7 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertStringContainsString(
 				'<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings" data-ran-booster-package-disclosure data-ran-booster-advanced-source-settings open',
 				$html,
-				$packageView->getType()
+				$packageView->get_type()
 			);
 		}
 	}
@@ -470,7 +470,7 @@ final class RepeatPackageViewTest extends TestCase {
 
 	public function testEditSourceChoicesUseInPlaceNavigationWithAnchoredFallback(): void {
 		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $packageView ) {
-			$identifierValue      = 'plugin' === $packageView->getType() ? 'example/example.php' : 'example-theme';
+			$identifierValue      = 'plugin' === $packageView->get_type() ? 'example/example.php' : 'example-theme';
 			$packageSourceMode    = 'edit';
 			$packageSourceView    = 'branch';
 			$packageCurrentSource = 'release_asset';
@@ -485,7 +485,7 @@ final class RepeatPackageViewTest extends TestCase {
 					'heading'           => $heading,
 					'description'       => $heading . ' description',
 					'meta'              => $heading . ' meta',
-					'url'               => 'https://example.test/wp-admin/admin.php?page=' . $packageView->getPageSlug() . '&source_view=' . $sourceKey,
+					'url'               => 'https://example.test/wp-admin/admin.php?page=' . $packageView->get_page_slug() . '&source_view=' . $sourceKey,
 					'disabled'          => false,
 					'client_hydratable' => false,
 				);
@@ -495,44 +495,44 @@ final class RepeatPackageViewTest extends TestCase {
 			require dirname( __DIR__, 2 ) . '/views/packages/source-choices.php';
 			$html = (string) ob_get_clean();
 
-			self::assertSame( 1, substr_count( $html, '#ran-booster-advanced-source-settings" hx-get=' ), $packageView->getType() );
-			self::assertSame( 1, substr_count( $html, 'hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none"' ), $packageView->getType() );
-			self::assertSame( 1, substr_count( $html, 'hx-push-url="true" hx-history="false" hx-sync="closest [data-ran-booster-source-controls]:replace"' ), $packageView->getType() );
-			self::assertSame( 1, substr_count( $html, 'data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error"' ), $packageView->getType() );
-			self::assertStringNotContainsString( 'https://example.test', $html, $packageView->getType() );
-			self::assertSame( 1, substr_count( $html, 'hx-get="/wp-admin/admin.php?' ), $packageView->getType() );
-			self::assertStringContainsString( '>Branch</strong>', $html, $packageView->getType() );
-			self::assertStringContainsString( '>Releases</strong>', $html, $packageView->getType() );
-			self::assertStringContainsString( '<legend class="screen-reader-text">Update source</legend>', $html, $packageView->getType() );
-			self::assertStringContainsString( '<h3 id="ran-booster-package-source-heading" class="ran-booster-section__title">Update source</h3>', $html, $packageView->getType() );
-			self::assertStringContainsString( 'ran-booster-package-source--navigation', $html, $packageView->getType() );
-			self::assertStringContainsString( 'ran-booster-source-choices--navigation nav-tab-wrapper wp-clearfix', $html, $packageView->getType() );
-			self::assertStringContainsString( ' nav-tab ', $html, $packageView->getType() );
-			self::assertSame( 1, substr_count( $html, 'nav-tab-active' ), $packageView->getType() );
-			self::assertStringContainsString( 'role="navigation" aria-label="Update source settings"', $html, $packageView->getType() );
-			self::assertStringContainsString( 'Viewing settings does not change the update source.', $html, $packageView->getType() );
-			self::assertSame( 1, substr_count( $html, 'ran-booster-source-choice__current-source' ), $packageView->getType() );
-			self::assertSame( 1, substr_count( $html, '>Active</span>' ), $packageView->getType() );
+			self::assertSame( 1, substr_count( $html, '#ran-booster-advanced-source-settings" hx-get=' ), $packageView->get_type() );
+			self::assertSame( 1, substr_count( $html, 'hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none"' ), $packageView->get_type() );
+			self::assertSame( 1, substr_count( $html, 'hx-push-url="true" hx-history="false" hx-sync="closest [data-ran-booster-source-controls]:replace"' ), $packageView->get_type() );
+			self::assertSame( 1, substr_count( $html, 'data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error"' ), $packageView->get_type() );
+			self::assertStringNotContainsString( 'https://example.test', $html, $packageView->get_type() );
+			self::assertSame( 1, substr_count( $html, 'hx-get="/wp-admin/admin.php?' ), $packageView->get_type() );
+			self::assertStringContainsString( '>Branch</strong>', $html, $packageView->get_type() );
+			self::assertStringContainsString( '>Releases</strong>', $html, $packageView->get_type() );
+			self::assertStringContainsString( '<legend class="screen-reader-text">Update source</legend>', $html, $packageView->get_type() );
+			self::assertStringContainsString( '<h3 id="ran-booster-package-source-heading" class="ran-booster-section__title">Update source</h3>', $html, $packageView->get_type() );
+			self::assertStringContainsString( 'ran-booster-package-source--navigation', $html, $packageView->get_type() );
+			self::assertStringContainsString( 'ran-booster-source-choices--navigation nav-tab-wrapper wp-clearfix', $html, $packageView->get_type() );
+			self::assertStringContainsString( ' nav-tab ', $html, $packageView->get_type() );
+			self::assertSame( 1, substr_count( $html, 'nav-tab-active' ), $packageView->get_type() );
+			self::assertStringContainsString( 'role="navigation" aria-label="Update source settings"', $html, $packageView->get_type() );
+			self::assertStringContainsString( 'Viewing settings does not change the update source.', $html, $packageView->get_type() );
+			self::assertSame( 1, substr_count( $html, 'ran-booster-source-choice__current-source' ), $packageView->get_type() );
+			self::assertSame( 1, substr_count( $html, '>Active</span>' ), $packageView->get_type() );
 			self::assertMatchesRegularExpression(
 				'/<span[^>]*class="ran-booster-source-choice__current-source"[^>]*>Active<\\/span>/',
 				$html,
-				$packageView->getType()
+				$packageView->get_type()
 			);
-			self::assertStringContainsString( 'ran-booster-source-choice__content', $html, $packageView->getType() );
-			self::assertStringNotContainsString( 'Current source', $html, $packageView->getType() );
+			self::assertStringContainsString( 'ran-booster-source-choice__content', $html, $packageView->get_type() );
+			self::assertStringNotContainsString( 'Current source', $html, $packageView->get_type() );
 			self::assertMatchesRegularExpression(
 				'/data-ran-booster-source-choice="release_asset"[^>]*>[\\s\\S]*?ran-booster-source-choice__current-source[^>]*>Active<\\/span>/',
 				$html,
-				$packageView->getType()
+				$packageView->get_type()
 			);
-			self::assertStringNotContainsString( 'Branch description', $html, $packageView->getType() );
-			self::assertStringNotContainsString( 'Releases meta', $html, $packageView->getType() );
-			self::assertStringNotContainsString( 'ran-booster-source-choice__radio', $html, $packageView->getType() );
-			self::assertStringNotContainsString( 'ran-booster-source-choice__navigation-cue', $html, $packageView->getType() );
+			self::assertStringNotContainsString( 'Branch description', $html, $packageView->get_type() );
+			self::assertStringNotContainsString( 'Releases meta', $html, $packageView->get_type() );
+			self::assertStringNotContainsString( 'ran-booster-source-choice__radio', $html, $packageView->get_type() );
+			self::assertStringNotContainsString( 'ran-booster-source-choice__navigation-cue', $html, $packageView->get_type() );
 			self::assertMatchesRegularExpression(
 				'/<span[^>]*aria-current="page"[^>]*data-ran-booster-source-choice="branch"|<span[^>]*data-ran-booster-source-choice="branch"[^>]*aria-current="page"/',
 				$html,
-				$packageView->getType()
+				$packageView->get_type()
 			);
 		}
 	}
@@ -607,45 +607,45 @@ final class RepeatPackageViewTest extends TestCase {
 				self::assertStringNotContainsString(
 					'data-ran-booster-settings-reinstall',
 					$html,
-					$packageView->getType()
+					$packageView->get_type()
 				);
 			}
 			self::assertMatchesRegularExpression(
 				'/data-ran-booster-branch-fields\s*>/',
 				$html,
-				$packageView->getType()
+				$packageView->get_type()
 			);
 			self::assertSame(
 				$branchSettingsInactive,
 				1 === preg_match( '/id="ran-booster-repository-branch"[^>]*disabled="disabled"/', $html ),
-				$packageView->getType()
+				$packageView->get_type()
 			);
 			self::assertSame(
 				$branchSettingsInactive,
 				1 === preg_match( '/id="ran-booster-repository-subdirectory"[^>]*disabled="disabled"/', $html ),
-				$packageView->getType()
+				$packageView->get_type()
 			);
-			self::assertSame( 1, substr_count( $html, '<h4 id="ran-booster-branch-readiness-heading">Branch readiness</h4>' ), $packageView->getType() );
-			self::assertStringContainsString( 'aria-labelledby="ran-booster-branch-readiness-heading"', $html, $packageView->getType() );
-			self::assertStringNotContainsString( 'Published releases remain the package source and settings are retained until returning.', $html, $packageView->getType() );
-			self::assertStringContainsString( 'class="screen-reader-text">' . ( $branchSettingsInactive ? 'Inactive Branch deployment settings' : 'Branch deployment settings' ) . '</legend>', $html, $packageView->getType() );
+			self::assertSame( 1, substr_count( $html, '<h4 id="ran-booster-branch-readiness-heading">Branch readiness</h4>' ), $packageView->get_type() );
+			self::assertStringContainsString( 'aria-labelledby="ran-booster-branch-readiness-heading"', $html, $packageView->get_type() );
+			self::assertStringNotContainsString( 'Published releases remain the package source and settings are retained until returning.', $html, $packageView->get_type() );
+			self::assertStringContainsString( 'class="screen-reader-text">' . ( $branchSettingsInactive ? 'Inactive Branch deployment settings' : 'Branch deployment settings' ) . '</legend>', $html, $packageView->get_type() );
 			self::assertSame(
 				$branchSettingsInactive,
 				1 === preg_match( '/ran-booster-branch-settings is-inactive[^>]*disabled="disabled"[^>]*aria-disabled="true"/', $html ),
-				$packageView->getType()
+				$packageView->get_type()
 			);
-			self::assertStringContainsString( 'id="ran-booster-branch-readiness"', $html, $packageView->getType() );
+			self::assertStringContainsString( 'id="ran-booster-branch-readiness"', $html, $packageView->get_type() );
 			$branchPanePosition   = strpos( $html, 'id="ran-booster-source-pane-branch"' );
 			$returnPosition       = strpos( $html, 'class="ran-booster-release-return"' );
 			$branchFieldsPosition = strpos( $html, '<fieldset class="ran-booster-branch-settings' );
 			$readinessPosition    = strpos( $html, 'id="ran-booster-branch-readiness"' );
-			self::assertIsInt( $branchPanePosition, $packageView->getType() );
-			self::assertIsInt( $returnPosition, $packageView->getType() );
-			self::assertIsInt( $branchFieldsPosition, $packageView->getType() );
-			self::assertIsInt( $readinessPosition, $packageView->getType() );
-			self::assertTrue( $branchPanePosition < $returnPosition, $packageView->getType() );
-			self::assertTrue( $returnPosition < $branchFieldsPosition, $packageView->getType() );
-			self::assertTrue( $branchFieldsPosition < $readinessPosition, $packageView->getType() );
+			self::assertIsInt( $branchPanePosition, $packageView->get_type() );
+			self::assertIsInt( $returnPosition, $packageView->get_type() );
+			self::assertIsInt( $branchFieldsPosition, $packageView->get_type() );
+			self::assertIsInt( $readinessPosition, $packageView->get_type() );
+			self::assertTrue( $branchPanePosition < $returnPosition, $packageView->get_type() );
+			self::assertTrue( $returnPosition < $branchFieldsPosition, $packageView->get_type() );
+			self::assertTrue( $branchFieldsPosition < $readinessPosition, $packageView->get_type() );
 	}
 
 	/** @return array{default_provider: string, providers: list<array<string, mixed>>} */
@@ -670,7 +670,7 @@ final class RepeatPackageViewTest extends TestCase {
 	}
 
 	private function package( PackagePagePresenter $packageView ): RepeatPackageViewPackage {
-		$identifier = 'plugin' === $packageView->getType() ? 'example/example.php' : 'example-theme';
+		$identifier = 'plugin' === $packageView->get_type() ? 'example/example.php' : 'example-theme';
 		$package    = new RepeatPackageViewPackage( $identifier );
 		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'provider-id', 'main' ) );
 

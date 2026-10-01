@@ -13,13 +13,13 @@ defined( 'WPINC' ) || die;
 $sourceChoiceMode = isset( $packageSourceMode ) && 'create' === $packageSourceMode ? 'create' : 'edit';
 if ( ! is_array( $packageSourceChoices ) || array() === $packageSourceChoices ) {
 	$pageUrl              = 'create' === $sourceChoiceMode
-		? add_query_arg( 'page', $packageView->getCreatePageSlug(), $packageView->getAdminUrl() )
+		? add_query_arg( 'page', $packageView->get_create_page_slug(), $packageView->get_admin_url() )
 		: add_query_arg(
 			array(
-				'page'    => $packageView->getPageSlug(),
+				'page'    => $packageView->get_page_slug(),
 				'package' => (string) ( $identifierValue ?? '' ),
 			),
-			$packageView->getAdminUrl()
+			$packageView->get_admin_url()
 		);
 	$packageSourceChoices = array(
 		'branch'        => array(

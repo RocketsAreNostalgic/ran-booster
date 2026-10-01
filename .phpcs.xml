@@ -32,6 +32,8 @@
 		<include-pattern>/RAN/RepositoryProvider/Admin/MetadataRules.php</include-pattern>
 		<!-- Artifact ceiling: complete owned validation method/caller cohort. -->
 		<include-pattern>/RAN/PackageArtifactLimit.php</include-pattern>
+		<!-- Connected admin routes: complete owned method/caller cohort. -->
+		<include-pattern>/RAN/Admin/WebhookManagement/WebhookManagementAdminUrl.php</include-pattern>
 		<!-- Internal webhook history: complete owned method/caller cohort. -->
 		<include-pattern>/RAN/Admin/WebhookManagement/Display/WebhookHistory.php</include-pattern>
 		<include-pattern>/RAN/Admin/WebhookManagement/Display/WebhookHistoryView.php</include-pattern>

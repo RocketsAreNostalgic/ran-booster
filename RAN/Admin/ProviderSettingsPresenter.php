@@ -183,8 +183,8 @@ final readonly class ProviderSettingsPresenter {
 	 *
 	 * @return array{default_provider: string, providers: list<array<string, mixed>>}
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
-	public function buildPackageForm( ?string $defaultProvider = null ): array {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+	public function build_package_form( ?string $defaultProvider = null ): array {
 		$providers = $this->package_providers();
 
 		$package_provider_codes = array_column(
@@ -216,8 +216,8 @@ final readonly class ProviderSettingsPresenter {
 	 *
 	 * @return array{default_provider: string, providers: list<array<string, mixed>>}
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
-	public function buildExistingPackageForm( string $storedProvider ): array {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+	public function build_existing_package_form( string $storedProvider ): array {
 		$providers = $this->package_providers();
 		$codes     = array_column( $providers, 'code' );
 
@@ -265,8 +265,7 @@ final readonly class ProviderSettingsPresenter {
 	 *     webhook_settings_url: string
 	 * }|null
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function buildPackageBranchReadiness( Package $package ): ?array {
+	public function build_package_branch_readiness( Package $package ): ?array {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		if ( ! in_array( $package->get_source(), array( PackageSource::BRANCH, PackageSource::RELEASE_ASSET ), true ) || null === $this->webhookAssistance ) {
 			return null;
@@ -287,7 +286,7 @@ final readonly class ProviderSettingsPresenter {
 				return null;
 			}
 			if ( PackageSource::RELEASE_ASSET === $package->get_source() ) {
-				$retention = $this->buildPackageWebhookRetention( $package );
+				$retention = $this->build_package_webhook_retention( $package );
 				if ( null === $retention ) {
 					return null;
 				}
@@ -339,8 +338,7 @@ final readonly class ProviderSettingsPresenter {
 	}
 
 	/** @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable' */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function checkPackageRepositoryBranch( string $type, Package $package ): string {
+	public function check_package_repository_branch( string $type, Package $package ): string {
 		if ( PackageSource::BRANCH !== $package->get_source() ) {
 			return 'unable_to_check';
 		}
@@ -449,14 +447,12 @@ final readonly class ProviderSettingsPresenter {
 	 * The dashboard may cache that result briefly, but credential replacement and
 	 * default public-profile changes must require a fresh remote check.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function packageRepositoryBranchCheckAccessFingerprint( Package $package ): string {
+	public function package_repository_branch_check_access_fingerprint( Package $package ): string {
 		return $this->branch_check_evidence->profile_fingerprint_for( $package, $this->effective_branch_check_profile( $package ) );
 	}
 
 	/** @return array{outcome: 'verified', checked_at: string}|null */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function packageRepositoryBranchEvidence( string $type, Package $package ): ?array {
+	public function package_repository_branch_evidence( string $type, Package $package ): ?array {
 		return $this->branch_check_evidence->find( $type, $package, $this->effective_branch_check_profile( $package ) );
 	}
 
@@ -482,8 +478,7 @@ final readonly class ProviderSettingsPresenter {
 	 *   provider_webhooks_url: string
 	 * }|null
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function buildPackageWebhookRetention( Package $package ): ?array {
+	public function build_package_webhook_retention( Package $package ): ?array {
 		if ( PackageSource::RELEASE_ASSET !== $package->get_source() ) {
 			return null;
 		}
@@ -534,8 +529,7 @@ final readonly class ProviderSettingsPresenter {
 	 *
 	 * @return list<array{code: string, label: string, available: bool, deploy: bool, default_credential_id: string, credential_kind_labels: array<string,string>, credentials: list<array{id: string, label: string, source: string}>}>
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function buildPackageList(): array {
+	public function build_package_list(): array {
 		return array_map(
 			static fn ( array $provider ): array => array(
 				'code'                   => $provider['code'],
@@ -563,8 +557,7 @@ final readonly class ProviderSettingsPresenter {
 	 * @param array<string, array<string, list<array{index:int,name:string,type:string}>>> $associations
 	 * @return list<array{code:string,label:string,credentials:list<array<string,mixed>>}>
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function buildPortabilityCredentials( array $associations ): array {
+	public function build_portability_credentials( array $associations ): array {
 		$groups = array();
 		foreach ( $this->providers->administrationMetadata() as $metadata ) {
 			$code       = $metadata->code->value;
@@ -1436,8 +1429,7 @@ final readonly class ProviderSettingsPresenter {
 	 * @param array<string, mixed> $data Provider settings and normalized list state.
 	 * @return array<string, mixed>
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function buildProfileListProjection( array $data ): array {
+	public function build_profile_list_projection( array $data ): array {
 		$provider       = is_array( $data['provider'] ?? null ) ? $data['provider'] : array();
 		$credentials    = is_array( $data['credential_profiles'] ?? null ) ? $data['credential_profiles'] : array();
 		$webhooks       = is_array( $data['webhook_profiles'] ?? null ) ? $data['webhook_profiles'] : array();

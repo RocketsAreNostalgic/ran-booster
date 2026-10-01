@@ -41,7 +41,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$packageRepositoryReady   = true;
 		$packageSource            = array();
 		$packageView              = new class() {
-			public function getType(): string {
+			public function get_type(): string {
 				return 'plugin';
 			}
 		};
@@ -258,7 +258,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$packageRepositoryReady   = true;
 		$packageSource            = array();
 		$packageView              = new class() {
-			public function getType(): string {
+			public function get_type(): string {
 				return 'plugin';
 			}
 		};

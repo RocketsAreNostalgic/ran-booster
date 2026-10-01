@@ -128,9 +128,9 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		$result = ( new DeploymentAdminController( $this->createStub( Dashboard::class ), monitor: $monitor ) )->handle();
 
 		self::assertTrue( $result['success'] );
-		self::assertFalse( ( new DeploymentAdminPresenter( $monitor ) )->shouldRender() );
+		self::assertFalse( ( new DeploymentAdminPresenter( $monitor ) )->should_render() );
 		$GLOBALS['ran_booster_repository_admin_user_id'] = 18;
-		self::assertTrue( ( new DeploymentAdminPresenter( $monitor ) )->shouldRender() );
+		self::assertTrue( ( new DeploymentAdminPresenter( $monitor ) )->should_render() );
 
 		$GLOBALS['ran_booster_repository_admin_capabilities']['manage_options'] = false;
 		ob_start();

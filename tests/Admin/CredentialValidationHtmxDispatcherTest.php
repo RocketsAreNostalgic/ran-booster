@@ -57,12 +57,12 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 	public function testOrdinaryPostKeepsTheExistingDashboardNoticeFlow(): void {
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
-			->method( 'addMessage' )
+			->method( 'add_message' )
 			->with( 'Repository credential validated successfully.' );
 		$dispatcher = $this->dispatcher( $dashboard, CredentialValidationResult::valid() );
 
 		$_POST['ran_booster'] = $this->request();
-		$dispatcher->dispatchPostRequests();
+		$dispatcher->dispatch_post_requests();
 
 		self::assertNull( $this->controller->response );
 		self::assertSame( array( 'manage_options' ), $GLOBALS['ran_booster_test_capability_checks'] );
@@ -71,13 +71,13 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 
 	public function testHtmxPostReturnsOnlyTheSafeSuccessToastPayload(): void {
 		$dashboard = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'addMessage' );
+		$dashboard->expects( self::never() )->method( 'add_message' );
 		$dispatcher                 = $this->dispatcher( $dashboard, CredentialValidationResult::valid() );
 		$_SERVER['HTTP_HX_REQUEST'] = 'true';
 		$_POST['ran_booster']       = $this->request();
 
 		try {
-			$dispatcher->dispatchPostRequests();
+			$dispatcher->dispatch_post_requests();
 			self::fail( 'An HTMX response must end the request after rendering its bounded fragment.' );
 		} catch ( HtmxCredentialValidationResponse $response ) {
 			self::assertSame( 'credential_1', $response->credentialId );
@@ -95,13 +95,13 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 		$GLOBALS['ran_booster_repository_admin_translations']['ran-booster'] = $translations;
 
 		$dashboard = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'addMessage' );
+		$dashboard->expects( self::never() )->method( 'add_message' );
 		$dispatcher                 = $this->dispatcher( $dashboard, CredentialValidationResult::valid() );
 		$_SERVER['HTTP_HX_REQUEST'] = 'true';
 		$_POST['ran_booster']       = $this->request();
 
 		try {
-			$dispatcher->dispatchPostRequests();
+			$dispatcher->dispatch_post_requests();
 			self::fail( 'An HTMX response must end the request after rendering its bounded fragment.' );
 		} catch ( HtmxCredentialValidationResponse $response ) {
 			self::assertSame( 'credential_1', $response->credentialId );
@@ -113,13 +113,13 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 
 	public function testHtmxValidationFailureRemainsLocalAndDoesNotClaimSuccess(): void {
 		$dashboard = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'addMessage' );
+		$dashboard->expects( self::never() )->method( 'add_message' );
 		$dispatcher                 = $this->dispatcher( $dashboard, CredentialValidationResult::rateLimited() );
 		$_SERVER['HTTP_HX_REQUEST'] = 'TRUE';
 		$_POST['ran_booster']       = $this->request();
 
 		try {
-			$dispatcher->dispatchPostRequests();
+			$dispatcher->dispatch_post_requests();
 			self::fail( 'An HTMX validation failure must return the local error fragment.' );
 		} catch ( HtmxCredentialValidationResponse $response ) {
 			self::assertSame( 'credential_1', $response->credentialId );

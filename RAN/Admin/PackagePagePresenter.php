@@ -41,39 +41,39 @@ final class PackagePagePresenter {
 		);
 	}
 
-	public function getType(): string { // phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public method preserves the existing caller contract.
+	public function get_type(): string {
 		return $this->type;
 	}
 
-	public function getSingularLabel(): string { // phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public method preserves the existing caller contract.
+	public function get_singular_label(): string {
 		return 'plugin' === $this->type
 			? _x( 'Plugin', 'Managed package type singular label', 'ran-booster' )
 			: _x( 'Theme', 'Managed package type singular label', 'ran-booster' );
 	}
 
-	public function getPluralLabel(): string { // phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public method preserves the existing caller contract.
+	public function get_plural_label(): string {
 		return 'plugin' === $this->type
 			? _x( 'Plugins', 'Managed package type plural label', 'ran-booster' )
 			: _x( 'Themes', 'Managed package type plural label', 'ran-booster' );
 	}
 
-	public function getIdentifierField(): string { // phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public method preserves the existing caller contract.
+	public function get_identifier_field(): string {
 		return $this->identifierField; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor property preserves its named parameter contract.
 	}
 
-	public function getPageSlug(): string { // phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public method preserves the existing caller contract.
+	public function get_page_slug(): string {
 		return $this->pageSlug; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor property preserves its named parameter contract.
 	}
 
-	public function getCreatePageSlug(): string { // phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public method preserves the existing caller contract.
+	public function get_create_page_slug(): string {
 		return $this->pageSlug . '-create'; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor property preserves its named parameter contract.
 	}
 
-	public function getAdminUrl(): string { // phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public method preserves the existing caller contract.
+	public function get_admin_url(): string {
 		return is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
 	}
 
-	public function getAction( string $operation ): string { // phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public method preserves the existing caller contract.
+	public function get_action( string $operation ): string {
 		if ( ! in_array( $operation, array( 'install', 'edit', 'update', 'unlink', 'unlink-delete', 'bulk' ), true ) ) {
 			throw new InvalidArgumentException( 'Unsupported package action.' );
 		}
@@ -106,7 +106,7 @@ final class PackagePagePresenter {
 			'packageProviderOptions'  => $package_provider_options,
 			'packageView'             => $this,
 			'packageProviders'        => $packageProviders, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-			'packageActivity'         => $deployments->packageActivity( $filtered_packages, $this->type ),
+			'packageActivity'         => $deployments->package_activity( $filtered_packages, $this->type ),
 			'packageExtensionRows'    => $this->extension_rows( $filtered_packages ),
 			'packageExtensionActions' => $this->extension_actions( $filtered_packages ),
 		);
@@ -150,7 +150,7 @@ final class PackagePagePresenter {
 	}
 
 	/** @return array<string, mixed> */
-	public function unavailableCreate( array $packageProviderSettings, bool $explicitProvider ): array { // phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public method and parameter names preserve caller compatibility.
+	public function unavailable_create( array $packageProviderSettings, bool $explicitProvider ): array { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve caller compatibility.
 		return array(
 			'packageProviderSettings'  => $packageProviderSettings, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
 			'packageView'              => $this,
@@ -264,7 +264,7 @@ final class PackagePagePresenter {
 	private function source_composition( string $mode, string $requested, ?Package $package = null, bool $open_advanced = false ): array {
 		$projection = null === $package ? null : $this->projection( $package );
 		$page_url   = null === $projection
-			? add_query_arg( 'page', $this->getCreatePageSlug(), $this->getAdminUrl() )
+			? add_query_arg( 'page', $this->get_create_page_slug(), $this->get_admin_url() )
 			: $projection->settingsUrl();
 		$base       = array(
 			'branch'        => array(
@@ -668,7 +668,7 @@ final class PackagePagePresenter {
 					'page'    => $this->pageSlug, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor property preserves its named parameter contract.
 					'package' => (string) $package->get_identifier(),
 				),
-				$this->getAdminUrl()
+				$this->get_admin_url()
 			),
 			$subdirectory
 		);

@@ -936,8 +936,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertSame( 0, substr_count( $dangerZone, 'hx-target="#wpbody-content"' ) );
 		self::assertSame( 2, substr_count( $dangerZone, 'name="ran_booster[confirm_package_removal]" value="1" required' ) );
 		self::assertSame( 2, substr_count( $dangerZone, 'name="ran_booster[expected_source_revision]"' ) );
-		self::assertStringContainsString( "\$packageView->getAction( 'unlink' )", $dangerZone );
-		self::assertStringContainsString( "\$packageView->getAction( 'unlink-delete' )", $dangerZone );
+		self::assertStringContainsString( "\$packageView->get_action( 'unlink' )", $dangerZone );
+		self::assertStringContainsString( "\$packageView->get_action( 'unlink-delete' )", $dangerZone );
 		self::assertStringContainsString( 'disabled data-ran-booster-package-removal-submit', $dangerZone );
 
 		self::assertStringContainsString( '.ran-booster-package-danger-zone > summary {', $css );
@@ -948,7 +948,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '.ran-booster-package-danger-zone__actions .button {', $css );
 		self::assertStringContainsString( 'inline-size: 100%;', $css );
 
-		self::assertStringNotContainsString( "\$packageView->getAction( 'unlink' )", $index );
+		self::assertStringNotContainsString( "\$packageView->get_action( 'unlink' )", $index );
 		self::assertStringNotContainsString( '$unlinkLabel', $index );
 	}
 

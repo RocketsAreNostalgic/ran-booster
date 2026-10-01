@@ -58,14 +58,14 @@ final class DashboardNoticeLoggingTest extends TestCase {
 	}
 
 	public function testEveryQueuedAdminWarningAndErrorNoticeCreatesASafeLogEvent(): void {
-		$this->dashboard->addMessage(
+		$this->dashboard->add_message(
 			array(
 				'type'    => 'warning',
 				'code'    => 'bulk_update_queue',
 				'message' => 'One package was skipped.',
 			)
 		);
-		$this->dashboard->addFailureMessage(
+		$this->dashboard->add_failure_message(
 			new WP_Error( 'ran_booster_test_failure', 'A safe public failure.' ),
 			new RuntimeException( 'secret-canary-token', 73 ),
 			array(
@@ -73,7 +73,7 @@ final class DashboardNoticeLoggingTest extends TestCase {
 				'step'      => 'manual_package_operation',
 			)
 		);
-		$this->dashboard->addMessage(
+		$this->dashboard->add_message(
 			array(
 				'type'    => 'success',
 				'message' => 'No warning.',
@@ -93,7 +93,7 @@ final class DashboardNoticeLoggingTest extends TestCase {
 	}
 
 	public function testUnexpectedManualOperationFailureIsLoggedBeforeTheRedactedNotice(): void {
-		self::assertFalse( $this->dashboard->postPackageOperation( 'install-plugin', array() ) );
+		self::assertFalse( $this->dashboard->post_package_operation( 'install-plugin', array() ) );
 
 		self::assertCount( 1, $this->dashboard->messages );
 		self::assertSame( 'error', $this->dashboard->messages[0]['type'] );

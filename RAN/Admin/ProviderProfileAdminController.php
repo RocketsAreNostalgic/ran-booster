@@ -38,8 +38,7 @@ class ProviderProfileAdminController {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		$this->branch_check_evidence = $branchCheckEvidence ?? new RepositoryBranchCheckEvidenceStore();
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
-	public function manageCredentialProfiles( array $request ): void {
+	public function manage_credential_profiles( array $request ): void {
 		$this->authorize( 'ran-booster-save-secrets' );
 		$action              = is_string( $request['action'] ?? null ) ? $request['action'] : '';
 		$interaction_request = null;
@@ -69,8 +68,8 @@ class ProviderProfileAdminController {
 			$this->profile_failure( $action, $interaction_request, $exception );
 		}
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the existing public callback and caller contract. Retain the public named-parameter contract.
-	public function manageCredentialValidation( array $request, bool $htmxRequest ): void {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+	public function manage_credential_validation( array $request, bool $htmxRequest ): void {
 		$this->authorize( 'ran-booster-save-secrets' );
 		$provider = null;
 		$id       = null;
@@ -109,7 +108,7 @@ class ProviderProfileAdminController {
 				$message = __( 'Repository credential validated successfully.', 'ran-booster' );
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 				if ( ! $htmxRequest ) {
-					$this->dashboard->addMessage( $message );
+					$this->dashboard->add_message( $message );
 				}
 			} else {
 				$error = $result->getDisplayMessage();
@@ -120,7 +119,7 @@ class ProviderProfileAdminController {
 				if ( $htmxRequest ) {
 					$status = 422;
 				} else {
-					$this->dashboard->addMessage( new \WP_Error( 'ran_booster_credential_validation_error', $error ) );
+					$this->dashboard->add_message( new \WP_Error( 'ran_booster_credential_validation_error', $error ) );
 				}
 			}
 		} catch ( \Throwable $exception ) {
@@ -132,8 +131,8 @@ class ProviderProfileAdminController {
 			$this->respond_to_htmx_credential_validation( $id, $message, $error, $status );
 		}
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the existing public callback and caller contract. Retain the public named-parameter contract.
-	public function managePublicLookupProfile( array $request, bool $htmxRequest ): void {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+	public function manage_public_lookup_profile( array $request, bool $htmxRequest ): void {
 		$this->authorize( 'ran-booster-save-public-lookup-profile' );
 		$provider = null;
 		$message  = null;
@@ -170,7 +169,7 @@ class ProviderProfileAdminController {
 				: __( 'Default public repository lookup profile saved.', 'ran-booster' );
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			if ( ! $htmxRequest ) {
-				$this->dashboard->addMessage( $message );
+				$this->dashboard->add_message( $message );
 			}
 		} catch ( \Throwable $exception ) {
 			$error  = $this->record_failure( $exception, 'save-public-lookup-profile', 'public_lookup_profile' );
@@ -471,7 +470,7 @@ class ProviderProfileAdminController {
 	}
 	private function complete_mutation( string $message, ?SignedAdminInteractionRequest $request ): void {
 		if ( null === $request || null === $this->interaction ) {
-			$this->dashboard->addMessage( $message );
+			$this->dashboard->add_message( $message );
 			return;
 		}
 		$this->interaction->respondToProviderProfileSuccess( $request, $message );
@@ -492,7 +491,7 @@ class ProviderProfileAdminController {
 	}
 	private function record_failure( \Throwable $exception, string $operation, string $step ): string {
 		$error = $this->safe_error( $exception );
-		$this->dashboard->addFailureMessage(
+		$this->dashboard->add_failure_message(
 			new \WP_Error( 'ran_booster_credentials_error', $error ),
 			$exception,
 			array(
@@ -538,7 +537,7 @@ class ProviderProfileAdminController {
 	protected function respond_to_htmx_public_lookup_profile( string $provider, ?string $message, ?string $error, int $status ): never {
 		status_header( $status );
 		$this->emit_success_header( $message );
-		echo $this->dashboard->renderPublicLookupProfileRegion( $provider, $error ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-owned, escaped view fragment.
+		echo $this->dashboard->render_public_lookup_profile_region( $provider, $error ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-owned, escaped view fragment.
 		exit;
 	}
 	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.

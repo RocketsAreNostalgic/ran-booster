@@ -117,8 +117,7 @@ class Dispatcher {
 		);
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
-	public function dispatchPostRequests() {
+	public function dispatch_post_requests() {
 		// The selected action determines which nonce is verified before any mutation occurs.
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		if ( isset( $_POST['ran_booster'] ) && is_array( $_POST['ran_booster'] ) ) {
@@ -159,13 +158,13 @@ class Dispatcher {
 			}
 
 			if ( 'save-public-lookup-profile' === $action ) {
-				$this->provider_profiles->managePublicLookupProfile( $request, $this->is_htmx_request() );
+				$this->provider_profiles->manage_public_lookup_profile( $request, $this->is_htmx_request() );
 
 				return;
 			}
 
 			if ( 'validate-access-profile' === $action ) {
-				$this->provider_profiles->manageCredentialValidation( $request, $this->is_htmx_request() );
+				$this->provider_profiles->manage_credential_validation( $request, $this->is_htmx_request() );
 
 				return;
 			}
@@ -178,7 +177,7 @@ class Dispatcher {
 			);
 
 			if ( in_array( $action, $credential_actions, true ) ) {
-				$this->provider_profiles->manageCredentialProfiles( $request );
+				$this->provider_profiles->manage_credential_profiles( $request );
 
 				return;
 			}
@@ -190,7 +189,7 @@ class Dispatcher {
 			);
 			if ( in_array( $action, $deployment_actions, true ) ) {
 				$request_method = $_SERVER['REQUEST_METHOD'] ?? null;
-				$this->deployment_admin->manageDeploymentAttempt(
+				$this->deployment_admin->manage_deployment_attempt(
 					$action,
 					$request,
 					is_string( $request_method ) && 'POST' === strtoupper( $request_method )
@@ -201,7 +200,7 @@ class Dispatcher {
 
 			if ( in_array( $action, array( 'bulk-plugin', 'bulk-theme' ), true ) ) {
 				$request_method = $_SERVER['REQUEST_METHOD'] ?? null;
-				$redirect       = $this->package_admin->manageBulk(
+				$redirect       = $this->package_admin->manage_bulk(
 					$this->dashboard,
 					$action,
 					$request,
@@ -311,7 +310,7 @@ class Dispatcher {
 
 		// Keep a failed attempt local to this protected POST response. Paths and
 		// failure details never enter redirects, logs, transients or global notices.
-		$this->dashboard->setSecretsStorageProvisioningResult( $result );
+		$this->dashboard->set_secrets_storage_provisioning_result( $result );
 	}
 
 	/** @param array<string, mixed> $request */
@@ -367,7 +366,7 @@ class Dispatcher {
 			$this->redirect_to( $admin_url . '?page=ran-booster&tab=overview' );
 		}
 
-		$this->dashboard->setSecretsStorageProvisioningResult( $result );
+		$this->dashboard->set_secrets_storage_provisioning_result( $result );
 	}
 
 	/** @param array<string, mixed> $request */
@@ -423,7 +422,7 @@ class Dispatcher {
 			$this->redirect_to( $admin_url . '?page=ran-booster&tab=overview' );
 		}
 
-		$this->dashboard->setSecretsStorageProvisioningResult( $result );
+		$this->dashboard->set_secrets_storage_provisioning_result( $result );
 	}
 
 	/** @param array<string, mixed> $request */
@@ -466,7 +465,7 @@ class Dispatcher {
 				);
 			}
 
-			$this->dashboard->addFailureMessage(
+			$this->dashboard->add_failure_message(
 				new \WP_Error(
 					'ran_booster_debug_capture_unavailable',
 					__( 'Booster could not update the temporary logging capture. No deployment was interrupted.', 'ran-booster' )
@@ -535,7 +534,7 @@ class Dispatcher {
 			}
 		}
 
-		$this->dashboard->postRunTroubleshooting(
+		$this->dashboard->post_run_troubleshooting(
 			array(
 				'provider'      => $provider,
 				'credential_id' => $credential_id,
@@ -544,7 +543,7 @@ class Dispatcher {
 		);
 
 		if ( $this->is_htmx_request() ) {
-			$this->respond_to_htmx_diagnostics( $this->dashboard->troubleshootingSucceeded() );
+			$this->respond_to_htmx_diagnostics( $this->dashboard->troubleshooting_succeeded() );
 		}
 	}
 
@@ -572,7 +571,7 @@ class Dispatcher {
 			);
 		}
 
-		echo $this->dashboard->renderDebugCaptureRegion( $error ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-owned, escaped view fragment.
+		echo $this->dashboard->render_debug_capture_region( $error ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-owned, escaped view fragment.
 		exit;
 	}
 
@@ -593,7 +592,7 @@ class Dispatcher {
 			);
 		}
 
-		echo $this->dashboard->renderTroubleshootingDiagnosticsRegion(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-owned, escaped view fragment.
+		echo $this->dashboard->render_troubleshooting_diagnostics_region(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-owned, escaped view fragment.
 		exit;
 	}
 }

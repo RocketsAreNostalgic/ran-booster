@@ -36,7 +36,7 @@ if ( ! $registry->isSealed()
 	throw new RuntimeException( 'The external fixture provider contract is not active.' );
 }
 
-$package_form     = $container->make( RAN\Admin\ProviderSettingsPresenter::class )->buildPackageForm( 'fixture-provider' );
+$package_form     = $container->make( RAN\Admin\ProviderSettingsPresenter::class )->build_package_form( 'fixture-provider' );
 $package_provider = array_column( $package_form['providers'], null, 'code' )['fixture-provider'] ?? null;
 
 if ( 'fixture-provider' !== $package_form['default_provider']

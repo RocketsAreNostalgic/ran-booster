@@ -216,10 +216,10 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 
 		foreach (
 			array(
-				static fn (): mixed => $controller->handleExport(),
-				static fn (): mixed => $controller->handlePreview(),
-				static fn (): mixed => $controller->handleApply(),
-				static fn (): mixed => $controller->previewFile( '/not-readable' ),
+				static fn (): mixed => $controller->handle_export(),
+				static fn (): mixed => $controller->handle_preview(),
+				static fn (): mixed => $controller->handle_apply(),
+				static fn (): mixed => $controller->preview_file( '/not-readable' ),
 			) as $entryPoint
 		) {
 			try {

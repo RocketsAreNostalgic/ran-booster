@@ -48,7 +48,7 @@ $packageProviderOptions     = isset( $packageProviderOptions ) && is_array( $pac
 	? $packageProviderOptions
 	: array();
 $extensionActionRenderer    = new \RAN\Admin\Component\AdminActionRenderer();
-$packageAdminUrl            = $packageView->getAdminUrl();
+$packageAdminUrl            = $packageView->get_admin_url();
 $activityDetailBaseUrl      = add_query_arg(
 	array(
 		'page'  => 'ran-booster',
@@ -71,14 +71,14 @@ $activityBadgeVariants      = array(
 	'failed'          => 'error',
 	'needs_attention' => 'error',
 );
-$bulkFormId                 = 'ran-booster-' . $packageView->getType() . '-bulk-form';
-$bulkActionId               = 'ran-booster-' . $packageView->getType() . '-bulk-action';
-$bulkSelectAllId            = 'ran-booster-' . $packageView->getType() . '-select-all';
-$bulkTypeLabel              = strtolower( $packageView->getPluralLabel() );
-$bulkTypeSingular           = strtolower( $packageView->getSingularLabel() );
-$isPluginList               = 'plugin' === $packageView->getType();
-$installAnotherUrl          = add_query_arg( 'page', $packageView->getCreatePageSlug(), $packageAdminUrl );
-$clearFiltersUrl            = add_query_arg( 'page', $packageView->getPageSlug(), $packageAdminUrl );
+$bulkFormId                 = 'ran-booster-' . $packageView->get_type() . '-bulk-form';
+$bulkActionId               = 'ran-booster-' . $packageView->get_type() . '-bulk-action';
+$bulkSelectAllId            = 'ran-booster-' . $packageView->get_type() . '-select-all';
+$bulkTypeLabel              = strtolower( $packageView->get_plural_label() );
+$bulkTypeSingular           = strtolower( $packageView->get_singular_label() );
+$isPluginList               = 'plugin' === $packageView->get_type();
+$installAnotherUrl          = add_query_arg( 'page', $packageView->get_create_page_slug(), $packageAdminUrl );
+$clearFiltersUrl            = add_query_arg( 'page', $packageView->get_page_slug(), $packageAdminUrl );
 $hasPackageListFilters      = array() !== array_filter(
 	$packageListState,
 	static fn ( mixed $value ): bool => is_string( $value ) && '' !== $value
@@ -102,9 +102,9 @@ $policyLabels = array(
 	\RAN\Deployment\DeploymentPolicy::AUTOMATIC->value => __( 'Automatic', 'ran-booster' ),
 );
 
-?><h2 class="wp-heading-inline ran-booster-package-heading"><?php echo esc_html( sprintf( /* translators: %s: Managed package type plural label, such as Plugins or Themes. */ __( 'Managed %s', 'ran-booster' ), $packageView->getPluralLabel() ) ); ?></h2>
+?><h2 class="wp-heading-inline ran-booster-package-heading"><?php echo esc_html( sprintf( /* translators: %s: Managed package type plural label, such as Plugins or Themes. */ __( 'Managed %s', 'ran-booster' ), $packageView->get_plural_label() ) ); ?></h2>
 <?php if ( $packageListTotal > 0 ) { ?>
-	<a class="page-title-action" href="<?php echo esc_url( $installAnotherUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $packageView->getType() ) ); ?></a>
+	<a class="page-title-action" href="<?php echo esc_url( $installAnotherUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $packageView->get_type() ) ); ?></a>
 <?php } ?>
 
 <div class="ran-booster-package-intro">
@@ -118,25 +118,25 @@ $policyLabels = array(
 <?php if ( $packageListTotal > 0 ) { ?>
 	<div class="ran-booster-package-list-controls">
 		<form class="ran-booster-package-list-filters" method="get" action="<?php echo esc_url( $packageAdminUrl ); ?>">
-			<input type="hidden" name="page" value="<?php echo esc_attr( $packageView->getPageSlug() ); ?>">
+			<input type="hidden" name="page" value="<?php echo esc_attr( $packageView->get_page_slug() ); ?>">
 			<?php if ( '' !== $packageListState['search'] ) { ?>
 				<input type="hidden" name="s" value="<?php echo esc_attr( $packageListState['search'] ); ?>">
 			<?php } ?>
-			<label class="screen-reader-text" for="ran-booster-<?php echo esc_attr( $packageView->getType() ); ?>-provider-filter"><?php esc_html_e( 'Filter by repository provider', 'ran-booster' ); ?></label>
-			<select id="ran-booster-<?php echo esc_attr( $packageView->getType() ); ?>-provider-filter" name="provider">
+			<label class="screen-reader-text" for="ran-booster-<?php echo esc_attr( $packageView->get_type() ); ?>-provider-filter"><?php esc_html_e( 'Filter by repository provider', 'ran-booster' ); ?></label>
+			<select id="ran-booster-<?php echo esc_attr( $packageView->get_type() ); ?>-provider-filter" name="provider">
 				<option value=""><?php esc_html_e( 'All providers', 'ran-booster' ); ?></option>
 				<?php foreach ( $packageProviderOptions as $providerOption ) { ?>
 					<option value="<?php echo esc_attr( $providerOption['code'] ); ?>" <?php selected( $providerOption['code'], $packageListState['provider'] ); ?>><?php echo esc_html( $providerOption['label'] ); ?></option>
 				<?php } ?>
 			</select>
-			<label class="screen-reader-text" for="ran-booster-<?php echo esc_attr( $packageView->getType() ); ?>-source-filter"><?php esc_html_e( 'Filter by update source', 'ran-booster' ); ?></label>
-			<select id="ran-booster-<?php echo esc_attr( $packageView->getType() ); ?>-source-filter" name="source">
+			<label class="screen-reader-text" for="ran-booster-<?php echo esc_attr( $packageView->get_type() ); ?>-source-filter"><?php esc_html_e( 'Filter by update source', 'ran-booster' ); ?></label>
+			<select id="ran-booster-<?php echo esc_attr( $packageView->get_type() ); ?>-source-filter" name="source">
 				<option value=""><?php esc_html_e( 'All update sources', 'ran-booster' ); ?></option>
 				<option value="branch" <?php selected( 'branch', $packageListState['source'] ); ?>><?php esc_html_e( 'Branch', 'ran-booster' ); ?></option>
 				<option value="release_asset" <?php selected( 'release_asset', $packageListState['source'] ); ?>><?php esc_html_e( 'Releases', 'ran-booster' ); ?></option>
 			</select>
-			<label class="screen-reader-text" for="ran-booster-<?php echo esc_attr( $packageView->getType() ); ?>-policy-filter"><?php esc_html_e( 'Filter by updates', 'ran-booster' ); ?></label>
-			<select id="ran-booster-<?php echo esc_attr( $packageView->getType() ); ?>-policy-filter" name="policy">
+			<label class="screen-reader-text" for="ran-booster-<?php echo esc_attr( $packageView->get_type() ); ?>-policy-filter"><?php esc_html_e( 'Filter by updates', 'ran-booster' ); ?></label>
+			<select id="ran-booster-<?php echo esc_attr( $packageView->get_type() ); ?>-policy-filter" name="policy">
 				<option value=""><?php esc_html_e( 'All updates', 'ran-booster' ); ?></option>
 				<option value="automatic" <?php selected( 'automatic', $packageListState['policy'] ); ?>><?php esc_html_e( 'Automatic', 'ran-booster' ); ?></option>
 				<option value="manual" <?php selected( 'manual', $packageListState['policy'] ); ?>><?php esc_html_e( 'Manual', 'ran-booster' ); ?></option>
@@ -149,15 +149,15 @@ $policyLabels = array(
 		</form>
 
 		<form class="ran-booster-package-list-search search-form" method="get" action="<?php echo esc_url( $packageAdminUrl ); ?>">
-			<input type="hidden" name="page" value="<?php echo esc_attr( $packageView->getPageSlug() ); ?>">
+			<input type="hidden" name="page" value="<?php echo esc_attr( $packageView->get_page_slug() ); ?>">
 			<?php foreach ( array( 'provider', 'source', 'policy' ) as $filterKey ) { ?>
 				<?php if ( '' !== $packageListState[ $filterKey ] ) { ?>
 					<input type="hidden" name="<?php echo esc_attr( $filterKey ); ?>" value="<?php echo esc_attr( $packageListState[ $filterKey ] ); ?>">
 				<?php } ?>
 			<?php } ?>
 			<p class="search-box">
-				<label for="ran-booster-<?php echo esc_attr( $packageView->getType() ); ?>-search"><?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( 'Search managed %s', 'ran-booster' ), strtolower( $packageView->getPluralLabel() ) ) ); ?></label>
-				<input id="ran-booster-<?php echo esc_attr( $packageView->getType() ); ?>-search" class="wp-filter-search" type="search" name="s" value="<?php echo esc_attr( $packageListState['search'] ); ?>">
+				<label for="ran-booster-<?php echo esc_attr( $packageView->get_type() ); ?>-search"><?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( 'Search managed %s', 'ran-booster' ), strtolower( $packageView->get_plural_label() ) ) ); ?></label>
+				<input id="ran-booster-<?php echo esc_attr( $packageView->get_type() ); ?>-search" class="wp-filter-search" type="search" name="s" value="<?php echo esc_attr( $packageListState['search'] ); ?>">
 				<button class="button" type="submit"><?php esc_html_e( 'Search', 'ran-booster' ); ?></button>
 			</p>
 		</form>
@@ -179,8 +179,8 @@ $policyLabels = array(
 			data-reinstall-confirm-singular="<?php esc_attr_e( 'Reinstall the selected branch and overwrite local changes?', 'ran-booster' ); ?>"
 			data-reinstall-confirm-plural="<?php esc_attr_e( 'Reinstall {count} selected branches and overwrite local changes?', 'ran-booster' ); ?>"
 		>
-			<?php wp_nonce_field( $packageView->getAction( 'bulk' ) ); ?>
-			<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $packageView->getAction( 'bulk' ) ); ?>">
+			<?php wp_nonce_field( $packageView->get_action( 'bulk' ) ); ?>
+			<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $packageView->get_action( 'bulk' ) ); ?>">
 			<label class="screen-reader-text" for="<?php echo esc_attr( $bulkActionId ); ?>"><?php esc_html_e( 'Select bulk action', 'ran-booster' ); ?></label>
 			<select id="<?php echo esc_attr( $bulkActionId ); ?>" name="ran_booster[bulk_action]" required>
 				<option value=""><?php esc_html_e( 'Bulk actions', 'ran-booster' ); ?></option>
@@ -215,7 +215,7 @@ $policyLabels = array(
 				<span class="screen-reader-text"><?php esc_html_e( 'Selection', 'ran-booster' ); ?></span>
 			<?php } ?>
 		</th>
-		<th scope="col" class="manage-column column-primary ran-booster-package-table__package-header"><?php echo esc_html( $packageView->getSingularLabel() ); ?></th>
+		<th scope="col" class="manage-column column-primary ran-booster-package-table__package-header"><?php echo esc_html( $packageView->get_singular_label() ); ?></th>
 		<th scope="col" class="manage-column ran-booster-package-table__deploy-info-header"><?php esc_html_e( 'Management', 'ran-booster' ); ?></th>
 		<th scope="col" class="manage-column ran-booster-package-table__actions-header"><?php esc_html_e( 'Actions', 'ran-booster' ); ?></th>
 	</tr>
@@ -227,13 +227,13 @@ $policyLabels = array(
 				<?php if ( $packageListTotal > 0 ) { ?>
 					<td></td>
 					<td colspan="3">
-						<?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( 'No managed %s match the current filters.', 'ran-booster' ), strtolower( $packageView->getPluralLabel() ) ) ); ?>
+						<?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( 'No managed %s match the current filters.', 'ran-booster' ), strtolower( $packageView->get_plural_label() ) ) ); ?>
 					</td>
 				<?php } else { ?>
 					<td colspan="4" class="ran-booster-package-empty-state">
-						<h3><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Add your first %s', 'ran-booster' ), $packageView->getType() ) ); ?></h3>
-						<p><?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( 'No %s are managed by RAN Booster yet.', 'ran-booster' ), strtolower( $packageView->getPluralLabel() ) ) ); ?></p>
-						<a class="button button-primary" href="<?php echo esc_url( $installAnotherUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Add your first %s', 'ran-booster' ), $packageView->getType() ) ); ?></a>
+						<h3><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Add your first %s', 'ran-booster' ), $packageView->get_type() ) ); ?></h3>
+						<p><?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( 'No %s are managed by RAN Booster yet.', 'ran-booster' ), strtolower( $packageView->get_plural_label() ) ) ); ?></p>
+						<a class="button button-primary" href="<?php echo esc_url( $installAnotherUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Add your first %s', 'ran-booster' ), $packageView->get_type() ) ); ?></a>
 					</td>
 				<?php } ?>
 			</tr>
@@ -299,7 +299,7 @@ $policyLabels = array(
 				$updateLabel = __( 'Credential unavailable', 'ran-booster' );
 			} else {
 				/* translators: %s is the managed package type, such as plugin or theme. */
-				$updateLabel = sprintf( __( 'Reinstall %s', 'ran-booster' ), $packageView->getType() );
+				$updateLabel = sprintf( __( 'Reinstall %s', 'ran-booster' ), $packageView->get_type() );
 			}
 			$idleUpdateLabel = __( 'Reinstall', 'ran-booster' );
 			if ( ! $releaseManaged ) {
@@ -372,7 +372,7 @@ $policyLabels = array(
 			}
 			$editUrl              = add_query_arg(
 				array(
-					'page'    => $packageView->getPageSlug(),
+					'page'    => $packageView->get_page_slug(),
 					'package' => $package->get_identifier(),
 				),
 				$packageAdminUrl
@@ -425,7 +425,7 @@ $policyLabels = array(
 			<?php } ?>
 		>
 			<th scope="row" rowspan="2" class="check-column">
-				<?php $packageCheckboxId = 'ran-booster-select-' . $packageView->getType() . '-' . $packageRowNumber; ?>
+				<?php $packageCheckboxId = 'ran-booster-select-' . $packageView->get_type() . '-' . $packageRowNumber; ?>
 				<input id="<?php echo esc_attr( $packageCheckboxId ); ?>" type="checkbox" name="ran_booster[identifiers][]" value="<?php echo esc_attr( $packageIdentifier ); ?>" form="<?php echo esc_attr( $bulkFormId ); ?>" data-ran-booster-package-checkbox data-ran-booster-branch-reinstall-eligible="<?php echo esc_attr( ( ! $releaseManaged && ! $updateNeedsAttention ) ? '1' : '0' ); ?>">
 				<label class="screen-reader-text" for="<?php echo esc_attr( $packageCheckboxId ); ?>"><?php echo esc_html( sprintf( /* translators: %s is a package name. */ __( 'Select %s', 'ran-booster' ), $package->name ) ); ?></label>
 			</th>
@@ -462,10 +462,10 @@ $policyLabels = array(
 						<?php $extensionActionRenderer->render( $packageActions, true ); ?>
 					<?php } else { ?>
 						<form action="" method="POST" class="ran-booster-package-row__update-form" data-ran-booster-package-mutation>
-							<?php wp_nonce_field( $packageView->getAction( 'update' ) ); ?>
-							<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $packageView->getAction( 'update' ) ); ?>">
+							<?php wp_nonce_field( $packageView->get_action( 'update' ) ); ?>
+							<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $packageView->get_action( 'update' ) ); ?>">
 							<input type="hidden" name="ran_booster[repository]" value="<?php echo esc_attr( (string) $package->repository ); ?>">
-							<input type="hidden" name="ran_booster[<?php echo esc_attr( $packageView->getIdentifierField() ); ?>]" value="<?php echo esc_attr( (string) $package->get_identifier() ); ?>">
+							<input type="hidden" name="ran_booster[<?php echo esc_attr( $packageView->get_identifier_field() ); ?>]" value="<?php echo esc_attr( (string) $package->get_identifier() ); ?>">
 							<?php require __DIR__ . '/expected-package.php'; ?>
 							<button type="submit" class="button button-primary button-update-package<?php echo $updateInProgress ? ' ran-booster-update-is-active' : ''; ?>" <?php disabled( ! $updateCanRun || $updateInProgress || $updateNeedsAttention ); ?> data-ran-booster-update-button data-idle-label="<?php echo esc_attr( $idleUpdateLabel ); ?>" data-update-can-run="<?php echo esc_attr( $updateCanRun ? '1' : '0' ); ?>" data-reinstall-confirm-message="<?php esc_attr_e( 'Reinstall from the saved branch and overwrite local changes?', 'ran-booster' ); ?>"<?php echo $updateInProgress ? ' aria-busy="true"' : ''; ?>>
 								<span data-ran-booster-update-label><?php esc_html_e( 'Reinstall', 'ran-booster' ); ?></span>

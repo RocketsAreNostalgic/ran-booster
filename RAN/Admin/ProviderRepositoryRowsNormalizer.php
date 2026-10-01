@@ -18,7 +18,7 @@ final class ProviderRepositoryRowsNormalizer {
 	// Placeholder meanings are fixed by the named projection fields below.
 	// phpcs:disable WordPress.WP.I18n.MissingTranslatorsComment
 	/** Build the managed-repository projection consumed by the provider page. */
-	public function projectPage( array $data, ?RepositoryWebhookManagementControls $webhookManagement = null, ?ReleaseWorkflowControls $releaseWorkflow = null ): array { // phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public method and parameter names preserve caller compatibility.
+	public function project_page( array $data, ?RepositoryWebhookManagementControls $webhookManagement = null, ?ReleaseWorkflowControls $releaseWorkflow = null ): array { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve caller compatibility.
 		$provider       = is_array( $data['provider'] ?? null ) ? $data['provider'] : array();
 		$provider_code  = is_string( $provider['code'] ?? null ) ? $provider['code'] : '';
 		$provider_label = is_string( $provider['label'] ?? null ) ? $provider['label'] : '';
@@ -410,7 +410,7 @@ final class ProviderRepositoryRowsNormalizer {
 			}
 			$release_reason_id = ( $is_release || $source_conflict ) && '' !== $consequence ? $reason_id . '-release-source' : '';
 			$described_by      = array_filter( array( $release_reason_id, ( '' !== ( $issues[0] ?? '' ) ) ? $reason_id : '', ! $siteReady && ! $is_release ? $reason_id . '-site' : '' ) ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-			$actions           = ! $inventory_incomplete && null !== $webhookManagement && $webhookManagement->supportsProvider( $providerCode ) && $has_branch && ! $historical // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			$actions           = ! $inventory_incomplete && null !== $webhookManagement && $webhookManagement->supports_provider( $providerCode ) && $has_branch && ! $historical // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
 				? $this->webhook_management_action( $locator, $described_by )
 				: array();
 			$secret_target     = 'shared' === $coverage ? (string) strtok( $locator, '/' ) : $locator;
@@ -507,7 +507,7 @@ final class ProviderRepositoryRowsNormalizer {
 			}
 		}
 		$core_rows    = null !== $webhookManagement // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-			? $webhookManagement->enrichRepositoryRows( $rows, $providerCode, $projections, $return_url ) // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			? $webhookManagement->enrich_repository_rows( $rows, $providerCode, $projections, $return_url ) // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
 			: $rows;
 		$webhook_rows = $this->normalize( $rows, $core_rows, $providerCode, true ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
 		$core_rows    = null !== $releaseWorkflow // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.

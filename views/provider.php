@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Provider page inputs assembled by Dashboard::getIndex(), ProviderSettingsPresenter
+ * Provider page inputs assembled by Dashboard::get_index(), ProviderSettingsPresenter
  * and ProviderRepositoryRowsNormalizer.
  *
  * @var string $activityUrl
@@ -242,10 +242,10 @@ $isRepositoryDetail = 'overview' === $providerView && 'repositories' === $provid
 				$repositoryView,
 				$repositoryViewUrls,
 				$repositoryViewRequestUrls,
-				null !== $webhookManagement && $webhookManagement->hasManagementCapability( $provider['code'] )
+				null !== $webhookManagement && $webhookManagement->has_management_capability( $provider['code'] )
 					? static function () use ( $webhookManagement, $provider, $requestedRepositoryId, $providerReturnUrl, $repositoryViewUrls, $hasBranchConsumer, $selectedRepositoryRow ): void {
 						$returnUrl = is_string( $repositoryViewUrls['branch'] ?? null ) ? $repositoryViewUrls['branch'] : $providerReturnUrl;
-						$webhookManagement->renderRepositoryWebhookSetup( $provider['code'], $requestedRepositoryId, $returnUrl, $hasBranchConsumer, (string) ( $selectedRepositoryRow['repository'] ?? '' ) );
+						$webhookManagement->render_repository_webhook_setup( $provider['code'], $requestedRepositoryId, $returnUrl, $hasBranchConsumer, (string) ( $selectedRepositoryRow['repository'] ?? '' ) );
 					}
 					: null,
 				static function () use ( $selectedRepositoryRow, $providerReturnUrl, $repositoryViewUrls ): void {
@@ -473,10 +473,10 @@ $isRepositoryDetail = 'overview' === $providerView && 'repositories' === $provid
 										$repositoryView,
 										$repositoryViewUrls,
 										$repositoryViewRequestUrls,
-										null !== $webhookManagement && $webhookManagement->supportsProvider( $provider['code'] )
+										null !== $webhookManagement && $webhookManagement->supports_provider( $provider['code'] )
 										? static function () use ( $webhookManagement, $provider, $requestedRepositoryId, $providerReturnUrl, $repositoryViewUrls, $hasBranchConsumer, $selectedRepositoryRow ): bool {
 											$returnUrl = is_string( $repositoryViewUrls['branch'] ?? null ) ? $repositoryViewUrls['branch'] : $providerReturnUrl;
-											$webhookManagement->renderRepositoryWebhookSetup( $provider['code'], $requestedRepositoryId, $returnUrl, $hasBranchConsumer, (string) ( $selectedRepositoryRow['repository'] ?? '' ) );
+											$webhookManagement->render_repository_webhook_setup( $provider['code'], $requestedRepositoryId, $returnUrl, $hasBranchConsumer, (string) ( $selectedRepositoryRow['repository'] ?? '' ) );
 
 											return true;
 										}

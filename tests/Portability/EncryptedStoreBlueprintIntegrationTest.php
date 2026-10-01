@@ -98,9 +98,9 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 
 		$blueprint = $this->exporter( $sourceSecrets )->export( array( 'gh' => array( 'source-credential' ) ) );
 		$password  = 'correct-horse-battery-staple';
-		( new BlueprintArchive() )->writeTo( $this->archivePath, $blueprint, $password );
-		$imported = ( new BlueprintArchive() )->readFrom( $this->archivePath, $password );
-		self::assertSame( $blueprint->canonicalJson(), $imported->canonicalJson() );
+		( new BlueprintArchive() )->write_to( $this->archivePath, $blueprint, $password );
+		$imported = ( new BlueprintArchive() )->read_from( $this->archivePath, $password );
+		self::assertSame( $blueprint->canonical_json(), $imported->canonical_json() );
 
 		$credential  = $imported->credentials[0];
 		$orphanedKey = $targetKeyStore->load_or_create()['key'];

@@ -117,6 +117,28 @@ parameters, including `maximumLength`, retain named-argument compatibility.
 Validation expressions and error messages, hook names, metadata keys and rendered
 HTML remain unchanged. Connected callers use snake_case methods without aliases.
 
+The webhook InstallationRecord cohort migrates 17 methods and their connected
+calls in WordPressInstallationStore, WebhookOperationCoordinator, WebhookHistory,
+WebhookDisplayModel and RepositoryWebhookManagementControls. Schema 4, serialized
+keys, storage identity, profile revisions, the unknown-hook sentinel, immutable
+copies, validation/errors and rendered output are unchanged; no aliases are added.
+InstallationRecord already belongs to both naming scopes. Its promoted fields
+`providerCode`, `repositoryId`, `hookId`, `managementCredentialId`, `webhookProfileId`,
+`webhookProfileScope`, `webhookProfileRevision`, `webhookProfileDisposition`,
+`createdAt` and `checkedAt`, their constructor parameters, public named parameters
+on `with_check`, `with_management_credential` and `with_profile` (including
+`profileId`), and key parameters remain connected-migration obligations under
+#167. Retained variable/property deferrals are temporary migration debt.
+
+The blueprint serialization/archive cohort migrates ten methods across
+BlueprintArchive, BlueprintCredential, BlueprintPackage and PackageBlueprint,
+together with connected callers. Blueprint format 1, canonical JSON field order
+and bytes, archive encryption/limits, credential handling and SensitiveParameter
+contracts are unchanged. BlueprintPackage's promoted `displayName` and
+`providerRepositoryId` properties and constructor parameters remain a separate
+connected-migration obligation. These four classes were already enforced; both
+cohorts preserve the scopes of 175 method files and 166 variable files.
+
 The private API12 cohort migrates 74 private declarations and their owned calls:
 two in Booster, eight in ProviderRegistry, one in RepositoryReleaseWorkflowStatus,
 26 in ReleaseWorkflowRequestController, nine in ReleaseWorkflowDisplay and 28 in

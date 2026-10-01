@@ -293,7 +293,7 @@ final readonly class PortabilityApplicationService {
 		return ! ( ( 'plugin' === $blueprint_package->type && ! $package instanceof Plugin )
 			|| ( 'theme' === $blueprint_package->type && ! $package instanceof Theme )
 			|| PackageSource::BRANCH !== $package->get_source()
-			|| ! $blueprint_package->sameManagementAs( BlueprintPackage::fromManagedPackage( $blueprint_package->type, $package ) )
+			|| ! $blueprint_package->same_management_as( BlueprintPackage::from_managed_package( $blueprint_package->type, $package ) )
 			|| ( $credential_id ?? '' ) !== $package->get_credential_id()
 			|| $repository_private !== (bool) $package->is_private()
 			|| DeploymentPolicy::DISABLED !== $package->get_deployment_policy() );

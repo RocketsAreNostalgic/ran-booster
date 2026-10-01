@@ -15,8 +15,7 @@ final class BlueprintArchive {
 	public const ENTRY     = 'blueprint.json';
 	public const MAX_BYTES = 1048576;
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
-	public function writeTo( string $path, #[\SensitiveParameter] PackageBlueprint $blueprint, #[\SensitiveParameter] ?string $password ): void {
+	public function write_to( string $path, #[\SensitiveParameter] PackageBlueprint $blueprint, #[\SensitiveParameter] ?string $password ): void {
 		$password  = '' === $password ? null : $password;
 		$encrypted = array() !== $blueprint->credentials;
 		if ( ( null !== $password ) !== $encrypted || ( $encrypted && ! self::valid_password( $password ) ) || ! self::zip_available( $encrypted ) ) {
@@ -28,7 +27,7 @@ final class BlueprintArchive {
 		set_error_handler( static fn(): bool => true );
 		try {
 			if ( true !== $zip->open( $path, ZipArchive::CREATE | ZipArchive::OVERWRITE )
-				|| ! $zip->addFromString( self::ENTRY, $blueprint->canonicalJson() )
+				|| ! $zip->addFromString( self::ENTRY, $blueprint->canonical_json() )
 				|| ( $encrypted && ( ! $zip->setPassword( $password ) || ! $zip->setEncryptionName( self::ENTRY, ZipArchive::EM_AES_256 ) ) )
 				|| ! $zip->close()
 				|| ! is_file( $path ) || filesize( $path ) > self::MAX_BYTES ) {
@@ -45,8 +44,7 @@ final class BlueprintArchive {
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
-	public function readFrom( string $path, #[\SensitiveParameter] ?string $password ): PackageBlueprint {
+	public function read_from( string $path, #[\SensitiveParameter] ?string $password ): PackageBlueprint {
 		$password = '' === $password ? null : $password;
 		if ( ! self::zip_available() || ! is_file( $path ) || 0 === filesize( $path ) || filesize( $path ) > self::MAX_BYTES ) {
 			throw new InvalidArgumentException( 'The portability archive is invalid.' );
@@ -72,7 +70,7 @@ final class BlueprintArchive {
 			if ( ! is_string( $json ) || strlen( $json ) > PackageBlueprint::MAX_BYTES || ! $zip->close() ) {
 				throw new InvalidArgumentException();
 			}
-			$blueprint = PackageBlueprint::fromJson( $json );
+			$blueprint = PackageBlueprint::from_json( $json );
 			if ( ( array() !== $blueprint->credentials ) !== ( ZipArchive::EM_AES_256 === $encryption ) ) {
 				throw new InvalidArgumentException();
 			}

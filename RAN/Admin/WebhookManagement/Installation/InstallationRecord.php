@@ -68,14 +68,12 @@ final readonly class InstallationRecord {
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function providerCode(): string {
+	public function provider_code(): string {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
 		return $this->providerCode;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function repositoryId(): string {
+	public function repository_id(): string {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
 		return $this->repositoryId;
 	}
@@ -84,49 +82,41 @@ final readonly class InstallationRecord {
 		return $this->repository;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function hookId(): string {
+	public function hook_id(): string {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
 		return $this->hookId;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function requiresHookIdentification(): bool {
+	public function requires_hook_identification(): bool {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
 		return hash_equals( self::UNKNOWN_HOOK_ID, $this->hookId );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public static function unknownHookId(): string {
+	public static function unknown_hook_id(): string {
 		return self::UNKNOWN_HOOK_ID;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function managementCredentialId(): string {
+	public function management_credential_id(): string {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
 		return $this->managementCredentialId;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function webhookProfileId(): string {
+	public function webhook_profile_id(): string {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
 		return $this->webhookProfileId;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function webhookProfileScope(): string {
+	public function webhook_profile_scope(): string {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
 		return $this->webhookProfileScope;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function webhookProfileRevision(): int {
+	public function webhook_profile_revision(): int {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
 		return $this->webhookProfileRevision;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function webhookProfileDisposition(): string {
+	public function webhook_profile_disposition(): string {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
 		return $this->webhookProfileDisposition;
 	}
@@ -139,32 +129,30 @@ final readonly class InstallationRecord {
 		return $this->status;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function checkedAt(): string {
+	public function checked_at(): string {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
 		return $this->checkedAt;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public/protected caller contract; retain public named-parameter names.
-	public function withCheck( string $status, string $checkedAt, ?string $endpoint = null ): self {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
+	public function with_check( string $status, string $checkedAt, ?string $endpoint = null ): self {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names; retain promoted constructor properties.
 		return new self( $this->providerCode, $this->repositoryId, $this->repository, $this->hookId, $this->managementCredentialId, $this->webhookProfileId, $this->webhookProfileScope, $this->webhookProfileRevision, $this->webhookProfileDisposition, $endpoint ?? $this->endpoint, $status, $this->createdAt, $checkedAt );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public/protected caller contract; retain public named-parameter names.
-	public function withManagementCredential( string $managementCredentialId, string $status, string $checkedAt, ?string $endpoint = null ): self {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
+	public function with_management_credential( string $managementCredentialId, string $status, string $checkedAt, ?string $endpoint = null ): self {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names; retain promoted constructor properties.
 		return new self( $this->providerCode, $this->repositoryId, $this->repository, $this->hookId, $managementCredentialId, $this->webhookProfileId, $this->webhookProfileScope, $this->webhookProfileRevision, $this->webhookProfileDisposition, $endpoint ?? $this->endpoint, $status, $this->createdAt, $checkedAt );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public/protected caller contract; retain public named-parameter names.
-	public function withProfile( string $managementCredentialId, string $profileId, string $scope, int $revision, string $disposition, string $endpoint, string $status, string $checkedAt ): self {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
+	public function with_profile( string $managementCredentialId, string $profileId, string $scope, int $revision, string $disposition, string $endpoint, string $status, string $checkedAt ): self {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names; retain promoted constructor properties.
 		return new self( $this->providerCode, $this->repositoryId, $this->repository, $this->hookId, $managementCredentialId, $profileId, $scope, $revision, $disposition, $endpoint, $status, $this->createdAt, $checkedAt );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function storageKey(): string {
+	public function storage_key(): string {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
 		return self::key( $this->providerCode, $this->repositoryId );
 	}
@@ -176,8 +164,7 @@ final readonly class InstallationRecord {
 	}
 
 	/** @return array{schema_version: int, provider_code: string, repository_id: string, repository: string, hook_id: string, management_credential_id: string, webhook_profile_id: string, webhook_profile_scope: string, webhook_profile_revision: int, webhook_profile_disposition: string, endpoint: string, status: string, created_at: string, checked_at: string} */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function toArray(): array {
+	public function to_array(): array {
 		return array(
 			'schema_version'              => 4,
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
@@ -207,8 +194,7 @@ final readonly class InstallationRecord {
 	}
 
 	/** @param array<string, mixed> $record */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public static function fromArray( array $record ): self {
+	public static function from_array( array $record ): self {
 		$expected = array( 'schema_version', 'provider_code', 'repository_id', 'repository', 'hook_id', 'management_credential_id', 'webhook_profile_id', 'webhook_profile_scope', 'webhook_profile_revision', 'webhook_profile_disposition', 'endpoint', 'status', 'created_at', 'checked_at' );
 
 		if ( count( $record ) !== count( $expected )

@@ -95,13 +95,13 @@ final class WordPressInstallationStore implements InstallationStore {
 			}
 
 			try {
-				$parsed = InstallationRecord::fromArray( $record );
+				$parsed = InstallationRecord::from_array( $record );
 			} catch ( Throwable ) {
 				$complete = false;
 				continue;
 			}
 
-			if ( hash_equals( $parsed->storageKey(), $key ) ) {
+			if ( hash_equals( $parsed->storage_key(), $key ) ) {
 				$records[ $key ] = $parsed;
 			} else {
 				$complete = false;
@@ -115,7 +115,7 @@ final class WordPressInstallationStore implements InstallationStore {
 	}
 
 	private function write( InstallationRecord $record, ?InstallationRecord $expected ): string {
-		$key = $record->storageKey();
+		$key = $record->storage_key();
 		for ( $attempt = 0; $attempt < self::CAS_ATTEMPTS; ++$attempt ) {
 			$snapshot = $this->snapshot();
 			$parsed   = $this->parse_records( $snapshot['value'] );
@@ -186,7 +186,7 @@ final class WordPressInstallationStore implements InstallationStore {
 	private function same( ?InstallationRecord $left, ?InstallationRecord $right ): bool {
 		return null === $left || null === $right
 			? $left === $right
-			: $left->toArray() === $right->toArray();
+			: $left->to_array() === $right->to_array();
 	}
 
 	private function refresh_option_cache(): void {
@@ -201,6 +201,6 @@ final class WordPressInstallationStore implements InstallationStore {
 	 * @return array<string, array<string, int|string>>
 	 */
 	private function serialize( array $records ): array {
-		return array_map( static fn ( InstallationRecord $record ): array => $record->toArray(), $records );
+		return array_map( static fn ( InstallationRecord $record ): array => $record->to_array(), $records );
 	}
 }

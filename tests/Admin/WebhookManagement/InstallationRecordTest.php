@@ -42,16 +42,16 @@ final class InstallationRecordTest extends TestCase {
 				'created_at'                  => '2026-07-23T16:00:00Z',
 				'checked_at'                  => '2026-07-23T16:00:00Z',
 			),
-			$record->toArray()
+			$record->to_array()
 		);
 
-		$checked = $record->withCheck( 'configuration_drift', '2026-07-23T17:00:00Z' );
+		$checked = $record->with_check( 'configuration_drift', '2026-07-23T17:00:00Z' );
 		self::assertSame( 'configuration_drift', $checked->status() );
-		self::assertSame( '2026-07-23T17:00:00Z', $checked->checkedAt() );
-		self::assertSame( '2026-07-23T16:00:00Z', $checked->toArray()['created_at'] );
-		self::assertSame( 'credential_1', $checked->managementCredentialId() );
-		self::assertArrayNotHasKey( 'management_credential_label', $checked->toArray() );
-		self::assertArrayNotHasKey( 'management_credential_material', $checked->toArray() );
+		self::assertSame( '2026-07-23T17:00:00Z', $checked->checked_at() );
+		self::assertSame( '2026-07-23T16:00:00Z', $checked->to_array()['created_at'] );
+		self::assertSame( 'credential_1', $checked->management_credential_id() );
+		self::assertArrayNotHasKey( 'management_credential_label', $checked->to_array() );
+		self::assertArrayNotHasKey( 'management_credential_material', $checked->to_array() );
 	}
 
 	public function testItRejectsUnexpectedPersistedFields(): void {
@@ -75,7 +75,7 @@ final class InstallationRecordTest extends TestCase {
 
 		$this->expectException( \InvalidArgumentException::class );
 
-		InstallationRecord::fromArray( $record );
+		InstallationRecord::from_array( $record );
 	}
 
 	public function testUnknownHookRecoveryUsesTheNonSecretV4Shape(): void {
@@ -83,7 +83,7 @@ final class InstallationRecordTest extends TestCase {
 			'gh',
 			'1234',
 			'owner/repository',
-			InstallationRecord::unknownHookId(),
+			InstallationRecord::unknown_hook_id(),
 			'credential_1',
 			'wh_0123456789abcdef01234567',
 			'repository',
@@ -95,14 +95,14 @@ final class InstallationRecordTest extends TestCase {
 			'2026-08-03T08:00:00Z'
 		);
 
-		$restored = InstallationRecord::fromArray( $record->toArray() );
+		$restored = InstallationRecord::from_array( $record->to_array() );
 
-		self::assertSame( 4, $restored->toArray()['schema_version'] );
-		self::assertTrue( $restored->requiresHookIdentification() );
-		self::assertSame( 'credential_1', $restored->managementCredentialId() );
-		self::assertSame( 'wh_0123456789abcdef01234567', $restored->webhookProfileId() );
-		self::assertArrayNotHasKey( 'management_credential_label', $restored->toArray() );
-		self::assertArrayNotHasKey( 'management_credential_material', $restored->toArray() );
+		self::assertSame( 4, $restored->to_array()['schema_version'] );
+		self::assertTrue( $restored->requires_hook_identification() );
+		self::assertSame( 'credential_1', $restored->management_credential_id() );
+		self::assertSame( 'wh_0123456789abcdef01234567', $restored->webhook_profile_id() );
+		self::assertArrayNotHasKey( 'management_credential_label', $restored->to_array() );
+		self::assertArrayNotHasKey( 'management_credential_material', $restored->to_array() );
 	}
 
 	public function testItRejectsPriorSchemaVersionsWithoutMigratingThem(): void {
@@ -120,12 +120,12 @@ final class InstallationRecordTest extends TestCase {
 			'configured',
 			'2026-07-23T16:00:00Z',
 			'2026-07-23T16:00:00Z'
-		) )->toArray();
+		) )->to_array();
 		$record['schema_version'] = 3;
 
 		$this->expectException( \InvalidArgumentException::class );
 
-		InstallationRecord::fromArray( $record );
+		InstallationRecord::from_array( $record );
 	}
 
 	public function testItRejectsUnsupportedScopesAndNonPositiveRevisions(): void {

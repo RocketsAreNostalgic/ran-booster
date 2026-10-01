@@ -397,7 +397,7 @@ class Dashboard {
 				if ( ! $package instanceof Package ) {
 					throw new \UnexpectedValueException();
 				}
-				$blueprint     = BlueprintPackage::fromManagedPackage( $type, $package );
+				$blueprint     = BlueprintPackage::from_managed_package( $type, $package );
 				$index         = count( $rows );
 				$rows[]        = array(
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.

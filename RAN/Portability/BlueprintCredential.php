@@ -39,8 +39,7 @@ final readonly class BlueprintCredential {
 	}
 
 	/** @param array<string, mixed> $record */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
-	public static function fromArray( #[\SensitiveParameter] array $record ): self {
+	public static function from_array( #[\SensitiveParameter] array $record ): self {
 		if ( array_keys( $record ) !== array( 'provider', 'label', 'kind', 'configuration', 'secret', 'packages' )
 			|| ! is_string( $record['provider'] ) || ! is_string( $record['label'] ) || ! is_string( $record['kind'] )
 			|| ! is_array( $record['configuration'] )
@@ -52,8 +51,7 @@ final readonly class BlueprintCredential {
 	}
 
 	/** @return array{provider:string,label:string,kind:string,configuration:array<string,mixed>|object,secret:string,packages:list<array{type:string,identifier:string}>} */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
-	public function toArray(): array {
+	public function to_array(): array {
 		$configuration = self::canonical_configuration( $this->configuration );
 		$packages      = $this->packages;
 		usort( $packages, static fn( array $left, array $right ): int => array( $left['type'], $left['identifier'] ) <=> array( $right['type'], $right['identifier'] ) );

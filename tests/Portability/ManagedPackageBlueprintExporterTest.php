@@ -44,7 +44,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		self::assertSame( array( 'plugin', 'theme' ), array_column( $blueprint->packages, 'type' ) );
 		self::assertSame( array( 'plugin/example.php', 'example-theme' ), array_column( $blueprint->packages, 'identifier' ) );
 		self::assertSame( array( 'Plugin Example', 'Example Theme' ), array_column( $blueprint->packages, 'displayName' ) );
-		self::assertStringNotContainsString( 'credential-id-canary', $blueprint->canonicalJson() );
+		self::assertStringNotContainsString( 'credential-id-canary', $blueprint->canonical_json() );
 	}
 
 	public function testPackageOnlyExportRemainsAvailableWhenEncryptedSecretsRuntimeIsUnavailable(): void {
@@ -189,9 +189,9 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 						'identifier' => 'example-theme',
 					),
 				),
-				$blueprint->credentials[0]->toArray()['packages']
+				$blueprint->credentials[0]->to_array()['packages']
 			);
-			self::assertStringNotContainsString( 'credential-id-canary', $blueprint->canonicalJson() );
+			self::assertStringNotContainsString( 'credential-id-canary', $blueprint->canonical_json() );
 		} finally {
 			foreach ( array( $path, $path . '.lock' ) as $file ) {
 				if ( is_file( $file ) ) {
@@ -240,9 +240,9 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 			self::assertSame( array( 'classic' ), array_column( $classic->credentials, 'kind' ) );
 			self::assertSame( array( 'classic', 'fine-grained' ), array_column( $both->credentials, 'kind' ) );
 			self::assertSame( array( 'plugin/classic.php' ), array_column( $classic->credentials[0]->packages, 'identifier' ) );
-			self::assertStringNotContainsString( 'fine-secret-canary', $classic->canonicalJson() );
-			self::assertStringNotContainsString( 'classic-profile', $both->canonicalJson() );
-			self::assertStringNotContainsString( 'fine-profile', $both->canonicalJson() );
+			self::assertStringNotContainsString( 'fine-secret-canary', $classic->canonical_json() );
+			self::assertStringNotContainsString( 'classic-profile', $both->canonical_json() );
+			self::assertStringNotContainsString( 'fine-profile', $both->canonical_json() );
 		} finally {
 			foreach ( array( $path, $path . '.lock' ) as $file ) {
 				if ( is_file( $file ) ) {
@@ -290,7 +290,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		$blueprint = ( new ManagedPackageBlueprintExporter( $plugins, $themes, $secrets ) )->export(
 			array( 'gh' => array( 'expiring-profile' ) )
 		);
-		$json      = $blueprint->canonicalJson();
+		$json      = $blueprint->canonical_json();
 
 		self::assertCount( 1, $blueprint->credentials );
 		self::assertSame( 'fine-grained', $blueprint->credentials[0]->kind );
@@ -383,9 +383,9 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 			self::assertCount( 1, $profileB->credentials );
 			self::assertCount( 1, $both->credentials );
 
-			$profileARecord = $profileA->credentials[0]->toArray();
-			$profileBRecord = $profileB->credentials[0]->toArray();
-			$bothRecord     = $both->credentials[0]->toArray();
+			$profileARecord = $profileA->credentials[0]->to_array();
+			$profileBRecord = $profileB->credentials[0]->to_array();
+			$bothRecord     = $both->credentials[0]->to_array();
 			self::assertSame(
 				array(
 					array(
@@ -422,8 +422,8 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 			self::assertSame( $profileARecord, $profileBRecord );
 			self::assertSame( $profileARecord, $bothRecord );
 			foreach ( array( $profileA, $profileB, $both ) as $blueprint ) {
-				self::assertStringNotContainsString( 'profile-a-canary', $blueprint->canonicalJson() );
-				self::assertStringNotContainsString( 'profile-b-canary', $blueprint->canonicalJson() );
+				self::assertStringNotContainsString( 'profile-a-canary', $blueprint->canonical_json() );
+				self::assertStringNotContainsString( 'profile-b-canary', $blueprint->canonical_json() );
 			}
 		} finally {
 			foreach ( array( $path, $path . '.lock' ) as $file ) {

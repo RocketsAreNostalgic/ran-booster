@@ -1226,7 +1226,7 @@ class SecretsFile {
 		#[\SensitiveParameter] PackageBlueprint $blueprint,
 		#[\SensitiveParameter] array $credentials
 	): array {
-		$artifact_identity = hash( 'sha256', $blueprint->canonicalJson() );
+		$artifact_identity = hash( 'sha256', $blueprint->canonical_json() );
 		$records           = array();
 
 		foreach ( $credentials as $credential ) {
@@ -1261,7 +1261,7 @@ class SecretsFile {
 		#[\SensitiveParameter] BlueprintCredential $needle
 	): bool {
 		foreach ( $blueprint->credentials as $credential ) {
-			if ( $credential->toArray() === $needle->toArray() ) {
+			if ( $credential->to_array() === $needle->to_array() ) {
 				return true;
 			}
 		}

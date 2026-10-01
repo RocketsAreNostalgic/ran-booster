@@ -291,8 +291,8 @@ final class WebhookManagementControllerTest extends TestCase {
 		);
 		$store            = new OperationStoreFixture();
 		$store->records   = array(
-			$projectionRecord->storageKey() => $projectionRecord,
-			$releaseRecord->storageKey()    => $releaseRecord,
+			$projectionRecord->storage_key() => $projectionRecord,
+			$releaseRecord->storage_key()    => $releaseRecord,
 		);
 		$result           = ( new WebhookDisplayModel( $facade, $store ) )->enrichHistoricalRows(
 			array(
@@ -373,8 +373,8 @@ final class WebhookManagementControllerTest extends TestCase {
 			'valid'
 		);
 
-		self::assertSame( 'credential_2', $store->record?->managementCredentialId() );
-		self::assertSame( 'wh_0123456789abcdef01234567', $store->record?->webhookProfileId() );
+		self::assertSame( 'credential_2', $store->record?->management_credential_id() );
+		self::assertSame( 'wh_0123456789abcdef01234567', $store->record?->webhook_profile_id() );
 
 		$this->controller( gateway: $gateway, store: $store )->handleAdminPost(
 			$this->request(
@@ -386,7 +386,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			'valid'
 		);
 
-		self::assertSame( 'credential_3', $store->record?->managementCredentialId() );
+		self::assertSame( 'credential_3', $store->record?->management_credential_id() );
 	}
 
 	public function testFailedOrAmbiguousRecordedOperationsDoNotReplaceTheManagementCredentialId(): void {
@@ -406,7 +406,7 @@ final class WebhookManagementControllerTest extends TestCase {
 				'valid'
 			);
 
-			self::assertSame( 'credential_1', $store->record?->managementCredentialId() );
+			self::assertSame( 'credential_1', $store->record?->management_credential_id() );
 		}
 	}
 
@@ -429,7 +429,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'webhook_management_result=configured_pending_delivery', $redirect );
 		self::assertSame( 'needs_verification', $store->record?->status() );
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Test-only scalar inspection; no serialized input is consumed.
-		self::assertStringNotContainsString( 'synthetic-request-credential', serialize( $store->record?->toArray() ) );
+		self::assertStringNotContainsString( 'synthetic-request-credential', serialize( $store->record?->to_array() ) );
 	}
 
 	public function testSetupRequiresAnExplicitKnownSigningSecretSelection(): void {
@@ -630,7 +630,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$model         = $display->panel( $providerCode, $providerLabel, '1234', 'https://site.example/provider', null, null, true );
 
 		self::assertSame( array( array( 'setup', 'credential_1', null, 'valid' ) ), $gateway->mutationCalls );
-		self::assertSame( $providerCode, $store->record?->providerCode() );
+		self::assertSame( $providerCode, $store->record?->provider_code() );
 		self::assertStringContainsString( 'tab=fixture-provider', $redirect );
 		self::assertFalse( $enriched['fixture-repository']['actions']['core:webhook-management']['disabled'] );
 		self::assertSame( $providerCode, $model['provider_code'] ?? null );
@@ -690,7 +690,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			$gateway->calls
 		);
 		self::assertCount( 1, $gateway->assessmentCalls, 'Saved credentials use the same one-assessment Core operation path.' );
-		self::assertSame( 'wh_0123456789abcdef01234567', $store->record?->webhookProfileId() );
+		self::assertSame( 'wh_0123456789abcdef01234567', $store->record?->webhook_profile_id() );
 	}
 
 	public function testPartialSetupRetainsOrphanRecoveryStateWithoutReportingSuccess(): void {
@@ -713,9 +713,9 @@ final class WebhookManagementControllerTest extends TestCase {
 		$redirect = $controller->handleAdminPost( $this->request(), 'valid' );
 
 		self::assertStringContainsString( 'webhook_management_result=setup_response_invalid', $redirect );
-		self::assertTrue( $store->record?->requiresHookIdentification() );
+		self::assertTrue( $store->record?->requires_hook_identification() );
 		self::assertSame( 'orphaned', $store->record?->status() );
-		self::assertSame( 'wh_0123456789abcdef01234567', $store->record?->webhookProfileId() );
+		self::assertSame( 'wh_0123456789abcdef01234567', $store->record?->webhook_profile_id() );
 		self::assertSame( 1, count( $gateway->mutationCalls ) );
 
 		$secondRedirect = $controller->handleAdminPost( $this->request(), 'valid' );
@@ -736,8 +736,8 @@ final class WebhookManagementControllerTest extends TestCase {
 		$redirect = $this->controller( gateway: $gateway, store: $store )->handleAdminPost( $this->request(), 'valid' );
 
 		self::assertSame( 2, $store->saveAttempts );
-		self::assertSame( '77', $store->record?->hookId() );
-		self::assertSame( 'wh_0123456789abcdef01234567', $store->record?->webhookProfileId() );
+		self::assertSame( '77', $store->record?->hook_id() );
+		self::assertSame( 'wh_0123456789abcdef01234567', $store->record?->webhook_profile_id() );
 		self::assertSame( 'orphaned', $store->record?->status() );
 		self::assertStringContainsString( 'webhook_management_result=orphaned', $redirect );
 	}
@@ -780,14 +780,14 @@ final class WebhookManagementControllerTest extends TestCase {
 				if ( 'setup' !== $operation ) {
 					$store->record = $this->record();
 				}
-				$before   = $store->record?->toArray();
+				$before   = $store->record?->to_array();
 				$redirect = $this->controller( gateway: $gateway, store: $store )->handleAdminPost(
 					$this->request( array( 'repository_webhook_management_operation' => $operation ) ),
 					'valid'
 				);
 
 				self::assertSame( array(), $gateway->mutationCalls, $operation . ' must not mutate after ' . $fitnessLabel );
-				self::assertSame( $before, $store->record?->toArray() );
+				self::assertSame( $before, $store->record?->to_array() );
 				self::assertSame( 0, $store->saveAttempts );
 				self::assertStringContainsString( 'webhook_management_result=repository_identity_unconfirmed', $redirect );
 				self::assertCount( 1, $gateway->calls );
@@ -809,8 +809,8 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		$redirect = $this->controller( gateway: $gateway, store: $store )->handleAdminPost( $this->request(), 'valid' );
 
-		self::assertSame( $current->toArray(), $store->record?->toArray() );
-		self::assertFalse( $store->record?->requiresHookIdentification() );
+		self::assertSame( $current->to_array(), $store->record?->to_array() );
+		self::assertFalse( $store->record?->requires_hook_identification() );
 		self::assertSame( 1, $store->saveAttempts );
 		self::assertStringContainsString( 'webhook_management_result=record_conflict', $redirect );
 		self::assertStringContainsString( 'recovery_hook=recovery%3Ahook-identity-unavailable', $redirect );
@@ -889,7 +889,7 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		self::assertSame( array( array( 'test', 'credential_1', '77', 'wh_0123456789abcdef01234567', 1, 'valid' ) ), $gateway->mutationCalls );
 		self::assertSame( 'needs_verification', $store->record?->status() );
-		self::assertSame( 'credential_1', $store->record?->managementCredentialId() );
+		self::assertSame( 'credential_1', $store->record?->management_credential_id() );
 		self::assertStringContainsString( 'webhook_management_result=ping_requested', $redirect );
 	}
 
@@ -1035,7 +1035,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			'valid'
 		);
 
-		self::assertSame( $current->toArray(), $store->record?->toArray() );
+		self::assertSame( $current->to_array(), $store->record?->to_array() );
 		self::assertStringContainsString( 'webhook_management_result=record_conflict', $redirect );
 	}
 
@@ -1489,7 +1489,7 @@ final class OperationStoreFixture implements InstallationStore {
 		++$this->allAttempts;
 		$records = $this->records;
 		if ( null !== $this->record ) {
-			$records[ $this->record->storageKey() ] = $this->record;
+			$records[ $this->record->storage_key() ] = $this->record;
 		}
 
 		return $records;
@@ -1503,7 +1503,7 @@ final class OperationStoreFixture implements InstallationStore {
 			return $this->records[ $key ];
 		}
 
-		return null !== $this->record && hash_equals( $providerCode, $this->record->providerCode() ) && hash_equals( $repositoryId, $this->record->repositoryId() )
+		return null !== $this->record && hash_equals( $providerCode, $this->record->provider_code() ) && hash_equals( $repositoryId, $this->record->repository_id() )
 			? $this->record
 			: null;
 	}
@@ -1550,7 +1550,7 @@ final class OperationStoreFixture implements InstallationStore {
 	private function same( ?InstallationRecord $left, ?InstallationRecord $right ): bool {
 		return null === $left || null === $right
 			? $left === $right
-			: $left->toArray() === $right->toArray();
+			: $left->to_array() === $right->to_array();
 	}
 }
 

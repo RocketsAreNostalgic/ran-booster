@@ -39,7 +39,7 @@ final class WebhookDisplayModel {
 		$records = array_filter(
 			$this->records->all(),
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			static fn ( InstallationRecord $record ): bool => hash_equals( $providerCode, $record->providerCode() )
+			static fn ( InstallationRecord $record ): bool => hash_equals( $providerCode, $record->provider_code() )
 		);
 		$current_record_keys = array();
 
@@ -174,7 +174,7 @@ final class WebhookDisplayModel {
 			$help = sprintf( __( 'Managed removal is unavailable because the recorded %1$s hook cannot be confirmed. Inspect %1$s manually before continuing.', 'ran-booster' ), $providerLabel ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		}
 		$recovery_warning = null;
-		if ( null !== $record && $record->requiresHookIdentification() ) {
+		if ( null !== $record && $record->requires_hook_identification() ) {
 			/* translators: %s: repository provider name. */
 			$recovery_warning = sprintf( __( 'Provider state changed without a stable hook ID. Managed operations are disabled for this repository. Inspect its %s webhooks and the recorded Core signing profile manually; do not retry Setup until both sides are reconciled.', 'ran-booster' ), $providerLabel ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		} elseif ( null !== $recovery ) {
@@ -216,7 +216,7 @@ final class WebhookDisplayModel {
 				'message' => $this->notice( $resultCode, $recovery, $remediation ),
 			),
 			'recovery_warning'            => $recovery_warning,
-			'management_credential_id'    => null === $record ? null : $record->managementCredentialId(),
+			'management_credential_id'    => null === $record ? null : $record->management_credential_id(),
 			'credential_choices'          => $credentials,
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			'webhook_profile_choices'     => null === $record ? $this->webhook_profile_choices( $providerCode, $repositoryId ) : array(),
@@ -539,9 +539,9 @@ final class WebhookDisplayModel {
 
 		return array(
 			'key'             => $key,
-			'provider_code'   => $record->providerCode(),
+			'provider_code'   => $record->provider_code(),
 			'provider_label'  => $provider_label,
-			'repository_id'   => $record->repositoryId(),
+			'repository_id'   => $record->repository_id(),
 			'repository'      => $record->repository(),
 			'repository_url'  => $repository_url ?? '',
 			'historical'      => true,
@@ -640,7 +640,7 @@ final class WebhookDisplayModel {
 				'value' => sprintf(
 					/* translators: %s: saved credential profile ID. */
 					__( 'Last managed with saved credential profile %s; current availability was not checked.', 'ran-booster' ),
-					$record->managementCredentialId()
+					$record->management_credential_id()
 				),
 			),
 			array(
@@ -649,7 +649,7 @@ final class WebhookDisplayModel {
 				'value' => sprintf(
 					/* translators: %s: signing secret profile ID. */
 					__( 'Recorded signing secret profile %s; current availability was not checked.', 'ran-booster' ),
-					$record->webhookProfileId()
+					$record->webhook_profile_id()
 				),
 			),
 			array(
@@ -674,7 +674,7 @@ final class WebhookDisplayModel {
 				'disabled:test' => __( 'Test webhook', 'ran-booster' ),
 			);
 		}
-		if ( $record->requiresHookIdentification() ) {
+		if ( $record->requires_hook_identification() ) {
 			return array();
 		}
 		$operations = array();
@@ -737,7 +737,7 @@ final class WebhookDisplayModel {
 			return sprintf(
 				/* translators: %s: signing secret profile ID. */
 				__( 'Recorded signing secret profile %s is unavailable.', 'ran-booster' ),
-				$record->webhookProfileId()
+				$record->webhook_profile_id()
 			);
 		}
 		$label = $this->webhook_profile_label( $record );
@@ -748,8 +748,8 @@ final class WebhookDisplayModel {
 				$label
 			);
 		}
-		$scope  = 'owner' === $record->webhookProfileScope() ? __( 'Owner-shared secret', 'ran-booster' ) : __( 'Repository secret', 'ran-booster' );
-		$source = 'created' === $record->webhookProfileDisposition() ? __( 'created for this hook', 'ran-booster' ) : __( 'reused from Booster', 'ran-booster' );
+		$scope  = 'owner' === $record->webhook_profile_scope() ? __( 'Owner-shared secret', 'ran-booster' ) : __( 'Repository secret', 'ran-booster' );
+		$source = 'created' === $record->webhook_profile_disposition() ? __( 'created for this hook', 'ran-booster' ) : __( 'reused from Booster', 'ran-booster' );
 
 		/* translators: 1: signing secret scope, 2: signing secret source. */
 		return sprintf( __( '%1$s; %2$s', 'ran-booster' ), $scope, $source );
@@ -757,8 +757,8 @@ final class WebhookDisplayModel {
 
 	private function management_credential_label( InstallationRecord $record ): string {
 		try {
-			foreach ( $this->facade->credentialChoices( $record->providerCode() ) as $choice ) {
-				if ( is_array( $choice ) && is_string( $choice['id'] ?? null ) && is_string( $choice['label'] ?? null ) && hash_equals( $record->managementCredentialId(), $choice['id'] ) ) {
+			foreach ( $this->facade->credentialChoices( $record->provider_code() ) as $choice ) {
+				if ( is_array( $choice ) && is_string( $choice['id'] ?? null ) && is_string( $choice['label'] ?? null ) && hash_equals( $record->management_credential_id(), $choice['id'] ) ) {
 					return sprintf(
 						/* translators: %s: current saved credential profile label. */
 						__( 'Last managed with %s; provider authority has not been revalidated.', 'ran-booster' ),
@@ -773,14 +773,14 @@ final class WebhookDisplayModel {
 		return sprintf(
 			/* translators: %s: saved credential profile ID. */
 			__( 'Previously used saved credential profile %s is unavailable.', 'ran-booster' ),
-			$record->managementCredentialId()
+			$record->management_credential_id()
 		);
 	}
 
 	private function webhook_profile_label( InstallationRecord $record ): ?string {
 		try {
-			foreach ( $this->facade->webhookProfileChoices( $record->providerCode(), $record->repositoryId() ) as $choice ) {
-				if ( is_array( $choice ) && is_string( $choice['id'] ?? null ) && is_string( $choice['label'] ?? null ) && hash_equals( $record->webhookProfileId(), $choice['id'] ) ) {
+			foreach ( $this->facade->webhookProfileChoices( $record->provider_code(), $record->repository_id() ) as $choice ) {
+				if ( is_array( $choice ) && is_string( $choice['id'] ?? null ) && is_string( $choice['label'] ?? null ) && hash_equals( $record->webhook_profile_id(), $choice['id'] ) ) {
 					return $choice['label'];
 				}
 			}
@@ -792,19 +792,19 @@ final class WebhookDisplayModel {
 	}
 
 	private function projected_status( InstallationRecord $record, bool $retained_source = false ): string {
-		$key = implode( ':', array( $record->providerCode(), $record->repositoryId(), $record->webhookProfileId(), (string) $record->webhookProfileRevision() ) );
+		$key = implode( ':', array( $record->provider_code(), $record->repository_id(), $record->webhook_profile_id(), (string) $record->webhook_profile_revision() ) );
 		if ( isset( $this->projected_statuses[ $key ] ) ) {
 			return $this->projected_statuses[ $key ];
 		}
 		try {
-			$profile = $this->facade->profile( $record->providerCode(), $record->repositoryId(), $record->webhookProfileId() );
+			$profile = $this->facade->profile( $record->provider_code(), $record->repository_id(), $record->webhook_profile_id() );
 		} catch ( \Throwable ) {
 			$profile = null;
 		}
 		$status = match ( true ) {
 			null === $profile && $retained_source => $record->status(),
 			null === $profile => 'local_profile_missing',
-			$record->webhookProfileRevision() < $profile->revision() => 'profile_revision_stale',
+			$record->webhook_profile_revision() < $profile->revision() => 'profile_revision_stale',
 			default => $record->status(),
 		};
 

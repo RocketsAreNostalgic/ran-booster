@@ -111,8 +111,8 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 			self::assertSame( 'storage_file_missing', $failure->reason() );
 		}
 		self::assertSame( $orphanedKey, $targetKeyStore->load( false ) );
-		self::assertTrue( $targetSecrets->canResetOrphanedKeyAt( $this->targetPath ) );
-		$targetSecrets->resetOrphanedKeyAt( $this->targetPath );
+		self::assertTrue( $targetSecrets->can_reset_orphaned_key_at( $this->targetPath ) );
+		$targetSecrets->reset_orphaned_key_at( $this->targetPath );
 		self::assertNull( $targetKeyStore->load( false ) );
 		self::assertFileDoesNotExist( $this->targetPath );
 		self::assertFileExists( $this->targetPath . '.lock' );
@@ -197,8 +197,8 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		} catch ( \RAN\Secrets\SecretsStorageUnavailable $failure ) {
 			self::assertSame( 'storage_key_missing', $failure->reason() );
 		}
-		self::assertTrue( $targetSecrets->canResetOrphanedCiphertextAt( $this->targetPath ) );
-		$targetSecrets->resetOrphanedCiphertextAt( $this->targetPath );
+		self::assertTrue( $targetSecrets->can_reset_orphaned_ciphertext_at( $this->targetPath ) );
+		$targetSecrets->reset_orphaned_ciphertext_at( $this->targetPath );
 		self::assertFileDoesNotExist( $this->targetPath );
 		self::assertFileExists( $this->targetPath . '.lock' );
 		self::assertNull( $targetKeyStore->load( false ) );

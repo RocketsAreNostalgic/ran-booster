@@ -407,15 +407,15 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 				self::assertTrue( chmod( $path . '.lock', 0600 ) );
 			}
 
-			self::assertTrue( $secrets->canResetOrphanedKeyAt( $path ) );
-			$secrets->resetOrphanedKeyAt( $path );
+			self::assertTrue( $secrets->can_reset_orphaned_key_at( $path ) );
+			$secrets->reset_orphaned_key_at( $path );
 
 			self::assertNull( $keyStore->load( false ) );
 			self::assertFileDoesNotExist( $path );
 			self::assertFileExists( $path . '.lock' );
 			clearstatcache( true, $path . '.lock' );
 			self::assertSame( 0600, fileperms( $path . '.lock' ) & 0777 );
-			self::assertFalse( $secrets->canResetOrphanedKeyAt( $path ) );
+			self::assertFalse( $secrets->can_reset_orphaned_key_at( $path ) );
 
 			$secrets->saveCredential(
 				'gh',
@@ -462,13 +462,13 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		self::assertNotNull( $oldKey );
 		self::assertTrue( $keyStore->delete_exact( $oldKey ) );
 
-		self::assertTrue( $secrets->canResetOrphanedCiphertextAt( $path ) );
-		$secrets->resetOrphanedCiphertextAt( $path );
+		self::assertTrue( $secrets->can_reset_orphaned_ciphertext_at( $path ) );
+		$secrets->reset_orphaned_ciphertext_at( $path );
 
 		self::assertFileDoesNotExist( $path );
 		self::assertFileExists( $path . '.lock' );
 		self::assertNull( $keyStore->load( false ) );
-		self::assertFalse( $secrets->canResetOrphanedCiphertextAt( $path ) );
+		self::assertFalse( $secrets->can_reset_orphaned_ciphertext_at( $path ) );
 
 		$secrets->saveCredential(
 			'gh',
@@ -512,12 +512,12 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		$key = $keyStore->load( false );
 		self::assertNotNull( $key );
 		self::assertTrue( $keyStore->delete_exact( $key ) );
-		self::assertTrue( $secrets->canResetOrphanedCiphertextAt( $path ) );
+		self::assertTrue( $secrets->can_reset_orphaned_ciphertext_at( $path ) );
 
 		$keyStore->load_or_create();
-		self::assertFalse( $secrets->canResetOrphanedCiphertextAt( $path ) );
+		self::assertFalse( $secrets->can_reset_orphaned_ciphertext_at( $path ) );
 		try {
-			$secrets->resetOrphanedCiphertextAt( $path );
+			$secrets->reset_orphaned_ciphertext_at( $path );
 			self::fail( 'A restored database key must stop ciphertext reset.' );
 		} catch ( SecretsStorageUnavailable $failure ) {
 			self::assertStringContainsString( 'changed', $failure->getMessage() );
@@ -529,7 +529,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		self::assertTrue( $keyStore->delete_exact( $restored ) );
 		self::assertTrue( chmod( $path, 0660 ) );
 		try {
-			$secrets->resetOrphanedCiphertextAt( $path );
+			$secrets->reset_orphaned_ciphertext_at( $path );
 			self::fail( 'An insecure ciphertext file must stop reset.' );
 		} catch ( SecretsStorageUnavailable $failure ) {
 			self::assertStringContainsString( 'invalid encrypted Booster secrets file', $failure->getMessage() );
@@ -553,12 +553,12 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			new SecretsRuntimeAvailability( true, false )
 		);
 
-		self::assertFalse( $secrets->canResetOrphanedKeyAt( $path . '.changed' ) );
+		self::assertFalse( $secrets->can_reset_orphaned_key_at( $path . '.changed' ) );
 		self::assertNotFalse( file_put_contents( $path, '{}' ) );
 		self::assertTrue( chmod( $path, 0600 ) );
-		self::assertFalse( $secrets->canResetOrphanedKeyAt( $path ) );
+		self::assertFalse( $secrets->can_reset_orphaned_key_at( $path ) );
 		try {
-			$secrets->resetOrphanedKeyAt( $path );
+			$secrets->reset_orphaned_key_at( $path );
 			self::fail( 'Restored ciphertext must stop the orphaned-key reset.' );
 		} catch ( SecretsStorageUnavailable $failure ) {
 			self::assertStringContainsString( 'changed', $failure->getMessage() );
@@ -585,7 +585,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		self::assertTrue( chmod( $path . '.lock', 0660 ) );
 
 		try {
-			$secrets->resetOrphanedKeyAt( $path );
+			$secrets->reset_orphaned_key_at( $path );
 			self::fail( 'An insecure existing lock must block reset.' );
 		} catch ( SecretsStorageUnavailable $failure ) {
 			self::assertStringContainsString( 'secure', $failure->getMessage() );
@@ -633,7 +633,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		);
 
 		try {
-			$secrets->resetOrphanedKeyAt( $path );
+			$secrets->reset_orphaned_key_at( $path );
 			self::fail( 'A replaced database key must not be treated as the exact orphaned key.' );
 		} catch ( SecretsStorageUnavailable $failure ) {
 			self::assertStringContainsString( 'could not be removed safely', $failure->getMessage() );

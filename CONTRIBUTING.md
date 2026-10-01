@@ -100,6 +100,15 @@ their contracts. Direct callers and subclasses must use the renamed snake_case
 methods; no legacy aliases are provided. Foreign same-spelled methods remain
 unchanged.
 
+The secret-storage recovery cohort migrates nine public methods in `SecretsFile`
+and `SecretsStorageProvisioner`, including connected callers, fixture overrides
+and recovery tests. Both classes were already enforced; naming scopes remain
+174 method files and 166 variable files. Public parameter names, including
+`expectedPath`, retain named-argument compatibility. Recovery tokens and
+confirmations, path and credential-fitness checks, lock and state rechecks, exact
+key/ciphertext deletion, rollback and fresh-request verification remain unchanged.
+Callers and subclasses use the snake_case methods without legacy aliases.
+
 The private API12 cohort migrates 74 private declarations and their owned calls:
 two in Booster, eight in ProviderRegistry, one in RepositoryReleaseWorkflowStatus,
 26 in ReleaseWorkflowRequestController, nine in ReleaseWorkflowDisplay and 28 in

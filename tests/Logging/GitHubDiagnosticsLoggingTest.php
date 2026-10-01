@@ -82,19 +82,19 @@ final class GitHubDiagnosticsLoggingTest extends TestCase {
 			public function __construct() {
 			}
 
-			public function validateCredential( string $credentialId, float $timeout = 15.0 ): CredentialValidationResult {
-				unset( $credentialId, $timeout );
+			public function validate_credential( string $credential_id, float $timeout = 15.0 ): CredentialValidationResult {
+				unset( $credential_id, $timeout );
 				throw $this->credentialException ?? new LogicException( 'Unexpected credential fixture state.' );
 			}
 
 			public function repository(
-				string $fullName,
-				?string $credentialId = null,
+				string $full_name,
+				?string $credential_id = null,
 				float|int $timeout = 15,
-				?int $responseSize = null,
-				bool $authenticateDefault = false
+				?int $response_size = null,
+				bool $authenticate_default = false
 			): RepositoryDescriptor {
-				unset( $fullName, $credentialId, $timeout, $responseSize, $authenticateDefault );
+				unset( $full_name, $credential_id, $timeout, $response_size, $authenticate_default );
 				throw $this->repositoryException ?? new LogicException( 'Unexpected repository fixture state.' );
 			}
 		};

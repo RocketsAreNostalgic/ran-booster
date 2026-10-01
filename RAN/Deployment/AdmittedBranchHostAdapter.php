@@ -190,8 +190,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			if ( '' === $resolved_ref || trim( $resolved_ref ) !== $resolved_ref || strlen( $resolved_ref ) > 191 || preg_match( '/[[:cntrl:]]/', $resolved_ref ) === 1 ) {
 				$this->stage( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID );
 			}
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			if ( null !== $deployment->expectedHead && ! hash_equals( $deployment->expectedHead, $resolved_ref ) ) {
+			if ( null !== $deployment->expected_head && ! hash_equals( $deployment->expected_head, $resolved_ref ) ) {
 				$this->stage( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID );
 			}
 		} catch ( AdmittedBranchStageFailure $failure ) {
@@ -227,7 +226,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		$artifact = null;
 		try {
 			$artifact = new PreparedArchiveArtifact(
-				PreparedArchive::downloadAndValidate(
+				PreparedArchive::download_and_validate(
 					$offer,
 					$deployment,
 					$this->archive_directory(),
@@ -251,21 +250,18 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function verifyCurrentHead(): void {
+	public function verify_current_head(): void {
 		if ( null === $this->provider_archive ) {
 			$this->stage( DeploymentOutcome::CODE_PROVIDER_FAILED );
 		}
 		$this->verify_provider_head( $this->provider_archive );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function assertMutationAllowed(): void {
+	public function assert_mutation_allowed(): void {
 		PackageMutationGuard::assert_filesystem_mutation_allowed();
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function frozenTarget( BranchDeploymentDeclaration $deployment, bool $deferExisting ): ?array {
+	public function frozen_target( BranchDeploymentDeclaration $deployment, bool $defer_existing ): ?array {
 		$this->assert_declaration( $deployment );
 		$data    = $this->attempt->safe_data();
 		$request = $this->attempt->get_request();
@@ -280,8 +276,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 				}
 				if ( $this->destination_exists( (string) $data['package_type'], $request->package_slug ) ) {
 					if ( $this->existing_management_matches_install_target() ) {
-						// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-						if ( $deferExisting ) {
+						if ( $defer_existing ) {
 							return null;
 						}
 						$this->stage( DeploymentOutcome::CODE_ALREADY_MANAGED );
@@ -302,8 +297,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			$package = $this->package_by_slug( (string) $data['package_type'], $request->package_slug );
 			$this->assert_package_snapshot( $package, $data, $request );
 			$identifier = (string) $package->get_identifier();
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			if ( null === $deployment->installedIdentifier || ! hash_equals( $deployment->installedIdentifier, $identifier ) ) {
+			if ( null === $deployment->installed_identifier || ! hash_equals( $deployment->installed_identifier, $identifier ) ) {
 				$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED );
 			}
 			return array( 'identifier' => $identifier ) + $this->package_runtime_state( $package );
@@ -312,14 +306,12 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function maintenanceActive(): bool {
+	public function maintenance_active(): bool {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		return file_exists( $this->maintenancePath );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function recheckManaged( BranchDeploymentDeclaration $deployment ): void {
+	public function recheck_managed( BranchDeploymentDeclaration $deployment ): void {
 		$this->assert_declaration( $deployment );
 		$data    = $this->attempt->safe_data();
 		$request = $this->attempt->get_request();
@@ -332,8 +324,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	public function installed( BranchDeploymentDeclaration $deployment ): array {
 		$this->assert_declaration( $deployment );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		$package    = $this->installed_package( $deployment->packageType, $deployment->slug );
+		$package    = $this->installed_package( $deployment->package_type, $deployment->slug );
 		$identifier = (string) $package->get_identifier();
 		if ( '' === $identifier ) {
 			throw new RuntimeException( 'The installed package identity is unavailable.' );
@@ -341,11 +332,9 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		return array( 'identifier' => $identifier ) + $this->package_runtime_state( $package );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function baselineNow( BranchDeploymentDeclaration $deployment, array $baseline ): ?array {
+	public function baseline_now( BranchDeploymentDeclaration $deployment, array $baseline ): ?array {
 		try {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$current = $this->package_from_identifier( $deployment->packageType, $baseline['identifier'] );
+			$current = $this->package_from_identifier( $deployment->package_type, $baseline['identifier'] );
 			return array( 'identifier' => (string) $current->get_identifier() ) + $this->package_runtime_state( $current );
 		} catch ( Throwable ) {
 			return null;
@@ -354,8 +343,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	public function adopt( BranchDeploymentDeclaration $deployment ): bool {
 		$this->assert_declaration( $deployment );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		$installed  = $this->installed_package( $deployment->packageType, $deployment->slug );
+		$installed  = $this->installed_package( $deployment->package_type, $deployment->slug );
 		$request    = $this->attempt->get_request();
 		$data       = $this->attempt->safe_data();
 		$repository = new ManagedRepository(
@@ -369,8 +357,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		$installed->set_repository( $repository );
 		$installed->set_subdirectory( $request->subdirectory );
 		$installed->set_deployment_policy( $request->deployment_policy );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		$result = 'plugin' === $deployment->packageType ? $this->plugins->adopt( $installed ) : $this->themes->adopt( $installed );
+		$result = 'plugin' === $deployment->package_type ? $this->plugins->adopt( $installed ) : $this->themes->adopt( $installed );
 		if ( $result->is_successful() ) {
 			return true;
 		}
@@ -383,7 +370,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		if ( ! $artifact instanceof PreparedArchiveArtifact ) {
 			throw new RuntimeException( 'The admitted branch artifact is not a prepared package archive.' );
 		}
-		$artifact->assertUnchanged();
+		$artifact->assert_unchanged();
 	}
 
 	public function execute( BranchDeploymentDeclaration $deployment, ?array $baseline, AdmittedBranchArtifact $artifact ): CorePackageExecutionResult {
@@ -393,18 +380,16 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 		$archive = $artifact->archive();
 		if ( 'install' === $deployment->operation ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			return 'plugin' === $deployment->packageType
-				? $this->executor->installPlugin( $archive, $deployment->slug, $deployment->subdirectory )
-				: $this->executor->installTheme( $archive, $deployment->slug, $deployment->subdirectory );
+			return 'plugin' === $deployment->package_type
+				? $this->executor->install_plugin( $archive, $deployment->slug, $deployment->subdirectory )
+				: $this->executor->install_theme( $archive, $deployment->slug, $deployment->subdirectory );
 		}
 		if ( null === $baseline ) {
 			throw new RuntimeException( 'The managed package baseline is unavailable.' );
 		}
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		return 'plugin' === $deployment->packageType
-			? $this->executor->updatePlugin( $archive, $deployment->slug, $deployment->subdirectory, $baseline['identifier'] )
-			: $this->executor->updateTheme( $archive, $deployment->slug, $deployment->subdirectory, $baseline['identifier'] );
+		return 'plugin' === $deployment->package_type
+			? $this->executor->update_plugin( $archive, $deployment->slug, $deployment->subdirectory, $baseline['identifier'] )
+			: $this->executor->update_theme( $archive, $deployment->slug, $deployment->subdirectory, $baseline['identifier'] );
 	}
 
 	public function run( callable $operation ): mixed {
@@ -518,7 +503,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	}
 
 	private function assert_artifact_capacity( PreparedArchiveArtifact $artifact, BranchDeploymentDeclaration $deployment ): void {
-		$expanded = $artifact->archive()->expandedBytes();
+		$expanded = $artifact->archive()->expanded_bytes();
 		$overhead = intdiv( $expanded, 10 ) + ( 0 === $expanded % 10 ? 0 : 1 );
 		if ( $expanded > intdiv( PHP_INT_MAX - $overhead, 2 ) ) {
 			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_DISK_SPACE_LOW );
@@ -554,8 +539,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	}
 
 	private function destination_root( BranchDeploymentDeclaration $deployment ): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		if ( 'plugin' === $deployment->packageType ) {
+		if ( 'plugin' === $deployment->package_type ) {
 			if ( ! defined( 'WP_PLUGIN_DIR' ) ) {
 				$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_DIRECTORY_UNWRITABLE );
 			}

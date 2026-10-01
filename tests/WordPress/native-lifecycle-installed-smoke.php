@@ -126,7 +126,7 @@ if ( ! $provider instanceof GitHubProvider ) {
 if ( 1 > did_action( 'after_setup_theme' ) ) {
 	throw new RuntimeException( 'The installed request has not crossed the native activation boundary.' );
 }
-$targets = ( new ReflectionProperty( GitHubProvider::class, 'nativeTargets' ) )->getValue( $provider );
+$targets = ( new ReflectionProperty( GitHubProvider::class, 'native_targets' ) )->getValue( $provider );
 if ( ! is_array( $targets ) || count( $targets ) < count( $items ) ) {
 	throw new RuntimeException( 'The fresh installed request did not register every managed GitHub target.' );
 }

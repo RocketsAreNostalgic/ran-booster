@@ -89,7 +89,7 @@ class LocalDataRemover {
 		$this->secrets->delete_managed_storage();
 		$this->clear_scheduled_work();
 		$this->clear_updater_state();
-		if ( ! ( new WorkflowAssistanceState() )->removeDurableState() ) {
+		if ( ! ( new WorkflowAssistanceState() )->remove_durable_state() ) {
 			throw new RuntimeException( 'Bundled GitHub provider state could not be removed.' );
 		}
 		$this->clear_user_metadata();

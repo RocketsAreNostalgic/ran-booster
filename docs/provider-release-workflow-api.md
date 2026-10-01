@@ -45,12 +45,15 @@ tags. The five methods are `workflowStatus`, `workflowPreview`,
 are rejected before provider, credential or preflight access.
 
 The helper resolves `RepositoryReleaseWorkflowManagementV3` directly.
-The production lock selects immutable GitHub Provider `v1.0.0-beta.8`
-(`556f19923f6564f1bbd5cecee089d6b136afc5cd`), which implements V3 and preserves
+The production lock selects immutable GitHub Provider `v1.0.0-beta.9`
+(`82ad810e8cde6a2f54318448e81685a619c2cfc3`), which implements V3 and preserves
 a valid bootstrap record's operation across source revisions. Core requires a
-`bootstrap` operation before exposing or invoking outcomes. The locked composition passed repository quality, archive verification and the
-four supported WordPress/database installation jobs on merged Core #177. This
-installed candidate proof does not establish an immutable API-12 Core release.
+`bootstrap` operation before exposing or invoking outcomes. The historical
+beta.8 composition (`556f19923f6564f1bbd5cecee089d6b136afc5cd`) passed repository
+quality, archive verification and the four supported WordPress/database jobs
+on merged Core #177. Those results do not qualify this new lock; see the
+[connected naming adoption record](connected-naming-adoption.md).
+Installed candidate proof does not establish an immutable API-12 Core release.
 
 The API 3 facet still requires the same five release-consumption capabilities on
 the registered provider aggregate: `RepositoryReleaseMetadata`,

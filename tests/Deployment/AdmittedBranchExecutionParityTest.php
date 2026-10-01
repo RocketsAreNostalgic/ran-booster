@@ -109,7 +109,7 @@ final class AdmittedBranchExecutionParityTest extends TestCase {
 			null,
 			'example/example.php'
 		);
-		$updater     = BranchUpdater::forAdmittedAttempt( $declaration, $host, $host, $host, $host, $host );
+		$updater     = BranchUpdater::for_admitted_attempt( $declaration, $host, $host, $host, $host, $host );
 		return $updater->plugin( 'owner/example', 'R_example', 'main', null, 'example' )->deploy();
 	}
 
@@ -163,11 +163,11 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 		return $this->artifact;
 	}
 
-	public function verifyCurrentHead(): void {
+	public function verify_current_head(): void {
 		$this->events[] = 'verify';
 	}
 
-	public function assertMutationAllowed(): void {
+	public function assert_mutation_allowed(): void {
 		$this->events[] = 'allowed';
 		if ( null !== $this->policyFailure ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test double transports a domain failure code.
@@ -175,17 +175,17 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 		}
 	}
 
-	public function frozenTarget( BranchDeploymentDeclaration $deployment, bool $deferExisting ): ?array {
-		$this->events[] = $deferExisting ? 'frozen:defer' : 'frozen:live';
+	public function frozen_target( BranchDeploymentDeclaration $deployment, bool $defer_existing ): ?array {
+		$this->events[] = $defer_existing ? 'frozen:defer' : 'frozen:live';
 		return $this->baseline;
 	}
 
-	public function maintenanceActive(): bool {
+	public function maintenance_active(): bool {
 		$this->events[] = 'maintenance';
 		return false;
 	}
 
-	public function recheckManaged( BranchDeploymentDeclaration $deployment ): void {
+	public function recheck_managed( BranchDeploymentDeclaration $deployment ): void {
 		$this->events[] = 'recheck';
 	}
 
@@ -198,7 +198,7 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 		);
 	}
 
-	public function baselineNow( BranchDeploymentDeclaration $deployment, array $baseline ): ?array {
+	public function baseline_now( BranchDeploymentDeclaration $deployment, array $baseline ): ?array {
 		$this->events[] = 'baseline-now';
 		return $baseline;
 	}
@@ -230,15 +230,15 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 final class ParityAdmittedArtifact implements AdmittedBranchArtifact {
 	public function __construct( private ParityAdmittedHost $host ) {}
 
-	public function resolvedRef(): string {
+	public function resolved_ref(): string {
 		return str_repeat( 'a', 40 );
 	}
 
-	public function expectedVersion(): string {
+	public function expected_version(): string {
 		return $this->host->artifactVersion;
 	}
 
-	public function assertUnchanged(): void {
+	public function assert_unchanged(): void {
 		$this->host->events[] = 'unchanged';
 	}
 

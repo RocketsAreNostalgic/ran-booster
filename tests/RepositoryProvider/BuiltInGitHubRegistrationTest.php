@@ -91,7 +91,7 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		self::assertSame( 1, $secrets->credentialStoresIssued );
 		self::assertSame( 0, $secrets->credentialStore->reads );
 
-		$artifactLimitSupplier = ( new \ReflectionProperty( GitHubProvider::class, 'maximumArtifactBytes' ) )->getValue( $provider );
+		$artifactLimitSupplier = ( new \ReflectionProperty( GitHubProvider::class, 'maximum_artifact_bytes' ) )->getValue( $provider );
 		self::assertInstanceOf( \Closure::class, $artifactLimitSupplier );
 		self::assertSame( PackageArtifactLimit::resolve(), $artifactLimitSupplier() );
 
@@ -116,7 +116,7 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		( new BoosterServiceProvider() )->register( $container, $runtime, new \stdClass(), 'ran-booster.php' );
 
 		$provider              = $container->make( ProviderRegistry::class )->get( 'gh' );
-		$artifactLimitSupplier = ( new \ReflectionProperty( GitHubProvider::class, 'maximumArtifactBytes' ) )->getValue( $provider );
+		$artifactLimitSupplier = ( new \ReflectionProperty( GitHubProvider::class, 'maximum_artifact_bytes' ) )->getValue( $provider );
 
 		self::assertInstanceOf( \Closure::class, $artifactLimitSupplier );
 		self::assertSame( $configuredLimit, $artifactLimitSupplier() );
@@ -137,7 +137,7 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		( new BoosterServiceProvider() )->register( $container, $runtime, new \stdClass(), 'ran-booster.php' );
 
 		$provider              = $container->make( ProviderRegistry::class )->get( 'gh' );
-		$artifactLimitSupplier = ( new \ReflectionProperty( GitHubProvider::class, 'maximumArtifactBytes' ) )->getValue( $provider );
+		$artifactLimitSupplier = ( new \ReflectionProperty( GitHubProvider::class, 'maximum_artifact_bytes' ) )->getValue( $provider );
 
 		self::assertInstanceOf( GitHubProvider::class, $provider );
 		self::assertInstanceOf( \Closure::class, $artifactLimitSupplier );

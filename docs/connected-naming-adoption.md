@@ -1,0 +1,122 @@
+# Connected Branch and Provider naming adoption
+
+This is the accepted #167 connected naming tranche, coordinated through the
+[operative checkpoint](https://github.com/RocketsAreNostalgic/ran-booster/issues/167#issuecomment-5939201056).
+Live exact Core candidate heads, checks and ownership belong in that checkpoint
+and the receiving PR. Core merge and release remain separate approval gates.
+
+## Verified package publication and selected lock
+
+Both owner-approved producer release PRs were merged with merge commits on
+1 October 2026. Exact-main CI and Profile A publication passed for each.
+
+| Package | Immutable release | Tag/source/dist commit | GitHub release ID |
+| --- | --- | --- | --- |
+| Branch | `v1.0.0-beta.8` | `729a15c30f088236d0702b52d4a9cbe15c851508` | `401363087` |
+| GitHub Provider | `v1.0.0-beta.9` | `82ad810e8cde6a2f54318448e81685a619c2cfc3` | `401363341` |
+
+GitHub reports both releases immutable and published; their tags resolve
+directly to the commits above. Core selects these real released requirements
+and Composer lock identities. Unrelated dependencies remain pinned. This
+supersedes preparation overlays but does not itself establish installed-site
+qualification or a released Core host. The receiving Core PR must qualify its
+exact committed lock, archive and WordPress/database composition independently.
+
+## Preserved handoffs and scope
+
+- Branch #72 at `9e2df612e073169f119187870b4f1b546128d02e` prepares
+  32 methods, 10 properties and 26 parameter occurrences.
+- Core #217 at `6811610bc5545f845efb02f8876e92cf87e0dff1` supplies the
+  six accepted deployment consumers/tests, based on Core
+  `02859a4f79353bf97af58316e9247102ca185e76`.
+- Provider #47 at `798d70011077cfc0fbb8eda8f8abb78859440287` supplies the
+  accepted manifest: 52 helper methods, 64 camelCase parameter occurrences and
+  four reserved parameters. Three private promoted properties are already
+  counted within the 64 parameters. Its successor runtime change preserves
+  that manifest and adds the paired uninstall/logging consumers.
+
+Root integration additionally updates three private-property reflection strings
+in `tests/RepositoryProvider/BuiltInGitHubRegistrationTest.php`. Provider #42
+already renamed that field to `maximum_artifact_bytes`; the public factory
+parameter `maximumArtifactBytes` remains unchanged. This discovered adoption
+dependency preserves the existing artifact-limit assertions and adds no new
+runtime scope to either delegated worker.
+
+Installed qualification also exposed a stale `nativeTargets` reflection string
+in `tests/WordPress/native-lifecycle-installed-smoke.php`. That fixture now uses
+Provider's private `native_targets` field; its installed lifecycle assertions
+and operational sequence are unchanged. These four reflection corrections
+are required consumers of the already-published private-property migration.
+
+Direct PHP API replacement intentionally breaks old method/property/named
+argument use during beta. Mixed old/new tuples are unsupported. Foreign
+interfaces, unrelated same-spelled methods, wire/persisted fields, templates,
+release identities, credentials, error/status semantics and runtime behavior
+are unchanged. Core's broader Provider interfaces remain outside this cut.
+
+## Qualification and publication order
+
+There is no Composer dependency cycle: Core bundles Provider, while Provider
+implements Core contracts and tests against an exact Core checkout. Provider
+does not require the whole Core package. Keep that architecture boundary.
+
+1. Freeze exact Branch, Provider and combined Core source commits. Review all
+   three actual published base/head tuples. Run each producer's ordinary
+   aggregate and required hosted checks; run Provider's host aggregate against
+   the exact combined Core candidate. Its previously certified host remains
+   separate baseline evidence, not proof of this composition.
+2. Qualify matching Core source preparation with `composer check`, exact-pinned
+   `pnpm check`, focused deployment/logging/uninstall checks, naming controls,
+   formatter stability and canonical generated/localisation checks. Record
+   every overlay and exact source commit. Do not label this evidence released
+   adoption, archive qualification or installed-site acceptance.
+3. Obtain separate owner approval for each exact producer source PR. Squash
+   ordinary development PRs and verify successful exact-main CI. Let the
+   existing Profile A lifecycle refresh the bot-owned producer release PRs
+   (currently Branch #69 and Provider #43); do not select speculative tags or
+   edit generated release metadata manually.
+4. Review and qualify each refreshed release proposal, obtain its separate
+   owner approval, and follow the repository's release merge policy. Verify
+   successful main admission and actual immutable release/tag identities,
+   dereferenced commits and publication evidence. Source merge alone does not
+   establish package publication.
+5. Update only Core's two producer requirements and their actual Composer lock
+   entries to the verified releases, preserving unrelated dependency pins.
+   Confirm the locked source/dist references match the immutable package
+   identities. No dev alias, counterfeit version or arbitrary candidate SHA
+   may substitute for a released package.
+6. Requalify the final exact Core composition. Run the required PHP/frontend,
+   naming, formatter, generated/POT and clean no-dev checks. Use canonical
+   `scripts/build-release.sh` and `scripts/verify-release.sh` from its committed
+   manifest/lock and retain runtime identity generation. Verify the final
+   archive and installed bytes, Provider/runtime readbacks, localisation and
+   all required WordPress/MySQL/MariaDB lanes. No old certified host or archive
+   proves this new tuple. Native terminal Quality and required hosted reviews
+   must pass; obtain independent review of the final actual published tuple.
+7. Obtain owner approval for the exact Core integration PR, then squash and
+   verify exact-main Quality. Only after the handoff is fully accounted for in
+   its receiving change may superseded drafts be closed.
+8. Core release PR #181 is a separate decision. The existing Profile B process
+   refreshes and qualifies its release-only candidate. Obtain explicit approval
+   and use a merge commit for the bot-owned Core release PR. Verify successful
+   merged-main Quality and promotion of that exact tested ZIP, then immutable
+   release/asset readback. Never rebuild or replace published assets.
+
+Core's runtime dependency verifier deliberately requires released semantic
+versions and canonical, matching source/dist commit references. Its archive
+builder installs from the committed lock independently. Do not weaken these
+checks to make a preparation overlay look like adoption. Verified publication
+above unlocks real-lock adoption and its archive/native installed qualification.
+
+## Follow-on obligations
+
+Track separately: the 50 Provider implementations of Core-owned interfaces;
+other Provider public parameters/promotions; Release Updater beta.9/protocol-5;
+Bitbucket API-12 released-Core certification; Migrator facade/DTO naming and
+installed acceptance; other Core cohorts including ReleaseManagement. UI
+features and owner-verified interactive acceptance remain deferred. Plugin
+Library remains on the backburner and the CI optimization inquiry is retired.
+
+Keep implementation, integration, qualification, merge, package publication and
+Core adoption as separate ledger states. Approval for preparation does not
+authorize any merge, release or publication step above.

@@ -104,8 +104,8 @@ final class WordPressInstallationStoreTest extends TestCase {
 		$future['schema_version'] = 5;
 		$raw                      = array(
 			$valid->storage_key() => $valid->to_array(),
-			'gh:future'          => $future,
-			'gh:malformed'       => array(
+			'gh:future'           => $future,
+			'gh:malformed'        => array(
 				'schema_version' => 3,
 				'token'          => 'must-not-be-read',
 			),
@@ -148,8 +148,8 @@ final class WordPressInstallationStoreTest extends TestCase {
 
 		return array(
 			$valid->storage_key() => $valid->to_array(),
-			'gh:future'          => $future,
-			'gh:malformed'       => array(
+			'gh:future'           => $future,
+			'gh:malformed'        => array(
 				'schema_version' => 4,
 				'token'          => 'must-not-be-read',
 			),

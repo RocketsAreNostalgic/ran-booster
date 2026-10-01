@@ -42,6 +42,12 @@ parameter `maximumArtifactBytes` remains unchanged. This discovered adoption
 dependency preserves the existing artifact-limit assertions and adds no new
 runtime scope to either delegated worker.
 
+Installed qualification also exposed a stale `nativeTargets` reflection string
+in `tests/WordPress/native-lifecycle-installed-smoke.php`. That fixture now uses
+Provider's private `native_targets` field; its installed lifecycle assertions
+and operational sequence are unchanged. These four reflection corrections
+are required consumers of the already-published private-property migration.
+
 Direct PHP API replacement intentionally breaks old method/property/named
 argument use during beta. Mixed old/new tuples are unsupported. Foreign
 interfaces, unrelated same-spelled methods, wire/persisted fields, templates,

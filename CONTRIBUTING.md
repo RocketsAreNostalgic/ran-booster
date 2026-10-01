@@ -51,7 +51,8 @@ the Provider-owned names and parameters. Three reflection references in
 `BuiltInGitHubRegistrationTest` also follow the private property rename already
 landed in Provider #42, so adopting current Provider source preserves the
 existing artifact-limit assertions. This intentionally breaks the old beta
-PHP API. Foreign Core-owned interfaces, persisted/wire fields and runtime
+PHP API. The installed native-lifecycle fixture likewise reflects the renamed
+private `native_targets` field. Foreign Core-owned interfaces, persisted/wire fields and runtime
 behavior remain unchanged. The three production consumers already belong to
 the method and variable enforcement scopes, which remain 176 and 166 files.
 

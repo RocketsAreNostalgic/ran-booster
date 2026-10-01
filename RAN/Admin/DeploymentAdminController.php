@@ -42,8 +42,8 @@ final class DeploymentAdminController {
 	}
 
 	/** @param array<string, mixed> $request */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public/protected caller contract; retain public named-parameter names.
-	public function manageDeploymentAttempt( string $action, array $request, bool $postRequest ): void {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+	public function manage_deployment_attempt( string $action, array $request, bool $postRequest ): void {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
 		if ( ! $postRequest ) {
 			return;
@@ -65,7 +65,7 @@ final class DeploymentAdminController {
 			}
 			if ( 'request-deployment-runner' === $action ) {
 				$this->coordinator->requestRunner();
-				$this->dashboard->addMessage( __( 'The deployment runner was requested.', 'ran-booster' ) );
+				$this->dashboard->add_message( __( 'The deployment runner was requested.', 'ran-booster' ) );
 				return;
 			}
 			$attempt_id     = $this->canonical_attempt_id( $request['attempt_id'] ?? null );
@@ -74,12 +74,12 @@ final class DeploymentAdminController {
 				throw new \RuntimeException( 'Explicit stopped-worker confirmation is required.' );
 			}
 			$this->coordinator->reconcileConfirmedStopped( $attempt_id, $correlation_id );
-			$this->dashboard->addMessage( __( 'The protected deployment action was accepted.', 'ran-booster' ) );
+			$this->dashboard->add_message( __( 'The protected deployment action was accepted.', 'ran-booster' ) );
 		} catch ( \Throwable $exception ) {
 			$operation = $action;
 			$step      = 'deployment_action_dispatch';
 			$error     = new \WP_Error( 'ran_booster_deployment_action_unavailable', __( 'Booster could not safely accept this deployment action. Refresh the activity record and try again.', 'ran-booster' ) );
-			$this->dashboard->addFailureMessage( $error, $exception, compact( 'operation', 'step' ) );
+			$this->dashboard->add_failure_message( $error, $exception, compact( 'operation', 'step' ) );
 		}
 	}
 
@@ -102,7 +102,7 @@ final class DeploymentAdminController {
 			wp_die( esc_html__( 'You do not have sufficient permissions to manage this package.', 'ran-booster' ) );
 		}
 		$this->attempts->resolveNeedsAttention( $attempt_id, $correlation_id, $this->current_user_id() );
-		$this->dashboard->addMessage( __( 'Retry is allowed. No package files or settings were changed.', 'ran-booster' ) );
+		$this->dashboard->add_message( __( 'Retry is allowed. No package files or settings were changed.', 'ran-booster' ) );
 	}
 
 	private function canonical_attempt_id( mixed $value ): int {

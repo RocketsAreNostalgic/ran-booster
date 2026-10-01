@@ -68,9 +68,9 @@ class Booster {
 
 	public function init() {
 		add_action( 'admin_init', array( $this->service( \RAN\Admin\CredentialSelfDestructPurger::class ), 'purge' ), 1 );
-		add_action( 'admin_init', array( $this, 'maybeUpgradeDatabase' ) );
-		add_action( 'admin_init', array( $this, 'registerPluginActionLinks' ) );
-		add_action( 'admin_init', array( $this->service( 'RAN\Dispatcher' ), 'dispatchPostRequests' ) );
+		add_action( 'admin_init', array( $this, 'maybe_upgrade_database' ) );
+		add_action( 'admin_init', array( $this, 'register_plugin_action_links' ) );
+		add_action( 'admin_init', array( $this->service( 'RAN\Dispatcher' ), 'dispatch_post_requests' ) );
 		add_action(
 			'wp_ajax_' . \RAN\Admin\RepositoryPickerController::AJAX_ACTION,
 			array( $this->service( 'RAN\Admin\RepositoryPickerController' ), 'handle' )
@@ -93,30 +93,30 @@ class Booster {
 		);
 		add_action(
 			'wp_ajax_' . \RAN\Admin\PortabilityController::EXPORT_ACTION,
-			array( $this->service( \RAN\Admin\PortabilityController::class ), 'handleExport' )
+			array( $this->service( \RAN\Admin\PortabilityController::class ), 'handle_export' )
 		);
 		add_action(
 			'wp_ajax_' . \RAN\Admin\PortabilityController::PREVIEW_ACTION,
-			array( $this->service( \RAN\Admin\PortabilityController::class ), 'handlePreview' )
+			array( $this->service( \RAN\Admin\PortabilityController::class ), 'handle_preview' )
 		);
 		add_action(
 			'wp_ajax_' . \RAN\Admin\PortabilityController::APPLY_ACTION,
-			array( $this->service( \RAN\Admin\PortabilityController::class ), 'handleApply' )
+			array( $this->service( \RAN\Admin\PortabilityController::class ), 'handle_apply' )
 		);
 		add_action( 'activate_plugin', array( WpPusherCoexistencePolicy::class, 'blockWpPusherActivation' ) );
-		add_action( 'rest_api_init', array( $this, 'registerWebhookRoutes' ) );
-		add_action( WordPressWorkerWakeup::HOOK, array( $this, 'runDeploymentWorker' ), 10, 0 );
+		add_action( 'rest_api_init', array( $this, 'register_webhook_routes' ) );
+		add_action( WordPressWorkerWakeup::HOOK, array( $this, 'run_deployment_worker' ), 10, 0 );
 
 		if ( is_multisite() ) {
-			add_action( 'network_admin_menu', array( $this, 'adminMenu' ) );
+			add_action( 'network_admin_menu', array( $this, 'admin_menu' ) );
 		} else {
-			add_action( 'admin_menu', array( $this, 'adminMenu' ) );
+			add_action( 'admin_menu', array( $this, 'admin_menu' ) );
 		}
 
 		// Add styles and scripts
-		add_action( 'admin_enqueue_scripts', array( $this, 'loadScripts' ) );
-		add_action( 'admin_enqueue_scripts', array( $this, 'loadCredentialExpiryNoticeScript' ) );
-		add_action( 'admin_enqueue_scripts', array( $this, 'loadBackgroundDeploymentFailureNoticeScript' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'load_scripts' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'load_credential_expiry_notice_script' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'load_background_deployment_failure_notice_script' ) );
 		$expiry_notice = $this->service( \RAN\Admin\CredentialExpiryNotice::class );
 		add_action( 'admin_notices', array( $expiry_notice, 'render' ) );
 		add_action( 'network_admin_notices', array( $expiry_notice, 'render' ) );
@@ -133,7 +133,7 @@ class Booster {
 	}
 
 	public function activate() {
-		if ( ! $this->sodiumAvailable() ) {
+		if ( ! $this->sodium_available() ) {
 			wp_die(
 				esc_html__(
 					'RAN Booster requires the PHP Sodium extension for encrypted credential storage. Ask your hosting provider to enable Sodium, then activate the plugin again.',
@@ -143,7 +143,7 @@ class Booster {
 
 			return;
 		}
-		if ( $this->isMultisiteInstallation() ) {
+		if ( $this->is_multisite_installation() ) {
 			wp_die(
 				esc_html__(
 					'RAN Booster encrypted credential storage is not available on multisite in this Beta release. Use a single-site WordPress installation.',
@@ -183,15 +183,13 @@ class Booster {
 		$this->service( WordPressWorkerWakeup::class )->request();
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	protected function sodiumAvailable(): bool {
+	protected function sodium_available(): bool {
 		return extension_loaded( 'sodium' )
 			&& function_exists( 'sodium_crypto_aead_xchacha20poly1305_ietf_encrypt' )
 			&& function_exists( 'sodium_crypto_aead_xchacha20poly1305_ietf_decrypt' );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	protected function isMultisiteInstallation(): bool {
+	protected function is_multisite_installation(): bool {
 		return function_exists( 'is_multisite' ) && is_multisite();
 	}
 
@@ -206,8 +204,7 @@ class Booster {
 		$this->service( WordPressWorkerWakeup::class )->clear();
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function runDeploymentWorker(): void {
+	public function run_deployment_worker(): void {
 		try {
 			$this->service( 'RAN\Storage\Database' )->maybeUpgrade();
 		// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- An active incompatible site must remain bootable without running the worker.
@@ -217,28 +214,25 @@ class Booster {
 		$this->service( DeploymentWorker::class )->run_once();
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function registerWebhookRoutes(): void {
+	public function register_webhook_routes(): void {
 		$this->service( 'RAN\Webhook\WebhookController' )->register_routes();
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function adminMenu() {
-		add_menu_page( $this->getName(), $this->getName(), 'manage_options', 'ran-booster', null, $this->get_menu_icon() );
-		add_submenu_page( 'ran-booster', $this->getName(), __( 'Overview', 'ran-booster' ), 'manage_options', 'ran-booster', array( $this->service( 'RAN\Dashboard' ), 'getIndex' ) );
-		add_submenu_page( 'ran-booster', __( 'Install Plugin', 'ran-booster' ), __( 'Install Plugin', 'ran-booster' ), 'manage_options', 'ran-booster-plugins-create', array( $this->service( 'RAN\Dashboard' ), 'getPluginsCreate' ) );
-		add_submenu_page( 'ran-booster', __( 'Managed Plugins', 'ran-booster' ), __( 'Plugins', 'ran-booster' ), 'manage_options', 'ran-booster-plugins', array( $this->service( 'RAN\Dashboard' ), 'getPlugins' ) );
-		add_submenu_page( 'ran-booster', __( 'Install Theme', 'ran-booster' ), __( 'Install Theme', 'ran-booster' ), 'manage_options', 'ran-booster-themes-create', array( $this->service( 'RAN\Dashboard' ), 'getThemesCreate' ) );
-		add_submenu_page( 'ran-booster', __( 'Managed Themes', 'ran-booster' ), __( 'Themes', 'ran-booster' ), 'manage_options', 'ran-booster-themes', array( $this->service( 'RAN\Dashboard' ), 'getThemes' ) );
-		add_submenu_page( 'ran-booster', __( 'Transporter', 'ran-booster' ), __( 'Transporter', 'ran-booster' ), 'manage_options', 'ran-booster-transporter', array( $this->service( 'RAN\Dashboard' ), 'getTransporter' ) );
-		add_submenu_page( 'ran-booster', __( 'Extensions', 'ran-booster' ), __( 'Extensions', 'ran-booster' ), 'manage_options', 'ran-booster-extensions', array( $this, 'renderExtensionsPage' ) );
+	public function admin_menu() {
+		add_menu_page( $this->get_name(), $this->get_name(), 'manage_options', 'ran-booster', null, $this->get_menu_icon() );
+		add_submenu_page( 'ran-booster', $this->get_name(), __( 'Overview', 'ran-booster' ), 'manage_options', 'ran-booster', array( $this->service( 'RAN\Dashboard' ), 'get_index' ) );
+		add_submenu_page( 'ran-booster', __( 'Install Plugin', 'ran-booster' ), __( 'Install Plugin', 'ran-booster' ), 'manage_options', 'ran-booster-plugins-create', array( $this->service( 'RAN\Dashboard' ), 'get_plugins_create' ) );
+		add_submenu_page( 'ran-booster', __( 'Managed Plugins', 'ran-booster' ), __( 'Plugins', 'ran-booster' ), 'manage_options', 'ran-booster-plugins', array( $this->service( 'RAN\Dashboard' ), 'get_plugins' ) );
+		add_submenu_page( 'ran-booster', __( 'Install Theme', 'ran-booster' ), __( 'Install Theme', 'ran-booster' ), 'manage_options', 'ran-booster-themes-create', array( $this->service( 'RAN\Dashboard' ), 'get_themes_create' ) );
+		add_submenu_page( 'ran-booster', __( 'Managed Themes', 'ran-booster' ), __( 'Themes', 'ran-booster' ), 'manage_options', 'ran-booster-themes', array( $this->service( 'RAN\Dashboard' ), 'get_themes' ) );
+		add_submenu_page( 'ran-booster', __( 'Transporter', 'ran-booster' ), __( 'Transporter', 'ran-booster' ), 'manage_options', 'ran-booster-transporter', array( $this->service( 'RAN\Dashboard' ), 'get_transporter' ) );
+		add_submenu_page( 'ran-booster', __( 'Extensions', 'ran-booster' ), __( 'Extensions', 'ran-booster' ), 'manage_options', 'ran-booster-extensions', array( $this, 'render_extensions_page' ) );
 	}
 
 	/**
 	 * Render the fixed, release-bundled Extensions catalogue.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function renderExtensionsPage(): void {
+	public function render_extensions_page(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
@@ -251,7 +245,7 @@ class Booster {
 			$installed_plugins = get_plugins();
 			$extensions        = $this->extension_cards( is_array( $installed_plugins ) ? $installed_plugins : array() );
 			$plugins_url       = is_multisite() ? network_admin_url( 'plugins.php' ) : admin_url( 'plugins.php' );
-			$this->service( 'RAN\Dashboard' )->getExtensions( $extensions, $plugins_url );
+			$this->service( 'RAN\Dashboard' )->get_extensions( $extensions, $plugins_url );
 		} catch ( \Throwable $failure ) {
 			BoosterLogger::logException(
 				'Extensions page unavailable',
@@ -352,8 +346,7 @@ class Booster {
 		return $catalogue;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function getName() {
+	public function get_name() {
 		return 'RAN Booster';
 	}
 
@@ -371,9 +364,8 @@ class Booster {
 		return 'data:image/svg+xml;base64,' . base64_encode( $svg );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function registerPluginActionLinks() {
-		if ( $this->isPassiveTroubleshootingRequest() ) {
+	public function register_plugin_action_links() {
+		if ( $this->is_passive_troubleshooting_request() ) {
 			return;
 		}
 
@@ -409,9 +401,8 @@ class Booster {
 	/**
 	 * Keep the passive Troubleshooting GET free of database-backed bootstrap work.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function maybeUpgradeDatabase() {
-		if ( $this->isPassiveTroubleshootingRequest() ) {
+	public function maybe_upgrade_database() {
+		if ( $this->is_passive_troubleshooting_request() ) {
 			return;
 		}
 
@@ -426,8 +417,7 @@ class Booster {
 	/**
 	 * Whether this Troubleshooting request defers sidecar validation during bootstrap.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function isPassiveTroubleshootingRequest(): bool {
+	public function is_passive_troubleshooting_request(): bool {
 		$method = isset( $_SERVER['REQUEST_METHOD'] ) && is_string( $_SERVER['REQUEST_METHOD'] )
 			? strtoupper( $_SERVER['REQUEST_METHOD'] )
 			: '';
@@ -461,8 +451,7 @@ class Booster {
 		return ! in_array( $panel, array( 'activity', 'deployment-activity' ), true );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function loadScripts( $hook ) {
+	public function load_scripts( $hook ) {
 		if ( ! is_string( $hook ) || ! in_array( $hook, self::ADMIN_PAGE_HOOKS, true ) ) {
 			return;
 		}
@@ -501,7 +490,7 @@ class Booster {
 			}
 			// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
-			if ( $this->isProviderAdminTab( $requested_tab ) || in_array( $requested_tab, array( 'portability', 'troubleshooting' ), true ) ) {
+			if ( $this->is_provider_admin_tab( $requested_tab ) || in_array( $requested_tab, array( 'portability', 'troubleshooting' ), true ) ) {
 				$should_enqueue_htmx = true;
 			}
 		}
@@ -655,7 +644,7 @@ class Booster {
 		}
 
 		if ( in_array( $hook, self::PACKAGE_PAGE_HOOKS, true ) ) {
-			$package_settings = $this->service( 'RAN\\Admin\\ProviderSettingsPresenter' )->buildPackageForm();
+			$package_settings = $this->service( 'RAN\\Admin\\ProviderSettingsPresenter' )->build_package_form();
 
 			wp_localize_script(
 				'ran-booster-packages',
@@ -723,8 +712,7 @@ class Booster {
 	/**
 	 * Whether a top-level tab is owned by a registered repository provider.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	protected function isProviderAdminTab( ?string $tab ): bool {
+	protected function is_provider_admin_tab( ?string $tab ): bool {
 		if ( null === $tab || '' === $tab ) {
 			return false;
 		}
@@ -752,8 +740,7 @@ class Booster {
 	 * Load the dedicated dismissal asset on any administration screen where
 	 * the current administrator will receive an expiry notice.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function loadCredentialExpiryNoticeScript( $hook ): void {
+	public function load_credential_expiry_notice_script( $hook ): void {
 		unset( $hook );
 
 		$notice = $this->service( \RAN\Admin\CredentialExpiryNotice::class );
@@ -787,12 +774,11 @@ class Booster {
 	/**
 	 * Load the small dismissal asset only when a background failure is visible.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function loadBackgroundDeploymentFailureNoticeScript( $hook ): void {
+	public function load_background_deployment_failure_notice_script( $hook ): void {
 		unset( $hook );
 
 		$notice = $this->service( \RAN\Admin\DeploymentAdminPresenter::class );
-		if ( ! $notice->shouldRender() ) {
+		if ( ! $notice->should_render() ) {
 			return;
 		}
 

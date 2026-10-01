@@ -27,8 +27,8 @@ final class WebhookDisplayModel {
 	 * @param array<string, array<string, mixed>> $repositoryProjections
 	 * @return array<string, array<string, mixed>>
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
-	public function enrichRows( array $rows, string $providerCode, string $providerLabel, string $repositoryUrlBase, array $repositoryProjections, string $returnUrl ): array {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+	public function enrich_rows( array $rows, string $providerCode, string $providerLabel, string $repositoryUrlBase, array $repositoryProjections, string $returnUrl ): array {
 		$this->projected_statuses = array();
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		$readiness = $this->readiness( $providerCode );
@@ -100,8 +100,8 @@ final class WebhookDisplayModel {
 	}
 
 	/** @param array<string,array<string,mixed>> $rows @param array<string,array<string,mixed>> $repositoryProjections @return array<string,array<string,mixed>> */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
-	public function enrichHistoricalRows( array $rows, string $providerCode, array $repositoryProjections ): array {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+	public function enrich_historical_rows( array $rows, string $providerCode, array $repositoryProjections ): array {
 		$records = $this->records->all();
 
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
@@ -193,7 +193,7 @@ final class WebhookDisplayModel {
 			'credentials_url'             => $this->provider_settings_url( $providerCode, 'credentials' ),
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			'secrets_url'                 => $this->provider_settings_url( $providerCode, 'secrets' ),
-			'form_action'                 => WebhookManagementAdminUrl::forPath( 'admin-post.php' ),
+			'form_action'                 => WebhookManagementAdminUrl::for_path( 'admin-post.php' ),
 			'admin_action'                => 'ran_booster_repository_webhook_management_operation',
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			'provider_code'               => $providerCode,
@@ -251,8 +251,8 @@ final class WebhookDisplayModel {
 	/**
 	 * @return array<string, mixed>
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
-	public function unavailablePanel( string $providerCode, string $providerLabel, string $repositoryId, string $repository, string $returnUrl, string $reason, ?string $webhooksUrl = null ): array {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+	public function unavailable_panel( string $providerCode, string $providerLabel, string $repositoryId, string $repository, string $returnUrl, string $reason, ?string $webhooksUrl = null ): array {
 		return array(
 			'disabled'                    => true,
 			'unavailable_reason'          => $reason,
@@ -263,7 +263,7 @@ final class WebhookDisplayModel {
 			'credentials_url'             => $this->provider_settings_url( $providerCode, 'credentials' ),
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			'secrets_url'                 => $this->provider_settings_url( $providerCode, 'secrets' ),
-			'form_action'                 => WebhookManagementAdminUrl::forPath( 'admin-post.php' ),
+			'form_action'                 => WebhookManagementAdminUrl::for_path( 'admin-post.php' ),
 			'admin_action'                => 'ran_booster_repository_webhook_management_operation',
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			'provider_code'               => $providerCode,
@@ -381,19 +381,17 @@ final class WebhookDisplayModel {
 		};
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function isSuccessfulResult( string $code ): bool {
+	public function is_successful_result( string $code ): bool {
 		return in_array( $code, array( 'configured_pending_delivery', 'verified', 'removed' ), true );
 	}
 
 	private function result_notice_class( string $code ): string {
 		return in_array( $code, array( 'ping_requested', 'ping_verified' ), true )
 			? 'notice-warning'
-			: ( $this->isSuccessfulResult( $code ) ? 'notice-success' : 'notice-error' );
+			: ( $this->is_successful_result( $code ) ? 'notice-success' : 'notice-error' );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function canRespondInlineToFailure( string $code ): bool {
+	public function can_respond_inline_to_failure( string $code ): bool {
 		return in_array( $code, array( 'forbidden', 'invalid_request', 'invalid_token', 'operation_unauthorized', 'repository_identity_unconfirmed', 'operation_busy', 'setup_failed', 'setup_compensated', 'assessment_insufficient', 'assessment_stale', 'assessment_unsupported', 'assessment_unavailable' ), true );
 	}
 
@@ -706,11 +704,11 @@ final class WebhookDisplayModel {
 	private function operation_url( string $operation, string $provider_code, string $repository_id ): string {
 		$action = 'ran_booster_repository_webhook_' . implode( '_', array( $operation, $provider_code, $repository_id ) );
 
-		return WebhookManagementAdminUrl::forPath( 'admin-post.php?action=ran_booster_repository_webhook_management_operation&_wpnonce=' . rawurlencode( wp_create_nonce( $action ) ) );
+		return WebhookManagementAdminUrl::for_path( 'admin-post.php?action=ran_booster_repository_webhook_management_operation&_wpnonce=' . rawurlencode( wp_create_nonce( $action ) ) );
 	}
 
 	private function provider_settings_url( string $provider_code, string $view ): string {
-		return WebhookManagementAdminUrl::forPath( 'admin.php?page=ran-booster&tab=' . rawurlencode( $provider_code ) . '&view=' . rawurlencode( $view ) );
+		return WebhookManagementAdminUrl::for_path( 'admin.php?page=ran-booster&tab=' . rawurlencode( $provider_code ) . '&view=' . rawurlencode( $view ) );
 	}
 
 	private function historical_status_label( string $status ): string {

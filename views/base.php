@@ -34,7 +34,7 @@ $adminPageModifier      = match ( $view ) {
 	default           => '',
 };
 $ranAdminShellNavigation = array();
-$packageType             = isset( $packageView ) ? $packageView->getType() : '';
+$packageType             = isset( $packageView ) ? $packageView->get_type() : '';
 $adminUrl                = is_multisite()
 	? network_admin_url( 'admin.php' )
 	: admin_url( 'admin.php' );

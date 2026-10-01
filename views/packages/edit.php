@@ -126,7 +126,7 @@ $packageAdvancedOpen          = isset( $_POST['ran_booster'] )
 	|| true === ( $packageSource['advanced_open'] ?? false );
 $packageDangerOpen            = in_array(
 	$submittedAction,
-	array( $packageView->getAction( 'unlink' ), $packageView->getAction( 'unlink-delete' ) ),
+	array( $packageView->get_action( 'unlink' ), $packageView->get_action( 'unlink-delete' ) ),
 	true
 );
 
@@ -158,10 +158,10 @@ foreach ( $providerOptions as $providerOption ) {
 	}
 }
 $repositoryUrl            = $storedRepositoryUrlBase . ltrim( (string) $package->repository, '/' );
-$adminUrl                 = $packageView->getAdminUrl();
+$adminUrl                 = $packageView->get_admin_url();
 $installAnotherUrl        = add_query_arg(
 	array(
-		'page'        => $packageView->getCreatePageSlug(),
+		'page'        => $packageView->get_create_page_slug(),
 		'provider'    => $storedProviderCode,
 		'open_picker' => '1',
 	),
@@ -169,24 +169,24 @@ $installAnotherUrl        = add_query_arg(
 );
 $settingsUrl              = add_query_arg(
 	array(
-		'page'    => $packageView->getPageSlug(),
+		'page'    => $packageView->get_page_slug(),
 		'package' => $identifierValue,
 	),
 	$adminUrl
 );
-$backUrl                  = add_query_arg( 'page', $packageView->getPageSlug(), $adminUrl );
+$backUrl                  = add_query_arg( 'page', $packageView->get_page_slug(), $adminUrl );
 $showBranchSettings       = 'branch' === $packageSourceView;
 $showBranchOperations     = $showBranchSettings && ! $releaseManaged;
 $repositoryReadOnly       = $releaseManaged;
 $branchReadOnly           = $releaseManaged;
 $packageMutationAvailable = $packageMutationAvailable && ! $packageSourceUnavailable;
-$wordPressEnabled         = 'plugin' === $packageView->getType()
+$wordPressEnabled         = 'plugin' === $packageView->get_type()
 	? ( function_exists( 'is_plugin_active' ) && is_plugin_active( $identifierValue ) )
 	: ( function_exists( 'wp_get_theme' ) && wp_get_theme()->get_stylesheet() === $identifierValue );
 $wordPressState           = $wordPressEnabled ? __( 'Enabled', 'ran-booster' ) : __( 'Disabled', 'ran-booster' );
 $wordPressActionUrl       = null;
 $wordPressActionLabel     = null;
-if ( ! $wordPressEnabled && 'plugin' === $packageView->getType() && current_user_can( 'activate_plugins' ) ) {
+if ( ! $wordPressEnabled && 'plugin' === $packageView->get_type() && current_user_can( 'activate_plugins' ) ) {
 	$wordPressActionUrl   = add_query_arg(
 		array(
 			'action'   => 'activate',
@@ -196,7 +196,7 @@ if ( ! $wordPressEnabled && 'plugin' === $packageView->getType() && current_user
 		admin_url( 'plugins.php' )
 	);
 	$wordPressActionLabel = __( 'Activate plugin', 'ran-booster' );
-} elseif ( ! $wordPressEnabled && 'theme' === $packageView->getType() && current_user_can( is_multisite() ? 'manage_network_themes' : 'switch_themes' ) ) {
+} elseif ( ! $wordPressEnabled && 'theme' === $packageView->get_type() && current_user_can( is_multisite() ? 'manage_network_themes' : 'switch_themes' ) ) {
 	$wordPressActionUrl   = add_query_arg(
 		array(
 			'action'     => is_multisite() ? 'enable' : 'activate',
@@ -208,7 +208,7 @@ if ( ! $wordPressEnabled && 'plugin' === $packageView->getType() && current_user
 	$wordPressActionLabel = is_multisite() ? __( 'Enable theme', 'ran-booster' ) : __( 'Activate theme', 'ran-booster' );
 }
 $showPackageOperationActions = $showBranchOperations || ( is_string( $wordPressActionUrl ) && is_string( $wordPressActionLabel ) );
-$packageSettingsSaveLabel    = 'plugin' === $packageView->getType()
+$packageSettingsSaveLabel    = 'plugin' === $packageView->get_type()
 	? __( 'Save plugin settings', 'ran-booster' )
 	: __( 'Save theme settings', 'ran-booster' );
 $sourceSummary               = 'branch' === $packageCurrentSource
@@ -226,7 +226,7 @@ $automationSummary = match ( $package->get_deployment_policy()->value ) {
 };
 
 ?>
-<p class="ran-booster-package-settings__back"><a href="<?php echo esc_url( $backUrl ); ?>">&larr; <?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $packageView->getPluralLabel() ) ); ?></a></p>
+<p class="ran-booster-package-settings__back"><a href="<?php echo esc_url( $backUrl ); ?>">&larr; <?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $packageView->get_plural_label() ) ); ?></a></p>
 <h2 class="ran-booster-package-settings__heading"><?php echo esc_html( sprintf( /* translators: %s is the item being edited. */ __( 'Edit %s', 'ran-booster' ), $package->name ) ); ?></h2>
 
 <?php if ( $providerUnavailable ) { ?>
@@ -253,19 +253,19 @@ $automationSummary = match ( $package->get_deployment_policy()->value ) {
 						<p><?php esc_html_e( 'Booster will not reinterpret this package as a branch deployment. Restore the update source add-on to manage updates or unlink the package.', 'ran-booster' ); ?></p>
 					</div>
 					<div class="ran-booster-settings-actions" role="group" aria-label="<?php esc_attr_e( 'Package settings actions', 'ran-booster' ); ?>">
-						<a class="button" href="<?php echo esc_url( $installAnotherUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $packageView->getType() ) ); ?></a>
-						<a class="button" href="<?php echo esc_url( $backUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $packageView->getPluralLabel() ) ); ?></a>
+						<a class="button" href="<?php echo esc_url( $installAnotherUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $packageView->get_type() ) ); ?></a>
+						<a class="button" href="<?php echo esc_url( $backUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $packageView->get_plural_label() ) ); ?></a>
 					</div>
 				</div>
 			</section>
 		<?php } else { ?>
 			<form id="ran-booster-package-edit-form" action="" method="POST" data-ran-booster-package-mutation>
-						<?php wp_nonce_field( $packageView->getAction( 'edit' ) ); ?>
+						<?php wp_nonce_field( $packageView->get_action( 'edit' ) ); ?>
 						<?php if ( $showBranchOperations ) { ?>
-							<input type="hidden" name="_ran_booster_reinstall_nonce" value="<?php echo esc_attr( wp_create_nonce( $packageView->getAction( 'update' ) ) ); ?>">
+							<input type="hidden" name="_ran_booster_reinstall_nonce" value="<?php echo esc_attr( wp_create_nonce( $packageView->get_action( 'update' ) ) ); ?>">
 						<?php } ?>
-						<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $packageView->getAction( 'edit' ) ); ?>">
-						<input type="hidden" name="ran_booster[<?php echo esc_attr( $packageView->getIdentifierField() ); ?>]" value="<?php echo esc_attr( $identifierValue ); ?>">
+						<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $packageView->get_action( 'edit' ) ); ?>">
+						<input type="hidden" name="ran_booster[<?php echo esc_attr( $packageView->get_identifier_field() ); ?>]" value="<?php echo esc_attr( $identifierValue ); ?>">
 						<?php require __DIR__ . '/expected-package.php'; ?>
 						<input type="hidden" name="ran_booster[provider_repository_id]" class="ran-booster-provider-repository-id-input" value="<?php echo esc_attr( $providerRepositoryId ); ?>">
 						<input type="hidden" name="ran_booster[provider_repository_identity_source]" class="ran-booster-provider-repository-identity-source-input" value="<?php echo esc_attr( $providerRepositoryIdentitySource ); ?>">
@@ -313,8 +313,8 @@ $automationSummary = match ( $package->get_deployment_policy()->value ) {
 
 			<div class="ran-booster-settings-actions ran-booster-package-settings__save-actions" role="group" aria-label="<?php esc_attr_e( 'Package settings actions', 'ran-booster' ); ?>">
 				<button type="submit" class="button button-primary" form="ran-booster-package-edit-form" data-ran-booster-package-settings-save data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error" data-ran-booster-package-mutation hx-post="<?php echo esc_url( wp_make_link_relative( $settingsUrl ) ); ?>" hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none" hx-sync="this:drop" hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]" <?php disabled( ! $packageMutationAvailable ); ?>><?php echo esc_html( $packageSettingsSaveLabel ); ?></button>
-				<a class="button" href="<?php echo esc_url( $installAnotherUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $packageView->getType() ) ); ?></a>
-				<a class="button" href="<?php echo esc_url( $backUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $packageView->getPluralLabel() ) ); ?></a>
+				<a class="button" href="<?php echo esc_url( $installAnotherUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $packageView->get_type() ) ); ?></a>
+				<a class="button" href="<?php echo esc_url( $backUrl ); ?>"><?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $packageView->get_plural_label() ) ); ?></a>
 			</div>
 		<?php } ?>
 

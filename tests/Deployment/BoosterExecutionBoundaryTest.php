@@ -23,7 +23,7 @@ final class BoosterExecutionBoundaryTest extends TestCase {
 		$container->bind( Database::class, new ExecutionBoundaryDatabase( $calls ) );
 		$container->bind( DeploymentWorker::class, new ExecutionBoundaryWorker( $calls ) );
 
-		$booster->runDeploymentWorker();
+		$booster->run_deployment_worker();
 
 		self::assertSame( array( 'schema', 'worker' ), $calls );
 	}
@@ -34,7 +34,7 @@ final class BoosterExecutionBoundaryTest extends TestCase {
 		$booster   = new Booster( $container );
 		$container->bind( WebhookController::class, new ExecutionBoundaryWebhookController( $calls ) );
 
-		$booster->registerWebhookRoutes();
+		$booster->register_webhook_routes();
 
 		self::assertSame( array( 'routes' ), $calls );
 	}
@@ -57,7 +57,7 @@ final class BoosterExecutionBoundaryTest extends TestCase {
 		$container->bind( Database::class, new BlockedExecutionBoundaryDatabase( $calls, $failure ) );
 		$container->bind( DeploymentWorker::class, new ExecutionBoundaryWorker( $calls ) );
 
-		$booster->runDeploymentWorker();
+		$booster->run_deployment_worker();
 
 		self::assertSame( array( 'schema' ), $calls );
 	}

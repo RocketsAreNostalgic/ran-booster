@@ -103,7 +103,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 			'operation' => 'export',
 		);
 
-		$this->dispatcher( $this->createStub( Dashboard::class ), $capture )->dispatchPostRequests();
+		$this->dispatcher( $this->createStub( Dashboard::class ), $capture )->dispatch_post_requests();
 
 		self::assertSame( 'inactive', $capture->snapshot()['state'] );
 		self::assertSame( array( 'manage_options' ), $GLOBALS['ran_booster_test_capability_checks'] );
@@ -119,14 +119,14 @@ final class OperatorActionDispatcherTest extends TestCase {
 		);
 
 		$_SERVER['REQUEST_METHOD'] = 'GET';
-		$this->dispatcher( $this->createStub( Dashboard::class ), $capture )->dispatchPostRequests();
+		$this->dispatcher( $this->createStub( Dashboard::class ), $capture )->dispatch_post_requests();
 		self::assertSame( 'inactive', $capture->snapshot()['state'] );
 		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
 
 		$_SERVER['REQUEST_METHOD']                                  = 'POST';
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = false;
 		try {
-			$this->dispatcher( $this->createStub( Dashboard::class ), $capture )->dispatchPostRequests();
+			$this->dispatcher( $this->createStub( Dashboard::class ), $capture )->dispatch_post_requests();
 			self::fail( 'A missing capability must terminate the request.' );
 		} catch ( \RuntimeException ) {
 			self::assertSame( 'inactive', $capture->snapshot()['state'] );
@@ -135,7 +135,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$GLOBALS['ran_booster_test_nonce_valid']                    = false;
 		try {
-			$this->dispatcher( $this->createStub( Dashboard::class ), $capture )->dispatchPostRequests();
+			$this->dispatcher( $this->createStub( Dashboard::class ), $capture )->dispatch_post_requests();
 			self::fail( 'An invalid nonce must terminate the request.' );
 		} catch ( \RuntimeException ) {
 			self::assertSame( 'inactive', $capture->snapshot()['state'] );
@@ -146,7 +146,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		$capture   = new TemporaryDebugCapture( '/missing/private-canary/secrets.json' );
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
-			->method( 'addFailureMessage' )
+			->method( 'add_failure_message' )
 			->with(
 				self::callback(
 					static function ( mixed $message ): bool {
@@ -161,13 +161,13 @@ final class OperatorActionDispatcherTest extends TestCase {
 			'operation' => 'start',
 		);
 
-		$this->dispatcher( $dashboard, $capture )->dispatchPostRequests();
+		$this->dispatcher( $dashboard, $capture )->dispatch_post_requests();
 	}
 
 	public function testHtmxDebugCaptureStartReturnsARegionAndSuccessEventWithoutARedirect(): void {
 		$capture   = $this->capture();
 		$dashboard = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::never() )->method( 'add_failure_message' );
 		$_SERVER['HTTP_HX_REQUEST'] = 'true';
 		$_POST['ran_booster']       = array(
 			'action'    => 'manage-debug-capture',
@@ -175,7 +175,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		);
 
 		try {
-			$this->htmxDispatcher( $dashboard, $capture )->dispatchPostRequests();
+			$this->htmxDispatcher( $dashboard, $capture )->dispatch_post_requests();
 			self::fail( 'An HTMX capture response must end after rendering its bounded region.' );
 		} catch ( HtmxDebugCaptureResponse $response ) {
 			self::assertSame( 'active', $capture->snapshot()['state'] );
@@ -190,7 +190,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		$capture->start();
 
 		$dashboard = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::never() )->method( 'add_failure_message' );
 		$_SERVER['HTTP_HX_REQUEST'] = 'true';
 		$_POST['ran_booster']       = array(
 			'action'    => 'manage-debug-capture',
@@ -198,7 +198,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		);
 
 		try {
-			$this->htmxDispatcher( $dashboard, $capture )->dispatchPostRequests();
+			$this->htmxDispatcher( $dashboard, $capture )->dispatch_post_requests();
 			self::fail( 'An HTMX capture response must end after rendering its bounded region.' );
 		} catch ( HtmxDebugCaptureResponse $response ) {
 			self::assertSame( 'retained', $capture->snapshot()['state'] );
@@ -211,7 +211,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 	public function testHtmxDebugCaptureFailureKeepsARedactedLocalErrorWithoutASuccessEvent(): void {
 		$capture   = new TemporaryDebugCapture( '/missing/private-canary/secrets.json' );
 		$dashboard = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::never() )->method( 'add_failure_message' );
 		$_SERVER['HTTP_HX_REQUEST'] = 'true';
 		$_POST['ran_booster']       = array(
 			'action'    => 'manage-debug-capture',
@@ -219,7 +219,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		);
 
 		try {
-			$this->htmxDispatcher( $dashboard, $capture )->dispatchPostRequests();
+			$this->htmxDispatcher( $dashboard, $capture )->dispatch_post_requests();
 			self::fail( 'An HTMX capture failure must end after rendering its bounded region.' );
 		} catch ( HtmxDebugCaptureResponse $response ) {
 			self::assertNull( $response->toastMessage );
@@ -232,7 +232,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 	public function testHtmxDiagnosticsRefreshesItsPanelAndOnlyToastsAnAllPassResult(): void {
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
-			->method( 'postRunTroubleshooting' )
+			->method( 'post_run_troubleshooting' )
 			->with(
 				array(
 					'provider'      => 'gh',
@@ -240,7 +240,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 					'repository'    => null,
 				)
 			);
-		$dashboard->expects( self::once() )->method( 'troubleshootingSucceeded' )->willReturn( true );
+		$dashboard->expects( self::once() )->method( 'troubleshooting_succeeded' )->willReturn( true );
 		$_SERVER['HTTP_HX_REQUEST'] = 'true';
 		$_POST['ran_booster']       = array(
 			'action'   => 'run-troubleshooting',
@@ -248,7 +248,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		);
 
 		try {
-			$this->htmxDispatcher( $dashboard, $this->capture() )->dispatchPostRequests();
+			$this->htmxDispatcher( $dashboard, $this->capture() )->dispatch_post_requests();
 			self::fail( 'An HTMX diagnostics response must end after rendering its bounded region.' );
 		} catch ( HtmxDiagnosticsResponse $response ) {
 			self::assertTrue( $response->succeeded );
@@ -258,7 +258,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 	public function testHtmxDiagnosticsKeepsAPartialResultPersistentWithoutASuccessEvent(): void {
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
-			->method( 'postRunTroubleshooting' )
+			->method( 'post_run_troubleshooting' )
 			->with(
 				array(
 					'provider'      => 'gh',
@@ -266,7 +266,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 					'repository'    => null,
 				)
 			);
-		$dashboard->expects( self::once() )->method( 'troubleshootingSucceeded' )->willReturn( false );
+		$dashboard->expects( self::once() )->method( 'troubleshooting_succeeded' )->willReturn( false );
 		$_SERVER['HTTP_HX_REQUEST'] = 'true';
 		$_POST['ran_booster']       = array(
 			'action'   => 'run-troubleshooting',
@@ -274,7 +274,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		);
 
 		try {
-			$this->htmxDispatcher( $dashboard, $this->capture() )->dispatchPostRequests();
+			$this->htmxDispatcher( $dashboard, $this->capture() )->dispatch_post_requests();
 			self::fail( 'An HTMX diagnostics response must end after rendering its bounded region.' );
 		} catch ( HtmxDiagnosticsResponse $response ) {
 			self::assertFalse( $response->succeeded );
@@ -284,9 +284,9 @@ final class OperatorActionDispatcherTest extends TestCase {
 	public function testAdministratorCanRequestTheOneShotRunnerWithActionNonce(): void {
 		$_POST['ran_booster'] = array( 'action' => 'request-deployment-runner' );
 		$dashboard            = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::once() )->method( 'addMessage' )->with( 'The deployment runner was requested.' );
+		$dashboard->expects( self::once() )->method( 'add_message' )->with( 'The deployment runner was requested.' );
 
-		$this->dispatcher( $dashboard )->dispatchPostRequests();
+		$this->dispatcher( $dashboard )->dispatch_post_requests();
 
 		self::assertSame( 1, $this->coordinator->requests );
 		self::assertSame( array( 'manage_options', 'update_plugins', 'update_themes' ), $GLOBALS['ran_booster_test_capability_checks'] );
@@ -299,7 +299,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 
 		$this->expectException( \RuntimeException::class );
 		try {
-			$this->dispatcher( $this->createStub( Dashboard::class ) )->dispatchPostRequests();
+			$this->dispatcher( $this->createStub( Dashboard::class ) )->dispatch_post_requests();
 		} finally {
 			self::assertSame( 0, $this->coordinator->requests );
 		}
@@ -309,7 +309,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$_POST['ran_booster']      = array( 'action' => 'request-deployment-runner' );
 
-		$this->dispatcher( $this->createStub( Dashboard::class ) )->dispatchPostRequests();
+		$this->dispatcher( $this->createStub( Dashboard::class ) )->dispatch_post_requests();
 
 		self::assertSame( 0, $this->coordinator->requests );
 		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
@@ -319,9 +319,9 @@ final class OperatorActionDispatcherTest extends TestCase {
 		$_POST['ran_booster']                                      = array( 'action' => 'request-deployment-runner' );
 		$GLOBALS['ran_booster_test_capabilities']['update_themes'] = false;
 		$dashboard = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::once() )->method( 'addFailureMessage' )->with( self::isInstanceOf( \WP_Error::class ) );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' )->with( self::isInstanceOf( \WP_Error::class ) );
 
-		$this->dispatcher( $dashboard )->dispatchPostRequests();
+		$this->dispatcher( $dashboard )->dispatch_post_requests();
 
 		self::assertSame( 0, $this->coordinator->requests );
 	}
@@ -378,10 +378,10 @@ final class OperatorActionDispatcherTest extends TestCase {
 		);
 		$dashboard            = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
-			->method( 'addMessage' )
+			->method( 'add_message' )
 			->with( 'Retry is allowed. No package files or settings were changed.' );
 
-		$this->dispatcher( $dashboard, attempts: $attempts )->dispatchPostRequests();
+		$this->dispatcher( $dashboard, attempts: $attempts )->dispatch_post_requests();
 
 		self::assertSame( array( 'manage_options', 'update_plugins' ), $GLOBALS['ran_booster_test_capability_checks'] );
 		self::assertSame( array( 'ran-booster-resolve-needs-attention' ), $GLOBALS['ran_booster_test_nonce_checks'] );
@@ -409,8 +409,8 @@ final class OperatorActionDispatcherTest extends TestCase {
 			$this->createStub( WordPressUpdaterLock::class )
 		);
 		$dashboard      = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::exactly( 2 ) )->method( 'addFailureMessage' );
-		$dashboard->expects( self::once() )->method( 'addMessage' )->with( 'The protected deployment action was accepted.' );
+		$dashboard->expects( self::exactly( 2 ) )->method( 'add_failure_message' );
+		$dashboard->expects( self::once() )->method( 'add_message' )->with( 'The protected deployment action was accepted.' );
 		$request = array(
 			'action'         => 'reconcile-deployment-worker',
 			'attempt_id'     => '12',
@@ -418,16 +418,16 @@ final class OperatorActionDispatcherTest extends TestCase {
 		);
 
 		$_POST['ran_booster'] = $request;
-		$this->dispatcher( $dashboard, attempts: $attempts, coordinator: $coordinator )->dispatchPostRequests();
+		$this->dispatcher( $dashboard, attempts: $attempts, coordinator: $coordinator )->dispatch_post_requests();
 		self::assertSame( 'running', $attempts->findExact( 12 )?->get_state()->value );
 
 		$_POST['ran_booster']                   = $request + array( 'confirm_stopped' => '1' );
 		$_POST['ran_booster']['correlation_id'] = str_repeat( 'c', 32 );
-		$this->dispatcher( $dashboard, attempts: $attempts, coordinator: $coordinator )->dispatchPostRequests();
+		$this->dispatcher( $dashboard, attempts: $attempts, coordinator: $coordinator )->dispatch_post_requests();
 		self::assertSame( 'running', $attempts->findExact( 12 )?->get_state()->value );
 
 		$_POST['ran_booster'] = $request + array( 'confirm_stopped' => '1' );
-		$this->dispatcher( $dashboard, attempts: $attempts, coordinator: $coordinator )->dispatchPostRequests();
+		$this->dispatcher( $dashboard, attempts: $attempts, coordinator: $coordinator )->dispatch_post_requests();
 
 		$fresh = $attempts->findExact( 12 );
 		self::assertSame( str_repeat( 'b', 32 ), $fresh?->get_correlation_id() );
@@ -532,7 +532,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		);
 
 		try {
-			$this->dispatcher( $this->createStub( Dashboard::class ), $capture )->dispatchPostRequests();
+			$this->dispatcher( $this->createStub( Dashboard::class ), $capture )->dispatch_post_requests();
 			self::fail( 'A successful capture operation must redirect.' );
 		} catch ( DebugCaptureRedirect $redirect ) {
 			return $redirect->url;

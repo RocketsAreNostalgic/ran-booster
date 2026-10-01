@@ -162,8 +162,8 @@ class Dashboard {
 		$this->core_self_update_development_notice = $coreSelfUpdateDevelopmentNotice;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
-	public function getIndex( ?string $forcedTab = null ) {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+	public function get_index( ?string $forcedTab = null ) {
 		if ( null === $this->admin_tabs ) {
 			throw new LogicException( 'Booster admin tabs are not configured.' );
 		}
@@ -244,8 +244,8 @@ class Dashboard {
 			$data['providerListState'] = $this->requested_provider_list_state();
 
 			$data['requestedRepositoryId']           = $this->requested_provider_repository_id();
-			$data                                    = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->projectPage( $data, $this->webhook_management, $this->release_workflow ) );
-			$data                                    = array_merge( $data, $this->provider_settings->buildProfileListProjection( $data ) );
+			$data                                    = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->project_page( $data, $this->webhook_management, $this->release_workflow ) );
+			$data                                    = array_merge( $data, $this->provider_settings->build_profile_list_projection( $data ) );
 			$data['webhookManagement']               = $this->webhook_management;
 			$data['releaseWorkflow']                 = $this->release_workflow;
 			$data['statusSummaryRenderer']           = new AdminStatusSummaryRenderer();
@@ -258,7 +258,7 @@ class Dashboard {
 				$data['portabilityExportRows']        = $export['rows'];
 				$data['portabilityExportUnavailable'] = false;
 				try {
-					$data['portabilityExportCredentialGroups']       = $this->provider_settings->buildPortabilityCredentials( $export['credentials'] );
+					$data['portabilityExportCredentialGroups']       = $this->provider_settings->build_portability_credentials( $export['credentials'] );
 					$data['portabilityExportCredentialsUnavailable'] = false;
 				} catch ( Throwable $failure ) {
 					BoosterLogger::logException(
@@ -310,9 +310,8 @@ class Dashboard {
 	}
 
 	/** Render the native sidebar route through the canonical Transporter tab. */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function getTransporter() {
-		return $this->getIndex( 'portability' );
+	public function get_transporter() {
+		return $this->get_index( 'portability' );
 	}
 
 	/**
@@ -320,8 +319,8 @@ class Dashboard {
 	 * preference mutation. The Dispatcher may return this fragment only after it
 	 * has performed the action's ordinary capability and nonce checks.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
-	public function renderPublicLookupProfileRegion( string $providerCode, ?string $error = null ): string {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+	public function render_public_lookup_profile_region( string $providerCode, ?string $error = null ): string {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		$settings                             = $this->provider_settings->build( $providerCode );
 		$settings['publicLookupProfileError'] = $error;
@@ -341,8 +340,7 @@ class Dashboard {
 	 * start or stop. The Dispatcher calls this only after capability and nonce
 	 * checks; an error remains in this persistent local region.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function renderDebugCaptureRegion( ?string $error = null ): string {
+	public function render_debug_capture_region( ?string $error = null ): string {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the include-scope view input contract.
 		$debugCapture = $this->debug_capture_payload();
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the include-scope view input contract.
@@ -354,8 +352,7 @@ class Dashboard {
 		return (string) ob_get_clean();
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function setSecretsStorageProvisioningResult( SecretsStorageProvisioningResult $result ): void {
+	public function set_secrets_storage_provisioning_result( SecretsStorageProvisioningResult $result ): void {
 		$this->secrets_storage_result = $result;
 	}
 
@@ -421,8 +418,7 @@ class Dashboard {
 	}
 
 	/** @param array{provider: string, credential_id?: string|null, repository?: string|null} $request */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function postRunTroubleshooting( array $request ): void {
+	public function post_run_troubleshooting( array $request ): void {
 		$this->troubleshooting_payload = $this->troubleshooting->diagnose(
 			$request['provider'],
 			$request['credential_id'] ?? null,
@@ -431,8 +427,7 @@ class Dashboard {
 	}
 
 	/** Render the Core-owned Diagnostics panel after an explicit HTMX request. */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function renderTroubleshootingDiagnosticsRegion(): string {
+	public function render_troubleshooting_diagnostics_region(): string {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the include-scope view input contract.
 		$troubleshootingPanel = 'diagnostics';
 		$troubleshooting      = $this->troubleshooting_payload ?? $this->troubleshooting->formPayload();
@@ -444,8 +439,7 @@ class Dashboard {
 	}
 
 	/** Whether the most recent diagnostics result completed without a warning or failure. */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function troubleshootingSucceeded(): bool {
+	public function troubleshooting_succeeded(): bool {
 		$results = $this->troubleshooting_payload['results'] ?? null;
 		if ( ! is_array( $results ) || array() === $results ) {
 			return false;
@@ -460,29 +454,25 @@ class Dashboard {
 		return empty( $this->troubleshooting_payload['partial'] );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function getPlugins() {
+	public function get_plugins() {
 		return $this->render_package_page( $this->plugin_pages );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function getPluginsCreate() {
+	public function get_plugins_create() {
 		return $this->render_package_create( $this->plugin_pages );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function getThemes() {
+	public function get_themes() {
 		return $this->render_package_page( $this->theme_pages );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function getThemesCreate() {
+	public function get_themes_create() {
 		return $this->render_package_create( $this->theme_pages );
 	}
 
 	/** @param list<array<string, mixed>> $extensions */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public callback and caller contract. Retain the public named-parameter contract.
-	public function getExtensions( array $extensions, string $pluginsUrl ) {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+	public function get_extensions( array $extensions, string $pluginsUrl ) {
 		return $this->render(
 			'extensions',
 			array(
@@ -494,8 +484,8 @@ class Dashboard {
 	}
 
 	private function render_package_page( PackagePagePresenter $package_view ) {
-		$type = $package_view->getType();
-		$this->package_admin->addSuccessNotice( $this, $type );
+		$type = $package_view->get_type();
+		$this->package_admin->add_success_notice( $this, $type );
 		$this->add_bulk_package_notice( $type );
 
 		// Read-only package selection; mutations use separately nonce-protected forms.
@@ -509,12 +499,12 @@ class Dashboard {
 					: $this->themes->booster_theme_from_stylesheet( $identifier );
 				$repository_branch_check_outcome            = $this->requested_package_repository_branch_check( $package, $type );
 				$repository_branch_check_evidence           = null === $repository_branch_check_outcome
-					? $this->provider_settings->packageRepositoryBranchEvidence( $type, $package )
+					? $this->provider_settings->package_repository_branch_evidence( $type, $package )
 					: null;
 				$edit_data                                  = $package_view->edit(
 					$package,
-					$this->provider_settings->buildExistingPackageForm( (string) ( $package->get_provider_code() ?? '' ) ),
-					$this->provider_settings->buildPackageBranchReadiness( $package ),
+					$this->provider_settings->build_existing_package_form( (string) ( $package->get_provider_code() ?? '' ) ),
+					$this->provider_settings->build_package_branch_readiness( $package ),
 					$this->requested_package_source_view(),
 					$this->requested_advanced_settings_open()
 				);
@@ -554,7 +544,7 @@ class Dashboard {
 		) {
 			return null;
 		}
-		$action = PackageAdminController::repositoryBranchCheckAction( $package, $type );
+		$action = PackageAdminController::repository_branch_check_action( $package, $type );
 		$nonce  = wp_unslash( $_GET['_ran_booster_repository_branch_nonce'] );
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 		if ( ! wp_verify_nonce( $nonce, $action ) ) {
@@ -563,18 +553,18 @@ class Dashboard {
 		$marker = 'ran_booster_branch_check_' . hash(
 			'sha256',
 			get_current_user_id() . "\0" . $action . "\0" . $nonce . "\0"
-			. $this->provider_settings->packageRepositoryBranchCheckAccessFingerprint( $package )
+			. $this->provider_settings->package_repository_branch_check_access_fingerprint( $package )
 		);
 		if ( function_exists( __NAMESPACE__ . '\\get_transient' ) || function_exists( 'get_transient' ) ) {
 			$completed = get_transient( $marker );
 			if ( is_string( $completed ) && in_array( $completed, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified', 'unable_to_check', 'provider_unavailable' ), true ) ) {
-				if ( 'verified' !== $completed || null !== $this->provider_settings->packageRepositoryBranchEvidence( $type, $package ) ) {
+				if ( 'verified' !== $completed || null !== $this->provider_settings->package_repository_branch_evidence( $type, $package ) ) {
 					return $completed;
 				}
 			}
 		}
 
-		$outcome = $this->provider_settings->checkPackageRepositoryBranch( $type, $package );
+		$outcome = $this->provider_settings->check_package_repository_branch( $type, $package );
 		if ( function_exists( __NAMESPACE__ . '\\set_transient' ) || function_exists( 'set_transient' ) ) {
 			set_transient( $marker, $outcome, 3600 );
 		}
@@ -600,7 +590,7 @@ class Dashboard {
 	private function package_index_data( array $packages, PackagePagePresenter $package_view ): array {
 		return $package_view->index(
 			$packages,
-			$this->provider_settings->buildPackageList(),
+			$this->provider_settings->build_package_list(),
 			$this->requested_package_list_state(),
 			$this->deployment_admin
 		);
@@ -678,14 +668,14 @@ class Dashboard {
 		try {
 			$this->db->requireReady();
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
-			return $this->database_unavailable_create( $package_view, $package_view->getType() );
+			return $this->database_unavailable_create( $package_view, $package_view->get_type() );
 		}
-		$success = $this->package_admin->addSuccessNotice( $this, $package_view->getType() );
+		$success = $this->package_admin->add_success_notice( $this, $package_view->get_type() );
 
 		return $this->render(
 			'packages/create',
 			$package_view->create(
-				$this->provider_settings->buildPackageForm( $this->requested_provider() ),
+				$this->provider_settings->build_package_form( $this->requested_provider() ),
 				$this->has_requested_provider(),
 				$this->requested_open_picker(),
 				$this->requested_package_source_view(),
@@ -695,13 +685,11 @@ class Dashboard {
 		);
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function addMessage( $message ) {
+	public function add_message( $message ) {
 		$this->record_message( $message );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function addFailureMessage( $message, Throwable $failure, array $context = array() ): void {
+	public function add_failure_message( $message, Throwable $failure, array $context = array() ): void {
 		$this->record_message( $message, $failure, $context );
 	}
 
@@ -742,8 +730,7 @@ class Dashboard {
 	}
 
 	/** @param array<string, mixed> $request */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function postPackageOperation( string $action, array $request ): bool|string {
+	public function post_package_operation( string $action, array $request ): bool|string {
 		$package_admin = $this->package_admin ?? new PackageAdminController();
 
 		return $package_admin->perform(
@@ -759,11 +746,11 @@ class Dashboard {
 
 	/** @return array{operation: string, identifier: string}|null */
 	private function add_package_success_notice( string $type ): ?array {
-		return $this->package_admin->addSuccessNotice( $this, $type );
+		return $this->package_admin->add_success_notice( $this, $type );
 	}
 
 	private function package_storage_failure_index( PackagePagePresenter $package_view, string $type, PackageStorageFailure $failure ): mixed {
-		$this->addFailureMessage(
+		$this->add_failure_message(
 			$this->package_storage_error( $failure ),
 			$failure,
 			array(
@@ -778,7 +765,7 @@ class Dashboard {
 
 	private function database_unavailable_create( PackagePagePresenter $package_view, string $type ): mixed {
 		$failure = PackageStorageFailure::unsupported_database();
-		$this->addFailureMessage(
+		$this->add_failure_message(
 			$this->package_storage_error( $failure ),
 			$failure,
 			array(
@@ -789,8 +776,8 @@ class Dashboard {
 
 		return $this->render(
 			'packages/create',
-			$package_view->unavailableCreate(
-				$this->provider_settings->buildPackageForm( $this->requested_provider() ),
+			$package_view->unavailable_create(
+				$this->provider_settings->build_package_form( $this->requested_provider() ),
 				$this->has_requested_provider()
 			)
 		);
@@ -804,13 +791,12 @@ class Dashboard {
 		);
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
-	public function bulkPackageRedirect( string $type, BulkPackageResult $result ): string {
-		return $this->package_admin->bulkRedirect( $type, $result, $this->package_list_query_arguments() );
+	public function bulk_package_redirect( string $type, BulkPackageResult $result ): string {
+		return $this->package_admin->bulk_redirect( $type, $result, $this->package_list_query_arguments() );
 	}
 
 	private function add_bulk_package_notice( string $type ): void {
-		$this->package_admin->addBulkNotice(
+		$this->package_admin->add_bulk_notice(
 			$this,
 			$type,
 			function ( array $message, array $context ): void {
@@ -1070,7 +1056,7 @@ class Dashboard {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the include-scope view input contract.
 		$data['developmentSafetyNotice'] = $this->should_show_development_safety_notice( $view, $data, $developmentEnvironmentDetected );
 		$data['messages']                = $this->messages;
-		$data['name']                    = $this->booster->getName();
+		$data['name']                    = $this->booster->get_name();
 
 		$data['coreSelfUpdateDevelopmentNotice'] = $this->core_self_update_development_notice;
 		if ( ! isset( $data['tabs'] ) ) {

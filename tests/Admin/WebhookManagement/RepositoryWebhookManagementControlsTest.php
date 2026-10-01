@@ -47,7 +47,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$controls = $this->controls( $provider );
 		$controls->register();
 
-		self::assertTrue( $controls->supportsProvider( 'fixture-provider' ) );
+		self::assertTrue( $controls->supports_provider( 'fixture-provider' ) );
 		self::assertSame(
 			array( 'ran_booster_documentation_sections_after_provider_fixture-provider' ),
 			array_keys( $GLOBALS['ran_booster_repository_webhook_management_filters'] )
@@ -70,10 +70,10 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			'tab'  => 'fixture-provider',
 		);
 
-		$controls->enqueueAdminAssets( 'settings_page_unrelated' );
+		$controls->enqueue_admin_assets( 'settings_page_unrelated' );
 		self::assertSame( array(), $GLOBALS['ran_booster_repository_webhook_management_styles'] );
 
-		$controls->enqueueAdminAssets( 'toplevel_page_ran-booster' );
+		$controls->enqueue_admin_assets( 'toplevel_page_ran-booster' );
 		self::assertSame(
 			array(
 				'handle'       => 'ran-booster-repository-webhook-management',
@@ -88,7 +88,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			'page'    => 'ran-booster-plugins',
 			'package' => 'example/example.php',
 		);
-		$controls->enqueueAdminAssets( 'ran-booster_page_ran-booster-plugins' );
+		$controls->enqueue_admin_assets( 'ran-booster_page_ran-booster-plugins' );
 		self::assertCount( 2, $GLOBALS['ran_booster_repository_webhook_management_styles'] );
 	}
 
@@ -104,17 +104,17 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$rows = array( 'repository' => array( 'actions' => array() ) );
 
 		foreach ( array( 'fitness-only', 'management-only', 'no-policy', 'absent', 'missing', "bad\0code" ) as $providerCode ) {
-			self::assertFalse( $controls->supportsProvider( $providerCode ) );
-			self::assertSame( $rows, $controls->enrichRepositoryRows( $rows, $providerCode, array(), 'https://example.test/' ) );
+			self::assertFalse( $controls->supports_provider( $providerCode ) );
+			self::assertSame( $rows, $controls->enrich_repository_rows( $rows, $providerCode, array(), 'https://example.test/' ) );
 			ob_start();
-			self::assertFalse( $controls->renderRepositoryPanel( $providerCode, 'repository', 'https://example.test/' ) );
+			self::assertFalse( $controls->render_repository_panel( $providerCode, 'repository', 'https://example.test/' ) );
 			self::assertSame( '', ob_get_clean() );
 		}
 		foreach ( array( 'fitness-only', 'management-only', 'no-policy' ) as $providerCode ) {
-			self::assertTrue( $controls->hasManagementCapability( $providerCode ) );
+			self::assertTrue( $controls->has_management_capability( $providerCode ) );
 		}
 		foreach ( array( 'absent', 'missing', "bad\0code" ) as $providerCode ) {
-			self::assertFalse( $controls->hasManagementCapability( $providerCode ) );
+			self::assertFalse( $controls->has_management_capability( $providerCode ) );
 		}
 
 		foreach ( $providers as $provider ) {
@@ -126,7 +126,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 				'page' => 'ran-booster',
 				'tab'  => $providerCode,
 			);
-			$controls->enqueueAdminAssets( 'toplevel_page_ran-booster' );
+			$controls->enqueue_admin_assets( 'toplevel_page_ran-booster' );
 		}
 		self::assertSame( array(), $GLOBALS['ran_booster_repository_webhook_management_styles'] );
 	}
@@ -137,7 +137,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$controls->register();
 
 		ob_start();
-		$controls->renderRepositoryWebhookSetup( 'fitness-only', '1234', 'https://example.test/repository', true, 'owner/branch' );
+		$controls->render_repository_webhook_setup( 'fitness-only', '1234', 'https://example.test/repository', true, 'owner/branch' );
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'Fitness only webhook configuration is incomplete.', $html );
@@ -172,7 +172,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			$controls->register();
 
 			ob_start();
-			self::assertFalse( $controls->renderRepositoryPanel( 'fixture-provider', '1234', 'https://example.test/repositories' ), $mode );
+			self::assertFalse( $controls->render_repository_panel( 'fixture-provider', '1234', 'https://example.test/repositories' ), $mode );
 			self::assertSame( '', (string) ob_get_clean(), $mode );
 		}
 	}
@@ -226,7 +226,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$controls->register();
 
 		ob_start();
-		$controls->renderRepositoryWebhookSetup( 'fixture-provider', '1234', 'https://example.test/repository' );
+		$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository' );
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( '<h3 id="ran-booster-repository-webhook-heading">Push-to-deploy</h3>', $html );
@@ -316,7 +316,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$controls->register();
 
 		ob_start();
-		$controls->renderRepositoryWebhookSetup( 'fixture-provider', '1234', 'https://example.test/repository', false );
+		$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository', false );
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'Webhook readiness', $html );
@@ -380,7 +380,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$controls->register();
 
 		ob_start();
-		$controls->renderPackageWebhookSetup( 'edit', 'plugin', 'branch', new AdminPackageProjection( 'plugin', 'example/example.php', 'Example', 'fixture-provider', 'branch', 1, 'manual', 'https://example.test/settings' ), 'https://example.test/settings' );
+		$controls->render_package_webhook_setup( 'edit', 'plugin', 'branch', new AdminPackageProjection( 'plugin', 'example/example.php', 'Example', 'fixture-provider', 'branch', 1, 'manual', 'https://example.test/settings' ), 'https://example.test/settings' );
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'data-ran-booster-package-webhook-setup open', $html );
@@ -495,7 +495,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$controls->register();
 
 		ob_start();
-		$controls->renderRepositoryWebhookSetup( 'fixture-provider', '1315521150', 'https://example.test/repository' );
+		$controls->render_repository_webhook_setup( 'fixture-provider', '1315521150', 'https://example.test/repository' );
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'Webhook readiness', $html );
@@ -551,7 +551,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			),
 		);
 
-		$result = $controls->enrichRepositoryRows( $rows, 'fitness-only', array(), 'https://example.test/' );
+		$result = $controls->enrich_repository_rows( $rows, 'fitness-only', array(), 'https://example.test/' );
 
 		self::assertSame( array( 'Recorded hook status', 'Observation', 'Management credential', 'Recorded signing secret', 'Last checked' ), array_column( $result['1234']['details'], 'label' ) );
 		self::assertSame( 'Needs attention: Needs Verification at last check', $result['1234']['details'][0]['value'] );

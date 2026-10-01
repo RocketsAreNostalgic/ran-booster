@@ -22,32 +22,32 @@ final class PackagePagePresenterTest extends TestCase {
 	public function testPluginConfigurationPreservesPluginRouting(): void {
 		$config = PackagePagePresenter::plugin();
 
-		self::assertSame( 'plugin', $config->getType() );
-		self::assertSame( 'Plugin', $config->getSingularLabel() );
-		self::assertSame( 'Plugins', $config->getPluralLabel() );
-		self::assertSame( 'file', $config->getIdentifierField() );
-		self::assertSame( 'ran-booster-plugins', $config->getPageSlug() );
-		self::assertSame( 'ran-booster-plugins-create', $config->getCreatePageSlug() );
-		self::assertSame( 'install-plugin', $config->getAction( 'install' ) );
-		self::assertSame( 'update-plugin', $config->getAction( 'update' ) );
-		self::assertSame( 'unlink-plugin', $config->getAction( 'unlink' ) );
-		self::assertSame( 'unlink-delete-plugin', $config->getAction( 'unlink-delete' ) );
-		self::assertSame( 'bulk-plugin', $config->getAction( 'bulk' ) );
+		self::assertSame( 'plugin', $config->get_type() );
+		self::assertSame( 'Plugin', $config->get_singular_label() );
+		self::assertSame( 'Plugins', $config->get_plural_label() );
+		self::assertSame( 'file', $config->get_identifier_field() );
+		self::assertSame( 'ran-booster-plugins', $config->get_page_slug() );
+		self::assertSame( 'ran-booster-plugins-create', $config->get_create_page_slug() );
+		self::assertSame( 'install-plugin', $config->get_action( 'install' ) );
+		self::assertSame( 'update-plugin', $config->get_action( 'update' ) );
+		self::assertSame( 'unlink-plugin', $config->get_action( 'unlink' ) );
+		self::assertSame( 'unlink-delete-plugin', $config->get_action( 'unlink-delete' ) );
+		self::assertSame( 'bulk-plugin', $config->get_action( 'bulk' ) );
 	}
 
 	public function testThemeConfigurationPreservesThemeRouting(): void {
 		$config = PackagePagePresenter::theme();
 
-		self::assertSame( 'theme', $config->getType() );
-		self::assertSame( 'Theme', $config->getSingularLabel() );
-		self::assertSame( 'Themes', $config->getPluralLabel() );
-		self::assertSame( 'stylesheet', $config->getIdentifierField() );
-		self::assertSame( 'ran-booster-themes', $config->getPageSlug() );
-		self::assertSame( 'ran-booster-themes-create', $config->getCreatePageSlug() );
-		self::assertSame( 'edit-theme', $config->getAction( 'edit' ) );
-		self::assertSame( 'unlink-theme', $config->getAction( 'unlink' ) );
-		self::assertSame( 'unlink-delete-theme', $config->getAction( 'unlink-delete' ) );
-		self::assertSame( 'bulk-theme', $config->getAction( 'bulk' ) );
+		self::assertSame( 'theme', $config->get_type() );
+		self::assertSame( 'Theme', $config->get_singular_label() );
+		self::assertSame( 'Themes', $config->get_plural_label() );
+		self::assertSame( 'stylesheet', $config->get_identifier_field() );
+		self::assertSame( 'ran-booster-themes', $config->get_page_slug() );
+		self::assertSame( 'ran-booster-themes-create', $config->get_create_page_slug() );
+		self::assertSame( 'edit-theme', $config->get_action( 'edit' ) );
+		self::assertSame( 'unlink-theme', $config->get_action( 'unlink' ) );
+		self::assertSame( 'unlink-delete-theme', $config->get_action( 'unlink-delete' ) );
+		self::assertSame( 'bulk-theme', $config->get_action( 'bulk' ) );
 	}
 
 	public function testPackageTypeLabelsUseContextualTranslationsWithoutChangingMachineValues(): void {
@@ -61,16 +61,16 @@ final class PackagePagePresenterTest extends TestCase {
 		$plugin = PackagePagePresenter::plugin();
 		$theme  = PackagePagePresenter::theme();
 
-		self::assertSame( 'Extension', $plugin->getSingularLabel() );
-		self::assertSame( 'Extensions', $plugin->getPluralLabel() );
-		self::assertSame( 'Habillage', $theme->getSingularLabel() );
-		self::assertSame( 'Habillages', $theme->getPluralLabel() );
-		self::assertSame( 'plugin', $plugin->getType() );
-		self::assertSame( 'file', $plugin->getIdentifierField() );
-		self::assertSame( 'ran-booster-plugins', $plugin->getPageSlug() );
-		self::assertSame( 'theme', $theme->getType() );
-		self::assertSame( 'stylesheet', $theme->getIdentifierField() );
-		self::assertSame( 'ran-booster-themes', $theme->getPageSlug() );
+		self::assertSame( 'Extension', $plugin->get_singular_label() );
+		self::assertSame( 'Extensions', $plugin->get_plural_label() );
+		self::assertSame( 'Habillage', $theme->get_singular_label() );
+		self::assertSame( 'Habillages', $theme->get_plural_label() );
+		self::assertSame( 'plugin', $plugin->get_type() );
+		self::assertSame( 'file', $plugin->get_identifier_field() );
+		self::assertSame( 'ran-booster-plugins', $plugin->get_page_slug() );
+		self::assertSame( 'theme', $theme->get_type() );
+		self::assertSame( 'stylesheet', $theme->get_identifier_field() );
+		self::assertSame( 'ran-booster-themes', $theme->get_page_slug() );
 	}
 
 	public function testPackageTypeLabelsResolveTranslationsAvailableAfterConstruction(): void {
@@ -84,16 +84,16 @@ final class PackagePagePresenterTest extends TestCase {
 			"Managed package type plural label\004Themes"  => 'Habillages',
 		);
 
-		self::assertSame( 'Extension', $plugin->getSingularLabel() );
-		self::assertSame( 'Extensions', $plugin->getPluralLabel() );
-		self::assertSame( 'Habillage', $theme->getSingularLabel() );
-		self::assertSame( 'Habillages', $theme->getPluralLabel() );
+		self::assertSame( 'Extension', $plugin->get_singular_label() );
+		self::assertSame( 'Extensions', $plugin->get_plural_label() );
+		self::assertSame( 'Habillage', $theme->get_singular_label() );
+		self::assertSame( 'Habillages', $theme->get_plural_label() );
 	}
 
 	public function testUnsupportedActionsAreRejected(): void {
 		$this->expectException( InvalidArgumentException::class );
 
-		PackagePagePresenter::plugin()->getAction( 'publish' );
+		PackagePagePresenter::plugin()->get_action( 'publish' );
 	}
 
 	public function testAdvancedSourceSummaryProjectionFailureFallsBackToCoreSummary(): void {

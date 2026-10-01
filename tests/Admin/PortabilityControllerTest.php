@@ -81,14 +81,14 @@ final class PortabilityControllerTest extends TestCase {
 	public function testPreviewRejectsUnauthorisedRequestsBeforeReadingAnUpload(): void {
 		$GLOBALS['ran_booster_repository_admin_allowed'] = false;
 
-		$result = $this->controller()->handlePreview();
+		$result = $this->controller()->handle_preview();
 
 		self::assertFalse( $result['success'] );
 		self::assertSame( 403, $result['status'] );
 	}
 
 	public function testPreviewRejectsMissingUploadsWithoutUsingPortabilityServices(): void {
-		$result = $this->controller()->handlePreview();
+		$result = $this->controller()->handle_preview();
 
 		self::assertFalse( $result['success'] );
 		self::assertSame( 400, $result['status'] );
@@ -98,14 +98,14 @@ final class PortabilityControllerTest extends TestCase {
 	public function testApplyRejectsUnauthorisedRequestsBeforeReadingAnUpload(): void {
 		$GLOBALS['ran_booster_repository_admin_allowed'] = false;
 
-		$result = $this->controller()->handleApply();
+		$result = $this->controller()->handle_apply();
 
 		self::assertFalse( $result['success'] );
 		self::assertSame( 403, $result['status'] );
 	}
 
 	public function testApplyRejectsMissingUploadAndRowWithoutUsingPortabilityServices(): void {
-		$result = $this->controller()->handleApply();
+		$result = $this->controller()->handle_apply();
 
 		self::assertFalse( $result['success'] );
 		self::assertSame( 400, $result['status'] );
@@ -117,7 +117,7 @@ final class PortabilityControllerTest extends TestCase {
 		$this->setUploadedBlueprint( $file );
 
 		try {
-			$result = $this->previewController( new PortabilityReadinessSpySecretsFile( true ) )->handlePreview();
+			$result = $this->previewController( new PortabilityReadinessSpySecretsFile( true ) )->handle_preview();
 		} finally {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test temporary file is outside WordPress media handling.
 			unlink( $file );
@@ -165,7 +165,7 @@ final class PortabilityControllerTest extends TestCase {
 		$this->setUploadedBlueprint( $file );
 
 		try {
-			$result = $this->previewController( new PortabilityReadinessSpySecretsFile( true ) )->handleApply();
+			$result = $this->previewController( new PortabilityReadinessSpySecretsFile( true ) )->handle_apply();
 		} finally {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test temporary file is outside WordPress media handling.
 			unlink( $file );
@@ -258,7 +258,7 @@ final class PortabilityControllerTest extends TestCase {
 		$this->setUploadedBlueprint( $file );
 
 		try {
-			$result = $this->previewController( $secrets )->handleApply();
+			$result = $this->previewController( $secrets )->handle_apply();
 		} finally {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test temporary file is outside WordPress media handling.
 			unlink( $file );
@@ -316,7 +316,7 @@ final class PortabilityControllerTest extends TestCase {
 		$_POST['response_format']                          = 'json';
 		$GLOBALS['ran_booster_repository_admin_file_read'] = false;
 
-		$result = $this->exportController()->handleExport();
+		$result = $this->exportController()->handle_export();
 
 		self::assertSame( false, $result['success'] );
 		self::assertSame( 500, $result['status'] );
@@ -425,7 +425,7 @@ final class PortabilityControllerTest extends TestCase {
 		$file      = $this->blueprintArchive( $blueprint );
 
 		try {
-			$html = $this->previewController( $secrets )->previewFile( $file );
+			$html = $this->previewController( $secrets )->preview_file( $file );
 		} finally {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test temporary file is outside WordPress media handling.
 			unlink( $file );
@@ -459,7 +459,7 @@ final class PortabilityControllerTest extends TestCase {
 		$file      = $this->blueprintArchive( $blueprint, 'correct-horse-battery-staple' );
 
 		try {
-			$html = $this->previewController( $secrets )->previewFile( $file, 'correct-horse-battery-staple' );
+			$html = $this->previewController( $secrets )->preview_file( $file, 'correct-horse-battery-staple' );
 		} finally {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test temporary file is outside WordPress media handling.
 			unlink( $file );
@@ -590,7 +590,7 @@ final class PortabilityControllerTest extends TestCase {
 		$this->setUploadedBlueprint( $file );
 
 		try {
-			$result = $this->previewController( new PortabilityReadinessSpySecretsFile( true ), true )->handleApply();
+			$result = $this->previewController( new PortabilityReadinessSpySecretsFile( true ), true )->handle_apply();
 		} finally {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test temporary file is outside WordPress media handling.
 			unlink( $file );
@@ -614,7 +614,7 @@ final class PortabilityControllerTest extends TestCase {
 		$this->setUploadedBlueprint( $file );
 
 		try {
-			$result = $this->previewController( new PortabilityReadinessSpySecretsFile( true ) )->handleApply();
+			$result = $this->previewController( new PortabilityReadinessSpySecretsFile( true ) )->handle_apply();
 		} finally {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test temporary file is outside WordPress media handling.
 			unlink( $file );

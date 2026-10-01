@@ -570,7 +570,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 			return $rows;
 		};
 
-		$result = ( new ProviderRepositoryRowsNormalizer() )->projectPage(
+		$result = ( new ProviderRepositoryRowsNormalizer() )->project_page(
 			array(
 				'provider'              => array(
 					'code'           => 'gh',
@@ -629,7 +629,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 	#[PreserveGlobalState( false )]
 	public function testRepositorySubtabsUseNetworkAdminHrefsButKeepRelativeHtmxRequestsOnMultisite(): void {
 		$GLOBALS['ran_booster_package_view_multisite'] = true;
-		$result                                        = ( new ProviderRepositoryRowsNormalizer() )->projectPage(
+		$result                                        = ( new ProviderRepositoryRowsNormalizer() )->project_page(
 			array(
 				'provider'              => array(
 					'code'           => 'gh',
@@ -663,7 +663,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 			$summaries[] = $this->summary( 'plugin', 'owner/manual-' . $index . '.php', 'Manual ' . $index, 'branch', 'main', '', 'manual' );
 		}
 
-		$result = ( new ProviderRepositoryRowsNormalizer() )->projectPage(
+		$result = ( new ProviderRepositoryRowsNormalizer() )->project_page(
 			array(
 				'provider'                     => array(
 					'code'           => 'gh',
@@ -745,7 +745,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 
 	/** @return array<string,mixed> */
 	private function projectSingleRepositoryPage( ?RepositoryWebhookManagementControls $webhookManagement = null, bool $automatic = false ): array {
-		return ( new ProviderRepositoryRowsNormalizer() )->projectPage(
+		return ( new ProviderRepositoryRowsNormalizer() )->project_page(
 			array(
 				'provider'                     => array(
 					'code'           => 'gh',

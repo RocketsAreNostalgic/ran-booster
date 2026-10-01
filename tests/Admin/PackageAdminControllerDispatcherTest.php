@@ -103,16 +103,16 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
-			->method( 'addFailureMessage' )
+			->method( 'add_failure_message' )
 			->with(
 				self::callback(
 					static fn ( mixed $message ): bool => $message instanceof WP_Error
 						&& 'ran_booster_unavailable_package_provider' === $message->get_error_code()
 				)
 			);
-		$dashboard->expects( self::never() )->method( 'postPackageOperation' );
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
 
-		$this->dispatcher( $dashboard, $providers, $plugins, $themes )->dispatchPostRequests();
+		$this->dispatcher( $dashboard, $providers, $plugins, $themes )->dispatch_post_requests();
 
 		self::assertSame( 0, $submitted->getClient()->getRequests() );
 		self::assertSame( 1, $plugins->lookups + $themes->lookups );
@@ -130,10 +130,10 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		$_POST['ran_booster'] = $unlinkInput;
 
 		$dashboard = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'addMessage' );
-		$dashboard->expects( self::once() )->method( 'postPackageOperation' )->with( 'unlink-plugin', $unlinkInput );
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$dashboard->expects( self::once() )->method( 'post_package_operation' )->with( 'unlink-plugin', $unlinkInput );
 
-		$this->dispatcher( $dashboard, $providers, $plugins, $themes )->dispatchPostRequests();
+		$this->dispatcher( $dashboard, $providers, $plugins, $themes )->dispatch_post_requests();
 
 		self::assertSame( 0, $plugins->lookups );
 	}
@@ -150,10 +150,10 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		$_POST['ran_booster'] = $unlinkInput;
 
 		$dashboard = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'addMessage' );
-		$dashboard->expects( self::once() )->method( 'postPackageOperation' )->with( 'unlink-theme', $unlinkInput );
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$dashboard->expects( self::once() )->method( 'post_package_operation' )->with( 'unlink-theme', $unlinkInput );
 
-		$this->dispatcher( $dashboard, $providers, $plugins, $themes )->dispatchPostRequests();
+		$this->dispatcher( $dashboard, $providers, $plugins, $themes )->dispatch_post_requests();
 
 		self::assertSame( 0, $themes->lookups );
 	}
@@ -179,7 +179,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		);
 		$dashboard        = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
-			->method( 'postPackageOperation' )
+			->method( 'post_package_operation' )
 			->with(
 				'edit-plugin',
 				self::callback(
@@ -221,7 +221,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		);
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
-			->method( 'postPackageOperation' )
+			->method( 'post_package_operation' )
 			->with(
 				'edit-plugin',
 				self::callback(
@@ -264,14 +264,14 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		);
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
-			->method( 'addFailureMessage' )
+			->method( 'add_failure_message' )
 			->with(
 				self::callback(
 					static fn ( mixed $message ): bool => $message instanceof WP_Error
 						&& 'Enter a repository-relative subdirectory. Do not use a leading slash, empty path segments, or current-directory and parent-directory segments.' === $message->get_error_message()
 				)
 			);
-		$dashboard->expects( self::never() )->method( 'postPackageOperation' );
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
 
 		$result = ( new PackageAdminController(
 			repositories: new PackageRepositoryRequestResolver( $providers ),
@@ -301,8 +301,8 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			'check_repository_branch_after_save' => '1',
 		);
 		$dashboard = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::once() )->method( 'addFailureMessage' );
-		$dashboard->expects( self::never() )->method( 'postPackageOperation' );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' );
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
 
 		$result = ( new PackageAdminController(
 			repositories: new PackageRepositoryRequestResolver( $providers ),
@@ -333,8 +333,8 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			'check_repository_branch_after_save' => '1',
 		);
 		$dashboard = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::once() )->method( 'addFailureMessage' );
-		$dashboard->expects( self::never() )->method( 'postPackageOperation' );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' );
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
 
 		$result = ( new PackageAdminController(
 			repositories: new PackageRepositoryRequestResolver( $providers ),

@@ -191,7 +191,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 				$secrets,
 				$interaction,
 				new InMemoryPublicRepositoryLookupProfileStore()
-			)->dispatchPostRequests();
+			)->dispatch_post_requests();
 			self::fail( 'An unauthorized provider-profile action must terminate before parsing state.' );
 		} catch ( \RuntimeException $failure ) {
 			self::assertSame( $denial, $failure->getMessage() );
@@ -227,7 +227,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 				$secrets,
 				$interaction,
 				new InMemoryPublicRepositoryLookupProfileStore()
-			)->dispatchPostRequests();
+			)->dispatch_post_requests();
 			self::fail( 'An invalid provider-profile nonce must terminate before parsing state.' );
 		} catch ( \RuntimeException $failure ) {
 			self::assertSame( 'Invalid nonce.', $failure->getMessage() );
@@ -250,8 +250,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	): void {
 		$interaction = new CapturingProviderProfileInteraction();
 		$dashboard   = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'addMessage' );
-		$dashboard->method( 'addFailureMessage' )
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$dashboard->method( 'add_failure_message' )
 			->willReturnCallback(
 				static function ( mixed $error, \Throwable $exception ): void {
 					unset( $error );
@@ -369,8 +369,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	): void {
 		$interaction = new CapturingProviderProfileInteraction();
 		$dashboard   = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'addMessage' );
-		$dashboard->expects( self::once() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' );
 		$_GET['view']         = str_contains( $request['action'], 'access' ) ? 'credentials' : 'secrets';
 		$_POST['ran_booster'] = $request;
 
@@ -393,8 +393,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$interaction        = new CapturingProviderProfileInteraction();
 		$dashboard          = $this->createMock( Dashboard::class );
 		$expiryObservations = new InMemoryCredentialExpiryObservationStore();
-		$dashboard->expects( self::never() )->method( 'addMessage' );
-		$dashboard->expects( self::never() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$dashboard->expects( self::never() )->method( 'add_failure_message' );
 		$_GET['view']         = 'credentials';
 		$_POST['ran_booster'] = array(
 			'action'        => 'save-access-profile',
@@ -444,8 +444,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
 			'2026-08-08T12:00:00Z'
 		);
-		$dashboard->expects( self::never() )->method( 'addMessage' );
-		$dashboard->expects( self::once() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' );
 		$_GET['view']         = 'credentials';
 		$_POST['ran_booster'] = array(
 			'action'        => 'save-access-profile',
@@ -490,8 +490,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
 			'2026-08-08T12:00:00Z'
 		);
-		$dashboard->expects( self::never() )->method( 'addMessage' );
-		$dashboard->expects( self::never() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$dashboard->expects( self::never() )->method( 'add_failure_message' );
 		$_GET['view']         = 'credentials';
 		$_POST['ran_booster'] = array(
 			'action'        => 'save-access-profile',
@@ -530,8 +530,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
 			'2026-08-08T12:00:00Z'
 		);
-		$dashboard->expects( self::never() )->method( 'addMessage' );
-		$dashboard->expects( self::never() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$dashboard->expects( self::never() )->method( 'add_failure_message' );
 		$_GET['view']         = 'credentials';
 		$_POST['ran_booster'] = array(
 			'action'        => 'save-access-profile',
@@ -565,8 +565,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	public function testCredentialReplacementInvalidatesEvidenceBeforeReplacingSecretMaterial(): void {
 		$interaction = new CapturingProviderProfileInteraction();
 		$dashboard   = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'addMessage' );
-		$dashboard->expects( self::never() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$dashboard->expects( self::never() )->method( 'add_failure_message' );
 		$evidence             = new ReplacementAwareBranchCheckEvidenceStore(
 			function (): bool {
 				return 'replacement-secret-canary' === ( $this->secrets->credentialMaterial( 'fixture', 'credential_existing' )['secret'] ?? null );
@@ -603,7 +603,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$dashboard     = $this->createMock( Dashboard::class );
 		$profileBefore = $this->secrets->credentialProfiles( 'fixture' )['credential_existing'];
 		$secretBefore  = $this->secrets->credentialMaterial( 'fixture', 'credential_existing' )['secret'];
-		$dashboard->expects( self::once() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' );
 		$_GET['view']         = 'credentials';
 		$_POST['ran_booster'] = array(
 			'action'        => 'save-access-profile',
@@ -633,8 +633,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	public function testCredentialConfigurationChangeInvalidatesEvidenceBeforeSaving(): void {
 		$interaction = new CapturingProviderProfileInteraction();
 		$dashboard   = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'addMessage' );
-		$dashboard->expects( self::never() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$dashboard->expects( self::never() )->method( 'add_failure_message' );
 		$evidence             = new ReplacementAwareBranchCheckEvidenceStore(
 			function (): bool {
 				return 'changed' === ( $this->secrets->credentialMaterial( 'fixture', 'credential_existing' )['configuration']['tenant'] ?? null );
@@ -672,7 +672,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$dashboard     = $this->createMock( Dashboard::class );
 		$profileBefore = $this->secrets->credentialProfiles( 'fixture' )['credential_existing'];
 		$secretBefore  = $this->secrets->credentialMaterial( 'fixture', 'credential_existing' )['secret'];
-		$dashboard->expects( self::once() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' );
 		$_GET['view']         = 'credentials';
 		$_POST['ran_booster'] = array(
 			'action'        => 'save-access-profile',
@@ -702,8 +702,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	public function testCredentialDeletionInvalidatesEvidenceOnlyAfterRemovingSecretMaterial(): void {
 		$interaction = new CapturingProviderProfileInteraction();
 		$dashboard   = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'addMessage' );
-		$dashboard->expects( self::never() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$dashboard->expects( self::never() )->method( 'add_failure_message' );
 		$lookup               = new InMemoryPublicRepositoryLookupProfileStore();
 		$lookup->profiles     = array( 'fixture' => 'credential_existing' );
 		$evidence             = new ReplacementAwareBranchCheckEvidenceStore(
@@ -736,8 +736,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	public function testCredentialDeletionClearsTheDeletedDefaultEvenWhenEvidenceInvalidationFails(): void {
 		$interaction = new CapturingProviderProfileInteraction();
 		$dashboard   = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'addMessage' );
-		$dashboard->expects( self::never() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$dashboard->expects( self::never() )->method( 'add_failure_message' );
 		$lookup               = new InMemoryPublicRepositoryLookupProfileStore();
 		$lookup->profiles     = array( 'fixture' => 'credential_existing' );
 		$_GET['view']         = 'credentials';
@@ -766,8 +766,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	public function testAccessProfileLockContentionFailsBeforeCredentialDeletion(): void {
 		$interaction = new CapturingProviderProfileInteraction();
 		$dashboard   = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'addMessage' );
-		$dashboard->expects( self::once() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' );
 		$lookup           = new InMemoryPublicRepositoryLookupProfileStore();
 		$lookup->profiles = array( 'fixture' => 'credential_existing' );
 		$lock             = $this->createMock( WordPressUpdaterLock::class );
@@ -795,8 +795,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	public function testAccessProfileLockReleaseFailureDoesNotReportSaveSuccess(): void {
 		$interaction = new CapturingProviderProfileInteraction();
 		$dashboard   = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'addMessage' );
-		$dashboard->expects( self::once() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' );
 		$lock = $this->createMock( WordPressUpdaterLock::class );
 		$lock->expects( self::once() )->method( 'acquire' )->willReturn( 'credential-lock' );
 		$lock->expects( self::once() )->method( 'release' )->with( 'credential-lock' )->willReturn( false );
@@ -836,7 +836,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			->willThrowException( new \RuntimeException( 'secret-canary-storage-fault' ) );
 		$interaction = new CapturingProviderProfileInteraction();
 		$dashboard   = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::once() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' );
 		$_POST['ran_booster'] = array(
 			'action'        => 'save-access-profile',
 			'provider'      => 'fixture',
@@ -890,7 +890,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			'2026-08-08T12:00:00Z'
 		);
 		$observationBefore = $expiryObservations->document;
-		$dashboard->expects( self::once() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' );
 		$_POST['ran_booster'] = array(
 			'action'        => 'save-access-profile',
 			'provider'      => 'fixture',
@@ -925,7 +925,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	public function testClosedWebhookInputFailureRemainsActionableAndNeverReflectsTheSecret(): void {
 		$interaction = new CapturingProviderProfileInteraction();
 		$dashboard   = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::once() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' );
 		$before = $this->secrets->webhookProfiles( 'fixture' );
 
 		$_POST['ran_booster'] = array(
@@ -964,7 +964,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			->willThrowException( new \RuntimeException( 'secret-canary-webhook-storage-fault' ) );
 		$interaction = new CapturingProviderProfileInteraction();
 		$dashboard   = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::once() )->method( 'addFailureMessage' );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' );
 		$_POST['ran_booster'] = array(
 			'action'   => 'save-webhook-profile',
 			'provider' => 'fixture',
@@ -1138,7 +1138,7 @@ final class CapturingProviderProfileInteraction {
 	}
 
 	public function dispatch( Dispatcher $dispatcher ): CapturedProviderProfileResponse {
-		$fiber = new \Fiber( static fn () => $dispatcher->dispatchPostRequests() );
+		$fiber = new \Fiber( static fn () => $dispatcher->dispatch_post_requests() );
 		$fiber->start();
 		if ( ! $fiber->isSuspended() || null === $this->response ) {
 			throw new \RuntimeException( 'Provider profile response was not captured.' );

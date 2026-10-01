@@ -139,6 +139,24 @@ contracts are unchanged. BlueprintPackage's promoted `displayName` and
 connected-migration obligation. These four classes were already enforced; both
 cohorts preserve the scopes of 175 method files and 166 variable files.
 
+The administration request/render cohort migrates 90 declarations (89 distinct
+names) across 15 Core classes: Booster, Dashboard and Dispatcher (32), package,
+provider and deployment presenters and the repository-row normalizer (24),
+package, provider-profile, portability and deployment controllers (13), and the
+webhook controls, controller, route helper and display model (21). Connected
+callers, views, registered callback method strings and test overrides use the
+snake_case methods without legacy aliases. WebhookManagementAdminUrl joins
+method enforcement, increasing its scope to 176 files; variable scope remains
+166 files. Public parameter and property names retain their existing contracts
+and remain separate connected-migration obligations under #167.
+
+WordPress hook names, priorities and argument counts, routes, menu slugs, nonce
+and capability checks, request/response schemas, redirects, HTML/HTMX output,
+secret handling, passive GET behavior and multisite quarantine are unchanged.
+Foreign same-spelled methods, including Release Workflow's enrichRepositoryRows
+and PHP reflection accessors, remain unchanged. Provider, AddOn and Branch
+contracts, dependency adoption and historical evidence are outside this cohort.
+
 The private API12 cohort migrates 74 private declarations and their owned calls:
 two in Booster, eight in ProviderRegistry, one in RepositoryReleaseWorkflowStatus,
 26 in ReleaseWorkflowRequestController, nine in ReleaseWorkflowDisplay and 28 in

@@ -112,11 +112,11 @@ final class ActivationRequirementsBooster extends Booster {
 		parent::__construct( $container );
 	}
 
-	protected function sodiumAvailable(): bool {
+	protected function sodium_available(): bool {
 		return $this->sodium;
 	}
 
-	protected function isMultisiteInstallation(): bool {
+	protected function is_multisite_installation(): bool {
 		return $this->multisite;
 	}
 }

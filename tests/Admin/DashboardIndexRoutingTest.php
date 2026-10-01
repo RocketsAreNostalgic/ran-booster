@@ -578,7 +578,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 	public function testProviderTabBuildsOnlyTheSelectedProviderSettings(): void {
 		$_GET['tab'] = 'bb';
 
-		$data = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->getIndex()['data'];
+		$data = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
 
 		self::assertSame( 'bb', $data['tab'] );
 		self::assertSame( 'provider.php', $data['tabView'] );
@@ -604,7 +604,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'order'           => 'desc',
 		);
 
-		$data = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->getIndex()['data'];
+		$data = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
 
 		self::assertSame( 'secrets', $data['providerView'] );
 		self::assertSame( 'setup', $data['providerTask'] );
@@ -628,7 +628,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$_GET['repository_view'] = 'unknown';
 		$_GET['orderby']         = 'unknown';
 
-		$fallback = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->getIndex()['data'];
+		$fallback = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
 
 		self::assertSame( 'overview', $fallback['providerView'] );
 		self::assertSame( 'status', $fallback['providerTask'] );
@@ -678,7 +678,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 				return array();
 			}
 		};
-		$data       = $this->dashboard( $secrets, providerCredentials: true )->getIndex()['data'];
+		$data       = $this->dashboard( $secrets, providerCredentials: true )->get_index()['data'];
 
 		// Dashboard supplies a fixed provider-route model; the passive view only renders and escapes it.
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract
@@ -732,7 +732,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
 			plugins: $plugins,
 			providerCredentials: true
-		)->getIndex()['data'];
+		)->get_index()['data'];
 
 		self::assertSame( 'repo-route', $data['requestedRepositoryId'] );
 		self::assertSame( 'repo-route', $data['selectedRepositoryRow']['repository_id'] );
@@ -783,7 +783,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
 			plugins: $plugins,
 			providerCredentials: true
-		)->getIndex()['data'];
+		)->get_index()['data'];
 
 		$releaseReturnUrl = '';
 		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_repository_release_sections'][] = static function ( array $row, string $returnUrl ) use ( &$releaseReturnUrl ): void {
@@ -838,7 +838,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			plugins: $plugins,
 			themes: $themes,
 			providerCredentials: true
-		)->getIndex()['data'];
+		)->get_index()['data'];
 
 		self::assertCount( 1, $data['provider_repositories']['repositories'] );
 		$repository = $data['provider_repositories']['repositories'][0];
@@ -867,7 +867,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
 			plugins: $plugins,
 			providerCredentials: true
-		)->getIndex()['data'];
+		)->get_index()['data'];
 
 		self::assertSame(
 			'https://example.test/wp-admin/network/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php',
@@ -912,7 +912,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			plugins: $plugins,
 			themes: $themes,
 			providerCredentials: true
-		)->getIndex()['data'];
+		)->get_index()['data'];
 		$repository = $data['provider_repositories']['repositories'][0];
 
 		self::assertSame( 'mixed', $repository['source'] );
@@ -942,7 +942,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
 			plugins: $plugins,
 			providerCredentials: true
-		)->getIndex()['data'];
+		)->get_index()['data'];
 
 		self::assertCount( 3, $data['repositoryTableRows'] );
 		foreach ( $data['repositoryTableRows'] as $row ) {
@@ -970,7 +970,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
 			plugins: $plugins,
 			providerCredentials: true
-		)->getIndex()['data'];
+		)->get_index()['data'];
 
 		self::assertCount( 2, $data['repositoryTableRows'] );
 		foreach ( $data['repositoryTableRows'] as $row ) {
@@ -996,7 +996,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$registry->seal();
 		$_GET['tab'] = 'fixture';
 
-		$data = $this->dashboard( $this->throwingSecrets(), adminAddOns: $registry )->getIndex()['data'];
+		$data = $this->dashboard( $this->throwingSecrets(), adminAddOns: $registry )->get_index()['data'];
 
 		self::assertSame( 'fixture', $data['tab'] );
 		self::assertArrayNotHasKey( 'tabView', $data );
@@ -1026,7 +1026,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 				return array();
 			}
 		};
-		$data    = $this->dashboard( $secrets, null, null, null, $plugins, $themes )->getIndex()['data'];
+		$data    = $this->dashboard( $secrets, null, null, null, $plugins, $themes )->get_index()['data'];
 
 		self::assertFalse( $data['portabilityExportUnavailable'] );
 		self::assertSame(
@@ -1052,7 +1052,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Fixture verifies the route leaves the request intact.
 		$_GET = array( 'tab' => 'documentation' );
 
-		$data = $this->dashboard( $this->throwingSecrets() )->getTransporter()['data'];
+		$data = $this->dashboard( $this->throwingSecrets() )->get_transporter()['data'];
 
 		self::assertSame( array( 'tab' => 'documentation' ), $_GET );
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
@@ -1065,7 +1065,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Fixture models WordPress's empty action argument.
 		$_GET = array( 'tab' => 'documentation' );
 
-		$data = $this->dashboard( $this->throwingSecrets() )->getIndex( '' )['data'];
+		$data = $this->dashboard( $this->throwingSecrets() )->get_index( '' )['data'];
 
 		self::assertSame( 'documentation', $data['tab'] );
 		self::assertSame( 'documentation.php', $data['tabView'] );
@@ -1109,7 +1109,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			}
 		};
 
-		$data = $this->dashboard( $secrets, null, null, null, $plugins, $themes )->getIndex()['data'];
+		$data = $this->dashboard( $secrets, null, null, null, $plugins, $themes )->get_index()['data'];
 
 		self::assertFalse( $data['portabilityExportCredentialsUnavailable'] );
 		self::assertSame( array( 'code', 'label', 'credentials' ), array_keys( $data['portabilityExportCredentialGroups'][0] ) );
@@ -1125,7 +1125,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertArrayNotHasKey( 'configuration', $unassociated );
 		self::assertStringNotContainsString( 'unused-configuration-canary', (string) wp_json_encode( $data['portabilityExportCredentialGroups'] ) );
 
-		$unavailable = $this->dashboard( $this->throwingSecrets(), null, null, null, $plugins, $themes )->getIndex()['data'];
+		$unavailable = $this->dashboard( $this->throwingSecrets(), null, null, null, $plugins, $themes )->get_index()['data'];
 		self::assertFalse( $unavailable['portabilityExportUnavailable'] );
 		self::assertCount( 2, $unavailable['portabilityExportRows'] );
 		self::assertTrue( $unavailable['portabilityExportCredentialsUnavailable'] );
@@ -1144,7 +1144,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 	public function testStaticTabsDoNotReadCredentialOrWebhookProfiles( string $key, string $view ): void {
 		$_GET['tab'] = $key;
 
-		$data = $this->dashboard( $this->throwingSecrets() )->getIndex()['data'];
+		$data = $this->dashboard( $this->throwingSecrets() )->get_index()['data'];
 
 		self::assertSame( $key, $data['tab'] );
 		self::assertSame( $view, $data['tabView'] );
@@ -1176,7 +1176,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$_GET['tab'] = $requested;
 		}
 
-		$data = $this->dashboard( $this->throwingSecrets() )->getIndex()['data'];
+		$data = $this->dashboard( $this->throwingSecrets() )->get_index()['data'];
 
 		self::assertSame( 'overview', $data['tab'] );
 		self::assertSame( 'onboarding.php', $data['tabView'] );
@@ -1190,7 +1190,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 	public function testNavigationUsesTheCorrectSingleAndNetworkAdminBases(): void {
 		$_GET['tab'] = 'documentation';
-		$singleSite  = $this->dashboard( $this->throwingSecrets() )->getIndex()['data'];
+		$singleSite  = $this->dashboard( $this->throwingSecrets() )->get_index()['data'];
 
 		self::assertSame(
 			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview',
@@ -1198,7 +1198,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 
 		$this->setMultisite( true );
-		$networkSite = $this->dashboard( $this->throwingSecrets() )->getIndex()['data'];
+		$networkSite = $this->dashboard( $this->throwingSecrets() )->get_index()['data'];
 
 		self::assertSame(
 			'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=overview',
@@ -1206,7 +1206,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 
 		$_GET['tab']     = 'overview';
-		$networkOverview = $this->dashboard( $this->throwingSecrets() )->getIndex()['data'];
+		$networkOverview = $this->dashboard( $this->throwingSecrets() )->get_index()['data'];
 		self::assertSame(
 			'https://example.test/wp-admin/network/admin.php?page=ran-booster-plugins-create',
 			$networkOverview['onboarding']['install_plugin_url']
@@ -1216,7 +1216,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 	public function testLegacyAddOnTabRequestsFallBackToTheOverview(): void {
 		$_GET['tab'] = 'assisted-hooks';
 
-		$data = $this->dashboard( $this->throwingSecrets() )->getIndex()['data'];
+		$data = $this->dashboard( $this->throwingSecrets() )->get_index()['data'];
 
 		self::assertSame( 'overview', $data['tab'] );
 		self::assertSame( 'onboarding.php', $data['tabView'] );
@@ -1266,9 +1266,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins );
 
 		$_GET  = array( 'package' => 'plugin/example.php' );
-		$edit  = $dashboard->getPlugins()['data'];
+		$edit  = $dashboard->get_plugins()['data'];
 		$_GET  = array();
-		$index = $dashboard->getPlugins()['data'];
+		$index = $dashboard->get_plugins()['data'];
 
 		self::assertSame(
 			array(
@@ -1306,9 +1306,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins );
 
 		$_GET = array( 'package' => 'plugin/example.php' );
-		self::assertSame( array(), $dashboard->getPlugins()['data']['packageExtensionPanels'] );
+		self::assertSame( array(), $dashboard->get_plugins()['data']['packageExtensionPanels'] );
 		$_GET = array();
-		self::assertSame( array(), $dashboard->getPlugins()['data']['packageExtensionRows'] );
+		self::assertSame( array(), $dashboard->get_plugins()['data']['packageExtensionRows'] );
 	}
 
 	public function testExplicitPackageSourceViewUsesOnlySharedAdvancedSectionsForPluginsAndThemes(): void {
@@ -1329,7 +1329,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 				'package'     => $identifier,
 				'source_view' => 'branch',
 			);
-			$data      = 'plugin' === $type ? $dashboard->getPlugins()['data'] : $dashboard->getThemes()['data'];
+			$data      = 'plugin' === $type ? $dashboard->get_plugins()['data'] : $dashboard->get_themes()['data'];
 
 			self::assertTrue( $data['packageSource']['advanced_open'], $type );
 			self::assertSame( array( '<section>Advanced source settings</section>' ), $data['packageSource']['advanced_sections'], $type );
@@ -1348,7 +1348,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'ran_booster_open_advanced' => '1',
 		);
 
-		$data = $dashboard->getPlugins()['data'];
+		$data = $dashboard->get_plugins()['data'];
 
 		self::assertTrue( $data['packageSource']['advanced_open'] );
 		self::assertSame( 'branch', $data['packageSource']['selected'] );
@@ -1366,7 +1366,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins );
 		$_GET      = array( 'package' => 'plugin/example.php' );
 
-		$data = $dashboard->getPlugins()['data'];
+		$data = $dashboard->get_plugins()['data'];
 
 		self::assertSame(
 			array(
@@ -1438,14 +1438,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 
 		$_GET   = array( 'source_view' => 'release_asset' );
-		$create = $dashboard->getPluginsCreate()['data'];
+		$create = $dashboard->get_plugins_create()['data'];
 		$_GET   = array(
 			'package'     => 'plugin/example.php',
 			'source_view' => 'release_asset',
 		);
-		$edit   = $dashboard->getPlugins()['data'];
+		$edit   = $dashboard->get_plugins()['data'];
 		$_GET   = array();
-		$index  = $dashboard->getPlugins()['data'];
+		$index  = $dashboard->get_plugins()['data'];
 
 		$createUrl = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins-create';
 		$editUrl   = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php';
@@ -1492,7 +1492,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'source_view' => 'branch',
 		);
 
-		$data = 'plugin' === $type ? $dashboard->getPlugins()['data'] : $dashboard->getThemes()['data'];
+		$data = 'plugin' === $type ? $dashboard->get_plugins()['data'] : $dashboard->get_themes()['data'];
 
 		self::assertSame( 'release_asset', $data['packageSource']['current'] );
 		self::assertSame( 'release_asset', $data['packageSource']['selected'] );
@@ -1585,7 +1585,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'source_view' => 'branch',
 		);
 
-		$readiness = $dashboard->getPlugins()['data']['packageBranchReadiness'];
+		$readiness = $dashboard->get_plugins()['data']['packageBranchReadiness'];
 
 		self::assertIsArray( $readiness );
 		self::assertArrayHasKey( 'retained', $readiness );
@@ -1620,11 +1620,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$service     = new TroubleshootingService( $local, $providers );
 		$dashboard   = $this->dashboard( $secrets, $service );
 
-		self::assertFalse( $dashboard->getIndex()['data']['troubleshooting']['ran'] );
-		$dashboard->postRunTroubleshooting( array( 'provider' => 'gh' ) );
-		self::assertTrue( $dashboard->getIndex()['data']['troubleshooting']['ran'] );
-		self::assertCount( 5, $dashboard->getIndex()['data']['troubleshooting']['results'] );
-		self::assertFalse( $this->dashboard( $secrets, $service )->getIndex()['data']['troubleshooting']['ran'] );
+		self::assertFalse( $dashboard->get_index()['data']['troubleshooting']['ran'] );
+		$dashboard->post_run_troubleshooting( array( 'provider' => 'gh' ) );
+		self::assertTrue( $dashboard->get_index()['data']['troubleshooting']['ran'] );
+		self::assertCount( 5, $dashboard->get_index()['data']['troubleshooting']['results'] );
+		self::assertFalse( $this->dashboard( $secrets, $service )->get_index()['data']['troubleshooting']['ran'] );
 	}
 
 	public function testDeploymentActivityUsesItsOwnReadPayloadWithoutDiagnosticsResults(): void {
@@ -1633,7 +1633,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'panel' => 'deployment-activity',
 		);
 
-		$data = $this->dashboard( $this->throwingSecrets() )->getIndex()['data'];
+		$data = $this->dashboard( $this->throwingSecrets() )->get_index()['data'];
 
 		self::assertSame( 'activity', $data['troubleshootingPanel'] );
 		self::assertSame( array(), $data['troubleshooting'] );
@@ -1655,7 +1655,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 				'panel' => 'debug-capture',
 			);
 
-			$data = $this->dashboard( $this->throwingSecrets(), null, null, null, null, null, $capture )->getIndex()['data'];
+			$data = $this->dashboard( $this->throwingSecrets(), null, null, null, null, null, $capture )->get_index()['data'];
 
 			self::assertSame( 'debug-capture', $data['troubleshootingPanel'] );
 			self::assertSame( array(), $data['troubleshooting'] );
@@ -1704,7 +1704,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			->willReturn( $package );
 
 		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins, themes: $themes );
-		$result    = 'plugin' === $type ? $dashboard->getPlugins() : $dashboard->getThemes();
+		$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
 
 		self::assertSame( 'packages/edit', $result['view'] );
 		self::assertSame(
@@ -1721,7 +1721,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			array_keys( $result['data'] )
 		);
 		self::assertSame( $package, $result['data']['package'] );
-		self::assertSame( $type, $result['data']['packageView']->getType() );
+		self::assertSame( $type, $result['data']['packageView']->get_type() );
 		self::assertSame( array(), $result['data']['packageExtensionPanels'] );
 		self::assertSame( 'branch', $result['data']['packageSource']['current'] );
 		self::assertSame( 'branch', $result['data']['packageSource']['selected'] );
@@ -1752,15 +1752,15 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$base      = 'https://example.test/wp-admin/network/admin.php';
 
 		$_GET   = array();
-		$create = 'plugin' === $type ? $dashboard->getPluginsCreate()['data'] : $dashboard->getThemesCreate()['data'];
+		$create = 'plugin' === $type ? $dashboard->get_plugins_create()['data'] : $dashboard->get_themes_create()['data'];
 		$_GET   = array( 'package' => $identifier );
-		$edit   = 'plugin' === $type ? $dashboard->getPlugins()['data'] : $dashboard->getThemes()['data'];
+		$edit   = 'plugin' === $type ? $dashboard->get_plugins()['data'] : $dashboard->get_themes()['data'];
 		$_GET   = array();
-		$index  = 'plugin' === $type ? $dashboard->getPlugins()['data'] : $dashboard->getThemes()['data'];
+		$index  = 'plugin' === $type ? $dashboard->get_plugins()['data'] : $dashboard->get_themes()['data'];
 
-		self::assertSame( $base, $create['packageView']->getAdminUrl() );
-		self::assertSame( $base, $edit['packageView']->getAdminUrl() );
-		self::assertSame( $base, $index['packageView']->getAdminUrl() );
+		self::assertSame( $base, $create['packageView']->get_admin_url() );
+		self::assertSame( $base, $edit['packageView']->get_admin_url() );
+		self::assertSame( $base, $index['packageView']->get_admin_url() );
 		self::assertStringStartsWith( $base . '?page=', $create['packageSource']['choices']['branch']['url'] );
 		self::assertSame( array( array( $settingsUrls[0][0], $settingsUrls[0][0] ) ), $settingsUrls );
 		self::assertStringStartsWith( $base . '?page=', $settingsUrls[0][0] );
@@ -1779,7 +1779,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			database: new ReadyDashboardDatabase()
 		);
 
-		$result = 'plugin' === $type ? $dashboard->getPluginsCreate() : $dashboard->getThemesCreate();
+		$result = 'plugin' === $type ? $dashboard->get_plugins_create() : $dashboard->get_themes_create();
 
 		self::assertSame( $identifier, $result['data']['managedPackageIdentifier'] );
 		self::assertCount( 1, $dashboard->messages );
@@ -1799,7 +1799,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			database: new ReadyDashboardDatabase()
 		);
 
-		$result = 'plugin' === $type ? $dashboard->getPluginsCreate() : $dashboard->getThemesCreate();
+		$result = 'plugin' === $type ? $dashboard->get_plugins_create() : $dashboard->get_themes_create();
 
 		self::assertSame( $identifier, $result['data']['managedPackageIdentifier'] );
 		self::assertCount( 1, $dashboard->messages );
@@ -1823,7 +1823,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			database: new ReadyDashboardDatabase()
 		);
 
-		$result = 'plugin' === $type ? $dashboard->getPluginsCreate() : $dashboard->getThemesCreate();
+		$result = 'plugin' === $type ? $dashboard->get_plugins_create() : $dashboard->get_themes_create();
 
 		self::assertNull( $result['data']['managedPackageIdentifier'] );
 		self::assertSame( array(), $dashboard->messages );
@@ -1860,11 +1860,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 		}
 
 		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins, themes: $themes );
-		$result    = 'plugin' === $type ? $dashboard->getPlugins() : $dashboard->getThemes();
+		$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
 
 		self::assertSame( 'packages/index', $result['view'] );
 		self::assertSame( array( $fallback ), $result['data']['packages'] );
-		self::assertSame( $type, $result['data']['packageView']->getType() );
+		self::assertSame( $type, $result['data']['packageView']->get_type() );
 		self::assertSame( 1, $result['data']['packageListTotal'] );
 	}
 
@@ -1917,7 +1917,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			plugins: $plugins,
 			themes: $themes
 		);
-		$data   = 'plugin' === $type ? $result->getPlugins()['data'] : $result->getThemes()['data'];
+		$data   = 'plugin' === $type ? $result->get_plugins()['data'] : $result->get_themes()['data'];
 
 		self::assertSame( 3, $data['packageListTotal'] );
 		self::assertSame(
@@ -1942,8 +1942,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 			->willReturnOnConsecutiveCalls( array( $first ), array( $second ) );
 		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins );
 
-		$initial = $dashboard->getPlugins()['data'];
-		$fresh   = $dashboard->getPlugins()['data'];
+		$initial = $dashboard->get_plugins()['data'];
+		$fresh   = $dashboard->get_plugins()['data'];
 
 		self::assertSame( array( $first ), $initial['packages'] );
 		self::assertSame( array( $second ), $fresh['packages'] );
@@ -1973,7 +1973,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			plugins: $plugins,
 			themes: $themes
 		);
-		$data      = 'plugin' === $type ? $dashboard->getPlugins()['data'] : $dashboard->getThemes()['data'];
+		$data      = 'plugin' === $type ? $dashboard->get_plugins()['data'] : $dashboard->get_themes()['data'];
 
 		self::assertSame(
 			array(
@@ -2001,7 +2001,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			new FailingDashboardThemeRepository()
 		);
 
-		$result = 'plugin' === $type ? $dashboard->getPlugins() : $dashboard->getThemes();
+		$result = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
 
 		self::assertSame( 'packages/index', $result['view'] );
 		self::assertSame( array(), $result['data']['packages'] );
@@ -2026,7 +2026,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			database: new Database( $connection )
 		);
 
-		$result = 'plugin' === $type ? $dashboard->getPluginsCreate() : $dashboard->getThemesCreate();
+		$result = 'plugin' === $type ? $dashboard->get_plugins_create() : $dashboard->get_themes_create();
 
 		self::assertSame( 'packages/create', $result['view'] );
 		self::assertFalse( $result['data']['packageMutationAvailable'] );
@@ -2052,7 +2052,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'unsafe'   => '<script>',
 		);
 
-		$url = $this->dashboard( $this->throwingSecrets() )->bulkPackageRedirect(
+		$url = $this->dashboard( $this->throwingSecrets() )->bulk_package_redirect(
 			'theme',
 			BulkPackageResult::policy(
 				BulkPackageAction::POLICY_AUTOMATIC,
@@ -2078,7 +2078,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 	public function testBulkPackageRedirectRejectsAPluginActivationResultForTheThemeList(): void {
 		$this->expectException( \LogicException::class );
 
-		$this->dashboard( $this->throwingSecrets() )->bulkPackageRedirect(
+		$this->dashboard( $this->throwingSecrets() )->bulk_package_redirect(
 			'theme',
 			BulkPackageResult::plugin_activation(
 				BulkPackageAction::ACTIVATE_PLUGINS,
@@ -2092,7 +2092,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 	public function testSignedBulkQueueNoticeReportsPartialSuccessAndUnavailableRunner(): void {
 		$dashboard = $this->dashboard( $this->throwingSecrets() );
-		$url       = $dashboard->bulkPackageRedirect(
+		$url       = $dashboard->bulk_package_redirect(
 			'plugin',
 			BulkPackageResult::queue(
 				selected: 4,
@@ -2108,7 +2108,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
 		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended
 
-		$dashboard->getPlugins();
+		$dashboard->get_plugins();
 
 		self::assertCount( 1, $dashboard->messages );
 		self::assertSame( 'warning', $dashboard->messages[0]['type'] );
@@ -2124,7 +2124,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 	public function testSignedBulkQueueNoticeReportsWhenEverySelectionWasSkipped(): void {
 		$dashboard = $this->dashboard( $this->throwingSecrets() );
-		$url       = $dashboard->bulkPackageRedirect(
+		$url       = $dashboard->bulk_package_redirect(
 			'plugin',
 			BulkPackageResult::queue(
 				2,
@@ -2137,7 +2137,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
 		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended
 
-		$dashboard->getPlugins();
+		$dashboard->get_plugins();
 
 		self::assertCount( 1, $dashboard->messages );
 		self::assertSame( 'warning', $dashboard->messages[0]['type'] );
@@ -2149,7 +2149,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 	public function testSignedBulkPolicyNoticeReportsChangedAndUnchangedCounts(): void {
 		$dashboard = $this->dashboard( $this->throwingSecrets() );
-		$url       = $dashboard->bulkPackageRedirect(
+		$url       = $dashboard->bulk_package_redirect(
 			'theme',
 			BulkPackageResult::policy(
 				BulkPackageAction::POLICY_MANUAL,
@@ -2164,7 +2164,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
 		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended
 
-		$dashboard->getThemes();
+		$dashboard->get_themes();
 
 		self::assertCount( 1, $dashboard->messages );
 		self::assertSame( 'success', $dashboard->messages[0]['type'] );
@@ -2176,7 +2176,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 	public function testSignedBulkActivationNoticeReportsPartialWordPressStateChange(): void {
 		$dashboard = $this->dashboard( $this->throwingSecrets() );
-		$url       = $dashboard->bulkPackageRedirect(
+		$url       = $dashboard->bulk_package_redirect(
 			'plugin',
 			BulkPackageResult::plugin_activation(
 				BulkPackageAction::DEACTIVATE_PLUGINS,
@@ -2193,7 +2193,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
 		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended
 
-		$dashboard->getPlugins();
+		$dashboard->get_plugins();
 
 		self::assertCount( 1, $dashboard->messages );
 		self::assertSame( 'warning', $dashboard->messages[0]['type'] );
@@ -2205,7 +2205,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 	public function testTamperedBulkNoticeIsIgnored(): void {
 		$dashboard = $this->dashboard( $this->throwingSecrets() );
-		$url       = $dashboard->bulkPackageRedirect(
+		$url       = $dashboard->bulk_package_redirect(
 			'plugin',
 			BulkPackageResult::queue( 1, 1, array(), 'scheduled' )
 		);
@@ -2214,14 +2214,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended
 		$_GET['ran_booster_bulk_queued'] = '20';
 
-		$dashboard->getPlugins();
+		$dashboard->get_plugins();
 
 		self::assertSame( array(), $dashboard->messages );
 	}
 
 	public function testBulkNoticeSignatureCannotBeReplayedAcrossPackageTypes(): void {
 		$dashboard = $this->dashboard( $this->throwingSecrets() );
-		$url       = $dashboard->bulkPackageRedirect(
+		$url       = $dashboard->bulk_package_redirect(
 			'plugin',
 			BulkPackageResult::queue( 1, 1, array(), 'scheduled' )
 		);
@@ -2229,14 +2229,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
 		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended
 
-		$dashboard->getThemes();
+		$dashboard->get_themes();
 
 		self::assertSame( array(), $dashboard->messages );
 	}
 
 	public function testForgedBulkNoticeMarkerIsIgnored(): void {
 		$dashboard = $this->dashboard( $this->throwingSecrets() );
-		$url       = $dashboard->bulkPackageRedirect(
+		$url       = $dashboard->bulk_package_redirect(
 			'plugin',
 			BulkPackageResult::queue( 1, 1, array(), 'scheduled' )
 		);
@@ -2245,7 +2245,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended
 		$_GET['_ran_booster_bulk_notice_nonce'] = 'forged';
 
-		$dashboard->getPlugins();
+		$dashboard->get_plugins();
 
 		self::assertSame( array(), $dashboard->messages );
 	}
@@ -2262,7 +2262,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			\RAN\PackageSource::RELEASE_ASSET
 		);
 
-		$activity = ( new DeploymentAdminPresenter( attempts: $attempts ) )->packageActivity( array( $branch, $release ), 'plugin' );
+		$activity = ( new DeploymentAdminPresenter( attempts: $attempts ) )->package_activity( array( $branch, $release ), 'plugin' );
 
 		self::assertFalse( $activity['unavailable'] );
 		self::assertArrayHasKey( 'plugin/branch.php', $activity['items'] );
@@ -2282,7 +2282,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			null,
 			null,
 			$this->deploymentAttempts( $database )
-		)->getIndex()['data']['deploymentActivity'];
+		)->get_index()['data']['deploymentActivity'];
 
 		self::assertCount( 9, $data['items'] );
 		self::assertSame( 9, $data['items'][0]->get_id() );
@@ -2317,7 +2317,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$this->deploymentAttempts( $database ),
 			$plugins,
 			$themes
-		)->getIndex()['data']['deploymentActivity'];
+		)->get_index()['data']['deploymentActivity'];
 
 		self::assertSame(
 			'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php',
@@ -2353,7 +2353,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$this->deploymentAttempts( $database ),
 			$plugins,
 			$themes
-		)->getIndex()['data']['deploymentActivity'];
+		)->get_index()['data']['deploymentActivity'];
 
 		self::assertFalse( $data['unavailable'] );
 		self::assertCount( 1, $data['items'] );
@@ -2370,7 +2370,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'panel' => 'deployment-activity',
 		);
 
-		$firstPage = $this->dashboard( $this->throwingSecrets(), null, null, $attempts )->getIndex()['data']['deploymentActivity'];
+		$firstPage = $this->dashboard( $this->throwingSecrets(), null, null, $attempts )->get_index()['data']['deploymentActivity'];
 
 		self::assertCount( 50, $firstPage['items'] );
 		self::assertSame( 51, $firstPage['items'][0]->get_id() );
@@ -2378,7 +2378,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 2, $firstPage['next_cursor'] );
 
 		$_GET['before'] = '2';
-		$lastPage       = $this->dashboard( $this->throwingSecrets(), null, null, $attempts )->getIndex()['data']['deploymentActivity'];
+		$lastPage       = $this->dashboard( $this->throwingSecrets(), null, null, $attempts )->get_index()['data']['deploymentActivity'];
 
 		self::assertCount( 1, $lastPage['items'] );
 		self::assertSame( 1, $lastPage['items'][0]->get_id() );
@@ -2400,7 +2400,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			null,
 			null,
 			$this->deploymentAttempts( $database )
-		)->getIndex()['data']['deploymentActivity'];
+		)->get_index()['data']['deploymentActivity'];
 
 		self::assertSame( array(), $data['items'] );
 		self::assertTrue( $data['has_cursor'] );
@@ -2415,7 +2415,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 
 		$data = $this->dashboard( $this->throwingSecrets(), null, null, $this->deploymentAttempts( new DashboardActivityWpdb() ) )
-			->getIndex()['data']['deploymentActivity'];
+			->get_index()['data']['deploymentActivity'];
 
 		self::assertSame( array(), $data['items'] );
 		self::assertTrue( $data['has_cursor'] );
@@ -2430,7 +2430,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'reference' => str_repeat( 'a', 32 ),
 		);
 
-		$data = $this->dashboard( $this->throwingSecrets() )->getIndex()['data']['deploymentActivity'];
+		$data = $this->dashboard( $this->throwingSecrets() )->get_index()['data']['deploymentActivity'];
 
 		self::assertSame( 'detail', $data['mode'] );
 		self::assertSame( array(), $data['items'] );
@@ -2445,7 +2445,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'reference' => array( str_repeat( 'a', 32 ) ),
 		);
 
-		$data = $this->dashboard( $this->throwingSecrets() )->getIndex()['data']['deploymentActivity'];
+		$data = $this->dashboard( $this->throwingSecrets() )->get_index()['data']['deploymentActivity'];
 
 		self::assertSame( 'detail', $data['mode'] );
 		self::assertSame( array(), $data['items'] );
@@ -2464,7 +2464,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'reference' => $attempt['correlation_id'],
 		);
 
-		$data = $this->dashboard( $this->throwingSecrets(), null, null, $attempts )->getIndex()['data']['deploymentActivity'];
+		$data = $this->dashboard( $this->throwingSecrets(), null, null, $attempts )->get_index()['data']['deploymentActivity'];
 
 		self::assertFalse( $data['unavailable'] );
 		self::assertSame( 1, $data['detail']->get_id() );
@@ -2517,7 +2517,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'provider_repository_identity_source' => 'manual',
 		);
 		self::assertFalse(
-			$dashboard->postPackageOperation(
+			$dashboard->post_package_operation(
 				'install-plugin',
 				$request
 			)
@@ -2528,7 +2528,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringContainsString( 'reference=' . $attempt['correlation_id'], $dashboard->messages[0]['message'] );
 		self::assertCount( 1, $attemptDatabase->rows );
 
-		self::assertFalse( $dashboard->postPackageOperation( 'install-plugin', $request ) );
+		self::assertFalse( $dashboard->post_package_operation( 'install-plugin', $request ) );
 		self::assertSame( 2, $coordinator->calls );
 		self::assertCount( 1, $attemptDatabase->rows );
 
@@ -2536,7 +2536,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertNotNull( $attemptDatabase->rows[0]['resolved_at'] );
 		self::assertSame( '7', $attemptDatabase->rows[0]['resolved_by'] );
 
-		self::assertFalse( $dashboard->postPackageOperation( 'install-plugin', $request ) );
+		self::assertFalse( $dashboard->post_package_operation( 'install-plugin', $request ) );
 		self::assertSame( 3, $coordinator->calls );
 		self::assertCount( 2, $attemptDatabase->rows );
 		self::assertSame( 'failed', $attemptDatabase->rows[1]['state'] );
@@ -2547,7 +2547,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'attempt'   => '43',
 			'reference' => $attempt['correlation_id'],
 		);
-		$activity = $dashboard->getIndex()['data']['deploymentActivity'];
+		$activity = $dashboard->get_index()['data']['deploymentActivity'];
 		self::assertSame( 43, $activity['detail']->get_id() );
 		self::assertSame( $attempt['correlation_id'], $activity['detail']->get_correlation_id() );
 		unset( $GLOBALS['ran_booster_test_status_header'] );

@@ -42,8 +42,7 @@ final readonly class PortabilityController {
 	) {
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
-	public function handleExport(): mixed {
+	public function handle_export(): mixed {
 		RuntimeSupport::assertManagedOperationsAllowed();
 
 		if ( ! $this->is_allowed( self::EXPORT_NONCE_ACTION ) ) {
@@ -130,8 +129,7 @@ final readonly class PortabilityController {
 		return $bytes;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
-	public function handlePreview(): mixed {
+	public function handle_preview(): mixed {
 		RuntimeSupport::assertManagedOperationsAllowed();
 
 		if ( ! $this->is_allowed( self::PREVIEW_NONCE_ACTION ) ) {
@@ -159,8 +157,7 @@ final readonly class PortabilityController {
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
-	public function handleApply(): mixed {
+	public function handle_apply(): mixed {
 		RuntimeSupport::assertManagedOperationsAllowed();
 
 		if ( ! $this->is_allowed( self::APPLY_NONCE_ACTION ) ) {
@@ -188,7 +185,7 @@ final readonly class PortabilityController {
 			$can_install = $package instanceof BlueprintPackage
 				&& current_user_can( 'plugin' === $package->type ? 'install_plugins' : 'install_themes' );
 
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handleApply validates its purpose-specific nonce before reading adopt.
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handle_apply validates its purpose-specific nonce before reading adopt.
 			return wp_send_json_success( $this->application->apply( $blueprint, $row, $this->requested_action(), $decisions, $target_credentials[ $row ] ?? null, ( '1' === (string) ( $_POST['adopt'] ?? '' ) ), $can_install ) );
 		} catch ( PackageStorageFailure $failure ) {
 			return wp_send_json_error( array( 'message' => $failure->getMessage() ), $failure->is_database_unsupported() ? 503 : 500 );
@@ -201,8 +198,8 @@ final readonly class PortabilityController {
 	 * @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $credentialDecisions
 	 * @param array<int, string> $targetCredentialIds
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the existing public callback and caller contract. Retain the public named-parameter contract.
-	public function previewFile( string $path, ?string $password = null, array $credentialDecisions = array(), array $targetCredentialIds = array() ): string {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+	public function preview_file( string $path, ?string $password = null, array $credentialDecisions = array(), array $targetCredentialIds = array() ): string {
 		RuntimeSupport::assertManagedOperationsAllowed();
 
 		$blueprint = $this->archive->read_from( $path, $password );
@@ -264,7 +261,7 @@ final readonly class PortabilityController {
 	}
 
 	private function is_inline_export_request(): bool {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- This only selects the response shape after handleExport has validated its nonce.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- This only selects the response shape after handle_export has validated its nonce.
 		$format = $_POST['response_format'] ?? null;
 
 		return is_string( $format ) && 'json' === $format;
@@ -328,7 +325,7 @@ final readonly class PortabilityController {
 	}
 
 	private function requested_row(): ?int {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handleApply validates its purpose-specific nonce first.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handle_apply validates its purpose-specific nonce first.
 		$value = $_POST['row'] ?? null;
 		if ( ! is_string( $value ) || ! ctype_digit( $value ) || (int) $value >= PackageBlueprint::MAX_PACKAGES ) {
 			return null;
@@ -339,7 +336,7 @@ final readonly class PortabilityController {
 
 	/** @return list<array{type:string,identifier:string}> */
 	private function selected_packages(): array {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handleExport validates its purpose-specific nonce first.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handle_export validates its purpose-specific nonce first.
 		$input = $_POST['packages'] ?? null;
 		if ( ! is_array( $input ) || array_diff( array_keys( $input ), array( 'plugin', 'theme' ) ) ) {
 			throw new InvalidArgumentException();
@@ -376,7 +373,7 @@ final readonly class PortabilityController {
 
 	/** @return array<string, list<string>> */
 	private function selected_credentials(): array {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handleExport validates its purpose-specific nonce first.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handle_export validates its purpose-specific nonce first.
 		$input = $_POST['credentials'] ?? array();
 		if ( ! is_array( $input ) ) {
 			throw new InvalidArgumentException();
@@ -403,7 +400,7 @@ final readonly class PortabilityController {
 	}
 
 	private function requested_action(): ?string {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handleApply validates its purpose-specific nonce first.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handle_apply validates its purpose-specific nonce first.
 		$value = $_POST['review_action'] ?? null;
 
 		return is_string( $value ) && in_array( $value, array( 'install', 'adopt', 'managed', 'protected', 'blocked' ), true ) ? $value : null;
@@ -522,7 +519,7 @@ final readonly class PortabilityController {
 	/** @return list<array{id:string,label:string,source:string}> */
 	private function credential_choices( string $provider ): array {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		foreach ( $this->providerSettings->buildPackageList() as $candidate ) {
+		foreach ( $this->providerSettings->build_package_list() as $candidate ) {
 			if ( ( $candidate['code'] ?? null ) === $provider && is_array( $candidate['credentials'] ?? null ) ) {
 				return array_values( array_filter( $candidate['credentials'], static fn ( array $credential ): bool => 'file' === ( $credential['source'] ?? null ) ) );
 			}
@@ -555,7 +552,7 @@ final readonly class PortabilityController {
 		$providers = array();
 		try {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$provider_list = $this->providerSettings->buildPackageList();
+			$provider_list = $this->providerSettings->build_package_list();
 		} catch ( Throwable ) {
 			$provider_list = array();
 		}

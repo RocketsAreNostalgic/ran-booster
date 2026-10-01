@@ -71,7 +71,7 @@ final class PackageAdminController {
 		try {
 			PackageMutationGuard::assert_admin_action_allowed( $action, $request );
 		} catch ( RuntimeException $failure ) {
-			$dashboard->addFailureMessage(
+			$dashboard->add_failure_message(
 				new WP_Error( 'ran_booster_unsupported_package_operation', $failure->getMessage() ),
 				$failure,
 				array(
@@ -95,12 +95,11 @@ final class PackageAdminController {
 			}
 		}
 
-		return $dashboard->postPackageOperation( $action, $request );
+		return $dashboard->post_package_operation( $action, $request );
 	}
 
 	/** @param array<string, mixed> $request */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
-	public function manageBulk(
+	public function manage_bulk(
 		Dashboard $dashboard,
 		string $action,
 		array $request,
@@ -161,7 +160,7 @@ final class PackageAdminController {
 			$result = BulkPackageResult::error( $operation, $selected, 'unavailable' );
 		}
 
-		return $dashboard->bulkPackageRedirect( $type, $result );
+		return $dashboard->bulk_package_redirect( $type, $result );
 	}
 
 	/**
@@ -189,7 +188,7 @@ final class PackageAdminController {
 				&& $this->enabled( $request, 'check_repository_branch_after_save' );
 			$result                  = $this->operations->execute( $operation );
 			if ( $reinstall && 'edited' === ( $result['status'] ?? null ) && ( $result['package'] ?? null ) instanceof Package ) {
-				$dashboard->addMessage(
+				$dashboard->add_message(
 					array(
 						'type'    => 'info',
 						'message' => __( 'Package settings were saved before the reinstall.', 'ran-booster' ),
@@ -201,7 +200,7 @@ final class PackageAdminController {
 			}
 		} catch ( PackageStorageFailure $failure ) {
 			status_header( 400 );
-			$dashboard->addFailureMessage(
+			$dashboard->add_failure_message(
 				new WP_Error( $failure->get_diagnostic_id(), $failure->getMessage(), array( 'recovery_required' => $failure->is_recovery_required() ) ),
 				$failure,
 				array(
@@ -288,8 +287,7 @@ final class PackageAdminController {
 	}
 
 	/** @return array{operation: string, identifier: string}|null */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
-	public function addSuccessNotice( Dashboard $dashboard, string $type ): ?array {
+	public function add_success_notice( Dashboard $dashboard, string $type ): ?array {
 		foreach ( array( 'ran_booster_result', 'ran_booster_package', '_ran_booster_notice_nonce' ) as $key ) {
 			if ( ! isset( $_GET[ $key ] ) || ! is_scalar( $_GET[ $key ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The complete marker is verified below.
 				return null;
@@ -305,7 +303,7 @@ final class PackageAdminController {
 			return null;
 		}
 		if ( 'already-managed' === $operation ) {
-			$dashboard->addMessage(
+			$dashboard->add_message(
 				array(
 					'type'    => 'warning',
 					'message' => sprintf(
@@ -325,7 +323,7 @@ final class PackageAdminController {
 			'unlink' => __( 'unlinked', 'ran-booster' ),
 			default => __( 'unlinked and deleted', 'ran-booster' ),
 		};
-		$dashboard->addMessage(
+		$dashboard->add_message(
 			array(
 				'type'    => 'success',
 				'message' => sprintf(
@@ -341,8 +339,8 @@ final class PackageAdminController {
 	}
 
 	/** @param array<string, string> $listArguments */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the existing public callback and caller contract. Retain the public named-parameter contract.
-	public function bulkRedirect( string $type, BulkPackageResult $result, array $listArguments ): string {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+	public function bulk_redirect( string $type, BulkPackageResult $result, array $listArguments ): string {
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true )
 			|| ( 'theme' === $type && in_array( $result->operation, BulkPackageAction::plugin_activation_operations(), true ) ) ) {
 			throw new LogicException( 'The bulk package redirect type is invalid.' );
@@ -365,8 +363,8 @@ final class PackageAdminController {
 	}
 
 	/** @param \Closure(array<string, mixed>, array<string, string>): void $addContextMessage */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the existing public callback and caller contract. Retain the public named-parameter contract.
-	public function addBulkNotice( Dashboard $dashboard, string $type, \Closure $addContextMessage ): void {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+	public function add_bulk_notice( Dashboard $dashboard, string $type, \Closure $addContextMessage ): void {
 		$data = array();
 		foreach ( array( 'operation', 'selected', 'changed', 'unchanged', 'queued', 'skips', 'runner', 'error' ) as $key ) {
 			$query_key = 'ran_booster_bulk_' . $key;
@@ -497,7 +495,7 @@ final class PackageAdminController {
 			BulkPackageAction::POLICY_AUTOMATIC => __( 'Automatic', 'ran-booster' ),
 			default => __( 'Manual', 'ran-booster' ),
 		};
-		$dashboard->addMessage(
+		$dashboard->add_message(
 			array(
 				'type'    => 'success',
 				'message' => sprintf(
@@ -535,7 +533,7 @@ final class PackageAdminController {
 		} catch ( Throwable $failure ) {
 			$message = __( 'Booster could not verify the managed package provider. No changes were made.', 'ran-booster' );
 		}
-		$dashboard->addFailureMessage(
+		$dashboard->add_failure_message(
 			new WP_Error( 'ran_booster_unavailable_package_provider', $message ),
 			$failure,
 			array(
@@ -582,7 +580,7 @@ final class PackageAdminController {
 		if ( is_string( $request['provider'] ?? null ) && preg_match( '/^[a-z0-9][a-z0-9_-]{0,31}$/D', $request['provider'] ) === 1 ) {
 			$context['provider'] = $request['provider'];
 		}
-		$dashboard->addFailureMessage( new WP_Error( 'ran_booster_repository_error', $message ), $failure, $context );
+		$dashboard->add_failure_message( new WP_Error( 'ran_booster_repository_error', $message ), $failure, $context );
 		return null;
 	}
 
@@ -642,15 +640,14 @@ final class PackageAdminController {
 			'package'                              => $identifier,
 			'source_view'                          => 'branch',
 			'ran_booster_repository_branch_check'  => '1',
-			'_ran_booster_repository_branch_nonce' => wp_create_nonce( self::repositoryBranchCheckAction( $package, $type ) ),
+			'_ran_booster_repository_branch_nonce' => wp_create_nonce( self::repository_branch_check_action( $package, $type ) ),
 		);
 		$url  = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
 
 		return $url . '?' . http_build_query( $args, '', '&', PHP_QUERY_RFC3986 );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
-	public static function repositoryBranchCheckAction( Package $package, string $type ): string {
+	public static function repository_branch_check_action( Package $package, string $type ): string {
 		return 'ran-booster-repository-branch-check|'
 			. $type . '|' . (string) $package->get_identifier() . '|'
 			. $package->get_source()->value . '|' . $package->get_source_revision();
@@ -681,16 +678,16 @@ final class PackageAdminController {
 	}
 
 	private function active_deployment( Dashboard $dashboard, DeploymentStorageFailure $failure, string $action ): bool {
-		$notice = $this->deployments?->activeDeployment( $failure, $action );
+		$notice = $this->deployments?->active_deployment( $failure, $action );
 		if ( null === $notice ) {
 			return $this->manual_failure( $dashboard, static function (): void {}, $failure, $action );
 		}
-		$dashboard->addFailureMessage( $notice['message'], $failure, $notice['context'] );
+		$dashboard->add_failure_message( $notice['message'], $failure, $notice['context'] );
 		return false;
 	}
 
 	private function terminal_deployment_failure( Dashboard $dashboard, \Closure $add_context_message, array $result, string $action ): bool {
-		$notice = $this->deployments?->deploymentFailure( $result['outcome_code'] ?? null, $result['correlation_id'], $action );
+		$notice = $this->deployments?->deployment_failure( $result['outcome_code'] ?? null, $result['correlation_id'], $action );
 		if ( null === $notice ) {
 			return $this->manual_failure( $dashboard, $add_context_message, null, $action );
 		}
@@ -709,7 +706,7 @@ final class PackageAdminController {
 		if ( null === $failure ) {
 			$add_context_message( $message, $context );
 		} else {
-			$dashboard->addFailureMessage( $message, $failure, $context );
+			$dashboard->add_failure_message( $message, $failure, $context );
 		}
 		return false;
 	}

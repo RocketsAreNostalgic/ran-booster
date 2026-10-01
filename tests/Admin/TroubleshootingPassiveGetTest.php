@@ -154,7 +154,7 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 		}
 		$_GET = $query;
 
-		self::assertSame( $expected, ( new Booster() )->isPassiveTroubleshootingRequest() );
+		self::assertSame( $expected, ( new Booster() )->is_passive_troubleshooting_request() );
 	}
 
 	public function testRealAdminInitHooksDeferSidecarValidationForDiagnosticsGet(): void {
@@ -219,7 +219,7 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 
 	public function testTypedStorageFailureUsesTheDedicatedNoticeWithoutAGenericDuplicate(): void {
 		$fixture = $this->registeredFixture();
-		$fixture['dashboard']->expects( self::never() )->method( 'addFailureMessage' );
+		$fixture['dashboard']->expects( self::never() )->method( 'add_failure_message' );
 		$fixture['secrets']->validationFailure = new SecretsStorageUnavailable(
 			'The encrypted Booster secrets store is incomplete.',
 			'storage_file_missing'
@@ -245,7 +245,7 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 		$container->bind(
 			'RAN\\Dispatcher',
 			new class() {
-				public function dispatchPostRequests(): void {
+				public function dispatch_post_requests(): void {
 				}
 			}
 		);

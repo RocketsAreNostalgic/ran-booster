@@ -60,8 +60,8 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 
 		self::assertStringContainsString( '>Plugins administrés</h2>', $html );
 		self::assertStringNotContainsString( '>Managed Plugins</h2>', $html );
-		self::assertSame( 'plugin', $packageView->getType() );
-		self::assertSame( 'ran-booster-plugins', $packageView->getPageSlug() );
+		self::assertSame( 'plugin', $packageView->get_type() );
+		self::assertSame( 'ran-booster-plugins', $packageView->get_page_slug() );
 		self::assertStringContainsString( 'ran-booster-admin--packages', $html );
 		self::assertStringContainsString( 'page=ran-booster-plugins-create', $html );
 	}
@@ -147,7 +147,7 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		self::assertStringNotContainsString( '>Transporter</a>', $html );
 		self::assertSame( 1, substr_count( $html, 'aria-current="page"' ) );
 		self::assertStringContainsString(
-			'plugin' === $packageView->getType()
+			'plugin' === $packageView->get_type()
 				? 'href="https://example.test/wp-admin/admin.php?page=ran-booster-plugins" aria-current="page">Plugins</a>'
 				: 'href="https://example.test/wp-admin/admin.php?page=ran-booster-themes" aria-current="page">Themes</a>',
 			$html

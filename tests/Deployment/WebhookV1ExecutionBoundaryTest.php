@@ -75,7 +75,7 @@ final class WebhookV1ExecutionBoundaryTest extends TestCase {
 		$runtime          = $this->runtime();
 		$this->operations = array();
 
-		$runtime->registerWebhookRoutes();
+		$runtime->register_webhook_routes();
 
 		self::assertCount( 1, $GLOBALS['ran_booster_webhook_v1_routes'] );
 		$route = $GLOBALS['ran_booster_webhook_v1_routes'][0];
@@ -87,7 +87,7 @@ final class WebhookV1ExecutionBoundaryTest extends TestCase {
 	}
 
 	public function testUnrelatedRestDispatchNeverEntersTheWebhookProcessor(): void {
-		$this->runtime()->registerWebhookRoutes();
+		$this->runtime()->register_webhook_routes();
 		$unrelatedCalls = 0;
 		register_rest_route(
 			'fixture/v1',

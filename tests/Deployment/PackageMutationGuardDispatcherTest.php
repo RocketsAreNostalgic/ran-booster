@@ -86,9 +86,9 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			'file'   => 'example/example.php',
 		);
 		$dashboard                 = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'postPackageOperation' );
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
 
-		$this->dispatcher( $dashboard )->dispatchPostRequests();
+		$this->dispatcher( $dashboard )->dispatch_post_requests();
 
 		self::assertSame( array(), $GLOBALS['ran_booster_test_capability_checks'] );
 		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
@@ -102,9 +102,9 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			'identifiers' => array( 'example/example.php' ),
 		);
 		$dashboard                 = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'bulkPackageRedirect' );
+		$dashboard->expects( self::never() )->method( 'bulk_package_redirect' );
 
-		$this->dispatcher( $dashboard )->dispatchPostRequests();
+		$this->dispatcher( $dashboard )->dispatch_post_requests();
 
 		self::assertSame( array(), $GLOBALS['ran_booster_test_capability_checks'] );
 		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
@@ -115,7 +115,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		$controller = new PackageAdminController();
 
 		self::assertNull(
-			$controller->manageBulk(
+			$controller->manage_bulk(
 				$dashboard,
 				'bulk-plugin-unknown',
 				array(
@@ -139,10 +139,10 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			'identifiers' => array( 'example/example.php' ),
 		);
 		$dashboard                               = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'bulkPackageRedirect' );
+		$dashboard->expects( self::never() )->method( 'bulk_package_redirect' );
 
 		try {
-			$this->dispatcher( $dashboard )->dispatchPostRequests();
+			$this->dispatcher( $dashboard )->dispatch_post_requests();
 			self::fail( 'Expected the invalid bulk nonce to stop dispatch.' );
 		} catch ( \RuntimeException $exception ) {
 			self::assertSame( 'Invalid nonce.', $exception->getMessage() );
@@ -161,10 +161,10 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			'identifiers' => array( 'example/example.php' ),
 		);
 		$dashboard = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'bulkPackageRedirect' );
+		$dashboard->expects( self::never() )->method( 'bulk_package_redirect' );
 
 		try {
-			$this->dispatcher( $dashboard )->dispatchPostRequests();
+			$this->dispatcher( $dashboard )->dispatch_post_requests();
 			self::fail( 'Expected the missing bulk capability to stop dispatch.' );
 		} catch ( \RuntimeException $exception ) {
 			self::assertStringContainsString( 'sufficient permissions', $exception->getMessage() );
@@ -266,7 +266,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		$controller = new PackageAdminController( bulkActions: $service );
 		$dashboard  = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
-			->method( 'bulkPackageRedirect' )
+			->method( 'bulk_package_redirect' )
 			->with(
 				$type,
 				self::callback(
@@ -276,7 +276,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 				)
 			)
 			->willReturnCallback(
-				static fn ( string $actualType, \RAN\Admin\BulkPackageResult $result ): string => $controller->bulkRedirect(
+				static fn ( string $actualType, \RAN\Admin\BulkPackageResult $result ): string => $controller->bulk_redirect(
 					$actualType,
 					$result,
 					array( 's' => 'preserved-filter' )
@@ -284,7 +284,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			);
 
 		try {
-			$this->dispatcher( $dashboard, true, $controller )->dispatchPostRequests();
+			$this->dispatcher( $dashboard, true, $controller )->dispatch_post_requests();
 			self::fail( 'Expected the test redirect interceptor to stop dispatch.' );
 		} catch ( \RuntimeException $exception ) {
 			$target = str_replace( 'redirect:', '', $exception->getMessage() );
@@ -311,7 +311,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		$target                    = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&signed=bulk';
 		$dashboard                 = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
-			->method( 'bulkPackageRedirect' )
+			->method( 'bulk_package_redirect' )
 			->with(
 				'plugin',
 				self::callback(
@@ -322,7 +322,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			->willReturn( $target );
 
 		try {
-			$this->dispatcher( $dashboard, true )->dispatchPostRequests();
+			$this->dispatcher( $dashboard, true )->dispatch_post_requests();
 			self::fail( 'Expected the test redirect interceptor to stop dispatch.' );
 		} catch ( \RuntimeException $exception ) {
 			self::assertSame( 'redirect:' . $target, $exception->getMessage() );
@@ -338,10 +338,10 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
-			->method( 'addFailureMessage' )
+			->method( 'add_failure_message' )
 			->with( self::callback( static fn ( mixed $message ): bool => $message instanceof WP_Error && 'ran_booster_unsupported_package_operation' === $message->get_error_code() ) );
 
-		$this->dispatcher( $dashboard )->dispatchPostRequests();
+		$this->dispatcher( $dashboard )->dispatch_post_requests();
 
 		self::assertSame( array( 'install-plugin' ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
@@ -354,11 +354,11 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
-			->method( 'addFailureMessage' )
+			->method( 'add_failure_message' )
 			->with( self::callback( static fn ( mixed $message ): bool => $message instanceof WP_Error && 'ran_booster_unsupported_package_operation' === $message->get_error_code() ) );
-		$dashboard->expects( self::never() )->method( 'postPackageOperation' );
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
 
-		$this->dispatcher( $dashboard )->dispatchPostRequests();
+		$this->dispatcher( $dashboard )->dispatch_post_requests();
 	}
 
 	public function testRepositoryResolutionWarningKeepsSafeFailureContextForLogging(): void {
@@ -370,7 +370,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
-			->method( 'addFailureMessage' )
+			->method( 'add_failure_message' )
 			->with(
 				self::callback(
 					static fn ( mixed $message ): bool => $message instanceof WP_Error
@@ -383,9 +383,9 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 					'provider'  => 'gh',
 				)
 			);
-		$dashboard->expects( self::never() )->method( 'postPackageOperation' );
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
 
-		$this->dispatcher( $dashboard )->dispatchPostRequests();
+		$this->dispatcher( $dashboard )->dispatch_post_requests();
 	}
 
 	#[DataProvider( 'packageActionCapabilities' )]
@@ -394,10 +394,10 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		$_POST['ran_booster']                    = array( 'action' => $action );
 
 		$dashboard = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'postPackageOperation' );
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
 
 		try {
-			$this->dispatcher( $dashboard )->dispatchPostRequests();
+			$this->dispatcher( $dashboard )->dispatch_post_requests();
 			self::fail( 'Expected the invalid nonce to stop package dispatch.' );
 		} catch ( \RuntimeException $exception ) {
 			self::assertSame( 'Invalid nonce.', $exception->getMessage() );
@@ -414,10 +414,10 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		$_POST['ran_booster'] = array( 'action' => $action );
 
 		$dashboard = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'postPackageOperation' );
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
 
 		try {
-			$this->dispatcher( $dashboard )->dispatchPostRequests();
+			$this->dispatcher( $dashboard )->dispatch_post_requests();
 			self::fail( 'Expected the missing capability to stop package dispatch.' );
 		} catch ( \RuntimeException $exception ) {
 			self::assertStringContainsString( 'sufficient permissions', $exception->getMessage() );
@@ -445,10 +445,10 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		$GLOBALS['ran_booster_test_capabilities'][ $deniedCapability ] = false;
 		$_POST['ran_booster'] = array( 'action' => $action );
 		$dashboard            = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'postPackageOperation' );
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
 
 		try {
-			$this->dispatcher( $dashboard )->dispatchPostRequests();
+			$this->dispatcher( $dashboard )->dispatch_post_requests();
 			self::fail( 'Expected the later missing capability to stop package dispatch.' );
 		} catch ( \RuntimeException $exception ) {
 			self::assertStringContainsString( 'sufficient permissions', $exception->getMessage() );
@@ -477,10 +477,10 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			'reinstall_after_save' => '1',
 		);
 		$dashboard            = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'postPackageOperation' );
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
 
 		try {
-			$this->dispatcher( $dashboard )->dispatchPostRequests();
+			$this->dispatcher( $dashboard )->dispatch_post_requests();
 			self::fail( 'Expected the missing reinstall nonce to stop package dispatch.' );
 		} catch ( \RuntimeException $exception ) {
 			self::assertSame( 'Invalid nonce.', $exception->getMessage() );
@@ -494,8 +494,8 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		$_POST['ran_booster'] = array( 'action' => 'remove-plugin' );
 
 		$dashboard = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::never() )->method( 'postPackageOperation' );
-		$this->dispatcher( $dashboard )->dispatchPostRequests();
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
+		$this->dispatcher( $dashboard )->dispatch_post_requests();
 
 		self::assertSame( array(), $GLOBALS['ran_booster_test_capability_checks'] );
 		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
@@ -522,12 +522,12 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		$target               = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&signed=1';
 		$dashboard            = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
-			->method( 'postPackageOperation' )
+			->method( 'post_package_operation' )
 			->with( 'update-plugin', $input )
 			->willReturn( $target );
 
 		try {
-			$this->dispatcher( $dashboard, true )->dispatchPostRequests();
+			$this->dispatcher( $dashboard, true )->dispatch_post_requests();
 			self::fail( 'Expected the test redirect interceptor to stop dispatch.' );
 		} catch ( \RuntimeException $exception ) {
 			self::assertSame( 'redirect:' . $target, $exception->getMessage() );
@@ -540,9 +540,9 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			'stylesheet' => 'example',
 		);
 		$dashboard            = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::once() )->method( 'postPackageOperation' )->willReturn( false );
+		$dashboard->expects( self::once() )->method( 'post_package_operation' )->willReturn( false );
 
-		$this->dispatcher( $dashboard, true )->dispatchPostRequests();
+		$this->dispatcher( $dashboard, true )->dispatch_post_requests();
 
 		self::assertSame( array( 'update_themes' ), $GLOBALS['ran_booster_test_capability_checks'] );
 	}

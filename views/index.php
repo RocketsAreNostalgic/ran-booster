@@ -14,7 +14,7 @@ if ( isset( $addOnTab, $addOnContext ) && $addOnTab instanceof \RAN\Admin\AdminA
 	<?php } ?>
 <?php } else { ?>
 	<?php
-	/** @var string $tabView Built-in tab path supplied by Dashboard::getIndex() in this branch. */
+	/** @var string $tabView Built-in tab path supplied by Dashboard::get_index() in this branch. */
 	require __DIR__ . '/' . $tabView;
 	?>
 <?php } ?>

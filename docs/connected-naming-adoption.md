@@ -131,15 +131,33 @@ with 50 GitHub Provider implementations, to snake_case. Parameter names and
 promotions remain unchanged. API13 rejects old API11/12 implementations before
 loading; workflowV3, Add-on16 and unrelated protocol identities are unchanged.
 
-The tracked beta.9 Provider lock still belongs to the prior API12 composition.
-Until an actually published matching Provider release replaces it, the API13
-branch is source preparation and must not be merged or packaged as adoption.
+The initial API13 preparation retained the beta.9/API12 lock and was not
+mergeable adoption. The current candidate now selects immutable beta.10,
+verified below; final combined archive/installed qualification remains required.
 Qualify the exact Core/Provider sources first; approve and publish Provider
 through its normal lifecycle; adopt the verified immutable release in Core;
 then requalify the complete archive/installed composition and obtain separate
 Core source and beta.31 release approvals. No fabricated tags or version aliases.
 
-Bitbucket #89/#75 remain with their existing owner. Their API12 work cannot
+Bitbucket #89/#75 are assigned to the new Bitbucket coordinator. Their API12 work cannot
 certify API13; matching implementation and later immutable-host certification
 remain explicit coordinated obligations. The broad ReleaseManagement naming
 cohort, other Provider parameters and UI acceptance are not absorbed.
+
+### Verified API13 package adoption candidate
+
+Provider release #50 regular-merged as
+`d39d83747af3109a79e80fd307d50e4fcc34d412` (tree
+`d2e58aaffe1d763eb26928a379cd92c67e1c8c9d`). Exact-main CI36940248825 and
+ProfileA36940445426 passed; immutable `v1.0.0-beta.10`, GitHub release401427616,
+was published on 1 October 2026 at23:22:40UTC. Its tag resolves directly to that
+merge. The current Composer requirement and source/dist lock references adopt
+this real release. Branch remains beta.8 and unrelated Composer pins remain
+unchanged. Core219's reviewed development lock is retained from main9bc6cd5.
+
+This is an integration candidate, not a merged or published Core host.
+Final qualification must use the actual installed packages and current source.
+The newly assigned Bitbucket and Release Updater coordinators supply separate
+bounded handoffs; no retired-agent acknowledgement is awaited. The protocol5
+consumer tranche follows this published Provider baseline and must provide its
+own compatible package publication before final Core dependency composition.

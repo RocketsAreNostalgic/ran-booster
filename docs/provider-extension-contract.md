@@ -1,10 +1,9 @@
 # Provider extension contract
 
-> API13 source preparation: the tracked Provider beta.9 lock still implements
-> API12 and must not be used to qualify or release this candidate. Matching
-> source checks are preparation only. Adopt a reviewed, actually published
-> matching Provider release and requalify the final installed composition.
-> Core beta.31 remains held; Bitbucket migration is separately owned.
+> API13 dependency-adoption candidate: the lock selects the immutable Provider
+> beta.10 release. Final archive/installed qualification must use this exact
+> composition; earlier source overlays are not adoption proof. Core beta.31
+> remains held for the coordinated work and its separate release decision.
 
 
 RAN Booster Provider API 13 accepts trusted repository providers through its late
@@ -244,8 +243,8 @@ check this exact marker before loading their implementation. API-11 and API-12 p
 must remain unregistered on this host; there is no V2 compatibility shim. The
 registration signature and Add-on API 16 are unchanged. See the
 [coordinated compatibility boundary](provider-release-workflow-api.md#provider-api-12-compatibility-boundary).
-The bundled lock selects immutable GitHub Provider `v1.0.0-beta.9`
-(`82ad810e8cde6a2f54318448e81685a619c2cfc3`), including the Provider-owned
+The bundled lock selects immutable GitHub Provider `v1.0.0-beta.10`
+(`d39d83747af3109a79e80fd307d50e4fcc34d412`), including the Provider-owned
 helper naming migration and preserved bootstrap record operation projection.
 Merged Core #177 passed repository, archive and installed checks for its
 historical beta.8 composition (`556f19923f6564f1bbd5cecee089d6b136afc5cd`).

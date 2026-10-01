@@ -1,10 +1,9 @@
 # Provider release-workflow capability
 
-> API13 source preparation: the tracked Provider beta.9 lock still implements
-> API12 and must not be used to qualify or release this candidate. Matching
-> source checks are preparation only. Adopt a reviewed, actually published
-> matching Provider release and requalify the final installed composition.
-> Core beta.31 remains held; Bitbucket migration is separately owned.
+> API13 dependency-adoption candidate: the lock selects the immutable Provider
+> beta.10 release. Final archive/installed qualification must use this exact
+> composition; earlier source overlays are not adoption proof. Core beta.31
+> remains held for the coordinated work and its separate release decision.
 
 
 Provider API 13 keeps release-workflow setup as an optional, separately versioned
@@ -52,8 +51,8 @@ tags. The five methods are `workflow_status`, `workflow_preview`,
 are rejected before provider, credential or preflight access.
 
 The helper resolves `RepositoryReleaseWorkflowManagementV3` directly.
-The production lock selects immutable GitHub Provider `v1.0.0-beta.9`
-(`82ad810e8cde6a2f54318448e81685a619c2cfc3`), which implements V3 and preserves
+The production lock selects immutable GitHub Provider `v1.0.0-beta.10`
+(`d39d83747af3109a79e80fd307d50e4fcc34d412`), which implements V3 and preserves
 a valid bootstrap record's operation across source revisions. Core requires a
 `bootstrap` operation before exposing or invoking outcomes. The historical
 beta.8 composition (`556f19923f6564f1bbd5cecee089d6b136afc5cd`) passed repository

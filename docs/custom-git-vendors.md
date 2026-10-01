@@ -1,10 +1,9 @@
 # Custom git vendor setup
 
-> API13 source preparation: the tracked Provider beta.9 lock still implements
-> API12 and must not be used to qualify or release this candidate. Matching
-> source checks are preparation only. Adopt a reviewed, actually published
-> matching Provider release and requalify the final installed composition.
-> Core beta.31 remains held; Bitbucket migration is separately owned.
+> API13 dependency-adoption candidate: the lock selects the immutable Provider
+> beta.10 release. Final archive/installed qualification must use this exact
+> composition; earlier source overlays are not adoption proof. Core beta.31
+> remains held for the coordinated work and its separate release decision.
 
 
 RAN Booster exposes a single runtime extension seam for custom git vendors:

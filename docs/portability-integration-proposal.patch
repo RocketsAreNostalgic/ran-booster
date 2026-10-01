@@ -1,0 +1,106 @@
+--- a/ran-booster.php
++++ b/ran-booster.php
+@@ -104,7 +104,7 @@
+ if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' ) ) {
+ 	define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', PortabilityFacade::API_VERSION );
+ } elseif ( PortabilityFacade::API_VERSION !== RAN_BOOSTER_PORTABILITY_API_VERSION ) {
+-	throw new LogicException( 'RAN Booster Portability API 2 conflicts with an existing API version marker.' );
++	throw new LogicException( 'RAN Booster Portability API 3 conflicts with an existing API version marker.' );
+ }
+ $ran_booster_core_development_notice = new CoreSelfUpdateDevelopmentNotice( $ran_booster_self_update_policy );
+ $ran_booster_core_development_notice->register();
+--- a/scripts/verify-release.sh
++++ b/scripts/verify-release.sh
+@@ -118,8 +118,8 @@
+ 		|| fail "release ref is missing the coordinated API marker: $required_api_marker"
+ done
+ portability_facade_source=$(git show "$commit:RAN/AddOn/Portability/PortabilityFacade.php")
+-grep -Fq 'public const API_VERSION = 2;' <<< "$portability_facade_source" \
+-	|| fail 'release ref is missing exact Portability API 2.'
++grep -Fq 'public const API_VERSION = 3;' <<< "$portability_facade_source" \
++	|| fail 'release ref is missing exact Portability API 3.'
+ for removed_api_marker in \
+ 	RAN_BOOSTER_LOGGING_API_VERSION \
+ 	RAN_BOOSTER_WEBHOOK_CLEANUP_API_VERSION \
+--- a/docs/admin-composition-contract.md
++++ b/docs/admin-composition-contract.md
+@@ -72,8 +72,8 @@
+ release facets. A plugin must not treat those internal coordinators as a public
+ service-delivery API.
+ 
+-Portability API 2 is an independently versioned adoption-only contract for a
+-trusted source bridge. Its consumer checks exact Portability API 2, not Add-on
++Portability API 3 is an independently versioned adoption-only contract for a
++trusted source bridge. Its consumer checks exact Portability API 3, not Add-on
+ API 16. The separate
+ [Portability API contract](portability-api.md) documents its candidate, nonce,
+ review, Apply, source-ownership, recovery, and cleanup boundaries.
+--- a/RAN/Booster.php
++++ b/RAN/Booster.php
+@@ -313,7 +313,7 @@
+ 				'image'         => 'wp-pusher-migrator.svg',
+ 				'availability'  => __( 'Free', 'ran-booster' ),
+ 				'required_apis' => array(
+-					'RAN_BOOSTER_PORTABILITY_API_VERSION' => 2,
++					'RAN_BOOSTER_PORTABILITY_API_VERSION' => 3,
+ 					'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION' => 2,
+ 				),
+ 				'docs_url'      => 'https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator#readme',
+--- a/tests/Admin/ExtensionsPageTest.php
++++ b/tests/Admin/ExtensionsPageTest.php
+@@ -302,7 +302,7 @@
+ 	public function testMismatchedRequiredApiMarksTheCardIncompatible(): void {
+ 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 10 );
+ 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
+-		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
++		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 3 );
+ 		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );
+ 		$GLOBALS['ran_booster_extensions_plugins']['ran-booster-bitbucket/ran-booster-bitbucket.php'] = array( 'Name' => 'Bitbucket' );
+ 
+@@ -320,7 +320,7 @@
+ 	public function testRendersTranslatedIncompatibleStateLabelWhileKeepingItsErrorState(): void {
+ 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 10 );
+ 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
+-		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
++		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 3 );
+ 		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );
+ 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Incompatible'] = 'Incompatible traduit';
+ 
+@@ -338,7 +338,7 @@
+ 	public function testApiThirteenHostDoesNotClaimCompatibilityWithApiTwelveBitbucket(): void {
+ 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 13 );
+ 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
+-		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
++		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 3 );
+ 		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );
+ 		$GLOBALS['ran_booster_extensions_plugins']['ran-booster-bitbucket/ran-booster-bitbucket.php'] = array( 'Name' => 'Bitbucket' );
+ 		$GLOBALS['ran_booster_extensions_active_plugins'] = array( 'ran-booster-bitbucket/ran-booster-bitbucket.php' );
+@@ -370,7 +370,7 @@
+ 	private function defineApisCompatibleWithExistingExtensionCatalogue(): void {
+ 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
+ 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
+-		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
++		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 3 );
+ 		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );
+ 	}
+ 
+--- a/.phpcs.xml
++++ b/.phpcs.xml
+@@ -107,6 +107,8 @@
+ 		<include-pattern>/RAN/Admin/PackagePagePresenter.php</include-pattern>
+ 		<include-pattern>/RAN/Admin/ProviderRepositoryRowsNormalizer.php</include-pattern>
+ 		<include-pattern>/RAN/AddOn/Portability/PortabilityFacade.php</include-pattern>
++		<include-pattern>/RAN/AddOn/Portability/PortabilityCandidate.php</include-pattern>
++		<include-pattern>/RAN/AddOn/Portability/PortabilityApplyResult.php</include-pattern>
+ 		<include-pattern>/RAN/AddOn/Portability/PortabilityReviewResult.php</include-pattern>
+ 		<include-pattern>/RAN/Uninstall/LocalDataRemover.php</include-pattern>
+ 		<include-pattern>/RAN/Runtime/UnsupportedMultisiteBootstrap.php</include-pattern>
+@@ -284,6 +286,8 @@
+ 		<include-pattern>/RAN/Admin/PackagePagePresenter.php</include-pattern>
+ 		<include-pattern>/RAN/Admin/ProviderRepositoryRowsNormalizer.php</include-pattern>
+ 		<include-pattern>/RAN/AddOn/Portability/PortabilityFacade.php</include-pattern>
++		<include-pattern>/RAN/AddOn/Portability/PortabilityCandidate.php</include-pattern>
++		<include-pattern>/RAN/AddOn/Portability/PortabilityApplyResult.php</include-pattern>
+ 		<include-pattern>/RAN/AddOn/Portability/PortabilityReviewResult.php</include-pattern>
+ 		<include-pattern>/RAN/Uninstall/LocalDataRemover.php</include-pattern>
+ 		<include-pattern>/RAN/Runtime/UnsupportedMultisiteBootstrap.php</include-pattern>

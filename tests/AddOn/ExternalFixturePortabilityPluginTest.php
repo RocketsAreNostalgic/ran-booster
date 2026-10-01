@@ -20,7 +20,7 @@ final class ExternalFixturePortabilityPluginTest extends TestCase {
 	#[PreserveGlobalState( false )]
 	public function testFixtureLoadedBeforeCoreReceivesOnlyExactApiTwoFacade(): void {
 		$this->loadFixture();
-		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
+		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 3 );
 
 		$this->runHook( 'plugins_loaded' );
 		$this->runHook( 'ran_booster_portability_ready', $this->facade() );
@@ -31,7 +31,7 @@ final class ExternalFixturePortabilityPluginTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testFixtureLoadedAfterCoreUsesTheSameExactContract(): void {
-		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
+		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 3 );
 		$this->loadFixture();
 
 		$this->runHook( 'plugins_loaded' );
@@ -81,9 +81,9 @@ final class ExternalFixturePortabilityPluginTest extends TestCase {
 				);
 			}
 
-			public function apply( PortabilityCandidate $candidate, string $expectedFingerprint, string $nonce ): PortabilityApplyResult {
+			public function apply( PortabilityCandidate $candidate, string $expected_fingerprint, string $nonce ): PortabilityApplyResult {
 				TestCase::assertSame( 'fixture/fixture.php', $candidate->identifier );
-				TestCase::assertSame( 'v1:' . str_repeat( 'a', 64 ), $expectedFingerprint );
+				TestCase::assertSame( 'v1:' . str_repeat( 'a', 64 ), $expected_fingerprint );
 				TestCase::assertSame( 'fixture-apply-nonce', $nonce );
 
 				return new PortabilityApplyResult(
@@ -100,6 +100,6 @@ final class ExternalFixturePortabilityPluginTest extends TestCase {
 		$results = $GLOBALS['ran_booster_fixture_portability_results'];
 		self::assertInstanceOf( PortabilityReviewResult::class, $results[0] );
 		self::assertInstanceOf( PortabilityApplyResult::class, $results[1] );
-		self::assertTrue( $results[1]->targetVerified );
+		self::assertTrue( $results[1]->target_verified );
 	}
 }

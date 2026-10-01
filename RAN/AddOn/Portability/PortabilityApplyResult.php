@@ -26,16 +26,16 @@ final readonly class PortabilityApplyResult {
 		public string $status,
 		public string $reason,
 		public string $message,
-		public bool $targetVerified
+		public bool $target_verified
 	) {
-		$verifiedStatus = in_array( $status, array( self::ADOPTED, self::UNCHANGED ), true );
-		$reasons        = array_merge(
+		$verified_status = in_array( $status, array( self::ADOPTED, self::UNCHANGED ), true );
+		$reasons         = array_merge(
 			array_map( static fn ( TargetPackageReason $reason ): string => $reason->value, TargetPackageReason::cases() ),
 			self::PROCEDURAL_REASONS
 		);
 		if ( ! in_array( $status, array( self::ADOPTED, self::UNCHANGED, self::BLOCKED, self::FAILED ), true )
 			|| ! in_array( $reason, $reasons, true )
-			|| $targetVerified !== $verifiedStatus
+			|| $target_verified !== $verified_status
 			|| '' === trim( $message )
 			|| strlen( $message ) > 255
 			|| 1 !== preg_match( '//u', $message )

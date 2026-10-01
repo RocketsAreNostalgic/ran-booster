@@ -111,10 +111,8 @@ final readonly class PortabilityApplicationService {
 			$blueprint,
 			$item,
 			null,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-			null === $candidate->credentialId ? null : 'target',
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-			$candidate->credentialId,
+			null === $candidate->credential_id ? null : 'target',
+			$candidate->credential_id,
 			$context['private'],
 			true,
 			true
@@ -310,7 +308,7 @@ final readonly class PortabilityApplicationService {
 			$reason = $resolved['reason'];
 
 			return array(
-				'review'  => PortabilityReviewResult::fromResolved(
+				'review'  => PortabilityReviewResult::from_resolved(
 					$candidate,
 					PortabilityReviewResult::BLOCKED,
 					$reason->value,
@@ -329,13 +327,12 @@ final readonly class PortabilityApplicationService {
 			$item = new BlueprintPlanItem( $package, TargetPackageAction::BLOCKED, TargetPackageReason::DESTINATION_CONFLICT );
 		} elseif ( TargetPackageAction::MANAGED === $item->action
 			&& ( ! $managed instanceof Package
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-				|| ! $this->target_verified( $managed, $package, $candidate->credentialId, $private ) ) ) {
+				|| ! $this->target_verified( $managed, $package, $candidate->credential_id, $private ) ) ) {
 			$item = new BlueprintPlanItem( $package, TargetPackageAction::PROTECTED, TargetPackageReason::MANAGEMENT_CONFLICT );
 		}
 
 		return array(
-			'review'  => PortabilityReviewResult::fromResolved(
+			'review'  => PortabilityReviewResult::from_resolved(
 				$candidate,
 				$item->action->value,
 				$item->reason->value,

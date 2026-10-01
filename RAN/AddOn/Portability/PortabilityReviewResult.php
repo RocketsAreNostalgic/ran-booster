@@ -44,25 +44,18 @@ final readonly class PortabilityReviewResult {
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the published public method and named-parameter contract.
-	public static function fromResolved(
+	public static function from_resolved(
 		PortabilityCandidate $candidate,
 		string $action,
 		string $reason,
 		string $message,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-		?string $providerRepositoryId,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-		?bool $repositoryPrivate
+		?string $provider_repository_id,
+		?bool $repository_private
 	): self {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-		if ( null !== $providerRepositoryId
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-			&& ( '' === $providerRepositoryId
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-				|| strlen( $providerRepositoryId ) > 191
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-				|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $providerRepositoryId ) ) ) {
+		if ( null !== $provider_repository_id
+			&& ( '' === $provider_repository_id
+				|| strlen( $provider_repository_id ) > 191
+				|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $provider_repository_id ) ) ) {
 			throw new InvalidArgumentException( 'The resolved Portability repository identity is invalid.' );
 		}
 
@@ -71,12 +64,11 @@ final readonly class PortabilityReviewResult {
 			$json = json_encode(
 				array(
 					'domain'                 => 'ran-booster-portability-review',
-					'version'                => PortabilityFacade::API_VERSION,
-					'candidate'              => $candidate->toArray(),
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-					'provider_repository_id' => $providerRepositoryId,
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-					'private'                => $repositoryPrivate,
+					// PHP API naming does not change the canonical review payload version.
+					'version'                => 2,
+					'candidate'              => $candidate->to_array(),
+					'provider_repository_id' => $provider_repository_id,
+					'private'                => $repository_private,
 					'action'                 => $action,
 					'reason'                 => $reason,
 				),

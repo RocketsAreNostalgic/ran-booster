@@ -12,7 +12,7 @@ use JsonException;
  */
 abstract class PortabilityFacade {
 
-	public const API_VERSION = 2;
+	public const API_VERSION = 3;
 
 	/**
 	 * Derive a bounded action for a review or Apply WordPress nonce.
@@ -23,24 +23,18 @@ abstract class PortabilityFacade {
 	 * that digest plus the exact `v1:` review fingerprint. Action strings never
 	 * contain raw candidate values.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the published public method and named-parameter contract.
-	final public function nonceAction(
+	final public function nonce_action(
 		string $operation,
 		PortabilityCandidate $candidate,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-		?string $expectedFingerprint = null
+		?string $expected_fingerprint = null
 	): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-		if ( 'review' === $operation && null === $expectedFingerprint ) {
+		if ( 'review' === $operation && null === $expected_fingerprint ) {
 			return 'ran-booster-portability-review-v1-' . $this->candidate_digest( $candidate );
 		}
 		if ( 'apply' === $operation
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-			&& is_string( $expectedFingerprint )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-			&& 1 === preg_match( '/\Av1:[a-f0-9]{64}\z/D', $expectedFingerprint ) ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-			return 'ran-booster-portability-apply-v1-' . $this->candidate_digest( $candidate ) . '-' . substr( $expectedFingerprint, 3 );
+			&& is_string( $expected_fingerprint )
+			&& 1 === preg_match( '/\Av1:[a-f0-9]{64}\z/D', $expected_fingerprint ) ) {
+			return 'ran-booster-portability-apply-v1-' . $this->candidate_digest( $candidate ) . '-' . substr( $expected_fingerprint, 3 );
 		}
 
 		throw new InvalidArgumentException( 'The Portability nonce scope is invalid.' );
@@ -50,8 +44,7 @@ abstract class PortabilityFacade {
 
 	abstract public function apply(
 		PortabilityCandidate $candidate,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-		string $expectedFingerprint,
+		string $expected_fingerprint,
 		string $nonce
 	): PortabilityApplyResult;
 
@@ -61,8 +54,9 @@ abstract class PortabilityFacade {
 			$json = json_encode(
 				array(
 					'domain'    => 'ran-booster-portability-candidate',
-					'version'   => self::API_VERSION,
-					'candidate' => $candidate->toArray(),
+					// PHP API naming does not change the canonical nonce payload version.
+					'version'   => 2,
+					'candidate' => $candidate->to_array(),
 				),
 				JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
 			);

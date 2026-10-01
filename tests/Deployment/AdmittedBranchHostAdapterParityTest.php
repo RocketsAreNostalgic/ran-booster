@@ -167,7 +167,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			$adapter->prepare( $adapter->declaration(), $this->updateBaseline() );
 			self::fail( 'A WordPress transport error must fail the admitted archive acquisition.' );
 		} catch ( AdmittedBranchStageFailure $failure ) {
-			self::assertSame( DeploymentOutcome::CODE_ARCHIVE_DOWNLOAD_FAILED, $failure->outcomeCode );
+			self::assertSame( DeploymentOutcome::CODE_ARCHIVE_DOWNLOAD_FAILED, $failure->outcome_code );
 		}
 
 		self::assertSame( 1, $archive->cleanupCalls );
@@ -184,7 +184,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			$adapter->prepare( $adapter->declaration(), $this->updateBaseline() );
 			self::fail( 'A terminal provider response must fail the admitted archive acquisition.' );
 		} catch ( AdmittedBranchStageFailure $failure ) {
-			self::assertSame( DeploymentOutcome::CODE_PROVIDER_REPOSITORY_MISSING, $failure->outcomeCode );
+			self::assertSame( DeploymentOutcome::CODE_PROVIDER_REPOSITORY_MISSING, $failure->outcome_code );
 		}
 
 		self::assertSame( 1, $archive->cleanupCalls );
@@ -201,7 +201,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			$adapter->prepare( $adapter->declaration(), $this->updateBaseline() );
 			self::fail( 'An unsafe provider URL must be rejected before HTTP.' );
 		} catch ( AdmittedBranchStageFailure $failure ) {
-			self::assertSame( DeploymentOutcome::CODE_ARCHIVE_URL_INVALID, $failure->outcomeCode );
+			self::assertSame( DeploymentOutcome::CODE_ARCHIVE_URL_INVALID, $failure->outcome_code );
 		}
 
 		self::assertSame( array(), $GLOBALS['ran_booster_admitted_http_calls'] );
@@ -362,10 +362,10 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 
 	private function deploy( AdmittedBranchHostAdapter $adapter ): string {
 		$declaration = $adapter->declaration();
-		$updater     = BranchUpdater::forAdmittedAttempt( $declaration, $adapter, $adapter, $adapter, $adapter, $adapter );
+		$updater     = BranchUpdater::for_admitted_attempt( $declaration, $adapter, $adapter, $adapter, $adapter, $adapter );
 		$deployment  = $updater->plugin(
 			$declaration->repository,
-			$declaration->repositoryId,
+			$declaration->repository_id,
 			$declaration->branch,
 			null,
 			$declaration->slug,
@@ -690,7 +690,7 @@ final class ParityCoreExecutor extends WordPressCorePackageExecutor {
 
 	public function __construct() {}
 
-	public function updatePlugin( PreparedPackageArtifact $artifact, string $packageSlug, ?string $subdirectory, string $pluginFile ): CorePackageExecutionResult {
+	public function update_plugin( PreparedPackageArtifact $artifact, string $package_slug, ?string $subdirectory, string $plugin_file ): CorePackageExecutionResult {
 		++$this->calls;
 		if ( null !== $this->afterExecution ) {
 			( $this->afterExecution )();
@@ -698,7 +698,7 @@ final class ParityCoreExecutor extends WordPressCorePackageExecutor {
 		return CorePackageExecutionResult::succeeded();
 	}
 
-	public function installPlugin( PreparedPackageArtifact $artifact, string $packageSlug, ?string $subdirectory ): CorePackageExecutionResult {
+	public function install_plugin( PreparedPackageArtifact $artifact, string $package_slug, ?string $subdirectory ): CorePackageExecutionResult {
 		++$this->calls;
 		if ( null !== $this->afterExecution ) {
 			( $this->afterExecution )();

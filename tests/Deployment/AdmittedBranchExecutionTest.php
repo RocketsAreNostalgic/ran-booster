@@ -90,7 +90,7 @@ final class AdmittedBranchExecutionTest extends TestCase {
 		);
 		$host        = new BoundaryAdmittedHost();
 
-		$updater = BranchUpdater::forAdmittedAttempt( $declaration, $host, $host, $host, $host, $host );
+		$updater = BranchUpdater::for_admitted_attempt( $declaration, $host, $host, $host, $host, $host );
 		$code    = $updater->plugin( 'owner/example', 'R_example', 'main', null, 'example' )->deploy();
 
 		self::assertSame( DeploymentOutcome::CODE_DEPLOYED, $code );
@@ -127,13 +127,13 @@ final class AdmittedBranchExecutionTest extends TestCase {
 
 		$declaration = $adapter->declaration();
 
-		self::assertSame( (string) $attempt->get_id(), $declaration->attemptId );
-		self::assertSame( 'plugin', $declaration->packageType );
+		self::assertSame( (string) $attempt->get_id(), $declaration->attempt_id );
+		self::assertSame( 'plugin', $declaration->package_type );
 		self::assertSame( 'example', $declaration->slug );
 		self::assertSame( 'owner/example', $declaration->repository );
-		self::assertSame( 'R_example', $declaration->repositoryId );
+		self::assertSame( 'R_example', $declaration->repository_id );
 		self::assertSame( 'main', $declaration->branch );
-		self::assertSame( 'example/example.php', $declaration->installedIdentifier );
+		self::assertSame( 'example/example.php', $declaration->installed_identifier );
 
 		$adapter->finish( DeploymentOutcome::CODE_PROVIDER_FAILED );
 		$terminal = $adapter->terminalAttempt();
@@ -173,7 +173,7 @@ final class AdmittedBranchExecutionTest extends TestCase {
 			);
 			self::fail( 'An invalid resolved revision must fail before artifact acquisition.' );
 		} catch ( AdmittedBranchStageFailure $failure ) {
-			self::assertSame( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID, $failure->outcomeCode );
+			self::assertSame( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID, $failure->outcome_code );
 		}
 
 		self::assertSame( 1, $archive->cleanupCalls );
@@ -197,7 +197,7 @@ final class AdmittedBranchExecutionTest extends TestCase {
 			);
 			self::fail( 'Resolved revision retrieval failure must clean the provider archive.' );
 		} catch ( AdmittedBranchStageFailure $failure ) {
-			self::assertSame( DeploymentOutcome::CODE_PROVIDER_FAILED, $failure->outcomeCode );
+			self::assertSame( DeploymentOutcome::CODE_PROVIDER_FAILED, $failure->outcome_code );
 		}
 
 		self::assertSame( 1, $archive->cleanupCalls );
@@ -338,25 +338,25 @@ final class BoundaryAdmittedHost implements AdmittedAttemptJournal, AdmittedArch
 		$this->events[] = 'prepare';
 		return $this->artifact;
 	}
-	public function verifyCurrentHead(): void {
+	public function verify_current_head(): void {
 		$this->events[] = 'verify';
 	}
-	public function assertMutationAllowed(): void {
+	public function assert_mutation_allowed(): void {
 		$this->events[] = 'allowed';
 	}
-	public function frozenTarget( BranchDeploymentDeclaration $deployment, bool $deferExisting ): ?array {
-		$this->events[] = $deferExisting ? 'frozen:defer' : 'frozen:live';
+	public function frozen_target( BranchDeploymentDeclaration $deployment, bool $defer_existing ): ?array {
+		$this->events[] = $defer_existing ? 'frozen:defer' : 'frozen:live';
 		return array(
 			'identifier' => 'example/example.php',
 			'version'    => '1.0.0',
 			'active'     => false,
 		);
 	}
-	public function maintenanceActive(): bool {
+	public function maintenance_active(): bool {
 		$this->events[] = 'maintenance';
 		return false;
 	}
-	public function recheckManaged( BranchDeploymentDeclaration $deployment ): void {
+	public function recheck_managed( BranchDeploymentDeclaration $deployment ): void {
 		$this->events[] = 'recheck';
 	}
 	public function installed( BranchDeploymentDeclaration $deployment ): array {
@@ -367,7 +367,7 @@ final class BoundaryAdmittedHost implements AdmittedAttemptJournal, AdmittedArch
 			'active'     => false,
 		);
 	}
-	public function baselineNow( BranchDeploymentDeclaration $deployment, array $baseline ): ?array {
+	public function baseline_now( BranchDeploymentDeclaration $deployment, array $baseline ): ?array {
 		$this->events[] = 'baseline-now';
 		return $baseline;
 	}
@@ -395,13 +395,13 @@ final class BoundaryAdmittedHost implements AdmittedAttemptJournal, AdmittedArch
 final class BoundaryAdmittedArtifact implements AdmittedBranchArtifact {
 	/** @param list<string> $events */
 	public function __construct( private array &$events ) {}
-	public function resolvedRef(): string {
+	public function resolved_ref(): string {
 		return str_repeat( 'a', 40 );
 	}
-	public function expectedVersion(): string {
+	public function expected_version(): string {
 		return '2.0.0';
 	}
-	public function assertUnchanged(): void {
+	public function assert_unchanged(): void {
 		$this->events[] = 'unchanged';
 	}
 	public function cleanup(): void {

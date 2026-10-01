@@ -39,7 +39,7 @@ final readonly class DeploymentRequest {
 		}
 		$this->maximum_artifact_bytes = null === $maximum_artifact_bytes
 			? PackageArtifactLimit::resolve()
-			: PackageArtifactLimit::requireValid( $maximum_artifact_bytes );
+			: PackageArtifactLimit::require_valid( $maximum_artifact_bytes );
 		if ( strlen( $this->to_json() ) > self::MAX_JSON_BYTES ) {
 			throw new InvalidArgumentException( 'The deployment request is too large.' );
 		}

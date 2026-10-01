@@ -96,15 +96,15 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		$capture->start();
 		$contents = file_get_contents( $this->capturePath );
 
-		$capture->assertManagedStorageDeletable();
+		$capture->assert_managed_storage_deletable();
 		self::assertSame( $contents, file_get_contents( $this->capturePath ) );
 
-		$capture->deleteManagedStorage();
+		$capture->delete_managed_storage();
 
 		self::assertFileDoesNotExist( $this->capturePath );
 		self::assertFileDoesNotExist( $this->capturePath . '.lock' );
 
-		$capture->deleteManagedStorage();
+		$capture->delete_managed_storage();
 		self::assertFileDoesNotExist( $this->capturePath );
 		self::assertFileDoesNotExist( $this->capturePath . '.lock' );
 	}
@@ -114,7 +114,7 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		$capture->start();
 		self::assertTrue( unlink( $this->capturePath ) );
 
-		$capture->deleteManagedStorage();
+		$capture->delete_managed_storage();
 
 		self::assertFileDoesNotExist( $this->capturePath );
 		self::assertFileDoesNotExist( $this->capturePath . '.lock' );
@@ -127,7 +127,7 @@ final class TemporaryDebugCaptureTest extends TestCase {
 
 		$originalUmask = umask( 0022 );
 		try {
-			$capture->deleteManagedStorage();
+			$capture->delete_managed_storage();
 		} finally {
 			umask( $originalUmask );
 		}
@@ -143,7 +143,7 @@ final class TemporaryDebugCaptureTest extends TestCase {
 
 		$this->assertMutationRefused(
 			static function () use ( $capture ): void {
-				$capture->deleteManagedStorage();
+				$capture->delete_managed_storage();
 			}
 		);
 		self::assertFileExists( $this->capturePath );
@@ -154,7 +154,7 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		chmod( $this->capturePath, 0644 );
 		$this->assertMutationRefused(
 			static function () use ( $capture ): void {
-				$capture->deleteManagedStorage();
+				$capture->delete_managed_storage();
 			}
 		);
 		self::assertFileExists( $this->capturePath );

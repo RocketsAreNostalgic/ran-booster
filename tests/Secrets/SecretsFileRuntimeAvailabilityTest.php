@@ -275,11 +275,11 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 				'/srv/wp-content/plugins/renamed-booster/ran-booster.php'
 			)
 		);
-		$confirmed->assertManagedStorageDeletable();
+		$confirmed->assert_managed_storage_deletable();
 		self::assertFileExists( $path );
 		self::assertFileExists( $path . '.lock' );
 		self::assertNotNull( $keyStore->load( false ) );
-		$confirmed->deleteManagedStorage();
+		$confirmed->delete_managed_storage();
 
 		self::assertFileDoesNotExist( $path );
 		self::assertFileDoesNotExist( $path . '.lock' );
@@ -317,7 +317,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 				SecretsRuntimeAvailability::for_confirmed_uninstall(
 					'/srv/wp-content/plugins/ran-booster/ran-booster.php'
 				)
-			)->assertManagedStorageDeletable();
+			)->assert_managed_storage_deletable();
 			self::fail( 'Incomplete converted-install material must stop uninstall.' );
 		} catch ( SecretsStorageUnavailable $failure ) {
 			self::assertStringContainsString( 'incomplete', $failure->getMessage() );
@@ -357,8 +357,8 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			new SecretsRuntimeAvailability( true, false )
 		);
 		self::assertFalse( $lockOnly->hasHealthyManagedStorage() );
-		$lockOnly->assertManagedStorageDeletable();
-		$lockOnly->deleteManagedStorage();
+		$lockOnly->assert_managed_storage_deletable();
+		$lockOnly->delete_managed_storage();
 		self::assertFileDoesNotExist( $lockPath . '.lock' );
 		rmdir( $lockRoot );
 
@@ -680,7 +680,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 
 	private function assertStoragePreflightRefused( SecretsFile $secrets, string $expectedReason ): void {
 		try {
-			$secrets->assertManagedStorageDeletable();
+			$secrets->assert_managed_storage_deletable();
 			self::fail( 'Incomplete managed storage must fail the deletion preflight.' );
 		} catch ( SecretsStorageUnavailable $failure ) {
 			self::assertStringContainsString( 'incomplete', $failure->getMessage() );

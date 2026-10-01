@@ -101,7 +101,7 @@ final class LocalDataRemoverTest extends TestCase {
 		$secrets = $this->createMock( SecretsFile::class );
 		$secrets->method( 'path' )->willReturn( null );
 		$secrets->expects( self::exactly( 2 ) )
-			->method( 'deleteManagedStorage' )
+			->method( 'delete_managed_storage' )
 			->willReturnCallback(
 				static function (): void {
 					unset( $GLOBALS['ran_booster_uninstall_options'][ SiteKeyStore::OPTION_NAME ] );
@@ -185,7 +185,7 @@ final class LocalDataRemoverTest extends TestCase {
 		$GLOBALS['ran_booster_uninstall_current_blog_id'] = 2;
 		$secrets = $this->createMock( SecretsFile::class );
 		$secrets->expects( self::never() )->method( 'path' );
-		$secrets->expects( self::never() )->method( 'deleteManagedStorage' );
+		$secrets->expects( self::never() )->method( 'delete_managed_storage' );
 
 		$this->expectException( RuntimeException::class );
 		$this->expectExceptionMessage( 'could not verify the converted installation cleanup scope' );
@@ -200,8 +200,8 @@ final class LocalDataRemoverTest extends TestCase {
 		$this->database->options                    = 'wp_2_options';
 		$secrets                                    = $this->createMock( SecretsFile::class );
 		$secrets->expects( self::never() )->method( 'path' );
-		$secrets->expects( self::never() )->method( 'assertManagedStorageDeletable' );
-		$secrets->expects( self::never() )->method( 'deleteManagedStorage' );
+		$secrets->expects( self::never() )->method( 'assert_managed_storage_deletable' );
+		$secrets->expects( self::never() )->method( 'delete_managed_storage' );
 
 		$this->expectException( RuntimeException::class );
 		$this->expectExceptionMessage( 'could not verify the converted installation cleanup scope' );
@@ -214,9 +214,9 @@ final class LocalDataRemoverTest extends TestCase {
 		$this->setUp();
 		$secrets = $this->createMock( SecretsFile::class );
 		$secrets->method( 'path' )->willReturn( '/private/secrets.json' );
-		$secrets->method( 'assertManagedStorageDeletable' )
+		$secrets->method( 'assert_managed_storage_deletable' )
 			->willThrowException( new RuntimeException( 'sensitive path must not escape' ) );
-		$secrets->expects( self::never() )->method( 'deleteManagedStorage' );
+		$secrets->expects( self::never() )->method( 'delete_managed_storage' );
 		$writer = $this->createMock( WpConfigSecretsPathWriter::class );
 		$writer->expects( self::never() )->method( 'remove_owned_definition' );
 
@@ -246,8 +246,8 @@ final class LocalDataRemoverTest extends TestCase {
 		$config  = '/site/wp-config.php';
 		$secrets = $this->createMock( SecretsFile::class );
 		$secrets->method( 'path' )->willReturn( $sidecar );
-		$secrets->expects( self::never() )->method( 'assertManagedStorageDeletable' );
-		$secrets->expects( self::never() )->method( 'deleteManagedStorage' );
+		$secrets->expects( self::never() )->method( 'assert_managed_storage_deletable' );
+		$secrets->expects( self::never() )->method( 'delete_managed_storage' );
 		$writer = $this->createMock( WpConfigSecretsPathWriter::class );
 		$writer->expects( self::once() )
 			->method( 'assert_owned_definition_removable' )
@@ -273,7 +273,7 @@ final class LocalDataRemoverTest extends TestCase {
 		$this->setUp();
 		$this->database->failureContains = 'wp_ran_booster_deployment_attempts';
 		$secrets                         = $this->secrets( null );
-		$secrets->method( 'deleteManagedStorage' )
+		$secrets->method( 'delete_managed_storage' )
 			->willReturnCallback(
 				static function (): void {
 					unset( $GLOBALS['ran_booster_uninstall_options'][ SiteKeyStore::OPTION_NAME ] );
@@ -313,7 +313,7 @@ final class LocalDataRemoverTest extends TestCase {
 		$sidecar = '/private/secrets.json';
 		$config  = '/site/wp-config.php';
 		$secrets = $this->secrets( $sidecar );
-		$secrets->method( 'deleteManagedStorage' );
+		$secrets->method( 'delete_managed_storage' );
 		$writer = $this->createMock( WpConfigSecretsPathWriter::class );
 		$writer->expects( self::once() )
 			->method( 'remove_owned_definition' )

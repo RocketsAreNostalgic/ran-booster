@@ -76,7 +76,7 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 			'healthy-storage check'     => fn (): bool => $this->secrets->hasHealthyManagedStorage(),
 			'storage verification'      => fn (): bool => $this->secrets->verifyAndSecure(),
 			'deletion preflight'        => function (): null {
-				$this->secrets->assertManagedStorageDeletable();
+				$this->secrets->assert_managed_storage_deletable();
 
 				return null;
 			},

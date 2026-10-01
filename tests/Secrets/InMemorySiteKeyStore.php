@@ -21,7 +21,7 @@ final class InMemorySiteKeyStore extends SiteKeyStore {
 		return self::$keys[ $this->identity ] ?? null;
 	}
 
-	public function loadOrCreate(): array {
+	public function load_or_create(): array {
 		$key = $this->load();
 		if ( null !== $key ) {
 			return array(
@@ -39,7 +39,7 @@ final class InMemorySiteKeyStore extends SiteKeyStore {
 		);
 	}
 
-	public function deleteExact( #[\SensitiveParameter] string $key ): bool {
+	public function delete_exact( #[\SensitiveParameter] string $key ): bool {
 		$stored = $this->load();
 		if ( null === $stored || ! hash_equals( $stored, $key ) ) {
 			return false;

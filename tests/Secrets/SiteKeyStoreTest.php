@@ -33,7 +33,7 @@ final class SiteKeyStoreTest extends TestCase {
 		$store               = new TestSiteKeyStore();
 		$store->generatedKey = self::KEY;
 
-		$result = $store->loadOrCreate();
+		$result = $store->load_or_create();
 
 		self::assertSame( self::KEY, $result['key'] );
 		self::assertTrue( $result['created'] );
@@ -48,7 +48,7 @@ final class SiteKeyStoreTest extends TestCase {
 		$store->generatedKey = self::KEY;
 		$store->raceWinner   = base64_encode( self::WINNER );
 
-		$result = $store->loadOrCreate();
+		$result = $store->load_or_create();
 
 		self::assertSame( self::WINNER, $result['key'] );
 		self::assertFalse( $result['created'] );
@@ -82,7 +82,7 @@ final class SiteKeyStoreTest extends TestCase {
 					}
 
 					try {
-						$result  = ( new AtomicFileSiteKeyStore( $keyPath ) )->loadOrCreate();
+						$result  = ( new AtomicFileSiteKeyStore( $keyPath ) )->load_or_create();
 						$payload = json_encode(
 							array(
 								'key'     => base64_encode( $result['key'] ),
@@ -137,7 +137,7 @@ final class SiteKeyStoreTest extends TestCase {
 		$store              = new TestSiteKeyStore();
 		$store->storedValue = base64_encode( self::WINNER );
 
-		$result = $store->loadOrCreate();
+		$result = $store->load_or_create();
 
 		self::assertSame( self::WINNER, $result['key'] );
 		self::assertFalse( $result['created'] );
@@ -150,7 +150,7 @@ final class SiteKeyStoreTest extends TestCase {
 		$store->storedValue = $stored;
 
 		try {
-			$store->loadOrCreate();
+			$store->load_or_create();
 			self::fail( 'A malformed stored key must fail closed.' );
 		} catch ( RuntimeException $exception ) {
 			self::assertStringNotContainsString( is_string( $stored ) ? $stored : 'sentinel', $exception->getMessage() );
@@ -230,18 +230,18 @@ final class SiteKeyStoreTest extends TestCase {
 		$store->failAdd      = true;
 
 		$this->expectException( RuntimeException::class );
-		$store->loadOrCreate();
+		$store->load_or_create();
 	}
 
 	public function testExactDeletionCannotRemoveADifferentKey(): void {
 		$store              = new TestSiteKeyStore();
 		$store->storedValue = base64_encode( self::WINNER );
 
-		self::assertFalse( $store->deleteExact( self::KEY ) );
+		self::assertFalse( $store->delete_exact( self::KEY ) );
 		self::assertSame( base64_encode( self::WINNER ), $store->storedValue );
 		self::assertSame( 0, $store->cacheInvalidations );
 
-		self::assertTrue( $store->deleteExact( self::WINNER ) );
+		self::assertTrue( $store->delete_exact( self::WINNER ) );
 		self::assertNull( $store->load() );
 		self::assertSame( 1, $store->cacheInvalidations );
 	}
@@ -252,7 +252,7 @@ final class SiteKeyStoreTest extends TestCase {
 		$store->failDelete  = true;
 
 		$this->expectException( RuntimeException::class );
-		$store->deleteExact( self::KEY );
+		$store->delete_exact( self::KEY );
 	}
 }
 

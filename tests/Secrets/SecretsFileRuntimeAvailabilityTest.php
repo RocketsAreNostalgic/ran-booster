@@ -306,7 +306,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		);
 		$key = $keyStore->load( false );
 		self::assertNotNull( $key );
-		self::assertTrue( $keyStore->deleteExact( $key ) );
+		self::assertTrue( $keyStore->delete_exact( $key ) );
 		define( 'WP_UNINSTALL_PLUGIN', 'ran-booster/ran-booster.php' );
 
 		try {
@@ -335,7 +335,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 	public function testDeletionPreflightRejectsRecoverablePartialStoresButDeletesSafeLockOnlyResidue(): void {
 		[$keyRoot, $keyPath] = $this->sidecarFixture();
 		$keyStore            = new InMemorySiteKeyStore( $keyPath );
-		$key                 = $keyStore->loadOrCreate()['key'];
+		$key                 = $keyStore->load_or_create()['key'];
 		$keyOnly             = $this->realSecrets(
 			$keyPath,
 			$keyStore,
@@ -344,7 +344,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		);
 		$this->assertStoragePreflightRefused( $keyOnly, 'storage_lock_missing' );
 		self::assertSame( $key, $keyStore->load( false ) );
-		self::assertTrue( $keyStore->deleteExact( $key ) );
+		self::assertTrue( $keyStore->delete_exact( $key ) );
 		rmdir( $keyRoot );
 
 		[$lockRoot, $lockPath] = $this->sidecarFixture();
@@ -387,7 +387,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		unlink( $missingPath );
 		$missingKey = $missingKeyStore->load( false );
 		self::assertNotNull( $missingKey );
-		self::assertTrue( $missingKeyStore->deleteExact( $missingKey ) );
+		self::assertTrue( $missingKeyStore->delete_exact( $missingKey ) );
 		rmdir( $missingRoot );
 	}
 
@@ -395,7 +395,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		foreach ( array( false, true ) as $existingLock ) {
 			[$root, $path] = $this->sidecarFixture();
 			$keyStore      = new InMemorySiteKeyStore( $path );
-			$oldKey        = $keyStore->loadOrCreate()['key'];
+			$oldKey        = $keyStore->load_or_create()['key'];
 			$secrets       = $this->realSecrets(
 				$path,
 				$keyStore,
@@ -460,7 +460,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		);
 		$oldKey = $keyStore->load( false );
 		self::assertNotNull( $oldKey );
-		self::assertTrue( $keyStore->deleteExact( $oldKey ) );
+		self::assertTrue( $keyStore->delete_exact( $oldKey ) );
 
 		self::assertTrue( $secrets->canResetOrphanedCiphertextAt( $path ) );
 		$secrets->resetOrphanedCiphertextAt( $path );
@@ -511,10 +511,10 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		);
 		$key = $keyStore->load( false );
 		self::assertNotNull( $key );
-		self::assertTrue( $keyStore->deleteExact( $key ) );
+		self::assertTrue( $keyStore->delete_exact( $key ) );
 		self::assertTrue( $secrets->canResetOrphanedCiphertextAt( $path ) );
 
-		$keyStore->loadOrCreate();
+		$keyStore->load_or_create();
 		self::assertFalse( $secrets->canResetOrphanedCiphertextAt( $path ) );
 		try {
 			$secrets->resetOrphanedCiphertextAt( $path );
@@ -526,7 +526,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 
 		$restored = $keyStore->load( false );
 		self::assertNotNull( $restored );
-		self::assertTrue( $keyStore->deleteExact( $restored ) );
+		self::assertTrue( $keyStore->delete_exact( $restored ) );
 		self::assertTrue( chmod( $path, 0660 ) );
 		try {
 			$secrets->resetOrphanedCiphertextAt( $path );
@@ -545,7 +545,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 	public function testOrphanedKeyResetRefusesAChangedPathOrRestoredCiphertext(): void {
 		[$root, $path] = $this->sidecarFixture();
 		$keyStore      = new InMemorySiteKeyStore( $path );
-		$key           = $keyStore->loadOrCreate()['key'];
+		$key           = $keyStore->load_or_create()['key'];
 		$secrets       = $this->realSecrets(
 			$path,
 			$keyStore,
@@ -574,7 +574,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 	public function testOrphanedKeyResetDoesNotRepairAnUntrustedExistingLock(): void {
 		[$root, $path] = $this->sidecarFixture();
 		$keyStore      = new InMemorySiteKeyStore( $path );
-		$key           = $keyStore->loadOrCreate()['key'];
+		$key           = $keyStore->load_or_create()['key'];
 		$secrets       = $this->realSecrets(
 			$path,
 			$keyStore,
@@ -611,14 +611,14 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 				return $this->key;
 			}
 
-			public function loadOrCreate(): array {
+			public function load_or_create(): array {
 				return array(
 					'key'     => $this->key,
 					'created' => false,
 				);
 			}
 
-			public function deleteExact( #[\SensitiveParameter] string $key ): bool {
+			public function delete_exact( #[\SensitiveParameter] string $key ): bool {
 				$this->key = random_bytes( 32 );
 
 				return false;

@@ -2101,19 +2101,19 @@ final class ProspectivePluginRepository extends PluginRepository {
 		$this->adoptionResult = PackageMutationResult::changed( PackageStorageOperation::INSERT );
 	}
 
-	public function isInstalled( string $identifier ): bool {
+	public function is_installed( string $identifier ): bool {
 		unset( $identifier );
 
 		return $this->installed;
 	}
 
-	public function hasManagementRecord( mixed $identifier ): bool {
+	public function has_management_record( mixed $identifier ): bool {
 		unset( $identifier );
 
 		return $this->managed;
 	}
 
-	public function installedPluginFromFile( string $file ): Plugin {
+	public function installed_plugin_from_file( string $file ): Plugin {
 		if ( ! $this->installedPackageAvailable ) {
 			throw new RuntimeException( 'The installed plugin is unavailable.' );
 		}
@@ -2121,7 +2121,7 @@ final class ProspectivePluginRepository extends PluginRepository {
 		return new ProspectiveInstalledPlugin( $file, $this->installedVersion );
 	}
 
-	public function adoptRelease(
+	public function adopt_release(
 		Plugin $plugin,
 		ManagedReleaseConfiguration $configuration,
 		int $userId

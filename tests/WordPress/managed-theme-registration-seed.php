@@ -16,7 +16,7 @@ $ran_booster_theme_fixtures   = array(
 );
 
 foreach ( $ran_booster_theme_fixtures as $ran_booster_stylesheet => $ran_booster_repository_id ) {
-	$ran_booster_theme = $ran_booster_theme_repository->installedThemeFromStylesheet( $ran_booster_stylesheet );
+	$ran_booster_theme = $ran_booster_theme_repository->installed_theme_from_stylesheet( $ran_booster_stylesheet );
 	$ran_booster_theme->set_repository(
 		new ManagedRepository(
 			'gh',
@@ -27,7 +27,7 @@ foreach ( $ran_booster_theme_fixtures as $ran_booster_stylesheet => $ran_booster
 	);
 	$ran_booster_theme->set_source( PackageSource::RELEASE_ASSET, 1 );
 	$ran_booster_theme->set_deployment_policy( DeploymentPolicy::MANUAL );
-	$ran_booster_result = $ran_booster_theme_repository->adoptRelease(
+	$ran_booster_result = $ran_booster_theme_repository->adopt_release(
 		$ran_booster_theme,
 		new ManagedReleaseConfiguration( $ran_booster_stylesheet, 'style.css' ),
 		get_current_user_id()

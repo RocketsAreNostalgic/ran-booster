@@ -588,11 +588,11 @@ final class ParityPluginRepository extends PluginRepository {
 
 	public function __construct() {}
 
-	public function allDeploymentPlugins( ?PackageSource $source = null ): array {
+	public function all_deployment_plugins( ?PackageSource $source = null ): array {
 		return $this->managed;
 	}
 
-	public function fromSlug( $slug ) {
+	public function from_slug( $slug ) {
 		if ( null !== $this->installed ) {
 			return $this->installed;
 		}
@@ -604,7 +604,7 @@ final class ParityPluginRepository extends PluginRepository {
 		throw new RuntimeException( 'Missing installed plugin.' );
 	}
 
-	public function boosterPluginFromFile( $file ) {
+	public function booster_plugin_from_file( $file ) {
 		if ( null !== $this->byIdentifier ) {
 			return $this->byIdentifier;
 		}

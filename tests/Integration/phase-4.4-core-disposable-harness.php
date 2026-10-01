@@ -414,7 +414,7 @@ function phase44_prospective( string $root, string $site, string $type, string $
 	$deploymentPolicy = null;
 	if ( 'success' === $mode ) {
 		$repository = 'plugin' === $type ? $container->make( RAN\Storage\PluginRepository::class ) : $container->make( RAN\Storage\ThemeRepository::class );
-		$package = 'plugin' === $type ? $repository->boosterPluginFromFile( $identifier ) : $repository->boosterThemeFromStylesheet( $identifier );
+		$package = 'plugin' === $type ? $repository->booster_plugin_from_file( $identifier ) : $repository->booster_theme_from_stylesheet( $identifier );
 		$deploymentPolicy = $package->get_deployment_policy()->value;
 		if ( 'manual' !== $deploymentPolicy ) throw new RuntimeException( 'Prospective adoption did not retain the Manual deployment policy.' );
 	} elseif ( file_exists( $destination ) || is_link( $destination ) ) {

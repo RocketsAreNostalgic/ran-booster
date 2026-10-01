@@ -153,9 +153,9 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		$managedPackage->method( 'get_subdirectory' )->willReturn( $imported->packages[0]->subdirectory );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'isInstalled' )->willReturn( true );
-		$plugins->method( 'hasManagementRecord' )->willReturn( true );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $managedPackage );
+		$plugins->method( 'is_installed' )->willReturn( true );
+		$plugins->method( 'has_management_record' )->willReturn( true );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $managedPackage );
 
 		$application = new PortabilityApplicationService(
 			new BlueprintReviewer( $plugins, $themes ),
@@ -275,8 +275,8 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		}
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( $packages );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( $packages );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 
 		return new ManagedPackageBlueprintExporter( $plugins, $themes, $secrets );
 	}

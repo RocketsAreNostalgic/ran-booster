@@ -351,7 +351,7 @@ final class TrackingPluginRepository extends PluginRepository {
 	public function __construct() {
 	}
 
-	public function allBoosterPlugins() {
+	public function all_booster_plugins() {
 		++$this->reads;
 
 		return array();

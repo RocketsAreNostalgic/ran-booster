@@ -523,8 +523,8 @@ final class PackageAdminController {
 				throw new RuntimeException( 'The managed package provider registry is unavailable.' );
 			}
 			$package = 'edit-plugin' === $action
-				? $this->plugins?->boosterPluginFromFile( $identifier )
-				: $this->themes?->boosterThemeFromStylesheet( $identifier );
+				? $this->plugins?->booster_plugin_from_file( $identifier )
+				: $this->themes?->booster_theme_from_stylesheet( $identifier );
 			if ( ! $package instanceof Package ) {
 				throw new RuntimeException( 'The managed package repository is unavailable.' );
 			}

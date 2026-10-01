@@ -121,8 +121,8 @@ try {
 			? 'ran-booster-p2-fixture-plugin/ran-booster-p2-fixture-plugin.php'
 			: 'ran-booster-p2-fixture-theme';
 		$package = 'plugin' === $type
-			? $plugins->boosterPluginFromFile( $identifier )
-			: $themes->boosterThemeFromStylesheet( $identifier );
+			? $plugins->booster_plugin_from_file( $identifier )
+			: $themes->booster_theme_from_stylesheet( $identifier );
 		if ( '2.0.0' !== $package->get_version()
 			|| PackageSource::RELEASE_ASSET !== $package->get_source()
 			|| 1 !== $package->get_source_revision()

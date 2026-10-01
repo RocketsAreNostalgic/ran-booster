@@ -124,7 +124,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			source: PackageSource::BRANCH
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$themes    = $this->createStub( ThemeRepository::class );
 		$store     = new RuntimeReleaseStore();
 		$registrar = $this->registrar(
@@ -249,7 +249,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 		$plugins  = $this->createMock( PluginRepository::class );
 		$plugins->expects( self::once() )
-			->method( 'allDeploymentPlugins' )
+			->method( 'all_deployment_plugins' )
 			->with( PackageSource::RELEASE_ASSET )
 			->willReturn(
 				array(
@@ -259,7 +259,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			);
 		$themes = $this->createMock( ThemeRepository::class );
 		$themes->expects( self::once() )
-			->method( 'allDeploymentThemes' )
+			->method( 'all_deployment_themes' )
 			->with( PackageSource::RELEASE_ASSET )
 			->willReturn( array( 'example-theme' => $theme ) );
 		$targets   = array();
@@ -313,9 +313,9 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$plugin  = $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::DISABLED );
 		$theme   = $this->package( 'theme', 'example-theme', 'example-theme', DeploymentPolicy::DISABLED );
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'example/example.php' => $plugin ) );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'example/example.php' => $plugin ) );
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $theme ) );
+		$themes->method( 'all_deployment_themes' )->willReturn( array( 'example-theme' => $theme ) );
 		$store     = new RuntimeReleaseStore(
 			array(
 				"plugin\0example/example.php" => new ManagedReleaseConfiguration( 'example', 'example.php' ),
@@ -358,9 +358,9 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			source: PackageSource::BRANCH
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willThrowException( new \RuntimeException( 'read failed' ) );
+		$plugins->method( 'all_deployment_plugins' )->willThrowException( new \RuntimeException( 'read failed' ) );
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $theme ) );
+		$themes->method( 'all_deployment_themes' )->willReturn( array( 'example-theme' => $theme ) );
 		$store     = new RuntimeReleaseStore(
 			array(
 				"theme\0example-theme" => new ManagedReleaseConfiguration( 'example-theme', 'style.css' ),
@@ -415,14 +415,14 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			providerRepositoryId: 'unavailable'
 		);
 		$plugins     = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+		$plugins->method( 'all_deployment_plugins' )->willReturn(
 			array(
 				'available/available.php'     => $available,
 				'unavailable/unavailable.php' => $unavailable,
 			)
 		);
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 		$database  = new class() {
 			public string $last_error = '';
 
@@ -465,14 +465,14 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$valid   = $this->package( 'plugin', 'valid/valid.php', 'valid', DeploymentPolicy::MANUAL );
 		$invalid = $this->package( 'plugin', 'invalid/invalid.php', 'invalid', DeploymentPolicy::MANUAL, provider: 'bb' );
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+		$plugins->method( 'all_deployment_plugins' )->willReturn(
 			array(
 				'valid/valid.php'     => $valid,
 				'invalid/invalid.php' => $invalid,
 			)
 		);
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 		$store     = new RuntimeReleaseStore(
 			array(
 				"plugin\0valid/valid.php"     => new ManagedReleaseConfiguration( 'valid', 'valid.php' ),
@@ -513,11 +513,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			repositoryId: 'nested-theme-repository'
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( self::NATIVE_PLUGIN => $plugin ) );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $plugin );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( self::NATIVE_PLUGIN => $plugin ) );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $plugin );
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $theme ) );
-		$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $theme );
+		$themes->method( 'all_deployment_themes' )->willReturn( array( 'example-theme' => $theme ) );
+		$themes->method( 'booster_theme_from_stylesheet' )->willReturn( $theme );
 		$registrar = $this->registrar(
 			$plugins,
 			$themes,
@@ -546,9 +546,9 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 	public function testRegistrarRejectsAProviderTargetThatReturnsFalse(): void {
 		$package = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( self::NATIVE_PLUGIN => $package ) );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( self::NATIVE_PLUGIN => $package ) );
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 		$target = new RuntimeUpdaterFacade();
 		$target->failRegistration();
 		$registrar = $this->registrar(
@@ -661,11 +661,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$plugin  = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
 		$theme   = $this->package( 'theme', 'example-theme', 'example-theme', DeploymentPolicy::MANUAL );
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( self::NATIVE_PLUGIN => $plugin ) );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $plugin );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( self::NATIVE_PLUGIN => $plugin ) );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $plugin );
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $theme ) );
-		$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $theme );
+		$themes->method( 'all_deployment_themes' )->willReturn( array( 'example-theme' => $theme ) );
+		$themes->method( 'booster_theme_from_stylesheet' )->willReturn( $theme );
 		$registrar = $this->registrar(
 			$plugins,
 			$themes,
@@ -777,11 +777,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 	public function testUnmanagedPluginAndThemeOffersRemainWordPressOwned(): void {
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array() );
-		$plugins->method( 'boosterPluginFromFile' )->willThrowException( new PluginNotFound() );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array() );
+		$plugins->method( 'booster_plugin_from_file' )->willThrowException( new PluginNotFound() );
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
-		$themes->method( 'boosterThemeFromStylesheet' )->willThrowException( new ThemeNotFound() );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
+		$themes->method( 'booster_theme_from_stylesheet' )->willThrowException( new ThemeNotFound() );
 		$registrar = $this->registrar(
 			$plugins,
 			$themes,
@@ -808,8 +808,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 	public function testManagedOfferFailsClosedWhenRepositoryReadIsUncertain(): void {
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array() );
-		$plugins->method( 'boosterPluginFromFile' )->willThrowException( new \RuntimeException( 'read failed' ) );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array() );
+		$plugins->method( 'booster_plugin_from_file' )->willThrowException( new \RuntimeException( 'read failed' ) );
 		$registrar = $this->registrar(
 			$plugins,
 			$this->createStub( ThemeRepository::class ),
@@ -892,11 +892,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$plugin  = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
 		$theme   = $this->package( 'theme', 'example-theme', 'example-theme', DeploymentPolicy::MANUAL );
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( self::NATIVE_PLUGIN => $plugin ) );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $plugin );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( self::NATIVE_PLUGIN => $plugin ) );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $plugin );
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $theme ) );
-		$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $theme );
+		$themes->method( 'all_deployment_themes' )->willReturn( array( 'example-theme' => $theme ) );
+		$themes->method( 'booster_theme_from_stylesheet' )->willReturn( $theme );
 		$registrar = $this->registrar(
 			$plugins,
 			$themes,
@@ -925,9 +925,9 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			source: PackageSource::BRANCH
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( self::NATIVE_PLUGIN => $branch ) );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( self::NATIVE_PLUGIN => $branch ) );
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 		$registrar = $this->registrar(
 			$plugins,
 			$themes,
@@ -949,7 +949,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertArrayHasKey( self::NATIVE_PLUGIN, $filtered->no_update );
 
 		$unavailable = $this->createStub( PluginRepository::class );
-		$unavailable->method( 'allDeploymentPlugins' )->willThrowException( new \RuntimeException( 'read failed' ) );
+		$unavailable->method( 'all_deployment_plugins' )->willThrowException( new \RuntimeException( 'read failed' ) );
 		$registrar = $this->registrar(
 			$unavailable,
 			$themes,
@@ -975,7 +975,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$package = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
 		$reads   = 0;
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturnCallback(
+		$plugins->method( 'all_deployment_plugins' )->willReturnCallback(
 			static function () use ( &$reads, $package ): array {
 				if ( 0 < $reads++ ) {
 					throw new \RuntimeException( 'read failed' );
@@ -984,9 +984,9 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				return array( self::NATIVE_PLUGIN => $package );
 			}
 		);
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 		$registrar = $this->registrar(
 			$plugins,
 			$themes,
@@ -1020,7 +1020,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 		$reads   = 0;
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturnCallback(
+		$plugins->method( 'all_deployment_plugins' )->willReturnCallback(
 			static function () use ( &$reads, $nested ): array {
 				if ( 0 < $reads++ ) {
 					throw new \RuntimeException( 'read failed' );
@@ -1030,7 +1030,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			}
 		);
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 		$registrar = $this->registrar(
 			$plugins,
 			$themes,
@@ -1167,7 +1167,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 	public function testSelfBulkUpdateIsRejectedBeforeManagedLookupAndManualSingleIsUnaffected(): void {
 		$plugins = $this->createMock( PluginRepository::class );
-		$plugins->expects( self::never() )->method( 'boosterPluginFromFile' );
+		$plugins->expects( self::never() )->method( 'booster_plugin_from_file' );
 		$registrar = $this->registrar(
 			$plugins,
 			$this->createStub( ThemeRepository::class ),
@@ -1199,7 +1199,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 		$package = $this->package( 'plugin', 'ran-booster.php', 'ran-booster', DeploymentPolicy::MANUAL );
 		$plugins = $this->createMock( PluginRepository::class );
-		$plugins->expects( self::once() )->method( 'boosterPluginFromFile' )->with( 'ran-booster.php' )->willReturn( $package );
+		$plugins->expects( self::once() )->method( 'booster_plugin_from_file' )->with( 'ran-booster.php' )->willReturn( $package );
 		$registrar = $this->registrar(
 			$plugins,
 			$this->createStub( ThemeRepository::class ),
@@ -1279,7 +1279,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			source: PackageSource::BRANCH
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$themes    = $this->createStub( ThemeRepository::class );
 		$store     = new RuntimeReleaseStore();
 		$registrar = $this->registrar(
@@ -1362,13 +1362,13 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			repositoryId: 'theme-preflight-repository'
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturnCallback(
+		$plugins->method( 'booster_plugin_from_file' )->willReturnCallback(
 			static function () use ( &$plugin ) {
 				return $plugin;
 			}
 		);
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $theme );
+		$themes->method( 'booster_theme_from_stylesheet' )->willReturn( $theme );
 		$store         = new RuntimeReleaseStore();
 		$lock          = new RuntimeUpdaterLock();
 		$listings      = array();
@@ -1487,15 +1487,15 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			subdirectory: 'packages/other'
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $root );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $root );
+		$plugins->method( 'all_deployment_plugins' )->willReturn(
 			array(
 				'example/example.php' => $root,
 				'other/other.php'     => $nested,
 			)
 		);
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 		$store         = new RuntimeReleaseStore();
 		$lock          = new RuntimeUpdaterLock();
 		$providerCalls = 0;
@@ -1544,7 +1544,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				$this->repositoryRows["plugin\0example/example.php"]->source = 'unknown';
 			}
 			$plugins = $this->createStub( PluginRepository::class );
-			$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+			$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 			$themes = $this->createStub( ThemeRepository::class );
 			$store  = new RuntimeReleaseStore();
 			$lock   = new RuntimeUpdaterLock();
@@ -1580,7 +1580,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 		$reads   = 0;
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturnCallback(
+		$plugins->method( 'booster_plugin_from_file' )->willReturnCallback(
 			function () use ( $root, &$reads ): Package {
 				if ( 1 === ++$reads ) {
 					return $root;
@@ -1630,7 +1630,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 		$current  = 'public';
 		$plugins  = $this->createStub( PluginRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturnCallback(
+		$plugins->method( 'booster_plugin_from_file' )->willReturnCallback(
 			static function () use ( &$packages, &$current ): Package {
 				return $packages[ $current ];
 			}
@@ -1774,7 +1774,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			source: PackageSource::BRANCH
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$themes     = $this->createStub( ThemeRepository::class );
 		$store      = new RuntimeReleaseStore();
 		$lock       = new RuntimeUpdaterLock();
@@ -1833,7 +1833,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			source: PackageSource::BRANCH
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$themes          = $this->createStub( ThemeRepository::class );
 		$store           = new RuntimeReleaseStore();
 		$lock            = new RuntimeUpdaterLock();
@@ -1956,7 +1956,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			source: PackageSource::BRANCH
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$themes    = $this->createStub( ThemeRepository::class );
 		$provider  = new class() implements RepositoryProvider, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseNativeTargets {
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
@@ -2044,7 +2044,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			source: PackageSource::BRANCH
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$themes    = $this->createStub( ThemeRepository::class );
 		$listCalls = 0;
 		$store     = new RuntimeReleaseStore();
@@ -2095,7 +2095,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			source: PackageSource::BRANCH
 		);
 		$plugins    = $this->createStub( PluginRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$themes    = $this->createStub( ThemeRepository::class );
 		$store     = new RuntimeReleaseStore();
 		$providers = $this->releaseMetadataRegistry();
@@ -2139,7 +2139,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			source: PackageSource::BRANCH
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$themes         = $this->createStub( ThemeRepository::class );
 		$store          = new RuntimeReleaseStore();
 		$registrar      = $this->registrar(
@@ -2181,7 +2181,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			source: PackageSource::BRANCH
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$store     = new RuntimeReleaseStore();
 		$registrar = $this->registrar(
 			$plugins,
@@ -2225,7 +2225,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			subdirectory: 'packages/example'
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$themes    = $this->createStub( ThemeRepository::class );
 		$store     = new RuntimeReleaseStore();
 		$listCalls = 0;
@@ -2268,7 +2268,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
-		$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $package );
+		$themes->method( 'booster_theme_from_stylesheet' )->willReturn( $package );
 		$store     = new RuntimeReleaseStore();
 		$listCalls = 0;
 		$providers = $this->releaseMetadataRegistry(
@@ -2308,7 +2308,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			subdirectory: 'packages/example'
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$themes    = $this->createStub( ThemeRepository::class );
 		$store     = new RuntimeReleaseStore(
 			array( "plugin\0example/example.php" => new ManagedReleaseConfiguration( 'example', 'example.php' ) )
@@ -2347,10 +2347,10 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			DeploymentPolicy::AUTOMATIC
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array() );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array() );
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $package ) );
-		$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $package );
+		$themes->method( 'all_deployment_themes' )->willReturn( array( 'example-theme' => $package ) );
+		$themes->method( 'booster_theme_from_stylesheet' )->willReturn( $package );
 		$store     = new RuntimeReleaseStore(
 			array(
 				"theme\0example-theme" => new ManagedReleaseConfiguration( 'example-theme', 'style.css' ),
@@ -2418,10 +2418,10 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 	public function testFacadeProjectsNeutralTargetOffersAndValidationFailures(): void {
 		$package = $this->package( 'theme', 'example-theme', 'example-theme', DeploymentPolicy::MANUAL );
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array() );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array() );
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $package ) );
-		$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $package );
+		$themes->method( 'all_deployment_themes' )->willReturn( array( 'example-theme' => $package ) );
+		$themes->method( 'booster_theme_from_stylesheet' )->willReturn( $package );
 		$store   = new RuntimeReleaseStore(
 			array(
 				"theme\0example-theme" => new ManagedReleaseConfiguration( 'example-theme', 'style.css' ),
@@ -2531,7 +2531,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$package = $this->package( 'theme', 'example-theme', 'example-theme', DeploymentPolicy::MANUAL );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
-		$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $package );
+		$themes->method( 'booster_theme_from_stylesheet' )->willReturn( $package );
 		$store     = new class() extends ManagedReleaseStore {
 			public function configuration( string $type, string $identifier ): ?ManagedReleaseConfiguration {
 				throw new InvalidArgumentException( 'Retired release configuration.' );
@@ -2570,7 +2570,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			source: PackageSource::BRANCH
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$themes         = $this->createStub( ThemeRepository::class );
 		$store          = new RuntimeReleaseStore();
 		$registrar      = $this->registrar(
@@ -2645,10 +2645,10 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			DeploymentPolicy::MANUAL
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'example/example.php' => $package ) );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'example/example.php' => $package ) );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 		$store     = new RuntimeReleaseStore(
 			array(
 				"plugin\0example/example.php" => new ManagedReleaseConfiguration( 'example', 'example.php' ),
@@ -2705,10 +2705,10 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			DeploymentPolicy::MANUAL
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'example/example.php' => $package ) );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'example/example.php' => $package ) );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 		$store     = new RuntimeReleaseStore(
 			array(
 				"plugin\0example/example.php" => new ManagedReleaseConfiguration( 'example', 'example.php' ),
@@ -2768,10 +2768,10 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			DeploymentPolicy::AUTOMATIC
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'example/example.php' => $package ) );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'example/example.php' => $package ) );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 		$store     = new RuntimeReleaseStore(
 			array(
 				"plugin\0example/example.php" => new ManagedReleaseConfiguration(
@@ -2901,10 +2901,10 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			DeploymentPolicy::MANUAL
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'example/example.php' => $package ) );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'example/example.php' => $package ) );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 		$store       = new RuntimeReleaseStore(
 			array(
 				"plugin\0example/example.php" => new ManagedReleaseConfiguration( 'example', 'example.php' ),
@@ -3028,15 +3028,15 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		Package|callable|null $live = null
 	): array {
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( self::NATIVE_PLUGIN => $registered ) );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( self::NATIVE_PLUGIN => $registered ) );
 		$live = $live ?? $registered;
 		if ( is_callable( $live ) ) {
-			$plugins->method( 'boosterPluginFromFile' )->willReturnCallback( $live );
+			$plugins->method( 'booster_plugin_from_file' )->willReturnCallback( $live );
 		} else {
-			$plugins->method( 'boosterPluginFromFile' )->willReturn( $live );
+			$plugins->method( 'booster_plugin_from_file' )->willReturn( $live );
 		}
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 		$lock      = new RuntimeUpdaterLock();
 		$facade    = new RuntimeUpdaterFacade();
 		$registrar = $this->registrar(

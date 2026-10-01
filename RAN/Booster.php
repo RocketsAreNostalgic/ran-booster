@@ -384,7 +384,7 @@ class Booster {
 		}
 
 		$repository = $this->service( 'RAN\Storage\PluginRepository' );
-		$plugins    = $repository->allBoosterPlugins();
+		$plugins    = $repository->all_booster_plugins();
 		$url        = is_multisite()
 			? network_admin_url( 'admin.php?page=ran-booster-plugins' )
 			: get_admin_url( null, 'admin.php?page=ran-booster-plugins' );

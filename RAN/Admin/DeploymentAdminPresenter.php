@@ -220,7 +220,7 @@ final class DeploymentAdminPresenter {
 		);
 		foreach ( array( 'plugin', 'theme' ) as $type ) {
 			try {
-				$packages = 'plugin' === $type ? $this->plugins?->allDeploymentPlugins() : $this->themes?->allDeploymentThemes();
+				$packages = 'plugin' === $type ? $this->plugins?->all_deployment_plugins() : $this->themes?->all_deployment_themes();
 				$view     = 'plugin' === $type ? PackagePagePresenter::plugin() : PackagePagePresenter::theme();
 				$seen     = array();
 				foreach ( $packages ?? array() as $package ) {

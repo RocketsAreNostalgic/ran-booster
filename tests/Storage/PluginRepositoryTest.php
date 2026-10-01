@@ -36,7 +36,7 @@ final class PluginRepositoryTest extends TestCase {
 	}
 
 	public function testSlugHydrationDoesNotRequireAGlobalContainer(): void {
-		$plugin = ( new PluginRepository() )->fromSlug( 'example' );
+		$plugin = ( new PluginRepository() )->from_slug( 'example' );
 
 		self::assertInstanceOf( Plugin::class, $plugin );
 		self::assertSame( 'example/example.php', $plugin->get_identifier() );
@@ -46,7 +46,7 @@ final class PluginRepositoryTest extends TestCase {
 		$repository = new PluginRepository();
 
 		$this->expectException( PluginNotFound::class );
-		$repository->fromSlug( 'missing-package' );
+		$repository->from_slug( 'missing-package' );
 	}
 
 	public function testPluginInstallationCheckRequiresAWordPressRegisteredPlugin(): void {

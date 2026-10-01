@@ -402,7 +402,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 			}
 
 			public function hasManagementRecordForTest( string $identifier ): bool {
-				return $this->hasManagementRecord( $identifier );
+				return $this->has_management_record( $identifier );
 			}
 
 			public function storeForTest( Package $package ): PackageMutationResult {

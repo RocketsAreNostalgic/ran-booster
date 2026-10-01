@@ -337,7 +337,7 @@ final class ReleaseWorkflowRequestController {
 
 	private function workflow_package( string $type, string $identifier, int $revision ): ?object {
 		$package = $this->request_boundary(
-			fn (): object => 'plugin' === $type ? $this->plugins->boosterPluginFromFile( $identifier ) : $this->themes->boosterThemeFromStylesheet( $identifier ),
+			fn (): object => 'plugin' === $type ? $this->plugins->booster_plugin_from_file( $identifier ) : $this->themes->booster_theme_from_stylesheet( $identifier ),
 			null
 		);
 		return null !== $package && $revision === $package->get_source_revision()

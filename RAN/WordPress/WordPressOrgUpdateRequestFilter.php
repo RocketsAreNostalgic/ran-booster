@@ -52,8 +52,8 @@ final class WordPressOrgUpdateRequestFilter {
 			}
 			$managed = array_keys(
 				'plugin' === $type
-					? $this->plugins->allBoosterPlugins()
-					: $this->themes->allBoosterThemes()
+					? $this->plugins->all_booster_plugins()
+					: $this->themes->all_booster_themes()
 			);
 		} catch ( Throwable ) {
 			return $args;

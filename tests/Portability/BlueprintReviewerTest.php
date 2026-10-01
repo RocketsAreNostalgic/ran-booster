@@ -36,15 +36,15 @@ final class BlueprintReviewerTest extends TestCase {
 		$themes  = $this->createStub( ThemeRepository::class );
 		$package = $this->blueprintPackage();
 
-		$plugins->expects( self::once() )->method( 'isInstalled' )->with( $package->identifier )->willReturn( $installed );
-		$plugins->expects( self::once() )->method( 'hasManagementRecord' )->with( $package->identifier )->willReturn( $managed );
+		$plugins->expects( self::once() )->method( 'is_installed' )->with( $package->identifier )->willReturn( $installed );
+		$plugins->expects( self::once() )->method( 'has_management_record' )->with( $package->identifier )->willReturn( $managed );
 		if ( $installed && $managed ) {
 			if ( null !== $failure ) {
-				$plugins->expects( self::once() )->method( 'boosterPluginFromFile' )->willThrowException(
+				$plugins->expects( self::once() )->method( 'booster_plugin_from_file' )->willThrowException(
 					'duplicate' === $failure ? PackageStorageFailure::duplicate_package_rows() : PackageStorageFailure::invalid_provider_identity()
 				);
 			} else {
-				$plugins->expects( self::once() )->method( 'boosterPluginFromFile' )->willReturn( $this->managedPackage( $managedRepositoryId ?? '' ) );
+				$plugins->expects( self::once() )->method( 'booster_plugin_from_file' )->willReturn( $this->managedPackage( $managedRepositoryId ?? '' ) );
 			}
 		}
 
@@ -69,9 +69,9 @@ final class BlueprintReviewerTest extends TestCase {
 		$plugins = $this->createMock( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
 		$package = $this->blueprintPackage();
-		$plugins->method( 'isInstalled' )->willReturn( true );
-		$plugins->method( 'hasManagementRecord' )->willReturn( true );
-		$plugins->method( 'boosterPluginFromFile' )->willThrowException( PackageStorageFailure::unsupported_database() );
+		$plugins->method( 'is_installed' )->willReturn( true );
+		$plugins->method( 'has_management_record' )->willReturn( true );
+		$plugins->method( 'booster_plugin_from_file' )->willThrowException( PackageStorageFailure::unsupported_database() );
 
 		$this->expectException( PackageStorageFailure::class );
 		$this->expectExceptionMessage( 'database requirements' );

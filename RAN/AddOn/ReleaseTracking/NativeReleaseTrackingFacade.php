@@ -849,10 +849,10 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 
 	private function package( string $type, string $identifier ): Package {
 		if ( 'plugin' === $type ) {
-			return $this->plugins->boosterPluginFromFile( $identifier );
+			return $this->plugins->booster_plugin_from_file( $identifier );
 		}
 		if ( 'theme' === $type ) {
-			return $this->themes->boosterThemeFromStylesheet( $identifier );
+			return $this->themes->booster_theme_from_stylesheet( $identifier );
 		}
 
 		throw new InvalidArgumentException( 'The release tracking package type is invalid.' );

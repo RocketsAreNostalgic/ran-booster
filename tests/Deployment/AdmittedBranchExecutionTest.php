@@ -267,13 +267,13 @@ final class AdmittedBranchExecutionTest extends TestCase {
 final class BoundaryPluginRepository extends PluginRepository {
 	public ?Plugin $package = null;
 	public function __construct() {}
-	public function allDeploymentPlugins( ?\RAN\PackageSource $source = null ): array {
+	public function all_deployment_plugins( ?\RAN\PackageSource $source = null ): array {
 		return null === $this->package ? array() : array( (string) $this->package->get_identifier() => $this->package );
 	}
-	public function fromSlug( $slug ) {
+	public function from_slug( $slug ) {
 		return $this->package ?? throw new RuntimeException( 'Missing test plugin.' );
 	}
-	public function boosterPluginFromFile( $file ) {
+	public function booster_plugin_from_file( $file ) {
 		return $this->package ?? throw new RuntimeException( 'Missing test plugin.' );
 	}
 }

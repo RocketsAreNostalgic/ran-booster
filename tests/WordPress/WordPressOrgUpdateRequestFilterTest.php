@@ -22,9 +22,9 @@ final class WordPressOrgUpdateRequestFilterTest extends TestCase {
 		$database = $this->createStub( Database::class );
 		$database->method( 'isSupported' )->willReturn( true );
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allBoosterPlugins' )->willReturn( array( 'managed/plugin.php' => new \stdClass() ) );
+		$plugins->method( 'all_booster_plugins' )->willReturn( array( 'managed/plugin.php' => new \stdClass() ) );
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allBoosterThemes' )->willReturn( array( 'managed-theme' => new \stdClass() ) );
+		$themes->method( 'all_booster_themes' )->willReturn( array( 'managed-theme' => new \stdClass() ) );
 		$filter = new WordPressOrgUpdateRequestFilter( $database, $plugins, $themes, 'ran-booster/ran-booster.php' );
 
 		$pluginArgs    = $filter->plugins(
@@ -75,9 +75,9 @@ final class WordPressOrgUpdateRequestFilterTest extends TestCase {
 		$database = $this->createStub( Database::class );
 		$database->method( 'isSupported' )->willReturn( true );
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allBoosterPlugins' )->willReturn( array( 'managed/plugin.php' => new \stdClass() ) );
+		$plugins->method( 'all_booster_plugins' )->willReturn( array( 'managed/plugin.php' => new \stdClass() ) );
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allBoosterThemes' )->willReturn( array( 'managed-theme' => new \stdClass() ) );
+		$themes->method( 'all_booster_themes' )->willReturn( array( 'managed-theme' => new \stdClass() ) );
 		$filter = new WordPressOrgUpdateRequestFilter( $database, $plugins, $themes, 'ran-booster/ran-booster.php' );
 		$args   = 'plugins' === $method
 			? array( 'body' => array( 'plugins' => '{"plugins":{"managed/plugin.php":{}},"active":["managed/plugin.php"]}' ) )
@@ -145,7 +145,7 @@ final class WordPressOrgUpdateRequestFilterTest extends TestCase {
 		$database = $this->createStub( Database::class );
 		$database->method( 'isSupported' )->willReturn( true );
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allBoosterPlugins' )->willThrowException( new RuntimeException( 'database details' ) );
+		$plugins->method( 'all_booster_plugins' )->willThrowException( new RuntimeException( 'database details' ) );
 		$args = array(
 			'body' => array(
 				'plugins' => '{"plugins":{"managed/plugin.php":{}},"active":[]}',
@@ -175,9 +175,9 @@ final class WordPressOrgUpdateRequestFilterTest extends TestCase {
 		$database = $this->createStub( Database::class );
 		$database->method( 'isSupported' )->willReturn( true );
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allBoosterPlugins' )->willReturn( array( 'managed/plugin.php' => new \stdClass() ) );
+		$plugins->method( 'all_booster_plugins' )->willReturn( array( 'managed/plugin.php' => new \stdClass() ) );
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allBoosterThemes' )->willReturn( array( 'managed-theme' => new \stdClass() ) );
+		$themes->method( 'all_booster_themes' )->willReturn( array( 'managed-theme' => new \stdClass() ) );
 
 		return new WordPressOrgUpdateRequestFilter( $database, $plugins, $themes, 'ran-booster/ran-booster.php' );
 	}

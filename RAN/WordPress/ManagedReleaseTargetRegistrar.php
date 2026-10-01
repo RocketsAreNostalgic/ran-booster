@@ -76,7 +76,7 @@ final class ManagedReleaseTargetRegistrar {
 		}
 
 		try {
-			$plugins = $this->plugins->allDeploymentPlugins( PackageSource::RELEASE_ASSET );
+			$plugins = $this->plugins->all_deployment_plugins( PackageSource::RELEASE_ASSET );
 		} catch ( Throwable $exception ) {
 			$this->failures[ self::key( 'plugin', '*' ) ] = 'repository_read_failed';
 			BoosterLogger::logException(
@@ -90,7 +90,7 @@ final class ManagedReleaseTargetRegistrar {
 			$plugins = array();
 		}
 		try {
-			$themes = $this->themes->allDeploymentThemes( PackageSource::RELEASE_ASSET );
+			$themes = $this->themes->all_deployment_themes( PackageSource::RELEASE_ASSET );
 		} catch ( Throwable $exception ) {
 			$this->failures[ self::key( 'theme', '*' ) ] = 'repository_read_failed';
 			BoosterLogger::logException(
@@ -541,8 +541,8 @@ final class ManagedReleaseTargetRegistrar {
 	/** @return array{release: bool, authority: array<string, int|string>|null} */
 	private function native_authority_snapshot( string $type, string $identifier ): array {
 		$package = 'plugin' === $type
-			? $this->plugins->boosterPluginFromFile( $identifier )
-			: $this->themes->boosterThemeFromStylesheet( $identifier );
+			? $this->plugins->booster_plugin_from_file( $identifier )
+			: $this->themes->booster_theme_from_stylesheet( $identifier );
 		if ( PackageSource::RELEASE_ASSET !== $package->get_source() ) {
 			return array(
 				'release'   => false,
@@ -612,8 +612,8 @@ final class ManagedReleaseTargetRegistrar {
 		}
 		try {
 			$packages = 'plugin' === $type
-				? $this->plugins->allDeploymentPlugins()
-				: $this->themes->allDeploymentThemes();
+				? $this->plugins->all_deployment_plugins()
+				: $this->themes->all_deployment_themes();
 		} catch ( Throwable ) {
 			$prefix = $type . "\0";
 			$keys   = array_unique(

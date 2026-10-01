@@ -9,8 +9,7 @@ use RAN\WordPress\ManagedReleaseConfiguration;
 
 class PluginRepository extends AbstractPackageRepository {
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function allBoosterPlugins() {
+	public function all_booster_plugins() {
 		include_once ABSPATH . 'wp-admin/includes/plugin.php';
 
 		return $this->all_packages();
@@ -21,15 +20,13 @@ class PluginRepository extends AbstractPackageRepository {
 	 *
 	 * @return array<string, Package>
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function allDeploymentPlugins( ?PackageSource $source = null ): array {
+	public function all_deployment_plugins( ?PackageSource $source = null ): array {
 		include_once ABSPATH . 'wp-admin/includes/plugin.php';
 
 		return $this->all_packages( $source );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function editPlugin( $file, $input ): PackageMutationResult {
+	public function edit_plugin( $file, $input ): PackageMutationResult {
 		return $this->edit_package( $file, $input );
 	}
 
@@ -37,13 +34,11 @@ class PluginRepository extends AbstractPackageRepository {
 	 * @param list<array<string, mixed>> $snapshots
 	 * @return array{selected: int, changed: int, unchanged: int}
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function setPluginDeploymentPolicies( array $snapshots, \RAN\Deployment\DeploymentPolicy $policy ): array {
+	public function set_plugin_deployment_policies( array $snapshots, \RAN\Deployment\DeploymentPolicy $policy ): array {
 		return $this->set_deployment_policies( $snapshots, $policy );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function disablePluginForRemoval( Plugin $plugin ): PackageMutationResult {
+	public function disable_plugin_for_removal( Plugin $plugin ): PackageMutationResult {
 		return $this->disable_package_for_removal( $plugin );
 	}
 
@@ -51,8 +46,7 @@ class PluginRepository extends AbstractPackageRepository {
 	 * @param $slug
 	 * @return Plugin
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function fromSlug( $slug ) {
+	public function from_slug( $slug ) {
 		$plugins = get_plugins();
 
 		foreach ( $plugins as $file => $plugin_info ) {
@@ -72,16 +66,14 @@ class PluginRepository extends AbstractPackageRepository {
 	 * @return Plugin $plugin
 	 * @throws PluginNotFound
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function boosterPluginFromFile( $file ) {
+	public function booster_plugin_from_file( $file ) {
 		include_once ABSPATH . 'wp-admin/includes/plugin.php';
 
 		return $this->managed_package( $file );
 	}
 
 	/** @throws PluginNotFound */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function installedPluginFromFile( string $file ): Plugin {
+	public function installed_plugin_from_file( string $file ): Plugin {
 		include_once ABSPATH . 'wp-admin/includes/plugin.php';
 		if ( ! $this->package_exists( $file ) ) {
 			throw $this->not_found_exception();
@@ -98,8 +90,7 @@ class PluginRepository extends AbstractPackageRepository {
 		return $this->adopt_package( $plugin );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function adoptRelease(
+	public function adopt_release(
 		Plugin $plugin,
 		ManagedReleaseConfiguration $configuration,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
@@ -109,8 +100,7 @@ class PluginRepository extends AbstractPackageRepository {
 		return $this->adopt_release_package( $plugin, $configuration, $userId );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function isInstalled( string $identifier ): bool {
+	public function is_installed( string $identifier ): bool {
 		return $this->package_exists( $identifier );
 	}
 

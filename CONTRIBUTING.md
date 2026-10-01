@@ -44,6 +44,31 @@ and does not raise the analysis level or certify new dependency/host versions.
 
 ## Audited PHP naming scope
 
+The internal webhook-history cohort uses `WebhookHistory::for_package()`,
+`WebhookHistory::from_record()` and `WebhookHistoryView::to_array()` throughout
+its owned callers and tests. Method enforcement includes both history classes,
+expanding the scope from 170 to 172 files; variable enforcement is unchanged by
+this cohort. Constructor/promoted parameter names and serialized history keys
+remain intact. The separate authority resolver's `forPackage()` and foreign
+readiness `toArray()` contracts retain their existing names. Historical records
+remain observations, not live readiness or restored update authority.
+
+
+The internal-variable cohort adds variable enforcement for Booster,
+ProviderRegistry, ReleaseWorkflowRequestController, ReleaseWorkflowDisplay and
+ReleaseWorkflowPresenter: variable scope expands from 161 to 166 files, while
+method scope remains 170. Internal locals, private parameters and eight private
+properties use snake_case; two ProviderRegistry property reflection references
+follow the private rename. Two owned private named-argument labels follow their
+renamed private parameters. Public/protected parameter contracts, promoted
+parameters, public properties, DTO fields, method names and production
+data/literals retain their names. Exact line/source exceptions document the
+retained contracts.
+RepositoryReleaseWorkflowStatus remains outside variable scope because its
+mixed-case variables are public/promoted DTO contracts requiring a connected
+migration. Registration, security/nonce/capability checks, projection/rendering
+and failure/control ordering are preserved.
+
 The private API12 cohort migrates 74 private declarations and their owned calls:
 two in Booster, eight in ProviderRegistry, one in RepositoryReleaseWorkflowStatus,
 26 in ReleaseWorkflowRequestController, nine in ReleaseWorkflowDisplay and 28 in
@@ -54,8 +79,8 @@ signatures and production literals remain unchanged. Registration atomicity,
 provider admission, capability/nonce checks, signed results, projection and
 rendered output contracts are preserved; this is not a UI behavior change.
 
-These six files expand method enforcement from 164 to 170 files. Variable
-enforcement remains at 161 files. Fifty retained mixed-case public/protected
+These six files expanded method enforcement from 164 to 170 files. Variable
+enforcement remained at 161 files for that method-only cohort. Fifty retained mixed-case public/protected
 declarations have individual deferred-contract annotations, pending their
 connected migration. Magic methods retain their native names. This cohort does
 not complete public contracts or variable/parameter naming in these files.
@@ -71,7 +96,7 @@ SQL/transaction order, filesystem/crypto/rollback behavior and response output
 remain unchanged.
 
 The three runtime-slug files expanded method enforcement to 164 files. Variable
-enforcement stays at 161 files. Their 26 retained mixed-case public declarations
+enforcement stayed at 161 files for that cohort. Their 26 retained mixed-case public declarations
 have individual deferred-contract annotations: the Package interface and dynamic
 getter dispatch still require a separate connected public migration. Magic
 methods retain their native names. All other files in this tranche were already

@@ -32,11 +32,11 @@ final readonly class ProviderSetupMetadata {
 		string $webhookDocumentationUrl,
 		string $deliveryDocumentationUrl
 	) {
-		$this->credentialSummary        = MetadataRules::requiredText( $credentialSummary, MetadataRules::SUMMARY_LENGTH );
-		$this->webhookLocation          = MetadataRules::requiredText( $webhookLocation, MetadataRules::DETAIL_LENGTH );
-		$this->webhookEvent             = MetadataRules::requiredText( $webhookEvent, MetadataRules::DETAIL_LENGTH );
-		$this->webhookDocumentationUrl  = MetadataRules::httpsUrl( $webhookDocumentationUrl );
-		$this->deliveryDocumentationUrl = MetadataRules::httpsUrl( $deliveryDocumentationUrl );
+		$this->credentialSummary        = MetadataRules::required_text( $credentialSummary, MetadataRules::SUMMARY_LENGTH );
+		$this->webhookLocation          = MetadataRules::required_text( $webhookLocation, MetadataRules::DETAIL_LENGTH );
+		$this->webhookEvent             = MetadataRules::required_text( $webhookEvent, MetadataRules::DETAIL_LENGTH );
+		$this->webhookDocumentationUrl  = MetadataRules::https_url( $webhookDocumentationUrl );
+		$this->deliveryDocumentationUrl = MetadataRules::https_url( $deliveryDocumentationUrl );
 
 		$links = array();
 		foreach ( $credentialLinks as $link ) {
@@ -45,8 +45,8 @@ final readonly class ProviderSetupMetadata {
 			}
 
 			$links[] = array(
-				'label' => MetadataRules::requiredText( $link['label'], MetadataRules::LABEL_LENGTH ),
-				'url'   => MetadataRules::httpsUrl( $link['url'] ),
+				'label' => MetadataRules::required_text( $link['label'], MetadataRules::LABEL_LENGTH ),
+				'url'   => MetadataRules::https_url( $link['url'] ),
 			);
 		}
 

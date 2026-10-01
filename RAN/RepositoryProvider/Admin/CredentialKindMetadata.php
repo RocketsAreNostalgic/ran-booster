@@ -31,10 +31,10 @@ final readonly class CredentialKindMetadata {
 		string $shortLabel = ''
 	) {
 		$code              = MetadataRules::identifier( $code );
-		$label             = MetadataRules::requiredText( $label, MetadataRules::LABEL_LENGTH );
-		$secretLabel       = MetadataRules::requiredText( $secretLabel, MetadataRules::LABEL_LENGTH );
-		$secretPlaceholder = MetadataRules::optionalText( $secretPlaceholder, MetadataRules::DETAIL_LENGTH );
-		$shortLabel        = MetadataRules::optionalText( $shortLabel, MetadataRules::LABEL_LENGTH );
+		$label             = MetadataRules::required_text( $label, MetadataRules::LABEL_LENGTH );
+		$secretLabel       = MetadataRules::required_text( $secretLabel, MetadataRules::LABEL_LENGTH );
+		$secretPlaceholder = MetadataRules::optional_text( $secretPlaceholder, MetadataRules::DETAIL_LENGTH );
+		$shortLabel        = MetadataRules::optional_text( $shortLabel, MetadataRules::LABEL_LENGTH );
 
 		$indexedFields = array();
 

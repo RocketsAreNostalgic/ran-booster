@@ -20,7 +20,7 @@ final class MetadataRules {
 	public const IDENTIFIER_LENGTH = 64;
 
 	public static function identifier( string $value ): string {
-		$hasControls = self::containsControlCharacters( $value );
+		$hasControls = self::contains_control_characters( $value );
 		$value       = trim( $value );
 
 		if ( $hasControls || strlen( $value ) > self::IDENTIFIER_LENGTH || 1 !== preg_match( '/^[a-z][a-z0-9_-]*$/', $value ) ) {
@@ -30,8 +30,8 @@ final class MetadataRules {
 		return $value;
 	}
 
-	public static function requiredText( string $value, int $maximumLength ): string {
-		$hasControls = self::containsControlCharacters( $value );
+	public static function required_text( string $value, int $maximumLength ): string {
+		$hasControls = self::contains_control_characters( $value );
 		$value       = trim( $value );
 
 		if ( $hasControls || '' === $value || strlen( $value ) > $maximumLength ) {
@@ -41,8 +41,8 @@ final class MetadataRules {
 		return $value;
 	}
 
-	public static function optionalText( string $value, int $maximumLength ): string {
-		$hasControls = self::containsControlCharacters( $value );
+	public static function optional_text( string $value, int $maximumLength ): string {
+		$hasControls = self::contains_control_characters( $value );
 		$value       = trim( $value );
 
 		if ( $hasControls || strlen( $value ) > $maximumLength ) {
@@ -52,8 +52,8 @@ final class MetadataRules {
 		return $value;
 	}
 
-	public static function httpsUrl( string $url ): string {
-		$hasControls = self::containsControlCharacters( $url );
+	public static function https_url( string $url ): string {
+		$hasControls = self::contains_control_characters( $url );
 		$url         = trim( $url );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Provider metadata remains usable without WordPress runtime.
@@ -76,7 +76,7 @@ final class MetadataRules {
 		return $url;
 	}
 
-	public static function containsControlCharacters( string $value ): bool {
+	public static function contains_control_characters( string $value ): bool {
 		return 1 === preg_match( '/[\x00-\x1F\x7F]/', $value );
 	}
 }

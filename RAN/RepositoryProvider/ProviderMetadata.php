@@ -21,18 +21,18 @@ final readonly class ProviderMetadata {
 		public ?ProviderAdminMetadata $admin = null
 	) {
 		try {
-			$label = MetadataRules::requiredText( $label, MetadataRules::LABEL_LENGTH );
+			$label = MetadataRules::required_text( $label, MetadataRules::LABEL_LENGTH );
 		} catch ( \InvalidArgumentException ) {
 			throw InvalidProvider::emptyLabel();
 		}
 
 		try {
-			$ownerLabel = MetadataRules::requiredText( $ownerLabel, MetadataRules::LABEL_LENGTH );
+			$ownerLabel = MetadataRules::required_text( $ownerLabel, MetadataRules::LABEL_LENGTH );
 		} catch ( \InvalidArgumentException ) {
 			throw InvalidProvider::emptyOwnerLabel();
 		}
 
-		if ( MetadataRules::containsControlCharacters( $repositoryUrlBase ) ) {
+		if ( MetadataRules::contains_control_characters( $repositoryUrlBase ) ) {
 			throw InvalidProvider::invalidRepositoryUrlBase();
 		}
 

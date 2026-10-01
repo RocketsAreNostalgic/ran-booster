@@ -28,6 +28,8 @@
 	</rule>
 	<!-- Enforce only the completed, individually audited naming cohorts. -->
 	<rule ref="RANOwnedMethods">
+		<!-- Internal provider metadata: complete owned helper/caller cohort. -->
+		<include-pattern>/RAN/RepositoryProvider/Admin/MetadataRules.php</include-pattern>
 		<!-- Artifact ceiling: complete owned validation method/caller cohort. -->
 		<include-pattern>/RAN/PackageArtifactLimit.php</include-pattern>
 		<!-- Internal webhook history: complete owned method/caller cohort. -->

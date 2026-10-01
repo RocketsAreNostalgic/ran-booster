@@ -1000,7 +1000,7 @@ msgstr ""
 msgid "RAN Booster could not identify the current administrator."
 msgstr ""
 
-#: RAN/Admin/DocumentationHookRenderer.php:128
+#: RAN/Admin/DocumentationHookRenderer.php:125
 msgid "An add-on guide is temporarily unavailable. Check plugin compatibility and the error log."
 msgstr ""
 

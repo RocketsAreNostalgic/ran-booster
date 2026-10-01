@@ -24,10 +24,10 @@ final readonly class WebhookScopeMetadata {
 		public bool $requiresManagedTarget = false
 	) {
 		$code              = MetadataRules::identifier( $code );
-		$label             = MetadataRules::requiredText( $label, MetadataRules::LABEL_LENGTH );
-		$targetLabel       = MetadataRules::optionalText( $targetLabel, MetadataRules::LABEL_LENGTH );
-		$targetPlaceholder = MetadataRules::optionalText( $targetPlaceholder, MetadataRules::DETAIL_LENGTH );
-		$description       = MetadataRules::optionalText( $description, MetadataRules::DETAIL_LENGTH );
+		$label             = MetadataRules::required_text( $label, MetadataRules::LABEL_LENGTH );
+		$targetLabel       = MetadataRules::optional_text( $targetLabel, MetadataRules::LABEL_LENGTH );
+		$targetPlaceholder = MetadataRules::optional_text( $targetPlaceholder, MetadataRules::DETAIL_LENGTH );
+		$description       = MetadataRules::optional_text( $description, MetadataRules::DETAIL_LENGTH );
 
 		if ( ! in_array( $code, array( 'owner', 'repository' ), true ) ) {
 			throw new InvalidArgumentException( 'Webhook scope codes must be owner or repository.' );

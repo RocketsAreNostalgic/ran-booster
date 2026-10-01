@@ -17,8 +17,7 @@ final class DocumentationHookRenderer {
 	 *
 	 * @param non-empty-string $filterHook
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the published public method and named-parameter contract.
-	public function renderSections(
+	public function render_sections(
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		string $filterHook,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
@@ -28,7 +27,7 @@ final class DocumentationHookRenderer {
 		?string $providerCode = null
 	): void {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-		$this->renderPreparedSections( $this->prepareSections( $filterHook, $documentationUrl, $scope, $providerCode ) );
+		$this->render_prepared_sections( $this->prepare_sections( $filterHook, $documentationUrl, $scope, $providerCode ) );
 	}
 
 	/**
@@ -37,8 +36,7 @@ final class DocumentationHookRenderer {
 	 * @param non-empty-string $filterHook
 	 * @return list<array{id: string, summary: string, content: string, open: bool}>
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the published public method and named-parameter contract.
-	public function prepareSections(
+	public function prepare_sections(
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		string $filterHook,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
@@ -67,8 +65,7 @@ final class DocumentationHookRenderer {
 	/**
 	 * @param list<array{id: string, summary: string, content: string, open: bool}> $sections
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the published public method and named-parameter contract.
-	public function renderPreparedSections( array $sections ): void {
+	public function render_prepared_sections( array $sections ): void {
 		foreach ( $sections as $section ) {
 			?>
 			<details id="<?php echo esc_attr( $section['id'] ); ?>" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section<?php echo $section['open'] ? ' open' : ''; ?>>

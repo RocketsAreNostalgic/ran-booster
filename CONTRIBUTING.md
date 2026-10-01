@@ -109,6 +109,14 @@ confirmations, path and credential-fitness checks, lock and state rechecks, exac
 key/ciphertext deletion, rollback and fresh-request verification remain unchanged.
 Callers and subclasses use the snake_case methods without legacy aliases.
 
+The documentation and metadata helper cohort migrates seven public methods in
+`DocumentationHookRenderer` and internal `MetadataRules`, together with owned
+callers, views and tests. MetadataRules joins method enforcement, increasing the
+method scope from 174 to 175 files; variable scope remains 166 files. Public
+parameters, including `maximumLength`, retain named-argument compatibility.
+Validation expressions and error messages, hook names, metadata keys and rendered
+HTML remain unchanged. Connected callers use snake_case methods without aliases.
+
 The private API12 cohort migrates 74 private declarations and their owned calls:
 two in Booster, eight in ProviderRegistry, one in RepositoryReleaseWorkflowStatus,
 26 in ReleaseWorkflowRequestController, nine in ReleaseWorkflowDisplay and 28 in

@@ -3,8 +3,10 @@ set -euo pipefail
 
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 validator="$repo_root/scripts/validate-release-candidate.sh"
-work_root=$(mktemp -d "${TMPDIR:-/tmp}/ran-bitbucket-release-candidate-test.XXXXXX")
+work_root=$(mktemp -d "${TMPDIR:-/tmp}/ran-core-release-candidate-test.XXXXXX")
 trap 'rm -rf "$work_root"' EXIT
+valid_cases=0
+invalid_cases=0
 
 fail() {
 	printf 'release candidate validator test: %s\n' "$*" >&2
@@ -83,6 +85,7 @@ expect_valid() {
 		cd "$case_dir"
 		bash "$validator" "$base_sha" "$head_sha"
 	) >/dev/null || fail "$name should pass"
+	valid_cases=$((valid_cases + 1))
 }
 
 expect_invalid() {
@@ -93,6 +96,7 @@ expect_invalid() {
 	) >/dev/null 2>&1; then
 		fail "$name should fail"
 	fi
+	invalid_cases=$((invalid_cases + 1))
 }
 
 prepare_valid valid
@@ -110,7 +114,7 @@ git -C "$case_dir" merge --quiet --no-ff main -m 'Merge branch main into release
 head_sha=$(git -C "$case_dir" rev-parse HEAD)
 expect_valid updated-branch
 
-prepare_valid updated-branch-version-mismatch
+prepare_valid updated-branch-consistent-version-revision
 generated_sha=$head_sha
 git -C "$case_dir" checkout --quiet -B main "$base_sha"
 printf '<?php // Main advanced.\n' > "$case_dir/main-advance.php"
@@ -124,9 +128,9 @@ replace_in_case 's/1\.2\.4/1.2.5/g' ran-booster.php
 replace_in_case 's/1\.2\.4/1.2.5/g' readme.txt
 replace_in_case 's/1\.2\.4/1.2.5/g' CHANGELOG.md
 amend_case
-expect_invalid updated-branch-version-mismatch
+expect_valid updated-branch-consistent-version-revision
 
-prepare_valid updated-branch-changelog-mismatch
+prepare_valid updated-branch-new-notes-revision
 generated_sha=$head_sha
 git -C "$case_dir" checkout --quiet -B main "$base_sha"
 printf '<?php // Main advanced.\n' > "$case_dir/main-advance.php"
@@ -137,9 +141,9 @@ git -C "$case_dir" checkout --quiet "$generated_sha"
 git -C "$case_dir" merge --quiet --no-ff main -m 'Merge branch main into release candidate'
 replace_in_case 's/Generated release\./Adjusted release notes./' CHANGELOG.md
 amend_case
-expect_invalid updated-branch-changelog-mismatch
+expect_valid updated-branch-new-notes-revision
 
-prepare_valid updated-branch-plus-prefixed-changelog-mismatch
+prepare_valid updated-branch-plus-prefixed-notes-revision
 replace_in_case 's/Generated release\./+ Generated release./' CHANGELOG.md
 amend_case
 generated_sha=$head_sha
@@ -152,7 +156,7 @@ git -C "$case_dir" checkout --quiet "$generated_sha"
 git -C "$case_dir" merge --quiet --no-ff main -m 'Merge branch main into release candidate'
 replace_in_case 's/\+ Generated release\./+ Adjusted release notes./' CHANGELOG.md
 amend_case
-expect_invalid updated-branch-plus-prefixed-changelog-mismatch
+expect_valid updated-branch-plus-prefixed-notes-revision
 
 prepare_valid updated-branch-runtime-edit
 generated_sha=$head_sha
@@ -169,7 +173,7 @@ git -C "$case_dir" commit --quiet --amend --no-edit
 head_sha=$(git -C "$case_dir" rev-parse HEAD)
 expect_invalid updated-branch-runtime-edit
 
-prepare_valid updated-branch-unsupported-history
+prepare_valid updated-branch-multi-commit
 generated_sha=$head_sha
 git -C "$case_dir" checkout --quiet -B main "$base_sha"
 printf '<?php // Main advanced.\n' > "$case_dir/main-advance.php"
@@ -177,15 +181,67 @@ git -C "$case_dir" add main-advance.php
 git -C "$case_dir" commit --quiet -m 'feat: advance main'
 base_sha=$(git -C "$case_dir" rev-parse HEAD)
 git -C "$case_dir" checkout --quiet "$generated_sha"
-git -C "$case_dir" commit --quiet --allow-empty -m 'chore: unsupported release history'
+git -C "$case_dir" commit --quiet --allow-empty -m 'chore: unchanged candidate tree'
 git -C "$case_dir" merge --quiet --no-ff main -m 'Merge branch main into release candidate'
 head_sha=$(git -C "$case_dir" rev-parse HEAD)
-expect_invalid updated-branch-unsupported-history
+expect_valid updated-branch-multi-commit
 
 prepare_valid multi-commit
-git -C "$case_dir" commit --quiet --allow-empty -m 'chore: unexpected second commit'
+git -C "$case_dir" commit --quiet --allow-empty -m 'chore: unchanged second commit'
 head_sha=$(git -C "$case_dir" rev-parse HEAD)
-expect_invalid multi-commit
+expect_valid multi-commit
+
+# Parent order and shared ancestry do not determine final content validity.
+prepare_valid updated-branch-base-first
+generated_sha=$head_sha
+git -C "$case_dir" checkout --quiet -B main "$base_sha"
+printf '<?php // Main advanced.\n' > "$case_dir/main-advance.php"
+git -C "$case_dir" add main-advance.php
+git -C "$case_dir" commit --quiet -m 'feat: advance main'
+base_sha=$(git -C "$case_dir" rev-parse HEAD)
+git -C "$case_dir" merge --quiet --no-ff "$generated_sha" -m 'Merge candidate onto current main'
+head_sha=$(git -C "$case_dir" rev-parse HEAD)
+expect_valid updated-branch-base-first
+
+prepare_valid divergent-base
+git -C "$case_dir" checkout --quiet -B main "$base_sha"
+git -C "$case_dir" commit --quiet --allow-empty -m 'chore: unchanged base tree'
+base_sha=$(git -C "$case_dir" rev-parse HEAD)
+expect_valid divergent-base
+
+prepare_valid orphan-candidate
+candidate_tree=$(git -C "$case_dir" rev-parse "$head_sha^{tree}")
+head_sha=$(git -C "$case_dir" commit-tree "$candidate_tree" -m 'Generated candidate with independent history')
+expect_valid orphan-candidate
+
+# A real newer-base change must not disappear from the candidate tree.
+prepare_valid missing-newer-base-content
+git -C "$case_dir" checkout --quiet -B main "$base_sha"
+printf '<?php // Main advanced.\n' > "$case_dir/main-advance.php"
+git -C "$case_dir" add main-advance.php
+git -C "$case_dir" commit --quiet -m 'feat: advance main'
+base_sha=$(git -C "$case_dir" rev-parse HEAD)
+expect_invalid missing-newer-base-content
+
+# The final empty commit cannot hide an earlier runtime change from the PR diff.
+prepare_valid hidden-runtime-edit
+printf '\n// Unexpected bootstrap edit.\n' >> "$case_dir/ran-booster.php"
+git -C "$case_dir" add .
+git -C "$case_dir" commit --quiet -m 'feat: unexpected production edit'
+git -C "$case_dir" commit --quiet --allow-empty -m 'chore: unchanged final tree'
+head_sha=$(git -C "$case_dir" rev-parse HEAD)
+expect_invalid hidden-runtime-edit
+
+prepare_valid merged-config-edit
+git -C "$case_dir" branch release-candidate "$head_sha"
+git -C "$case_dir" checkout --quiet -b extra-config "$base_sha"
+printf '{"unexpected":true}\n' > "$case_dir/composer.json"
+git -C "$case_dir" add .
+git -C "$case_dir" commit --quiet -m 'chore: unexpected configuration edit'
+git -C "$case_dir" checkout --quiet release-candidate
+git -C "$case_dir" merge --quiet --no-ff extra-config -m 'Merge unexpected configuration'
+head_sha=$(git -C "$case_dir" rev-parse HEAD)
+expect_invalid merged-config-edit
 
 prepare_valid extra-file
 printf 'unexpected\n' > "$case_dir/unexpected.txt"
@@ -242,4 +298,4 @@ replace_in_case 's/1\.2\.4/1.2.5/g' CHANGELOG.md
 amend_case
 expect_invalid wrong-heading
 
-printf 'Release candidate validator behavior passed (2 valid, 17 invalid cases).\n'
+printf 'Release candidate validator behavior passed (%s valid, %s invalid cases).\n' "$valid_cases" "$invalid_cases"

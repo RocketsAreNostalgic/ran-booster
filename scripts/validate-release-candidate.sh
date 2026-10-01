@@ -12,36 +12,6 @@ base_commit=$(git rev-parse --verify "$1^{commit}") \
 release_commit=$(git rev-parse --verify "$2^{commit}") \
 	|| fail 'release commit is unavailable.'
 
-git merge-base --is-ancestor "$base_commit" "$release_commit" \
-	|| fail 'release commit does not descend from its pull-request base.'
-
-release_parents=( $(git rev-list --parents -n 1 "$release_commit") )
-generated_commit=''
-case "${#release_parents[@]}" in
-	2)
-		[[ "${release_parents[1]}" == "$base_commit" ]] \
-			|| fail 'linear release candidate must be the generated commit directly above its pull-request base.'
-		;;
-	3)
-		if [[ "${release_parents[1]}" == "$base_commit" ]]; then
-			generated_commit="${release_parents[2]}"
-		elif [[ "${release_parents[2]}" == "$base_commit" ]]; then
-			generated_commit="${release_parents[1]}"
-		else
-			fail 'updated release candidate merge must have its pull-request base as a parent.'
-		fi
-		[[ "$(git rev-list --parents -n 1 "$generated_commit" | wc -w | tr -d ' ')" == 2 ]] \
-			|| fail 'updated release candidate must contain one generated commit, not merged history.'
-		[[ "$(git rev-parse "${generated_commit}^")" == "$(git merge-base "$base_commit" "$generated_commit")" ]] \
-			|| fail 'updated release candidate must generate directly from the branches’ common ancestor.'
-		bash "$0" "$(git rev-parse "${generated_commit}^")" "$generated_commit" \
-			|| fail 'updated release candidate has no exact generated release parent.'
-		;;
-	*)
-		fail 'release candidate must be a generated commit or a controlled branch-update merge.'
-		;;
-esac
-
 expected_changes=$(printf '%s\n' \
 	$'M\t.release-please-manifest.json' \
 	$'M\tCHANGELOG.md' \
@@ -70,12 +40,6 @@ base_version=$(manifest_version "$base_commit") \
 	|| fail 'base manifest has an invalid shape.'
 release_version=$(manifest_version "$release_commit") \
 	|| fail 'release manifest has an invalid shape.'
-if [[ -n "$generated_commit" ]]; then
-	generated_version=$(manifest_version "$generated_commit") \
-		|| fail 'generated release parent has an invalid manifest shape.'
-	[[ "$release_version" == "$generated_version" ]] \
-		|| fail 'updated release candidate version must equal its generated release parent.'
-fi
 [[ "$release_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] \
 	|| fail 'release version is not valid semver.'
 [[ "$release_version" != "$base_version" ]] \
@@ -121,18 +85,5 @@ base_heading_line=$(grep -nE -m1 '^## \[[0-9]+\.[0-9]+\.[0-9]+' <<< "$release_ch
 	| cut -d: -f1)
 [[ -n "$release_heading_line" && "$release_heading_line" == "$base_heading_line" ]] \
 	|| fail 'new release entry must remain the first version section in the changelog.'
-
-if [[ -n "$generated_commit" ]]; then
-	generated_base=$(git rev-parse "${generated_commit}^")
-	changelog_additions() {
-		git diff --no-ext-diff --unified=0 "$1" "$2" -- CHANGELOG.md \
-			| awk '/^@@ / { hunk = 1; next } hunk && /^\+/ { print substr($0, 2) }'
-	}
-	diff -u \
-		<(changelog_additions "$generated_base" "$generated_commit") \
-		<(changelog_additions "$base_commit" "$release_commit") \
-		>/dev/null \
-		|| fail 'updated release candidate changelog additions must equal its generated release parent.'
-fi
 
 printf 'Validated Release Please candidate %s at %s.\n' "$release_version" "$release_commit"

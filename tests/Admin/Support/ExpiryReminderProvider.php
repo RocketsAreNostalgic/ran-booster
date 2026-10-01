@@ -15,7 +15,7 @@ final class ExpiryReminderProvider implements RepositoryProvider, ProviderCreden
 
 	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata(
 			ProviderCode::parse( 'gh' ),
 			'GitHub',
@@ -24,7 +24,7 @@ final class ExpiryReminderProvider implements RepositoryProvider, ProviderCreden
 		);
 	}
 
-	public function getCredentialPolicy(): ProviderCredentialPolicy {
+	public function get_credential_policy(): ProviderCredentialPolicy {
 		return new GitHubCredentialPolicy();
 	}
 }

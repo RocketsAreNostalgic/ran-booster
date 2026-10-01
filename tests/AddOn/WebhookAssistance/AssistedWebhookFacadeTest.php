@@ -47,7 +47,7 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local source contract inspection.
 		$bootstrap = file_get_contents( dirname( __DIR__, 3 ) . '/ran-booster.php' );
 		self::assertIsString( $bootstrap );
-		self::assertStringContainsString( "RAN_BOOSTER_PROVIDER_API_VERSION', 12", $bootstrap );
+		self::assertStringContainsString( "RAN_BOOSTER_PROVIDER_API_VERSION', 13", $bootstrap );
 		self::assertStringContainsString( "RAN_BOOSTER_ADDON_API_VERSION', 16", $bootstrap );
 		self::assertStringNotContainsString( 'RAN_BOOSTER_WEBHOOK_CLEANUP_API_VERSION', $bootstrap );
 		self::assertStringNotContainsString( 'ran_booster_webhook_cleanup_ready', $bootstrap );
@@ -527,11 +527,11 @@ final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhoo
 	/** @var callable(): void|null */
 	public $duringRemove = null;
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub fixture', 'https://example.test/', 'Owner' );
 	}
 
-	public function getProviderDiagnostics(): ProviderDiagnostics {
+	public function get_provider_diagnostics(): ProviderDiagnostics {
 		return new class() implements ProviderDiagnostics {
 			public function diagnose( ProviderDiagnosticRequest $request ): array {
 				return array();
@@ -539,45 +539,45 @@ final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhoo
 		};
 	}
 
-	public function getWebhookPolicy(): \RAN\RepositoryProvider\ProviderWebhookPolicy {
+	public function get_webhook_policy(): \RAN\RepositoryProvider\ProviderWebhookPolicy {
 		return new InertWebhookPolicy( ProviderCode::parse( 'gh' ) );
 	}
 
-	public function diagnoseWebhookReadiness(): \RAN\RepositoryProvider\ProviderDiagnosticResult {
+	public function diagnose_webhook_readiness(): \RAN\RepositoryProvider\ProviderDiagnosticResult {
 		return new \RAN\RepositoryProvider\ProviderDiagnosticResult( \RAN\RepositoryProvider\ProviderDiagnosticResult::PASSED, 'fixture_webhook_ready', 'Fixture is ready.', 'No action is required.' );
 	}
 
-	public function normalizeWebhook( WebhookRequest $request ): WebhookEnvelope {
+	public function normalize_webhook( WebhookRequest $request ): WebhookEnvelope {
 		unset( $request );
 
 		return WebhookEnvelope::ignored();
 	}
 
-	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 		throw new \RuntimeException( 'not used' );
 	}
 
-	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 		throw new \RuntimeException( 'not used' );
 	}
 
-	public function assessSetup( string $repositoryId, string $repository, ?string $credentialProfileId ): RepositoryWebhookFitnessResult {
+	public function assess_setup( string $repositoryId, string $repository, ?string $credentialProfileId ): RepositoryWebhookFitnessResult {
 		return $this->fitness( $credentialProfileId );
 	}
 
-	public function assessCheck( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+	public function assess_check( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
 		return $this->fitness( $credentialProfileId );
 	}
 
-	public function assessReconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+	public function assess_reconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
 		return $this->fitness( $credentialProfileId );
 	}
 
-	public function assessRemove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+	public function assess_remove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
 		return $this->fitness( $credentialProfileId );
 	}
 
-	public function assessTest( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+	public function assess_test( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
 		return $this->fitness( $credentialProfileId );
 	}
 

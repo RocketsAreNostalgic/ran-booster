@@ -1081,7 +1081,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 	}
 
 	public function testRuntimeReleaseProviderDefaultTargetAcceptsTheNamedContractArguments(): void {
-		$target = ( new RuntimeReleaseProvider() )->createNativeTarget(
+		$target = ( new RuntimeReleaseProvider() )->create_native_target(
 			'plugin',
 			new RepositoryReference( 'owner/example', '123456789', false, null ),
 			'/tmp/example.php',
@@ -1963,32 +1963,32 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 			public int $listCalls = 0;
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'partial' ), 'Partial release fixture', 'https://partial.example/', 'Owner' );
 			}
 
-			public function expectedUpdateUri( RepositoryReference $repository ): string {
+			public function expected_update_uri( RepositoryReference $repository ): string {
 				return 'https://partial.example/' . $repository->locator;
 			}
 
-			public function releaseDetailsUrl( RepositoryReference $repository, string $tag ): string {
-				return $this->expectedUpdateUri( $repository ) . '/releases/' . rawurlencode( $tag );
+			public function release_details_url( RepositoryReference $repository, string $tag ): string {
+				return $this->expected_update_uri( $repository ) . '/releases/' . rawurlencode( $tag );
 			}
 
-			public function listReleaseCandidates( string $packageType, RepositoryReference $repository, string $channel ): RepositoryReleaseCandidateList {
+			public function list_release_candidates( string $packageType, RepositoryReference $repository, string $channel ): RepositoryReleaseCandidateList {
 				unset( $packageType, $repository, $channel );
 				++$this->listCalls;
 
 				return new RepositoryReleaseCandidateList( array() );
 			}
 
-			public function hasRegisteredNativeTarget( string $packageType, string $installedIdentifier ): bool {
+			public function has_registered_native_target( string $packageType, string $installedIdentifier ): bool {
 				unset( $packageType, $installedIdentifier );
 
 				return false;
 			}
 
-			public function createNativeTarget(
+			public function create_native_target(
 				string $packageType,
 				RepositoryReference $repository,
 				string $metadataFile,
@@ -3001,16 +3001,16 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			public function __construct( private string $code, private string $baseUrl ) {
 			}
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( $this->code ), 'Metadata-only fixture', $this->baseUrl, 'Owner' );
 			}
 
-			public function expectedUpdateUri( RepositoryReference $repository ): string {
+			public function expected_update_uri( RepositoryReference $repository ): string {
 				return $this->baseUrl . $repository->locator;
 			}
 
-			public function releaseDetailsUrl( RepositoryReference $repository, string $tag ): string {
-				return '' === $tag ? '' : $this->expectedUpdateUri( $repository ) . '/releases/tag/' . rawurlencode( $tag );
+			public function release_details_url( RepositoryReference $repository, string $tag ): string {
+				return '' === $tag ? '' : $this->expected_update_uri( $repository ) . '/releases/tag/' . rawurlencode( $tag );
 			}
 		};
 		$registry = new ProviderRegistry( array( $provider ) );

@@ -91,7 +91,7 @@ final class AdminTabRegistryTest extends TestCase {
 
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'Metadata only', 'https://example.test/', 'Owner' );
 			}
 		};
@@ -127,7 +127,7 @@ final class AdminTabRegistryTest extends TestCase {
 			) {
 			}
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata(
 					$this->code,
 					$this->label,

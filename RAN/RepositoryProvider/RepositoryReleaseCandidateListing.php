@@ -8,7 +8,7 @@ use RAN\Provider\ProviderCapability;
 
 interface RepositoryReleaseCandidateListing extends ProviderCapability {
 	/** Return at most eight candidates in provider-preferred inspection order. */
-	public function listReleaseCandidates(
+	public function list_release_candidates(
 		string $packageType,
 		RepositoryReference $repository,
 		string $channel

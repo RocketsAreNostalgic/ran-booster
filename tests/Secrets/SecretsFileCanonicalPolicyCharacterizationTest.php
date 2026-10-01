@@ -1019,11 +1019,11 @@ final readonly class RecordingCredentialPolicy implements ProviderCredentialPoli
 	) {
 	}
 
-	public function getProvider(): ProviderCode {
+	public function get_provider(): ProviderCode {
 		return ProviderCode::parse( $this->provider );
 	}
 
-	public function normalizeCredential( array $metadata, mixed $secret ): array {
+	public function normalize_credential( array $metadata, mixed $secret ): array {
 		$this->calls->record( $this->provider, 'credential', 'normalize', is_string( $secret ) && '' !== $secret );
 		if ( null !== $this->beforeNormalize ) {
 			( $this->beforeNormalize )();
@@ -1040,14 +1040,14 @@ final readonly class RecordingCredentialPolicy implements ProviderCredentialPoli
 		);
 	}
 
-	public function getConstantNames(): array {
+	public function get_constant_names(): array {
 		return array(
 			'RAN_BOOSTER_' . strtoupper( $this->provider ) . '_TOKEN',
 			'RAN_BOOSTER_' . strtoupper( $this->provider ) . '_UNUSED',
 		);
 	}
 
-	public function credentialFromConstants( array $constants ): ?array {
+	public function credential_from_constants( array $constants ): ?array {
 		$this->calls->record( $this->provider, 'credential', 'constants', false, array_keys( $constants ) );
 		$name   = 'RAN_BOOSTER_' . strtoupper( $this->provider ) . '_TOKEN';
 		$secret = $constants[ $name ] ?? null;
@@ -1074,19 +1074,19 @@ final readonly class RecordingWebhookPolicy implements ProviderWebhookPolicy {
 	) {
 	}
 
-	public function getProvider(): ProviderCode {
+	public function get_provider(): ProviderCode {
 		return ProviderCode::parse( $this->provider );
 	}
 
-	public function getRetainedHeaders(): array {
+	public function get_retained_headers(): array {
 		return array( 'x-fixture-signature' );
 	}
 
-	public function getSignatureHeader(): string {
+	public function get_signature_header(): string {
 		return 'x-fixture-signature';
 	}
 
-	public function normalizeWebhook( array $metadata, mixed $secret ): array {
+	public function normalize_webhook( array $metadata, mixed $secret ): array {
 		$this->calls->record( $this->provider, 'webhook', 'normalize', is_string( $secret ) && '' !== $secret );
 		if ( null !== $this->beforeNormalize ) {
 			( $this->beforeNormalize )();
@@ -1104,11 +1104,11 @@ final readonly class RecordingWebhookPolicy implements ProviderWebhookPolicy {
 		);
 	}
 
-	public function getConstantNames(): array {
+	public function get_constant_names(): array {
 		return array( 'RAN_BOOSTER_' . strtoupper( $this->provider ) . '_WEBHOOK_SECRET' );
 	}
 
-	public function webhookFromConstants( array $constants ): ?array {
+	public function webhook_from_constants( array $constants ): ?array {
 		$this->calls->record( $this->provider, 'webhook', 'constants', false, array_keys( $constants ) );
 		$name   = 'RAN_BOOSTER_' . strtoupper( $this->provider ) . '_WEBHOOK_SECRET';
 		$secret = $constants[ $name ] ?? null;
@@ -1125,11 +1125,11 @@ final readonly class RecordingWebhookPolicy implements ProviderWebhookPolicy {
 		);
 	}
 
-	public function authorizeWebhook( SignedWebhookVerification $verification, string $repositoryAuthorityId, string $repository ): bool {
+	public function authorize_webhook( SignedWebhookVerification $verification, string $repositoryAuthorityId, string $repository ): bool {
 		return false;
 	}
 
-	public function repositoryTargetMatches( string $target, string $repositoryLocator ): bool {
+	public function repository_target_matches( string $target, string $repositoryLocator ): bool {
 		return $target === $repositoryLocator;
 	}
 }

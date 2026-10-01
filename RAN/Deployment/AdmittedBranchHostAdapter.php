@@ -173,7 +173,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		);
 
 		try {
-			$this->provider_archive = $this->providers->get( $provider )->prepareArchive(
+			$this->provider_archive = $this->providers->get( $provider )->prepare_archive(
 				new ArchiveRequest(
 					$reference,
 					(string) $data['requested_ref'],

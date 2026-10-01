@@ -36,17 +36,17 @@ final class TemporaryCredentialProvider implements RepositoryProvider, ProviderC
 	) {
 	}
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata( ProviderCode::parse( $this->providerCode ), $this->providerLabel, 'https://provider.example.test/', 'Owner' );
 	}
 
-	public function getCredentialPolicy(): ProviderCredentialPolicy {
+	public function get_credential_policy(): ProviderCredentialPolicy {
 		return 'gh' === $this->providerCode
 			? new GitHubCredentialPolicy()
 			: new TemporaryProviderCredentialPolicy( ProviderCode::parse( $this->providerCode ) );
 	}
 
-	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 		$this->credentialIds[] = $request->credentialId;
 		if ( null === $request->credentialId && 0 !== $this->anonymousFailure ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test-only provider error has fixed public text.
@@ -71,7 +71,7 @@ final class TemporaryCredentialProvider implements RepositoryProvider, ProviderC
 		);
 	}
 
-	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 		throw new RuntimeException( 'Archive preparation is not used by this test.' );
 	}
 }
@@ -82,11 +82,11 @@ final readonly class TemporaryProviderCredentialPolicy implements ProviderCreden
 	public function __construct( private ProviderCode $provider ) {
 	}
 
-	public function getProvider(): ProviderCode {
+	public function get_provider(): ProviderCode {
 		return $this->provider;
 	}
 
-	public function normalizeCredential( array $metadata, mixed $secret ): array {
+	public function normalize_credential( array $metadata, mixed $secret ): array {
 		$label         = $metadata['label'] ?? null;
 		$kind          = $metadata['kind'] ?? null;
 		$configuration = $metadata['configuration'] ?? null;
@@ -103,11 +103,11 @@ final readonly class TemporaryProviderCredentialPolicy implements ProviderCreden
 		);
 	}
 
-	public function getConstantNames(): array {
+	public function get_constant_names(): array {
 		return array();
 	}
 
-	public function credentialFromConstants( array $constants ): ?array {
+	public function credential_from_constants( array $constants ): ?array {
 		return null;
 	}
 }

@@ -71,7 +71,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		);
 		$option  = 'ran_booster_github_provider_release_workflow_failure_history';
 		$GLOBALS['ran_booster_release_deployments_test_options'] = array( $option => array( $current ) );
-		self::assertCount( 1, $provider->workflowStatus( $target )->failureHistory() );
+		self::assertCount( 1, $provider->workflow_status( $target )->failureHistory() );
 		$GLOBALS['ran_booster_release_deployments_test_options']['ran_booster_github_provider_release_workflow_setup_records'] = array(
 			'123456789' => array(
 				'schema_version' => 2,
@@ -79,7 +79,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 			),
 		);
 		$before = json_encode( $GLOBALS['ran_booster_release_deployments_test_options'], JSON_THROW_ON_ERROR );
-		$status = $provider->workflowStatus( $target );
+		$status = $provider->workflow_status( $target );
 		self::assertTrue( $status->recordOccupied() );
 		self::assertFalse( $status->recordExact() );
 		self::assertSame( '', $status->recordOperation() );
@@ -90,7 +90,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 			foreach ( array( array( $obsolete ), array( $current, $obsolete ) ) as $history ) {
 				$GLOBALS['ran_booster_release_deployments_test_options'] = array( $option => $history );
 				$before = json_encode( $GLOBALS['ran_booster_release_deployments_test_options'], JSON_THROW_ON_ERROR );
-				self::assertSame( array(), $provider->workflowStatus( $target )->failureHistory() );
+				self::assertSame( array(), $provider->workflow_status( $target )->failureHistory() );
 				self::assertSame( $before, json_encode( $GLOBALS['ran_booster_release_deployments_test_options'], JSON_THROW_ON_ERROR ) );
 			}
 		}
@@ -161,7 +161,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 				'ran_booster_github_provider_release_workflow_setup_records' => array( '101' => $stored ),
 			);
 			$before = json_encode( $GLOBALS['ran_booster_release_deployments_test_options'], JSON_THROW_ON_ERROR );
-			$actual = $provider->workflowStatus( $target );
+			$actual = $provider->workflow_status( $target );
 			self::assertTrue( $actual->recordOccupied(), $case );
 			self::assertFalse( $actual->recordExact(), $case );
 			foreach ( array( $controller, $presenter ) as $consumer ) {
@@ -175,7 +175,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testReleasedGitHubPackageComposesAsAPhysicallySeparateExternalPlugin(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 13 );
 		define( 'RAN_BOOSTER_RUNTIME_MODE', 'single_site_supported' );
 		$GLOBALS['ran_booster_external_fixture_actions'] = array();
 
@@ -204,7 +204,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 				str_replace( '\\', '/', $source )
 			);
 
-			$metadata = $provider->getMetadata();
+			$metadata = $provider->get_metadata();
 			self::assertSame( 'gh', $metadata->code->value );
 			self::assertSame( 'GitHub', $metadata->label );
 			self::assertSame( 'https://github.com/', $metadata->repositoryUrlBase );
@@ -254,7 +254,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 
 		$provider = $container->make( ProviderRegistry::class )->get( 'gh' );
 		try {
-			$provider->listReleaseCandidates(
+			$provider->list_release_candidates(
 				'plugin',
 				new RepositoryReference( 'RocketsAreNostalgic/example-plugin', '987654321', false, null ),
 				'stable'
@@ -323,7 +323,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		);
 
 		$browser = $registry->requireCapability( 'gh', CredentialedPublicRepositoryBrowser::class );
-		$result  = $browser->browseRepositories( RepositoryBrowseRequest::publicOwner( 'RocketsAreNostalgic' ) );
+		$result  = $browser->browse_repositories( RepositoryBrowseRequest::publicOwner( 'RocketsAreNostalgic' ) );
 
 		self::assertCount( 1, $result->repositories );
 		self::assertSame( 'RocketsAreNostalgic/ran-booster', $result->repositories[0]->locator );
@@ -351,7 +351,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 			)
 		);
 
-		$archive = $provider->prepareArchive(
+		$archive = $provider->prepare_archive(
 			new ArchiveRequest(
 				new RepositoryReference( 'RocketsAreNostalgic/example-plugin', '987654321', false, null ),
 				'main'
@@ -375,7 +375,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		);
 
 		try {
-			$provider->listReleaseCandidates(
+			$provider->list_release_candidates(
 				'plugin',
 				new RepositoryReference( 'RocketsAreNostalgic/example-plugin', '987654321', false, null ),
 				'stable'

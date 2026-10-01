@@ -22,7 +22,7 @@ final class ReleaseArtifactCustodian {
 
 		try {
 			$maximum_artifact_bytes = PackageArtifactLimit::resolve();
-			$resolved_ref           = $custody->resolvedRef();
+			$resolved_ref           = $custody->resolved_ref();
 			$version                = $custody->version();
 			$size                   = $custody->size();
 			$sha256                 = $custody->sha256();

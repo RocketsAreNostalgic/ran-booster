@@ -84,7 +84,7 @@ final class PreparedArtifact implements RepositoryReleaseArtifactCustody {
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function resolvedRef(): string {
+	public function resolved_ref(): string {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		return $this->resolvedRef;
 	}

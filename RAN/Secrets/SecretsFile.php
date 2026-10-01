@@ -1038,7 +1038,7 @@ class SecretsFile {
 	/** @return array<string, mixed>|null */
 	private function constant_credential( string $provider, ProviderCredentialPolicy $policy ): ?array {
 		try {
-			$record = $policy->credentialFromConstants( $this->declared_constants( $policy->getConstantNames() ) );
+			$record = $policy->credential_from_constants( $this->declared_constants( $policy->get_constant_names() ) );
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'Provider credential constants could not be validated.' );
 		}
@@ -1082,7 +1082,7 @@ class SecretsFile {
 	/** @return array<string, string>|null */
 	private function constant_webhook( string $provider, ProviderWebhookPolicy $policy ): ?array {
 		try {
-			$record = $policy->webhookFromConstants( $this->declared_constants( $policy->getConstantNames() ) );
+			$record = $policy->webhook_from_constants( $this->declared_constants( $policy->get_constant_names() ) );
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'Provider webhook constants could not be validated.' );
 		}
@@ -1168,7 +1168,7 @@ class SecretsFile {
 		$policy = $this->provider_policies->findCredentialPolicy( $provider );
 		try {
 			$record = null !== $policy
-				? $policy->normalizeCredential( $metadata, $secret )
+				? $policy->normalize_credential( $metadata, $secret )
 				: $metadata + array( 'secret' => $secret );
 		} catch ( InvalidCredentialInput $failure ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Rebuild the closed failure so provider arguments never cross this boundary.
@@ -1190,7 +1190,7 @@ class SecretsFile {
 		);
 		if ( $submitted && $policy instanceof SubmittedCredentialValidator ) {
 			try {
-				$policy->validateSubmittedCredential(
+				$policy->validate_submitted_credential(
 					array(
 						'label'         => $validated['label'],
 						'kind'          => $validated['kind'],
@@ -1303,7 +1303,7 @@ class SecretsFile {
 		);
 		try {
 			$record = null !== $policy
-				? $policy->normalizeWebhook( $policy_data, $secret )
+				? $policy->normalize_webhook( $policy_data, $secret )
 				: $policy_data + array( 'secret' => $secret );
 		} catch ( InvalidWebhookInput $failure ) {
 			if ( $submitted ) {
@@ -1739,7 +1739,7 @@ class SecretsFile {
 			foreach ( $records as $id => $record ) {
 				$validated = $this->revalidate_stored_credential( $provider, $id, $record );
 				if ( $policy instanceof SubmittedCredentialValidator ) {
-					$policy->validateSubmittedCredential(
+					$policy->validate_submitted_credential(
 						array(
 							'label'         => $validated['label'],
 							'kind'          => $validated['kind'],

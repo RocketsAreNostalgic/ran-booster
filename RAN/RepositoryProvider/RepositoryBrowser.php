@@ -8,5 +8,5 @@ use RAN\Provider\ProviderCapability;
 
 interface RepositoryBrowser extends ProviderCapability {
 
-	public function browseRepositories( RepositoryBrowseRequest $request ): RepositoryBrowseResult;
+	public function browse_repositories( RepositoryBrowseRequest $request ): RepositoryBrowseResult;
 }

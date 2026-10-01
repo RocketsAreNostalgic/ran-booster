@@ -163,24 +163,24 @@ final class WebhookV1BoundaryProvider implements RepositoryProvider, WebhookNorm
 	public function __construct( private array &$operations ) {
 	}
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
 	}
 
-	public function getWebhookPolicy(): ProviderWebhookPolicy {
+	public function get_webhook_policy(): ProviderWebhookPolicy {
 		$this->operations[] = 'provider';
 
 		return new InertWebhookPolicy( ProviderCode::parse( 'gh' ), array( 'x-fixture-signature' ) );
 	}
 
-	public function normalizeWebhook( WebhookRequest $request ): WebhookEnvelope {
+	public function normalize_webhook( WebhookRequest $request ): WebhookEnvelope {
 		unset( $request );
 		$this->operations[] = 'provider';
 
 		return WebhookEnvelope::ignored();
 	}
 
-	public function diagnoseWebhookReadiness(): \RAN\RepositoryProvider\ProviderDiagnosticResult {
+	public function diagnose_webhook_readiness(): \RAN\RepositoryProvider\ProviderDiagnosticResult {
 		$this->operations[] = 'remote';
 
 		return new \RAN\RepositoryProvider\ProviderDiagnosticResult(

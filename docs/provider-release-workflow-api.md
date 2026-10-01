@@ -1,6 +1,13 @@
 # Provider release-workflow capability
 
-Provider API 12 keeps release-workflow setup as an optional, separately versioned
+> API13 source preparation: the tracked Provider beta.9 lock still implements
+> API12 and must not be used to qualify or release this candidate. Matching
+> source checks are preparation only. Adopt a reviewed, actually published
+> matching Provider release and requalify the final installed composition.
+> Core beta.31 remains held; Bitbucket migration is separately owned.
+
+
+Provider API 13 keeps release-workflow setup as an optional, separately versioned
 provider facet. The base provider registration seam does not change when this
 facet evolves.
 
@@ -40,8 +47,8 @@ model, credential material, callback or service resolver. Core constructs fresh
 API 3 values at the provider call boundary. Provider-owned workflow status,
 preview and result outputs remain bounded. Preview accepts only initial
 `bootstrap` setup on `stable`; its summary no longer contains old/new template
-tags. The five methods are `workflowStatus`, `workflowPreview`,
-`workflowInspect`, `workflowSetup` and `workflowOutcome`. Update operations
+tags. The five methods are `workflow_status`, `workflow_preview`,
+`workflow_inspect`, `workflow_setup` and `workflow_outcome`. Update operations
 are rejected before provider, credential or preflight access.
 
 The helper resolves `RepositoryReleaseWorkflowManagementV3` directly.
@@ -53,7 +60,7 @@ beta.8 composition (`556f19923f6564f1bbd5cecee089d6b136afc5cd`) passed repositor
 quality, archive verification and the four supported WordPress/database jobs
 on merged Core #177. Those results do not qualify this new lock; see the
 [connected naming adoption record](connected-naming-adoption.md).
-Installed candidate proof does not establish an immutable API-12 Core release.
+Installed candidate proof does not establish an immutable API-13 Core release.
 
 The API 3 facet still requires the same five release-consumption capabilities on
 the registered provider aggregate: `RepositoryReleaseMetadata`,
@@ -63,17 +70,17 @@ workflow-helper controls and calls also require that aggregate's
 `ProviderMetadata` to expose non-null `ProviderAdminMetadata`. Admin metadata
 remains optional for ordinary provider registration and other capabilities.
 
-## Provider API 12 compatibility boundary
+## Provider API 13 compatibility boundary
 
-Provider API 12 identifies this breaking, initial-only V3 contract. API 11
+Provider API 13 identifies the snake_case provider capability contracts while retaining initial-only workflow V3. API 11
 promised V2 and is no longer advertised by Core. External providers
 must check the exact outer API marker before loading their implementation:
-old API-11 providers remain unregistered on API 12, and API-12 providers remain
+old API-11 and API-12 providers remain unregistered on API 13, and API-13 providers remain
 unregistered on older or unknown future hosts. Tests cover both plugin load
 orders. No V2 shim, range negotiation or registration redesign is introduced.
 
-Ben approved this narrowly coordinated generation change under organisation
-#81 on 30 September 2026. The registration factory signature and Add-on API 16
+The earlier API12 initial-only V3 change was approved under organisation #81.
+The methods-only API13 migration is coordinated under Core #167. The registration factory signature and Add-on API 16
 remain unchanged. GitHub Provider host qualification and Bitbucket registration
 must move together with Core; Branch Updater and Release Updater protocols do
 not change as part of this work.
@@ -98,7 +105,7 @@ readback without the development Composer autoloader.
 UI/presentation implementation and owner interactive/end-to-end acceptance
 remain deferred under #81/#85. Automated checks must identify exact sources and
 distinguish source candidates, installed candidate archives and certified
-releases. An immutable API-12 Core release and Bitbucket qualification against
+releases. An immutable API-13 Core release and Bitbucket qualification against
 that actual release remain pending. Keep certification pins tied to the actual
 certified release; do not publish a bridge-only release or claim full G1/G2
 acceptance from this candidate proof.

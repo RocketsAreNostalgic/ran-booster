@@ -666,15 +666,15 @@ final class ParityRepositoryProvider implements RepositoryProvider {
 
 	public function __construct( private ?ParityProviderArchive $archive ) {}
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
 	}
 
-	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 		throw new RuntimeException( 'Repository resolution is not part of admitted parity coverage.' );
 	}
 
-	public function prepareArchive( ArchiveRequest $request ): ProviderPreparedArchive {
+	public function prepare_archive( ArchiveRequest $request ): ProviderPreparedArchive {
 		++$this->prepareCalls;
 		if ( null !== $this->prepareFailure ) {
 			throw $this->prepareFailure;

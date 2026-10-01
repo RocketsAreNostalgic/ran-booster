@@ -3,8 +3,8 @@
 // Executed by WP-CLI inside a disposable WordPress installation.
 // phpcs:disable
 
-if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 12 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
-	throw new RuntimeException( 'Provider API 12 is unavailable.' );
+if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 13 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+	throw new RuntimeException( 'Provider API 13 is unavailable.' );
 }
 
 if ( defined( 'RAN_BOOSTER_LOGGING_API_VERSION' ) ) {
@@ -48,7 +48,7 @@ if ( 'fixture-provider' !== $package_form['default_provider']
 	throw new RuntimeException( 'The external fixture package form contract is invalid.' );
 }
 
-$descriptor = $provider->resolveRepository(
+$descriptor = $provider->resolve_repository(
 	new RAN\RepositoryProvider\RepositoryLookupRequest(
 		'group/subgroup/package'
 	)
@@ -62,7 +62,7 @@ if ( 'group/subgroup/package' !== $descriptor->locator
 }
 
 $resolved_ref = sha1( "group/subgroup/package\0main" );
-$archive      = $provider->prepareArchive(
+$archive      = $provider->prepare_archive(
 	new RAN\RepositoryProvider\ArchiveRequest(
 		new RAN\RepositoryProvider\RepositoryReference(
 			$descriptor->locator,
@@ -85,7 +85,7 @@ try {
 }
 
 $diagnostic_request = new RAN\RepositoryProvider\ProviderDiagnosticRequest( null, 'group/subgroup/package' );
-$diagnostic_results = $provider->getProviderDiagnostics()->diagnose( $diagnostic_request );
+$diagnostic_results = $provider->get_provider_diagnostics()->diagnose( $diagnostic_request );
 
 if ( 3 !== count( $diagnostic_results )
 	|| 2 !== $diagnostic_request->getRemoteCalls()

@@ -89,11 +89,11 @@ final class ProviderRegistrationContextTest extends TestCase {
 		self::assertSame( $context, $observed[1] );
 	}
 
-	public function testApi11RejectsTwoArgumentFactoriesBeforeInvocation(): void {
+	public function testApi13RejectsTwoArgumentFactoriesBeforeInvocation(): void {
 		$registry = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
 
 		$this->expectException( InvalidProviderPolicy::class );
-		$this->expectExceptionMessage( 'The provider factory does not implement the Provider API 12 registration signature.' );
+		$this->expectExceptionMessage( 'The provider factory does not implement the Provider API 13 registration signature.' );
 
 		$registry->registerWithCredentialStore(
 			'bb',
@@ -108,11 +108,11 @@ final class ProviderRegistrationContextTest extends TestCase {
 		);
 	}
 
-	public function testApi11RejectsVariadicThirdParameter(): void {
+	public function testApi13RejectsVariadicThirdParameter(): void {
 		$registry = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
 
 		$this->expectException( InvalidProviderPolicy::class );
-		$this->expectExceptionMessage( 'The provider factory does not implement the Provider API 12 registration signature.' );
+		$this->expectExceptionMessage( 'The provider factory does not implement the Provider API 13 registration signature.' );
 
 		$registry->registerWithCredentialStore(
 			'variadic',
@@ -128,11 +128,11 @@ final class ProviderRegistrationContextTest extends TestCase {
 		);
 	}
 
-	public function testApi11RejectsByReferenceContextParameter(): void {
+	public function testApi13RejectsByReferenceContextParameter(): void {
 		$registry = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
 
 		$this->expectException( InvalidProviderPolicy::class );
-		$this->expectExceptionMessage( 'The provider factory does not implement the Provider API 12 registration signature.' );
+		$this->expectExceptionMessage( 'The provider factory does not implement the Provider API 13 registration signature.' );
 
 		$registry->registerWithCredentialStore(
 			'by-reference',
@@ -150,11 +150,11 @@ final class ProviderRegistrationContextTest extends TestCase {
 
 
 
-	public function testApi11RejectsNullableRegistrationContext(): void {
+	public function testApi13RejectsNullableRegistrationContext(): void {
 		$registry = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
 
 		$this->expectException( InvalidProviderPolicy::class );
-		$this->expectExceptionMessage( 'The provider factory does not implement the Provider API 12 registration signature.' );
+		$this->expectExceptionMessage( 'The provider factory does not implement the Provider API 13 registration signature.' );
 
 		$registry->registerWithCredentialStore(
 			'nullable-context',
@@ -170,7 +170,7 @@ final class ProviderRegistrationContextTest extends TestCase {
 		);
 	}
 
-	public function testApi11RejectsIncorrectFirstParameterType(): void {
+	public function testApi13RejectsIncorrectFirstParameterType(): void {
 		$registry = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
 
 		$this->expectException( InvalidProviderPolicy::class );
@@ -190,7 +190,7 @@ final class ProviderRegistrationContextTest extends TestCase {
 		);
 	}
 
-	public function testApi11RejectsIncorrectSecondParameterType(): void {
+	public function testApi13RejectsIncorrectSecondParameterType(): void {
 		$registry = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
 
 		$this->expectException( InvalidProviderPolicy::class );
@@ -209,7 +209,7 @@ final class ProviderRegistrationContextTest extends TestCase {
 		);
 	}
 
-	public function testApi11RejectsAdditionalFactoryParameters(): void {
+	public function testApi13RejectsAdditionalFactoryParameters(): void {
 		$registry = $this->registry( new ProviderRegistrationContext( static fn (): int => 52_428_800 ) );
 
 		$this->expectException( InvalidProviderPolicy::class );

@@ -33,7 +33,7 @@ final readonly class ManagedPackageWebhookAuthorityResolver {
 			if ( ! $package instanceof Package
 				|| PackageSource::BRANCH !== $package->get_source()
 				|| $package->get_provider_code() !== $provider->value
-				|| ! $policy->repositoryTargetMatches( $target, (string) $package->get_repository() )
+				|| ! $policy->repository_target_matches( $target, (string) $package->get_repository() )
 			) {
 				continue;
 			}

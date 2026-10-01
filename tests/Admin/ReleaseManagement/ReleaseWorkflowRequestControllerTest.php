@@ -42,7 +42,7 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 			$call = $provider->calls[ array_key_last( $provider->calls ) ];
 			self::assertSame( $operation, $call['operation'] );
 			self::assertSame( 'credential_1', $call['credential_id'] );
-			self::assertSame( 'fixture', $provider->getMetadata()->code->value );
+			self::assertSame( 'fixture', $provider->get_metadata()->code->value );
 		}
 	}
 
@@ -382,7 +382,7 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 
 	private function controller( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $sourceGuard = null, ?ProviderRegistry $providers = null ): ReleaseWorkflowRequestController {
 		$provider ??= new RepositoryReleaseWorkflowProviderDouble();
-		return new ReleaseWorkflowRequestController( $tracking ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), new PluginRepositoryDouble( providerCode: $provider->getMetadata()->code->value ), new ThemeRepositoryDouble(), $providers ?? new ProviderRegistry( $registered ? array( $provider ) : array() ), $sourceGuard ?? $this->sourceGuard() );
+		return new ReleaseWorkflowRequestController( $tracking ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), new PluginRepositoryDouble( providerCode: $provider->get_metadata()->code->value ), new ThemeRepositoryDouble(), $providers ?? new ProviderRegistry( $registered ? array( $provider ) : array() ), $sourceGuard ?? $this->sourceGuard() );
 	}
 
 	private function registryWithoutMetadata( RepositoryProvider $provider ): ProviderRegistry {

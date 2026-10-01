@@ -10,19 +10,19 @@ use RAN\RepositoryProvider\SignedWebhookVerification;
 
 final readonly class WebhookPolicy implements ProviderWebhookPolicy {
 
-	public function getProvider(): ProviderCode {
+	public function get_provider(): ProviderCode {
 		return ProviderCode::parse( 'fixture-provider' );
 	}
 
-	public function getRetainedHeaders(): array {
+	public function get_retained_headers(): array {
 		return array( 'x-fixture-event', 'x-fixture-signature' );
 	}
 
-	public function getSignatureHeader(): string {
+	public function get_signature_header(): string {
 		return 'x-fixture-signature';
 	}
 
-	public function normalizeWebhook( array $metadata, mixed $secret ): array {
+	public function normalize_webhook( array $metadata, mixed $secret ): array {
 		if ( ! is_string( $metadata['label'] ?? null ) || '' === trim( $metadata['label'] )
 			|| ! is_string( $metadata['scope'] ?? null ) || 'repository' !== $metadata['scope']
 			|| ! is_string( $metadata['target'] ?? null ) || '' === trim( $metadata['target'] )
@@ -41,25 +41,25 @@ final readonly class WebhookPolicy implements ProviderWebhookPolicy {
 		);
 	}
 
-	public function getConstantNames(): array {
+	public function get_constant_names(): array {
 		return array();
 	}
 
-	public function webhookFromConstants( array $constants ): ?array {
+	public function webhook_from_constants( array $constants ): ?array {
 		unset( $constants );
 
 		return null;
 	}
 
-	public function authorizeWebhook( SignedWebhookVerification $verification, string $repositoryAuthorityId, string $repository ): bool {
-		if ( ! $verification->getProvider()->equals( $this->getProvider() ) || '' === $repositoryAuthorityId ) {
+	public function authorize_webhook( SignedWebhookVerification $verification, string $repositoryAuthorityId, string $repository ): bool {
+		if ( ! $verification->getProvider()->equals( $this->get_provider() ) || '' === $repositoryAuthorityId ) {
 			return false;
 		}
 
 		foreach ( $verification->getProfiles() as $profile ) {
 			if ( 'repository' === $profile['scope']
 				&& hash_equals( $profile['authority_id'], $repositoryAuthorityId )
-				&& $this->repositoryTargetMatches( $profile['target'], $repository )
+				&& $this->repository_target_matches( $profile['target'], $repository )
 			) {
 				return true;
 			}
@@ -68,7 +68,7 @@ final readonly class WebhookPolicy implements ProviderWebhookPolicy {
 		return false;
 	}
 
-	public function repositoryTargetMatches( string $target, string $repositoryLocator ): bool {
+	public function repository_target_matches( string $target, string $repositoryLocator ): bool {
 		return 0 === strcasecmp( trim( $target, '/' ), trim( $repositoryLocator, '/' ) );
 	}
 }

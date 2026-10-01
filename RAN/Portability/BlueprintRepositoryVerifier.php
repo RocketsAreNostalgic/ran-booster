@@ -44,7 +44,7 @@ final readonly class BlueprintRepositoryVerifier {
 		try {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
 			$provider   = ProviderCode::parse( $candidate->providerCode );
-			$descriptor = $this->providers->get( $provider )->resolveRepository(
+			$descriptor = $this->providers->get( $provider )->resolve_repository(
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
 				new RepositoryLookupRequest( $candidate->repository, $candidate->credentialId )
 			);
@@ -197,7 +197,7 @@ final readonly class BlueprintRepositoryVerifier {
 	private function verified_item( BlueprintPlanItem $item, ?string $credential_id, ?bool &$repository_private ): BlueprintPlanItem {
 		$package            = $item->package;
 		$provider           = ProviderCode::parse( $package->provider );
-		$descriptor         = $this->providers->get( $provider )->resolveRepository(
+		$descriptor         = $this->providers->get( $provider )->resolve_repository(
 			new RepositoryLookupRequest( $package->repository, $credential_id )
 		);
 		$repository_private = $descriptor->private;

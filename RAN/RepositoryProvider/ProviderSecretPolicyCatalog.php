@@ -25,14 +25,14 @@ final class ProviderSecretPolicyCatalog {
 
 		try {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public provider policy API preserves established method and named-argument contracts.
-			$credential_provider = null === $credentialPolicy ? null : $credentialPolicy->getProvider();
+			$credential_provider = null === $credentialPolicy ? null : $credentialPolicy->get_provider();
 		} catch ( \Throwable ) {
 			throw InvalidProviderPolicy::unavailableCredentialPolicy();
 		}
 
 		try {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public provider policy API preserves established method and named-argument contracts.
-			$webhook_provider = null === $webhookPolicy ? null : $webhookPolicy->getProvider();
+			$webhook_provider = null === $webhookPolicy ? null : $webhookPolicy->get_provider();
 		} catch ( \Throwable ) {
 			throw InvalidProviderPolicy::unavailableWebhookPolicy();
 		}

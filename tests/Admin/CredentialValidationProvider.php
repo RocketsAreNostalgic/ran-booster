@@ -20,7 +20,7 @@ final class CredentialValidationProvider implements RepositoryProvider, Credenti
 	public function __construct( private CredentialValidationResult $result ) {
 	}
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata(
 			ProviderCode::parse( 'bb' ),
 			'Bitbucket',
@@ -29,7 +29,7 @@ final class CredentialValidationProvider implements RepositoryProvider, Credenti
 		);
 	}
 
-	public function validateCredential( string $credentialId ): CredentialValidationResult {
+	public function validate_credential( string $credentialId ): CredentialValidationResult {
 		$this->validatedIds[] = $credentialId;
 
 		return $this->result;

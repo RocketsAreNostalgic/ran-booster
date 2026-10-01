@@ -198,8 +198,8 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 	}
 
 	public function testEveryProviderHasTheManualDeploymentCapabilities(): void {
-		self::assertTrue( method_exists( RepositoryProvider::class, 'resolveRepository' ) );
-		self::assertTrue( method_exists( RepositoryProvider::class, 'prepareArchive' ) );
+		self::assertTrue( method_exists( RepositoryProvider::class, 'resolve_repository' ) );
+		self::assertTrue( method_exists( RepositoryProvider::class, 'prepare_archive' ) );
 	}
 
 	public function testPushToDeployRequiresWebhookCapabilityBeforeResolution(): void {
@@ -209,17 +209,17 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 
 			public int $resolveCalls = 0;
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
 			}
 
-			public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+			public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 				++$this->resolveCalls;
 
 				throw new RuntimeException( 'Resolution must not be reached.' );
 			}
 
-			public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+			public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 				throw new RuntimeException( 'Archive preparation is not used by this test.' );
 			}
 		};
@@ -381,29 +381,29 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 				$this->request = null;
 			}
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( $this->registeredCode, 'Fixture', 'https://example.test/', 'Owner' );
 			}
 
-			public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+			public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 				$this->request = $request;
 
 				return $this->descriptor;
 			}
 
-			public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+			public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 				throw new RuntimeException( 'Archive preparation is not used by this test.' );
 			}
 
-			public function normalizeWebhook( WebhookRequest $request ): WebhookEnvelope {
+			public function normalize_webhook( WebhookRequest $request ): WebhookEnvelope {
 				throw new RuntimeException( 'Webhook normalization is not used by this test.' );
 			}
 
-			public function getWebhookPolicy(): ProviderWebhookPolicy {
+			public function get_webhook_policy(): ProviderWebhookPolicy {
 				return new InertWebhookPolicy( $this->registeredCode );
 			}
 
-			public function diagnoseWebhookReadiness(): \RAN\RepositoryProvider\ProviderDiagnosticResult {
+			public function diagnose_webhook_readiness(): \RAN\RepositoryProvider\ProviderDiagnosticResult {
 				throw new RuntimeException( 'Webhook readiness is not used by this test.' );
 			}
 		};
@@ -421,25 +421,25 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 			public function __construct( private RepositoryDescriptor $descriptor ) {
 			}
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
 			}
 
-			public function getPublicRepositoryBrowseMetadata(): PublicRepositoryBrowseMetadata {
+			public function get_public_repository_browse_metadata(): PublicRepositoryBrowseMetadata {
 				return new PublicRepositoryBrowseMetadata( true );
 			}
 
-			public function browseRepositories( RepositoryBrowseRequest $request ): RepositoryBrowseResult {
+			public function browse_repositories( RepositoryBrowseRequest $request ): RepositoryBrowseResult {
 				throw new RuntimeException( 'Repository browsing is not used by this test.' );
 			}
 
-			public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+			public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 				$this->request = $request;
 
 				return $this->descriptor;
 			}
 
-			public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+			public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 				throw new RuntimeException( 'Archive preparation is not used by this test.' );
 			}
 		};

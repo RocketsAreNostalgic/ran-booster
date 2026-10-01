@@ -759,12 +759,12 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 
 	private function controller( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $sourceGuard = null ): ReleaseWorkflowRequestController {
 		$provider ??= new RepositoryReleaseWorkflowProviderDouble();
-		return new ReleaseWorkflowRequestController( $tracking ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), new PluginRepositoryDouble( providerCode: $provider->getMetadata()->code->value ), new ThemeRepositoryDouble(), new ProviderRegistry( $registered ? array( $provider ) : array() ), $sourceGuard ?? $this->sourceGuard() );
+		return new ReleaseWorkflowRequestController( $tracking ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), new PluginRepositoryDouble( providerCode: $provider->get_metadata()->code->value ), new ThemeRepositoryDouble(), new ProviderRegistry( $registered ? array( $provider ) : array() ), $sourceGuard ?? $this->sourceGuard() );
 	}
 
 	private function controls( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $sourceGuard = null, ?ProviderRegistry $providers = null ): ReleaseWorkflowControls {
 		$provider ??= new RepositoryReleaseWorkflowProviderDouble();
-		return new ReleaseWorkflowControls( $tracking ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), new PluginRepositoryDouble( providerCode: $provider->getMetadata()->code->value ), new ThemeRepositoryDouble(), $providers ?? new ProviderRegistry( $registered ? array( $provider ) : array() ), $sourceGuard ?? $this->sourceGuard() );
+		return new ReleaseWorkflowControls( $tracking ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), new PluginRepositoryDouble( providerCode: $provider->get_metadata()->code->value ), new ThemeRepositoryDouble(), $providers ?? new ProviderRegistry( $registered ? array( $provider ) : array() ), $sourceGuard ?? $this->sourceGuard() );
 	}
 
 	private function registryWithoutMetadata( RepositoryProvider $provider ): ProviderRegistry {
@@ -777,7 +777,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		$provider    ??= new RepositoryReleaseWorkflowProviderDouble();
 		$tracking    ??= new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
 		$sourceGuard ??= $this->sourceGuard();
-		$plugins       = new PluginRepositoryDouble( providerCode: $provider->getMetadata()->code->value );
+		$plugins       = new PluginRepositoryDouble( providerCode: $provider->get_metadata()->code->value );
 		$themes        = new ThemeRepositoryDouble();
 		$providers     = new ProviderRegistry( $registered ? array( $provider ) : array() );
 		$requests      = new ReleaseWorkflowRequestController( $tracking, $plugins, $themes, $providers, $sourceGuard );

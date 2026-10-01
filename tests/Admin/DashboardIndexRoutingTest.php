@@ -1563,12 +1563,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 				\RAN\RepositoryProvider\WebhookNormalizer::class,
 			)
 		);
-		$provider->method( 'getMetadata' )->willReturn( new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://example.test/', 'Owner' ) );
+		$provider->method( 'get_metadata' )->willReturn( new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://example.test/', 'Owner' ) );
 		$policies = ShippedSecretPolicyCatalog::create();
-		$provider->method( 'getCredentialPolicy' )->willReturn( $policies->credentialPolicy( ProviderCode::parse( 'gh' ) ) );
-		$provider->method( 'getWebhookPolicy' )->willReturn( $policies->webhookPolicy( ProviderCode::parse( 'gh' ) ) );
-		$provider->expects( self::never() )->method( 'resolveRepository' );
-		$provider->expects( self::never() )->method( 'prepareArchive' );
+		$provider->method( 'get_credential_policy' )->willReturn( $policies->credentialPolicy( ProviderCode::parse( 'gh' ) ) );
+		$provider->method( 'get_webhook_policy' )->willReturn( $policies->webhookPolicy( ProviderCode::parse( 'gh' ) ) );
+		$provider->expects( self::never() )->method( 'resolve_repository' );
+		$provider->expects( self::never() )->method( 'prepare_archive' );
 		self::assertInstanceOf( \RAN\RepositoryProvider\WebhookNormalizer::class, $provider );
 		$evaluator = new WebhookAssistanceReadinessEvaluator( $plugins, $themes, $secrets, new ReadyDashboardDatabase(), static fn (): bool => true );
 		self::assertSame( 'ready', $evaluator->evaluate( 'gh', rest_url( 'ran-booster/v1/webhooks/gh' ) )->toArray()['site']['status'] );
@@ -2697,7 +2697,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			) {
 			}
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata(
 					$this->code,
 					$this->label,
@@ -2714,24 +2714,24 @@ final class DashboardIndexRoutingTest extends TestCase {
 				);
 			}
 
-			public function getCredentialPolicy(): ProviderCredentialPolicy {
+			public function get_credential_policy(): ProviderCredentialPolicy {
 				return ShippedSecretPolicyCatalog::create()->credentialPolicy( $this->code );
 			}
 
-			public function getWebhookPolicy(): \RAN\RepositoryProvider\ProviderWebhookPolicy {
+			public function get_webhook_policy(): \RAN\RepositoryProvider\ProviderWebhookPolicy {
 				return ShippedSecretPolicyCatalog::create()->webhookPolicy( $this->code );
 			}
 
-			public function diagnoseWebhookReadiness(): ProviderDiagnosticResult {
+			public function diagnose_webhook_readiness(): ProviderDiagnosticResult {
 				throw new RuntimeException( 'Unused provider-route fixture method.' );
 			}
 
-			public function normalizeWebhook( \RAN\RepositoryProvider\WebhookRequest $request ): \RAN\RepositoryProvider\WebhookEnvelope {
+			public function normalize_webhook( \RAN\RepositoryProvider\WebhookRequest $request ): \RAN\RepositoryProvider\WebhookEnvelope {
 				unset( $request );
 				return \RAN\RepositoryProvider\WebhookEnvelope::ignored();
 			}
 
-			public function repositoryWebhookSettingsUrl( string $locator ): string {
+			public function repository_webhook_settings_url( string $locator ): string {
 				return 'https://example.test/' . trim( $locator, '/' ) . '/settings/hooks';
 			}
 		};
@@ -2924,7 +2924,7 @@ final class DashboardBranchCheckProvider implements RepositoryProvider, Credenti
 	) {
 	}
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata(
 			ProviderCode::parse( 'gh' ),
 			'GitHub',
@@ -2933,21 +2933,21 @@ final class DashboardBranchCheckProvider implements RepositoryProvider, Credenti
 		);
 	}
 
-	public function resolveRepository( \RAN\RepositoryProvider\RepositoryLookupRequest $request ): \RAN\RepositoryProvider\RepositoryDescriptor {
+	public function resolve_repository( \RAN\RepositoryProvider\RepositoryLookupRequest $request ): \RAN\RepositoryProvider\RepositoryDescriptor {
 		unset( $request );
 		throw new RuntimeException( 'Repository resolution is not used by the branch check.' );
 	}
 
-	public function browseRepositories( RepositoryBrowseRequest $request ): RepositoryBrowseResult {
+	public function browse_repositories( RepositoryBrowseRequest $request ): RepositoryBrowseResult {
 		unset( $request );
 		throw new RuntimeException( 'Repository browsing is not used by the branch check.' );
 	}
 
-	public function getPublicRepositoryBrowseMetadata(): PublicRepositoryBrowseMetadata {
+	public function get_public_repository_browse_metadata(): PublicRepositoryBrowseMetadata {
 		return new PublicRepositoryBrowseMetadata( true );
 	}
 
-	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 		if ( null !== $this->onProviderAccess ) {
 			( $this->onProviderAccess )();
 		}
@@ -2980,7 +2980,7 @@ final class DashboardBranchCheckProvider implements RepositoryProvider, Credenti
 		};
 	}
 
-	public function repositoryPathExists( \RAN\RepositoryProvider\RepositoryReference $repository, string $ref, string $path ): bool {
+	public function repository_path_exists( \RAN\RepositoryProvider\RepositoryReference $repository, string $ref, string $path ): bool {
 		unset( $repository, $ref );
 		++$this->pathCalls;
 		$this->path = $path;
@@ -2997,7 +2997,7 @@ final class DashboardBranchCheckProviderWithoutPathInspector implements Reposito
 
 	public int $pathCalls = 0;
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata(
 			ProviderCode::parse( 'gh' ),
 			'GitHub',
@@ -3006,21 +3006,21 @@ final class DashboardBranchCheckProviderWithoutPathInspector implements Reposito
 		);
 	}
 
-	public function resolveRepository( \RAN\RepositoryProvider\RepositoryLookupRequest $request ): \RAN\RepositoryProvider\RepositoryDescriptor {
+	public function resolve_repository( \RAN\RepositoryProvider\RepositoryLookupRequest $request ): \RAN\RepositoryProvider\RepositoryDescriptor {
 		unset( $request );
 		throw new RuntimeException( 'Repository resolution is not used by the branch check.' );
 	}
 
-	public function browseRepositories( RepositoryBrowseRequest $request ): RepositoryBrowseResult {
+	public function browse_repositories( RepositoryBrowseRequest $request ): RepositoryBrowseResult {
 		unset( $request );
 		throw new RuntimeException( 'Repository browsing is not used by the branch check.' );
 	}
 
-	public function getPublicRepositoryBrowseMetadata(): PublicRepositoryBrowseMetadata {
+	public function get_public_repository_browse_metadata(): PublicRepositoryBrowseMetadata {
 		return new PublicRepositoryBrowseMetadata( true );
 	}
 
-	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 		unset( $request );
 		return new class() implements PreparedArchive {
 			public function getUrl(): string {
@@ -3076,7 +3076,7 @@ final class DashboardUncredentialedBranchCheckProvider implements RepositoryProv
 
 	public ?ArchiveRequest $request = null;
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata(
 			ProviderCode::parse( 'gh' ),
 			'GitHub',
@@ -3085,12 +3085,12 @@ final class DashboardUncredentialedBranchCheckProvider implements RepositoryProv
 		);
 	}
 
-	public function resolveRepository( \RAN\RepositoryProvider\RepositoryLookupRequest $request ): \RAN\RepositoryProvider\RepositoryDescriptor {
+	public function resolve_repository( \RAN\RepositoryProvider\RepositoryLookupRequest $request ): \RAN\RepositoryProvider\RepositoryDescriptor {
 		unset( $request );
 		throw new RuntimeException( 'Repository resolution is not used by the branch check.' );
 	}
 
-	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 		$this->request = $request;
 
 		return new class() implements PreparedArchive {

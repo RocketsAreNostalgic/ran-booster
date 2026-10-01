@@ -171,11 +171,11 @@ final class EscapingDiagnosticProvider implements RepositoryProvider, WebhookNor
 	public function __construct( private Throwable $failure, private bool $failReadiness ) {
 	}
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'Fixture', 'https://example.test/', 'Owner' );
 	}
 
-	public function getProviderDiagnostics(): \RAN\RepositoryProvider\ProviderDiagnostics {
+	public function get_provider_diagnostics(): \RAN\RepositoryProvider\ProviderDiagnostics {
 		return new class( $this->failure, $this->failReadiness ) implements \RAN\RepositoryProvider\ProviderDiagnostics {
 			public function __construct( private Throwable $failure, private bool $failReadiness ) {
 			}
@@ -191,43 +191,43 @@ final class EscapingDiagnosticProvider implements RepositoryProvider, WebhookNor
 		};
 	}
 
-	public function getWebhookPolicy(): ProviderWebhookPolicy {
+	public function get_webhook_policy(): ProviderWebhookPolicy {
 		return new class() implements ProviderWebhookPolicy {
-			public function getProvider(): ProviderCode {
+			public function get_provider(): ProviderCode {
 				return ProviderCode::parse( 'gh' );
 			}
-			public function getRetainedHeaders(): array {
+			public function get_retained_headers(): array {
 				return array();
 			}
-			public function getSignatureHeader(): string {
+			public function get_signature_header(): string {
 				return 'x-fixture-signature';
 			}
-			public function normalizeWebhook( array $metadata, mixed $secret ): array {
+			public function normalize_webhook( array $metadata, mixed $secret ): array {
 				unset( $metadata, $secret );
 				return array();
 			}
-			public function getConstantNames(): array {
+			public function get_constant_names(): array {
 				return array();
 			}
-			public function webhookFromConstants( array $constants ): ?array {
+			public function webhook_from_constants( array $constants ): ?array {
 				unset( $constants );
 				return null;
 			}
-			public function authorizeWebhook( \RAN\RepositoryProvider\SignedWebhookVerification $verification, string $repositoryAuthorityId, string $repository ): bool {
+			public function authorize_webhook( \RAN\RepositoryProvider\SignedWebhookVerification $verification, string $repositoryAuthorityId, string $repository ): bool {
 				unset( $verification, $repositoryAuthorityId, $repository );
 				return false;
 			}
-			public function repositoryTargetMatches( string $target, string $repositoryLocator ): bool {
+			public function repository_target_matches( string $target, string $repositoryLocator ): bool {
 				return $target === $repositoryLocator;
 			}
 		};
 	}
 
-	public function diagnoseWebhookReadiness(): \RAN\RepositoryProvider\ProviderDiagnosticResult {
+	public function diagnose_webhook_readiness(): \RAN\RepositoryProvider\ProviderDiagnosticResult {
 		throw $this->failure;
 	}
 
-	public function normalizeWebhook( WebhookRequest $request ): WebhookEnvelope {
+	public function normalize_webhook( WebhookRequest $request ): WebhookEnvelope {
 		unset( $request );
 		return WebhookEnvelope::ignored();
 	}

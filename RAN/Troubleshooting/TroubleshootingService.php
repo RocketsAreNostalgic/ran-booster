@@ -127,7 +127,7 @@ final class TroubleshootingService {
 		}
 
 		try {
-			$provider_results = $aggregate->getProviderDiagnostics()->diagnose( $request );
+			$provider_results = $aggregate->get_provider_diagnostics()->diagnose( $request );
 		} catch ( ProviderDiagnosticBudgetExceeded $exception ) {
 			$reason = ProviderDiagnosticBudgetExceeded::DEADLINE === $exception->getReason()
 				? 'deadline_exhausted'
@@ -192,7 +192,7 @@ final class TroubleshootingService {
 				$partial = $this->higher_priority( $partial, 'deadline_exhausted' );
 			} else {
 				try {
-					$readiness = $aggregate->diagnoseWebhookReadiness();
+					$readiness = $aggregate->diagnose_webhook_readiness();
 					if ( $this->valid_provider_result( $readiness, $provider_code, $seen ) ) {
 						$this->record_provider_failure( $readiness, $provider_code, 'provider_webhook_readiness' );
 						$results[] = $readiness;

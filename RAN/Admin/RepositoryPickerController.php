@@ -69,7 +69,7 @@ final class RepositoryPickerController {
 					$provider_code,
 					null === $credential_id ? RepositoryBrowser::class : CredentialedPublicRepositoryBrowser::class
 				);
-				$result                  = $browser->browseRepositories(
+				$result                  = $browser->browse_repositories(
 					RepositoryBrowseRequest::publicOwner(
 						$owner,
 						$credential_id
@@ -80,7 +80,7 @@ final class RepositoryPickerController {
 				$credential_input = isset( $_POST['credential_id'] ) ? wp_unslash( $_POST['credential_id'] ) : '';
 				$credential_id    = $this->credential_id( $credential_input, false );
 				$this->secrets->credentialProfiles( $provider_code );
-				$result = $browser->browseRepositories(
+				$result = $browser->browse_repositories(
 					RepositoryBrowseRequest::accessible(
 						$credential_id
 					)
@@ -214,7 +214,7 @@ final class RepositoryPickerController {
 		}
 
 		$browser  = $this->providers->requireCapability( $provider, CredentialedPublicRepositoryBrowser::class );
-		$metadata = $browser->getPublicRepositoryBrowseMetadata();
+		$metadata = $browser->get_public_repository_browse_metadata();
 
 		if ( 'default' === $identity ) {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Repository provider metadata property is a connected public contract.

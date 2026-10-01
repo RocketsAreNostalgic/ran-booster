@@ -19,29 +19,31 @@ final class ProviderApiLifecycleTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	#[DataProvider( 'registrationLoadOrders' )]
-	public function testApiElevenProviderIsRejectedBeforeItsV2ClassLoads( bool $coreFirst ): void {
+	public function testOldProviderIsRejectedBeforeItsIncompatibleClassLoads( bool $coreFirst, int $providerApi, string $providerClass ): void {
 		require_once dirname( __DIR__ ) . '/Support/ExternalFixturePluginWordPressFunctions.php';
 		$GLOBALS['ran_booster_external_fixture_actions'] = array();
 		if ( $coreFirst ) {
-			define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
+			define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 13 );
 		}
-		require dirname( __DIR__ ) . '/fixtures/provider-api11-registration/provider.php';
+		require dirname( __DIR__ ) . '/fixtures/provider-api' . $providerApi . '-registration/provider.php';
 		if ( ! $coreFirst ) {
-			define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
+			define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 13 );
 		}
 		$registry  = new ProviderRegistry();
 		$callbacks = $GLOBALS['ran_booster_external_fixture_actions']['ran_booster_register_providers'];
 		self::assertCount( 1, $callbacks );
 		$callbacks[0]( $registry );
-		self::assertFalse( class_exists( 'RANBoosterApiElevenWorkflowProvider', false ) );
+		self::assertFalse( class_exists( $providerClass, false ) );
 		self::assertSame( array(), $registry->all() );
 	}
 
-	/** @return array<string, array{bool}> */
+	/** @return array<string, array{bool, int, string}> */
 	public static function registrationLoadOrders(): array {
 		return array(
-			'core first'     => array( true ),
-			'provider first' => array( false ),
+			'API 11 core first'     => array( true, 11, 'RANBoosterApiElevenWorkflowProvider' ),
+			'API 11 provider first' => array( false, 11, 'RANBoosterApiElevenWorkflowProvider' ),
+			'API 12 core first'     => array( true, 12, 'RANBoosterApiTwelveProvider' ),
+			'API 12 provider first' => array( false, 12, 'RANBoosterApiTwelveProvider' ),
 		);
 	}
 
@@ -52,7 +54,7 @@ final class ProviderApiLifecycleTest extends TestCase {
 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 1 );
 
 		$this->expectException( LogicException::class );
-		$this->expectExceptionMessage( 'RAN Booster Provider API 12 conflicts with an existing API version marker.' );
+		$this->expectExceptionMessage( 'RAN Booster Provider API 13 conflicts with an existing API version marker.' );
 
 		require dirname( __DIR__, 2 ) . '/ran-booster.php';
 	}

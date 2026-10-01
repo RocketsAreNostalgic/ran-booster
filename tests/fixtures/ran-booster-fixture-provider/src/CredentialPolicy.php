@@ -12,11 +12,11 @@ use RuntimeException;
 
 final readonly class CredentialPolicy implements ProviderCredentialPolicy, SubmittedCredentialValidator {
 
-	public function getProvider(): ProviderCode {
+	public function get_provider(): ProviderCode {
 		return ProviderCode::parse( 'fixture-provider' );
 	}
 
-	public function normalizeCredential( array $metadata, mixed $secret ): array {
+	public function normalize_credential( array $metadata, mixed $secret ): array {
 		$configuration = $metadata['configuration'] ?? null;
 
 		if ( 'api-key' !== ( $metadata['kind'] ?? null )
@@ -40,11 +40,11 @@ final readonly class CredentialPolicy implements ProviderCredentialPolicy, Submi
 		);
 	}
 
-	public function getConstantNames(): array {
+	public function get_constant_names(): array {
 		return array();
 	}
 
-	public function validateSubmittedCredential( array $metadata, #[\SensitiveParameter] string $secret ): void {
+	public function validate_submitted_credential( array $metadata, #[\SensitiveParameter] string $secret ): void {
 		if ( ! str_starts_with( $secret, 'fixture_' ) ) {
 			// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Core revalidates this conformance fixture's fixed safe copy.
 			throw new InvalidCredentialInput(
@@ -55,7 +55,7 @@ final readonly class CredentialPolicy implements ProviderCredentialPolicy, Submi
 		}
 	}
 
-	public function credentialFromConstants( array $constants ): ?array {
+	public function credential_from_constants( array $constants ): ?array {
 		return null;
 	}
 }

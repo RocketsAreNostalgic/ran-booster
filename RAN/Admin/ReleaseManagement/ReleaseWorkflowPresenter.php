@@ -621,7 +621,7 @@ final class ReleaseWorkflowPresenter {
 		$channel     = 'stable';
 		$preview     = null;
 		if ( '' === $reason && '' !== $preview_key ) {
-			$preview = $this->request_boundary( fn () => $provider->workflowPreview( ReleaseWorkflowProviderProjection::target( $status ), $preview_key ), null );
+			$preview = $this->request_boundary( fn () => $provider->workflow_preview( ReleaseWorkflowProviderProjection::target( $status ), $preview_key ), null );
 			if ( null !== $preview && ( $preview->key() !== $preview_key || $preview->providerCode() !== $provider_code || $preview->repositoryId() !== $status->providerRepositoryId() ) ) {
 				$preview = null;
 			}
@@ -702,7 +702,7 @@ final class ReleaseWorkflowPresenter {
 			),
 		);
 	}
-	/** Render-only identity check. POST requests continue through workflowStatus(). */
+	/** Render-only identity check. POST requests continue through workflow_status(). */
 	private function workflow_display_status( string $type, string $identifier, int $revision ): ?ReleaseTrackingStatus {
 		$status = $this->releases?->status( $type, $identifier );
 		if ( ! $status instanceof ReleaseTrackingStatus || $revision !== $status->sourceRevision()
@@ -820,7 +820,7 @@ final class ReleaseWorkflowPresenter {
 		}
 		$key = hash( 'sha256', (string) wp_json_encode( array( $provider_code, $status->providerRepositoryId(), $status->type(), $status->identifier(), $status->sourceRevision() ) ) );
 		if ( ! array_key_exists( $key, $this->workflow_statuses ) ) {
-			$value = $this->request_boundary( fn () => $provider->workflowStatus( ReleaseWorkflowProviderProjection::target( $status ) ), null );
+			$value = $this->request_boundary( fn () => $provider->workflow_status( ReleaseWorkflowProviderProjection::target( $status ) ), null );
 			if ( null !== $value && ( $value->providerCode() !== $provider_code
 				|| $value->repositoryId() !== $status->providerRepositoryId()
 				|| ( $value->recordExact() && ( $value->packageType() !== $status->type() || $value->packageIdentifier() !== $status->identifier() || $value->sourceRevision() !== $status->sourceRevision() ) ) ) ) {

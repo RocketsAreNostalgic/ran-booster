@@ -217,19 +217,19 @@ final readonly class WebhookControllerProvider implements RepositoryProvider, We
 		$this->envelope = $envelope ?? WebhookEnvelope::probe();
 	}
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
 	}
 
-	public function normalizeWebhook( WebhookRequest $request ): WebhookEnvelope {
+	public function normalize_webhook( WebhookRequest $request ): WebhookEnvelope {
 		return $this->envelope;
 	}
 
-	public function getWebhookPolicy(): ProviderWebhookPolicy {
+	public function get_webhook_policy(): ProviderWebhookPolicy {
 		return new InertWebhookPolicy( ProviderCode::parse( 'gh' ), array( 'x-fixture-signature' ) );
 	}
 
-	public function diagnoseWebhookReadiness(): \RAN\RepositoryProvider\ProviderDiagnosticResult {
+	public function diagnose_webhook_readiness(): \RAN\RepositoryProvider\ProviderDiagnosticResult {
 		return new \RAN\RepositoryProvider\ProviderDiagnosticResult(
 			\RAN\RepositoryProvider\ProviderDiagnosticResult::WARNING,
 			'test.webhook.delivery_unverified',

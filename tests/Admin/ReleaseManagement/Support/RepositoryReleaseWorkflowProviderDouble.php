@@ -41,38 +41,38 @@ final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvide
 
 	public function __construct( private readonly string $code = 'fixture', private readonly string $repositoryId = '101', private readonly ?RepositoryReleaseWorkflowPreview $preview = null, private readonly ?RepositoryReleaseWorkflowStatus $status = null, private readonly ?RepositoryReleaseWorkflowResult $workflowResult = null, private readonly bool $adminSurface = true ) {}
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata( ProviderCode::parse( $this->code ), 'Workflow fixture', 'https://fixture.example/', 'Owner', $this->adminSurface ? new ProviderAdminMetadata( array(), array() ) : null ); }
-	public function getProviderDiagnostics(): ProviderDiagnostics {
+	public function get_provider_diagnostics(): ProviderDiagnostics {
 		return new class() implements ProviderDiagnostics { public function diagnose( ProviderDiagnosticRequest $request ): array {
 				unset( $request );
 				return array();
 		} }; }
-	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 		return new RepositoryDescriptor( ProviderCode::parse( $this->code ), $request->locator, 'example', $this->repositoryId, false, 'main', null ); }
-	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 		unset( $request );
 		throw new RuntimeException( 'Archive preparation is outside this fixture.' ); }
-	public function expectedUpdateUri( RepositoryReference $repository ): string {
+	public function expected_update_uri( RepositoryReference $repository ): string {
 		return 'https://fixture.example/' . $repository->locator; }
-	public function releaseDetailsUrl( RepositoryReference $repository, string $tag ): string {
+	public function release_details_url( RepositoryReference $repository, string $tag ): string {
 		return 'https://fixture.example/' . $repository->locator . '/releases/tag/' . rawurlencode( $tag ); }
-	public function listReleaseCandidates( string $packageType, RepositoryReference $repository, string $channel ): RepositoryReleaseCandidateList {
+	public function list_release_candidates( string $packageType, RepositoryReference $repository, string $channel ): RepositoryReleaseCandidateList {
 		unset( $packageType, $repository, $channel );
 		throw new RuntimeException( 'Candidate listing is outside this fixture.' ); }
-	public function inspectRelease( string $packageType, RepositoryReference $repository, string $providerReleaseId, string $tag, string $channel ): RepositoryReleaseInspection {
+	public function inspect_release( string $packageType, RepositoryReference $repository, string $providerReleaseId, string $tag, string $channel ): RepositoryReleaseInspection {
 		unset( $packageType, $repository, $providerReleaseId, $tag, $channel );
 		throw new RuntimeException( 'Release inspection is outside this fixture.' ); }
-	public function acquireRelease( string $packageType, RepositoryReference $repository, string $providerReleaseId, string $tag, string $expectedFingerprint, string $channel ): RepositoryReleaseArtifact {
+	public function acquire_release( string $packageType, RepositoryReference $repository, string $providerReleaseId, string $tag, string $expectedFingerprint, string $channel ): RepositoryReleaseArtifact {
 		unset( $packageType, $repository, $providerReleaseId, $tag, $expectedFingerprint, $channel );
 		throw new RuntimeException( 'Release acquisition is outside this fixture.' ); }
-	public function hasRegisteredNativeTarget( string $packageType, string $installedIdentifier ): bool {
+	public function has_registered_native_target( string $packageType, string $installedIdentifier ): bool {
 		unset( $packageType, $installedIdentifier );
 		return false; }
-	public function createNativeTarget( string $packageType, RepositoryReference $repository, string $metadataFile, string $packageRoot, string $installedIdentifier, string $channel, string $deploymentPolicy ): RepositoryReleaseNativeTarget {
+	public function create_native_target( string $packageType, RepositoryReference $repository, string $metadataFile, string $packageRoot, string $installedIdentifier, string $channel, string $deploymentPolicy ): RepositoryReleaseNativeTarget {
 		unset( $packageType, $repository, $metadataFile, $packageRoot, $installedIdentifier, $channel, $deploymentPolicy );
 		throw new RuntimeException( 'Native targets are outside this fixture.' ); }
-	public function workflowStatus( RepositoryReleaseWorkflowTarget $status ): RepositoryReleaseWorkflowStatus {
+	public function workflow_status( RepositoryReleaseWorkflowTarget $status ): RepositoryReleaseWorkflowStatus {
 		++$this->statusReads;
 		$this->throwIfNeeded();
 		return $this->status ?? new RepositoryReleaseWorkflowStatus(
@@ -87,7 +87,7 @@ final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvide
 				),
 			)
 		); }
-	public function workflowPreview( RepositoryReleaseWorkflowTarget $status, string $key ): ?RepositoryReleaseWorkflowPreview {
+	public function workflow_preview( RepositoryReleaseWorkflowTarget $status, string $key ): ?RepositoryReleaseWorkflowPreview {
 		unset( $status );
 		$this->throwIfNeeded();
 		$this->calls[] = array(
@@ -96,10 +96,10 @@ final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvide
 			'key'           => $key,
 		);
 		return $this->preview; }
-	public function workflowInspect( RepositoryReleaseWorkflowTarget $status, string $channel, RepositoryReleaseWorkflowPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult {
+	public function workflow_inspect( RepositoryReleaseWorkflowTarget $status, string $channel, RepositoryReleaseWorkflowPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult {
 		unset( $status, $preflight );
 		return $this->result( 'inspect', $credentialId, array( 'channel' => $channel ) ); }
-	public function workflowSetup( RepositoryReleaseWorkflowTarget $status, string $key, string $confirmation, RepositoryReleaseWorkflowPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult {
+	public function workflow_setup( RepositoryReleaseWorkflowTarget $status, string $key, string $confirmation, RepositoryReleaseWorkflowPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult {
 		unset( $status, $preflight );
 		return $this->result(
 			'setup',
@@ -109,7 +109,7 @@ final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvide
 				'confirmation' => $confirmation,
 			)
 		); }
-	public function workflowOutcome( RepositoryReleaseWorkflowTarget $status, ?string $credentialId ): RepositoryReleaseWorkflowResult {
+	public function workflow_outcome( RepositoryReleaseWorkflowTarget $status, ?string $credentialId ): RepositoryReleaseWorkflowResult {
 		unset( $status );
 		return $this->result( 'outcome', $credentialId ); }
 

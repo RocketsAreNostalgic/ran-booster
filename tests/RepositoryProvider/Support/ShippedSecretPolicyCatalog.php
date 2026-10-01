@@ -24,28 +24,28 @@ final class ShippedSecretPolicyCatalog {
 		$catalog->register(
 			ProviderCode::parse( 'bb' ),
 			new class() implements ProviderCredentialPolicy {
-				public function getProvider(): ProviderCode {
+				public function get_provider(): ProviderCode {
 					return ProviderCode::parse( 'bb' ); }
-				public function normalizeCredential( array $metadata, mixed $secret ): array {
+				public function normalize_credential( array $metadata, mixed $secret ): array {
 					return array(
 						'label'         => '',
 						'kind'          => '',
 						'configuration' => array(),
 						'secret'        => '',
 					); }
-				public function getConstantNames(): array {
+				public function get_constant_names(): array {
 					return array(); }
-				public function credentialFromConstants( array $constants ): ?array {
+				public function credential_from_constants( array $constants ): ?array {
 					return null; }
 			},
 			new class() implements ProviderWebhookPolicy {
-				public function getProvider(): ProviderCode {
+				public function get_provider(): ProviderCode {
 					return ProviderCode::parse( 'bb' ); }
-				public function getRetainedHeaders(): array {
+				public function get_retained_headers(): array {
 					return array(); }
-				public function getSignatureHeader(): string {
+				public function get_signature_header(): string {
 					return ''; }
-				public function normalizeWebhook( array $metadata, mixed $secret ): array {
+				public function normalize_webhook( array $metadata, mixed $secret ): array {
 					return array(
 						'label'        => '',
 						'scope'        => '',
@@ -53,13 +53,13 @@ final class ShippedSecretPolicyCatalog {
 						'authority_id' => '',
 						'secret'       => '',
 					); }
-				public function getConstantNames(): array {
+				public function get_constant_names(): array {
 					return array(); }
-				public function webhookFromConstants( array $constants ): ?array {
+				public function webhook_from_constants( array $constants ): ?array {
 					return null; }
-				public function authorizeWebhook( SignedWebhookVerification $verification, string $repositoryAuthorityId, string $repository ): bool {
+				public function authorize_webhook( SignedWebhookVerification $verification, string $repositoryAuthorityId, string $repository ): bool {
 					return false; }
-				public function repositoryTargetMatches( string $target, string $repositoryLocator ): bool {
+				public function repository_target_matches( string $target, string $repositoryLocator ): bool {
 					return false; }
 			}
 		);

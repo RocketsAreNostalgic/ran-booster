@@ -7,7 +7,7 @@ namespace RAN\RepositoryProvider;
 use RAN\Provider\ProviderCapability;
 
 interface RepositoryReleaseMetadata extends ProviderCapability {
-	public function expectedUpdateUri( RepositoryReference $repository ): string;
+	public function expected_update_uri( RepositoryReference $repository ): string;
 
-	public function releaseDetailsUrl( RepositoryReference $repository, string $tag ): string;
+	public function release_details_url( RepositoryReference $repository, string $tag ): string;
 }

@@ -52,7 +52,7 @@ final class CredentialExpiryReminder {
 			$source    = 'manual';
 		}
 
-		$metadata       = $this->providers->get( $provider )->getMetadata();
+		$metadata       = $this->providers->get( $provider )->get_metadata();
 		$provider_label = $metadata->label;
 		$label          = is_string( $profile['label'] ?? null ) && '' !== trim( $profile['label'] )
 			? $profile['label']

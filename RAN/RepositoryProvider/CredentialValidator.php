@@ -8,5 +8,5 @@ use RAN\Provider\ProviderCapability;
 
 interface CredentialValidator extends ProviderCapability {
 
-	public function validateCredential( string $credentialId ): CredentialValidationResult;
+	public function validate_credential( string $credentialId ): CredentialValidationResult;
 }

@@ -305,7 +305,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
 			}
 		};
@@ -396,11 +396,11 @@ final class RepositoryPickerControllerTest extends TestCase {
 
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
 			}
 
-			public function browseRepositories( RepositoryBrowseRequest $request ): \RAN\RepositoryProvider\RepositoryBrowseResult {
+			public function browse_repositories( RepositoryBrowseRequest $request ): \RAN\RepositoryProvider\RepositoryBrowseResult {
 				throw new RuntimeException(
 					'upstream-response-canary; Retry-After: header-canary; token-canary',
 					429
@@ -431,11 +431,11 @@ final class RepositoryPickerControllerTest extends TestCase {
 
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
 			}
 
-			public function browseRepositories( RepositoryBrowseRequest $request ): \RAN\RepositoryProvider\RepositoryBrowseResult {
+			public function browse_repositories( RepositoryBrowseRequest $request ): \RAN\RepositoryProvider\RepositoryBrowseResult {
 				return new \RAN\RepositoryProvider\RepositoryBrowseResult(
 					array(
 						new RepositoryDescriptor( ProviderCode::parse( 'gh' ), 'owner/repository', 'repository', '42', false, 'main', null ),
@@ -469,11 +469,11 @@ final class RepositoryPickerControllerTest extends TestCase {
 
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
 			}
 
-			public function browseRepositories( RepositoryBrowseRequest $request ): \RAN\RepositoryProvider\RepositoryBrowseResult {
+			public function browse_repositories( RepositoryBrowseRequest $request ): \RAN\RepositoryProvider\RepositoryBrowseResult {
 				return new \RAN\RepositoryProvider\RepositoryBrowseResult( array(), \RAN\RepositoryProvider\RepositoryBrowseResult::RATE_LIMIT );
 			}
 		};
@@ -509,11 +509,11 @@ final class RepositoryPickerControllerTest extends TestCase {
 				$this->request = null;
 			}
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( $this->code, 'Fixture', 'https://example.test/', 'Owner' );
 			}
 
-			public function browseRepositories( RepositoryBrowseRequest $request ): \RAN\RepositoryProvider\RepositoryBrowseResult {
+			public function browse_repositories( RepositoryBrowseRequest $request ): \RAN\RepositoryProvider\RepositoryBrowseResult {
 				$this->request = $request;
 
 				return new \RAN\RepositoryProvider\RepositoryBrowseResult( $this->repositories );
@@ -552,15 +552,15 @@ final class RepositoryPickerControllerTest extends TestCase {
 			) {
 			}
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( $this->code, 'Fixture', 'https://example.test/', 'Owner' );
 			}
 
-			public function getPublicRepositoryBrowseMetadata(): PublicRepositoryBrowseMetadata {
+			public function get_public_repository_browse_metadata(): PublicRepositoryBrowseMetadata {
 				return new PublicRepositoryBrowseMetadata( $this->supportsDefault );
 			}
 
-			public function browseRepositories( RepositoryBrowseRequest $request ): \RAN\RepositoryProvider\RepositoryBrowseResult {
+			public function browse_repositories( RepositoryBrowseRequest $request ): \RAN\RepositoryProvider\RepositoryBrowseResult {
 				$this->request = $request;
 
 				return new \RAN\RepositoryProvider\RepositoryBrowseResult( $this->repositories );
@@ -576,7 +576,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		array $profileIds = array(),
 		bool $storageUnavailable = false
 	): RepositoryPickerController {
-		$providerCode = $provider->getMetadata()->code->value;
+		$providerCode = $provider->get_metadata()->code->value;
 		$profiles     = array();
 		foreach ( $profileIds as $profileId ) {
 			$profiles[ $profileId ] = array(

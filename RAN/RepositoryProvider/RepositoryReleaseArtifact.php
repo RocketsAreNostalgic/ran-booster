@@ -8,13 +8,13 @@ namespace RAN\RepositoryProvider;
 interface RepositoryReleaseArtifact {
 	public function discard(): bool;
 
-	public function handoffToCore(): RepositoryReleaseArtifactCustody;
+	public function handoff_to_core(): RepositoryReleaseArtifactCustody;
 
 	public function version(): string;
 
-	public function packageRoot(): string;
+	public function package_root(): string;
 
-	public function mainFile(): string;
+	public function main_file(): string;
 
 	public function identifier( string $packageType ): string;
 }

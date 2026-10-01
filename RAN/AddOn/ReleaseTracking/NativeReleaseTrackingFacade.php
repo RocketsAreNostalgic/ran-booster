@@ -370,7 +370,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 
 			foreach ( $this->release_browser_repositories( $package ) as $repository ) {
 				try {
-					return $listing->listReleaseCandidates( $type, $repository, $channel );
+					return $listing->list_release_candidates( $type, $repository, $channel );
 				} catch ( RepositoryReleaseReadUnavailable ) {
 					continue;
 				}
@@ -422,7 +422,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			foreach ( $this->release_browser_repositories( $package ) as $repository ) {
 				try {
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-					$inspection = $inspector->inspectRelease( $type, $repository, $releaseId, $tag, $channel );
+					$inspection = $inspector->inspect_release( $type, $repository, $releaseId, $tag, $channel );
 					break;
 				} catch ( RepositoryReleaseReadUnavailable ) {
 					continue;
@@ -440,7 +440,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				|| ! hash_equals( $configuration->metadataFile(), $inspection->mainFile ) ) {
 				return null;
 			}
-			$url = $metadata->releaseDetailsUrl( $repository, $inspection->tag );
+			$url = $metadata->release_details_url( $repository, $inspection->tag );
 			if ( '' === $url ) {
 				return null;
 			}
@@ -869,7 +869,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		try {
 			$metadata       = $this->providers->requireCapability( $provider_code, RepositoryReleaseMetadata::class );
 			$native_targets = $this->providers->requireCapability( $provider_code, RepositoryReleaseNativeTargets::class );
-			$expected       = $metadata->expectedUpdateUri( $package->get_repository()->reference );
+			$expected       = $metadata->expected_update_uri( $package->get_repository()->reference );
 		} catch ( UnsupportedProviderCapability | UnknownProvider ) {
 			return new ReleaseTrackingEligibility( ReleaseTrackingEligibility::UNSUPPORTED_PROVIDER );
 		} catch ( Throwable ) {
@@ -934,7 +934,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 
 	private function has_registered_target( RepositoryReleaseNativeTargets $native_targets, string $type, string $identity ): bool {
 		try {
-			return $native_targets->hasRegisteredNativeTarget( $type, $identity );
+			return $native_targets->has_registered_native_target( $type, $identity );
 		} catch ( Throwable ) {
 			return false;
 		}
@@ -1073,7 +1073,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		RepositoryReleaseInspector $inspector,
 		RepositoryReleaseMetadata $metadata
 	): ReleaseTrackingPreflight {
-		$candidates = $listing->listReleaseCandidates( $type, $repository, $channel )->candidates;
+		$candidates = $listing->list_release_candidates( $type, $repository, $channel )->candidates;
 		if ( array() === $candidates ) {
 			return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $package_root, reasonCode: 'no_releases' );
 		}
@@ -1086,7 +1086,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			++$inspected;
 
 			try {
-				$inspection = $inspector->inspectRelease(
+				$inspection = $inspector->inspect_release(
 					$type,
 					$repository,
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
@@ -1130,7 +1130,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				$comparison < 0 => 'older',
 				default => 'same',
 			};
-			$release_url = $metadata->releaseDetailsUrl( $repository, $inspection->tag );
+			$release_url = $metadata->release_details_url( $repository, $inspection->tag );
 			if ( '' === $release_url ) {
 				throw new InvalidArgumentException( 'The release details URL is unavailable.' );
 			}
@@ -1259,7 +1259,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		try {
 			$metadata = $this->providers->requireCapability( $provider_code, RepositoryReleaseMetadata::class );
 
-			return $metadata->releaseDetailsUrl( $package->get_repository()->reference, $tag );
+			return $metadata->release_details_url( $package->get_repository()->reference, $tag );
 		} catch ( Throwable ) {
 			return '';
 		}

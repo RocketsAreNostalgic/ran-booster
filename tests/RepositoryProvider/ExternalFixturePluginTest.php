@@ -47,7 +47,7 @@ final class ExternalFixturePluginTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testPresenterSuppressesManagementPresentationForAPartialCapabilityProvider(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 13 );
 		$this->loadFixturePlugin();
 		list( $registry, , $path ) = $this->registry();
 
@@ -59,44 +59,44 @@ final class ExternalFixturePluginTest extends TestCase {
 				public function __construct( private Provider $provider ) {
 				}
 
-				public function getMetadata(): \RAN\RepositoryProvider\ProviderMetadata {
-					return $this->provider->getMetadata();
+				public function get_metadata(): \RAN\RepositoryProvider\ProviderMetadata {
+					return $this->provider->get_metadata();
 				}
 
-				public function getProviderDiagnostics(): \RAN\RepositoryProvider\ProviderDiagnostics {
-					return $this->provider->getProviderDiagnostics();
+				public function get_provider_diagnostics(): \RAN\RepositoryProvider\ProviderDiagnostics {
+					return $this->provider->get_provider_diagnostics();
 				}
 
-				public function resolveRepository( \RAN\RepositoryProvider\RepositoryLookupRequest $request ): \RAN\RepositoryProvider\RepositoryDescriptor {
-					return $this->provider->resolveRepository( $request );
+				public function resolve_repository( \RAN\RepositoryProvider\RepositoryLookupRequest $request ): \RAN\RepositoryProvider\RepositoryDescriptor {
+					return $this->provider->resolve_repository( $request );
 				}
 
-				public function prepareArchive( ArchiveRequest $request ): \RAN\RepositoryProvider\PreparedArchive {
-					return $this->provider->prepareArchive( $request );
+				public function prepare_archive( ArchiveRequest $request ): \RAN\RepositoryProvider\PreparedArchive {
+					return $this->provider->prepare_archive( $request );
 				}
 
-				public function assessSetup( string $repositoryId, string $repository, ?string $credentialProfileId ): RepositoryWebhookFitnessResult {
-					return $this->provider->assessSetup( $repositoryId, $repository, $credentialProfileId );
+				public function assess_setup( string $repositoryId, string $repository, ?string $credentialProfileId ): RepositoryWebhookFitnessResult {
+					return $this->provider->assess_setup( $repositoryId, $repository, $credentialProfileId );
 				}
 
-				public function assessCheck( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
-					return $this->provider->assessCheck( $repositoryId, $repository, $credentialProfileId, $hookId );
+				public function assess_check( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+					return $this->provider->assess_check( $repositoryId, $repository, $credentialProfileId, $hookId );
 				}
 
-				public function assessReconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
-					return $this->provider->assessReconfigure( $repositoryId, $repository, $credentialProfileId, $hookId );
+				public function assess_reconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+					return $this->provider->assess_reconfigure( $repositoryId, $repository, $credentialProfileId, $hookId );
 				}
 
-				public function assessRemove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
-					return $this->provider->assessRemove( $repositoryId, $repository, $credentialProfileId, $hookId );
+				public function assess_remove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+					return $this->provider->assess_remove( $repositoryId, $repository, $credentialProfileId, $hookId );
 				}
 
-				public function assessTest( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
-					return $this->provider->assessTest( $repositoryId, $repository, $credentialProfileId, $hookId );
+				public function assess_test( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+					return $this->provider->assess_test( $repositoryId, $repository, $credentialProfileId, $hookId );
 				}
 			};
 
-			$metadata   = $partial->getMetadata();
+			$metadata   = $partial->get_metadata();
 			$reflection = new \ReflectionClass( ProviderSettingsPresenter::class );
 			$projection = $reflection->getMethod( 'provider' )->invoke(
 				$reflection->newInstanceWithoutConstructor(),
@@ -116,7 +116,7 @@ final class ExternalFixturePluginTest extends TestCase {
 	public function testPluginLoadedBeforeTheApiMarkerRegistersOnTheLaterHook(): void {
 		$this->loadFixturePlugin();
 		self::assertFalse( defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) );
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 13 );
 
 		list( $registry, , $path ) = $this->registry();
 		$this->runRegistrationHook( $registry );
@@ -128,7 +128,7 @@ final class ExternalFixturePluginTest extends TestCase {
 		#[RunInSeparateProcess]
 		#[PreserveGlobalState( false )]
 	public function testPluginLoadedAfterTheApiMarkerExercisesTheCompleteProviderContract(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 13 );
 		$this->loadFixturePlugin();
 		list( $registry, $secrets, $path ) = $this->registry();
 
@@ -169,7 +169,7 @@ final class ExternalFixturePluginTest extends TestCase {
 				true
 			);
 
-			self::assertTrue( $provider->validateCredential( $credentialId )->isValid() );
+			self::assertTrue( $provider->validate_credential( $credentialId )->isValid() );
 			self::assertSame( 'ran-lab', $secrets->credentialProfiles( 'fixture-provider' )[ $credentialId ]['configuration']['tenant'] );
 
 			$resolved = ( new PackageRepositoryRequestResolver( $registry ) )->resolve(
@@ -213,7 +213,7 @@ final class ExternalFixturePluginTest extends TestCase {
 					return $now;
 				}
 			);
-			$results           = $provider->getProviderDiagnostics()->diagnose( $request );
+			$results           = $provider->get_provider_diagnostics()->diagnose( $request );
 			self::assertCount( 3, $results );
 			self::assertSame(
 				array(
@@ -236,12 +236,12 @@ final class ExternalFixturePluginTest extends TestCase {
 				true,
 				$credentialId
 			);
-			$archive     = $provider->prepareArchive( new ArchiveRequest( $reference, 'main' ) );
+			$archive     = $provider->prepare_archive( new ArchiveRequest( $reference, 'main' ) );
 			$resolvedRef = sha1( "group/subgroup/package\0main" );
 			self::assertSame( $resolvedRef, $archive->getResolvedRef() );
 			self::assertSame( 'https://fixtures.example.test/group/subgroup/package/' . $resolvedRef . '.zip', $archive->getUrl() );
 
-			$automatic = $provider->prepareArchive( new ArchiveRequest( $reference, $resolvedRef, 'main' ) );
+			$automatic = $provider->prepare_archive( new ArchiveRequest( $reference, $resolvedRef, 'main' ) );
 			$provider->getClient()->setBranchHead( 'main', '89abcdef0123456789abcdef0123456789abcdef' );
 			try {
 				$automatic->verifyCurrentHead();
@@ -253,7 +253,7 @@ final class ExternalFixturePluginTest extends TestCase {
 			$fitness = $registry->requireCapability( 'fixture-provider', RepositoryWebhookFitness::class );
 			self::assertSame(
 				'fixture.permission.webhook_exact',
-				$fitness->assessSetup( $resolved['provider_repository_id'], $resolved['repository'], $credentialId )->toArray()['code']
+				$fitness->assess_setup( $resolved['provider_repository_id'], $resolved['repository'], $credentialId )->toArray()['code']
 			);
 			$management = $registry->requireCapability( 'fixture-provider', RepositoryWebhookManagement::class );
 			$operation  = $management->setup( $resolved['provider_repository_id'], $resolved['repository'], 'https://site.example/webhook', $credentialId, str_repeat( 's', 32 ) );
@@ -263,16 +263,16 @@ final class ExternalFixturePluginTest extends TestCase {
 
 			$normalizer = $registry->requireCapability( 'fixture-provider', WebhookNormalizer::class );
 			self::assertSame( $provider, $normalizer );
-			self::assertSame( array( 'x-fixture-event', 'x-fixture-signature' ), $normalizer->getWebhookPolicy()->getRetainedHeaders() );
+			self::assertSame( array( 'x-fixture-event', 'x-fixture-signature' ), $normalizer->get_webhook_policy()->get_retained_headers() );
 			$beforeNormalization = $provider->getClient()->getRequestCount();
 			$request             = new WebhookRequest(
 				ProviderCode::parse( 'fixture-provider' ),
 				'',
 				array( 'x-fixture-event' => 'ping' ),
-				$normalizer->getWebhookPolicy()->getRetainedHeaders()
+				$normalizer->get_webhook_policy()->get_retained_headers()
 			);
 			try {
-				$normalizer->normalizeWebhook( $request );
+				$normalizer->normalize_webhook( $request );
 				self::fail( 'Fixture normalization must require verified provider evidence.' );
 			} catch ( \RAN\RepositoryProvider\WebhookRejected $failure ) {
 				self::assertSame( 401, $failure->getStatusCode() );
@@ -290,15 +290,15 @@ final class ExternalFixturePluginTest extends TestCase {
 					),
 				)
 			);
-			self::assertTrue( $normalizer->normalizeWebhook( $verified )->isProbe() );
+			self::assertTrue( $normalizer->normalize_webhook( $verified )->isProbe() );
 			$otherProviderRequest = new WebhookRequest(
 				ProviderCode::parse( 'gh' ),
 				'',
 				array( 'x-fixture-event' => 'ping' ),
-				$normalizer->getWebhookPolicy()->getRetainedHeaders()
+				$normalizer->get_webhook_policy()->get_retained_headers()
 			);
 			try {
-				$normalizer->normalizeWebhook(
+				$normalizer->normalize_webhook(
 					$otherProviderRequest->withVerification(
 						new SignedWebhookVerification(
 							ProviderCode::parse( 'gh' ),
@@ -352,8 +352,9 @@ final class ExternalFixturePluginTest extends TestCase {
 	public static function incompatibleProviderApis(): array {
 		return array(
 			'older'    => array( 10 ),
-			'previous' => array( 11 ),
-			'future'   => array( 13 ),
+			'api_11'   => array( 11 ),
+			'previous' => array( 12 ),
+			'future'   => array( 14 ),
 		);
 	}
 

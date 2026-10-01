@@ -3,8 +3,8 @@
 // Executed by WP-CLI against the installed release ZIP in a disposable site.
 // phpcs:disable
 
-if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 12 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
-	throw new RuntimeException( 'The installed runtime does not expose Provider API 12.' );
+if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 13 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+	throw new RuntimeException( 'The installed runtime does not expose Provider API 13.' );
 }
 
 if ( 3 !== RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3::RELEASE_WORKFLOW_API_VERSION ) {
@@ -28,7 +28,7 @@ if ( false !== $development_autoloader ) {
 $container = require __DIR__ . '/core-container-fixture.php';
 $registry  = $container->make( RAN\RepositoryProvider\ProviderRegistry::class );
 $provider  = $registry->get( 'gh' );
-$metadata  = $provider->getMetadata();
+$metadata  = $provider->get_metadata();
 $admin     = $metadata->admin;
 
 if ( ! $registry->isSealed()
@@ -70,13 +70,13 @@ foreach (
 	}
 }
 
-$credential_policy = $provider->getCredentialPolicy();
-$webhook_policy    = $provider->getWebhookPolicy();
-if ( 'gh' !== $credential_policy->getProvider()->value
-	|| array( 'RAN_BOOSTER_GITHUB_TOKEN' ) !== $credential_policy->getConstantNames()
-	|| 'gh' !== $webhook_policy->getProvider()->value
-	|| array( 'x-github-event', 'x-github-delivery', 'x-hub-signature-256' ) !== $webhook_policy->getRetainedHeaders()
-	|| 'x-hub-signature-256' !== $webhook_policy->getSignatureHeader()
+$credential_policy = $provider->get_credential_policy();
+$webhook_policy    = $provider->get_webhook_policy();
+if ( 'gh' !== $credential_policy->get_provider()->value
+	|| array( 'RAN_BOOSTER_GITHUB_TOKEN' ) !== $credential_policy->get_constant_names()
+	|| 'gh' !== $webhook_policy->get_provider()->value
+	|| array( 'x-github-event', 'x-github-delivery', 'x-hub-signature-256' ) !== $webhook_policy->get_retained_headers()
+	|| 'x-hub-signature-256' !== $webhook_policy->get_signature_header()
 ) {
 	throw new RuntimeException( 'The installed GitHub provider policies do not match the bundled contract.' );
 }

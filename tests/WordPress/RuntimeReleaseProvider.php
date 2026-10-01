@@ -53,23 +53,23 @@ final class RuntimeReleaseProvider implements RepositoryProvider, RepositoryRele
 			: \Closure::fromCallable( $targetFactory );
 	}
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata( ProviderCode::parse( $this->code ), 'Release fixture', $this->baseUrl, 'Owner' );
 	}
 
-	public function expectedUpdateUri( RepositoryReference $repository ): string {
+	public function expected_update_uri( RepositoryReference $repository ): string {
 		return $this->baseUrl . $repository->locator;
 	}
 
-	public function releaseDetailsUrl( RepositoryReference $repository, string $tag ): string {
-		return '' === $tag ? '' : $this->expectedUpdateUri( $repository ) . '/releases/tag/' . rawurlencode( $tag );
+	public function release_details_url( RepositoryReference $repository, string $tag ): string {
+		return '' === $tag ? '' : $this->expected_update_uri( $repository ) . '/releases/tag/' . rawurlencode( $tag );
 	}
 
-	public function listReleaseCandidates( string $packageType, RepositoryReference $repository, string $channel ): RepositoryReleaseCandidateList {
+	public function list_release_candidates( string $packageType, RepositoryReference $repository, string $channel ): RepositoryReleaseCandidateList {
 		return ( $this->list )( $packageType, $repository, $channel );
 	}
 
-	public function inspectRelease(
+	public function inspect_release(
 		string $packageType,
 		RepositoryReference $repository,
 		string $providerReleaseId,
@@ -79,13 +79,13 @@ final class RuntimeReleaseProvider implements RepositoryProvider, RepositoryRele
 		return ( $this->inspect )( $packageType, $repository, $providerReleaseId, $tag, $channel );
 	}
 
-	public function hasRegisteredNativeTarget( string $packageType, string $installedIdentifier ): bool {
+	public function has_registered_native_target( string $packageType, string $installedIdentifier ): bool {
 		unset( $packageType, $installedIdentifier );
 
 		return $this->collision;
 	}
 
-	public function createNativeTarget(
+	public function create_native_target(
 		string $packageType,
 		RepositoryReference $repository,
 		string $metadataFile,

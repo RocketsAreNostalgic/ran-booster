@@ -283,31 +283,31 @@ final class AuthorityInstallationStore implements InstallationStore {
 
 final readonly class AuthorityWebhookPolicy implements ProviderWebhookPolicy {
 
-	public function getProvider(): ProviderCode {
+	public function get_provider(): ProviderCode {
 		return ProviderCode::parse( 'gh' );
 	}
 
-	public function getRetainedHeaders(): array {
+	public function get_retained_headers(): array {
 		return array( 'x-signature' );
 	}
 
-	public function getSignatureHeader(): string {
+	public function get_signature_header(): string {
 		return 'x-signature';
 	}
 
-	public function normalizeWebhook( array $metadata, mixed $secret ): array {
+	public function normalize_webhook( array $metadata, mixed $secret ): array {
 		throw new \LogicException( 'Webhook normalization is not used by this test.' );
 	}
 
-	public function getConstantNames(): array {
+	public function get_constant_names(): array {
 		return array();
 	}
 
-	public function webhookFromConstants( array $constants ): ?array {
+	public function webhook_from_constants( array $constants ): ?array {
 		return null;
 	}
 
-	public function authorizeWebhook(
+	public function authorize_webhook(
 		SignedWebhookVerification $verification,
 		string $repositoryAuthorityId,
 		string $repository
@@ -315,7 +315,7 @@ final readonly class AuthorityWebhookPolicy implements ProviderWebhookPolicy {
 		return false;
 	}
 
-	public function repositoryTargetMatches( string $target, string $repositoryLocator ): bool {
+	public function repository_target_matches( string $target, string $repositoryLocator ): bool {
 		return 0 === strcasecmp( trim( $target, '/' ), trim( $repositoryLocator, '/' ) );
 	}
 }

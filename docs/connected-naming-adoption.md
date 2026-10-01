@@ -120,3 +120,26 @@ Library remains on the backburner and the CI optimization inquiry is retired.
 Keep implementation, integration, qualification, merge, package publication and
 Core adoption as separate ledger states. Approval for preparation does not
 authorize any merge, release or publication step above.
+
+## Next tranche: Core-owned provider methods (API13 preparation)
+
+The previous helper/Branch tranche landed in Core #218 at
+`9b634bdf10ae2866ceca54ac6262d4845fa859d2` and passed exact-main Quality.
+Ben has held beta.31 for the subsequent connected provider-interface migration.
+This next tranche changes 47 declarations across 20 Core interfaces, paired
+with 50 GitHub Provider implementations, to snake_case. Parameter names and
+promotions remain unchanged. API13 rejects old API11/12 implementations before
+loading; workflowV3, Add-on16 and unrelated protocol identities are unchanged.
+
+The tracked beta.9 Provider lock still belongs to the prior API12 composition.
+Until an actually published matching Provider release replaces it, the API13
+branch is source preparation and must not be merged or packaged as adoption.
+Qualify the exact Core/Provider sources first; approve and publish Provider
+through its normal lifecycle; adopt the verified immutable release in Core;
+then requalify the complete archive/installed composition and obtain separate
+Core source and beta.31 release approvals. No fabricated tags or version aliases.
+
+Bitbucket #89/#75 remain with their existing owner. Their API12 work cannot
+certify API13; matching implementation and later immutable-host certification
+remain explicit coordinated obligations. The broad ReleaseManagement naming
+cohort, other Provider parameters and UI acceptance are not absorbed.

@@ -105,7 +105,7 @@ final readonly class PackageRepositoryRequestResolver {
 		}
 		if ( $trusted_public_lookup ) {
 			$browser = $this->providers->requireCapability( $provider, CredentialedPublicRepositoryBrowser::class );
-			if ( ! $browser->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile ) {
+			if ( ! $browser->get_public_repository_browse_metadata()->supportsProviderDefaultProfile ) {
 				throw new InvalidArgumentException( 'A default public repository lookup profile is unavailable for this provider.' );
 			}
 			$public_picker = true;
@@ -114,7 +114,7 @@ final readonly class PackageRepositoryRequestResolver {
 		$verification_credential_id = $trusted_public_lookup
 			? $trusted_public_lookup_id
 			: ( '' !== $public_lookup_id ? $public_lookup_id : $credential_id );
-		$repository                 = $aggregate->resolveRepository(
+		$repository                 = $aggregate->resolve_repository(
 			new RepositoryLookupRequest(
 				wp_unslash( $repository_input ),
 				'' === $verification_credential_id ? null : $verification_credential_id,

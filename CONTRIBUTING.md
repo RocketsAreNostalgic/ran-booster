@@ -686,3 +686,14 @@ The administration action, source-choice and status-summary component cohort
 enforces owned snake_case helper, variable and parameter names. Public normalize
 and render method names, structured array keys, URL validation and limits, HTML,
 escaping, ARIA attributes and callback invocation behavior are unchanged.
+
+## Provider API13 methods-only tranche
+
+Core #167 coordinates 47 interface declarations across 20 interfaces with 50
+GitHub Provider implementations. Only resolved contract methods and their
+callers, overrides, mocks and reflection references migrate to snake_case.
+Public parameter/promoted names, DTO accessors, persisted fields and unrelated
+same-spelled APIs remain unchanged. Exact API13 admission prevents API11/12
+implementations from loading; workflow V3 and Add-on API16 remain unchanged.
+Source overlays are preparation only until a matching immutable Provider
+release is adopted and the complete installed composition is qualified.

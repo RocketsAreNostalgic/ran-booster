@@ -316,7 +316,7 @@ final class RepositoryWebhookManagementControls {
 				return null;
 			}
 			$provider = $this->providers->requireCapability( $provider_code, RepositoryWebhookSettingsLink::class );
-			$url      = null === $repository ? '' : trim( $provider->repositoryWebhookSettingsUrl( $repository ) );
+			$url      = null === $repository ? '' : trim( $provider->repository_webhook_settings_url( $repository ) );
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Provider returns an external display URL which is checked before rendering.
 			$parts = parse_url( $url );
 			if ( '' === $url || strlen( $url ) > 2048 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $url ) || false === filter_var( $url, FILTER_VALIDATE_URL ) || false === $parts || 'https' !== strtolower( $parts['scheme'] ?? '' ) || '' === ( $parts['host'] ?? '' ) || array_intersect_key( $parts, array_flip( array( 'user', 'pass', 'query', 'fragment' ) ) ) ) {

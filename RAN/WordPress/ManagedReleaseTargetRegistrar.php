@@ -471,7 +471,7 @@ final class ManagedReleaseTargetRegistrar {
 		}
 		$native_targets = $this->providers->requireCapability( $provider_code, RepositoryReleaseNativeTargets::class );
 		$metadata_file  = $this->metadata_path( $type, $configuration, $identifier );
-		$target         = $native_targets->createNativeTarget(
+		$target         = $native_targets->create_native_target(
 			$type,
 			$package->get_repository()->reference,
 			$metadata_file,

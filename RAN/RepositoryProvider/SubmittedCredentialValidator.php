@@ -16,7 +16,7 @@ namespace RAN\RepositoryProvider;
 interface SubmittedCredentialValidator {
 
 	/** @param array<string, mixed> $metadata Canonical non-secret credential metadata. */
-	public function validateSubmittedCredential(
+	public function validate_submitted_credential(
 		array $metadata,
 		#[\SensitiveParameter] string $secret
 	): void;

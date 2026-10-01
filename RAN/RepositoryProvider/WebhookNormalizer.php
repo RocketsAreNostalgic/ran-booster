@@ -8,13 +8,13 @@ use RAN\Provider\ProviderCapability;
 
 interface WebhookNormalizer extends ProviderCapability {
 
-	public function getWebhookPolicy(): ProviderWebhookPolicy;
+	public function get_webhook_policy(): ProviderWebhookPolicy;
 
 	/**
 	 * Report this provider's local webhook configuration and any retained,
 	 * authenticated delivery evidence without making a remote request.
 	 */
-	public function diagnoseWebhookReadiness(): ProviderDiagnosticResult;
+	public function diagnose_webhook_readiness(): ProviderDiagnosticResult;
 
-	public function normalizeWebhook( WebhookRequest $request ): WebhookEnvelope;
+	public function normalize_webhook( WebhookRequest $request ): WebhookEnvelope;
 }

@@ -1,5 +1,12 @@
 # Custom git vendor setup
 
+> API13 source preparation: the tracked Provider beta.9 lock still implements
+> API12 and must not be used to qualify or release this candidate. Matching
+> source checks are preparation only. Adopt a reviewed, actually published
+> matching Provider release and requalify the final installed composition.
+> Core beta.31 remains held; Bitbucket migration is separately owned.
+
+
 RAN Booster exposes a single runtime extension seam for custom git vendors:
 `ran_booster_register_providers`. Use it to register a trusted repository
 provider that can resolve repositories, expose diagnostics, prepare immutable
@@ -27,7 +34,7 @@ had a chance to run.
 ## Registration pattern
 
 A provider attaches its callback on `plugins_loaded` before Booster seals the
-registry. Provider API 12 uses one required three-argument credential-bearing
+registry. Provider API 13 uses one required three-argument credential-bearing
 factory contract:
 
 ```php
@@ -35,7 +42,7 @@ add_action(
   'ran_booster_register_providers',
   static function ( \RAN\RepositoryProvider\ProviderRegistry $registry ): void {
     if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-      || 12 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+      || 13 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
       return;
     }
 
@@ -58,7 +65,7 @@ add_action(
 ```
 
 Use `registerWithCredentialStore()` when the provider reads stored credentials.
-Every API-12 factory receives the two provider-bound read-only values plus the
+Every API-13 factory receives the two provider-bound read-only values plus the
 bounded `ProviderRegistrationContext`. The third parameter must be
 non-variadic, by-value and typed exactly to that class; two-argument, variadic
 or by-reference context signatures are rejected before provider construction.
@@ -75,9 +82,9 @@ and call it only when the operation actually needs the archive ceiling, not
 while its registration factory is constructing the provider aggregate.
 
 The context is not a service locator and exposes no container, logger, database,
-sidecar, credential writer or other Core implementation service. Provider API 12
+sidecar, credential writer or other Core implementation service. Provider API 13
 guarantees this context as part of credential-bearing registration; providers
-targeting API 12 must not feature-detect or fall back to the retired
+targeting API 13 must not feature-detect or fall back to the retired
 two-argument factory shape.
 
 Neither provider-bound value accepts a provider argument, selects another
@@ -88,7 +95,7 @@ Activating a credential-bearing provider therefore trusts it with credentials
 saved under its code; registration order is not publisher authentication, and
 Core cannot control the provider's private code after authorized disclosure.
 
-Provider API 12 supplies no logger, service container or generic service
+Provider API 13 supplies no logger, service container or generic service
 resolver. The additive registration context does not change that marker or turn
 registration into generic dependency injection. An unexpected caught diagnostic
 failure may be attached only to a bounded request-local
@@ -100,10 +107,10 @@ administrator copy.
 Every custom vendor implements `RAN\RepositoryProvider\RepositoryProvider`.
 That interface requires four responsibilities:
 
-- `getMetadata()` returns the provider's typed metadata.
-- `getProviderDiagnostics()` returns the bounded troubleshooting suite.
-- `resolveRepository()` maps a lookup request to a repository descriptor.
-- `prepareArchive()` produces an immutable archive request and must fail closed
+- `get_metadata()` returns the provider's typed metadata.
+- `get_provider_diagnostics()` returns the bounded troubleshooting suite.
+- `resolve_repository()` maps a lookup request to a repository descriptor.
+- `prepare_archive()` produces an immutable archive request and must fail closed
   if an expected branch is no longer the current head.
 
 The provider code itself is represented by `RAN\RepositoryProvider\ProviderCode`.
@@ -168,18 +175,18 @@ ordinary typed results without a failure; there is no Provider API logger.
 
 ### Repository resolution and archive preparation
 
-A vendor's `resolveRepository()` method should convert a lookup request into a
+A vendor's `resolve_repository()` method should convert a lookup request into a
 `RAN\RepositoryProvider\RepositoryDescriptor`.
 That descriptor is the canonical handoff into Booster's deployment pipeline and
 contains the selected provider, repository identity, locator, privacy, default
 branch, credential selection, and package slug.
 
-`prepareArchive()` receives an archive request and must return a verified
+`prepare_archive()` receives an archive request and must return a verified
 `RAN\RepositoryProvider\PreparedArchive`. Archive URLs must be HTTPS, must have
 a host, and must not contain user info or fragments. Providers must not place
 reusable secrets in archive URLs.
 
-Provider API 12 supplies `GitReferenceSyntax::isValidNamedReference()` for the
+Provider API 13 supplies `GitReferenceSyntax::isValidNamedReference()` for the
 generic bounded branch/ref syntax check and `AuthenticatedPreparedArchive` for
 the one-request archive authentication, redirect scrubbing, head verification
 and cleanup lifecycle. A vendor may impose stricter syntax or origin rules, but
@@ -206,8 +213,8 @@ them:
 - `RAN\RepositoryProvider\RepositoryWebhookFitness` and
   `RAN\RepositoryProvider\RepositoryWebhookManagement` together for the exact
   `repository-webhook-management/3` setup, check, reconfigure, remove and test
-  operation, with matching read-only `assessSetup`, `assessCheck`,
-  `assessReconfigure`, `assessRemove` and `assessTest` methods. The provider
+  operation, with matching read-only `assess_setup`, `assess_check`,
+  `assess_reconfigure`, `assess_remove` and `assess_test` methods. The provider
   owns its fixed vendor calls; Core owns authorization, binding, secret custody
   and bounded results. Core does not generate a
   management form, credential schema or route from the backend capability.
@@ -258,9 +265,9 @@ them:
   operations. See the
   [workflow capability contract](provider-extension-contract.md#optional-release-workflow-management).
 
-Provider API 12 hosts publish
+Provider API 13 hosts publish
 `RepositoryReleaseWorkflowManagementV3` as the current optional workflow
-management facet. Providers targeting API 12 may implement that interface
+management facet. Providers targeting API 13 may implement that interface
 directly; providers that do not adopt workflow API 3 need no additional feature
 check. See the
 [dedicated workflow API contract](provider-release-workflow-api.md).
@@ -325,9 +332,9 @@ shape check.
    single-use `RepositoryReleaseArtifact`. Do not return a path, URL, archive
    bytes, provider result payload or reusable claim. Report a bounded cleanup
    failure when provider-owned bytes cannot be discarded before handoff.
-1. When targeting Provider API 12, `RepositoryReleaseWorkflowManagementV3` is
+1. When targeting Provider API 13, `RepositoryReleaseWorkflowManagementV3` is
    available as the current optional workflow facet; older Booster releases that
-   advertise Provider API 10 remain outside this API-12 contract.
+   advertise Provider API 10 remain outside this API-13 contract.
 1. Test registration from the main plugin file with the version guard in place.
 1. Verify the provider registers cleanly, seals cleanly, and surfaces the
    correct optional capabilities.

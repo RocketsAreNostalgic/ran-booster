@@ -15,13 +15,13 @@ use RAN\Provider\ProviderCapability;
 interface RepositoryReleaseWorkflowManagementV3 extends ProviderCapability {
 	public const RELEASE_WORKFLOW_API_VERSION = 3;
 
-	public function workflowStatus( RepositoryReleaseWorkflowTarget $target ): RepositoryReleaseWorkflowStatus;
+	public function workflow_status( RepositoryReleaseWorkflowTarget $target ): RepositoryReleaseWorkflowStatus;
 
-	public function workflowPreview( RepositoryReleaseWorkflowTarget $target, string $key ): ?RepositoryReleaseWorkflowPreview;
+	public function workflow_preview( RepositoryReleaseWorkflowTarget $target, string $key ): ?RepositoryReleaseWorkflowPreview;
 
-	public function workflowInspect( RepositoryReleaseWorkflowTarget $target, string $channel, RepositoryReleaseWorkflowPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult;
+	public function workflow_inspect( RepositoryReleaseWorkflowTarget $target, string $channel, RepositoryReleaseWorkflowPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult;
 
-	public function workflowSetup( RepositoryReleaseWorkflowTarget $target, string $key, string $confirmation, RepositoryReleaseWorkflowPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult;
+	public function workflow_setup( RepositoryReleaseWorkflowTarget $target, string $key, string $confirmation, RepositoryReleaseWorkflowPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult;
 
-	public function workflowOutcome( RepositoryReleaseWorkflowTarget $target, ?string $credentialId ): RepositoryReleaseWorkflowResult;
+	public function workflow_outcome( RepositoryReleaseWorkflowTarget $target, ?string $credentialId ): RepositoryReleaseWorkflowResult;
 }

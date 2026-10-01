@@ -432,8 +432,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			)
 		);
 		$reference  = new RepositoryReference( 'owner/example', '123456789', false, null );
-		$candidate  = $provider->listReleaseCandidates( 'plugin', $reference, 'stable' )->candidates[0];
-		$inspection = $provider->inspectRelease( 'plugin', $reference, $candidate->providerReleaseId, $candidate->tag, 'stable' );
+		$candidate  = $provider->list_release_candidates( 'plugin', $reference, 'stable' )->candidates[0];
+		$inspection = $provider->inspect_release( 'plugin', $reference, $candidate->providerReleaseId, $candidate->tag, 'stable' );
 		$plugins    = new ProspectivePluginRepository();
 		$executor   = new ProspectiveExecutor();
 		$facade     = $this->facade( $plugins, $executor, provider: $provider );
@@ -871,14 +871,14 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$metadataOnly  = new class() extends ProspectivePartialReleaseProvider implements RepositoryReleaseMetadata {
 			public int $metadataCalls = 0;
 
-			public function expectedUpdateUri( RepositoryReference $repository ): string {
+			public function expected_update_uri( RepositoryReference $repository ): string {
 				unset( $repository );
 				++$this->metadataCalls;
 
 				return 'https://example.com/owner/example';
 			}
 
-			public function releaseDetailsUrl( RepositoryReference $repository, string $tag ): string {
+			public function release_details_url( RepositoryReference $repository, string $tag ): string {
 				unset( $repository, $tag );
 				++$this->metadataCalls;
 
@@ -888,7 +888,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$inspectorOnly = new class() extends ProspectivePartialReleaseProvider implements RepositoryReleaseInspector {
 			public int $inspectionCalls = 0;
 
-			public function inspectRelease(
+			public function inspect_release(
 				string $packageType,
 				RepositoryReference $repository,
 				string $providerReleaseId,
@@ -1588,7 +1588,7 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 	) {
 	}
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata(
 			ProviderCode::parse( $this->code ),
 			'Prospective provider',
@@ -1597,7 +1597,7 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 		);
 	}
 
-	public function getProviderDiagnostics(): ProviderDiagnostics {
+	public function get_provider_diagnostics(): ProviderDiagnostics {
 		return new class() implements ProviderDiagnostics {
 			public function diagnose( ProviderDiagnosticRequest $request ): array {
 				unset( $request );
@@ -1607,13 +1607,13 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 		};
 	}
 
-	public function hasRegisteredNativeTarget( string $packageType, string $installedIdentifier ): bool {
+	public function has_registered_native_target( string $packageType, string $installedIdentifier ): bool {
 		unset( $packageType, $installedIdentifier );
 
 		return false;
 	}
 
-	public function createNativeTarget(
+	public function create_native_target(
 		string $packageType,
 		RepositoryReference $repository,
 		string $metadataFile,
@@ -1639,7 +1639,7 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 		};
 	}
 
-	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 		++self::$resolveCalls;
 		if ( null !== $this->resolveFailure ) {
 			throw $this->resolveFailure;
@@ -1656,13 +1656,13 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 		);
 	}
 
-	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 		unset( $request );
 
 		throw new RuntimeException( 'Branch archive preparation is outside this test.' );
 	}
 
-	public function listReleaseCandidates(
+	public function list_release_candidates(
 		string $packageType,
 		RepositoryReference $repository,
 		string $channel
@@ -1676,7 +1676,7 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 		return $this->candidateList ?? new RepositoryReleaseCandidateList( array() );
 	}
 
-	public function inspectRelease(
+	public function inspect_release(
 		string $packageType,
 		RepositoryReference $repository,
 		string $providerReleaseId,
@@ -1698,7 +1698,7 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 		return $this->inspection ?? self::defaultInspection( $providerReleaseId, $tag );
 	}
 
-	public function acquireRelease(
+	public function acquire_release(
 		string $packageType,
 		RepositoryReference $repository,
 		string $providerReleaseId,
@@ -1728,13 +1728,13 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 		return self::$acquisition;
 	}
 
-	public function expectedUpdateUri( RepositoryReference $repository ): string {
+	public function expected_update_uri( RepositoryReference $repository ): string {
 		++self::$metadataCalls;
 
 		return ( 'gh' === $this->code ? 'https://github.com/' : 'https://example.com/' ) . $repository->locator;
 	}
 
-	public function releaseDetailsUrl( RepositoryReference $repository, string $tag ): string {
+	public function release_details_url( RepositoryReference $repository, string $tag ): string {
 		++self::$metadataCalls;
 
 		return $this->expectedUpdateUriWithoutTracking( $repository ) . '/releases/tag/' . rawurlencode( $tag );
@@ -1764,28 +1764,28 @@ final class ProspectiveListingOnlyProvider implements RepositoryProvider, Reposi
 		$this->provider = new ProspectiveRepositoryProvider( $code );
 	}
 
-	public function getMetadata(): ProviderMetadata {
-		return $this->provider->getMetadata();
+	public function get_metadata(): ProviderMetadata {
+		return $this->provider->get_metadata();
 	}
 
-	public function getProviderDiagnostics(): ProviderDiagnostics {
-		return $this->provider->getProviderDiagnostics();
+	public function get_provider_diagnostics(): ProviderDiagnostics {
+		return $this->provider->get_provider_diagnostics();
 	}
 
-	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
-		return $this->provider->resolveRepository( $request );
+	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+		return $this->provider->resolve_repository( $request );
 	}
 
-	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
-		return $this->provider->prepareArchive( $request );
+	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
+		return $this->provider->prepare_archive( $request );
 	}
 
-	public function listReleaseCandidates(
+	public function list_release_candidates(
 		string $packageType,
 		RepositoryReference $repository,
 		string $channel
 	): RepositoryReleaseCandidateList {
-		return $this->provider->listReleaseCandidates( $packageType, $repository, $channel );
+		return $this->provider->list_release_candidates( $packageType, $repository, $channel );
 	}
 }
 
@@ -1796,53 +1796,53 @@ final class ProspectiveProviderWithoutAcquisition implements RepositoryProvider,
 		$this->provider = new ProspectiveRepositoryProvider();
 	}
 
-	public function getMetadata(): ProviderMetadata {
-		return $this->provider->getMetadata();
+	public function get_metadata(): ProviderMetadata {
+		return $this->provider->get_metadata();
 	}
 
-	public function getProviderDiagnostics(): ProviderDiagnostics {
-		return $this->provider->getProviderDiagnostics();
+	public function get_provider_diagnostics(): ProviderDiagnostics {
+		return $this->provider->get_provider_diagnostics();
 	}
 
-	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
-		return $this->provider->resolveRepository( $request );
+	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+		return $this->provider->resolve_repository( $request );
 	}
 
-	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
-		return $this->provider->prepareArchive( $request );
+	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
+		return $this->provider->prepare_archive( $request );
 	}
 
-	public function listReleaseCandidates(
+	public function list_release_candidates(
 		string $packageType,
 		RepositoryReference $repository,
 		string $channel
 	): RepositoryReleaseCandidateList {
-		return $this->provider->listReleaseCandidates( $packageType, $repository, $channel );
+		return $this->provider->list_release_candidates( $packageType, $repository, $channel );
 	}
 
-	public function inspectRelease(
+	public function inspect_release(
 		string $packageType,
 		RepositoryReference $repository,
 		string $providerReleaseId,
 		string $tag,
 		string $channel
 	): RepositoryReleaseInspection {
-		return $this->provider->inspectRelease( $packageType, $repository, $providerReleaseId, $tag, $channel );
+		return $this->provider->inspect_release( $packageType, $repository, $providerReleaseId, $tag, $channel );
 	}
 
-	public function expectedUpdateUri( RepositoryReference $repository ): string {
-		return $this->provider->expectedUpdateUri( $repository );
+	public function expected_update_uri( RepositoryReference $repository ): string {
+		return $this->provider->expected_update_uri( $repository );
 	}
 
-	public function releaseDetailsUrl( RepositoryReference $repository, string $tag ): string {
-		return $this->provider->releaseDetailsUrl( $repository, $tag );
+	public function release_details_url( RepositoryReference $repository, string $tag ): string {
+		return $this->provider->release_details_url( $repository, $tag );
 	}
 }
 
 abstract class ProspectivePartialReleaseProvider implements RepositoryProvider {
 	public int $resolveCalls = 0;
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata(
 			ProviderCode::parse( 'gh' ),
 			'Partial release provider',
@@ -1851,7 +1851,7 @@ abstract class ProspectivePartialReleaseProvider implements RepositoryProvider {
 		);
 	}
 
-	public function getProviderDiagnostics(): ProviderDiagnostics {
+	public function get_provider_diagnostics(): ProviderDiagnostics {
 		return new class() implements ProviderDiagnostics {
 			public function diagnose( ProviderDiagnosticRequest $request ): array {
 				unset( $request );
@@ -1861,7 +1861,7 @@ abstract class ProspectivePartialReleaseProvider implements RepositoryProvider {
 		};
 	}
 
-	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 		++$this->resolveCalls;
 
 		return new RepositoryDescriptor(
@@ -1875,7 +1875,7 @@ abstract class ProspectivePartialReleaseProvider implements RepositoryProvider {
 		);
 	}
 
-	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 		unset( $request );
 
 		throw new RuntimeException( 'Branch archive preparation is outside this test.' );
@@ -1889,23 +1889,23 @@ final class ProspectiveAcquisitionOnlyProvider implements RepositoryProvider, Re
 		$this->provider = new ProspectiveRepositoryProvider( $code );
 	}
 
-	public function getMetadata(): ProviderMetadata {
-		return $this->provider->getMetadata();
+	public function get_metadata(): ProviderMetadata {
+		return $this->provider->get_metadata();
 	}
 
-	public function getProviderDiagnostics(): ProviderDiagnostics {
-		return $this->provider->getProviderDiagnostics();
+	public function get_provider_diagnostics(): ProviderDiagnostics {
+		return $this->provider->get_provider_diagnostics();
 	}
 
-	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
-		return $this->provider->resolveRepository( $request );
+	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+		return $this->provider->resolve_repository( $request );
 	}
 
-	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
-		return $this->provider->prepareArchive( $request );
+	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
+		return $this->provider->prepare_archive( $request );
 	}
 
-	public function acquireRelease(
+	public function acquire_release(
 		string $packageType,
 		RepositoryReference $repository,
 		string $providerReleaseId,
@@ -1913,7 +1913,7 @@ final class ProspectiveAcquisitionOnlyProvider implements RepositoryProvider, Re
 		string $expectedFingerprint,
 		string $channel
 	): RepositoryReleaseArtifact {
-		return $this->provider->acquireRelease( $packageType, $repository, $providerReleaseId, $tag, $expectedFingerprint, $channel );
+		return $this->provider->acquire_release( $packageType, $repository, $providerReleaseId, $tag, $expectedFingerprint, $channel );
 	}
 }
 
@@ -1921,7 +1921,7 @@ final class ProspectiveRepositoryProviderWithoutListing implements RepositoryPro
 
 	public int $resolveCalls = 0;
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata(
 			ProviderCode::parse( 'gh' ),
 			'GitHub without release listing',
@@ -1930,7 +1930,7 @@ final class ProspectiveRepositoryProviderWithoutListing implements RepositoryPro
 		);
 	}
 
-	public function getProviderDiagnostics(): ProviderDiagnostics {
+	public function get_provider_diagnostics(): ProviderDiagnostics {
 		return new class() implements ProviderDiagnostics {
 			public function diagnose( ProviderDiagnosticRequest $request ): array {
 				unset( $request );
@@ -1940,7 +1940,7 @@ final class ProspectiveRepositoryProviderWithoutListing implements RepositoryPro
 		};
 	}
 
-	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 		++$this->resolveCalls;
 
 		return new RepositoryDescriptor(
@@ -1954,7 +1954,7 @@ final class ProspectiveRepositoryProviderWithoutListing implements RepositoryPro
 		);
 	}
 
-	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 		unset( $request );
 
 		throw new RuntimeException( 'Branch archive preparation is outside this test.' );
@@ -1996,7 +1996,7 @@ final class ProspectiveRepositoryReleaseArtifact implements RepositoryReleaseArt
 		return $this->discarded;
 	}
 
-	public function handoffToCore(): PreparedArtifact {
+	public function handoff_to_core(): PreparedArtifact {
 		if ( $this->handedOff || $this->discarded ) {
 			throw new RuntimeException( 'The release artifact is unavailable.' );
 		}
@@ -2033,11 +2033,11 @@ final class ProspectiveRepositoryReleaseArtifact implements RepositoryReleaseArt
 		return $this->commit;
 	}
 
-	public function packageRoot(): string {
+	public function package_root(): string {
 		return $this->root;
 	}
 
-	public function mainFile(): string {
+	public function main_file(): string {
 		return $this->metadataFile;
 	}
 

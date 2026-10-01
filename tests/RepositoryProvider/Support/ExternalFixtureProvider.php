@@ -37,7 +37,7 @@ final readonly class ExternalFixtureProvider implements RepositoryProvider, Prov
 		$this->credentialPolicy = new ExternalFixtureCredentialPolicy( $this->code );
 	}
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata(
 			$this->code,
 			'Fixture provider',
@@ -58,15 +58,15 @@ final readonly class ExternalFixtureProvider implements RepositoryProvider, Prov
 		);
 	}
 
-	public function getProviderDiagnostics(): ProviderDiagnostics {
+	public function get_provider_diagnostics(): ProviderDiagnostics {
 		return $this->diagnostics;
 	}
 
-	public function getCredentialPolicy(): ProviderCredentialPolicy {
+	public function get_credential_policy(): ProviderCredentialPolicy {
 		return $this->credentialPolicy;
 	}
 
-	public function validateCredential( string $credentialId ): CredentialValidationResult {
+	public function validate_credential( string $credentialId ): CredentialValidationResult {
 		$material = null !== $this->credentials
 			? $this->credentials->credentialMaterial( $credentialId )
 			: null;
@@ -76,9 +76,9 @@ final readonly class ExternalFixtureProvider implements RepositoryProvider, Prov
 			: CredentialValidationResult::invalid();
 	}
 
-	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 		$credentialId = $request->credentialId;
-		if ( null !== $credentialId && '' !== $credentialId && ! $this->validateCredential( $credentialId )->isValid() ) {
+		if ( null !== $credentialId && '' !== $credentialId && ! $this->validate_credential( $credentialId )->isValid() ) {
 			throw new RuntimeException( 'The fixture credential is unavailable.' );
 		}
 
@@ -95,7 +95,7 @@ final readonly class ExternalFixtureProvider implements RepositoryProvider, Prov
 		);
 	}
 
-	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 		$repository     = $request->repository;
 		$locator        = $repository->locator;
 		$expectedBranch = $request->expectedBranch;

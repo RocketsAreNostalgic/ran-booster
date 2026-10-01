@@ -72,7 +72,7 @@ class LocalDataRemover {
 		if ( null !== $config_path ) {
 			if ( null !== $sidecar_path ) {
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				$owned_definition = $this->configWriter->assertOwnedDefinitionRemovable( $config_path, $sidecar_path );
+				$owned_definition = $this->configWriter->assert_owned_definition_removable( $config_path, $sidecar_path );
 				if ( function_exists( 'is_multisite' ) && is_multisite() && ! $owned_definition ) {
 					throw new RuntimeException( 'Booster could not verify the converted installation configuration ownership.' );
 				}
@@ -99,7 +99,7 @@ class LocalDataRemover {
 		if ( null !== $config_path ) {
 			if ( null !== $sidecar_path ) {
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				$this->configWriter->removeOwnedDefinition( $config_path, $sidecar_path );
+				$this->configWriter->remove_owned_definition( $config_path, $sidecar_path );
 			}
 			$this->remove_wp_config_lock( $config_path );
 		}

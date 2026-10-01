@@ -105,7 +105,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		$writer   = new WpConfigSecretsPathWriter();
 		$writer->write( $this->configPath, $this->sidecarPath );
 
-		self::assertTrue( $writer->removeOwnedDefinition( $this->configPath, $this->sidecarPath ) );
+		self::assertTrue( $writer->remove_owned_definition( $this->configPath, $this->sidecarPath ) );
 		self::assertSame( $original, file_get_contents( $this->configPath ) );
 		self::assertSame( 0640, fileperms( $this->configPath ) & 0777 );
 		self::assertSame( $owner, fileowner( $this->configPath ) );
@@ -121,7 +121,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		$owner = fileowner( $this->configPath );
 		$group = filegroup( $this->configPath );
 
-		$result  = $writer->retargetOwnedDefinition( $this->configPath, $this->sidecarPath, $replacement );
+		$result  = $writer->retarget_owned_definition( $this->configPath, $this->sidecarPath, $replacement );
 		$written = (string) file_get_contents( $this->configPath );
 
 		self::assertTrue( $result->requires_next_request_verification() );
@@ -143,7 +143,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		$this->writeConfig( $config );
 
 		self::assertFalse(
-			( new WpConfigSecretsPathWriter() )->retargetOwnedDefinition(
+			( new WpConfigSecretsPathWriter() )->retarget_owned_definition(
 				$this->configPath,
 				$this->sidecarPath,
 				$this->directory . '/private/previous/secrets.json'
@@ -160,17 +160,17 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		$writer = new WpConfigSecretsPathWriter();
 		$writer->write( $this->configPath, $sidecar );
 
-		self::assertTrue( $writer->removeOwnedDefinition( $this->configPath, $sidecar ) );
+		self::assertTrue( $writer->remove_owned_definition( $this->configPath, $sidecar ) );
 		self::assertSame( $config, file_get_contents( $this->configPath ) );
 	}
 
 	public function testRemovalIsIdempotent(): void {
 		$writer = new WpConfigSecretsPathWriter();
 		$writer->write( $this->configPath, $this->sidecarPath );
-		self::assertTrue( $writer->removeOwnedDefinition( $this->configPath, $this->sidecarPath ) );
+		self::assertTrue( $writer->remove_owned_definition( $this->configPath, $this->sidecarPath ) );
 		$removed = file_get_contents( $this->configPath );
 
-		self::assertFalse( $writer->removeOwnedDefinition( $this->configPath, $this->sidecarPath ) );
+		self::assertFalse( $writer->remove_owned_definition( $this->configPath, $this->sidecarPath ) );
 		self::assertSame( $removed, file_get_contents( $this->configPath ) );
 		self::assertSame( array(), $this->temporaryFiles() );
 	}
@@ -181,9 +181,9 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		$written = file_get_contents( $this->configPath );
 
 		self::assertTrue(
-			$writer->assertOwnedDefinitionRemovable( $this->configPath, $this->sidecarPath )
+			$writer->assert_owned_definition_removable( $this->configPath, $this->sidecarPath )
 		);
-		self::assertTrue( $writer->hasOwnedDefinition( $this->configPath, $this->sidecarPath ) );
+		self::assertTrue( $writer->has_owned_definition( $this->configPath, $this->sidecarPath ) );
 		self::assertSame( $written, file_get_contents( $this->configPath ) );
 	}
 
@@ -195,7 +195,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		self::assertTrue( chmod( $this->configPath, 0400 ) );
 
 		self::assertFalse(
-			( new WpConfigSecretsPathWriter() )->removeOwnedDefinition( $this->configPath, $this->sidecarPath )
+			( new WpConfigSecretsPathWriter() )->remove_owned_definition( $this->configPath, $this->sidecarPath )
 		);
 		self::assertSame( $config, file_get_contents( $this->configPath ) );
 		self::assertFileDoesNotExist( $this->configPath . '.ran-booster.lock' );
@@ -209,7 +209,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		$this->writeConfig( $config );
 
 		self::assertFalse(
-			( new WpConfigSecretsPathWriter() )->removeOwnedDefinition( $this->configPath, $this->sidecarPath )
+			( new WpConfigSecretsPathWriter() )->remove_owned_definition( $this->configPath, $this->sidecarPath )
 		);
 		self::assertSame( $config, file_get_contents( $this->configPath ) );
 		self::assertFileDoesNotExist( $this->configPath . '.ran-booster.lock' );
@@ -223,7 +223,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 
 		$this->assertRefused(
 			'owned_definition_ambiguous',
-			fn() => ( new WpConfigSecretsPathWriter() )->removeOwnedDefinition(
+			fn() => ( new WpConfigSecretsPathWriter() )->remove_owned_definition(
 				$this->configPath,
 				$this->sidecarPath
 			)
@@ -353,7 +353,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		};
 		$this->assertRefused(
 			'config_changed',
-			fn() => $writer->removeOwnedDefinition( $this->configPath, $this->sidecarPath )
+			fn() => $writer->remove_owned_definition( $this->configPath, $this->sidecarPath )
 		);
 		self::assertStringContainsString(
 			'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR',
@@ -450,7 +450,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		$writer   = $writerFactory();
 		$this->assertRefused(
 			$reason,
-			fn() => $writer->removeOwnedDefinition( $this->configPath, $this->sidecarPath )
+			fn() => $writer->remove_owned_definition( $this->configPath, $this->sidecarPath )
 		);
 		self::assertSame( $original, file_get_contents( $this->configPath ) );
 		self::assertSame( array(), $this->temporaryFiles() );
@@ -495,7 +495,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		};
 		$this->assertRefused(
 			'replacement_readback_failed',
-			fn() => $writer->removeOwnedDefinition( $this->configPath, $this->sidecarPath )
+			fn() => $writer->remove_owned_definition( $this->configPath, $this->sidecarPath )
 		);
 		self::assertSame( $original, file_get_contents( $this->configPath ) );
 		self::assertSame( array(), $this->temporaryFiles() );

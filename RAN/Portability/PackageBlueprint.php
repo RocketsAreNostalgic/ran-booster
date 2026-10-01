@@ -34,7 +34,7 @@ final readonly class PackageBlueprint {
 			if ( ! $credential instanceof BlueprintCredential ) {
 				throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
 			}
-			$material = $credential->toArray();
+			$material = $credential->to_array();
 			unset( $material['packages'] );
 			try {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Pure canonical contract with exceptions enabled.
@@ -57,8 +57,7 @@ final readonly class PackageBlueprint {
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
-	public static function fromJson( #[\SensitiveParameter] string $json ): self {
+	public static function from_json( #[\SensitiveParameter] string $json ): self {
 		if ( '' === $json || strlen( $json ) > self::MAX_BYTES || 1 !== preg_match( '//u', $json ) ) {
 			throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
 		}
@@ -75,29 +74,28 @@ final readonly class PackageBlueprint {
 			if ( ! is_array( $record ) ) {
 				throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
 			}
-			$credentials[] = BlueprintCredential::fromArray( $record );
+			$credentials[] = BlueprintCredential::from_array( $record );
 		}
 		$blueprint = new self(
 			array_map(
-				static fn( mixed $record ): BlueprintPackage => is_array( $record ) ? BlueprintPackage::fromArray( $record ) : throw new InvalidArgumentException( 'The portability blueprint is invalid.' ),
+				static fn( mixed $record ): BlueprintPackage => is_array( $record ) ? BlueprintPackage::from_array( $record ) : throw new InvalidArgumentException( 'The portability blueprint is invalid.' ),
 				$data['packages']
 			),
 			$credentials
 		);
 
-		if ( ! hash_equals( $blueprint->canonicalJson(), $json ) ) {
+		if ( ! hash_equals( $blueprint->canonical_json(), $json ) ) {
 			throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
 		}
 
 		return $blueprint;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
-	public function canonicalJson(): string {
+	public function canonical_json(): string {
 		$packages    = $this->packages;
 		$credentials = $this->credentials;
 		usort( $packages, static fn( BlueprintPackage $left, BlueprintPackage $right ): int => array( $left->type, $left->identifier ) <=> array( $right->type, $right->identifier ) );
-		usort( $credentials, static fn( BlueprintCredential $left, BlueprintCredential $right ): int => $left->toArray() <=> $right->toArray() );
+		usort( $credentials, static fn( BlueprintCredential $left, BlueprintCredential $right ): int => $left->to_array() <=> $right->to_array() );
 		try {
 			// The core is deliberately WordPress-independent so it can be unit tested without bootstrapping WordPress.
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode
@@ -105,8 +103,8 @@ final readonly class PackageBlueprint {
 				array(
 					'format'      => self::FORMAT,
 					'version'     => self::VERSION,
-					'packages'    => array_map( static fn( BlueprintPackage $package ): array => $package->toArray(), $packages ),
-					'credentials' => array_map( static fn( BlueprintCredential $credential ): array => $credential->toArray(), $credentials ),
+					'packages'    => array_map( static fn( BlueprintPackage $package ): array => $package->to_array(), $packages ),
+					'credentials' => array_map( static fn( BlueprintCredential $credential ): array => $credential->to_array(), $credentials ),
 				),
 				JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
 			);

@@ -85,7 +85,7 @@ final readonly class PortabilityController {
 			if ( false === $path ) {
 				throw new InvalidArgumentException();
 			}
-			$this->archive->writeTo( $path, $blueprint, $password );
+			$this->archive->write_to( $path, $blueprint, $password );
 		} catch ( Throwable ) {
 			return $this->export_failure( __( 'Booster could not create the Transporter Blueprint ZIP. Please try again.', 'ran-booster' ), 500 );
 		}
@@ -145,7 +145,7 @@ final readonly class PortabilityController {
 		}
 
 		try {
-			$blueprint = $this->archive->readFrom( $upload['tmp_name'], $this->password_from_request( 'password' ) );
+			$blueprint = $this->archive->read_from( $upload['tmp_name'], $this->password_from_request( 'password' ) );
 			try {
 				$decisions = $this->credential_decisions( $blueprint );
 			} catch ( InvalidArgumentException ) {
@@ -175,7 +175,7 @@ final readonly class PortabilityController {
 
 		try {
 			$target_credentials = $this->target_credential_ids();
-			$blueprint          = $this->archive->readFrom( $upload['tmp_name'], $this->password_from_request( 'password' ) );
+			$blueprint          = $this->archive->read_from( $upload['tmp_name'], $this->password_from_request( 'password' ) );
 			$package            = $blueprint->packages[ $row ] ?? null;
 			try {
 				$decisions = $this->credential_decisions( $blueprint );
@@ -205,7 +205,7 @@ final readonly class PortabilityController {
 	public function previewFile( string $path, ?string $password = null, array $credentialDecisions = array(), array $targetCredentialIds = array() ): string {
 		RuntimeSupport::assertManagedOperationsAllowed();
 
-		$blueprint = $this->archive->readFrom( $path, $password );
+		$blueprint = $this->archive->read_from( $path, $password );
 
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		return $this->review_blueprint( $blueprint, $credentialDecisions, $targetCredentialIds );

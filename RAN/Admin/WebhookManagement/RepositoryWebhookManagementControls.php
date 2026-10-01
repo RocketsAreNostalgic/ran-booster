@@ -462,7 +462,7 @@ final class RepositoryWebhookManagementControls {
 		$record          = $this->installation_store->find( $provider_code, $repository_id );
 		$secret_coverage = is_string( $repository['local_secret_coverage'] ?? null )
 			? $repository['local_secret_coverage']
-			: ( null === $record ? 'unknown' : 'recorded-' . $record->webhookProfileScope() );
+			: ( null === $record ? 'unknown' : 'recorded-' . $record->webhook_profile_scope() );
 		$receiver_ready  = 'ready' === ( $site['status'] ?? null );
 		$record_healthy  = null !== $record
 			&& 'configured' === $record->status()
@@ -508,7 +508,7 @@ final class RepositoryWebhookManagementControls {
 						? sprintf(
 							/* translators: %s: UTC timestamp of the last recorded webhook check. */
 							__( 'Configured at the last recorded check on %s. Run Check to confirm current provider state.', 'ran-booster' ),
-							$record->checkedAt()
+							$record->checked_at()
 						)
 						: __( 'The recorded remote webhook needs review. Run Check or inspect it at the provider.', 'ran-booster' ) ),
 				'state'   => $record_healthy ? 'is-ok' : ( null === $record ? 'is-pending' : 'is-warning' ),

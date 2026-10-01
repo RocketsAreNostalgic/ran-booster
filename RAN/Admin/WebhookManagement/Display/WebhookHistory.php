@@ -25,6 +25,6 @@ final readonly class WebhookHistory {
 	}
 
 	public static function from_record( InstallationRecord $record ): WebhookHistoryView {
-		return new WebhookHistoryView( $record->providerCode(), $record->repositoryId(), $record->status(), $record->checkedAt() );
+		return new WebhookHistoryView( $record->provider_code(), $record->repository_id(), $record->status(), $record->checked_at() );
 	}
 }

@@ -36,9 +36,9 @@ final class WordPressInstallationStoreTest extends TestCase {
 		self::assertSame( InstallationStore::WRITE_APPLIED, $this->store()->save_if_current( $record, null ) );
 
 		$fresh = $this->store();
-		self::assertSame( $record->toArray(), $fresh->find( 'gh', '424242' )?->toArray() );
+		self::assertSame( $record->to_array(), $fresh->find( 'gh', '424242' )?->to_array() );
 		self::assertSame( InstallationStore::WRITE_UNCHANGED, $fresh->save_if_current( $record, $record ) );
-		self::assertSame( $record->toArray(), $this->store()->find( 'gh', '424242' )?->toArray() );
+		self::assertSame( $record->to_array(), $this->store()->find( 'gh', '424242' )?->to_array() );
 	}
 
 	public function testProviderAndRepositoryFormTheStorageIdentity(): void {
@@ -48,8 +48,8 @@ final class WordPressInstallationStoreTest extends TestCase {
 
 		self::assertSame( InstallationStore::WRITE_APPLIED, $store->save_if_current( $github, null ) );
 		self::assertSame( InstallationStore::WRITE_APPLIED, $store->save_if_current( $other, null ) );
-		self::assertSame( '99', $store->find( 'gh', 'same' )?->hookId() );
-		self::assertSame( 'opaque-hook', $store->find( 'fixture', 'same' )?->hookId() );
+		self::assertSame( '99', $store->find( 'gh', 'same' )?->hook_id() );
+		self::assertSame( 'opaque-hook', $store->find( 'fixture', 'same' )?->hook_id() );
 	}
 
 	public function testWholeMapCasRetriesWithoutLosingAnInterleavedIndependentTarget(): void {
@@ -58,52 +58,52 @@ final class WordPressInstallationStoreTest extends TestCase {
 		$store  = $this->store(
 			static function () use ( $other ): void {
 				$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
-					$other->storageKey() => $other->toArray(),
+					$other->storage_key() => $other->to_array(),
 				);
 			}
 		);
 
 		self::assertSame( InstallationStore::WRITE_APPLIED, $store->save_if_current( $github, null ) );
-		self::assertSame( $github->toArray(), $store->find( 'gh', 'github' )?->toArray() );
-		self::assertSame( $other->toArray(), $store->find( 'fixture', 'other' )?->toArray() );
+		self::assertSame( $github->to_array(), $store->find( 'gh', 'github' )?->to_array() );
+		self::assertSame( $other->to_array(), $store->find( 'fixture', 'other' )?->to_array() );
 	}
 
 	public function testSameTargetCasNeverOverwritesAnInterleavedKnownRecordWithAmbiguousRecovery(): void {
 		$known    = $this->record( 'gh', 'github', 'owner/repository', '77' );
-		$recovery = $this->record( 'gh', 'github', 'owner/repository', InstallationRecord::unknownHookId(), 'orphaned' );
+		$recovery = $this->record( 'gh', 'github', 'owner/repository', InstallationRecord::unknown_hook_id(), 'orphaned' );
 		$store    = $this->store(
 			static function () use ( $known ): void {
 				$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
-					$known->storageKey() => $known->toArray(),
+					$known->storage_key() => $known->to_array(),
 				);
 			}
 		);
 
 		self::assertSame( InstallationStore::WRITE_CONFLICT, $store->save_if_current( $recovery, null ) );
-		self::assertSame( $known->toArray(), $store->find( 'gh', 'github' )?->toArray() );
+		self::assertSame( $known->to_array(), $store->find( 'gh', 'github' )?->to_array() );
 	}
 
 	public function testSameTargetCasNeverOverwritesInterleavedRecoveryWithStaleKnownEvidence(): void {
 		$known    = $this->record( 'gh', 'github', 'owner/repository', '77' );
-		$recovery = $this->record( 'gh', 'github', 'owner/repository', InstallationRecord::unknownHookId(), 'orphaned' );
+		$recovery = $this->record( 'gh', 'github', 'owner/repository', InstallationRecord::unknown_hook_id(), 'orphaned' );
 		$store    = $this->store(
 			static function () use ( $recovery ): void {
 				$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
-					$recovery->storageKey() => $recovery->toArray(),
+					$recovery->storage_key() => $recovery->to_array(),
 				);
 			}
 		);
 
 		self::assertSame( InstallationStore::WRITE_CONFLICT, $store->save_if_current( $known, null ) );
-		self::assertSame( $recovery->toArray(), $store->find( 'gh', 'github' )?->toArray() );
+		self::assertSame( $recovery->to_array(), $store->find( 'gh', 'github' )?->to_array() );
 	}
 
 	public function testMalformedAndFutureRecordsFailClosedWithoutRewritingTheOption(): void {
 		$valid                    = $this->record( 'gh', 'valid', 'owner/repository', '77' );
-		$future                   = $valid->toArray();
+		$future                   = $valid->to_array();
 		$future['schema_version'] = 5;
 		$raw                      = array(
-			$valid->storageKey() => $valid->toArray(),
+			$valid->storage_key() => $valid->to_array(),
 			'gh:future'          => $future,
 			'gh:malformed'       => array(
 				'schema_version' => 3,
@@ -114,8 +114,8 @@ final class WordPressInstallationStoreTest extends TestCase {
 
 		$records = $this->store()->all();
 
-		self::assertSame( array( $valid->storageKey() ), array_keys( $records ) );
-		self::assertSame( $valid->toArray(), $records[ $valid->storageKey() ]->toArray() );
+		self::assertSame( array( $valid->storage_key() ), array_keys( $records ) );
+		self::assertSame( $valid->to_array(), $records[ $valid->storage_key() ]->to_array() );
 		self::assertSame( $raw, $GLOBALS['ran_booster_repository_webhook_management_test_options'][ WordPressInstallationStore::OPTION_NAME ] );
 	}
 
@@ -132,7 +132,7 @@ final class WordPressInstallationStoreTest extends TestCase {
 		$raw    = $this->incompleteRaw();
 		$GLOBALS['ran_booster_repository_webhook_management_test_options'][ WordPressInstallationStore::OPTION_NAME ] = $raw;
 
-		self::assertSame( InstallationStore::WRITE_FAILED, $this->store()->delete_if_current( $record->providerCode(), $record->repositoryId(), $record ) );
+		self::assertSame( InstallationStore::WRITE_FAILED, $this->store()->delete_if_current( $record->provider_code(), $record->repository_id(), $record ) );
 		self::assertSame( $raw, $GLOBALS['ran_booster_repository_webhook_management_test_options'][ WordPressInstallationStore::OPTION_NAME ] );
 	}
 
@@ -143,11 +143,11 @@ final class WordPressInstallationStoreTest extends TestCase {
 	/** @return array<string, array<string, int|string>> */
 	private function incompleteRaw(): array {
 		$valid                    = $this->record( 'gh', 'valid', 'owner/repository', '77' );
-		$future                   = $valid->toArray();
+		$future                   = $valid->to_array();
 		$future['schema_version'] = 5;
 
 		return array(
-			$valid->storageKey() => $valid->toArray(),
+			$valid->storage_key() => $valid->to_array(),
 			'gh:future'          => $future,
 			'gh:malformed'       => array(
 				'schema_version' => 4,

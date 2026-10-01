@@ -108,7 +108,7 @@ final class LocalDataRemoverTest extends TestCase {
 				}
 			);
 		$writer = $this->createMock( WpConfigSecretsPathWriter::class );
-		$writer->expects( self::never() )->method( 'removeOwnedDefinition' );
+		$writer->expects( self::never() )->method( 'remove_owned_definition' );
 		$remover = $this->remover( $secrets, $writer );
 
 		$remover->remove();
@@ -218,7 +218,7 @@ final class LocalDataRemoverTest extends TestCase {
 			->willThrowException( new RuntimeException( 'sensitive path must not escape' ) );
 		$secrets->expects( self::never() )->method( 'deleteManagedStorage' );
 		$writer = $this->createMock( WpConfigSecretsPathWriter::class );
-		$writer->expects( self::never() )->method( 'removeOwnedDefinition' );
+		$writer->expects( self::never() )->method( 'remove_owned_definition' );
 
 		$remover = $this->remover(
 			$secrets,
@@ -250,10 +250,10 @@ final class LocalDataRemoverTest extends TestCase {
 		$secrets->expects( self::never() )->method( 'deleteManagedStorage' );
 		$writer = $this->createMock( WpConfigSecretsPathWriter::class );
 		$writer->expects( self::once() )
-			->method( 'assertOwnedDefinitionRemovable' )
+			->method( 'assert_owned_definition_removable' )
 			->with( $config, $sidecar )
 			->willThrowException( new RuntimeException( 'owned definition is ambiguous' ) );
-		$writer->expects( self::never() )->method( 'removeOwnedDefinition' );
+		$writer->expects( self::never() )->method( 'remove_owned_definition' );
 
 		try {
 			$this->remover( $secrets, $writer, $config )->remove();
@@ -280,7 +280,7 @@ final class LocalDataRemoverTest extends TestCase {
 				}
 			);
 		$writer = $this->createMock( WpConfigSecretsPathWriter::class );
-		$writer->expects( self::never() )->method( 'removeOwnedDefinition' );
+		$writer->expects( self::never() )->method( 'remove_owned_definition' );
 		$remover = $this->remover( $secrets, $writer );
 
 		try {
@@ -316,7 +316,7 @@ final class LocalDataRemoverTest extends TestCase {
 		$secrets->method( 'deleteManagedStorage' );
 		$writer = $this->createMock( WpConfigSecretsPathWriter::class );
 		$writer->expects( self::once() )
-			->method( 'removeOwnedDefinition' )
+			->method( 'remove_owned_definition' )
 			->with( $config, $sidecar )
 			->willReturn( false );
 

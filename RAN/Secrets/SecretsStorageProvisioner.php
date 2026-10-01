@@ -292,7 +292,7 @@ class SecretsStorageProvisioner {
 		$owned       = false;
 		$same_device = false;
 		try {
-			$owned       = null !== $config && $this->writer->assertOwnedDefinitionRemovable( $config, $current );
+			$owned       = null !== $config && $this->writer->assert_owned_definition_removable( $config, $current );
 			$same_device = null !== $config && $this->same_filesystem_device( dirname( $candidate['candidate_path'] ), $config );
 		} catch ( Throwable ) {
 			$owned = false;
@@ -428,7 +428,7 @@ class SecretsStorageProvisioner {
 		string $current,
 		string $replacement
 	): WpConfigPathWriteResult|false {
-		return $this->writer->retargetOwnedDefinition( $config, $current, $replacement );
+		return $this->writer->retarget_owned_definition( $config, $current, $replacement );
 	}
 
 	protected function recovery_credentials_fit( string $candidate ): bool {
@@ -576,7 +576,7 @@ class SecretsStorageProvisioner {
 	private function configured_path_source( string $configured, bool $path_is_safe ): string {
 		try {
 			$config = $this->loaded_wp_config_path();
-			if ( null !== $config && $this->writer->hasOwnedDefinition( $config, $configured ) ) {
+			if ( null !== $config && $this->writer->has_owned_definition( $config, $configured ) ) {
 				return SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC;
 			}
 			if ( $path_is_safe && $configured === $this->resolve_candidate() ) {

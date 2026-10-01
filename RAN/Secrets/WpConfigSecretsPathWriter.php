@@ -38,8 +38,7 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * Atomically retarget the exact definition previously inserted by this writer.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function retargetOwnedDefinition(
+	public function retarget_owned_definition(
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		string $configPath,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
@@ -65,8 +64,8 @@ class WpConfigSecretsPathWriter {
 	 *
 	 * @return bool Whether the owned definition block was removed.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase, WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-	public function removeOwnedDefinition( string $configPath, string $sidecarPath ): bool {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
+	public function remove_owned_definition( string $configPath, string $sidecarPath ): bool {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		return $this->edit( $configPath, $sidecarPath, true, null );
 	}
@@ -76,10 +75,10 @@ class WpConfigSecretsPathWriter {
 	 *
 	 * @return bool Whether the exact owned definition is present.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase, WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-	public function assertOwnedDefinitionRemovable( string $configPath, string $sidecarPath ): bool {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
+	public function assert_owned_definition_removable( string $configPath, string $sidecarPath ): bool {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-		if ( ! $this->hasOwnedDefinition( $configPath, $sidecarPath ) ) {
+		if ( ! $this->has_owned_definition( $configPath, $sidecarPath ) ) {
 			return false;
 		}
 
@@ -97,8 +96,8 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * Report whether the exact directory definition was inserted by this writer.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase, WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-	public function hasOwnedDefinition( string $configPath, string $sidecarPath ): bool {
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
+	public function has_owned_definition( string $configPath, string $sidecarPath ): bool {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		$this->assert_absolute_safe_path( $configPath, 'config_path_invalid' );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.

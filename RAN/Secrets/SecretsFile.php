@@ -898,8 +898,7 @@ class SecretsFile {
 	/**
 	 * Verify exact managed storage ownership without changing the filesystem or key.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function assertManagedStorageDeletable(): void {
+	public function assert_managed_storage_deletable(): void {
 		$key = $this->load_key( false );
 
 		if ( ! is_string( $this->path ) || '' === $this->path ) {
@@ -961,9 +960,8 @@ class SecretsFile {
 	 * secure, process-owned, single-link file that authenticates with the current
 	 * database key. The key is removed only after the ciphertext is gone.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function deleteManagedStorage(): void {
-		$this->assertManagedStorageDeletable();
+	public function delete_managed_storage(): void {
+		$this->assert_managed_storage_deletable();
 
 		$key = $this->load_key( false );
 

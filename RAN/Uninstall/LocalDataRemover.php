@@ -79,14 +79,14 @@ class LocalDataRemover {
 			}
 			$this->assert_wp_config_lock_removable( $config_path );
 		}
-		$this->secrets->assertManagedStorageDeletable();
+		$this->secrets->assert_managed_storage_deletable();
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		$this->debugCapture->assertManagedStorageDeletable();
+		$this->debugCapture->assert_managed_storage_deletable();
 		$this->assert_automatic_directories_removable( $sidecar_path );
 
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		$this->debugCapture->deleteManagedStorage();
-		$this->secrets->deleteManagedStorage();
+		$this->debugCapture->delete_managed_storage();
+		$this->secrets->delete_managed_storage();
 		$this->clear_scheduled_work();
 		$this->clear_updater_state();
 		if ( ! ( new WorkflowAssistanceState() )->removeDurableState() ) {

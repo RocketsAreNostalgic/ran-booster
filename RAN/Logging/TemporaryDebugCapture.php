@@ -134,8 +134,7 @@ final class TemporaryDebugCapture {
 	/**
 	 * Verify exact managed capture ownership without changing the filesystem.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
-	public function assertManagedStorageDeletable(): void {
+	public function assert_managed_storage_deletable(): void {
 		if ( ! is_string( $this->path ) || '' === $this->path ) {
 			return;
 		}
@@ -172,8 +171,7 @@ final class TemporaryDebugCapture {
 	 * This uninstall-only seam is idempotent, but it never deletes malformed,
 	 * symlinked, insecure or foreign capture material.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
-	public function deleteManagedStorage(): void {
+	public function delete_managed_storage(): void {
 		if ( ! is_string( $this->path ) || '' === $this->path ) {
 			return;
 		}

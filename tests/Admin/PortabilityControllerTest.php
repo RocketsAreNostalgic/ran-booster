@@ -911,7 +911,7 @@ final class PortabilityControllerTest extends TestCase {
 	private function blueprintArchive( PackageBlueprint $blueprint, ?string $password = null ): string {
 		$file = tempnam( sys_get_temp_dir(), 'ran-booster-portability-controller-' );
 		self::assertIsString( $file );
-		( new BlueprintArchive() )->writeTo( $file, $blueprint, $password );
+		( new BlueprintArchive() )->write_to( $file, $blueprint, $password );
 
 		return $file;
 	}

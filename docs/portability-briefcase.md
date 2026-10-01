@@ -180,7 +180,7 @@ silently dropping the credential.
 The canonical archive filename is `ran-booster-blueprint.zip` and the JSON entry
 inside the archive is `blueprint.json`.
 
-`PackageBlueprint::fromJson()` accepts only canonical JSON that matches the
+`PackageBlueprint::from_json()` accepts only canonical JSON that matches the
 computed output exactly. The current format is:
 
 - format: `ran-booster-package-blueprint`

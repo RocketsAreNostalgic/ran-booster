@@ -70,7 +70,7 @@ final readonly class BlueprintReviewer {
 	}
 
 	private function managed_result( BlueprintPackage $blueprint, Package $package ): BlueprintPlanItem {
-		$matches = $blueprint->sameManagementAs( BlueprintPackage::fromManagedPackage( $blueprint->type, $package ) );
+		$matches = $blueprint->same_management_as( BlueprintPackage::from_managed_package( $blueprint->type, $package ) );
 
 		return new BlueprintPlanItem(
 			$blueprint,

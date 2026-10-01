@@ -44,8 +44,7 @@ final readonly class BlueprintPackage {
 	}
 
 	/** @param array<string, mixed> $record */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
-	public static function fromArray( array $record ): self {
+	public static function from_array( array $record ): self {
 		$keys = array(
 			'type',
 			'identifier',
@@ -63,8 +62,7 @@ final readonly class BlueprintPackage {
 		return new self( $record['type'], $record['identifier'], $record['display_name'], $record['provider'], $record['provider_repository_id'], $record['repository'], $record['branch'], $record['subdirectory'] );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
-	public static function fromManagedPackage( string $type, Package $package ): self {
+	public static function from_managed_package( string $type, Package $package ): self {
 		return new self(
 			$type,
 			(string) $package->get_identifier(),
@@ -78,8 +76,7 @@ final readonly class BlueprintPackage {
 	}
 
 	/** @return array<string, scalar|null> */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
-	public function toArray(): array {
+	public function to_array(): array {
 		return array(
 			'type'                   => $this->type,
 			'identifier'             => $this->identifier,
@@ -94,10 +91,9 @@ final readonly class BlueprintPackage {
 		);
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
-	public function sameManagementAs( self $other ): bool {
-		$left  = $this->toArray();
-		$right = $other->toArray();
+	public function same_management_as( self $other ): bool {
+		$left  = $this->to_array();
+		$right = $other->to_array();
 		unset( $left['display_name'], $right['display_name'] );
 
 		return $left === $right;

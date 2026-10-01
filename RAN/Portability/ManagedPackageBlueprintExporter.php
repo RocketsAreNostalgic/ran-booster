@@ -62,7 +62,7 @@ final readonly class ManagedPackageBlueprintExporter {
 					);
 					continue;
 				}
-				$blueprint  = BlueprintPackage::fromManagedPackage( $type, $package );
+				$blueprint  = BlueprintPackage::from_managed_package( $type, $package );
 				$packages[] = $blueprint;
 				$managed[]  = array(
 					'package'   => $package,

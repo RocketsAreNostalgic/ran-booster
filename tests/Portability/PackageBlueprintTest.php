@@ -19,9 +19,9 @@ final class PackageBlueprintTest extends TestCase {
 	public function testCanonicalJsonUsesTheExactV1SchemaAndSortsPackages(): void {
 		$blueprint = new PackageBlueprint( array( $this->package( 'theme', 'example-theme', 'Example Theme' ), $this->package() ) );
 
-		$json = $blueprint->canonicalJson();
+		$json = $blueprint->canonical_json();
 
-		self::assertSame( $json, PackageBlueprint::fromJson( $json )->canonicalJson() );
+		self::assertSame( $json, PackageBlueprint::from_json( $json )->canonical_json() );
 		self::assertSame( array( 'format', 'version', 'packages', 'credentials' ), array_keys( json_decode( $json, true, flags: JSON_THROW_ON_ERROR ) ) );
 		self::assertStringContainsString( '"credentials":[]', $json );
 		self::assertLessThan( strpos( $json, '"type":"theme"' ), strpos( $json, '"type":"plugin"' ) );
@@ -59,7 +59,7 @@ final class PackageBlueprintTest extends TestCase {
 			);
 
 			try {
-				PackageBlueprint::fromJson( $json );
+				PackageBlueprint::from_json( $json );
 				self::fail( 'Expected an unknown Blueprint version to be rejected.' );
 			} catch ( InvalidArgumentException $exception ) {
 				self::assertSame( 'The portability blueprint is invalid.', $exception->getMessage() );
@@ -80,9 +80,9 @@ final class PackageBlueprintTest extends TestCase {
 			'secret-canary-value',
 			array( $this->identity() )
 		);
-		$json       = ( new PackageBlueprint( array( $this->package() ), array( $credential ) ) )->canonicalJson();
+		$json       = ( new PackageBlueprint( array( $this->package() ), array( $credential ) ) )->canonical_json();
 
-		self::assertSame( $json, PackageBlueprint::fromJson( $json )->canonicalJson() );
+		self::assertSame( $json, PackageBlueprint::from_json( $json )->canonical_json() );
 		self::assertStringContainsString( '"configuration":{"owner":"team","scope":"repo"}', $json );
 		self::assertStringContainsString( '"secret":"secret-canary-value"', $json );
 		self::assertStringNotContainsString( 'source_id', $json );
@@ -101,13 +101,13 @@ final class PackageBlueprintTest extends TestCase {
 			$json = ( new PackageBlueprint(
 				array( $this->package() ),
 				array( new BlueprintCredential( 'gh', 'Token', 'custom', $configuration, 'secret', array( $this->identity() ) ) )
-			) )->canonicalJson();
-			self::assertSame( $json, PackageBlueprint::fromJson( $json )->canonicalJson() );
+			) )->canonical_json();
+			self::assertSame( $json, PackageBlueprint::from_json( $json )->canonical_json() );
 		}
 		$emptyJson = ( new PackageBlueprint(
 			array( $this->package() ),
 			array( new BlueprintCredential( 'gh', 'Token', 'custom', array(), 'secret', array( $this->identity() ) ) )
-		) )->canonicalJson();
+		) )->canonical_json();
 		self::assertStringContainsString( '"configuration":{}', $emptyJson );
 	}
 
@@ -178,11 +178,11 @@ final class PackageBlueprintTest extends TestCase {
 		$json = ( new PackageBlueprint(
 			array( $this->package() ),
 			array( new BlueprintCredential( 'gh', 'Token', 'classic', array(), 'parser-trace-secret-canary', array( $this->identity() ) ) )
-		) )->canonicalJson();
+		) )->canonical_json();
 		$json = str_replace( '"kind":"classic"', '"kind":""', $json );
 
 		try {
-			PackageBlueprint::fromJson( $json );
+			PackageBlueprint::from_json( $json );
 			self::fail( 'Expected an invalid credential record.' );
 		} catch ( InvalidArgumentException $exception ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export -- Test-only inspection of redacted exception arguments.
@@ -191,35 +191,35 @@ final class PackageBlueprintTest extends TestCase {
 	}
 
 	public function testRejectsUnknownAndSecretAdjacentFields(): void {
-		$record                 = $this->package()->toArray();
+		$record                 = $this->package()->to_array();
 		$record['access_token'] = 'token-canary';
 
 		$this->expectException( InvalidArgumentException::class );
-		BlueprintPackage::fromArray( $record );
+		BlueprintPackage::from_array( $record );
 	}
 
 	public function testRejectsEveryRemovedV1Field(): void {
 		foreach ( array( 'private', 'destination_slug' ) as $legacyField ) {
-			$record                 = $this->package()->toArray();
+			$record                 = $this->package()->to_array();
 			$record[ $legacyField ] = 'removed';
 			try {
-				BlueprintPackage::fromArray( $record );
+				BlueprintPackage::from_array( $record );
 				self::fail( 'Expected a removed V1 field to be rejected.' );
 			} catch ( InvalidArgumentException ) {
 				self::addToAssertionCount( 1 );
 			}
 		}
 
-		$json = ( new PackageBlueprint( array( $this->package() ) ) )->canonicalJson();
+		$json = ( new PackageBlueprint( array( $this->package() ) ) )->canonical_json();
 		$json = str_replace( '"version":1,', '"version":1,"created_at":"2026-07-20T00:00:00Z",', $json );
 		$this->expectException( InvalidArgumentException::class );
-		PackageBlueprint::fromJson( $json );
+		PackageBlueprint::from_json( $json );
 	}
 
 	public function testRejectsInvalidUtf8AndResourceLimits(): void {
 		foreach ( array( "\xB1", str_repeat( ' ', PackageBlueprint::MAX_BYTES + 1 ) ) as $invalid ) {
 			try {
-				PackageBlueprint::fromJson( $invalid );
+				PackageBlueprint::from_json( $invalid );
 				self::fail( 'Expected invalid blueprint JSON to be rejected.' );
 			} catch ( InvalidArgumentException ) {
 				self::addToAssertionCount( 1 );
@@ -229,7 +229,7 @@ final class PackageBlueprintTest extends TestCase {
 
 	public function testRejectsJsonPastTheMaximumNestingDepth(): void {
 		$this->expectException( InvalidArgumentException::class );
-		PackageBlueprint::fromJson( str_repeat( '{"record":', 17 ) . 'null' . str_repeat( '}', 17 ) );
+		PackageBlueprint::from_json( str_repeat( '{"record":', 17 ) . 'null' . str_repeat( '}', 17 ) );
 	}
 
 	public function testRejectsTooManyOrDuplicatePackages(): void {
@@ -271,7 +271,7 @@ final class PackageBlueprintTest extends TestCase {
 		}
 
 		$this->expectException( InvalidArgumentException::class );
-		( new PackageBlueprint( $packages ) )->canonicalJson();
+		( new PackageBlueprint( $packages ) )->canonical_json();
 	}
 
 	public function testRejectsUrlLocatorsThatCanEmbedCredentials(): void {
@@ -281,10 +281,10 @@ final class PackageBlueprintTest extends TestCase {
 			'https://example.test/owner/repository#token-canary',
 		);
 		foreach ( $locators as $locator ) {
-			$record               = $this->package()->toArray();
+			$record               = $this->package()->to_array();
 			$record['repository'] = $locator;
 			try {
-				BlueprintPackage::fromArray( $record );
+				BlueprintPackage::from_array( $record );
 				self::fail( 'Expected a potentially credential-bearing locator to be rejected.' );
 			} catch ( InvalidArgumentException ) {
 				self::addToAssertionCount( 1 );
@@ -293,14 +293,14 @@ final class PackageBlueprintTest extends TestCase {
 	}
 
 	public function testRejectsDuplicateOrNonCanonicalJsonObjectKeys(): void {
-		$json    = ( new PackageBlueprint( array( $this->package() ) ) )->canonicalJson();
+		$json    = ( new PackageBlueprint( array( $this->package() ) ) )->canonical_json();
 		$invalid = array(
 			str_replace( '"format":"ran-booster-package-blueprint"', '"format":"invalid","format":"ran-booster-package-blueprint"', $json ),
 			str_replace( '{"format":"ran-booster-package-blueprint","version":1', '{"version":1,"format":"ran-booster-package-blueprint"', $json ),
 		);
 		foreach ( $invalid as $candidate ) {
 			try {
-				PackageBlueprint::fromJson( $candidate );
+				PackageBlueprint::from_json( $candidate );
 				self::fail( 'Expected noncanonical JSON to be rejected.' );
 			} catch ( InvalidArgumentException ) {
 				self::addToAssertionCount( 1 );
@@ -312,7 +312,7 @@ final class PackageBlueprintTest extends TestCase {
 		$left  = $this->package( displayName: 'Old Label' );
 		$right = $this->package( displayName: 'New Label' );
 
-		self::assertTrue( $left->sameManagementAs( $right ) );
+		self::assertTrue( $left->same_management_as( $right ) );
 
 		foreach ( array( '', ' padded ', "line\nbreak", "\xB1", str_repeat( 'x', 192 ) ) as $displayName ) {
 			try {
@@ -336,12 +336,12 @@ final class PackageBlueprintTest extends TestCase {
 		);
 
 		foreach ( $changed as $candidate ) {
-			self::assertFalse( $package->sameManagementAs( $candidate ) );
+			self::assertFalse( $package->same_management_as( $candidate ) );
 		}
 
 		$plugin = new BlueprintPackage( 'plugin', 'example.php', 'Example', 'gh', '123', 'owner/repository', 'main', null );
 		$theme  = new BlueprintPackage( 'theme', 'example.php', 'Example', 'gh', '123', 'owner/repository', 'main', null );
-		self::assertFalse( $plugin->sameManagementAs( $theme ) );
+		self::assertFalse( $plugin->same_management_as( $theme ) );
 	}
 
 	public function testRejectsNonCanonicalSubdirectory(): void {

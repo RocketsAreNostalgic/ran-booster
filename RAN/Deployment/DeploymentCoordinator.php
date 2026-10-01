@@ -269,18 +269,15 @@ class DeploymentCoordinator {
 		try {
 			$declaration = $host->declaration();
 		} catch ( AdmittedBranchStageFailure $failure ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$host->finish( $failure->outcomeCode );
+			$host->finish( $failure->outcome_code );
 			return $this->finished_outcome( $host->terminalAttempt() );
 		}
 
-		$updater = BranchUpdater::forAdmittedAttempt( $declaration, $host, $host, $host, $host, $host );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		$deployment = 'plugin' === $declaration->packageType
+		$updater    = BranchUpdater::for_admitted_attempt( $declaration, $host, $host, $host, $host, $host );
+		$deployment = 'plugin' === $declaration->package_type
 			? $updater->plugin(
 				$declaration->repository,
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				$declaration->repositoryId,
+				$declaration->repository_id,
 				$declaration->branch,
 				null,
 				$declaration->slug,
@@ -288,14 +285,13 @@ class DeploymentCoordinator {
 			)
 			: $updater->theme(
 				$declaration->repository,
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				$declaration->repositoryId,
+				$declaration->repository_id,
 				$declaration->branch,
 				$declaration->slug,
 				$declaration->subdirectory
 			);
-		$code    = $deployment->deploy();
-		$outcome = $this->finished_outcome( $host->terminalAttempt() );
+		$code       = $deployment->deploy();
+		$outcome    = $this->finished_outcome( $host->terminalAttempt() );
 		if ( ! hash_equals( $code, $outcome->get_code() ) ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}

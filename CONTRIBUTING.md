@@ -44,6 +44,23 @@ and does not raise the analysis level or certify new dependency/host versions.
 
 ## Audited PHP naming scope
 
+The connected Branch and GitHub Provider helper tranche updates eight Core
+consumer/test files under #167. Branch-owned calls and implementations use the
+accepted snake_case API; Provider helper cleanup and logging overrides follow
+the Provider-owned names and parameters. Three reflection references in
+`BuiltInGitHubRegistrationTest` also follow the private property rename already
+landed in Provider #42, so adopting current Provider source preserves the
+existing artifact-limit assertions. This intentionally breaks the old beta
+PHP API. Foreign Core-owned interfaces, persisted/wire fields and runtime
+behavior remain unchanged. The three production consumers already belong to
+the method and variable enforcement scopes, which remain 176 and 166 files.
+
+Source preparation requires matching producer candidates. The old released
+Composer lock cannot qualify the renamed consumers, and a temporary source
+overlay is not released adoption. Follow
+[the connected-boundary adoption sequence](docs/connected-naming-adoption.md)
+before landing this composition or claiming installed/archive qualification.
+
 The artifact-ceiling cohort uses `PackageArtifactLimit::require_valid()` in its
 resolver, durable deployment request and tests. Method enforcement includes
 `PackageArtifactLimit`, expanding the scope from 172 to 173 files; variable

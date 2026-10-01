@@ -51,15 +51,15 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 	public function testAdapterConsumesPackageExpandedByteFactWithoutRescanningZip(): void {
 		$source = file_get_contents( __DIR__ . '/../../RAN/Deployment/AdmittedBranchHostAdapter.php' );
 		self::assertIsString( $source );
-		self::assertStringContainsString( '$artifact->archive()->expandedBytes()', $source );
+		self::assertStringContainsString( '$artifact->archive()->expanded_bytes()', $source );
 		self::assertStringNotContainsString( 'EXPANDED_RATIO', $source );
-		self::assertStringNotContainsString( 'private function expandedBytes', $source );
+		self::assertStringNotContainsString( 'private function expanded_bytes', $source );
 		self::assertStringNotContainsString( '->statIndex(', $source );
 	}
 
 	public function testHostCapacityAcceptsExactlyTwoCopiesPlusTenPercentOverhead(): void {
 		list( $artifact, $deployment )                   = $this->preparedArtifact();
-		$expanded                                        = $artifact->archive()->expandedBytes();
+		$expanded                                        = $artifact->archive()->expanded_bytes();
 		$required                                        = ( $expanded * 2 ) + intdiv( $expanded + 9, 10 );
 		$GLOBALS['ran_booster_admitted_disk_free_space'] = array(
 			WP_CONTENT_DIR => $required,
@@ -76,7 +76,7 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 
 	public function testHostCapacityMapsInsufficientDestinationSpaceToExistingOutcome(): void {
 		list( $artifact, $deployment )                   = $this->preparedArtifact();
-		$expanded                                        = $artifact->archive()->expandedBytes();
+		$expanded                                        = $artifact->archive()->expanded_bytes();
 		$required                                        = ( $expanded * 2 ) + intdiv( $expanded + 9, 10 );
 		$GLOBALS['ran_booster_admitted_disk_free_space'] = array(
 			WP_CONTENT_DIR => $required,
@@ -87,7 +87,7 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 			$this->invokeCapacityCheck( $artifact, $deployment );
 			self::fail( 'Insufficient destination capacity must fail the admitted host check.' );
 		} catch ( AdmittedBranchStageFailure $failure ) {
-			self::assertSame( DeploymentOutcome::CODE_DEPLOYMENT_DISK_SPACE_LOW, $failure->outcomeCode );
+			self::assertSame( DeploymentOutcome::CODE_DEPLOYMENT_DISK_SPACE_LOW, $failure->outcome_code );
 		} finally {
 			$artifact->cleanup();
 		}
@@ -137,7 +137,7 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 
 		return array(
 			new PreparedArchiveArtifact(
-				PreparedArchive::downloadAndValidate( $offer, $deployment, $directory, 1048576 )
+				PreparedArchive::download_and_validate( $offer, $deployment, $directory, 1048576 )
 			),
 			$deployment,
 		);

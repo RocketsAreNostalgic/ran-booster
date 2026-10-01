@@ -389,6 +389,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	}
 
 	public function testAutomaticRemovalUsesTheRecordedExpiryAsItsEncryptedDeadline(): void {
+		$expires_on         = gmdate( 'Y-m-d', time() + 30 * 86400 );
 		$interaction        = new CapturingProviderProfileInteraction();
 		$dashboard          = $this->createMock( Dashboard::class );
 		$expiryObservations = new InMemoryCredentialExpiryObservationStore();
@@ -402,7 +403,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			'kind'          => 'api-key',
 			'configuration' => array( 'tenant' => 'deployment' ),
 			'secret'        => 'secret-canary-access',
-			'expires_on'    => '2026-09-30',
+			'expires_on'    => $expires_on,
 			'self_destruct' => '1',
 		);
 
@@ -426,9 +427,9 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		);
 		self::assertCount( 1, $profiles );
 		self::assertTrue( $profiles[0]['self_destruct'] );
-		self::assertSame( '2026-09-30', $profiles[0]['destroy_on'] );
+		self::assertSame( $expires_on, $profiles[0]['destroy_on'] );
 		self::assertSame(
-			'2026-09-30',
+			$expires_on,
 			$expiryObservations->get( 'fixture', $profiles[0]['id'] )['manual_expires_on']
 		);
 	}

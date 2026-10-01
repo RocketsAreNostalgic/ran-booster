@@ -36,8 +36,8 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		$plugins = $this->createMock( PluginRepository::class );
 		$themes  = $this->createMock( ThemeRepository::class );
 
-		$plugins->expects( self::once() )->method( 'allDeploymentPlugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
-		$themes->expects( self::once() )->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $theme ) );
+		$plugins->expects( self::once() )->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
+		$themes->expects( self::once() )->method( 'all_deployment_themes' )->willReturn( array( 'example-theme' => $theme ) );
 
 		$blueprint = ( new ManagedPackageBlueprintExporter( $plugins, $themes, new SecretsFile( null, array() ) ) )->export();
 
@@ -51,8 +51,8 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id' );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 		$secrets = new SecretsFile(
 			constants: array(),
 			providerPolicies: new ProviderSecretPolicyCatalog(),
@@ -86,8 +86,8 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id', source: PackageSource::RELEASE_ASSET );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 
 		try {
 			( new ManagedPackageBlueprintExporter( $plugins, $themes, new SecretsFile( null, array() ) ) )->export();
@@ -103,8 +103,8 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		$theme   = $this->package( 'example-theme', 'example-theme', 'theme-repository-id', source: PackageSource::RELEASE_ASSET );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $theme ) );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
+		$themes->method( 'all_deployment_themes' )->willReturn( array( 'example-theme' => $theme ) );
 
 		try {
 			( new ManagedPackageBlueprintExporter( $plugins, $themes, new SecretsFile( null, array() ) ) )->export();
@@ -118,8 +118,8 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id' );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 		$secrets = new SecretsFile(
 			constants: array(),
 			providerPolicies: new ProviderSecretPolicyCatalog(),
@@ -138,8 +138,8 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id', credentialId: '' );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 		$secrets = new SecretsFile(
 			constants: array(),
 			providerPolicies: new ProviderSecretPolicyCatalog(),
@@ -171,8 +171,8 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 				'secret-canary'
 			);
 
-			$plugins->expects( self::once() )->method( 'allDeploymentPlugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
-			$themes->expects( self::once() )->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $theme ) );
+			$plugins->expects( self::once() )->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
+			$themes->expects( self::once() )->method( 'all_deployment_themes' )->willReturn( array( 'example-theme' => $theme ) );
 
 			$blueprint = ( new ManagedPackageBlueprintExporter( $plugins, $themes, $secrets ) )->export( array( 'gh' => array( 'credential-id-canary' ) ) );
 
@@ -230,8 +230,8 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 				),
 				'fine-secret-canary'
 			);
-			$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'plugin/classic.php' => $plugin ) );
-			$themes->method( 'allDeploymentThemes' )->willReturn( array( 'fine-theme' => $theme ) );
+			$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/classic.php' => $plugin ) );
+			$themes->method( 'all_deployment_themes' )->willReturn( array( 'fine-theme' => $theme ) );
 			$exporter = new ManagedPackageBlueprintExporter( $plugins, $themes, $secrets );
 
 			$classic = $exporter->export( array( 'gh' => array( 'classic-profile' ) ) );
@@ -257,8 +257,8 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		$plugin  = $this->package( 'plugin/expiring.php', 'expiring', 'expiring-repository-id', credentialId: 'expiring-profile' );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'plugin/expiring.php' => $plugin ) );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/expiring.php' => $plugin ) );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 		$secrets = new class() extends SecretsFile {
 			public function __construct() {
 				parent::__construct( null, array() );
@@ -320,8 +320,8 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 				),
 				'lifecycle-secret-canary'
 			);
-			$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'plugin/lifecycle.php' => $plugin ) );
-			$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+			$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/lifecycle.php' => $plugin ) );
+			$themes->method( 'all_deployment_themes' )->willReturn( array() );
 
 			$this->expectException( InvalidArgumentException::class );
 			( new ManagedPackageBlueprintExporter( $plugins, $themes, $secrets ) )->export( array( 'gh' => array( 'lifecycle-profile-canary' ) ) );
@@ -355,8 +355,8 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 					'identical-material-secret-canary'
 				);
 			}
-			$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'plugin/profile-a.php' => $plugin ) );
-			$themes->method( 'allDeploymentThemes' )->willReturn( array( 'profile-b-theme' => $theme ) );
+			$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/profile-a.php' => $plugin ) );
+			$themes->method( 'all_deployment_themes' )->willReturn( array( 'profile-b-theme' => $theme ) );
 			$exporter = new ManagedPackageBlueprintExporter( $plugins, $themes, $secrets );
 
 			$profileA = $exporter->export(
@@ -440,8 +440,8 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		$theme   = $this->package( 'example-theme', 'example-theme', 'theme-repository-id' );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $theme ) );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
+		$themes->method( 'all_deployment_themes' )->willReturn( array( 'example-theme' => $theme ) );
 
 		$blueprint = ( new ManagedPackageBlueprintExporter( $plugins, $themes, new SecretsFile( null, array() ) ) )->export(
 			array(),
@@ -474,8 +474,8 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 				),
 				'secret-canary'
 			);
-			$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
-			$themes->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $theme ) );
+			$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
+			$themes->method( 'all_deployment_themes' )->willReturn( array( 'example-theme' => $theme ) );
 
 			$blueprint = ( new ManagedPackageBlueprintExporter( $plugins, $themes, $secrets ) )->export(
 				array( 'gh' => array( 'credential-id-canary' ) ),
@@ -513,8 +513,8 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id' );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 
 		$this->expectException( InvalidArgumentException::class );
 		( new ManagedPackageBlueprintExporter( $plugins, $themes, new SecretsFile( null, array() ) ) )->export( array(), $selection );
@@ -559,8 +559,8 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id' );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 
 		$this->expectException( InvalidArgumentException::class );
 		( new ManagedPackageBlueprintExporter( $plugins, $themes, new SecretsFile( null, array() ) ) )->export( $selection );

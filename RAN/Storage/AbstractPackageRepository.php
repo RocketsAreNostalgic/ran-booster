@@ -71,8 +71,7 @@ abstract class AbstractPackageRepository {
 	 * the managed package must still use their type-specific reader so malformed
 	 * and duplicate records remain distinguishable.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function hasManagementRecord( mixed $identifier ): bool {
+	public function has_management_record( mixed $identifier ): bool {
 		$model = new PackageModel( array( 'package' => $identifier ) );
 
 		return array() !== $this->package_rows( $model->package );

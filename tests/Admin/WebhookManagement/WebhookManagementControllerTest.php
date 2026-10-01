@@ -1454,8 +1454,8 @@ final class WebhookManagementControllerTest extends TestCase {
 	private function packageAuthorities( array $plugins = array(), array $themes = array() ): ManagedPackageWebhookAuthorityResolver {
 		$pluginRepository = $this->createMock( PluginRepository::class );
 		$themeRepository  = $this->createMock( ThemeRepository::class );
-		$pluginRepository->method( 'boosterPluginFromFile' )->willReturnCallback( fn ( mixed $identifier ): Package => $this->returnPackage( $plugins, $identifier ) );
-		$themeRepository->method( 'boosterThemeFromStylesheet' )->willReturnCallback( fn ( mixed $identifier ): Package => $this->returnPackage( $themes, $identifier ) );
+		$pluginRepository->method( 'booster_plugin_from_file' )->willReturnCallback( fn ( mixed $identifier ): Package => $this->returnPackage( $plugins, $identifier ) );
+		$themeRepository->method( 'booster_theme_from_stylesheet' )->willReturnCallback( fn ( mixed $identifier ): Package => $this->returnPackage( $themes, $identifier ) );
 
 		return new ManagedPackageWebhookAuthorityResolver( $pluginRepository, $themeRepository );
 	}

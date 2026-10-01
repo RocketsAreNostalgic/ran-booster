@@ -106,8 +106,8 @@ final class WebhookAssistanceReadinessEvaluator {
 		try {
 			$this->database->requireReady();
 			$packages = array_merge(
-				$this->plugins->allDeploymentPlugins(),
-				$this->themes->allDeploymentThemes()
+				$this->plugins->all_deployment_plugins(),
+				$this->themes->all_deployment_themes()
 			);
 		} catch ( \Throwable ) {
 			return null;
@@ -190,7 +190,7 @@ final class WebhookAssistanceReadinessEvaluator {
 	 */
 	private function repository_readiness( string $provider, array $site_reasons, ?array $profiles ): array {
 		$repositories = array();
-		foreach ( array_merge( $this->plugins->allDeploymentPlugins(), $this->themes->allDeploymentThemes() ) as $package ) {
+		foreach ( array_merge( $this->plugins->all_deployment_plugins(), $this->themes->all_deployment_themes() ) as $package ) {
 			if ( ! $package instanceof Package
 				|| PackageSource::BRANCH !== $package->get_source()
 				|| $provider !== $package->get_provider_code() ) {

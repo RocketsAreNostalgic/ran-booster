@@ -390,8 +390,8 @@ class Dashboard {
 		$rows        = array();
 		$credentials = array();
 		foreach ( array(
-			'plugin' => $this->plugins->allDeploymentPlugins(),
-			'theme'  => $this->themes->allDeploymentThemes(),
+			'plugin' => $this->plugins->all_deployment_plugins(),
+			'theme'  => $this->themes->all_deployment_themes(),
 		) as $type => $packages ) {
 			foreach ( $packages as $package ) {
 				if ( ! $package instanceof Package ) {
@@ -505,8 +505,8 @@ class Dashboard {
 				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only package selection.
 				$identifier                                 = sanitize_text_field( wp_unslash( $_GET['package'] ) );
 				$package                                    = 'plugin' === $type
-					? $this->plugins->boosterPluginFromFile( $identifier )
-					: $this->themes->boosterThemeFromStylesheet( $identifier );
+					? $this->plugins->booster_plugin_from_file( $identifier )
+					: $this->themes->booster_theme_from_stylesheet( $identifier );
 				$repository_branch_check_outcome            = $this->requested_package_repository_branch_check( $package, $type );
 				$repository_branch_check_evidence           = null === $repository_branch_check_outcome
 					? $this->provider_settings->packageRepositoryBranchEvidence( $type, $package )
@@ -534,8 +534,8 @@ class Dashboard {
 
 		try {
 			$packages = 'plugin' === $type
-				? $this->plugins->allBoosterPlugins()
-				: $this->themes->allBoosterThemes();
+				? $this->plugins->all_booster_plugins()
+				: $this->themes->all_booster_themes();
 		} catch ( PackageStorageFailure $failure ) {
 			return $this->package_storage_failure_index( $package_view, $type, $failure );
 		}

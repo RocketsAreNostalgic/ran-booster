@@ -210,7 +210,7 @@ final class AuthorityPluginRepository extends PluginRepository {
 	public function __construct( private readonly array $packages ) {
 	}
 
-	public function allDeploymentPlugins( ?\RAN\PackageSource $source = null ): array {
+	public function all_deployment_plugins( ?\RAN\PackageSource $source = null ): array {
 		return $this->packages;
 	}
 }
@@ -221,7 +221,7 @@ final class AuthorityThemeRepository extends ThemeRepository {
 	public function __construct( private readonly array $packages ) {
 	}
 
-	public function allDeploymentThemes( ?\RAN\PackageSource $source = null ): array {
+	public function all_deployment_themes( ?\RAN\PackageSource $source = null ): array {
 		return $this->packages;
 	}
 }
@@ -230,7 +230,7 @@ final class ExactAuthorityPluginRepository extends PluginRepository {
 	/** @param array<string, AuthorityPackage> $packages */
 	public function __construct( private readonly array $packages ) {}
 
-	public function boosterPluginFromFile( $file ): AuthorityPackage {
+	public function booster_plugin_from_file( $file ): AuthorityPackage {
 		if ( ! is_string( $file ) || ! isset( $this->packages[ $file ] ) ) {
 			throw new \RuntimeException( 'Exact plugin lookup did not match.' );
 		}
@@ -238,7 +238,7 @@ final class ExactAuthorityPluginRepository extends PluginRepository {
 		return $this->packages[ $file ];
 	}
 
-	public function allDeploymentPlugins( ?\RAN\PackageSource $source = null ): array {
+	public function all_deployment_plugins( ?\RAN\PackageSource $source = null ): array {
 		throw new \LogicException( 'History must not scan plugin collections.' );
 	}
 }
@@ -247,7 +247,7 @@ final class ExactAuthorityThemeRepository extends ThemeRepository {
 	/** @param array<string, AuthorityPackage> $packages */
 	public function __construct( private readonly array $packages ) {}
 
-	public function boosterThemeFromStylesheet( $stylesheet ): AuthorityPackage {
+	public function booster_theme_from_stylesheet( $stylesheet ): AuthorityPackage {
 		if ( ! is_string( $stylesheet ) || ! isset( $this->packages[ $stylesheet ] ) ) {
 			throw new \RuntimeException( 'Exact theme lookup did not match.' );
 		}
@@ -255,7 +255,7 @@ final class ExactAuthorityThemeRepository extends ThemeRepository {
 		return $this->packages[ $stylesheet ];
 	}
 
-	public function allDeploymentThemes( ?\RAN\PackageSource $source = null ): array {
+	public function all_deployment_themes( ?\RAN\PackageSource $source = null ): array {
 		throw new \LogicException( 'History must not scan theme collections.' );
 	}
 }

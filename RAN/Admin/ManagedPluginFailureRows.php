@@ -25,7 +25,7 @@ final readonly class ManagedPluginFailureRows {
 		}
 
 		try {
-			$plugins = $this->plugins->allBoosterPlugins();
+			$plugins = $this->plugins->all_booster_plugins();
 		} catch ( Throwable ) {
 			return;
 		}

@@ -24,7 +24,7 @@ final class ThemeRepositoryDouble extends ThemeRepository {
 		parent::__construct();
 	}
 
-	public function boosterThemeFromStylesheet( $stylesheet ): object {
+	public function booster_theme_from_stylesheet( $stylesheet ): object {
 		++$this->reads;
 		$this->identifiers[] = (string) $stylesheet;
 		if ( $this->missing ) {

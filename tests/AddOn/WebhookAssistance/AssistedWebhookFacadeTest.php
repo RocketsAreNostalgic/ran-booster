@@ -752,13 +752,13 @@ final class FixedPluginRepository extends PluginRepository {
 	public function __construct( private FixedFacadePackage $package ) {
 	}
 
-	public function allDeploymentPlugins( ?\RAN\PackageSource $source = null ): array {
+	public function all_deployment_plugins( ?\RAN\PackageSource $source = null ): array {
 		return array( $this->package );
 	}
 }
 
 final class FixedThemeRepository extends ThemeRepository {
-	public function allDeploymentThemes( ?\RAN\PackageSource $source = null ): array {
+	public function all_deployment_themes( ?\RAN\PackageSource $source = null ): array {
 		return array();
 	}
 }

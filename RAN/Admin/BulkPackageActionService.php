@@ -191,8 +191,8 @@ final readonly class BulkPackageActionService {
 		}
 
 		$result = 'plugin' === $action->package_type
-			? $this->plugins->setPluginDeploymentPolicies( $snapshots, $policy )
-			: $this->themes->setThemeDeploymentPolicies( $snapshots, $policy );
+			? $this->plugins->set_plugin_deployment_policies( $snapshots, $policy )
+			: $this->themes->set_theme_deployment_policies( $snapshots, $policy );
 
 		return BulkPackageResult::policy( $action->operation, $result );
 	}
@@ -270,8 +270,8 @@ final readonly class BulkPackageActionService {
 	private function find( string $package_type, string $identifier ): Package {
 		try {
 			return 'plugin' === $package_type
-				? $this->plugins->boosterPluginFromFile( $identifier )
-				: $this->themes->boosterThemeFromStylesheet( $identifier );
+				? $this->plugins->booster_plugin_from_file( $identifier )
+				: $this->themes->booster_theme_from_stylesheet( $identifier );
 		} catch ( PluginNotFound | ThemeNotFound ) {
 			throw BulkPackageActionFailure::stale_selection();
 		} catch ( PackageStorageFailure $failure ) {

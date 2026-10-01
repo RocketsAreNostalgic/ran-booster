@@ -154,8 +154,8 @@ final readonly class PackageRemovalService {
 
 	private function disable( string $type, Package $package ): void {
 		$result = 'plugin' === $type
-			? $this->plugins->disablePluginForRemoval( $package )
-			: $this->themes->disableThemeForRemoval( $package );
+			? $this->plugins->disable_plugin_for_removal( $package )
+			: $this->themes->disable_theme_for_removal( $package );
 		$result->require_success();
 	}
 
@@ -183,8 +183,8 @@ final readonly class PackageRemovalService {
 
 	private function find( string $type, string $identifier ): Package {
 		return 'plugin' === $type
-			? $this->plugins->boosterPluginFromFile( $identifier )
-			: $this->themes->boosterThemeFromStylesheet( $identifier );
+			? $this->plugins->booster_plugin_from_file( $identifier )
+			: $this->themes->booster_theme_from_stylesheet( $identifier );
 	}
 
 	private function unlink( string $type, string $identifier, Package $package ): void {
@@ -198,8 +198,8 @@ final readonly class PackageRemovalService {
 
 	private function is_installed( string $type, string $identifier ): bool {
 		return 'plugin' === $type
-			? $this->plugins->isInstalled( $identifier )
-			: $this->themes->isInstalled( $identifier );
+			? $this->plugins->is_installed( $identifier )
+			: $this->themes->is_installed( $identifier );
 	}
 
 	private function log_failure( Throwable $failure, string $step ): void {

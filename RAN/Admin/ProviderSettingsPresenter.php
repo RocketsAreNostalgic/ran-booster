@@ -842,14 +842,14 @@ final readonly class ProviderSettingsPresenter {
 						'package' => $package,
 						'type'    => 'plugin',
 					),
-					array_values( $this->plugins->allDeploymentPlugins() )
+					array_values( $this->plugins->all_deployment_plugins() )
 				),
 				array_map(
 					static fn ( Package $package ): array => array(
 						'package' => $package,
 						'type'    => 'theme',
 					),
-					array_values( $this->themes->allDeploymentThemes() )
+					array_values( $this->themes->all_deployment_themes() )
 				)
 			);
 		} catch ( Throwable ) {
@@ -1080,8 +1080,8 @@ final readonly class ProviderSettingsPresenter {
 
 		try {
 			$packages = array_merge(
-				$this->plugins->allDeploymentPlugins(),
-				$this->themes->allDeploymentThemes()
+				$this->plugins->all_deployment_plugins(),
+				$this->themes->all_deployment_themes()
 			);
 		} catch ( Throwable ) {
 			return array(

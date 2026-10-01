@@ -398,7 +398,7 @@ final class EditBoundaryPluginRepository extends PluginRepository {
 	public function __construct( private readonly Package $package ) {
 	}
 
-	public function boosterPluginFromFile( $file ) {
+	public function booster_plugin_from_file( $file ) {
 		++$this->lookups;
 
 		return $this->package;
@@ -412,7 +412,7 @@ final class EditBoundaryThemeRepository extends ThemeRepository {
 	public function __construct( private readonly Package $package ) {
 	}
 
-	public function boosterThemeFromStylesheet( $stylesheet ) {
+	public function booster_theme_from_stylesheet( $stylesheet ) {
 		++$this->lookups;
 
 		return $this->package;

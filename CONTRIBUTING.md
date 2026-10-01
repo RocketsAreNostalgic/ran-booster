@@ -90,6 +90,16 @@ The fallback rejects newly introduced underscore-prefixed getter aliases, so
 method renaming does not create new magic property names. Existing package
 subclasses must migrate their owned method overrides with the interface.
 
+The connected public repository cohort migrates 21 declarations across
+`AbstractPackageRepository`, `PluginRepository` and `ThemeRepository`, together
+with owned callers, test overrides and mock method references. These classes
+were already enforced; method and variable scopes remain at 174 and 166 files.
+Public parameter names, including `userId`, signatures, persisted keys, source
+filtering, revision fences, adoption/removal ordering and failure behavior retain
+their contracts. Direct callers and subclasses must use the renamed snake_case
+methods; no legacy aliases are provided. Foreign same-spelled methods remain
+unchanged.
+
 The private API12 cohort migrates 74 private declarations and their owned calls:
 two in Booster, eight in ProviderRegistry, one in RepositoryReleaseWorkflowStatus,
 26 in ReleaseWorkflowRequestController, nine in ReleaseWorkflowDisplay and 28 in

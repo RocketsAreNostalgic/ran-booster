@@ -871,8 +871,8 @@ final class PortabilityControllerTest extends TestCase {
 		$package->method( 'get_source_revision' )->willReturn( 1 );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'example/example.php' => $package ) );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array() );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'example/example.php' => $package ) );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 
 		return new PortabilityController(
 			new ManagedPackageBlueprintExporter( $plugins, $themes, new SecretsFile( null, array() ) ),
@@ -885,10 +885,10 @@ final class PortabilityControllerTest extends TestCase {
 	private function previewController( SecretsFile $secrets, bool $installed = false, string $type = 'plugin' ): PortabilityController {
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'isInstalled' )->willReturn( $installed && 'plugin' === $type );
-		$plugins->method( 'hasManagementRecord' )->willReturn( false );
-		$themes->method( 'isInstalled' )->willReturn( $installed && 'theme' === $type );
-		$themes->method( 'hasManagementRecord' )->willReturn( false );
+		$plugins->method( 'is_installed' )->willReturn( $installed && 'plugin' === $type );
+		$plugins->method( 'has_management_record' )->willReturn( false );
+		$themes->method( 'is_installed' )->willReturn( $installed && 'theme' === $type );
+		$themes->method( 'has_management_record' )->willReturn( false );
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$provider = new TemporaryCredentialProvider( $secrets->credentialsFor( 'gh' ), 0, 'repository-id' );
 		$registry = new ProviderRegistry( array( $provider ), $catalog );

@@ -82,11 +82,11 @@ $container         = require __DIR__ . '/core-container-fixture.php';
 $plugin_repository = $container->make( PluginRepository::class );
 $deploy            = $container->make( DeploymentCoordinator::class );
 $repository        = new ManagedRepository( 'gh', 'RocketsAreNostalgic/booster-fixture-plugin', '1315521150', 'main' );
-$root              = $plugin_repository->installedPluginFromFile( $root_id );
+$root              = $plugin_repository->installed_plugin_from_file( $root_id );
 $root->set_repository( $repository );
 $root->set_deployment_policy( DeploymentPolicy::DISABLED );
 $root->set_source( PackageSource::RELEASE_ASSET, 1 );
-$adoption = $plugin_repository->adoptRelease( $root, new ManagedReleaseConfiguration( basename( $root_dir ), 'booster-fixture-plugin.php' ), 1 );
+$adoption = $plugin_repository->adopt_release( $root, new ManagedReleaseConfiguration( basename( $root_dir ), 'booster-fixture-plugin.php' ), 1 );
 $assert( $adoption->is_successful(), 'root Release adoption succeeds: ' . $adoption->get_diagnostic_id() );
 
 global $wpdb;
@@ -112,7 +112,7 @@ try {
 $after_attempts = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE provider_repository_id = %s', $attempt_table, '1315521150' ) );
 $assert( $blocked && $before_attempts === $after_attempts && $root_hash === hash_file( 'sha256', $root_dir . '/booster-fixture-plugin.php' ), 'Release blocks nested Branch install before attempts or filesystem mutation' );
 
-$nested = $plugin_repository->installedPluginFromFile( $nested_id );
+$nested = $plugin_repository->installed_plugin_from_file( $nested_id );
 $nested->set_repository( $repository );
 $nested->set_deployment_policy( DeploymentPolicy::DISABLED );
 $assert( ! $plugin_repository->adopt( $nested )->is_successful(), 'installed nested Branch adoption is blocked by root Release' );

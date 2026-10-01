@@ -527,20 +527,20 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 
 	private function installed_package( string $type, string $identifier ): Package {
 		return 'plugin' === $type
-			? $this->plugins->installedPluginFromFile( $identifier )
-			: $this->themes->installedThemeFromStylesheet( $identifier );
+			? $this->plugins->installed_plugin_from_file( $identifier )
+			: $this->themes->installed_theme_from_stylesheet( $identifier );
 	}
 
 	private function is_installed( string $type, string $identifier ): bool {
 		return 'plugin' === $type
-			? $this->plugins->isInstalled( $identifier )
-			: $this->themes->isInstalled( $identifier );
+			? $this->plugins->is_installed( $identifier )
+			: $this->themes->is_installed( $identifier );
 	}
 
 	private function has_management_record( string $type, string $identifier ): bool {
 		return 'plugin' === $type
-			? $this->plugins->hasManagementRecord( $identifier )
-			: $this->themes->hasManagementRecord( $identifier );
+			? $this->plugins->has_management_record( $identifier )
+			: $this->themes->has_management_record( $identifier );
 	}
 
 	/** @param array<string, mixed> $repository */
@@ -598,10 +598,10 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		int $user_id
 	): bool {
 		if ( 'plugin' === $type && $package instanceof Plugin ) {
-			return $this->plugins->adoptRelease( $package, $configuration, $user_id )->is_successful();
+			return $this->plugins->adopt_release( $package, $configuration, $user_id )->is_successful();
 		}
 		if ( 'theme' === $type && $package instanceof Theme ) {
-			return $this->themes->adoptRelease( $package, $configuration, $user_id )->is_successful();
+			return $this->themes->adopt_release( $package, $configuration, $user_id )->is_successful();
 		}
 
 		return false;

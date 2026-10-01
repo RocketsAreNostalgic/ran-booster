@@ -30,8 +30,8 @@ final readonly class BlueprintReviewer {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		$managedPackage = null;
 		$repository     = 'plugin' === $blueprint->type ? $this->plugins : $this->themes;
-		$installed      = $repository->isInstalled( $blueprint->identifier );
-		$managed        = $repository->hasManagementRecord( $blueprint->identifier );
+		$installed      = $repository->is_installed( $blueprint->identifier );
+		$managed        = $repository->has_management_record( $blueprint->identifier );
 
 		if ( ! $installed ) {
 			return new BlueprintPlanItem(
@@ -47,8 +47,8 @@ final readonly class BlueprintReviewer {
 
 		try {
 			$package = 'plugin' === $blueprint->type
-				? $this->plugins->boosterPluginFromFile( $blueprint->identifier )
-				: $this->themes->boosterThemeFromStylesheet( $blueprint->identifier );
+				? $this->plugins->booster_plugin_from_file( $blueprint->identifier )
+				: $this->themes->booster_theme_from_stylesheet( $blueprint->identifier );
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 			$managedPackage = $package;
 		} catch ( PackageStorageFailure $failure ) {

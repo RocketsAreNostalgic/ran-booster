@@ -24,7 +24,7 @@ final class PluginRepositoryDouble extends PluginRepository {
 		parent::__construct();
 	}
 
-	public function boosterPluginFromFile( $file ): object {
+	public function booster_plugin_from_file( $file ): object {
 		++$this->reads;
 		$this->identifiers[] = (string) $file;
 		if ( $this->missing ) {

@@ -623,19 +623,19 @@ final class RemovalPluginRepository extends PluginRepository {
 	public function __construct( private readonly RemovalPlugin $package ) {
 	}
 
-	public function boosterPluginFromFile( $file ) {
+	public function booster_plugin_from_file( $file ) {
 		unset( $file );
 		return $this->package;
 	}
 
-	public function disablePluginForRemoval( Plugin $plugin ): PackageMutationResult {
+	public function disable_plugin_for_removal( Plugin $plugin ): PackageMutationResult {
 		$plugin->set_deployment_policy( DeploymentPolicy::DISABLED );
 		$plugin->set_source( $plugin->get_source(), $plugin->get_source_revision() + 1 );
 
 		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
 	}
 
-	public function isInstalled( string $identifier ): bool {
+	public function is_installed( string $identifier ): bool {
 		unset( $identifier );
 		return $this->installed;
 	}
@@ -663,19 +663,19 @@ final class RemovalThemeRepository extends ThemeRepository {
 	public function __construct( private readonly RemovalTheme $package ) {
 	}
 
-	public function boosterThemeFromStylesheet( $stylesheet ) {
+	public function booster_theme_from_stylesheet( $stylesheet ) {
 		unset( $stylesheet );
 		return $this->package;
 	}
 
-	public function disableThemeForRemoval( Theme $theme ): PackageMutationResult {
+	public function disable_theme_for_removal( Theme $theme ): PackageMutationResult {
 		$theme->set_deployment_policy( DeploymentPolicy::DISABLED );
 		$theme->set_source( $theme->get_source(), $theme->get_source_revision() + 1 );
 
 		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
 	}
 
-	public function isInstalled( string $identifier ): bool {
+	public function is_installed( string $identifier ): bool {
 		unset( $identifier );
 		return $this->installed;
 	}

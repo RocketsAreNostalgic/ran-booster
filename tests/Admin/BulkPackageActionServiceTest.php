@@ -726,7 +726,7 @@ final class BulkActionPluginRepository extends PluginRepository {
 		$this->packages = $packages;
 	}
 
-	public function boosterPluginFromFile( $file ) {
+	public function booster_plugin_from_file( $file ) {
 		if ( ! isset( $this->packages[ $file ] ) ) {
 			throw new PluginNotFound( 'Missing fixture plugin.' );
 		}
@@ -734,7 +734,7 @@ final class BulkActionPluginRepository extends PluginRepository {
 		return $this->packages[ $file ];
 	}
 
-	public function setPluginDeploymentPolicies( array $snapshots, DeploymentPolicy $policy ): array {
+	public function set_plugin_deployment_policies( array $snapshots, DeploymentPolicy $policy ): array {
 		$this->snapshots = $snapshots;
 		$this->policy    = $policy;
 
@@ -748,7 +748,7 @@ final class BulkActionPluginRepository extends PluginRepository {
 
 final class BulkActionThemeRepository extends ThemeRepository {
 
-	public function boosterThemeFromStylesheet( $stylesheet ) {
+	public function booster_theme_from_stylesheet( $stylesheet ) {
 		throw new ThemeNotFound( 'Missing fixture theme.' );
 	}
 }

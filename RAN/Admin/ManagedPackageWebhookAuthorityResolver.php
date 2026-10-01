@@ -29,7 +29,7 @@ final readonly class ManagedPackageWebhookAuthorityResolver {
 	): string {
 		$matches = array();
 
-		foreach ( array_merge( $this->plugins->allDeploymentPlugins(), $this->themes->allDeploymentThemes() ) as $package ) {
+		foreach ( array_merge( $this->plugins->all_deployment_plugins(), $this->themes->all_deployment_themes() ) as $package ) {
 			if ( ! $package instanceof Package
 				|| PackageSource::BRANCH !== $package->get_source()
 				|| $package->get_provider_code() !== $provider->value
@@ -64,7 +64,7 @@ final readonly class ManagedPackageWebhookAuthorityResolver {
 		string $owner
 	): string {
 		$owner = strtolower( trim( $owner, " \t\n\r\0\x0B/" ) );
-		foreach ( array_merge( $this->plugins->allDeploymentPlugins(), $this->themes->allDeploymentThemes() ) as $package ) {
+		foreach ( array_merge( $this->plugins->all_deployment_plugins(), $this->themes->all_deployment_themes() ) as $package ) {
 			if ( ! $package instanceof Package
 				|| PackageSource::BRANCH !== $package->get_source()
 				|| $package->get_provider_code() !== $provider->value ) {
@@ -88,8 +88,8 @@ final readonly class ManagedPackageWebhookAuthorityResolver {
 	public function forPackage( string $type, string $identifier ): ?array {
 		try {
 			$package = 'plugin' === $type
-				? $this->plugins->boosterPluginFromFile( $identifier )
-				: ( 'theme' === $type ? $this->themes->boosterThemeFromStylesheet( $identifier ) : null );
+				? $this->plugins->booster_plugin_from_file( $identifier )
+				: ( 'theme' === $type ? $this->themes->booster_theme_from_stylesheet( $identifier ) : null );
 		} catch ( \Throwable ) {
 			return null;
 		}

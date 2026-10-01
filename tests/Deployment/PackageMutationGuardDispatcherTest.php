@@ -212,9 +212,9 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		$plugins              = $this->createMock( PluginRepository::class );
 		$themes               = $this->createMock( ThemeRepository::class );
 		if ( 'plugin' === $type ) {
-			$plugins->expects( self::once() )->method( 'boosterPluginFromFile' )->with( $identifier )->willReturn( $package );
+			$plugins->expects( self::once() )->method( 'booster_plugin_from_file' )->with( $identifier )->willReturn( $package );
 			$plugins->expects( self::once() )
-				->method( 'setPluginDeploymentPolicies' )
+				->method( 'set_plugin_deployment_policies' )
 				->with(
 					self::callback( static fn ( array $snapshots ): bool => $identifier === ( $snapshots[0]['package'] ?? null ) ),
 					DeploymentPolicy::DISABLED
@@ -230,11 +230,11 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 						);
 					}
 				);
-			$themes->expects( self::never() )->method( 'setThemeDeploymentPolicies' );
+			$themes->expects( self::never() )->method( 'set_theme_deployment_policies' );
 		} else {
-			$themes->expects( self::once() )->method( 'boosterThemeFromStylesheet' )->with( $identifier )->willReturn( $package );
+			$themes->expects( self::once() )->method( 'booster_theme_from_stylesheet' )->with( $identifier )->willReturn( $package );
 			$themes->expects( self::once() )
-				->method( 'setThemeDeploymentPolicies' )
+				->method( 'set_theme_deployment_policies' )
 				->with(
 					self::callback( static fn ( array $snapshots ): bool => $identifier === ( $snapshots[0]['package'] ?? null ) ),
 					DeploymentPolicy::DISABLED
@@ -250,7 +250,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 						);
 					}
 				);
-			$plugins->expects( self::never() )->method( 'setPluginDeploymentPolicies' );
+			$plugins->expects( self::never() )->method( 'set_plugin_deployment_policies' );
 		}
 		$lock = $this->createMock( WordPressUpdaterLock::class );
 		$lock->expects( self::once() )->method( 'acquire' )->willReturn( 'bulk-lock' );

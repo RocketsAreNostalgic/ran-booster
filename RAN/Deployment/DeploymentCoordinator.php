@@ -408,8 +408,8 @@ class DeploymentCoordinator {
 		$normalizer = $this->providers->requireCapability( $event->provider, WebhookNormalizer::class );
 		$policy     = $normalizer->getWebhookPolicy();
 		foreach ( array(
-			'plugin' => $this->plugins->allDeploymentPlugins(),
-			'theme'  => $this->themes->allDeploymentThemes(),
+			'plugin' => $this->plugins->all_deployment_plugins(),
+			'theme'  => $this->themes->all_deployment_themes(),
 		) as $type => $packages ) {
 			foreach ( $packages as $package ) {
 				if ( PackageSource::BRANCH === $package->get_source()
@@ -439,6 +439,6 @@ class DeploymentCoordinator {
 	}
 
 	private function package_from_identifier( string $type, string $identifier ): Package {
-		return 'plugin' === $type ? $this->plugins->boosterPluginFromFile( $identifier ) : $this->themes->boosterThemeFromStylesheet( $identifier );
+		return 'plugin' === $type ? $this->plugins->booster_plugin_from_file( $identifier ) : $this->themes->booster_theme_from_stylesheet( $identifier );
 	}
 }

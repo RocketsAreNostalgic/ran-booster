@@ -151,13 +151,13 @@ final class NativePortabilityFacadeTest extends TestCase {
 	): NativePortabilityFacade {
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'isInstalled' )->willReturn( $installed );
-		$plugins->method( 'hasManagementRecord' )->willReturn( $managed );
+		$plugins->method( 'is_installed' )->willReturn( $installed );
+		$plugins->method( 'has_management_record' )->willReturn( $managed );
 		if ( null !== $managedPackage ) {
-			$plugins->method( 'boosterPluginFromFile' )->willReturn( $managedPackage );
+			$plugins->method( 'booster_plugin_from_file' )->willReturn( $managedPackage );
 		}
-		$themes->method( 'isInstalled' )->willReturn( false );
-		$themes->method( 'hasManagementRecord' )->willReturn( false );
+		$themes->method( 'is_installed' )->willReturn( false );
+		$themes->method( 'has_management_record' )->willReturn( false );
 
 		$catalog        = new ProviderSecretPolicyCatalog();
 		$secrets        = new SecretsFile( null, array(), $catalog );

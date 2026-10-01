@@ -42,8 +42,8 @@ final readonly class ManagedPackageBlueprintExporter {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		$credentials = $this->credential_selection( $credentialSelection );
 		foreach ( array(
-			'plugin' => $this->plugins->allDeploymentPlugins(),
-			'theme'  => $this->themes->allDeploymentThemes(),
+			'plugin' => $this->plugins->all_deployment_plugins(),
+			'theme'  => $this->themes->all_deployment_themes(),
 		) as $type => $group ) {
 			foreach ( $group as $package ) {
 				if ( ! $package instanceof Package ) {

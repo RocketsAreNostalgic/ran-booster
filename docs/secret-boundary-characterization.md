@@ -32,7 +32,7 @@ credential-plaintext enumerator:
   existing Core composition and were explicitly internal-by-contract. The
   supplemental separation below removes them from `Booster` without claiming
   hostile same-process confidentiality;
-- `PluginRepository::fromSlug()` now hydrates `Plugin` directly; and
+- `PluginRepository::from_slug()` now hydrates `Plugin` directly; and
 - `SecretsFile::credentialMaterials()` is deleted rather than replaced with a
   private generic iterator. Display-safe profiles, one exact/default material
   read, the three-method provider-bound store and Core's bounded requested-

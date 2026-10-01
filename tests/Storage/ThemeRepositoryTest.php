@@ -52,6 +52,6 @@ final class ThemeRepositoryTest extends TestCase {
 		$repository = new ThemeRepository();
 
 		$this->expectException( ThemeNotFound::class );
-		$repository->fromSlug( 'not-a-theme' );
+		$repository->from_slug( 'not-a-theme' );
 	}
 }

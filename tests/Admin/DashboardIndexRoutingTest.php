@@ -707,7 +707,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'repository' => 'repo-route',
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+		$plugins->method( 'all_deployment_plugins' )->willReturn(
 			array(
 				'plugin/route.php'     => $this->managedPackage(
 					'plugin/route.php',
@@ -767,7 +767,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'repository_view' => 'releases',
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+		$plugins->method( 'all_deployment_plugins' )->willReturn(
 			array(
 				'plugin/route.php' => $this->managedPackage(
 					'plugin/route.php',
@@ -807,7 +807,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'panel' => 'repositories',
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+		$plugins->method( 'all_deployment_plugins' )->willReturn(
 			array(
 				$this->managedPackage(
 					'plugin/shared.php',
@@ -820,7 +820,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			)
 		);
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allDeploymentThemes' )->willReturn(
+		$themes->method( 'all_deployment_themes' )->willReturn(
 			array(
 				$this->managedPackage(
 					'shared-theme',
@@ -859,7 +859,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'panel' => 'repositories',
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+		$plugins->method( 'all_deployment_plugins' )->willReturn(
 			array( $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'repo-example', provider: 'bb' ) )
 		);
 
@@ -892,9 +892,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 			);
 		}
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( $releasePackages );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( $releasePackages );
 		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'allDeploymentThemes' )->willReturn(
+		$themes->method( 'all_deployment_themes' )->willReturn(
 			array(
 				$this->managedPackage(
 					'branch-shared',
@@ -929,7 +929,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'panel' => 'repositories',
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+		$plugins->method( 'all_deployment_plugins' )->willReturn(
 			array(
 				$this->managedPackage( 'plugin/one.php', 'One', 'repo-conflict', provider: 'bb', repository: 'workspace/one' ),
 				$this->managedPackage( 'plugin/two.php', 'Two', 'repo-conflict', provider: 'bb', repository: 'workspace/two' ),
@@ -959,7 +959,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'panel' => 'repositories',
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+		$plugins->method( 'all_deployment_plugins' )->willReturn(
 			array(
 				$this->managedPackage( 'plugin/upper.php', 'Uppercase Locator', 'repo-upper', provider: 'bb', repository: 'Owner/Repo' ),
 				$this->managedPackage( 'plugin/lower.php', 'Lowercase Locator', 'repo-lower', provider: 'bb', repository: 'owner/repo' ),
@@ -1015,8 +1015,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$theme       = $this->managedPackage( 'example-theme', 'Example Theme', 'theme-repository-id' );
 		$plugins     = $this->createStub( PluginRepository::class );
 		$themes      = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $theme ) );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
+		$themes->method( 'all_deployment_themes' )->willReturn( array( 'example-theme' => $theme ) );
 
 		$secrets = new class() extends SecretsFile {
 			public function __construct() {
@@ -1077,8 +1077,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$theme       = $this->managedPackage( 'example-theme', 'Example Theme', 'theme-repository-id', credentialId: 'shared-profile' );
 		$plugins     = $this->createStub( PluginRepository::class );
 		$themes      = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
-		$themes->method( 'allDeploymentThemes' )->willReturn( array( 'example-theme' => $theme ) );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
+		$themes->method( 'all_deployment_themes' )->willReturn( array( 'example-theme' => $theme ) );
 		$secrets = new class() extends SecretsFile {
 			public function __construct() {
 				parent::__construct( '/unused/test-secrets.php', array() );
@@ -1261,8 +1261,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 			};
 		$package = $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id' );
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
-		$plugins->method( 'allBoosterPlugins' )->willReturn( array( $package ) );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$plugins->method( 'all_booster_plugins' )->willReturn( array( $package ) );
 		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins );
 
 		$_GET  = array( 'package' => 'plugin/example.php' );
@@ -1301,8 +1301,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 			};
 		$package = $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id' );
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
-		$plugins->method( 'allBoosterPlugins' )->willReturn( array( $package ) );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$plugins->method( 'all_booster_plugins' )->willReturn( array( $package ) );
 		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins );
 
 		$_GET = array( 'package' => 'plugin/example.php' );
@@ -1322,8 +1322,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$package    = $this->managedPackage( $identifier, 'Example Package', 'repository-id' );
 			$plugins    = $this->createStub( PluginRepository::class );
 			$themes     = $this->createStub( ThemeRepository::class );
-			$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
-			$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $package );
+			$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+			$themes->method( 'booster_theme_from_stylesheet' )->willReturn( $package );
 			$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins, themes: $themes );
 			$_GET      = array(
 				'package'     => $identifier,
@@ -1340,7 +1340,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 	public function testExplicitAdvancedOpenFlagOpensTheSelectedSourceView(): void {
 		$package = $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id' );
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins );
 		$_GET      = array(
 			'package'                   => 'plugin/example.php',
@@ -1362,7 +1362,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			subdirectory: 'packages/example'
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins );
 		$_GET      = array( 'package' => 'plugin/example.php' );
 
@@ -1429,8 +1429,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 			\RAN\PackageSource::RELEASE_ASSET
 		);
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
-		$plugins->method( 'allBoosterPlugins' )->willReturn( array( $package ) );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$plugins->method( 'all_booster_plugins' )->willReturn( array( $package ) );
 		$dashboard = $this->dashboard(
 			$this->throwingSecrets(),
 			plugins: $plugins,
@@ -1484,8 +1484,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 		$plugins    = $this->createStub( PluginRepository::class );
 		$themes     = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
-		$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $package );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$themes->method( 'booster_theme_from_stylesheet' )->willReturn( $package );
 		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins, themes: $themes );
 		$_GET      = array(
 			'package'     => $identifier,
@@ -1513,15 +1513,15 @@ final class DashboardIndexRoutingTest extends TestCase {
 			public function __construct( private Package $package ) {
 			}
 
-			public function boosterPluginFromFile( $file ) {
+			public function booster_plugin_from_file( $file ) {
 				return 'release/release.php' === $file ? $this->package : null;
 			}
 
-			public function allBoosterPlugins(): array {
+			public function all_booster_plugins(): array {
 				return array( $this->package );
 			}
 
-			public function allDeploymentPlugins( ?\RAN\PackageSource $source = null ): array {
+			public function all_deployment_plugins( ?\RAN\PackageSource $source = null ): array {
 				return array( $this->package );
 			}
 		};
@@ -1529,11 +1529,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 			public function __construct() {
 			}
 
-			public function allBoosterThemes(): array {
+			public function all_booster_themes(): array {
 				return array();
 			}
 
-			public function allDeploymentThemes( ?\RAN\PackageSource $source = null ): array {
+			public function all_deployment_themes( ?\RAN\PackageSource $source = null ): array {
 				return array();
 			}
 		};
@@ -1695,11 +1695,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$_GET       = array( 'package' => $identifier );
 
 		$plugins->expects( 'plugin' === $type ? self::once() : self::never() )
-			->method( 'boosterPluginFromFile' )
+			->method( 'booster_plugin_from_file' )
 			->with( $identifier )
 			->willReturn( $package );
 		$themes->expects( 'theme' === $type ? self::once() : self::never() )
-			->method( 'boosterThemeFromStylesheet' )
+			->method( 'booster_theme_from_stylesheet' )
 			->with( $identifier )
 			->willReturn( $package );
 
@@ -1739,10 +1739,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 			};
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'boosterPluginFromFile' )->willReturn( $package );
-		$plugins->method( 'allBoosterPlugins' )->willReturn( 'plugin' === $type ? array( $package ) : array() );
-		$themes->method( 'boosterThemeFromStylesheet' )->willReturn( $package );
-		$themes->method( 'allBoosterThemes' )->willReturn( 'theme' === $type ? array( $package ) : array() );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$plugins->method( 'all_booster_plugins' )->willReturn( 'plugin' === $type ? array( $package ) : array() );
+		$themes->method( 'booster_theme_from_stylesheet' )->willReturn( $package );
+		$themes->method( 'all_booster_themes' )->willReturn( 'theme' === $type ? array( $package ) : array() );
 		$dashboard = $this->dashboard(
 			$this->throwingSecrets(),
 			plugins: $plugins,
@@ -1843,20 +1843,20 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		if ( 'plugin' === $type ) {
 			$plugins->expects( self::once() )
-				->method( 'boosterPluginFromFile' )
+				->method( 'booster_plugin_from_file' )
 				->with( $identifier )
 				->willThrowException( new PluginNotFound( 'Missing fixture plugin.' ) );
-			$plugins->expects( self::once() )->method( 'allBoosterPlugins' )->willReturn( array( $fallback ) );
-			$themes->expects( self::never() )->method( 'boosterThemeFromStylesheet' );
-			$themes->expects( self::never() )->method( 'allBoosterThemes' );
+			$plugins->expects( self::once() )->method( 'all_booster_plugins' )->willReturn( array( $fallback ) );
+			$themes->expects( self::never() )->method( 'booster_theme_from_stylesheet' );
+			$themes->expects( self::never() )->method( 'all_booster_themes' );
 		} else {
 			$themes->expects( self::once() )
-				->method( 'boosterThemeFromStylesheet' )
+				->method( 'booster_theme_from_stylesheet' )
 				->with( $identifier )
 				->willThrowException( new ThemeNotFound( 'Missing fixture theme.' ) );
-			$themes->expects( self::once() )->method( 'allBoosterThemes' )->willReturn( array( $fallback ) );
-			$plugins->expects( self::never() )->method( 'boosterPluginFromFile' );
-			$plugins->expects( self::never() )->method( 'allBoosterPlugins' );
+			$themes->expects( self::once() )->method( 'all_booster_themes' )->willReturn( array( $fallback ) );
+			$plugins->expects( self::never() )->method( 'booster_plugin_from_file' );
+			$plugins->expects( self::never() )->method( 'all_booster_plugins' );
 		}
 
 		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins, themes: $themes );
@@ -1909,8 +1909,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'allBoosterPlugins' )->willReturn( 'plugin' === $type ? array( $branch, $release, $other ) : array() );
-		$themes->method( 'allBoosterThemes' )->willReturn( 'theme' === $type ? array( $branch, $release, $other ) : array() );
+		$plugins->method( 'all_booster_plugins' )->willReturn( 'plugin' === $type ? array( $branch, $release, $other ) : array() );
+		$themes->method( 'all_booster_themes' )->willReturn( 'theme' === $type ? array( $branch, $release, $other ) : array() );
 
 		$result = $this->dashboard(
 			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
@@ -1938,7 +1938,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$second  = $this->managedPackage( 'second/second.php', 'Second Plugin', 'second-repository' );
 		$plugins = $this->createMock( PluginRepository::class );
 		$plugins->expects( self::exactly( 2 ) )
-			->method( 'allBoosterPlugins' )
+			->method( 'all_booster_plugins' )
 			->willReturnOnConsecutiveCalls( array( $first ), array( $second ) );
 		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins );
 
@@ -1965,8 +1965,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'allBoosterPlugins' )->willReturn( 'plugin' === $type ? array( $package ) : array() );
-		$themes->method( 'allBoosterThemes' )->willReturn( 'theme' === $type ? array( $package ) : array() );
+		$plugins->method( 'all_booster_plugins' )->willReturn( 'plugin' === $type ? array( $package ) : array() );
+		$themes->method( 'all_booster_themes' )->willReturn( 'theme' === $type ? array( $package ) : array() );
 
 		$dashboard = $this->dashboard(
 			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
@@ -2295,12 +2295,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$database->rows = array( DashboardActivityWpdb::attempt( 1, 'failed' ) );
 		$plugins        = $this->createStub( PluginRepository::class );
 		$themes         = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+		$plugins->method( 'all_deployment_plugins' )->willReturn(
 			array(
 				'plugin/example.php' => $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'repository-1' ),
 			)
 		);
-		$themes->method( 'allDeploymentThemes' )->willReturn(
+		$themes->method( 'all_deployment_themes' )->willReturn(
 			array(
 				'example-theme' => $this->managedPackage( 'example-theme', 'Example Theme', 'repository-2' ),
 			)
@@ -2334,13 +2334,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$database->rows = array( DashboardActivityWpdb::attempt( 1, 'failed' ) );
 		$plugins        = $this->createStub( PluginRepository::class );
 		$themes         = $this->createStub( ThemeRepository::class );
-		$plugins->method( 'allDeploymentPlugins' )->willReturn(
+		$plugins->method( 'all_deployment_plugins' )->willReturn(
 			array(
 				'plugin/example.php'       => $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'repository-1' ),
 				'other-example/plugin.php' => $this->managedPackage( 'other-example/plugin.php', 'Other Example Plugin', 'repository-2' ),
 			)
 		);
-		$themes->method( 'allDeploymentThemes' )->willThrowException( PackageStorageFailure::invalid_provider_identity() );
+		$themes->method( 'all_deployment_themes' )->willThrowException( PackageStorageFailure::invalid_provider_identity() );
 		$_GET = array(
 			'tab'   => 'troubleshooting',
 			'panel' => 'deployment-activity',
@@ -2486,7 +2486,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			new ReadyDashboardDatabase()
 		);
 		$plugins                 = $this->createMock( PluginRepository::class );
-		$plugins->expects( self::never() )->method( 'fromSlug' );
+		$plugins->expects( self::never() )->method( 'from_slug' );
 		$themes      = $this->createStub( ThemeRepository::class );
 		$updaterLock = $this->createStub( WordPressUpdaterLock::class );
 		$coordinator = new DashboardNeedsAttentionCoordinator( $attempts );
@@ -2590,11 +2590,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 			public function __construct() {
 			}
 
-			public function allBoosterPlugins(): array {
+			public function all_booster_plugins(): array {
 				return array();
 			}
 
-			public function allDeploymentPlugins( ?\RAN\PackageSource $source = null ): array {
+			public function all_deployment_plugins( ?\RAN\PackageSource $source = null ): array {
 				return array();
 			}
 		};
@@ -2603,11 +2603,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 			public function __construct() {
 			}
 
-			public function allBoosterThemes(): array {
+			public function all_booster_themes(): array {
 				return array();
 			}
 
-			public function allDeploymentThemes( ?\RAN\PackageSource $source = null ): array {
+			public function all_deployment_themes( ?\RAN\PackageSource $source = null ): array {
 				return array();
 			}
 		};
@@ -2739,21 +2739,21 @@ final class DashboardIndexRoutingTest extends TestCase {
 }
 
 final class FailingDashboardPluginRepository extends PluginRepository {
-	public function allBoosterPlugins(): array {
+	public function all_booster_plugins(): array {
 		throw PackageStorageFailure::invalid_provider_identity();
 	}
 
-	public function boosterPluginFromFile( $file ) {
+	public function booster_plugin_from_file( $file ) {
 		throw PackageStorageFailure::invalid_provider_identity();
 	}
 }
 
 final class FailingDashboardThemeRepository extends ThemeRepository {
-	public function allBoosterThemes(): array {
+	public function all_booster_themes(): array {
 		throw PackageStorageFailure::invalid_provider_identity();
 	}
 
-	public function boosterThemeFromStylesheet( $stylesheet ) {
+	public function booster_theme_from_stylesheet( $stylesheet ) {
 		throw PackageStorageFailure::invalid_provider_identity();
 	}
 }

@@ -106,8 +106,8 @@ final readonly class PackageOperationService {
 
 		$slug       = $operation->package_slug ?? throw new RuntimeException( 'The package slug is unavailable.' );
 		$installed  = 'plugin' === $operation->package_type
-			? $this->plugins->fromSlug( $slug )
-			: $this->themes->fromSlug( $slug );
+			? $this->plugins->from_slug( $slug )
+			: $this->themes->from_slug( $slug );
 		$identifier = $installed->get_identifier();
 		if ( ! is_string( $identifier ) || '' === $identifier ) {
 			throw new RuntimeException( 'The installed package identity is unavailable.' );
@@ -120,8 +120,8 @@ final readonly class PackageOperationService {
 	private function link_installed( PackageOperation $operation ): array {
 		$slug    = $operation->package_slug ?? throw new RuntimeException( 'The package slug is unavailable.' );
 		$package = 'plugin' === $operation->package_type
-			? ( null === $operation->identifier ? $this->plugins->fromSlug( $slug ) : $this->plugins->installedPluginFromFile( $operation->identifier ) )
-			: ( null === $operation->identifier ? $this->themes->fromSlug( $slug ) : $this->themes->installedThemeFromStylesheet( $operation->identifier ) );
+			? ( null === $operation->identifier ? $this->plugins->from_slug( $slug ) : $this->plugins->installed_plugin_from_file( $operation->identifier ) )
+			: ( null === $operation->identifier ? $this->themes->from_slug( $slug ) : $this->themes->installed_theme_from_stylesheet( $operation->identifier ) );
 		if ( $package instanceof Plugin ) {
 			PackageMutationGuard::assert_plugin_file_allowed( $package->get_identifier() );
 		}
@@ -196,8 +196,8 @@ final readonly class PackageOperationService {
 			: $this->repository( $operation, $this->provider_repository_id_for_edit( $operation, $existing ) );
 		$this->source_guard->assertAllowed( $repository->provider->value, $repository->reference->providerRepositoryId, 'plugin' === $operation->package_type ? 1 : 2, $identifier, $existing->get_source() );
 		$result = 'plugin' === $operation->package_type
-			? $this->plugins->editPlugin( $identifier, $this->edit_input( $operation, $repository, $existing, $release_managed ) )
-			: $this->themes->editTheme( $identifier, $this->edit_input( $operation, $repository, $existing, $release_managed ) );
+			? $this->plugins->edit_plugin( $identifier, $this->edit_input( $operation, $repository, $existing, $release_managed ) )
+			: $this->themes->edit_theme( $identifier, $this->edit_input( $operation, $repository, $existing, $release_managed ) );
 		$result->require_success();
 
 		return array(
@@ -290,8 +290,8 @@ final readonly class PackageOperationService {
 
 	private function find( string $type, string $identifier ): Package {
 		return 'plugin' === $type
-			? $this->plugins->boosterPluginFromFile( $identifier )
-			: $this->themes->boosterThemeFromStylesheet( $identifier );
+			? $this->plugins->booster_plugin_from_file( $identifier )
+			: $this->themes->booster_theme_from_stylesheet( $identifier );
 	}
 
 	private function adopt( string $type, Package $package ): PackageMutationResult {

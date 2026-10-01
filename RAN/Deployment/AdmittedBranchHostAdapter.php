@@ -644,12 +644,12 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	}
 
 	private function installed_package( string $type, string $slug ): Package {
-		return 'plugin' === $type ? $this->plugins->fromSlug( $slug ) : $this->themes->fromSlug( $slug );
+		return 'plugin' === $type ? $this->plugins->from_slug( $slug ) : $this->themes->from_slug( $slug );
 	}
 
 	private function package_by_slug( string $type, string $slug ): Package {
 		$matches = array_filter(
-			'plugin' === $type ? $this->plugins->allDeploymentPlugins() : $this->themes->allDeploymentThemes(),
+			'plugin' === $type ? $this->plugins->all_deployment_plugins() : $this->themes->all_deployment_themes(),
 			static fn ( Package $package ): bool => (string) $package->get_slug() === $slug
 		);
 		if ( 1 !== count( $matches ) ) {
@@ -659,7 +659,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	}
 
 	private function package_from_identifier( string $type, string $identifier ): Package {
-		return 'plugin' === $type ? $this->plugins->boosterPluginFromFile( $identifier ) : $this->themes->boosterThemeFromStylesheet( $identifier );
+		return 'plugin' === $type ? $this->plugins->booster_plugin_from_file( $identifier ) : $this->themes->booster_theme_from_stylesheet( $identifier );
 	}
 
 	private function destination_exists( string $type, string $slug ): bool {

@@ -1474,10 +1474,10 @@ final class OperationPluginRepository extends PluginRepository {
 	public ?Plugin $freshAfterMutation                    = null;
 	public ?PackageMutationResult $adoptionResult         = null;
 	public function __construct( public Plugin $package ) {}
-	public function fromSlug( $slug ) {
+	public function from_slug( $slug ) {
 		$this->requestedSlug = (string) $slug;
 		return $this->package; }
-	public function boosterPluginFromFile( $file ) {
+	public function booster_plugin_from_file( $file ) {
 		return null !== $this->freshAfterMutation && ( null !== $this->stored || array() !== $this->edited )
 			? $this->freshAfterMutation
 			: $this->package; }
@@ -1489,14 +1489,14 @@ final class OperationPluginRepository extends PluginRepository {
 		$this->stored = $plugin;
 		return $this->adoptionResult ?? PackageMutationResult::changed( PackageStorageOperation::INSERT );
 	}
-	public function editPlugin( $file, $input ): PackageMutationResult {
+	public function edit_plugin( $file, $input ): PackageMutationResult {
 		$this->edited = $input;
 		$this->package->set_repository( $input['repository'] );
 		$this->package->set_deployment_policy( DeploymentPolicy::from_database( $input['deployment_policy'] ) );
 		$this->package->set_subdirectory( $input['subdirectory'] );
 		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
 	}
-	public function disablePluginForRemoval( Plugin $plugin ): PackageMutationResult {
+	public function disable_plugin_for_removal( Plugin $plugin ): PackageMutationResult {
 		unset( $plugin );
 		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
 	}
@@ -1507,7 +1507,7 @@ final class OperationPluginRepository extends PluginRepository {
 		$this->unlinked = (string) $file;
 		return PackageMutationResult::changed( PackageStorageOperation::DELETE );
 	}
-	public function isInstalled( string $identifier ): bool {
+	public function is_installed( string $identifier ): bool {
 		unset( $identifier );
 		return $this->installed;
 	}
@@ -1521,10 +1521,10 @@ final class OperationThemeRepository extends ThemeRepository {
 	public ?string $requestedSlug                         = null;
 	public ?Theme $freshAfterMutation                     = null;
 	public function __construct( public Theme $package ) {}
-	public function fromSlug( $slug ) {
+	public function from_slug( $slug ) {
 		$this->requestedSlug = (string) $slug;
 		return $this->package; }
-	public function boosterThemeFromStylesheet( $stylesheet ) {
+	public function booster_theme_from_stylesheet( $stylesheet ) {
 		return null !== $this->freshAfterMutation && ( null !== $this->stored || array() !== $this->edited )
 			? $this->freshAfterMutation
 			: $this->package; }
@@ -1536,14 +1536,14 @@ final class OperationThemeRepository extends ThemeRepository {
 		$this->stored = $theme;
 		return PackageMutationResult::changed( PackageStorageOperation::INSERT );
 	}
-	public function editTheme( $stylesheet, $input ): PackageMutationResult {
+	public function edit_theme( $stylesheet, $input ): PackageMutationResult {
 		$this->edited = $input;
 		$this->package->set_repository( $input['repository'] );
 		$this->package->set_deployment_policy( DeploymentPolicy::from_database( $input['deployment_policy'] ) );
 		$this->package->set_subdirectory( $input['subdirectory'] );
 		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
 	}
-	public function disableThemeForRemoval( Theme $theme ): PackageMutationResult {
+	public function disable_theme_for_removal( Theme $theme ): PackageMutationResult {
 		unset( $theme );
 		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
 	}
@@ -1551,7 +1551,7 @@ final class OperationThemeRepository extends ThemeRepository {
 		$this->unlinked = (string) $stylesheet;
 		return PackageMutationResult::changed( PackageStorageOperation::DELETE );
 	}
-	public function isInstalled( string $identifier ): bool {
+	public function is_installed( string $identifier ): bool {
 		unset( $identifier );
 		return $this->installed;
 	}

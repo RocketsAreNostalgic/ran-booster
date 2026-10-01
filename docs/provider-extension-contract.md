@@ -242,7 +242,7 @@ Provider API 13 identifies the breaking snake_case capability contracts and reta
 check this exact marker before loading their implementation. API-11 and API-12 providers
 must remain unregistered on this host; there is no V2 compatibility shim. The
 registration signature and Add-on API 16 are unchanged. See the
-[coordinated compatibility boundary](provider-release-workflow-api.md#provider-api-12-compatibility-boundary).
+[coordinated compatibility boundary](provider-release-workflow-api.md#provider-api-13-compatibility-boundary).
 The bundled lock selects immutable GitHub Provider `v1.0.0-beta.10`
 (`d39d83747af3109a79e80fd307d50e4fcc34d412`), including the Provider-owned
 helper naming migration and preserved bootstrap record operation projection.

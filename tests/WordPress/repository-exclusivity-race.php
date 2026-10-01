@@ -96,8 +96,8 @@ if ( 'release' === $action ) {
 	$ok = ( new ManagedReleaseStore( $database ) )->transition( 'plugin', $package, PackageSource::BRANCH, 1, PackageSource::RELEASE_ASSET, new ManagedReleaseConfiguration( 'exclusivity-root', 'exclusivity-root.php' ), 1 );
 } else {
 	$wp_theme = wp_get_theme( $theme );
-	$managed = Theme::fromWpThemeObject( $wp_theme );
-	$managed->setRepository( new ManagedRepository( 'gh', 'example/exclusivity-fixture', 'race-' . $run_id, 'main' ) );
+	$managed = Theme::from_wp_theme_object( $wp_theme );
+	$managed->set_repository( new ManagedRepository( 'gh', 'example/exclusivity-fixture', 'race-' . $run_id, 'main' ) );
 	$ok = ( new ThemeRepository() )->adopt( $managed )->is_successful();
 }
 file_put_contents( $result, wp_json_encode( array( 'action' => $action, 'ok' => $ok ) ) );

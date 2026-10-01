@@ -113,7 +113,7 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 
 	public function testItExcludesReleaseManagedPackagesFromRepositoryAndOwnerWebhookAuthority(): void {
 		$package = AuthorityPackage::make( 'plugin/example.php', 'owner/example', 'gh', 'repository-42' );
-		$package->setSource( PackageSource::RELEASE_ASSET, 2 );
+		$package->set_source( PackageSource::RELEASE_ASSET, 2 );
 		$resolver = $this->resolver( array( $package ) );
 
 		foreach ( array( 'repository', 'owner' ) as $scope ) {
@@ -190,16 +190,16 @@ final class AuthorityPackage extends AbstractPackage {
 		?string $authorityId
 	): self {
 		$package = new self( $identifier, $authorityId );
-		$package->setRepository( new ManagedRepository( $provider, $locator, $authorityId ?? 'missing-for-test', 'main' ) );
+		$package->set_repository( new ManagedRepository( $provider, $locator, $authorityId ?? 'missing-for-test', 'main' ) );
 
 		return $package;
 	}
 
-	public function getProviderRepositoryId(): ?string {
+	public function get_provider_repository_id(): ?string {
 		return $this->authorityId;
 	}
 
-	public function getIdentifier(): mixed {
+	public function get_identifier(): mixed {
 		return $this->identifier;
 	}
 }

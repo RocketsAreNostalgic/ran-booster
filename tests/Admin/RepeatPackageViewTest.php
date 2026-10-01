@@ -341,7 +341,7 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertSame( 2, substr_count( $dangerZone, 'name="ran_booster[confirm_package_removal]" value="1" required' ) );
 		self::assertSame( 2, substr_count( $dangerZone, 'disabled data-ran-booster-package-removal-submit' ) );
 		self::assertStringContainsString(
-			'name="ran_booster[' . $packageView->getIdentifierField() . ']" value="' . $package->getIdentifier() . '"',
+			'name="ran_booster[' . $packageView->getIdentifierField() . ']" value="' . $package->get_identifier() . '"',
 			$dangerZone
 		);
 		self::assertMatchesRegularExpression( '/Unlink ' . preg_quote( $type, '/' ) . '\\s*<\\/button>/', $dangerZone );
@@ -589,7 +589,7 @@ final class RepeatPackageViewTest extends TestCase {
 		bool $branchSettingsInactive
 	): void {
 			$package = $this->package( $packageView );
-			$package->setSource( $currentSource, 2 );
+			$package->set_source( $currentSource, 2 );
 
 			$packageProviderSettings = $this->providerSettings( true );
 			$packageSource           = array(
@@ -672,7 +672,7 @@ final class RepeatPackageViewTest extends TestCase {
 	private function package( PackagePagePresenter $packageView ): RepeatPackageViewPackage {
 		$identifier = 'plugin' === $packageView->getType() ? 'example/example.php' : 'example-theme';
 		$package    = new RepeatPackageViewPackage( $identifier );
-		$package->setRepository( new ManagedRepository( 'gh', 'owner/example', 'provider-id', 'main' ) );
+		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'provider-id', 'main' ) );
 
 		return $package;
 	}
@@ -723,7 +723,7 @@ final class RepeatPackageViewPackage extends AbstractPackage {
 		$this->name = 'Example package';
 	}
 
-	public function getIdentifier(): mixed {
+	public function get_identifier(): mixed {
 		return $this->identifier;
 	}
 

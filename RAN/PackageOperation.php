@@ -151,7 +151,7 @@ final readonly class PackageOperation {
 	}
 
 	public static function update_from_saved_package( self $edit, Package $package ): self {
-		$identifier = $package->getIdentifier();
+		$identifier = $package->get_identifier();
 		if ( 'edit' !== $edit->operation
 			|| ! is_string( $identifier )
 			|| '' === $identifier
@@ -164,18 +164,18 @@ final readonly class PackageOperation {
 			'update-' . $edit->package_type,
 			array(
 				'plugin' === $edit->package_type ? 'file' : 'stylesheet' => $identifier,
-				'repository'                      => (string) $package->getRepository(),
-				'expected_provider'               => $package->getProviderCode(),
-				'expected_provider_repository_id' => $package->getProviderRepositoryId(),
-				'expected_repository'             => (string) $package->getRepository(),
-				'expected_branch'                 => (string) $package->getBranch(),
-				'expected_credential_id'          => $package->getCredentialId(),
-				'expected_subdirectory'           => (string) $package->getSubdirectory(),
-				'expected_private'                => (bool) $package->getPrivate(),
-				'expected_package_slug'           => (string) $package->getSlug(),
-				'expected_deployment_policy'      => $package->getDeploymentPolicy()->value,
-				'expected_source'                 => $package->getSource()->value,
-				'expected_source_revision'        => (string) $package->getSourceRevision(),
+				'repository'                      => (string) $package->get_repository(),
+				'expected_provider'               => $package->get_provider_code(),
+				'expected_provider_repository_id' => $package->get_provider_repository_id(),
+				'expected_repository'             => (string) $package->get_repository(),
+				'expected_branch'                 => (string) $package->get_branch(),
+				'expected_credential_id'          => $package->get_credential_id(),
+				'expected_subdirectory'           => (string) $package->get_subdirectory(),
+				'expected_private'                => (bool) $package->get_private(),
+				'expected_package_slug'           => (string) $package->get_slug(),
+				'expected_deployment_policy'      => $package->get_deployment_policy()->value,
+				'expected_source'                 => $package->get_source()->value,
+				'expected_source_revision'        => (string) $package->get_source_revision(),
 			)
 		);
 	}

@@ -135,11 +135,11 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		self::assertNull( $targetKeyStore->load() );
 
 		$managedPackage = $this->createStub( Package::class );
-		$managedPackage->method( 'getIdentifier' )->willReturn( $imported->packages[0]->identifier );
-		$managedPackage->method( 'getDisplayName' )->willReturn( $imported->packages[0]->displayName );
-		$managedPackage->method( 'getProviderCode' )->willReturn( $imported->packages[0]->provider );
-		$managedPackage->method( 'getProviderRepositoryId' )->willReturn( $imported->packages[0]->providerRepositoryId );
-		$managedPackage->method( 'getRepository' )->willReturn(
+		$managedPackage->method( 'get_identifier' )->willReturn( $imported->packages[0]->identifier );
+		$managedPackage->method( 'get_display_name' )->willReturn( $imported->packages[0]->displayName );
+		$managedPackage->method( 'get_provider_code' )->willReturn( $imported->packages[0]->provider );
+		$managedPackage->method( 'get_provider_repository_id' )->willReturn( $imported->packages[0]->providerRepositoryId );
+		$managedPackage->method( 'get_repository' )->willReturn(
 			new ManagedRepository(
 				$imported->packages[0]->provider,
 				$imported->packages[0]->repository,
@@ -149,8 +149,8 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 				'missing-source-profile'
 			)
 		);
-		$managedPackage->method( 'getBranch' )->willReturn( $imported->packages[0]->branch );
-		$managedPackage->method( 'getSubdirectory' )->willReturn( $imported->packages[0]->subdirectory );
+		$managedPackage->method( 'get_branch' )->willReturn( $imported->packages[0]->branch );
+		$managedPackage->method( 'get_subdirectory' )->willReturn( $imported->packages[0]->subdirectory );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
 		$plugins->method( 'isInstalled' )->willReturn( true );
@@ -257,20 +257,20 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 			'second/second.php'   => 'Second',
 		) as $identifier => $displayName ) {
 			$package = $this->createStub( Package::class );
-			$package->method( 'getIdentifier' )->willReturn( $identifier );
-			$package->method( 'getDisplayName' )->willReturn( $displayName );
-			$package->method( 'getSlug' )->willReturn( explode( '/', $identifier, 2 )[0] );
-			$package->method( 'getProviderCode' )->willReturn( 'gh' );
-			$package->method( 'getProviderRepositoryId' )->willReturn( 'repository-id' );
-			$package->method( 'getRepository' )->willReturn(
+			$package->method( 'get_identifier' )->willReturn( $identifier );
+			$package->method( 'get_display_name' )->willReturn( $displayName );
+			$package->method( 'get_slug' )->willReturn( explode( '/', $identifier, 2 )[0] );
+			$package->method( 'get_provider_code' )->willReturn( 'gh' );
+			$package->method( 'get_provider_repository_id' )->willReturn( 'repository-id' );
+			$package->method( 'get_repository' )->willReturn(
 				new ManagedRepository( 'gh', 'owner/repository', 'repository-id', 'main', true, 'source-credential' )
 			);
-			$package->method( 'getBranch' )->willReturn( 'main' );
-			$package->method( 'isPrivate' )->willReturn( true );
-			$package->method( 'getSubdirectory' )->willReturn( null );
-			$package->method( 'getCredentialId' )->willReturn( 'source-credential' );
-			$package->method( 'getSource' )->willReturn( PackageSource::BRANCH );
-			$package->method( 'getSourceRevision' )->willReturn( 1 );
+			$package->method( 'get_branch' )->willReturn( 'main' );
+			$package->method( 'is_private' )->willReturn( true );
+			$package->method( 'get_subdirectory' )->willReturn( null );
+			$package->method( 'get_credential_id' )->willReturn( 'source-credential' );
+			$package->method( 'get_source' )->willReturn( PackageSource::BRANCH );
+			$package->method( 'get_source_revision' )->willReturn( 1 );
 			$packages[ $identifier ] = $package;
 		}
 		$plugins = $this->createStub( PluginRepository::class );

@@ -769,11 +769,11 @@ final class FixedFacadePackage extends AbstractPackage {
 		$this->deploymentPolicy = DeploymentPolicy::MANUAL;
 	}
 
-	public function getIdentifier(): mixed {
+	public function get_identifier(): mixed {
 		return 'plugin/example.php';
 	}
 
-	public function getProviderRepositoryId(): ?string {
+	public function get_provider_repository_id(): ?string {
 		return '101';
 	}
 

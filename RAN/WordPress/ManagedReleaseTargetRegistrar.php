@@ -374,17 +374,17 @@ final class ManagedReleaseTargetRegistrar {
 	 */
 	private function register_packages( string $type, array $packages, array $conflicts = array() ): void {
 		foreach ( $packages as $package ) {
-			if ( ! $package instanceof Package || PackageSource::RELEASE_ASSET !== $package->getSource() ) {
+			if ( ! $package instanceof Package || PackageSource::RELEASE_ASSET !== $package->get_source() ) {
 				continue;
 			}
-			$identifier = (string) $package->getIdentifier();
+			$identifier = (string) $package->get_identifier();
 			$key        = self::key( $type, $identifier );
 			if ( isset( $conflicts[ $key ] ) ) {
 				$this->failures[ $key ] = $conflicts[ $key ];
 
 				continue;
 			}
-			if ( null !== $package->getSubdirectory() ) {
+			if ( null !== $package->get_subdirectory() ) {
 				$this->failures[ $key ] = 'subdirectory_not_supported';
 
 				continue;
@@ -417,19 +417,19 @@ final class ManagedReleaseTargetRegistrar {
 			) as $type => $group
 		) {
 			foreach ( $group as $package ) {
-				if ( ! $package instanceof Package || PackageSource::RELEASE_ASSET !== $package->getSource() ) {
+				if ( ! $package instanceof Package || PackageSource::RELEASE_ASSET !== $package->get_source() ) {
 					continue;
 				}
-				$identifier       = (string) $package->getIdentifier();
+				$identifier       = (string) $package->get_identifier();
 				$key              = self::key( $type, $identifier );
 				$packages[ $key ] = $package;
 			}
 		}
 		foreach ( $packages as $key => $package ) {
 			$type       = str_starts_with( $key, "plugin\0" ) ? 'plugin' : 'theme';
-			$identifier = (string) $package->getIdentifier();
-			$provider   = (string) $package->getProviderCode();
-			$repository = (string) $package->getProviderRepositoryId();
+			$identifier = (string) $package->get_identifier();
+			$provider   = (string) $package->get_provider_code();
+			$repository = (string) $package->get_provider_repository_id();
 			try {
 				$assessment = $this->source_guard->assess(
 					$provider,
@@ -460,9 +460,9 @@ final class ManagedReleaseTargetRegistrar {
 	}
 
 	private function register_package( string $type, Package $package ): RepositoryReleaseNativeTarget {
-		$identifier    = (string) $package->getIdentifier();
+		$identifier    = (string) $package->get_identifier();
 		$configuration = $this->store->configuration( $type, $identifier );
-		$provider_code = $package->getProviderCode();
+		$provider_code = $package->get_provider_code();
 		if ( null === $configuration
 			|| null === $provider_code
 			|| ! $this->providers->isSealed()
@@ -473,12 +473,12 @@ final class ManagedReleaseTargetRegistrar {
 		$metadata_file  = $this->metadata_path( $type, $configuration, $identifier );
 		$target         = $native_targets->createNativeTarget(
 			$type,
-			$package->getRepository()->reference,
+			$package->get_repository()->reference,
 			$metadata_file,
 			$configuration->packageRoot(),
 			$identifier,
 			$configuration->channel(),
-			$package->getDeploymentPolicy()->value
+			$package->get_deployment_policy()->value
 		);
 		if ( ! $target->register() ) {
 			throw new \RuntimeException( 'The managed release target could not be registered.' );
@@ -543,21 +543,21 @@ final class ManagedReleaseTargetRegistrar {
 		$package = 'plugin' === $type
 			? $this->plugins->boosterPluginFromFile( $identifier )
 			: $this->themes->boosterThemeFromStylesheet( $identifier );
-		if ( PackageSource::RELEASE_ASSET !== $package->getSource() ) {
+		if ( PackageSource::RELEASE_ASSET !== $package->get_source() ) {
 			return array(
 				'release'   => false,
 				'authority' => null,
 			);
 		}
-		if ( null !== $package->getSubdirectory() ) {
+		if ( null !== $package->get_subdirectory() ) {
 			return array(
 				'release'   => true,
 				'authority' => null,
 			);
 		}
 		$configuration = $this->store->configuration( $type, $identifier );
-		$repository_id = $package->getProviderRepositoryId();
-		$provider_code = $package->getProviderCode();
+		$repository_id = $package->get_provider_repository_id();
+		$provider_code = $package->get_provider_code();
 		if ( null === $provider_code
 			|| ! is_string( $repository_id )
 			|| '' === $repository_id
@@ -638,8 +638,8 @@ final class ManagedReleaseTargetRegistrar {
 			if ( ! $package instanceof Package ) {
 				continue;
 			}
-			$identifier = (string) $package->getIdentifier();
-			if ( PackageSource::RELEASE_ASSET !== $package->getSource() ) {
+			$identifier = (string) $package->get_identifier();
+			if ( PackageSource::RELEASE_ASSET !== $package->get_source() ) {
 				unset( $transient->response[ $identifier ] );
 
 				continue;
@@ -665,14 +665,14 @@ final class ManagedReleaseTargetRegistrar {
 	/** @return array<string, int|string> */
 	private function authority( Package $package, ManagedReleaseConfiguration $configuration ): array {
 		return array(
-			'provider'               => (string) $package->getProviderCode(),
-			'source_revision'        => $package->getSourceRevision(),
-			'provider_repository_id' => (string) $package->getProviderRepositoryId(),
-			'repository'             => (string) $package->getRepository(),
-			'credential_id'          => $package->getCredentialId(),
-			'private'                => $package->getPrivate() ? 1 : 0,
+			'provider'               => (string) $package->get_provider_code(),
+			'source_revision'        => $package->get_source_revision(),
+			'provider_repository_id' => (string) $package->get_provider_repository_id(),
+			'repository'             => (string) $package->get_repository(),
+			'credential_id'          => $package->get_credential_id(),
+			'private'                => $package->get_private() ? 1 : 0,
 			'configuration'          => $configuration->toJson(),
-			'deployment_policy'      => $package->getDeploymentPolicy()->value,
+			'deployment_policy'      => $package->get_deployment_policy()->value,
 		);
 	}
 

@@ -186,11 +186,11 @@ try {
 
 	$packages      = $container->make( PluginRepository::class );
 	$fixturePlugin = $packages->installedPluginFromFile( $identifier );
-	$fixturePlugin->setRepository( new ManagedRepository( 'gh', 'example/database-smoke', 'database-smoke', 'main' ) );
-	$fixturePlugin->setDeploymentPolicy( DeploymentPolicy::DISABLED );
+	$fixturePlugin->set_repository( new ManagedRepository( 'gh', 'example/database-smoke', 'database-smoke', 'main' ) );
+	$fixturePlugin->set_deployment_policy( DeploymentPolicy::DISABLED );
 	$packages->store( $fixturePlugin )->require_success();
 	$stored = $packages->boosterPluginFromFile( $identifier );
-	if ( DeploymentPolicy::DISABLED !== $stored->getDeploymentPolicy() ) {
+	if ( DeploymentPolicy::DISABLED !== $stored->get_deployment_policy() ) {
 		throw new RuntimeException( 'The database smoke could not verify its package record.' );
 	}
 	$packages->unlink( $identifier )->require_success();

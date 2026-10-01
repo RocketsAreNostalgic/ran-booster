@@ -292,11 +292,11 @@ final readonly class PortabilityApplicationService {
 	): bool {
 		return ! ( ( 'plugin' === $blueprint_package->type && ! $package instanceof Plugin )
 			|| ( 'theme' === $blueprint_package->type && ! $package instanceof Theme )
-			|| PackageSource::BRANCH !== $package->getSource()
+			|| PackageSource::BRANCH !== $package->get_source()
 			|| ! $blueprint_package->sameManagementAs( BlueprintPackage::fromManagedPackage( $blueprint_package->type, $package ) )
-			|| ( $credential_id ?? '' ) !== $package->getCredentialId()
-			|| $repository_private !== (bool) $package->isPrivate()
-			|| DeploymentPolicy::DISABLED !== $package->getDeploymentPolicy() );
+			|| ( $credential_id ?? '' ) !== $package->get_credential_id()
+			|| $repository_private !== (bool) $package->is_private()
+			|| DeploymentPolicy::DISABLED !== $package->get_deployment_policy() );
 	}
 
 	/**

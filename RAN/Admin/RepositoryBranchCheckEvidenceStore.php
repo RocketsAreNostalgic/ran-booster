@@ -199,37 +199,37 @@ class RepositoryBranchCheckEvidenceStore {
 	}
 
 	private function key( string $type, Package $package ): string {
-		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) || ! is_string( $package->getIdentifier() ) ) {
+		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) || ! is_string( $package->get_identifier() ) ) {
 			throw new RuntimeException( 'Booster cannot save repository branch check evidence for this package.' );
 		}
-		return hash( 'sha256', $type . "\\0" . $package->getIdentifier() );
+		return hash( 'sha256', $type . "\\0" . $package->get_identifier() );
 	}
 
 	private function target_fingerprint( Package $package ): string {
-		$reference = $package->getRepository()->reference;
+		$reference = $package->get_repository()->reference;
 		return hash(
 			'sha256',
 			implode(
 				"\\0",
 				array(
-					(string) $package->getSource()->value,
-					(string) $package->getSourceRevision(),
-					(string) $package->getProviderCode(),
+					(string) $package->get_source()->value,
+					(string) $package->get_source_revision(),
+					(string) $package->get_provider_code(),
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
 					(string) $reference->providerRepositoryId,
 					(string) $reference->locator,
-					(string) $package->getBranch(),
+					(string) $package->get_branch(),
 					$reference->private ? '1' : '0',
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
 					(string) $reference->credentialId,
-					(string) $package->getSubdirectory(),
+					(string) $package->get_subdirectory(),
 				)
 			)
 		);
 	}
 
 	private function profile_fingerprint( Package $package, ?string $profile_id ): string {
-		$provider  = (string) $package->getProviderCode();
+		$provider  = (string) $package->get_provider_code();
 		$anonymous = null === $profile_id || '' === $profile_id;
 		$profile   = $anonymous ? 'anonymous:' : 'profile:' . $profile_id;
 		$all       = $this->all();

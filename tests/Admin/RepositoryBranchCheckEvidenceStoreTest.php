@@ -56,7 +56,7 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 		$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
 		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
 		$store->record( 'plugin', $package, 'profile-a', 'verified' );
-		$package->setSource( PackageSource::BRANCH, 2 );
+		$package->set_source( PackageSource::BRANCH, 2 );
 		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
 
 		$store->record( 'plugin', $package, 'profile-a', 'verified' );
@@ -215,7 +215,7 @@ final class BranchEvidencePackage extends AbstractPackage {
 		$this->repository = $repository;
 	}
 
-	public function getIdentifier(): mixed {
+	public function get_identifier(): mixed {
 		return $this->identifier;
 	}
 

@@ -1466,9 +1466,9 @@ final class WebhookManagementControllerTest extends TestCase {
 			throw new \RuntimeException( 'Package return authority did not match.' );
 		}
 		$package = $this->createMock( Package::class );
-		$package->method( 'getSource' )->willReturn( PackageSource::BRANCH );
-		$package->method( 'getProviderCode' )->willReturn( $packages[ $identifier ][0] );
-		$package->method( 'getProviderRepositoryId' )->willReturn( $packages[ $identifier ][1] );
+		$package->method( 'get_source' )->willReturn( PackageSource::BRANCH );
+		$package->method( 'get_provider_code' )->willReturn( $packages[ $identifier ][0] );
+		$package->method( 'get_provider_repository_id' )->willReturn( $packages[ $identifier ][1] );
 
 		return $package;
 	}

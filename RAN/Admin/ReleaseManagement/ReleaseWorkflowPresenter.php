@@ -186,8 +186,8 @@ final class ReleaseWorkflowPresenter {
 		$status             = $single ? $this->request_boundary( fn (): ?ReleaseTrackingStatus => $this->workflow_display_status( $type, $identifier, $revision ), null ) : null;
 		$exact              = $status instanceof ReleaseTrackingStatus
 			&& $this->status_matches_summary( $status, $type, $identifier, (string) ( $summary['source'] ?? '' ), $revision, $repository_id )
-			&& is_object( $package ) && is_callable( array( $package, 'getRepository' ) )
-			&& hash_equals( $repository, (string) $package->getRepository() );
+			&& is_object( $package ) && is_callable( array( $package, 'get_repository' ) )
+			&& hash_equals( $repository, (string) $package->get_repository() );
 		$workflow_available = null !== $this->workflow_provider( $provider_code );
 		$workflow_status    = $exact ? $this->workflow_provider_status( $status ) : null;
 		$matching_result    = $exact && is_array( $result )
@@ -394,9 +394,9 @@ final class ReleaseWorkflowPresenter {
 	}
 
 	private function workflow_source_guard( string $type, string $identifier, object $package ): array {
-		if ( ! is_callable( array( $package, 'getProviderCode' ) )
-			|| ! is_callable( array( $package, 'getProviderRepositoryId' ) )
-			|| ! is_string( $package->getProviderRepositoryId() ) ) {
+		if ( ! is_callable( array( $package, 'get_provider_code' ) )
+			|| ! is_callable( array( $package, 'get_provider_repository_id' ) )
+			|| ! is_string( $package->get_provider_repository_id() ) ) {
 			return array(
 				'allowed'            => false,
 				'code'               => 'repository_source_unavailable',
@@ -408,8 +408,8 @@ final class ReleaseWorkflowPresenter {
 		}
 
 		return $this->repository_source_guard(
-			$package->getProviderCode(),
-			$package->getProviderRepositoryId(),
+			$package->get_provider_code(),
+			$package->get_provider_repository_id(),
 			$type,
 			$identifier,
 			PackageSource::RELEASE_ASSET
@@ -418,17 +418,17 @@ final class ReleaseWorkflowPresenter {
 
 	private function workflow_package( string $type, string $identifier, int $revision ): ?object {
 		$package = $this->local_package( $type, $identifier );
-		return null !== $package && $revision === $package->getSourceRevision()
-			&& is_string( $package->getProviderRepositoryId() ) && '' !== $package->getProviderRepositoryId()
+		return null !== $package && $revision === $package->get_source_revision()
+			&& is_string( $package->get_provider_repository_id() ) && '' !== $package->get_provider_repository_id()
 			? $package : null;
 	}
 	private function package_matches_status( object $package, ReleaseTrackingStatus $status ): bool {
-		return $status->providerRepositoryId() === $package->getProviderRepositoryId()
-			&& $status->sourceRevision() === $package->getSourceRevision();
+		return $status->providerRepositoryId() === $package->get_provider_repository_id()
+			&& $status->sourceRevision() === $package->get_source_revision();
 	}
 	private function anonymous_workflow_inspection_allowed( object $package ): bool {
-		return is_callable( array( $package, 'isPrivate' ) )
-			&& false === $this->request_boundary( fn (): mixed => $package->isPrivate(), null );
+		return is_callable( array( $package, 'is_private' ) )
+			&& false === $this->request_boundary( fn (): mixed => $package->is_private(), null );
 	}
 
 	/**
@@ -451,17 +451,17 @@ final class ReleaseWorkflowPresenter {
 		$repository    = is_string( $row['repository_id'] ?? null ) ? $row['repository_id'] : '';
 		$locator       = is_string( $row['repository'] ?? null ) ? $row['repository'] : '';
 		$exact         = null !== $this->workflow_provider( $provider_code ) && null !== $package && '' !== $repository
-			&& is_callable( array( $package, 'getIdentifier' ) )
-			&& is_callable( array( $package, 'getProviderRepositoryId' ) )
-			&& is_callable( array( $package, 'getRepository' ) )
-			&& is_callable( array( $package, 'getSourceRevision' ) )
-			&& is_string( $package->getIdentifier() )
-			&& hash_equals( $reference, $package->getIdentifier() )
-			&& hash_equals( $provider_code, (string) $package->getProviderCode() )
-			&& is_string( $package->getProviderRepositoryId() )
-			&& hash_equals( $repository, $package->getProviderRepositoryId() )
-			&& 0 === strcasecmp( $locator, (string) $package->getRepository() )
-			&& $summary_revision === $package->getSourceRevision();
+			&& is_callable( array( $package, 'get_identifier' ) )
+			&& is_callable( array( $package, 'get_provider_repository_id' ) )
+			&& is_callable( array( $package, 'get_repository' ) )
+			&& is_callable( array( $package, 'get_source_revision' ) )
+			&& is_string( $package->get_identifier() )
+			&& hash_equals( $reference, $package->get_identifier() )
+			&& hash_equals( $provider_code, (string) $package->get_provider_code() )
+			&& is_string( $package->get_provider_repository_id() )
+			&& hash_equals( $repository, $package->get_provider_repository_id() )
+			&& 0 === strcasecmp( $locator, (string) $package->get_repository() )
+			&& $summary_revision === $package->get_source_revision();
 		if ( $exact ) {
 			$status = $this->request_boundary(
 				fn (): ?ReleaseTrackingStatus => $this->tracking->status( $type, $reference, $summary_revision ),
@@ -584,7 +584,7 @@ final class ReleaseWorkflowPresenter {
 		if ( null === $status || null === $package || ! $this->package_matches_status( $package, $status ) ) {
 			return $this->unavailable_workflow_view( __( 'Booster could not confirm this package. Reload its settings and try again.', 'ran-booster' ) );
 		}
-		$provider_code = (string) $package->getProviderCode();
+		$provider_code = (string) $package->get_provider_code();
 		if ( null === $this->workflow_capability( $provider_code ) ) {
 			return null;
 		}
@@ -833,7 +833,7 @@ final class ReleaseWorkflowPresenter {
 
 	private function workflow_provider_code( ReleaseTrackingStatus $status ): string {
 		$package = $this->workflow_package( $status->type(), $status->identifier(), $status->sourceRevision() );
-		return null !== $package && $this->package_matches_status( $package, $status ) ? (string) $package->getProviderCode() : '';
+		return null !== $package && $this->package_matches_status( $package, $status ) ? (string) $package->get_provider_code() : '';
 	}
 	/** @param array<string,string> $exception_context */
 	private function request_boundary( callable $operation, mixed $failure, array $exception_context = array() ): mixed {

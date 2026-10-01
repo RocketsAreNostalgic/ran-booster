@@ -75,6 +75,21 @@ mixed-case variables are public/promoted DTO contracts requiring a connected
 migration. Registration, security/nonce/capability checks, projection/rendering
 and failure/control ordering are preserved.
 
+The connected public package cohort migrates the `Package` interface and
+`AbstractPackage`, `Plugin` and `Theme` methods, including their factories,
+owned callers, callable checks, fixture overrides and mock method references.
+Method enforcement adds the interface (173 to 174 files); variable enforcement
+remains at 166 files. Public parameter names, properties, persisted keys and
+foreign receiver methods retain their contracts. Direct method callers must use
+the renamed snake_case methods; no legacy method aliases are provided.
+
+Magic property reads retain their existing getter-first behavior through a
+bounded map of the 15 existing getter keys. Case variants, protected-field
+fallback, unknown keys and unrelated subclass getters retain their behavior.
+The fallback rejects newly introduced underscore-prefixed getter aliases, so
+method renaming does not create new magic property names. Existing package
+subclasses must migrate their owned method overrides with the interface.
+
 The private API12 cohort migrates 74 private declarations and their owned calls:
 two in Booster, eight in ProviderRegistry, one in RepositoryReleaseWorkflowStatus,
 26 in ReleaseWorkflowRequestController, nine in ReleaseWorkflowDisplay and 28 in

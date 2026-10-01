@@ -184,7 +184,7 @@ final readonly class BulkPackageActionService {
 				$this->assert_ready(
 					$package,
 					DeploymentPolicy::AUTOMATIC === $policy
-						&& PackageSource::BRANCH === $package->getSource()
+						&& PackageSource::BRANCH === $package->get_source()
 				);
 			}
 			$snapshots[] = $this->snapshot( $package );
@@ -213,11 +213,11 @@ final readonly class BulkPackageActionService {
 				$this->increment( $skipped, $failure->reason );
 				continue;
 			}
-			if ( ! $package->getDeploymentPolicy()->allows_manual_mutation() ) {
+			if ( ! $package->get_deployment_policy()->allows_manual_mutation() ) {
 				$this->increment( $skipped, 'disabled' );
 				continue;
 			}
-			if ( PackageSource::BRANCH !== $package->getSource() ) {
+			if ( PackageSource::BRANCH !== $package->get_source() ) {
 				$this->increment( $skipped, 'release_source' );
 				continue;
 			}
@@ -228,24 +228,24 @@ final readonly class BulkPackageActionService {
 				continue;
 			}
 
-			$provider_code = (string) $package->getProviderCode();
+			$provider_code = (string) $package->get_provider_code();
 			$request       = new DeploymentRequest(
-				(string) $package->getRepository(),
-				'' === $package->getCredentialId() ? null : $package->getCredentialId(),
-				(bool) $package->getPrivate(),
-				(string) $package->getBranch(),
-				(string) $package->getSlug(),
-				is_string( $package->getSubdirectory() ) ? $package->getSubdirectory() : null,
-				$package->getDeploymentPolicy(),
+				(string) $package->get_repository(),
+				'' === $package->get_credential_id() ? null : $package->get_credential_id(),
+				(bool) $package->get_private(),
+				(string) $package->get_branch(),
+				(string) $package->get_slug(),
+				is_string( $package->get_subdirectory() ) ? $package->get_subdirectory() : null,
+				$package->get_deployment_policy(),
 				$user_id > 0 ? $user_id : null
 			);
 			$targets[]     = array(
 				'package_type'            => $action->package_type,
 				'provider'                => $provider_code,
-				'provider_repository_id'  => (string) $package->getProviderRepositoryId(),
+				'provider_repository_id'  => (string) $package->get_provider_repository_id(),
 				'requested_ref'           => $request->configured_branch,
-				'package_source'          => $package->getSource()->value,
-				'package_source_revision' => $package->getSourceRevision(),
+				'package_source'          => $package->get_source()->value,
+				'package_source_revision' => $package->get_source_revision(),
 				'request'                 => $request,
 			);
 		}
@@ -280,8 +280,8 @@ final readonly class BulkPackageActionService {
 	}
 
 	private function assert_ready( Package $package, bool $webhook_required ): void {
-		$provider_code = $package->getProviderCode();
-		if ( null === $provider_code || null === $package->getProviderRepositoryId() ) {
+		$provider_code = $package->get_provider_code();
+		if ( null === $provider_code || null === $package->get_provider_repository_id() ) {
 			throw BulkPackageActionFailure::unavailable_provider();
 		}
 
@@ -299,8 +299,8 @@ final readonly class BulkPackageActionService {
 			}
 		}
 
-		$credential_id = $package->getCredentialId();
-		if ( ( $package->getPrivate() || '' !== $credential_id )
+		$credential_id = $package->get_credential_id();
+		if ( ( $package->get_private() || '' !== $credential_id )
 			&& null === $this->secrets->credentialMaterial( $provider_code, '' === $credential_id ? null : $credential_id ) ) {
 			throw BulkPackageActionFailure::unavailable_credential();
 		}
@@ -309,17 +309,17 @@ final readonly class BulkPackageActionService {
 	/** @return array<string, mixed> */
 	private function snapshot( Package $package ): array {
 		return array(
-			'package'                => (string) $package->getIdentifier(),
-			'repository'             => (string) $package->getRepository(),
-			'branch'                 => (string) $package->getBranch(),
-			'deployment_policy'      => $package->getDeploymentPolicy()->value,
-			'provider'               => (string) $package->getProviderCode(),
-			'provider_repository_id' => (string) $package->getProviderRepositoryId(),
-			'private'                => $package->getPrivate() ? 1 : 0,
-			'credential_id'          => '' === $package->getCredentialId() ? null : $package->getCredentialId(),
-			'subdirectory'           => $package->getSubdirectory(),
-			'source'                 => $package->getSource()->value,
-			'source_revision'        => $package->getSourceRevision(),
+			'package'                => (string) $package->get_identifier(),
+			'repository'             => (string) $package->get_repository(),
+			'branch'                 => (string) $package->get_branch(),
+			'deployment_policy'      => $package->get_deployment_policy()->value,
+			'provider'               => (string) $package->get_provider_code(),
+			'provider_repository_id' => (string) $package->get_provider_repository_id(),
+			'private'                => $package->get_private() ? 1 : 0,
+			'credential_id'          => '' === $package->get_credential_id() ? null : $package->get_credential_id(),
+			'subdirectory'           => $package->get_subdirectory(),
+			'source'                 => $package->get_source()->value,
+			'source_revision'        => $package->get_source_revision(),
 		);
 	}
 

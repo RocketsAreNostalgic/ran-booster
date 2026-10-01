@@ -67,13 +67,13 @@ final readonly class BlueprintPackage {
 	public static function fromManagedPackage( string $type, Package $package ): self {
 		return new self(
 			$type,
-			(string) $package->getIdentifier(),
-			$package->getDisplayName(),
-			(string) $package->getProviderCode(),
-			(string) $package->getProviderRepositoryId(),
-			(string) $package->getRepository(),
-			(string) $package->getBranch(),
-			$package->getSubdirectory()
+			(string) $package->get_identifier(),
+			$package->get_display_name(),
+			(string) $package->get_provider_code(),
+			(string) $package->get_provider_repository_id(),
+			(string) $package->get_repository(),
+			(string) $package->get_branch(),
+			$package->get_subdirectory()
 		);
 	}
 

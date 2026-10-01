@@ -585,18 +585,18 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		PackageSource $source = PackageSource::BRANCH
 	): Package {
 		$package = $this->createStub( Package::class );
-		$package->method( 'getIdentifier' )->willReturn( $identifier );
-		$package->method( 'getDisplayName' )->willReturn( 'example-theme' === $identifier ? 'Example Theme' : 'Plugin Example' );
-		$package->method( 'getSlug' )->willReturn( $slug );
-		$package->method( 'getProviderCode' )->willReturn( 'gh' );
-		$package->method( 'getProviderRepositoryId' )->willReturn( $providerRepositoryId );
-		$package->method( 'getRepository' )->willReturn( new ManagedRepository( 'gh', 'owner/repository', $providerRepositoryId, 'main', $private, $credentialId ) );
-		$package->method( 'getBranch' )->willReturn( 'main' );
-		$package->method( 'isPrivate' )->willReturn( $private );
-		$package->method( 'getSubdirectory' )->willReturn( null );
-		$package->method( 'getCredentialId' )->willReturn( $credentialId );
-		$package->method( 'getSource' )->willReturn( $source );
-		$package->method( 'getSourceRevision' )->willReturn( 1 );
+		$package->method( 'get_identifier' )->willReturn( $identifier );
+		$package->method( 'get_display_name' )->willReturn( 'example-theme' === $identifier ? 'Example Theme' : 'Plugin Example' );
+		$package->method( 'get_slug' )->willReturn( $slug );
+		$package->method( 'get_provider_code' )->willReturn( 'gh' );
+		$package->method( 'get_provider_repository_id' )->willReturn( $providerRepositoryId );
+		$package->method( 'get_repository' )->willReturn( new ManagedRepository( 'gh', 'owner/repository', $providerRepositoryId, 'main', $private, $credentialId ) );
+		$package->method( 'get_branch' )->willReturn( 'main' );
+		$package->method( 'is_private' )->willReturn( $private );
+		$package->method( 'get_subdirectory' )->willReturn( null );
+		$package->method( 'get_credential_id' )->willReturn( $credentialId );
+		$package->method( 'get_source' )->willReturn( $source );
+		$package->method( 'get_source_revision' )->willReturn( 1 );
 
 		return $package;
 	}

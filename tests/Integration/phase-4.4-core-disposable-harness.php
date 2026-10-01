@@ -415,7 +415,7 @@ function phase44_prospective( string $root, string $site, string $type, string $
 	if ( 'success' === $mode ) {
 		$repository = 'plugin' === $type ? $container->make( RAN\Storage\PluginRepository::class ) : $container->make( RAN\Storage\ThemeRepository::class );
 		$package = 'plugin' === $type ? $repository->boosterPluginFromFile( $identifier ) : $repository->boosterThemeFromStylesheet( $identifier );
-		$deploymentPolicy = $package->getDeploymentPolicy()->value;
+		$deploymentPolicy = $package->get_deployment_policy()->value;
 		if ( 'manual' !== $deploymentPolicy ) throw new RuntimeException( 'Prospective adoption did not retain the Manual deployment policy.' );
 	} elseif ( file_exists( $destination ) || is_link( $destination ) ) {
 		throw new RuntimeException( 'Prospective pre-mutation veto created a destination.' );

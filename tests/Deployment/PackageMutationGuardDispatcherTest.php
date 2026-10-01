@@ -201,11 +201,11 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		);
 		$package              = new class( $identifier ) extends AbstractPackage {
 			public function __construct( private readonly string $identifier ) {
-				$this->setInstallationSlug( str_contains( $identifier, '/' ) ? dirname( $identifier ) : $identifier );
-				$this->setRepository( new ManagedRepository( 'fixture', 'owner/repository', 'R_fixture', 'main' ) );
+				$this->set_installation_slug( str_contains( $identifier, '/' ) ? dirname( $identifier ) : $identifier );
+				$this->set_repository( new ManagedRepository( 'fixture', 'owner/repository', 'R_fixture', 'main' ) );
 			}
 
-			public function getIdentifier(): mixed {
+			public function get_identifier(): mixed {
 				return $this->identifier;
 			}
 		};
@@ -221,7 +221,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 				)
 				->willReturnCallback(
 					static function ( array $snapshots, DeploymentPolicy $policy ) use ( $package ): array {
-						$package->setDeploymentPolicy( $policy );
+						$package->set_deployment_policy( $policy );
 
 						return array(
 							'selected'  => count( $snapshots ),
@@ -241,7 +241,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 				)
 				->willReturnCallback(
 					static function ( array $snapshots, DeploymentPolicy $policy ) use ( $package ): array {
-						$package->setDeploymentPolicy( $policy );
+						$package->set_deployment_policy( $policy );
 
 						return array(
 							'selected'  => count( $snapshots ),
@@ -296,7 +296,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			self::assertStringStartsWith( 'nonce-for-', (string) ( $query['_ran_booster_bulk_notice_nonce'] ?? '' ) );
 		}
 
-		self::assertSame( DeploymentPolicy::DISABLED, $package->getDeploymentPolicy() );
+		self::assertSame( DeploymentPolicy::DISABLED, $package->get_deployment_policy() );
 		self::assertSame( array( 'plugin' === $type ? 'update_plugins' : 'update_themes' ), $GLOBALS['ran_booster_test_capability_checks'] );
 		self::assertSame( array( $action ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}

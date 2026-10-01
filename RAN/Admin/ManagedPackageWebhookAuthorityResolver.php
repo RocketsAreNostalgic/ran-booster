@@ -31,14 +31,14 @@ final readonly class ManagedPackageWebhookAuthorityResolver {
 
 		foreach ( array_merge( $this->plugins->allDeploymentPlugins(), $this->themes->allDeploymentThemes() ) as $package ) {
 			if ( ! $package instanceof Package
-				|| PackageSource::BRANCH !== $package->getSource()
-				|| $package->getProviderCode() !== $provider->value
-				|| ! $policy->repositoryTargetMatches( $target, (string) $package->getRepository() )
+				|| PackageSource::BRANCH !== $package->get_source()
+				|| $package->get_provider_code() !== $provider->value
+				|| ! $policy->repositoryTargetMatches( $target, (string) $package->get_repository() )
 			) {
 				continue;
 			}
 
-			$authorityId = $package->getProviderRepositoryId();
+			$authorityId = $package->get_provider_repository_id();
 			if ( ! is_string( $authorityId ) || '' === trim( $authorityId ) ) {
 				throw new CredentialRequestException(
 					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception remains a plain administrator message.
@@ -66,12 +66,12 @@ final readonly class ManagedPackageWebhookAuthorityResolver {
 		$owner = strtolower( trim( $owner, " \t\n\r\0\x0B/" ) );
 		foreach ( array_merge( $this->plugins->allDeploymentPlugins(), $this->themes->allDeploymentThemes() ) as $package ) {
 			if ( ! $package instanceof Package
-				|| PackageSource::BRANCH !== $package->getSource()
-				|| $package->getProviderCode() !== $provider->value ) {
+				|| PackageSource::BRANCH !== $package->get_source()
+				|| $package->get_provider_code() !== $provider->value ) {
 				continue;
 			}
 
-			$repository = trim( (string) $package->getRepository(), " \t\n\r\0\x0B/" );
+			$repository = trim( (string) $package->get_repository(), " \t\n\r\0\x0B/" );
 			$parts      = explode( '/', $repository, 2 );
 			if ( 2 === count( $parts )
 				&& strtolower( $parts[0] ) === $owner
@@ -94,11 +94,11 @@ final readonly class ManagedPackageWebhookAuthorityResolver {
 			return null;
 		}
 
-		if ( ! $package instanceof Package || PackageSource::BRANCH !== $package->getSource() ) {
+		if ( ! $package instanceof Package || PackageSource::BRANCH !== $package->get_source() ) {
 			return null;
 		}
-		$providerCode = $package->getProviderCode();
-		$repositoryId = $package->getProviderRepositoryId();
+		$providerCode = $package->get_provider_code();
+		$repositoryId = $package->get_provider_repository_id();
 		if ( ! is_string( $providerCode ) || ! is_string( $repositoryId ) || '' === trim( $providerCode ) || '' === trim( $repositoryId ) ) {
 			return null;
 		}

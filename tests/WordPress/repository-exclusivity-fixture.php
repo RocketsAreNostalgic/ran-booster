@@ -83,9 +83,9 @@ $plugin_repository = $container->make( PluginRepository::class );
 $deploy            = $container->make( DeploymentCoordinator::class );
 $repository        = new ManagedRepository( 'gh', 'RocketsAreNostalgic/booster-fixture-plugin', '1315521150', 'main' );
 $root              = $plugin_repository->installedPluginFromFile( $root_id );
-$root->setRepository( $repository );
-$root->setDeploymentPolicy( DeploymentPolicy::DISABLED );
-$root->setSource( PackageSource::RELEASE_ASSET, 1 );
+$root->set_repository( $repository );
+$root->set_deployment_policy( DeploymentPolicy::DISABLED );
+$root->set_source( PackageSource::RELEASE_ASSET, 1 );
 $adoption = $plugin_repository->adoptRelease( $root, new ManagedReleaseConfiguration( basename( $root_dir ), 'booster-fixture-plugin.php' ), 1 );
 $assert( $adoption->is_successful(), 'root Release adoption succeeds: ' . $adoption->get_diagnostic_id() );
 
@@ -113,11 +113,11 @@ $after_attempts = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i
 $assert( $blocked && $before_attempts === $after_attempts && $root_hash === hash_file( 'sha256', $root_dir . '/booster-fixture-plugin.php' ), 'Release blocks nested Branch install before attempts or filesystem mutation' );
 
 $nested = $plugin_repository->installedPluginFromFile( $nested_id );
-$nested->setRepository( $repository );
-$nested->setDeploymentPolicy( DeploymentPolicy::DISABLED );
+$nested->set_repository( $repository );
+$nested->set_deployment_policy( DeploymentPolicy::DISABLED );
 $assert( ! $plugin_repository->adopt( $nested )->is_successful(), 'installed nested Branch adoption is blocked by root Release' );
 $assert( $plugin_repository->unlink( $root_id )->is_successful(), 'ordinary unlink removes root Release record' );
-$root->setSource( PackageSource::BRANCH, 1 );
+$root->set_source( PackageSource::BRANCH, 1 );
 $assert( $plugin_repository->adopt( $root )->is_successful() && $plugin_repository->adopt( $nested )->is_successful(), 'root and nested Branch adoption both succeed' );
 $store = new ManagedReleaseStore();
 $assert( ! $store->transition( 'plugin', $root_id, PackageSource::BRANCH, 1, PackageSource::RELEASE_ASSET, new ManagedReleaseConfiguration( basename( $root_dir ), 'booster-fixture-plugin.php' ), 1 ), 'shared Branch repository refuses root Release transition' );

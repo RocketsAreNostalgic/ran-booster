@@ -405,7 +405,7 @@ class Dashboard {
 					'identifier' => $blueprint->identifier,
 					'type'       => $blueprint->type,
 				);
-				$credential_id = $package->getCredentialId();
+				$credential_id = $package->get_credential_id();
 				if ( '' !== $blueprint->provider && '' !== $credential_id ) {
 					$credentials[ $blueprint->provider ][ $credential_id ][] = array(
 						'index' => $index,
@@ -513,7 +513,7 @@ class Dashboard {
 					: null;
 				$edit_data                                  = $package_view->edit(
 					$package,
-					$this->provider_settings->buildExistingPackageForm( (string) ( $package->getProviderCode() ?? '' ) ),
+					$this->provider_settings->buildExistingPackageForm( (string) ( $package->get_provider_code() ?? '' ) ),
 					$this->provider_settings->buildPackageBranchReadiness( $package ),
 					$this->requested_package_source_view(),
 					$this->requested_advanced_settings_open()
@@ -584,9 +584,9 @@ class Dashboard {
 				'event'        => 'repository_branch_checked',
 				'operation'    => 'repository_branch_check',
 				'outcome_code' => $outcome,
-				'package_slug' => (string) $package->getSlug(),
-				'provider'     => (string) $package->getProviderCode(),
-				'source'       => $package->getSource()->value,
+				'package_slug' => (string) $package->get_slug(),
+				'provider'     => (string) $package->get_provider_code(),
+				'source'       => $package->get_source()->value,
 				'step'         => 'package_branch_check',
 			)
 		);

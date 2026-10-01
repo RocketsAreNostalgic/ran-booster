@@ -178,7 +178,7 @@ final class PackagePagePresenter {
 			if ( ! $package instanceof Package ) {
 				continue;
 			}
-			$code = (string) ( $package->getProviderCode() ?? '' );
+			$code = (string) ( $package->get_provider_code() ?? '' );
 			if ( '' !== $code && ! isset( $options[ $code ] ) ) {
 				$options[ $code ] = array(
 					'code'  => $code,
@@ -210,14 +210,14 @@ final class PackagePagePresenter {
 						return false;
 					}
 
-					$provider = (string) ( $package->getProviderCode() ?? '' );
+					$provider = (string) ( $package->get_provider_code() ?? '' );
 					if ( '' !== $state['provider'] && $provider !== $state['provider'] ) {
 						return false;
 					}
-					if ( '' !== $state['source'] && $package->getSource()->value !== $state['source'] ) {
+					if ( '' !== $state['source'] && $package->get_source()->value !== $state['source'] ) {
 						return false;
 					}
-					if ( '' !== $state['policy'] && $package->getDeploymentPolicy()->value !== $state['policy'] ) {
+					if ( '' !== $state['policy'] && $package->get_deployment_policy()->value !== $state['policy'] ) {
 						return false;
 					}
 					if ( '' === $search ) {
@@ -229,12 +229,12 @@ final class PackagePagePresenter {
 							implode(
 								"\n",
 								array(
-									$package->getDisplayName(),
-									(string) $package->getIdentifier(),
-									(string) $package->getRepository(),
+									$package->get_display_name(),
+									(string) $package->get_identifier(),
+									(string) $package->get_repository(),
 									$provider,
 									$provider_labels[ $provider ] ?? '',
-									(string) $package->getBranch(),
+									(string) $package->get_branch(),
 								)
 							)
 						),
@@ -305,7 +305,7 @@ final class PackagePagePresenter {
 			$this->log_failure( 'package source choices unavailable', 'package_source_choices', $failure );
 		}
 
-		$current  = null === $package ? PackageSource::BRANCH->value : $package->getSource()->value;
+		$current  = null === $package ? PackageSource::BRANCH->value : $package->get_source()->value;
 		$selected = null === $package ? PackageSource::BRANCH->value : $current;
 		if ( null !== $package
 			&& isset( $choices[ $requested ] )
@@ -372,8 +372,8 @@ final class PackagePagePresenter {
 				/* translators: 1: source label, 2: branch. */
 				__( '%1$s · %2$s', 'ran-booster' ),
 				$source_label,
-				null !== $package && '' !== (string) $package->getBranch()
-					? (string) $package->getBranch()
+				null !== $package && '' !== (string) $package->get_branch()
+					? (string) $package->get_branch()
 					: __( 'provider default', 'ran-booster' )
 			)
 			: $source_label;
@@ -410,7 +410,7 @@ final class PackagePagePresenter {
 		?AdminPackageProjection $projection
 	): array {
 		$source  = 'edit' === $mode && null !== $package
-			? $package->getSource()->value
+			? $package->get_source()->value
 			: $selected;
 		$heading = PackageSource::BRANCH->value === $source
 			? __( 'Branch', 'ran-booster' )
@@ -652,21 +652,21 @@ final class PackagePagePresenter {
 	}
 
 	private function projection( Package $package ): AdminPackageProjection {
-		$subdirectory = is_string( $package->getSubdirectory() )
-			? trim( $package->getSubdirectory() )
+		$subdirectory = is_string( $package->get_subdirectory() )
+			? trim( $package->get_subdirectory() )
 			: '';
 		return new AdminPackageProjection(
 			$this->type,
-			(string) $package->getIdentifier(),
-			$package->getDisplayName(),
-			(string) ( $package->getProviderCode() ?? '' ),
-			$package->getSource()->value,
-			$package->getSourceRevision(),
-			$package->getDeploymentPolicy()->value,
+			(string) $package->get_identifier(),
+			$package->get_display_name(),
+			(string) ( $package->get_provider_code() ?? '' ),
+			$package->get_source()->value,
+			$package->get_source_revision(),
+			$package->get_deployment_policy()->value,
 			add_query_arg(
 				array(
 					'page'    => $this->pageSlug, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor property preserves its named parameter contract.
-					'package' => (string) $package->getIdentifier(),
+					'package' => (string) $package->get_identifier(),
 				),
 				$this->getAdminUrl()
 			),

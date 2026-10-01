@@ -102,7 +102,7 @@ final class ReleaseWorkflowRequestController {
 					break;
 				}
 				$package = $this->workflow_package( $type, $identifier, $revision );
-				if ( null === $package || $provider_code !== (string) $package->getProviderCode() || $repository_id !== $package->getProviderRepositoryId() ) {
+				if ( null === $package || $provider_code !== (string) $package->get_provider_code() || $repository_id !== $package->get_provider_repository_id() ) {
 					$outcome['diagnostic_code'] = 'package_source_changed';
 					break;
 				}
@@ -243,15 +243,15 @@ final class ReleaseWorkflowRequestController {
 			'owner_type'         => null,
 			'owner_package'      => null,
 		);
-		if ( ! is_callable( array( $package, 'getProviderCode' ) )
-			|| ! is_callable( array( $package, 'getProviderRepositoryId' ) )
-			|| ! is_string( $package->getProviderRepositoryId() ) ) {
+		if ( ! is_callable( array( $package, 'get_provider_code' ) )
+			|| ! is_callable( array( $package, 'get_provider_repository_id' ) )
+			|| ! is_string( $package->get_provider_repository_id() ) ) {
 			return $failure;
 		}
 		$type_id = 'plugin' === $type ? 1 : ( 'theme' === $type ? 2 : 0 );
 		return $this->request_boundary(
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the property promoted by the public constructor named-parameter contract.
-			fn (): array => $this->sourceGuard->assess( $package->getProviderCode(), $package->getProviderRepositoryId(), $type_id, $identifier, PackageSource::RELEASE_ASSET ),
+			fn (): array => $this->sourceGuard->assess( $package->get_provider_code(), $package->get_provider_repository_id(), $type_id, $identifier, PackageSource::RELEASE_ASSET ),
 			$failure
 		);
 	}
@@ -340,18 +340,18 @@ final class ReleaseWorkflowRequestController {
 			fn (): object => 'plugin' === $type ? $this->plugins->boosterPluginFromFile( $identifier ) : $this->themes->boosterThemeFromStylesheet( $identifier ),
 			null
 		);
-		return null !== $package && $revision === $package->getSourceRevision()
-			&& is_string( $package->getProviderRepositoryId() ) && '' !== $package->getProviderRepositoryId() ? $package : null;
+		return null !== $package && $revision === $package->get_source_revision()
+			&& is_string( $package->get_provider_repository_id() ) && '' !== $package->get_provider_repository_id() ? $package : null;
 	}
 
 	private function package_matches_status( object $package, ReleaseTrackingStatus $status ): bool {
-		return $status->providerRepositoryId() === $package->getProviderRepositoryId()
-			&& $status->sourceRevision() === $package->getSourceRevision();
+		return $status->providerRepositoryId() === $package->get_provider_repository_id()
+			&& $status->sourceRevision() === $package->get_source_revision();
 	}
 
 	private function anonymous_workflow_inspection_allowed( object $package ): bool {
-		return is_callable( array( $package, 'isPrivate' ) )
-			&& false === $this->request_boundary( fn (): mixed => $package->isPrivate(), null );
+		return is_callable( array( $package, 'is_private' ) )
+			&& false === $this->request_boundary( fn (): mixed => $package->is_private(), null );
 	}
 
 	private function record_matches_package_status( ?\RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus $record, ReleaseTrackingStatus $status ): bool {
@@ -394,7 +394,7 @@ final class ReleaseWorkflowRequestController {
 
 	private function workflow_provider_code( ReleaseTrackingStatus $status ): string {
 		$package = $this->workflow_package( $status->type(), $status->identifier(), $status->sourceRevision() );
-		return null !== $package && $this->package_matches_status( $package, $status ) ? (string) $package->getProviderCode() : '';
+		return null !== $package && $this->package_matches_status( $package, $status ) ? (string) $package->get_provider_code() : '';
 	}
 
 	/** @param array<string,string> $exception_context */

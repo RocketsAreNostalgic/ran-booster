@@ -54,7 +54,7 @@ class ThemeRepository extends AbstractPackageRepository {
 			throw $this->not_found_exception();
 		}
 
-		return Theme::fromWpThemeObject( $wp_theme );
+		return Theme::from_wp_theme_object( $wp_theme );
 	}
 
 	/**
@@ -114,7 +114,7 @@ class ThemeRepository extends AbstractPackageRepository {
 	}
 
 	protected function package_from_installation( string $identifier ): Package {
-		return Theme::fromWpThemeObject( wp_get_theme( $identifier ) );
+		return Theme::from_wp_theme_object( wp_get_theme( $identifier ) );
 	}
 
 	protected function not_found_exception(): ThemeNotFound {

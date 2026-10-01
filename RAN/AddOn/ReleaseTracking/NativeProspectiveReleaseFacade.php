@@ -361,16 +361,16 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 							array( 'identifier' => $identifier )
 						);
 					} elseif ( null !== $package ) {
-						$actual_version = $package->getVersion();
+						$actual_version = $package->get_version();
 						if ( ! $result->is_successful()
 							|| ! hash_equals( $release->version(), $actual_version )
 							|| ! $activation_unchanged ) {
 							$outcome = $this->installed_but_unmanaged( $identifier, $actual_version );
 						} else {
-							$package->setRepository( $repository );
-							$package->setSubdirectory( null );
-							$package->setDeploymentPolicy( DeploymentPolicy::MANUAL );
-							$package->setSource( PackageSource::RELEASE_ASSET, 1 );
+							$package->set_repository( $repository );
+							$package->set_subdirectory( null );
+							$package->set_deployment_policy( DeploymentPolicy::MANUAL );
+							$package->set_source( PackageSource::RELEASE_ASSET, 1 );
 							$adoption = $this->adopt_release(
 								$type,
 								$package,

@@ -268,11 +268,11 @@ final readonly class ProviderSettingsPresenter {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function buildPackageBranchReadiness( Package $package ): ?array {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		if ( ! in_array( $package->getSource(), array( PackageSource::BRANCH, PackageSource::RELEASE_ASSET ), true ) || null === $this->webhookAssistance ) {
+		if ( ! in_array( $package->get_source(), array( PackageSource::BRANCH, PackageSource::RELEASE_ASSET ), true ) || null === $this->webhookAssistance ) {
 			return null;
 		}
 
-		$provider_code = (string) ( $package->getProviderCode() ?? '' );
+		$provider_code = (string) ( $package->get_provider_code() ?? '' );
 		if ( '' === $provider_code ) {
 			return null;
 		}
@@ -286,7 +286,7 @@ final readonly class ProviderSettingsPresenter {
 			if ( null === $readiness ) {
 				return null;
 			}
-			if ( PackageSource::RELEASE_ASSET === $package->getSource() ) {
+			if ( PackageSource::RELEASE_ASSET === $package->get_source() ) {
 				$retention = $this->buildPackageWebhookRetention( $package );
 				if ( null === $retention ) {
 					return null;
@@ -306,8 +306,8 @@ final readonly class ProviderSettingsPresenter {
 				);
 			}
 
-			$repository_id = $package->getProviderRepositoryId();
-			$repository    = strtolower( trim( (string) $package->getRepository(), '/' ) );
+			$repository_id = $package->get_provider_repository_id();
+			$repository    = strtolower( trim( (string) $package->get_repository(), '/' ) );
 			$match         = null;
 			foreach ( $readiness['repositories'] as $candidate ) {
 				if ( ! is_array( $candidate ) ) {
@@ -330,7 +330,7 @@ final readonly class ProviderSettingsPresenter {
 				'repository'           => $match,
 				'webhook_settings_url' => (string) ( $this->repository_webhook_settings_url(
 					$provider,
-					(string) $package->getRepository()
+					(string) $package->get_repository()
 				) ?? '' ),
 			);
 		} catch ( Throwable ) {
@@ -341,7 +341,7 @@ final readonly class ProviderSettingsPresenter {
 	/** @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable' */
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function checkPackageRepositoryBranch( string $type, Package $package ): string {
-		if ( PackageSource::BRANCH !== $package->getSource() ) {
+		if ( PackageSource::BRANCH !== $package->get_source() ) {
 			return 'unable_to_check';
 		}
 		try {
@@ -361,7 +361,7 @@ final readonly class ProviderSettingsPresenter {
 		$profile_fingerprint = $this->branch_check_evidence->profile_fingerprint_for( $package, $profile_id );
 
 		try {
-			$provider = $this->providers->get( (string) $package->getProviderCode() );
+			$provider = $this->providers->get( (string) $package->get_provider_code() );
 		} catch ( UnknownProvider ) {
 			return $this->record_package_repository_branch_check( $type, $package, $profile_id, 'provider_unavailable', $profile_fingerprint );
 		} catch ( Throwable ) {
@@ -371,7 +371,7 @@ final readonly class ProviderSettingsPresenter {
 		$archive = null;
 		$result  = 'unable_to_check';
 		try {
-			$repository = $package->getRepository()->reference;
+			$repository = $package->get_repository()->reference;
 			if ( ! $repository->private ) {
 				$credential_id = $provider instanceof CredentialedPublicRepositoryBrowser
 					&& $provider->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile
@@ -387,13 +387,13 @@ final readonly class ProviderSettingsPresenter {
 				);
 			}
 
-			$archive      = $provider->prepareArchive( new ArchiveRequest( $repository, (string) $package->getBranch() ) );
+			$archive      = $provider->prepareArchive( new ArchiveRequest( $repository, (string) $package->get_branch() ) );
 			$resolved_ref = $archive->getResolvedRef();
 			if ( '' !== trim( $resolved_ref )
 				&& strlen( $resolved_ref ) <= 191
 				&& ! preg_match( '/[\x00-\x1F\x7F]/', $resolved_ref )
 			) {
-				$subdirectory = $package->getSubdirectory();
+				$subdirectory = $package->get_subdirectory();
 				if ( is_string( $subdirectory ) && '' !== $subdirectory
 					&& $provider instanceof RepositoryPathInspector
 				) {
@@ -461,10 +461,10 @@ final readonly class ProviderSettingsPresenter {
 	}
 
 	private function effective_branch_check_profile( Package $package ): ?string {
-		if ( $package->isPrivate() ) {
-			return $package->getCredentialId();
+		if ( $package->is_private() ) {
+			return $package->get_credential_id();
 		}
-		return $this->public_lookup_profiles->get( (string) $package->getProviderCode() );
+		return $this->public_lookup_profiles->get( (string) $package->get_provider_code() );
 	}
 
 	/**
@@ -484,13 +484,13 @@ final readonly class ProviderSettingsPresenter {
 	 */
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the public callback and caller contract.
 	public function buildPackageWebhookRetention( Package $package ): ?array {
-		if ( PackageSource::RELEASE_ASSET !== $package->getSource() ) {
+		if ( PackageSource::RELEASE_ASSET !== $package->get_source() ) {
 			return null;
 		}
 
-		$provider_code = (string) ( $package->getProviderCode() ?? '' );
-		$repository_id = (string) ( $package->getProviderRepositoryId() ?? '' );
-		$repository    = trim( (string) $package->getRepository() );
+		$provider_code = (string) ( $package->get_provider_code() ?? '' );
+		$repository_id = (string) ( $package->get_provider_repository_id() ?? '' );
+		$repository    = trim( (string) $package->get_repository() );
 		if ( '' === $provider_code || '' === $repository_id || '' === $repository ) {
 			return null;
 		}
@@ -866,14 +866,14 @@ final readonly class ProviderSettingsPresenter {
 		$locators_by_repository_id = array();
 		foreach ( $packages as $entry ) {
 			$package = $entry['package'];
-			$source  = $package->getSource();
-			if ( $package->getProviderCode() !== $provider
+			$source  = $package->get_source();
+			if ( $package->get_provider_code() !== $provider
 				|| ( $branch_only && PackageSource::BRANCH !== $source ) ) {
 				continue;
 			}
 
-			$target        = trim( (string) $package->getRepository() );
-			$repository_id = trim( (string) ( $package->getProviderRepositoryId() ?? '' ) );
+			$target        = trim( (string) $package->get_repository() );
+			$repository_id = trim( (string) ( $package->get_provider_repository_id() ?? '' ) );
 			if ( '' === $target ) {
 				continue;
 			}
@@ -886,14 +886,14 @@ final readonly class ProviderSettingsPresenter {
 
 		foreach ( $packages as $entry ) {
 			$package = $entry['package'];
-			$source  = $package->getSource();
-			if ( $package->getProviderCode() !== $provider
+			$source  = $package->get_source();
+			if ( $package->get_provider_code() !== $provider
 				|| ( $branch_only && PackageSource::BRANCH !== $source ) ) {
 				continue;
 			}
 
-			$target        = trim( (string) $package->getRepository() );
-			$repository_id = trim( (string) ( $package->getProviderRepositoryId() ?? '' ) );
+			$target        = trim( (string) $package->get_repository() );
+			$repository_id = trim( (string) ( $package->get_provider_repository_id() ?? '' ) );
 			if ( '' === $target ) {
 				continue;
 			}
@@ -906,7 +906,7 @@ final readonly class ProviderSettingsPresenter {
 			// Provider IDs, not mutable locators or package source, are the live-row
 			// authority. An absent ID stays visible for review but is never operable.
 			$key   = '' === $repository_id
-				? 'historical:' . hash( 'sha256', $target . '|' . $source->value . '|' . (string) $package->getIdentifier() )
+				? 'historical:' . hash( 'sha256', $target . '|' . $source->value . '|' . (string) $package->get_identifier() )
 				: $repository_id;
 			$parts = explode( '/', trim( $target, '/' ), 2 );
 			if ( 2 === count( $parts ) && '' !== trim( $parts[0] ) ) {
@@ -947,17 +947,17 @@ final readonly class ProviderSettingsPresenter {
 
 			$repositories[ $key ]['sources'][ $source->value ] = true;
 			++$repositories[ $key ]['package_count'];
-			$repositories[ $key ]['package_references'][] = (string) $package->getIdentifier();
+			$repositories[ $key ]['package_references'][] = (string) $package->get_identifier();
 			if ( PackageSource::BRANCH === $source ) {
-				$repositories[ $key ]['branch_package_references'][] = (string) $package->getIdentifier();
-				if ( 'automatic' === $package->getDeploymentPolicy()->value ) {
+				$repositories[ $key ]['branch_package_references'][] = (string) $package->get_identifier();
+				if ( 'automatic' === $package->get_deployment_policy()->value ) {
 					$repositories[ $key ]['has_automatic_branch_consumer'] = true;
 				}
 			}
 			if ( self::MAX_REPOSITORY_PACKAGE_SUMMARIES > count( $repositories[ $key ]['package_summaries'] ) ) {
 				$repositories[ $key ]['package_summaries'][] = $this->package_summary( $package, $source, $entry['type'] );
 			}
-			$policy = $package->getDeploymentPolicy()->value;
+			$policy = $package->get_deployment_policy()->value;
 			++$repositories[ $key ]['deployment_policies'][ $policy ];
 			if ( 'automatic' === $policy ) {
 				++$repositories[ $key ]['automatic_count'];
@@ -988,20 +988,20 @@ final readonly class ProviderSettingsPresenter {
 
 	/** @return array{type:string,identifier:string,display_name:string,settings_url:string,source:string,source_revision:int,branch:string,subdirectory:string,deployment_policy:string} */
 	private function package_summary( Package $package, PackageSource $source, string $type ): array {
-		$identifier = (string) $package->getIdentifier();
+		$identifier = (string) $package->get_identifier();
 		$page       = 'theme' === $type ? 'ran-booster-themes' : 'ran-booster-plugins';
 
 		return array(
 			'type'              => $type,
 			'identifier'        => $identifier,
-			'display_name'      => $package->getDisplayName(),
+			'display_name'      => $package->get_display_name(),
 			'settings_url'      => ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) )
 				. '?page=' . $page . '&package=' . rawurlencode( $identifier ),
 			'source'            => $source->value,
-			'source_revision'   => $package->getSourceRevision(),
-			'branch'            => (string) $package->getBranch(),
-			'subdirectory'      => (string) $package->getSubdirectory(),
-			'deployment_policy' => $package->getDeploymentPolicy()->value,
+			'source_revision'   => $package->get_source_revision(),
+			'branch'            => (string) $package->get_branch(),
+			'subdirectory'      => (string) $package->get_subdirectory(),
+			'deployment_policy' => $package->get_deployment_policy()->value,
 		);
 	}
 
@@ -1093,15 +1093,15 @@ final readonly class ProviderSettingsPresenter {
 		$references = array();
 		foreach ( $packages as $package ) {
 			if ( ! $package instanceof Package
-				|| PackageSource::BRANCH !== $package->getSource()
-				|| $provider_code !== $package->getProviderCode() ) {
+				|| PackageSource::BRANCH !== $package->get_source()
+				|| $provider_code !== $package->get_provider_code() ) {
 				continue;
 			}
-			$package_id = (string) ( $package->getProviderRepositoryId() ?? '' );
+			$package_id = (string) ( $package->get_provider_repository_id() ?? '' );
 			if ( ( '' !== $package_id && hash_equals( $repository_id, $package_id ) )
-				|| 0 === strcasecmp( trim( $repository, '/' ), trim( (string) $package->getRepository(), '/' ) )
+				|| 0 === strcasecmp( trim( $repository, '/' ), trim( (string) $package->get_repository(), '/' ) )
 			) {
-				$references[] = (string) $package->getIdentifier();
+				$references[] = (string) $package->get_identifier();
 			}
 		}
 

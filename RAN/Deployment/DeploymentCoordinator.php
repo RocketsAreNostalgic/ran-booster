@@ -105,7 +105,7 @@ class DeploymentCoordinator {
 			$package    = $this->package_from_identifier( $type, $identifier );
 			$this->assert_submitted_snapshot( $command, $package );
 			$this->assert_branch_source( $package );
-			if ( ! $package->getDeploymentPolicy()->allows_manual_mutation() ) {
+			if ( ! $package->get_deployment_policy()->allows_manual_mutation() ) {
 				throw new RuntimeException( 'The package is disabled for Booster deployments.' );
 			}
 			$request       = $this->request_from_package( $package, $user_id > 0 ? $user_id : null );
@@ -113,12 +113,12 @@ class DeploymentCoordinator {
 			$attempt       = $this->attempts->admitAndClaimManual(
 				'update',
 				$type,
-				(string) $package->getProviderCode(),
-				(string) $package->getProviderRepositoryId(),
+				(string) $package->get_provider_code(),
+				(string) $package->get_provider_repository_id(),
 				$request,
 				$requested_ref,
-				$package->getSource()->value,
-				$package->getSourceRevision()
+				$package->get_source()->value,
+				$package->get_source_revision()
 			);
 		} else {
 			throw new RuntimeException( 'The package request is not a deployment.' );
@@ -155,17 +155,17 @@ class DeploymentCoordinator {
 	private function assert_submitted_snapshot( PackageOperation $command, Package $package ): void {
 		$expected = $command->expected_package;
 		if ( ! $command->has_expected_package()
-			|| $package->getProviderCode() !== $expected['provider']
-			|| ! hash_equals( (string) $package->getProviderRepositoryId(), (string) $expected['provider_repository_id'] )
-			|| ! hash_equals( (string) $package->getRepository(), (string) $expected['repository'] )
-			|| ! hash_equals( (string) $package->getBranch(), (string) $expected['branch'] )
-			|| ! hash_equals( $package->getCredentialId(), (string) $expected['credential_id'] )
-			|| ! hash_equals( (string) $package->getSubdirectory(), (string) $expected['subdirectory'] )
-			|| (bool) $package->getPrivate() !== $expected['private']
-			|| ! hash_equals( (string) $package->getSlug(), (string) $expected['package_slug'] )
-			|| $package->getDeploymentPolicy() !== $expected['deployment_policy']
-			|| $package->getSource() !== $expected['source']
-			|| $package->getSourceRevision() !== $expected['source_revision'] ) {
+			|| $package->get_provider_code() !== $expected['provider']
+			|| ! hash_equals( (string) $package->get_provider_repository_id(), (string) $expected['provider_repository_id'] )
+			|| ! hash_equals( (string) $package->get_repository(), (string) $expected['repository'] )
+			|| ! hash_equals( (string) $package->get_branch(), (string) $expected['branch'] )
+			|| ! hash_equals( $package->get_credential_id(), (string) $expected['credential_id'] )
+			|| ! hash_equals( (string) $package->get_subdirectory(), (string) $expected['subdirectory'] )
+			|| (bool) $package->get_private() !== $expected['private']
+			|| ! hash_equals( (string) $package->get_slug(), (string) $expected['package_slug'] )
+			|| $package->get_deployment_policy() !== $expected['deployment_policy']
+			|| $package->get_source() !== $expected['source']
+			|| $package->get_source_revision() !== $expected['source_revision'] ) {
 			throw new RuntimeException( 'The managed package changed after this form was opened.' );
 		}
 	}
@@ -201,7 +201,7 @@ class DeploymentCoordinator {
 				throw $failure;
 			}
 			foreach ( $matches as $match ) {
-				$key = $match['type'] . "\0" . $match['package']->getSlug();
+				$key = $match['type'] . "\0" . $match['package']->get_slug();
 				if ( isset( $targets[ $key ] ) && $targets[ $key ]['requested_ref'] !== $event->commit ) {
 					throw new RuntimeException( 'Conflicting webhook events target one package.' );
 				}
@@ -211,8 +211,8 @@ class DeploymentCoordinator {
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 					'provider_repository_id'  => $event->providerRepositoryId,
 					'requested_ref'           => $event->commit,
-					'package_source'          => $match['package']->getSource()->value,
-					'package_source_revision' => $match['package']->getSourceRevision(),
+					'package_source'          => $match['package']->get_source()->value,
+					'package_source_revision' => $match['package']->get_source_revision(),
 					'request'                 => $this->request_from_package( $match['package'], null ),
 				);
 			}
@@ -384,19 +384,19 @@ class DeploymentCoordinator {
 
 	private function request_from_package( Package $package, ?int $user_id ): DeploymentRequest {
 		$this->assert_branch_source( $package );
-		$provider = $package->getProviderCode();
-		if ( null === $provider || null === $package->getProviderRepositoryId() ) {
+		$provider = $package->get_provider_code();
+		if ( null === $provider || null === $package->get_provider_repository_id() ) {
 			throw new RuntimeException( 'The managed package provider identity is incomplete.' );
 		}
 		$this->providers->get( ProviderCode::parse( $provider ) );
 		return new DeploymentRequest(
-			(string) $package->getRepository(),
-			'' === $package->getCredentialId() ? null : $package->getCredentialId(),
-			(bool) $package->getPrivate(),
-			(string) $package->getBranch(),
-			(string) $package->getSlug(),
-			is_string( $package->getSubdirectory() ) ? $package->getSubdirectory() : null,
-			$package->getDeploymentPolicy(),
+			(string) $package->get_repository(),
+			'' === $package->get_credential_id() ? null : $package->get_credential_id(),
+			(bool) $package->get_private(),
+			(string) $package->get_branch(),
+			(string) $package->get_slug(),
+			is_string( $package->get_subdirectory() ) ? $package->get_subdirectory() : null,
+			$package->get_deployment_policy(),
 			$user_id,
 			PackageArtifactLimit::resolve( null )
 		);
@@ -412,15 +412,15 @@ class DeploymentCoordinator {
 			'theme'  => $this->themes->allDeploymentThemes(),
 		) as $type => $packages ) {
 			foreach ( $packages as $package ) {
-				if ( PackageSource::BRANCH === $package->getSource()
-					&& $package->getDeploymentPolicy()->allows_webhook_mutation()
-					&& ! PackageMutationGuard::is_booster_plugin_file( $package->getIdentifier() )
-					&& $package->getProviderCode() === $event->provider->value
-					&& $policy->repositoryTargetMatches( $event->repository, (string) $package->getRepository() )
-					&& (string) $package->getBranch() === $event->branch
-					&& null !== $package->getProviderRepositoryId()
+				if ( PackageSource::BRANCH === $package->get_source()
+					&& $package->get_deployment_policy()->allows_webhook_mutation()
+					&& ! PackageMutationGuard::is_booster_plugin_file( $package->get_identifier() )
+					&& $package->get_provider_code() === $event->provider->value
+					&& $policy->repositoryTargetMatches( $event->repository, (string) $package->get_repository() )
+					&& (string) $package->get_branch() === $event->branch
+					&& null !== $package->get_provider_repository_id()
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-					&& hash_equals( (string) $package->getProviderRepositoryId(), $event->providerRepositoryId ) ) {
+					&& hash_equals( (string) $package->get_provider_repository_id(), $event->providerRepositoryId ) ) {
 					$matches[] = array(
 						'type'    => $type,
 						'package' => $package,
@@ -432,7 +432,7 @@ class DeploymentCoordinator {
 	}
 
 	private function assert_branch_source( Package $package ): void {
-		if ( PackageSource::BRANCH !== $package->getSource() ) {
+		if ( PackageSource::BRANCH !== $package->get_source() ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal domain exception; presentation owns escaping.
 			throw new DeploymentCheckFailure( DeploymentOutcome::CODE_DEPLOYMENT_RELEASE_SOURCE_BLOCKED, 'Branch deployment is unavailable for a release-managed package.' );
 		}

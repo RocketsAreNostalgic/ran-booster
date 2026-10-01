@@ -129,9 +129,9 @@ The canonical path is concentrated in `RAN/Secrets/SecretsFile.php`:
   requested constant overlay, then reads and revalidates the whole document
   before returning only the requested provider's candidates.
 - `verifyAndSecure()`, `hasHealthyManagedStorage()`,
-  `assertManagedStorageReady()` and `assertManagedStorageDeletable()` each
+  `assertManagedStorageReady()` and `assert_managed_storage_deletable()` each
   authenticate and revalidate the complete stored document.
-- `deleteManagedStorage()` authenticates once in its own deletion preflight and
+- `delete_managed_storage()` authenticates once in its own deletion preflight and
   once again under its exclusive deletion lock.
 - `purgeExpiredCredentials()` reads every record before filtering, then a
   changed document receives prewrite and readback validation.

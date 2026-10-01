@@ -158,7 +158,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		$wpdb->updateResult = 0;
 		self::assertSame( PackageMutationStatus::CONFLICT, $storage->storeForTest( $package )->get_status() );
 
-		$package->setRepository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'next' ) );
+		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'next' ) );
 		self::assertSame( PackageMutationStatus::CONFLICT, $storage->storeForTest( $package )->get_status() );
 
 		$wpdb->updateResult = 1;
@@ -204,7 +204,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 			[$storage, $package] = $case;
 			$store               = $storage->storeForTest( $package );
 			$adopt               = $storage->adoptForTest( $package );
-			$edit                = $storage->editForTest( (string) $package->getIdentifier(), $this->editInput() );
+			$edit                = $storage->editForTest( (string) $package->get_identifier(), $this->editInput() );
 
 			self::assertSame( PackageMutationStatus::FAILED, $store->get_status() );
 			self::assertSame( PackageMutationStatus::FAILED, $adopt->get_status() );
@@ -242,13 +242,13 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		self::assertSame( 0, $wpdb->inserts[0][1]['private'] );
 		self::assertSame( '0', $wpdb->rows[0]['private'] );
 
-		$package->setRepository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'next' ) );
+		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'next' ) );
 		self::assertSame( PackageMutationStatus::CHANGED, $storage->storeForTest( $package )->get_status() );
 		self::assertSame( 0, $wpdb->updates[0][1]['private'] );
 		self::assertSame( '0', $wpdb->rows[0]['private'] );
 
-		$package->setRepository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'next', true, 'private-profile' ) );
-		$package->setSource( PackageSource::BRANCH, 2 );
+		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'next', true, 'private-profile' ) );
+		$package->set_source( PackageSource::BRANCH, 2 );
 		self::assertSame( PackageMutationStatus::CHANGED, $storage->storeForTest( $package )->get_status() );
 		self::assertSame( 1, $wpdb->updates[1][1]['private'] );
 		self::assertSame( '1', $wpdb->rows[0]['private'] );
@@ -319,7 +319,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		$wpdb                               = new StorageTestWpdb();
 		$wpdb->rows[]                       = $this->storedRow();
 		$wpdb->successfulReadsBeforeFailure = 2;
-		$package->setRepository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'next' ) );
+		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'next' ) );
 		$updateResult = $storage->storeForTest( $package );
 		$this->assertAmbiguousWrite( $updateResult, PackageStorageOperation::UPDATE );
 
@@ -436,7 +436,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 					public function __construct( private readonly string $identifier ) {
 					}
 
-					public function getIdentifier(): mixed {
+					public function get_identifier(): mixed {
 						return $this->identifier;
 					}
 				};
@@ -454,14 +454,14 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 			public function __construct( private readonly string $identifier ) {
 			}
 
-			public function getIdentifier(): mixed {
+			public function get_identifier(): mixed {
 				return $this->identifier;
 			}
 		};
 		$repository = new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'main' );
-		$package->setRepository( $repository );
-		$package->setDeploymentPolicy( DeploymentPolicy::MANUAL );
-		$package->setSubdirectory( '' );
+		$package->set_repository( $repository );
+		$package->set_deployment_policy( DeploymentPolicy::MANUAL );
+		$package->set_subdirectory( '' );
 
 		return $package;
 	}

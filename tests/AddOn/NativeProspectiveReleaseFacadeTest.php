@@ -769,13 +769,13 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 1, $plugins->adoptionCalls );
 		self::assertSame( 17, $plugins->adoptionUserId );
 		self::assertInstanceOf( Plugin::class, $plugins->adoptedPackage );
-		self::assertSame( PackageSource::RELEASE_ASSET, $plugins->adoptedPackage?->getSource() );
-		self::assertSame( 1, $plugins->adoptedPackage?->getSourceRevision() );
-		self::assertSame( DeploymentPolicy::MANUAL, $plugins->adoptedPackage?->getDeploymentPolicy() );
-		self::assertSame( 'gh', $plugins->adoptedPackage?->getProviderCode() );
-		self::assertSame( 'owner/example', (string) $plugins->adoptedPackage?->getRepository() );
-		self::assertSame( '123456789', $plugins->adoptedPackage?->getProviderRepositoryId() );
-		self::assertSame( 'main', $plugins->adoptedPackage?->getBranch() );
+		self::assertSame( PackageSource::RELEASE_ASSET, $plugins->adoptedPackage?->get_source() );
+		self::assertSame( 1, $plugins->adoptedPackage?->get_source_revision() );
+		self::assertSame( DeploymentPolicy::MANUAL, $plugins->adoptedPackage?->get_deployment_policy() );
+		self::assertSame( 'gh', $plugins->adoptedPackage?->get_provider_code() );
+		self::assertSame( 'owner/example', (string) $plugins->adoptedPackage?->get_repository() );
+		self::assertSame( '123456789', $plugins->adoptedPackage?->get_provider_repository_id() );
+		self::assertSame( 'main', $plugins->adoptedPackage?->get_branch() );
 		self::assertSame( 'example', $plugins->adoptedConfiguration?->packageRoot() );
 		self::assertSame( 'example.php', $plugins->adoptedConfiguration?->metadataFile() );
 		self::assertSame( 'prerelease', $plugins->adoptedConfiguration?->channel() );
@@ -1494,8 +1494,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		);
 		self::assertSame( 1, $executor->installCalls );
 		self::assertSame( 1, $plugins->adoptionCalls );
-		self::assertSame( PackageSource::RELEASE_ASSET, $plugins->adoptedPackage?->getSource() );
-		self::assertSame( DeploymentPolicy::MANUAL, $plugins->adoptedPackage?->getDeploymentPolicy() );
+		self::assertSame( PackageSource::RELEASE_ASSET, $plugins->adoptedPackage?->get_source() );
+		self::assertSame( DeploymentPolicy::MANUAL, $plugins->adoptedPackage?->get_deployment_policy() );
 		self::assertFileDoesNotExist( (string) $this->artifactPath );
 	}
 

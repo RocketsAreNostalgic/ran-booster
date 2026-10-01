@@ -838,7 +838,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( "'running'         => 'pending'", $view );
 		self::assertStringContainsString( "'succeeded'       => 'ok'", $view );
 		self::assertStringContainsString( 'data-ran-booster-package-progress', $view );
-		self::assertStringContainsString( 'data-package-source="<?php echo esc_attr( $package->getSource()->value ); ?>"', $view );
+		self::assertStringContainsString( 'data-package-source="<?php echo esc_attr( $package->get_source()->value ); ?>"', $view );
 		self::assertStringContainsString(
 			'[data-ran-booster-package-progress][data-package-source="branch"]',
 			$script

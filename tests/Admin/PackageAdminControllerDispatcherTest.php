@@ -381,12 +381,12 @@ final class EditBoundaryPackage extends AbstractPackage {
 
 	public static function make( string $identifier, string $provider, bool $private = false, ?string $credentialId = null ): self {
 		$package = new self( $identifier );
-		$package->setRepository( new ManagedRepository( $provider, 'owner/original', 'repository-id', 'main', $private, $credentialId ) );
+		$package->set_repository( new ManagedRepository( $provider, 'owner/original', 'repository-id', 'main', $private, $credentialId ) );
 
 		return $package;
 	}
 
-	public function getIdentifier(): mixed {
+	public function get_identifier(): mixed {
 		return $this->identifier;
 	}
 }

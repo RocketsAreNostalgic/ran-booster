@@ -242,13 +242,13 @@ $policyLabels = array(
 		<?php foreach ( $packages as $package ) { ?>
 			<?php
 			++$packageRowNumber;
-			$providerCode            = (string) ( $package->getProviderCode() ?? '' );
+			$providerCode            = (string) ( $package->get_provider_code() ?? '' );
 			$packageProvider         = $packageProvidersByCode[ $providerCode ] ?? null;
 			$providerUnavailable     = null === $packageProvider;
-			$deploymentPolicy        = $package->getDeploymentPolicy();
+			$deploymentPolicy        = $package->get_deployment_policy();
 			$policyDisabled          = \RAN\Deployment\DeploymentPolicy::DISABLED === $deploymentPolicy;
-			$packageIdentifier       = (string) $package->getIdentifier();
-			$releaseManaged          = \RAN\PackageSource::RELEASE_ASSET === $package->getSource();
+			$packageIdentifier       = (string) $package->get_identifier();
+			$releaseManaged          = \RAN\PackageSource::RELEASE_ASSET === $package->get_source();
 			$packageExtensionRow     = isset( $packageExtensionRows[ $packageIdentifier ] ) && is_array( $packageExtensionRows[ $packageIdentifier ] )
 				? $packageExtensionRows[ $packageIdentifier ]
 				: array();
@@ -275,15 +275,15 @@ $policyLabels = array(
 			$lastSuccessfulAt        = is_array( $lastSuccessfulActivity ) && is_string( $lastSuccessfulActivity['finished_at'] ?? null )
 				? $lastSuccessfulActivity['finished_at']
 				: '';
-			$installedVersion        = $package->getVersion();
+			$installedVersion        = $package->get_version();
 			$credentialProfiles      = is_array( $packageProvider['credentials'] ?? null ) ? $packageProvider['credentials'] : array();
 			$credentialsById         = array_column( $credentialProfiles, null, 'id' );
-			$storedCredentialId      = $package->getCredentialId();
+			$storedCredentialId      = $package->get_credential_id();
 			$effectiveCredentialId   = '' !== $storedCredentialId
 				? $storedCredentialId
 				: (string) ( $packageProvider['default_credential_id'] ?? '' );
 			$configuredCredential    = $credentialsById[ $effectiveCredentialId ] ?? null;
-			$credentialAvailable     = ! $package->getPrivate() || is_array( $configuredCredential );
+			$credentialAvailable     = ! $package->get_private() || is_array( $configuredCredential );
 			$providerCanDeploy       = ! $providerUnavailable && true === $packageProvider['deploy'];
 			$deploymentAvailable     = $providerCanDeploy && $credentialAvailable;
 			$updateCanRun            = $deploymentAvailable && ! $policyDisabled;
@@ -317,10 +317,10 @@ $policyLabels = array(
 				: sprintf(
 					/* translators: %s is the repository branch name. */
 					__( 'Branch: %s', 'ran-booster' ),
-					$package->getBranch()
+					$package->get_branch()
 				);
 			$accessLabel = __( 'Public repository', 'ran-booster' );
-			if ( $package->getPrivate() ) {
+			if ( $package->get_private() ) {
 				if ( $providerUnavailable ) {
 					$accessLabel = __( 'Private; provider unavailable', 'ran-booster' );
 				} elseif ( is_array( $configuredCredential ) ) {
@@ -373,7 +373,7 @@ $policyLabels = array(
 			$editUrl              = add_query_arg(
 				array(
 					'page'    => $packageView->getPageSlug(),
-					'package' => $package->getIdentifier(),
+					'package' => $package->get_identifier(),
 				),
 				$packageAdminUrl
 			);
@@ -387,7 +387,7 @@ $policyLabels = array(
 				: sprintf(
 					/* translators: %s is the repository branch name. */
 					__( 'Branch · %s', 'ran-booster' ),
-					'' !== $package->getBranch() ? $package->getBranch() : __( 'provider default', 'ran-booster' )
+					'' !== $package->get_branch() ? $package->get_branch() : __( 'provider default', 'ran-booster' )
 				);
 			if ( $providerUnavailable ) {
 				$statusLine = __( 'The saved provider is unavailable. Restore it before deploying this package.', 'ran-booster' );
@@ -416,7 +416,7 @@ $policyLabels = array(
 			?>
 		<tr
 			class="ran-booster-package-row ran-booster-package-row--primary<?php echo $wordPressPluginActive ? ' ran-booster-package-row--wordpress-active' : ''; ?>"
-			data-package-source="<?php echo esc_attr( $package->getSource()->value ); ?>"
+			data-package-source="<?php echo esc_attr( $package->get_source()->value ); ?>"
 			<?php if ( ! $releaseManaged ) { ?>
 				data-ran-booster-package-progress
 				data-attempt-id="<?php echo esc_attr( (string) $latestActivityId ); ?>"
@@ -465,7 +465,7 @@ $policyLabels = array(
 							<?php wp_nonce_field( $packageView->getAction( 'update' ) ); ?>
 							<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $packageView->getAction( 'update' ) ); ?>">
 							<input type="hidden" name="ran_booster[repository]" value="<?php echo esc_attr( (string) $package->repository ); ?>">
-							<input type="hidden" name="ran_booster[<?php echo esc_attr( $packageView->getIdentifierField() ); ?>]" value="<?php echo esc_attr( (string) $package->getIdentifier() ); ?>">
+							<input type="hidden" name="ran_booster[<?php echo esc_attr( $packageView->getIdentifierField() ); ?>]" value="<?php echo esc_attr( (string) $package->get_identifier() ); ?>">
 							<?php require __DIR__ . '/expected-package.php'; ?>
 							<button type="submit" class="button button-primary button-update-package<?php echo $updateInProgress ? ' ran-booster-update-is-active' : ''; ?>" <?php disabled( ! $updateCanRun || $updateInProgress || $updateNeedsAttention ); ?> data-ran-booster-update-button data-idle-label="<?php echo esc_attr( $idleUpdateLabel ); ?>" data-update-can-run="<?php echo esc_attr( $updateCanRun ? '1' : '0' ); ?>" data-reinstall-confirm-message="<?php esc_attr_e( 'Reinstall from the saved branch and overwrite local changes?', 'ran-booster' ); ?>"<?php echo $updateInProgress ? ' aria-busy="true"' : ''; ?>>
 								<span data-ran-booster-update-label><?php esc_html_e( 'Reinstall', 'ran-booster' ); ?></span>

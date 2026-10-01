@@ -29,7 +29,7 @@ $deleteDescription = 'plugin' === $packageView->getType()
 			<?php wp_nonce_field( $packageView->getAction( 'unlink' ) ); ?>
 			<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $packageView->getAction( 'unlink' ) ); ?>">
 			<input type="hidden" name="ran_booster[<?php echo esc_attr( $packageView->getIdentifierField() ); ?>]" value="<?php echo esc_attr( $identifierValue ); ?>">
-			<input type="hidden" name="ran_booster[expected_source_revision]" value="<?php echo esc_attr( (string) $package->getSourceRevision() ); ?>">
+			<input type="hidden" name="ran_booster[expected_source_revision]" value="<?php echo esc_attr( (string) $package->get_source_revision() ); ?>">
 			<label for="<?php echo esc_attr( $unlinkCheckboxId ); ?>">
 				<input id="<?php echo esc_attr( $unlinkCheckboxId ); ?>" type="checkbox" name="ran_booster[confirm_package_removal]" value="1" required data-ran-booster-package-removal-confirm>
 				<?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'I understand Booster will stop managing this %s.', 'ran-booster' ), $packageTypeLabel ) ); ?>
@@ -44,7 +44,7 @@ $deleteDescription = 'plugin' === $packageView->getType()
 			<?php wp_nonce_field( $packageView->getAction( 'unlink-delete' ) ); ?>
 			<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $packageView->getAction( 'unlink-delete' ) ); ?>">
 			<input type="hidden" name="ran_booster[<?php echo esc_attr( $packageView->getIdentifierField() ); ?>]" value="<?php echo esc_attr( $identifierValue ); ?>">
-			<input type="hidden" name="ran_booster[expected_source_revision]" value="<?php echo esc_attr( (string) $package->getSourceRevision() ); ?>">
+			<input type="hidden" name="ran_booster[expected_source_revision]" value="<?php echo esc_attr( (string) $package->get_source_revision() ); ?>">
 			<label for="<?php echo esc_attr( $deleteCheckboxId ); ?>">
 				<input id="<?php echo esc_attr( $deleteCheckboxId ); ?>" type="checkbox" name="ran_booster[confirm_package_removal]" value="1" required data-ran-booster-package-removal-confirm>
 				<?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'I understand this will remove the %s from this WordPress site.', 'ran-booster' ), $packageTypeLabel ) ); ?>

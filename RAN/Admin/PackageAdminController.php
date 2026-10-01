@@ -231,9 +231,9 @@ final class PackageAdminController {
 					'event'        => 'package_settings_saved',
 					'operation'    => $action,
 					'outcome_code' => 'edited',
-					'package_slug' => (string) $package->getSlug(),
-					'provider'     => (string) $package->getProviderCode(),
-					'source'       => $package->getSource()->value,
+					'package_slug' => (string) $package->get_slug(),
+					'provider'     => (string) $package->get_provider_code(),
+					'source'       => $package->get_source()->value,
 					'step'         => 'package_settings',
 				)
 			);
@@ -245,7 +245,7 @@ final class PackageAdminController {
 		if ( $check_repository_branch
 			&& 'edited' === $status
 			&& ( $result['package'] ?? null ) instanceof Package
-			&& PackageSource::BRANCH === $result['package']->getSource()
+			&& PackageSource::BRANCH === $result['package']->get_source()
 		) {
 			return $this->repository_branch_check_redirect( $operation, $result['package'] );
 		}
@@ -528,7 +528,7 @@ final class PackageAdminController {
 			if ( ! $package instanceof Package ) {
 				throw new RuntimeException( 'The managed package repository is unavailable.' );
 			}
-			$this->providers->get( $package->getProviderCode() );
+			$this->providers->get( $package->get_provider_code() );
 			return $package;
 		} catch ( InvalidProviderCode | UnknownProvider $failure ) {
 			$message = __( 'This package cannot be edited until its stored repository provider is registered again.', 'ran-booster' );
@@ -591,22 +591,22 @@ final class PackageAdminController {
 	private function trusted_public_lookup_profile( array $request, ?Package $package ): ?array {
 		if ( ! $package instanceof Package
 			|| ! $this->enabled( $request, 'check_repository_branch_after_save' )
-			|| PackageSource::BRANCH !== $package->getSource()
-			|| $package->getRepository()->reference->private
+			|| PackageSource::BRANCH !== $package->get_source()
+			|| $package->get_repository()->reference->private
 			|| ! is_string( $request['provider'] ?? null )
-			|| $package->getProviderCode() !== trim( wp_unslash( $request['provider'] ) ) ) {
+			|| $package->get_provider_code() !== trim( wp_unslash( $request['provider'] ) ) ) {
 			return null;
 		}
 
 		return array(
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			'profile_id' => $this->publicLookupProfiles?->get( $package->getProviderCode() ),
+			'profile_id' => $this->publicLookupProfiles?->get( $package->get_provider_code() ),
 		);
 	}
 
 	/** @param array<string, string> $list_arguments */
 	private function success_redirect( PackageOperation $operation, Package|string $package, array $list_arguments, bool $install_another = false, bool $return_to_settings = false, ?string $result_operation = null ): string {
-		$identifier = $package instanceof Package ? $package->getIdentifier() : $package;
+		$identifier = $package instanceof Package ? $package->get_identifier() : $package;
 		if ( ! is_string( $identifier ) || '' === $identifier ) {
 			throw new LogicException( 'The deployed package identity is unavailable.' );
 		}
@@ -632,7 +632,7 @@ final class PackageAdminController {
 	}
 
 	private function repository_branch_check_redirect( PackageOperation $operation, Package $package ): string {
-		$identifier = $package->getIdentifier();
+		$identifier = $package->get_identifier();
 		if ( ! is_string( $identifier ) || '' === $identifier ) {
 			throw new LogicException( 'The managed package identity is unavailable.' );
 		}
@@ -652,8 +652,8 @@ final class PackageAdminController {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Preserve the existing public callback and caller contract.
 	public static function repositoryBranchCheckAction( Package $package, string $type ): string {
 		return 'ran-booster-repository-branch-check|'
-			. $type . '|' . (string) $package->getIdentifier() . '|'
-			. $package->getSource()->value . '|' . $package->getSourceRevision();
+			. $type . '|' . (string) $package->get_identifier() . '|'
+			. $package->get_source()->value . '|' . $package->get_source_revision();
 	}
 
 	private function enabled( array $request, string $key ): bool {

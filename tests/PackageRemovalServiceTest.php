@@ -85,7 +85,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertSame( 'failed', $result->status );
 		self::assertSame( 'stale', $result->outcome_code );
 		self::assertEquals( PackageRemovalResult::failed( outcome_code: 'stale' ), $result );
-		self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->getDeploymentPolicy() );
+		self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->get_deployment_policy() );
 		self::assertFalse( $fixture->plugins->unlinked );
 		self::assertSame( array(), $fixture->gateway->events );
 	}
@@ -99,7 +99,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertSame( 'unlinked', $result->status );
 		self::assertTrue( $fixture->plugins->unlinked );
 		self::assertTrue( $fixture->plugins->installed );
-		self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->getDeploymentPolicy() );
+		self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->get_deployment_policy() );
 		self::assertSame( array(), $fixture->gateway->events );
 	}
 
@@ -243,8 +243,8 @@ final class PackageRemovalServiceTest extends TestCase {
 		);
 
 		self::assertSame( 'deleted', $result->status );
-		self::assertSame( DeploymentPolicy::DISABLED, $fixture->plugin->getDeploymentPolicy() );
-		self::assertSame( 8, $fixture->plugin->getSourceRevision() );
+		self::assertSame( DeploymentPolicy::DISABLED, $fixture->plugin->get_deployment_policy() );
+		self::assertSame( 8, $fixture->plugin->get_source_revision() );
 		self::assertTrue( $fixture->plugins->unlinked );
 		self::assertSame(
 			array( 'plugin_path', 'plugin_shared', 'plugin_dependents', 'plugin_active', 'plugin_deactivate', 'plugin_active', 'plugin_delete' ),
@@ -292,8 +292,8 @@ final class PackageRemovalServiceTest extends TestCase {
 		);
 
 		self::assertSame( 'operation_in_progress', $result->outcome_code );
-		self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->getDeploymentPolicy() );
-		self::assertSame( 7, $fixture->plugin->getSourceRevision() );
+		self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->get_deployment_policy() );
+		self::assertSame( 7, $fixture->plugin->get_source_revision() );
 		self::assertFalse( $fixture->plugins->unlinked );
 	}
 
@@ -306,8 +306,8 @@ final class PackageRemovalServiceTest extends TestCase {
 		);
 
 		self::assertSame( 'active_dependents', $result->outcome_code );
-		self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->getDeploymentPolicy() );
-		self::assertSame( 7, $fixture->plugin->getSourceRevision() );
+		self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->get_deployment_policy() );
+		self::assertSame( 7, $fixture->plugin->get_source_revision() );
 		self::assertFalse( $fixture->plugins->unlinked );
 		self::assertSame( array( 'plugin_path', 'plugin_shared', 'plugin_dependents' ), $fixture->gateway->events );
 	}
@@ -327,8 +327,8 @@ final class PackageRemovalServiceTest extends TestCase {
 		);
 
 		self::assertSame( $outcomeCode, $result->outcome_code );
-		self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->getDeploymentPolicy() );
-		self::assertSame( 7, $fixture->plugin->getSourceRevision() );
+		self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->get_deployment_policy() );
+		self::assertSame( 7, $fixture->plugin->get_source_revision() );
 		self::assertFalse( $fixture->plugins->unlinked );
 	}
 
@@ -350,7 +350,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		);
 
 		self::assertSame( 'deactivation_failed', $result->outcome_code );
-		self::assertSame( DeploymentPolicy::DISABLED, $fixture->plugin->getDeploymentPolicy() );
+		self::assertSame( DeploymentPolicy::DISABLED, $fixture->plugin->get_deployment_policy() );
 		self::assertFalse( $fixture->plugins->unlinked );
 		self::assertNotContains( 'plugin_delete', $fixture->gateway->events );
 	}
@@ -364,7 +364,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		);
 
 		self::assertSame( 'files_still_present', $result->outcome_code );
-		self::assertSame( DeploymentPolicy::DISABLED, $fixture->plugin->getDeploymentPolicy() );
+		self::assertSame( DeploymentPolicy::DISABLED, $fixture->plugin->get_deployment_policy() );
 		self::assertFalse( $fixture->plugins->unlinked );
 	}
 
@@ -396,7 +396,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		);
 
 		self::assertSame( 'management_state_uncertain', $result->outcome_code );
-		self::assertSame( DeploymentPolicy::DISABLED, $fixture->plugin->getDeploymentPolicy() );
+		self::assertSame( DeploymentPolicy::DISABLED, $fixture->plugin->get_deployment_policy() );
 		self::assertFalse( $fixture->plugins->unlinked );
 	}
 
@@ -419,8 +419,8 @@ final class PackageRemovalServiceTest extends TestCase {
 		);
 
 		self::assertSame( $blocker, $result->outcome_code );
-		self::assertSame( DeploymentPolicy::MANUAL, $fixture->theme->getDeploymentPolicy() );
-		self::assertSame( 7, $fixture->theme->getSourceRevision() );
+		self::assertSame( DeploymentPolicy::MANUAL, $fixture->theme->get_deployment_policy() );
+		self::assertSame( 7, $fixture->theme->get_source_revision() );
 		self::assertFalse( $fixture->themes->unlinked );
 		self::assertNotContains( 'theme_delete', $fixture->gateway->events );
 	}
@@ -437,8 +437,8 @@ final class PackageRemovalServiceTest extends TestCase {
 		);
 
 		self::assertSame( 'deleted', $result->status );
-		self::assertSame( DeploymentPolicy::DISABLED, $fixture->theme->getDeploymentPolicy() );
-		self::assertSame( 8, $fixture->theme->getSourceRevision() );
+		self::assertSame( DeploymentPolicy::DISABLED, $fixture->theme->get_deployment_policy() );
+		self::assertSame( 8, $fixture->theme->get_source_revision() );
 		self::assertTrue( $fixture->themes->unlinked );
 		self::assertSame( array( 'theme_path', 'theme_blocker', 'theme_delete' ), $fixture->gateway->events );
 	}
@@ -453,7 +453,7 @@ final class PackageRemovalServiceTest extends TestCase {
 				PackageOperation::from_input( 'unlink-delete-plugin', $this->input() )
 			);
 		} finally {
-			self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->getDeploymentPolicy() );
+			self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->get_deployment_policy() );
 			self::assertFalse( $fixture->plugins->unlinked );
 		}
 	}
@@ -556,9 +556,9 @@ final class PackageRemovalServiceTest extends TestCase {
 		$plugin = RemovalPlugin::make( 'example/example.php' );
 		$theme  = new RemovalTheme( 'example' );
 		foreach ( array( $plugin, $theme ) as $package ) {
-			$package->setRepository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
-			$package->setDeploymentPolicy( DeploymentPolicy::MANUAL );
-			$package->setSource( PackageSource::BRANCH, 7 );
+			$package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
+			$package->set_deployment_policy( DeploymentPolicy::MANUAL );
+			$package->set_source( PackageSource::BRANCH, 7 );
 		}
 		$plugins = new RemovalPluginRepository( $plugin );
 		$themes  = new RemovalThemeRepository( $theme );
@@ -589,7 +589,7 @@ final readonly class RemovalFixture {
 
 final class RemovalPlugin extends Plugin {
 	public static function make( string $identifier ): self {
-		return self::fromWpArray(
+		return self::from_wp_array(
 			$identifier,
 			array(
 				'Name'        => 'Example',
@@ -629,8 +629,8 @@ final class RemovalPluginRepository extends PluginRepository {
 	}
 
 	public function disablePluginForRemoval( Plugin $plugin ): PackageMutationResult {
-		$plugin->setDeploymentPolicy( DeploymentPolicy::DISABLED );
-		$plugin->setSource( $plugin->getSource(), $plugin->getSourceRevision() + 1 );
+		$plugin->set_deployment_policy( DeploymentPolicy::DISABLED );
+		$plugin->set_source( $plugin->get_source(), $plugin->get_source_revision() + 1 );
 
 		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
 	}
@@ -669,8 +669,8 @@ final class RemovalThemeRepository extends ThemeRepository {
 	}
 
 	public function disableThemeForRemoval( Theme $theme ): PackageMutationResult {
-		$theme->setDeploymentPolicy( DeploymentPolicy::DISABLED );
-		$theme->setSource( $theme->getSource(), $theme->getSourceRevision() + 1 );
+		$theme->set_deployment_policy( DeploymentPolicy::DISABLED );
+		$theme->set_source( $theme->get_source(), $theme->get_source_revision() + 1 );
 
 		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
 	}

@@ -123,9 +123,9 @@ try {
 		$package = 'plugin' === $type
 			? $plugins->boosterPluginFromFile( $identifier )
 			: $themes->boosterThemeFromStylesheet( $identifier );
-		if ( '2.0.0' !== $package->getVersion()
-			|| PackageSource::RELEASE_ASSET !== $package->getSource()
-			|| 1 !== $package->getSourceRevision()
+		if ( '2.0.0' !== $package->get_version()
+			|| PackageSource::RELEASE_ASSET !== $package->get_source()
+			|| 1 !== $package->get_source_revision()
 		) {
 			throw new RuntimeException( 'The installed release package readback is invalid.' );
 		}

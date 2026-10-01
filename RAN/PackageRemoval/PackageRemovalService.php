@@ -55,7 +55,7 @@ final readonly class PackageRemovalService {
 		$result = PackageRemovalResult::failed( 'management_state_uncertain' );
 		try {
 			$package = $this->find( $operation->package_type, $identifier );
-			if ( $package->getSourceRevision() !== $operation->get_expected_source_revision() ) {
+			if ( $package->get_source_revision() !== $operation->get_expected_source_revision() ) {
 				$result = PackageRemovalResult::failed( 'stale' );
 			} elseif ( 'unlink' === $operation->operation ) {
 				$this->unlink( $operation->package_type, $identifier, $package );
@@ -63,7 +63,7 @@ final readonly class PackageRemovalService {
 			} elseif ( null !== $this->attempts
 				&& $this->attempts->hasUnresolvedPackageAttempt(
 					$operation->package_type,
-					(string) $package->getSlug()
+					(string) $package->get_slug()
 				) ) {
 				$result = PackageRemovalResult::failed( 'operation_in_progress' );
 			} else {

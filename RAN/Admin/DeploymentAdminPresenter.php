@@ -180,14 +180,14 @@ final class DeploymentAdminPresenter {
 		}
 		$items = array();
 		foreach ( $packages as $package ) {
-			if ( ! $package instanceof Package || ! is_string( $package->getIdentifier() ) ) {
+			if ( ! $package instanceof Package || ! is_string( $package->get_identifier() ) ) {
 				return $this->package_activity_result();
 			}
-			if ( PackageSource::RELEASE_ASSET === $package->getSource() ) {
+			if ( PackageSource::RELEASE_ASSET === $package->get_source() ) {
 				continue;
 			}
 			try {
-				$items[ $package->getIdentifier() ] = $this->attempts->packageActivitySummary( $type, (string) $package->getSlug() );
+				$items[ $package->get_identifier() ] = $this->attempts->packageActivitySummary( $type, (string) $package->get_slug() );
 			} catch ( Throwable $failure ) {
 				$this->log_read_failure( 'package deployment activity unavailable', $failure, 'package_activity_summary', 'read-' . $type . '-package-activity' );
 				return $this->package_activity_result();
@@ -227,7 +227,7 @@ final class DeploymentAdminPresenter {
 					if ( ! $package instanceof Package ) {
 						continue;
 					}
-					$slug = (string) $package->getSlug();
+					$slug = (string) $package->get_slug();
 					if ( '' === $slug || isset( $seen[ $slug ] ) ) {
 						unset( $urls[ $type ][ $slug ] );
 						$seen[ $slug ] = true;
@@ -236,7 +236,7 @@ final class DeploymentAdminPresenter {
 					$seen[ $slug ]          = true;
 					$query                  = array();
 					$query['page']          = $view->getPageSlug();
-					$query['package']       = (string) $package->getIdentifier();
+					$query['package']       = (string) $package->get_identifier();
 					$urls[ $type ][ $slug ] = add_query_arg( $query, is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) );
 				}
 			} catch ( Throwable $failure ) {

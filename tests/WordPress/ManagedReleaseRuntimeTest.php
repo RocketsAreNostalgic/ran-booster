@@ -1526,8 +1526,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 0, $providerCalls );
 		self::assertSame( array(), $store->transitions );
 		self::assertSame( 0, $lock->acquires );
-		self::assertSame( PackageSource::BRANCH, $root->getSource() );
-		self::assertSame( 1, $root->getSourceRevision() );
+		self::assertSame( PackageSource::BRANCH, $root->get_source() );
+		self::assertSame( 1, $root->get_source_revision() );
 	}
 
 	public function testEnableTreatsMissingRepositoryIdentityAndGuardReadFailureAsUnavailable(): void {
@@ -1617,8 +1617,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 'release_repository_conflict', $result->code() );
 		self::assertSame( array(), $store->transitions );
 		self::assertSame( 1, $lock->acquires );
-		self::assertSame( PackageSource::BRANCH, $root->getSource() );
-		self::assertSame( 1, $root->getSourceRevision() );
+		self::assertSame( PackageSource::BRANCH, $root->get_source() );
+		self::assertSame( 1, $root->get_source_revision() );
 	}
 
 	public function testManagedReleaseReadsUseTheConfiguredPublicLookupProfileWithoutReplacingPackageCredentials(): void {
@@ -1727,7 +1727,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$nonce = $facade->nonceAction( 'inspect_candidate', 'plugin', 'example/example.php', 1, 'stable' );
 		self::assertNull( $facade->inspectCandidate( 'plugin', 'example/example.php', 1, '101', 'v2.0.0', 'stable', $nonce ) );
 		self::assertSame( array(), $references );
-		self::assertNull( $packages['private_lookup']->getRepository()->reference->credentialId );
+		self::assertNull( $packages['private_lookup']->get_repository()->reference->credentialId );
 
 		$packages['branch_public'] = $this->package(
 			'plugin',
@@ -1743,7 +1743,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$preflight                 = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
 		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $preflight?->code() );
 		self::assertSame( array( 'public-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credentialId, $references ) );
-		self::assertNull( $packages['branch_public']->getRepository()->reference->credentialId );
+		self::assertNull( $packages['branch_public']->get_repository()->reference->credentialId );
 
 		$packages['branch_explicit'] = $this->package(
 			'plugin',
@@ -1760,7 +1760,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$preflight                   = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
 		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $preflight?->code() );
 		self::assertSame( array( 'package-profile', 'public-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credentialId, $references ) );
-		self::assertSame( 'package-profile', $packages['branch_explicit']->getRepository()->reference->credentialId );
+		self::assertSame( 'package-profile', $packages['branch_explicit']->get_repository()->reference->credentialId );
 	}
 
 	public function testPrivateEnablePreflightUsesOnlyTheSavedPackageCredential(): void {
@@ -2211,8 +2211,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertFalse( $result->successful() );
 		self::assertSame( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $result->code() );
 		self::assertCount( 0, $store->transitions );
-		self::assertSame( PackageSource::BRANCH, $package->getSource() );
-		self::assertSame( DeploymentPolicy::AUTOMATIC, $package->getDeploymentPolicy() );
+		self::assertSame( PackageSource::BRANCH, $package->get_source() );
+		self::assertSame( DeploymentPolicy::AUTOMATIC, $package->get_deployment_policy() );
 	}
 
 	public function testNestedBranchPluginIsRejectedBeforeReleaseProviderWork(): void {
@@ -3104,20 +3104,20 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		?string $providerRepositoryId = null
 	): Package {
 		$package = $this->createStub( Package::class );
-		$package->method( 'getIdentifier' )->willReturn( $identifier );
-		$package->method( 'getSlug' )->willReturn( $slug );
-		$package->method( 'getDeploymentPolicy' )->willReturn( $policy );
-		$package->method( 'getSource' )->willReturn( $source );
-		$package->method( 'getSourceRevision' )->willReturn( $sourceRevision );
-		$package->method( 'getProviderCode' )->willReturn( $provider );
-		$package->method( 'getRepository' )->willReturn(
+		$package->method( 'get_identifier' )->willReturn( $identifier );
+		$package->method( 'get_slug' )->willReturn( $slug );
+		$package->method( 'get_deployment_policy' )->willReturn( $policy );
+		$package->method( 'get_source' )->willReturn( $source );
+		$package->method( 'get_source_revision' )->willReturn( $sourceRevision );
+		$package->method( 'get_provider_code' )->willReturn( $provider );
+		$package->method( 'get_repository' )->willReturn(
 			new ManagedRepository( $provider, 'owner/example', $repositoryId, 'main', $private, $credentialId )
 		);
-		$package->method( 'getProviderRepositoryId' )->willReturn( $providerRepositoryId ?? $repositoryId );
-		$package->method( 'getCredentialId' )->willReturn( $credentialId );
-		$package->method( 'getPrivate' )->willReturn( $private );
-		$package->method( 'getVersion' )->willReturn( '1.0.0' );
-		$package->method( 'getSubdirectory' )->willReturn( $subdirectory );
+		$package->method( 'get_provider_repository_id' )->willReturn( $providerRepositoryId ?? $repositoryId );
+		$package->method( 'get_credential_id' )->willReturn( $credentialId );
+		$package->method( 'get_private' )->willReturn( $private );
+		$package->method( 'get_version' )->willReturn( '1.0.0' );
+		$package->method( 'get_subdirectory' )->willReturn( $subdirectory );
 		$this->repositoryRows[ $type . "\0" . $identifier ] = (object) array(
 			'type'                   => 'plugin' === $type ? '1' : '2',
 			'package'                => $identifier,

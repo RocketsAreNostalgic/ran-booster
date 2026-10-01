@@ -87,12 +87,12 @@ abstract class AbstractPackageRepository {
 		global $wpdb;
 
 		$this->require_storage_support( PackageStorageOperation::UPDATE );
-		$revision = $package->getSourceRevision();
+		$revision = $package->get_source_revision();
 		if ( PHP_INT_MAX === $revision ) {
 			return $this->source_conflict_result();
 		}
 
-		$model  = new PackageModel( array( 'package' => (string) $package->getIdentifier() ) );
+		$model  = new PackageModel( array( 'package' => (string) $package->get_identifier() ) );
 		$data   = array(
 			'deployment_policy' => DeploymentPolicy::DISABLED->value,
 			'source_revision'   => $revision + 1,
@@ -103,9 +103,9 @@ abstract class AbstractPackageRepository {
 			array(
 				'package'           => $model->package,
 				'type'              => $this->package_type(),
-				'source'            => $package->getSource()->value,
+				'source'            => $package->get_source()->value,
 				'source_revision'   => $revision,
-				'deployment_policy' => $package->getDeploymentPolicy()->value,
+				'deployment_policy' => $package->get_deployment_policy()->value,
 			)
 		);
 
@@ -394,7 +394,7 @@ abstract class AbstractPackageRepository {
 				$model->provider_repository_id,
 				$this->package_type(),
 				$model->package,
-				$package->getSource(),
+				$package->get_source(),
 				true
 			);
 			if ( ! $assessment['allowed'] ) {
@@ -408,7 +408,7 @@ abstract class AbstractPackageRepository {
 			}
 			if ( array() !== $existing_rows ) {
 				$stored_source = $this->source_model_from_row( $existing_rows[0] );
-				if ( PackageSource::BRANCH->value !== $stored_source->source || PackageSource::BRANCH !== $package->getSource() || $stored_source->source_revision !== $package->getSourceRevision() || PHP_INT_MAX === $stored_source->source_revision ) {
+				if ( PackageSource::BRANCH->value !== $stored_source->source || PackageSource::BRANCH !== $package->get_source() || $stored_source->source_revision !== $package->get_source_revision() || PHP_INT_MAX === $stored_source->source_revision ) {
 					$wpdb->query( 'ROLLBACK' );
 					return $this->source_conflict_result();
 				}
@@ -451,8 +451,8 @@ abstract class AbstractPackageRepository {
 		global $wpdb;
 
 		$this->require_storage_support( PackageStorageOperation::INSERT );
-		if ( PackageSource::BRANCH !== $package->getSource()
-			|| 1 !== $package->getSourceRevision() ) {
+		if ( PackageSource::BRANCH !== $package->get_source()
+			|| 1 !== $package->get_source_revision() ) {
 			return $this->source_conflict_result();
 		}
 
@@ -542,13 +542,13 @@ abstract class AbstractPackageRepository {
 
 		global $wpdb;
 
-		$identifier = (string) $package->getIdentifier();
+		$identifier = (string) $package->get_identifier();
 		$expected   = 1 === $this->package_type()
 			? $configuration->packageRoot() . '/' . $configuration->metadataFile()
 			: $configuration->packageRoot();
-		if ( PackageSource::RELEASE_ASSET !== $package->getSource()
-			|| 1 !== $package->getSourceRevision()
-			|| null !== $package->getSubdirectory()
+		if ( PackageSource::RELEASE_ASSET !== $package->get_source()
+			|| 1 !== $package->get_source_revision()
+			|| null !== $package->get_subdirectory()
 			|| ! hash_equals( $expected, $identifier )
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 			|| $userId < 0 ) {
@@ -635,19 +635,19 @@ abstract class AbstractPackageRepository {
 
 	/** @return array{0: PackageModel, 1: array<string, mixed>} */
 	private function package_record( Package $package ): array {
-		$repository = $package->getRepository();
+		$repository = $package->get_repository();
 		$model      = new PackageModel(
 			array(
-				'package'                => $package->getIdentifier(),
+				'package'                => $package->get_identifier(),
 				'repository'             => (string) $repository,
 				'branch'                 => $repository->branch,
 				'provider'               => $repository->provider->value,
 				'provider_repository_id' => $repository->reference->providerRepositoryId,
 				'private'                => $repository->reference->private,
-				'deployment_policy'      => $package->getDeploymentPolicy()->value,
-				'source'                 => $package->getSource()->value,
-				'source_revision'        => $package->getSourceRevision(),
-				'subdirectory'           => $package->getSubdirectory(),
+				'deployment_policy'      => $package->get_deployment_policy()->value,
+				'source'                 => $package->get_source()->value,
+				'source_revision'        => $package->get_source_revision(),
+				'subdirectory'           => $package->get_subdirectory(),
 				'credential_id'          => $repository->reference->credentialId ?? '',
 			)
 		);
@@ -925,8 +925,8 @@ abstract class AbstractPackageRepository {
 			throw PackageStorageFailure::invalid_provider_identity();
 		}
 
-		$package->setRepository( $repository );
-		$package->setDeploymentPolicy(
+		$package->set_repository( $repository );
+		$package->set_deployment_policy(
 			DeploymentPolicy::from_database( $this->value_from_row( $row, 'deployment_policy', DeploymentPolicy::MANUAL->value ) )
 		);
 		$source = new PackageModel(
@@ -935,8 +935,8 @@ abstract class AbstractPackageRepository {
 				'source_revision' => $this->value_from_row( $row, 'source_revision' ),
 			)
 		);
-		$package->setSource( PackageSource::from_database( $source->source ), $source->source_revision );
-		$package->setSubdirectory( $this->value_from_row( $row, 'subdirectory' ) );
+		$package->set_source( PackageSource::from_database( $source->source ), $source->source_revision );
+		$package->set_subdirectory( $this->value_from_row( $row, 'subdirectory' ) );
 
 		return $package;
 	}

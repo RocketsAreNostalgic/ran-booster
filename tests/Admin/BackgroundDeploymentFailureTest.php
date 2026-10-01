@@ -166,7 +166,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 				}
 
 				public function allBoosterPlugins(): array {
-					return array( $this->plugin->getIdentifier() => $this->plugin );
+					return array( $this->plugin->get_identifier() => $this->plugin );
 				}
 			},
 			$this->monitor()
@@ -218,7 +218,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 	}
 
 	private function plugin(): Plugin {
-		$plugin = Plugin::fromWpArray(
+		$plugin = Plugin::from_wp_array(
 			'example/example.php',
 			array(
 				'Name'        => 'Example',
@@ -234,8 +234,8 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 				'AuthorName'  => '',
 			)
 		);
-		$plugin->setRepository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main', true, 'profile_123' ) );
-		$plugin->setDeploymentPolicy( DeploymentPolicy::AUTOMATIC );
+		$plugin->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main', true, 'profile_123' ) );
+		$plugin->set_deployment_policy( DeploymentPolicy::AUTOMATIC );
 
 		return $plugin;
 	}

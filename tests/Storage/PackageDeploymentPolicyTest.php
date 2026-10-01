@@ -32,11 +32,11 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 	public function testPackagesDefaultToManualAndUseTheSharedPolicyEnum(): void {
 		$package = $this->package();
 
-		self::assertSame( DeploymentPolicy::MANUAL, $package->getDeploymentPolicy() );
+		self::assertSame( DeploymentPolicy::MANUAL, $package->get_deployment_policy() );
 
 		foreach ( DeploymentPolicy::cases() as $policy ) {
-			$package->setDeploymentPolicy( $policy );
-			self::assertSame( $policy, $package->getDeploymentPolicy() );
+			$package->set_deployment_policy( $policy );
+			self::assertSame( $policy, $package->get_deployment_policy() );
 		}
 
 		self::assertNull( DeploymentPolicy::tryFrom( 'enabled' ) );
@@ -46,7 +46,7 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 		global $wpdb;
 
 		$package = $this->package();
-		$package->setDeploymentPolicy( DeploymentPolicy::AUTOMATIC );
+		$package->set_deployment_policy( DeploymentPolicy::AUTOMATIC );
 
 		$result = $this->storage()->storeForTest( $package );
 
@@ -56,7 +56,7 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 		self::assertArrayNotHasKey( 'status', $wpdb->inserts[0][1] );
 
 		$hydrated = $this->storage()->findForTest( 'example/example.php' );
-		self::assertSame( DeploymentPolicy::AUTOMATIC, $hydrated->getDeploymentPolicy() );
+		self::assertSame( DeploymentPolicy::AUTOMATIC, $hydrated->get_deployment_policy() );
 	}
 
 	public function testPackageModelRejectsUnknownPolicies(): void {
@@ -247,7 +247,7 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 					public function __construct( private readonly string $identifier ) {
 					}
 
-					public function getIdentifier(): mixed {
+					public function get_identifier(): mixed {
 						return $this->identifier;
 					}
 				};
@@ -262,12 +262,12 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 	private function package(): Package {
 		$package    = new class() extends AbstractPackage {
 
-			public function getIdentifier(): mixed {
+			public function get_identifier(): mixed {
 				return 'example/example.php';
 			}
 		};
 		$repository = new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'main' );
-		$package->setRepository( $repository );
+		$package->set_repository( $repository );
 
 		return $package;
 	}

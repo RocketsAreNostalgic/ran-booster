@@ -31,14 +31,14 @@ final readonly class ManagedPluginFailureRows {
 		}
 
 		foreach ( $plugins as $plugin ) {
-			if ( ! $plugin instanceof Package || ! is_string( $plugin->getIdentifier() ) || ! is_string( $plugin->getSlug() ) ) {
+			if ( ! $plugin instanceof Package || ! is_string( $plugin->get_identifier() ) || ! is_string( $plugin->get_slug() ) ) {
 				continue;
 			}
-			$failure = $this->monitor->for_package( 'plugin', $plugin->getSlug() );
+			$failure = $this->monitor->for_package( 'plugin', $plugin->get_slug() );
 			if ( null === $failure ) {
 				continue;
 			}
-			$file = $plugin->getIdentifier();
+			$file = $plugin->get_identifier();
 			add_action(
 				'after_plugin_row_' . $file,
 				function ( string $plugin_file ) use ( $failure ): void {

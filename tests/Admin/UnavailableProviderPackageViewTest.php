@@ -133,7 +133,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$packageProviders = array( $this->packageListProvider() );
 		$packageActivity  = array(
 			'items'       => array(
-				(string) $package->getIdentifier() => array(
+				(string) $package->get_identifier() => array(
 					'latest'          => $this->attempt( 2, 'failed', null ),
 					'last_successful' => $this->attempt( 1, 'succeeded', str_repeat( 'a', 40 ) ),
 				),
@@ -180,7 +180,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 
 	public function testDisabledAutomationSuppressesHistoricalDeploymentStatus(): void {
 		$package = $this->package();
-		$package->setDeploymentPolicy( DeploymentPolicy::DISABLED );
+		$package->set_deployment_policy( DeploymentPolicy::DISABLED );
 		$GLOBALS['ran_booster_bulk_active_plugins'] = array( 'exact/exact.php' );
 
 		$packages         = array( $package );
@@ -188,7 +188,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$packageProviders = array( $this->packageListProvider() );
 		$packageActivity  = array(
 			'items'       => array(
-				(string) $package->getIdentifier() => array(
+				(string) $package->get_identifier() => array(
 					'latest'          => $this->attempt( 2, 'failed', null ),
 					'last_successful' => null,
 				),
@@ -231,7 +231,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 
 	public function testManualAutomationRemainsIndependentFromWordPressActivation(): void {
 		$package = $this->package();
-		$package->setDeploymentPolicy( DeploymentPolicy::MANUAL );
+		$package->set_deployment_policy( DeploymentPolicy::MANUAL );
 		$packages         = array( $package );
 		$packageView      = PackagePagePresenter::plugin();
 		$packageProviders = array( $this->packageListProvider() );
@@ -278,7 +278,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 
 	public function testReleaseManagedEditViewKeepsCoreAndAddOnFormsSeparate(): void {
 		$package = $this->package();
-		$package->setSource( PackageSource::RELEASE_ASSET, 2 );
+		$package->set_source( PackageSource::RELEASE_ASSET, 2 );
 		$packageView             = PackagePagePresenter::plugin();
 		$packageProviderSettings = array(
 			'default_provider' => 'temporarily-offline',
@@ -322,7 +322,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 
 	public function testReleaseManagedEditRoutesWebhookManagementToTheRepositoryPage(): void {
 		$package = $this->package();
-		$package->setSource( PackageSource::RELEASE_ASSET, 2 );
+		$package->set_source( PackageSource::RELEASE_ASSET, 2 );
 		$packageView             = PackagePagePresenter::plugin();
 		$packageProviderSettings = array(
 			'default_provider' => 'temporarily-offline',
@@ -350,7 +350,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 
 	public function testReleaseManagedListUsesTheExistingDeploymentPositionAndReadOnlySummary(): void {
 		$package = $this->package();
-		$package->setSource( PackageSource::RELEASE_ASSET, 2 );
+		$package->set_source( PackageSource::RELEASE_ASSET, 2 );
 		$packages                = array( $package );
 		$packageView             = PackagePagePresenter::plugin();
 		$packageProviders        = array( $this->packageListProvider() );
@@ -449,7 +449,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 			$packageProviders = array( $this->packageListProvider() );
 			$packageActivity  = array(
 				'items'       => array(
-					(string) $package->getIdentifier() => array(
+					(string) $package->get_identifier() => array(
 						'latest'          => $this->attempt( 3, $state, null ),
 						'last_successful' => null,
 					),
@@ -474,7 +474,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$packageProviders = array( $this->packageListProvider() );
 		$packageActivity  = array(
 			'items'       => array(
-				(string) $package->getIdentifier() => array(
+				(string) $package->get_identifier() => array(
 					'latest'          => $this->attempt( 5, 'needs_attention', null, true ),
 					'last_successful' => null,
 				),
@@ -675,8 +675,8 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		);
 
 		$package = new UnavailableProviderPackage();
-		$package->setRepository( $repository );
-		$package->setDeploymentPolicy( DeploymentPolicy::AUTOMATIC );
+		$package->set_repository( $repository );
+		$package->set_deployment_policy( DeploymentPolicy::AUTOMATIC );
 
 		return $package;
 	}
@@ -685,7 +685,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 final class UnavailableProviderPackage extends AbstractPackage {
 	public string $name = 'Exact package';
 
-	public function getIdentifier(): mixed {
+	public function get_identifier(): mixed {
 		return 'exact/exact.php';
 	}
 

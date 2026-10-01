@@ -527,7 +527,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		string $repositoryId = 'R_example',
 		DeploymentPolicy $policy = DeploymentPolicy::AUTOMATIC
 	): Plugin {
-		$plugin = Plugin::fromWpArray(
+		$plugin = Plugin::from_wp_array(
 			$identifier,
 			array(
 				'Name'        => 'Example',
@@ -543,9 +543,9 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 				'AuthorName'  => '',
 			)
 		);
-		$plugin->setRepository( new ManagedRepository( 'gh', $repository, $repositoryId, 'main' ) );
-		$plugin->setDeploymentPolicy( $policy );
-		$plugin->setSource( PackageSource::BRANCH, 1 );
+		$plugin->set_repository( new ManagedRepository( 'gh', $repository, $repositoryId, 'main' ) );
+		$plugin->set_deployment_policy( $policy );
+		$plugin->set_source( PackageSource::BRANCH, 1 );
 		return $plugin;
 	}
 
@@ -597,7 +597,7 @@ final class ParityPluginRepository extends PluginRepository {
 			return $this->installed;
 		}
 		foreach ( $this->managed as $plugin ) {
-			if ( (string) $plugin->getSlug() === (string) $slug ) {
+			if ( (string) $plugin->get_slug() === (string) $slug ) {
 				return $plugin;
 			}
 		}
@@ -609,7 +609,7 @@ final class ParityPluginRepository extends PluginRepository {
 			return $this->byIdentifier;
 		}
 		foreach ( $this->managed as $plugin ) {
-			if ( (string) $plugin->getIdentifier() === (string) $file ) {
+			if ( (string) $plugin->get_identifier() === (string) $file ) {
 				return $plugin;
 			}
 		}

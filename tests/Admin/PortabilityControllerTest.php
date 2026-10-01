@@ -857,18 +857,18 @@ final class PortabilityControllerTest extends TestCase {
 
 	private function exportController(): PortabilityController {
 		$package = $this->createStub( \RAN\Package::class );
-		$package->method( 'getIdentifier' )->willReturn( 'example/example.php' );
-		$package->method( 'getDisplayName' )->willReturn( 'Example' );
-		$package->method( 'getSlug' )->willReturn( 'example' );
-		$package->method( 'getProviderCode' )->willReturn( 'gh' );
-		$package->method( 'getProviderRepositoryId' )->willReturn( 'repository-id' );
-		$package->method( 'getRepository' )->willReturn( new ManagedRepository( 'gh', 'owner/repository', 'repository-id', 'main', false, '' ) );
-		$package->method( 'getBranch' )->willReturn( 'main' );
-		$package->method( 'isPrivate' )->willReturn( false );
-		$package->method( 'getSubdirectory' )->willReturn( null );
-		$package->method( 'getCredentialId' )->willReturn( '' );
-		$package->method( 'getSource' )->willReturn( PackageSource::BRANCH );
-		$package->method( 'getSourceRevision' )->willReturn( 1 );
+		$package->method( 'get_identifier' )->willReturn( 'example/example.php' );
+		$package->method( 'get_display_name' )->willReturn( 'Example' );
+		$package->method( 'get_slug' )->willReturn( 'example' );
+		$package->method( 'get_provider_code' )->willReturn( 'gh' );
+		$package->method( 'get_provider_repository_id' )->willReturn( 'repository-id' );
+		$package->method( 'get_repository' )->willReturn( new ManagedRepository( 'gh', 'owner/repository', 'repository-id', 'main', false, '' ) );
+		$package->method( 'get_branch' )->willReturn( 'main' );
+		$package->method( 'is_private' )->willReturn( false );
+		$package->method( 'get_subdirectory' )->willReturn( null );
+		$package->method( 'get_credential_id' )->willReturn( '' );
+		$package->method( 'get_source' )->willReturn( PackageSource::BRANCH );
+		$package->method( 'get_source_revision' )->willReturn( 1 );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
 		$plugins->method( 'allDeploymentPlugins' )->willReturn( array( 'example/example.php' => $package ) );
@@ -963,7 +963,7 @@ final class PortabilityControllerTest extends TestCase {
 		string $provider = 'gh',
 		PackageSource $source = PackageSource::BRANCH
 	): Plugin {
-		$plugin = Plugin::fromWpArray(
+		$plugin = Plugin::from_wp_array(
 			'example/example.php',
 			array(
 				'Name'        => 'Example',
@@ -979,10 +979,10 @@ final class PortabilityControllerTest extends TestCase {
 				'AuthorName'  => '',
 			)
 		);
-		$plugin->setRepository( new ManagedRepository( $provider, $locator, $providerRepositoryId, $branch, $private, $credentialId ) );
-		$plugin->setDeploymentPolicy( $policy );
-		$plugin->setSubdirectory( $subdirectory );
-		$plugin->setSource( $source, 1 );
+		$plugin->set_repository( new ManagedRepository( $provider, $locator, $providerRepositoryId, $branch, $private, $credentialId ) );
+		$plugin->set_deployment_policy( $policy );
+		$plugin->set_subdirectory( $subdirectory );
+		$plugin->set_source( $source, 1 );
 
 		return $plugin;
 	}
@@ -994,8 +994,8 @@ final class PortabilityControllerTest extends TestCase {
 				$this->name       = 'Example';
 			}
 		};
-		$theme->setRepository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'main', true, 'target-profile' ) );
-		$theme->setDeploymentPolicy( DeploymentPolicy::DISABLED );
+		$theme->set_repository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'main', true, 'target-profile' ) );
+		$theme->set_deployment_policy( DeploymentPolicy::DISABLED );
 
 		return $theme;
 	}

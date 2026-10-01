@@ -116,18 +116,18 @@ final class WebhookAssistanceReadinessEvaluator {
 		$release_packages = array();
 		$release_locator  = null;
 		foreach ( $packages as $package ) {
-			if ( ! $package instanceof Package || $provider !== $package->getProviderCode() ) {
+			if ( ! $package instanceof Package || $provider !== $package->get_provider_code() ) {
 				continue;
 			}
 
-			$locator          = (string) $package->getRepository();
+			$locator          = (string) $package->get_repository();
 			$normalized       = strtolower( trim( $locator, '/' ) );
-			$package_identity = $package->getProviderRepositoryId();
+			$package_identity = $package->get_provider_repository_id();
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			$identity_matches = is_string( $package_identity ) && hash_equals( $repositoryId, $package_identity );
 			$locator_matches  = null !== $release_locator && hash_equals( $release_locator, $normalized );
 
-			if ( PackageSource::RELEASE_ASSET === $package->getSource() && $identity_matches ) {
+			if ( PackageSource::RELEASE_ASSET === $package->get_source() && $identity_matches ) {
 				if ( ! $this->safe_repository( $locator )
 					|| ( null !== $release_locator && ! hash_equals( $release_locator, $normalized ) ) ) {
 					return null;
@@ -137,7 +137,7 @@ final class WebhookAssistanceReadinessEvaluator {
 				continue;
 			}
 
-			if ( PackageSource::BRANCH === $package->getSource() && ( $identity_matches || $locator_matches ) ) {
+			if ( PackageSource::BRANCH === $package->get_source() && ( $identity_matches || $locator_matches ) ) {
 				return null;
 			}
 		}
@@ -149,9 +149,9 @@ final class WebhookAssistanceReadinessEvaluator {
 		// A branch package may have appeared before the release locator was known.
 		foreach ( $packages as $package ) {
 			if ( $package instanceof Package
-				&& $provider === $package->getProviderCode()
-				&& PackageSource::BRANCH === $package->getSource()
-				&& hash_equals( $release_locator, strtolower( trim( (string) $package->getRepository(), '/' ) ) )
+				&& $provider === $package->get_provider_code()
+				&& PackageSource::BRANCH === $package->get_source()
+				&& hash_equals( $release_locator, strtolower( trim( (string) $package->get_repository(), '/' ) ) )
 			) {
 				return null;
 			}
@@ -164,11 +164,11 @@ final class WebhookAssistanceReadinessEvaluator {
 			'disabled'  => 0,
 		);
 		foreach ( $release_packages as $package ) {
-			$references[] = (string) $package->getIdentifier();
-			++$policies[ $package->getDeploymentPolicy()->value ];
+			$references[] = (string) $package->get_identifier();
+			++$policies[ $package->get_deployment_policy()->value ];
 		}
 		sort( $references, SORT_STRING );
-		$repository = (string) $release_packages[0]->getRepository();
+		$repository = (string) $release_packages[0]->get_repository();
 
 		return new AssistanceTarget(
 			$provider,
@@ -192,12 +192,12 @@ final class WebhookAssistanceReadinessEvaluator {
 		$repositories = array();
 		foreach ( array_merge( $this->plugins->allDeploymentPlugins(), $this->themes->allDeploymentThemes() ) as $package ) {
 			if ( ! $package instanceof Package
-				|| PackageSource::BRANCH !== $package->getSource()
-				|| $provider !== $package->getProviderCode() ) {
+				|| PackageSource::BRANCH !== $package->get_source()
+				|| $provider !== $package->get_provider_code() ) {
 				continue;
 			}
 
-			$repository            = (string) $package->getRepository();
+			$repository            = (string) $package->get_repository();
 			$key                   = strtolower( trim( $repository, '/' ) );
 			$entry                 = $repositories[ $key ] ?? array(
 				'repository' => $repository,
@@ -207,12 +207,12 @@ final class WebhookAssistanceReadinessEvaluator {
 				'manual'     => 0,
 				'disabled'   => 0,
 			);
-			$repository_id         = $package->getProviderRepositoryId();
+			$repository_id         = $package->get_provider_repository_id();
 			$entry['identities'][] = is_string( $repository_id ) && $this->valid_repository_id( $repository_id )
 				? $repository_id
 				: null;
-			$entry['packages'][]   = (string) $package->getIdentifier();
-			++$entry[ $package->getDeploymentPolicy()->value ];
+			$entry['packages'][]   = (string) $package->get_identifier();
+			++$entry[ $package->get_deployment_policy()->value ];
 			$repositories[ $key ] = $entry;
 		}
 

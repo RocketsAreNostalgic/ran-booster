@@ -37,8 +37,8 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		$package       = $this->package( 'example/example.php' );
 		$opaqueLocator = 'RocketsAreNostalgic/%2Fexample<tag>';
 		$repository    = new ManagedRepository( 'gh', $opaqueLocator, '000123456789', 'release', false, 'credential-one' );
-		$package->setRepository( $repository );
-		$package->setDeploymentPolicy( DeploymentPolicy::AUTOMATIC );
+		$package->set_repository( $repository );
+		$package->set_deployment_policy( DeploymentPolicy::AUTOMATIC );
 
 		self::assertSame( PackageMutationStatus::CHANGED, $storage->storeForTest( $package )->get_status() );
 		self::assertSame( 'gh', $wpdb->inserts[0][1]['provider'] );
@@ -49,7 +49,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		self::assertSame( '000123456789', $wpdb->inserts[0][1]['provider_repository_id'], 'Stable IDs must remain opaque strings.' );
 
 		$opaqueProviderId = '000%2F{opaque-repository}-value';
-		$package->setRepository( new ManagedRepository( 'gh', $opaqueLocator, $opaqueProviderId, 'release', false, 'credential-one' ) );
+		$package->set_repository( new ManagedRepository( 'gh', $opaqueLocator, $opaqueProviderId, 'release', false, 'credential-one' ) );
 
 		self::assertSame( PackageMutationStatus::CHANGED, $storage->storeForTest( $package )->get_status() );
 		self::assertSame( 'gh', $wpdb->updates[0][1]['provider'] );
@@ -63,14 +63,14 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		$wpdb->row = (object) $wpdb->rows[0];
 		$hydrated  = $storage->findForTest( 'example/example.php' );
 
-		self::assertInstanceOf( ManagedRepository::class, $hydrated->getRepository() );
-		self::assertSame( 'gh', $hydrated->getProviderCode() );
-		self::assertSame( $opaqueProviderId, $hydrated->getProviderRepositoryId() );
-		self::assertSame( $opaqueLocator, (string) $hydrated->getRepository() );
-		self::assertSame( 'credential-one', $hydrated->getCredentialId() );
-		self::assertSame( 'release', $hydrated->getBranch() );
-		self::assertSame( PackageSource::BRANCH, $hydrated->getSource() );
-		self::assertSame( 2, $hydrated->getSourceRevision() );
+		self::assertInstanceOf( ManagedRepository::class, $hydrated->get_repository() );
+		self::assertSame( 'gh', $hydrated->get_provider_code() );
+		self::assertSame( $opaqueProviderId, $hydrated->get_provider_repository_id() );
+		self::assertSame( $opaqueLocator, (string) $hydrated->get_repository() );
+		self::assertSame( 'credential-one', $hydrated->get_credential_id() );
+		self::assertSame( 'release', $hydrated->get_branch() );
+		self::assertSame( PackageSource::BRANCH, $hydrated->get_source() );
+		self::assertSame( 2, $hydrated->get_source_revision() );
 	}
 
 	public function testReleaseSourceAndRevisionHydrateWithoutBranchFallback(): void {
@@ -94,8 +94,8 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 
 		$package = $this->storage()->findForTest( 'example/example.php' );
 
-		self::assertSame( PackageSource::RELEASE_ASSET, $package->getSource() );
-		self::assertSame( 7, $package->getSourceRevision() );
+		self::assertSame( PackageSource::RELEASE_ASSET, $package->get_source() );
+		self::assertSame( 7, $package->get_source_revision() );
 	}
 
 	public function testMalformedStoredSourceStateFailsClosed(): void {
@@ -154,7 +154,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		);
 
 		$package = $this->package( 'example/example.php' );
-		$package->setRepository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'main' ) );
+		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'main' ) );
 
 		$result = $this->storage()->storeForTest( $package );
 
@@ -346,11 +346,11 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 
 		$package = $storage->findForTest( 'example/example.php' );
 
-		self::assertSame( 'external-offline', $package->getProviderCode() );
-		self::assertSame( 'group/subgroup/package', (string) $package->getRepository() );
-		self::assertSame( 'opaque-external-id', $package->getProviderRepositoryId() );
-		self::assertSame( 'external-credential', $package->getCredentialId() );
-		self::assertTrue( $package->isPrivate() );
+		self::assertSame( 'external-offline', $package->get_provider_code() );
+		self::assertSame( 'group/subgroup/package', (string) $package->get_repository() );
+		self::assertSame( 'opaque-external-id', $package->get_provider_repository_id() );
+		self::assertSame( 'external-credential', $package->get_credential_id() );
+		self::assertTrue( $package->is_private() );
 	}
 
 	public function testInvalidStoredProviderIdentityFailsWithASafeStorageError(): void {
@@ -503,7 +503,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 					public function __construct( private readonly string $identifier ) {
 					}
 
-					public function getIdentifier(): mixed {
+					public function get_identifier(): mixed {
 						return $this->identifier;
 					}
 				};
@@ -521,7 +521,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 			public function __construct( private readonly string $identifier ) {
 			}
 
-			public function getIdentifier(): mixed {
+			public function get_identifier(): mixed {
 				return $this->identifier;
 			}
 		};

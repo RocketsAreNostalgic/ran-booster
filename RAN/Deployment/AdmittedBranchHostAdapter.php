@@ -91,7 +91,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 		if ( 'update' === $data['operation'] ) {
 			try {
-				$identifier = (string) $this->package_by_slug( (string) $data['package_type'], $request->package_slug )->getIdentifier();
+				$identifier = (string) $this->package_by_slug( (string) $data['package_type'], $request->package_slug )->get_identifier();
 			} catch ( PackageStorageFailure $failure ) {
 				$this->stage_package_storage_failure( $failure );
 			} catch ( Throwable ) {
@@ -301,7 +301,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 			$package = $this->package_by_slug( (string) $data['package_type'], $request->package_slug );
 			$this->assert_package_snapshot( $package, $data, $request );
-			$identifier = (string) $package->getIdentifier();
+			$identifier = (string) $package->get_identifier();
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 			if ( null === $deployment->installedIdentifier || ! hash_equals( $deployment->installedIdentifier, $identifier ) ) {
 				$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED );
@@ -334,7 +334,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		$this->assert_declaration( $deployment );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		$package    = $this->installed_package( $deployment->packageType, $deployment->slug );
-		$identifier = (string) $package->getIdentifier();
+		$identifier = (string) $package->get_identifier();
 		if ( '' === $identifier ) {
 			throw new RuntimeException( 'The installed package identity is unavailable.' );
 		}
@@ -346,7 +346,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		try {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 			$current = $this->package_from_identifier( $deployment->packageType, $baseline['identifier'] );
-			return array( 'identifier' => (string) $current->getIdentifier() ) + $this->package_runtime_state( $current );
+			return array( 'identifier' => (string) $current->get_identifier() ) + $this->package_runtime_state( $current );
 		} catch ( Throwable ) {
 			return null;
 		}
@@ -366,9 +366,9 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			$request->is_private,
 			$request->credential_id
 		);
-		$installed->setRepository( $repository );
-		$installed->setSubdirectory( $request->subdirectory );
-		$installed->setDeploymentPolicy( $request->deployment_policy );
+		$installed->set_repository( $repository );
+		$installed->set_subdirectory( $request->subdirectory );
+		$installed->set_deployment_policy( $request->deployment_policy );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		$result = 'plugin' === $deployment->packageType ? $this->plugins->adopt( $installed ) : $this->themes->adopt( $installed );
 		if ( $result->is_successful() ) {
@@ -574,24 +574,24 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			$data       = $this->attempt->safe_data();
 			$request    = $this->attempt->get_request();
 			$installed  = $this->installed_package( (string) $data['package_type'], $request->package_slug );
-			$identifier = (string) $installed->getIdentifier();
+			$identifier = (string) $installed->get_identifier();
 			if ( '' === $identifier ) {
 				return false;
 			}
 			$existing = $this->package_from_identifier( (string) $data['package_type'], $identifier );
-			return hash_equals( $identifier, (string) $existing->getIdentifier() )
-				&& $existing->getProviderCode() === $data['provider']
-				&& hash_equals( (string) $existing->getProviderRepositoryId(), (string) $data['provider_repository_id'] )
-				&& hash_equals( (string) $existing->getRepository(), $request->repository )
-				&& hash_equals( (string) $existing->getSubdirectory(), (string) $request->subdirectory )
-				&& hash_equals( (string) $existing->getSlug(), $request->package_slug );
+			return hash_equals( $identifier, (string) $existing->get_identifier() )
+				&& $existing->get_provider_code() === $data['provider']
+				&& hash_equals( (string) $existing->get_provider_repository_id(), (string) $data['provider_repository_id'] )
+				&& hash_equals( (string) $existing->get_repository(), $request->repository )
+				&& hash_equals( (string) $existing->get_subdirectory(), (string) $request->subdirectory )
+				&& hash_equals( (string) $existing->get_slug(), $request->package_slug );
 		} catch ( Throwable ) {
 			return false;
 		}
 	}
 
 	private function existing_management_matches_installed_target( Package $installed ): bool {
-		$identifier = (string) $installed->getIdentifier();
+		$identifier = (string) $installed->get_identifier();
 		if ( '' === $identifier ) {
 			return false;
 		}
@@ -599,46 +599,46 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			$data     = $this->attempt->safe_data();
 			$request  = $this->attempt->get_request();
 			$existing = $this->package_from_identifier( (string) $data['package_type'], $identifier );
-			return hash_equals( $identifier, (string) $existing->getIdentifier() )
-				&& PackageSource::BRANCH === $existing->getSource()
-				&& $existing->getProviderCode() === $data['provider']
-				&& hash_equals( (string) $existing->getProviderRepositoryId(), (string) $data['provider_repository_id'] )
-				&& hash_equals( (string) $existing->getRepository(), $request->repository )
-				&& hash_equals( (string) $existing->getBranch(), $request->configured_branch )
-				&& hash_equals( $existing->getCredentialId(), (string) $request->credential_id )
-				&& hash_equals( (string) $existing->getSubdirectory(), (string) $request->subdirectory )
-				&& (bool) $existing->getPrivate() === $request->is_private
-				&& hash_equals( (string) $existing->getSlug(), $request->package_slug )
-				&& $existing->getDeploymentPolicy() === $request->deployment_policy;
+			return hash_equals( $identifier, (string) $existing->get_identifier() )
+				&& PackageSource::BRANCH === $existing->get_source()
+				&& $existing->get_provider_code() === $data['provider']
+				&& hash_equals( (string) $existing->get_provider_repository_id(), (string) $data['provider_repository_id'] )
+				&& hash_equals( (string) $existing->get_repository(), $request->repository )
+				&& hash_equals( (string) $existing->get_branch(), $request->configured_branch )
+				&& hash_equals( $existing->get_credential_id(), (string) $request->credential_id )
+				&& hash_equals( (string) $existing->get_subdirectory(), (string) $request->subdirectory )
+				&& (bool) $existing->get_private() === $request->is_private
+				&& hash_equals( (string) $existing->get_slug(), $request->package_slug )
+				&& $existing->get_deployment_policy() === $request->deployment_policy;
 		} catch ( Throwable ) {
 			return false;
 		}
 	}
 
 	private function assert_package_snapshot( Package $package, array $data, DeploymentRequest $request ): void {
-		if ( $package->getProviderCode() !== $data['provider']
-			|| ! hash_equals( (string) $package->getProviderRepositoryId(), (string) $data['provider_repository_id'] )
-			|| ! hash_equals( (string) $package->getRepository(), $request->repository )
-			|| ! hash_equals( (string) $package->getBranch(), $request->configured_branch )
-			|| ! hash_equals( $package->getCredentialId(), (string) $request->credential_id )
-			|| ! hash_equals( (string) $package->getSubdirectory(), (string) $request->subdirectory )
-			|| (bool) $package->getPrivate() !== $request->is_private
-			|| ! hash_equals( (string) $package->getSlug(), $request->package_slug )
-			|| $package->getDeploymentPolicy() !== $request->deployment_policy
-			|| $package->getSource()->value !== ( $data['package_source'] ?? null )
-			|| $package->getSourceRevision() !== ( $data['package_source_revision'] ?? null ) ) {
+		if ( $package->get_provider_code() !== $data['provider']
+			|| ! hash_equals( (string) $package->get_provider_repository_id(), (string) $data['provider_repository_id'] )
+			|| ! hash_equals( (string) $package->get_repository(), $request->repository )
+			|| ! hash_equals( (string) $package->get_branch(), $request->configured_branch )
+			|| ! hash_equals( $package->get_credential_id(), (string) $request->credential_id )
+			|| ! hash_equals( (string) $package->get_subdirectory(), (string) $request->subdirectory )
+			|| (bool) $package->get_private() !== $request->is_private
+			|| ! hash_equals( (string) $package->get_slug(), $request->package_slug )
+			|| $package->get_deployment_policy() !== $request->deployment_policy
+			|| $package->get_source()->value !== ( $data['package_source'] ?? null )
+			|| $package->get_source_revision() !== ( $data['package_source_revision'] ?? null ) ) {
 			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED );
 		}
 	}
 
 	/** @return array{version:string,active:bool} */
 	private function package_runtime_state( Package $package ): array {
-		$identifier = (string) $package->getIdentifier();
+		$identifier = (string) $package->get_identifier();
 		$active     = $package instanceof \RAN\Plugin
 			? in_array( $identifier, (array) get_option( 'active_plugins', array() ), true )
 			: in_array( $identifier, array( (string) get_option( 'stylesheet', '' ), (string) get_option( 'template', '' ) ), true );
 		return array(
-			'version' => $package->getVersion(),
+			'version' => $package->get_version(),
 			'active'  => $active,
 		);
 	}
@@ -650,7 +650,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	private function package_by_slug( string $type, string $slug ): Package {
 		$matches = array_filter(
 			'plugin' === $type ? $this->plugins->allDeploymentPlugins() : $this->themes->allDeploymentThemes(),
-			static fn ( Package $package ): bool => (string) $package->getSlug() === $slug
+			static fn ( Package $package ): bool => (string) $package->get_slug() === $slug
 		);
 		if ( 1 !== count( $matches ) ) {
 			throw new RuntimeException( 'The managed package identity is unavailable or ambiguous.' );

@@ -68,7 +68,7 @@ final class PackageOperationServiceTest extends TestCase {
 
 	public function testReinstallAfterSaveDeploysTheAuthoritativeEditedPackageAndReturnsToSettings(): void {
 		$package = $this->plugin();
-		$package->setDeploymentPolicy( DeploymentPolicy::DISABLED );
+		$package->set_deployment_policy( DeploymentPolicy::DISABLED );
 		$coordinator = new OperationCoordinator();
 		$dashboard   = $this->dashboard( $coordinator, $package );
 
@@ -90,7 +90,7 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 'update', $coordinator->lastCommand->operation );
 		self::assertSame( DeploymentPolicy::MANUAL, $coordinator->lastCommand->expected_package['deployment_policy'] );
 		self::assertTrue( $coordinator->lastCommand->has_expected_package() );
-		self::assertSame( 'manual', $package->getDeploymentPolicy()->value );
+		self::assertSame( 'manual', $package->get_deployment_policy()->value );
 		$query = $this->redirectQuery( $redirect );
 		self::assertSame( 'update', $query['ran_booster_result'] );
 		self::assertSame( 'example/example.php', $query['package'] );
@@ -113,8 +113,8 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 
 		self::assertIsString( $redirect );
-		self::assertSame( 'feature/verified-after-save', $package->getBranch() );
-		self::assertSame( 'packages/example', $package->getSubdirectory() );
+		self::assertSame( 'feature/verified-after-save', $package->get_branch() );
+		self::assertSame( 'packages/example', $package->get_subdirectory() );
 		$query = $this->redirectQuery( $redirect );
 		self::assertSame( 'ran-booster-plugins', $query['page'] );
 		self::assertSame( 'example/example.php', $query['package'] );
@@ -174,7 +174,7 @@ final class PackageOperationServiceTest extends TestCase {
 	public function testBranchAdmissionRefusesAnotherReleaseOwnerBeforeWriting( string $action ): void {
 		$plugins = new OperationPluginRepository( $this->plugin() );
 		$themes  = new OperationThemeRepository( new OperationTheme( 'example' ) );
-		$themes->package->setRepository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
+		$themes->package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
 		$database         = new RepositorySourceGuardDatabase();
 		$database->rows[] = (object) array(
 			'type'                   => 2,
@@ -211,7 +211,7 @@ final class PackageOperationServiceTest extends TestCase {
 
 		$link = PackageOperation::from_input( 'install-plugin', $this->input( 'install-plugin', array( 'dry-run' => '1' ) ) );
 		self::assertSame( 'linked', $service->execute( $link )['status'] );
-		self::assertSame( 'owner/example', (string) $plugins->stored?->getRepository() );
+		self::assertSame( 'owner/example', (string) $plugins->stored?->get_repository() );
 
 		$edit = PackageOperation::from_input( 'edit-plugin', $this->input( 'edit-plugin' ) );
 		self::assertSame( 'edited', $service->execute( $edit )['status'] );
@@ -228,9 +228,9 @@ final class PackageOperationServiceTest extends TestCase {
 	public function testLinkTreatsTheSameReleaseManagedTargetAsAlreadyManaged(): void {
 		$plugins                     = new OperationPluginRepository( $this->plugin() );
 		$plugins->freshAfterMutation = $this->plugin();
-		$plugins->freshAfterMutation->setRepository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'release', true, 'existing-access' ) );
-		$plugins->freshAfterMutation->setDeploymentPolicy( DeploymentPolicy::AUTOMATIC );
-		$plugins->freshAfterMutation->setSource( PackageSource::RELEASE_ASSET, 7 );
+		$plugins->freshAfterMutation->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'release', true, 'existing-access' ) );
+		$plugins->freshAfterMutation->set_deployment_policy( DeploymentPolicy::AUTOMATIC );
+		$plugins->freshAfterMutation->set_source( PackageSource::RELEASE_ASSET, 7 );
 		$plugins->adoptionResult = PackageMutationResult::conflict(
 			PackageStorageOperation::INSERT,
 			'ran_booster_storage_adoption_conflict',
@@ -282,7 +282,7 @@ final class PackageOperationServiceTest extends TestCase {
 	public function testLinkKeepsMismatchedExistingManagementAsStorageFailure(): void {
 		$plugins                     = new OperationPluginRepository( $this->plugin() );
 		$plugins->freshAfterMutation = $this->plugin();
-		$plugins->freshAfterMutation->setRepository( new ManagedRepository( 'gh', 'owner/other', 'R_other', 'main' ) );
+		$plugins->freshAfterMutation->set_repository( new ManagedRepository( 'gh', 'owner/other', 'R_other', 'main' ) );
 		$plugins->adoptionResult = PackageMutationResult::conflict(
 			PackageStorageOperation::INSERT,
 			'ran_booster_storage_adoption_conflict',
@@ -385,7 +385,7 @@ final class PackageOperationServiceTest extends TestCase {
 		) {
 			$package = 'edit-plugin' === $action ? $this->plugin() : new OperationTheme( 'example' );
 			if ( $package instanceof Theme ) {
-				$package->setRepository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
+				$package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
 			}
 			$plugins = new OperationPluginRepository( $this->plugin() );
 			$themes  = new OperationThemeRepository( $package instanceof Theme ? $package : new OperationTheme( 'example' ) );
@@ -442,7 +442,7 @@ final class PackageOperationServiceTest extends TestCase {
 
 		$link = PackageOperation::from_input( 'install-theme', $this->input( 'install-theme', array( 'dry-run' => '1' ) ) );
 		self::assertSame( 'linked', $service->execute( $link )['status'] );
-		self::assertSame( 'owner/example', (string) $themes->stored?->getRepository() );
+		self::assertSame( 'owner/example', (string) $themes->stored?->get_repository() );
 
 		$edit = PackageOperation::from_input( 'edit-theme', $this->input( 'edit-theme' ) );
 		self::assertSame( 'edited', $service->execute( $edit )['status'] );
@@ -456,8 +456,8 @@ final class PackageOperationServiceTest extends TestCase {
 
 	public function testReleaseManagedPackageRetainsItsRepositoryIdentityWhileUpdatingAccessAndPolicy(): void {
 		$plugin = $this->plugin();
-		$plugin->setRepository( new ManagedRepository( 'gh', 'owner/release', 'R_release', 'stable', true, 'old-access' ) );
-		$plugin->setSource( PackageSource::RELEASE_ASSET, 2 );
+		$plugin->set_repository( new ManagedRepository( 'gh', 'owner/release', 'R_release', 'stable', true, 'old-access' ) );
+		$plugin->set_source( PackageSource::RELEASE_ASSET, 2 );
 		$plugins = new OperationPluginRepository( $plugin );
 		$service = $this->service(
 			$plugins,
@@ -513,8 +513,8 @@ final class PackageOperationServiceTest extends TestCase {
 
 	public function testLegacyReleaseManagedPackageWithSubdirectoryCannotBeEdited(): void {
 		$plugin = $this->plugin();
-		$plugin->setSubdirectory( 'packages/example' );
-		$plugin->setSource( PackageSource::RELEASE_ASSET, 2 );
+		$plugin->set_subdirectory( 'packages/example' );
+		$plugin->set_source( PackageSource::RELEASE_ASSET, 2 );
 		$plugins = new OperationPluginRepository( $plugin );
 		$service = $this->service(
 			$plugins,
@@ -556,7 +556,7 @@ final class PackageOperationServiceTest extends TestCase {
 		$result = $service->execute( $operation );
 
 		self::assertSame( 'linked', $result['status'] );
-		self::assertSame( DeploymentPolicy::DISABLED, $result['package']->getDeploymentPolicy() );
+		self::assertSame( DeploymentPolicy::DISABLED, $result['package']->get_deployment_policy() );
 		self::assertSame( $plugins->stored, $result['package'] );
 	}
 
@@ -844,9 +844,9 @@ final class PackageOperationServiceTest extends TestCase {
 		$pluginOriginal = $this->plugin();
 		$pluginFresh    = $this->plugin();
 		$themeOriginal  = new OperationTheme( 'example' );
-		$themeOriginal->setRepository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
+		$themeOriginal->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
 		$themeFresh = new OperationTheme( 'example' );
-		$themeFresh->setRepository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
+		$themeFresh->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
 		$plugins                     = new OperationPluginRepository( $pluginOriginal );
 		$themes                      = new OperationThemeRepository( $themeOriginal );
 		$plugins->freshAfterMutation = $pluginFresh;
@@ -1335,17 +1335,17 @@ final class PackageOperationServiceTest extends TestCase {
 				2 => $themes->package,
 			) as $type => $package ) {
 				try {
-					$package->getRepository();
+					$package->get_repository();
 				} catch ( \TypeError ) {
 					continue; // Installed-only fixtures do not yet represent a managed relationship.
 				}
-				if ( null !== $package->getProviderCode() && null !== $package->getProviderRepositoryId() ) {
+				if ( null !== $package->get_provider_code() && null !== $package->get_provider_repository_id() ) {
 					$sourceDatabase->rows[] = (object) array(
 						'type'                   => $type,
-						'package'                => $package->getIdentifier(),
-						'provider'               => $package->getProviderCode(),
-						'provider_repository_id' => $package->getProviderRepositoryId(),
-						'source'                 => $package->getSource()->value,
+						'package'                => $package->get_identifier(),
+						'provider'               => $package->get_provider_code(),
+						'provider_repository_id' => $package->get_provider_repository_id(),
+						'source'                 => $package->get_source()->value,
 					);
 				}
 			}
@@ -1398,7 +1398,7 @@ final class PackageOperationServiceTest extends TestCase {
 	}
 
 	private function plugin( string $file = 'example/example.php' ): Plugin {
-		$plugin     = Plugin::fromWpArray(
+		$plugin     = Plugin::from_wp_array(
 			$file,
 			array(
 				'Name'        => 'Example',
@@ -1415,7 +1415,7 @@ final class PackageOperationServiceTest extends TestCase {
 			)
 		);
 		$repository = new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' );
-		$plugin->setRepository( $repository );
+		$plugin->set_repository( $repository );
 
 		return $plugin;
 	}
@@ -1491,9 +1491,9 @@ final class OperationPluginRepository extends PluginRepository {
 	}
 	public function editPlugin( $file, $input ): PackageMutationResult {
 		$this->edited = $input;
-		$this->package->setRepository( $input['repository'] );
-		$this->package->setDeploymentPolicy( DeploymentPolicy::from_database( $input['deployment_policy'] ) );
-		$this->package->setSubdirectory( $input['subdirectory'] );
+		$this->package->set_repository( $input['repository'] );
+		$this->package->set_deployment_policy( DeploymentPolicy::from_database( $input['deployment_policy'] ) );
+		$this->package->set_subdirectory( $input['subdirectory'] );
 		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
 	}
 	public function disablePluginForRemoval( Plugin $plugin ): PackageMutationResult {
@@ -1538,9 +1538,9 @@ final class OperationThemeRepository extends ThemeRepository {
 	}
 	public function editTheme( $stylesheet, $input ): PackageMutationResult {
 		$this->edited = $input;
-		$this->package->setRepository( $input['repository'] );
-		$this->package->setDeploymentPolicy( DeploymentPolicy::from_database( $input['deployment_policy'] ) );
-		$this->package->setSubdirectory( $input['subdirectory'] );
+		$this->package->set_repository( $input['repository'] );
+		$this->package->set_deployment_policy( DeploymentPolicy::from_database( $input['deployment_policy'] ) );
+		$this->package->set_subdirectory( $input['subdirectory'] );
 		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
 	}
 	public function disableThemeForRemoval( Theme $theme ): PackageMutationResult {

@@ -7,50 +7,50 @@ namespace RAN;
 use RAN\Deployment\DeploymentPolicy;
 
 interface Package {
-	public function getIdentifier(): mixed;
+	public function get_identifier(): mixed;
 
-	public function getDisplayName(): string;
+	public function get_display_name(): string;
 
-	public function getVersion(): string;
+	public function get_version(): string;
 
-	public function getSlug(): mixed;
+	public function get_slug(): mixed;
 
-	public function setInstallationSlug( ?string $slug ): void;
+	public function set_installation_slug( ?string $slug ): void;
 
-	public function getSubdirectory(): mixed;
+	public function get_subdirectory(): mixed;
 
-	public function hasSubdirectory(): bool;
+	public function has_subdirectory(): bool;
 
-	public function setSubdirectory( mixed $subdirectory ): void;
+	public function set_subdirectory( mixed $subdirectory ): void;
 
-	public function getDeploymentPolicy(): DeploymentPolicy;
+	public function get_deployment_policy(): DeploymentPolicy;
 
-	public function setDeploymentPolicy( DeploymentPolicy $deploymentPolicy ): void;
+	public function set_deployment_policy( DeploymentPolicy $deploymentPolicy ): void;
 
-	public function getSource(): PackageSource;
+	public function get_source(): PackageSource;
 
-	public function getSourceRevision(): int;
+	public function get_source_revision(): int;
 
-	public function setSource( PackageSource $source, int $revision ): void;
+	public function set_source( PackageSource $source, int $revision ): void;
 
 
-	public function setRepository( ManagedRepository $repository ): void;
+	public function set_repository( ManagedRepository $repository ): void;
 
-	public function getRepository(): ManagedRepository;
+	public function get_repository(): ManagedRepository;
 
-	public function getBranch(): mixed;
+	public function get_branch(): mixed;
 
-	public function getDeploymentRef(): ?string;
+	public function get_deployment_ref(): ?string;
 
-	public function setDeploymentRef( ?string $deploymentRef ): void;
+	public function set_deployment_ref( ?string $deploymentRef ): void;
 
-	public function getCredentialId(): string;
+	public function get_credential_id(): string;
 
-	public function getProviderCode(): ?string;
+	public function get_provider_code(): ?string;
 
-	public function getProviderRepositoryId(): ?string;
+	public function get_provider_repository_id(): ?string;
 
-	public function isPrivate(): mixed;
+	public function is_private(): mixed;
 
-	public function getPrivate(): mixed;
+	public function get_private(): mixed;
 }

@@ -119,7 +119,7 @@ try {
 		$assert( hash_equals( hash( 'sha256', $fixture['contents'] ), (string) hash_file( 'sha256', $fixture['directory'] . '/' . $fixture['metadata'] ) ), 'Installed prospective bytes differ from the verified ZIP.' );
 		$assert( $selectedTheme === get_stylesheet() && ! ( 'plugin' === $type && is_plugin_active( $identifier ) ), 'New prospective target became active.' );
 		$package = 'plugin' === $type ? $plugins->boosterPluginFromFile( $identifier ) : $themes->boosterThemeFromStylesheet( $identifier );
-		$assert( '2.0.0' === $package->getVersion() && RAN\PackageSource::RELEASE_ASSET === $package->getSource(), 'Successful prospective install was not adopted exactly.' );
+		$assert( '2.0.0' === $package->get_version() && RAN\PackageSource::RELEASE_ASSET === $package->get_source(), 'Successful prospective install was not adopted exactly.' );
 		$cleanStreams();
 		$measurements[$type] = array_map( static fn ( string $key ): int => $counts[$key] - $before[$key], array_keys( $counts ) );
 	}

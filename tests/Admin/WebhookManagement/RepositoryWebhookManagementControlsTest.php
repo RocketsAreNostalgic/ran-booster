@@ -347,9 +347,9 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			'recovery_profile'          => 'profile_123',
 		);
 		$package = $this->createMock( Package::class );
-		$package->method( 'getSource' )->willReturn( PackageSource::BRANCH );
-		$package->method( 'getProviderCode' )->willReturn( 'fixture-provider' );
-		$package->method( 'getProviderRepositoryId' )->willReturn( '1234' );
+		$package->method( 'get_source' )->willReturn( PackageSource::BRANCH );
+		$package->method( 'get_provider_code' )->willReturn( 'fixture-provider' );
+		$package->method( 'get_provider_repository_id' )->willReturn( '1234' );
 		$plugins = $this->createMock( PluginRepository::class );
 		$plugins->expects( self::once() )->method( 'boosterPluginFromFile' )->willReturn( $package );
 		$facade = $this->createMock( WebhookAssistanceFacade::class );

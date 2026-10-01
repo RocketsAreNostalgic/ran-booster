@@ -39,7 +39,7 @@ final class PluginRepositoryTest extends TestCase {
 		$plugin = ( new PluginRepository() )->fromSlug( 'example' );
 
 		self::assertInstanceOf( Plugin::class, $plugin );
-		self::assertSame( 'example/example.php', $plugin->getIdentifier() );
+		self::assertSame( 'example/example.php', $plugin->get_identifier() );
 	}
 
 	public function testMissingSlugThrowsInsteadOfCreatingAnEmptyPluginIdentity(): void {

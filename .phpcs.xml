@@ -40,7 +40,8 @@
 		<include-pattern>/RAN/Admin/ReleaseManagement/ReleaseWorkflowRequestController.php</include-pattern>
 		<include-pattern>/RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php</include-pattern>
 		<include-pattern>/RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php</include-pattern>
-		<!-- Runtime slug overrides: retained public contracts have declaration-local deferrals. -->
+		<!-- Connected public Package contract and runtime slug overrides. -->
+		<include-pattern>/RAN/Package.php</include-pattern>
 		<include-pattern>/RAN/AbstractPackage.php</include-pattern>
 		<include-pattern>/RAN/Plugin.php</include-pattern>
 		<include-pattern>/RAN/Theme.php</include-pattern>

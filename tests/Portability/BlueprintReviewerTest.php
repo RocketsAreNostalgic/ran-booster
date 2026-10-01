@@ -85,13 +85,13 @@ final class BlueprintReviewerTest extends TestCase {
 
 	private function managedPackage( string $providerRepositoryId ): Package {
 		$package = $this->createStub( Package::class );
-		$package->method( 'getIdentifier' )->willReturn( 'example/example.php' );
-		$package->method( 'getDisplayName' )->willReturn( 'Example' );
-		$package->method( 'getProviderCode' )->willReturn( 'gh' );
-		$package->method( 'getProviderRepositoryId' )->willReturn( $providerRepositoryId );
-		$package->method( 'getRepository' )->willReturn( new ManagedRepository( 'gh', 'owner/repository', $providerRepositoryId, 'main' ) );
-		$package->method( 'getBranch' )->willReturn( 'main' );
-		$package->method( 'getSubdirectory' )->willReturn( null );
+		$package->method( 'get_identifier' )->willReturn( 'example/example.php' );
+		$package->method( 'get_display_name' )->willReturn( 'Example' );
+		$package->method( 'get_provider_code' )->willReturn( 'gh' );
+		$package->method( 'get_provider_repository_id' )->willReturn( $providerRepositoryId );
+		$package->method( 'get_repository' )->willReturn( new ManagedRepository( 'gh', 'owner/repository', $providerRepositoryId, 'main' ) );
+		$package->method( 'get_branch' )->willReturn( 'main' );
+		$package->method( 'get_subdirectory' )->willReturn( null );
 
 		return $package;
 	}

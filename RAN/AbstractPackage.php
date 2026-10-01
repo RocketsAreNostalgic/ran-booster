@@ -17,22 +17,19 @@ abstract class AbstractPackage implements Package {
 	protected ?string $deploymentRef    = null;
 	protected ?string $installationSlug = null;
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function getVersion(): string {
+	public function get_version(): string {
 		return (string) ( $this->version ?? '' );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function getDisplayName(): string {
+	public function get_display_name(): string {
 		$name = trim( (string) ( $this->name ?? '' ) );
 
-		return '' === $name ? (string) $this->getIdentifier() : $name;
+		return '' === $name ? (string) $this->get_identifier() : $name;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function getSlug(): mixed {
-		if ( $this->hasSubdirectory() ) {
-			return PackageSubdirectory::installation_slug( '', $this->getSubdirectory() );
+	public function get_slug(): mixed {
+		if ( $this->has_subdirectory() ) {
+			return PackageSubdirectory::installation_slug( '', $this->get_subdirectory() );
 		}
 
 		return PackageSubdirectory::installation_slug(
@@ -41,48 +38,39 @@ abstract class AbstractPackage implements Package {
 		);
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function setInstallationSlug( ?string $slug ): void {
+	public function set_installation_slug( ?string $slug ): void {
 		$this->installationSlug = null === $slug ? null : PackageSubdirectory::normalize_slug( $slug );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function getSubdirectory(): mixed {
+	public function get_subdirectory(): mixed {
 		return $this->subdirectory;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function hasSubdirectory(): bool {
-		return ! ( is_null( $this->getSubdirectory() ) || $this->getSubdirectory() === '' );
+	public function has_subdirectory(): bool {
+		return ! ( is_null( $this->get_subdirectory() ) || $this->get_subdirectory() === '' );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function setSubdirectory( mixed $subdirectory ): void {
+	public function set_subdirectory( mixed $subdirectory ): void {
 		$this->subdirectory = PackageSubdirectory::normalize( $subdirectory );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function getDeploymentPolicy(): DeploymentPolicy {
+	public function get_deployment_policy(): DeploymentPolicy {
 		return $this->deploymentPolicy;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function setDeploymentPolicy( DeploymentPolicy $deploymentPolicy ): void {
+	public function set_deployment_policy( DeploymentPolicy $deploymentPolicy ): void {
 		$this->deploymentPolicy = $deploymentPolicy;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function getSource(): PackageSource {
+	public function get_source(): PackageSource {
 		return $this->source;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function getSourceRevision(): int {
+	public function get_source_revision(): int {
 		return $this->sourceRevision;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function setSource( PackageSource $source, int $revision ): void {
+	public function set_source( PackageSource $source, int $revision ): void {
 		if ( $revision < 1 ) {
 			throw new \InvalidArgumentException( 'The managed package source revision is invalid.' );
 		}
@@ -92,60 +80,67 @@ abstract class AbstractPackage implements Package {
 	}
 
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function setRepository( ManagedRepository $repository ): void {
+	public function set_repository( ManagedRepository $repository ): void {
 		$this->repository = $repository;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function getRepository(): ManagedRepository {
+	public function get_repository(): ManagedRepository {
 		return $this->repository;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function getBranch(): mixed {
+	public function get_branch(): mixed {
 		return $this->repository->branch;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function getDeploymentRef(): ?string {
+	public function get_deployment_ref(): ?string {
 		return $this->deploymentRef;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function setDeploymentRef( ?string $deploymentRef ): void {
+	public function set_deployment_ref( ?string $deploymentRef ): void {
 		$this->deploymentRef = $deploymentRef;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function getCredentialId(): string {
+	public function get_credential_id(): string {
 		return $this->repository->reference->credentialId ?? '';
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function getProviderCode(): ?string {
+	public function get_provider_code(): ?string {
 		return $this->repository->provider->value;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function getProviderRepositoryId(): ?string {
+	public function get_provider_repository_id(): ?string {
 		return $this->repository->reference->providerRepositoryId;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function isPrivate(): mixed {
+	public function is_private(): mixed {
 		return $this->repository->reference->private;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function getPrivate(): mixed {
-		return $this->isPrivate();
+	public function get_private(): mixed {
+		return $this->is_private();
 	}
 
 	public function __get( string $name ): mixed {
-		$method = 'get' . ucfirst( $name );
+		$getters = array(
+			'branch'               => 'get_branch',
+			'credentialid'         => 'get_credential_id',
+			'deploymentpolicy'     => 'get_deployment_policy',
+			'deploymentref'        => 'get_deployment_ref',
+			'displayname'          => 'get_display_name',
+			'identifier'           => 'get_identifier',
+			'private'              => 'get_private',
+			'providercode'         => 'get_provider_code',
+			'providerrepositoryid' => 'get_provider_repository_id',
+			'repository'           => 'get_repository',
+			'slug'                 => 'get_slug',
+			'source'               => 'get_source',
+			'sourcerevision'       => 'get_source_revision',
+			'subdirectory'         => 'get_subdirectory',
+			'version'              => 'get_version',
+		);
+		$method  = $getters[ strtolower( $name ) ] ?? 'get' . ucfirst( $name );
 
-		if ( method_exists( $this, $method ) ) {
+		if ( method_exists( $this, $method ) && ( isset( $getters[ strtolower( $name ) ] ) || ! in_array( strtolower( $method ), $getters, true ) ) ) {
 			return $this->$method();
 		}
 
@@ -157,7 +152,7 @@ abstract class AbstractPackage implements Package {
 	}
 
 	public function __toString(): string {
-		return $this->getIdentifier();
+		return $this->get_identifier();
 	}
 
 	protected function runtime_slug(): string {

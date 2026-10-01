@@ -49,15 +49,15 @@ final readonly class ManagedPackageBlueprintExporter {
 				if ( ! $package instanceof Package ) {
 					throw new InvalidArgumentException( 'The managed package inventory is invalid.' );
 				}
-				$key = $type . "\0" . $package->getIdentifier();
+				$key = $type . "\0" . $package->get_identifier();
 				if ( null !== $selected && ! isset( $selected[ $key ] ) ) {
 					continue;
 				}
 				unset( $selected[ $key ] );
-				if ( PackageSource::BRANCH !== $package->getSource() ) {
+				if ( PackageSource::BRANCH !== $package->get_source() ) {
 					$unsupported[] = new BlueprintExportPackageFailure(
 						$type,
-						$package->getDisplayName(),
+						$package->get_display_name(),
 						BlueprintExportPackageFailure::PUBLISHED_RELEASES
 					);
 					continue;
@@ -146,7 +146,7 @@ final readonly class ManagedPackageBlueprintExporter {
 		foreach ( $managed as $entry ) {
 			$package       = $entry['package'];
 			$blueprint     = $entry['blueprint'];
-			$credential_id = $package->getCredentialId();
+			$credential_id = $package->get_credential_id();
 			$key           = $blueprint->provider . "\0" . $credential_id;
 			if ( ! isset( $selected[ $key ] ) ) {
 				continue;

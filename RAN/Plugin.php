@@ -17,8 +17,7 @@ class Plugin extends AbstractPackage {
 	protected $title;
 	protected $authorName;
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public static function fromWpArray( $file, array $array ) {
+	public static function from_wp_array( $file, array $array ) {
 		$plugin = new static();
 
 		$plugin->file        = $file;
@@ -37,13 +36,12 @@ class Plugin extends AbstractPackage {
 		return $plugin;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names and dynamic getter contracts remain deferred to their connected caller cohort under #167.
-	public function getIdentifier(): mixed {
+	public function get_identifier(): mixed {
 		return $this->file;
 	}
 
 	protected function runtime_slug(): string {
-		$identifier = trim( (string) $this->getIdentifier(), '/' );
+		$identifier = trim( (string) $this->get_identifier(), '/' );
 		$directory  = dirname( $identifier );
 
 		return '.' === $directory

@@ -27,29 +27,29 @@ $submittedAction                  = isset( $submittedPackage['action'] ) && is_s
 	: '';
 $selectedCredentialId             = isset( $_POST['ran_booster']['credential_id'] )
 	? sanitize_text_field( (string) $_POST['ran_booster']['credential_id'] )
-	: $package->getCredentialId();
+	: $package->get_credential_id();
 $repositoryValue                  = isset( $submittedPackage['repository'] ) && is_scalar( $submittedPackage['repository'] )
 	? sanitize_text_field( wp_unslash( (string) $submittedPackage['repository'] ) )
 	: (string) $package->repository;
 $branchValue                      = isset( $submittedPackage['branch'] ) && is_scalar( $submittedPackage['branch'] )
 	? sanitize_text_field( wp_unslash( (string) $submittedPackage['branch'] ) )
-	: (string) $package->getBranch();
+	: (string) $package->get_branch();
 $subdirectoryValue                = isset( $submittedPackage['subdirectory'] ) && is_scalar( $submittedPackage['subdirectory'] )
 	? sanitize_text_field( wp_unslash( (string) $submittedPackage['subdirectory'] ) )
-	: (string) $package->getSubdirectory();
-$savedSubdirectoryValue           = (string) $package->getSubdirectory();
+	: (string) $package->get_subdirectory();
+$savedSubdirectoryValue           = (string) $package->get_subdirectory();
 $submittedDeploymentPolicy        = isset( $submittedPackage['deployment_policy'] ) && is_scalar( $submittedPackage['deployment_policy'] )
 	? \RAN\Deployment\DeploymentPolicy::tryFrom( sanitize_key( wp_unslash( (string) $submittedPackage['deployment_policy'] ) ) )
 	: null;
-$deploymentPolicy                 = ( $submittedDeploymentPolicy ?? $package->getDeploymentPolicy() )->value;
-$identifierValue                  = (string) $package->getIdentifier();
-$storedProviderCode               = (string) ( $package->getProviderCode() ?? '' );
+$deploymentPolicy                 = ( $submittedDeploymentPolicy ?? $package->get_deployment_policy() )->value;
+$identifierValue                  = (string) $package->get_identifier();
+$storedProviderCode               = (string) ( $package->get_provider_code() ?? '' );
 $providerCode                     = isset( $_POST['ran_booster']['provider'] )
 	? sanitize_key( (string) $_POST['ran_booster']['provider'] )
 	: $storedProviderCode;
 $providerRepositoryId             = isset( $_POST['ran_booster']['provider_repository_id'] )
 	? wp_strip_all_tags( wp_unslash( (string) $_POST['ran_booster']['provider_repository_id'] ), true )
-	: (string) ( $package->getProviderRepositoryId() ?? '' );
+	: (string) ( $package->get_provider_repository_id() ?? '' );
 $providerRepositoryIdentitySource = isset( $_POST['ran_booster']['provider_repository_identity_source'] )
 	? sanitize_key( (string) $_POST['ran_booster']['provider_repository_identity_source'] )
 	: 'stored';
@@ -97,7 +97,7 @@ if ( null === $selectedProviderOption ) {
 }
 
 $providerUnavailable      = false === $selectedProviderOption['available'];
-$releaseManaged           = \RAN\PackageSource::RELEASE_ASSET === $package->getSource();
+$releaseManaged           = \RAN\PackageSource::RELEASE_ASSET === $package->get_source();
 $packageMutationAvailable = ! $providerUnavailable && true === $selectedProviderOption['deploy'];
 $packageExtensionPanels   = isset( $packageExtensionPanels ) && is_array( $packageExtensionPanels )
 	? $packageExtensionPanels
@@ -115,11 +115,11 @@ $packageAdvancedSections      = is_array( $packageSource['advanced_sections'] ??
 $packageAdvancedSummary       = is_string( $packageSource['advanced_summary'] ?? null )
 	? $packageSource['advanced_summary']
 	: __( 'Branch · provider default', 'ran-booster' );
-$packageSourceView            = is_string( $packageSource['selected'] ?? null ) ? $packageSource['selected'] : $package->getSource()->value;
-$packageCurrentSource         = is_string( $packageSource['current'] ?? null ) ? $packageSource['current'] : $package->getSource()->value;
+$packageSourceView            = is_string( $packageSource['selected'] ?? null ) ? $packageSource['selected'] : $package->get_source()->value;
+$packageCurrentSource         = is_string( $packageSource['current'] ?? null ) ? $packageSource['current'] : $package->get_source()->value;
 $packageSourceUnavailable     = array_key_exists( 'unavailable', $packageSource ?? array() )
 	? true === $packageSource['unavailable']
-	: \RAN\PackageSource::BRANCH !== $package->getSource();
+	: \RAN\PackageSource::BRANCH !== $package->get_source();
 $packageSourceMode            = 'edit';
 $packageRepositoryReady       = true;
 $packageAdvancedOpen          = isset( $_POST['ran_booster'] )
@@ -131,21 +131,21 @@ $packageDangerOpen            = in_array(
 );
 
 if ( $providerUnavailable ) {
-	$selectedCredentialId  = $package->getCredentialId();
+	$selectedCredentialId  = $package->get_credential_id();
 	$repositoryValue       = (string) $package->repository;
-	$branchValue           = (string) $package->getBranch();
-	$subdirectoryValue     = (string) $package->getSubdirectory();
-	$deploymentPolicy      = $package->getDeploymentPolicy()->value;
-	$providerRepositoryId  = (string) ( $package->getProviderRepositoryId() ?? '' );
+	$branchValue           = (string) $package->get_branch();
+	$subdirectoryValue     = (string) $package->get_subdirectory();
+	$deploymentPolicy      = $package->get_deployment_policy()->value;
+	$providerRepositoryId  = (string) ( $package->get_provider_repository_id() ?? '' );
 	$publicLookupProfileId = '';
 
 } elseif ( $releaseManaged ) {
 	$repositoryValue   = (string) $package->repository;
-	$branchValue       = (string) $package->getBranch();
-	$subdirectoryValue = (string) $package->getSubdirectory();
+	$branchValue       = (string) $package->get_branch();
+	$subdirectoryValue = (string) $package->get_subdirectory();
 }
 
-if ( '' === $selectedCredentialId && $package->isPrivate() && ! $providerUnavailable ) {
+if ( '' === $selectedCredentialId && $package->is_private() && ! $providerUnavailable ) {
 	$selectedCredentialId = $selectedProviderOption['default_credential_id'];
 }
 $providerBrowseAvailable  = $selectedProviderOption['browse'];
@@ -215,11 +215,11 @@ $sourceSummary               = 'branch' === $packageCurrentSource
 	? sprintf(
 		/* translators: %s is the repository branch name. */
 		__( 'Branch · %s', 'ran-booster' ),
-		'' !== (string) $package->getBranch() ? (string) $package->getBranch() : __( 'provider default', 'ran-booster' )
+		'' !== (string) $package->get_branch() ? (string) $package->get_branch() : __( 'provider default', 'ran-booster' )
 	)
 	: (string) ( $packageSourceChoices[ $packageCurrentSource ]['heading'] ?? __( 'Unavailable update source', 'ran-booster' ) );
 $sourceSummaryMeta = (string) ( $packageSourceChoices[ $packageCurrentSource ]['meta'] ?? __( 'The update source provider is unavailable', 'ran-booster' ) );
-$automationSummary = match ( $package->getDeploymentPolicy()->value ) {
+$automationSummary = match ( $package->get_deployment_policy()->value ) {
 	\RAN\Deployment\DeploymentPolicy::DISABLED->value => __( 'Disabled', 'ran-booster' ),
 	\RAN\Deployment\DeploymentPolicy::AUTOMATIC->value => __( 'Automatic', 'ran-booster' ),
 	default => __( 'Manual', 'ran-booster' ),
@@ -235,7 +235,7 @@ $automationSummary = match ( $package->getDeploymentPolicy()->value ) {
 		<p>
 			<?php esc_html_e( 'Provider:', 'ran-booster' ); ?> <code><?php echo esc_html( $storedProviderCode ); ?></code><br>
 			<?php esc_html_e( 'Repository:', 'ran-booster' ); ?> <code><?php echo esc_html( (string) $package->repository ); ?></code><br>
-			<?php esc_html_e( 'Provider repository ID:', 'ran-booster' ); ?> <code><?php echo esc_html( (string) ( $package->getProviderRepositoryId() ?? '' ) ); ?></code>
+			<?php esc_html_e( 'Provider repository ID:', 'ran-booster' ); ?> <code><?php echo esc_html( (string) ( $package->get_provider_repository_id() ?? '' ) ); ?></code>
 		</p>
 	</div>
 <?php } ?>

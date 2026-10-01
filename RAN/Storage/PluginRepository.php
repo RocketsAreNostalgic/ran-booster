@@ -60,7 +60,7 @@ class PluginRepository extends AbstractPackageRepository {
 			$current_slug = $tmp[0];
 
 			if ( $current_slug === $slug ) {
-				return Plugin::fromWpArray( $file, $plugin_info );
+				return Plugin::from_wp_array( $file, $plugin_info );
 			}
 		}
 
@@ -131,7 +131,7 @@ class PluginRepository extends AbstractPackageRepository {
 	}
 
 	protected function package_from_installation( string $identifier ): Package {
-		return Plugin::fromWpArray(
+		return Plugin::from_wp_array(
 			$identifier,
 			get_plugin_data( WP_PLUGIN_DIR . '/' . $identifier, false, false )
 		);

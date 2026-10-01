@@ -205,7 +205,7 @@ final class NativePortabilityFacadeTest extends TestCase {
 		bool $private,
 		DeploymentPolicy $policy = DeploymentPolicy::DISABLED
 	): Plugin {
-		$plugin = Plugin::fromWpArray(
+		$plugin = Plugin::from_wp_array(
 			'example/example.php',
 			array(
 				'Name'        => 'Example',
@@ -221,8 +221,8 @@ final class NativePortabilityFacadeTest extends TestCase {
 				'AuthorName'  => '',
 			)
 		);
-		$plugin->setRepository( new ManagedRepository( 'gh', 'owner/repository', 'repository-id', 'main', $private ) );
-		$plugin->setDeploymentPolicy( $policy );
+		$plugin->set_repository( new ManagedRepository( 'gh', 'owner/repository', 'repository-id', 'main', $private ) );
+		$plugin->set_deployment_policy( $policy );
 
 		return $plugin;
 	}

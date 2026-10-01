@@ -242,7 +242,7 @@ final class AdmittedBranchExecutionTest extends TestCase {
 	}
 
 	private function plugin(): Plugin {
-		$plugin = Plugin::fromWpArray(
+		$plugin = Plugin::from_wp_array(
 			'example/example.php',
 			array(
 				'Name'        => 'Example',
@@ -258,8 +258,8 @@ final class AdmittedBranchExecutionTest extends TestCase {
 				'AuthorName'  => '',
 			)
 		);
-		$plugin->setRepository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
-		$plugin->setDeploymentPolicy( DeploymentPolicy::AUTOMATIC );
+		$plugin->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
+		$plugin->set_deployment_policy( DeploymentPolicy::AUTOMATIC );
 		return $plugin;
 	}
 }
@@ -268,7 +268,7 @@ final class BoundaryPluginRepository extends PluginRepository {
 	public ?Plugin $package = null;
 	public function __construct() {}
 	public function allDeploymentPlugins( ?\RAN\PackageSource $source = null ): array {
-		return null === $this->package ? array() : array( (string) $this->package->getIdentifier() => $this->package );
+		return null === $this->package ? array() : array( (string) $this->package->get_identifier() => $this->package );
 	}
 	public function fromSlug( $slug ) {
 		return $this->package ?? throw new RuntimeException( 'Missing test plugin.' );

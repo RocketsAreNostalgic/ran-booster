@@ -125,7 +125,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 			'plugins.php?error=true&plugin=enable%2Fenable.php',
 			$GLOBALS['ran_booster_bulk_activation_redirects']['enable/enable.php']
 		);
-		self::assertSame( DeploymentPolicy::MANUAL, $plugins->packages['enable/enable.php']->getDeploymentPolicy() );
+		self::assertSame( DeploymentPolicy::MANUAL, $plugins->packages['enable/enable.php']->get_deployment_policy() );
 	}
 
 	public function testActivationSkipsAPluginWithoutItsExactMetaCapability(): void {
@@ -306,7 +306,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 
 	public function testReleaseAutomaticPolicyUsesNativeUpdatesWithoutWebhookCapability(): void {
 		$release = BulkActionPackage::make( 'release/release.php', 'fixture' );
-		$release->setSource( PackageSource::RELEASE_ASSET, 2 );
+		$release->set_source( PackageSource::RELEASE_ASSET, 2 );
 		$plugins = new BulkActionPluginRepository( array( 'release/release.php' => $release ) );
 
 		$result = $this->service( $plugins, true )->execute(
@@ -327,7 +327,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 	public function testQueueUpdatesAdmitsEligiblePackagesAndReportsSkipsAndBusyRows(): void {
 		$eligible = BulkActionPackage::make( 'eligible/eligible.php', 'fixture' );
 		$disabled = BulkActionPackage::make( 'disabled/disabled.php', 'fixture' );
-		$disabled->setDeploymentPolicy( DeploymentPolicy::DISABLED );
+		$disabled->set_deployment_policy( DeploymentPolicy::DISABLED );
 		$missing             = BulkActionPackage::make( 'missing/missing.php', 'missing-provider' );
 		$plugins             = new BulkActionPluginRepository(
 			array(
@@ -373,7 +373,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 
 	public function testQueueUpdatesDoesNotAdmitAnythingWhenEverySelectionIsIneligible(): void {
 		$disabled = BulkActionPackage::make( 'disabled/disabled.php', 'fixture' );
-		$disabled->setDeploymentPolicy( DeploymentPolicy::DISABLED );
+		$disabled->set_deployment_policy( DeploymentPolicy::DISABLED );
 		$missing     = BulkActionPackage::make( 'missing/missing.php', 'missing-provider' );
 		$plugins     = new BulkActionPluginRepository(
 			array(
@@ -410,7 +410,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 
 	public function testQueueUpdateSkipsReleaseManagedPackagesWithoutProviderOrCredentialWork(): void {
 		$release = BulkActionPackage::make( 'release/release.php', 'missing-provider', true, 'missing-profile' );
-		$release->setSource( PackageSource::RELEASE_ASSET, 2 );
+		$release->set_source( PackageSource::RELEASE_ASSET, 2 );
 		$plugins     = new BulkActionPluginRepository( array( 'release/release.php' => $release ) );
 		$coordinator = new BulkActionCoordinator();
 
@@ -693,8 +693,8 @@ final class BulkActionPackage extends AbstractPackage {
 		?string $credentialId = null
 	): self {
 		$package = new self( $identifier );
-		$package->setInstallationSlug( dirname( $identifier ) );
-		$package->setRepository(
+		$package->set_installation_slug( dirname( $identifier ) );
+		$package->set_repository(
 			new ManagedRepository(
 				$provider,
 				'owner/' . dirname( $identifier ),
@@ -708,7 +708,7 @@ final class BulkActionPackage extends AbstractPackage {
 		return $package;
 	}
 
-	public function getIdentifier(): mixed {
+	public function get_identifier(): mixed {
 		return $this->identifier;
 	}
 }

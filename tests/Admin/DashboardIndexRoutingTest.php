@@ -1930,7 +1930,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$data['packageListState']
 		);
 		self::assertSame( array( 'Bitbucket', 'GitHub' ), array_column( $data['packageProviderOptions'], 'label' ) );
-		self::assertSame( array( $release->getIdentifier() ), array_map( static fn ( Package $package ): mixed => $package->getIdentifier(), $data['packages'] ) );
+		self::assertSame( array( $release->get_identifier() ), array_map( static fn ( Package $package ): mixed => $package->get_identifier(), $data['packages'] ) );
 	}
 
 	public function testRepeatedPackageIndexRenderingUsesFreshRepositoryReadback(): void {
@@ -2660,18 +2660,18 @@ final class DashboardIndexRoutingTest extends TestCase {
 		?string $subdirectory = null
 	): Package {
 		$package = $this->createStub( Package::class );
-		$package->method( 'getIdentifier' )->willReturn( $identifier );
-		$package->method( 'getDisplayName' )->willReturn( $name );
-		$package->method( 'getSlug' )->willReturn( 'example' );
-		$package->method( 'getProviderCode' )->willReturn( $provider );
-		$package->method( 'getProviderRepositoryId' )->willReturn( $providerRepositoryId );
-		$package->method( 'getRepository' )->willReturn( new ManagedRepository( $provider, $repository, $providerRepositoryId, $branch, $private, $credentialId ) );
-		$package->method( 'getBranch' )->willReturn( $branch );
-		$package->method( 'getSubdirectory' )->willReturn( $subdirectory );
-		$package->method( 'getSource' )->willReturn( $source );
-		$package->method( 'getSourceRevision' )->willReturn( 1 );
-		$package->method( 'getDeploymentPolicy' )->willReturn( $policy );
-		$package->method( 'getCredentialId' )->willReturn( $credentialId );
+		$package->method( 'get_identifier' )->willReturn( $identifier );
+		$package->method( 'get_display_name' )->willReturn( $name );
+		$package->method( 'get_slug' )->willReturn( 'example' );
+		$package->method( 'get_provider_code' )->willReturn( $provider );
+		$package->method( 'get_provider_repository_id' )->willReturn( $providerRepositoryId );
+		$package->method( 'get_repository' )->willReturn( new ManagedRepository( $provider, $repository, $providerRepositoryId, $branch, $private, $credentialId ) );
+		$package->method( 'get_branch' )->willReturn( $branch );
+		$package->method( 'get_subdirectory' )->willReturn( $subdirectory );
+		$package->method( 'get_source' )->willReturn( $source );
+		$package->method( 'get_source_revision' )->willReturn( 1 );
+		$package->method( 'get_deployment_policy' )->willReturn( $policy );
+		$package->method( 'get_credential_id' )->willReturn( $credentialId );
 
 		return $package;
 	}

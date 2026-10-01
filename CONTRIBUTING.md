@@ -44,6 +44,16 @@ and does not raise the analysis level or certify new dependency/host versions.
 
 ## Audited PHP naming scope
 
+The internal webhook-history cohort uses `WebhookHistory::for_package()`,
+`WebhookHistory::from_record()` and `WebhookHistoryView::to_array()` throughout
+its owned callers and tests. Method enforcement includes both history classes,
+expanding the scope from 170 to 172 files; variable enforcement is unchanged by
+this cohort. Constructor/promoted parameter names and serialized history keys
+remain intact. The separate authority resolver's `forPackage()` and foreign
+readiness `toArray()` contracts retain their existing names. Historical records
+remain observations, not live readiness or restored update authority.
+
+
 The internal-variable cohort adds variable enforcement for Booster,
 ProviderRegistry, ReleaseWorkflowRequestController, ReleaseWorkflowDisplay and
 ReleaseWorkflowPresenter: variable scope expands from 161 to 166 files, while

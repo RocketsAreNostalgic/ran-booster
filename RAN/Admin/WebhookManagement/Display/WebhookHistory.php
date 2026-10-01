@@ -12,7 +12,7 @@ use RAN\Admin\WebhookManagement\Installation\InstallationStore;
 final readonly class WebhookHistory {
 	public function __construct( private ManagedPackageWebhookAuthorityResolver $authorities, private InstallationStore $records ) {}
 
-	public function forPackage( string $type, string $identifier ): ?WebhookHistoryView {
+	public function for_package( string $type, string $identifier ): ?WebhookHistoryView {
 		$authority = $this->authorities->forPackage( $type, $identifier );
 		if ( null === $authority ) {
 			return null;
@@ -20,11 +20,11 @@ final readonly class WebhookHistory {
 		$record = $this->records->find( $authority['provider_code'], $authority['repository_id'] );
 
 		return $record instanceof InstallationRecord
-			? $this->fromRecord( $record )
+			? $this->from_record( $record )
 			: null;
 	}
 
-	public static function fromRecord( InstallationRecord $record ): WebhookHistoryView {
+	public static function from_record( InstallationRecord $record ): WebhookHistoryView {
 		return new WebhookHistoryView( $record->providerCode(), $record->repositoryId(), $record->status(), $record->checkedAt() );
 	}
 }

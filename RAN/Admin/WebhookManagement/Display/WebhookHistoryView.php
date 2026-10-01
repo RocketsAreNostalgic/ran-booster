@@ -15,7 +15,7 @@ final readonly class WebhookHistoryView {
 	}
 
 	/** @return array{provider_code:string,repository_id:string,recorded_status:string,checked_at:string,current_local_condition:null,historical_not_live:true} */
-	public function toArray(): array {
+	public function to_array(): array {
 		return array(
 			'provider_code'           => $this->providerCode,
 			'repository_id'           => $this->repositoryId,

@@ -28,6 +28,9 @@
 	</rule>
 	<!-- Enforce only the completed, individually audited naming cohorts. -->
 	<rule ref="RANOwnedMethods">
+		<!-- Internal webhook history: complete owned method/caller cohort. -->
+		<include-pattern>/RAN/Admin/WebhookManagement/Display/WebhookHistory.php</include-pattern>
+		<include-pattern>/RAN/Admin/WebhookManagement/Display/WebhookHistoryView.php</include-pattern>
 		<!-- Private API12 helpers: retained public/protected contracts have declaration-local deferrals. -->
 		<include-pattern>/RAN/Booster.php</include-pattern>
 		<include-pattern>/RAN/RepositoryProvider/ProviderRegistry.php</include-pattern>

@@ -42,8 +42,7 @@ class SiteKeyStore {
 	/**
 	 * @return array{key: string, created: bool}
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function loadOrCreate(): array {
+	public function load_or_create(): array {
 		$existing = $this->load();
 		if ( null !== $existing ) {
 			return array(
@@ -77,8 +76,7 @@ class SiteKeyStore {
 	/**
 	 * Remove only the exact key supplied by a failed first-write operation.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function deleteExact( #[\SensitiveParameter] string $key ): bool {
+	public function delete_exact( #[\SensitiveParameter] string $key ): bool {
 		$this->require_raw_key( $key );
 		$result = $this->delete_stored_value_exact( base64_encode( $key ) );
 

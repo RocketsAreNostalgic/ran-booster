@@ -2271,7 +2271,7 @@ class SecretsFile {
 	/** @return array{key:string,created:bool} */
 	private function load_or_create_key(): array {
 		try {
-			return $this->key_store->loadOrCreate();
+			return $this->key_store->load_or_create();
 		} catch ( \Throwable ) {
 			throw $this->unavailable( 'The Booster site key could not be initialized.' );
 		}
@@ -2279,7 +2279,7 @@ class SecretsFile {
 
 	private function delete_exact_key( #[\SensitiveParameter] string $key ): void {
 		try {
-			if ( ! $this->key_store->deleteExact( $key ) ) {
+			if ( ! $this->key_store->delete_exact( $key ) ) {
 				throw $this->unavailable( 'The failed Booster site key could not be removed safely.' );
 			}
 		} catch ( SecretsStorageUnavailable $failure ) {
@@ -2291,7 +2291,7 @@ class SecretsFile {
 
 	private function delete_managed_key( #[\SensitiveParameter] string $key ): void {
 		try {
-			if ( $this->key_store->deleteExact( $key ) ) {
+			if ( $this->key_store->delete_exact( $key ) ) {
 				return;
 			}
 

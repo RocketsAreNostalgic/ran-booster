@@ -103,7 +103,7 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		self::assertSame( $blueprint->canonicalJson(), $imported->canonicalJson() );
 
 		$credential  = $imported->credentials[0];
-		$orphanedKey = $targetKeyStore->loadOrCreate()['key'];
+		$orphanedKey = $targetKeyStore->load_or_create()['key'];
 		try {
 			$targetSecrets->importCredentialsIfAbsent( $imported, $credential );
 			self::fail( 'Blueprint import must not overwrite a key whose encrypted sidecar is missing.' );
@@ -190,7 +190,7 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 
 		$lostTargetKey = $targetKeyStore->load( false );
 		self::assertNotNull( $lostTargetKey );
-		self::assertTrue( $targetKeyStore->deleteExact( $lostTargetKey ) );
+		self::assertTrue( $targetKeyStore->delete_exact( $lostTargetKey ) );
 		try {
 			$targetSecrets->importCredentialsIfAbsent( $imported, $credential );
 			self::fail( 'Blueprint import must not overwrite ciphertext whose database key is missing.' );

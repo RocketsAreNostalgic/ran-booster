@@ -197,6 +197,7 @@ final class WebhookControllerTest extends TestCase {
 						parent::__construct( '/unused/controller-secrets.php', array() );
 					}
 
+					// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of webhook_materials retains the production method contract; these inputs do not affect this controlled result.
 					public function webhook_materials( ProviderCode|string $provider ): array {
 						return array(
 							'test-profile' => array(
@@ -227,6 +228,7 @@ final readonly class WebhookControllerProvider implements RepositoryProvider, We
 		return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterface -- The fixture implementation of normalize_webhook retains the production method contract; these inputs do not affect this controlled result.
 	public function normalize_webhook( WebhookRequest $request ): WebhookEnvelope {
 		return $this->envelope;
 	}
@@ -251,6 +253,7 @@ final class WebhookControllerCoordinator extends DeploymentCoordinator {
 	public function __construct( private ?array $result = null ) {
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of accept_webhook retains the production method contract; these inputs do not affect this controlled result.
 	public function accept_webhook(
 		array $events,
 		string $authenticated_body_digest

@@ -190,10 +190,12 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			array(),
 			$catalog,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentials_for( $code ),
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 		$registry->register_with_credential_store(
 			'fixture',
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static function (
 				ProviderCredentialStore $credentials,
 				AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
@@ -217,15 +219,18 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static function ( ProviderCode $code ): ProviderCredentialStore {
 				throw new RuntimeException( 'credential-store-token-canary' );
 			},
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		try {
 			$registry->register_with_credential_store(
 				'fixture',
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 				static fn (
 					ProviderCredentialStore $credentials,
 					AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
@@ -249,12 +254,14 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			array(),
 			$catalog,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentials_for( $code ),
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		try {
 			$registry->register_with_credential_store(
 				'fixture',
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 				static function (
 					ProviderCredentialStore $credentials,
 					AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
@@ -281,6 +288,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			array(),
 			$catalog,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentials_for( $code ),
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 		$provider = new class() implements RepositoryProvider {
@@ -294,6 +302,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		try {
 			$registry->register_with_credential_store(
 				'fixture',
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 				static fn (
 					ProviderCredentialStore $credentials,
 					AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
@@ -344,12 +353,14 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			array(),
 			$catalog,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentials_for( $code ),
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		try {
 			$registry->register_with_credential_store(
 				'fixture',
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 				static function (
 					ProviderCredentialStore $credentials,
 					AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
@@ -383,12 +394,14 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 
 				return $secrets->credentials_for( $code );
 			},
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		try {
 			$registry->register_with_credential_store(
 				'fixture',
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 				static fn (
 					ProviderCredentialStore $credentials,
 					AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
@@ -410,11 +423,13 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$registry               = new ProviderRegistry(
 			array(),
 			$catalog,
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static function ( ProviderCode $code ) use ( &$credential_store_calls ): ProviderCredentialStore {
 				++$credential_store_calls;
 
 				throw new RuntimeException( 'The credential-store factory must not run after sealing.' );
 			},
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 		$registry->seal();
@@ -422,6 +437,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		try {
 			$registry->register_with_credential_store(
 				'fixture',
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 				static function (
 					ProviderCredentialStore $credentials,
 					AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
@@ -451,12 +467,14 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			array(),
 			$catalog,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentials_for( $code ),
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		try {
 			$registry->register_with_credential_store(
 				'fixture',
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 				static fn (
 					ProviderCredentialStore $credentials,
 					AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
@@ -481,11 +499,13 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			array(),
 			$catalog,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentials_for( $code ),
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		$registry->register_with_credential_store(
 			'fixture',
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static fn (
 				ProviderCredentialStore $credentials,
 				AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
@@ -556,10 +576,12 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			array(),
 			$active_catalog,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $active_secrets->credentials_for( $code ),
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 		$registry->register_with_credential_store(
 			'fixture',
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static fn (
 				ProviderCredentialStore $credentials,
 				AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
@@ -716,6 +738,7 @@ final readonly class AtomicPolicyProvider implements RepositoryProvider, Provide
 		);
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterface -- The fixture implementation of normalize_webhook retains the production method contract; these inputs do not affect this controlled result.
 	public function normalize_webhook( WebhookRequest $request ): WebhookEnvelope {
 		return WebhookEnvelope::ignored();
 	}
@@ -723,6 +746,7 @@ final readonly class AtomicPolicyProvider implements RepositoryProvider, Provide
 
 final readonly class EmptyProviderDiagnostics implements ProviderDiagnostics {
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterface -- The fixture implementation of diagnose retains the production method contract; these inputs do not affect this controlled result.
 	public function diagnose( ProviderDiagnosticRequest $request ): array {
 		return array();
 	}

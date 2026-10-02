@@ -38,6 +38,7 @@ add_action(
 
 		$registry->register_with_credential_store(
 			'fixture-provider',
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The release-runtime fixture callback retains the registered factory or provider callable signature while returning a controlled result.
 			static fn (
 				\RAN\RepositoryProvider\ProviderCredentialStore $credentials,
 				\RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,

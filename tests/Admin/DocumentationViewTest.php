@@ -442,6 +442,7 @@ final class DocumentationViewTest extends TestCase {
 	/**
 	 * @param list<array<string, mixed>> $provider_documentation Display-safe provider guidance.
 	 */
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The included production view reads these parameters as local template variables.
 	private function render_view( array $provider_documentation ): string {
 		$tabs                = array(
 			array(

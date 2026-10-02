@@ -1,7 +1,6 @@
 <?php
 
 // Executed by WP-CLI inside a disposable WordPress installation.
-// phpcs:disable
 
 if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 14 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
 	throw new RuntimeException( 'Provider API 14 is unavailable.' );
@@ -23,7 +22,7 @@ if ( function_exists( 'ran_booster' )
 
 $container = require __DIR__ . '/core-container-fixture.php';
 $registry  = $container->make( RAN\RepositoryProvider\ProviderRegistry::class );
-$provider = $registry->get( 'fixture-provider' );
+$provider  = $registry->get( 'fixture-provider' );
 if ( 0 !== $provider->get_client()->get_request_count() ) {
 	throw new RuntimeException( 'Provider registration must not contact the provider client.' );
 }
@@ -118,6 +117,7 @@ foreach ( array( RAN\RepositoryProvider\RepositoryBrowser::class, RAN\Repository
 	try {
 		$registry->require_capability( 'fixture-provider', $capability );
 		throw new RuntimeException( 'The external fixture exposed an unsupported capability.' );
+	// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- This expected exception is the exercised negative path; the surrounding proof continues deliberately.
 	} catch ( RAN\RepositoryProvider\UnsupportedProviderCapability ) {
 		// Expected: public browsing, authenticated public browsing and webhooks are independently optional.
 	}

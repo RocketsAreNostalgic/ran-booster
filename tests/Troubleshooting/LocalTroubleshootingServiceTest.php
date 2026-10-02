@@ -189,19 +189,23 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 		$database                           = new class() {
 			public string $prefix = 'wp_';
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of prepare retains the production method contract; these inputs do not affect this controlled result.
 			public function prepare( string $query, mixed ...$arguments ): string {
 				throw new \RuntimeException( 'token_canary' );
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of query retains the production method contract; these inputs do not affect this controlled result.
 			public function query( string $query ): int|false {
 				return false;
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of get_results retains the production method contract; these inputs do not affect this controlled result.
 			public function get_results( string $query ): array|false {
 				return false;
 			}
 
 			/** @param array<string, mixed> $data */
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of insert retains the production method contract; these inputs do not affect this controlled result.
 			public function insert( string $table, array $data ): int|false {
 				return false;
 			}
@@ -241,6 +245,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 			public function db_server_info(): string {
 				return '5.7.44';
 			}
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of get_results retains the production method contract; these inputs do not affect this controlled result.
 			public function get_results( string $query ): array {
 				throw new \LogicException( 'An old server must fail before engine or custom-table reads.' );
 			}

@@ -193,7 +193,7 @@ final class ReleaseWorkflowPresenter {
 			&& hash_equals( $repository_id, (string) ( $result['repository'] ?? '' ) )
 			&& hash_equals( $type, (string) ( $result['type'] ?? '' ) )
 			&& hash_equals( $identifier, (string) ( $result['identifier'] ?? '' ) )
-			&& $revision === (int) ( $result['source_revision'] ?? 0 ) ? $result : null;
+			&& (int) ( $result['source_revision'] ?? 0 ) === $revision ? $result : null;
 		$view               = $exact
 			? $this->request_boundary(
 				fn (): ?array => $this->workflow_view_for(

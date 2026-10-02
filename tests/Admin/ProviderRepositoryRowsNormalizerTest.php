@@ -391,6 +391,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 
 	public function test_projects_mixed_sources_and_keeps_webhook_consumers_branch_only(): void {
 		$captured_projections = array();
+		// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- The repository-row filter retains the provider-code slot before the projections asserted by this fixture.
 		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_provider_repository_rows'][] = static function ( array $rows, string $provider_code, array $projections ) use ( &$captured_projections ): array {
 			$captured_projections = $projections;
 

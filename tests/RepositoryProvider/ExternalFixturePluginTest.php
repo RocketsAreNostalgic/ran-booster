@@ -385,6 +385,7 @@ final class ExternalFixturePluginTest extends TestCase {
 			array(),
 			$secret_policies,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentials_for( $code ),
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new class() implements AuthenticatedWebhookDeliveryEvidenceReader {
 				public function latest_authenticated_delivery(): ?AuthenticatedWebhookDeliveryEvidence {
 					return null;

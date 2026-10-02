@@ -3,7 +3,6 @@
 // Recover the active Core container from its WordPress lifecycle callback for
 // source-owned WP-CLI proofs. This test-only inspection must never become a
 // production accessor.
-// phpcs:disable
 
 use RAN\Booster;
 use RAN\Internal\CoreContainer;

@@ -316,10 +316,10 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 	}
 
 	/** @template T of object
-	 *  @param class-string<T> $class
+	 *  @param class-string<T> $class_name
 	 *  @return T
 	 */
-	private function blank( string $class ): object {
-		return ( new \ReflectionClass( $class ) )->newInstanceWithoutConstructor();
+	private function blank( string $class_name ): object {
+		return ( new \ReflectionClass( $class_name ) )->newInstanceWithoutConstructor();
 	}
 }

@@ -1080,6 +1080,7 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 		return ! file_exists( $current ) && ! is_link( $current );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of orphaned_key_reset_available retains the production method contract; these inputs do not affect this controlled result.
 	protected function orphaned_key_reset_available( string $current ): bool {
 		return $this->orphaned_reset_available;
 	}
@@ -1089,6 +1090,7 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 		$this->orphaned_reset_available = false;
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of orphaned_ciphertext_reset_available retains the production method contract; these inputs do not affect this controlled result.
 	protected function orphaned_ciphertext_reset_available( string $current ): bool {
 		return $this->orphaned_ciphertext_reset_available;
 	}

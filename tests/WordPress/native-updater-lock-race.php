@@ -1,8 +1,8 @@
 <?php
 
 // Disposable two-connection proof for WordPress's native updater lock.
-// phpcs:disable
 
+// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
 [$mode, $run_id, $label, $ready_path, $release_path, $result_path] = array_pad( $args, 6, '' );
 if ( ! is_string( $mode ) || ! is_string( $run_id ) || preg_match( '/^[a-f0-9]{24}$/D', $run_id ) !== 1 ) {
 	throw new RuntimeException( 'The native-lock race arguments are invalid.' );
@@ -13,13 +13,16 @@ $lock_name = 'auto_updater.lock';
 $token_for = static function ( string $participant ) use ( $run_id ): string {
 	return (string) ( 1000000000 + ( (int) sprintf( '%u', crc32( $run_id . ':' . $participant ) ) % 1000000000 ) );
 };
-$tokens = array( $token_for( 'a' ), $token_for( 'b' ) );
+$tokens    = array( $token_for( 'a' ), $token_for( 'b' ) );
 
 if ( 'engine' === $mode ) {
+	// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
 	$status = $wpdb->get_row( $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', $wpdb->options ) );
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Engine is the native MySQL SHOW TABLE STATUS field.
 	if ( ! is_object( $status ) || ! is_string( $status->Engine ?? null ) ) {
 		throw new RuntimeException( 'The WordPress options-table engine is unavailable.' );
 	}
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Engine is the native MySQL SHOW TABLE STATUS field.
 	WP_CLI::line( $status->Engine );
 	return;
 }
@@ -29,6 +32,7 @@ if ( 'set-engine' === $mode ) {
 	if ( ! in_array( $engine, array( 'InnoDB', 'MyISAM' ), true ) ) {
 		throw new RuntimeException( 'The requested options-table engine is invalid.' );
 	}
+	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Engine is allowlisted to InnoDB or MyISAM above; the table identifier uses the %i placeholder.
 	if ( false === $wpdb->query( $wpdb->prepare( 'ALTER TABLE %i ENGINE=' . $engine, $wpdb->options ) ) ) {
 		throw new RuntimeException( 'The WordPress options-table engine could not be changed.' );
 	}
@@ -51,7 +55,9 @@ if ( 'cleanup' === $mode ) {
 }
 
 if ( 'prepare' === $mode ) {
+	// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
 	$status = $wpdb->get_row( $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', $wpdb->options ) );
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Engine is the native MySQL SHOW TABLE STATUS field.
 	if ( ! is_object( $status ) || 0 !== strcasecmp( 'MyISAM', (string) ( $status->Engine ?? '' ) ) ) {
 		throw new RuntimeException( 'The native-lock race requires MyISAM wp_options.' );
 	}
@@ -70,16 +76,20 @@ if ( 'child' === $mode ) {
 	if ( ! in_array( $label, array( 'a', 'b' ), true ) ) {
 		throw new RuntimeException( 'The native-lock participant is invalid.' );
 	}
+	// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
 	foreach ( array( $ready_path, $release_path, $result_path ) as $path ) {
 		if ( ! is_string( $path ) || ! str_starts_with( $path, sys_get_temp_dir() . DIRECTORY_SEPARATOR ) ) {
 			throw new RuntimeException( 'A native-lock race marker path is invalid.' );
 		}
 	}
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 	$ready = fopen( $ready_path, 'x' );
 	if ( false === $ready ) {
 		throw new RuntimeException( 'The native-lock participant could not reach the barrier.' );
 	}
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 	fwrite( $ready, "ready\n" );
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 	fclose( $ready );
 	$deadline = microtime( true ) + 15.0;
 	while ( ! file_exists( $release_path ) ) {
@@ -100,22 +110,33 @@ if ( 'child' === $mode ) {
 	if ( false === $result ) {
 		throw new RuntimeException( 'The native-lock election query failed.' );
 	}
-	$json = wp_json_encode( array( 'label' => $label, 'token' => $token_for( $label ), 'result' => (int) $result ) );
+	$json = wp_json_encode(
+		array(
+			'label'  => $label,
+			'token'  => $token_for( $label ),
+			'result' => (int) $result,
+		)
+	);
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 	$file = fopen( $result_path, 'x' );
 	if ( ! is_string( $json ) || false === $file ) {
 		throw new RuntimeException( 'The native-lock race result could not be written.' );
 	}
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 	fwrite( $file, $json . "\n" );
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 	fclose( $file );
 	return;
 }
 
 if ( 'assert' === $mode ) {
 	$results = array();
+	// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
 	foreach ( array( $ready_path, $release_path ) as $path ) {
 		if ( ! is_string( $path ) || ! str_starts_with( $path, sys_get_temp_dir() . DIRECTORY_SEPARATOR ) ) {
 			throw new RuntimeException( 'A native-lock result path is invalid.' );
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 		$result = json_decode( (string) file_get_contents( $path ), true );
 		if ( ! is_array( $result ) || ! isset( $result['token'], $result['result'] ) ) {
 			throw new RuntimeException( 'A native-lock race result is invalid.' );
@@ -136,7 +157,7 @@ if ( 'assert' === $mode ) {
 	if ( hash_equals( $stored, $wrong ) ) {
 		$wrong = '9999999998';
 	}
-	$removed = $wpdb->query(
+	$removed           = $wpdb->query(
 		$wpdb->prepare( 'DELETE FROM %i WHERE option_name = %s AND option_value = %s', $wpdb->options, $lock_name, $wrong )
 	);
 	$after_wrong_token = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, $lock_name ) );

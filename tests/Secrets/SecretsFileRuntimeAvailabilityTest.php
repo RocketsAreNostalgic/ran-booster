@@ -607,6 +607,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 				$this->key = random_bytes( 32 );
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of load retains the production method contract; these inputs do not affect this controlled result.
 			public function load( bool $repair_autoload = true ): ?string {
 				return $this->key;
 			}
@@ -618,6 +619,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 				);
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of delete_exact retains the production method contract; these inputs do not affect this controlled result.
 			public function delete_exact( #[\SensitiveParameter] string $key ): bool {
 				$this->key = random_bytes( 32 );
 

@@ -26,6 +26,7 @@ trait SuppliesProviderManualCapabilities {
 		);
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- The fixture implementation of prepare_archive retains the production method contract; these inputs do not affect this controlled result.
 	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 		return new class() implements PreparedArchive {
 			public function get_url(): string {

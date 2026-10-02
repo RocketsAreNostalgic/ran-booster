@@ -1,9 +1,8 @@
 <?php
 
 // Independent claimant that proves contention exists only at the native lock.
-// phpcs:disable
 
-$phase = $args[0] ?? '';
+$phase         = $args[0] ?? '';
 $result_marker = $args[1] ?? '';
 if ( ! in_array( $phase, array( 'pre', 'post', 'foreign' ), true )
 	|| ! is_string( $result_marker )
@@ -40,9 +39,12 @@ if ( 'pre' === $phase ) {
 	$suffix = 'core-lock-contended';
 }
 
+// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 $marker = fopen( $result_marker, 'x' );
 if ( false === $marker ) {
 	throw new RuntimeException( 'The contender marker could not be created.' );
 }
+// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 fwrite( $marker, 'claimed:' . $attempt->get_correlation_id() . ':' . $suffix . "\n" );
+// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 fclose( $marker );

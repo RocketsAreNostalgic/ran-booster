@@ -90,7 +90,7 @@ add_action(
 $ran_booster_runtime_support = RuntimeSupport::current();
 if ( ! defined( 'RAN_BOOSTER_RUNTIME_MODE' ) ) {
 	define( 'RAN_BOOSTER_RUNTIME_MODE', $ran_booster_runtime_support->value );
-} elseif ( $ran_booster_runtime_support->value !== RAN_BOOSTER_RUNTIME_MODE ) {
+} elseif ( RAN_BOOSTER_RUNTIME_MODE !== $ran_booster_runtime_support->value ) {
 	throw new LogicException( 'RAN Booster runtime mode conflicts with an existing runtime marker.' );
 }
 

@@ -1,7 +1,6 @@
 <?php
 
 // Disposable-site proof for the raw-storage repository source invariant.
-// phpcs:disable
 
 use RAN\ManagedRepository;
 use RAN\PackageSource;
@@ -12,6 +11,7 @@ use RAN\Theme;
 use RAN\WordPress\ManagedReleaseConfiguration;
 use RAN\WordPress\ManagedReleaseStore;
 
+// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
 [$action, $run_id, $ready, $release, $result] = array_pad( $args, 5, '' );
 if ( ! in_array( $action, array( 'setup', 'branch', 'release', 'assert', 'cleanup' ), true ) || preg_match( '/^[a-f0-9]{24}$/D', $run_id ) !== 1 ) {
 	throw new RuntimeException( 'Invalid repository-exclusivity race arguments.' );
@@ -37,28 +37,76 @@ if ( 'setup' === $action ) {
 	}
 	wp_mkdir_p( $plugin_dir );
 	wp_mkdir_p( $theme_dir );
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 	file_put_contents( $plugin_file, "<?php\n/*\nPlugin Name: Exclusivity Root\nVersion: 1.0.0\nUpdate URI: https://github.com/example/exclusivity-fixture\n*/\n" );
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 	file_put_contents( $theme_dir . '/style.css', "/*\nTheme Name: Exclusivity Theme\nVersion: 1.0.0\nUpdate URI: https://github.com/example/exclusivity-fixture\n*/\n" );
 	global $wpdb;
-	$wpdb->delete( $table, array( 'package' => $package, 'type' => 1 ) );
-	$wpdb->delete( $table, array( 'package' => $theme, 'type' => 2 ) );
-	$wpdb->insert( $table, array( 'package' => $package, 'type' => 1, 'repository' => 'example/exclusivity-fixture', 'branch' => 'main', 'provider' => 'gh', 'provider_repository_id' => 'race-' . $run_id, 'private' => 0, 'credential_id' => null, 'deployment_policy' => 'manual', 'source' => 'branch', 'source_revision' => 1, 'subdirectory' => null, 'release_configuration' => null ) );
+	$wpdb->delete(
+		$table,
+		array(
+			'package' => $package,
+			'type'    => 1,
+		)
+	);
+	$wpdb->delete(
+		$table,
+		array(
+			'package' => $theme,
+			'type'    => 2,
+		)
+	);
+	$wpdb->insert(
+		$table,
+		array(
+			'package'                => $package,
+			'type'                   => 1,
+			'repository'             => 'example/exclusivity-fixture',
+			'branch'                 => 'main',
+			'provider'               => 'gh',
+			'provider_repository_id' => 'race-' . $run_id,
+			'private'                => 0,
+			'credential_id'          => null,
+			'deployment_policy'      => 'manual',
+			'source'                 => 'branch',
+			'source_revision'        => 1,
+			'subdirectory'           => null,
+			'release_configuration'  => null,
+		)
+	);
 	return;
 }
 if ( 'cleanup' === $action ) {
 	global $wpdb;
-	$wpdb->delete( $table, array( 'package' => $package, 'type' => 1 ) );
-	$wpdb->delete( $table, array( 'package' => $theme, 'type' => 2 ) );
+	$wpdb->delete(
+		$table,
+		array(
+			'package' => $package,
+			'type'    => 1,
+		)
+	);
+	$wpdb->delete(
+		$table,
+		array(
+			'package' => $theme,
+			'type'    => 2,
+		)
+	);
+	// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Best-effort cleanup tolerates an already-removed disposable fixture or stopped child process. Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 	@unlink( $plugin_file );
+	// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Best-effort cleanup tolerates an already-removed disposable fixture or stopped child process. Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 	@rmdir( $plugin_dir );
+	// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Best-effort cleanup tolerates an already-removed disposable fixture or stopped child process. Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 	@unlink( $theme_dir . '/style.css' );
+	// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Best-effort cleanup tolerates an already-removed disposable fixture or stopped child process. Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 	@rmdir( $theme_dir );
 	return;
 }
 if ( 'assert' === $action ) {
 	global $wpdb;
 	$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT source FROM %i WHERE provider = %s AND provider_repository_id = %s', $table, 'gh', 'race-' . $run_id ) );
-	$results = array_map( static fn( string $path ): array => json_decode( (string) file_get_contents( $path ), true, 512, JSON_THROW_ON_ERROR ), array( $ready, $release ) );
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
+	$results   = array_map( static fn( string $path ): array => json_decode( (string) file_get_contents( $path ), true, 512, JSON_THROW_ON_ERROR ), array( $ready, $release ) );
 	$successes = count( array_filter( $results, static fn( array $entry ): bool => true === ( $entry['ok'] ?? null ) ) );
 	if ( 1 !== $successes || ! is_array( $rows ) || ( 1 === count( $rows ) && 'release_asset' !== ( $rows[0]->source ?? null ) ) || ( 2 === count( $rows ) && count( array_filter( $rows, static fn( object $row ): bool => 'branch' === ( $row->source ?? null ) ) ) !== 2 ) || ! in_array( count( $rows ), array( 1, 2 ), true ) ) {
 		throw new RuntimeException( 'The concurrent persistence operations created a mixed or missing repository group.' );
@@ -66,6 +114,7 @@ if ( 'assert' === $action ) {
 	return;
 }
 
+// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
 foreach ( array( $ready, $release, $result ) as $path ) {
 	if ( ! is_string( $path ) || ! str_starts_with( $path, sys_get_temp_dir() . DIRECTORY_SEPARATOR ) ) {
 		throw new RuntimeException( 'Invalid race marker path.' );
@@ -78,26 +127,57 @@ $database = new class( $wpdb, $ready, $release ) {
 	public string $prefix;
 	public string $base_prefix;
 	private bool $paused = false;
-	public function __construct( private object $wpdb, private string $ready, private string $release ) { $this->options = $wpdb->options; $this->prefix = $wpdb->prefix; $this->base_prefix = $wpdb->base_prefix; }
-	public function db_server_info(): string { return (string) $this->wpdb->db_server_info(); }
-	public function suppress_errors( bool $suppress = true ): bool { return (bool) $this->wpdb->suppress_errors( $suppress ); }
-	public function __call( string $name, array $arguments ): mixed { $value = $this->wpdb->{$name}( ...$arguments ); $this->last_error = (string) $this->wpdb->last_error; return $value; }
+	public function __construct( private object $wpdb, private string $ready, private string $release ) {
+		$this->options     = $wpdb->options;
+		$this->prefix      = $wpdb->prefix;
+		$this->base_prefix = $wpdb->base_prefix; }
+	public function db_server_info(): string {
+		return (string) $this->wpdb->db_server_info(); }
+	public function suppress_errors( bool $suppress = true ): bool {
+		return (bool) $this->wpdb->suppress_errors( $suppress ); }
+	public function __call( string $name, array $arguments ): mixed {
+		$value            = $this->wpdb->{$name}( ...$arguments );
+		$this->last_error = (string) $this->wpdb->last_error;
+		return $value; }
 	public function get_results( string $query ): array|object|null {
-		if ( ! $this->paused && str_contains( $query, 'provider_repository_id') && str_contains( $query, 'FOR UPDATE' ) ) {
-			$this->paused = true; $handle = fopen( $this->ready, 'x' ); if ( false === $handle ) { throw new RuntimeException( 'Barrier failed.' ); } fclose( $handle);
-			$deadline = microtime( true ) + 15; while ( ! file_exists( $this->release ) ) { if ( microtime( true ) >= $deadline ) { throw new RuntimeException( 'Barrier timed out.' ); } usleep( 50000 ); }
+		if ( ! $this->paused && str_contains( $query, 'provider_repository_id' ) && str_contains( $query, 'FOR UPDATE' ) ) {
+			$this->paused = true;
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
+			$handle = fopen( $this->ready, 'x' );
+			if ( false === $handle ) {
+				throw new RuntimeException( 'Barrier failed.' );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
+			} fclose( $handle );
+			$deadline = microtime( true ) + 15;
+			while ( ! file_exists( $this->release ) ) {
+				if ( microtime( true ) >= $deadline ) {
+					throw new RuntimeException( 'Barrier timed out.' );
+				} usleep( 50000 ); }
 		}
-		$value = $this->wpdb->get_results( $query ); $this->last_error = (string) $this->wpdb->last_error; return $value;
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The query is assembled from fixed fixture SQL and already-prepared values before this read.
+		$value            = $this->wpdb->get_results( $query );
+		$this->last_error = (string) $this->wpdb->last_error;
+		return $value;
 	}
 };
+// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
 $wpdb = $database;
-$ok = false;
+$ok   = false;
 if ( 'release' === $action ) {
 	$ok = ( new ManagedReleaseStore( $database ) )->transition( 'plugin', $package, PackageSource::BRANCH, 1, PackageSource::RELEASE_ASSET, new ManagedReleaseConfiguration( 'exclusivity-root', 'exclusivity-root.php' ), 1 );
 } else {
 	$wp_theme = wp_get_theme( $theme );
-	$managed = Theme::from_wp_theme_object( $wp_theme );
+	$managed  = Theme::from_wp_theme_object( $wp_theme );
 	$managed->set_repository( new ManagedRepository( 'gh', 'example/exclusivity-fixture', 'race-' . $run_id, 'main' ) );
 	$ok = ( new ThemeRepository() )->adopt( $managed )->is_successful();
 }
-file_put_contents( $result, wp_json_encode( array( 'action' => $action, 'ok' => $ok ) ) );
+// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
+file_put_contents(
+	$result,
+	wp_json_encode(
+		array(
+			'action' => $action,
+			'ok'     => $ok,
+		)
+	)
+);

@@ -22,10 +22,10 @@ $expected_php_translation = 'En attente';
 
 // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Exact disposable marker content.
 $marker_contents = file_get_contents( $disposable_mark );
-if ( ! is_string( $expected_root ) || false === $wordpress_root || $wordpress_root !== realpath( $expected_root )
+if ( ! is_string( $expected_root ) || false === $wordpress_root || realpath( $expected_root ) !== $wordpress_root
 	|| false === $content_root || $content_root !== $wordpress_root . '/wp-content'
 	|| false === $plugin_root || $plugin_root !== $content_root . '/plugins'
-	|| 'http://localhost' !== $expected_url || $expected_url !== get_option( 'siteurl' )
+	|| 'http://localhost' !== $expected_url || $expected_url !== get_option( 'siteurl' ) // phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Read the expected global before WordPress option filters can mutate it.
 	|| 'fr_FR' !== get_option( 'WPLANG', '' ) || 'fr_FR' !== determine_locale()
 	|| is_link( $disposable_mark ) || ! is_file( $disposable_mark )
 	|| "RAN Booster disposable test site\n" !== $marker_contents
@@ -42,7 +42,7 @@ foreach (
 		'RAN_BOOSTER_PORTABILITY_API_VERSION'       => 3,
 	) as $constant => $expected_version
 ) {
-	if ( ! defined( $constant ) || $expected_version !== constant( $constant ) ) {
+	if ( ! defined( $constant ) || constant( $constant ) !== $expected_version ) {
 		throw new RuntimeException( 'The installed localisation smoke found an unexpected public API version.' );
 	}
 }

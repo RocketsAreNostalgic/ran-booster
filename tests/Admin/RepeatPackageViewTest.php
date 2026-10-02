@@ -132,6 +132,7 @@ final class RepeatPackageViewTest extends TestCase {
 	}
 
 	#[DataProvider( 'create_view_matrix' )]
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The included production view reads these parameters as local template variables.
 	public function test_create_view_does_not_trigger_warnings_when_promoted_to_exceptions(
 		PackagePagePresenter $package_view,
 		bool $explicit_provider,
@@ -619,11 +620,13 @@ final class RepeatPackageViewTest extends TestCase {
 			);
 			self::assertSame(
 				$branch_settings_inactive,
+				// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Already literal-first; the sniff scans across the preceding assertion argument.
 				1 === preg_match( '/id="ran-booster-repository-branch"[^>]*disabled="disabled"/', $html ),
 				$package_view->get_type()
 			);
 			self::assertSame(
 				$branch_settings_inactive,
+				// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Already literal-first; the sniff scans across the preceding assertion argument.
 				1 === preg_match( '/id="ran-booster-repository-subdirectory"[^>]*disabled="disabled"/', $html ),
 				$package_view->get_type()
 			);
@@ -633,6 +636,7 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertStringContainsString( 'class="screen-reader-text">' . ( $branch_settings_inactive ? 'Inactive Branch deployment settings' : 'Branch deployment settings' ) . '</legend>', $html, $package_view->get_type() );
 			self::assertSame(
 				$branch_settings_inactive,
+				// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Already literal-first; the sniff scans across the preceding assertion argument.
 				1 === preg_match( '/ran-booster-branch-settings is-inactive[^>]*disabled="disabled"[^>]*aria-disabled="true"/', $html ),
 				$package_view->get_type()
 			);
@@ -693,16 +697,16 @@ final class RepeatPackageViewTest extends TestCase {
 		return $matches[0];
 	}
 
-	private function form_by_class( string $html, string $class ): string {
-		self::assertMatchesRegularExpression( '/<form[^>]*class="[^"]*' . preg_quote( $class, '/' ) . '[^"]*".*?<\/form>/s', $html );
-		preg_match( '/<form[^>]*class="[^"]*' . preg_quote( $class, '/' ) . '[^"]*".*?<\/form>/s', $html, $matches );
+	private function form_by_class( string $html, string $css_class ): string {
+		self::assertMatchesRegularExpression( '/<form[^>]*class="[^"]*' . preg_quote( $css_class, '/' ) . '[^"]*".*?<\/form>/s', $html );
+		preg_match( '/<form[^>]*class="[^"]*' . preg_quote( $css_class, '/' ) . '[^"]*".*?<\/form>/s', $html, $matches );
 
 		return $matches[0];
 	}
 
-	private function action_group_by_class( string $html, string $class ): string {
-		self::assertMatchesRegularExpression( '/<div[^>]*class="[^"]*' . preg_quote( $class, '/' ) . '[^"]*"[^>]*>.*?<\/div>/s', $html );
-		preg_match( '/<div[^>]*class="[^"]*' . preg_quote( $class, '/' ) . '[^"]*"[^>]*>.*?<\/div>/s', $html, $matches );
+	private function action_group_by_class( string $html, string $css_class ): string {
+		self::assertMatchesRegularExpression( '/<div[^>]*class="[^"]*' . preg_quote( $css_class, '/' ) . '[^"]*"[^>]*>.*?<\/div>/s', $html );
+		preg_match( '/<div[^>]*class="[^"]*' . preg_quote( $css_class, '/' ) . '[^"]*"[^>]*>.*?<\/div>/s', $html, $matches );
 
 		return $matches[0];
 	}

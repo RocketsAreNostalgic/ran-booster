@@ -171,6 +171,7 @@ final class PackageIndexFilterControlsTest extends TestCase {
 	 * @param array{search:string,provider:string,source:string,policy:string} $package_list_state
 	 * @param list<array{code:string,label:string}>                           $package_provider_options
 	 */
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The included production view reads these parameters as local template variables.
 	private function render(
 		PackagePagePresenter $package_view,
 		array $package_list_state,

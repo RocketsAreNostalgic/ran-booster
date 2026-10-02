@@ -182,6 +182,7 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 				return new PublicRepositoryBrowseMetadata( true );
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of browse_repositories retains the production method contract; these inputs do not affect this controlled result.
 			public function browse_repositories( RepositoryBrowseRequest $request ): RepositoryBrowseResult {
 				return new RepositoryBrowseResult( array() );
 			}

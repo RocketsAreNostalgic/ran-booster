@@ -11,7 +11,7 @@ namespace RAN\Secrets;
 function lstat( string $path ): array|false {
 	$stat = \lstat( $path );
 	$mock = $GLOBALS['ran_booster_shared_host_stat'] ?? null;
-	if ( false !== $stat && is_array( $mock ) && $path === ( $mock['path'] ?? null ) ) {
+	if ( false !== $stat && is_array( $mock ) && ( $mock['path'] ?? null ) === $path ) {
 		$stat['uid'] = $mock['uid'];
 		$stat['gid'] = $mock['gid'];
 	}
@@ -22,7 +22,7 @@ function lstat( string $path ): array|false {
 function is_writable( string $path ): bool {
 	$mock = $GLOBALS['ran_booster_shared_host_stat'] ?? null;
 
-	return is_array( $mock ) && $path === ( $mock['path'] ?? null )
+	return is_array( $mock ) && ( $mock['path'] ?? null ) === $path
 		? false
 		: \is_writable( $path );
 }

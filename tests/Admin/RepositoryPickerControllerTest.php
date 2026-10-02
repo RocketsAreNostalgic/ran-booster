@@ -402,6 +402,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of browse_repositories retains the production method contract; these inputs do not affect this controlled result.
 			public function browse_repositories( RepositoryBrowseRequest $request ): \RAN\RepositoryProvider\RepositoryBrowseResult {
 				throw new RuntimeException(
 					'upstream-response-canary; Retry-After: header-canary; token-canary',
@@ -437,6 +438,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of browse_repositories retains the production method contract; these inputs do not affect this controlled result.
 			public function browse_repositories( RepositoryBrowseRequest $request ): \RAN\RepositoryProvider\RepositoryBrowseResult {
 				return new \RAN\RepositoryProvider\RepositoryBrowseResult(
 					array(
@@ -475,6 +477,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of browse_repositories retains the production method contract; these inputs do not affect this controlled result.
 			public function browse_repositories( RepositoryBrowseRequest $request ): \RAN\RepositoryProvider\RepositoryBrowseResult {
 				return new \RAN\RepositoryProvider\RepositoryBrowseResult( array(), \RAN\RepositoryProvider\RepositoryBrowseResult::RATE_LIMIT );
 			}

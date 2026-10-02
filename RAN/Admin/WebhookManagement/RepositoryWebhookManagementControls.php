@@ -182,7 +182,7 @@ final class RepositoryWebhookManagementControls {
 		if ( null === $model ) {
 			return false;
 		}
-		$model['webhooks_url'] = $this->repository_webhook_settings_url( $provider_code, $repository_id, $model['repository'] );
+		$model['webhooks_url'] = $this->repository_webhook_settings_url( $provider_code, $model['repository'] );
 		echo $this->render_repository_webhook_panel_model( $model ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Fixed Core panel template escapes the normalized model.
 
 		return true;
@@ -246,7 +246,7 @@ final class RepositoryWebhookManagementControls {
 				( '' !== trim( $repository ) ) ? $repository : $repository_id,
 				$return_url,
 				$reason,
-				$this->repository_webhook_settings_url( $provider_code, $repository_id, ( '' !== trim( $repository ) ) ? $repository : null )
+				$this->repository_webhook_settings_url( $provider_code, ( '' !== trim( $repository ) ) ? $repository : null )
 			);
 			$notices[] = array(
 				'class'   => 'notice-warning',
@@ -254,7 +254,7 @@ final class RepositoryWebhookManagementControls {
 			);
 		}
 		if ( is_array( $model ) ) {
-			$model['webhooks_url'] = $this->repository_webhook_settings_url( $provider_code, $repository_id, $model['repository'] );
+			$model['webhooks_url'] = $this->repository_webhook_settings_url( $provider_code, $model['repository'] );
 			if ( is_array( $model['result'] ?? null ) ) {
 				$notices[] = $model['result'];
 			}
@@ -271,7 +271,7 @@ final class RepositoryWebhookManagementControls {
 		$this->render_repository_webhook_section( $readiness_items, is_array( $model ) ? $this->render_repository_webhook_panel_model( $model ) : '', $has_branch_consumer, $notices );
 	}
 
-	private function repository_webhook_settings_url( string $provider_code, string $repository_id, ?string $fallback_repository ): ?string {
+	private function repository_webhook_settings_url( string $provider_code, ?string $fallback_repository ): ?string {
 		try {
 			$repository = $fallback_repository;
 			if ( null === $repository ) {

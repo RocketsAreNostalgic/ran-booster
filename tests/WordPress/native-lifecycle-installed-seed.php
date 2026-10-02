@@ -1,7 +1,6 @@
 <?php
 
 // Executed only by the marked installed-CI runner before its fresh lifecycle request.
-// phpcs:disable
 
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI || '1' !== getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_TEST_DISPOSABLE' ) ) {
 	throw new RuntimeException( 'The native lifecycle seed requires the marked installed CI site.' );
@@ -26,10 +25,11 @@ if ( false === $wordpress_root || false === $content_root || false === $plugin_r
 }
 
 global $wpdb;
-$table = ran_booster_table_name();
-$items = array();
+$table    = ran_booster_table_name();
+$items    = array();
 $archives = array();
 for ( $number = 1; $number <= (int) $scale; ++$number ) {
+	// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
 	$type       = 0 === $number % 2 ? 'theme' : 'plugin';
 	$root       = 'ran-booster-c4-' . $type . '-' . $number;
 	$identifier = 'plugin' === $type ? $root . '/' . $root . '.php' : $root;
@@ -39,24 +39,35 @@ for ( $number = 1; $number <= (int) $scale; ++$number ) {
 	}
 }
 for ( $number = 1; $number <= (int) $scale; ++$number ) {
+	// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
 	$type       = 0 === $number % 2 ? 'theme' : 'plugin';
 	$root       = 'ran-booster-c4-' . $type . '-' . $number;
 	$identifier = 'plugin' === $type ? $root . '/' . $root . '.php' : $root;
 	$directory  = ( 'plugin' === $type ? WP_PLUGIN_DIR : get_theme_root() ) . '/' . $root;
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 	if ( ! mkdir( $directory, 0700, true ) ) {
 		throw new RuntimeException( 'The native lifecycle fixture directory is unsafe.' );
 	}
 	$policy  = $number % 4 >= 2 ? 'automatic' : 'manual';
-	$items[] = array( 'number' => $number, 'type' => $type, 'identifier' => $identifier, 'directory' => $directory, 'policy' => $policy );
+	$items[] = array(
+		'number'     => $number,
+		'type'       => $type,
+		'identifier' => $identifier,
+		'directory'  => $directory,
+		'policy'     => $policy,
+	);
 	update_option( 'ran_booster_c4_native_items', $items, false );
 	$repository = 'ran-booster-c4/' . $root;
 	$metadata   = 'plugin' === $type ? $root . '.php' : 'style.css';
 	$contents   = 'plugin' === $type
 		? "<?php\n/*\nPlugin Name: C4 $number\nVersion: 1.0.0\nRequires at least: 7.0\nRequires PHP: 8.2\nUpdate URI: https://github.com/$repository\n*/\n"
 		: "/*\nTheme Name: C4 $number\nVersion: 1.0.0\nRequires at least: 7.0\nRequires PHP: 8.2\nUpdate URI: https://github.com/$repository\n*/\n";
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 	file_put_contents( $directory . '/' . $metadata, $contents );
 	if ( 'theme' === $type ) {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 		file_put_contents( $directory . '/index.php', '<?php' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 		file_put_contents( $directory . '/functions.php', "<?php\nthrow new RuntimeException( 'Inactive C4 theme executed.' );\n" );
 	}
 	$archive = getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_ARCHIVE_ROOT' ) . '/' . $root . '.zip';
@@ -71,7 +82,15 @@ for ( $number = 1; $number <= (int) $scale; ++$number ) {
 		$zip->addFromString( $root . '/functions.php', "<?php\nthrow new RuntimeException( 'Inactive C4 theme executed.' );\n" );
 	}
 	$zip->close();
-	$configuration = json_encode( array( 'channel' => 'stable', 'package_root' => $root, 'metadata_file' => $metadata ), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES );
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Fixture serializes exact test protocol bytes independently of WordPress JSON filters.
+	$configuration = json_encode(
+		array(
+			'channel'       => 'stable',
+			'package_root'  => $root,
+			'metadata_file' => $metadata,
+		),
+		JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES
+	);
 	$inserted      = $wpdb->insert(
 		$table,
 		array(
@@ -91,7 +110,11 @@ for ( $number = 1; $number <= (int) $scale; ++$number ) {
 	if ( 1 !== $inserted ) {
 		throw new RuntimeException( 'The native lifecycle fixture row was not persisted.' );
 	}
-	$items[ count( $items ) - 1 ] += array( 'repository' => $repository, 'repository_id' => (string) ( 940000 + $number ), 'expected_digest' => hash( 'sha256', $updated_contents ) );
+	$items[ count( $items ) - 1 ] += array(
+		'repository'      => $repository,
+		'repository_id'   => (string) ( 940000 + $number ),
+		'expected_digest' => hash( 'sha256', $updated_contents ),
+	);
 	update_option( 'ran_booster_c4_native_items', $items, false );
 	$archives[ $repository ] = $archive;
 }

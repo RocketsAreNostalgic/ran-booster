@@ -653,7 +653,7 @@ final class PortabilityControllerTest extends TestCase {
 		$method->invoke( $this->application(), array( 'package' => $this->managed_plugin( DeploymentPolicy::DISABLED ) ), $blueprint, null, false );
 		$method->invoke(
 			$this->application(),
-			array( 'package' => $this->managed_plugin( DeploymentPolicy::DISABLED, private: true, credential_id: 'target-profile' ) ),
+			array( 'package' => $this->managed_plugin( DeploymentPolicy::DISABLED, is_private: true, credential_id: 'target-profile' ) ),
 			$blueprint,
 			'target-profile',
 			true
@@ -682,15 +682,15 @@ final class PortabilityControllerTest extends TestCase {
 		$blueprint  = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', 'main', null );
 		$method     = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'assert_disabled_result' );
 		$mismatches = array(
-			'provider'     => $this->managed_plugin( DeploymentPolicy::DISABLED, private: true, credential_id: 'target-profile', provider: 'gitlab' ),
+			'provider'     => $this->managed_plugin( DeploymentPolicy::DISABLED, is_private: true, credential_id: 'target-profile', provider: 'gitlab' ),
 			'type'         => $this->managed_theme_with_plugin_identifier(),
-			'source'       => $this->managed_plugin( DeploymentPolicy::DISABLED, private: true, credential_id: 'target-profile', source: PackageSource::RELEASE_ASSET ),
-			'locator'      => $this->managed_plugin( DeploymentPolicy::DISABLED, locator: 'owner/other', private: true, credential_id: 'target-profile' ),
-			'stable id'    => $this->managed_plugin( DeploymentPolicy::DISABLED, provider_repository_id: 'other-id', private: true, credential_id: 'target-profile' ),
-			'branch'       => $this->managed_plugin( DeploymentPolicy::DISABLED, branch: 'develop', private: true, credential_id: 'target-profile' ),
-			'credential'   => $this->managed_plugin( DeploymentPolicy::DISABLED, private: true, credential_id: 'other-profile' ),
+			'source'       => $this->managed_plugin( DeploymentPolicy::DISABLED, is_private: true, credential_id: 'target-profile', source: PackageSource::RELEASE_ASSET ),
+			'locator'      => $this->managed_plugin( DeploymentPolicy::DISABLED, locator: 'owner/other', is_private: true, credential_id: 'target-profile' ),
+			'stable id'    => $this->managed_plugin( DeploymentPolicy::DISABLED, provider_repository_id: 'other-id', is_private: true, credential_id: 'target-profile' ),
+			'branch'       => $this->managed_plugin( DeploymentPolicy::DISABLED, branch: 'develop', is_private: true, credential_id: 'target-profile' ),
+			'credential'   => $this->managed_plugin( DeploymentPolicy::DISABLED, is_private: true, credential_id: 'other-profile' ),
 			'privacy'      => $this->managed_plugin( DeploymentPolicy::DISABLED, credential_id: 'target-profile' ),
-			'subdirectory' => $this->managed_plugin( DeploymentPolicy::DISABLED, private: true, credential_id: 'target-profile', subdirectory: 'plugin' ),
+			'subdirectory' => $this->managed_plugin( DeploymentPolicy::DISABLED, is_private: true, credential_id: 'target-profile', subdirectory: 'plugin' ),
 		);
 
 		foreach ( $mismatches as $label => $package ) {
@@ -959,7 +959,7 @@ final class PortabilityControllerTest extends TestCase {
 		string $locator = 'owner/example',
 		string $provider_repository_id = 'repository-id',
 		string $branch = 'main',
-		bool $private = false,
+		bool $is_private = false,
 		?string $credential_id = null,
 		?string $subdirectory = null,
 		string $provider = 'gh',
@@ -981,7 +981,7 @@ final class PortabilityControllerTest extends TestCase {
 				'AuthorName'  => '',
 			)
 		);
-		$plugin->set_repository( new ManagedRepository( $provider, $locator, $provider_repository_id, $branch, $private, $credential_id ) );
+		$plugin->set_repository( new ManagedRepository( $provider, $locator, $provider_repository_id, $branch, $is_private, $credential_id ) );
 		$plugin->set_deployment_policy( $policy );
 		$plugin->set_subdirectory( $subdirectory );
 		$plugin->set_source( $source, 1 );

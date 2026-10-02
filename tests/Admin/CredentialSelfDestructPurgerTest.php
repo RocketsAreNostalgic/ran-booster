@@ -104,10 +104,12 @@ final class PurgerEvidenceStore extends RepositoryBranchCheckEvidenceStore {
 
 final class ThrowingPurgerEvidenceStore extends RepositoryBranchCheckEvidenceStore {
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of bump_profile_generation retains the production method contract; these inputs do not affect this controlled result.
 	public function bump_profile_generation( string $provider, string $profile_id ): void {
 		throw new \RuntimeException( 'evidence unavailable' );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of bump_provider_generation retains the production method contract; these inputs do not affect this controlled result.
 	public function bump_provider_generation( string $provider ): void {
 		throw new \RuntimeException( 'evidence unavailable' );
 	}

@@ -428,6 +428,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$database  = new class() {
 			public string $last_error = '';
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassBeforeLastUsed -- The fixture implementation of prepare retains the production method contract; these inputs do not affect this controlled result.
 			public function prepare( string $query, mixed ...$arguments ): array {
 				return $arguments;
 			}
@@ -561,6 +562,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			),
 			new RuntimeUpdaterLock(),
 			$this->release_metadata_registry(
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- The release-runtime fixture callback retains the registered factory or provider callable signature while returning a controlled result.
 				target_factory: static fn ( mixed ...$options ): RuntimeUpdaterFacade => $target
 			)
 		);
@@ -1378,7 +1380,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$invalidations = array();
 		$allowed       = true;
 		$providers     = $this->release_metadata_registry(
-			list: static function ( string $type, RepositoryReference $repository, string $channel ) use ( &$listings ): RepositoryReleaseCandidateList {
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The release-runtime fixture callback retains the registered factory or provider callable signature while returning a controlled result.
+			list_releases: static function ( string $type, RepositoryReference $repository, string $channel ) use ( &$listings ): RepositoryReleaseCandidateList {
 				$listings[] = compact( 'type', 'repository', 'channel' );
 				$ids        = 'plugin' === $type ? array( '101', '102' ) : array( '201' );
 
@@ -1419,7 +1422,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				);
 			}
 		);
-		$facade        = $this->facade(
+		$facade = $this->facade(
 			$plugins,
 			$themes,
 			$store,
@@ -1508,7 +1511,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$lock           = new RuntimeUpdaterLock();
 		$provider_calls = 0;
 		$providers      = $this->release_metadata_registry(
-			list: static function () use ( &$provider_calls ): never {
+			list_releases: static function () use ( &$provider_calls ): never {
 				++$provider_calls;
 				throw new \RuntimeException( 'Provider preflight must not run for a repository conflict.' );
 			}
@@ -1633,8 +1636,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$packages = array(
 			'public'         => $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL ),
 			'explicit'       => $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL, credential_id: 'package-profile' ),
-			'private'        => $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL, private: true, credential_id: 'private-profile' ),
-			'private_lookup' => $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL, private: true ),
+			'private'        => $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL, is_private: true, credential_id: 'private-profile' ),
+			'private_lookup' => $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL, is_private: true ),
 		);
 		$current  = 'public';
 		$plugins  = $this->createStub( PluginRepository::class );
@@ -1653,7 +1656,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$references         = array();
 		$failure_mode       = 'typed';
 		$providers          = $this->release_metadata_registry(
-			list: static function ( string $type, RepositoryReference $repository, string $channel ) use ( &$references, &$failure_mode ): RepositoryReleaseCandidateList {
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- The release-runtime fixture callback retains the registered factory or provider callable signature while returning a controlled result.
+			list_releases: static function ( string $type, RepositoryReference $repository, string $channel ) use ( &$references, &$failure_mode ): RepositoryReleaseCandidateList {
 				$references[] = $repository;
 				if ( in_array( $repository->credential_id, array( 'package-profile', 'private-profile' ), true ) ) {
 					if ( 'typed' === $failure_mode ) {
@@ -1666,6 +1670,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 				return new RepositoryReleaseCandidateList( array() );
 			},
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- The release-runtime fixture callback retains the registered factory or provider callable signature while returning a controlled result.
 			inspect: static function ( string $type, RepositoryReference $repository, string $release_id, string $tag, string $channel ) use ( &$references, &$failure_mode ): RepositoryReleaseInspection {
 				$references[] = $repository;
 				if ( in_array( $repository->credential_id, array( 'package-profile', 'private-profile' ), true ) ) {
@@ -1680,7 +1685,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				return new RepositoryReleaseInspection( $release_id, $tag, '2.0.0', str_repeat( 'a', 40 ), 'example', 'example.php', 'v1:' . str_repeat( 'b', 64 ) );
 			}
 		);
-		$facade             = $this->facade(
+		$facade = $this->facade(
 			$plugins,
 			$themes,
 			$store,
@@ -1777,7 +1782,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			'example/example.php',
 			'example',
 			DeploymentPolicy::MANUAL,
-			private: true,
+			is_private: true,
 			credential_id: 'package-profile',
 			source: PackageSource::BRANCH
 		);
@@ -1788,7 +1793,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$lock       = new RuntimeUpdaterLock();
 		$references = array();
 		$providers  = $this->release_metadata_registry(
-			list: static function ( string $type, RepositoryReference $repository, string $channel ) use ( &$references ): RepositoryReleaseCandidateList {
+			list_releases: static function ( string $type, RepositoryReference $repository, string $channel ) use ( &$references ): RepositoryReleaseCandidateList {
 				unset( $type, $channel );
 				$references[] = $repository;
 				if ( 'package-profile' === $repository->credential_id ) {
@@ -1848,7 +1853,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$mode             = 'release_id';
 		$inspection_calls = 0;
 		$providers        = $this->release_metadata_registry(
-			list: static function () use ( &$mode ): RepositoryReleaseCandidateList {
+			list_releases: static function () use ( &$mode ): RepositoryReleaseCandidateList {
 				if ( 'operational' === $mode ) {
 					throw new \RuntimeException( 'token=must-not-escape' );
 				}
@@ -2238,7 +2243,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$store      = new RuntimeReleaseStore();
 		$list_calls = 0;
 		$providers  = $this->release_metadata_registry(
-			list: static function () use ( &$list_calls ): RepositoryReleaseCandidateList {
+			list_releases: static function () use ( &$list_calls ): RepositoryReleaseCandidateList {
 				++$list_calls;
 
 				return new RepositoryReleaseCandidateList( array() );
@@ -2280,7 +2285,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$store      = new RuntimeReleaseStore();
 		$list_calls = 0;
 		$providers  = $this->release_metadata_registry(
-			list: static function () use ( &$list_calls ): RepositoryReleaseCandidateList {
+			list_releases: static function () use ( &$list_calls ): RepositoryReleaseCandidateList {
 				++$list_calls;
 
 				return new RepositoryReleaseCandidateList( array() );
@@ -2370,6 +2375,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$store,
 			new RuntimeUpdaterLock(),
 			$this->release_metadata_registry(
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- The release-runtime fixture callback retains the registered factory or provider callable signature while returning a controlled result.
 				target_factory: static fn ( mixed ...$options ): object => new RuntimeUpdaterFacade(
 					diagnostics: array(
 						'state'                => 'ready',
@@ -2488,6 +2494,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$themes,
 			$store,
 			new RuntimeUpdaterLock(),
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- The release-runtime fixture callback retains the registered factory or provider callable signature while returning a controlled result.
 			$this->release_metadata_registry( target_factory: static fn ( mixed ...$options ): object => $target )
 		);
 		$registrar->register();
@@ -2541,6 +2548,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$themes  = $this->createStub( ThemeRepository::class );
 		$themes->method( 'booster_theme_from_stylesheet' )->willReturn( $package );
 		$store     = new class() extends ManagedReleaseStore {
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of configuration retains the production method contract; these inputs do not affect this controlled result.
 			public function configuration( string $type, string $identifier ): ?ManagedReleaseConfiguration {
 				throw new InvalidArgumentException( 'Retired release configuration.' );
 			}
@@ -2591,7 +2599,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$preflight_calls = 0;
 		$lock            = new RuntimeUpdaterLock();
 		$providers       = $this->release_metadata_registry(
-			list: static function () use ( &$preflight_calls ): RepositoryReleaseCandidateList {
+			list_releases: static function () use ( &$preflight_calls ): RepositoryReleaseCandidateList {
 				++$preflight_calls;
 
 				return new RepositoryReleaseCandidateList( array() );
@@ -2668,6 +2676,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$store,
 			new RuntimeUpdaterLock(),
 			$this->release_metadata_registry(
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- The release-runtime fixture callback retains the registered factory or provider callable signature while returning a controlled result.
 				target_factory: static fn ( mixed ...$options ): object => new RuntimeUpdaterFacade(
 					diagnostics: array(
 						'state'                => 'ready',
@@ -2983,19 +2992,19 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 	}
 
 	/**
-	 * @param callable(string, RepositoryReference, string): RepositoryReleaseCandidateList|null $list
+	 * @param callable(string, RepositoryReference, string): RepositoryReleaseCandidateList|null $list_releases
 	 * @param callable(string, RepositoryReference, string, string, string): RepositoryReleaseInspection|null $inspect
 	 */
 	private function release_metadata_registry(
 		string $code = 'gh',
 		string $base_url = 'https://github.com/',
-		?callable $list = null,
+		?callable $list_releases = null,
 		?callable $inspect = null,
 		?callable $target_factory = null,
 		bool $collision = false
 	): ProviderRegistry {
 		$registry = new ProviderRegistry(
-			array( new RuntimeReleaseProvider( $code, $base_url, $list, $inspect, $target_factory, $collision ) )
+			array( new RuntimeReleaseProvider( $code, $base_url, $list_releases, $inspect, $target_factory, $collision ) )
 		);
 		$registry->seal();
 
@@ -3086,6 +3095,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$database = new class( fn (): array => $this->repository_rows ) {
 			public string $last_error = '';
 			public function __construct( private \Closure $rows ) {}
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassBeforeLastUsed -- The fixture implementation of prepare retains the production method contract; these inputs do not affect this controlled result.
 			public function prepare( string $query, mixed ...$arguments ): array {
 				return $arguments;
 			}
@@ -3102,7 +3112,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		string $identifier,
 		string $slug,
 		DeploymentPolicy $policy,
-		bool $private = false,
+		bool $is_private = false,
 		string $credential_id = '',
 		string $provider = 'gh',
 		PackageSource $source = PackageSource::RELEASE_ASSET,
@@ -3119,11 +3129,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$package->method( 'get_source_revision' )->willReturn( $source_revision );
 		$package->method( 'get_provider_code' )->willReturn( $provider );
 		$package->method( 'get_repository' )->willReturn(
-			new ManagedRepository( $provider, 'owner/example', $repository_id, 'main', $private, $credential_id )
+			new ManagedRepository( $provider, 'owner/example', $repository_id, 'main', $is_private, $credential_id )
 		);
 		$package->method( 'get_provider_repository_id' )->willReturn( $provider_repository_id ?? $repository_id );
 		$package->method( 'get_credential_id' )->willReturn( $credential_id );
-		$package->method( 'get_private' )->willReturn( $private );
+		$package->method( 'get_private' )->willReturn( $is_private );
 		$package->method( 'get_version' )->willReturn( '1.0.0' );
 		$package->method( 'get_subdirectory' )->willReturn( $subdirectory );
 		$this->repository_rows[ $type . "\0" . $identifier ] = (object) array(

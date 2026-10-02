@@ -309,7 +309,7 @@ final class PortabilityContractTest extends TestCase {
 	private function review(
 		PortabilityCandidate $candidate,
 		?string $provider_repository_id = 'repository-id',
-		?bool $private = true,
+		?bool $is_private = true,
 		string $action = PortabilityReviewResult::ADOPT
 	): PortabilityReviewResult {
 		return PortabilityReviewResult::from_resolved(
@@ -318,16 +318,18 @@ final class PortabilityContractTest extends TestCase {
 			TargetPackageReason::NONE->value,
 			'Review complete.',
 			$provider_repository_id,
-			$private
+			$is_private
 		);
 	}
 
 	private function facade(): PortabilityFacade {
 		return new class() extends PortabilityFacade {
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of review retains the production method contract; these inputs do not affect this controlled result.
 			public function review( PortabilityCandidate $candidate, string $nonce ): PortabilityReviewResult {
 				throw new \LogicException();
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of apply retains the production method contract; these inputs do not affect this controlled result.
 			public function apply( PortabilityCandidate $candidate, string $expected_fingerprint, string $nonce ): PortabilityApplyResult {
 				throw new \LogicException();
 			}

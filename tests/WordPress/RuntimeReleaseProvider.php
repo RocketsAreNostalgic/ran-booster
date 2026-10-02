@@ -20,24 +20,26 @@ use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
 final class RuntimeReleaseProvider implements RepositoryProvider, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseNativeTargets {
 	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
-	private \Closure $list;
+	private \Closure $list_releases;
 	private \Closure $inspect;
 	private \Closure $target_factory;
 
 	public function __construct(
 		private string $code = 'gh',
 		private string $base_url = 'https://github.com/',
-		?callable $list = null,
+		?callable $list_releases = null,
 		?callable $inspect = null,
 		?callable $target_factory = null,
 		private bool $collision = false
 	) {
-		$this->list           = null === $list
+		$this->list_releases = null === $list_releases
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The release-runtime fixture callback retains the registered factory or provider callable signature while returning a controlled result.
 			? static fn ( string $type, RepositoryReference $repository, string $channel ): RepositoryReleaseCandidateList => new RepositoryReleaseCandidateList(
 				array( new RepositoryReleaseCandidate( '101', 'v2.0.0', '2.0.0', false, '2026-08-17T12:00:00Z', array( 'example.zip' ) ) )
 			)
-			: \Closure::fromCallable( $list );
-		$this->inspect        = null === $inspect
+			: \Closure::fromCallable( $list_releases );
+		$this->inspect = null === $inspect
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- The release-runtime fixture callback retains the registered factory or provider callable signature while returning a controlled result.
 			? static fn ( string $type, RepositoryReference $repository, string $release_id, string $tag, string $channel ): RepositoryReleaseInspection => new RepositoryReleaseInspection(
 				$release_id,
 				$tag,
@@ -66,7 +68,7 @@ final class RuntimeReleaseProvider implements RepositoryProvider, RepositoryRele
 	}
 
 	public function list_release_candidates( string $package_type, RepositoryReference $repository, string $channel ): RepositoryReleaseCandidateList {
-		return ( $this->list )( $package_type, $repository, $channel );
+		return ( $this->list_releases )( $package_type, $repository, $channel );
 	}
 
 	public function inspect_release(

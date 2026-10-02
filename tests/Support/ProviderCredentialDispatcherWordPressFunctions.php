@@ -45,6 +45,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\sanitize_text_field' ) ) {
 	}
 }
 
+// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- WordPress esc_html__ stub preserves native argument slots; this fixture records only the values relevant to its assertions.
 function esc_html__( string $text, string $domain = 'default' ): string {
 	return $text;
 }

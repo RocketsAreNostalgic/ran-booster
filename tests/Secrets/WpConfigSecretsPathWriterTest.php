@@ -248,7 +248,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 
 	#[DataProvider( 'unsafe_path_provider' )]
 	public function test_it_refuses_unsafe_paths( string $config_path, string $sidecar_path ): void {
-		$expected = $config_path === '/tmp/wp-config.php' ? 'sidecar_path_invalid' : 'config_path_invalid';
+		$expected = '/tmp/wp-config.php' === $config_path ? 'sidecar_path_invalid' : 'config_path_invalid';
 		$this->assert_refused(
 			$expected,
 			static fn() => ( new WpConfigSecretsPathWriter() )->write( $config_path, $sidecar_path )
@@ -372,6 +372,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		yield 'lock' => array(
 			'lock_failed',
 			static fn(): WpConfigSecretsPathWriter => new class() extends WpConfigSecretsPathWriter {
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of acquire_lock retains the production method contract; these inputs do not affect this controlled result.
 				protected function acquire_lock( mixed $lock ): bool {
 					return false;
 				}
@@ -380,6 +381,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		yield 'temporary creation' => array(
 			'temporary_create_failed',
 			static fn(): WpConfigSecretsPathWriter => new class() extends WpConfigSecretsPathWriter {
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of create_temporary retains the production method contract; these inputs do not affect this controlled result.
 				protected function create_temporary( string $directory ): array {
 					throw new WpConfigPathWriteException( 'temporary_create_failed', 'Test temporary creation failure.' );
 				}
@@ -388,6 +390,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		yield 'write' => array(
 			'temporary_write_failed',
 			static fn(): WpConfigSecretsPathWriter => new class() extends WpConfigSecretsPathWriter {
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of write_handle retains the production method contract; these inputs do not affect this controlled result.
 				protected function write_handle( mixed $handle, string $contents ): int|false {
 					return false;
 				}
@@ -396,6 +399,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		yield 'flush' => array(
 			'temporary_flush_failed',
 			static fn(): WpConfigSecretsPathWriter => new class() extends WpConfigSecretsPathWriter {
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of flush_handle retains the production method contract; these inputs do not affect this controlled result.
 				protected function flush_handle( mixed $handle ): bool {
 					return false;
 				}
@@ -404,6 +408,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		yield 'fsync' => array(
 			'temporary_sync_failed',
 			static fn(): WpConfigSecretsPathWriter => new class() extends WpConfigSecretsPathWriter {
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of sync_handle retains the production method contract; these inputs do not affect this controlled result.
 				protected function sync_handle( mixed $handle ): bool {
 					return false;
 				}
@@ -412,6 +417,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		yield 'temporary read-back' => array(
 			'temporary_readback_failed',
 			static fn(): WpConfigSecretsPathWriter => new class() extends WpConfigSecretsPathWriter {
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of read_back retains the production method contract; these inputs do not affect this controlled result.
 				protected function read_back( string $path ): string|false {
 					return false;
 				}
@@ -420,6 +426,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		yield 'atomic rename' => array(
 			'replace_failed',
 			static fn(): WpConfigSecretsPathWriter => new class() extends WpConfigSecretsPathWriter {
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of replace_path retains the production method contract; these inputs do not affect this controlled result.
 				protected function replace_path( string $source, string $destination ): bool {
 					return false;
 				}

@@ -13,7 +13,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\apply_filters' ) ) {
 }
 
 if ( ! function_exists( __NAMESPACE__ . '\\get_option' ) ) {
-	function get_option( string $name, mixed $default = false ): mixed {
+	function get_option( string $name, mixed $default = false ): mixed { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound -- Preserve the WordPress function parameter signature.
 		return $GLOBALS['ran_booster_prospective_options'][ $name ] ?? $default;
 	}
 }

@@ -258,7 +258,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 	): void {
 		global $ran_booster_storage_test_options, $wpdb;
 
-		$this->install_current_schema( $wpdb );
+		$this->install_current_schema();
 		unset( $wpdb->schema_tables[ $table ][ $section ][ $name ] );
 		if ( 'columns' === $section ) {
 			unset( $wpdb->schema_tables[ $table ]['columnMetadata'][ $name ] );
@@ -321,7 +321,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 	public function test_wrong_engine_fails_before_recording_version(): void {
 		global $ran_booster_storage_test_options, $wpdb;
 
-		$this->install_current_schema( $wpdb );
+		$this->install_current_schema();
 		$wpdb->schema_tables['wp_ran_booster_deployment_attempts']['engine'] = 'MyISAM';
 
 		try {
@@ -337,7 +337,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 	public function test_changed_attempt_column_type_is_incompatible_and_preserved(): void {
 		global $ran_booster_storage_test_options, $wpdb;
 
-		$this->install_current_schema( $wpdb );
+		$this->install_current_schema();
 		$wpdb->schema_tables['wp_ran_booster_deployment_attempts']['columns']['request_json'] = 'longtext';
 
 		$this->assert_incompatible_schema_fails_before_ddl( $wpdb );
@@ -362,7 +362,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 	): void {
 		global $ran_booster_storage_test_options, $wpdb;
 
-		$this->install_current_schema( $wpdb );
+		$this->install_current_schema();
 
 		$wpdb->schema_tables[ $table ]['columnMetadata'][ $column ][ $attribute ] = $value;
 
@@ -372,7 +372,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 	public function test_current_schema_rejects_prefixed_index_before_ddl(): void {
 		global $ran_booster_storage_test_options, $wpdb;
 
-		$this->install_current_schema( $wpdb );
+		$this->install_current_schema();
 
 		$wpdb->schema_tables['wp_ran_booster_deployment_attempts']['indexes']['queue']['prefixes'][0] = 10;
 
@@ -382,7 +382,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 	public function test_incompatible_attempt_table_fails_closed_without_ddl_or_deletion(): void {
 		global $ran_booster_storage_test_options, $wpdb;
 
-		$this->install_current_schema( $wpdb );
+		$this->install_current_schema();
 		$wpdb->rows[] = array(
 			'id'             => 1,
 			'correlation_id' => 'preserved',
@@ -418,7 +418,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 	public function test_unreadable_attempt_table_fails_closed_without_ddl(): void {
 		global $ran_booster_storage_test_options, $wpdb;
 
-		$this->install_current_schema( $wpdb );
+		$this->install_current_schema();
 		$wpdb->schemas                         = array();
 		$wpdb->successful_reads_before_failure = 2;
 
@@ -520,7 +520,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		self::assertStringNotContainsString( 'wp_options', implode( "\n", $wpdb->queries ) );
 	}
 
-	private function install_current_schema( StorageTestWpdb $wpdb ): void {
+	private function install_current_schema(): void {
 		( new Database() )->install();
 	}
 

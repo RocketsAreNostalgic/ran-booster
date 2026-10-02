@@ -122,8 +122,8 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 	}
 
 	#[DataProvider( 'repository_privacy_provider' )]
-	public function test_it_preserves_an_associated_credential_for_public_and_private_repositories( bool $private ): void {
-		[$verifier, $provider] = $this->verifier( 0, 'repository-id', $private );
+	public function test_it_preserves_an_associated_credential_for_public_and_private_repositories( bool $is_private ): void {
+		[$verifier, $provider] = $this->verifier( 0, 'repository-id', $is_private );
 
 		$repository_private = null;
 		$result             = $verifier->verify( $this->install_item(), $this->credential(), BlueprintCredentialAction::IMPORT, null, $repository_private );
@@ -131,7 +131,7 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		self::assertSame( TargetPackageAction::INSTALL, $result->action );
 		self::assertSame( array( $provider->temporary_credential_id ), $provider->credential_ids );
 		self::assertNotNull( $provider->temporary_credential_id );
-		self::assertSame( $private, $repository_private );
+		self::assertSame( $is_private, $repository_private );
 	}
 
 	/** @return iterable<string, array{bool}> */
@@ -370,7 +370,7 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 	private function verifier(
 		int $anonymous_failure,
 		string $provider_repository_id,
-		bool $private = false,
+		bool $is_private = false,
 		string $provider_code = 'gh',
 		string $accepted_secret = self::CLASSIC_TOKEN
 	): array {
@@ -380,7 +380,7 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 			$secrets->credentials_for( $provider_code ),
 			$anonymous_failure,
 			$provider_repository_id,
-			$private,
+			$is_private,
 			$provider_code,
 			'gh' === $provider_code ? 'GitHub' : 'Bitbucket',
 			$accepted_secret

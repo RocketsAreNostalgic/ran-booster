@@ -1,7 +1,6 @@
 <?php
 
 // Executed by WP-CLI against the installed release ZIP in a disposable site.
-// phpcs:disable
 
 if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 14 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
 	throw new RuntimeException( 'The installed runtime does not expose Provider API 14.' );
@@ -66,6 +65,7 @@ foreach (
 	) as $capability
 ) {
 	if ( $provider !== $registry->require_capability( 'gh', $capability ) ) {
+		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 		throw new RuntimeException( 'The installed GitHub provider capability is not registered: ' . $capability );
 	}
 }
@@ -81,6 +81,7 @@ if ( 'gh' !== $credential_policy->get_provider()->value
 	throw new RuntimeException( 'The installed GitHub provider policies do not match the bundled contract.' );
 }
 
+// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
 $tabs = ( new RAN\Admin\AdminTabRegistry( $registry ) )->all();
 if ( array( 'overview', 'gh', 'portability', 'documentation', 'troubleshooting' ) !== array_map( static fn ( $tab ): string => $tab->get_key(), $tabs )
 	|| 'GitHub' !== $tabs[1]->get_label()

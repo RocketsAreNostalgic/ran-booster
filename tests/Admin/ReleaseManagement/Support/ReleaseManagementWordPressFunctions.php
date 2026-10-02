@@ -209,10 +209,12 @@ function plugins_url( string $path, string $plugin ): string {
 }
 
 /** @param list<string> $dependencies */
+// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- WordPress wp_enqueue_script stub preserves native argument slots; compact() reads the parameters to record the exact call arguments.
 function wp_enqueue_script( string $handle, string $source = '', array $dependencies = array(), string|bool|null $version = false, bool $footer = false ): void {
 	$GLOBALS['ran_booster_release_management_test_scripts'][ $handle ] = compact( 'source', 'dependencies', 'version', 'footer' );
 }
 
+// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- WordPress wp_set_script_translations stub preserves native argument slots; compact() reads the parameters to record the exact call arguments.
 function wp_set_script_translations( string $handle, string $domain, string $path = '' ): bool {
 	$GLOBALS['ran_booster_release_management_test_script_translations'][] = compact( 'handle', 'domain', 'path' );
 
@@ -220,6 +222,7 @@ function wp_set_script_translations( string $handle, string $domain, string $pat
 }
 
 /** @param list<string> $dependencies */
+// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- WordPress wp_enqueue_style stub preserves native argument slots; compact() reads the parameters to record the exact call arguments.
 function wp_enqueue_style( string $handle, string $source = '', array $dependencies = array(), string|bool|null $version = false ): void {
 	$GLOBALS['ran_booster_release_management_test_styles'][ $handle ] = compact( 'source', 'dependencies', 'version' );
 }

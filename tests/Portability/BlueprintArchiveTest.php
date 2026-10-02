@@ -167,6 +167,7 @@ final class BlueprintArchiveTest extends TestCase {
 		$warnings = array();
 		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Test assertion captures warnings that the codec must contain.
 		set_error_handler(
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The PHP error-handler callback receives severity and message; this fixture only records that a warning occurred.
 			static function ( int $severity, string $message ) use ( &$warnings ): bool {
 				$warnings[] = compact( 'severity', 'message' );
 				return true;

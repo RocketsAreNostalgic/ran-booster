@@ -30,6 +30,7 @@ require_once dirname( __DIR__, 2 ) . '/Support/WebhookManagementCapabilityProvid
 require_once dirname( __DIR__, 2 ) . '/Support/PackageViewWordPressFunctions.php';
 
 final class RepositoryWebhookManagementControlsTest extends TestCase {
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override requires this method name.
 	protected function setUp(): void {
 		if ( ! defined( 'ABSPATH' ) ) {
 			define( 'ABSPATH', __DIR__ . '/' );
@@ -39,7 +40,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$GLOBALS['ran_booster_repository_webhook_management_styles']       = array();
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities'] = array();
 		$GLOBALS['ran_booster_repository_webhook_management_test_options'] = array();
-		$_get = array();
+		$_GET = array();
 	}
 
 	public function test_it_registers_the_complete_non_git_hub_provider_presentation_and_request_boundary_once(): void {
@@ -65,7 +66,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 	public function test_it_loads_scoped_styles_on_capable_provider_and_package_settings_screens(): void {
 		$controls = $this->controls( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) );
 		$controls->register();
-		$_get = array(
+		$_GET = array(
 			'page' => 'ran-booster',
 			'tab'  => 'fixture-provider',
 		);
@@ -84,7 +85,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			$GLOBALS['ran_booster_repository_webhook_management_styles'][0]
 		);
 
-		$_get = array(
+		$_GET = array(
 			'page'    => 'ran-booster-plugins',
 			'package' => 'example/example.php',
 		);
@@ -122,7 +123,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		}
 		self::assertSame( array(), $GLOBALS['ran_booster_repository_webhook_management_filters'] );
 		foreach ( array( 'fitness-only', 'management-only', 'no-policy', 'absent', 'missing' ) as $provider_code ) {
-			$_get = array(
+			$_GET = array(
 				'page' => 'ran-booster',
 				'tab'  => $provider_code,
 			);
@@ -341,7 +342,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 
 	public function test_package_webhook_disclosure_opens_for_an_operation_result_and_recovery_context(): void {
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
-		$_get    = array(
+		$_GET    = array(
 			'webhook_management_result' => 'operation_failed',
 			'recovery_hook'             => '77',
 			'recovery_profile'          => 'profile_123',

@@ -88,14 +88,14 @@ final class RepositoryWebhookManagementControls {
 		}
 
 		$context = $this->controller->panel_context();
-		$model = $this->display->panel( $authority['provider_code'], $metadata->label, $authority['repository_id'], $return_url, $context['result'], $context['recovery'], true, $context['remediation'] );
+		$model   = $this->display->panel( $authority['provider_code'], $metadata->label, $authority['repository_id'], $return_url, $context['result'], $context['recovery'], true, $context['remediation'] );
 		if ( null === $model ) {
 			$this->render_unavailable_package_webhook_setup( $this->package_webhook_unavailable_reason( $authority['provider_code'], $authority['repository_id'], $package->identifier() ) );
 			return;
 		}
 
 		$form_attributes = '';
-		$open           = null !== $context['result'] || null !== $context['recovery'] || null !== $context['remediation'];
+		$open            = null !== $context['result'] || null !== $context['recovery'] || null !== $context['remediation'];
 		?>
 		<details class="ran-booster-package-disclosure ran-booster-package-webhook-setup" data-ran-booster-package-webhook-setup<?php echo $open ? ' open' : ''; ?>>
 			<summary><strong><?php esc_html_e( 'Webhook setup', 'ran-booster' ); ?></strong></summary>
@@ -232,14 +232,14 @@ final class RepositoryWebhookManagementControls {
 			return;
 		}
 		$readiness_items = $this->repository_webhook_readiness_items( $provider_code, $repository_id, $has_branch_consumer );
-		$metadata = $this->controller->provider_metadata( $provider_code );
-		$model   = $has_branch_consumer ? $this->repository_webhook_panel_model( $provider_code, $repository_id, $return_url ) : null;
-		$notices = array();
+		$metadata        = $this->controller->provider_metadata( $provider_code );
+		$model           = $has_branch_consumer ? $this->repository_webhook_panel_model( $provider_code, $repository_id, $return_url ) : null;
+		$notices         = array();
 		if ( ! is_array( $model ) && $metadata instanceof ProviderMetadata ) {
-			$reason = ! $has_branch_consumer
+			$reason    = ! $has_branch_consumer
 				? __( 'Webhook operations are unavailable while no eligible Branch package uses this repository.', 'ran-booster' )
 				: $this->repository_webhook_unavailable_reason( $provider_code, $repository_id );
-			$model = $this->display->unavailable_panel(
+			$model     = $this->display->unavailable_panel(
 				$provider_code,
 				$metadata->label,
 				$repository_id,
@@ -557,8 +557,8 @@ final class RepositoryWebhookManagementControls {
 	}
 
 	public function handle_admin_post(): void {
-		$request  = is_array( $_post ) ? wp_unslash( $_post ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- The controller verifies the operation-bound nonce before dispatch.
-		$query    = is_array( $_get ) ? wp_unslash( $_get ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reads the nonce that the controller verifies before dispatch.
+		$request  = is_array( $_POST ) ? wp_unslash( $_POST ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- The controller verifies the operation-bound nonce before dispatch.
+		$query    = is_array( $_GET ) ? wp_unslash( $_GET ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reads the nonce that the controller verifies before dispatch.
 		$nonce    = is_string( $query['_wpnonce'] ?? null ) ? trim( $query['_wpnonce'] ) : '';
 		$redirect = $this->controller->handle_admin_post( $request, $nonce );
 
@@ -567,12 +567,12 @@ final class RepositoryWebhookManagementControls {
 	}
 
 	public function enqueue_admin_assets( string $hook_suffix ): void {
-		$query         = wp_unslash( $_get ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only asset routing.
-		$provider_code = is_array( $query ) && is_string( $query['tab'] ?? null ) ? trim( $query['tab'] ) : '';
+		$query           = wp_unslash( $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only asset routing.
+		$provider_code   = is_array( $query ) && is_string( $query['tab'] ?? null ) ? trim( $query['tab'] ) : '';
 		$provider_screen = 'toplevel_page_ran-booster' === $hook_suffix
 			&& is_array( $query ) && 'ran-booster' === ( $query['page'] ?? '' )
 			&& null !== $this->controller->provider_metadata( $provider_code );
-		$package_screen = is_array( $query ) && in_array( $hook_suffix, array( 'ran-booster_page_ran-booster-plugins', 'ran-booster_page_ran-booster-themes' ), true )
+		$package_screen  = is_array( $query ) && in_array( $hook_suffix, array( 'ran-booster_page_ran-booster-plugins', 'ran-booster_page_ran-booster-themes' ), true )
 			&& in_array( $query['page'] ?? null, array( 'ran-booster-plugins', 'ran-booster-themes' ), true )
 			&& is_string( $query['package'] ?? null ) && '' !== trim( $query['package'] ) && strlen( $query['package'] ) <= 191;
 		if ( ! $provider_screen && ! $package_screen ) {

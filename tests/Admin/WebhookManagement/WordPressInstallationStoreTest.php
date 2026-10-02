@@ -12,6 +12,7 @@ use RAN\Admin\WebhookManagement\Installation\WordPressInstallationStore;
 require_once __DIR__ . '/WordPressInstallationStoreWordPressFunctions.php';
 
 final class WordPressInstallationStoreTest extends TestCase {
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override requires this method name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_repository_webhook_management_test_options'] = array();
 	}
@@ -167,7 +168,7 @@ final class WordPressInstallationStoreTest extends TestCase {
 					$interleave();
 				}
 				$current_exists = array_key_exists( $option, $GLOBALS['ran_booster_repository_webhook_management_test_options'] );
-				$current       = $GLOBALS['ran_booster_repository_webhook_management_test_options'][ $option ] ?? null;
+				$current        = $GLOBALS['ran_booster_repository_webhook_management_test_options'][ $option ] ?? null;
 				if ( $exists !== $current_exists || ( $exists && $expected !== $current ) ) {
 					return false;
 				}

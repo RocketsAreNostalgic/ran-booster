@@ -11,6 +11,7 @@ use RAN\Admin\AdminAddOnRegistry;
 use RAN\Admin\AdminAddOnTab;
 
 final class ExternalFixtureTabAddOnPluginTest extends TestCase {
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override requires this method name.
 	protected function setUp(): void {
 		require_once __DIR__ . '/../Support/ExternalFixtureAddOnWordPressFunctions.php';
 		require_once __DIR__ . '/../Support/ExternalFixtureTabAddOnWordPressFunctions.php';

@@ -29,12 +29,12 @@ final class WebhookDisplayModel {
 	 */
 	public function enrich_rows( array $rows, string $provider_code, string $provider_label, string $repository_url_base, array $repository_projections, string $return_url ): array {
 		$this->projected_statuses = array();
-		$readiness = $this->readiness( $provider_code );
+		$readiness                = $this->readiness( $provider_code );
 		if ( null === $readiness ) {
 			return $rows;
 		}
 
-		$records = array_filter(
+		$records             = array_filter(
 			$this->records->all(),
 			static fn ( InstallationRecord $record ): bool => hash_equals( $provider_code, $record->provider_code() )
 		);
@@ -69,8 +69,8 @@ final class WebhookDisplayModel {
 				continue;
 			}
 			$repository_id = is_string( $row['repository_id'] ?? null ) ? trim( $row['repository_id'] ) : '';
-			$record_key = InstallationRecord::key( $provider_code, $repository_id );
-			$record     = '' === $repository_id ? null : ( $records[ $record_key ] ?? null );
+			$record_key    = InstallationRecord::key( $provider_code, $repository_id );
+			$record        = '' === $repository_id ? null : ( $records[ $record_key ] ?? null );
 			if ( null === $record ) {
 				continue;
 			}
@@ -82,7 +82,7 @@ final class WebhookDisplayModel {
 
 		foreach ( $records as $record_key => $record ) {
 			if ( ! isset( $current_record_keys[ $record_key ] ) ) {
-				$synthetic_key = 'ran-booster-repository-webhook-management:historical:' . substr( hash( 'sha256', $record_key ), 0, 16 );
+				$synthetic_key          = 'ran-booster-repository-webhook-management:historical:' . substr( hash( 'sha256', $record_key ), 0, 16 );
 				$rows[ $synthetic_key ] = $this->retained_record_row( $synthetic_key, $record, $provider_label, $repository_url_base );
 			}
 		}
@@ -96,7 +96,7 @@ final class WebhookDisplayModel {
 
 		foreach ( $repository_projections as $row_key => $projection ) {
 			$repository_id = $this->projection_repository_id( $row_key, $projection );
-			$record = null === $repository_id ? null : ( $records[ InstallationRecord::key( $provider_code, $repository_id ) ] ?? null );
+			$record        = null === $repository_id ? null : ( $records[ InstallationRecord::key( $provider_code, $repository_id ) ] ?? null );
 			if ( null !== $record && isset( $rows[ $row_key ] ) ) {
 				$existing                    = is_array( $rows[ $row_key ]['details'] ?? null ) ? $rows[ $row_key ]['details'] : array();
 				$rows[ $row_key ]['details'] = array_merge( $existing, $this->historical_details( $record ) );
@@ -107,7 +107,7 @@ final class WebhookDisplayModel {
 				continue;
 			}
 			$repository_id = is_string( $row['repository_id'] ?? null ) ? $row['repository_id'] : '';
-			$record = '' === trim( $repository_id ) ? null : ( $records[ InstallationRecord::key( $provider_code, $repository_id ) ] ?? null );
+			$record        = '' === trim( $repository_id ) ? null : ( $records[ InstallationRecord::key( $provider_code, $repository_id ) ] ?? null );
 			if ( null !== $record ) {
 				$existing                    = is_array( $row['details'] ?? null ) ? $row['details'] : array();
 				$rows[ $row_key ]['details'] = array_merge( $existing, $this->historical_details( $record ) );
@@ -137,11 +137,11 @@ final class WebhookDisplayModel {
 		}
 
 		$this->projected_statuses = array();
-		$record = $this->records->find( $provider_code, $repository_id );
-		$status = null === $record ? null : $this->projected_status( $record );
-		$credentials = $this->credential_choices( $provider_code );
-		$operations = null === $recovery ? $this->available_operations( $target, $record, $status, $provider_label, array() !== $credentials ) : array();
-		$operation_models = $this->operation_models( $operations, $provider_code, $repository_id );
+		$record                   = $this->records->find( $provider_code, $repository_id );
+		$status                   = null === $record ? null : $this->projected_status( $record );
+		$credentials              = $this->credential_choices( $provider_code );
+		$operations               = null === $recovery ? $this->available_operations( $target, $record, $status, $provider_label, array() !== $credentials ) : array();
+		$operation_models         = $this->operation_models( $operations, $provider_code, $repository_id );
 
 		$help = null;
 		if ( null !== $record && 'local_profile_missing' === $status ) {

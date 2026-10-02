@@ -7,13 +7,21 @@ namespace RAN\Admin\WebhookManagement;
 // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Focused management adapter fixture.
 
 function add_action( string $hook, callable $callback, int $priority = 10, int $accepted_args = 1 ): bool {
-	$GLOBALS['ran_booster_repository_webhook_management_actions'][ $hook ][] = array( 'callback' => $callback, 'priority' => $priority, 'acceptedArgs' => $accepted_args );
+	$GLOBALS['ran_booster_repository_webhook_management_actions'][ $hook ][] = array(
+		'callback'     => $callback,
+		'priority'     => $priority,
+		'acceptedArgs' => $accepted_args,
+	);
 
 	return true;
 }
 
 function add_filter( string $hook, callable $callback, int $priority = 10, int $accepted_args = 1 ): bool {
-	$GLOBALS['ran_booster_repository_webhook_management_filters'][ $hook ][] = array( 'callback' => $callback, 'priority' => $priority, 'acceptedArgs' => $accepted_args );
+	$GLOBALS['ran_booster_repository_webhook_management_filters'][ $hook ][] = array(
+		'callback'     => $callback,
+		'priority'     => $priority,
+		'acceptedArgs' => $accepted_args,
+	);
 
 	return true;
 }

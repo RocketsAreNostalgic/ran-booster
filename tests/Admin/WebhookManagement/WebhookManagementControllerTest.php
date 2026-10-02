@@ -126,11 +126,11 @@ final class WebhookManagementControllerTest extends TestCase {
 	}
 
 	public function test_browser_only_profile_warning_does_not_replace_the_recorded_historical_observation(): void {
-		$gateway                = $this->gateway();
+		$gateway                 = $this->gateway();
 		$gateway->profile_absent = true;
-		$store                  = new OperationStoreFixture();
-		$store->record          = $this->record( 'needs_verification' );
-		$rows                   = array(
+		$store                   = new OperationStoreFixture();
+		$store->record           = $this->record( 'needs_verification' );
+		$rows                    = array(
 			'1234' => array(
 				'details' => array(),
 				'actions' => array(),
@@ -289,12 +289,12 @@ final class WebhookManagementControllerTest extends TestCase {
 			'2026-07-23T16:00:00Z',
 			'2026-07-23T17:00:00Z'
 		);
-		$store            = new OperationStoreFixture();
-		$store->records   = array(
+		$store             = new OperationStoreFixture();
+		$store->records    = array(
 			$projection_record->storage_key() => $projection_record,
 			$release_record->storage_key()    => $release_record,
 		);
-		$result           = ( new WebhookDisplayModel( $facade, $store ) )->enrich_historical_rows(
+		$result            = ( new WebhookDisplayModel( $facade, $store ) )->enrich_historical_rows(
 			array(
 				'projection-row' => array(
 					'details' => array(),
@@ -481,16 +481,16 @@ final class WebhookManagementControllerTest extends TestCase {
 			)
 		);
 
-		$controller = $this->controller( authorities: $matching );
-		$plugin     = $controller->handle_admin_post(
+		$controller  = $this->controller( authorities: $matching );
+		$plugin      = $controller->handle_admin_post(
 			$this->request( array( 'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php' ) ),
 			'valid'
 		);
-		$theme      = $controller->handle_admin_post(
+		$theme       = $controller->handle_admin_post(
 			$this->request( array( 'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster-themes&package=example-theme' ) ),
 			'valid'
 		);
-		$unrelated  = $controller->handle_admin_post(
+		$unrelated   = $controller->handle_admin_post(
 			$this->request( array( 'return_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=other%2Fother.php' ) ),
 			'valid'
 		);
@@ -601,16 +601,16 @@ final class WebhookManagementControllerTest extends TestCase {
 	public function test_complete_non_git_hub_provider_uses_the_same_placement_and_operation_path(): void {
 		$provider_code  = 'fixture-provider';
 		$provider_label = 'Fixture Forge';
-		$gateway       = new OperationGatewayFixture(
+		$gateway        = new OperationGatewayFixture(
 			$this->readiness( $provider_code ),
 			$this->target( $provider_code ),
 			$this->operation_result( provider_code: $provider_code )
 		);
-		$store         = new OperationStoreFixture();
-		$controller    = $this->controller( $gateway, $store, provider_code: $provider_code, provider_label: $provider_label );
-		$request       = $this->request( array( 'provider_code' => $provider_code ) );
-		$redirect      = $controller->handle_admin_post( $request, 'valid' );
-		$display       = $this->display( $gateway, $store );
+		$store          = new OperationStoreFixture();
+		$controller     = $this->controller( $gateway, $store, provider_code: $provider_code, provider_label: $provider_label );
+		$request        = $this->request( array( 'provider_code' => $provider_code ) );
+		$redirect       = $controller->handle_admin_post( $request, 'valid' );
+		$display        = $this->display( $gateway, $store );
 		$repository_row = array(
 			'fixture-repository' => array(
 				'details' => array(),
@@ -625,9 +625,9 @@ final class WebhookManagementControllerTest extends TestCase {
 				),
 			),
 		);
-		$projection    = array( 'fixture-repository' => $this->repository_projection( $provider_code ) );
-		$enriched      = $display->enrich_rows( $repository_row, $provider_code, $provider_label, 'https://fixture-provider.example.test/', $projection, 'https://site.example/provider' );
-		$model         = $display->panel( $provider_code, $provider_label, '1234', 'https://site.example/provider', null, null, true );
+		$projection     = array( 'fixture-repository' => $this->repository_projection( $provider_code ) );
+		$enriched       = $display->enrich_rows( $repository_row, $provider_code, $provider_label, 'https://fixture-provider.example.test/', $projection, 'https://site.example/provider' );
+		$model          = $display->panel( $provider_code, $provider_label, '1234', 'https://site.example/provider', null, null, true );
 
 		self::assertSame( array( array( 'setup', 'credential_1', null, 'valid' ) ), $gateway->mutation_calls );
 		self::assertSame( $provider_code, $store->record?->provider_code() );
@@ -729,8 +729,8 @@ final class WebhookManagementControllerTest extends TestCase {
 	}
 
 	public function test_setup_save_failure_falls_back_to_durable_orphan_evidence(): void {
-		$gateway                      = $this->gateway();
-		$store                        = new OperationStoreFixture();
+		$gateway                        = $this->gateway();
+		$store                          = new OperationStoreFixture();
 		$store->save_failures_remaining = 1;
 
 		$redirect = $this->controller( gateway: $gateway, store: $store )->handle_admin_post( $this->request(), 'valid' );
@@ -743,10 +743,10 @@ final class WebhookManagementControllerTest extends TestCase {
 	}
 
 	public function test_repeated_setup_save_failure_returns_bounded_recovery_references_and_disables_retry_view(): void {
-		$gateway                      = $this->gateway();
-		$store                        = new OperationStoreFixture();
+		$gateway                        = $this->gateway();
+		$store                          = new OperationStoreFixture();
 		$store->save_failures_remaining = 2;
-		$controller                   = $this->controller( gateway: $gateway, store: $store );
+		$controller                     = $this->controller( gateway: $gateway, store: $store );
 
 		$redirect = $controller->handle_admin_post( $this->request(), 'valid' );
 
@@ -757,7 +757,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringNotContainsString( 'synthetic-request-credential', $redirect );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url,WordPress.Security.NonceVerification.Recommended -- Test parses a local redirect into display-only query state.
-		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $_get );
+		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $_GET );
 		$html = $this->render_panel( $gateway, $store );
 		self::assertStringContainsString( 'provider hook reference 77', $html );
 		self::assertStringContainsString( 'Core signing profile wh_0123456789abcdef01234567', $html );
@@ -799,10 +799,10 @@ final class WebhookManagementControllerTest extends TestCase {
 	}
 
 	public function test_concurrent_setup_cannot_overwrite_a_record_that_changed_after_core_execution_started(): void {
-		$gateway                       = $this->gateway();
-		$gateway->result               = $this->operation_result( 'ambiguous', 'setup_response_invalid', null );
-		$store                         = new OperationStoreFixture();
-		$current                       = $this->record();
+		$gateway                         = $this->gateway();
+		$gateway->result                 = $this->operation_result( 'ambiguous', 'setup_response_invalid', null );
+		$store                           = new OperationStoreFixture();
+		$current                         = $this->record();
 		$store->before_conditional_write = static function ( OperationStoreFixture $interleaved ) use ( $current ): void {
 			$interleaved->record = $current;
 		};
@@ -834,11 +834,11 @@ final class WebhookManagementControllerTest extends TestCase {
 	}
 
 	public function test_saved_credential_absence_keeps_every_webhook_mutation_control_visible_and_disabled(): void {
-		$gateway                       = $this->gateway();
+		$gateway                        = $this->gateway();
 		$gateway->credentials_available = false;
-		$store                         = new OperationStoreFixture();
-		$store->record                 = $this->record();
-		$model                         = $this->display( $gateway, $store )->panel(
+		$store                          = new OperationStoreFixture();
+		$store->record                  = $this->record();
+		$model                          = $this->display( $gateway, $store )->panel(
 			'gh',
 			'GitHub',
 			'1234',
@@ -907,7 +907,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'webhook_management_result=ping_requested', $redirect );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url,WordPress.Security.NonceVerification.Recommended -- Test parses a local redirect into display-only query state.
-		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $_get );
+		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $_GET );
 		$html = $this->render_panel( $gateway, $store );
 
 		self::assertStringContainsString( 'notice notice-warning inline ran-booster-repository-webhook-management__notice', $html );
@@ -996,7 +996,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'webhook_management_result=remove_outcome_unknown', $redirect );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url,WordPress.Security.NonceVerification.Recommended -- Test parses a local redirect into display-only query state.
-		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $_get );
+		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $_GET );
 		$html = $this->render_panel( $gateway, $store );
 
 		self::assertStringContainsString( 'could not confirm whether the remote hook was removed', $html );
@@ -1021,11 +1021,11 @@ final class WebhookManagementControllerTest extends TestCase {
 	}
 
 	public function test_confirmed_absence_cannot_delete_a_record_changed_while_core_was_running(): void {
-		$gateway                       = $this->gateway();
-		$gateway->result               = $this->operation_result( 'succeeded', 'absent', '77', false );
-		$store                         = new OperationStoreFixture();
-		$store->record                 = $this->record();
-		$current                       = $this->record( status: 'profile_revision_stale' );
+		$gateway                         = $this->gateway();
+		$gateway->result                 = $this->operation_result( 'succeeded', 'absent', '77', false );
+		$store                           = new OperationStoreFixture();
+		$store->record                   = $this->record();
+		$current                         = $this->record( status: 'profile_revision_stale' );
 		$store->before_conditional_write = static function ( OperationStoreFixture $interleaved ) use ( $current ): void {
 			$interleaved->record = $current;
 		};
@@ -1075,7 +1075,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'webhook_management_result=reconfigure_readback_unavailable', $redirect );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url,WordPress.Security.NonceVerification.Recommended -- Test parses a local redirect into display-only query state.
-		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $_get );
+		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $_GET );
 		$html = $this->render_panel( $gateway, $store );
 
 		self::assertStringContainsString( 'notice notice-error inline ran-booster-repository-webhook-management__notice', $html );
@@ -1099,11 +1099,11 @@ final class WebhookManagementControllerTest extends TestCase {
 		);
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url,WordPress.Security.NonceVerification.Recommended -- Test parses a local signed redirect.
-		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $_get );
+		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $_GET );
 		$html = $this->render_panel( $gateway, $store );
 		self::assertStringContainsString( $remediation, $html );
 
-		$_get['webhook_management_remediation'] = 'Tampered provider guidance.';
+		$_GET['webhook_management_remediation'] = 'Tampered provider guidance.';
 		$html                                   = $this->render_panel( $gateway, $store );
 		self::assertStringNotContainsString( 'Tampered provider guidance.', $html );
 		self::assertStringContainsString( 'could not confirm that the remote webhook operation succeeded', $html );
@@ -1130,11 +1130,11 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'webhook_management_provider=gh', $redirect );
 		self::assertStringContainsString( 'webhook_management_repository=1234', $redirect );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url,WordPress.Security.NonceVerification.Recommended -- Test parses a local signed redirect into display-only query state.
-		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $_get );
+		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $_GET );
 		$html = $this->render_panel( $gateway, $store );
 
 		self::assertStringContainsString( $remediation, $html );
-		$_get['webhook_management_repository'] = 'other';
+		$_GET['webhook_management_repository'] = 'other';
 		$html                                  = $this->render_panel( $gateway, $store );
 		self::assertStringNotContainsString( $remediation, $html );
 	}
@@ -1187,7 +1187,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'webhook_management_result=operation_lock_release_failed', $redirect );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url,WordPress.Security.NonceVerification.Recommended -- Test parses a local redirect into display-only query state.
-		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $_get );
+		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $_GET );
 		$html = $this->render_panel( $gateway, $store );
 
 		self::assertStringContainsString( 'then run Check before retrying', $html );
@@ -1197,7 +1197,7 @@ final class WebhookManagementControllerTest extends TestCase {
 	}
 
 	public function test_verified_result_copy_does_not_claim_that_check_proved_signed_delivery(): void {
-		$_get = array( 'webhook_management_result' => 'verified' );
+		$_GET = array( 'webhook_management_result' => 'verified' );
 		$html = $this->render_panel();
 
 		self::assertStringContainsString( 'Provider request ID in Booster Activity', $html );
@@ -1264,7 +1264,7 @@ final class WebhookManagementControllerTest extends TestCase {
 	}
 
 	public function test_failed_result_renders_as_an_explicit_error_notice(): void {
-		$_get = array( 'webhook_management_result' => 'setup_failed' );
+		$_GET = array( 'webhook_management_result' => 'setup_failed' );
 		$html = $this->render_panel();
 
 		self::assertStringContainsString( 'notice notice-error inline ran-booster-repository-webhook-management__notice', $html );
@@ -1282,8 +1282,10 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( $fallback, $display->notice( 'fixture_provider_failed', null, str_repeat( 'r', 512 ) ) );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override requires this method name.
+
 	protected function tearDown(): void {
-		$_get = array();
+		$_GET = array();
 		unset( $GLOBALS['ran_booster_package_view_multisite'] );
 	}
 
@@ -1476,11 +1478,11 @@ final class WebhookManagementControllerTest extends TestCase {
 
 final class OperationStoreFixture implements InstallationStore {
 	public ?InstallationRecord $record = null;
-	public int $all_attempts            = 0;
-	public int $find_attempts           = 0;
+	public int $all_attempts           = 0;
+	public int $find_attempts          = 0;
 	/** @var array<string, InstallationRecord> */
-	public array $records             = array();
-	public int $save_attempts          = 0;
+	public array $records               = array();
+	public int $save_attempts           = 0;
 	public int $save_failures_remaining = 0;
 	/** @var (\Closure(self): void)|null */
 	public ?\Closure $before_conditional_write = null;
@@ -1511,7 +1513,7 @@ final class OperationStoreFixture implements InstallationStore {
 	public function save_if_current( InstallationRecord $record, ?InstallationRecord $expected ): string {
 		++$this->save_attempts;
 		if ( null !== $this->before_conditional_write ) {
-			$interleave                   = $this->before_conditional_write;
+			$interleave                     = $this->before_conditional_write;
 			$this->before_conditional_write = null;
 			$interleave( $this );
 		}
@@ -1535,7 +1537,7 @@ final class OperationStoreFixture implements InstallationStore {
 		unset( $provider_code, $repository_id );
 		++$this->save_attempts;
 		if ( null !== $this->before_conditional_write ) {
-			$interleave                   = $this->before_conditional_write;
+			$interleave                     = $this->before_conditional_write;
 			$this->before_conditional_write = null;
 			$interleave( $this );
 		}
@@ -1562,7 +1564,7 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 	/** @var list<array<mixed>> */
 	public array $mutation_calls = array();
 	public RepositoryWebhookFitnessResult $fitness;
-	public bool $throw_on_readiness     = false;
+	public bool $throw_on_readiness    = false;
 	public bool $profile_absent        = false;
 	public bool $credentials_available = true;
 
@@ -1621,8 +1623,8 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 
 	public function assess_setup( AssistanceTarget $target, ?string $credential_profile_id, string $nonce ): RepositoryWebhookFitnessResult {
 		unset( $target );
-		$call                    = array( 'assess_setup', $credential_profile_id, $nonce );
-		$this->calls[]           = $call;
+		$call                     = array( 'assess_setup', $credential_profile_id, $nonce );
+		$this->calls[]            = $call;
 		$this->assessment_calls[] = $call;
 
 		return $this->fitness;
@@ -1630,8 +1632,8 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 
 	public function assess_check( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $webhook_profile_id, int $profile_revision, string $nonce ): RepositoryWebhookFitnessResult {
 		unset( $target );
-		$call                    = array( 'assess_check', $credential_profile_id, $hook_id, $webhook_profile_id, $profile_revision, $nonce );
-		$this->calls[]           = $call;
+		$call                     = array( 'assess_check', $credential_profile_id, $hook_id, $webhook_profile_id, $profile_revision, $nonce );
+		$this->calls[]            = $call;
 		$this->assessment_calls[] = $call;
 
 		return $this->fitness;
@@ -1639,8 +1641,8 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 
 	public function assess_reconfigure( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $webhook_profile_id, int $profile_revision, string $nonce ): RepositoryWebhookFitnessResult {
 		unset( $target );
-		$call                    = array( 'assess_reconfigure', $credential_profile_id, $hook_id, $webhook_profile_id, $profile_revision, $nonce );
-		$this->calls[]           = $call;
+		$call                     = array( 'assess_reconfigure', $credential_profile_id, $hook_id, $webhook_profile_id, $profile_revision, $nonce );
+		$this->calls[]            = $call;
 		$this->assessment_calls[] = $call;
 
 		return $this->fitness;
@@ -1648,8 +1650,8 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 
 	public function assess_remove( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $webhook_profile_id, int $profile_revision, string $nonce ): RepositoryWebhookFitnessResult {
 		unset( $target );
-		$call                    = array( 'assess_remove', $credential_profile_id, $hook_id, $webhook_profile_id, $profile_revision, $nonce );
-		$this->calls[]           = $call;
+		$call                     = array( 'assess_remove', $credential_profile_id, $hook_id, $webhook_profile_id, $profile_revision, $nonce );
+		$this->calls[]            = $call;
 		$this->assessment_calls[] = $call;
 
 		return $this->fitness;
@@ -1657,8 +1659,8 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 
 	public function assess_test( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $webhook_profile_id, int $profile_revision, string $nonce ): RepositoryWebhookFitnessResult {
 		unset( $target );
-		$call                    = array( 'assess_test', $credential_profile_id, $hook_id, $webhook_profile_id, $profile_revision, $nonce );
-		$this->calls[]           = $call;
+		$call                     = array( 'assess_test', $credential_profile_id, $hook_id, $webhook_profile_id, $profile_revision, $nonce );
+		$this->calls[]            = $call;
 		$this->assessment_calls[] = $call;
 
 		return $this->fitness;
@@ -1707,7 +1709,7 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 	/** @param array<mixed> $call */
 	private function authoritative_operation( array $call ): RepositoryWebhookOperationResult {
 		$this->assessment_calls[] = $call;
-		$projection              = $this->fitness->to_array();
+		$projection               = $this->fitness->to_array();
 		if ( 'supported' !== $projection['support']
 			|| ! in_array( $projection['suitability'], array( 'suitable', 'unknown' ), true )
 			|| ! in_array( $projection['evidence'], array( 'observed', 'inferred', 'unknown_by_design' ), true ) ) {

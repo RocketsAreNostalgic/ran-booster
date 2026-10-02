@@ -33,7 +33,7 @@ final class WebhookProcessorTest extends TestCase {
 
 	public function test_unknown_and_unsupported_providers_fail_closed(): void {
 		$request_calls = 0;
-		$request      = static function () use ( &$request_calls ): array {
+		$request       = static function () use ( &$request_calls ): array {
 			++$request_calls;
 
 			return array(
@@ -41,7 +41,7 @@ final class WebhookProcessorTest extends TestCase {
 				'headers' => array(),
 			);
 		};
-		$processor    = $this->processor( new ProviderRegistry(), new WebhookProcessorCoordinator() );
+		$processor     = $this->processor( new ProviderRegistry(), new WebhookProcessorCoordinator() );
 
 		self::assertSame( 404, $processor->handle( 'bb', $request )->get_status() );
 
@@ -53,7 +53,7 @@ final class WebhookProcessorTest extends TestCase {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
 			}
 		};
-		$processor    = $this->processor(
+		$processor     = $this->processor(
 			new ProviderRegistry( array( $metadata_only ) ),
 			new WebhookProcessorCoordinator()
 		);
@@ -122,8 +122,8 @@ final class WebhookProcessorTest extends TestCase {
 
 	public function test_accepted_admission_returns_only_the_safe_receipt(): void {
 		$correlation_id = str_repeat( 'a', 32 );
-		$body          = '{"secret-canary":"raw-body-canary"}';
-		$processor     = $this->event_processor(
+		$body           = '{"secret-canary":"raw-body-canary"}';
+		$processor      = $this->event_processor(
 			new WebhookProcessorCoordinator( self::admission_result( 'accepted', $correlation_id, 1, 'scheduled' ) )
 		);
 
@@ -148,7 +148,7 @@ final class WebhookProcessorTest extends TestCase {
 
 	public function test_exact_duplicate_admission_returns202_without_replaying_deployment(): void {
 		$correlation_id = str_repeat( 'b', 32 );
-		$processor     = $this->event_processor(
+		$processor      = $this->event_processor(
 			new WebhookProcessorCoordinator( self::admission_result( 'duplicate', $correlation_id, 1, 'already_scheduled' ) )
 		);
 
@@ -244,7 +244,7 @@ final class WebhookProcessorTest extends TestCase {
 
 	public function test_zero_target_replay_returns202_without_a_worker_wakeup(): void {
 		$correlation_id = str_repeat( 'f', 32 );
-		$processor     = $this->event_processor(
+		$processor      = $this->event_processor(
 			new WebhookProcessorCoordinator( self::admission_result( 'duplicate', $correlation_id, 0, 'not_required' ) )
 		);
 
@@ -288,8 +288,8 @@ final class WebhookProcessorTest extends TestCase {
 
 	public function test_false_signature_stops_before_normalization_and_intake(): void {
 		$normalizer_calls = 0;
-		$spy             = new WebhookProcessorCoordinatorSpy();
-		$materials       = array();
+		$spy              = new WebhookProcessorCoordinatorSpy();
+		$materials        = array();
 		foreach ( range( 1, 16 ) as $index ) {
 			$materials[ 'profile-' . $index ] = array(
 				'scope'        => 'owner',
@@ -578,7 +578,7 @@ final class WebhookProcessorCoordinator extends DeploymentCoordinator {
 	): array {
 		if ( null !== $this->spy ) {
 			++$this->spy->calls;
-			$this->spy->events                  = $events;
+			$this->spy->events                    = $events;
 			$this->spy->authenticated_body_digest = $authenticated_body_digest;
 		}
 		if ( null !== $this->failure ) {
@@ -593,6 +593,6 @@ final class WebhookProcessorCoordinatorSpy {
 
 	public int $calls = 0;
 	/** @var list<PushEvent> */
-	public array $events                   = array();
+	public array $events                     = array();
 	public string $authenticated_body_digest = '';
 }

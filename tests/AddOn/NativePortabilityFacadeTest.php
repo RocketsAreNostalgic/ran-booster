@@ -31,9 +31,13 @@ final class NativePortabilityFacadeTest extends TestCase {
 
 	private ?TemporaryCredentialProvider $provider = null;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override requires this method name.
+
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_package_mutation_guard_multisite'] = false;
 	}
+
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override requires this method name.
 
 	protected function tearDown(): void {
 		unset( $GLOBALS['ran_booster_package_mutation_guard_multisite'] );
@@ -51,7 +55,7 @@ final class NativePortabilityFacadeTest extends TestCase {
 			$bootstrap
 		);
 		$runtime_gate = strpos( $bootstrap, 'if ( ! $ran_booster_runtime_support->allows_managed_operations() )' );
-		$marker      = strpos( $bootstrap, "if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' )" );
+		$marker       = strpos( $bootstrap, "if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' )" );
 		self::assertIsInt( $runtime_gate );
 		self::assertIsInt( $marker );
 		self::assertStringContainsString( 'return;', substr( $bootstrap, $runtime_gate, $marker - $runtime_gate ) );

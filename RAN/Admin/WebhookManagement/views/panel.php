@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** @var array<string, mixed> $model */
 /** @var string $form_attributes */
-$disabled        = true === ( $model['disabled'] ?? false );
+$disabled         = true === ( $model['disabled'] ?? false );
 $profile_disabled = $disabled || true === ( $model['webhook_profile_disabled'] ?? false );
 ?>
 <div class="ran-booster-repository-webhook-management">

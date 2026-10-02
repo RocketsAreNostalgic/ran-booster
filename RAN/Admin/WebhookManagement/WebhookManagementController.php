@@ -43,7 +43,7 @@ final class WebhookManagementController {
 		?callable $verify_nonce = null,
 		?callable $create_nonce = null
 	) {
-		$this->can_manage = null === $can_manage
+		$this->can_manage   = null === $can_manage
 			? static fn (): bool => current_user_can( 'manage_options' )
 			: \Closure::fromCallable( $can_manage );
 		$this->verify_nonce = null === $verify_nonce
@@ -137,7 +137,7 @@ final class WebhookManagementController {
 
 	/** @return array{result:?string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string} */
 	public function panel_context(): array {
-		$query          = is_array( $_get ) ? wp_unslash( $_get ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Bounded display-only context.
+		$query          = is_array( $_GET ) ? wp_unslash( $_GET ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Bounded display-only context.
 		$code           = $this->string_value( $query, 'webhook_management_result' );
 		$safe_reference = static fn ( mixed $value ): ?string => is_string( $value )
 			&& 1 === preg_match( '/^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/', $value )
@@ -230,7 +230,7 @@ final class WebhookManagementController {
 
 	/** Prove that a package-settings return URL belongs to this signed repository operation. */
 	private function package_return_matches_operation( string $page, string $package, string $provider_code, string $repository_id ): bool {
-		$type = 'ran-booster-plugins' === $page ? 'plugin' : 'theme';
+		$type      = 'ran-booster-plugins' === $page ? 'plugin' : 'theme';
 		$authority = $this->package_authorities->for_package( $type, $package );
 
 		return null !== $authority

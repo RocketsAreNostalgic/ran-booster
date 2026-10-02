@@ -145,11 +145,11 @@ final class AssistedWebhookFacadeTest extends TestCase {
 	}
 
 	public function test_setup_exception_after_provider_invocation_retains_recovery_profile(): void {
-		$secrets              = new FixedFacadeSecretsFile();
-		$provider             = new FixedWebhookProvider();
+		$secrets               = new FixedFacadeSecretsFile();
+		$provider              = new FixedWebhookProvider();
 		$provider->throw_setup = true;
-		$facade               = $this->facade( $secrets, $provider );
-		$target               = $facade->target( 'gh', '101' );
+		$facade                = $this->facade( $secrets, $provider );
+		$target                = $facade->target( 'gh', '101' );
 		self::assertNotNull( $target );
 
 		$result = $facade->setup( $target, 'profile_1', 'good' );
@@ -161,15 +161,15 @@ final class AssistedWebhookFacadeTest extends TestCase {
 	}
 
 	public function test_failed_setup_cannot_delete_a_profile_rotated_during_the_provider_request(): void {
-		$secrets              = new FixedFacadeSecretsFile();
-		$provider             = new FixedWebhookProvider();
+		$secrets               = new FixedFacadeSecretsFile();
+		$provider              = new FixedWebhookProvider();
 		$provider->setup_state = 'failed';
-		$facade               = $this->facade( $secrets, $provider );
-		$target               = $facade->target( 'gh', '101' );
+		$facade                = $this->facade( $secrets, $provider );
+		$target                = $facade->target( 'gh', '101' );
 		self::assertNotNull( $target );
 		$provider->during_setup = static function () use ( $secrets ): void {
 			$profile_id                        = (string) array_key_first( $secrets->profiles );
-			$rotated                          = $secrets->profile( $profile_id, 2, 'rotated-secret' );
+			$rotated                           = $secrets->profile( $profile_id, 2, 'rotated-secret' );
 			$secrets->profiles[ $profile_id ]  = $rotated;
 			$secrets->materials[ $profile_id ] = $rotated;
 		};
@@ -183,11 +183,11 @@ final class AssistedWebhookFacadeTest extends TestCase {
 	}
 
 	public function test_pre_provider_failure_cannot_delete_a_profile_rotated_after_creation(): void {
-		$secrets                         = new FixedFacadeSecretsFile();
+		$secrets                            = new FixedFacadeSecretsFile();
 		$secrets->throw_material_after_save = true;
-		$provider                        = new FixedWebhookProvider();
-		$facade                          = $this->facade( $secrets, $provider );
-		$target                          = $facade->target( 'gh', '101' );
+		$provider                           = new FixedWebhookProvider();
+		$facade                             = $this->facade( $secrets, $provider );
+		$target                             = $facade->target( 'gh', '101' );
 		self::assertNotNull( $target );
 
 		$result = $facade->setup( $target, 'profile_1', 'good' );
@@ -222,7 +222,7 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		);
 		$target   = $facade->target( 'gh', '101' );
 		self::assertNotNull( $target );
-		$nested                = null;
+		$nested                 = null;
 		$provider->during_setup = static function () use ( $facade, $target, &$nested ): void {
 			$nested = $facade->setup( $target, 'profile_1', 'good' );
 		};
@@ -237,10 +237,10 @@ final class AssistedWebhookFacadeTest extends TestCase {
 	}
 
 	public function test_separate_request_facades_contend_on_the_same_target_lock(): void {
-		$secrets     = new FixedFacadeSecretsFile();
-		$provider    = new FixedWebhookProvider();
-		$held        = false;
-		$acquire     = static function () use ( &$held ): bool {
+		$secrets      = new FixedFacadeSecretsFile();
+		$provider     = new FixedWebhookProvider();
+		$held         = false;
+		$acquire      = static function () use ( &$held ): bool {
 			if ( $held ) {
 				return false;
 			}
@@ -248,7 +248,7 @@ final class AssistedWebhookFacadeTest extends TestCase {
 
 			return true;
 		};
-		$release     = static function () use ( &$held ): bool {
+		$release      = static function () use ( &$held ): bool {
 			$held = false;
 
 			return true;
@@ -259,7 +259,7 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		$other_target = $other_facade->target( 'gh', '101' );
 		self::assertNotNull( $first_target );
 		self::assertNotNull( $other_target );
-		$nested                = null;
+		$nested                 = null;
 		$provider->during_setup = static function () use ( $other_facade, $other_target, &$nested ): void {
 			$nested = $other_facade->setup( $other_target, 'profile_1', 'good' );
 		};
@@ -272,11 +272,11 @@ final class AssistedWebhookFacadeTest extends TestCase {
 	}
 
 	public function test_lock_release_failure_does_not_overwrite_ambiguous_recovery_evidence(): void {
-		$secrets               = new FixedFacadeSecretsFile();
-		$provider              = new FixedWebhookProvider();
+		$secrets                = new FixedFacadeSecretsFile();
+		$provider               = new FixedWebhookProvider();
 		$provider->remove_state = 'ambiguous';
-		$facade                = $this->facade( $secrets, $provider, static fn (): bool => true, static fn (): bool => false );
-		$target                = $facade->target( 'gh', '101' );
+		$facade                 = $this->facade( $secrets, $provider, static fn (): bool => true, static fn (): bool => false );
+		$target                 = $facade->target( 'gh', '101' );
 		self::assertNotNull( $target );
 		$profile_id                       = 'wh_' . str_repeat( 'a', 24 );
 		$secrets->profiles[ $profile_id ] = $secrets->profile( $profile_id, 1 );
@@ -291,11 +291,11 @@ final class AssistedWebhookFacadeTest extends TestCase {
 	}
 
 	public function test_lock_release_failure_does_not_overwrite_partial_setup_recovery_evidence(): void {
-		$secrets              = new FixedFacadeSecretsFile();
-		$provider             = new FixedWebhookProvider();
+		$secrets               = new FixedFacadeSecretsFile();
+		$provider              = new FixedWebhookProvider();
 		$provider->throw_setup = true;
-		$facade               = $this->facade( $secrets, $provider, static fn (): bool => true, static fn (): bool => false );
-		$target               = $facade->target( 'gh', '101' );
+		$facade                = $this->facade( $secrets, $provider, static fn (): bool => true, static fn (): bool => false );
+		$target                = $facade->target( 'gh', '101' );
 		self::assertNotNull( $target );
 
 		$result = $facade->setup( $target, 'profile_1', 'good' );
@@ -338,11 +338,11 @@ final class AssistedWebhookFacadeTest extends TestCase {
 	}
 
 	public function test_mutation_stops_when_same_request_fitness_cannot_rebind_repository_identity(): void {
-		$secrets                      = new FixedFacadeSecretsFile();
-		$provider                     = new FixedWebhookProvider();
+		$secrets                       = new FixedFacadeSecretsFile();
+		$provider                      = new FixedWebhookProvider();
 		$provider->fitness_suitability = 'insufficient';
-		$facade                       = $this->facade( $secrets, $provider );
-		$target                       = $facade->target( 'gh', '101' );
+		$facade                        = $this->facade( $secrets, $provider );
+		$target                        = $facade->target( 'gh', '101' );
 		self::assertNotNull( $target );
 
 		$result = $facade->setup( $target, 'profile_1', 'good' );
@@ -371,11 +371,11 @@ final class AssistedWebhookFacadeTest extends TestCase {
 	}
 
 	public function test_reconfigure_exception_after_provider_invocation_retains_recovery_evidence(): void {
-		$secrets                    = new FixedFacadeSecretsFile();
-		$provider                   = new FixedWebhookProvider();
+		$secrets                     = new FixedFacadeSecretsFile();
+		$provider                    = new FixedWebhookProvider();
 		$provider->throw_reconfigure = true;
-		$facade                     = $this->facade( $secrets, $provider );
-		$target                     = $facade->target( 'gh', '101' );
+		$facade                      = $this->facade( $secrets, $provider );
+		$target                      = $facade->target( 'gh', '101' );
 		self::assertNotNull( $target );
 		$profile_id                        = 'wh_' . str_repeat( 'a', 24 );
 		$secrets->profiles[ $profile_id ]  = $secrets->profile( $profile_id, 1, 'current-secret' );
@@ -402,7 +402,7 @@ final class AssistedWebhookFacadeTest extends TestCase {
 
 		$profile_id                       = 'wh_' . str_repeat( 'a', 24 );
 		$secrets->profiles[ $profile_id ] = $secrets->profile( $profile_id, 2 );
-		$checked                         = $facade->check( $target, 'profile_1', '55', $profile_id, 1, 'good' );
+		$checked                          = $facade->check( $target, 'profile_1', '55', $profile_id, 1, 'good' );
 		self::assertSame( 'operation_unauthorized', $checked->code() );
 		self::assertSame( 0, $provider->calls );
 	}
@@ -435,7 +435,7 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		$secrets->profiles[ $profile_id ]  = $secrets->profile( $profile_id, 1, 'original-secret' );
 		$secrets->materials[ $profile_id ] = $secrets->profiles[ $profile_id ];
 		$provider->during_remove           = static function () use ( $secrets, $profile_id ): void {
-			$rotated                          = $secrets->profile( $profile_id, 2, 'rotated-secret' );
+			$rotated                           = $secrets->profile( $profile_id, 2, 'rotated-secret' );
 			$secrets->profiles[ $profile_id ]  = $rotated;
 			$secrets->materials[ $profile_id ] = $rotated;
 		};
@@ -449,11 +449,11 @@ final class AssistedWebhookFacadeTest extends TestCase {
 	}
 
 	public function test_remove_exception_after_provider_invocation_retains_recovery_evidence(): void {
-		$secrets               = new FixedFacadeSecretsFile();
-		$provider              = new FixedWebhookProvider();
+		$secrets                = new FixedFacadeSecretsFile();
+		$provider               = new FixedWebhookProvider();
 		$provider->throw_remove = true;
-		$facade                = $this->facade( $secrets, $provider );
-		$target                = $facade->target( 'gh', '101' );
+		$facade                 = $this->facade( $secrets, $provider );
+		$target                 = $facade->target( 'gh', '101' );
 		self::assertNotNull( $target );
 		$profile_id                       = 'wh_' . str_repeat( 'a', 24 );
 		$secrets->profiles[ $profile_id ] = $secrets->profile( $profile_id, 1 );
@@ -511,9 +511,9 @@ final class AssistedWebhookFacadeTest extends TestCase {
 }
 
 final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhookFitness, RepositoryWebhookManagement, WebhookNormalizer {
-	public const OPERATION            = 'repository-webhook-management';
-	public const VERSION              = 1;
-	public int $calls                 = 0;
+	public const OPERATION             = 'repository-webhook-management';
+	public const VERSION               = 1;
+	public int $calls                  = 0;
 	public ?string $credential_id      = null;
 	public string $signing_secret      = '';
 	public string $remove_state        = 'succeeded';
@@ -586,7 +586,7 @@ final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhoo
 		$this->credential_id  = $credential_profile_id;
 		$this->signing_secret = $signing_secret;
 		if ( null !== $this->during_setup ) {
-			$callback          = $this->during_setup;
+			$callback           = $this->during_setup;
 			$this->during_setup = null;
 			$callback();
 		}
@@ -616,7 +616,7 @@ final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhoo
 	public function remove( string $repository_id, string $repository, string $hook_id, string $callback_url, ?string $credential_profile_id ): RepositoryWebhookOperationResult {
 		++$this->calls;
 		if ( null !== $this->during_remove ) {
-			$callback           = $this->during_remove;
+			$callback            = $this->during_remove;
 			$this->during_remove = null;
 			$callback();
 		}
@@ -663,8 +663,8 @@ final class FixedFacadeSecretsFile extends SecretsFile {
 	/** @var array<string,array<string,mixed>> */
 	public array $profiles = array();
 	/** @var array<string,array<string,mixed>> */
-	public array $materials             = array();
-	public string $saved_secret          = '';
+	public array $materials                = array();
+	public string $saved_secret            = '';
 	public bool $throw_material_after_save = false;
 
 	public function assert_managed_storage_ready(): void {
@@ -689,11 +689,11 @@ final class FixedFacadeSecretsFile extends SecretsFile {
 
 	public function webhook_materials( ProviderCode|string $provider ): array {
 		if ( $this->throw_material_after_save && array() !== $this->profiles ) {
-			$this->throw_material_after_save  = false;
-			$profile_id                     = (string) array_key_first( $this->profiles );
-			$rotated                       = $this->profile( $profile_id, 2, 'rotated-before-snapshot' );
-			$this->profiles[ $profile_id ]  = $rotated;
-			$this->materials[ $profile_id ] = $rotated;
+			$this->throw_material_after_save = false;
+			$profile_id                      = (string) array_key_first( $this->profiles );
+			$rotated                         = $this->profile( $profile_id, 2, 'rotated-before-snapshot' );
+			$this->profiles[ $profile_id ]   = $rotated;
+			$this->materials[ $profile_id ]  = $rotated;
 			throw new \RuntimeException( 'Material snapshot failed after concurrent rotation.' );
 		}
 
@@ -702,7 +702,7 @@ final class FixedFacadeSecretsFile extends SecretsFile {
 
 	public function save_webhook( ProviderCode|string $provider, ?string $id, array $metadata, ?string $secret ): string {
 		$id                  ??= 'wh_' . str_repeat( 'a', 24 );
-		$this->saved_secret     = (string) $secret;
+		$this->saved_secret    = (string) $secret;
 		$this->profiles[ $id ] = $metadata + array(
 			'id'         => $id,
 			'revision'   => 1,
@@ -765,7 +765,7 @@ final class FixedThemeRepository extends ThemeRepository {
 
 final class FixedFacadePackage extends AbstractPackage {
 	public function __construct( ManagedRepository $repository ) {
-		$this->repository       = $repository;
+		$this->repository        = $repository;
 		$this->deployment_policy = DeploymentPolicy::MANUAL;
 	}
 

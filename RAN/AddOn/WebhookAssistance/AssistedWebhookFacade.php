@@ -42,10 +42,10 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		?callable $acquire_lock = null,
 		?callable $release_lock = null
 	) {
-		$this->can_manage = null === $can_manage
+		$this->can_manage   = null === $can_manage
 			? static fn (): bool => current_user_can( 'manage_options' )
 			: \Closure::fromCallable( $can_manage );
-		$this->endpoint   = null === $endpoint
+		$this->endpoint     = null === $endpoint
 			? static fn ( string $provider_code ): string => rest_url( 'ran-booster/v1/webhooks/' . rawurlencode( $provider_code ) )
 			: \Closure::fromCallable( $endpoint );
 		$this->verify_nonce = null === $verify_nonce
@@ -138,7 +138,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 			return null;
 		}
 		try {
-			$target = $this->current_target( $provider_code, $repository_id, true );
+			$target  = $this->current_target( $provider_code, $repository_id, true );
 			$profile = null === $target ? null : ( $this->secrets->webhook_profiles( $provider_code )[ $profile_id ] ?? null );
 
 			return is_array( $profile ) && $this->applies_to( $target, $profile ) ? $this->metadata( $provider_code, $profile_id, $profile ) : null;
@@ -202,7 +202,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 			$target,
 			function () use ( $target, $credential_profile_id, $hook_id, $profile_id, $profile_revision, $nonce ): RepositoryWebhookOperationResult {
 				$current = $this->authorize( 'reconfigure', $target, $nonce );
-				$record = null === $current ? null : $this->profile_record( $current->provider_code(), $profile_id );
+				$record  = null === $current ? null : $this->profile_record( $current->provider_code(), $profile_id );
 				if ( null === $current || null === $record || $profile_revision !== $record[0]->revision() || ! $this->applies_metadata( $current, $record[0] ) || ! $this->credential_profile_available( $current->provider_code(), (string) $credential_profile_id ) ) {
 					return $this->failed( 'operation_unauthorized' );
 				}
@@ -231,7 +231,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 			$target,
 			function () use ( $target, $credential_profile_id, $hook_id, $profile_id, $profile_revision, $nonce ): RepositoryWebhookOperationResult {
 				$current = $this->authorize( 'remove', $target, $nonce, true );
-				$record = null === $current ? null : $this->profile_record( $current->provider_code(), $profile_id );
+				$record  = null === $current ? null : $this->profile_record( $current->provider_code(), $profile_id );
 				if ( null === $current || null === $record || $profile_revision !== $record[0]->revision() || ! $this->applies_metadata( $current, $record[0] ) || ! $this->credential_profile_available( $current->provider_code(), (string) $credential_profile_id ) ) {
 					return $this->failed( 'operation_unauthorized' );
 				}
@@ -243,7 +243,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 					}
 					$provider         = $this->complete_webhook_provider( $current->provider_code() );
 					$provider_started = true;
-					$result = $provider->remove( $current->repository_id(), $current->repository(), $hook_id, $current->endpoint(), $credential_profile_id )->with_profile( $profile );
+					$result           = $provider->remove( $current->repository_id(), $current->repository(), $hook_id, $current->endpoint(), $credential_profile_id )->with_profile( $profile );
 					if ( $result->confirms_absence() && 'created' === $profile->disposition() && ! $this->delete_profile_if_revision( $current->provider_code(), $profile->id(), $profile->revision() ) ) {
 						return $result->as_partial( 'local_profile_release_failed', 'The remote hook is absent; remove the retained local profile before replacing it.' );
 					}

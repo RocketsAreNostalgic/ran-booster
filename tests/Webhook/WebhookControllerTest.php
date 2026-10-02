@@ -28,12 +28,16 @@ final class WebhookControllerTest extends TestCase {
 	public const WEBHOOK_SECRET = 'controller-test-webhook-secret-001';
 	private const NO_STORE      = 'no-store, no-cache, must-revalidate, max-age=0';
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override requires this method name.
+
 	protected function setUp(): void {
-		$_server['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_METHOD'] = 'POST';
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override requires this method name.
+
 	protected function tearDown(): void {
-		unset( $_server['REQUEST_METHOD'] );
+		unset( $_SERVER['REQUEST_METHOD'] );
 	}
 
 	public function test_url_provider_cannot_be_overridden_by_merged_request_parameters(): void {
@@ -70,7 +74,7 @@ final class WebhookControllerTest extends TestCase {
 			self::assertSame( self::NO_STORE, $response->get_headers()['Cache-Control'] );
 		}
 
-		$_server['REQUEST_METHOD'] = 'GET';
+		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$request                   = new \WP_REST_Request( array( 'provider' => 'gh' ), array(), '{}', array(), 'POST' );
 		$response                  = $controller->receive( $request );
 

@@ -214,8 +214,8 @@ final class RanBoosterCorePackageExecutorSmoke {
 			throw new RuntimeException( 'A child theme with a missing parent reached mutation or a secondary request.' );
 		}
 
-		$parent_slug = $this->artifact( 'theme', $parent_slug, '1.0.0', 'parent-theme' );
-		$this->assert_success( $this->with_hook_restoration_check( static fn () => $executor->install_theme( $parent_slug, $parent_slug, null ) ) );
+		$parent_artifact = $this->artifact( 'theme', $parent_slug, '1.0.0', 'parent-theme' );
+		$this->assert_success( $this->with_hook_restoration_check( static fn () => $executor->install_theme( $parent_artifact, $parent_slug, null ) ) );
 		$this->themes[] = $parent_slug;
 		$child          = $this->artifact( 'theme', $child_slug, '1.0.0', 'child-theme', null, $parent_slug );
 		$this->assert_success( $this->with_hook_restoration_check( static fn () => $executor->install_theme( $child, $child_slug, null ) ) );

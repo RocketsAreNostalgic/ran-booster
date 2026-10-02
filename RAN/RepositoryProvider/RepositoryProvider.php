@@ -6,11 +6,11 @@ namespace RAN\RepositoryProvider;
 
 interface RepositoryProvider {
 
-	public function getMetadata(): ProviderMetadata;
+	public function get_metadata(): ProviderMetadata;
 
-	public function getProviderDiagnostics(): ProviderDiagnostics;
+	public function get_provider_diagnostics(): ProviderDiagnostics;
 
-	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor;
+	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor;
 
 	/**
 	 * Prepare an immutable archive request.
@@ -20,5 +20,5 @@ interface RepositoryProvider {
 	 *
 	 * @throws StaleDeployment When the immutable ref is no longer the branch head.
 	 */
-	public function prepareArchive( ArchiveRequest $request ): PreparedArchive;
+	public function prepare_archive( ArchiveRequest $request ): PreparedArchive;
 }

@@ -60,7 +60,7 @@ final class ProspectiveReleaseCandidateReader {
 				'1' === ( $repository['private'] ?? null ),
 				is_string( $repository['credential_id'] ?? null ) && '' !== $repository['credential_id'] ? $repository['credential_id'] : null
 			);
-			$result     = $listing->listReleaseCandidates( $type, $reference, $channel );
+			$result     = $listing->list_release_candidates( $type, $reference, $channel );
 			if ( array() === $result->candidates ) {
 				return ProspectiveReleaseResult::failure( 'no_releases' );
 			}

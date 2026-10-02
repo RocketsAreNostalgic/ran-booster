@@ -360,11 +360,11 @@ class TroubleshootingProviderFixture implements RepositoryProvider {
 	public function __construct( protected string $code, private Closure $diagnose ) {
 	}
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata( ProviderCode::parse( $this->code ), 'GitHub fixture', 'https://example.test/', 'Owner' );
 	}
 
-	public function getProviderDiagnostics(): ProviderDiagnostics {
+	public function get_provider_diagnostics(): ProviderDiagnostics {
 		return new class( $this ) implements ProviderDiagnostics {
 			public function __construct( private TroubleshootingProviderFixture $provider ) {
 			}
@@ -389,24 +389,24 @@ final class TroubleshootingWebhookProviderFixture extends TroubleshootingProvide
 		parent::__construct( $code, $diagnose );
 	}
 
-	public function getWebhookPolicy(): ProviderWebhookPolicy {
+	public function get_webhook_policy(): ProviderWebhookPolicy {
 		return new class( ProviderCode::parse( $this->code ) ) implements ProviderWebhookPolicy {
 			public function __construct( private ProviderCode $provider ) {
 			}
 
-			public function getProvider(): ProviderCode {
+			public function get_provider(): ProviderCode {
 				return $this->provider;
 			}
 
-			public function getRetainedHeaders(): array {
+			public function get_retained_headers(): array {
 				return array();
 			}
 
-			public function getSignatureHeader(): string {
+			public function get_signature_header(): string {
 				return 'x-fixture-signature';
 			}
 
-			public function normalizeWebhook( array $metadata, mixed $secret ): array {
+			public function normalize_webhook( array $metadata, mixed $secret ): array {
 				return array(
 					'label'        => 'Fixture',
 					'scope'        => 'global',
@@ -416,31 +416,31 @@ final class TroubleshootingWebhookProviderFixture extends TroubleshootingProvide
 				);
 			}
 
-			public function getConstantNames(): array {
+			public function get_constant_names(): array {
 				return array();
 			}
 
-			public function webhookFromConstants( array $constants ): ?array {
+			public function webhook_from_constants( array $constants ): ?array {
 				return null;
 			}
 
-			public function authorizeWebhook( \RAN\RepositoryProvider\SignedWebhookVerification $verification, string $repositoryAuthorityId, string $repository ): bool {
+			public function authorize_webhook( \RAN\RepositoryProvider\SignedWebhookVerification $verification, string $repositoryAuthorityId, string $repository ): bool {
 				return true;
 			}
 
-			public function repositoryTargetMatches( string $target, string $repositoryLocator ): bool {
+			public function repository_target_matches( string $target, string $repositoryLocator ): bool {
 				return $target === $repositoryLocator;
 			}
 		};
 	}
 
-	public function diagnoseWebhookReadiness(): ProviderDiagnosticResult {
+	public function diagnose_webhook_readiness(): ProviderDiagnosticResult {
 		++$this->readinessRuns;
 
 		return ( $this->readiness )();
 	}
 
-	public function normalizeWebhook( WebhookRequest $request ): WebhookEnvelope {
+	public function normalize_webhook( WebhookRequest $request ): WebhookEnvelope {
 		return WebhookEnvelope::ignored();
 	}
 }

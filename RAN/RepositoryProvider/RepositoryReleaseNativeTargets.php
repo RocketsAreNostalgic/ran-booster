@@ -7,13 +7,13 @@ namespace RAN\RepositoryProvider;
 use RAN\Provider\ProviderCapability;
 
 interface RepositoryReleaseNativeTargets extends ProviderCapability {
-	public function hasRegisteredNativeTarget( string $packageType, string $installedIdentifier ): bool;
+	public function has_registered_native_target( string $packageType, string $installedIdentifier ): bool;
 
 	/**
 	 * Create a target whose remote pre-download work runs only after Core's
 	 * earliest upgrader_pre_download authority fence.
 	 */
-	public function createNativeTarget(
+	public function create_native_target(
 		string $packageType,
 		RepositoryReference $repository,
 		string $metadataFile,

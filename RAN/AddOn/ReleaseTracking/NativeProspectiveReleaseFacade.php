@@ -177,7 +177,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		try {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			$repository = $this->repository_reference( $this->resolve_repository( $repositoryRequest ) );
-			$inspection = $capabilities['inspector']->inspectRelease(
+			$inspection = $capabilities['inspector']->inspect_release(
 				$type,
 				$repository,
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
@@ -200,7 +200,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 					'version'      => $inspection->version,
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 					'commit'       => $inspection->providerCommitId,
-					'details_url'  => $capabilities['metadata']->releaseDetailsUrl( $repository, $inspection->tag ),
+					'details_url'  => $capabilities['metadata']->release_details_url( $repository, $inspection->tag ),
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 					'package_root' => $inspection->packageRoot,
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
@@ -271,7 +271,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		}
 
 		try {
-			$release = $acquirer->acquireRelease(
+			$release = $acquirer->acquire_release(
 				$type,
 				$repository_reference,
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
@@ -328,8 +328,8 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 					break;
 				}
 				$configuration = new ManagedReleaseConfiguration(
-					$release->packageRoot(),
-					$release->mainFile(),
+					$release->package_root(),
+					$release->main_file(),
 					$channel
 				);
 				$user_id       = ( $this->current_user_id )();
@@ -347,10 +347,10 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 					$outcome = ProspectiveReleaseResult::failure( 'package_already_exists' );
 				} else {
 					PackageMutationGuard::assert_filesystem_mutation_allowed();
-					$artifact             = ReleaseArtifactCustodian::claim( $release->handoffToCore() );
+					$artifact             = ReleaseArtifactCustodian::claim( $release->handoff_to_core() );
 					$result               = 'plugin' === $type
-						? $this->executor->installPlugin( $artifact, $release->packageRoot(), null )
-						: $this->executor->installTheme( $artifact, $release->packageRoot(), null );
+						? $this->executor->installPlugin( $artifact, $release->package_root(), null )
+						: $this->executor->installTheme( $artifact, $release->package_root(), null );
 					$exists               = $this->installed_state_or_null( $type, $identifier );
 					$package              = true === $exists ? $this->installed_package_or_null( $type, $identifier ) : null;
 					$is_active            = $this->active_state_or_null( $type, $identifier );

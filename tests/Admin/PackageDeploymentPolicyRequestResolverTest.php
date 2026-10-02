@@ -24,11 +24,11 @@ final class PackageDeploymentPolicyRequestResolverTest extends TestCase {
 
 			public int $resolveCalls = 0;
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'Fixture', 'https://example.test/', 'Owner' );
 			}
 
-			public function getProviderDiagnostics(): ProviderDiagnostics {
+			public function get_provider_diagnostics(): ProviderDiagnostics {
 				return new class() implements ProviderDiagnostics {
 					public function diagnose( ProviderDiagnosticRequest $request ): array {
 						return array();
@@ -36,7 +36,7 @@ final class PackageDeploymentPolicyRequestResolverTest extends TestCase {
 				};
 			}
 
-			public function resolveRepository( \RAN\RepositoryProvider\RepositoryLookupRequest $request ): \RAN\RepositoryProvider\RepositoryDescriptor {
+			public function resolve_repository( \RAN\RepositoryProvider\RepositoryLookupRequest $request ): \RAN\RepositoryProvider\RepositoryDescriptor {
 				++$this->resolveCalls;
 
 				return new \RAN\RepositoryProvider\RepositoryDescriptor(
@@ -50,7 +50,7 @@ final class PackageDeploymentPolicyRequestResolverTest extends TestCase {
 				);
 			}
 
-			public function prepareArchive( \RAN\RepositoryProvider\ArchiveRequest $request ): \RAN\RepositoryProvider\PreparedArchive {
+			public function prepare_archive( \RAN\RepositoryProvider\ArchiveRequest $request ): \RAN\RepositoryProvider\PreparedArchive {
 				throw new \RuntimeException( 'Archive preparation is not used by this test.' );
 			}
 		};
@@ -73,11 +73,11 @@ final class PackageDeploymentPolicyRequestResolverTest extends TestCase {
 	public function testResolverDefaultsMissingPolicyToManual(): void {
 		$provider = new class() implements RepositoryProvider {
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'Fixture', 'https://example.test/', 'Owner' );
 			}
 
-			public function getProviderDiagnostics(): ProviderDiagnostics {
+			public function get_provider_diagnostics(): ProviderDiagnostics {
 				return new class() implements ProviderDiagnostics {
 					public function diagnose( ProviderDiagnosticRequest $request ): array {
 						return array();
@@ -85,7 +85,7 @@ final class PackageDeploymentPolicyRequestResolverTest extends TestCase {
 				};
 			}
 
-			public function resolveRepository( \RAN\RepositoryProvider\RepositoryLookupRequest $request ): \RAN\RepositoryProvider\RepositoryDescriptor {
+			public function resolve_repository( \RAN\RepositoryProvider\RepositoryLookupRequest $request ): \RAN\RepositoryProvider\RepositoryDescriptor {
 				return new \RAN\RepositoryProvider\RepositoryDescriptor(
 					ProviderCode::parse( 'gh' ),
 					$request->locator,
@@ -97,7 +97,7 @@ final class PackageDeploymentPolicyRequestResolverTest extends TestCase {
 				);
 			}
 
-			public function prepareArchive( \RAN\RepositoryProvider\ArchiveRequest $request ): \RAN\RepositoryProvider\PreparedArchive {
+			public function prepare_archive( \RAN\RepositoryProvider\ArchiveRequest $request ): \RAN\RepositoryProvider\PreparedArchive {
 				throw new \RuntimeException( 'Archive preparation is not used by this test.' );
 			}
 		};

@@ -61,7 +61,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 		);
 		$secrets  = new RepositoryResolverSecretsStub();
 		$provider = $this->provider( $secrets );
-		$archive  = $provider->prepareArchive(
+		$archive  = $provider->prepare_archive(
 			$this->archiveRequest( $commit, false, null, 'release/candidate' )
 		);
 		$requests = \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests();
@@ -97,7 +97,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 		);
 		$secrets  = new RepositoryResolverSecretsStub( array( 'private-profile' => self::TOKEN ) );
 		$provider = $this->provider( $secrets );
-		$archive  = $provider->prepareArchive(
+		$archive  = $provider->prepare_archive(
 			$this->archiveRequest( $commit, true, 'private-profile', 'main' )
 		);
 		$requests = \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests();
@@ -131,7 +131,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 		$provider = $this->provider( $secrets );
 
 		try {
-			$provider->prepareArchive( $this->archiveRequest( $stale, true, 'private-profile', 'main' ) );
+			$provider->prepare_archive( $this->archiveRequest( $stale, true, 'private-profile', 'main' ) );
 			self::fail( 'A delayed GitHub webhook commit must not replace the current branch head.' );
 		} catch ( StaleDeployment $exception ) {
 			self::assertSame( 409, $exception->getCode() );
@@ -150,7 +150,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 		$provider = $this->provider( $secrets );
 
 		try {
-			$provider->prepareArchive(
+			$provider->prepare_archive(
 				$this->archiveRequest(
 					'0123456789abcdef0123456789abcdef01234567',
 					true,
@@ -181,7 +181,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 		$provider = $this->provider( $secrets );
 
 		try {
-			$provider->prepareArchive(
+			$provider->prepare_archive(
 				$this->archiveRequest(
 					'0123456789abcdef0123456789abcdef01234567',
 					true,
@@ -296,7 +296,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 		);
 		$secrets  = new RepositoryResolverSecretsStub();
 		$provider = $this->provider( $secrets );
-		$archive  = $provider->prepareArchive( $this->archiveRequest( 'release', false ) );
+		$archive  = $provider->prepare_archive( $this->archiveRequest( 'release', false ) );
 
 		self::assertCount( 2, \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests() );
 		self::assertSame(
@@ -325,7 +325,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 
 		try {
 			$this->provider( new RepositoryResolverSecretsStub() )
-				->prepareArchive( $this->archiveRequest( 'release', false ) );
+				->prepare_archive( $this->archiveRequest( 'release', false ) );
 			self::fail( 'An oversized SHA-only response must not be accepted as an immutable ref.' );
 		} catch ( RuntimeException $exception ) {
 			self::assertSame( 502, $exception->getCode() );
@@ -359,7 +359,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 			)
 		);
 		$provider = $this->provider( new RepositoryResolverSecretsStub() );
-		$archive  = $provider->prepareArchive( $this->archiveRequest( $commit, false, null, 'main' ) );
+		$archive  = $provider->prepare_archive( $this->archiveRequest( $commit, false, null, 'main' ) );
 
 		try {
 			$archive->verifyCurrentHead();
@@ -382,7 +382,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 				)
 			);
 			$archive = $this->provider( new RepositoryResolverSecretsStub() )
-				->prepareArchive( $this->archiveRequest( $ref, false ) );
+				->prepare_archive( $this->archiveRequest( $ref, false ) );
 
 			self::assertSame( $commit, $archive->getResolvedRef(), $ref );
 			self::assertStringEndsWith( '/zipball/' . $commit, $archive->getUrl(), $ref );
@@ -396,7 +396,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 		$provider = $this->provider( $secrets );
 
 		try {
-			$provider->prepareArchive( $this->archiveRequest( 'main', true, 'private-profile', 'main' ) );
+			$provider->prepare_archive( $this->archiveRequest( 'main', true, 'private-profile', 'main' ) );
 			self::fail( 'An expected branch must be paired with an immutable commit.' );
 		} catch ( RuntimeException $exception ) {
 			self::assertSame( 400, $exception->getCode() );
@@ -504,7 +504,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 			)
 		);
 		$archive = $this->provider( new RepositoryResolverSecretsStub( array( 'private-profile' => self::TOKEN ) ) )
-			->prepareArchive( $this->archiveRequest( $commit, true, 'private-profile', 'main' ) );
+			->prepare_archive( $this->archiveRequest( $commit, true, 'private-profile', 'main' ) );
 
 		\RAN\RepositoryProvider\authenticated_archive_filters( 'http_request_args' )[0]['callback'](
 			array( 'headers' => array() ),
@@ -527,7 +527,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 			)
 		);
 		$archive = $this->provider( $secrets )
-			->prepareArchive( $this->archiveRequest( 'release', true, 'private-profile' ) );
+			->prepare_archive( $this->archiveRequest( 'release', true, 'private-profile' ) );
 
 		self::assertInstanceOf( AuthenticatedPreparedArchive::class, $archive );
 

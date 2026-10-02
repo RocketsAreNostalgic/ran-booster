@@ -28,6 +28,28 @@
 	</rule>
 	<!-- Enforce only the completed, individually audited naming cohorts. -->
 	<rule ref="RANOwnedMethods">
+		<!-- API13: complete provider capability interface method cohort. -->
+		<include-pattern>/RAN/RepositoryProvider/CredentialValidator.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/CredentialedPublicRepositoryBrowser.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/ProviderCredentialPolicy.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/ProviderCredentialPolicySupplier.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/ProviderWebhookPolicy.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryBrowser.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryPathInspector.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryProvider.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryReleaseAcquirer.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryReleaseArtifact.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryReleaseArtifactCustody.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryReleaseCandidateListing.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryReleaseInspector.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryReleaseMetadata.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryReleaseNativeTargets.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryReleaseWorkflowManagementV3.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryWebhookFitness.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/RepositoryWebhookSettingsLink.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/SubmittedCredentialValidator.php</include-pattern>
+		<include-pattern>/RAN/RepositoryProvider/WebhookNormalizer.php</include-pattern>
+
 		<!-- Internal provider metadata: complete owned helper/caller cohort. -->
 		<include-pattern>/RAN/RepositoryProvider/Admin/MetadataRules.php</include-pattern>
 		<!-- Artifact ceiling: complete owned validation method/caller cohort. -->

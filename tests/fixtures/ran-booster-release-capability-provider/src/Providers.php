@@ -40,11 +40,11 @@ abstract class BaseProvider implements RepositoryProvider {
 	public function __construct( private readonly string $code ) {
 	}
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata( ProviderCode::parse( $this->code ), 'P2 fixture ' . $this->code, 'https://p2.invalid/', 'Owner' );
 	}
 
-	public function getProviderDiagnostics(): ProviderDiagnostics {
+	public function get_provider_diagnostics(): ProviderDiagnostics {
 		return new class() implements ProviderDiagnostics {
 			public function diagnose( ProviderDiagnosticRequest $request ): array {
 				unset( $request );
@@ -54,7 +54,7 @@ abstract class BaseProvider implements RepositoryProvider {
 		};
 	}
 
-	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 		return new RepositoryDescriptor(
 			ProviderCode::parse( $this->code ),
 			$request->locator,
@@ -66,7 +66,7 @@ abstract class BaseProvider implements RepositoryProvider {
 		);
 	}
 
-	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 		unset( $request );
 
 		throw new RuntimeException( 'Branch archive preparation is outside the release-capability fixture.' );
@@ -88,15 +88,15 @@ final class PartialProvider extends BaseProvider implements RepositoryReleaseMet
 		parent::__construct( 'p2-partial' );
 	}
 
-	public function expectedUpdateUri( RepositoryReference $repository ): string {
+	public function expected_update_uri( RepositoryReference $repository ): string {
 		return 'https://p2.invalid/' . $repository->locator;
 	}
 
-	public function releaseDetailsUrl( RepositoryReference $repository, string $tag ): string {
-		return $this->expectedUpdateUri( $repository ) . '/releases/' . rawurlencode( $tag );
+	public function release_details_url( RepositoryReference $repository, string $tag ): string {
+		return $this->expected_update_uri( $repository ) . '/releases/' . rawurlencode( $tag );
 	}
 
-	public function listReleaseCandidates( string $packageType, RepositoryReference $repository, string $channel ): RepositoryReleaseCandidateList {
+	public function list_release_candidates( string $packageType, RepositoryReference $repository, string $channel ): RepositoryReleaseCandidateList {
 		unset( $packageType, $repository, $channel );
 
 		update_option( 'ran_booster_p2_partial_called', true, false );
@@ -104,13 +104,13 @@ final class PartialProvider extends BaseProvider implements RepositoryReleaseMet
 		return new RepositoryReleaseCandidateList( array() );
 	}
 
-	public function hasRegisteredNativeTarget( string $packageType, string $installedIdentifier ): bool {
+	public function has_registered_native_target( string $packageType, string $installedIdentifier ): bool {
 		unset( $packageType, $installedIdentifier );
 
 		return false;
 	}
 
-	public function createNativeTarget(
+	public function create_native_target(
 		string $packageType,
 		RepositoryReference $repository,
 		string $metadataFile,
@@ -136,15 +136,15 @@ final class ReleaseProvider extends BaseProvider implements RepositoryReleaseMet
 		return 'private';
 	}
 
-	public function expectedUpdateUri( RepositoryReference $repository ): string {
+	public function expected_update_uri( RepositoryReference $repository ): string {
 		return 'https://p2.invalid/' . $repository->locator;
 	}
 
-	public function releaseDetailsUrl( RepositoryReference $repository, string $tag ): string {
-		return $this->expectedUpdateUri( $repository ) . '/releases/' . rawurlencode( $tag );
+	public function release_details_url( RepositoryReference $repository, string $tag ): string {
+		return $this->expected_update_uri( $repository ) . '/releases/' . rawurlencode( $tag );
 	}
 
-	public function listReleaseCandidates( string $packageType, RepositoryReference $repository, string $channel ): RepositoryReleaseCandidateList {
+	public function list_release_candidates( string $packageType, RepositoryReference $repository, string $channel ): RepositoryReleaseCandidateList {
 		unset( $packageType, $repository, $channel );
 
 		return new RepositoryReleaseCandidateList(
@@ -152,7 +152,7 @@ final class ReleaseProvider extends BaseProvider implements RepositoryReleaseMet
 		);
 	}
 
-	public function inspectRelease(
+	public function inspect_release(
 		string $packageType,
 		RepositoryReference $repository,
 		string $providerReleaseId,
@@ -176,7 +176,7 @@ final class ReleaseProvider extends BaseProvider implements RepositoryReleaseMet
 		);
 	}
 
-	public function acquireRelease(
+	public function acquire_release(
 		string $packageType,
 		RepositoryReference $repository,
 		string $providerReleaseId,
@@ -207,13 +207,13 @@ final class ReleaseProvider extends BaseProvider implements RepositoryReleaseMet
 		);
 	}
 
-	public function hasRegisteredNativeTarget( string $packageType, string $installedIdentifier ): bool {
+	public function has_registered_native_target( string $packageType, string $installedIdentifier ): bool {
 		unset( $packageType, $installedIdentifier );
 
 		return false;
 	}
 
-	public function createNativeTarget(
+	public function create_native_target(
 		string $packageType,
 		RepositoryReference $repository,
 		string $metadataFile,
@@ -259,7 +259,7 @@ final class FixtureReleaseArtifact implements RepositoryReleaseArtifact {
 		return unlink( $this->path );
 	}
 
-	public function handoffToCore(): PreparedArtifact {
+	public function handoff_to_core(): PreparedArtifact {
 		if ( $this->handedOff ) {
 			throw new RuntimeException( 'The fixture artifact was already handed off.' );
 		}
@@ -287,11 +287,11 @@ final class FixtureReleaseArtifact implements RepositoryReleaseArtifact {
 		return '2.0.0';
 	}
 
-	public function packageRoot(): string {
+	public function package_root(): string {
 		return $this->root;
 	}
 
-	public function mainFile(): string {
+	public function main_file(): string {
 		return $this->mainFile;
 	}
 

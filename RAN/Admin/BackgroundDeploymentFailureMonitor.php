@@ -76,7 +76,7 @@ final class BackgroundDeploymentFailureMonitor {
 			$provider       = (string) $data['provider'];
 			$provider_label = strtoupper( $provider );
 			try {
-				$provider_label = $this->providers->get( ProviderCode::parse( $provider ) )->getMetadata()->label;
+				$provider_label = $this->providers->get( ProviderCode::parse( $provider ) )->get_metadata()->label;
 			} catch ( Throwable ) {
 				$provider_label = strtoupper( $provider );
 			}

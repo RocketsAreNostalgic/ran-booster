@@ -9,5 +9,5 @@ use RAN\Provider\ProviderCapability;
 /** Optional provider capability for checking a normalized path at an immutable ref. */
 interface RepositoryPathInspector extends ProviderCapability {
 
-	public function repositoryPathExists( RepositoryReference $repository, string $ref, string $path ): bool;
+	public function repository_path_exists( RepositoryReference $repository, string $ref, string $path ): bool;
 }

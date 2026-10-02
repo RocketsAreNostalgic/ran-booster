@@ -65,7 +65,7 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 
 		self::assertInstanceOf( RegistrationTrackingSecretsFile::class, $secrets );
 		$provider = $container->make( ProviderRegistry::class )->get( 'gh' );
-		$metadata = $provider->getMetadata();
+		$metadata = $provider->get_metadata();
 
 		self::assertInstanceOf( GitHubProvider::class, $provider );
 		self::assertInstanceOf( CredentialValidator::class, $provider );
@@ -80,9 +80,9 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		self::assertInstanceOf( RepositoryReleaseInspector::class, $provider );
 		self::assertInstanceOf( RepositoryReleaseMetadata::class, $provider );
 		self::assertInstanceOf( RepositoryReleaseNativeTargets::class, $provider );
-		self::assertInstanceOf( GitHubDiagnostics::class, $provider->getProviderDiagnostics() );
-		self::assertInstanceOf( GitHubCredentialPolicy::class, $provider->getCredentialPolicy() );
-		self::assertInstanceOf( GitHubWebhookPolicy::class, $provider->getWebhookPolicy() );
+		self::assertInstanceOf( GitHubDiagnostics::class, $provider->get_provider_diagnostics() );
+		self::assertInstanceOf( GitHubCredentialPolicy::class, $provider->get_credential_policy() );
+		self::assertInstanceOf( GitHubWebhookPolicy::class, $provider->get_webhook_policy() );
 		self::assertSame( 'gh', $metadata->code->value );
 		self::assertSame( 'GitHub', $metadata->label );
 		self::assertSame( 'https://github.com/', $metadata->repositoryUrlBase );

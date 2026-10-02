@@ -1,8 +1,8 @@
 # Provider registration and coexistence: current state
 
-**Status:** Current-source characterization for Provider API 12, reconciled on
-18 September 2026 after the first-party GitHub package extraction and external
-composition proof. This document records behavior that exists now. It does not
+**Status:** Current-source characterization for Provider API 13, reconciled on
+1 October 2026 for the methods-only naming candidate. Earlier extraction and
+external-composition proofs do not certify this candidate. This document does not
 reserve new vendor names or change registration semantics.
 
 ## Short answer
@@ -33,7 +33,7 @@ filesystem, database, hook, or process access.
 ## Registration lifecycle
 
 Core publishes the exact integer marker
-`RAN_BOOSTER_PROVIDER_API_VERSION = 12`. Compatible provider plugins attach a
+`RAN_BOOSTER_PROVIDER_API_VERSION = 13`. Compatible provider plugins attach a
 callback to `ran_booster_register_providers` during normal plugin loading and
 must fail closed unless the marker is exactly the generation they support.
 

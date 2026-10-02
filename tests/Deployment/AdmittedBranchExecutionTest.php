@@ -305,13 +305,13 @@ final class BoundaryRepositoryProvider implements RepositoryProvider {
 	use SuppliesProviderDiagnostics;
 
 	public function __construct( private BoundaryProviderArchive $archive ) {}
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
 	}
-	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 		throw new RuntimeException( 'Repository resolution is not part of this boundary test.' );
 	}
-	public function prepareArchive( ArchiveRequest $request ): ProviderPreparedArchive {
+	public function prepare_archive( ArchiveRequest $request ): ProviderPreparedArchive {
 		return $this->archive;
 	}
 }

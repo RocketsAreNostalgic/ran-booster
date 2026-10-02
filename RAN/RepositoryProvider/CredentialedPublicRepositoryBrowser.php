@@ -13,5 +13,5 @@ namespace RAN\RepositoryProvider;
  */
 interface CredentialedPublicRepositoryBrowser extends RepositoryBrowser {
 
-	public function getPublicRepositoryBrowseMetadata(): PublicRepositoryBrowseMetadata;
+	public function get_public_repository_browse_metadata(): PublicRepositoryBrowseMetadata;
 }

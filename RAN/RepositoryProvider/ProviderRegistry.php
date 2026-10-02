@@ -71,7 +71,7 @@ final class ProviderRegistry {
 	 * The factory must construct its aggregate locally without network or other
 	 * side effects. Registration remains atomic after the aggregate is returned.
 	 *
-	 * Provider API 12 factories must declare a non-variadic, by-value third
+	 * Provider API 13 factories must declare a non-variadic, by-value third
 	 * parameter typed exactly ProviderRegistrationContext. The registry validates
 	 * that callable contract before invoking the factory.
 	 *
@@ -154,7 +154,7 @@ final class ProviderRegistry {
 		$this->assert_can_register_code( $code );
 
 		try {
-			$provider->getProviderDiagnostics();
+			$provider->get_provider_diagnostics();
 		} catch ( \Throwable $exception ) {
 			BoosterLogger::logException( 'provider registration diagnostics unavailable', $exception, array( 'step' => 'provider_diagnostics' ) );
 			throw new LogicException( 'Repository provider diagnostics could not be supplied.' );
@@ -176,7 +176,7 @@ final class ProviderRegistry {
 
 		if ( $provider instanceof ProviderCredentialPolicySupplier ) {
 			try {
-				$credential_policy = $provider->getCredentialPolicy();
+				$credential_policy = $provider->get_credential_policy();
 			} catch ( \Throwable $exception ) {
 				BoosterLogger::logException( 'provider registration credential policy unavailable', $exception, array( 'step' => 'provider_credential_policy' ) );
 				throw InvalidProviderPolicy::unavailableCredentialPolicy();
@@ -185,7 +185,7 @@ final class ProviderRegistry {
 
 		if ( $provider instanceof WebhookNormalizer ) {
 			try {
-				$webhook_policy = $provider->getWebhookPolicy();
+				$webhook_policy = $provider->get_webhook_policy();
 			} catch ( \Throwable $exception ) {
 				BoosterLogger::logException( 'provider registration webhook policy unavailable', $exception, array( 'step' => 'provider_webhook_policy' ) );
 				throw InvalidProviderPolicy::unavailableWebhookPolicy();
@@ -288,7 +288,7 @@ final class ProviderRegistry {
 
 	private function read_metadata( RepositoryProvider $provider ): ProviderMetadata {
 		try {
-			return $provider->getMetadata();
+			return $provider->get_metadata();
 		} catch ( \Throwable $exception ) {
 			BoosterLogger::logException( 'provider registration metadata unavailable', $exception, array( 'step' => 'provider_metadata' ) );
 			throw InvalidProviderPolicy::unavailableMetadata();

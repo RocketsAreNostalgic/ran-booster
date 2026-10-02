@@ -161,8 +161,8 @@ final class WebhookProfileStorageTest extends TestCase {
 
 	public function testRemovedGlobalScopeAndConstantAreUnavailable(): void {
 		$policy = ShippedSecretPolicyCatalog::create()->webhookPolicy( 'gh' );
-		self::assertSame( array(), $policy->getConstantNames() );
-		self::assertNull( $policy->webhookFromConstants( array( 'RAN_BOOSTER_GITHUB_WEBHOOK_SECRET' => str_repeat( 'a', 32 ) ) ) );
+		self::assertSame( array(), $policy->get_constant_names() );
+		self::assertNull( $policy->webhook_from_constants( array( 'RAN_BOOSTER_GITHUB_WEBHOOK_SECRET' => str_repeat( 'a', 32 ) ) ) );
 
 		$this->expectException( RuntimeException::class );
 		$this->secrets->saveWebhook(
@@ -229,31 +229,31 @@ final class WebhookProfileStorageTest extends TestCase {
 			ProviderCode::parse( 'gh' ),
 			null,
 			new class() implements ProviderWebhookPolicy {
-				public function getProvider(): ProviderCode {
+				public function get_provider(): ProviderCode {
 					return ProviderCode::parse( 'gh' );
 				}
 
-				public function getRetainedHeaders(): array {
+				public function get_retained_headers(): array {
 					return array();
 				}
 
-				public function getSignatureHeader(): string {
+				public function get_signature_header(): string {
 					return 'x-fixture-signature';
 				}
 
-				public function normalizeWebhook( array $metadata, mixed $secret ): array {
+				public function normalize_webhook( array $metadata, mixed $secret ): array {
 					return $metadata + array( 'secret' => $secret );
 				}
 
-				public function getConstantNames(): array {
+				public function get_constant_names(): array {
 					return array();
 				}
 
-				public function webhookFromConstants( array $constants ): ?array {
+				public function webhook_from_constants( array $constants ): ?array {
 					return null;
 				}
 
-				public function authorizeWebhook(
+				public function authorize_webhook(
 					SignedWebhookVerification $verification,
 					string $repositoryAuthorityId,
 					string $repository
@@ -261,7 +261,7 @@ final class WebhookProfileStorageTest extends TestCase {
 					return false;
 				}
 
-				public function repositoryTargetMatches( string $target, string $repositoryLocator ): bool {
+				public function repository_target_matches( string $target, string $repositoryLocator ): bool {
 					return false;
 				}
 			}

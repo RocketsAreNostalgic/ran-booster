@@ -172,7 +172,7 @@ final class ExtensionsPageTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testRendersTwoOfflineCardsWithTruthfulUnavailableControls(): void {
-		$this->defineCompatibleApis();
+		$this->defineApisCompatibleWithExistingExtensionCatalogue();
 
 		$output = $this->render();
 
@@ -256,7 +256,7 @@ final class ExtensionsPageTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testInstalledStateComesOnlyFromLocalWordPressPluginState(): void {
-		$this->defineCompatibleApis();
+		$this->defineApisCompatibleWithExistingExtensionCatalogue();
 		$GLOBALS['ran_booster_extensions_plugins']                = array(
 			'ran-booster-bitbucket/ran-booster-bitbucket.php' => array( 'Name' => 'Bitbucket' ),
 			'ran-booster-release-deployments/ran-booster-release-deployments.php' => array( 'Name' => 'Releases' ),
@@ -276,7 +276,7 @@ final class ExtensionsPageTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function testRendersTranslatedActiveAndInstalledInactiveStateLabelsWithoutChangingStateControls(): void {
-		$this->defineCompatibleApis();
+		$this->defineApisCompatibleWithExistingExtensionCatalogue();
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster'] = array(
 			'Active'              => 'Actif',
 			'Installed, inactive' => 'Installé, inactif',
@@ -333,6 +333,23 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringContainsString( '>Inactive<', $output );
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testApiThirteenHostDoesNotClaimCompatibilityWithApiTwelveBitbucket(): void {
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 13 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
+		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
+		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );
+		$GLOBALS['ran_booster_extensions_plugins']['ran-booster-bitbucket/ran-booster-bitbucket.php'] = array( 'Name' => 'Bitbucket' );
+		$GLOBALS['ran_booster_extensions_active_plugins'] = array( 'ran-booster-bitbucket/ran-booster-bitbucket.php' );
+
+		$output = $this->render();
+
+		self::assertSame( 2, substr_count( $output, '>Incompatible<' ) );
+		self::assertStringContainsString( 'Requires a different version of Booster', $output );
+		self::assertStringNotContainsString( '>Active<', $output );
+	}
+
 	public function testDeniedRequestRendersNothing(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = false;
 
@@ -350,7 +367,7 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringNotContainsString( 'plugin-card', $output );
 	}
 
-	private function defineCompatibleApis(): void {
+	private function defineApisCompatibleWithExistingExtensionCatalogue(): void {
 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
 		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );

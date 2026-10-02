@@ -91,7 +91,7 @@ final class ProviderCapabilityContractTest extends TestCase {
 		return new class() implements RepositoryProvider, ProviderOwnedCapability, SecondProviderOwnedCapability {
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'facet-fixture' ), 'Facet fixture', 'https://example.test/', 'Owner' );
 			}
 

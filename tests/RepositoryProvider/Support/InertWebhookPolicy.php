@@ -15,35 +15,35 @@ final readonly class InertWebhookPolicy implements ProviderWebhookPolicy {
 	public function __construct( private ProviderCode $provider, private array $headers = array() ) {
 	}
 
-	public function getProvider(): ProviderCode {
+	public function get_provider(): ProviderCode {
 		return $this->provider;
 	}
 
-	public function getRetainedHeaders(): array {
+	public function get_retained_headers(): array {
 		return $this->headers;
 	}
 
-	public function getSignatureHeader(): string {
+	public function get_signature_header(): string {
 		return 'x-fixture-signature';
 	}
 
-	public function normalizeWebhook( array $metadata, mixed $secret ): array {
+	public function normalize_webhook( array $metadata, mixed $secret ): array {
 		throw new RuntimeException( 'The inert webhook policy cannot store secrets.' );
 	}
 
-	public function getConstantNames(): array {
+	public function get_constant_names(): array {
 		return array();
 	}
 
-	public function webhookFromConstants( array $constants ): ?array {
+	public function webhook_from_constants( array $constants ): ?array {
 		return null;
 	}
 
-	public function authorizeWebhook( SignedWebhookVerification $verification, string $repositoryAuthorityId, string $repository ): bool {
+	public function authorize_webhook( SignedWebhookVerification $verification, string $repositoryAuthorityId, string $repository ): bool {
 		return true;
 	}
 
-	public function repositoryTargetMatches( string $target, string $repositoryLocator ): bool {
+	public function repository_target_matches( string $target, string $repositoryLocator ): bool {
 		return $target === $repositoryLocator;
 	}
 }

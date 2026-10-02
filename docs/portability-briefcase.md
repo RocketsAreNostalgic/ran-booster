@@ -137,7 +137,7 @@ state something inconsistent, such as `install` with a conflict reason.
 ## Repository verification
 
 `BlueprintRepositoryVerifier` checks the target package against the registered
-provider using `ProviderRegistry` and the provider's `resolveRepository()`
+provider using `ProviderRegistry` and the provider's `resolve_repository()`
 method.
 
 Every credential carried by an encrypted Blueprint requires one request-local

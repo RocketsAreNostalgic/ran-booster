@@ -14,12 +14,12 @@ sanitized Booster-specific evidence.
   freezes the post-C1 request, operation, readback and page boundaries and the
   only bounded follow-up packets currently proposed for the two admin hotspots.
 - [Provider registration and coexistence](provider-registration-and-coexistence.md)
-  records Provider API 12 exact-code collision, credential-custody, and
+  records Provider API 13 exact-code collision, credential-custody, and
   same-vendor coexistence behavior without presenting proposed hardening as
   current protection.
 - [Provider release-workflow capability](provider-release-workflow-api.md)
   records the provider-neutral initial-only API 3 contract, the pre-1.0 API 2 retirement,
-  and the Provider API 12 registration seam.
+  and the Provider API 13 registration seam.
 
 Core architecture, release, portability, and security contracts remain in the
 named documents beside this index.

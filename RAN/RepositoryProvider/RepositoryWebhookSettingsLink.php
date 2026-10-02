@@ -11,5 +11,5 @@ use RAN\Provider\ProviderCapability;
  */
 interface RepositoryWebhookSettingsLink extends ProviderCapability {
 
-	public function repositoryWebhookSettingsUrl( string $locator ): string;
+	public function repository_webhook_settings_url( string $locator ): string;
 }

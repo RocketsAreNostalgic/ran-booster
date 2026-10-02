@@ -36,11 +36,11 @@ final readonly class WebhookProcessor {
 		try {
 			$provider_code = ProviderCode::parse( $provider );
 			$normalizer    = $this->providers->requireCapability( $provider_code, WebhookNormalizer::class );
-			$policy        = $normalizer->getWebhookPolicy();
+			$policy        = $normalizer->get_webhook_policy();
 			$input         = $request();
-			$webhook       = new WebhookRequest( $provider_code, $input['body'], $input['headers'], $policy->getRetainedHeaders() );
+			$webhook       = new WebhookRequest( $provider_code, $input['body'], $input['headers'], $policy->get_retained_headers() );
 			$verification  = $this->verifier->verify( $webhook, $policy );
-			$envelope      = $normalizer->normalizeWebhook( $webhook->withVerification( $verification ) );
+			$envelope      = $normalizer->normalize_webhook( $webhook->withVerification( $verification ) );
 			if ( count( $envelope->getEvents() ) > 32 ) {
 				throw new WebhookRejected( 400, 'Webhook event fan-out is too large.' );
 			}
@@ -55,7 +55,7 @@ final readonly class WebhookProcessor {
 
 			foreach ( $envelope->getEvents() as $event ) {
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Shared PushEvent property retains its provider contract until its coordinated #167 cohort.
-				if ( ! $policy->authorizeWebhook( $verification, $event->providerRepositoryId, $event->repository ) ) {
+				if ( ! $policy->authorize_webhook( $verification, $event->providerRepositoryId, $event->repository ) ) {
 					throw new WebhookRejected( 401, 'Webhook authentication failed.' );
 				}
 			}

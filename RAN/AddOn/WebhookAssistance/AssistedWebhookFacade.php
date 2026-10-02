@@ -436,11 +436,11 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		$provider = $this->complete_webhook_provider( $target->providerCode() );
 
 		return match ( $action ) {
-			'setup'       => $provider->assessSetup( $target->repositoryId(), $target->repository(), $credential_id ),
-			'check'       => $provider->assessCheck( $target->repositoryId(), $target->repository(), $credential_id, (string) $hook_id ),
-			'reconfigure' => $provider->assessReconfigure( $target->repositoryId(), $target->repository(), $credential_id, (string) $hook_id ),
-			'remove'      => $provider->assessRemove( $target->repositoryId(), $target->repository(), $credential_id, (string) $hook_id ),
-			'test'        => $provider->assessTest( $target->repositoryId(), $target->repository(), $credential_id, (string) $hook_id ),
+			'setup'       => $provider->assess_setup( $target->repositoryId(), $target->repository(), $credential_id ),
+			'check'       => $provider->assess_check( $target->repositoryId(), $target->repository(), $credential_id, (string) $hook_id ),
+			'reconfigure' => $provider->assess_reconfigure( $target->repositoryId(), $target->repository(), $credential_id, (string) $hook_id ),
+			'remove'      => $provider->assess_remove( $target->repositoryId(), $target->repository(), $credential_id, (string) $hook_id ),
+			'test'        => $provider->assess_test( $target->repositoryId(), $target->repository(), $credential_id, (string) $hook_id ),
 		};
 	}
 

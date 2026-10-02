@@ -49,7 +49,7 @@ final class WebhookProcessorTest extends TestCase {
 
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
 			}
 		};
@@ -345,7 +345,7 @@ final class WebhookProcessorTest extends TestCase {
 			new ProviderRegistry(
 				array(
 					new WebhookProcessorProvider(
-						static fn ( WebhookRequest $request ): WebhookEnvelope => $normalizer->normalizeWebhook( $request )
+						static fn ( WebhookRequest $request ): WebhookEnvelope => $normalizer->normalize_webhook( $request )
 					),
 				)
 			),
@@ -538,19 +538,19 @@ final readonly class WebhookProcessorProvider implements RepositoryProvider, Web
 		$this->normalizer = \Closure::fromCallable( $normalizer );
 	}
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
 	}
 
-	public function normalizeWebhook( WebhookRequest $request ): WebhookEnvelope {
+	public function normalize_webhook( WebhookRequest $request ): WebhookEnvelope {
 		return ( $this->normalizer )( $request );
 	}
 
-	public function getWebhookPolicy(): ProviderWebhookPolicy {
+	public function get_webhook_policy(): ProviderWebhookPolicy {
 		return new GitHubWebhookPolicy();
 	}
 
-	public function diagnoseWebhookReadiness(): \RAN\RepositoryProvider\ProviderDiagnosticResult {
+	public function diagnose_webhook_readiness(): \RAN\RepositoryProvider\ProviderDiagnosticResult {
 		return new \RAN\RepositoryProvider\ProviderDiagnosticResult(
 			\RAN\RepositoryProvider\ProviderDiagnosticResult::WARNING,
 			'test.webhook.delivery_unverified',

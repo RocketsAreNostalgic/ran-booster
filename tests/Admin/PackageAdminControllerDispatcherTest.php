@@ -429,20 +429,20 @@ final class CapturingPublicLookupProvider implements RepositoryProvider, Credent
 	public function __construct( private readonly bool $supportsDefaultPublicProfile = true ) {
 	}
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://example.test/', 'Owner' );
 	}
 
-	public function getPublicRepositoryBrowseMetadata(): PublicRepositoryBrowseMetadata {
+	public function get_public_repository_browse_metadata(): PublicRepositoryBrowseMetadata {
 		return new PublicRepositoryBrowseMetadata( $this->supportsDefaultPublicProfile );
 	}
 
-	public function browseRepositories( RepositoryBrowseRequest $request ): RepositoryBrowseResult {
+	public function browse_repositories( RepositoryBrowseRequest $request ): RepositoryBrowseResult {
 		unset( $request );
 		return new RepositoryBrowseResult( array() );
 	}
 
-	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 		$this->requests[] = $request;
 
 		return new RepositoryDescriptor(
@@ -456,7 +456,7 @@ final class CapturingPublicLookupProvider implements RepositoryProvider, Credent
 		);
 	}
 
-	public function prepareArchive( \RAN\RepositoryProvider\ArchiveRequest $request ): \RAN\RepositoryProvider\PreparedArchive {
+	public function prepare_archive( \RAN\RepositoryProvider\ArchiveRequest $request ): \RAN\RepositoryProvider\PreparedArchive {
 		unset( $request );
 		throw new \RuntimeException( 'Archive preparation is not used by this test.' );
 	}
@@ -469,11 +469,11 @@ final class CapturingRepositoryProvider implements RepositoryProvider {
 	/** @var list<RepositoryLookupRequest> */
 	public array $requests = array();
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://example.test/', 'Owner' );
 	}
 
-	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 		$this->requests[] = $request;
 
 		return new RepositoryDescriptor(
@@ -487,7 +487,7 @@ final class CapturingRepositoryProvider implements RepositoryProvider {
 		);
 	}
 
-	public function prepareArchive( \RAN\RepositoryProvider\ArchiveRequest $request ): \RAN\RepositoryProvider\PreparedArchive {
+	public function prepare_archive( \RAN\RepositoryProvider\ArchiveRequest $request ): \RAN\RepositoryProvider\PreparedArchive {
 		unset( $request );
 		throw new \RuntimeException( 'Archive preparation is not used by this test.' );
 	}

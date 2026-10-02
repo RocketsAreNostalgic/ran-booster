@@ -17,7 +17,7 @@ interface RepositoryReleaseArtifactCustody {
 
 	public function discard(): bool;
 
-	public function resolvedRef(): string;
+	public function resolved_ref(): string;
 
 	public function version(): string;
 

@@ -137,7 +137,7 @@ final class ReleaseWorkflowRequestController {
 				}
 				$confirmation = is_string( $request['confirm_repository'] ?? null ) ? wp_unslash( $request['confirm_repository'] ) : '';
 				if ( $write ) {
-					$preview = $provider->workflowPreview( $provider_target, $preview_key );
+					$preview = $provider->workflow_preview( $provider_target, $preview_key );
 					if ( null === $preview || $preview->key() !== $preview_key || $preview->providerCode() !== $provider_code
 						|| $preview->repositoryId() !== $repository_id || $preview->confirmation() !== $confirmation
 						|| $preview->kind() !== 'bootstrap' ) {
@@ -160,9 +160,9 @@ final class ReleaseWorkflowRequestController {
 					$provider_preflight = ReleaseWorkflowProviderProjection::preflight( $preflight );
 				}
 				$result = match ( $operation ) {
-					'inspect' => $provider->workflowInspect( $provider_target, $channel, $provider_preflight ?? throw new \RuntimeException( 'Release workflow preflight projection is unavailable.' ), '' === $credential_id ? null : $credential_id ),
-					'setup' => $provider->workflowSetup( $provider_target, $preview_key, $confirmation, $provider_preflight ?? throw new \RuntimeException( 'Release workflow preflight projection is unavailable.' ), $credential_id ),
-					'outcome' => $provider->workflowOutcome( $provider_target, '' === $credential_id ? null : $credential_id ),
+					'inspect' => $provider->workflow_inspect( $provider_target, $channel, $provider_preflight ?? throw new \RuntimeException( 'Release workflow preflight projection is unavailable.' ), '' === $credential_id ? null : $credential_id ),
+					'setup' => $provider->workflow_setup( $provider_target, $preview_key, $confirmation, $provider_preflight ?? throw new \RuntimeException( 'Release workflow preflight projection is unavailable.' ), $credential_id ),
+					'outcome' => $provider->workflow_outcome( $provider_target, '' === $credential_id ? null : $credential_id ),
 				};
 				$outcome = $this->workflow_result( $type, $identifier, $result->workflowCode(), $result->successful(), $result->previewKey(), $result->failureStage(), $result->diagnosticCode(), '' !== $result->correlationReference(), $result->correlationReference(), $result->message(), $result->remediation() );
 			} while ( false );
@@ -383,7 +383,7 @@ final class ReleaseWorkflowRequestController {
 	private function workflow_provider_status( ReleaseTrackingStatus $status, RepositoryReleaseWorkflowTarget $target ): ?\RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus {
 		$provider_code = $this->workflow_provider_code( $status );
 		$provider      = $this->workflow_provider( $provider_code );
-		$value         = null === $provider ? null : $this->request_boundary( fn () => $provider->workflowStatus( $target ), null );
+		$value         = null === $provider ? null : $this->request_boundary( fn () => $provider->workflow_status( $target ), null );
 		if ( null !== $value && ( $value->providerCode() !== $provider_code
 			|| $value->repositoryId() !== $status->providerRepositoryId()
 			|| ( $value->recordExact() && ( $value->packageType() !== $status->type() || $value->packageIdentifier() !== $status->identifier() || $value->sourceRevision() !== $status->sourceRevision() ) ) ) ) {

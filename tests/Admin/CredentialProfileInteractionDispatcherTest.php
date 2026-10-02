@@ -1018,8 +1018,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	private function provider(): RepositoryProvider {
 		$code          = ProviderCode::parse( 'fixture' );
 		$webhookPolicy = $this->createStub( ProviderWebhookPolicy::class );
-		$webhookPolicy->method( 'getProvider' )->willReturn( $code );
-		$webhookPolicy->method( 'normalizeWebhook' )
+		$webhookPolicy->method( 'get_provider' )->willReturn( $code );
+		$webhookPolicy->method( 'normalize_webhook' )
 			->willReturnCallback(
 				static fn ( array $metadata, mixed $secret ): array => array(
 					'label'        => (string) ( $metadata['label'] ?? '' ),
@@ -1037,7 +1037,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 				WebhookNormalizer::class,
 			)
 		);
-		$provider->method( 'getMetadata' )
+		$provider->method( 'get_metadata' )
 			->willReturn(
 				new ProviderMetadata(
 					$code,
@@ -1058,9 +1058,9 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 					)
 				)
 			);
-		$provider->method( 'getCredentialPolicy' )
+		$provider->method( 'get_credential_policy' )
 			->willReturn( new ExternalFixtureCredentialPolicy( $code ) );
-		$provider->method( 'getWebhookPolicy' )->willReturn( $webhookPolicy );
+		$provider->method( 'get_webhook_policy' )->willReturn( $webhookPolicy );
 
 		return $provider;
 	}

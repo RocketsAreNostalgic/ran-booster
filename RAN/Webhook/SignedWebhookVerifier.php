@@ -63,7 +63,7 @@ final readonly class SignedWebhookVerifier {
 	}
 
 	private function signature( WebhookRequest $request, ProviderWebhookPolicy $policy ): string {
-		$values = $request->getRawHeaderValues( $policy->getSignatureHeader() );
+		$values = $request->getRawHeaderValues( $policy->get_signature_header() );
 		if ( 1 !== count( $values ) || 1 !== preg_match( '/\Asha256=[a-f0-9]{64}\z/D', $values[0] ) ) {
 			throw $this->authentication_failed();
 		}

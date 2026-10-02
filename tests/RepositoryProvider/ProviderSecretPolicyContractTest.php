@@ -119,7 +119,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$provider = new class() implements RepositoryProvider {
 			use \Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata(
 					ProviderCode::parse( 'missing-webhook' ),
 					'Missing webhook',
@@ -132,7 +132,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 				);
 			}
 
-			public function getProviderDiagnostics(): ProviderDiagnostics {
+			public function get_provider_diagnostics(): ProviderDiagnostics {
 				return new EmptyProviderDiagnostics();
 			}
 		};
@@ -155,7 +155,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$provider = new class() implements RepositoryProvider {
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata(
 					ProviderCode::parse( 'missing-credential' ),
 					'Missing credential policy',
@@ -286,7 +286,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$provider = new class() implements RepositoryProvider {
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				throw new RuntimeException( 'provider-metadata-token-canary' );
 			}
 		};
@@ -317,7 +317,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$provider = new class() implements RepositoryProvider {
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				throw new RuntimeException( 'direct-provider-metadata-token-canary' );
 			}
 		};
@@ -498,7 +498,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		self::assertArrayNotHasKey( 'other-fixture', $registry->all() );
 		self::assertSame( 'fixture', $registry->metadata()['fixture']->code->value );
 		self::assertSame( 1, $provider->metadataCalls );
-		self::assertSame( 'fixture', $catalog->credentialPolicy( 'fixture' )->getProvider()->value );
+		self::assertSame( 'fixture', $catalog->credentialPolicy( 'fixture' )->get_provider()->value );
 		$this->assertCredentialPolicyUnavailable( $catalog, ProviderCode::parse( 'other-fixture' ) );
 	}
 
@@ -677,7 +677,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$registry->register( $provider );
 
 		self::assertSame( $provider, $registry->get( $code ) );
-		self::assertSame( $code->value, $catalog->credentialPolicy( $code )->getProvider()->value );
+		self::assertSame( $code->value, $catalog->credentialPolicy( $code )->get_provider()->value );
 	}
 }
 
@@ -691,23 +691,23 @@ final readonly class AtomicPolicyProvider implements RepositoryProvider, Provide
 	) {
 	}
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata( $this->code, 'Atomic fixture', 'https://example.test/', 'Owner' );
 	}
 
-	public function getProviderDiagnostics(): ProviderDiagnostics {
+	public function get_provider_diagnostics(): ProviderDiagnostics {
 		return new EmptyProviderDiagnostics();
 	}
 
-	public function getCredentialPolicy(): ProviderCredentialPolicy {
+	public function get_credential_policy(): ProviderCredentialPolicy {
 		return $this->credentialPolicy;
 	}
 
-	public function getWebhookPolicy(): ProviderWebhookPolicy {
+	public function get_webhook_policy(): ProviderWebhookPolicy {
 		return $this->webhookPolicy;
 	}
 
-	public function diagnoseWebhookReadiness(): ProviderDiagnosticResult {
+	public function diagnose_webhook_readiness(): ProviderDiagnosticResult {
 		return new ProviderDiagnosticResult(
 			ProviderDiagnosticResult::WARNING,
 			'test.webhook.delivery_unverified',
@@ -716,7 +716,7 @@ final readonly class AtomicPolicyProvider implements RepositoryProvider, Provide
 		);
 	}
 
-	public function normalizeWebhook( WebhookRequest $request ): WebhookEnvelope {
+	public function normalize_webhook( WebhookRequest $request ): WebhookEnvelope {
 		return WebhookEnvelope::ignored();
 	}
 }
@@ -733,7 +733,7 @@ final class AlternatingMetadataProvider implements RepositoryProvider, ProviderC
 
 	public int $metadataCalls = 0;
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		++$this->metadataCalls;
 		$code = 1 === $this->metadataCalls ? 'fixture' : 'other-fixture';
 
@@ -757,11 +757,11 @@ final class AlternatingMetadataProvider implements RepositoryProvider, ProviderC
 		);
 	}
 
-	public function getProviderDiagnostics(): ProviderDiagnostics {
+	public function get_provider_diagnostics(): ProviderDiagnostics {
 		return new EmptyProviderDiagnostics();
 	}
 
-	public function getCredentialPolicy(): ProviderCredentialPolicy {
+	public function get_credential_policy(): ProviderCredentialPolicy {
 		return new ExternalFixtureCredentialPolicy( ProviderCode::parse( 'fixture' ) );
 	}
 }
@@ -770,13 +770,13 @@ final class AlternatingCredentialPolicy implements ProviderCredentialPolicy {
 
 	public int $providerCalls = 0;
 
-	public function getProvider(): ProviderCode {
+	public function get_provider(): ProviderCode {
 		++$this->providerCalls;
 
 		return ProviderCode::parse( 1 === $this->providerCalls ? 'fixture' : 'other-fixture' );
 	}
 
-	public function normalizeCredential( array $metadata, mixed $secret ): array {
+	public function normalize_credential( array $metadata, mixed $secret ): array {
 		return array(
 			'label'         => is_string( $metadata['label'] ?? null ) ? $metadata['label'] : 'Fixture',
 			'kind'          => 'api-key',
@@ -785,11 +785,11 @@ final class AlternatingCredentialPolicy implements ProviderCredentialPolicy {
 		);
 	}
 
-	public function getConstantNames(): array {
+	public function get_constant_names(): array {
 		return array();
 	}
 
-	public function credentialFromConstants( array $constants ): ?array {
+	public function credential_from_constants( array $constants ): ?array {
 		return null;
 	}
 }
@@ -800,7 +800,7 @@ final readonly class MutablePolicyProvider implements RepositoryProvider, Provid
 	public function __construct( private ProviderCredentialPolicy $policy ) {
 	}
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata(
 			ProviderCode::parse( 'fixture' ),
 			'Mutable policy fixture',
@@ -821,65 +821,65 @@ final readonly class MutablePolicyProvider implements RepositoryProvider, Provid
 		);
 	}
 
-	public function getProviderDiagnostics(): ProviderDiagnostics {
+	public function get_provider_diagnostics(): ProviderDiagnostics {
 		return new EmptyProviderDiagnostics();
 	}
 
-	public function getCredentialPolicy(): ProviderCredentialPolicy {
+	public function get_credential_policy(): ProviderCredentialPolicy {
 		return $this->policy;
 	}
 }
 
 final readonly class ExplodingCredentialPolicy implements ProviderCredentialPolicy {
 
-	public function getProvider(): ProviderCode {
+	public function get_provider(): ProviderCode {
 		throw new RuntimeException( 'credential-policy-token-canary' );
 	}
 
-	public function normalizeCredential( array $metadata, mixed $secret ): array {
+	public function normalize_credential( array $metadata, mixed $secret ): array {
 		throw new RuntimeException( 'not called' );
 	}
 
-	public function getConstantNames(): array {
+	public function get_constant_names(): array {
 		return array();
 	}
 
-	public function credentialFromConstants( array $constants ): ?array {
+	public function credential_from_constants( array $constants ): ?array {
 		return null;
 	}
 }
 
 final readonly class ExplodingWebhookPolicy implements ProviderWebhookPolicy {
 
-	public function getProvider(): ProviderCode {
+	public function get_provider(): ProviderCode {
 		throw new RuntimeException( 'webhook-policy-path-canary' );
 	}
 
-	public function getRetainedHeaders(): array {
+	public function get_retained_headers(): array {
 		return array();
 	}
 
-	public function getSignatureHeader(): string {
+	public function get_signature_header(): string {
 		return 'x-fixture-signature';
 	}
 
-	public function normalizeWebhook( array $metadata, mixed $secret ): array {
+	public function normalize_webhook( array $metadata, mixed $secret ): array {
 		throw new RuntimeException( 'not called' );
 	}
 
-	public function getConstantNames(): array {
+	public function get_constant_names(): array {
 		return array();
 	}
 
-	public function webhookFromConstants( array $constants ): ?array {
+	public function webhook_from_constants( array $constants ): ?array {
 		return null;
 	}
 
-	public function authorizeWebhook( \RAN\RepositoryProvider\SignedWebhookVerification $verification, string $repositoryAuthorityId, string $repository ): bool {
+	public function authorize_webhook( \RAN\RepositoryProvider\SignedWebhookVerification $verification, string $repositoryAuthorityId, string $repository ): bool {
 		return false;
 	}
 
-	public function repositoryTargetMatches( string $target, string $repositoryLocator ): bool {
+	public function repository_target_matches( string $target, string $repositoryLocator ): bool {
 		return false;
 	}
 }

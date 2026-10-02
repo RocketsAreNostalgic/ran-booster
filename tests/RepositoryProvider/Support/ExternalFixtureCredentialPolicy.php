@@ -13,11 +13,11 @@ final readonly class ExternalFixtureCredentialPolicy implements ProviderCredenti
 	public function __construct( private ProviderCode $code ) {
 	}
 
-	public function getProvider(): ProviderCode {
+	public function get_provider(): ProviderCode {
 		return $this->code;
 	}
 
-	public function normalizeCredential( array $metadata, mixed $secret ): array {
+	public function normalize_credential( array $metadata, mixed $secret ): array {
 		$configuration = $metadata['configuration'] ?? null;
 
 		if ( 'api-key' !== ( $metadata['kind'] ?? null )
@@ -41,11 +41,11 @@ final readonly class ExternalFixtureCredentialPolicy implements ProviderCredenti
 		);
 	}
 
-	public function getConstantNames(): array {
+	public function get_constant_names(): array {
 		return array();
 	}
 
-	public function credentialFromConstants( array $constants ): ?array {
+	public function credential_from_constants( array $constants ): ?array {
 		return null;
 	}
 }

@@ -10,7 +10,7 @@ use RAN\RepositoryProvider\ProviderDiagnostics;
 trait SuppliesProviderDiagnostics {
 	use SuppliesProviderManualCapabilities;
 
-	public function getProviderDiagnostics(): ProviderDiagnostics {
+	public function get_provider_diagnostics(): ProviderDiagnostics {
 		return new class() implements ProviderDiagnostics {
 			public function diagnose( ProviderDiagnosticRequest $request ): array {
 				return array();

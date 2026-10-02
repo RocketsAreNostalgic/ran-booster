@@ -49,7 +49,7 @@ final class InvalidProviderPolicy extends RuntimeException {
 	}
 
 	public static function invalidProviderFactorySignature(): self {
-		return new self( 'The provider factory does not implement the Provider API 12 registration signature.' );
+		return new self( 'The provider factory does not implement the Provider API 13 registration signature.' );
 	}
 
 

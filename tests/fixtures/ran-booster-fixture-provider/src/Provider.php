@@ -55,7 +55,7 @@ final readonly class Provider implements RepositoryProvider, ProviderCredentialP
 		$this->diagnostics      = new Diagnostics( $this->client, $credentials );
 	}
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata(
 			$this->code,
 			'Fixture provider',
@@ -76,25 +76,25 @@ final readonly class Provider implements RepositoryProvider, ProviderCredentialP
 		);
 	}
 
-	public function getProviderDiagnostics(): ProviderDiagnostics {
+	public function get_provider_diagnostics(): ProviderDiagnostics {
 		return $this->diagnostics;
 	}
 
-	public function getCredentialPolicy(): ProviderCredentialPolicy {
+	public function get_credential_policy(): ProviderCredentialPolicy {
 		return $this->credentialPolicy;
 	}
 
-	public function validateCredential( string $credentialId ): CredentialValidationResult {
+	public function validate_credential( string $credentialId ): CredentialValidationResult {
 		return $this->client->validateCredential( $this->credentials->credentialMaterial( $credentialId ) )
 			? CredentialValidationResult::valid()
 			: CredentialValidationResult::invalid();
 	}
 
-	public function getWebhookPolicy(): ProviderWebhookPolicy {
+	public function get_webhook_policy(): ProviderWebhookPolicy {
 		return $this->webhookPolicy;
 	}
 
-	public function diagnoseWebhookReadiness(): ProviderDiagnosticResult {
+	public function diagnose_webhook_readiness(): ProviderDiagnosticResult {
 		return new ProviderDiagnosticResult(
 			ProviderDiagnosticResult::NOT_CONFIGURED,
 			'fixture-provider.webhook.not_configured',
@@ -103,7 +103,7 @@ final readonly class Provider implements RepositoryProvider, ProviderCredentialP
 		);
 	}
 
-	public function normalizeWebhook( WebhookRequest $request ): WebhookEnvelope {
+	public function normalize_webhook( WebhookRequest $request ): WebhookEnvelope {
 		if ( ! $request->getProvider()->equals( $this->code ) ) {
 			throw new WebhookRejected( 400, 'Webhook provider does not match fixture provider.' );
 		}
@@ -115,9 +115,9 @@ final readonly class Provider implements RepositoryProvider, ProviderCredentialP
 			: WebhookEnvelope::ignored();
 	}
 
-	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 		$credentialId = $request->credentialId;
-		if ( null !== $credentialId && ! $this->validateCredential( $credentialId )->isValid() ) {
+		if ( null !== $credentialId && ! $this->validate_credential( $credentialId )->isValid() ) {
 			throw new RuntimeException( 'The fixture credential is unavailable.' );
 		}
 
@@ -134,7 +134,7 @@ final readonly class Provider implements RepositoryProvider, ProviderCredentialP
 		);
 	}
 
-	public function prepareArchive( ArchiveRequest $request ): PreparedArchiveContract {
+	public function prepare_archive( ArchiveRequest $request ): PreparedArchiveContract {
 		$repository     = $request->repository;
 		$locator        = $repository->locator;
 		$expectedBranch = $request->expectedBranch;
@@ -178,24 +178,24 @@ final readonly class Provider implements RepositoryProvider, ProviderCredentialP
 		return null !== $this->deliveryEvidence->latestAuthenticatedDelivery();
 	}
 
-	public function assessSetup( string $repositoryId, string $repository, ?string $credentialProfileId ): RepositoryWebhookFitnessResult {
+	public function assess_setup( string $repositoryId, string $repository, ?string $credentialProfileId ): RepositoryWebhookFitnessResult {
 		return $this->fitness( $credentialProfileId );
 	}
 
-	public function assessCheck( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+	public function assess_check( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
 		return $this->fitness( $credentialProfileId );
 	}
 
-	public function assessReconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+	public function assess_reconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
 		return $this->fitness( $credentialProfileId );
 	}
 
-	public function assessRemove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+	public function assess_remove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
 		return $this->fitness( $credentialProfileId );
 	}
 
-	public function assessTest( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
-		return $this->assessRemove( $repositoryId, $repository, $credentialProfileId, $hookId );
+	public function assess_test( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+		return $this->assess_remove( $repositoryId, $repository, $credentialProfileId, $hookId );
 	}
 
 	public function setup( string $repositoryId, string $repository, string $callbackUrl, ?string $credentialProfileId, string $signingSecret ): RepositoryWebhookOperationResult {
@@ -233,7 +233,7 @@ final readonly class Provider implements RepositoryProvider, ProviderCredentialP
 	}
 
 	private function credential( ?string $credentialId ): void {
-		if ( null === $credentialId || ! $this->validateCredential( $credentialId )->isValid() ) {
+		if ( null === $credentialId || ! $this->validate_credential( $credentialId )->isValid() ) {
 			throw new RuntimeException( 'The fixture operation credential is unavailable.' );
 		}
 	}

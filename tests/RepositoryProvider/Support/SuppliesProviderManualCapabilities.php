@@ -14,9 +14,9 @@ use RAN\RepositoryProvider\RepositoryLookupRequest;
  */
 trait SuppliesProviderManualCapabilities {
 
-	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 		return new RepositoryDescriptor(
-			$this->getMetadata()->code,
+			$this->get_metadata()->code,
 			$request->locator,
 			basename( $request->locator ),
 			'test:' . hash( 'sha256', $request->locator ),
@@ -26,7 +26,7 @@ trait SuppliesProviderManualCapabilities {
 		);
 	}
 
-	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 		return new class() implements PreparedArchive {
 			public function getUrl(): string {
 				return 'https://example.test/archive.zip';

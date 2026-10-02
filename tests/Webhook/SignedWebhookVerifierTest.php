@@ -76,7 +76,7 @@ final class SignedWebhookVerifierTest extends TestCase {
 
 		$this->assertAuthenticationFailed(
 			fn () => $verifier->verify(
-				new WebhookRequest( ProviderCode::parse( 'gh' ), '{}', $headers, ( new GitHubWebhookPolicy() )->getRetainedHeaders() ),
+				new WebhookRequest( ProviderCode::parse( 'gh' ), '{}', $headers, ( new GitHubWebhookPolicy() )->get_retained_headers() ),
 				new GitHubWebhookPolicy()
 			)
 		);
@@ -117,7 +117,7 @@ final class SignedWebhookVerifierTest extends TestCase {
 			ProviderCode::parse( 'gh' ),
 			$body,
 			array( 'X-Hub-Signature-256' => 'sha256=' . hash_hmac( 'sha256', $body, $materials['profile-16']['secret'] ) ),
-			$policy->getRetainedHeaders()
+			$policy->get_retained_headers()
 		);
 
 		$profiles = $this->verifier( $materials )->verify( $request, $policy )->getProfiles();
@@ -154,7 +154,7 @@ final class SignedWebhookVerifierTest extends TestCase {
 			ProviderCode::parse( 'gh' ),
 			$body,
 			array( 'X-Hub-Signature-256' => 'sha256=' . hash_hmac( 'sha256', $body, self::SECRET ) ),
-			$policy->getRetainedHeaders()
+			$policy->get_retained_headers()
 		);
 	}
 

@@ -102,7 +102,7 @@ final readonly class ProviderSettingsPresenter {
 
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		$selected = $available[ $selectedProvider ];
-		$metadata = $selected->getMetadata();
+		$metadata = $selected->get_metadata();
 		$admin    = $metadata->admin;
 
 		if ( null === $admin ) {
@@ -372,7 +372,7 @@ final readonly class ProviderSettingsPresenter {
 			$repository = $package->get_repository()->reference;
 			if ( ! $repository->private ) {
 				$credential_id = $provider instanceof CredentialedPublicRepositoryBrowser
-					&& $provider->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile
+					&& $provider->get_public_repository_browse_metadata()->supportsProviderDefaultProfile
 						? $profile_id
 						: null;
 
@@ -385,7 +385,7 @@ final readonly class ProviderSettingsPresenter {
 				);
 			}
 
-			$archive      = $provider->prepareArchive( new ArchiveRequest( $repository, (string) $package->get_branch() ) );
+			$archive      = $provider->prepare_archive( new ArchiveRequest( $repository, (string) $package->get_branch() ) );
 			$resolved_ref = $archive->getResolvedRef();
 			if ( '' !== trim( $resolved_ref )
 				&& strlen( $resolved_ref ) <= 191
@@ -396,7 +396,7 @@ final readonly class ProviderSettingsPresenter {
 					&& $provider instanceof RepositoryPathInspector
 				) {
 					try {
-						$result = $provider->repositoryPathExists( $repository, $resolved_ref, $subdirectory )
+						$result = $provider->repository_path_exists( $repository, $resolved_ref, $subdirectory )
 							? 'verified'
 							: 'subdirectory_unavailable';
 					} catch ( Throwable ) {
@@ -661,7 +661,7 @@ final readonly class ProviderSettingsPresenter {
 				'browse'                                 => $provider instanceof RepositoryBrowser,
 				'credentialed_public_browse'             => $provider instanceof CredentialedPublicRepositoryBrowser,
 				'provider_default_public_lookup_profile' => $provider instanceof CredentialedPublicRepositoryBrowser
-					&& $provider->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile,
+					&& $provider->get_public_repository_browse_metadata()->supportsProviderDefaultProfile,
 				'deploy'                                 => true,
 				'webhooks'                               => $provider instanceof WebhookNormalizer,
 				'default_credential_id'                  => $this->default_credential_id( $credentials ),
@@ -697,7 +697,7 @@ final readonly class ProviderSettingsPresenter {
 			return null;
 		}
 
-		$supports_default = $provider->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile;
+		$supports_default = $provider->get_public_repository_browse_metadata()->supportsProviderDefaultProfile;
 		$configured_id    = $supports_default ? $this->public_lookup_profiles->get( $provider_code ) ?? '' : '';
 		$configured_label = '';
 		$eligible_ids     = array();
@@ -727,7 +727,7 @@ final readonly class ProviderSettingsPresenter {
 	 */
 	private function public_lookup_profile( RepositoryProvider $provider, string $provider_code, array $credentials ): ?array {
 		if ( ! $provider instanceof CredentialedPublicRepositoryBrowser
-			|| ! $provider->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile ) {
+			|| ! $provider->get_public_repository_browse_metadata()->supportsProviderDefaultProfile ) {
 			return null;
 		}
 
@@ -768,7 +768,7 @@ final readonly class ProviderSettingsPresenter {
 		foreach ( $providers as $code => $provider ) {
 			$tabs[] = array(
 				'code'   => $code,
-				'label'  => $provider->getMetadata()->label,
+				'label'  => $provider->get_metadata()->label,
 				'active' => $code === $selected_provider,
 			);
 		}
@@ -805,7 +805,7 @@ final readonly class ProviderSettingsPresenter {
 				'browse'                                 => $provider instanceof RepositoryBrowser,
 				'credentialed_public_browse'             => $provider instanceof CredentialedPublicRepositoryBrowser,
 				'provider_default_public_lookup_profile' => $provider instanceof CredentialedPublicRepositoryBrowser
-					&& $provider->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile,
+					&& $provider->get_public_repository_browse_metadata()->supportsProviderDefaultProfile,
 				'archive'                                => true,
 				'webhooks'                               => $provider instanceof WebhookNormalizer,
 				'package'                                => true,
@@ -1137,7 +1137,7 @@ final readonly class ProviderSettingsPresenter {
 			return null;
 		}
 
-		return rtrim( $provider->getMetadata()->repositoryUrlBase, '/' )
+		return rtrim( $provider->get_metadata()->repositoryUrlBase, '/' )
 			. '/'
 			. rawurlencode( $parts[0] )
 			. '/'
@@ -1150,7 +1150,7 @@ final readonly class ProviderSettingsPresenter {
 		}
 
 		try {
-			$url = trim( $provider->repositoryWebhookSettingsUrl( $locator ) );
+			$url = trim( $provider->repository_webhook_settings_url( $locator ) );
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Display payload remains usable without WordPress runtime.
 			$parts = parse_url( $url );
 

@@ -87,7 +87,7 @@ class ProviderProfileAdminController {
 			} catch ( UnsupportedProviderCapability ) {
 				throw new CredentialRequestException( __( 'Credential validation is unavailable for this repository provider.', 'ran-booster' ) );
 			}
-			$result = $validator->validateCredential( $id );
+			$result = $validator->validate_credential( $id );
 			if ( $result->isValid() ) {
 				if ( null !== $result->expiry ) {
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
@@ -145,7 +145,7 @@ class ProviderProfileAdminController {
 			} catch ( UnsupportedProviderCapability ) {
 				throw new CredentialRequestException( __( 'A default public repository lookup profile is unavailable for this provider.', 'ran-booster' ) );
 			}
-			if ( ! $browser->getPublicRepositoryBrowseMetadata()->supportsProviderDefaultProfile ) {
+			if ( ! $browser->get_public_repository_browse_metadata()->supportsProviderDefaultProfile ) {
 				throw new CredentialRequestException( __( 'A default public repository lookup profile is unavailable for this provider.', 'ran-booster' ) );
 			}
 			if ( ! array_key_exists( 'profile_id', $request ) || ! is_string( $request['profile_id'] ) ) {
@@ -338,7 +338,7 @@ class ProviderProfileAdminController {
 		$authority_id = '';
 		if ( 'repository' === $scope ) {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$authority_id = $this->webhookAuthorities->resolve( $provider, $normalizer->getWebhookPolicy(), $target );
+			$authority_id = $this->webhookAuthorities->resolve( $provider, $normalizer->get_webhook_policy(), $target );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		} elseif ( 'owner' === $scope && $scope_metadata->requiresManagedTarget ) {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
@@ -523,7 +523,7 @@ class ProviderProfileAdminController {
 	}
 	private function provider_admin( ProviderCode $provider ): ProviderAdminMetadata {
 		try {
-			$admin = $this->providers->get( $provider )->getMetadata()->admin;
+			$admin = $this->providers->get( $provider )->get_metadata()->admin;
 		} catch ( \Throwable ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Choose a supported repository provider.', 'ran-booster' ) );

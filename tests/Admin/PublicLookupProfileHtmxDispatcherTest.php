@@ -172,15 +172,15 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'fixture' ), 'Fixture', 'https://example.test/', 'Owner' );
 			}
 
-			public function getPublicRepositoryBrowseMetadata(): PublicRepositoryBrowseMetadata {
+			public function get_public_repository_browse_metadata(): PublicRepositoryBrowseMetadata {
 				return new PublicRepositoryBrowseMetadata( true );
 			}
 
-			public function browseRepositories( RepositoryBrowseRequest $request ): RepositoryBrowseResult {
+			public function browse_repositories( RepositoryBrowseRequest $request ): RepositoryBrowseResult {
 				return new RepositoryBrowseResult( array() );
 			}
 		};

@@ -93,7 +93,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 
 		self::assertSame( $provider, $registry->get( 'fixture' ) );
 		self::assertTrue( $registry->isSealed() );
-		self::assertTrue( $provider->validateCredential( $credentialId )->isValid() );
+		self::assertTrue( $provider->validate_credential( $credentialId )->isValid() );
 		self::assertSame( 'ran-lab', $secrets->credentialProfiles( 'fixture' )[ $credentialId ]['configuration']['tenant'] );
 
 		$resolved = ( new PackageRepositoryRequestResolver( $registry ) )->resolve(
@@ -128,7 +128,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 			false,
 			null
 		);
-		$archive   = $provider->prepareArchive( new ArchiveRequest( $reference, 'main' ) );
+		$archive   = $provider->prepare_archive( new ArchiveRequest( $reference, 'main' ) );
 
 		$resolvedRef = sha1( "group/subgroup/package\0main" );
 		self::assertSame( $resolvedRef, $archive->getResolvedRef() );
@@ -145,7 +145,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 
 	public function testFixtureProviderDiagnosticsUseTheSameProviderClient(): void {
 		$provider    = new ExternalFixtureProvider();
-		$diagnostics = $provider->getProviderDiagnostics();
+		$diagnostics = $provider->get_provider_diagnostics();
 		$results     = $diagnostics->diagnose(
 			new ProviderDiagnosticRequest( null, 'example/package' )
 		);
@@ -159,7 +159,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 
 	public function testMissingDiagnosticsAreRejectedBeforeRegistryMutation(): void {
 		$provider = new class() {
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata(
 					ProviderCode::parse( 'missing-diagnostics' ),
 					'Missing diagnostics',
@@ -182,18 +182,18 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 		$valid = new ExternalFixtureProvider( 'missing-diagnostics' );
 		$registry->register( $valid );
 		self::assertSame( $valid, $registry->get( 'missing-diagnostics' ) );
-		self::assertSame( 'missing-diagnostics', $catalog->credentialPolicy( 'missing-diagnostics' )->getProvider()->value );
+		self::assertSame( 'missing-diagnostics', $catalog->credentialPolicy( 'missing-diagnostics' )->get_provider()->value );
 	}
 
 	public function testFailingDiagnosticsSupplierIsSafelyRejectedBeforeMutation(): void {
 		$provider = new class() implements RepositoryProvider {
 			use \Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'unsafe' ), 'Unsafe', 'https://example.test/', 'Owner' );
 			}
 
-			public function getProviderDiagnostics(): \RAN\RepositoryProvider\ProviderDiagnostics {
+			public function get_provider_diagnostics(): \RAN\RepositoryProvider\ProviderDiagnostics {
 				throw new \RuntimeException( 'token-bearing-provider-error' );
 			}
 		};
@@ -212,7 +212,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 		$valid = new ExternalFixtureProvider( 'unsafe' );
 		$registry->register( $valid );
 		self::assertSame( $valid, $registry->get( 'unsafe' ) );
-		self::assertSame( 'unsafe', $catalog->credentialPolicy( 'unsafe' )->getProvider()->value );
+		self::assertSame( 'unsafe', $catalog->credentialPolicy( 'unsafe' )->get_provider()->value );
 	}
 
 	public function testSelectedProviderDiagnosticsDoNotSweepTheSealedRegistry(): void {
@@ -223,7 +223,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 
 		$provider = $registry->get( 'selected' );
 		self::assertInstanceOf( RepositoryProvider::class, $provider );
-		$provider->getProviderDiagnostics()->diagnose( new ProviderDiagnosticRequest( null, 'example/package' ) );
+		$provider->get_provider_diagnostics()->diagnose( new ProviderDiagnosticRequest( null, 'example/package' ) );
 
 		self::assertSame( 2, $selected->getClient()->getRequests() );
 		self::assertSame( 0, $idle->getClient()->getRequests() );
@@ -237,13 +237,13 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 			public function __construct( private int &$metadataCalls ) {
 			}
 
-			public function getMetadata(): ProviderMetadata {
+			public function get_metadata(): ProviderMetadata {
 				++$this->metadataCalls;
 
 				return new ProviderMetadata( ProviderCode::parse( 'another-fixture' ), 'Another fixture', 'https://example.test/', 'Owner' );
 			}
 
-			public function getProviderDiagnostics(): ProviderDiagnostics {
+			public function get_provider_diagnostics(): ProviderDiagnostics {
 				throw new \LogicException( 'Diagnostics must not be requested after sealing.' );
 			}
 		};
@@ -652,21 +652,21 @@ final readonly class RegistrationGuardCredentialPolicy implements ProviderCreden
 	public function __construct( private ProviderCode $code, private Closure $callback ) {
 	}
 
-	public function getProvider(): ProviderCode {
+	public function get_provider(): ProviderCode {
 		( $this->callback )( 'credential_policy_identity' );
 
 		return $this->code;
 	}
 
-	public function normalizeCredential( array $metadata, mixed $secret ): array {
+	public function normalize_credential( array $metadata, mixed $secret ): array {
 		throw new LogicException( 'Unused registration-guard test method.' );
 	}
 
-	public function getConstantNames(): array {
+	public function get_constant_names(): array {
 		return array();
 	}
 
-	public function credentialFromConstants( array $constants ): ?array {
+	public function credential_from_constants( array $constants ): ?array {
 		return null;
 	}
 }
@@ -676,33 +676,33 @@ final readonly class RegistrationGuardWebhookPolicy implements ProviderWebhookPo
 	public function __construct( private ProviderCode $code, private Closure $callback ) {
 	}
 
-	public function getProvider(): ProviderCode {
+	public function get_provider(): ProviderCode {
 		( $this->callback )( 'webhook_policy_identity' );
 
 		return $this->code;
 	}
 
-	public function getRetainedHeaders(): array {
+	public function get_retained_headers(): array {
 		return array();
 	}
 
-	public function getSignatureHeader(): string {
+	public function get_signature_header(): string {
 		return 'x-fixture-signature';
 	}
 
-	public function normalizeWebhook( array $metadata, mixed $secret ): array {
+	public function normalize_webhook( array $metadata, mixed $secret ): array {
 		throw new LogicException( 'Unused registration-guard test method.' );
 	}
 
-	public function getConstantNames(): array {
+	public function get_constant_names(): array {
 		return array();
 	}
 
-	public function webhookFromConstants( array $constants ): ?array {
+	public function webhook_from_constants( array $constants ): ?array {
 		return null;
 	}
 
-	public function authorizeWebhook(
+	public function authorize_webhook(
 		SignedWebhookVerification $verification,
 		string $repositoryAuthorityId,
 		string $repository
@@ -710,7 +710,7 @@ final readonly class RegistrationGuardWebhookPolicy implements ProviderWebhookPo
 		return false;
 	}
 
-	public function repositoryTargetMatches( string $target, string $repositoryLocator ): bool {
+	public function repository_target_matches( string $target, string $repositoryLocator ): bool {
 		return false;
 	}
 }
@@ -725,7 +725,7 @@ final readonly class RegistrationGuardProvider implements RepositoryProvider, Pr
 		$this->code = ProviderCode::parse( $code );
 	}
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		( $this->callback )( 'metadata' );
 
 		return new ProviderMetadata(
@@ -740,29 +740,29 @@ final readonly class RegistrationGuardProvider implements RepositoryProvider, Pr
 		);
 	}
 
-	public function getProviderDiagnostics(): ProviderDiagnostics {
+	public function get_provider_diagnostics(): ProviderDiagnostics {
 		( $this->callback )( 'diagnostics' );
 
 		return new RegistrationGuardDiagnostics();
 	}
 
-	public function getCredentialPolicy(): ProviderCredentialPolicy {
+	public function get_credential_policy(): ProviderCredentialPolicy {
 		( $this->callback )( 'credential_policy_getter' );
 
 		return new RegistrationGuardCredentialPolicy( $this->code, $this->callback );
 	}
 
-	public function getWebhookPolicy(): ProviderWebhookPolicy {
+	public function get_webhook_policy(): ProviderWebhookPolicy {
 		( $this->callback )( 'webhook_policy_getter' );
 
 		return new RegistrationGuardWebhookPolicy( $this->code, $this->callback );
 	}
 
-	public function diagnoseWebhookReadiness(): ProviderDiagnosticResult {
+	public function diagnose_webhook_readiness(): ProviderDiagnosticResult {
 		throw new LogicException( 'Unused registration-guard test method.' );
 	}
 
-	public function normalizeWebhook( WebhookRequest $request ): WebhookEnvelope {
+	public function normalize_webhook( WebhookRequest $request ): WebhookEnvelope {
 		return WebhookEnvelope::ignored();
 	}
 }

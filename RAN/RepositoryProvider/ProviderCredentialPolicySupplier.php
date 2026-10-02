@@ -8,5 +8,5 @@ use RAN\Provider\ProviderCapability;
 
 interface ProviderCredentialPolicySupplier extends ProviderCapability {
 
-	public function getCredentialPolicy(): ProviderCredentialPolicy;
+	public function get_credential_policy(): ProviderCredentialPolicy;
 }

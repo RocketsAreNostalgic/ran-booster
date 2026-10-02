@@ -43,8 +43,8 @@ final class RepositoryReleaseWorkflowCompatibilityTest extends TestCase {
 		self::assertFalse( $reflection->hasMethod( 'workflowInspectUpdate' ) );
 		self::assertFalse( $reflection->hasMethod( 'workflowSetupUpdate' ) );
 		self::assertFalse( interface_exists( 'RAN\\RepositoryProvider\\RepositoryReleaseWorkflowManagementV2' ) );
-		$statusType  = $reflection->getMethod( 'workflowStatus' )->getParameters()[0]->getType();
-		$inspectType = $reflection->getMethod( 'workflowInspect' )->getParameters()[2]->getType();
+		$statusType  = $reflection->getMethod( 'workflow_status' )->getParameters()[0]->getType();
+		$inspectType = $reflection->getMethod( 'workflow_inspect' )->getParameters()[2]->getType();
 
 		self::assertInstanceOf( ReflectionNamedType::class, $statusType );
 		self::assertInstanceOf( ReflectionNamedType::class, $inspectType );

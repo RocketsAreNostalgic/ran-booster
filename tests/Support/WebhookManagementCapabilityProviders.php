@@ -37,11 +37,11 @@ abstract class WebhookManagementCapabilityProvider implements RepositoryProvider
 	) {
 	}
 
-	public function getMetadata(): ProviderMetadata {
+	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata( ProviderCode::parse( $this->code ), $this->label, 'https://' . $this->code . '.example.test/', $this->label );
 	}
 
-	public function getProviderDiagnostics(): ProviderDiagnostics {
+	public function get_provider_diagnostics(): ProviderDiagnostics {
 		return new class() implements ProviderDiagnostics {
 			public function diagnose( ProviderDiagnosticRequest $request ): array {
 				unset( $request );
@@ -51,13 +51,13 @@ abstract class WebhookManagementCapabilityProvider implements RepositoryProvider
 		};
 	}
 
-	public function resolveRepository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 		unset( $request );
 		++$this->providerOperationCalls;
 		throw new RuntimeException( 'Repository resolution is outside this presentation test.' );
 	}
 
-	public function prepareArchive( ArchiveRequest $request ): PreparedArchive {
+	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 		unset( $request );
 		++$this->providerOperationCalls;
 		throw new RuntimeException( 'Archive preparation is outside this presentation test.' );
@@ -65,23 +65,23 @@ abstract class WebhookManagementCapabilityProvider implements RepositoryProvider
 }
 
 trait SuppliesWebhookFitness {
-	public function assessSetup( string $repositoryId, string $repository, ?string $credentialProfileId ): RepositoryWebhookFitnessResult {
+	public function assess_setup( string $repositoryId, string $repository, ?string $credentialProfileId ): RepositoryWebhookFitnessResult {
 		return $this->unexpectedFitnessOperation();
 	}
 
-	public function assessCheck( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+	public function assess_check( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
 		return $this->unexpectedFitnessOperation();
 	}
 
-	public function assessReconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+	public function assess_reconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
 		return $this->unexpectedFitnessOperation();
 	}
 
-	public function assessRemove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+	public function assess_remove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
 		return $this->unexpectedFitnessOperation();
 	}
 
-	public function assessTest( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
+	public function assess_test( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
 		return $this->unexpectedFitnessOperation();
 	}
 
@@ -125,21 +125,21 @@ final class CompleteWebhookManagementCapabilityProvider extends WebhookManagemen
 	public const OPERATION = RepositoryWebhookFitness::OPERATION;
 	public const VERSION   = RepositoryWebhookFitness::VERSION;
 
-	public function getWebhookPolicy(): ProviderWebhookPolicy {
-		return new InertWebhookPolicy( $this->getMetadata()->code );
+	public function get_webhook_policy(): ProviderWebhookPolicy {
+		return new InertWebhookPolicy( $this->get_metadata()->code );
 	}
 
-	public function diagnoseWebhookReadiness(): ProviderDiagnosticResult {
+	public function diagnose_webhook_readiness(): ProviderDiagnosticResult {
 		return new ProviderDiagnosticResult( ProviderDiagnosticResult::PASSED, 'fixture_webhook_ready', 'Fixture webhook policy is ready.', 'No fixture remediation is required.' );
 	}
 
-	public function normalizeWebhook( WebhookRequest $request ): WebhookEnvelope {
+	public function normalize_webhook( WebhookRequest $request ): WebhookEnvelope {
 		unset( $request );
 
 		return WebhookEnvelope::ignored();
 	}
 
-	public function repositoryWebhookSettingsUrl( string $locator ): string {
+	public function repository_webhook_settings_url( string $locator ): string {
 		return 'https://fixture-provider.example.test/' . rawurlencode( $locator ) . '/settings/hooks';
 	}
 }

@@ -402,7 +402,7 @@ class DeploymentCoordinator {
 	private function matching_packages( PushEvent $event ): array {
 		$matches    = array();
 		$normalizer = $this->providers->requireCapability( $event->provider, WebhookNormalizer::class );
-		$policy     = $normalizer->getWebhookPolicy();
+		$policy     = $normalizer->get_webhook_policy();
 		foreach ( array(
 			'plugin' => $this->plugins->all_deployment_plugins(),
 			'theme'  => $this->themes->all_deployment_themes(),
@@ -412,7 +412,7 @@ class DeploymentCoordinator {
 					&& $package->get_deployment_policy()->allows_webhook_mutation()
 					&& ! PackageMutationGuard::is_booster_plugin_file( $package->get_identifier() )
 					&& $package->get_provider_code() === $event->provider->value
-					&& $policy->repositoryTargetMatches( $event->repository, (string) $package->get_repository() )
+					&& $policy->repository_target_matches( $event->repository, (string) $package->get_repository() )
 					&& (string) $package->get_branch() === $event->branch
 					&& null !== $package->get_provider_repository_id()
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.

@@ -37,22 +37,22 @@ final readonly class WebhookEnvelope {
 		return new self( self::EVENTS, $events );
 	}
 
-	public function isProbe(): bool {
+	public function is_probe(): bool {
 		return self::PROBE === $this->type;
 	}
 
-	public function isIgnored(): bool {
+	public function is_ignored(): bool {
 		return self::IGNORED === $this->type;
 	}
 
-	public function hasEvents(): bool {
+	public function has_events(): bool {
 		return self::EVENTS === $this->type;
 	}
 
 	/**
 	 * @return list<PushEvent>
 	 */
-	public function getEvents(): array {
+	public function get_events(): array {
 		return $this->events;
 	}
 }

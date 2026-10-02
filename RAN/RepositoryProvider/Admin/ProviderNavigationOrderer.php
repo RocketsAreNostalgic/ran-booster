@@ -9,7 +9,7 @@ use RAN\RepositoryProvider\ProviderMetadata;
 final class ProviderNavigationOrderer {
 
 	/** @param iterable<ProviderMetadata> $metadata @return list<ProviderMetadata> */
-	public function orderMetadata( iterable $metadata ): array {
+	public function order_metadata( iterable $metadata ): array {
 		$ordered = array();
 		foreach ( $metadata as $item ) {
 			$ordered[] = $item;

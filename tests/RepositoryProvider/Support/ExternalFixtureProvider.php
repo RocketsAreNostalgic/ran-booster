@@ -28,13 +28,13 @@ final readonly class ExternalFixtureProvider implements RepositoryProvider, Prov
 	private ProviderCode $code;
 	private ExternalFixtureClient $client;
 	private ProviderDiagnostics $diagnostics;
-	private ProviderCredentialPolicy $credentialPolicy;
+	private ProviderCredentialPolicy $credential_policy;
 
 	public function __construct( string $code = 'fixture', private ?ProviderCredentialStore $credentials = null ) {
 		$this->code             = ProviderCode::parse( $code );
 		$this->client           = new ExternalFixtureClient( $this->code );
 		$this->diagnostics      = new ExternalFixtureDiagnostics( $this->client );
-		$this->credentialPolicy = new ExternalFixtureCredentialPolicy( $this->code );
+		$this->credential_policy = new ExternalFixtureCredentialPolicy( $this->code );
 	}
 
 	public function get_metadata(): ProviderMetadata {
@@ -63,12 +63,12 @@ final readonly class ExternalFixtureProvider implements RepositoryProvider, Prov
 	}
 
 	public function get_credential_policy(): ProviderCredentialPolicy {
-		return $this->credentialPolicy;
+		return $this->credential_policy;
 	}
 
-	public function validate_credential( string $credentialId ): CredentialValidationResult {
+	public function validate_credential( string $credential_id ): CredentialValidationResult {
 		$material = null !== $this->credentials
-			? $this->credentials->credentialMaterial( $credentialId )
+			? $this->credentials->credential_material( $credential_id )
 			: null;
 
 		return is_array( $material ) && 'api-key' === ( $material['kind'] ?? null )
@@ -77,8 +77,8 @@ final readonly class ExternalFixtureProvider implements RepositoryProvider, Prov
 	}
 
 	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
-		$credentialId = $request->credentialId;
-		if ( null !== $credentialId && '' !== $credentialId && ! $this->validate_credential( $credentialId )->isValid() ) {
+		$credential_id = $request->credential_id;
+		if ( null !== $credential_id && '' !== $credential_id && ! $this->validate_credential( $credential_id )->is_valid() ) {
 			throw new RuntimeException( 'The fixture credential is unavailable.' );
 		}
 
@@ -87,46 +87,46 @@ final readonly class ExternalFixtureProvider implements RepositoryProvider, Prov
 		return new RepositoryDescriptor(
 			$this->code,
 			$repository->locator,
-			$repository->packageSlug,
-			$repository->providerRepositoryId,
-			null !== $credentialId,
-			$repository->defaultBranch,
-			$credentialId
+			$repository->package_slug,
+			$repository->provider_repository_id,
+			null !== $credential_id,
+			$repository->default_branch,
+			$credential_id
 		);
 	}
 
 	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 		$repository     = $request->repository;
 		$locator        = $repository->locator;
-		$expectedBranch = $request->expectedBranch;
-		$resolvedRef    = null === $expectedBranch
-			? $this->client->resolveRef( $locator, $request->ref )
+		$expected_branch = $request->expected_branch;
+		$resolved_ref    = null === $expected_branch
+			? $this->client->resolve_ref( $locator, $request->ref )
 			: strtolower( $request->ref );
 
-		if ( null !== $expectedBranch ) {
-			$head = $this->client->branchHead( $locator, $expectedBranch );
-			if ( ! hash_equals( $resolvedRef, $head ) ) {
+		if ( null !== $expected_branch ) {
+			$head = $this->client->branch_head( $locator, $expected_branch );
+			if ( ! hash_equals( $resolved_ref, $head ) ) {
 				throw new StaleDeployment( 'The fixture deployment is stale because the configured branch has moved.', 409 );
 			}
 		}
 
-		$headVerifier = null;
-		if ( null !== $expectedBranch ) {
-			$headVerifier = function () use ( $locator, $expectedBranch, $resolvedRef ): void {
-				if ( ! hash_equals( $resolvedRef, $this->client->branchHead( $locator, $expectedBranch ) ) ) {
+		$head_verifier = null;
+		if ( null !== $expected_branch ) {
+			$head_verifier = function () use ( $locator, $expected_branch, $resolved_ref ): void {
+				if ( ! hash_equals( $resolved_ref, $this->client->branch_head( $locator, $expected_branch ) ) ) {
 					throw new StaleDeployment( 'The fixture deployment is stale because the configured branch has moved.', 409 );
 				}
 			};
 		}
 
 		return new ExternalFixturePreparedArchive(
-			'https://fixtures.example.test/' . $locator . '/' . $resolvedRef . '.zip',
-			$resolvedRef,
-			$headVerifier
+			'https://fixtures.example.test/' . $locator . '/' . $resolved_ref . '.zip',
+			$resolved_ref,
+			$head_verifier
 		);
 	}
 
-	public function getClient(): ExternalFixtureClient {
+	public function get_client(): ExternalFixtureClient {
 		return $this->client;
 	}
 }

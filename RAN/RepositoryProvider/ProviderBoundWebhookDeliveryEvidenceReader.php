@@ -16,7 +16,7 @@ final readonly class ProviderBoundWebhookDeliveryEvidenceReader implements Authe
 		$this->read = Closure::fromCallable( $read );
 	}
 
-	public function latestAuthenticatedDelivery(): ?AuthenticatedWebhookDeliveryEvidence {
+	public function latest_authenticated_delivery(): ?AuthenticatedWebhookDeliveryEvidence {
 		$evidence = ( $this->read )( $this->provider );
 
 		if ( null !== $evidence && ! $evidence->provider->equals( $this->provider ) ) {

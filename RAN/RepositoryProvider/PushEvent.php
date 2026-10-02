@@ -12,19 +12,19 @@ final readonly class PushEvent {
 		public ProviderCode $provider,
 		public string $repository,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		public string $providerRepositoryId,
+		public string $provider_repository_id,
 		public string $branch,
 		public string $commit,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		public string $deliveryId
+		public string $delivery_id
 	) {
 		$this->require_value( $repository );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		$this->require_value( $providerRepositoryId );
+		$this->require_value( $provider_repository_id );
 		$this->require_value( $branch );
 		$this->require_value( $commit );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		$this->require_value( $deliveryId );
+		$this->require_value( $delivery_id );
 	}
 
 	/**
@@ -38,16 +38,16 @@ final readonly class PushEvent {
 	 * }
 	 */
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function toArray(): array {
+	public function to_array(): array {
 		return array(
 			'provider'               => $this->provider->value,
 			'repository'             => $this->repository,
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-			'provider_repository_id' => $this->providerRepositoryId,
+			'provider_repository_id' => $this->provider_repository_id,
 			'branch'                 => $this->branch,
 			'commit'                 => $this->commit,
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-			'delivery_id'            => $this->deliveryId,
+			'delivery_id'            => $this->delivery_id,
 		);
 	}
 

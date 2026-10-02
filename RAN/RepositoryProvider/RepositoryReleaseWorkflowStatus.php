@@ -8,21 +8,21 @@ use InvalidArgumentException;
 
 /** Secret-free current workflow record and assessment evidence. */
 final readonly class RepositoryReleaseWorkflowStatus {
-	/** @param list<array{operation:string,outcome_code:string,failure_stage:string,diagnostic_code:string,diagnostic_available:bool,correlation_reference:string,recorded_at:string}> $failureHistory @param list<array{id:string,label:string}> $credentialChoices @param list<array{label:string,url:string}> $documentationLinks */
-	public function __construct( private string $providerCode, private string $repositoryId, private bool $recordExact, private bool $recordOccupied, private string $pullRequestUrl = '', private string $packageType = '', private string $packageIdentifier = '', private int $sourceRevision = 0, private string $recordOperation = '', private string $observationKind = '', private string $observedAt = '', private array $failureHistory = array(), private array $credentialChoices = array(), private array $documentationLinks = array(), private string $providerWorkflowUrl = '', private string $writeGuidance = '' ) {
-		if ( $this->recordExact && ! $this->recordOccupied ) {
+	/** @param list<array{operation:string,outcome_code:string,failure_stage:string,diagnostic_code:string,diagnostic_available:bool,correlation_reference:string,recorded_at:string}> $failure_history @param list<array{id:string,label:string}> $credential_choices @param list<array{label:string,url:string}> $documentation_links */
+	public function __construct( private string $provider_code, private string $repository_id, private bool $record_exact, private bool $record_occupied, private string $pull_request_url = '', private string $package_type = '', private string $package_identifier = '', private int $source_revision = 0, private string $record_operation = '', private string $observation_kind = '', private string $observed_at = '', private array $failure_history = array(), private array $credential_choices = array(), private array $documentation_links = array(), private string $provider_workflow_url = '', private string $write_guidance = '' ) {
+		if ( $this->record_exact && ! $this->record_occupied ) {
 			throw new InvalidArgumentException( 'An exact release workflow record must occupy the repository.' );
 		}
-		if ( ! $this->text( $this->providerCode, 32 ) || ! $this->text( $this->repositoryId, 191 ) || ! $this->url( $this->pullRequestUrl, true )
-			|| ! in_array( $this->packageType, array( '', 'plugin', 'theme' ), true ) || ! $this->text( $this->packageIdentifier, 255, true ) || $this->sourceRevision < 0
-			|| ! in_array( $this->recordOperation, array( '', 'bootstrap' ), true ) || ! in_array( $this->observationKind, array( '', 'existing_automation_detected', 'booster_setup_verified', 'no_recognisable_automation' ), true )
-			|| ! $this->timestamp( $this->observedAt, true ) || count( $this->failureHistory ) > 12 || count( $this->credentialChoices ) > 16 || count( $this->documentationLinks ) > 16 || ! $this->url( $this->providerWorkflowUrl, true ) || ! $this->optional_text( $this->writeGuidance, 512 ) ) {
+		if ( ! $this->text( $this->provider_code, 32 ) || ! $this->text( $this->repository_id, 191 ) || ! $this->url( $this->pull_request_url, true )
+			|| ! in_array( $this->package_type, array( '', 'plugin', 'theme' ), true ) || ! $this->text( $this->package_identifier, 255, true ) || $this->source_revision < 0
+			|| ! in_array( $this->record_operation, array( '', 'bootstrap' ), true ) || ! in_array( $this->observation_kind, array( '', 'existing_automation_detected', 'booster_setup_verified', 'no_recognisable_automation' ), true )
+			|| ! $this->timestamp( $this->observed_at, true ) || count( $this->failure_history ) > 12 || count( $this->credential_choices ) > 16 || count( $this->documentation_links ) > 16 || ! $this->url( $this->provider_workflow_url, true ) || ! $this->optional_text( $this->write_guidance, 512 ) ) {
 			throw new InvalidArgumentException( 'Release workflow status is invalid.' ); }
-		foreach ( $this->credentialChoices as $choice ) {
+		foreach ( $this->credential_choices as $choice ) {
 			if ( ! is_array( $choice ) || array_keys( $choice ) !== array( 'id', 'label' ) || ! is_string( $choice['id'] ) || ! $this->text( $choice['id'], 191 ) || ! is_string( $choice['label'] ) || ! $this->text( $choice['label'], 255 ) ) {
 				throw new InvalidArgumentException( 'Release workflow credentials are invalid.' ); }
 		}
-		foreach ( $this->failureHistory as $failure ) {
+		foreach ( $this->failure_history as $failure ) {
 			if ( ! is_array( $failure )
 				|| array_keys( $failure ) !== array( 'operation', 'outcome_code', 'failure_stage', 'diagnostic_code', 'diagnostic_available', 'correlation_reference', 'recorded_at' )
 				|| ! in_array( $failure['operation'], array( 'inspect', 'setup', 'outcome' ), true )
@@ -35,74 +35,74 @@ final readonly class RepositoryReleaseWorkflowStatus {
 				throw new InvalidArgumentException( 'Release workflow failure history is invalid.' );
 			}
 		}
-		foreach ( $this->documentationLinks as $link ) {
+		foreach ( $this->documentation_links as $link ) {
 			if ( ! is_array( $link ) || array_keys( $link ) !== array( 'label', 'url' ) || ! is_string( $link['label'] ) || ! $this->text( $link['label'], 255 ) || ! is_string( $link['url'] ) || ! $this->url( $link['url'] ) ) {
 				throw new InvalidArgumentException( 'Release workflow documentation links are invalid.' ); }
 		}
 	}
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function providerCode(): string {
-		return $this->providerCode;
+	public function provider_code(): string {
+		return $this->provider_code;
 	}
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function repositoryId(): string {
-		return $this->repositoryId;
+	public function repository_id(): string {
+		return $this->repository_id;
 	}
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function recordExact(): bool {
-		return $this->recordExact;
+	public function record_exact(): bool {
+		return $this->record_exact;
 	}
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function recordOccupied(): bool {
-		return $this->recordOccupied;
+	public function record_occupied(): bool {
+		return $this->record_occupied;
 	}
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function pullRequestUrl(): string {
-		return $this->pullRequestUrl;
+	public function pull_request_url(): string {
+		return $this->pull_request_url;
 	}
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function packageType(): string {
-		return $this->packageType;
+	public function package_type(): string {
+		return $this->package_type;
 	}
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function packageIdentifier(): string {
-		return $this->packageIdentifier;
+	public function package_identifier(): string {
+		return $this->package_identifier;
 	}
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function sourceRevision(): int {
-		return $this->sourceRevision;
+	public function source_revision(): int {
+		return $this->source_revision;
 	}
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function recordOperation(): string {
-		return $this->recordOperation;
+	public function record_operation(): string {
+		return $this->record_operation;
 	}
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function observationKind(): string {
-		return $this->observationKind;
+	public function observation_kind(): string {
+		return $this->observation_kind;
 	}
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function observedAt(): string {
-		return $this->observedAt;
+	public function observed_at(): string {
+		return $this->observed_at;
 	}
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function failureHistory(): array {
-		return $this->failureHistory;
+	public function failure_history(): array {
+		return $this->failure_history;
 	}
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function credentialChoices(): array {
-		return $this->credentialChoices;
+	public function credential_choices(): array {
+		return $this->credential_choices;
 	}
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function documentationLinks(): array {
-		return $this->documentationLinks;
+	public function documentation_links(): array {
+		return $this->documentation_links;
 	}
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function providerWorkflowUrl(): string {
-		return $this->providerWorkflowUrl;
+	public function provider_workflow_url(): string {
+		return $this->provider_workflow_url;
 	}
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function writeGuidance(): string {
-		return $this->writeGuidance; }
+	public function write_guidance(): string {
+		return $this->write_guidance; }
 	private function text( string $value, int $limit, bool $empty = false ): bool {
 		return ( $empty || '' !== trim( $value ) ) && strlen( $value ) <= $limit && 1 === preg_match( '//u', $value ) && 0 === preg_match( '/[<>\x00-\x1F\x7F]/', $value ); }
 	private function optional_text( string $value, int $limit ): bool {

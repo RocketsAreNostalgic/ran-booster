@@ -12,70 +12,70 @@ final readonly class RepositoryReleaseNativeTargetStatus {
 	public function __construct(
 		public bool $active,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		public string $offeredVersion = '',
+		public string $offered_version = '',
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		public string $versionRelationship = '',
+		public string $version_relationship = '',
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		public ?int $lastCheck = null,
+		public ?int $last_check = null,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		public ?int $nextCheck = null,
+		public ?int $next_check = null,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		public string $failureCode = '',
+		public string $failure_code = '',
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		public string $candidateCode = '',
+		public string $candidate_code = '',
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		public string $candidateReleaseTag = '',
+		public string $candidate_release_tag = '',
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		public string $candidateReleaseVersion = '',
+		public string $candidate_release_version = '',
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		public string $candidatePackageHeaderVersion = '',
+		public string $candidate_package_header_version = '',
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		public string $candidateProviderReleaseId = ''
+		public string $candidate_provider_release_id = ''
 	) {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		if ( ! in_array( $versionRelationship, self::RELATIONSHIPS, true )
+		if ( ! in_array( $version_relationship, self::RELATIONSHIPS, true )
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-			|| ! self::valid_version( $offeredVersion )
+			|| ! self::valid_version( $offered_version )
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-			|| ! self::valid_time( $lastCheck )
+			|| ! self::valid_time( $last_check )
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-			|| ! self::valid_time( $nextCheck )
+			|| ! self::valid_time( $next_check )
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-			|| ! self::valid_code( $failureCode )
+			|| ! self::valid_code( $failure_code )
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-			|| ! self::valid_code( $candidateCode )
+			|| ! self::valid_code( $candidate_code )
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-			|| ! self::valid_text( $candidateReleaseTag, 100 )
+			|| ! self::valid_text( $candidate_release_tag, 100 )
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-			|| ! self::valid_version( $candidateReleaseVersion )
+			|| ! self::valid_version( $candidate_release_version )
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-			|| ! self::valid_version( $candidatePackageHeaderVersion )
+			|| ! self::valid_version( $candidate_package_header_version )
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-			|| ! self::valid_text( $candidateProviderReleaseId, 191 ) ) {
+			|| ! self::valid_text( $candidate_provider_release_id, 191 ) ) {
 			throw new InvalidArgumentException( 'The repository release native target status is invalid.' );
 		}
 		$candidate_values = array(
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-			$candidateCode,
+			$candidate_code,
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-			$candidateReleaseTag,
+			$candidate_release_tag,
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-			$candidateReleaseVersion,
+			$candidate_release_version,
 		);
 		if ( ( array() !== array_filter( $candidate_values, static fn ( string $value ): bool => '' === $value )
 			&& array() !== array_filter( $candidate_values, static fn ( string $value ): bool => '' !== $value ) )
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-			|| ( '' === $candidateCode && '' !== $candidatePackageHeaderVersion )
+			|| ( '' === $candidate_code && '' !== $candidate_package_header_version )
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-			|| ( '' !== $candidateProviderReleaseId
+			|| ( '' !== $candidate_provider_release_id
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-				&& ( 'release_identity_verified' !== $candidateCode
+				&& ( 'release_identity_verified' !== $candidate_code
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-					|| '' === $candidateReleaseTag
+					|| '' === $candidate_release_tag
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-					|| '' === $candidateReleaseVersion
+					|| '' === $candidate_release_version
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-					|| '' === $candidatePackageHeaderVersion ) ) ) {
+					|| '' === $candidate_package_header_version ) ) ) {
 			throw new InvalidArgumentException( 'The repository release native target status is invalid.' );
 		}
 	}

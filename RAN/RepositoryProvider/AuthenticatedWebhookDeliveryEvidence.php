@@ -14,11 +14,11 @@ final readonly class AuthenticatedWebhookDeliveryEvidence {
 
 	public function __construct(
 		public ProviderCode $provider,
-		public string $receivedAt,
-		public bool $matchedManagedPackage
+		public string $received_at,
+		public bool $matched_managed_package
 	) {
-		$received = DateTimeImmutable::createFromFormat( '!Y-m-d H:i:s', $this->receivedAt );
-		if ( false === $received || $received->format( 'Y-m-d H:i:s' ) !== $this->receivedAt ) {
+		$received = DateTimeImmutable::createFromFormat( '!Y-m-d H:i:s', $this->received_at );
+		if ( false === $received || $received->format( 'Y-m-d H:i:s' ) !== $this->received_at ) {
 			throw new InvalidArgumentException( 'Authenticated webhook delivery evidence requires a valid timestamp.' );
 		}
 	}

@@ -22,21 +22,21 @@ trait SuppliesProviderManualCapabilities {
 			'test:' . hash( 'sha256', $request->locator ),
 			false,
 			'main',
-			$request->credentialId
+			$request->credential_id
 		);
 	}
 
 	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 		return new class() implements PreparedArchive {
-			public function getUrl(): string {
+			public function get_url(): string {
 				return 'https://example.test/archive.zip';
 			}
 
-			public function getResolvedRef(): string {
+			public function get_resolved_ref(): string {
 				return '0123456789abcdef0123456789abcdef01234567';
 			}
 
-			public function verifyCurrentHead(): void {
+			public function verify_current_head(): void {
 			}
 
 			public function cleanup(): void {

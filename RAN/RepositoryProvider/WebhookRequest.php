@@ -33,21 +33,21 @@ final class WebhookRequest {
 
 	/**
 	 * @param array<string, string|list<string>> $headers         Native WordPress REST request headers.
-	 * @param list<string>                       $retainedHeaders Provider-owned canonical header names.
+	 * @param list<string>                       $retained_headers Provider-owned canonical header names.
 	 */
 	public function __construct(
 		private ProviderCode $provider,
 		private string $body,
 		array $headers,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		array $retainedHeaders
+		array $retained_headers
 	) {
 		if ( strlen( $body ) > self::MAX_BODY_BYTES ) {
 			throw new WebhookRejected( 413, 'Webhook request is too large.' );
 		}
 
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		$retainedHeaders = $this->validate_retained_headers( $retainedHeaders );
+		$retained_headers = $this->validate_retained_headers( $retained_headers );
 		$normalized      = array();
 		$retained        = array();
 		$retained_bytes  = 0;
@@ -60,7 +60,7 @@ final class WebhookRequest {
 			$name = $this->normalize_header_name( $name );
 
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-			if ( ! in_array( $name, $retainedHeaders, true ) ) {
+			if ( ! in_array( $name, $retained_headers, true ) ) {
 				continue;
 			}
 
@@ -92,18 +92,18 @@ final class WebhookRequest {
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function getProvider(): ProviderCode {
+	public function get_provider(): ProviderCode {
 		return $this->provider;
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function getBody(): string {
+	public function get_body(): string {
 		return $this->body;
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function withVerification( SignedWebhookVerification $verification ): self {
-		if ( ! $verification->getProvider()->equals( $this->provider ) ) {
+	public function with_verification( SignedWebhookVerification $verification ): self {
+		if ( ! $verification->get_provider()->equals( $this->provider ) ) {
 			throw new InvalidArgumentException( 'Webhook verification provider does not match the request.' );
 		}
 
@@ -114,7 +114,7 @@ final class WebhookRequest {
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function requireVerification(): SignedWebhookVerification {
+	public function require_verification(): SignedWebhookVerification {
 		if ( null === $this->verification ) {
 			throw new WebhookRejected( 401, 'Webhook authentication failed.' );
 		}
@@ -123,7 +123,7 @@ final class WebhookRequest {
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function getHeader( string $name ): ?string {
+	public function get_header( string $name ): ?string {
 		return $this->headers[ $this->normalize_header_name( $name ) ] ?? null;
 	}
 
@@ -133,7 +133,7 @@ final class WebhookRequest {
 	 * @return list<string>
 	 */
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function getRawHeaderValues( string $name ): array {
+	public function get_raw_header_values( string $name ): array {
 		return $this->raw_headers[ $this->normalize_header_name( $name ) ] ?? array();
 	}
 

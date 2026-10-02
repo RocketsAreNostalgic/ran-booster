@@ -25,7 +25,7 @@ final class NormalizedValuesTest extends TestCase {
 	private const GITHUB_HEADERS    = array( 'x-github-event', 'x-github-delivery', 'x-hub-signature-256' );
 	private const BITBUCKET_HEADERS = array( 'x-event-key', 'x-request-uuid', 'x-hub-signature' );
 
-	public function testRepositoryDescriptorHasTheExactNormalizedEdgeShape(): void {
+	public function test_repository_descriptor_has_the_exact_normalized_edge_shape(): void {
 		$repository = new RepositoryDescriptor(
 			ProviderCode::parse( 'gh' ),
 			'RocketsAreNostalgic/ran-booster',
@@ -46,15 +46,15 @@ final class NormalizedValuesTest extends TestCase {
 				'default_branch'         => 'main',
 				'credential_id'          => 'credential-one',
 			),
-			$repository->toArray()
+			$repository->to_array()
 		);
 		self::assertSame(
-			$repository->toArray(),
-			array_intersect_key( $repository->toArray(), array_flip( array_keys( $repository->toArray() ) ) )
+			$repository->to_array(),
+			array_intersect_key( $repository->to_array(), array_flip( array_keys( $repository->to_array() ) ) )
 		);
 	}
 
-	public function testRepositoryContractsKeepOpaqueNestedLocatorsWithoutRewritingProviderData(): void {
+	public function test_repository_contracts_keep_opaque_nested_locators_without_rewriting_provider_data(): void {
 		$request    = new RepositoryLookupRequest(
 			' group/subgroup/package '
 		);
@@ -67,15 +67,15 @@ final class NormalizedValuesTest extends TestCase {
 			'main',
 			null
 		);
-		$reference  = RepositoryReference::fromDescriptor( $repository );
+		$reference  = RepositoryReference::from_descriptor( $repository );
 
 		self::assertSame( ' group/subgroup/package ', $request->locator );
 		self::assertSame( ' group/subgroup/package ', $repository->locator );
 		self::assertSame( ' group/subgroup/package ', $reference->locator );
-		self::assertSame( 'package', $repository->packageSlug );
+		self::assertSame( 'package', $repository->package_slug );
 	}
 
-	public function testRepositoryDescriptorPreservesProviderIdentityCasing(): void {
+	public function test_repository_descriptor_preserves_provider_identity_casing(): void {
 		$repository = new RepositoryDescriptor(
 			ProviderCode::parse( 'gh' ),
 			'RocketsAreNostalgic/tnyGmaps',
@@ -87,23 +87,23 @@ final class NormalizedValuesTest extends TestCase {
 		);
 
 		self::assertSame( 'RocketsAreNostalgic/tnyGmaps', $repository->locator );
-		self::assertSame( 'tnyGmaps', $repository->packageSlug );
-		self::assertSame( '565105478', $repository->providerRepositoryId );
+		self::assertSame( 'tnyGmaps', $repository->package_slug );
+		self::assertSame( '565105478', $repository->provider_repository_id );
 	}
 
-	public function testRepositoryContractsAcceptTheExactLocatorAndPackageSlugByteBounds(): void {
+	public function test_repository_contracts_accept_the_exact_locator_and_package_slug_byte_bounds(): void {
 		$locator = str_repeat( 'l', 512 );
 		$slug    = str_repeat( 's', 191 );
 
 		self::assertSame( $locator, ( new RepositoryLookupRequest( $locator ) )->locator );
 		self::assertSame(
 			$slug,
-			( new RepositoryDescriptor( ProviderCode::parse( 'fixture' ), $locator, $slug, 'fixture-id', false, 'main', null ) )->packageSlug
+			( new RepositoryDescriptor( ProviderCode::parse( 'fixture' ), $locator, $slug, 'fixture-id', false, 'main', null ) )->package_slug
 		);
 	}
 
-	#[DataProvider( 'invalidOpaqueLocators' )]
-	public function testRepositoryContractsRejectInvalidOpaqueLocators( string $locator ): void {
+	#[DataProvider( 'invalid_opaque_locators' )]
+	public function test_repository_contracts_reject_invalid_opaque_locators( string $locator ): void {
 		foreach ( array( 'lookup', 'descriptor', 'reference' ) as $contract ) {
 			try {
 				match ( $contract ) {
@@ -119,7 +119,7 @@ final class NormalizedValuesTest extends TestCase {
 	}
 
 	/** @return list<array{string}> */
-	public static function invalidOpaqueLocators(): array {
+	public static function invalid_opaque_locators(): array {
 		return array(
 			array( '' ),
 			array( "group/pack\nage" ),
@@ -127,15 +127,15 @@ final class NormalizedValuesTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'invalidProviderPackageSlugs' )]
-	public function testRepositoryDescriptorRejectsInvalidProviderPackageSlugs( string $slug ): void {
+	#[DataProvider( 'invalid_provider_package_slugs' )]
+	public function test_repository_descriptor_rejects_invalid_provider_package_slugs( string $slug ): void {
 		$this->expectException( InvalidArgumentException::class );
 
 		new RepositoryDescriptor( ProviderCode::parse( 'fixture' ), 'group/subgroup/package', $slug, 'fixture-id', false, 'main', null );
 	}
 
 	/** @return list<array{string}> */
-	public static function invalidProviderPackageSlugs(): array {
+	public static function invalid_provider_package_slugs(): array {
 		return array(
 			array( '' ),
 			array( 'group/package' ),
@@ -144,7 +144,7 @@ final class NormalizedValuesTest extends TestCase {
 		);
 	}
 
-	public function testRepositoryReferencesAreDerivedWithoutCredentialMaterial(): void {
+	public function test_repository_references_are_derived_without_credential_material(): void {
 		$repository = new RepositoryDescriptor(
 			ProviderCode::parse( 'bb' ),
 			'workspace/project',
@@ -154,17 +154,17 @@ final class NormalizedValuesTest extends TestCase {
 			'main',
 			null
 		);
-		$reference  = RepositoryReference::fromDescriptor( $repository );
+		$reference  = RepositoryReference::from_descriptor( $repository );
 		$request    = new ArchiveRequest( $reference, 'd34db33f', 'main' );
 
 		self::assertSame( 'workspace/project', $reference->locator );
 		self::assertFalse( $reference->private );
 		self::assertSame( 'd34db33f', $request->ref );
-		self::assertSame( 'main', $request->expectedBranch );
+		self::assertSame( 'main', $request->expected_branch );
 		self::assertSame( $reference, $request->repository );
 	}
 
-	public function testArchiveRequestLeavesTheExpectedBranchOptionalAndRejectsABlankExpectation(): void {
+	public function test_archive_request_leaves_the_expected_branch_optional_and_rejects_ablank_expectation(): void {
 		$reference = new RepositoryReference(
 			'workspace/project',
 			'{repository-uuid}',
@@ -172,42 +172,42 @@ final class NormalizedValuesTest extends TestCase {
 			null
 		);
 
-		self::assertNull( ( new ArchiveRequest( $reference, 'd34db33f' ) )->expectedBranch );
+		self::assertNull( ( new ArchiveRequest( $reference, 'd34db33f' ) )->expected_branch );
 
 		$this->expectException( InvalidArgumentException::class );
 
 		new ArchiveRequest( $reference, 'd34db33f', " \t\n" );
 	}
 
-	public function testRepositoryBrowseRequestCarriesOnlyScopeAndCredentialIdentity(): void {
-		$request = RepositoryBrowseRequest::publicOwner( 'RocketsAreNostalgic' );
+	public function test_repository_browse_request_carries_only_scope_and_credential_identity(): void {
+		$request = RepositoryBrowseRequest::public_owner( 'RocketsAreNostalgic' );
 
-		self::assertSame( RepositoryBrowseMode::PUBLIC_OWNER, $request->getMode() );
-		self::assertSame( 'RocketsAreNostalgic', $request->getOwner() );
-		self::assertNull( $request->getCredentialId() );
+		self::assertSame( RepositoryBrowseMode::PUBLIC_OWNER, $request->get_mode() );
+		self::assertSame( 'RocketsAreNostalgic', $request->get_owner() );
+		self::assertNull( $request->get_credential_id() );
 
 		$accessible = RepositoryBrowseRequest::accessible( 'credential-one' );
 
-		self::assertSame( RepositoryBrowseMode::ACCESSIBLE, $accessible->getMode() );
-		self::assertNull( $accessible->getOwner() );
-		self::assertSame( 'credential-one', $accessible->getCredentialId() );
+		self::assertSame( RepositoryBrowseMode::ACCESSIBLE, $accessible->get_mode() );
+		self::assertNull( $accessible->get_owner() );
+		self::assertSame( 'credential-one', $accessible->get_credential_id() );
 	}
 
-	public function testPublicRepositoryBrowseRequestMayCarryOneProfileIdentity(): void {
-		$request = RepositoryBrowseRequest::publicOwner( 'RocketsAreNostalgic', 'public-lookup' );
+	public function test_public_repository_browse_request_may_carry_one_profile_identity(): void {
+		$request = RepositoryBrowseRequest::public_owner( 'RocketsAreNostalgic', 'public-lookup' );
 
-		self::assertSame( RepositoryBrowseMode::PUBLIC_OWNER, $request->getMode() );
-		self::assertSame( 'RocketsAreNostalgic', $request->getOwner() );
-		self::assertSame( 'public-lookup', $request->getCredentialId() );
+		self::assertSame( RepositoryBrowseMode::PUBLIC_OWNER, $request->get_mode() );
+		self::assertSame( 'RocketsAreNostalgic', $request->get_owner() );
+		self::assertSame( 'public-lookup', $request->get_credential_id() );
 	}
 
-	public function testAccessibleBrowseRequiresOneCredentialProfile(): void {
+	public function test_accessible_browse_requires_one_credential_profile(): void {
 		$this->expectException( InvalidArgumentException::class );
 
 		new RepositoryBrowseRequest( RepositoryBrowseMode::ACCESSIBLE );
 	}
 
-	public function testPushEventHasTheExactNormalizedEdgeShape(): void {
+	public function test_push_event_has_the_exact_normalized_edge_shape(): void {
 		$event = new PushEvent(
 			ProviderCode::parse( 'bb' ),
 			'workspace/project',
@@ -226,35 +226,35 @@ final class NormalizedValuesTest extends TestCase {
 				'commit'                 => 'd34db33f',
 				'delivery_id'            => 'delivery-one',
 			),
-			$event->toArray()
+			$event->to_array()
 		);
 	}
 
-	public function testWebhookEnvelopeSupportsMultiplePushEvents(): void {
+	public function test_webhook_envelope_supports_multiple_push_events(): void {
 		$first  = new PushEvent( ProviderCode::parse( 'bb' ), 'workspace/project', 'one', 'main', 'aaa', 'request' );
 		$second = new PushEvent( ProviderCode::parse( 'bb' ), 'workspace/project', 'one', 'release', 'bbb', 'request' );
 		$result = WebhookEnvelope::events( $first, $second );
 
-		self::assertTrue( $result->hasEvents() );
-		self::assertFalse( $result->isProbe() );
-		self::assertFalse( $result->isIgnored() );
-		self::assertSame( array( $first, $second ), $result->getEvents() );
+		self::assertTrue( $result->has_events() );
+		self::assertFalse( $result->is_probe() );
+		self::assertFalse( $result->is_ignored() );
+		self::assertSame( array( $first, $second ), $result->get_events() );
 	}
 
-	public function testWebhookEnvelopeDistinguishesProbeAndIgnoredRequests(): void {
-		self::assertTrue( WebhookEnvelope::probe()->isProbe() );
-		self::assertSame( array(), WebhookEnvelope::probe()->getEvents() );
-		self::assertTrue( WebhookEnvelope::ignored()->isIgnored() );
-		self::assertSame( array(), WebhookEnvelope::ignored()->getEvents() );
+	public function test_webhook_envelope_distinguishes_probe_and_ignored_requests(): void {
+		self::assertTrue( WebhookEnvelope::probe()->is_probe() );
+		self::assertSame( array(), WebhookEnvelope::probe()->get_events() );
+		self::assertTrue( WebhookEnvelope::ignored()->is_ignored() );
+		self::assertSame( array(), WebhookEnvelope::ignored()->get_events() );
 	}
 
-	public function testEventEnvelopeRejectsAnEmptyEventList(): void {
+	public function test_event_envelope_rejects_an_empty_event_list(): void {
 		$this->expectException( InvalidArgumentException::class );
 
 		WebhookEnvelope::events();
 	}
 
-	public function testWebhookRequestAcceptsNativeWordPressHeaderShape(): void {
+	public function test_webhook_request_accepts_native_word_press_header_shape(): void {
 		$request = new WebhookRequest(
 			ProviderCode::parse( 'gh' ),
 			'{"ref":"refs/heads/main"}',
@@ -266,14 +266,14 @@ final class NormalizedValuesTest extends TestCase {
 			self::GITHUB_HEADERS
 		);
 
-		self::assertSame( '{"ref":"refs/heads/main"}', $request->getBody() );
-		self::assertSame( 'push', $request->getHeader( 'x-github-event' ) );
-		self::assertSame( 'delivery-one', $request->getHeader( 'X-GITHUB-DELIVERY' ) );
-		self::assertSame( 'sha256=signature', $request->getHeader( 'x-hub-signature-256' ) );
-		self::assertSame( array( 'push' ), $request->getRawHeaderValues( 'X_GITHUB_EVENT' ) );
+		self::assertSame( '{"ref":"refs/heads/main"}', $request->get_body() );
+		self::assertSame( 'push', $request->get_header( 'x-github-event' ) );
+		self::assertSame( 'delivery-one', $request->get_header( 'X-GITHUB-DELIVERY' ) );
+		self::assertSame( 'sha256=signature', $request->get_header( 'x-hub-signature-256' ) );
+		self::assertSame( array( 'push' ), $request->get_raw_header_values( 'X_GITHUB_EVENT' ) );
 	}
 
-	public function testWebhookRequestRetainsEquivalentRawValuesAndAliases(): void {
+	public function test_webhook_request_retains_equivalent_raw_values_and_aliases(): void {
 		$request = new WebhookRequest(
 			ProviderCode::parse( 'gh' ),
 			'{}',
@@ -284,12 +284,12 @@ final class NormalizedValuesTest extends TestCase {
 			self::GITHUB_HEADERS
 		);
 
-		self::assertSame( 'push', $request->getHeader( 'x-github-event' ) );
-		self::assertSame( array( ' push ', 'push', 'push' ), $request->getRawHeaderValues( 'x-github-event' ) );
-		self::assertSame( array(), $request->getRawHeaderValues( 'authorization' ) );
+		self::assertSame( 'push', $request->get_header( 'x-github-event' ) );
+		self::assertSame( array( ' push ', 'push', 'push' ), $request->get_raw_header_values( 'x-github-event' ) );
+		self::assertSame( array(), $request->get_raw_header_values( 'authorization' ) );
 	}
 
-	public function testWebhookHeaderNamesAreCaseAndSeparatorInsensitive(): void {
+	public function test_webhook_header_names_are_case_and_separator_insensitive(): void {
 		$request = new WebhookRequest(
 			ProviderCode::parse( 'bb' ),
 			'{}',
@@ -301,12 +301,12 @@ final class NormalizedValuesTest extends TestCase {
 			self::BITBUCKET_HEADERS
 		);
 
-		self::assertSame( 'repo:push', $request->getHeader( 'x-event-key' ) );
-		self::assertSame( 'request-one', $request->getHeader( 'X_REQUEST_UUID' ) );
-		self::assertSame( 'signature', $request->getHeader( 'x-hub-signature' ) );
+		self::assertSame( 'repo:push', $request->get_header( 'x-event-key' ) );
+		self::assertSame( 'request-one', $request->get_header( 'X_REQUEST_UUID' ) );
+		self::assertSame( 'signature', $request->get_header( 'x-hub-signature' ) );
 	}
 
-	public function testWebhookRequestDropsAllUnplannedAndSensitiveHeaders(): void {
+	public function test_webhook_request_drops_all_unplanned_and_sensitive_headers(): void {
 		$request = new WebhookRequest(
 			ProviderCode::parse( 'gh' ),
 			'{}',
@@ -319,13 +319,13 @@ final class NormalizedValuesTest extends TestCase {
 			self::GITHUB_HEADERS
 		);
 
-		self::assertNull( $request->getHeader( 'authorization' ) );
-		self::assertNull( $request->getHeader( 'cookie' ) );
-		self::assertNull( $request->getHeader( 'x-custom-secret' ) );
-		self::assertSame( 'push', $request->getHeader( 'x-github-event' ) );
+		self::assertNull( $request->get_header( 'authorization' ) );
+		self::assertNull( $request->get_header( 'cookie' ) );
+		self::assertNull( $request->get_header( 'x-custom-secret' ) );
+		self::assertSame( 'push', $request->get_header( 'x-github-event' ) );
 	}
 
-	public function testWebhookRequestRejectsAmbiguousRetainedHeaderValues(): void {
+	public function test_webhook_request_rejects_ambiguous_retained_header_values(): void {
 		$this->expectException( InvalidArgumentException::class );
 
 		new WebhookRequest(
@@ -336,7 +336,7 @@ final class NormalizedValuesTest extends TestCase {
 		);
 	}
 
-	public function testWebhookRequestRejectsMissingRetainedHeaderValues(): void {
+	public function test_webhook_request_rejects_missing_retained_header_values(): void {
 		$this->expectException( InvalidArgumentException::class );
 
 		new WebhookRequest(
@@ -347,7 +347,7 @@ final class NormalizedValuesTest extends TestCase {
 		);
 	}
 
-	public function testWebhookRequestRejectsOversizedRetainedHeaderValues(): void {
+	public function test_webhook_request_rejects_oversized_retained_header_values(): void {
 		$this->expectException( InvalidArgumentException::class );
 
 		new WebhookRequest(
@@ -358,7 +358,7 @@ final class NormalizedValuesTest extends TestCase {
 		);
 	}
 
-	public function testWebhookRequestRejectsOversizedAggregateRetainedHeaders(): void {
+	public function test_webhook_request_rejects_oversized_aggregate_retained_headers(): void {
 		$headers = array();
 		$policy  = array();
 		foreach ( range( 1, 16 ) as $index ) {
@@ -371,15 +371,15 @@ final class NormalizedValuesTest extends TestCase {
 		new WebhookRequest( ProviderCode::parse( 'gh' ), '{}', $headers, $policy );
 	}
 
-	public function testValidCredentialValidationResultContainsNoDisplayMessage(): void {
-		self::assertTrue( CredentialValidationResult::valid()->isValid() );
-		self::assertNull( CredentialValidationResult::valid()->getDisplayMessage() );
+	public function test_valid_credential_validation_result_contains_no_display_message(): void {
+		self::assertTrue( CredentialValidationResult::valid()->is_valid() );
+		self::assertNull( CredentialValidationResult::valid()->get_display_message() );
 	}
 
 	/**
 	 * @return array<string, array{string, string, string, string}>
 	 */
-	public static function untrustedCredentialValidationMessages(): array {
+	public static function untrusted_credential_validation_messages(): array {
 		return array(
 			'canary'    => array(
 				'invalid',
@@ -394,13 +394,13 @@ final class NormalizedValuesTest extends TestCase {
 				'The repository provider could not validate this credential. Try again later.',
 			),
 			'multiline' => array(
-				'rateLimited',
+				'rate_limited',
 				"Validation failed\r\nSet-Cookie: provider-multiline-canary=1",
 				CredentialValidationResult::RATE_LIMITED,
 				'The repository provider rate-limited credential validation. Try again later.',
 			),
 			'oversize'  => array(
-				'invalidResponse',
+				'invalid_response',
 				str_repeat( 'provider-oversize-canary-', 256 ),
 				CredentialValidationResult::INVALID_RESPONSE,
 				'The repository provider returned an invalid credential-validation response.',
@@ -408,31 +408,31 @@ final class NormalizedValuesTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'untrustedCredentialValidationMessages' )]
-	public function testCredentialValidationResultDiscardsUntrustedProviderText(
+	#[DataProvider( 'untrusted_credential_validation_messages' )]
+	public function test_credential_validation_result_discards_untrusted_provider_text(
 		string $factory,
-		string $untrustedMessage,
+		string $untrusted_message,
 		string $reason,
-		string $expectedMessage
+		string $expected_message
 	): void {
-		$factoryMethod = new \ReflectionMethod( CredentialValidationResult::class, $factory );
-		$result        = $factoryMethod->invokeArgs( null, array( $untrustedMessage ) );
+		$factory_method = new \ReflectionMethod( CredentialValidationResult::class, $factory );
+		$result        = $factory_method->invokeArgs( null, array( $untrusted_message ) );
 
-		self::assertSame( 0, $factoryMethod->getNumberOfParameters() );
+		self::assertSame( 0, $factory_method->getNumberOfParameters() );
 		self::assertInstanceOf( CredentialValidationResult::class, $result );
-		self::assertFalse( $result->isValid() );
+		self::assertFalse( $result->is_valid() );
 		self::assertSame( $reason, $result->reason );
-		self::assertSame( $expectedMessage, $result->getDisplayMessage() );
-		self::assertLessThanOrEqual( 160, strlen( $expectedMessage ) );
-		self::assertDoesNotMatchRegularExpression( '/[\x00-\x1F\x7F]/', $expectedMessage );
-		self::assertStringNotContainsString( 'canary', $expectedMessage );
-		self::assertStringNotContainsString( $untrustedMessage, $expectedMessage );
+		self::assertSame( $expected_message, $result->get_display_message() );
+		self::assertLessThanOrEqual( 160, strlen( $expected_message ) );
+		self::assertDoesNotMatchRegularExpression( '/[\x00-\x1F\x7F]/', $expected_message );
+		self::assertStringNotContainsString( 'canary', $expected_message );
+		self::assertStringNotContainsString( $untrusted_message, $expected_message );
 	}
 
 	/**
 	 * @return list<array{class-string}>
 	 */
-	public static function credentialFreeDataTransferObjects(): array {
+	public static function credential_free_data_transfer_objects(): array {
 		return array(
 			array( RepositoryDescriptor::class ),
 			array( RepositoryBrowseRequest::class ),
@@ -442,8 +442,8 @@ final class NormalizedValuesTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'credentialFreeDataTransferObjects' )]
-	public function testDataTransferObjectsDoNotExposeRawSecretOrTokenFields( string $class ): void {
+	#[DataProvider( 'credential_free_data_transfer_objects' )]
+	public function test_data_transfer_objects_do_not_expose_raw_secret_or_token_fields( string $class ): void {
 		$properties = array_map(
 			static fn ( \ReflectionProperty $property ): string => $property->getName(),
 			( new ReflectionClass( $class ) )->getProperties()

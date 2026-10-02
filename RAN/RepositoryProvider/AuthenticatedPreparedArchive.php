@@ -25,10 +25,10 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 	public function __construct(
 		private readonly string $url,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private readonly string $resolvedRef,
+		private readonly string $resolved_ref,
 		?Closure $authorizer = null,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private readonly ?Closure $headVerifier = null
+		private readonly ?Closure $head_verifier = null
 	) {
 		if ( isset( self::$reserved_urls[ $url ] ) && null !== self::$reserved_urls[ $url ]->get() ) {
 			throw new RuntimeException( 'The provider archive URL is already prepared for this request.' );
@@ -41,29 +41,29 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 			return;
 		}
 
-		add_filter( 'http_request_args', array( $this, 'authenticateRequest' ), 10, 2 );
+		add_filter( 'http_request_args', array( $this, 'authenticate_request' ), 10, 2 );
 		$this->authentication_filter_registered = true;
-		add_action( self::REDIRECT_HOOK, array( $this, 'stripAuthenticationFromRedirect' ), 10, 5 );
+		add_action( self::REDIRECT_HOOK, array( $this, 'strip_authentication_from_redirect' ), 10, 5 );
 		$this->redirect_scrubber_registered = true;
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function getUrl(): string {
+	public function get_url(): string {
 		return $this->url;
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function getResolvedRef(): string {
+	public function get_resolved_ref(): string {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		return $this->resolvedRef;
+		return $this->resolved_ref;
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function verifyCurrentHead(): void {
+	public function verify_current_head(): void {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		if ( null !== $this->headVerifier ) {
+		if ( null !== $this->head_verifier ) {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			( $this->headVerifier )();
+			( $this->head_verifier )();
 		}
 	}
 
@@ -72,7 +72,7 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 	 * @return array<string, mixed>
 	 */
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function authenticateRequest( array $arguments, mixed $url ): array {
+	public function authenticate_request( array $arguments, mixed $url ): array {
 		if ( ! is_string( $url ) || $url !== $this->url ) {
 			return $arguments;
 		}
@@ -108,7 +108,7 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 	 * @param array<string, mixed> $headers  Headers Requests would reuse for the redirect.
 	 */
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function stripAuthenticationFromRedirect( mixed &$location, array &$headers, mixed $data, mixed $options, mixed $original ): void {
+	public function strip_authentication_from_redirect( mixed &$location, array &$headers, mixed $data, mixed $options, mixed $original ): void {
 		if ( ! is_object( $original ) || ! isset( $original->url ) || $original->url !== $this->url ) {
 			return;
 		}
@@ -126,10 +126,10 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 		}
 
 		if ( $this->authentication_filter_registered ) {
-			remove_filter( 'http_request_args', array( $this, 'authenticateRequest' ), 10 );
+			remove_filter( 'http_request_args', array( $this, 'authenticate_request' ), 10 );
 		}
 		if ( $this->redirect_scrubber_registered ) {
-			remove_action( self::REDIRECT_HOOK, array( $this, 'stripAuthenticationFromRedirect' ), 10 );
+			remove_action( self::REDIRECT_HOOK, array( $this, 'strip_authentication_from_redirect' ), 10 );
 		}
 
 		$this->authentication_filter_registered = false;
@@ -172,7 +172,7 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 
 	private function consume_authentication_filter(): void {
 		if ( $this->authentication_filter_registered ) {
-			remove_filter( 'http_request_args', array( $this, 'authenticateRequest' ), 10 );
+			remove_filter( 'http_request_args', array( $this, 'authenticate_request' ), 10 );
 		}
 
 		$this->authentication_filter_registered = false;

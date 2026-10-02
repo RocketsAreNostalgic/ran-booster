@@ -15,14 +15,14 @@ use Closure;
  */
 final readonly class ProviderRegistrationContext {
 	/** @var Closure(): int */
-	private Closure $maximumArtifactBytes;
+	private Closure $maximum_artifact_bytes;
 
-	/** @param callable(): int $maximumArtifactBytes */
-	public function __construct( callable $maximumArtifactBytes ) {
-		$this->maximumArtifactBytes = Closure::fromCallable( $maximumArtifactBytes );
+	/** @param callable(): int $maximum_artifact_bytes */
+	public function __construct( callable $maximum_artifact_bytes ) {
+		$this->maximum_artifact_bytes = Closure::fromCallable( $maximum_artifact_bytes );
 	}
 
-	public function maximumArtifactBytes(): int {
-		return ( $this->maximumArtifactBytes )();
+	public function maximum_artifact_bytes(): int {
+		return ( $this->maximum_artifact_bytes )();
 	}
 }

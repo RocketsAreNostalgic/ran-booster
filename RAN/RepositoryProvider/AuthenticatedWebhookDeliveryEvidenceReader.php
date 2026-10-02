@@ -9,5 +9,5 @@ namespace RAN\RepositoryProvider;
  */
 interface AuthenticatedWebhookDeliveryEvidenceReader {
 
-	public function latestAuthenticatedDelivery(): ?AuthenticatedWebhookDeliveryEvidence;
+	public function latest_authenticated_delivery(): ?AuthenticatedWebhookDeliveryEvidence;
 }

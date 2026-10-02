@@ -13,51 +13,51 @@ use RuntimeException;
 
 final class RepositoryBrowseRequestTest extends TestCase {
 
-	public function testOneRequestCannotClaimMoreThanFiveRemoteCalls(): void {
+	public function test_one_request_cannot_claim_more_than_five_remote_calls(): void {
 		$request = RepositoryBrowseRequest::accessible( 'profile' );
 
 		for ( $call = 0; $call < RepositoryBrowseRequest::MAX_REMOTE_CALLS; ++$call ) {
-			$timeout = $request->claimRemoteCall();
+			$timeout = $request->claim_remote_call();
 			self::assertGreaterThan( 0.0, $timeout );
 			self::assertLessThanOrEqual( 3.0, $timeout );
 		}
 
-		self::assertFalse( $request->hasCapacity() );
+		self::assertFalse( $request->has_capacity() );
 		$this->expectException( RuntimeException::class );
 		$this->expectExceptionCode( 503 );
-		$request->claimRemoteCall();
+		$request->claim_remote_call();
 	}
 
-	public function testPerResponseAndAggregateByteLimitsAreEnforced(): void {
-		$perResponse = RepositoryBrowseRequest::accessible( 'profile' );
+	public function test_per_response_and_aggregate_byte_limits_are_enforced(): void {
+		$per_response = RepositoryBrowseRequest::accessible( 'profile' );
 		$this->expectException( RuntimeException::class );
 		$this->expectExceptionCode( 413 );
-		$perResponse->acceptResponseBody( str_repeat( 'x', RepositoryBrowseRequest::PER_RESPONSE_BYTES + 1 ) );
+		$per_response->accept_response_body( str_repeat( 'x', RepositoryBrowseRequest::PER_RESPONSE_BYTES + 1 ) );
 	}
 
-	public function testAggregateResponseLimitAllowsFourMaximumResponsesAndRejectsMore(): void {
+	public function test_aggregate_response_limit_allows_four_maximum_responses_and_rejects_more(): void {
 		$request = RepositoryBrowseRequest::accessible( 'profile' );
 		for ( $response = 0; $response < 4; ++$response ) {
-			$request->acceptResponseBody( str_repeat( 'x', RepositoryBrowseRequest::PER_RESPONSE_BYTES ) );
+			$request->accept_response_body( str_repeat( 'x', RepositoryBrowseRequest::PER_RESPONSE_BYTES ) );
 		}
 
 		$this->expectException( RuntimeException::class );
 		$this->expectExceptionCode( 413 );
-		$request->acceptResponseBody( 'x' );
+		$request->accept_response_body( 'x' );
 	}
 
-	public function testExpiredDeadlineRejectsARequestBeforeNetworkWork(): void {
+	public function test_expired_deadline_rejects_arequest_before_network_work(): void {
 		$request = RepositoryBrowseRequest::accessible( 'profile' );
 		$started = new \ReflectionProperty( $request, 'started_at' );
 		$started->setValue( $request, hrtime( true ) - 9_000_000_000 );
 
-		self::assertFalse( $request->hasCapacity() );
+		self::assertFalse( $request->has_capacity() );
 		$this->expectException( RuntimeException::class );
 		$this->expectExceptionCode( 503 );
-		$request->claimRemoteCall();
+		$request->claim_remote_call();
 	}
 
-	public function testProvidersCannotReturnMoreThanTheSharedResultLimit(): void {
+	public function test_providers_cannot_return_more_than_the_shared_result_limit(): void {
 		$repository = new RepositoryDescriptor(
 			ProviderCode::parse( 'gh' ),
 			'owner/repository',

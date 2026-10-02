@@ -12,7 +12,7 @@ use RAN\RepositoryProvider\InvalidCredentialInput;
 final class ProviderInputFailureContractTest extends TestCase {
 
 	/** @return iterable<string, array{string, string}> */
-	public static function unsafeFailures(): iterable {
+	public static function unsafe_failures(): iterable {
 		yield 'unknown reason' => array( 'provider_specific_reason', 'Safe-looking text.' );
 		yield 'token shaped' => array( InvalidCredentialInput::INVALID_SECRET_SHAPE, 'Rejected github_pat_secretcanary123.' );
 		yield 'authorization header' => array( InvalidCredentialInput::INVALID_SECRET_SHAPE, 'Authorization: Bearer secretcanary' );
@@ -28,14 +28,14 @@ final class ProviderInputFailureContractTest extends TestCase {
 		yield 'credentialed url' => array( InvalidCredentialInput::INVALID_CONFIGURATION, 'See https://secret@example.test/help.' );
 	}
 
-	#[DataProvider( 'unsafeFailures' )]
-	public function testUnknownOrUnsafeProviderCopyFailsClosed( string $reason, string $message ): void {
+	#[DataProvider( 'unsafe_failures' )]
+	public function test_unknown_or_unsafe_provider_copy_fails_closed( string $reason, string $message ): void {
 		$this->expectException( InvalidArgumentException::class );
 
 		new InvalidCredentialInput( $reason, $message );
 	}
 
-	public function testKnownReasonAndSafeProviderCopyRemainActionable(): void {
+	public function test_known_reason_and_safe_provider_copy_remain_actionable(): void {
 		$failure = new InvalidCredentialInput(
 			InvalidCredentialInput::CREDENTIAL_KIND_MISMATCH,
 			'Choose the credential kind that matches the submitted secret.'

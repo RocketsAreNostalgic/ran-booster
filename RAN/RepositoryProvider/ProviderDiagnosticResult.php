@@ -44,7 +44,7 @@ final readonly class ProviderDiagnosticResult {
 	 * @return array{status: string, code: string, message: string, remediation: string}
 	 */
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
-	public function toArray(): array {
+	public function to_array(): array {
 		return array(
 			'status'      => $this->status,
 			'code'        => $this->code,

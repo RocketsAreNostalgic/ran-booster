@@ -15,11 +15,11 @@ final class RepositoryReleaseAcquisitionRejected extends RuntimeException {
 		parent::__construct( 'The exact repository release could not be acquired.' );
 	}
 
-	public static function invalidRelease(): self {
+	public static function invalid_release(): self {
 		return new self( self::INVALID_RELEASE );
 	}
 
-	public static function cleanupFailed(): self {
+	public static function cleanup_failed(): self {
 		return new self( self::CLEANUP_FAILED );
 	}
 }

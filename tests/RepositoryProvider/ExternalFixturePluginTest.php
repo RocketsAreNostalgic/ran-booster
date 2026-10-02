@@ -46,13 +46,13 @@ final class ExternalFixturePluginTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testPresenterSuppressesManagementPresentationForAPartialCapabilityProvider(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 13 );
-		$this->loadFixturePlugin();
+	public function test_presenter_suppresses_management_presentation_for_apartial_capability_provider(): void {
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
+		$this->load_fixture_plugin();
 		list( $registry, , $path ) = $this->registry();
 
 		try {
-			$this->runRegistrationHook( $registry );
+			$this->run_registration_hook( $registry );
 			$provider = $registry->get( 'fixture-provider' );
 			self::assertInstanceOf( Provider::class, $provider );
 			$partial = new class( $provider ) implements \RAN\RepositoryProvider\RepositoryProvider, RepositoryWebhookFitness {
@@ -75,24 +75,24 @@ final class ExternalFixturePluginTest extends TestCase {
 					return $this->provider->prepare_archive( $request );
 				}
 
-				public function assess_setup( string $repositoryId, string $repository, ?string $credentialProfileId ): RepositoryWebhookFitnessResult {
-					return $this->provider->assess_setup( $repositoryId, $repository, $credentialProfileId );
+				public function assess_setup( string $repository_id, string $repository, ?string $credential_profile_id ): RepositoryWebhookFitnessResult {
+					return $this->provider->assess_setup( $repository_id, $repository, $credential_profile_id );
 				}
 
-				public function assess_check( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
-					return $this->provider->assess_check( $repositoryId, $repository, $credentialProfileId, $hookId );
+				public function assess_check( string $repository_id, string $repository, ?string $credential_profile_id, string $hook_id ): RepositoryWebhookFitnessResult {
+					return $this->provider->assess_check( $repository_id, $repository, $credential_profile_id, $hook_id );
 				}
 
-				public function assess_reconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
-					return $this->provider->assess_reconfigure( $repositoryId, $repository, $credentialProfileId, $hookId );
+				public function assess_reconfigure( string $repository_id, string $repository, ?string $credential_profile_id, string $hook_id ): RepositoryWebhookFitnessResult {
+					return $this->provider->assess_reconfigure( $repository_id, $repository, $credential_profile_id, $hook_id );
 				}
 
-				public function assess_remove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
-					return $this->provider->assess_remove( $repositoryId, $repository, $credentialProfileId, $hookId );
+				public function assess_remove( string $repository_id, string $repository, ?string $credential_profile_id, string $hook_id ): RepositoryWebhookFitnessResult {
+					return $this->provider->assess_remove( $repository_id, $repository, $credential_profile_id, $hook_id );
 				}
 
-				public function assess_test( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
-					return $this->provider->assess_test( $repositoryId, $repository, $credentialProfileId, $hookId );
+				public function assess_test( string $repository_id, string $repository, ?string $credential_profile_id, string $hook_id ): RepositoryWebhookFitnessResult {
+					return $this->provider->assess_test( $repository_id, $repository, $credential_profile_id, $hook_id );
 				}
 			};
 
@@ -107,40 +107,40 @@ final class ExternalFixturePluginTest extends TestCase {
 
 			self::assertArrayNotHasKey( 'webhook_assistance', $projection );
 		} finally {
-			$this->cleanSidecar( $path );
+			$this->clean_sidecar( $path );
 		}
 	}
 
 		#[RunInSeparateProcess]
 		#[PreserveGlobalState( false )]
-	public function testPluginLoadedBeforeTheApiMarkerRegistersOnTheLaterHook(): void {
-		$this->loadFixturePlugin();
+	public function test_plugin_loaded_before_the_api_marker_registers_on_the_later_hook(): void {
+		$this->load_fixture_plugin();
 		self::assertFalse( defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) );
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 13 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
 
 		list( $registry, , $path ) = $this->registry();
-		$this->runRegistrationHook( $registry );
+		$this->run_registration_hook( $registry );
 
 		self::assertInstanceOf( Provider::class, $registry->get( 'fixture-provider' ) );
-		$this->cleanSidecar( $path );
+		$this->clean_sidecar( $path );
 	}
 
 		#[RunInSeparateProcess]
 		#[PreserveGlobalState( false )]
-	public function testPluginLoadedAfterTheApiMarkerExercisesTheCompleteProviderContract(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 13 );
-		$this->loadFixturePlugin();
+	public function test_plugin_loaded_after_the_api_marker_exercises_the_complete_provider_contract(): void {
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
+		$this->load_fixture_plugin();
 		list( $registry, $secrets, $path ) = $this->registry();
 
 		try {
-			$this->runRegistrationHook( $registry );
+			$this->run_registration_hook( $registry );
 			$registry->seal();
 			$provider = $registry->get( 'fixture-provider' );
 			self::assertInstanceOf( Provider::class, $provider );
-			self::assertSame( 0, $provider->getClient()->getRequestCount(), 'Registration must not run provider diagnostics or contact the provider client.' );
-			self::assertFalse( $provider->latestDeliveryWasObserved() );
+			self::assertSame( 0, $provider->get_client()->get_request_count(), 'Registration must not run provider diagnostics or contact the provider client.' );
+			self::assertFalse( $provider->latest_delivery_was_observed() );
 			try {
-				$secrets->saveCredential(
+				$secrets->save_credential(
 					'fixture-provider',
 					null,
 					array(
@@ -157,7 +157,7 @@ final class ExternalFixturePluginTest extends TestCase {
 				self::assertSame( 'Fixture API keys must begin with fixture_.', $failure->getMessage() );
 			}
 
-			$credentialId = $secrets->saveCredential(
+			$credential_id = $secrets->save_credential(
 				'fixture-provider',
 				'fixture-primary',
 				array(
@@ -169,15 +169,15 @@ final class ExternalFixturePluginTest extends TestCase {
 				true
 			);
 
-			self::assertTrue( $provider->validate_credential( $credentialId )->isValid() );
-			self::assertSame( 'ran-lab', $secrets->credentialProfiles( 'fixture-provider' )[ $credentialId ]['configuration']['tenant'] );
+			self::assertTrue( $provider->validate_credential( $credential_id )->is_valid() );
+			self::assertSame( 'ran-lab', $secrets->credential_profiles( 'fixture-provider' )[ $credential_id ]['configuration']['tenant'] );
 
 			$resolved = ( new PackageRepositoryRequestResolver( $registry ) )->resolve(
 				array(
 					'provider'      => 'fixture-provider',
 					'repository'    => 'group/subgroup/package',
 					'branch'        => '',
-					'credential_id' => $credentialId,
+					'credential_id' => $credential_id,
 				)
 			);
 
@@ -193,19 +193,19 @@ final class ExternalFixturePluginTest extends TestCase {
 			self::assertFalse( $settings['provider']['capabilities']['credentialed_public_browse'] );
 			self::assertFalse( $settings['provider']['capabilities']['provider_default_public_lookup_profile'] );
 			self::assertTrue( $settings['provider']['capabilities']['webhooks'] );
-			$packageForm     = ( new ProviderSettingsPresenter( $registry, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ) ) )->build_package_form( 'fixture-provider' );
-			$packageProvider = array_column( $packageForm['providers'], null, 'code' )['fixture-provider'];
-			self::assertSame( 'fixture-provider', $packageForm['default_provider'] );
-			self::assertTrue( $packageProvider['deploy'] );
-			self::assertFalse( $packageProvider['browse'] );
-			self::assertFalse( $packageProvider['credentialed_public_browse'] );
-			self::assertFalse( $packageProvider['provider_default_public_lookup_profile'] );
-			self::assertTrue( $packageProvider['webhooks'] );
+			$package_form     = ( new ProviderSettingsPresenter( $registry, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ) ) )->build_package_form( 'fixture-provider' );
+			$package_provider = array_column( $package_form['providers'], null, 'code' )['fixture-provider'];
+			self::assertSame( 'fixture-provider', $package_form['default_provider'] );
+			self::assertTrue( $package_provider['deploy'] );
+			self::assertFalse( $package_provider['browse'] );
+			self::assertFalse( $package_provider['credentialed_public_browse'] );
+			self::assertFalse( $package_provider['provider_default_public_lookup_profile'] );
+			self::assertTrue( $package_provider['webhooks'] );
 
-			$beforeDiagnostics = $provider->getClient()->getRequestCount();
+			$before_diagnostics = $provider->get_client()->get_request_count();
 			$now               = 100.0;
 			$request           = new ProviderDiagnosticRequest(
-				$credentialId,
+				$credential_id,
 				'group/subgroup/package',
 				ProviderDiagnosticRequest::MAX_REMOTE_CALLS,
 				4.25,
@@ -223,48 +223,48 @@ final class ExternalFixturePluginTest extends TestCase {
 				),
 				array_map( static fn( $result ): string => $result->code, $results )
 			);
-			self::assertSame( 3, $request->getRemoteCalls() );
-			self::assertSame( 3, $provider->getClient()->getRequestCount() - $beforeDiagnostics );
-			self::assertSame( array( 4.25, 4.25, 4.25 ), $provider->getClient()->getDiagnosticTimeouts() );
+			self::assertSame( 3, $request->get_remote_calls() );
+			self::assertSame( 3, $provider->get_client()->get_request_count() - $before_diagnostics );
+			self::assertSame( array( 4.25, 4.25, 4.25 ), $provider->get_client()->get_diagnostic_timeouts() );
 			foreach ( $results as $result ) {
-				self::assertSame( array( 'status', 'code', 'message', 'remediation' ), array_keys( $result->toArray() ) );
+				self::assertSame( array( 'status', 'code', 'message', 'remediation' ), array_keys( $result->to_array() ) );
 			}
 
 			$reference   = new RepositoryReference(
 				$resolved['repository'],
 				$resolved['provider_repository_id'],
 				true,
-				$credentialId
+				$credential_id
 			);
 			$archive     = $provider->prepare_archive( new ArchiveRequest( $reference, 'main' ) );
-			$resolvedRef = sha1( "group/subgroup/package\0main" );
-			self::assertSame( $resolvedRef, $archive->getResolvedRef() );
-			self::assertSame( 'https://fixtures.example.test/group/subgroup/package/' . $resolvedRef . '.zip', $archive->getUrl() );
+			$resolved_ref = sha1( "group/subgroup/package\0main" );
+			self::assertSame( $resolved_ref, $archive->get_resolved_ref() );
+			self::assertSame( 'https://fixtures.example.test/group/subgroup/package/' . $resolved_ref . '.zip', $archive->get_url() );
 
-			$automatic = $provider->prepare_archive( new ArchiveRequest( $reference, $resolvedRef, 'main' ) );
-			$provider->getClient()->setBranchHead( 'main', '89abcdef0123456789abcdef0123456789abcdef' );
+			$automatic = $provider->prepare_archive( new ArchiveRequest( $reference, $resolved_ref, 'main' ) );
+			$provider->get_client()->set_branch_head( 'main', '89abcdef0123456789abcdef0123456789abcdef' );
 			try {
-				$automatic->verifyCurrentHead();
+				$automatic->verify_current_head();
 				self::fail( 'The fixture provider must re-check automatic deployment heads before mutation.' );
 			} catch ( \RAN\RepositoryProvider\StaleDeployment $exception ) {
 				self::assertSame( 409, $exception->getCode() );
 			}
 
-			$fitness = $registry->requireCapability( 'fixture-provider', RepositoryWebhookFitness::class );
+			$fitness = $registry->require_capability( 'fixture-provider', RepositoryWebhookFitness::class );
 			self::assertSame(
 				'fixture.permission.webhook_exact',
-				$fitness->assess_setup( $resolved['provider_repository_id'], $resolved['repository'], $credentialId )->toArray()['code']
+				$fitness->assess_setup( $resolved['provider_repository_id'], $resolved['repository'], $credential_id )->to_array()['code']
 			);
-			$management = $registry->requireCapability( 'fixture-provider', RepositoryWebhookManagement::class );
-			$operation  = $management->setup( $resolved['provider_repository_id'], $resolved['repository'], 'https://site.example/webhook', $credentialId, str_repeat( 's', 32 ) );
+			$management = $registry->require_capability( 'fixture-provider', RepositoryWebhookManagement::class );
+			$operation  = $management->setup( $resolved['provider_repository_id'], $resolved['repository'], 'https://site.example/webhook', $credential_id, str_repeat( 's', 32 ) );
 			self::assertSame( 'configured_pending_delivery', $operation->code() );
-			self::assertStringNotContainsString( 'fixture_not-a-real-secret', json_encode( $operation->toArray(), JSON_THROW_ON_ERROR ) );
-			self::assertStringNotContainsString( str_repeat( 's', 32 ), json_encode( $operation->toArray(), JSON_THROW_ON_ERROR ) );
+			self::assertStringNotContainsString( 'fixture_not-a-real-secret', json_encode( $operation->to_array(), JSON_THROW_ON_ERROR ) );
+			self::assertStringNotContainsString( str_repeat( 's', 32 ), json_encode( $operation->to_array(), JSON_THROW_ON_ERROR ) );
 
-			$normalizer = $registry->requireCapability( 'fixture-provider', WebhookNormalizer::class );
+			$normalizer = $registry->require_capability( 'fixture-provider', WebhookNormalizer::class );
 			self::assertSame( $provider, $normalizer );
 			self::assertSame( array( 'x-fixture-event', 'x-fixture-signature' ), $normalizer->get_webhook_policy()->get_retained_headers() );
-			$beforeNormalization = $provider->getClient()->getRequestCount();
+			$before_normalization = $provider->get_client()->get_request_count();
 			$request             = new WebhookRequest(
 				ProviderCode::parse( 'fixture-provider' ),
 				'',
@@ -275,9 +275,9 @@ final class ExternalFixturePluginTest extends TestCase {
 				$normalizer->normalize_webhook( $request );
 				self::fail( 'Fixture normalization must require verified provider evidence.' );
 			} catch ( \RAN\RepositoryProvider\WebhookRejected $failure ) {
-				self::assertSame( 401, $failure->getStatusCode() );
+				self::assertSame( 401, $failure->get_status_code() );
 			}
-			$verified = $request->withVerification(
+			$verified = $request->with_verification(
 				new SignedWebhookVerification(
 					ProviderCode::parse( 'fixture-provider' ),
 					array(
@@ -290,8 +290,8 @@ final class ExternalFixturePluginTest extends TestCase {
 					),
 				)
 			);
-			self::assertTrue( $normalizer->normalize_webhook( $verified )->isProbe() );
-			$otherProviderRequest = new WebhookRequest(
+			self::assertTrue( $normalizer->normalize_webhook( $verified )->is_probe() );
+			$other_provider_request = new WebhookRequest(
 				ProviderCode::parse( 'gh' ),
 				'',
 				array( 'x-fixture-event' => 'ping' ),
@@ -299,7 +299,7 @@ final class ExternalFixturePluginTest extends TestCase {
 			);
 			try {
 				$normalizer->normalize_webhook(
-					$otherProviderRequest->withVerification(
+					$other_provider_request->with_verification(
 						new SignedWebhookVerification(
 							ProviderCode::parse( 'gh' ),
 							array(
@@ -315,53 +315,53 @@ final class ExternalFixturePluginTest extends TestCase {
 				);
 				self::fail( 'Fixture normalization must reject a differently verified provider.' );
 			} catch ( \RAN\RepositoryProvider\WebhookRejected $failure ) {
-				self::assertSame( 400, $failure->getStatusCode() );
+				self::assertSame( 400, $failure->get_status_code() );
 			}
-			self::assertSame( $beforeNormalization, $provider->getClient()->getRequestCount(), 'Normalization must not contact the provider client.' );
+			self::assertSame( $before_normalization, $provider->get_client()->get_request_count(), 'Normalization must not contact the provider client.' );
 
 			foreach ( array( RepositoryBrowser::class, CredentialedPublicRepositoryBrowser::class, RepositoryReleaseCandidateListing::class ) as $capability ) {
 				try {
-					$registry->requireCapability( 'fixture-provider', $capability );
+					$registry->require_capability( 'fixture-provider', $capability );
 					self::fail( 'The fixture must not expose unsupported optional capabilities.' );
 				} catch ( UnsupportedProviderCapability ) {
 					self::assertSame( $provider, $registry->get( 'fixture-provider' ) );
 				}
 			}
 		} finally {
-			$this->cleanSidecar( $path );
+			$this->clean_sidecar( $path );
 		}
 	}
 
 		#[RunInSeparateProcess]
 		#[PreserveGlobalState( false )]
-	#[DataProvider( 'incompatibleProviderApis' )]
-	public function testPluginDoesNotRegisterWithAnIncompatibleProviderApi( int $api ): void {
+	#[DataProvider( 'incompatible_provider_apis' )]
+	public function test_plugin_does_not_register_with_an_incompatible_provider_api( int $api ): void {
 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', $api );
-		$this->loadFixturePlugin();
+		$this->load_fixture_plugin();
 		list( $registry, , $path ) = $this->registry();
 
 		try {
-			$this->runRegistrationHook( $registry );
+			$this->run_registration_hook( $registry );
 			self::assertFalse( class_exists( Provider::class, false ) );
 		} finally {
-			$this->cleanSidecar( $path );
+			$this->clean_sidecar( $path );
 		}
 	}
 
 	/** @return array<string, array{int}> */
-	public static function incompatibleProviderApis(): array {
+	public static function incompatible_provider_apis(): array {
 		return array(
 			'older'    => array( 10 ),
 			'api_11'   => array( 11 ),
 			'previous' => array( 12 ),
-			'future'   => array( 14 ),
+			'future'   => array( 15 ),
 		);
 	}
 
 		#[RunInSeparateProcess]
 		#[PreserveGlobalState( false )]
-	public function testPluginIsHarmlessWhenBoosterIsAbsent(): void {
-		$this->loadFixturePlugin();
+	public function test_plugin_is_harmless_when_booster_is_absent(): void {
+		$this->load_fixture_plugin();
 		$callbacks = $GLOBALS['ran_booster_external_fixture_actions']['ran_booster_register_providers'] ?? array();
 
 		self::assertCount( 1, $callbacks );
@@ -369,7 +369,7 @@ final class ExternalFixturePluginTest extends TestCase {
 		self::assertFalse( class_exists( Provider::class, false ) );
 	}
 
-	private function loadFixturePlugin(): void {
+	private function load_fixture_plugin(): void {
 		$GLOBALS['ran_booster_external_fixture_actions'] = array();
 		require dirname( __DIR__ ) . '/fixtures/ran-booster-fixture-provider/ran-booster-fixture-provider.php';
 	}
@@ -379,14 +379,14 @@ final class ExternalFixturePluginTest extends TestCase {
 		 */
 	private function registry(): array {
 		$path           = sys_get_temp_dir() . '/ran-booster-external-fixture-' . bin2hex( random_bytes( 8 ) ) . '.php';
-		$secretPolicies = new ProviderSecretPolicyCatalog();
-		$secrets        = SecretsFileTestFactory::create( $path, array(), $secretPolicies );
+		$secret_policies = new ProviderSecretPolicyCatalog();
+		$secrets        = SecretsFileTestFactory::create( $path, array(), $secret_policies );
 		$registry       = new ProviderRegistry(
 			array(),
-			$secretPolicies,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
+			$secret_policies,
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentials_for( $code ),
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new class() implements AuthenticatedWebhookDeliveryEvidenceReader {
-				public function latestAuthenticatedDelivery(): ?AuthenticatedWebhookDeliveryEvidence {
+				public function latest_authenticated_delivery(): ?AuthenticatedWebhookDeliveryEvidence {
 					return null;
 				}
 			},
@@ -396,13 +396,13 @@ final class ExternalFixturePluginTest extends TestCase {
 		return array( $registry, $secrets, $path );
 	}
 
-	private function runRegistrationHook( ProviderRegistry $registry ): void {
+	private function run_registration_hook( ProviderRegistry $registry ): void {
 		$callbacks = $GLOBALS['ran_booster_external_fixture_actions']['ran_booster_register_providers'] ?? array();
 		self::assertCount( 1, $callbacks );
 		$callbacks[0]( $registry );
 	}
 
-	private function cleanSidecar( string $path ): void {
+	private function clean_sidecar( string $path ): void {
 		foreach ( array( $path, $path . '.lock' ) as $candidate ) {
 			if ( is_file( $candidate ) ) {
 				unlink( $candidate );

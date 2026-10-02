@@ -9,32 +9,32 @@ use InvalidArgumentException;
 final readonly class RepositoryReleaseCandidate {
 	private const UTC_PATTERN = '/\A(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,6})?Z\z/D';
 
-	/** @param list<string> $expectedAssetNames */
+	/** @param list<string> $expected_asset_names */
 	public function __construct(
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		public string $providerReleaseId,
+		public string $provider_release_id,
 		public string $tag,
 		public string $version,
 		public bool $prerelease,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		public string $publishedAt,
+		public string $published_at,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		public array $expectedAssetNames
+		public array $expected_asset_names
 	) {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		if ( 1 !== preg_match( '/\A[^\x00-\x1F\x7F]{1,191}\z/D', $providerReleaseId )
+		if ( 1 !== preg_match( '/\A[^\x00-\x1F\x7F]{1,191}\z/D', $provider_release_id )
 			|| 1 !== preg_match( '/\A[^\x00-\x1F\x7F]{1,100}\z/D', $tag )
 			|| 1 !== preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._+-]{0,63}\z/D', $version )
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-			|| ! self::valid_utc_timestamp( $publishedAt )
+			|| ! self::valid_utc_timestamp( $published_at )
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-			|| ! array_is_list( $expectedAssetNames )
+			|| ! array_is_list( $expected_asset_names )
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-			|| count( $expectedAssetNames ) > 8 ) {
+			|| count( $expected_asset_names ) > 8 ) {
 			throw new InvalidArgumentException( 'The repository release candidate is invalid.' );
 		}
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		foreach ( $expectedAssetNames as $asset_name ) {
+		foreach ( $expected_asset_names as $asset_name ) {
 			if ( ! is_string( $asset_name )
 				|| strlen( $asset_name ) > 220
 				|| ! str_ends_with( strtolower( $asset_name ), '.zip' )

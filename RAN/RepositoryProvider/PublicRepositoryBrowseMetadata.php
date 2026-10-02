@@ -10,7 +10,7 @@ namespace RAN\RepositoryProvider;
 final readonly class PublicRepositoryBrowseMetadata {
 
 	public function __construct(
-		public bool $supportsProviderDefaultProfile
+		public bool $supports_provider_default_profile
 	) {
 	}
 }

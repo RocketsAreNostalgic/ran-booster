@@ -16,5 +16,5 @@ interface RepositoryReleaseArtifact {
 
 	public function main_file(): string;
 
-	public function identifier( string $packageType ): string;
+	public function identifier( string $package_type ): string;
 }

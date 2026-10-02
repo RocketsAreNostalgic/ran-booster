@@ -22,7 +22,7 @@ final readonly class ProviderCode {
 		if ( in_array( $value, array( 'overview', 'portability', 'documentation', 'troubleshooting' ), true )
 			|| 1 !== preg_match( '/\A[a-z][a-z0-9-]{0,31}\z/', $value )
 		) {
-			throw InvalidProviderCode::forValue();
+			throw InvalidProviderCode::for_value();
 		}
 
 		return new self( $value );

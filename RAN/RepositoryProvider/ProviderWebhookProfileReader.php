@@ -11,5 +11,5 @@ namespace RAN\RepositoryProvider;
  */
 interface ProviderWebhookProfileReader {
 
-	public function hasWebhookProfile(): bool;
+	public function has_webhook_profile(): bool;
 }

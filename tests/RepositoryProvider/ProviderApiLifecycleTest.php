@@ -18,27 +18,27 @@ final class ProviderApiLifecycleTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	#[DataProvider( 'registrationLoadOrders' )]
-	public function testOldProviderIsRejectedBeforeItsIncompatibleClassLoads( bool $coreFirst, int $providerApi, string $providerClass ): void {
+	#[DataProvider( 'registration_load_orders' )]
+	public function test_old_provider_is_rejected_before_its_incompatible_class_loads( bool $core_first, int $provider_api, string $provider_class ): void {
 		require_once dirname( __DIR__ ) . '/Support/ExternalFixturePluginWordPressFunctions.php';
 		$GLOBALS['ran_booster_external_fixture_actions'] = array();
-		if ( $coreFirst ) {
-			define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 13 );
+		if ( $core_first ) {
+			define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
 		}
-		require dirname( __DIR__ ) . '/fixtures/provider-api' . $providerApi . '-registration/provider.php';
-		if ( ! $coreFirst ) {
-			define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 13 );
+		require dirname( __DIR__ ) . '/fixtures/provider-api' . $provider_api . '-registration/provider.php';
+		if ( ! $core_first ) {
+			define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
 		}
 		$registry  = new ProviderRegistry();
 		$callbacks = $GLOBALS['ran_booster_external_fixture_actions']['ran_booster_register_providers'];
 		self::assertCount( 1, $callbacks );
 		$callbacks[0]( $registry );
-		self::assertFalse( class_exists( $providerClass, false ) );
+		self::assertFalse( class_exists( $provider_class, false ) );
 		self::assertSame( array(), $registry->all() );
 	}
 
 	/** @return array<string, array{bool, int, string}> */
-	public static function registrationLoadOrders(): array {
+	public static function registration_load_orders(): array {
 		return array(
 			'API 11 core first'     => array( true, 11, 'RANBoosterApiElevenWorkflowProvider' ),
 			'API 11 provider first' => array( false, 11, 'RANBoosterApiElevenWorkflowProvider' ),
@@ -49,19 +49,19 @@ final class ProviderApiLifecycleTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testConflictingProviderApiMarkerFailsClearly(): void {
+	public function test_conflicting_provider_api_marker_fails_clearly(): void {
 		define( 'WPINC', 'wpinc' );
 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 1 );
 
 		$this->expectException( LogicException::class );
-		$this->expectExceptionMessage( 'RAN Booster Provider API 13 conflicts with an existing API version marker.' );
+		$this->expectExceptionMessage( 'RAN Booster Provider API 14 conflicts with an existing API version marker.' );
 
 		require dirname( __DIR__, 2 ) . '/ran-booster.php';
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testCorePublishesNoLoggingApiMarker(): void {
+	public function test_core_publishes_no_logging_api_marker(): void {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static local bootstrap contract.
 		$bootstrap = file_get_contents( dirname( __DIR__, 2 ) . '/ran-booster.php' );
 
@@ -69,44 +69,44 @@ final class ProviderApiLifecycleTest extends TestCase {
 		self::assertStringNotContainsString( 'RAN_BOOSTER_LOGGING_API_VERSION', $bootstrap );
 	}
 
-	public function testProviderRegistryExposesNoLoggingFacade(): void {
+	public function test_provider_registry_exposes_no_logging_facade(): void {
 		$registry   = new ReflectionClass( ProviderRegistry::class );
 		$parameters = $registry->getConstructor()?->getParameters() ?? array();
 
 		self::assertFalse( $registry->hasMethod( 'logging' ) );
 		self::assertCount( 5, $parameters );
-		self::assertSame( 'registrationContext', $parameters[4]->getName() );
+		self::assertSame( 'registration_context', $parameters[4]->getName() );
 		self::assertTrue( $parameters[4]->isOptional() );
 		self::assertTrue( $parameters[4]->allowsNull() );
 		self::assertInstanceOf( ReflectionNamedType::class, $parameters[4]->getType() );
 		self::assertSame( ProviderRegistrationContext::class, $parameters[4]->getType()?->getName() );
 	}
 
-	public function testProviderRegistryRequiresNoLoggingFacade(): void {
+	public function test_provider_registry_requires_no_logging_facade(): void {
 		self::assertInstanceOf( ProviderRegistry::class, new ProviderRegistry() );
 	}
 
-	public function testManagedReleaseTargetsAndBundledControlsFollowProviderSealing(): void {
+	public function test_managed_release_targets_and_bundled_controls_follow_provider_sealing(): void {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static local bootstrap contract.
 		$bootstrap = file_get_contents( dirname( __DIR__, 2 ) . '/ran-booster.php' );
 
 		self::assertIsString( $bootstrap );
-		$providerRegistration = strpos( $bootstrap, "do_action( 'ran_booster_register_providers'" );
-		$providerSeal         = strpos( $bootstrap, '$providerRegistry->seal()' );
-		$targetRegistration   = strpos( $bootstrap, 'ManagedReleaseTargetRegistrar::class )->register()' );
-		$releaseControls      = strpos( $bootstrap, 'make( ReleaseManagementControls::class )->register()' );
-		$workflowControls     = strpos( $bootstrap, 'make( ReleaseWorkflowControls::class )->register()' );
+		$provider_registration = strpos( $bootstrap, "do_action( 'ran_booster_register_providers'" );
+		$provider_seal         = strpos( $bootstrap, '$provider_registry->seal()' );
+		$target_registration   = strpos( $bootstrap, 'ManagedReleaseTargetRegistrar::class )->register()' );
+		$release_controls      = strpos( $bootstrap, 'make( ReleaseManagementControls::class )->register()' );
+		$workflow_controls     = strpos( $bootstrap, 'make( ReleaseWorkflowControls::class )->register()' );
 
-		self::assertIsInt( $providerRegistration );
-		self::assertIsInt( $providerSeal );
-		self::assertIsInt( $targetRegistration );
-		self::assertTrue( $providerRegistration < $providerSeal );
-		self::assertTrue( $providerSeal < $targetRegistration );
-		self::assertIsInt( $releaseControls );
-		self::assertIsInt( $workflowControls );
-		self::assertTrue( $targetRegistration < $releaseControls );
-		self::assertTrue( $targetRegistration < $workflowControls );
-		self::assertTrue( $workflowControls < $releaseControls );
+		self::assertIsInt( $provider_registration );
+		self::assertIsInt( $provider_seal );
+		self::assertIsInt( $target_registration );
+		self::assertTrue( $provider_registration < $provider_seal );
+		self::assertTrue( $provider_seal < $target_registration );
+		self::assertIsInt( $release_controls );
+		self::assertIsInt( $workflow_controls );
+		self::assertTrue( $target_registration < $release_controls );
+		self::assertTrue( $target_registration < $workflow_controls );
+		self::assertTrue( $workflow_controls < $release_controls );
 		self::assertSame( 1, substr_count( $bootstrap, 'ManagedReleaseTargetRegistrar::class )->register()' ) );
 		self::assertSame( 1, substr_count( $bootstrap, 'make( ReleaseManagementControls::class )->register()' ) );
 		self::assertSame( 1, substr_count( $bootstrap, 'make( ReleaseWorkflowControls::class )->register()' ) );

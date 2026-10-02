@@ -350,6 +350,23 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringNotContainsString( '>Active<', $output );
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function testApiThreeHostDoesNotClaimCompatibilityWithApiTwoMigrator(): void {
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
+		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 3 );
+		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );
+		$GLOBALS['ran_booster_extensions_plugins']['ran-booster-wp-pusher-migrator/ran-booster-wp-pusher-migrator.php'] = array( 'Name' => 'Migrator' );
+		$GLOBALS['ran_booster_extensions_active_plugins'] = array( 'ran-booster-wp-pusher-migrator/ran-booster-wp-pusher-migrator.php' );
+
+		$output = $this->render();
+
+		self::assertSame( 2, substr_count( $output, '>Incompatible<' ) );
+		self::assertStringContainsString( 'Requires a different version of Booster', $output );
+		self::assertStringNotContainsString( '>Active<', $output );
+	}
+
 	public function testDeniedRequestRendersNothing(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = false;
 

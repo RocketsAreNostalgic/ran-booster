@@ -72,8 +72,8 @@ internal typed coordinators after resolving the selected provider's exact
 release facets. A plugin must not treat those internal coordinators as a public
 service-delivery API.
 
-Portability API 2 is an independently versioned adoption-only contract for a
-trusted source bridge. Its consumer checks exact Portability API 2, not Add-on
+Portability API 3 is an independently versioned adoption-only contract for a
+trusted source bridge. Its consumer checks exact Portability API 3, not Add-on
 API 16. The separate
 [Portability API contract](portability-api.md) documents its candidate, nonce,
 review, Apply, source-ownership, recovery, and cleanup boundaries.

@@ -107,6 +107,8 @@
 		<include-pattern>/RAN/Admin/PackagePagePresenter.php</include-pattern>
 		<include-pattern>/RAN/Admin/ProviderRepositoryRowsNormalizer.php</include-pattern>
 		<include-pattern>/RAN/AddOn/Portability/PortabilityFacade.php</include-pattern>
+		<include-pattern>/RAN/AddOn/Portability/PortabilityCandidate.php</include-pattern>
+		<include-pattern>/RAN/AddOn/Portability/PortabilityApplyResult.php</include-pattern>
 		<include-pattern>/RAN/AddOn/Portability/PortabilityReviewResult.php</include-pattern>
 		<include-pattern>/RAN/Uninstall/LocalDataRemover.php</include-pattern>
 		<include-pattern>/RAN/Runtime/UnsupportedMultisiteBootstrap.php</include-pattern>
@@ -284,6 +286,8 @@
 		<include-pattern>/RAN/Admin/PackagePagePresenter.php</include-pattern>
 		<include-pattern>/RAN/Admin/ProviderRepositoryRowsNormalizer.php</include-pattern>
 		<include-pattern>/RAN/AddOn/Portability/PortabilityFacade.php</include-pattern>
+		<include-pattern>/RAN/AddOn/Portability/PortabilityCandidate.php</include-pattern>
+		<include-pattern>/RAN/AddOn/Portability/PortabilityApplyResult.php</include-pattern>
 		<include-pattern>/RAN/AddOn/Portability/PortabilityReviewResult.php</include-pattern>
 		<include-pattern>/RAN/Uninstall/LocalDataRemover.php</include-pattern>
 		<include-pattern>/RAN/Runtime/UnsupportedMultisiteBootstrap.php</include-pattern>

@@ -104,7 +104,7 @@ $ran_booster_release_updater = ReleaseUpdaterBootstrap::register();
 if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' ) ) {
 	define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', PortabilityFacade::API_VERSION );
 } elseif ( PortabilityFacade::API_VERSION !== RAN_BOOSTER_PORTABILITY_API_VERSION ) {
-	throw new LogicException( 'RAN Booster Portability API 2 conflicts with an existing API version marker.' );
+	throw new LogicException( 'RAN Booster Portability API 3 conflicts with an existing API version marker.' );
 }
 $ran_booster_core_development_notice = new CoreSelfUpdateDevelopmentNotice( $ran_booster_self_update_policy );
 $ran_booster_core_development_notice->register();

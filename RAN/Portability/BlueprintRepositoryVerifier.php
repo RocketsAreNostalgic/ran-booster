@@ -30,10 +30,8 @@ final readonly class BlueprintRepositoryVerifier {
 	 */
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public method and named by-reference parameter contracts remain unchanged pending their connected-caller audit.
 	public function resolveCandidate( PortabilityCandidate $candidate ): array {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
-		if ( null !== $candidate->credentialId
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
-			&& ! $this->has_target_credential( $candidate->providerCode, $candidate->credentialId ) ) {
+		if ( null !== $candidate->credential_id
+			&& ! $this->has_target_credential( $candidate->provider_code, $candidate->credential_id ) ) {
 			return array(
 				'package' => null,
 				'private' => null,
@@ -42,22 +40,18 @@ final readonly class BlueprintRepositoryVerifier {
 		}
 
 		try {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
-			$provider   = ProviderCode::parse( $candidate->providerCode );
+			$provider   = ProviderCode::parse( $candidate->provider_code );
 			$descriptor = $this->providers->get( $provider )->resolve_repository(
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
-				new RepositoryLookupRequest( $candidate->repository, $candidate->credentialId )
+				new RepositoryLookupRequest( $candidate->repository, $candidate->credential_id )
 			);
 			if ( ! $descriptor->provider->equals( $provider )
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
-				|| $descriptor->credentialId !== $candidate->credentialId
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
-				|| ( $descriptor->private && null === $candidate->credentialId ) ) {
+				|| $descriptor->credentialId !== $candidate->credential_id
+				|| ( $descriptor->private && null === $candidate->credential_id ) ) {
 				return array(
 					'package' => null,
 					'private' => null,
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
-					'reason'  => null === $candidate->credentialId
+					'reason'  => null === $candidate->credential_id
 						? TargetPackageReason::CREDENTIAL_REQUIRED
 						: TargetPackageReason::REPOSITORY_IDENTITY_MISMATCH,
 				);
@@ -67,10 +61,8 @@ final readonly class BlueprintRepositoryVerifier {
 				'package' => new BlueprintPackage(
 					$candidate->type,
 					$candidate->identifier,
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
-					$candidate->displayName,
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
-					$candidate->providerCode,
+					$candidate->display_name,
+					$candidate->provider_code,
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Foreign DTO properties retain their separately owned contracts.
 					$descriptor->providerRepositoryId,
 					$candidate->repository,

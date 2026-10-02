@@ -1,6 +1,6 @@
-# Portability API 2
+# Portability API 3
 
-Portability API 2 is Core's narrow, request-local adoption boundary for a
+Portability API 3 is Core's narrow, request-local adoption boundary for a
 trusted source bridge. It reviews one already-installed plugin or theme and may
 adopt that package into Booster with deployment policy forced to Disabled.
 
@@ -10,14 +10,14 @@ the separate Blueprint V1 ZIP workflow.
 
 ## Version and service delivery
 
-A consumer must require exact Portability API 2:
+A consumer must require exact Portability API 3:
 
 ```php
 add_action(
 	'plugins_loaded',
 	static function (): void {
 		if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' )
-			|| 2 !== RAN_BOOSTER_PORTABILITY_API_VERSION ) {
+			|| 3 !== RAN_BOOSTER_PORTABILITY_API_VERSION ) {
 			return;
 		}
 
@@ -41,7 +41,7 @@ not replayed. The callback receives only the portability facade; it does not rec
 Core's container, repositories, provider clients, credential store, filesystem
 paths, or cleanup authority.
 
-Portability API 2 is independently versioned. A source bridge does not need
+Portability API 3 is independently versioned. A source bridge does not need
 Add-on API 16 or Provider API 13, although Core continues to use its registered
 providers internally.
 
@@ -50,7 +50,7 @@ A source bridge may separately feature-detect Core's additive
 row without a page refresh. Core derives the target from bounded presentation
 identity based on the installed candidate, never from a source row ID, source
 key or source revision. This presentation transport does not change
-Portability API 2 authorization, review, Apply, target verification or
+Portability API 3 authorization, review, Apply, target verification or
 source-cleanup ownership. See
 [Enhanced administration interaction API](enhanced-admin-interactions.md).
 
@@ -61,14 +61,14 @@ Construct one immutable
 
 - `type`: `plugin` or `theme`;
 - `identifier`: installed plugin basename or theme stylesheet;
-- `displayName`: non-empty display-safe text, at most 191 bytes;
-- `providerCode`: a registered provider code;
+- `display_name`: non-empty display-safe text, at most 191 bytes;
+- `provider_code`: a registered provider code;
 - `repository`: a normalized repository locator without embedded credentials,
   query, or fragment;
 - `branch`: non-empty and at most 255 bytes;
 - `subdirectory`: `null` or a normalized relative path of at most 255 bytes;
   and
-- `credentialId`: `null` or an existing Core credential-profile ID matching
+- `credential_id`: `null` or an existing Core credential-profile ID matching
   `[A-Za-z0-9_-]{3,64}`.
 
 The candidate deliberately has no source row ID or fingerprint, provider-issued
@@ -83,20 +83,20 @@ The bridge owns its source state and uses the facade in this order:
 1. Fresh-read and validate the source record.
 2. Build the current candidate.
 3. Derive the review action with
-   `nonceAction( 'review', $candidate )`, create that WordPress nonce, and call
+   `nonce_action( 'review', $candidate )`, create that WordPress nonce, and call
    `review( $candidate, $nonce )`.
 4. Display the returned closed action, reason, message, and opaque `v1:`
    fingerprint.
 5. Before Apply, fresh-read the source again and require its bridge-owned
    fingerprint to be unchanged.
 6. Derive the Apply action with
-   `nonceAction( 'apply', $candidate, $review->fingerprint )`, create that
+   `nonce_action( 'apply', $candidate, $review->fingerprint )`, create that
    WordPress nonce, and call
    `apply( $candidate, $review->fingerprint, $nonce )`.
-7. Remove source authority only when Apply returns `targetVerified = true` and
+7. Remove source authority only when Apply returns `target_verified = true` and
    a final exact source comparison succeeds.
 
-`nonceAction()` scopes a nonce; it neither creates a nonce nor grants authority.
+`nonce_action()` scopes a nonce; it neither creates a nonce nor grants authority.
 Core independently checks `manage_options`, the applicable plugin or theme
 installation capability for Apply, the nonce, installed identity, provider
 resolution, credential selection, privacy, current review action, and managed
@@ -111,7 +111,7 @@ Review returns one of:
   runtime checks prevent safe adoption.
 
 The facade never returns `install`. Apply returns `adopted`, `unchanged`,
-`blocked`, or `failed`. `targetVerified` is true only for `adopted` or
+`blocked`, or `failed`. `target_verified` is true only for `adopted` or
 `unchanged` after exact readback proves the identifier, provider identity,
 repository, branch, subdirectory, credential profile, provider privacy, and
 Disabled policy.
@@ -171,7 +171,7 @@ reconcile from the two live authorities.
 
 ## Deliberate limits
 
-Portability API 2 does not provide:
+Portability API 3 does not provide:
 
 - package installation, file replacement, activation, or deployment enablement;
 - credential creation, transfer, display, validation, or deletion;
@@ -182,3 +182,12 @@ Portability API 2 does not provide:
 
 Material rejected approaches and their reconsideration triggers remain in the
 private architecture review archive; they are not public runtime contracts.
+
+## PHP naming transition
+
+API 3 uses snake_case PHP methods, named parameters and promoted properties.
+It requires a matching source bridge; API 2 callers are not compatible. The
+serialized candidate keys, nonce action prefixes and review fingerprint format
+remain unchanged, including canonical hash payload version 2. Renaming PHP
+identifiers does not invalidate a previously generated review solely by changing
+its hash inputs. Authorization and fresh review/apply checks remain mandatory.

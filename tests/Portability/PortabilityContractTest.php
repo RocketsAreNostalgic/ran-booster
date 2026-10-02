@@ -16,6 +16,75 @@ use ReflectionClass;
 
 final class PortabilityContractTest extends TestCase {
 
+	public function testApiThreePreservesApiTwoCandidateReviewAndNonceBytes(): void {
+		// Captured from pre-migration Core d5b35ac, not derived from API_VERSION.
+		$candidate = $this->candidate();
+		$review    = $this->review( $candidate );
+		$facade    = $this->facade();
+
+		self::assertSame(
+			'{"type":"plugin","identifier":"example/example.php","display_name":"Example","provider":"gh","repository":"owner/example","branch":"main","subdirectory":null,"credential_id":"target-profile"}',
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Preserve the exact canonical bytes used by the hash contract.
+			json_encode( $candidate->to_array(), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE )
+		);
+		self::assertSame(
+			'v1:9eb772cacefcb6e282a09a5485d3c3a5cb59820f869233ff3a7befcc16de42c7',
+			$review->fingerprint
+		);
+		self::assertSame(
+			'ran-booster-portability-review-v1-da2854f0934e0516ffb0b65b4930c7a611bba3b6049aaf798eafff752992a1a5',
+			$facade->nonce_action( 'review', $candidate )
+		);
+		self::assertSame(
+			'ran-booster-portability-apply-v1-da2854f0934e0516ffb0b65b4930c7a611bba3b6049aaf798eafff752992a1a5-9eb772cacefcb6e282a09a5485d3c3a5cb59820f869233ff3a7befcc16de42c7',
+			$facade->nonce_action( 'apply', $candidate, $review->fingerprint )
+		);
+	}
+
+	public function testCompletedPhpBoundaryRejectsLegacyNamesAndAcceptsNamedArguments(): void {
+		$candidate = new PortabilityCandidate(
+			type: 'plugin',
+			identifier: 'example/example.php',
+			display_name: 'Example',
+			provider_code: 'gh',
+			repository: 'owner/example',
+			branch: 'main',
+			credential_id: 'target-profile'
+		);
+		$review    = PortabilityReviewResult::from_resolved(
+			candidate: $candidate,
+			action: PortabilityReviewResult::ADOPT,
+			reason: TargetPackageReason::NONE->value,
+			message: 'Ready.',
+			provider_repository_id: 'repository-id',
+			repository_private: true
+		);
+		$result    = new PortabilityApplyResult(
+			status: PortabilityApplyResult::ADOPTED,
+			reason: TargetPackageReason::NONE->value,
+			message: 'Adopted.',
+			target_verified: true
+		);
+		self::assertTrue( $result->target_verified );
+		self::assertSame( $this->candidate()->to_array(), $candidate->to_array() );
+		self::assertSame(
+			$this->facade()->nonce_action( 'apply', $candidate, $review->fingerprint ),
+			$this->facade()->nonce_action( operation: 'apply', candidate: $candidate, expected_fingerprint: $review->fingerprint )
+		);
+		foreach ( array( PortabilityFacade::class, PortabilityCandidate::class, PortabilityReviewResult::class, PortabilityApplyResult::class, \RAN\AddOn\Portability\NativePortabilityFacade::class ) as $class ) {
+			$reflection = new ReflectionClass( $class );
+			foreach ( $reflection->getMethods() as $method ) {
+				self::assertMatchesRegularExpression( '/^[a-z_]+$/', $method->name );
+				foreach ( $method->getParameters() as $parameter ) {
+					self::assertMatchesRegularExpression( '/^[a-z_]+$/', $parameter->name );
+				}
+			}
+			foreach ( $reflection->getProperties() as $property ) {
+				self::assertMatchesRegularExpression( '/^[a-z_]+$/', $property->name );
+			}
+		}
+	}
+
 	public function testCandidateProjectsOnlyBoundedTargetFields(): void {
 		$candidate = $this->candidate();
 
@@ -30,10 +99,10 @@ final class PortabilityContractTest extends TestCase {
 				'subdirectory'  => null,
 				'credential_id' => 'target-profile',
 			),
-			$candidate->toArray()
+			$candidate->to_array()
 		);
 		self::assertSame(
-			array( 'type', 'identifier', 'displayName', 'providerCode', 'repository', 'branch', 'subdirectory', 'credentialId' ),
+			array( 'type', 'identifier', 'display_name', 'provider_code', 'repository', 'branch', 'subdirectory', 'credential_id' ),
 			array_keys( get_object_vars( $candidate ) )
 		);
 	}
@@ -56,20 +125,20 @@ final class PortabilityContractTest extends TestCase {
 				'identifier' => 'example/example.php',
 			),
 		);
-		yield 'blank display name' => array( array( 'displayName' => '' ) );
-		yield 'display control' => array( array( 'displayName' => "Example\nPackage" ) );
-		yield 'reserved provider' => array( array( 'providerCode' => 'portability' ) );
+		yield 'blank display name' => array( array( 'display_name' => '' ) );
+		yield 'display control' => array( array( 'display_name' => "Example\nPackage" ) );
+		yield 'reserved provider' => array( array( 'provider_code' => 'portability' ) );
 		yield 'repository credential' => array( array( 'repository' => 'https://token@example.test/owner/repository' ) );
 		yield 'repository query' => array( array( 'repository' => 'https://example.test/owner/repository?token=secret' ) );
 		yield 'blank branch' => array( array( 'branch' => '' ) );
 		yield 'noncanonical subdirectory' => array( array( 'subdirectory' => 'plugin/' ) );
-		yield 'short credential id' => array( array( 'credentialId' => 'ab' ) );
-		yield 'credential control' => array( array( 'credentialId' => "target\nprofile" ) );
-		yield 'long credential id' => array( array( 'credentialId' => str_repeat( 'a', 65 ) ) );
+		yield 'short credential id' => array( array( 'credential_id' => 'ab' ) );
+		yield 'credential control' => array( array( 'credential_id' => "target\nprofile" ) );
+		yield 'long credential id' => array( array( 'credential_id' => str_repeat( 'a', 65 ) ) );
 	}
 
 	public function testReviewResultIsClosedAndVersionFingerprintBound(): void {
-		$result = PortabilityReviewResult::fromResolved(
+		$result = PortabilityReviewResult::from_resolved(
 			$this->candidate(),
 			PortabilityReviewResult::ADOPT,
 			TargetPackageReason::NONE->value,
@@ -83,7 +152,7 @@ final class PortabilityContractTest extends TestCase {
 		self::assertStringNotContainsString( 'target-profile', $result->fingerprint );
 		$reflection = new ReflectionClass( PortabilityReviewResult::class );
 		self::assertSame( 'string', (string) $reflection->getProperty( 'action' )->getType() );
-		self::assertSame( 'string', (string) $reflection->getMethod( 'fromResolved' )->getParameters()[1]->getType() );
+		self::assertSame( 'string', (string) $reflection->getMethod( 'from_resolved' )->getParameters()[1]->getType() );
 	}
 
 	#[DataProvider( 'invalidReviewProvider' )]
@@ -126,8 +195,8 @@ final class PortabilityContractTest extends TestCase {
 			false
 		);
 
-		self::assertTrue( $adopted->targetVerified );
-		self::assertFalse( $blocked->targetVerified );
+		self::assertTrue( $adopted->target_verified );
+		self::assertFalse( $blocked->target_verified );
 
 		foreach (
 			array(
@@ -154,8 +223,8 @@ final class PortabilityContractTest extends TestCase {
 		);
 		sort( $methods );
 
-		self::assertSame( 2, PortabilityFacade::API_VERSION );
-		self::assertSame( array( 'apply', 'nonceAction', 'review' ), $methods );
+		self::assertSame( 3, PortabilityFacade::API_VERSION );
+		self::assertSame( array( 'apply', 'nonce_action', 'review' ), $methods );
 		self::assertFalse( $reflection->hasMethod( 'prepare' ) );
 		self::assertFalse( $reflection->hasMethod( 'cancel' ) );
 	}
@@ -164,14 +233,14 @@ final class PortabilityContractTest extends TestCase {
 		$facade      = $this->facade();
 		$candidate   = $this->candidate();
 		$fingerprint = 'v1:' . str_repeat( 'a', 64 );
-		$review      = $facade->nonceAction( 'review', $candidate );
-		$apply       = $facade->nonceAction( 'apply', $candidate, $fingerprint );
+		$review      = $facade->nonce_action( 'review', $candidate );
+		$apply       = $facade->nonce_action( 'apply', $candidate, $fingerprint );
 
 		self::assertMatchesRegularExpression( '/\Aran-booster-portability-review-v1-[a-f0-9]{64}\z/D', $review );
 		self::assertMatchesRegularExpression( '/\Aran-booster-portability-apply-v1-[a-f0-9]{64}-[a-f0-9]{64}\z/D', $apply );
 		self::assertNotSame( $review, $apply );
 		self::assertStringNotContainsString( 'owner/example', $apply );
-		self::assertNotSame( $review, $facade->nonceAction( 'review', $this->candidate( array( 'branch' => 'develop' ) ) ) );
+		self::assertNotSame( $review, $facade->nonce_action( 'review', $this->candidate( array( 'branch' => 'develop' ) ) ) );
 
 		foreach (
 			array(
@@ -182,7 +251,7 @@ final class PortabilityContractTest extends TestCase {
 			) as [ $operation, $expected ]
 		) {
 			try {
-				$facade->nonceAction( $operation, $candidate, $expected );
+				$facade->nonce_action( $operation, $candidate, $expected );
 				self::fail( 'Invalid nonce scope was accepted.' );
 			} catch ( InvalidArgumentException ) {
 				$this->addToAssertionCount( 1 );
@@ -201,12 +270,12 @@ final class PortabilityContractTest extends TestCase {
 				)
 			),
 			$this->candidate( array( 'identifier' => 'other/other.php' ) ),
-			$this->candidate( array( 'displayName' => 'Other' ) ),
-			$this->candidate( array( 'providerCode' => 'gitlab' ) ),
+			$this->candidate( array( 'display_name' => 'Other' ) ),
+			$this->candidate( array( 'provider_code' => 'gitlab' ) ),
 			$this->candidate( array( 'repository' => 'owner/other' ) ),
 			$this->candidate( array( 'branch' => 'develop' ) ),
 			$this->candidate( array( 'subdirectory' => 'plugin' ) ),
-			$this->candidate( array( 'credentialId' => 'other-profile' ) ),
+			$this->candidate( array( 'credential_id' => 'other-profile' ) ),
 		);
 
 		foreach ( $changes as $candidate ) {
@@ -222,14 +291,14 @@ final class PortabilityContractTest extends TestCase {
 	private function candidate( array $overrides = array() ): PortabilityCandidate {
 		$values = array_merge(
 			array(
-				'type'         => 'plugin',
-				'identifier'   => 'example/example.php',
-				'displayName'  => 'Example',
-				'providerCode' => 'gh',
-				'repository'   => 'owner/example',
-				'branch'       => 'main',
-				'subdirectory' => null,
-				'credentialId' => 'target-profile',
+				'type'          => 'plugin',
+				'identifier'    => 'example/example.php',
+				'display_name'  => 'Example',
+				'provider_code' => 'gh',
+				'repository'    => 'owner/example',
+				'branch'        => 'main',
+				'subdirectory'  => null,
+				'credential_id' => 'target-profile',
 			),
 			$overrides
 		);
@@ -239,16 +308,16 @@ final class PortabilityContractTest extends TestCase {
 
 	private function review(
 		PortabilityCandidate $candidate,
-		?string $providerRepositoryId = 'repository-id',
+		?string $provider_repository_id = 'repository-id',
 		?bool $private = true,
 		string $action = PortabilityReviewResult::ADOPT
 	): PortabilityReviewResult {
-		return PortabilityReviewResult::fromResolved(
+		return PortabilityReviewResult::from_resolved(
 			$candidate,
 			$action,
 			TargetPackageReason::NONE->value,
 			'Review complete.',
-			$providerRepositoryId,
+			$provider_repository_id,
 			$private
 		);
 	}
@@ -259,7 +328,7 @@ final class PortabilityContractTest extends TestCase {
 				throw new \LogicException();
 			}
 
-			public function apply( PortabilityCandidate $candidate, string $expectedFingerprint, string $nonce ): PortabilityApplyResult {
+			public function apply( PortabilityCandidate $candidate, string $expected_fingerprint, string $nonce ): PortabilityApplyResult {
 				throw new \LogicException();
 			}
 		};

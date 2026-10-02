@@ -69,7 +69,7 @@ final class GitHubDiagnosticsLoggingTest extends TestCase {
 		yield 'repository' => array( false, 'owner/repository-secret-canary', 74 );
 	}
 
-	#[DataProvider( 'unexpectedFailures' )]
+	#[DataProvider( 'unexpected_failures' )]
 	public function test_unexpected_failure_is_logged_without_provider_input_or_exception_message(
 		bool $credential,
 		string $provider_input,
@@ -101,12 +101,12 @@ final class GitHubDiagnosticsLoggingTest extends TestCase {
 		$failure = new LogicException( self::SECRET_CANARY, $code );
 		if ( $credential ) {
 			$browser->credential_exception = $failure;
-			$results                      = ( new GitHubDiagnostics( $browser ) )->diagnose( new ProviderDiagnosticRequest( $provider_input ) );
-			$result                       = $results[0];
+			$results                       = ( new GitHubDiagnostics( $browser ) )->diagnose( new ProviderDiagnosticRequest( $provider_input ) );
+			$result                        = $results[0];
 		} else {
 			$browser->repository_exception = $failure;
-			$results                      = ( new GitHubDiagnostics( $browser ) )->diagnose( new ProviderDiagnosticRequest( null, $provider_input ) );
-			$result                       = $results[1];
+			$results                       = ( new GitHubDiagnostics( $browser ) )->diagnose( new ProviderDiagnosticRequest( null, $provider_input ) );
+			$result                        = $results[1];
 		}
 		self::assertSame( $failure, $result->failure );
 		$service = ( new ReflectionClass( TroubleshootingService::class ) )->newInstanceWithoutConstructor();
@@ -128,7 +128,7 @@ final class GitHubDiagnosticsLoggingTest extends TestCase {
 		yield 'webhook readiness' => array( true, 'provider_webhook_readiness' );
 	}
 
-	#[DataProvider( 'escapingFailures' )]
+	#[DataProvider( 'escaping_failures' )]
 	public function test_escaping_provider_failure_is_logged_only_at_the_core_boundary( bool $readiness, string $step ): void {
 		$failure  = new LogicException( self::SECRET_CANARY, 75 );
 		$provider = new EscapingDiagnosticProvider( $failure, $readiness );

@@ -89,7 +89,7 @@ final class DeploymentWorkerTest extends TestCase {
 	public function test_cron_worker_selects_manual_and_webhook_attempts_in_fifo_order(): void {
 		$this->attempts->admit_and_claim_manual( 'update', 'plugin', 'gh', 'R_manual', $this->request( 'manual' ), 'main', 'branch', 1 );
 		$this->database->rows[0]['state'] = DeploymentState::QUEUED->value;
-		$manual_correlation                = $this->database->rows[0]['correlation_id'];
+		$manual_correlation               = $this->database->rows[0]['correlation_id'];
 		$this->admit( 'webhook' );
 
 		$result = $this->worker()->run_once();
@@ -170,7 +170,7 @@ final class WorkerCoordinator extends DeploymentCoordinator {
 
 	public int $calls = 0;
 	/** @var list<int> */
-	public array $attempt_ids          = array();
+	public array $attempt_ids         = array();
 	public ?RuntimeException $failure = null;
 
 	public function __construct() {

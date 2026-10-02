@@ -45,7 +45,7 @@ class DeploymentCoordinator {
 		?WordPressCorePackageExecutor $branch_executor = null
 	) {
 		$this->branch_executor = $branch_executor ?? new WordPressCorePackageExecutor();
-		$this->source_guard ??= new RepositorySourceGuard();
+		$this->source_guard  ??= new RepositorySourceGuard();
 		if ( '' === trim( $maintenance_path ) ) {
 			throw new RuntimeException( 'The WordPress maintenance path is invalid.' );
 		}
@@ -168,8 +168,8 @@ class DeploymentCoordinator {
 		if ( array() === $events || preg_match( '/^[a-f0-9]{64}$/D', $authenticated_body_digest ) !== 1 ) {
 			throw new RuntimeException( 'The authenticated webhook delivery is invalid.' );
 		}
-		$first    = $events[0];
-		$provider = $first->provider->value;
+		$first       = $events[0];
+		$provider    = $first->provider->value;
 		$delivery_id = $first->delivery_id;
 		$targets     = array();
 

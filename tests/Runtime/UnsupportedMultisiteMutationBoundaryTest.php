@@ -73,14 +73,14 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 
 	public function test_core_executor_rejects_before_artifact_or_word_press_access(): void {
 		$core_calls = 0;
-		$executor  = new CorePackageExecutor(
+		$executor   = new CorePackageExecutor(
 			static function () use ( &$core_calls ): never {
 				++$core_calls;
 				throw new \RuntimeException( 'WordPress Core must stay inert.' );
 			}
 		);
-		$artifact  = $this->blank( PreparedArtifact::class );
-		$results   = array(
+		$artifact   = $this->blank( PreparedArtifact::class );
+		$results    = array(
 			$executor->install_plugin( $artifact, 'example', null ),
 			$executor->install_theme( $artifact, 'example', null ),
 			$executor->update_plugin( $artifact, 'example', null, 'example/example.php' ),

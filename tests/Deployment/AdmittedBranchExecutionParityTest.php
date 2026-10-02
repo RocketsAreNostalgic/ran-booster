@@ -23,7 +23,7 @@ use RuntimeException;
 
 final class AdmittedBranchExecutionParityTest extends TestCase {
 	public function test_downgrade_is_blocked_before_mutation(): void {
-		$host                  = new ParityAdmittedHost();
+		$host                   = new ParityAdmittedHost();
 		$host->artifact_version = '0.9.0';
 
 		$code = $this->deploy( $host, 'update' );
@@ -36,7 +36,7 @@ final class AdmittedBranchExecutionParityTest extends TestCase {
 	}
 
 	public function test_policy_failure_is_projected_before_artifact_acquisition(): void {
-		$host                = new ParityAdmittedHost();
+		$host                 = new ParityAdmittedHost();
 		$host->policy_failure = DeploymentOutcome::CODE_POLICY_BLOCKED;
 
 		$code = $this->deploy( $host, 'update' );
@@ -49,7 +49,7 @@ final class AdmittedBranchExecutionParityTest extends TestCase {
 	}
 
 	public function test_mutation_start_durability_failure_prevents_core_execution_and_preserves_ambiguity(): void {
-		$host                       = new ParityAdmittedHost();
+		$host                         = new ParityAdmittedHost();
 		$host->mutation_start_failure = true;
 
 		try {
@@ -84,7 +84,7 @@ final class AdmittedBranchExecutionParityTest extends TestCase {
 	}
 
 	public function test_cleanup_failure_after_mutation_is_projected_as_interrupted(): void {
-		$host                 = new ParityAdmittedHost();
+		$host                  = new ParityAdmittedHost();
 		$host->cleanup_failure = true;
 
 		$code = $this->deploy( $host, 'update' );
@@ -128,15 +128,15 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 	/** @var list<string> */
 	public array $events = array();
 	/** @var array{identifier:string,version:string,active:bool}|null */
-	public ?array $baseline           = array(
+	public ?array $baseline             = array(
 		'identifier' => 'example/example.php',
 		'version'    => '1.0.0',
 		'active'     => false,
 	);
-	public string $artifact_version    = '2.0.0';
-	public ?string $policy_failure     = null;
+	public string $artifact_version     = '2.0.0';
+	public ?string $policy_failure      = null;
 	public bool $mutation_start_failure = false;
-	public bool $cleanup_failure       = false;
+	public bool $cleanup_failure        = false;
 	private ParityAdmittedArtifact $artifact;
 
 	public function __construct() {

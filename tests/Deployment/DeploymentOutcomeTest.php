@@ -28,7 +28,7 @@ final class DeploymentOutcomeTest extends TestCase {
 		yield 'downgrade blocked' => array( DeploymentOutcome::CODE_DOWNGRADE_BLOCKED );
 	}
 
-	#[DataProvider( 'archiveFailureCodes' )]
+	#[DataProvider( 'archive_failure_codes' )]
 	public function test_archive_limit_failures_are_closed_failed_outcomes( string $code ): void {
 		$outcome = DeploymentOutcome::from_code( $code );
 
@@ -61,7 +61,7 @@ final class DeploymentOutcomeTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'providerFailureProvider' )]
+	#[DataProvider( 'provider_failure_provider' )]
 	public function test_provider_failure_codes_map_to_closed_safe_outcomes( int $status, string $expected ): void {
 		$outcome = DeploymentOutcome::from_provider_failure(
 			new \RuntimeException( 'Authorization: Bearer secret-canary', $status )

@@ -45,7 +45,7 @@ final class WordPressWorkerWakeupTest extends TestCase {
 	}
 
 	public function test_existing_event_is_not_duplicated(): void {
-		$this->database->queued_at            = gmdate( 'Y-m-d H:i:s', time() + 60 );
+		$this->database->queued_at           = gmdate( 'Y-m-d H:i:s', time() + 60 );
 		WordPressWorkerWakeupCron::$events[] = $this->event( WordPressWorkerWakeup::HOOK, time() + 30 );
 
 		self::assertSame( 'already_scheduled', $this->wakeup->request() );
@@ -163,8 +163,8 @@ final class WordPressWorkerWakeupDatabase {
 
 	public string $prefix     = 'wp_';
 	public string $last_error = '';
-	public ?string $queued_at  = null;
-	public bool $read_fails    = false;
+	public ?string $queued_at = null;
+	public bool $read_fails   = false;
 
 	public function db_server_info(): string {
 		return '8.4.6';

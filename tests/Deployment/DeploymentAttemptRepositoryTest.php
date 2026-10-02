@@ -30,7 +30,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 
 	protected function setUp(): void {
 		$this->database                               = new AttemptRepositoryDatabase();
-		$this->database_lifecycle                      = $this->createStub( Database::class );
+		$this->database_lifecycle                     = $this->createStub( Database::class );
 		$GLOBALS['ran_booster_attempt_cache_deletes'] = array();
 		$this->repository                             = new DeploymentAttemptRepository(
 			$this->database,
@@ -222,7 +222,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 
 	public function test_pruning_and_partial_batch_insert_roll_back_together(): void {
 		$this->seed_attempts( array_fill( 0, 200, DeploymentState::SUCCEEDED->value ) );
-		$before                           = $this->database->rows;
+		$before                             = $this->database->rows;
 		$this->database->fail_insert_number = 2;
 
 		try {
@@ -247,7 +247,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			$before = $this->database->rows;
 
 			$this->database->fail_query_contains = 'delete' === $failure ? 'DELETE FROM' : null;
-			$this->database->fail_commit        = 'commit' === $failure;
+			$this->database->fail_commit         = 'commit' === $failure;
 			try {
 				$this->manual( $failure . '-failure' );
 				self::fail( 'Capacity pruning must roll back when its transaction fails.' );
@@ -275,7 +275,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 
 	public function test_unsupported_database_blocks_attempt_reads_and_admissions_before_table_access(): void {
 		$this->database->server_info = '5.7.44';
-		$this->repository           = $this->repository_with_maximum( database_lifecycle: new Database( $this->database ) );
+		$this->repository            = $this->repository_with_maximum( database_lifecycle: new Database( $this->database ) );
 
 		try {
 			$this->repository->recent_history();
@@ -299,8 +299,8 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$lifecycle = $this->createStub( Database::class );
 		$lifecycle->method( 'require_ready' )->willThrowException( new DatabaseLifecycleFailure( failure_reason: 'schema_operation_failed' ) );
 		$this->database->fail_reads = true;
-		$this->database->queries   = array();
-		$this->repository          = $this->repository_with_maximum( database_lifecycle: $lifecycle );
+		$this->database->queries    = array();
+		$this->repository           = $this->repository_with_maximum( database_lifecycle: $lifecycle );
 		foreach ( array(
 			fn () => $this->repository->recent_history(),
 			fn () => $this->manual( 'blocked' ),
@@ -340,7 +340,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			self::assertCount( 0, $this->database->rows );
 		}
 
-		$this->database->fail_insert         = false;
+		$this->database->fail_insert          = false;
 		$this->database->tamper_insert_column = 'request_json';
 		$this->database->tamper_insert_value  = '{}';
 		$this->expectException( DeploymentStorageFailure::class );
@@ -350,7 +350,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 	public function test_manual_claim_or_commit_failure_rolls_back_the_admission(): void {
 		foreach ( array( 'claim', 'commit' ) as $failure ) {
 			$this->database->zero_query_contains = 'claim' === $failure ? "SET state = 'running'" : null;
-			$this->database->fail_commit        = 'commit' === $failure;
+			$this->database->fail_commit         = 'commit' === $failure;
 
 			try {
 				$this->manual( $failure . '-failure' );
@@ -663,7 +663,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 	}
 
 	public function test_valid_but_different_terminal_timestamp_fails_readback(): void {
-		$running                            = $this->manual( 'example' );
+		$running                              = $this->manual( 'example' );
 		$this->database->tamper_update_column = 'finished_at';
 		$this->database->tamper_update_value  = '2026-07-19 00:00:01';
 
@@ -761,7 +761,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 	}
 
 	public function test_reconciliation_rolls_back_a_tampered_terminal_timestamp(): void {
-		$running                            = $this->manual( 'example' );
+		$running                              = $this->manual( 'example' );
 		$this->database->tamper_update_column = 'finished_at';
 		$this->database->tamper_update_value  = '2026-07-19 00:00:01';
 

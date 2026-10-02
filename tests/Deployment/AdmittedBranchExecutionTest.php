@@ -180,11 +180,11 @@ final class AdmittedBranchExecutionTest extends TestCase {
 	}
 
 	public function test_provider_archive_is_cleaned_when_resolved_revision_retrieval_throws(): void {
-		$archive                   = new BoundaryProviderArchive( str_repeat( 'a', 40 ) );
+		$archive                     = new BoundaryProviderArchive( str_repeat( 'a', 40 ) );
 		$archive->resolved_ref_fails = true;
-		$provider                  = new BoundaryRepositoryProvider( $archive );
-		$adapter                   = $this->adapter( $this->running_update(), new ProviderRegistry( array( $provider ) ) );
-		$declaration               = $adapter->declaration();
+		$provider                    = new BoundaryRepositoryProvider( $archive );
+		$adapter                     = $this->adapter( $this->running_update(), new ProviderRegistry( array( $provider ) ) );
+		$declaration                 = $adapter->declaration();
 
 		try {
 			$adapter->prepare(
@@ -283,7 +283,7 @@ final class BoundaryThemeRepository extends ThemeRepository {
 }
 
 final class BoundaryProviderArchive implements ProviderPreparedArchive {
-	public int $cleanup_calls      = 0;
+	public int $cleanup_calls       = 0;
 	public bool $resolved_ref_fails = false;
 	public function __construct( private string $resolved_ref ) {}
 	public function get_url(): string {

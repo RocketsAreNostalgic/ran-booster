@@ -46,7 +46,7 @@ final class DeploymentRequestTest extends TestCase {
 		DeploymentRequest::from_json( json_encode( $data, JSON_THROW_ON_ERROR ) );
 	}
 
-	#[DataProvider( 'unsafeRequestProvider' )]
+	#[DataProvider( 'unsafe_request_provider' )]
 	public function test_unsafe_control_path_and_secret_material_is_rejected( callable $factory ): void {
 		$this->expectException( InvalidArgumentException::class );
 		$factory();

@@ -23,10 +23,10 @@ final class TemporaryDebugCaptureTest extends TestCase {
 	private int $now;
 
 	protected function setUp(): void {
-		$this->directory   = sys_get_temp_dir() . '/ran-booster-debug-' . bin2hex( random_bytes( 8 ) );
+		$this->directory    = sys_get_temp_dir() . '/ran-booster-debug-' . bin2hex( random_bytes( 8 ) );
 		$this->secrets_path = $this->directory . '/custom-secrets.php';
 		$this->capture_path = $this->directory . '/ran-booster-debug.php';
-		$this->now         = strtotime( '2026-07-23T12:00:00Z' );
+		$this->now          = strtotime( '2026-07-23T12:00:00Z' );
 
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
 	}

@@ -7,13 +7,13 @@ namespace Tests\Deployment;
 final class WordPressWorkerWakeupCron {
 
 	/** @var list<object> */
-	public static array $events            = array();
+	public static array $events             = array();
 	public static bool $schedule_succeeds   = true;
 	public static bool $unschedule_succeeds = true;
 	public static bool $clear_succeeds      = true;
 
 	public static function reset(): void {
-		self::$events             = array();
+		self::$events              = array();
 		self::$schedule_succeeds   = true;
 		self::$unschedule_succeeds = true;
 		self::$clear_succeeds      = true;

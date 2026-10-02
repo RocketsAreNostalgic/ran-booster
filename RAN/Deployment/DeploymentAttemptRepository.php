@@ -54,8 +54,8 @@ final class DeploymentAttemptRepository {
 		if ( null === $this->table_name ) {
 			$this->table_name = \RAN\Storage\Database::attempt_table_name();
 		}
-		$this->clock = $clock ?? static fn (): DateTimeImmutable => new DateTimeImmutable( 'now', wp_timezone() );
-		$this->random_bytes = $random_bytes ?? static fn ( int $length ): string => random_bytes( $length );
+		$this->clock              = $clock ?? static fn (): DateTimeImmutable => new DateTimeImmutable( 'now', wp_timezone() );
+		$this->random_bytes       = $random_bytes ?? static fn ( int $length ): string => random_bytes( $length );
 		$this->database_lifecycle = $database_lifecycle ?? new Database( $this->database );
 	}
 	public function admit_and_claim_manual(
@@ -101,7 +101,7 @@ final class DeploymentAttemptRepository {
 						null
 					)
 				);
-				$query = $this->update_query( $queued->get_id(), DeploymentState::QUEUED, array( 'state' => DeploymentState::RUNNING->value ) );
+				$query  = $this->update_query( $queued->get_id(), DeploymentState::QUEUED, array( 'state' => DeploymentState::RUNNING->value ) );
 				if ( 1 !== $this->database->query( $query ) ) {
 					throw DeploymentStorageFailure::unavailable();
 				}
@@ -247,7 +247,7 @@ final class DeploymentAttemptRepository {
 
 		return $this->transaction(
 			function () use ( $provider, $delivery_id, $delivery_digest, $normalized ): array {
-				$query = $this->prepare(
+				$query    = $this->prepare(
 					'SELECT * FROM %i WHERE provider = %s AND delivery_id = %s ORDER BY package_type, package_slug FOR UPDATE',
 					$this->table_name,
 					$provider,
@@ -315,7 +315,7 @@ final class DeploymentAttemptRepository {
 					"SELECT * FROM %i WHERE state = 'queued' ORDER BY created_at, id LIMIT 1 FOR UPDATE",
 					$this->table_name
 				);
-				$rows = $this->read_rows( $query );
+				$rows  = $this->read_rows( $query );
 
 				return $this->claim_locked_row( $rows );
 			}
@@ -417,7 +417,7 @@ final class DeploymentAttemptRepository {
 
 	/** @return array{queued: int, running: int, needs_attention: int} */
 	public function operational_snapshot(): array {
-		$query = $this->prepare(
+		$query  = $this->prepare(
 			"SELECT state, COUNT(*) AS total FROM %i WHERE state IN ('queued','running') OR (state = 'needs_attention' AND resolved_at IS NULL AND resolved_by IS NULL) GROUP BY state",
 			$this->table_name
 		);
@@ -552,7 +552,7 @@ final class DeploymentAttemptRepository {
 	public function package_activity_summary( string $package_type, string $package_slug ): array {
 		$this->assert_package_type( $package_type );
 		$this->assert_package_slug( $package_slug );
-		$query = $this->prepare(
+		$query    = $this->prepare(
 			'SELECT * FROM %i AS attempts
 			WHERE attempts.id = (
 				SELECT MAX(latest.id) FROM %i AS latest WHERE latest.package_type = %s AND latest.package_slug = %s
@@ -708,7 +708,7 @@ final class DeploymentAttemptRepository {
 	/** @param array<string, string|null> $data */
 	private function update_query( int $id, DeploymentState $current_state, array $data ): string {
 		$assignments = array();
-		$arguments = array( $this->table_name );
+		$arguments   = array( $this->table_name );
 		foreach ( $data as $column => $value ) {
 			if ( preg_match( '/^[a-z_]+$/D', $column ) !== 1 ) {
 				throw DeploymentStorageFailure::invalid_record();
@@ -863,7 +863,7 @@ final class DeploymentAttemptRepository {
 		$query = null === $correlation_id
 			? $this->prepare( 'SELECT * FROM %i WHERE id = %d LIMIT 2 FOR UPDATE', $this->table_name, $id )
 			: $this->prepare( 'SELECT * FROM %i WHERE id = %d AND correlation_id = %s LIMIT 2 FOR UPDATE', $this->table_name, $id, $correlation_id );
-		$rows = $this->read_rows( $query );
+		$rows  = $this->read_rows( $query );
 		if ( count( $rows ) !== 1 ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
@@ -878,7 +878,7 @@ final class DeploymentAttemptRepository {
 			$package_type,
 			$package_slug
 		);
-		$rows = $this->read_rows( $query );
+		$rows  = $this->read_rows( $query );
 		if ( count( $rows ) > 1 ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}

@@ -129,7 +129,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
-	#[DataProvider( 'bulkActionCapabilities' )]
+	#[DataProvider( 'bulk_action_capabilities' )]
 	public function test_bulk_routes_use_their_exact_capability_before_their_nonce( string $action, string $operation, string $capability ): void {
 		$_SERVER['REQUEST_METHOD']               = 'POST';
 		$GLOBALS['ran_booster_test_nonce_valid'] = false;
@@ -152,7 +152,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		self::assertSame( array( $action ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
-	#[DataProvider( 'bulkActionCapabilities' )]
+	#[DataProvider( 'bulk_action_capabilities' )]
 	public function test_bulk_routes_stop_before_nonce_without_their_exact_capability( string $action, string $operation, string $capability ): void {
 		$GLOBALS['ran_booster_test_capabilities'][ $capability ] = false;
 		$_POST['ran_booster']                                    = array(
@@ -184,7 +184,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'bulkPolicyJourneys' )]
+	#[DataProvider( 'bulk_policy_journeys' )]
 	public function test_real_bulk_policy_journeys_keep_authority_mutation_readback_and_signed_transport_together(
 		string $type,
 		string $action,
@@ -388,7 +388,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		$this->dispatcher( $dashboard )->dispatch_post_requests();
 	}
 
-	#[DataProvider( 'packageActionCapabilities' )]
+	#[DataProvider( 'package_action_capabilities' )]
 	public function test_each_package_action_uses_its_exact_capability_and_nonce( string $action, array $capabilities ): void {
 		$GLOBALS['ran_booster_test_nonce_valid'] = false;
 		$_POST['ran_booster']                    = array( 'action' => $action );
@@ -407,7 +407,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		self::assertSame( array( $action ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
-	#[DataProvider( 'packageActionCapabilities' )]
+	#[DataProvider( 'package_action_capabilities' )]
 	public function test_each_package_action_fails_before_nonce_without_its_exact_capability( string $action, array $capabilities ): void {
 		$denied_capability = $capabilities[0];
 		$GLOBALS['ran_booster_test_capabilities'][ $denied_capability ] = false;
@@ -436,7 +436,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'laterCapabilityDenials' )]
+	#[DataProvider( 'later_capability_denials' )]
 	public function test_later_delete_capabilities_independently_stop_before_nonce_and_mutation(
 		string $action,
 		array $expected_checks,
@@ -466,7 +466,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'reinstallNonceActions' )]
+	#[DataProvider( 'reinstall_nonce_actions' )]
 	public function test_reinstall_after_save_requires_both_edit_and_update_nonces_before_mutation(
 		string $action,
 		string $update_action,
@@ -509,7 +509,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'packageTransports' )]
+	#[DataProvider( 'package_transports' )]
 	public function test_successful_package_operation_uses_the_same_signed_dashboard_target_for_native_and_htmx( bool $htmx ): void {
 		if ( $htmx ) {
 			$_SERVER['HTTP_HX_REQUEST'] = 'true';

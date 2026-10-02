@@ -97,8 +97,8 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		);
 		$this->plugins          = new ParityPluginRepository();
 		$this->themes           = new ParityThemeRepository();
-		$this->source_database   = new RepositorySourceGuardDatabase();
-		$this->source_guard      = new RepositorySourceGuard( $this->source_database, $this->createStub( Database::class ) );
+		$this->source_database  = new RepositorySourceGuardDatabase();
+		$this->source_guard     = new RepositorySourceGuard( $this->source_database, $this->createStub( Database::class ) );
 		$this->plugins->managed = array( $this->plugin() );
 	}
 
@@ -271,8 +271,8 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 	}
 
 	public function test_lock_release_storage_failure_leaves_attempt_running(): void {
-		$attempt                           = $this->running_update();
-		$adapter                           = $this->adapter( $attempt, new ParityRepositoryProvider( new ParityProviderArchive( str_repeat( 'a', 40 ) ) ) );
+		$attempt                             = $this->running_update();
+		$adapter                             = $this->adapter( $attempt, new ParityRepositoryProvider( new ParityProviderArchive( str_repeat( 'a', 40 ) ) ) );
 		$this->database->fail_query_contains = 'DELETE FROM `wp_options`';
 
 		try {
@@ -314,11 +314,11 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 	}
 
 	public function test_terminal_webhook_failure_notifies_only_after_durable_finish(): void {
-		$provider                 = new ParityRepositoryProvider( null );
+		$provider                  = new ParityRepositoryProvider( null );
 		$provider->prepare_failure = new RuntimeException( 'expired credential', 401 );
-		$notifier                 = new ParityFailureNotifier( $this->database );
-		$attempt                  = $this->running_webhook_update();
-		$coordinator              = $this->coordinator( $provider, $notifier );
+		$notifier                  = new ParityFailureNotifier( $this->database );
+		$attempt                   = $this->running_webhook_update();
+		$coordinator               = $this->coordinator( $provider, $notifier );
 
 		$outcome = $coordinator->execute_claimed( $attempt );
 
@@ -337,7 +337,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		$attempt  = $this->running_install( $slug, DeploymentPolicy::MANUAL );
 		$adapter  = $this->adapter( $attempt, $provider, executor: $executor );
 		$this->download_fixture( $slug );
-		$this->plugins->installed      = $this->plugin(
+		$this->plugins->installed       = $this->plugin(
 			identifier: $slug . '/' . $slug . '.php',
 			version: '2.0.0',
 			repository: 'owner/install-plugin',
@@ -580,8 +580,8 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 
 final class ParityPluginRepository extends PluginRepository {
 	/** @var list<Plugin> */
-	public array $managed                         = array();
-	public ?Plugin $installed                     = null;
+	public array $managed                          = array();
+	public ?Plugin $installed                      = null;
 	public ?Plugin $by_identifier                  = null;
 	public ?PackageMutationResult $adoption_result = null;
 	public int $adopt_calls                        = 0;
@@ -627,7 +627,7 @@ final class ParityThemeRepository extends ThemeRepository {
 }
 
 final class ParityProviderArchive implements ProviderPreparedArchive {
-	public string $url       = 'https://example.test/archive.zip';
+	public string $url        = 'https://example.test/archive.zip';
 	public int $cleanup_calls = 0;
 	/** @var null|callable(): void */
 	public $on_cleanup = null;
@@ -716,7 +716,7 @@ final class ParityFailureNotifier implements DeploymentFailureNotifier {
 	public function __construct( private AttemptRepositoryDatabase $database ) {}
 
 	public function notify( DeploymentAttempt $attempt ): bool {
-		$this->attempts[]     = $attempt;
+		$this->attempts[]      = $attempt;
 		$this->stored_states[] = (string) ( $this->database->rows[0]['state'] ?? '' );
 		return true;
 	}

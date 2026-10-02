@@ -14,7 +14,7 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		$bootstrap = $this->source( 'ran-booster.php' );
 
 		$registration = strpos( $bootstrap, 'ReleaseUpdaterBootstrap::register();' );
-		$core_target   = strpos( $bootstrap, 'ManagedReleaseUpdaterRegistrar::class )->plugin(' );
+		$core_target  = strpos( $bootstrap, 'ManagedReleaseUpdaterRegistrar::class )->plugin(' );
 		$target       = strpos( $bootstrap, 'ManagedReleaseTargetRegistrar::class )->register()' );
 
 		self::assertIsInt( $registration );
@@ -28,11 +28,11 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 	public function test_core_self_target_uses_the_selected_updater_without_provider_capability(): void {
 		$bootstrap = $this->source( 'ran-booster.php' );
 
-		$seal        = strpos( $bootstrap, '$provider_registry->seal()' );
+		$seal         = strpos( $bootstrap, '$provider_registry->seal()' );
 		$policy_guard = strpos( $bootstrap, 'if ( $ran_booster_self_update_policy->allows_native_discovery() )' );
 		$core_updater = strpos( $bootstrap, 'ManagedReleaseUpdaterRegistrar::class )->plugin(' );
-		$repository  = strpos( $bootstrap, "'RocketsAreNostalgic/ran-booster'," );
-		$adapter     = strpos( $bootstrap, 'new CoreSelfUpdateNativeTarget( $core_updater )' );
+		$repository   = strpos( $bootstrap, "'RocketsAreNostalgic/ran-booster'," );
+		$adapter      = strpos( $bootstrap, 'new CoreSelfUpdateNativeTarget( $core_updater )' );
 		$status_bind  = strpos( $bootstrap, 'new CoreSelfUpdateStatus( $ran_booster_self_update_policy, $core_release_target )' );
 
 		self::assertIsInt( $seal );

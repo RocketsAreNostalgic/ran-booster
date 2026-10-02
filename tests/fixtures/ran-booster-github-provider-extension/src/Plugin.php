@@ -25,7 +25,7 @@ final class Plugin {
 		}
 
 		$inner_registrar = require dirname( __DIR__ ) . '/vendor/ran/wp-release-updater/bootstrap.php';
-		$registrar      = new ReleaseUpdaterRegistrar( $inner_registrar );
+		$registrar       = new ReleaseUpdaterRegistrar( $inner_registrar );
 
 		$factory = static function (
 			ProviderCredentialStore $credentials,

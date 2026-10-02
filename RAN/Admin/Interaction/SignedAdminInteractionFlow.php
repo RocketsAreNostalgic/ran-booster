@@ -49,22 +49,22 @@ final class SignedAdminInteractionFlow {
 		?callable $terminate = null
 	) {
 		$this->resolve_pending_request = Closure::fromCallable( $resolve_pending_request );
-		$this->emit_header = null === $emit_header
+		$this->emit_header             = null === $emit_header
 			? static function ( string $name, string $value ): void {
 				header( $name . ': ' . $value );
 			}
 			: Closure::fromCallable( $emit_header );
-		$this->emit_status = null === $emit_status
+		$this->emit_status             = null === $emit_status
 			? static function ( int $status ): void {
 				status_header( $status );
 			}
 			: Closure::fromCallable( $emit_status );
-		$this->redirect  = null === $redirect
+		$this->redirect                = null === $redirect
 			? static function ( string $url ): void {
 				wp_safe_redirect( $url );
 			}
 			: Closure::fromCallable( $redirect );
-		$this->terminate = null === $terminate
+		$this->terminate               = null === $terminate
 			? static function (): never {
 				exit;
 			}

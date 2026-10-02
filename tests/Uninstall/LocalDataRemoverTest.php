@@ -62,7 +62,7 @@ final class LocalDataRemoverTest extends TestCase {
 			PublicRepositoryLookupProfileStore::OPTION_NAME => array( 'profiles' => array() ),
 			'ran_booster_release_deployments_assessment_observations' => array( array( 'kind' => 'existing_automation_detected' ) ),
 			'ran_booster_release_deployments_failure_history' => array( array( 'correlation_reference' => str_repeat( 'a', 32 ) ) ),
-			$this->updater_authority_option()               => 'owned-updater-state',
+			$this->updater_authority_option()             => 'owned-updater-state',
 			SiteKeyStore::OPTION_NAME                     => 'encoded-key',
 			WordPressInstallationStore::OPTION_NAME       => array( 'current-webhook-record' ),
 			'unrelated_option'                            => 'preserved',
@@ -77,7 +77,7 @@ final class LocalDataRemoverTest extends TestCase {
 			$GLOBALS['ran_booster_uninstall_options'][ $provider_option ] = array( 'current-provider-state' );
 		}
 		$GLOBALS['ran_booster_uninstall_options']['ran_booster_release_deployments_setup_records'] = array( 'obsolete-provider-state' );
-		$this->database->tables   = array(
+		$this->database->tables    = array(
 			'wp_ran_booster_packages',
 			'wp_ran_booster_deployment_attempts',
 			'wp_ran_booster_rejected_admission_audit',
@@ -272,7 +272,7 @@ final class LocalDataRemoverTest extends TestCase {
 	public function test_database_failure_leaves_a_repeatable_partial_cleanup(): void {
 		$this->setUp();
 		$this->database->failure_contains = 'wp_ran_booster_deployment_attempts';
-		$secrets                         = $this->secrets( null );
+		$secrets                          = $this->secrets( null );
 		$secrets->method( 'delete_managed_storage' )
 			->willReturnCallback(
 				static function (): void {
@@ -377,13 +377,13 @@ final class LocalDataRemoverTest extends TestCase {
 	#[PreserveGlobalState( false )]
 	public function test_remove_deletes_the_exact_config_lock_and_empty_automatic_directories(): void {
 		$this->setUp();
-		$root       = (string) realpath( sys_get_temp_dir() )
+		$root        = (string) realpath( sys_get_temp_dir() )
 			. '/ran-booster-uninstall-directories-'
 			. bin2hex( random_bytes( 6 ) );
-		$base       = $root . '/.ran-booster';
-		$site       = $base . '/site-fingerprint';
-		$sidecar    = $site . '/secrets.json';
-		$config     = $root . '/wp-config.php';
+		$base        = $root . '/.ran-booster';
+		$site        = $base . '/site-fingerprint';
+		$sidecar     = $site . '/secrets.json';
+		$config      = $root . '/wp-config.php';
 		$config_lock = $config . '.ran-booster.lock';
 		self::assertTrue( mkdir( $site, 0700, true ) );
 		self::assertNotFalse( file_put_contents( $config, "<?php\n" ) );

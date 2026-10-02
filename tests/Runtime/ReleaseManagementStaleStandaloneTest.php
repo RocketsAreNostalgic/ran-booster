@@ -48,7 +48,7 @@ final class ReleaseManagementStaleStandaloneTest extends TestCase {
 		}
 		$hooks->fire( 'plugins_loaded' );
 
-		self::assertSame( 16, RAN_BOOSTER_ADDON_API_VERSION );
+		self::assertSame( 17, RAN_BOOSTER_ADDON_API_VERSION );
 		self::assertSame( array( 'plugins_loaded', 'admin_notices' ), $hooks->action_hooks() );
 		self::assertSame( array(), $hooks->filter_hooks() );
 		foreach ( array(

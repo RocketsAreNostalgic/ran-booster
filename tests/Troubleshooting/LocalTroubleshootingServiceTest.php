@@ -30,7 +30,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 	protected function setUp(): void {
 		$temporary_root = realpath( sys_get_temp_dir() );
 		self::assertIsString( $temporary_root );
-		$this->directory          = $temporary_root . '/ran-booster-local-diagnostics-' . bin2hex( random_bytes( 8 ) );
+		$this->directory           = $temporary_root . '/ran-booster-local-diagnostics-' . bin2hex( random_bytes( 8 ) );
 		$this->temporary_directory = $this->directory . '/temporary';
 		$this->secrets_directory   = $this->directory . '/credentials';
 		$this->plugin_directory    = $this->directory . '/plugins';
@@ -103,7 +103,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 	}
 
 	public function test_unavailable_journal_and_worker_fail_explicitly(): void {
-		$service                     = $this->service();
+		$service                      = $this->service();
 		$service->deployment_snapshot = null;
 
 		$payload = $service->diagnose();
@@ -113,7 +113,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 	}
 
 	public function test_unresolved_attempts_and_missing_queued_wakeup_are_warnings(): void {
-		$service                     = $this->service();
+		$service                      = $this->service();
 		$service->deployment_snapshot = array(
 			'queued'             => 2,
 			'running'            => 0,
@@ -135,7 +135,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 	}
 
 	public function test_invalid_attempt_retention_constant_is_reported_with_the_safe_fallback(): void {
-		$service                         = $this->service();
+		$service                          = $this->service();
 		$service->retention_configuration = array(
 			'valid'        => false,
 			'maximum_rows' => 200,
@@ -151,7 +151,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 	}
 
 	public function test_unavailable_worker_inspection_fails_even_when_the_queue_is_empty(): void {
-		$service                   = $this->service();
+		$service                    = $this->service();
 		$service->worker_inspection = array(
 			'status'       => 'unavailable',
 			'scheduled_at' => null,
@@ -164,7 +164,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 	}
 
 	public function test_missing_wakeup_is_healthy_while_the_worker_is_running(): void {
-		$service                     = $this->service();
+		$service                      = $this->service();
 		$service->deployment_snapshot = array(
 			'queued'             => 2,
 			'running'            => 1,
@@ -184,7 +184,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 	}
 
 	public function test_deployment_snapshot_dependency_failure_is_isolated_to_operational_rows(): void {
-		$database                         = new class() {
+		$database                           = new class() {
 			public string $prefix = 'wp_';
 
 			public function prepare( string $query, mixed ...$arguments ): string {
@@ -204,7 +204,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 				return false;
 			}
 		};
-		$service                          = new LocalTroubleshootingServiceFixture(
+		$service                            = new LocalTroubleshootingServiceFixture(
 			new SecretsFile( $this->directory . '/secrets.php', array() ),
 			$this->temporary_directory,
 			$this->plugin_directory,
@@ -283,7 +283,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 	}
 
 	public function test_reports_an_unsupported_runtime_without_hiding_other_local_rows(): void {
-		$service                   = $this->service();
+		$service                    = $this->service();
 		$service->wordpress_version = '6.9.9';
 
 		$payload = $service->diagnose();
@@ -299,14 +299,14 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 		self::assertSame( 'local.runtime.ready', $service->diagnose()['results'][0]->code );
 
 		$service->php_version = '8.1.99';
-		$result              = $service->diagnose()['results'][0];
+		$result               = $service->diagnose()['results'][0];
 
 		self::assertSame( 'local.runtime.unsupported', $result->code );
 		self::assertSame( 'Upgrade to WordPress 7.0 or newer and PHP 8.2 or newer, then run diagnostics again.', $result->remediation );
 	}
 
 	public function test_reports_disabled_file_modifications_before_marker_writes(): void {
-		$service                           = $this->service();
+		$service                             = $this->service();
 		$service->file_modifications_allowed = false;
 
 		$payload = $service->diagnose();
@@ -316,7 +316,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 	}
 
 	public function test_reports_a_non_direct_wordpress_filesystem_method(): void {
-		$service                   = $this->service();
+		$service                    = $this->service();
 		$service->filesystem_method = 'ftpext';
 
 		$payload = $service->diagnose();
@@ -343,9 +343,9 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 		mkdir( $real_parent . '/nested', 0700, true );
 		symlink( $real_parent, $link_parent );
 
-		$service                     = $this->service();
+		$service                      = $this->service();
 		$service->temporary_directory = $link_parent . '/nested';
-		$payload                     = $service->diagnose();
+		$payload                      = $service->diagnose();
 
 		self::assertSame( 'local.filesystem.ready', $payload['results'][1]->code );
 		self::assertNotSame( array(), $service->opened_paths );
@@ -355,7 +355,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 	}
 
 	public function test_resolves_dot_segments_before_writing(): void {
-		$service                     = $this->service();
+		$service                      = $this->service();
 		$service->temporary_directory = $this->temporary_directory . '/../temporary';
 
 		$payload = $service->diagnose();
@@ -367,7 +367,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 	}
 
 	public function test_fails_when_the_canonical_directory_is_replaced_before_open(): void {
-		$service                         = $this->service();
+		$service                            = $this->service();
 		$service->replace_directory_on_open = $this->temporary_directory;
 
 		$payload = $service->diagnose();
@@ -389,7 +389,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 	}
 
 	public function test_permission_failure_fails_and_cleans_the_marker(): void {
-		$service                 = $this->service();
+		$service                  = $this->service();
 		$service->fail_permission = true;
 
 		$payload = $service->diagnose();
@@ -399,7 +399,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 	}
 
 	public function test_promotion_failure_fails_and_cleans_the_marker(): void {
-		$service                = $this->service();
+		$service                 = $this->service();
 		$service->fail_promotion = $this->temporary_directory;
 
 		$payload = $service->diagnose();
@@ -409,7 +409,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 	}
 
 	public function test_cleanup_failure_is_a_failed_result(): void {
-		$service              = $this->service();
+		$service               = $this->service();
 		$service->fail_cleanup = $this->temporary_directory;
 
 		$payload = $service->diagnose();
@@ -419,7 +419,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 	}
 
 	public function test_path_substitution_is_not_unlinked_during_cleanup(): void {
-		$service                  = $this->service();
+		$service                    = $this->service();
 		$service->race_on_promotion = $this->temporary_directory;
 
 		$payload = $service->diagnose();
@@ -429,7 +429,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 	}
 
 	public function test_destination_raced_into_place_is_not_overwritten_or_removed(): void {
-		$service                  = $this->service();
+		$service                   = $this->service();
 		$service->race_destination = $this->temporary_directory;
 
 		$payload = $service->diagnose();
@@ -443,9 +443,9 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 		file_put_contents( $target, 'permission target canary' );
 		chmod( $target, 0644 );
 
-		$service                             = $this->service();
+		$service                               = $this->service();
 		$service->substitute_before_permission = $target;
-		$payload                             = $service->diagnose();
+		$payload                               = $service->diagnose();
 
 		clearstatcache( true, $target );
 		self::assertSame( 'local.filesystem.unavailable', $payload['results'][1]->code );
@@ -475,10 +475,10 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 	public function test_result_payload_never_contains_secret_or_path_canaries(): void {
 		$secret_canary = 'ghp_secret_diagnostic_canary';
 		$path_canary   = 'absolute-path-diagnostic-canary';
-		$directory    = $this->directory . '/' . $path_canary . '/' . $secret_canary;
+		$directory     = $this->directory . '/' . $path_canary . '/' . $secret_canary;
 		mkdir( $directory, 0700, true );
 
-		$service                     = $this->service();
+		$service                      = $this->service();
 		$service->temporary_directory = $directory;
 		$service->fail_promotion      = $directory;
 

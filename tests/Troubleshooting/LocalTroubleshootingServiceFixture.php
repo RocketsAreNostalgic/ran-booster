@@ -14,23 +14,23 @@ use RAN\Troubleshooting\LocalTroubleshootingService;
 
 final class LocalTroubleshootingServiceFixture extends LocalTroubleshootingService {
 
-	public bool $multisite                = false;
+	public bool $multisite                  = false;
 	public bool $file_modifications_allowed = true;
-	public string $php_version             = '8.2.0';
-	public string $wordpress_version       = '7.0.1';
-	public string $filesystem_method       = 'direct';
+	public string $php_version              = '8.2.0';
+	public string $wordpress_version        = '7.0.1';
+	public string $filesystem_method        = 'direct';
 	public string $temporary_directory;
 	public string $plugin_directory;
 	public string $theme_directory;
-	public bool $fail_permission                = false;
-	public ?string $fail_promotion              = null;
-	public ?string $fail_cleanup                = null;
+	public bool $fail_permission                 = false;
+	public ?string $fail_promotion               = null;
+	public ?string $fail_cleanup                 = null;
 	public ?string $race_on_promotion            = null;
-	public ?string $race_destination            = null;
+	public ?string $race_destination             = null;
 	public ?string $substitute_before_permission = null;
-	public ?string $replace_directory_on_open     = null;
-	public int $filesystem_reads                = 0;
-	public int $marker_opens                    = 0;
+	public ?string $replace_directory_on_open    = null;
+	public int $filesystem_reads                 = 0;
+	public int $marker_opens                     = 0;
 	public int $deployment_snapshot_reads        = 0;
 	public int $worker_inspection_reads          = 0;
 	public bool $use_deployment_dependency       = false;
@@ -58,7 +58,7 @@ final class LocalTroubleshootingServiceFixture extends LocalTroubleshootingServi
 	public array $opened_paths = array();
 	/** @var list<int> */
 	public array $permissions_before_promotion = array();
-	private int $suffix_counter               = 1;
+	private int $suffix_counter                = 1;
 
 	public function __construct(
 		SecretsFile $secrets,

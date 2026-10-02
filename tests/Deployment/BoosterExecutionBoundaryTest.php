@@ -47,7 +47,7 @@ final class BoosterExecutionBoundaryTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'databaseSafeStateProvider' )]
+	#[DataProvider( 'database_safe_state_provider' )]
 	public function test_database_safe_state_stops_worker_without_leaking_the_failure(
 		DatabaseCompatibilityFailure|DatabaseLifecycleFailure $failure
 	): void {

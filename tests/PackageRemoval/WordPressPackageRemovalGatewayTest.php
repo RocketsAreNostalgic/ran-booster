@@ -28,7 +28,7 @@ final class WordPressPackageRemovalGatewayTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'deleteResults' )]
+	#[DataProvider( 'delete_results' )]
 	public function test_plugin_inventory_is_refreshed_after_every_completed_delete_attempt( mixed $result, bool $deleted ): void {
 		$GLOBALS['ran_booster_package_removal_gateway_result'] = $result;
 

@@ -48,11 +48,11 @@ final readonly class Provider implements RepositoryProvider, ProviderCredentialP
 		private ProviderCredentialStore $credentials,
 		private AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence
 	) {
-		$this->code             = ProviderCode::parse( 'fixture-provider' );
-		$this->client           = new Client();
+		$this->code              = ProviderCode::parse( 'fixture-provider' );
+		$this->client            = new Client();
 		$this->credential_policy = new CredentialPolicy();
 		$this->webhook_policy    = new WebhookPolicy();
-		$this->diagnostics      = new Diagnostics( $this->client, $credentials );
+		$this->diagnostics       = new Diagnostics( $this->client, $credentials );
 	}
 
 	public function get_metadata(): ProviderMetadata {
@@ -135,8 +135,8 @@ final readonly class Provider implements RepositoryProvider, ProviderCredentialP
 	}
 
 	public function prepare_archive( ArchiveRequest $request ): PreparedArchiveContract {
-		$repository     = $request->repository;
-		$locator        = $repository->locator;
+		$repository      = $request->repository;
+		$locator         = $repository->locator;
 		$expected_branch = $request->expected_branch;
 		$resolved_ref    = null === $expected_branch
 			? $this->client->resolve_ref( $locator, $request->ref )

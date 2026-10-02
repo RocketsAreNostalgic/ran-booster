@@ -16,36 +16,36 @@ use RAN\RepositoryProvider\RepositoryProvider;
  */
 final class Plugin {
 	public static function boot(): void {
-		add_action( 'ran_booster_register_providers', array( new self(), 'registerProvider' ) );
+		add_action( 'ran_booster_register_providers', array( new self(), 'register_provider' ) );
 	}
 
-	public function registerProvider( object $registry ): void {
-		if ( ! self::hasCompatibleCore() || ! $registry instanceof ProviderRegistry ) {
+	public function register_provider( object $registry ): void {
+		if ( ! self::has_compatible_core() || ! $registry instanceof ProviderRegistry ) {
 			return;
 		}
 
-		$innerRegistrar = require dirname( __DIR__ ) . '/vendor/ran/wp-release-updater/bootstrap.php';
-		$registrar      = new ReleaseUpdaterRegistrar( $innerRegistrar );
+		$inner_registrar = require dirname( __DIR__ ) . '/vendor/ran/wp-release-updater/bootstrap.php';
+		$registrar       = new ReleaseUpdaterRegistrar( $inner_registrar );
 
 		$factory = static function (
 			ProviderCredentialStore $credentials,
-			AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-			ProviderRegistrationContext $registrationContext
+			AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
+			ProviderRegistrationContext $registration_context
 		) use ( $registrar ): RepositoryProvider {
 			return GitHubProvider::create(
 				$credentials,
-				$deliveryEvidence,
+				$delivery_evidence,
 				$registrar,
-				static fn (): int => $registrationContext->maximumArtifactBytes()
+				static fn (): int => $registration_context->maximum_artifact_bytes()
 			);
 		};
 
-		$registry->registerWithCredentialStore( 'gh', $factory );
+		$registry->register_with_credential_store( 'gh', $factory );
 	}
 
-	private static function hasCompatibleCore(): bool {
+	private static function has_compatible_core(): bool {
 		return ( ! defined( 'RAN_BOOSTER_RUNTIME_MODE' ) || 'single_site_supported' === RAN_BOOSTER_RUNTIME_MODE )
 			&& defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-			&& 13 === RAN_BOOSTER_PROVIDER_API_VERSION;
+			&& 14 === RAN_BOOSTER_PROVIDER_API_VERSION;
 	}
 }

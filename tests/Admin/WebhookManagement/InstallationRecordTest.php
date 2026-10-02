@@ -8,7 +8,7 @@ use PHPUnit\Framework\TestCase;
 use RAN\Admin\WebhookManagement\Installation\InstallationRecord;
 
 final class InstallationRecordTest extends TestCase {
-	public function testItPersistsOnlyNonSecretMetadata(): void {
+	public function test_it_persists_only_non_secret_metadata(): void {
 		$record = new InstallationRecord(
 			'gh',
 			'1234',
@@ -54,7 +54,7 @@ final class InstallationRecordTest extends TestCase {
 		self::assertArrayNotHasKey( 'management_credential_material', $checked->to_array() );
 	}
 
-	public function testItRejectsUnexpectedPersistedFields(): void {
+	public function test_it_rejects_unexpected_persisted_fields(): void {
 		$record = array(
 			'checked_at'                  => '2026-07-23T16:00:00Z',
 			'status'                      => 'configured',
@@ -78,7 +78,7 @@ final class InstallationRecordTest extends TestCase {
 		InstallationRecord::from_array( $record );
 	}
 
-	public function testUnknownHookRecoveryUsesTheNonSecretV4Shape(): void {
+	public function test_unknown_hook_recovery_uses_the_non_secret_v4_shape(): void {
 		$record = new InstallationRecord(
 			'gh',
 			'1234',
@@ -105,7 +105,7 @@ final class InstallationRecordTest extends TestCase {
 		self::assertArrayNotHasKey( 'management_credential_material', $restored->to_array() );
 	}
 
-	public function testItRejectsPriorSchemaVersionsWithoutMigratingThem(): void {
+	public function test_it_rejects_prior_schema_versions_without_migrating_them(): void {
 		$record                   = ( new InstallationRecord(
 			'gh',
 			'1234',
@@ -128,7 +128,7 @@ final class InstallationRecordTest extends TestCase {
 		InstallationRecord::from_array( $record );
 	}
 
-	public function testItRejectsUnsupportedScopesAndNonPositiveRevisions(): void {
+	public function test_it_rejects_unsupported_scopes_and_non_positive_revisions(): void {
 		foreach ( array( array( 'global', 1 ), array( 'repository', 0 ) ) as [ $scope, $revision ] ) {
 			try {
 				new InstallationRecord(
@@ -153,7 +153,7 @@ final class InstallationRecordTest extends TestCase {
 		}
 	}
 
-	public function testItRejectsProviderCodesCoreCannotPublish(): void {
+	public function test_it_rejects_provider_codes_core_cannot_publish(): void {
 		$this->expectException( \InvalidArgumentException::class );
 
 		new InstallationRecord(

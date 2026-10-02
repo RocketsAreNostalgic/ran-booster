@@ -30,22 +30,16 @@ final readonly class AdminInteractionRequest {
 			throw new InvalidArgumentException( 'Administration interaction error regions require a bounded element ID.' );
 		}
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public interaction methods retain the existing connected caller and callback contracts.
-	public static function providerRepositories(
+	public static function provider_repositories(
 		string $operation,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		string $canonicalUrl,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		string $errorRegionId
+		string $canonical_url,
+		string $error_region_id
 	): self {
 		return new self(
 			$operation,
 			AdminInteractionTarget::PROVIDER_REPOSITORIES,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-			$canonicalUrl,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-			$errorRegionId
+			$canonical_url,
+			$error_region_id
 		);
 	}
 
@@ -55,30 +49,22 @@ final readonly class AdminInteractionRequest {
 	 * The namespace is presentation identity only. It must not contain a source
 	 * row ID, source key, source revision or cleanup instruction.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public interaction methods retain the existing connected caller and callback contracts.
-	public static function transporterMigrationSourceRow(
+	public static function transporter_migration_source_row(
 		string $operation,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		string $rowNamespace,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		string $canonicalUrl,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		string $errorRegionId
+		string $row_namespace,
+		string $canonical_url,
+		string $error_region_id
 	): self {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		if ( 1 !== preg_match( '/^[a-z][a-z0-9-]{0,63}:[a-z][a-z0-9-]{0,63}$/', $rowNamespace ) ) {
+		if ( 1 !== preg_match( '/^[a-z][a-z0-9-]{0,63}:[a-z][a-z0-9-]{0,63}$/', $row_namespace ) ) {
 			throw new InvalidArgumentException( 'Transporter migration rows require a bounded namespaced presentation key.' );
 		}
 
 		return new self(
 			$operation,
 			AdminInteractionTarget::TRANSPORTER_MIGRATION_SOURCE,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-			$canonicalUrl,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-			$errorRegionId,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-			substr( hash( 'sha256', $rowNamespace ), 0, 32 )
+			$canonical_url,
+			$error_region_id,
+			substr( hash( 'sha256', $row_namespace ), 0, 32 )
 		);
 	}
 
@@ -89,29 +75,19 @@ final readonly class AdminInteractionRequest {
 	public function target(): AdminInteractionTarget {
 		return $this->target;
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public interaction methods retain the existing connected caller and callback contracts.
-	public function targetKey(): string {
+	public function target_key(): string {
 		return $this->target->key( $this->target_instance );
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public interaction methods retain the existing connected caller and callback contracts.
-	public function targetSelector(): string {
+	public function target_selector(): string {
 		return $this->target->selector( $this->target_instance );
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public interaction methods retain the existing connected caller and callback contracts.
-	public function targetElementId(): string {
-		return $this->target->elementId( $this->target_instance );
+	public function target_element_id(): string {
+		return $this->target->element_id( $this->target_instance );
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public interaction methods retain the existing connected caller and callback contracts.
-	public function canonicalUrl(): string {
+	public function canonical_url(): string {
 		return $this->canonical_url;
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public interaction methods retain the existing connected caller and callback contracts.
-	public function errorRegionId(): string {
+	public function error_region_id(): string {
 		return $this->error_region_id;
 	}
 }

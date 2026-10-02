@@ -23,7 +23,7 @@ final class DatabaseCompatibilityNoticeTest extends TestCase {
 		unset( $GLOBALS['ran_booster_repository_admin_allowed'] );
 	}
 
-	public function testUnsupportedDatabaseRendersOnePersistentSafeScopedWarning(): void {
+	public function test_unsupported_database_renders_one_persistent_safe_scoped_warning(): void {
 		$notice = $this->notice( false, false );
 
 		ob_start();
@@ -37,7 +37,7 @@ final class DatabaseCompatibilityNoticeTest extends TestCase {
 		self::assertStringNotContainsString( 'is-dismissible', $html );
 	}
 
-	public function testBlockedSchemaRendersTheLifecycleMessageWithoutDatabaseDetails(): void {
+	public function test_blocked_schema_renders_the_lifecycle_message_without_database_details(): void {
 		$notice = $this->notice( true, false );
 
 		ob_start();
@@ -49,19 +49,19 @@ final class DatabaseCompatibilityNoticeTest extends TestCase {
 		self::assertStringNotContainsString( 'schema_operation_failed', $html );
 	}
 
-	public function testSupportedUnauthorizedAndUnrelatedScreensRenderNothing(): void {
-		self::assertFalse( $this->notice( true, true )->shouldRender() );
-		self::assertFalse( $this->notice( false, false, 'dashboard' )->shouldRender() );
+	public function test_supported_unauthorized_and_unrelated_screens_render_nothing(): void {
+		self::assertFalse( $this->notice( true, true )->should_render() );
+		self::assertFalse( $this->notice( false, false, 'dashboard' )->should_render() );
 
 		$GLOBALS['ran_booster_repository_admin_allowed'] = false;
-		self::assertFalse( $this->notice( false, false )->shouldRender() );
+		self::assertFalse( $this->notice( false, false )->should_render() );
 	}
 
-	private function notice( bool $supported, bool $ready, string $screenId = 'plugins' ): DatabaseCompatibilityNotice {
+	private function notice( bool $supported, bool $ready, string $screen_id = 'plugins' ): DatabaseCompatibilityNotice {
 		$database = $this->createStub( Database::class );
-		$database->method( 'isSupported' )->willReturn( $supported );
-		$database->method( 'isReady' )->willReturn( $ready );
+		$database->method( 'is_supported' )->willReturn( $supported );
+		$database->method( 'is_ready' )->willReturn( $ready );
 
-		return new DatabaseCompatibilityNotice( $database, $screenId );
+		return new DatabaseCompatibilityNotice( $database, $screen_id );
 	}
 }

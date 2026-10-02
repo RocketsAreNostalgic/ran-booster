@@ -41,66 +41,45 @@ final class DeploymentAttemptRepository {
 
 	public function __construct(
 		private ?object $database = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private ?string $tableName = null,
+		private ?string $table_name = null,
 		?callable $clock = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?callable $randomBytes = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?Database $databaseLifecycle = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private mixed $configuredMaxAttemptRows = null
+		?callable $random_bytes = null,
+		?Database $database_lifecycle = null,
+		private mixed $configured_max_attempt_rows = null
 	) {
 		if ( null === $this->database ) {
 			global $wpdb;
 			$this->database = $wpdb;
 		}
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		if ( null === $this->tableName ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$this->tableName = \RAN\Storage\Database::attemptTableName();
+		if ( null === $this->table_name ) {
+			$this->table_name = \RAN\Storage\Database::attempt_table_name();
 		}
-		$this->clock = $clock ?? static fn (): DateTimeImmutable => new DateTimeImmutable( 'now', wp_timezone() );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->random_bytes = $randomBytes ?? static fn ( int $length ): string => random_bytes( $length );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->database_lifecycle = $databaseLifecycle ?? new Database( $this->database );
+		$this->clock              = $clock ?? static fn (): DateTimeImmutable => new DateTimeImmutable( 'now', wp_timezone() );
+		$this->random_bytes       = $random_bytes ?? static fn ( int $length ): string => random_bytes( $length );
+		$this->database_lifecycle = $database_lifecycle ?? new Database( $this->database );
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function admitAndClaimManual(
+	public function admit_and_claim_manual(
 		string $operation,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		string $packageType,
+		string $package_type,
 		string $provider,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		string $providerRepositoryId,
+		string $provider_repository_id,
 		DeploymentRequest $request,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		string $requestedRef,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		string $packageSource,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		int $packageSourceRevision
+		string $requested_ref,
+		string $package_source,
+		int $package_source_revision
 	): DeploymentAttempt {
-		RuntimeSupport::assertManagedOperationsAllowed();
+		RuntimeSupport::assert_managed_operations_allowed();
 
 		$this->assert_operation( $operation );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->assert_package_type( $packageType );
+		$this->assert_package_type( $package_type );
 		$this->assert_provider( $provider );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->assert_safe_text( $providerRepositoryId, 191 );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->assert_safe_text( $requestedRef, 255 );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->assert_package_source( $packageSource, $packageSourceRevision );
+		$this->assert_safe_text( $provider_repository_id, 191 );
+		$this->assert_safe_text( $requested_ref, 255 );
+		$this->assert_package_source( $package_source, $package_source_revision );
 
 		return $this->transaction(
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			function () use ( $operation, $packageType, $provider, $providerRepositoryId, $request, $requestedRef, $packageSource, $packageSourceRevision ): DeploymentAttempt {
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				$active = $this->active_package_attempt( $packageType, $request->package_slug );
+			function () use ( $operation, $package_type, $provider, $provider_repository_id, $request, $requested_ref, $package_source, $package_source_revision ): DeploymentAttempt {
+				$active = $this->active_package_attempt( $package_type, $request->package_slug );
 				if ( null !== $active ) {
 					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The failure stores a validated, whitelisted attempt projection; it does not render output.
 					throw DeploymentStorageFailure::contention( $active->safe_data() );
@@ -111,23 +90,18 @@ final class DeploymentAttemptRepository {
 					$this->row_data(
 						'manual',
 						$operation,
-						// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-						$packageType,
+						$package_type,
 						$provider,
-						// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-						$providerRepositoryId,
+						$provider_repository_id,
 						$request,
-						// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-						$requestedRef,
-						// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-						$packageSource,
-						// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-						$packageSourceRevision,
+						$requested_ref,
+						$package_source,
+						$package_source_revision,
 						null,
 						null
 					)
 				);
-				$query = $this->update_query( $queued->get_id(), DeploymentState::QUEUED, array( 'state' => DeploymentState::RUNNING->value ) );
+				$query  = $this->update_query( $queued->get_id(), DeploymentState::QUEUED, array( 'state' => DeploymentState::RUNNING->value ) );
 				if ( 1 !== $this->database->query( $query ) ) {
 					throw DeploymentStorageFailure::unavailable();
 				}
@@ -149,9 +123,8 @@ final class DeploymentAttemptRepository {
 	 * @param list<array{package_type: string, provider: string, provider_repository_id: string, requested_ref: string, package_source: string, package_source_revision: int, request: DeploymentRequest}> $targets
 	 * @return array{admitted: list<DeploymentAttempt>, busy: list<array<string, bool|int|string|null>>}
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function admitManualBatch( array $targets ): array {
-		RuntimeSupport::assertManagedOperationsAllowed();
+	public function admit_manual_batch( array $targets ): array {
+		RuntimeSupport::assert_managed_operations_allowed();
 
 		if ( array() === $targets || count( $targets ) > self::MAX_MANUAL_TARGETS ) {
 			throw DeploymentStorageFailure::invalid_record();
@@ -238,15 +211,12 @@ final class DeploymentAttemptRepository {
 	 * @param list<array{operation: string, package_type: string, provider_repository_id: string, requested_ref: string, package_source: string, package_source_revision: int, request: DeploymentRequest}> $targets
 	 * @return list<DeploymentAttempt>
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function admitWebhookBatch( string $provider, string $deliveryId, string $deliveryDigest, array $targets ): array {
-		RuntimeSupport::assertManagedOperationsAllowed();
+	public function admit_webhook_batch( string $provider, string $delivery_id, string $delivery_digest, array $targets ): array {
+		RuntimeSupport::assert_managed_operations_allowed();
 
 		$this->assert_provider( $provider );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->assert_safe_text( $deliveryId, 191 );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->assert_hex( $deliveryDigest, 64 );
+		$this->assert_safe_text( $delivery_id, 191 );
+		$this->assert_hex( $delivery_digest, 64 );
 		if ( count( $targets ) > self::MAX_WEBHOOK_TARGETS ) {
 			throw DeploymentStorageFailure::invalid_record();
 		}
@@ -276,26 +246,21 @@ final class DeploymentAttemptRepository {
 		ksort( $normalized, SORT_STRING );
 
 		return $this->transaction(
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			function () use ( $provider, $deliveryId, $deliveryDigest, $normalized ): array {
-				$query = $this->prepare(
+			function () use ( $provider, $delivery_id, $delivery_digest, $normalized ): array {
+				$query    = $this->prepare(
 					'SELECT * FROM %i WHERE provider = %s AND delivery_id = %s ORDER BY package_type, package_slug FOR UPDATE',
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-					$this->tableName,
+					$this->table_name,
 					$provider,
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-					$deliveryId
+					$delivery_id
 				);
 				$rows     = $this->read_rows( $query );
 				$existing = array();
 				foreach ( $rows as $row ) {
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-					if ( ! hash_equals( $deliveryDigest, (string) ( $row->delivery_digest ?? '' ) ) ) {
+					if ( ! hash_equals( $delivery_digest, (string) ( $row->delivery_digest ?? '' ) ) ) {
 						throw DeploymentStorageFailure::delivery_conflict();
 					}
 					if ( self::DELIVERY_ACK_TYPE === ( $row->package_type ?? null ) ) {
-						// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-						$this->assert_delivery_acknowledgement( $row, $provider, $deliveryId, $deliveryDigest );
+						$this->assert_delivery_acknowledgement( $row, $provider, $delivery_id, $delivery_digest );
 						continue;
 					}
 					$attempt          = DeploymentAttempt::from_database( $row );
@@ -308,8 +273,7 @@ final class DeploymentAttemptRepository {
 				}
 				if ( array() === $normalized ) {
 					$this->reserve_capacity( 1 );
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-					$this->insert_delivery_acknowledgement( $provider, $deliveryId, $deliveryDigest );
+					$this->insert_delivery_acknowledgement( $provider, $delivery_id, $delivery_digest );
 
 					return array();
 				}
@@ -328,10 +292,8 @@ final class DeploymentAttemptRepository {
 							$target['requested_ref'],
 							$target['package_source'],
 							$target['package_source_revision'],
-							// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-							$deliveryId,
-							// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-							$deliveryDigest
+							$delivery_id,
+							$delivery_digest
 						)
 					);
 				}
@@ -344,49 +306,33 @@ final class DeploymentAttemptRepository {
 			true
 		);
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function claimNext(): ?DeploymentAttempt {
-		RuntimeSupport::assertManagedOperationsAllowed();
+	public function claim_next(): ?DeploymentAttempt {
+		RuntimeSupport::assert_managed_operations_allowed();
 
 		return $this->transaction(
 			function (): ?DeploymentAttempt {
 				$query = $this->prepare(
 					"SELECT * FROM %i WHERE state = 'queued' ORDER BY created_at, id LIMIT 1 FOR UPDATE",
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-					$this->tableName
+					$this->table_name
 				);
-				$rows = $this->read_rows( $query );
+				$rows  = $this->read_rows( $query );
 
 				return $this->claim_locked_row( $rows );
 			}
 		);
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function recordResolvedRef( int $attemptId, string $resolvedRef ): DeploymentAttempt {
-		RuntimeSupport::assertManagedOperationsAllowed();
-
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->assert_safe_text( $resolvedRef, 191 );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		return $this->running_write( $attemptId, array( 'resolved_ref' => $resolvedRef ) );
+	public function record_resolved_ref( int $attempt_id, string $resolved_ref ): DeploymentAttempt {
+		RuntimeSupport::assert_managed_operations_allowed();
+		$this->assert_safe_text( $resolved_ref, 191 );
+		return $this->running_write( $attempt_id, array( 'resolved_ref' => $resolved_ref ) );
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function markMutationStarted( int $attemptId, ?DateTimeInterface $at = null ): DeploymentAttempt {
-		RuntimeSupport::assertManagedOperationsAllowed();
-
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		return $this->running_write( $attemptId, array( 'mutation_started_at' => $this->time_string( $at ?? $this->now() ) ) );
+	public function mark_mutation_started( int $attempt_id, ?DateTimeInterface $at = null ): DeploymentAttempt {
+		RuntimeSupport::assert_managed_operations_allowed();
+		return $this->running_write( $attempt_id, array( 'mutation_started_at' => $this->time_string( $at ?? $this->now() ) ) );
 	}
-
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function finish( int $attemptId, DeploymentOutcome $outcome, ?DateTimeInterface $at = null ): DeploymentAttempt {
-		RuntimeSupport::assertManagedOperationsAllowed();
-
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$id    = $this->positive_id( $attemptId );
+	public function finish( int $attempt_id, DeploymentOutcome $outcome, ?DateTimeInterface $at = null ): DeploymentAttempt {
+		RuntimeSupport::assert_managed_operations_allowed();
+		$id    = $this->positive_id( $attempt_id );
 		$data  = array(
 			'state'        => $outcome->get_state()->value,
 			'outcome_code' => $outcome->get_code(),
@@ -408,11 +354,8 @@ final class DeploymentAttemptRepository {
 
 		return $attempt;
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function findExact( int $attemptId ): ?DeploymentAttempt {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the promoted constructor or external DTO property contract. Retain the public named-parameter contract.
-		$query = $this->prepare( 'SELECT * FROM %i WHERE id = %d LIMIT 2', $this->tableName, $this->positive_id( $attemptId ) );
+	public function find_exact( int $attempt_id ): ?DeploymentAttempt {
+		$query = $this->prepare( 'SELECT * FROM %i WHERE id = %d LIMIT 2', $this->table_name, $this->positive_id( $attempt_id ) );
 		$rows  = $this->read_rows( $query );
 		if ( count( $rows ) > 1 ) {
 			throw DeploymentStorageFailure::inconsistent();
@@ -424,19 +367,16 @@ final class DeploymentAttemptRepository {
 	/**
 	 * Read an exact, bounded set of attempts in one query.
 	 *
-	 * @param list<int> $attemptIds
+	 * @param list<int> $attempt_ids
 	 * @return array<int, DeploymentAttempt>
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function findExactBatch( array $attemptIds ): array {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( array() === $attemptIds || count( $attemptIds ) > self::MAX_MANUAL_TARGETS ) {
+	public function find_exact_batch( array $attempt_ids ): array {
+		if ( array() === $attempt_ids || count( $attempt_ids ) > self::MAX_MANUAL_TARGETS ) {
 			throw DeploymentStorageFailure::invalid_record();
 		}
 
 		$ids = array();
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		foreach ( $attemptIds as $attempt_id ) {
+		foreach ( $attempt_ids as $attempt_id ) {
 			$id = $this->positive_id( $attempt_id );
 			if ( isset( $ids[ $id ] ) ) {
 				throw DeploymentStorageFailure::invalid_record();
@@ -446,8 +386,7 @@ final class DeploymentAttemptRepository {
 
 		$query = $this->prepare(
 			'SELECT * FROM %i WHERE id IN (' . implode( ', ', array_fill( 0, count( $ids ), '%d' ) ) . ') ORDER BY id',
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$this->tableName,
+			$this->table_name,
 			...array_values( $ids )
 		);
 		$found = array();
@@ -462,11 +401,8 @@ final class DeploymentAttemptRepository {
 
 		return $found;
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function earliestQueuedAt(): ?DateTimeImmutable {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		$query = $this->prepare( "SELECT created_at FROM %i WHERE state = 'queued' ORDER BY created_at, id LIMIT 1", $this->tableName );
+	public function earliest_queued_at(): ?DateTimeImmutable {
+		$query = $this->prepare( "SELECT created_at FROM %i WHERE state = 'queued' ORDER BY created_at, id LIMIT 1", $this->table_name );
 		$rows  = $this->read_rows( $query );
 		if ( array() === $rows ) {
 			return null;
@@ -480,12 +416,10 @@ final class DeploymentAttemptRepository {
 	}
 
 	/** @return array{queued: int, running: int, needs_attention: int} */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function operationalSnapshot(): array {
-		$query = $this->prepare(
+	public function operational_snapshot(): array {
+		$query  = $this->prepare(
 			"SELECT state, COUNT(*) AS total FROM %i WHERE state IN ('queued','running') OR (state = 'needs_attention' AND resolved_at IS NULL AND resolved_by IS NULL) GROUP BY state",
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$this->tableName
+			$this->table_name
 		);
 		$result = array(
 			'queued'          => 0,
@@ -501,22 +435,15 @@ final class DeploymentAttemptRepository {
 
 		return $result;
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function hasUnresolvedPackageAttempt( string $packageType, string $packageSlug ): bool {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->assert_package_type( $packageType );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->assert_safe_text( $packageSlug, 191 );
+	public function has_unresolved_package_attempt( string $package_type, string $package_slug ): bool {
+		$this->assert_package_type( $package_type );
+		$this->assert_safe_text( $package_slug, 191 );
 		$rows = $this->read_rows(
 			$this->prepare(
 				"SELECT id FROM %i WHERE package_type = %s AND package_slug = %s AND (state IN ('queued','running') OR (state = 'needs_attention' AND resolved_at IS NULL AND resolved_by IS NULL)) LIMIT 2",
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				$this->tableName,
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				$packageType,
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				$packageSlug
+				$this->table_name,
+				$package_type,
+				$package_slug
 			)
 		);
 		if ( count( $rows ) > 1 ) {
@@ -525,9 +452,7 @@ final class DeploymentAttemptRepository {
 
 		return array() !== $rows;
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function latestAuthenticatedDelivery( ProviderCode $provider ): ?AuthenticatedWebhookDeliveryEvidence {
+	public function latest_authenticated_delivery( ProviderCode $provider ): ?AuthenticatedWebhookDeliveryEvidence {
 		$rows = $this->read_rows(
 			$this->prepare(
 				"SELECT provider, source, package_type, delivery_id, delivery_digest, created_at
@@ -535,8 +460,7 @@ final class DeploymentAttemptRepository {
 				WHERE provider = %s AND source = 'webhook'
 				ORDER BY id DESC
 				LIMIT 1",
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				$this->tableName,
+				$this->table_name,
 				$provider->value
 			)
 		);
@@ -575,14 +499,11 @@ final class DeploymentAttemptRepository {
 	}
 
 	/** @return array{valid: bool, maximum_rows: int, source: 'configured'|'default'} */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function retentionConfigurationStatus(): array {
+	public function retention_configuration_status(): array {
 		if ( null !== $this->retention_configuration ) {
 			return $this->retention_configuration;
 		}
-
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		$value  = $this->configuredMaxAttemptRows;
+		$value  = $this->configured_max_attempt_rows;
 		$source = 'configured';
 		if ( null === $value && ! defined( 'RAN_BOOSTER_MAX_ATTEMPT_ROWS' ) ) {
 			$source = 'default';
@@ -604,20 +525,16 @@ final class DeploymentAttemptRepository {
 	}
 
 	/** @return list<DeploymentAttempt> */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function recentHistory( int $limit = 25, ?int $beforeId = null ): array {
+	public function recent_history( int $limit = 25, ?int $before_id = null ): array {
 		$limit = $this->history_limit( $limit );
 		$query = $this->prepare(
 			'SELECT * FROM %i WHERE package_type IN (%s, %s)',
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$this->tableName,
+			$this->table_name,
 			'plugin',
 			'theme'
 		);
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( null !== $beforeId ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$query .= $this->prepare( ' AND id < %d', $this->positive_id( $beforeId ) );
+		if ( null !== $before_id ) {
+			$query .= $this->prepare( ' AND id < %d', $this->positive_id( $before_id ) );
 		}
 		$query .= $this->prepare( ' ORDER BY id DESC LIMIT %d', $limit );
 
@@ -632,13 +549,10 @@ final class DeploymentAttemptRepository {
 	 *
 	 * @return array{latest: DeploymentAttempt|null, last_successful: DeploymentAttempt|null}
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function packageActivitySummary( string $packageType, string $packageSlug ): array {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->assert_package_type( $packageType );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->assert_package_slug( $packageSlug );
-		$query = $this->prepare(
+	public function package_activity_summary( string $package_type, string $package_slug ): array {
+		$this->assert_package_type( $package_type );
+		$this->assert_package_slug( $package_slug );
+		$query    = $this->prepare(
 			'SELECT * FROM %i AS attempts
 			WHERE attempts.id = (
 				SELECT MAX(latest.id) FROM %i AS latest WHERE latest.package_type = %s AND latest.package_slug = %s
@@ -646,20 +560,13 @@ final class DeploymentAttemptRepository {
 				SELECT MAX(success.id) FROM %i AS success WHERE success.package_type = %s AND success.package_slug = %s AND success.state = %s
 			)
 			ORDER BY attempts.id DESC LIMIT 2',
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$this->tableName,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$this->tableName,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$packageType,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$packageSlug,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$this->tableName,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$packageType,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$packageSlug,
+			$this->table_name,
+			$this->table_name,
+			$package_type,
+			$package_slug,
+			$this->table_name,
+			$package_type,
+			$package_slug,
 			DeploymentState::SUCCEEDED->value
 		);
 		$attempts = array_map( array( DeploymentAttempt::class, 'from_database' ), $this->read_rows( $query ) );
@@ -680,12 +587,9 @@ final class DeploymentAttemptRepository {
 	/**
 	 * Reconcile only after an administrator confirms the worker stopped.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function reconcileConfirmedStopped( int $attemptId, ?DateTimeInterface $at = null ): DeploymentAttempt {
-		RuntimeSupport::assertManagedOperationsAllowed();
-
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$id = $this->positive_id( $attemptId );
+	public function reconcile_confirmed_stopped( int $attempt_id, ?DateTimeInterface $at = null ): DeploymentAttempt {
+		RuntimeSupport::assert_managed_operations_allowed();
+		$id = $this->positive_id( $attempt_id );
 
 		return $this->transaction(
 			function () use ( $id, $at ): DeploymentAttempt {
@@ -719,31 +623,20 @@ final class DeploymentAttemptRepository {
 			}
 		);
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function resolveNeedsAttention(
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		int $attemptId,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		string $correlationId,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		int $resolvedBy,
+	public function resolve_needs_attention(
+		int $attempt_id,
+		string $correlation_id,
+		int $resolved_by,
 		?DateTimeInterface $at = null
 	): DeploymentAttempt {
-		RuntimeSupport::assertManagedOperationsAllowed();
-
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$id = $this->positive_id( $attemptId );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->assert_hex( $correlationId, 32 );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$user_id = $this->positive_id( $resolvedBy );
+		RuntimeSupport::assert_managed_operations_allowed();
+		$id = $this->positive_id( $attempt_id );
+		$this->assert_hex( $correlation_id, 32 );
+		$user_id = $this->positive_id( $resolved_by );
 
 		return $this->transaction(
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			function () use ( $id, $correlationId, $user_id, $at ): DeploymentAttempt {
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				$row    = $this->locked_attempt_row( $id, $correlationId );
+			function () use ( $id, $correlation_id, $user_id, $at ): DeploymentAttempt {
+				$row    = $this->locked_attempt_row( $id, $correlation_id );
 				$stored = DeploymentAttempt::from_database( $row );
 				if ( ! $stored->requires_operator_resolution() ) {
 					throw DeploymentStorageFailure::inconsistent();
@@ -757,8 +650,7 @@ final class DeploymentAttemptRepository {
 				}
 				$attempt = $this->require_exact( $id );
 				$this->assert_attempt_data( $attempt, $data );
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				if ( ! hash_equals( $correlationId, $attempt->get_correlation_id() ) || $attempt->requires_operator_resolution() ) {
+				if ( ! hash_equals( $correlation_id, $attempt->get_correlation_id() ) || $attempt->requires_operator_resolution() ) {
 					throw DeploymentStorageFailure::inconsistent();
 				}
 				BoosterLogger::log(
@@ -816,8 +708,7 @@ final class DeploymentAttemptRepository {
 	/** @param array<string, string|null> $data */
 	private function update_query( int $id, DeploymentState $current_state, array $data ): string {
 		$assignments = array();
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		$arguments = array( $this->tableName );
+		$arguments   = array( $this->table_name );
 		foreach ( $data as $column => $value ) {
 			if ( preg_match( '/^[a-z_]+$/D', $column ) !== 1 ) {
 				throw DeploymentStorageFailure::invalid_record();
@@ -878,11 +769,10 @@ final class DeploymentAttemptRepository {
 	/** @param array<string, int|string|null> $data */
 	private function insert_and_read( array $data ): DeploymentAttempt {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- This is the deployment persistence boundary. Retain the promoted constructor or external DTO property contract.
-		if ( 1 !== $this->database->insert( $this->tableName, $data ) ) {
+		if ( 1 !== $this->database->insert( $this->table_name, $data ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		$query = $this->prepare( 'SELECT * FROM %i WHERE correlation_id = %s LIMIT 2', $this->tableName, $data['correlation_id'] );
+		$query = $this->prepare( 'SELECT * FROM %i WHERE correlation_id = %s LIMIT 2', $this->table_name, $data['correlation_id'] );
 		$rows  = $this->read_rows( $query );
 		if ( count( $rows ) !== 1 ) {
 			throw DeploymentStorageFailure::inconsistent();
@@ -919,11 +809,10 @@ final class DeploymentAttemptRepository {
 			'resolved_by'             => null,
 		);
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- This is the durable zero-target delivery acknowledgement. Retain the promoted constructor or external DTO property contract.
-		if ( 1 !== $this->database->insert( $this->tableName, $data ) ) {
+		if ( 1 !== $this->database->insert( $this->table_name, $data ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		$query = $this->prepare( 'SELECT * FROM %i WHERE correlation_id = %s LIMIT 2', $this->tableName, $data['correlation_id'] );
+		$query = $this->prepare( 'SELECT * FROM %i WHERE correlation_id = %s LIMIT 2', $this->table_name, $data['correlation_id'] );
 		$rows  = $this->read_rows( $query );
 		if ( count( $rows ) !== 1 ) {
 			throw DeploymentStorageFailure::inconsistent();
@@ -962,7 +851,7 @@ final class DeploymentAttemptRepository {
 	}
 
 	private function require_exact( int $id ): DeploymentAttempt {
-		$attempt = $this->findExact( $id );
+		$attempt = $this->find_exact( $id );
 		if ( null === $attempt ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
@@ -972,11 +861,9 @@ final class DeploymentAttemptRepository {
 
 	private function locked_attempt_row( int $id, ?string $correlation_id = null ): object {
 		$query = null === $correlation_id
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			? $this->prepare( 'SELECT * FROM %i WHERE id = %d LIMIT 2 FOR UPDATE', $this->tableName, $id )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			: $this->prepare( 'SELECT * FROM %i WHERE id = %d AND correlation_id = %s LIMIT 2 FOR UPDATE', $this->tableName, $id, $correlation_id );
-		$rows = $this->read_rows( $query );
+			? $this->prepare( 'SELECT * FROM %i WHERE id = %d LIMIT 2 FOR UPDATE', $this->table_name, $id )
+			: $this->prepare( 'SELECT * FROM %i WHERE id = %d AND correlation_id = %s LIMIT 2 FOR UPDATE', $this->table_name, $id, $correlation_id );
+		$rows  = $this->read_rows( $query );
 		if ( count( $rows ) !== 1 ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
@@ -987,12 +874,11 @@ final class DeploymentAttemptRepository {
 	private function active_package_attempt( string $package_type, string $package_slug ): ?DeploymentAttempt {
 		$query = $this->prepare(
 			"SELECT * FROM %i WHERE package_type = %s AND package_slug = %s AND (state IN ('queued','running') OR (state = 'needs_attention' AND resolved_at IS NULL AND resolved_by IS NULL)) ORDER BY created_at DESC, id DESC LIMIT 1 FOR UPDATE",
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$this->tableName,
+			$this->table_name,
 			$package_type,
 			$package_slug
 		);
-		$rows = $this->read_rows( $query );
+		$rows  = $this->read_rows( $query );
 		if ( count( $rows ) > 1 ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
@@ -1011,8 +897,7 @@ final class DeploymentAttemptRepository {
 		$count_rows = $this->read_rows(
 			$this->prepare(
 				'SELECT COUNT(*) AS total FROM %i FOR UPDATE',
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				$this->tableName
+				$this->table_name
 			)
 		);
 		if ( count( $count_rows ) !== 1 || ! is_numeric( $count_rows[0]->total ?? null ) ) {
@@ -1023,7 +908,7 @@ final class DeploymentAttemptRepository {
 			throw DeploymentStorageFailure::inconsistent();
 		}
 
-		$maximum_rows = $this->retentionConfigurationStatus()['maximum_rows'];
+		$maximum_rows = $this->retention_configuration_status()['maximum_rows'];
 		$prune_rows   = max( 0, $current_rows + $incoming_rows - $maximum_rows );
 		if ( 0 === $prune_rows ) {
 			return;
@@ -1032,8 +917,7 @@ final class DeploymentAttemptRepository {
 		$candidates = $this->read_rows(
 			$this->prepare(
 				"SELECT id FROM %i WHERE (state IN ('succeeded','failed') OR (state = 'needs_attention' AND resolved_at IS NOT NULL AND resolved_by IS NOT NULL)) ORDER BY created_at, id LIMIT %d FOR UPDATE",
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				$this->tableName,
+				$this->table_name,
 				$prune_rows
 			)
 		);
@@ -1051,8 +935,7 @@ final class DeploymentAttemptRepository {
 		}
 		$query = $this->prepare(
 			'DELETE FROM %i WHERE id IN (' . implode( ', ', array_fill( 0, count( $ids ), '%d' ) ) . ") AND (state IN ('succeeded','failed') OR (state = 'needs_attention' AND resolved_at IS NOT NULL AND resolved_by IS NOT NULL))",
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$this->tableName,
+			$this->table_name,
 			...array_values( $ids )
 		);
 		if ( count( $ids ) !== $this->database->query( $query ) ) {
@@ -1128,7 +1011,7 @@ final class DeploymentAttemptRepository {
 
 	private function require_storage_support(): void {
 		try {
-			$this->database_lifecycle->requireReady();
+			$this->database_lifecycle->require_ready();
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
 			throw DeploymentStorageFailure::unsupported_database();
 		}

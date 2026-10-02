@@ -40,7 +40,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		$this->attempts = new DeploymentAttemptRepository(
 			$this->database,
 			'wp_ran_booster_deployment_attempts',
-			databaseLifecycle: $this->createStub( Database::class )
+			database_lifecycle: $this->createStub( Database::class )
 		);
 
 		$GLOBALS['ran_booster_repository_admin_allowed']               = true;
@@ -83,7 +83,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		parent::tearDown();
 	}
 
-	public function testMonitorReportsOnlyTheNewestCurrentWebhookFailureForEachPackage(): void {
+	public function test_monitor_reports_only_the_newest_current_webhook_failure_for_each_package(): void {
 		$this->database->rows    = array(
 			$this->row( 1, 'old-failure', 'example', 'webhook', DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED ),
 			$this->row( 2, 'new-success', 'example', 'webhook', DeploymentOutcome::CODE_DEPLOYED ),
@@ -107,7 +107,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		self::assertNotNull( $monitor->fingerprint() );
 	}
 
-	public function testNoticeIsAdministratorOnlyEscapedRequestDeduplicatedAndDismissiblePerUser(): void {
+	public function test_notice_is_administrator_only_escaped_request_deduplicated_and_dismissible_per_user(): void {
 		$this->database->rows = array(
 			$this->row( 1, 'affected', 'affected', 'webhook', DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED ),
 		);
@@ -138,7 +138,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		self::assertSame( '', (string) ob_get_clean() );
 	}
 
-	public function testDismissalRejectsUnauthorizedInvalidNonceAndPersistenceFailure(): void {
+	public function test_dismissal_rejects_unauthorized_invalid_nonce_and_persistence_failure(): void {
 		$this->database->rows = array(
 			$this->row( 1, 'affected', 'affected', 'webhook', DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED ),
 		);
@@ -154,7 +154,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		self::assertSame( 500, $controller->handle()['status'] );
 	}
 
-	public function testPluginScreenRegistersAndRendersAWordPressNativeFailureRow(): void {
+	public function test_plugin_screen_registers_and_renders_aword_press_native_failure_row(): void {
 		$this->database->rows = array(
 			$this->row( 1, 'affected', 'example', 'webhook', DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED ),
 		);
@@ -186,7 +186,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		self::assertStringContainsString( 'Replace credential', $html );
 	}
 
-	public function testEmailIsLimitedToBackgroundFailuresAndContainsOnlySafeActionableData(): void {
+	public function test_email_is_limited_to_background_failures_and_contains_only_safe_actionable_data(): void {
 		$email   = new BackgroundDeploymentFailureEmail();
 		$failure = DeploymentAttempt::from_database(
 			$this->row( 1, 'affected', 'example', 'webhook', DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED )
@@ -243,11 +243,11 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 	/** @return array<string, mixed> */
 	private function row(
 		int $id,
-		string $correlationSeed,
+		string $correlation_seed,
 		string $slug,
 		string $source,
 		string $outcome,
-		string $packageType = 'plugin'
+		string $package_type = 'plugin'
 	): array {
 		$request = new DeploymentRequest(
 			'owner/' . $slug,
@@ -263,10 +263,10 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 
 		return array(
 			'id'                      => $id,
-			'correlation_id'          => substr( hash( 'sha256', $correlationSeed ), 0, 32 ),
+			'correlation_id'          => substr( hash( 'sha256', $correlation_seed ), 0, 32 ),
 			'source'                  => $source,
 			'operation'               => 'update',
-			'package_type'            => $packageType,
+			'package_type'            => $package_type,
 			'package_slug'            => $slug,
 			'package_source'          => 'branch',
 			'package_source_revision' => 1,

@@ -7,9 +7,9 @@ namespace RANTests;
 use PHPUnit\Framework\TestCase;
 
 final class ReleasePromotionBoundaryTest extends TestCase {
-	public function testReleasePleaseConfigurationUsesProfileBDraftLifecycle(): void {
+	public function test_release_please_configuration_uses_profile_bdraft_lifecycle(): void {
 		$config = json_decode(
-			$this->readText( 'release-please-config.json' ),
+			$this->read_text( 'release-please-config.json' ),
 			true,
 			512,
 			JSON_THROW_ON_ERROR
@@ -21,8 +21,8 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 		self::assertNotSame( true, $config['skip-github-release'] ?? false );
 	}
 
-	public function testProfileBCallerOwnsTheOnlyGenericReleaseMutationBoundary(): void {
-		$workflow = $this->readText( '.github/workflows/release-please.yml' );
+	public function test_profile_bcaller_owns_the_only_generic_release_mutation_boundary(): void {
+		$workflow = $this->read_text( '.github/workflows/release-please.yml' );
 
 		self::assertStringContainsString(
 			'uses: RocketsAreNostalgic/.github/.github/workflows/release-profile-b.yml@593768db30a0101e940e85b9a084b2c773322785',
@@ -35,8 +35,8 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 		self::assertStringNotContainsString( '--clobber', $workflow );
 	}
 
-	public function testQualityPromotionManifestBindsExactCoreAssets(): void {
-		$quality = $this->readText( '.github/workflows/quality.yml' );
+	public function test_quality_promotion_manifest_binds_exact_core_assets(): void {
+		$quality = $this->read_text( '.github/workflows/quality.yml' );
 		$markers = array(
 			'ran-profile-b-promotion',
 			'quality_commit:$quality_commit',
@@ -52,7 +52,7 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 		}
 	}
 
-	public function testObsoleteGenericReleaseStateHelpersAreRemoved(): void {
+	public function test_obsolete_generic_release_state_helpers_are_removed(): void {
 		$paths = array(
 			'scripts/has-trusted-release-candidate-run.sh',
 			'scripts/reconcile-release-candidate-marker.sh',
@@ -69,8 +69,8 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 		}
 	}
 
-	public function testReleaseDocumentationMapsRetainedAndDeletedGuarantees(): void {
-		$release = $this->readText( 'RELEASE.md' );
+	public function test_release_documentation_maps_retained_and_deleted_guarantees(): void {
+		$release = $this->read_text( 'RELEASE.md' );
 
 		self::assertStringContainsString( 'Retained and deleted evidence', $release );
 		self::assertStringContainsString( 'Runtime archive', $release );
@@ -80,7 +80,7 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 		self::assertStringContainsString( '--clobber', $release );
 	}
 
-	private function readText( string $path ): string {
+	private function read_text( string $path ): string {
 		$text = file_get_contents( $this->root() . '/' . $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local repository contract.
 		self::assertIsString( $text );
 

@@ -37,7 +37,7 @@ final class ReleaseArtifactCustodian {
 			// those implementations load-compatible while new providers can return
 			// provider-owned custody without importing this Core concrete type.
 			if ( $custody instanceof PreparedArtifact ) {
-				$custody->assertUnchanged();
+				$custody->assert_unchanged();
 
 				return $custody;
 			}
@@ -153,7 +153,7 @@ final class ReleaseArtifactCustodian {
 			if ( ! $input_closed ) {
 				throw new RuntimeException();
 			}
-			$prepared_identity = PreparedArtifact::regularFileIdentity( $path );
+			$prepared_identity = PreparedArtifact::regular_file_identity( $path );
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- Custody transfer requires source/copy digest continuity.
 			$copy_digest = hash_file( 'sha256', $path );
 			if ( ! is_string( $copy_digest )

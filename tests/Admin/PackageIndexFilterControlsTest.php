@@ -21,7 +21,7 @@ final class PackageIndexFilterControlsTest extends TestCase {
 	/**
 	 * @return array<string, array{PackagePagePresenter, string, string, string}>
 	 */
-	public static function packageTypes(): array {
+	public static function package_types(): array {
 		return array(
 			'plugins' => array(
 				PackagePagePresenter::plugin(),
@@ -38,15 +38,15 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'packageTypes' )]
-	public function testItRendersTheSharedSelectedQueryContract(
-		PackagePagePresenter $packageView,
-		string $pageSlug,
+	#[DataProvider( 'package_types' )]
+	public function test_it_renders_the_shared_selected_query_contract(
+		PackagePagePresenter $package_view,
+		string $page_slug,
 		string $type,
 		string $plural
 	): void {
 		$html = $this->render(
-			$packageView,
+			$package_view,
 			array(
 				'search'   => 'Release Plugin',
 				'provider' => 'gh',
@@ -71,7 +71,7 @@ final class PackageIndexFilterControlsTest extends TestCase {
 			$html
 		);
 		self::assertStringContainsString(
-			'class="page-title-action" href="https://example.test/wp-admin/admin.php?page=' . $pageSlug . '-create"',
+			'class="page-title-action" href="https://example.test/wp-admin/admin.php?page=' . $page_slug . '-create"',
 			$html
 		);
 		self::assertStringContainsString( 'class="ran-booster-package-list-filters"', $html );
@@ -79,7 +79,7 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		self::assertStringContainsString( 'class="ran-booster-package-list-controls"', $html );
 		self::assertStringContainsString( 'method="get"', $html );
 		self::assertStringContainsString( 'action="https://example.test/wp-admin/admin.php"', $html );
-		self::assertStringContainsString( 'name="page" value="' . $pageSlug . '"', $html );
+		self::assertStringContainsString( 'name="page" value="' . $page_slug . '"', $html );
 		self::assertStringContainsString( 'type="hidden" name="s" value="Release Plugin"', $html );
 		self::assertStringContainsString( 'type="search" name="s" value="Release Plugin"', $html );
 		self::assertMatchesRegularExpression( '/name="provider"[\s\S]*value="gh"\s+selected="selected"[\s\S]*>GitHub</', $html );
@@ -88,7 +88,7 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		self::assertStringContainsString( '>Filter</button>', $html );
 		self::assertStringContainsString( '>Search</button>', $html );
 		self::assertStringContainsString(
-			'href="https://example.test/wp-admin/admin.php?page=' . $pageSlug . '">Clear filters</a>',
+			'href="https://example.test/wp-admin/admin.php?page=' . $page_slug . '">Clear filters</a>',
 			$html
 		);
 		self::assertStringContainsString( 'class="tablenav top ran-booster-package-toolbar"', $html );
@@ -101,15 +101,15 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		self::assertStringNotContainsString( 'Add your first ' . $type, $html );
 	}
 
-	#[DataProvider( 'packageTypes' )]
-	public function testRawEmptyInventoryOffersProminentFirstPackageOnboarding(
-		PackagePagePresenter $packageView,
-		string $pageSlug,
+	#[DataProvider( 'package_types' )]
+	public function test_raw_empty_inventory_offers_prominent_first_package_onboarding(
+		PackagePagePresenter $package_view,
+		string $page_slug,
 		string $type,
 		string $plural
 	): void {
 		$html = $this->render(
-			$packageView,
+			$package_view,
 			array(
 				'search'   => '',
 				'provider' => '',
@@ -129,7 +129,7 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		self::assertStringContainsString( '<h3>Add your first ' . $type . '</h3>', $html );
 		self::assertStringContainsString( 'No ' . $plural . ' are managed by RAN Booster yet.', $html );
 		self::assertStringContainsString(
-			'class="button button-primary" href="https://example.test/wp-admin/admin.php?page=' . $pageSlug . '-create">Add your first ' . $type . '</a>',
+			'class="button button-primary" href="https://example.test/wp-admin/admin.php?page=' . $page_slug . '-create">Add your first ' . $type . '</a>',
 			$html
 		);
 		self::assertStringNotContainsString( 'ran-booster-package-toolbar', $html );
@@ -138,10 +138,10 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		self::assertStringNotContainsString( 'match the current filters', $html );
 	}
 
-	#[DataProvider( 'packageTypes' )]
-	public function testNetworkPackageIndexesKeepEveryPackageRouteOnTheNetworkAdminBase(
-		PackagePagePresenter $packageView,
-		string $pageSlug,
+	#[DataProvider( 'package_types' )]
+	public function test_network_package_indexes_keep_every_package_route_on_the_network_admin_base(
+		PackagePagePresenter $package_view,
+		string $page_slug,
 		string $type,
 		string $plural
 	): void {
@@ -149,7 +149,7 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		$GLOBALS['ran_booster_package_view_multisite']   = true;
 		$GLOBALS['ran_booster_dashboard_test_multisite'] = true;
 		$html = $this->render(
-			$packageView,
+			$package_view,
 			array(
 				'search'   => 'release',
 				'provider' => '',
@@ -160,31 +160,31 @@ final class PackageIndexFilterControlsTest extends TestCase {
 			array()
 		);
 
-		self::assertStringContainsString( 'href="https://example.test/wp-admin/network/admin.php?page=' . $pageSlug . '-create"', $html );
+		self::assertStringContainsString( 'href="https://example.test/wp-admin/network/admin.php?page=' . $page_slug . '-create"', $html );
 		self::assertStringContainsString( 'action="https://example.test/wp-admin/network/admin.php"', $html );
-		self::assertStringContainsString( 'href="https://example.test/wp-admin/network/admin.php?page=' . $pageSlug . '">Clear filters</a>', $html );
-		self::assertStringNotContainsString( 'https://example.test/wp-admin/admin.php?page=' . $pageSlug, $html );
+		self::assertStringContainsString( 'href="https://example.test/wp-admin/network/admin.php?page=' . $page_slug . '">Clear filters</a>', $html );
+		self::assertStringNotContainsString( 'https://example.test/wp-admin/admin.php?page=' . $page_slug, $html );
 	}
 
 	/**
-	 * @param array{search:string,provider:string,source:string,policy:string} $packageListState
-	 * @param list<array{code:string,label:string}>                           $packageProviderOptions
+	 * @param array{search:string,provider:string,source:string,policy:string} $package_list_state
+	 * @param list<array{code:string,label:string}>                           $package_provider_options
 	 */
 	private function render(
-		PackagePagePresenter $packageView,
-		array $packageListState,
-		int $packageListTotal,
-		array $packageProviderOptions
+		PackagePagePresenter $package_view,
+		array $package_list_state,
+		int $package_list_total,
+		array $package_provider_options
 	): string {
-		$packages                = array();
-		$packageProviders        = array();
-		$packageActivity         = array(
+		$packages                  = array();
+		$package_providers         = array();
+		$package_activity          = array(
 			'items'       => array(),
 			'unavailable' => false,
 		);
-		$packageExtensionRows    = array();
-		$packageExtensionActions = array();
-		$messages                = array();
+		$package_extension_rows    = array();
+		$package_extension_actions = array();
+		$messages                  = array();
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/index.php';

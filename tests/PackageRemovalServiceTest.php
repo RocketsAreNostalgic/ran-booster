@@ -50,7 +50,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		);
 	}
 
-	public function testRemovalRequiresExactConfirmationAndSourceRevision(): void {
+	public function test_removal_requires_exact_confirmation_and_source_revision(): void {
 		foreach (
 			array(
 				array( 'confirm_package_removal' => '0' ),
@@ -73,7 +73,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertSame( 7, $operation->get_expected_source_revision() );
 	}
 
-	public function testStaleRevisionChangesNothing(): void {
+	public function test_stale_revision_changes_nothing(): void {
 		$fixture = $this->fixture();
 		$result  = $fixture->service->execute(
 			PackageOperation::from_input(
@@ -90,7 +90,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertSame( array(), $fixture->gateway->events );
 	}
 
-	public function testConfirmedUnlinkLeavesPackageFilesInstalled(): void {
+	public function test_confirmed_unlink_leaves_package_files_installed(): void {
 		$fixture = $this->fixture();
 		$result  = $fixture->service->execute(
 			PackageOperation::from_input( 'unlink-plugin', $this->input() )
@@ -103,7 +103,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertSame( array(), $fixture->gateway->events );
 	}
 
-	public function testConfirmedUnlinkClearsBranchEvidenceBeforeTheSameIdentityCanBeReused(): void {
+	public function test_confirmed_unlink_clears_branch_evidence_before_the_same_identity_can_be_reused(): void {
 		$fixture  = $this->fixture();
 		$evidence = new RemovalBranchCheckEvidenceStore();
 		$evidence->record( 'plugin', $fixture->plugin, 'profile-a', 'verified' );
@@ -121,11 +121,11 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertNull( $evidence->find( 'plugin', $fixture->plugin, 'profile-a' ) );
 	}
 
-	public function testFailedUnlinkInvalidatesBranchEvidence(): void {
-		$fixture                         = $this->fixture();
-		$evidence                        = new RemovalBranchCheckEvidenceStore();
-		$fixture->plugins->unlinkFailure = true;
-		$service                         = new PackageRemovalService(
+	public function test_failed_unlink_invalidates_branch_evidence(): void {
+		$fixture                          = $this->fixture();
+		$evidence                         = new RemovalBranchCheckEvidenceStore();
+		$fixture->plugins->unlink_failure = true;
+		$service                          = new PackageRemovalService(
 			$fixture->plugins,
 			$fixture->themes,
 			$fixture->gateway,
@@ -145,11 +145,11 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertNull( $evidence->find( 'plugin', $fixture->plugin, 'profile-a' ) );
 	}
 
-	public function testFailedBranchEvidenceClearLeavesPackageManagementAndEvidenceUntouched(): void {
-		$fixture              = $this->fixture();
-		$evidence             = new RemovalBranchCheckEvidenceStore();
-		$evidence->clearFails = true;
-		$service              = new PackageRemovalService(
+	public function test_failed_branch_evidence_clear_leaves_package_management_and_evidence_untouched(): void {
+		$fixture               = $this->fixture();
+		$evidence              = new RemovalBranchCheckEvidenceStore();
+		$evidence->clear_fails = true;
+		$service               = new PackageRemovalService(
 			$fixture->plugins,
 			$fixture->themes,
 			$fixture->gateway,
@@ -169,7 +169,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertNotNull( $evidence->find( 'plugin', $fixture->plugin, 'profile-a' ) );
 	}
 
-	public function testConfirmedUnlinkUsesTheSharedUpdaterLock(): void {
+	public function test_confirmed_unlink_uses_the_shared_updater_lock(): void {
 		$fixture = $this->fixture();
 		$lock    = new RemovalUpdaterLock();
 		$service = new PackageRemovalService(
@@ -188,7 +188,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertSame( array( 'acquire', 'release:fixture-lock' ), $lock->events );
 	}
 
-	public function testPlainUnlinkLockContentionChangesNothing(): void {
+	public function test_plain_unlink_lock_contention_changes_nothing(): void {
 		$fixture         = $this->fixture();
 		$lock            = new RemovalUpdaterLock();
 		$lock->available = false;
@@ -209,7 +209,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertFalse( $fixture->plugins->unlinked );
 	}
 
-	public function testPlainUnlinkLockReleaseFailureDoesNotReportSuccess(): void {
+	public function test_plain_unlink_lock_release_failure_does_not_report_success(): void {
 		$fixture          = $this->fixture();
 		$lock             = new RemovalUpdaterLock();
 		$lock->releasable = false;
@@ -230,10 +230,10 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertTrue( $fixture->plugins->unlinked );
 	}
 
-	public function testPluginIsDisabledDeactivatedUninstalledDeletedThenUnlinked(): void {
-		$fixture                        = $this->fixture();
-		$fixture->gateway->pluginActive = true;
-		$fixture->gateway->pluginDelete = static function () use ( $fixture ): bool {
+	public function test_plugin_is_disabled_deactivated_uninstalled_deleted_then_unlinked(): void {
+		$fixture                         = $this->fixture();
+		$fixture->gateway->plugin_active = true;
+		$fixture->gateway->plugin_delete = static function () use ( $fixture ): bool {
 			$fixture->plugins->installed = false;
 			return true;
 		};
@@ -252,14 +252,14 @@ final class PackageRemovalServiceTest extends TestCase {
 		);
 	}
 
-	public function testDestructiveRemovalUsesTheSharedUpdaterLock(): void {
-		$fixture                        = $this->fixture();
-		$lock                           = new RemovalUpdaterLock();
-		$fixture->gateway->pluginDelete = static function () use ( $fixture ): bool {
+	public function test_destructive_removal_uses_the_shared_updater_lock(): void {
+		$fixture                         = $this->fixture();
+		$lock                            = new RemovalUpdaterLock();
+		$fixture->gateway->plugin_delete = static function () use ( $fixture ): bool {
 			$fixture->plugins->installed = false;
 			return true;
 		};
-		$service                        = new PackageRemovalService(
+		$service                         = new PackageRemovalService(
 			$fixture->plugins,
 			$fixture->themes,
 			$fixture->gateway,
@@ -275,7 +275,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertSame( array( 'acquire', 'release:fixture-lock' ), $lock->events );
 	}
 
-	public function testUpdaterLockContentionChangesNothing(): void {
+	public function test_updater_lock_contention_changes_nothing(): void {
 		$fixture         = $this->fixture();
 		$lock            = new RemovalUpdaterLock();
 		$lock->available = false;
@@ -297,9 +297,9 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertFalse( $fixture->plugins->unlinked );
 	}
 
-	public function testActivePluginDependentsLeaveTheManagedPackageUnchanged(): void {
-		$fixture                                  = $this->fixture();
-		$fixture->gateway->pluginActiveDependents = true;
+	public function test_active_plugin_dependents_leave_the_managed_package_unchanged(): void {
+		$fixture                                    = $this->fixture();
+		$fixture->gateway->plugin_active_dependents = true;
 
 		$result = $fixture->service->execute(
 			PackageOperation::from_input( 'unlink-delete-plugin', $this->input() )
@@ -312,38 +312,38 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertSame( array( 'plugin_path', 'plugin_shared', 'plugin_dependents' ), $fixture->gateway->events );
 	}
 
-	#[DataProvider( 'unsafePluginDeletionStates' )]
-	public function testUnsafePluginDeletionPreconditionsChangeNothing(
-		bool $safePath,
-		bool $sharedDirectory,
-		string $outcomeCode
+	#[DataProvider( 'unsafe_plugin_deletion_states' )]
+	public function test_unsafe_plugin_deletion_preconditions_change_nothing(
+		bool $safe_path,
+		bool $shared_directory,
+		string $outcome_code
 	): void {
-		$fixture                                 = $this->fixture();
-		$fixture->gateway->pluginSafePath        = $safePath;
-		$fixture->gateway->pluginSharedDirectory = $sharedDirectory;
+		$fixture                                   = $this->fixture();
+		$fixture->gateway->plugin_safe_path        = $safe_path;
+		$fixture->gateway->plugin_shared_directory = $shared_directory;
 
 		$result = $fixture->service->execute(
 			PackageOperation::from_input( 'unlink-delete-plugin', $this->input() )
 		);
 
-		self::assertSame( $outcomeCode, $result->outcome_code );
+		self::assertSame( $outcome_code, $result->outcome_code );
 		self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->get_deployment_policy() );
 		self::assertSame( 7, $fixture->plugin->get_source_revision() );
 		self::assertFalse( $fixture->plugins->unlinked );
 	}
 
 	/** @return list<array{bool, bool, string}> */
-	public static function unsafePluginDeletionStates(): array {
+	public static function unsafe_plugin_deletion_states(): array {
 		return array(
 			array( false, false, 'unsafe_path' ),
 			array( true, true, 'shared_plugin_directory' ),
 		);
 	}
 
-	public function testFailedPluginDeactivationLeavesTheManagedPackageDisabled(): void {
-		$fixture                                   = $this->fixture();
-		$fixture->gateway->pluginActive            = true;
-		$fixture->gateway->deactivationStaysActive = true;
+	public function test_failed_plugin_deactivation_leaves_the_managed_package_disabled(): void {
+		$fixture                                     = $this->fixture();
+		$fixture->gateway->plugin_active             = true;
+		$fixture->gateway->deactivation_stays_active = true;
 
 		$result = $fixture->service->execute(
 			PackageOperation::from_input( 'unlink-delete-plugin', $this->input() )
@@ -355,9 +355,9 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertNotContains( 'plugin_delete', $fixture->gateway->events );
 	}
 
-	public function testReportedDeletionMustAlsoRemoveTheFiles(): void {
-		$fixture                        = $this->fixture();
-		$fixture->gateway->pluginDelete = static fn (): bool => true;
+	public function test_reported_deletion_must_also_remove_the_files(): void {
+		$fixture                         = $this->fixture();
+		$fixture->gateway->plugin_delete = static fn (): bool => true;
 
 		$result = $fixture->service->execute(
 			PackageOperation::from_input( 'unlink-delete-plugin', $this->input() )
@@ -368,9 +368,9 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertFalse( $fixture->plugins->unlinked );
 	}
 
-	public function testVerifiedAbsenceWinsOverAnUnreliableWordPressReturnValue(): void {
-		$fixture                        = $this->fixture();
-		$fixture->gateway->pluginDelete = static function () use ( $fixture ): bool {
+	public function test_verified_absence_wins_over_an_unreliable_word_press_return_value(): void {
+		$fixture                         = $this->fixture();
+		$fixture->gateway->plugin_delete = static function () use ( $fixture ): bool {
 			$fixture->plugins->installed = false;
 			return false;
 		};
@@ -383,10 +383,10 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertTrue( $fixture->plugins->unlinked );
 	}
 
-	public function testFilesDeletedButManagementUnlinkFailureIsBounded(): void {
-		$fixture                         = $this->fixture();
-		$fixture->plugins->unlinkFailure = true;
-		$fixture->gateway->pluginDelete  = static function () use ( $fixture ): bool {
+	public function test_files_deleted_but_management_unlink_failure_is_bounded(): void {
+		$fixture                          = $this->fixture();
+		$fixture->plugins->unlink_failure = true;
+		$fixture->gateway->plugin_delete  = static function () use ( $fixture ): bool {
 			$fixture->plugins->installed = false;
 			return true;
 		};
@@ -401,7 +401,7 @@ final class PackageRemovalServiceTest extends TestCase {
 	}
 
 	/** @return list<array{string}> */
-	public static function themeBlockers(): array {
+	public static function theme_blockers(): array {
 		return array(
 			array( 'theme_active' ),
 			array( 'theme_parent_in_use' ),
@@ -409,13 +409,13 @@ final class PackageRemovalServiceTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'themeBlockers' )]
-	public function testThemeSafetyBlockerLeavesTheManagedThemeUnchanged( string $blocker ): void {
-		$fixture                        = $this->fixture();
-		$fixture->gateway->themeBlocker = $blocker;
+	#[DataProvider( 'theme_blockers' )]
+	public function test_theme_safety_blocker_leaves_the_managed_theme_unchanged( string $blocker ): void {
+		$fixture                         = $this->fixture();
+		$fixture->gateway->theme_blocker = $blocker;
 
 		$result = $fixture->service->execute(
-			PackageOperation::from_input( 'unlink-delete-theme', $this->themeInput() )
+			PackageOperation::from_input( 'unlink-delete-theme', $this->theme_input() )
 		);
 
 		self::assertSame( $blocker, $result->outcome_code );
@@ -425,15 +425,15 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertNotContains( 'theme_delete', $fixture->gateway->events );
 	}
 
-	public function testThemeDeletionIsVerifiedBeforeManagementIsUnlinked(): void {
-		$fixture                       = $this->fixture();
-		$fixture->gateway->themeDelete = static function () use ( $fixture ): bool {
+	public function test_theme_deletion_is_verified_before_management_is_unlinked(): void {
+		$fixture                        = $this->fixture();
+		$fixture->gateway->theme_delete = static function () use ( $fixture ): bool {
 			$fixture->themes->installed = false;
 			return true;
 		};
 
 		$result = $fixture->service->execute(
-			PackageOperation::from_input( 'unlink-delete-theme', $this->themeInput() )
+			PackageOperation::from_input( 'unlink-delete-theme', $this->theme_input() )
 		);
 
 		self::assertSame( 'deleted', $result->status );
@@ -443,7 +443,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertSame( array( 'theme_path', 'theme_blocker', 'theme_delete' ), $fixture->gateway->events );
 	}
 
-	public function testDisabledFileModificationsPreventAnyStateChange(): void {
+	public function test_disabled_file_modifications_prevent_any_state_change(): void {
 		$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = false;
 		$fixture = $this->fixture();
 
@@ -458,7 +458,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		}
 	}
 
-	public function testDashboardMapsOnlyBoundedRemovalFailuresToSafeNotices(): void {
+	public function test_dashboard_maps_only_bounded_removal_failures_to_safe_notices(): void {
 		$dashboard  = ( new \ReflectionClass( Dashboard::class ) )->newInstanceWithoutConstructor();
 		$controller = ( new \ReflectionClass( PackageAdminController::class ) )->newInstanceWithoutConstructor();
 		$method     = new \ReflectionMethod( PackageAdminController::class, 'removal_failure' );
@@ -476,13 +476,13 @@ final class PackageRemovalServiceTest extends TestCase {
 				'shared_plugin_directory',
 				'stale',
 				'unsafe_path',
-			) as $outcomeCode
+			) as $outcome_code
 		) {
 			$dashboard->messages = array();
 			$method->invoke(
 				$controller,
 				$operation,
-				$outcomeCode,
+				$outcome_code,
 				static function ( WP_Error $message ) use ( $dashboard ): void {
 					$dashboard->messages[] = array(
 						'type'    => 'error',
@@ -494,7 +494,7 @@ final class PackageRemovalServiceTest extends TestCase {
 			);
 			self::assertCount( 1, $dashboard->messages );
 			self::assertSame(
-				'ran_booster_package_removal_' . $outcomeCode,
+				'ran_booster_package_removal_' . $outcome_code,
 				$dashboard->messages[0]['code']
 			);
 			self::assertStringNotContainsString(
@@ -504,7 +504,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		}
 	}
 
-	public function testDashboardRemovalFailureUsesContextualPackageTypeTranslation(): void {
+	public function test_dashboard_removal_failure_uses_contextual_package_type_translation(): void {
 		$dashboard  = ( new \ReflectionClass( Dashboard::class ) )->newInstanceWithoutConstructor();
 		$controller = ( new \ReflectionClass( PackageAdminController::class ) )->newInstanceWithoutConstructor();
 		$method     = new \ReflectionMethod( PackageAdminController::class, 'removal_failure' );
@@ -541,7 +541,7 @@ final class PackageRemovalServiceTest extends TestCase {
 	}
 
 	/** @param array<string, string> $overrides */
-	private function themeInput( array $overrides = array() ): array {
+	private function theme_input( array $overrides = array() ): array {
 		return array_merge(
 			array(
 				'stylesheet'               => 'example',
@@ -616,9 +616,9 @@ final class RemovalTheme extends Theme {
 }
 
 final class RemovalPluginRepository extends PluginRepository {
-	public bool $installed     = true;
-	public bool $unlinked      = false;
-	public bool $unlinkFailure = false;
+	public bool $installed      = true;
+	public bool $unlinked       = false;
+	public bool $unlink_failure = false;
 
 	public function __construct( private readonly RemovalPlugin $package ) {
 	}
@@ -642,7 +642,7 @@ final class RemovalPluginRepository extends PluginRepository {
 
 	public function unlink( $file ): PackageMutationResult {
 		unset( $file );
-		if ( $this->unlinkFailure ) {
+		if ( $this->unlink_failure ) {
 			return PackageMutationResult::failed(
 				operation: PackageStorageOperation::DELETE,
 				diagnostic_id: 'fixture_unlink_failed',
@@ -691,11 +691,11 @@ final class RemovalThemeRepository extends ThemeRepository {
 final class RemovalBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenceStore {
 
 	/** @var array<string, mixed> */
-	private array $records  = array();
-	public bool $clearFails = false;
+	private array $records   = array();
+	public bool $clear_fails = false;
 
 	public function clear( string $type, \RAN\Package $package ): void {
-		if ( $this->clearFails ) {
+		if ( $this->clear_fails ) {
 			throw new \RuntimeException( 'Fixture evidence clear failed.' );
 		}
 
@@ -713,74 +713,74 @@ final class RemovalBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenc
 }
 
 final class RemovalGateway implements PackageRemovalGateway {
-	public bool $pluginActive            = false;
-	public bool $pluginActiveDependents  = false;
-	public bool $pluginSharedDirectory   = false;
-	public bool $pluginSafePath          = true;
-	public bool $themeSafePath           = true;
-	public bool $deactivationStaysActive = false;
-	public ?string $themeBlocker         = null;
+	public bool $plugin_active             = false;
+	public bool $plugin_active_dependents  = false;
+	public bool $plugin_shared_directory   = false;
+	public bool $plugin_safe_path          = true;
+	public bool $theme_safe_path           = true;
+	public bool $deactivation_stays_active = false;
+	public ?string $theme_blocker          = null;
 	/** @var callable(): bool|null */
-	public $pluginDelete = null;
+	public $plugin_delete = null;
 	/** @var callable(): bool|null */
-	public $themeDelete = null;
+	public $theme_delete = null;
 	/** @var list<string> */
 	public array $events = array();
 
 	public function plugin_is_active( string $identifier ): bool {
 		unset( $identifier );
 		$this->events[] = 'plugin_active';
-		return $this->pluginActive;
+		return $this->plugin_active;
 	}
 
 	public function plugin_has_active_dependents( string $identifier ): bool {
 		unset( $identifier );
 		$this->events[] = 'plugin_dependents';
-		return $this->pluginActiveDependents;
+		return $this->plugin_active_dependents;
 	}
 
 	public function plugin_shares_directory( string $identifier ): bool {
 		unset( $identifier );
 		$this->events[] = 'plugin_shared';
-		return $this->pluginSharedDirectory;
+		return $this->plugin_shared_directory;
 	}
 
 	public function plugin_path_is_safe( string $identifier ): bool {
 		unset( $identifier );
 		$this->events[] = 'plugin_path';
-		return $this->pluginSafePath;
+		return $this->plugin_safe_path;
 	}
 
 	public function deactivate_plugin( string $identifier ): void {
 		unset( $identifier );
 		$this->events[] = 'plugin_deactivate';
-		if ( ! $this->deactivationStaysActive ) {
-			$this->pluginActive = false;
+		if ( ! $this->deactivation_stays_active ) {
+			$this->plugin_active = false;
 		}
 	}
 
 	public function delete_plugin( string $identifier ): bool {
 		unset( $identifier );
 		$this->events[] = 'plugin_delete';
-		return null === $this->pluginDelete ? false : ( $this->pluginDelete )();
+		return null === $this->plugin_delete ? false : ( $this->plugin_delete )();
 	}
 
 	public function theme_deletion_blocker( string $stylesheet ): ?string {
 		unset( $stylesheet );
 		$this->events[] = 'theme_blocker';
-		return $this->themeBlocker;
+		return $this->theme_blocker;
 	}
 
 	public function theme_path_is_safe( string $stylesheet ): bool {
 		unset( $stylesheet );
 		$this->events[] = 'theme_path';
-		return $this->themeSafePath;
+		return $this->theme_safe_path;
 	}
 
 	public function delete_theme( string $stylesheet ): bool {
 		unset( $stylesheet );
 		$this->events[] = 'theme_delete';
-		return null === $this->themeDelete ? false : ( $this->themeDelete )();
+		return null === $this->theme_delete ? false : ( $this->theme_delete )();
 	}
 }
 

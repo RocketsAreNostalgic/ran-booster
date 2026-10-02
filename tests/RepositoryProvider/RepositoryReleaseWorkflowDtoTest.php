@@ -12,7 +12,7 @@ use RAN\RepositoryProvider\RepositoryReleaseWorkflowResult;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus;
 
 final class RepositoryReleaseWorkflowDtoTest extends TestCase {
-	public function testPreviewUsesOnlyInitialPackIdentity(): void {
+	public function test_preview_uses_only_initial_pack_identity(): void {
 		$preview = new RepositoryReleaseWorkflowPreview(
 			str_repeat( 'a', 32 ),
 			'gh',
@@ -33,8 +33,8 @@ final class RepositoryReleaseWorkflowDtoTest extends TestCase {
 		self::assertSame( '1.0.0', $preview->summary()['pack_version'] );
 	}
 
-	#[DataProvider( 'retiredPreviewModes' )]
-	public function testPreviewRejectsRetiredUpdateAndPrereleaseModes( string $kind, string $channel ): void {
+	#[DataProvider( 'retired_preview_modes' )]
+	public function test_preview_rejects_retired_update_and_prerelease_modes( string $kind, string $channel ): void {
 		$this->expectException( InvalidArgumentException::class );
 		new RepositoryReleaseWorkflowPreview(
 			str_repeat( 'a', 32 ),
@@ -55,26 +55,26 @@ final class RepositoryReleaseWorkflowDtoTest extends TestCase {
 	}
 
 	/** @return array<string, array{string, string}> */
-	public static function retiredPreviewModes(): array {
+	public static function retired_preview_modes(): array {
 		return array(
 			'template-update' => array( 'template_update', '' ),
 			'prerelease'      => array( 'bootstrap', 'prerelease' ),
 		);
 	}
 
-	public function testStatusRejectsRetiredUpdateRecord(): void {
+	public function test_status_rejects_retired_update_record(): void {
 		$this->expectException( InvalidArgumentException::class );
-		new RepositoryReleaseWorkflowStatus( 'gh', '101', true, true, recordOperation: 'template_update' );
+		new RepositoryReleaseWorkflowStatus( 'gh', '101', true, true, record_operation: 'template_update' );
 	}
 
-	public function testDtosRejectHtmlAndUnboundedRecords(): void {
+	public function test_dtos_reject_html_and_unbounded_records(): void {
 		$this->expectException( InvalidArgumentException::class );
 		new RepositoryReleaseWorkflowStatus(
 			'gh',
 			'101',
 			false,
 			false,
-			credentialChoices: array(
+			credential_choices: array(
 				array(
 					'id'    => 'selected',
 					'label' => '<b>Selected</b>',
@@ -83,34 +83,34 @@ final class RepositoryReleaseWorkflowDtoTest extends TestCase {
 		);
 	}
 
-	public function testStatusRejectsAnExactRecordThatDoesNotOccupyTheRepository(): void {
+	public function test_status_rejects_an_exact_record_that_does_not_occupy_the_repository(): void {
 		$this->expectException( InvalidArgumentException::class );
 
 		new RepositoryReleaseWorkflowStatus( 'gh', '101', true, false );
 	}
 
-	public function testResultRejectsHtmlAndPreviewRejectsUnexpectedRecordKeys(): void {
+	public function test_result_rejects_html_and_preview_rejects_unexpected_record_keys(): void {
 		$this->expectException( InvalidArgumentException::class );
 		new RepositoryReleaseWorkflowResult( 'workflow_invalid_request', false, message: '<em>Unsafe</em>' );
 	}
 
-	#[DataProvider( 'invalidResultFailureStageProvider' )]
-	public function testResultRejectsFailureStagesOutsideCoreDisplayContract( bool $successful, string $failureStage ): void {
+	#[DataProvider( 'invalid_result_failure_stage_provider' )]
+	public function test_result_rejects_failure_stages_outside_core_display_contract( bool $successful, string $failure_stage ): void {
 		$this->expectException( InvalidArgumentException::class );
 
-		new RepositoryReleaseWorkflowResult( 'workflow_invalid_request', $successful, failureStage: $failureStage );
+		new RepositoryReleaseWorkflowResult( 'workflow_invalid_request', $successful, failure_stage: $failure_stage );
 	}
 
 	/** @return array<string, array{bool, string}> */
-	public static function invalidResultFailureStageProvider(): array {
+	public static function invalid_result_failure_stage_provider(): array {
 		return array(
 			'success-stage' => array( true, 'repository_snapshot' ),
 			'unknown-stage' => array( false, 'provider_transport' ),
 		);
 	}
 
-	#[DataProvider( 'invalidUtf8ProviderText' )]
-	public function testResultRejectsMalformedUtf8ProviderText( string $field ): void {
+	#[DataProvider( 'invalid_utf8_provider_text' )]
+	public function test_result_rejects_malformed_utf8_provider_text( string $field ): void {
 		$this->expectException( InvalidArgumentException::class );
 
 		new RepositoryReleaseWorkflowResult(
@@ -121,15 +121,15 @@ final class RepositoryReleaseWorkflowDtoTest extends TestCase {
 	}
 
 	/** @return array<string, array{string}> */
-	public static function invalidUtf8ProviderText(): array {
+	public static function invalid_utf8_provider_text(): array {
 		return array(
 			'message'     => array( 'message' ),
 			'remediation' => array( 'remediation' ),
 		);
 	}
 
-	#[DataProvider( 'whitespaceOnlyResultCopy' )]
-	public function testResultRejectsWhitespaceOnlyOptionalProviderCopy( string $field ): void {
+	#[DataProvider( 'whitespace_only_result_copy' )]
+	public function test_result_rejects_whitespace_only_optional_provider_copy( string $field ): void {
 		$this->expectException( InvalidArgumentException::class );
 
 		new RepositoryReleaseWorkflowResult(
@@ -140,20 +140,20 @@ final class RepositoryReleaseWorkflowDtoTest extends TestCase {
 	}
 
 	/** @return array<string, array{string}> */
-	public static function whitespaceOnlyResultCopy(): array {
+	public static function whitespace_only_result_copy(): array {
 		return array(
 			'message'     => array( 'message' ),
 			'remediation' => array( 'remediation' ),
 		);
 	}
 
-	public function testStatusRejectsWhitespaceOnlyOptionalWriteGuidance(): void {
+	public function test_status_rejects_whitespace_only_optional_write_guidance(): void {
 		$this->expectException( InvalidArgumentException::class );
 
-		new RepositoryReleaseWorkflowStatus( 'gh', '101', false, false, writeGuidance: " \t " );
+		new RepositoryReleaseWorkflowStatus( 'gh', '101', false, false, write_guidance: " \t " );
 	}
 
-	public function testPreviewRejectsUnexpectedChangedPathFields(): void {
+	public function test_preview_rejects_unexpected_changed_path_fields(): void {
 		$this->expectException( InvalidArgumentException::class );
 		new RepositoryReleaseWorkflowPreview(
 			str_repeat( 'a', 32 ),

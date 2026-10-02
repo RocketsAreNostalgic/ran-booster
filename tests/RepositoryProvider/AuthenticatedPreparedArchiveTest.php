@@ -27,18 +27,18 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 		parent::tearDown();
 	}
 
-	public function testDistinctSameAndCrossProviderArchivesCoexistWithoutCrossAuthentication(): void {
-		$githubOne = new AuthenticatedPreparedArchive(
+	public function test_distinct_same_and_cross_provider_archives_coexist_without_cross_authentication(): void {
+		$github_one = new AuthenticatedPreparedArchive(
 			'https://api.github.com/repos/example/plugin/zipball/' . self::REF,
 			self::REF,
 			$this->authorizer( 'Bearer github-one-canary' )
 		);
-		$githubTwo = new AuthenticatedPreparedArchive(
+		$github_two = new AuthenticatedPreparedArchive(
 			'https://api.github.com/repos/example/theme/zipball/' . self::REF,
 			self::REF,
 			$this->authorizer( 'Bearer github-two-canary' )
 		);
-		$bitbucket = new AuthenticatedPreparedArchive(
+		$bitbucket  = new AuthenticatedPreparedArchive(
 			'https://bitbucket.org/example/plugin/get/' . self::REF . '.zip',
 			self::REF,
 			$this->authorizer( 'Basic bitbucket-canary' )
@@ -47,26 +47,26 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 		self::assertCount( 3, $this->filters() );
 		self::assertCount( 3, $this->actions() );
 
-		$arguments = $this->applyFilters( $githubOne->getUrl() );
+		$arguments = $this->apply_filters( $github_one->get_url() );
 		self::assertSame( 'Bearer github-one-canary', $arguments['headers']['Authorization'] );
 		self::assertCount( 2, $this->filters() );
 
-		$arguments = $this->applyFilters( $githubTwo->getUrl() );
+		$arguments = $this->apply_filters( $github_two->get_url() );
 		self::assertSame( 'Bearer github-two-canary', $arguments['headers']['Authorization'] );
 		self::assertCount( 1, $this->filters() );
 
-		$arguments = $this->applyFilters( $bitbucket->getUrl() );
+		$arguments = $this->apply_filters( $bitbucket->get_url() );
 		self::assertSame( 'Basic bitbucket-canary', $arguments['headers']['Authorization'] );
 		self::assertSame( array(), $this->filters() );
 		self::assertCount( 3, $this->actions() );
 
-		$githubOne->cleanup();
-		$githubTwo->cleanup();
+		$github_one->cleanup();
+		$github_two->cleanup();
 		$bitbucket->cleanup();
-		$this->assertNoHooks();
+		$this->assert_no_hooks();
 	}
 
-	public function testPublicArchiveReservesAndReleasesItsExactUrl(): void {
+	public function test_public_archive_reserves_and_releases_its_exact_url(): void {
 		$url    = 'https://archives.example.test/public.zip';
 		$public = new AuthenticatedPreparedArchive( $url, self::REF );
 
@@ -78,7 +78,7 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 		}
 	}
 
-	public function testReleasedPublicUrlCanBePreparedAgain(): void {
+	public function test_released_public_url_can_be_prepared_again(): void {
 		$url    = 'https://archives.example.test/reusable.zip';
 		$public = new AuthenticatedPreparedArchive( $url, self::REF );
 		$public->cleanup();
@@ -88,11 +88,11 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 		self::assertCount( 1, $this->actions() );
 
 		$private->cleanup();
-		$this->assertNoHooks();
+		$this->assert_no_hooks();
 	}
 
-	public function testCloneCannotCreateOrReleaseASecondCleanupAuthority(): void {
-		$original = $this->privateArchive( $this->authorizer( 'Bearer original-canary' ), '-clone' );
+	public function test_clone_cannot_create_or_release_asecond_cleanup_authority(): void {
+		$original = $this->private_archive( $this->authorizer( 'Bearer original-canary' ), '-clone' );
 
 		try {
 			clone $original;
@@ -103,17 +103,17 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 
 		self::assertCount( 1, $this->filters() );
 		self::assertCount( 1, $this->actions() );
-		$this->assertDuplicateUrlRejected( $original->getUrl() );
+		$this->assert_duplicate_url_rejected( $original->get_url() );
 		self::assertCount( 1, $this->filters() );
 		self::assertCount( 1, $this->actions() );
 
 		$original->cleanup();
-		$replacement = new AuthenticatedPreparedArchive( $original->getUrl(), self::REF );
+		$replacement = new AuthenticatedPreparedArchive( $original->get_url(), self::REF );
 		$replacement->cleanup();
-		$this->assertNoHooks();
+		$this->assert_no_hooks();
 	}
 
-	public function testSerializedPublicCopyCannotReleaseItsOwnersReservation(): void {
+	public function test_serialized_public_copy_cannot_release_its_owners_reservation(): void {
 		$url   = 'https://archives.example.test/serialized-public.zip';
 		$owner = new AuthenticatedPreparedArchive( $url, self::REF );
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Exercise an adversarial copy of the runtime value.
@@ -123,21 +123,21 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 
 		self::assertInstanceOf( AuthenticatedPreparedArchive::class, $copy );
 		$copy->cleanup();
-		$this->assertDuplicateUrlRejected( $url );
-		$this->assertNoHooks();
+		$this->assert_duplicate_url_rejected( $url );
+		$this->assert_no_hooks();
 
 		$owner->cleanup();
 		$replacement = new AuthenticatedPreparedArchive( $url, self::REF );
 		$replacement->cleanup();
-		$this->assertNoHooks();
+		$this->assert_no_hooks();
 	}
 
-	public function testPreExistingMixedCaseAuthorizationFailsClosedAndCleansExplicitly(): void {
-		$archive  = $this->privateArchive( $this->authorizer( 'Bearer archive-canary' ) );
+	public function test_pre_existing_mixed_case_authorization_fails_closed_and_cleans_explicitly(): void {
+		$archive  = $this->private_archive( $this->authorizer( 'Bearer archive-canary' ) );
 		$callback = $this->filters()[0]['callback'];
 
 		try {
-			$callback( array( 'headers' => array( 'aUtHoRiZaTiOn' => 'foreign-secret-canary' ) ), $archive->getUrl() );
+			$callback( array( 'headers' => array( 'aUtHoRiZaTiOn' => 'foreign-secret-canary' ) ), $archive->get_url() );
 			self::fail( 'An inherited authorization header must be rejected.' );
 		} catch ( RuntimeException $exception ) {
 			self::assertStringNotContainsString( 'foreign-secret-canary', $exception->getMessage() );
@@ -147,10 +147,10 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 		self::assertSame( array(), $this->filters() );
 		self::assertCount( 1, $this->actions() );
 		$archive->cleanup();
-		$this->assertNoHooks();
+		$this->assert_no_hooks();
 	}
 
-	public function testThrowingAndMalformedAuthorizersExposeOnlyFixedFailures(): void {
+	public function test_throwing_and_malformed_authorizers_expose_only_fixed_failures(): void {
 		$authorizers = array(
 			static function (): never {
 				throw new RuntimeException( 'authorizer-secret-canary' );
@@ -166,11 +166,11 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 		);
 
 		foreach ( $authorizers as $index => $authorizer ) {
-			$archive  = $this->privateArchive( Closure::fromCallable( $authorizer ), '-' . $index );
+			$archive  = $this->private_archive( Closure::fromCallable( $authorizer ), '-' . $index );
 			$callback = $this->filters()[0]['callback'];
 
 			try {
-				$callback( array( 'headers' => array() ), $archive->getUrl() );
+				$callback( array( 'headers' => array() ), $archive->get_url() );
 				self::fail( 'Unsafe authorizer output must be rejected.' );
 			} catch ( RuntimeException $exception ) {
 				self::assertSame( 'Provider archive authentication could not be applied safely.', $exception->getMessage() );
@@ -180,11 +180,11 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 			self::assertSame( array(), $this->filters() );
 			self::assertCount( 1, $this->actions() );
 			$archive->cleanup();
-			$this->assertNoHooks();
+			$this->assert_no_hooks();
 		}
 	}
 
-	public function testCleanupIsIdempotentAndVerifierSurvivesIt(): void {
+	public function test_cleanup_is_idempotent_and_verifier_survives_it(): void {
 		$verified = 0;
 		$archive  = new AuthenticatedPreparedArchive(
 			'https://archives.example.test/verifier.zip',
@@ -198,20 +198,20 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 
 		$archive->cleanup();
 		$archive->cleanup();
-		$archive->verifyCurrentHead();
+		$archive->verify_current_head();
 
 		self::assertSame( 1, $verified );
-		$this->assertNoHooks();
+		$this->assert_no_hooks();
 
 		try {
-			$callback( array( 'headers' => array() ), $archive->getUrl() );
+			$callback( array( 'headers' => array() ), $archive->get_url() );
 			self::fail( 'Cleaned authentication must remain unavailable.' );
 		} catch ( RuntimeException $exception ) {
 			self::assertStringNotContainsString( 'verifier-canary', $exception->getMessage() );
 		}
 	}
 
-	private function privateArchive( Closure $authorizer, string $suffix = '' ): AuthenticatedPreparedArchive {
+	private function private_archive( Closure $authorizer, string $suffix = '' ): AuthenticatedPreparedArchive {
 		return new AuthenticatedPreparedArchive(
 			'https://archives.example.test/private' . $suffix . '.zip',
 			self::REF,
@@ -227,7 +227,7 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 		};
 	}
 
-	private function assertDuplicateUrlRejected( string $url ): void {
+	private function assert_duplicate_url_rejected( string $url ): void {
 		try {
 			new AuthenticatedPreparedArchive( $url, self::REF );
 			self::fail( 'A reserved archive URL must be rejected.' );
@@ -237,7 +237,7 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 	}
 
 	/** @return array<string, mixed> */
-	private function applyFilters( string $url ): array {
+	private function apply_filters( string $url ): array {
 		$arguments = array( 'headers' => array() );
 		foreach ( $this->filters() as $filter ) {
 			$arguments = $filter['callback']( $arguments, $url );
@@ -256,7 +256,7 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 		return \RAN\RepositoryProvider\authenticated_archive_actions( AuthenticatedPreparedArchive::REDIRECT_HOOK );
 	}
 
-	private function assertNoHooks(): void {
+	private function assert_no_hooks(): void {
 		self::assertSame( array(), $this->filters() );
 		self::assertSame( array(), $this->actions() );
 	}

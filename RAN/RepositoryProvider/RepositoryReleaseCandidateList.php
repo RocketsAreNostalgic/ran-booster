@@ -13,15 +13,15 @@ final readonly class RepositoryReleaseCandidateList {
 		if ( ! array_is_list( $candidates ) || count( $candidates ) > 8 ) {
 			throw new InvalidArgumentException( 'Repository release candidates must be a bounded list.' );
 		}
-		$releaseIds = array();
+		$release_ids = array();
 		foreach ( $candidates as $candidate ) {
 			if ( ! $candidate instanceof RepositoryReleaseCandidate ) {
 				throw new InvalidArgumentException( 'Repository release candidates must be typed values.' );
 			}
-			if ( isset( $releaseIds[ $candidate->providerReleaseId ] ) ) {
+			if ( isset( $release_ids[ $candidate->provider_release_id ] ) ) {
 				throw new InvalidArgumentException( 'Repository release candidate identities must be unique.' );
 			}
-			$releaseIds[ $candidate->providerReleaseId ] = true;
+			$release_ids[ $candidate->provider_release_id ] = true;
 		}
 	}
 }

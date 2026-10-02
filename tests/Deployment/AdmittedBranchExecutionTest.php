@@ -53,7 +53,7 @@ final class AdmittedBranchExecutionTest extends TestCase {
 	private DeploymentAttemptRepository $attempts;
 	private BoundaryPluginRepository $plugins;
 	private BoundaryThemeRepository $themes;
-	private int $randomByte = 1;
+	private int $random_byte = 1;
 
 	protected function setUp(): void {
 		$this->database         = new AttemptRepositoryDatabase();
@@ -63,7 +63,7 @@ final class AdmittedBranchExecutionTest extends TestCase {
 			'wp_ran_booster_deployment_attempts',
 			static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-09-12 12:00:00 UTC' ),
 			function ( int $length ): string {
-				return str_repeat( chr( $this->randomByte++ ), $length );
+				return str_repeat( chr( $this->random_byte++ ), $length );
 			}
 		);
 		$this->plugins          = new BoundaryPluginRepository();
@@ -75,7 +75,7 @@ final class AdmittedBranchExecutionTest extends TestCase {
 		unset( $GLOBALS['wpdb'] );
 	}
 
-	public function testExternalAdmittedRunnerOwnsTheExecutionSequence(): void {
+	public function test_external_admitted_runner_owns_the_execution_sequence(): void {
 		$declaration = new BranchDeploymentDeclaration(
 			'42',
 			'plugin',
@@ -121,8 +121,8 @@ final class AdmittedBranchExecutionTest extends TestCase {
 		);
 	}
 
-	public function testConcreteAdapterBuildsDeclarationAndProjectsTerminalStateDurably(): void {
-		$attempt = $this->runningUpdate();
+	public function test_concrete_adapter_builds_declaration_and_projects_terminal_state_durably(): void {
+		$attempt = $this->running_update();
 		$adapter = $this->adapter( $attempt, new ProviderRegistry() );
 
 		$declaration = $adapter->declaration();
@@ -136,7 +136,7 @@ final class AdmittedBranchExecutionTest extends TestCase {
 		self::assertSame( 'example/example.php', $declaration->installed_identifier );
 
 		$adapter->finish( DeploymentOutcome::CODE_PROVIDER_FAILED );
-		$terminal = $adapter->terminalAttempt();
+		$terminal = $adapter->terminal_attempt();
 
 		self::assertSame( DeploymentState::FAILED, $terminal->get_state() );
 		self::assertSame( DeploymentOutcome::CODE_PROVIDER_FAILED, $terminal->get_outcome()?->get_code() );
@@ -144,22 +144,22 @@ final class AdmittedBranchExecutionTest extends TestCase {
 		self::assertSame( DeploymentOutcome::CODE_PROVIDER_FAILED, $this->database->rows[0]['outcome_code'] );
 	}
 
-	public function testConcreteAdapterUsesTheSharedWordPressUpdaterLock(): void {
-		$adapter = $this->adapter( $this->runningUpdate(), new ProviderRegistry() );
+	public function test_concrete_adapter_uses_the_shared_word_press_updater_lock(): void {
+		$adapter = $this->adapter( $this->running_update(), new ProviderRegistry() );
 
 		$result = $adapter->run( static fn (): string => 'inside-lock' );
 
 		self::assertSame( 'inside-lock', $result );
-		self::assertArrayNotHasKey( 'auto_updater.lock', $this->database->optionRows );
+		self::assertArrayNotHasKey( 'auto_updater.lock', $this->database->option_rows );
 		$queries = implode( "\n", $this->database->queries );
 		self::assertStringContainsString( 'INSERT IGNORE INTO `wp_options`', $queries );
 		self::assertStringContainsString( 'DELETE FROM `wp_options`', $queries );
 	}
 
-	public function testProviderArchiveIsCleanedWhenItsResolvedRevisionIsInvalid(): void {
+	public function test_provider_archive_is_cleaned_when_its_resolved_revision_is_invalid(): void {
 		$archive     = new BoundaryProviderArchive( '' );
 		$provider    = new BoundaryRepositoryProvider( $archive );
-		$adapter     = $this->adapter( $this->runningUpdate(), new ProviderRegistry( array( $provider ) ) );
+		$adapter     = $this->adapter( $this->running_update(), new ProviderRegistry( array( $provider ) ) );
 		$declaration = $adapter->declaration();
 
 		try {
@@ -176,15 +176,15 @@ final class AdmittedBranchExecutionTest extends TestCase {
 			self::assertSame( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID, $failure->outcome_code );
 		}
 
-		self::assertSame( 1, $archive->cleanupCalls );
+		self::assertSame( 1, $archive->cleanup_calls );
 	}
 
-	public function testProviderArchiveIsCleanedWhenResolvedRevisionRetrievalThrows(): void {
-		$archive                   = new BoundaryProviderArchive( str_repeat( 'a', 40 ) );
-		$archive->resolvedRefFails = true;
-		$provider                  = new BoundaryRepositoryProvider( $archive );
-		$adapter                   = $this->adapter( $this->runningUpdate(), new ProviderRegistry( array( $provider ) ) );
-		$declaration               = $adapter->declaration();
+	public function test_provider_archive_is_cleaned_when_resolved_revision_retrieval_throws(): void {
+		$archive                     = new BoundaryProviderArchive( str_repeat( 'a', 40 ) );
+		$archive->resolved_ref_fails = true;
+		$provider                    = new BoundaryRepositoryProvider( $archive );
+		$adapter                     = $this->adapter( $this->running_update(), new ProviderRegistry( array( $provider ) ) );
+		$declaration                 = $adapter->declaration();
 
 		try {
 			$adapter->prepare(
@@ -200,10 +200,10 @@ final class AdmittedBranchExecutionTest extends TestCase {
 			self::assertSame( DeploymentOutcome::CODE_PROVIDER_FAILED, $failure->outcome_code );
 		}
 
-		self::assertSame( 1, $archive->cleanupCalls );
+		self::assertSame( 1, $archive->cleanup_calls );
 	}
 
-	private function runningUpdate(): DeploymentAttempt {
+	private function running_update(): DeploymentAttempt {
 		$request = new DeploymentRequest(
 			'owner/example',
 			null,
@@ -215,7 +215,7 @@ final class AdmittedBranchExecutionTest extends TestCase {
 			7
 		);
 
-		return $this->attempts->admitAndClaimManual(
+		return $this->attempts->admit_and_claim_manual(
 			'update',
 			'plugin',
 			'gh',
@@ -283,21 +283,21 @@ final class BoundaryThemeRepository extends ThemeRepository {
 }
 
 final class BoundaryProviderArchive implements ProviderPreparedArchive {
-	public int $cleanupCalls      = 0;
-	public bool $resolvedRefFails = false;
-	public function __construct( private string $resolvedRef ) {}
-	public function getUrl(): string {
+	public int $cleanup_calls       = 0;
+	public bool $resolved_ref_fails = false;
+	public function __construct( private string $resolved_ref ) {}
+	public function get_url(): string {
 		return 'https://example.test/archive.zip';
 	}
-	public function getResolvedRef(): string {
-		if ( $this->resolvedRefFails ) {
+	public function get_resolved_ref(): string {
+		if ( $this->resolved_ref_fails ) {
 			throw new RuntimeException( 'Resolved revision retrieval failed.' );
 		}
-		return $this->resolvedRef;
+		return $this->resolved_ref;
 	}
-	public function verifyCurrentHead(): void {}
+	public function verify_current_head(): void {}
 	public function cleanup(): void {
-		++$this->cleanupCalls;
+		++$this->cleanup_calls;
 	}
 }
 

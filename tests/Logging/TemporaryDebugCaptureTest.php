@@ -18,15 +18,15 @@ require_once __DIR__ . '/LoggingWordPressFunctions.php';
 final class TemporaryDebugCaptureTest extends TestCase {
 
 	private string $directory;
-	private string $secretsPath;
-	private string $capturePath;
+	private string $secrets_path;
+	private string $capture_path;
 	private int $now;
 
 	protected function setUp(): void {
-		$this->directory   = sys_get_temp_dir() . '/ran-booster-debug-' . bin2hex( random_bytes( 8 ) );
-		$this->secretsPath = $this->directory . '/custom-secrets.php';
-		$this->capturePath = $this->directory . '/ran-booster-debug.php';
-		$this->now         = strtotime( '2026-07-23T12:00:00Z' );
+		$this->directory    = sys_get_temp_dir() . '/ran-booster-debug-' . bin2hex( random_bytes( 8 ) );
+		$this->secrets_path = $this->directory . '/custom-secrets.php';
+		$this->capture_path = $this->directory . '/ran-booster-debug.php';
+		$this->now          = strtotime( '2026-07-23T12:00:00Z' );
 
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
 	}
@@ -34,8 +34,8 @@ final class TemporaryDebugCaptureTest extends TestCase {
 	protected function tearDown(): void {
 		foreach (
 			array(
-				$this->capturePath,
-				$this->capturePath . '.lock',
+				$this->capture_path,
+				$this->capture_path . '.lock',
 				$this->directory . '/link-target',
 			) as $path
 		) {
@@ -50,7 +50,7 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		}
 	}
 
-	public function testCaptureUsesFixedSiblingAndSupportsItsCompleteLifecycle(): void {
+	public function test_capture_uses_fixed_sibling_and_supports_its_complete_lifecycle(): void {
 		$capture = $this->capture();
 
 		self::assertSame( 'inactive', $capture->snapshot()['state'] );
@@ -60,10 +60,10 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		self::assertSame( 'active', $started['state'] );
 		self::assertSame( '2026-07-23T13:00:00Z', $started['active_until'] );
 		self::assertSame( '2026-07-24T13:00:00Z', $started['expires_at'] );
-		self::assertSame( 0600, fileperms( $this->capturePath ) & 0777 );
-		self::assertSame( 0600, fileperms( $this->capturePath . '.lock' ) & 0777 );
-		self::assertStringStartsWith( "<?php exit; ?>\n", file_get_contents( $this->capturePath ) );
-		self::assertStringContainsString( '"owner":"ran-booster"', file_get_contents( $this->capturePath ) );
+		self::assertSame( 0600, fileperms( $this->capture_path ) & 0777 );
+		self::assertSame( 0600, fileperms( $this->capture_path . '.lock' ) & 0777 );
+		self::assertStringStartsWith( "<?php exit; ?>\n", file_get_contents( $this->capture_path ) );
+		self::assertStringContainsString( '"owner":"ran-booster"', file_get_contents( $this->capture_path ) );
 
 		self::assertTrue( $capture->append( "[ran-booster] first\nline" ) );
 		$snapshot = $capture->snapshot();
@@ -86,81 +86,81 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		self::assertFalse( $capture->append( '[ran-booster] ignored' ) );
 
 		self::assertTrue( $capture->delete() );
-		self::assertFileDoesNotExist( $this->capturePath );
+		self::assertFileDoesNotExist( $this->capture_path );
 		self::assertFalse( $capture->delete() );
 		self::assertSame( 'inactive', $capture->snapshot()['state'] );
 	}
 
-	public function testManagedStorageDeletionRemovesOwnedCaptureAndExactLockIdempotently(): void {
+	public function test_managed_storage_deletion_removes_owned_capture_and_exact_lock_idempotently(): void {
 		$capture = $this->capture();
 		$capture->start();
-		$contents = file_get_contents( $this->capturePath );
+		$contents = file_get_contents( $this->capture_path );
 
 		$capture->assert_managed_storage_deletable();
-		self::assertSame( $contents, file_get_contents( $this->capturePath ) );
+		self::assertSame( $contents, file_get_contents( $this->capture_path ) );
 
 		$capture->delete_managed_storage();
 
-		self::assertFileDoesNotExist( $this->capturePath );
-		self::assertFileDoesNotExist( $this->capturePath . '.lock' );
+		self::assertFileDoesNotExist( $this->capture_path );
+		self::assertFileDoesNotExist( $this->capture_path . '.lock' );
 
 		$capture->delete_managed_storage();
-		self::assertFileDoesNotExist( $this->capturePath );
-		self::assertFileDoesNotExist( $this->capturePath . '.lock' );
+		self::assertFileDoesNotExist( $this->capture_path );
+		self::assertFileDoesNotExist( $this->capture_path . '.lock' );
 	}
 
-	public function testManagedStorageDeletionRemovesAnOrphanedExactLock(): void {
+	public function test_managed_storage_deletion_removes_an_orphaned_exact_lock(): void {
 		$capture = $this->capture();
 		$capture->start();
-		self::assertTrue( unlink( $this->capturePath ) );
+		self::assertTrue( unlink( $this->capture_path ) );
 
 		$capture->delete_managed_storage();
 
-		self::assertFileDoesNotExist( $this->capturePath );
-		self::assertFileDoesNotExist( $this->capturePath . '.lock' );
+		self::assertFileDoesNotExist( $this->capture_path );
+		self::assertFileDoesNotExist( $this->capture_path . '.lock' );
 	}
 
-	public function testManagedStorageDeletionSecuresANewLockWhenTheCaptureLockIsMissing(): void {
+	public function test_managed_storage_deletion_secures_a_new_lock_when_the_capture_lock_is_missing(): void {
 		$capture = $this->capture();
 		$capture->start();
-		self::assertTrue( unlink( $this->capturePath . '.lock' ) );
+		self::assertTrue( unlink( $this->capture_path . '.lock' ) );
 
-		$originalUmask = umask( 0022 );
+		$original_umask = umask( 0022 );
 		try {
 			$capture->delete_managed_storage();
 		} finally {
-			umask( $originalUmask );
+			umask( $original_umask );
 		}
 
-		self::assertFileDoesNotExist( $this->capturePath );
-		self::assertFileDoesNotExist( $this->capturePath . '.lock' );
+		self::assertFileDoesNotExist( $this->capture_path );
+		self::assertFileDoesNotExist( $this->capture_path . '.lock' );
 	}
 
-	public function testManagedStorageDeletionRetainsForeignOrUnsafeMaterial(): void {
+	public function test_managed_storage_deletion_retains_foreign_or_unsafe_material(): void {
 		$capture = $this->capture();
-		file_put_contents( $this->capturePath, "<?php exit; ?>\n{\"owner\":\"someone-else\"}\n" );
-		chmod( $this->capturePath, 0600 );
+		file_put_contents( $this->capture_path, "<?php exit; ?>\n{\"owner\":\"someone-else\"}\n" );
+		chmod( $this->capture_path, 0600 );
 
-		$this->assertMutationRefused(
+		$this->assert_mutation_refused(
 			static function () use ( $capture ): void {
 				$capture->delete_managed_storage();
 			}
 		);
-		self::assertFileExists( $this->capturePath );
-		self::assertFileExists( $this->capturePath . '.lock' );
+		self::assertFileExists( $this->capture_path );
+		self::assertFileExists( $this->capture_path . '.lock' );
 
-		unlink( $this->capturePath );
-		file_put_contents( $this->capturePath, 'unsafe' );
-		chmod( $this->capturePath, 0644 );
-		$this->assertMutationRefused(
+		unlink( $this->capture_path );
+		file_put_contents( $this->capture_path, 'unsafe' );
+		chmod( $this->capture_path, 0644 );
+		$this->assert_mutation_refused(
 			static function () use ( $capture ): void {
 				$capture->delete_managed_storage();
 			}
 		);
-		self::assertFileExists( $this->capturePath );
+		self::assertFileExists( $this->capture_path );
 	}
 
-	public function testStartResetsAnOwnedCaptureAndNaturalEndIsRetained(): void {
+	public function test_start_resets_an_owned_capture_and_natural_end_is_retained(): void {
 		$capture = $this->capture();
 		$capture->start();
 		$capture->append( '[ran-booster] old' );
@@ -177,7 +177,7 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		self::assertSame( '2026-07-23T14:00:00Z', $restarted['active_until'] );
 	}
 
-	public function testLegacyLifecycleMetadataRemainsReadableAndIsRemovedOnWrite(): void {
+	public function test_legacy_lifecycle_metadata_remains_readable_and_is_removed_on_write(): void {
 		$metadata = array(
 			'owner'        => 'ran-booster',
 			'format'       => 1,
@@ -186,19 +186,19 @@ final class TemporaryDebugCaptureTest extends TestCase {
 			'stopped_at'   => null,
 			'expires_at'   => '2026-07-24T13:00:00Z',
 		);
-		file_put_contents( $this->capturePath, "<?php exit; ?>\n" . json_encode( $metadata ) . "\n" );
-		chmod( $this->capturePath, 0600 );
+		file_put_contents( $this->capture_path, "<?php exit; ?>\n" . json_encode( $metadata ) . "\n" );
+		chmod( $this->capture_path, 0600 );
 
 		$capture = $this->capture();
 		self::assertSame( 'active', $capture->snapshot()['state'] );
 		self::assertSame( 'retained', $capture->stop()['state'] );
 
-		$contents = file_get_contents( $this->capturePath );
+		$contents = file_get_contents( $this->capture_path );
 		self::assertStringNotContainsString( 'started_at', $contents );
 		self::assertStringNotContainsString( 'stopped_at', $contents );
 	}
 
-	public function testLegacyStoppedCaptureRemainsRetainedUntilItIsRestarted(): void {
+	public function test_legacy_stopped_capture_remains_retained_until_it_is_restarted(): void {
 		$metadata = array(
 			'owner'        => 'ran-booster',
 			'format'       => 1,
@@ -207,20 +207,20 @@ final class TemporaryDebugCaptureTest extends TestCase {
 			'stopped_at'   => '2026-07-23T11:30:00Z',
 			'expires_at'   => '2026-07-24T11:30:00Z',
 		);
-		file_put_contents( $this->capturePath, "<?php exit; ?>\n" . json_encode( $metadata ) . "\n" );
-		chmod( $this->capturePath, 0600 );
+		file_put_contents( $this->capture_path, "<?php exit; ?>\n" . json_encode( $metadata ) . "\n" );
+		chmod( $this->capture_path, 0600 );
 
 		$capture = $this->capture();
 		self::assertSame( 'retained', $capture->snapshot()['state'] );
 		self::assertFalse( $capture->append( '[ran-booster] refused' ) );
 		self::assertSame( 'active', $capture->start()['state'] );
 
-		$contents = file_get_contents( $this->capturePath );
+		$contents = file_get_contents( $this->capture_path );
 		self::assertStringNotContainsString( 'started_at', $contents );
 		self::assertStringNotContainsString( 'stopped_at', $contents );
 	}
 
-	public function testExpiredCaptureIsLazilyDeletedAndBecomesInactive(): void {
+	public function test_expired_capture_is_lazily_deleted_and_becomes_inactive(): void {
 		$capture = $this->capture();
 		$capture->start();
 		$capture->append( '[ran-booster] expiring' );
@@ -230,11 +230,11 @@ final class TemporaryDebugCaptureTest extends TestCase {
 
 		self::assertSame( 'inactive', $snapshot['state'] );
 		self::assertSame( array(), $snapshot['entries'] );
-		self::assertFileDoesNotExist( $this->capturePath );
+		self::assertFileDoesNotExist( $this->capture_path );
 		self::assertSame( 'inactive', $capture->snapshot()['state'] );
 	}
 
-	public function testEntryCountEntrySizeAndFileSizeRemainBounded(): void {
+	public function test_entry_count_entry_size_and_file_size_remain_bounded(): void {
 		$capture = $this->capture();
 		$capture->start();
 
@@ -251,10 +251,10 @@ final class TemporaryDebugCaptureTest extends TestCase {
 			self::assertTrue( $capture->append( '[ran-booster] ' . str_repeat( 'x', 10000 ) . '-' . $index ) );
 		}
 
-		clearstatcache( true, $this->capturePath );
-		self::assertLessThanOrEqual( 262144, filesize( $this->capturePath ) );
+		clearstatcache( true, $this->capture_path );
+		self::assertLessThanOrEqual( 262144, filesize( $this->capture_path ) );
 
-		$lines = explode( "\n", file_get_contents( $this->capturePath ) );
+		$lines = explode( "\n", file_get_contents( $this->capture_path ) );
 		array_shift( $lines );
 		array_shift( $lines );
 		foreach ( array_filter( $lines, static fn( string $line ): bool => '' !== $line ) as $line ) {
@@ -262,83 +262,83 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		}
 	}
 
-	public function testForeignMalformedAndUnsafeFilesAreNeverOverwrittenOrDeleted(): void {
+	public function test_foreign_malformed_and_unsafe_files_are_never_overwritten_or_deleted(): void {
 		$capture = $this->capture();
 
-		file_put_contents( $this->capturePath, "<?php exit; ?>\n{\"owner\":\"someone-else\"}\n" );
-		chmod( $this->capturePath, 0600 );
+		file_put_contents( $this->capture_path, "<?php exit; ?>\n{\"owner\":\"someone-else\"}\n" );
+		chmod( $this->capture_path, 0600 );
 		self::assertSame( 'malformed', $capture->snapshot()['state'] );
-		$this->assertMutationRefused( static fn(): array => $capture->start() );
-		$this->assertMutationRefused( static fn(): bool => $capture->delete() );
-		self::assertFileExists( $this->capturePath );
+		$this->assert_mutation_refused( static fn(): array => $capture->start() );
+		$this->assert_mutation_refused( static fn(): bool => $capture->delete() );
+		self::assertFileExists( $this->capture_path );
 
-		unlink( $this->capturePath );
-		file_put_contents( $this->capturePath, "not-a-capture\n" );
-		chmod( $this->capturePath, 0600 );
+		unlink( $this->capture_path );
+		file_put_contents( $this->capture_path, "not-a-capture\n" );
+		chmod( $this->capture_path, 0600 );
 		self::assertSame( 'malformed', $capture->snapshot()['state'] );
 
-		unlink( $this->capturePath );
+		unlink( $this->capture_path );
 		file_put_contents( $this->directory . '/link-target', 'foreign' );
-		symlink( $this->directory . '/link-target', $this->capturePath );
+		symlink( $this->directory . '/link-target', $this->capture_path );
 		self::assertSame( 'malformed', $capture->snapshot()['state'] );
-		$this->assertMutationRefused( static fn(): array => $capture->start() );
-		self::assertTrue( is_link( $this->capturePath ) );
+		$this->assert_mutation_refused( static fn(): array => $capture->start() );
+		self::assertTrue( is_link( $this->capture_path ) );
 	}
 
-	public function testHardLinkedCaptureAndLockDoNotBlockCaptureLifecycle(): void {
+	public function test_hard_linked_capture_and_lock_do_not_block_capture_lifecycle(): void {
 		$capture = $this->capture();
 		$capture->start();
 
-		self::assertTrue( link( $this->capturePath, $this->directory . '/link-target' ) );
+		self::assertTrue( link( $this->capture_path, $this->directory . '/link-target' ) );
 		self::assertSame( 'active', $capture->snapshot()['state'] );
 		self::assertTrue( $capture->append( '[ran-booster] accepted' ) );
 
 		unlink( $this->directory . '/link-target' );
-		unlink( $this->capturePath . '.lock' );
+		unlink( $this->capture_path . '.lock' );
 		file_put_contents( $this->directory . '/link-target', '' );
-		self::assertTrue( link( $this->directory . '/link-target', $this->capturePath . '.lock' ) );
-		chmod( $this->capturePath . '.lock', 0600 );
+		self::assertTrue( link( $this->directory . '/link-target', $this->capture_path . '.lock' ) );
+		chmod( $this->capture_path . '.lock', 0600 );
 		self::assertSame( 'active', $capture->snapshot()['state'] );
 	}
 
-	public function testSymlinkedLockIsRefused(): void {
+	public function test_symlinked_lock_is_refused(): void {
 		$capture = $this->capture();
 		$capture->start();
-		unlink( $this->capturePath . '.lock' );
+		unlink( $this->capture_path . '.lock' );
 		file_put_contents( $this->directory . '/link-target', 'foreign' );
-		self::assertTrue( symlink( $this->directory . '/link-target', $this->capturePath . '.lock' ) );
+		self::assertTrue( symlink( $this->directory . '/link-target', $this->capture_path . '.lock' ) );
 
 		self::assertSame( 'unavailable', $capture->snapshot()['state'] );
 		self::assertSame( 'foreign', file_get_contents( $this->directory . '/link-target' ) );
 	}
 
-	public function testUnavailableLocationAndAppendFailuresAreFailOpen(): void {
+	public function test_unavailable_location_and_append_failures_are_fail_open(): void {
 		$capture = new TemporaryDebugCapture( $this->directory . '/missing/secrets.json' );
 
 		self::assertSame( 'unavailable', $capture->snapshot()['state'] );
 		self::assertFalse( $capture->append( '[ran-booster] ignored' ) );
-		$this->assertMutationRefused( static fn(): array => $capture->start() );
+		$this->assert_mutation_refused( static fn(): array => $capture->start() );
 
 		$available = $this->capture();
 		$available->start();
-		chmod( $this->capturePath, 0644 );
+		chmod( $this->capture_path, 0644 );
 		self::assertSame( 'malformed', $available->snapshot()['state'] );
 		self::assertFalse( $available->append( '[ran-booster] fail open' ) );
 
-		chmod( $this->capturePath, 0600 );
+		chmod( $this->capture_path, 0600 );
 		chmod( $this->directory, 0755 );
 		self::assertSame( 'unavailable', $available->snapshot()['state'] );
-		$this->assertMutationRefused( static fn(): array => $available->start() );
+		$this->assert_mutation_refused( static fn(): array => $available->start() );
 	}
 
 	private function capture(): TemporaryDebugCapture {
 		return new TemporaryDebugCapture(
-			$this->secretsPath,
+			$this->secrets_path,
 			fn(): int => $this->now
 		);
 	}
 
-	private function assertMutationRefused( callable $operation ): void {
+	private function assert_mutation_refused( callable $operation ): void {
 		try {
 			$operation();
 			self::fail( 'Expected an unsafe capture mutation to be refused.' );

@@ -29,8 +29,8 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 	private array $files = array();
 
 	protected function setUp(): void {
-		$this->ensureDirectory( WP_CONTENT_DIR );
-		$this->ensureDirectory( WP_PLUGIN_DIR );
+		$this->ensure_directory( WP_CONTENT_DIR );
+		$this->ensure_directory( WP_PLUGIN_DIR );
 		unset( $GLOBALS['ran_booster_admitted_disk_free_space'] );
 	}
 
@@ -48,7 +48,7 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 		}
 	}
 
-	public function testAdapterConsumesPackageExpandedByteFactWithoutRescanningZip(): void {
+	public function test_adapter_consumes_package_expanded_byte_fact_without_rescanning_zip(): void {
 		$source = file_get_contents( __DIR__ . '/../../RAN/Deployment/AdmittedBranchHostAdapter.php' );
 		self::assertIsString( $source );
 		self::assertStringContainsString( '$artifact->archive()->expanded_bytes()', $source );
@@ -57,8 +57,8 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 		self::assertStringNotContainsString( '->statIndex(', $source );
 	}
 
-	public function testHostCapacityAcceptsExactlyTwoCopiesPlusTenPercentOverhead(): void {
-		list( $artifact, $deployment )                   = $this->preparedArtifact();
+	public function test_host_capacity_accepts_exactly_two_copies_plus_ten_percent_overhead(): void {
+		list( $artifact, $deployment )                   = $this->prepared_artifact();
 		$expanded                                        = $artifact->archive()->expanded_bytes();
 		$required                                        = ( $expanded * 2 ) + intdiv( $expanded + 9, 10 );
 		$GLOBALS['ran_booster_admitted_disk_free_space'] = array(
@@ -67,15 +67,15 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 		);
 
 		try {
-			$this->invokeCapacityCheck( $artifact, $deployment );
+			$this->invoke_capacity_check( $artifact, $deployment );
 			self::addToAssertionCount( 1 );
 		} finally {
 			$artifact->cleanup();
 		}
 	}
 
-	public function testHostCapacityMapsInsufficientDestinationSpaceToExistingOutcome(): void {
-		list( $artifact, $deployment )                   = $this->preparedArtifact();
+	public function test_host_capacity_maps_insufficient_destination_space_to_existing_outcome(): void {
+		list( $artifact, $deployment )                   = $this->prepared_artifact();
 		$expanded                                        = $artifact->archive()->expanded_bytes();
 		$required                                        = ( $expanded * 2 ) + intdiv( $expanded + 9, 10 );
 		$GLOBALS['ran_booster_admitted_disk_free_space'] = array(
@@ -84,7 +84,7 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 		);
 
 		try {
-			$this->invokeCapacityCheck( $artifact, $deployment );
+			$this->invoke_capacity_check( $artifact, $deployment );
 			self::fail( 'Insufficient destination capacity must fail the admitted host check.' );
 		} catch ( AdmittedBranchStageFailure $failure ) {
 			self::assertSame( DeploymentOutcome::CODE_DEPLOYMENT_DISK_SPACE_LOW, $failure->outcome_code );
@@ -94,7 +94,7 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 	}
 
 	/** @return array{PreparedArchiveArtifact,BranchDeploymentDeclaration} */
-	private function preparedArtifact(): array {
+	private function prepared_artifact(): array {
 		$source = tempnam( sys_get_temp_dir(), 'ran-booster-capacity-source-' );
 		if ( false === $source ) {
 			throw new RuntimeException( 'Unable to create the capacity ZIP fixture path.' );
@@ -127,8 +127,8 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 			'gh',
 			'R_example',
 			str_repeat( 'a', 40 ),
-			static function ( string $destination, int $maximumArtifactBytes ) use ( $source ): void {
-				if ( $maximumArtifactBytes < 1 || ! copy( $source, $destination ) ) {
+			static function ( string $destination, int $maximum_artifact_bytes ) use ( $source ): void {
+				if ( $maximum_artifact_bytes < 1 || ! copy( $source, $destination ) ) {
 					throw new RuntimeException( 'Unable to copy the capacity ZIP fixture.' );
 				}
 			},
@@ -143,13 +143,13 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 		);
 	}
 
-	private function invokeCapacityCheck( PreparedArchiveArtifact $artifact, BranchDeploymentDeclaration $deployment ): void {
+	private function invoke_capacity_check( PreparedArchiveArtifact $artifact, BranchDeploymentDeclaration $deployment ): void {
 		$adapter = ( new ReflectionClass( AdmittedBranchHostAdapter::class ) )->newInstanceWithoutConstructor();
 		$method  = new ReflectionMethod( AdmittedBranchHostAdapter::class, 'assert_artifact_capacity' );
 		$method->invoke( $adapter, $artifact, $deployment );
 	}
 
-	private function ensureDirectory( string $path ): void {
+	private function ensure_directory( string $path ): void {
 		if ( ! is_dir( $path ) && ! mkdir( $path, 0777, true ) && ! is_dir( $path ) ) {
 			throw new RuntimeException( 'Unable to create the capacity test directory.' );
 		}

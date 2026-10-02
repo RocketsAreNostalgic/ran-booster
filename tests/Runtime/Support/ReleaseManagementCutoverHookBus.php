@@ -13,7 +13,7 @@ final class ReleaseManagementCutoverHookBus {
 
 	private int $sequence = 0;
 
-	public function addAction( string $hook, callable $callback, int $priority = 10 ): void {
+	public function add_action( string $hook, callable $callback, int $priority = 10 ): void {
 		$this->actions[ $hook ][] = array(
 			'callback' => $callback,
 			'priority' => $priority,
@@ -21,7 +21,7 @@ final class ReleaseManagementCutoverHookBus {
 		);
 	}
 
-	public function addFilter( string $hook, callable $callback, int $priority = 10 ): void {
+	public function add_filter( string $hook, callable $callback, int $priority = 10 ): void {
 		$this->filters[ $hook ][] = array(
 			'callback' => $callback,
 			'priority' => $priority,
@@ -42,12 +42,12 @@ final class ReleaseManagementCutoverHookBus {
 	}
 
 	/** @return list<string> */
-	public function actionHooks(): array {
+	public function action_hooks(): array {
 		return array_keys( $this->actions );
 	}
 
 	/** @return list<string> */
-	public function filterHooks(): array {
+	public function filter_hooks(): array {
 		return array_keys( $this->filters );
 	}
 }

@@ -69,24 +69,24 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 	private const FINGERPRINT = 'v2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
-	private ?string $artifactPath                                = null;
+	private ?string $artifact_path                                = null;
 	private ?ProspectiveRepositoryReleaseArtifact $acquisition   = null;
-	private ?ProspectiveSourceGuardDatabase $sourceGuardDatabase = null;
+	private ?ProspectiveSourceGuardDatabase $source_guard_database = null;
 
-	public function testProspectiveFacadeApiVersionTracksTheOpaqueReleaseIdContract(): void {
+	public function test_prospective_facade_api_version_tracks_the_opaque_release_id_contract(): void {
 		self::assertSame( 7, ProspectiveReleaseFacade::API_VERSION );
 	}
 
 	protected function setUp(): void {
-		ProspectiveRepositoryProvider::$resolveCalls     = 0;
-		ProspectiveRepositoryProvider::$listingCalls     = 0;
-		ProspectiveRepositoryProvider::$inspectionCalls  = 0;
-		ProspectiveRepositoryProvider::$acquisitionCalls = 0;
-		ProspectiveRepositoryProvider::$metadataCalls    = 0;
-		ProspectiveRepositoryProvider::$inspectionInput  = array();
-		ProspectiveRepositoryProvider::$acquisitionInput = array();
+		ProspectiveRepositoryProvider::$resolve_calls     = 0;
+		ProspectiveRepositoryProvider::$listing_calls     = 0;
+		ProspectiveRepositoryProvider::$inspection_calls  = 0;
+		ProspectiveRepositoryProvider::$acquisition_calls = 0;
+		ProspectiveRepositoryProvider::$metadata_calls    = 0;
+		ProspectiveRepositoryProvider::$inspection_input  = array();
+		ProspectiveRepositoryProvider::$acquisition_input = array();
 		ProspectiveRepositoryProvider::$acquisition      = null;
-		$this->sourceGuardDatabase                       = null;
+		$this->source_guard_database                       = null;
 
 		$GLOBALS['ran_booster_prospective_options']              = array();
 		$GLOBALS['ran_booster_package_mutation_guard_multisite'] = false;
@@ -96,29 +96,29 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 	protected function tearDown(): void {
 		ProspectiveRepositoryProvider::$acquisition = null;
-		if ( null !== $this->artifactPath && file_exists( $this->artifactPath ) ) {
+		if ( null !== $this->artifact_path && file_exists( $this->artifact_path ) ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test-only temporary artifact cleanup.
-			unlink( $this->artifactPath );
+			unlink( $this->artifact_path );
 		}
-		$this->artifactPath = null;
+		$this->artifact_path = null;
 		$this->acquisition  = null;
 		unset( $GLOBALS['ran_booster_prospective_options'] );
 		unset( $GLOBALS['ran_booster_wp_pusher_active_plugins'] );
 	}
 
-	public function testSupportedProviderCodesAreBoundedAndLocal(): void {
+	public function test_supported_provider_codes_are_bounded_and_local(): void {
 		$plugins  = new ProspectivePluginRepository();
 		$executor = new ProspectiveExecutor();
 		$facade   = $this->facade( $plugins, $executor );
 
-		self::assertSame( array( 'gh' ), $facade->supportedProviderCodes( 'plugin' ) );
-		self::assertSame( array( 'gh' ), $facade->supportedProviderCodes( 'theme' ) );
-		self::assertSame( array(), $facade->supportedProviderCodes( 'invalid' ) );
-		self::assertSame( 0, $executor->installCalls );
-		self::assertSame( 0, $plugins->adoptionCalls );
+		self::assertSame( array( 'gh' ), $facade->supported_provider_codes( 'plugin' ) );
+		self::assertSame( array( 'gh' ), $facade->supported_provider_codes( 'theme' ) );
+		self::assertSame( array(), $facade->supported_provider_codes( 'invalid' ) );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 0, $plugins->adoption_calls );
 	}
 
-	public function testSupportedProviderCodesDeriveFromEveryCompleteProviderInStableOrder(): void {
+	public function test_supported_provider_codes_derive_from_every_complete_provider_in_stable_order(): void {
 		$facade = $this->facade(
 			new ProspectivePluginRepository(),
 			new ProspectiveExecutor(),
@@ -129,10 +129,10 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			)
 		);
 
-		self::assertSame( array( 'alpha', 'zeta' ), $facade->supportedProviderCodes( 'plugin' ) );
+		self::assertSame( array( 'alpha', 'zeta' ), $facade->supported_provider_codes( 'plugin' ) );
 	}
 
-	public function testCompleteProductPlacementRequiresAllFiveReleaseFacetsOnOneProvider(): void {
+	public function test_complete_product_placement_requires_all_five_release_facets_on_one_provider(): void {
 		$listing     = new ProspectiveListingOnlyProvider( 'listing' );
 		$inspection  = new ProspectiveProviderWithoutAcquisition();
 		$acquisition = new ProspectiveAcquisitionOnlyProvider( 'acquisition' );
@@ -146,28 +146,28 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		);
 		$registry    = new ProviderRegistry( array( $listing, $inspection, $acquisition, $partial, $zero, $complete ) );
 
-		self::assertSame( array( 'p2-release' ), $facade->supportedProviderCodes( 'plugin' ) );
-		self::assertSame( $listing, $registry->requireCapability( 'listing', RepositoryReleaseCandidateListing::class ) );
-		self::assertSame( $inspection, $registry->requireCapability( 'gh', RepositoryReleaseInspector::class ) );
-		self::assertSame( $inspection, $registry->requireCapability( 'gh', RepositoryReleaseMetadata::class ) );
-		self::assertSame( $acquisition, $registry->requireCapability( 'acquisition', RepositoryReleaseAcquirer::class ) );
-		self::assertSame( $partial, $registry->requireCapability( 'p2-partial', RepositoryReleaseCandidateListing::class ) );
-		self::assertSame( $partial, $registry->requireCapability( 'p2-partial', RepositoryReleaseMetadata::class ) );
-		self::assertSame( $partial, $registry->requireCapability( 'p2-partial', RepositoryReleaseNativeTargets::class ) );
+		self::assertSame( array( 'p2-release' ), $facade->supported_provider_codes( 'plugin' ) );
+		self::assertSame( $listing, $registry->require_capability( 'listing', RepositoryReleaseCandidateListing::class ) );
+		self::assertSame( $inspection, $registry->require_capability( 'gh', RepositoryReleaseInspector::class ) );
+		self::assertSame( $inspection, $registry->require_capability( 'gh', RepositoryReleaseMetadata::class ) );
+		self::assertSame( $acquisition, $registry->require_capability( 'acquisition', RepositoryReleaseAcquirer::class ) );
+		self::assertSame( $partial, $registry->require_capability( 'p2-partial', RepositoryReleaseCandidateListing::class ) );
+		self::assertSame( $partial, $registry->require_capability( 'p2-partial', RepositoryReleaseMetadata::class ) );
+		self::assertSame( $partial, $registry->require_capability( 'p2-partial', RepositoryReleaseNativeTargets::class ) );
 		foreach ( array( RepositoryReleaseCandidateListing::class, RepositoryReleaseInspector::class, RepositoryReleaseAcquirer::class, RepositoryReleaseMetadata::class, RepositoryReleaseNativeTargets::class ) as $capability ) {
 			self::assertNotInstanceOf( $capability, $zero );
-			self::assertSame( $complete, $registry->requireCapability( 'p2-release', $capability ) );
+			self::assertSame( $complete, $registry->require_capability( 'p2-release', $capability ) );
 		}
 	}
 
-	public function testRetiredDiscoverOperationHasNoNonceScope(): void {
+	public function test_retired_discover_operation_has_no_nonce_scope(): void {
 		$facade = $this->facade( new ProspectivePluginRepository(), new ProspectiveExecutor() );
 
 		$this->expectException( \InvalidArgumentException::class );
-		$facade->nonceAction( 'discover', 'plugin' );
+		$facade->nonce_action( 'discover', 'plugin' );
 	}
 
-	public function testExistingReleaseOwnerStopsProspectiveAcquisitionBeforeFilesystemMutation(): void {
+	public function test_existing_release_owner_stops_prospective_acquisition_before_filesystem_mutation(): void {
 		$database = new class() {
 			public string $last_error = '';
 
@@ -197,18 +197,18 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$facade   = $this->facade(
 			$plugins,
 			$executor,
-			sourceGuard: new RepositorySourceGuard( $database, $this->createStub( Database::class ) )
+			source_guard: new RepositorySourceGuard( $database, $this->createStub( Database::class ) )
 		);
 
-		$result = $facade->install( 'plugin', $this->repositoryRequest(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce' );
+		$result = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce' );
 
 		self::assertSame( 'release_repository_conflict', $result->code() );
-		self::assertSame( 0, ProspectiveRepositoryProvider::$acquisitionCalls );
-		self::assertSame( 0, $executor->installCalls );
-		self::assertSame( 0, $plugins->adoptionCalls );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$acquisition_calls );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 0, $plugins->adoption_calls );
 	}
 
-	public function testUnavailableRepositoryRelationshipStopsProspectiveAcquisitionBeforeFilesystemMutation(): void {
+	public function test_unavailable_repository_relationship_stops_prospective_acquisition_before_filesystem_mutation(): void {
 		$database = new class() {
 			public string $last_error = 'read failed';
 
@@ -230,26 +230,26 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$facade   = $this->facade(
 			$plugins,
 			$executor,
-			sourceGuard: new RepositorySourceGuard( $database, $this->createStub( Database::class ) )
+			source_guard: new RepositorySourceGuard( $database, $this->createStub( Database::class ) )
 		);
 
-		$result = $facade->install( 'plugin', $this->repositoryRequest(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce' );
+		$result = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce' );
 
 		self::assertSame( 'release_unavailable', $result->code() );
-		self::assertSame( 0, ProspectiveRepositoryProvider::$acquisitionCalls );
-		self::assertSame( 0, $executor->installCalls );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$acquisition_calls );
+		self::assertSame( 0, $executor->install_calls );
 	}
 
-	public function testUnsupportedProviderFailsBeforeRepositoryResolutionOrPreflight(): void {
+	public function test_unsupported_provider_fails_before_repository_resolution_or_preflight(): void {
 		$plugins    = new ProspectivePluginRepository();
 		$executor   = new ProspectiveExecutor();
 		$facade     = $this->facade( $plugins, $executor );
-		$repository = $this->repositoryRequest();
+		$repository = $this->repository_request();
 
 		$repository['provider'] = 'bb';
 
 		$results = array(
-			$facade->listCandidates( 'plugin', $repository, 'stable', 'valid-nonce' ),
+			$facade->list_candidates( 'plugin', $repository, 'stable', 'valid-nonce' ),
 			$facade->inspect( 'plugin', $repository, '42', 'v1.2.3', 'stable', 'valid-nonce' ),
 			$facade->install(
 				'plugin',
@@ -267,12 +267,12 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			self::assertSame( 'unsupported_provider', $result->code() );
 			self::assertSame( array(), $result->data() );
 		}
-		self::assertSame( 0, ProspectiveRepositoryProvider::$resolveCalls );
-		self::assertSame( 0, $executor->installCalls );
-		self::assertSame( 0, $plugins->adoptionCalls );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$resolve_calls );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 0, $plugins->adoption_calls );
 	}
 
-	public function testRegisteredProviderWithoutListingFacetFailsBeforeRepositoryResolutionOrRemoteWork(): void {
+	public function test_registered_provider_without_listing_facet_fails_before_repository_resolution_or_remote_work(): void {
 		$provider = new ProspectiveRepositoryProviderWithoutListing();
 		$facade   = $this->facade(
 			new ProspectivePluginRepository(),
@@ -280,10 +280,10 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			provider: $provider
 		);
 
-		self::assertSame( array(), $facade->supportedProviderCodes( 'plugin' ) );
-		$result = $facade->listCandidates(
+		self::assertSame( array(), $facade->supported_provider_codes( 'plugin' ) );
+		$result = $facade->list_candidates(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'stable',
 			'valid-nonce'
 		);
@@ -291,20 +291,20 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'unsupported_provider', $result->code() );
 		self::assertSame( array(), $result->data() );
-		self::assertSame( 0, $provider->resolveCalls );
+		self::assertSame( 0, $provider->resolve_calls );
 	}
 
-	public function testListingOnlyProviderFailsBeforeRepositoryResolutionOrCandidateListing(): void {
+	public function test_listing_only_provider_fails_before_repository_resolution_or_candidate_listing(): void {
 		$provider               = new ProspectiveListingOnlyProvider( 'forge' );
 		$plugins                = new ProspectivePluginRepository();
 		$executor               = new ProspectiveExecutor();
 		$facade                 = $this->facade( $plugins, $executor, provider: $provider );
-		$repository             = $this->repositoryRequest();
+		$repository             = $this->repository_request();
 		$repository['provider'] = 'forge';
 
-		self::assertSame( array(), $facade->supportedProviderCodes( 'plugin' ) );
+		self::assertSame( array(), $facade->supported_provider_codes( 'plugin' ) );
 
-		$listing = $facade->listCandidates( 'plugin', $repository, 'stable', 'valid-nonce' );
+		$listing = $facade->list_candidates( 'plugin', $repository, 'stable', 'valid-nonce' );
 		self::assertFalse( $listing->successful() );
 		self::assertSame( 'unsupported_provider', $listing->code() );
 		self::assertSame( array(), $listing->data() );
@@ -326,43 +326,43 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			self::assertFalse( $result->successful() );
 			self::assertSame( 'unsupported_provider', $result->code() );
 		}
-		self::assertSame( 0, ProspectiveRepositoryProvider::$resolveCalls );
-		self::assertSame( 0, ProspectiveRepositoryProvider::$listingCalls );
-		self::assertSame( 0, $executor->installCalls );
-		self::assertSame( 0, $plugins->adoptionCalls );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$resolve_calls );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$listing_calls );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 0, $plugins->adoption_calls );
 	}
 
-	public function testPartialProviderFailsBeforeRepositoryResolutionOrCandidateListing(): void {
+	public function test_partial_provider_fails_before_repository_resolution_or_candidate_listing(): void {
 		$provider   = new ProspectiveProviderWithoutAcquisition();
 		$facade     = $this->facade(
 			new ProspectivePluginRepository(),
 			new ProspectiveExecutor(),
 			provider: $provider
 		);
-		$repository = $this->repositoryRequest();
+		$repository = $this->repository_request();
 
-		self::assertSame( array(), $facade->supportedProviderCodes( 'plugin' ) );
+		self::assertSame( array(), $facade->supported_provider_codes( 'plugin' ) );
 
-		$result = $facade->listCandidates( 'plugin', $repository, 'stable', 'valid-nonce' );
+		$result = $facade->list_candidates( 'plugin', $repository, 'stable', 'valid-nonce' );
 
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'unsupported_provider', $result->code() );
 		self::assertSame( array(), $result->data() );
-		self::assertSame( 0, ProspectiveRepositoryProvider::$resolveCalls );
-		self::assertSame( 0, ProspectiveRepositoryProvider::$listingCalls );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$resolve_calls );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$listing_calls );
 	}
 
-	public function testProviderWithoutAcquisitionFailsInstallBeforeMutationOrRepositoryResolution(): void {
+	public function test_provider_without_acquisition_fails_install_before_mutation_or_repository_resolution(): void {
 		$provider = new ProspectiveProviderWithoutAcquisition();
 		$plugins  = new ProspectivePluginRepository();
 		$executor = new ProspectiveExecutor();
 		$facade   = $this->facade( $plugins, $executor, provider: $provider );
 		$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = false;
 
-		self::assertSame( array(), $facade->supportedProviderCodes( 'plugin' ) );
+		self::assertSame( array(), $facade->supported_provider_codes( 'plugin' ) );
 		$result = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
@@ -372,14 +372,14 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'unsupported_provider', $result->code() );
-		self::assertSame( 0, ProspectiveRepositoryProvider::$resolveCalls );
-		self::assertSame( 0, ProspectiveRepositoryProvider::$acquisitionCalls );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$resolve_calls );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$acquisition_calls );
 		self::assertSame( array(), $GLOBALS['ran_booster_package_mutation_guard_contexts'] );
-		self::assertSame( 0, $executor->installCalls );
-		self::assertSame( 0, $plugins->adoptionCalls );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 0, $plugins->adoption_calls );
 	}
 
-	public function testCandidateProjectionPreservesAFormerlyOverflowingProviderIdentity(): void {
+	public function test_candidate_projection_preserves_a_formerly_overflowing_provider_identity(): void {
 		$provider = new ProspectiveRepositoryProvider(
 			'gh',
 			new RepositoryReleaseCandidateList(
@@ -401,9 +401,9 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			provider: $provider
 		);
 
-		$result = $facade->listCandidates(
+		$result = $facade->list_candidates(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'stable',
 			'valid-nonce'
 		);
@@ -411,17 +411,17 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertTrue( $result->successful() );
 		self::assertSame( 'release_candidates_available', $result->code() );
 		self::assertSame( '9999999999999999999', $result->data()['candidates'][0]['release_id'] ?? null );
-		self::assertSame( 1, ProspectiveRepositoryProvider::$resolveCalls );
+		self::assertSame( 1, ProspectiveRepositoryProvider::$resolve_calls );
 	}
 
-	public function testOpaqueProviderReleaseIdentitySurvivesTheProspectiveFacade(): void {
-		$opaqueId   = 'release:opaque/42';
+	public function test_opaque_provider_release_identity_survives_the_prospective_facade(): void {
+		$opaque_id   = 'release:opaque/42';
 		$provider   = new ProspectiveRepositoryProvider(
 			'gh',
 			new RepositoryReleaseCandidateList(
 				array(
 					new RepositoryReleaseCandidate(
-						$opaqueId,
+						$opaque_id,
 						'v1.2.3',
 						'1.2.3',
 						false,
@@ -433,32 +433,32 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		);
 		$reference  = new RepositoryReference( 'owner/example', '123456789', false, null );
 		$candidate  = $provider->list_release_candidates( 'plugin', $reference, 'stable' )->candidates[0];
-		$inspection = $provider->inspect_release( 'plugin', $reference, $candidate->providerReleaseId, $candidate->tag, 'stable' );
+		$inspection = $provider->inspect_release( 'plugin', $reference, $candidate->provider_release_id, $candidate->tag, 'stable' );
 		$plugins    = new ProspectivePluginRepository();
 		$executor   = new ProspectiveExecutor();
 		$facade     = $this->facade( $plugins, $executor, provider: $provider );
 
-		self::assertSame( $opaqueId, $candidate->providerReleaseId );
-		self::assertSame( $opaqueId, $inspection->providerReleaseId );
+		self::assertSame( $opaque_id, $candidate->provider_release_id );
+		self::assertSame( $opaque_id, $inspection->provider_release_id );
 
-		$result = $facade->listCandidates(
+		$result = $facade->list_candidates(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'stable',
 			'valid-nonce'
 		);
 
 		self::assertTrue( $result->successful() );
 		self::assertSame( 'release_candidates_available', $result->code() );
-		self::assertSame( $opaqueId, $result->data()['candidates'][0]['release_id'] ?? null );
-		self::assertSame( 1, ProspectiveRepositoryProvider::$resolveCalls );
-		self::assertSame( 1, ProspectiveRepositoryProvider::$inspectionCalls );
-		self::assertSame( 0, ProspectiveRepositoryProvider::$acquisitionCalls );
-		self::assertSame( 0, $executor->installCalls );
-		self::assertSame( 0, $plugins->adoptionCalls );
+		self::assertSame( $opaque_id, $result->data()['candidates'][0]['release_id'] ?? null );
+		self::assertSame( 1, ProspectiveRepositoryProvider::$resolve_calls );
+		self::assertSame( 1, ProspectiveRepositoryProvider::$inspection_calls );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$acquisition_calls );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 0, $plugins->adoption_calls );
 	}
 
-	public function testStableCandidateProjectionRejectsPrereleaseEvidence(): void {
+	public function test_stable_candidate_projection_rejects_prerelease_evidence(): void {
 		$provider = new ProspectiveRepositoryProvider(
 			'gh',
 			new RepositoryReleaseCandidateList(
@@ -480,9 +480,9 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			provider: $provider
 		);
 
-		$result = $facade->listCandidates(
+		$result = $facade->list_candidates(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'stable',
 			'valid-nonce'
 		);
@@ -490,10 +490,10 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'unable_to_check', $result->code() );
 		self::assertSame( array(), $result->data() );
-		self::assertSame( 1, ProspectiveRepositoryProvider::$resolveCalls );
+		self::assertSame( 1, ProspectiveRepositoryProvider::$resolve_calls );
 	}
 
-	public function testStableCandidateProjectionAcceptsProviderOwnedHyphenatedVersion(): void {
+	public function test_stable_candidate_projection_accepts_provider_owned_hyphenated_version(): void {
 		$provider = new ProspectiveRepositoryProvider(
 			'gh',
 			new RepositoryReleaseCandidateList(
@@ -515,9 +515,9 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			provider: $provider
 		);
 
-		$result = $facade->listCandidates(
+		$result = $facade->list_candidates(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'stable',
 			'valid-nonce'
 		);
@@ -525,12 +525,12 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertTrue( $result->successful() );
 		self::assertSame( 'release_candidates_available', $result->code() );
 		self::assertSame( '2026-08', $result->data()['candidates'][0]['version'] ?? null );
-		self::assertSame( 1, ProspectiveRepositoryProvider::$resolveCalls );
+		self::assertSame( 1, ProspectiveRepositoryProvider::$resolve_calls );
 	}
 
-	public function testCandidateListMapsBoundedDisplayDataWithoutInspectingOrInstalling(): void {
+	public function test_candidate_list_maps_bounded_display_data_without_inspecting_or_installing(): void {
 		$provider = new ProspectiveRepositoryProvider(
-			candidateList: new RepositoryReleaseCandidateList(
+			candidate_list: new RepositoryReleaseCandidateList(
 				array(
 					new RepositoryReleaseCandidate( '52', 'v2.0.0-beta.2', '2.0.0-beta.2', true, '2026-07-28T08:00:00Z', array( 'example-2.0.0-beta.2.zip' ) ),
 					new RepositoryReleaseCandidate( '42', 'v1.2.3', '1.2.3', false, '2026-07-27T08:00:00Z', array( 'example-1.2.3.zip' ) ),
@@ -541,14 +541,14 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$executor = new ProspectiveExecutor();
 		$facade   = $this->facade( $plugins, $executor, provider: $provider );
 
-		self::assertSame( array( 'gh' ), $facade->supportedProviderCodes( 'plugin' ) );
+		self::assertSame( array( 'gh' ), $facade->supported_provider_codes( 'plugin' ) );
 		self::assertSame(
 			'ran-booster-prospective-release-list_candidates-plugin',
-			$facade->nonceAction( 'list_candidates', 'plugin' )
+			$facade->nonce_action( 'list_candidates', 'plugin' )
 		);
-		$result = $facade->listCandidates(
+		$result = $facade->list_candidates(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'prerelease',
 			'valid-nonce'
 		);
@@ -579,20 +579,20 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			),
 			$result->data()
 		);
-		self::assertSame( 1, ProspectiveRepositoryProvider::$listingCalls );
-		self::assertSame( 0, $executor->installCalls );
-		self::assertSame( 0, $plugins->adoptionCalls );
+		self::assertSame( 1, ProspectiveRepositoryProvider::$listing_calls );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 0, $plugins->adoption_calls );
 	}
 
-	public function testInternalCandidateReaderClosesResolverAndListingFailures(): void {
+	public function test_internal_candidate_reader_closes_resolver_and_listing_failures(): void {
 		$failures = array(
-			'resolver' => new ProspectiveRepositoryProvider( resolveFailure: new RuntimeException( 'resolver-failure' ) ),
-			'listing'  => new ProspectiveRepositoryProvider( candidateList: new RuntimeException( 'listing-failure' ) ),
+			'resolver' => new ProspectiveRepositoryProvider( resolve_failure: new RuntimeException( 'resolver-failure' ) ),
+			'listing'  => new ProspectiveRepositoryProvider( candidate_list: new RuntimeException( 'listing-failure' ) ),
 		);
 
 		foreach ( $failures as $name => $provider ) {
 			$facade = $this->facade( new ProspectivePluginRepository(), new ProspectiveExecutor(), provider: $provider );
-			$result = $facade->listCandidates( 'plugin', $this->repositoryRequest(), 'stable', 'valid-nonce' );
+			$result = $facade->list_candidates( 'plugin', $this->repository_request(), 'stable', 'valid-nonce' );
 
 			self::assertFalse( $result->successful(), $name );
 			self::assertSame( 'unable_to_check', $result->code(), $name );
@@ -600,22 +600,22 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		}
 	}
 
-	public function testInvalidChannelFailsBeforeAnyProspectiveReleaseWork(): void {
+	public function test_invalid_channel_fails_before_any_prospective_release_work(): void {
 		$facade = $this->facade(
 			new ProspectivePluginRepository(),
 			new ProspectiveExecutor()
 		);
 
 		$results = array(
-			$facade->listCandidates(
+			$facade->list_candidates(
 				'plugin',
-				$this->repositoryRequest(),
+				$this->repository_request(),
 				'preview',
 				'valid-nonce'
 			),
 			$facade->inspect(
 				'plugin',
-				$this->repositoryRequest(),
+				$this->repository_request(),
 				'42',
 				'v1.2.3',
 				'preview',
@@ -623,7 +623,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			),
 			$facade->install(
 				'plugin',
-				$this->repositoryRequest(),
+				$this->repository_request(),
 				'42',
 				'v1.2.3',
 				self::FINGERPRINT,
@@ -638,15 +638,15 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		}
 	}
 
-	public function testFailedExactValidationDoesNotExecuteOrPersistAnything(): void {
-		ProspectiveRepositoryProvider::$acquisition = RepositoryReleaseAcquisitionRejected::invalidRelease();
+	public function test_failed_exact_validation_does_not_execute_or_persist_anything(): void {
+		ProspectiveRepositoryProvider::$acquisition = RepositoryReleaseAcquisitionRejected::invalid_release();
 		$plugins                                    = new ProspectivePluginRepository();
 		$executor                                   = new ProspectiveExecutor();
 		$facade                                     = $this->facade( $plugins, $executor );
 
 		$result = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
@@ -656,12 +656,12 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'release_invalid', $result->code() );
-		self::assertSame( 1, ProspectiveRepositoryProvider::$acquisitionCalls );
-		self::assertSame( 0, $executor->installCalls );
-		self::assertSame( 0, $plugins->adoptionCalls );
+		self::assertSame( 1, ProspectiveRepositoryProvider::$acquisition_calls );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 0, $plugins->adoption_calls );
 	}
 
-	public function testOperationalAcquisitionFailureReturnsUnableBeforeInstall(): void {
+	public function test_operational_acquisition_failure_returns_unable_before_install(): void {
 		ProspectiveRepositoryProvider::$acquisition = new RuntimeException( 'provider-secret-message' );
 		$plugins                                    = new ProspectivePluginRepository();
 		$executor                                   = new ProspectiveExecutor();
@@ -669,7 +669,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 		$result = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
@@ -680,21 +680,21 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'unable_to_check', $result->code() );
 		self::assertSame( array(), $result->data() );
-		self::assertSame( 1, ProspectiveRepositoryProvider::$resolveCalls );
-		self::assertSame( 1, ProspectiveRepositoryProvider::$acquisitionCalls );
-		self::assertSame( 0, $executor->installCalls );
-		self::assertSame( 0, $plugins->adoptionCalls );
+		self::assertSame( 1, ProspectiveRepositoryProvider::$resolve_calls );
+		self::assertSame( 1, ProspectiveRepositoryProvider::$acquisition_calls );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 0, $plugins->adoption_calls );
 	}
 
-	public function testProviderAcquisitionCleanupFailureIsPreservedBeforeInstall(): void {
-		ProspectiveRepositoryProvider::$acquisition = RepositoryReleaseAcquisitionRejected::cleanupFailed();
+	public function test_provider_acquisition_cleanup_failure_is_preserved_before_install(): void {
+		ProspectiveRepositoryProvider::$acquisition = RepositoryReleaseAcquisitionRejected::cleanup_failed();
 		$plugins                                    = new ProspectivePluginRepository();
 		$executor                                   = new ProspectiveExecutor();
 		$facade                                     = $this->facade( $plugins, $executor );
 
 		$result = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
@@ -704,22 +704,22 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'installation_cleanup_failed', $result->code() );
-		self::assertSame( 0, $executor->installCalls );
-		self::assertSame( 0, $plugins->adoptionCalls );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 0, $plugins->adoption_calls );
 	}
 
-	public function testCoreCustodyCleanupFailureIsPreservedThroughInstallFacade(): void {
+	public function test_core_custody_cleanup_failure_is_preserved_through_install_facade(): void {
 		$plugins  = new ProspectivePluginRepository();
 		$executor = new ProspectiveExecutor();
 		$lock     = new ProspectiveUpdaterLock();
 		$facade   = $this->facade( $plugins, $executor, 7, $lock );
-		$this->setReadyRelease();
+		$this->set_ready_release();
 		self::assertNotNull( $this->acquisition );
-		$this->acquisition->handoffFailure = new ReleaseArtifactCleanupFailure();
+		$this->acquisition->handoff_failure = new ReleaseArtifactCleanupFailure();
 
 		$result = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
@@ -729,24 +729,24 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'installation_cleanup_failed', $result->code() );
-		self::assertSame( 0, $executor->installCalls );
-		self::assertSame( 0, $plugins->adoptionCalls );
-		self::assertSame( 1, $this->acquisition->handoffCalls );
-		self::assertSame( 1, $this->acquisition->discardCalls );
-		self::assertSame( 1, $lock->releaseCalls );
-		self::assertFileDoesNotExist( (string) $this->artifactPath );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 0, $plugins->adoption_calls );
+		self::assertSame( 1, $this->acquisition->handoff_calls );
+		self::assertSame( 1, $this->acquisition->discard_calls );
+		self::assertSame( 1, $lock->release_calls );
+		self::assertFileDoesNotExist( (string) $this->artifact_path );
 	}
 
-	public function testSuccessfulInstallUsesCoreExecutorAndAdoptsReleaseAssetWithManualPolicy(): void {
+	public function test_successful_install_uses_core_executor_and_adopts_release_asset_with_manual_policy(): void {
 		$plugins  = new ProspectivePluginRepository();
 		$executor = new ProspectiveExecutor();
 		$lock     = new ProspectiveUpdaterLock();
 		$facade   = $this->facade( $plugins, $executor, 17, $lock );
-		$this->setReadyRelease();
+		$this->set_ready_release();
 
 		$result = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
@@ -763,60 +763,60 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			),
 			$result->data()
 		);
-		self::assertSame( 1, $executor->installCalls );
-		self::assertSame( 'example', $executor->packageSlug );
+		self::assertSame( 1, $executor->install_calls );
+		self::assertSame( 'example', $executor->package_slug );
 		self::assertNull( $executor->subdirectory );
-		self::assertSame( 1, $plugins->adoptionCalls );
-		self::assertSame( 17, $plugins->adoptionUserId );
-		self::assertInstanceOf( Plugin::class, $plugins->adoptedPackage );
-		self::assertSame( PackageSource::RELEASE_ASSET, $plugins->adoptedPackage?->get_source() );
-		self::assertSame( 1, $plugins->adoptedPackage?->get_source_revision() );
-		self::assertSame( DeploymentPolicy::MANUAL, $plugins->adoptedPackage?->get_deployment_policy() );
-		self::assertSame( 'gh', $plugins->adoptedPackage?->get_provider_code() );
-		self::assertSame( 'owner/example', (string) $plugins->adoptedPackage?->get_repository() );
-		self::assertSame( '123456789', $plugins->adoptedPackage?->get_provider_repository_id() );
-		self::assertSame( 'main', $plugins->adoptedPackage?->get_branch() );
-		self::assertSame( 'example', $plugins->adoptedConfiguration?->packageRoot() );
-		self::assertSame( 'example.php', $plugins->adoptedConfiguration?->metadataFile() );
-		self::assertSame( 'prerelease', $plugins->adoptedConfiguration?->channel() );
-		self::assertSame( 'plugin', ProspectiveRepositoryProvider::$acquisitionInput['package_type'] ?? null );
-		self::assertSame( 'owner/example', ProspectiveRepositoryProvider::$acquisitionInput['repository']?->locator );
-		self::assertSame( '123456789', ProspectiveRepositoryProvider::$acquisitionInput['repository']?->providerRepositoryId );
-		self::assertSame( '42', ProspectiveRepositoryProvider::$acquisitionInput['release_id'] ?? null );
-		self::assertSame( 'v1.2.3', ProspectiveRepositoryProvider::$acquisitionInput['tag'] ?? null );
-		self::assertSame( self::FINGERPRINT, ProspectiveRepositoryProvider::$acquisitionInput['fingerprint'] ?? null );
-		self::assertSame( 'prerelease', ProspectiveRepositoryProvider::$acquisitionInput['channel'] ?? null );
-		self::assertSame( 1, $this->acquisition?->handoffCalls );
-		self::assertSame( 0, $this->acquisition?->discardCalls );
-		self::assertSame( 1, $lock->acquireCalls );
-		self::assertSame( 1, $lock->releaseCalls );
-		self::assertFileDoesNotExist( (string) $this->artifactPath );
+		self::assertSame( 1, $plugins->adoption_calls );
+		self::assertSame( 17, $plugins->adoption_user_id );
+		self::assertInstanceOf( Plugin::class, $plugins->adopted_package );
+		self::assertSame( PackageSource::RELEASE_ASSET, $plugins->adopted_package?->get_source() );
+		self::assertSame( 1, $plugins->adopted_package?->get_source_revision() );
+		self::assertSame( DeploymentPolicy::MANUAL, $plugins->adopted_package?->get_deployment_policy() );
+		self::assertSame( 'gh', $plugins->adopted_package?->get_provider_code() );
+		self::assertSame( 'owner/example', (string) $plugins->adopted_package?->get_repository() );
+		self::assertSame( '123456789', $plugins->adopted_package?->get_provider_repository_id() );
+		self::assertSame( 'main', $plugins->adopted_package?->get_branch() );
+		self::assertSame( 'example', $plugins->adopted_configuration?->package_root() );
+		self::assertSame( 'example.php', $plugins->adopted_configuration?->metadata_file() );
+		self::assertSame( 'prerelease', $plugins->adopted_configuration?->channel() );
+		self::assertSame( 'plugin', ProspectiveRepositoryProvider::$acquisition_input['package_type'] ?? null );
+		self::assertSame( 'owner/example', ProspectiveRepositoryProvider::$acquisition_input['repository']?->locator );
+		self::assertSame( '123456789', ProspectiveRepositoryProvider::$acquisition_input['repository']?->provider_repository_id );
+		self::assertSame( '42', ProspectiveRepositoryProvider::$acquisition_input['release_id'] ?? null );
+		self::assertSame( 'v1.2.3', ProspectiveRepositoryProvider::$acquisition_input['tag'] ?? null );
+		self::assertSame( self::FINGERPRINT, ProspectiveRepositoryProvider::$acquisition_input['fingerprint'] ?? null );
+		self::assertSame( 'prerelease', ProspectiveRepositoryProvider::$acquisition_input['channel'] ?? null );
+		self::assertSame( 1, $this->acquisition?->handoff_calls );
+		self::assertSame( 0, $this->acquisition?->discard_calls );
+		self::assertSame( 1, $lock->acquire_calls );
+		self::assertSame( 1, $lock->release_calls );
+		self::assertFileDoesNotExist( (string) $this->artifact_path );
 	}
 
-	public function testOpaqueReleaseIdPropagatesExactlyThroughFacadeInspectionAndInstallation(): void {
-		$opaqueId = 'gid://forge/release/{042}:leading-000';
+	public function test_opaque_release_id_propagates_exactly_through_facade_inspection_and_installation(): void {
+		$opaque_id = 'gid://forge/release/{042}:leading-000';
 		$plugins  = new ProspectivePluginRepository();
 		$executor = new ProspectiveExecutor();
 		$facade   = $this->facade( $plugins, $executor );
-		$this->setReadyRelease();
+		$this->set_ready_release();
 
 		$inspection = $facade->inspect(
 			'plugin',
-			$this->repositoryRequest(),
-			$opaqueId,
+			$this->repository_request(),
+			$opaque_id,
 			'v1.2.3',
 			'stable',
 			'valid-nonce'
 		);
 
 		self::assertTrue( $inspection->successful() );
-		self::assertSame( $opaqueId, $inspection->data()['release_id'] ?? null );
-		self::assertSame( $opaqueId, ProspectiveRepositoryProvider::$inspectionInput['release_id'] ?? null );
+		self::assertSame( $opaque_id, $inspection->data()['release_id'] ?? null );
+		self::assertSame( $opaque_id, ProspectiveRepositoryProvider::$inspection_input['release_id'] ?? null );
 
 		$installation = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
-			$opaqueId,
+			$this->repository_request(),
+			$opaque_id,
 			'v1.2.3',
 			(string) ( $inspection->data()['fingerprint'] ?? '' ),
 			'stable',
@@ -825,16 +825,16 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 		self::assertTrue( $installation->successful() );
 		self::assertSame( 'installed', $installation->code() );
-		self::assertSame( $opaqueId, ProspectiveRepositoryProvider::$acquisitionInput['release_id'] ?? null );
+		self::assertSame( $opaque_id, ProspectiveRepositoryProvider::$acquisition_input['release_id'] ?? null );
 	}
 
-	public function testInspectReturnsTheFingerprintRequiredForInstallContinuity(): void {
+	public function test_inspect_returns_the_fingerprint_required_for_install_continuity(): void {
 		$plugins = new ProspectivePluginRepository();
 		$facade  = $this->facade( $plugins, new ProspectiveExecutor() );
 
 		$result = $facade->inspect(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			'stable',
@@ -857,52 +857,52 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			),
 			$result->data()
 		);
-		self::assertSame( 1, ProspectiveRepositoryProvider::$inspectionCalls );
-		self::assertSame( 1, ProspectiveRepositoryProvider::$metadataCalls );
-		self::assertSame( 'plugin', ProspectiveRepositoryProvider::$inspectionInput['package_type'] ?? null );
-		self::assertSame( 'owner/example', ProspectiveRepositoryProvider::$inspectionInput['repository']?->locator );
-		self::assertSame( '123456789', ProspectiveRepositoryProvider::$inspectionInput['repository']?->providerRepositoryId );
-		self::assertSame( '42', ProspectiveRepositoryProvider::$inspectionInput['release_id'] ?? null );
-		self::assertSame( 'v1.2.3', ProspectiveRepositoryProvider::$inspectionInput['tag'] ?? null );
-		self::assertSame( 'stable', ProspectiveRepositoryProvider::$inspectionInput['channel'] ?? null );
+		self::assertSame( 1, ProspectiveRepositoryProvider::$inspection_calls );
+		self::assertSame( 1, ProspectiveRepositoryProvider::$metadata_calls );
+		self::assertSame( 'plugin', ProspectiveRepositoryProvider::$inspection_input['package_type'] ?? null );
+		self::assertSame( 'owner/example', ProspectiveRepositoryProvider::$inspection_input['repository']?->locator );
+		self::assertSame( '123456789', ProspectiveRepositoryProvider::$inspection_input['repository']?->provider_repository_id );
+		self::assertSame( '42', ProspectiveRepositoryProvider::$inspection_input['release_id'] ?? null );
+		self::assertSame( 'v1.2.3', ProspectiveRepositoryProvider::$inspection_input['tag'] ?? null );
+		self::assertSame( 'stable', ProspectiveRepositoryProvider::$inspection_input['channel'] ?? null );
 	}
 
-	public function testInspectRequiresBothProviderFacetsBeforeRepositoryResolution(): void {
-		$metadataOnly  = new class() extends ProspectivePartialReleaseProvider implements RepositoryReleaseMetadata {
-			public int $metadataCalls = 0;
+	public function test_inspect_requires_both_provider_facets_before_repository_resolution(): void {
+		$metadata_only  = new class() extends ProspectivePartialReleaseProvider implements RepositoryReleaseMetadata {
+			public int $metadata_calls = 0;
 
 			public function expected_update_uri( RepositoryReference $repository ): string {
 				unset( $repository );
-				++$this->metadataCalls;
+				++$this->metadata_calls;
 
 				return 'https://example.com/owner/example';
 			}
 
 			public function release_details_url( RepositoryReference $repository, string $tag ): string {
 				unset( $repository, $tag );
-				++$this->metadataCalls;
+				++$this->metadata_calls;
 
 				return 'https://example.com/owner/example/releases/tag/v1.2.3';
 			}
 		};
-		$inspectorOnly = new class() extends ProspectivePartialReleaseProvider implements RepositoryReleaseInspector {
-			public int $inspectionCalls = 0;
+		$inspector_only = new class() extends ProspectivePartialReleaseProvider implements RepositoryReleaseInspector {
+			public int $inspection_calls = 0;
 
 			public function inspect_release(
-				string $packageType,
+				string $package_type,
 				RepositoryReference $repository,
-				string $providerReleaseId,
+				string $provider_release_id,
 				string $tag,
 				string $channel
 			): RepositoryReleaseInspection {
-				unset( $packageType, $repository, $providerReleaseId, $tag, $channel );
-				++$this->inspectionCalls;
+				unset( $package_type, $repository, $provider_release_id, $tag, $channel );
+				++$this->inspection_calls;
 
-				return ProspectiveRepositoryProvider::defaultInspection();
+				return ProspectiveRepositoryProvider::default_inspection();
 			}
 		};
 
-		foreach ( array( $metadataOnly, $inspectorOnly ) as $provider ) {
+		foreach ( array( $metadata_only, $inspector_only ) as $provider ) {
 			$facade = $this->facade(
 				new ProspectivePluginRepository(),
 				new ProspectiveExecutor(),
@@ -910,7 +910,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			);
 			$result = $facade->inspect(
 				'plugin',
-				$this->repositoryRequest(),
+				$this->repository_request(),
 				'42',
 				'v1.2.3',
 				'stable',
@@ -919,21 +919,21 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 			self::assertFalse( $result->successful() );
 			self::assertSame( 'unsupported_provider', $result->code() );
-			self::assertSame( 0, $provider->resolveCalls );
+			self::assertSame( 0, $provider->resolve_calls );
 		}
-		self::assertSame( 0, $metadataOnly->metadataCalls );
-		self::assertSame( 0, $inspectorOnly->inspectionCalls );
+		self::assertSame( 0, $metadata_only->metadata_calls );
+		self::assertSame( 0, $inspector_only->inspection_calls );
 	}
 
-	public function testInspectMapsOnlyClosedProviderRejections(): void {
+	public function test_inspect_maps_only_closed_provider_rejections(): void {
 		$cases = array(
-			array( 'no_releases', RepositoryReleaseInspectionRejected::noReleases() ),
-			array( 'release_invalid', RepositoryReleaseInspectionRejected::invalidRelease() ),
+			array( 'no_releases', RepositoryReleaseInspectionRejected::no_releases() ),
+			array( 'release_invalid', RepositoryReleaseInspectionRejected::invalid_release() ),
 			array( 'release_invalid', RepositoryReleaseInspectionRejected::incompatible() ),
 			array( 'unable_to_check', new RuntimeException( 'provider-secret-message' ) ),
 		);
 
-		foreach ( $cases as [ $expectedCode, $failure ] ) {
+		foreach ( $cases as [ $expected_code, $failure ] ) {
 			$provider = new ProspectiveRepositoryProvider( inspection: $failure );
 			$facade   = $this->facade(
 				new ProspectivePluginRepository(),
@@ -942,7 +942,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			);
 			$result   = $facade->inspect(
 				'plugin',
-				$this->repositoryRequest(),
+				$this->repository_request(),
 				'42',
 				'v1.2.3',
 				'stable',
@@ -950,13 +950,13 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			);
 
 			self::assertFalse( $result->successful() );
-			self::assertSame( $expectedCode, $result->code() );
+			self::assertSame( $expected_code, $result->code() );
 			self::assertSame( array(), $result->data() );
 		}
-		self::assertSame( 0, ProspectiveRepositoryProvider::$metadataCalls );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$metadata_calls );
 	}
 
-	public function testInspectRejectsProviderIdentityDriftBeforeMetadataProjection(): void {
+	public function test_inspect_rejects_provider_identity_drift_before_metadata_projection(): void {
 		$cases = array(
 			new RepositoryReleaseInspection(
 				'43',
@@ -987,7 +987,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			);
 			$result   = $facade->inspect(
 				'plugin',
-				$this->repositoryRequest(),
+				$this->repository_request(),
 				'42',
 				'v1.2.3',
 				'stable',
@@ -997,18 +997,18 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			self::assertFalse( $result->successful() );
 			self::assertSame( 'release_invalid', $result->code() );
 		}
-		self::assertSame( 0, ProspectiveRepositoryProvider::$metadataCalls );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$metadata_calls );
 	}
 
-	public function testFingerprintMismatchCannotReachCore(): void {
+	public function test_fingerprint_mismatch_cannot_reach_core(): void {
 		$plugins  = new ProspectivePluginRepository();
 		$executor = new ProspectiveExecutor();
 		$facade   = $this->facade( $plugins, $executor );
-		$this->setReadyRelease();
+		$this->set_ready_release();
 
 		$result = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			'v2:' . str_repeat( 'b', 64 ),
@@ -1018,23 +1018,23 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'release_invalid', $result->code() );
-		self::assertSame( 0, $executor->installCalls );
-		self::assertSame( 0, $plugins->adoptionCalls );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 0, $plugins->adoption_calls );
 	}
 
-	public function testIdentityThatAppearsAfterLockAcquisitionStopsBeforeHandoff(): void {
+	public function test_identity_that_appears_after_lock_acquisition_stops_before_handoff(): void {
 		$plugins         = new ProspectivePluginRepository();
 		$executor        = new ProspectiveExecutor();
 		$lock            = new ProspectiveUpdaterLock();
-		$lock->onAcquire = static function () use ( $plugins ): void {
+		$lock->on_acquire = static function () use ( $plugins ): void {
 			$plugins->installed = true;
 		};
 		$facade          = $this->facade( $plugins, $executor, 7, $lock );
-		$this->setReadyRelease();
+		$this->set_ready_release();
 
 		$result = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
@@ -1044,25 +1044,25 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'package_already_exists', $result->code() );
-		self::assertSame( 0, $this->acquisition?->handoffCalls );
-		self::assertSame( 1, $this->acquisition?->discardCalls );
-		self::assertSame( 0, $executor->installCalls );
-		self::assertSame( 1, $lock->releaseCalls );
+		self::assertSame( 0, $this->acquisition?->handoff_calls );
+		self::assertSame( 1, $this->acquisition?->discard_calls );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 1, $lock->release_calls );
 	}
 
-	public function testWpPusherActivatedAfterLockAcquisitionStopsBeforeHandoff(): void {
+	public function test_wp_pusher_activated_after_lock_acquisition_stops_before_handoff(): void {
 		$plugins         = new ProspectivePluginRepository();
 		$executor        = new ProspectiveExecutor();
 		$lock            = new ProspectiveUpdaterLock();
-		$lock->onAcquire = static function (): void {
+		$lock->on_acquire = static function (): void {
 			$GLOBALS['ran_booster_wp_pusher_active_plugins'] = array( 'wppusher/wppusher.php' );
 		};
 		$facade          = $this->facade( $plugins, $executor, 7, $lock );
-		$this->setReadyRelease();
+		$this->set_ready_release();
 
 		$result = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
@@ -1072,17 +1072,17 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'install_failed', $result->code() );
-		self::assertSame( 0, $this->acquisition?->handoffCalls );
-		self::assertSame( 1, $this->acquisition?->discardCalls );
-		self::assertSame( 0, $executor->installCalls );
-		self::assertSame( 1, $lock->releaseCalls );
+		self::assertSame( 0, $this->acquisition?->handoff_calls );
+		self::assertSame( 1, $this->acquisition?->discard_calls );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 1, $lock->release_calls );
 	}
 
-	public function testConflictDiscoveredAfterLockAcquisitionReturnsCleanupFailureWhenLockReleaseFails(): void {
+	public function test_conflict_discovered_after_lock_acquisition_returns_cleanup_failure_when_lock_release_fails(): void {
 		$plugins             = new ProspectivePluginRepository();
 		$executor            = new ProspectiveExecutor();
 		$lock                = new ProspectiveUpdaterLock();
-		$lock->releaseResult = false;
+		$lock->release_result = false;
 		$database            = new SequencedSourceGuardDatabase(
 			array(
 				array(),
@@ -1098,13 +1098,13 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 				),
 			)
 		);
-		$sourceGuard         = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
-		$this->setReadyRelease();
-		$facade = $this->facade( $plugins, $executor, 7, $lock, null, $sourceGuard );
+		$source_guard         = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
+		$this->set_ready_release();
+		$facade = $this->facade( $plugins, $executor, 7, $lock, null, $source_guard );
 
 		$result = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
@@ -1115,13 +1115,13 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'installation_cleanup_failed', $result->code() );
 		self::assertSame( array(), $result->data() );
-		self::assertSame( 1, $lock->acquireCalls );
-		self::assertSame( 1, $lock->releaseCalls );
+		self::assertSame( 1, $lock->acquire_calls );
+		self::assertSame( 1, $lock->release_calls );
 		self::assertSame( 3, $database->reads );
-		self::assertSame( 1, $this->acquisition?->discardCalls );
+		self::assertSame( 1, $this->acquisition?->discard_calls );
 	}
 
-	public function testConflictDiscoveredBeforeLockAcquisitionReturnsCleanupFailureWhenDiscardFails(): void {
+	public function test_conflict_discovered_before_lock_acquisition_returns_cleanup_failure_when_discard_fails(): void {
 		$plugins     = new ProspectivePluginRepository();
 		$executor    = new ProspectiveExecutor();
 		$database    = new SequencedSourceGuardDatabase(
@@ -1139,15 +1139,15 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			)
 		);
 		$lock        = new ProspectiveUpdaterLock();
-		$sourceGuard = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
-		$this->setReadyRelease();
+		$source_guard = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
+		$this->set_ready_release();
 		self::assertNotNull( $this->acquisition );
-		$this->acquisition->discardResult = false;
-		$facade                           = $this->facade( $plugins, $executor, 7, $lock, null, $sourceGuard );
+		$this->acquisition->discard_result = false;
+		$facade                           = $this->facade( $plugins, $executor, 7, $lock, null, $source_guard );
 
 		$result = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
@@ -1158,59 +1158,59 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'installation_cleanup_failed', $result->code() );
 		self::assertSame( array(), $result->data() );
-		self::assertSame( 0, $lock->acquireCalls );
-		self::assertSame( 0, $lock->releaseCalls );
-		self::assertSame( 0, $this->acquisition?->handoffCalls );
-		self::assertSame( 1, $this->acquisition?->discardCalls );
+		self::assertSame( 0, $lock->acquire_calls );
+		self::assertSame( 0, $lock->release_calls );
+		self::assertSame( 0, $this->acquisition?->handoff_calls );
+		self::assertSame( 1, $this->acquisition?->discard_calls );
 		self::assertSame( 2, $database->reads );
-		self::assertSame( 0, $executor->installCalls );
+		self::assertSame( 0, $executor->install_calls );
 	}
 
-	public function testUnavailableRelationshipBeforeLockAcquisitionStopsWithoutMutation(): void {
+	public function test_unavailable_relationship_before_lock_acquisition_stops_without_mutation(): void {
 		$plugins     = new ProspectivePluginRepository();
 		$executor    = new ProspectiveExecutor();
 		$database    = new SequencedSourceGuardDatabase( array( array(), array( (object) array() ) ) );
 		$lock        = new ProspectiveUpdaterLock();
-		$sourceGuard = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
-		$this->setReadyRelease();
-		$facade = $this->facade( $plugins, $executor, 7, $lock, null, $sourceGuard );
+		$source_guard = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
+		$this->set_ready_release();
+		$facade = $this->facade( $plugins, $executor, 7, $lock, null, $source_guard );
 
-		$result = $facade->install( 'plugin', $this->repositoryRequest(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce' );
+		$result = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce' );
 
 		self::assertSame( 'release_unavailable', $result->code() );
-		self::assertSame( 0, $lock->acquireCalls );
-		self::assertSame( 0, $executor->installCalls );
+		self::assertSame( 0, $lock->acquire_calls );
+		self::assertSame( 0, $executor->install_calls );
 	}
 
-	public function testUnavailableRelationshipAfterLockAcquisitionStopsWithoutMutation(): void {
+	public function test_unavailable_relationship_after_lock_acquisition_stops_without_mutation(): void {
 		$plugins     = new ProspectivePluginRepository();
 		$executor    = new ProspectiveExecutor();
 		$database    = new SequencedSourceGuardDatabase( array( array(), array(), array( (object) array() ) ) );
 		$lock        = new ProspectiveUpdaterLock();
-		$sourceGuard = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
-		$this->setReadyRelease();
-		$facade = $this->facade( $plugins, $executor, 7, $lock, null, $sourceGuard );
+		$source_guard = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
+		$this->set_ready_release();
+		$facade = $this->facade( $plugins, $executor, 7, $lock, null, $source_guard );
 
-		$result = $facade->install( 'plugin', $this->repositoryRequest(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce' );
+		$result = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce' );
 
 		self::assertSame( 'release_unavailable', $result->code() );
-		self::assertSame( 1, $lock->acquireCalls );
-		self::assertSame( 1, $lock->releaseCalls );
-		self::assertSame( 0, $executor->installCalls );
+		self::assertSame( 1, $lock->acquire_calls );
+		self::assertSame( 1, $lock->release_calls );
+		self::assertSame( 0, $executor->install_calls );
 	}
 
-	public function testUnrelatedConcurrentActivationDoesNotBlockAdoption(): void {
+	public function test_unrelated_concurrent_activation_does_not_block_adoption(): void {
 		$plugins             = new ProspectivePluginRepository();
 		$executor            = new ProspectiveExecutor();
-		$executor->onInstall = static function (): void {
+		$executor->on_install = static function (): void {
 			$GLOBALS['ran_booster_prospective_options']['active_plugins'] = array( 'unrelated/unrelated.php' );
 		};
 		$facade              = $this->facade( $plugins, $executor );
-		$this->setReadyRelease();
+		$this->set_ready_release();
 
 		$result = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
@@ -1220,22 +1220,22 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 		self::assertTrue( $result->successful() );
 		self::assertSame( 'installed', $result->code() );
-		self::assertSame( 1, $plugins->adoptionCalls );
-		self::assertFileDoesNotExist( (string) $this->artifactPath );
+		self::assertSame( 1, $plugins->adoption_calls );
+		self::assertFileDoesNotExist( (string) $this->artifact_path );
 	}
 
-	public function testTargetActivationChangeReportsInstalledButUnmanagedWithoutAdoption(): void {
+	public function test_target_activation_change_reports_installed_but_unmanaged_without_adoption(): void {
 		$plugins             = new ProspectivePluginRepository();
 		$executor            = new ProspectiveExecutor();
-		$executor->onInstall = static function (): void {
+		$executor->on_install = static function (): void {
 			$GLOBALS['ran_booster_prospective_options']['active_plugins'] = array( 'example/example.php' );
 		};
 		$facade              = $this->facade( $plugins, $executor );
-		$this->setReadyRelease();
+		$this->set_ready_release();
 
 		$result = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
@@ -1245,20 +1245,20 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'installed_but_unmanaged', $result->code() );
-		self::assertSame( 0, $plugins->adoptionCalls );
-		self::assertFileDoesNotExist( (string) $this->artifactPath );
+		self::assertSame( 0, $plugins->adoption_calls );
+		self::assertFileDoesNotExist( (string) $this->artifact_path );
 	}
 
-	public function testWrongInstalledVersionIsReportedWithItsActualIdentity(): void {
+	public function test_wrong_installed_version_is_reported_with_its_actual_identity(): void {
 		$plugins                   = new ProspectivePluginRepository();
-		$plugins->installedVersion = '9.9.9';
+		$plugins->installed_version = '9.9.9';
 		$executor                  = new ProspectiveExecutor();
 		$facade                    = $this->facade( $plugins, $executor );
-		$this->setReadyRelease();
+		$this->set_ready_release();
 
 		$result = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
@@ -1275,22 +1275,22 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			),
 			$result->data()
 		);
-		self::assertSame( 0, $plugins->adoptionCalls );
+		self::assertSame( 0, $plugins->adoption_calls );
 	}
 
-	public function testLockAcquisitionExceptionReportsUpdaterCleanupFailure(): void {
+	public function test_lock_acquisition_exception_reports_updater_cleanup_failure(): void {
 		$plugins              = new ProspectivePluginRepository();
 		$executor             = new ProspectiveExecutor();
 		$lock                 = new ProspectiveUpdaterLock();
-		$lock->throwOnAcquire = true;
+		$lock->throw_on_acquire = true;
 		$facade               = $this->facade( $plugins, $executor, 7, $lock );
-		$this->setReadyRelease();
+		$this->set_ready_release();
 		self::assertNotNull( $this->acquisition );
-		$this->acquisition->discardResult = false;
+		$this->acquisition->discard_result = false;
 
 		$result = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
@@ -1300,21 +1300,21 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'installation_cleanup_failed', $result->code() );
-		self::assertSame( 1, $this->acquisition?->discardCalls );
-		self::assertSame( 0, $lock->releaseCalls );
-		self::assertFileExists( (string) $this->artifactPath );
+		self::assertSame( 1, $this->acquisition?->discard_calls );
+		self::assertSame( 0, $lock->release_calls );
+		self::assertFileExists( (string) $this->artifact_path );
 	}
 
-	public function testCoreFailureWithExactPackagePresentReportsInstalledButUnmanaged(): void {
+	public function test_core_failure_with_exact_package_present_reports_installed_but_unmanaged(): void {
 		$plugins          = new ProspectivePluginRepository();
 		$executor         = new ProspectiveExecutor();
 		$executor->result = CorePackageExecutionResult::failed( CorePackageExecutionFailure::WORDPRESS_FAILED );
 		$facade           = $this->facade( $plugins, $executor );
-		$this->setReadyRelease();
+		$this->set_ready_release();
 
 		$result = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
@@ -1324,20 +1324,20 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'installed_but_unmanaged', $result->code() );
-		self::assertSame( 0, $plugins->adoptionCalls );
+		self::assertSame( 0, $plugins->adoption_calls );
 	}
 
-	public function testCoreFailureReturnsOrdinaryFailureOnlyWhenTargetIsProvenAbsent(): void {
+	public function test_core_failure_returns_ordinary_failure_only_when_target_is_proven_absent(): void {
 		$plugins                 = new ProspectivePluginRepository();
 		$executor                = new ProspectiveExecutor();
-		$executor->markInstalled = false;
+		$executor->mark_installed = false;
 		$executor->result        = CorePackageExecutionResult::failed( CorePackageExecutionFailure::WORDPRESS_FAILED );
 		$facade                  = $this->facade( $plugins, $executor );
-		$this->setReadyRelease();
+		$this->set_ready_release();
 
 		$result = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
@@ -1347,23 +1347,23 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'wordpress_failed', $result->code() );
-		self::assertSame( 0, $plugins->adoptionCalls );
+		self::assertSame( 0, $plugins->adoption_calls );
 	}
 
-	public function testAbsentTargetIgnoresUnrelatedActivationSideEffect(): void {
+	public function test_absent_target_ignores_unrelated_activation_side_effect(): void {
 		$plugins                 = new ProspectivePluginRepository();
 		$executor                = new ProspectiveExecutor();
-		$executor->markInstalled = false;
+		$executor->mark_installed = false;
 		$executor->result        = CorePackageExecutionResult::failed( CorePackageExecutionFailure::WORDPRESS_FAILED );
-		$executor->onInstall     = static function (): void {
+		$executor->on_install     = static function (): void {
 			$GLOBALS['ran_booster_prospective_options']['active_plugins'] = array( 'unrelated/unrelated.php' );
 		};
 		$facade                  = $this->facade( $plugins, $executor );
-		$this->setReadyRelease();
+		$this->set_ready_release();
 
 		$result = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
@@ -1374,19 +1374,19 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'wordpress_failed', $result->code() );
 		self::assertSame( array(), $result->data() );
-		self::assertSame( 0, $plugins->adoptionCalls );
+		self::assertSame( 0, $plugins->adoption_calls );
 	}
 
-	public function testUnreadableInstalledTargetReportsBoundedUncertainty(): void {
+	public function test_unreadable_installed_target_reports_bounded_uncertainty(): void {
 		$plugins                            = new ProspectivePluginRepository();
-		$plugins->installedPackageAvailable = false;
+		$plugins->installed_package_available = false;
 		$executor                           = new ProspectiveExecutor();
 		$facade                             = $this->facade( $plugins, $executor );
-		$this->setReadyRelease();
+		$this->set_ready_release();
 
 		$result = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
@@ -1397,20 +1397,20 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'management_state_uncertain', $result->code() );
 		self::assertSame( array( 'identifier' => 'example/example.php' ), $result->data() );
-		self::assertSame( 0, $plugins->adoptionCalls );
+		self::assertSame( 0, $plugins->adoption_calls );
 	}
 
-	public function testReleaseExceptionConvertsInstalledOutcomeToCleanupFailure(): void {
+	public function test_release_exception_converts_installed_outcome_to_cleanup_failure(): void {
 		$plugins              = new ProspectivePluginRepository();
 		$executor             = new ProspectiveExecutor();
 		$lock                 = new ProspectiveUpdaterLock();
-		$lock->throwOnRelease = true;
+		$lock->throw_on_release = true;
 		$facade               = $this->facade( $plugins, $executor, 7, $lock );
-		$this->setReadyRelease();
+		$this->set_ready_release();
 
 		$result = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
@@ -1427,21 +1427,21 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			),
 			$result->data()
 		);
-		self::assertSame( 1, $lock->releaseCalls );
-		self::assertFileDoesNotExist( (string) $this->artifactPath );
+		self::assertSame( 1, $lock->release_calls );
+		self::assertFileDoesNotExist( (string) $this->artifact_path );
 	}
 
-	public function testFalseLockReleaseConvertsInstalledOutcomeToCleanupFailure(): void {
+	public function test_false_lock_release_converts_installed_outcome_to_cleanup_failure(): void {
 		$plugins             = new ProspectivePluginRepository();
 		$executor            = new ProspectiveExecutor();
 		$lock                = new ProspectiveUpdaterLock();
-		$lock->releaseResult = false;
+		$lock->release_result = false;
 		$facade              = $this->facade( $plugins, $executor, 7, $lock );
-		$this->setReadyRelease();
+		$this->set_ready_release();
 
 		$result = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
@@ -1458,12 +1458,12 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			),
 			$result->data()
 		);
-		self::assertFileDoesNotExist( (string) $this->artifactPath );
+		self::assertFileDoesNotExist( (string) $this->artifact_path );
 	}
 
-	public function testPersistenceFailureAfterInstallReportsManagementStateUncertain(): void {
+	public function test_persistence_failure_after_install_reports_management_state_uncertain(): void {
 		$plugins                 = new ProspectivePluginRepository();
-		$plugins->adoptionResult = PackageMutationResult::failed(
+		$plugins->adoption_result = PackageMutationResult::failed(
 			PackageStorageOperation::INSERT,
 			'ran_booster_storage_write_failed',
 			'The release management record could not be saved.',
@@ -1471,11 +1471,11 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		);
 		$executor                = new ProspectiveExecutor();
 		$facade                  = $this->facade( $plugins, $executor );
-		$this->setReadyRelease();
+		$this->set_ready_release();
 
 		$result = $facade->install(
 			'plugin',
-			$this->repositoryRequest(),
+			$this->repository_request(),
 			'42',
 			'v1.2.3',
 			self::FINGERPRINT,
@@ -1492,22 +1492,22 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			),
 			$result->data()
 		);
-		self::assertSame( 1, $executor->installCalls );
-		self::assertSame( 1, $plugins->adoptionCalls );
-		self::assertSame( PackageSource::RELEASE_ASSET, $plugins->adoptedPackage?->get_source() );
-		self::assertSame( DeploymentPolicy::MANUAL, $plugins->adoptedPackage?->get_deployment_policy() );
-		self::assertFileDoesNotExist( (string) $this->artifactPath );
+		self::assertSame( 1, $executor->install_calls );
+		self::assertSame( 1, $plugins->adoption_calls );
+		self::assertSame( PackageSource::RELEASE_ASSET, $plugins->adopted_package?->get_source() );
+		self::assertSame( DeploymentPolicy::MANUAL, $plugins->adopted_package?->get_deployment_policy() );
+		self::assertFileDoesNotExist( (string) $this->artifact_path );
 	}
 
-	private function setReadyRelease(): void {
-		$this->artifactPath = tempnam( sys_get_temp_dir(), 'ran-booster-prospective-' );
-		if ( false === $this->artifactPath ) {
+	private function set_ready_release(): void {
+		$this->artifact_path = tempnam( sys_get_temp_dir(), 'ran-booster-prospective-' );
+		if ( false === $this->artifact_path ) {
 			throw new RuntimeException( 'The test release artifact could not be created.' );
 		}
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test-only temporary artifact.
-		file_put_contents( $this->artifactPath, 'verified-release-archive' );
+		file_put_contents( $this->artifact_path, 'verified-release-archive' );
 		$this->acquisition                          = new ProspectiveRepositoryReleaseArtifact(
-			$this->artifactPath,
+			$this->artifact_path,
 			'1.2.3',
 			str_repeat( 'a', 40 ),
 			'example',
@@ -1519,10 +1519,10 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	private function facade(
 		ProspectivePluginRepository $plugins,
 		ProspectiveExecutor $executor,
-		int $userId = 7,
-		?ProspectiveUpdaterLock $updaterLock = null,
+		int $user_id = 7,
+		?ProspectiveUpdaterLock $updater_lock = null,
 		RepositoryProvider|iterable|null $provider = null,
-		?RepositorySourceGuard $sourceGuard = null
+		?RepositorySourceGuard $source_guard = null
 	): NativeProspectiveReleaseFacade {
 		$providers         = null === $provider
 			? array( new ProspectiveRepositoryProvider() )
@@ -1530,31 +1530,31 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$registry          = new ProviderRegistry( $providers );
 		$resolver          = new PackageRepositoryRequestResolver( $registry );
 		$executor->plugins = $plugins;
-		$sourceGuard     ??= $this->sourceGuard();
+		$source_guard     ??= $this->source_guard();
 
 		return new NativeProspectiveReleaseFacade(
 			$resolver,
 			$executor,
 			$plugins,
 			new ProspectiveThemeRepository(),
-			$updaterLock ?? new ProspectiveUpdaterLock(),
+			$updater_lock ?? new ProspectiveUpdaterLock(),
 			$registry,
 			static fn ( string $type ): bool => 'plugin' === $type,
 			static fn ( string $nonce, string $action ): bool => 'valid-nonce' === $nonce
 					&& str_starts_with( $action, 'ran-booster-prospective-release-' ),
-			static fn (): int => $userId,
-			$sourceGuard
+			static fn (): int => $user_id,
+			$source_guard
 		);
 	}
 
-	private function sourceGuard(): RepositorySourceGuard {
-		$this->sourceGuardDatabase ??= new ProspectiveSourceGuardDatabase();
+	private function source_guard(): RepositorySourceGuard {
+		$this->source_guard_database ??= new ProspectiveSourceGuardDatabase();
 
-		return new RepositorySourceGuard( $this->sourceGuardDatabase, $this->createStub( Database::class ) );
+		return new RepositorySourceGuard( $this->source_guard_database, $this->createStub( Database::class ) );
 	}
 
 	/** @return array<string, string> */
-	private function repositoryRequest( string $branch = 'main' ): array {
+	private function repository_request( string $branch = 'main' ): array {
 		return array(
 			'provider'      => 'gh',
 			'repository'    => 'owner/example',
@@ -1567,24 +1567,24 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 final class ProspectiveRepositoryProvider implements RepositoryProvider, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseMetadata, RepositoryReleaseNativeTargets {
 	private const EXPECTED_FINGERPRINT = 'v2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
-	public static int $resolveCalls                                     = 0;
-	public static int $listingCalls                                     = 0;
-	public static int $inspectionCalls                                  = 0;
-	public static int $acquisitionCalls                                 = 0;
-	public static int $metadataCalls                                    = 0;
+	public static int $resolve_calls                                     = 0;
+	public static int $listing_calls                                     = 0;
+	public static int $inspection_calls                                  = 0;
+	public static int $acquisition_calls                                 = 0;
+	public static int $metadata_calls                                    = 0;
 	public static RepositoryReleaseArtifact|Throwable|null $acquisition = null;
 
 	/** @var array{package_type?: string, repository?: RepositoryReference, release_id?: string, tag?: string, channel?: string} */
-	public static array $inspectionInput = array();
+	public static array $inspection_input = array();
 
 	/** @var array{package_type?: string, repository?: RepositoryReference, release_id?: string, tag?: string, fingerprint?: string, channel?: string} */
-	public static array $acquisitionInput = array();
+	public static array $acquisition_input = array();
 
 	public function __construct(
 		private readonly string $code = 'gh',
-		private readonly RepositoryReleaseCandidateList|Throwable|null $candidateList = null,
+		private readonly RepositoryReleaseCandidateList|Throwable|null $candidate_list = null,
 		private readonly RepositoryReleaseInspection|Throwable|null $inspection = null,
-		private readonly ?Throwable $resolveFailure = null
+		private readonly ?Throwable $resolve_failure = null
 	) {
 	}
 
@@ -1607,22 +1607,22 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 		};
 	}
 
-	public function has_registered_native_target( string $packageType, string $installedIdentifier ): bool {
-		unset( $packageType, $installedIdentifier );
+	public function has_registered_native_target( string $package_type, string $installed_identifier ): bool {
+		unset( $package_type, $installed_identifier );
 
 		return false;
 	}
 
 	public function create_native_target(
-		string $packageType,
+		string $package_type,
 		RepositoryReference $repository,
-		string $metadataFile,
-		string $packageRoot,
-		string $installedIdentifier,
+		string $metadata_file,
+		string $package_root,
+		string $installed_identifier,
 		string $channel,
-		string $deploymentPolicy
+		string $deployment_policy
 	): RepositoryReleaseNativeTarget {
-		unset( $packageType, $repository, $metadataFile, $packageRoot, $installedIdentifier, $channel, $deploymentPolicy );
+		unset( $package_type, $repository, $metadata_file, $package_root, $installed_identifier, $channel, $deployment_policy );
 
 		return new class() implements RepositoryReleaseNativeTarget {
 			public function register(): bool {
@@ -1640,9 +1640,9 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 	}
 
 	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
-		++self::$resolveCalls;
-		if ( null !== $this->resolveFailure ) {
-			throw $this->resolveFailure;
+		++self::$resolve_calls;
+		if ( null !== $this->resolve_failure ) {
+			throw $this->resolve_failure;
 		}
 
 		return new RepositoryDescriptor(
@@ -1663,31 +1663,31 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 	}
 
 	public function list_release_candidates(
-		string $packageType,
+		string $package_type,
 		RepositoryReference $repository,
 		string $channel
 	): RepositoryReleaseCandidateList {
-		++self::$listingCalls;
-		unset( $packageType, $repository, $channel );
-		if ( $this->candidateList instanceof Throwable ) {
-			throw $this->candidateList;
+		++self::$listing_calls;
+		unset( $package_type, $repository, $channel );
+		if ( $this->candidate_list instanceof Throwable ) {
+			throw $this->candidate_list;
 		}
 
-		return $this->candidateList ?? new RepositoryReleaseCandidateList( array() );
+		return $this->candidate_list ?? new RepositoryReleaseCandidateList( array() );
 	}
 
 	public function inspect_release(
-		string $packageType,
+		string $package_type,
 		RepositoryReference $repository,
-		string $providerReleaseId,
+		string $provider_release_id,
 		string $tag,
 		string $channel
 	): RepositoryReleaseInspection {
-		++self::$inspectionCalls;
-		self::$inspectionInput = array(
-			'package_type' => $packageType,
+		++self::$inspection_calls;
+		self::$inspection_input = array(
+			'package_type' => $package_type,
 			'repository'   => $repository,
-			'release_id'   => $providerReleaseId,
+			'release_id'   => $provider_release_id,
 			'tag'          => $tag,
 			'channel'      => $channel,
 		);
@@ -1695,31 +1695,31 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 			throw $this->inspection;
 		}
 
-		return $this->inspection ?? self::defaultInspection( $providerReleaseId, $tag );
+		return $this->inspection ?? self::default_inspection( $provider_release_id, $tag );
 	}
 
 	public function acquire_release(
-		string $packageType,
+		string $package_type,
 		RepositoryReference $repository,
-		string $providerReleaseId,
+		string $provider_release_id,
 		string $tag,
-		string $expectedFingerprint,
+		string $expected_fingerprint,
 		string $channel
 	): RepositoryReleaseArtifact {
-		++self::$acquisitionCalls;
-		self::$acquisitionInput = array(
-			'package_type' => $packageType,
+		++self::$acquisition_calls;
+		self::$acquisition_input = array(
+			'package_type' => $package_type,
 			'repository'   => $repository,
-			'release_id'   => $providerReleaseId,
+			'release_id'   => $provider_release_id,
 			'tag'          => $tag,
-			'fingerprint'  => $expectedFingerprint,
+			'fingerprint'  => $expected_fingerprint,
 			'channel'      => $channel,
 		);
 		if ( self::$acquisition instanceof Throwable ) {
 			throw self::$acquisition;
 		}
-		if ( self::EXPECTED_FINGERPRINT !== $expectedFingerprint ) {
-			throw RepositoryReleaseAcquisitionRejected::invalidRelease();
+		if ( self::EXPECTED_FINGERPRINT !== $expected_fingerprint ) {
+			throw RepositoryReleaseAcquisitionRejected::invalid_release();
 		}
 		if ( ! self::$acquisition instanceof RepositoryReleaseArtifact ) {
 			throw new RuntimeException( 'Release acquisition fixture is unavailable.' );
@@ -1729,20 +1729,20 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 	}
 
 	public function expected_update_uri( RepositoryReference $repository ): string {
-		++self::$metadataCalls;
+		++self::$metadata_calls;
 
 		return ( 'gh' === $this->code ? 'https://github.com/' : 'https://example.com/' ) . $repository->locator;
 	}
 
 	public function release_details_url( RepositoryReference $repository, string $tag ): string {
-		++self::$metadataCalls;
+		++self::$metadata_calls;
 
-		return $this->expectedUpdateUriWithoutTracking( $repository ) . '/releases/tag/' . rawurlencode( $tag );
+		return $this->expected_update_uri_without_tracking( $repository ) . '/releases/tag/' . rawurlencode( $tag );
 	}
 
-	public static function defaultInspection( string $providerReleaseId = '42', string $tag = 'v1.2.3' ): RepositoryReleaseInspection {
+	public static function default_inspection( string $provider_release_id = '42', string $tag = 'v1.2.3' ): RepositoryReleaseInspection {
 		return new RepositoryReleaseInspection(
-			$providerReleaseId,
+			$provider_release_id,
 			$tag,
 			'1.2.3',
 			str_repeat( 'a', 40 ),
@@ -1752,7 +1752,7 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 		);
 	}
 
-	private function expectedUpdateUriWithoutTracking( RepositoryReference $repository ): string {
+	private function expected_update_uri_without_tracking( RepositoryReference $repository ): string {
 		return ( 'gh' === $this->code ? 'https://github.com/' : 'https://example.com/' ) . $repository->locator;
 	}
 }
@@ -1781,11 +1781,11 @@ final class ProspectiveListingOnlyProvider implements RepositoryProvider, Reposi
 	}
 
 	public function list_release_candidates(
-		string $packageType,
+		string $package_type,
 		RepositoryReference $repository,
 		string $channel
 	): RepositoryReleaseCandidateList {
-		return $this->provider->list_release_candidates( $packageType, $repository, $channel );
+		return $this->provider->list_release_candidates( $package_type, $repository, $channel );
 	}
 }
 
@@ -1813,21 +1813,21 @@ final class ProspectiveProviderWithoutAcquisition implements RepositoryProvider,
 	}
 
 	public function list_release_candidates(
-		string $packageType,
+		string $package_type,
 		RepositoryReference $repository,
 		string $channel
 	): RepositoryReleaseCandidateList {
-		return $this->provider->list_release_candidates( $packageType, $repository, $channel );
+		return $this->provider->list_release_candidates( $package_type, $repository, $channel );
 	}
 
 	public function inspect_release(
-		string $packageType,
+		string $package_type,
 		RepositoryReference $repository,
-		string $providerReleaseId,
+		string $provider_release_id,
 		string $tag,
 		string $channel
 	): RepositoryReleaseInspection {
-		return $this->provider->inspect_release( $packageType, $repository, $providerReleaseId, $tag, $channel );
+		return $this->provider->inspect_release( $package_type, $repository, $provider_release_id, $tag, $channel );
 	}
 
 	public function expected_update_uri( RepositoryReference $repository ): string {
@@ -1840,7 +1840,7 @@ final class ProspectiveProviderWithoutAcquisition implements RepositoryProvider,
 }
 
 abstract class ProspectivePartialReleaseProvider implements RepositoryProvider {
-	public int $resolveCalls = 0;
+	public int $resolve_calls = 0;
 
 	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata(
@@ -1862,7 +1862,7 @@ abstract class ProspectivePartialReleaseProvider implements RepositoryProvider {
 	}
 
 	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
-		++$this->resolveCalls;
+		++$this->resolve_calls;
 
 		return new RepositoryDescriptor(
 			ProviderCode::parse( 'gh' ),
@@ -1906,20 +1906,20 @@ final class ProspectiveAcquisitionOnlyProvider implements RepositoryProvider, Re
 	}
 
 	public function acquire_release(
-		string $packageType,
+		string $package_type,
 		RepositoryReference $repository,
-		string $providerReleaseId,
+		string $provider_release_id,
 		string $tag,
-		string $expectedFingerprint,
+		string $expected_fingerprint,
 		string $channel
 	): RepositoryReleaseArtifact {
-		return $this->provider->acquire_release( $packageType, $repository, $providerReleaseId, $tag, $expectedFingerprint, $channel );
+		return $this->provider->acquire_release( $package_type, $repository, $provider_release_id, $tag, $expected_fingerprint, $channel );
 	}
 }
 
 final class ProspectiveRepositoryProviderWithoutListing implements RepositoryProvider {
 
-	public int $resolveCalls = 0;
+	public int $resolve_calls = 0;
 
 	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata(
@@ -1941,7 +1941,7 @@ final class ProspectiveRepositoryProviderWithoutListing implements RepositoryPro
 	}
 
 	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
-		++$this->resolveCalls;
+		++$this->resolve_calls;
 
 		return new RepositoryDescriptor(
 			ProviderCode::parse( 'gh' ),
@@ -1962,28 +1962,28 @@ final class ProspectiveRepositoryProviderWithoutListing implements RepositoryPro
 }
 
 final class ProspectiveRepositoryReleaseArtifact implements RepositoryReleaseArtifact {
-	public int $handoffCalls          = 0;
-	public int $discardCalls          = 0;
-	public bool $discardResult        = true;
-	public ?Throwable $handoffFailure = null;
-	private bool $handedOff           = false;
+	public int $handoff_calls          = 0;
+	public int $discard_calls          = 0;
+	public bool $discard_result        = true;
+	public ?Throwable $handoff_failure = null;
+	private bool $handed_off           = false;
 	private bool $discarded           = false;
 
 	public function __construct(
 		private string $path,
-		private string $releaseVersion,
+		private string $release_version,
 		private string $commit,
 		private string $root,
-		private string $metadataFile
+		private string $metadata_file
 	) {
 	}
 
 	public function discard(): bool {
-		++$this->discardCalls;
-		if ( $this->handedOff || $this->discarded ) {
+		++$this->discard_calls;
+		if ( $this->handed_off || $this->discarded ) {
 			return true;
 		}
-		if ( ! $this->discardResult ) {
+		if ( ! $this->discard_result ) {
 			return false;
 		}
 		if ( file_exists( $this->path ) ) {
@@ -1997,25 +1997,25 @@ final class ProspectiveRepositoryReleaseArtifact implements RepositoryReleaseArt
 	}
 
 	public function handoff_to_core(): PreparedArtifact {
-		if ( $this->handedOff || $this->discarded ) {
+		if ( $this->handed_off || $this->discarded ) {
 			throw new RuntimeException( 'The release artifact is unavailable.' );
 		}
-		++$this->handoffCalls;
-		if ( null !== $this->handoffFailure ) {
-			throw $this->handoffFailure;
+		++$this->handoff_calls;
+		if ( null !== $this->handoff_failure ) {
+			throw $this->handoff_failure;
 		}
-		$identity = PreparedArtifact::regularFileIdentity( $this->path );
+		$identity = PreparedArtifact::regular_file_identity( $this->path );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- Test-only immutable artifact evidence.
 		$digest = hash_file( 'sha256', $this->path );
 		if ( null === $identity || ! is_string( $digest ) ) {
 			throw new RuntimeException( 'The release artifact could not be prepared.' );
 		}
-		$this->handedOff = true;
+		$this->handed_off = true;
 
 		return new PreparedArtifact(
 			$this->path,
 			$this->commit,
-			$this->releaseVersion,
+			$this->release_version,
 			$digest,
 			$identity['device'],
 			$identity['inode'],
@@ -2026,10 +2026,10 @@ final class ProspectiveRepositoryReleaseArtifact implements RepositoryReleaseArt
 	}
 
 	public function version(): string {
-		return $this->releaseVersion;
+		return $this->release_version;
 	}
 
-	public function providerCommitId(): string {
+	public function provider_commit_id(): string {
 		return $this->commit;
 	}
 
@@ -2038,12 +2038,12 @@ final class ProspectiveRepositoryReleaseArtifact implements RepositoryReleaseArt
 	}
 
 	public function main_file(): string {
-		return $this->metadataFile;
+		return $this->metadata_file;
 	}
 
-	public function identifier( string $packageType ): string {
-		return match ( $packageType ) {
-			'plugin' => $this->root . '/' . $this->metadataFile,
+	public function identifier( string $package_type ): string {
+		return match ( $package_type ) {
+			'plugin' => $this->root . '/' . $this->metadata_file,
 			'theme' => $this->root,
 			default => throw new RuntimeException( 'The package type is invalid.' ),
 		};
@@ -2052,33 +2052,33 @@ final class ProspectiveRepositoryReleaseArtifact implements RepositoryReleaseArt
 
 final class ProspectiveExecutor extends CorePackageExecutor {
 
-	public int $installCalls           = 0;
-	public string $packageSlug         = '';
+	public int $install_calls           = 0;
+	public string $package_slug         = '';
 	public ?string $subdirectory       = null;
 	public ?PreparedArtifact $artifact = null;
 	public CorePackageExecutionResult $result;
-	public ?\Closure $onInstall                  = null;
+	public ?\Closure $on_install                  = null;
 	public ?ProspectivePluginRepository $plugins = null;
-	public bool $markInstalled                   = true;
+	public bool $mark_installed                   = true;
 
 	public function __construct() {
 		$this->result = CorePackageExecutionResult::succeeded();
 	}
 
-	public function installPlugin(
+	public function install_plugin(
 		PreparedArtifact $artifact,
-		string $packageSlug,
+		string $package_slug,
 		?string $subdirectory
 	): CorePackageExecutionResult {
-		++$this->installCalls;
+		++$this->install_calls;
 		$this->artifact     = $artifact;
-		$this->packageSlug  = $packageSlug;
+		$this->package_slug  = $package_slug;
 		$this->subdirectory = $subdirectory;
-		if ( $this->markInstalled && null !== $this->plugins ) {
+		if ( $this->mark_installed && null !== $this->plugins ) {
 			$this->plugins->installed = true;
 		}
-		if ( null !== $this->onInstall ) {
-			( $this->onInstall )();
+		if ( null !== $this->on_install ) {
+			( $this->on_install )();
 		}
 
 		return $this->result;
@@ -2087,18 +2087,18 @@ final class ProspectiveExecutor extends CorePackageExecutor {
 
 final class ProspectivePluginRepository extends PluginRepository {
 
-	public int $adoptionCalls                                 = 0;
-	public int $adoptionUserId                                = 0;
-	public ?Plugin $adoptedPackage                            = null;
-	public ?ManagedReleaseConfiguration $adoptedConfiguration = null;
-	public PackageMutationResult $adoptionResult;
+	public int $adoption_calls                                 = 0;
+	public int $adoption_user_id                                = 0;
+	public ?Plugin $adopted_package                            = null;
+	public ?ManagedReleaseConfiguration $adopted_configuration = null;
+	public PackageMutationResult $adoption_result;
 	public bool $installed                 = false;
 	public bool $managed                   = false;
-	public bool $installedPackageAvailable = true;
-	public string $installedVersion        = '1.2.3';
+	public bool $installed_package_available = true;
+	public string $installed_version        = '1.2.3';
 
 	public function __construct() {
-		$this->adoptionResult = PackageMutationResult::changed( PackageStorageOperation::INSERT );
+		$this->adoption_result = PackageMutationResult::changed( PackageStorageOperation::INSERT );
 	}
 
 	public function is_installed( string $identifier ): bool {
@@ -2114,24 +2114,24 @@ final class ProspectivePluginRepository extends PluginRepository {
 	}
 
 	public function installed_plugin_from_file( string $file ): Plugin {
-		if ( ! $this->installedPackageAvailable ) {
+		if ( ! $this->installed_package_available ) {
 			throw new RuntimeException( 'The installed plugin is unavailable.' );
 		}
 
-		return new ProspectiveInstalledPlugin( $file, $this->installedVersion );
+		return new ProspectiveInstalledPlugin( $file, $this->installed_version );
 	}
 
 	public function adopt_release(
 		Plugin $plugin,
 		ManagedReleaseConfiguration $configuration,
-		int $userId
+		int $user_id
 	): PackageMutationResult {
-		++$this->adoptionCalls;
-		$this->adoptedPackage       = $plugin;
-		$this->adoptedConfiguration = $configuration;
-		$this->adoptionUserId       = $userId;
+		++$this->adoption_calls;
+		$this->adopted_package       = $plugin;
+		$this->adopted_configuration = $configuration;
+		$this->adoption_user_id       = $user_id;
 
-		return $this->adoptionResult;
+		return $this->adoption_result;
 	}
 }
 
@@ -2143,20 +2143,20 @@ final class ProspectiveThemeRepository extends ThemeRepository {
 
 final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 
-	public int $acquireCalls    = 0;
-	public int $releaseCalls    = 0;
-	public bool $releaseResult  = true;
-	public bool $throwOnAcquire = false;
-	public bool $throwOnRelease = false;
-	public ?\Closure $onAcquire = null;
+	public int $acquire_calls    = 0;
+	public int $release_calls    = 0;
+	public bool $release_result  = true;
+	public bool $throw_on_acquire = false;
+	public bool $throw_on_release = false;
+	public ?\Closure $on_acquire = null;
 
 	public function acquire(): string {
-		++$this->acquireCalls;
-		if ( $this->throwOnAcquire ) {
+		++$this->acquire_calls;
+		if ( $this->throw_on_acquire ) {
 			throw new RuntimeException( 'The test lock could not be acquired.' );
 		}
-		if ( null !== $this->onAcquire ) {
-			( $this->onAcquire )();
+		if ( null !== $this->on_acquire ) {
+			( $this->on_acquire )();
 		}
 
 		return 'test-lock-token';
@@ -2164,26 +2164,26 @@ final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 
 	public function release( string $token ): bool {
 		unset( $token );
-		++$this->releaseCalls;
-		if ( $this->throwOnRelease ) {
+		++$this->release_calls;
+		if ( $this->throw_on_release ) {
 			throw new RuntimeException( 'The test lock could not be released.' );
 		}
 
-		return $this->releaseResult;
+		return $this->release_result;
 	}
 }
 
 final class SequencedSourceGuardDatabase {
 	/** @param list<list<object>> $rowsByRead */
-	public function __construct( public array $rowsByRead ) {
+	public function __construct( public array $rows_by_read ) {
 	}
 
 	public int $reads            = 0;
-	public string $preparedQuery = '';
+	public string $prepared_query = '';
 
 	public function prepare( string $query, mixed ...$arguments ): string {
 		unset( $arguments );
-		$this->preparedQuery = $query;
+		$this->prepared_query = $query;
 
 		return $query;
 	}
@@ -2191,7 +2191,7 @@ final class SequencedSourceGuardDatabase {
 	/** @return list<object> */
 	public function get_results( string $query ): array {
 		unset( $query );
-		$read = $this->rowsByRead[ $this->reads ] ?? array();
+		$read = $this->rows_by_read[ $this->reads ] ?? array();
 		++$this->reads;
 
 		return $read;

@@ -12,8 +12,8 @@ use RAN\Admin\ReleaseManagement\ReleaseWorkflowDisplay;
 use ReflectionMethod;
 
 final class ReleaseWorkflowDisplayTest extends TestCase {
-	public function testRepositorySectionEscapesPresenterFields(): void {
-		$html = ( new ReleaseWorkflowDisplay() )->repositorySection(
+	public function test_repository_section_escapes_presenter_fields(): void {
+		$html = ( new ReleaseWorkflowDisplay() )->repository_section(
 			array(
 				'settings_url'      => 'https://example.test/settings?a=1&b=2',
 				'settings_label'    => '<script>settings</script>',
@@ -36,7 +36,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringNotContainsString( '<script>', $html );
 	}
 
-	public function testWorkflowOwnersKeepTheSeparatedSourceBoundaries(): void {
+	public function test_workflow_owners_keep_the_separated_source_boundaries(): void {
 		$root = dirname( __DIR__, 3 ) . '/RAN/Admin/ReleaseManagement/';
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static local source boundary under test.
 		$controls = file_get_contents( $root . 'ReleaseWorkflowControls.php' );
@@ -51,7 +51,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertDoesNotMatchRegularExpression( '/\$_(?:GET|POST|SERVER)|\becho\b|<section|<form/', $presenter );
 		self::assertDoesNotMatchRegularExpression( '/\$_(?:GET|POST|SERVER)|ProviderRegistry|PluginRepository|ThemeRepository|ReleaseTrackingFacade/', $display );
 		self::assertSame(
-			array( '__construct', 'register', 'keepReleaseSettingsDiscoverable', 'enrichRepositoryRows', 'renderPackageReleaseAutomationLink', 'renderRepositoryReleaseSections', 'handleWorkflow' ),
+			array( '__construct', 'register', 'keep_release_settings_discoverable', 'enrich_repository_rows', 'render_package_release_automation_link', 'render_repository_release_sections', 'handle_workflow' ),
 			array_values(
 				array_map(
 					static fn ( \ReflectionMethod $method ): string => $method->getName(),
@@ -64,7 +64,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		);
 	}
 
-	public function testSourceReadyRefusalsExplainWhatMustBeReviewedBeforeSetup(): void {
+	public function test_source_ready_refusals_explain_what_must_be_reviewed_before_setup(): void {
 		$display = new ReleaseWorkflowDisplay();
 		foreach ( array(
 			'workflow_release_path_conflict'    => 'One or more files Booster would manage already exist. Review and reconcile them before setting up a release workflow.',
@@ -87,7 +87,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		}
 	}
 
-	public function testExactCanonicalReleaseSetupNeedsNoSetupPullRequest(): void {
+	public function test_exact_canonical_release_setup_needs_no_setup_pull_request(): void {
 		$html = ( new ReleaseWorkflowDisplay() )->workflow(
 			array(
 				'result_code'       => 'workflow_release_automation_present',
@@ -101,7 +101,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringContainsString( '<button type="submit" class="button" disabled aria-disabled="true">Assess release setup</button>', $html );
 	}
 
-	public function testExistingReleaseAutomationConflictIsAnInformationalObservation(): void {
+	public function test_existing_release_automation_conflict_is_an_informational_observation(): void {
 		$html = ( new ReleaseWorkflowDisplay() )->workflow(
 			array(
 				'result_code'       => 'workflow_release_automation_conflict',
@@ -118,7 +118,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringNotContainsString( 'Competing release automation', $html );
 	}
 
-	public function testRateLimitIsAnAdvisoryRatherThanACredentialFailure(): void {
+	public function test_rate_limit_is_an_advisory_rather_than_a_credential_failure(): void {
 		$html = ( new ReleaseWorkflowDisplay() )->workflow(
 			array(
 				'result_code'       => 'workflow_rate_limited',
@@ -132,7 +132,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringNotContainsString( 'selected saved credential', $html );
 	}
 
-	public function testRequestValidationFailureDetailsExplainTheSafeAction(): void {
+	public function test_request_validation_failure_details_explain_the_safe_action(): void {
 		$display = new ReleaseWorkflowDisplay();
 		foreach ( array(
 			'malformed_request'       => 'The request was incomplete or malformed. Reload the release workflow page and try again.',
@@ -156,7 +156,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		}
 	}
 
-	public function testRepositorySourceDiagnosticsRemainActionableInWorkflowFailureDetails(): void {
+	public function test_repository_source_diagnostics_remain_actionable_in_workflow_failure_details(): void {
 		$display = new ReleaseWorkflowDisplay();
 		foreach ( array(
 			'repository_source_conflict'      => 'Another managed package now uses this repository. Review the repository package list, then change or remove the conflicting relationship before retrying.',
@@ -178,7 +178,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		}
 	}
 
-	public function testInvalidPackageCompatibilityDiagnosticExplainsHowToCorrectTheRelease(): void {
+	public function test_invalid_package_compatibility_diagnostic_explains_how_to_correct_the_release(): void {
 		$html = ( new ReleaseWorkflowDisplay() )->workflow(
 			array(
 				'result_code'       => 'workflow_preflight_unavailable',
@@ -192,7 +192,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringContainsString( 'Diagnostic code: <code>package_compatibility_invalid</code>', $html );
 	}
 
-	public function testImmediateReleasePreflightFailureIsAnErrorNoticeWithAnInlineDiagnosticDisclosure(): void {
+	public function test_immediate_release_preflight_failure_is_an_error_notice_with_an_inline_diagnostic_disclosure(): void {
 		$display = new ReleaseWorkflowDisplay();
 		$html    = $display->workflow(
 			array(
@@ -214,7 +214,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringContainsString( 'Failure reference: <code>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</code>', $html );
 		self::assertStringNotContainsString( 'exception message', $html );
 
-		$withoutReference = $display->workflow(
+		$without_reference = $display->workflow(
 			array(
 				'result_code'           => 'workflow_preflight_unavailable',
 				'result_successful'     => false,
@@ -224,11 +224,11 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 				'correlation_reference' => 'cccccccccccccccccccccccccccccccc',
 			)
 		);
-		self::assertStringContainsString( 'Diagnostic code: <code>provider_unavailable</code>', $withoutReference );
-		self::assertStringNotContainsString( 'cccccccccccccccccccccccccccccccc', $withoutReference );
+		self::assertStringContainsString( 'Diagnostic code: <code>provider_unavailable</code>', $without_reference );
+		self::assertStringNotContainsString( 'cccccccccccccccccccccccccccccccc', $without_reference );
 	}
 
-	public function testCompatibilityMetadataFailureRetainsItsConcreteDiagnosticCode(): void {
+	public function test_compatibility_metadata_failure_retains_its_concrete_diagnostic_code(): void {
 		$html = ( new ReleaseWorkflowDisplay() )->workflow(
 			array(
 				'result_code'       => 'workflow_preflight_unavailable',
@@ -242,7 +242,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringContainsString( 'Diagnostic code: <code>package_compatibility_invalid</code>', $html );
 	}
 
-	public function testImmediatePreflightContractFailureExplainsThatTheRequestStateMustBeReloaded(): void {
+	public function test_immediate_preflight_contract_failure_explains_that_the_request_state_must_be_reloaded(): void {
 		$html = ( new ReleaseWorkflowDisplay() )->workflow(
 			array(
 				'result_code'       => 'workflow_preflight_unavailable',
@@ -267,9 +267,9 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringNotContainsString( 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', $html );
 	}
 
-	public function testResultNoticeUsesProviderMessagesOnlyWhenNonEmptyAndFallsBackOtherwise(): void {
+	public function test_result_notice_uses_provider_messages_only_when_non_empty_and_falls_back_otherwise(): void {
 		$display = new ReleaseWorkflowDisplay();
-		$custom  = $display->resultNotice(
+		$custom  = $display->result_notice(
 			array(
 				'result_code'        => 'workflow_preflight_unavailable',
 				'result_successful'  => false,
@@ -285,7 +285,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringNotContainsString( 'Booster could not validate the package release before continuing. No draft was opened.', $custom );
 		self::assertStringNotContainsString( 'Booster could not read release data using the package&#039;s saved repository access. The credential selected for workflow setup is used only after this release check.', $custom );
 
-		$fallback = $display->resultNotice(
+		$fallback = $display->result_notice(
 			array(
 				'result_code'        => 'workflow_preflight_unavailable',
 				'result_successful'  => false,
@@ -302,7 +302,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringNotContainsString( 'Provider-specific remediation text.', $fallback );
 	}
 
-	public function testDurablePublishedReleaseDocumentationLinksRenderInEveryWorkflowState(): void {
+	public function test_durable_published_release_documentation_links_render_in_every_workflow_state(): void {
 		$display = new ReleaseWorkflowDisplay();
 		foreach ( array(
 			array( 'forms' => array( 'inspect' => $this->form( 'inspect' ) ) ),
@@ -332,7 +332,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		}
 	}
 
-	public function testPublishedReleaseDocumentationUsesNetworkAdminOnMultisite(): void {
+	public function test_published_release_documentation_uses_network_admin_on_multisite(): void {
 		$GLOBALS['ran_booster_release_management_test_multisite'] = true;
 		try {
 			$html = ( new ReleaseWorkflowDisplay() )->workflow( array() );
@@ -346,7 +346,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		);
 	}
 
-	public function testPreviewAndFormValuesAreEscapedWithoutLeakingRawMarkup(): void {
+	public function test_preview_and_form_values_are_escaped_without_leaking_raw_markup(): void {
 		$html = ( new ReleaseWorkflowDisplay() )->workflow(
 			array(
 				'result_code'       => 'workflow_inspected',
@@ -387,7 +387,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringContainsString( 'Manage credentials', $html );
 	}
 
-	public function testRecordedSetupRendersOutcomeWithoutTemplateUpdateControls(): void {
+	public function test_recorded_setup_renders_outcome_without_template_update_controls(): void {
 		$html = ( new ReleaseWorkflowDisplay() )->workflow(
 			array(
 				'result_code'       => '',
@@ -416,7 +416,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringNotContainsString( '<details', $html );
 	}
 
-	public function testRecordedWorkflowKeepsOutcomeControlWhenItsPullRequestUrlIsUnavailable(): void {
+	public function test_recorded_workflow_keeps_outcome_control_when_its_pull_request_url_is_unavailable(): void {
 		$html = ( new ReleaseWorkflowDisplay() )->workflow(
 			array(
 				'record' => array( 'pull_request_url' => '' ),
@@ -433,7 +433,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringNotContainsString( 'Review recorded setup pull request', $html );
 	}
 
-	public function testUnavailableRetainsTheAssessmentInterfaceButDisablesItsControls(): void {
+	public function test_unavailable_retains_the_assessment_interface_but_disables_its_controls(): void {
 		$reason = 'A temporary upstream limitation prevents direct assessment right now.';
 		$html   = ( new ReleaseWorkflowDisplay() )->workflow(
 			array(
@@ -459,7 +459,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringNotContainsString( 'type="password"', $html );
 	}
 
-	public function testStableWorkflowShellKeepsNoticeAssessmentAndDocsZonesOrderedAcrossStates(): void {
+	public function test_stable_workflow_shell_keeps_notice_assessment_and_docs_zones_ordered_across_states(): void {
 		$inspect = $this->form( 'inspect' );
 		$states  = array(
 			'needs-attention'     => array(
@@ -517,7 +517,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		}
 	}
 
-	public function testVerifiedReleaseDoesNotClaimWorkflowOperation(): void {
+	public function test_verified_release_does_not_claim_workflow_operation(): void {
 		$html = ( new ReleaseWorkflowDisplay() )->workflow(
 			array(
 				'result_code'        => 'workflow_release_ready',
@@ -544,7 +544,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringNotContainsString( 'Set up release automation', $html );
 	}
 
-	public function testLegacyAndUnknownEvidenceRemainDisplayOnlyAndEscaped(): void {
+	public function test_legacy_and_unknown_evidence_remain_display_only_and_escaped(): void {
 		$display = new ReleaseWorkflowDisplay();
 		$legacy  = $display->workflow(
 			array(
@@ -577,7 +577,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringNotContainsString( '<form', $unknown );
 	}
 
-	public function testAllThreeFormKindsUseNewActionsAndExpectedCredentialRequirements(): void {
+	public function test_all_three_form_kinds_use_new_actions_and_expected_credential_requirements(): void {
 		$display = new ReleaseWorkflowDisplay();
 		$method  = new ReflectionMethod( $display, 'form' );
 		foreach ( array( 'inspect', 'setup', 'outcome' ) as $operation ) {
@@ -598,7 +598,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		}
 	}
 
-	public function testCredentiallessWriteFormsRemainInTheStableShellButAreDisabled(): void {
+	public function test_credentialless_write_forms_remain_in_the_stable_shell_but_are_disabled(): void {
 		$display = new ReleaseWorkflowDisplay();
 
 		foreach ( array(
@@ -630,7 +630,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		}
 	}
 
-	public function testAdapterSourcesContainNoRetiredRoutesProductTextOrTextDomain(): void {
+	public function test_adapter_sources_contain_no_retired_routes_product_text_or_text_domain(): void {
 		$root = dirname( __DIR__, 3 ) . '/RAN/Admin/ReleaseManagement/';
 		foreach ( array( 'ReleaseWorkflowControls.php', 'ReleaseWorkflowDisplay.php' ) as $file ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static local source boundary under test.

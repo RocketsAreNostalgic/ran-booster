@@ -49,11 +49,11 @@ final class WebhookV1ExecutionBoundaryTest extends TestCase {
 			static fn(): int => strtotime( '2026-08-03T12:00:00Z' )
 		);
 		$this->capture->start();
-		BoosterLogger::configureCapture( $this->capture );
+		BoosterLogger::configure_capture( $this->capture );
 	}
 
 	protected function tearDown(): void {
-		BoosterLogger::configureCapture( null );
+		BoosterLogger::configure_capture( null );
 		unset( $GLOBALS['ran_booster_webhook_v1_operations'] );
 
 		foreach (
@@ -71,7 +71,7 @@ final class WebhookV1ExecutionBoundaryTest extends TestCase {
 		}
 	}
 
-	public function testRouteRegistrationResolvesTheRealGraphWithoutCrossingOperationBoundaries(): void {
+	public function test_route_registration_resolves_the_real_graph_without_crossing_operation_boundaries(): void {
 		$runtime          = $this->runtime();
 		$this->operations = array();
 
@@ -83,18 +83,18 @@ final class WebhookV1ExecutionBoundaryTest extends TestCase {
 		self::assertSame( '/webhooks/(?P<provider>[a-z0-9-]+)', $route['route'] );
 		self::assertSame( 'POST', $route['arguments']['methods'] );
 		self::assertInstanceOf( \RAN\Webhook\WebhookController::class, $route['arguments']['callback'][0] );
-		$this->assertNoOperations();
+		$this->assert_no_operations();
 	}
 
-	public function testUnrelatedRestDispatchNeverEntersTheWebhookProcessor(): void {
+	public function test_unrelated_rest_dispatch_never_enters_the_webhook_processor(): void {
 		$this->runtime()->register_webhook_routes();
-		$unrelatedCalls = 0;
+		$unrelated_calls = 0;
 		register_rest_route(
 			'fixture/v1',
 			'/health',
 			array(
-				'callback' => static function () use ( &$unrelatedCalls ): void {
-					++$unrelatedCalls;
+				'callback' => static function () use ( &$unrelated_calls ): void {
+					++$unrelated_calls;
 				},
 			)
 		);
@@ -103,8 +103,8 @@ final class WebhookV1ExecutionBoundaryTest extends TestCase {
 		$dispatched = ran_booster_test_dispatch_rest_route( '/fixture/v1/health', new \stdClass() );
 
 		self::assertTrue( $dispatched );
-		self::assertSame( 1, $unrelatedCalls );
-		$this->assertNoOperations();
+		self::assertSame( 1, $unrelated_calls );
+		$this->assert_no_operations();
 	}
 
 	private function runtime(): Booster {
@@ -122,7 +122,7 @@ final class WebhookV1ExecutionBoundaryTest extends TestCase {
 		return new Booster( $container );
 	}
 
-	private function assertNoOperations(): void {
+	private function assert_no_operations(): void {
 		self::assertSame( array(), $this->operations );
 		self::assertSame( array(), $this->capture->snapshot()['entries'] );
 	}
@@ -133,11 +133,11 @@ final class WebhookV1BoundaryDatabase extends Database {
 	public function __construct( private array &$operations ) {
 	}
 
-	public function maybeUpgrade(): void {
+	public function maybe_upgrade(): void {
 		$this->operations[] = 'database';
 	}
 
-	public function requireReady(): void {
+	public function require_ready(): void {
 		$this->operations[] = 'database';
 	}
 }
@@ -148,7 +148,7 @@ final class WebhookV1BoundarySecretsFile extends SecretsFile {
 		parent::__construct( '/unused/webhook-v1-boundary-secrets.php', array() );
 	}
 
-	public function webhookMaterials( ProviderCode|string $provider ): array {
+	public function webhook_materials( ProviderCode|string $provider ): array {
 		unset( $provider );
 		$this->operations[] = 'sidecar';
 
@@ -197,8 +197,8 @@ final class WebhookV1BoundaryCoordinator extends DeploymentCoordinator {
 	public function __construct( private array &$operations ) {
 	}
 
-	public function acceptWebhook( array $events, string $authenticatedBodyDigest ): array {
-		unset( $events, $authenticatedBodyDigest );
+	public function accept_webhook( array $events, string $authenticated_body_digest ): array {
+		unset( $events, $authenticated_body_digest );
 		$this->operations[] = 'storage';
 
 		return array(

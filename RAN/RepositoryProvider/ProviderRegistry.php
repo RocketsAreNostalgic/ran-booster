@@ -33,29 +33,19 @@ final class ProviderRegistry {
 	 */
 	public function __construct(
 		iterable $providers = array(),
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?ProviderSecretPolicyCatalog $secretPolicies = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?callable $credentialStoreFactory = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?callable $deliveryEvidenceReaderFactory = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?ProviderRegistrationContext $registrationContext = null
+		?ProviderSecretPolicyCatalog $secret_policies = null,
+		?callable $credential_store_factory = null,
+		?callable $delivery_evidence_reader_factory = null,
+		?ProviderRegistrationContext $registration_context = null
 	) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->secret_policies = $secretPolicies ?? new ProviderSecretPolicyCatalog();
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->credential_store_factory = null === $credentialStoreFactory
+		$this->secret_policies                  = $secret_policies ?? new ProviderSecretPolicyCatalog();
+		$this->credential_store_factory         = null === $credential_store_factory
 			? null
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			: \Closure::fromCallable( $credentialStoreFactory );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->delivery_evidence_reader_factory = null === $deliveryEvidenceReaderFactory
+			: \Closure::fromCallable( $credential_store_factory );
+		$this->delivery_evidence_reader_factory = null === $delivery_evidence_reader_factory
 			? null
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			: \Closure::fromCallable( $deliveryEvidenceReaderFactory );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->registration_context = $registrationContext ?? new ProviderRegistrationContext(
+			: \Closure::fromCallable( $delivery_evidence_reader_factory );
+		$this->registration_context             = $registration_context ?? new ProviderRegistrationContext(
 			static fn (): int => PackageArtifactLimit::resolve()
 		);
 
@@ -78,7 +68,7 @@ final class ProviderRegistry {
 	 * @param callable $factory Provider factory.
 	 */
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function registerWithCredentialStore( ProviderCode|string $code, callable $factory ): void {
+	public function register_with_credential_store( ProviderCode|string $code, callable $factory ): void {
 		$this->begin_registration();
 
 		try {
@@ -88,48 +78,48 @@ final class ProviderRegistry {
 			$this->assert_provider_factory_signature( $factory );
 
 			if ( null === $this->credential_store_factory ) {
-				throw InvalidProviderPolicy::credentialStoreUnavailable();
+				throw InvalidProviderPolicy::credential_store_unavailable();
 			}
 			if ( null === $this->delivery_evidence_reader_factory ) {
-				throw InvalidProviderPolicy::deliveryEvidenceReaderUnavailable();
+				throw InvalidProviderPolicy::delivery_evidence_reader_unavailable();
 			}
 
 			try {
 				$credentials = ( $this->credential_store_factory )( $code );
 			} catch ( \Throwable $exception ) {
-				BoosterLogger::logException( 'provider registration credential store factory failed', $exception, array( 'step' => 'provider_credential_store_factory' ) );
-				throw InvalidProviderPolicy::invalidCredentialStoreFactory();
+				BoosterLogger::log_exception( 'provider registration credential store factory failed', $exception, array( 'step' => 'provider_credential_store_factory' ) );
+				throw InvalidProviderPolicy::invalid_credential_store_factory();
 			}
 
 			if ( ! $credentials instanceof ProviderCredentialStore ) {
-				throw InvalidProviderPolicy::invalidCredentialStoreFactory();
+				throw InvalidProviderPolicy::invalid_credential_store_factory();
 			}
 			try {
 				$delivery_evidence = ( $this->delivery_evidence_reader_factory )( $code );
 			} catch ( \Throwable $exception ) {
-				BoosterLogger::logException( 'provider registration delivery evidence factory failed', $exception, array( 'step' => 'provider_delivery_evidence_factory' ) );
-				throw InvalidProviderPolicy::invalidDeliveryEvidenceReaderFactory();
+				BoosterLogger::log_exception( 'provider registration delivery evidence factory failed', $exception, array( 'step' => 'provider_delivery_evidence_factory' ) );
+				throw InvalidProviderPolicy::invalid_delivery_evidence_reader_factory();
 			}
 
 			if ( ! $delivery_evidence instanceof AuthenticatedWebhookDeliveryEvidenceReader ) {
-				throw InvalidProviderPolicy::invalidDeliveryEvidenceReaderFactory();
+				throw InvalidProviderPolicy::invalid_delivery_evidence_reader_factory();
 			}
 
 			try {
 				$provider = $factory( $credentials, $delivery_evidence, $this->registration_context );
 			} catch ( \Throwable $exception ) {
-				BoosterLogger::logException( 'provider registration provider factory failed', $exception, array( 'step' => 'provider_factory' ) );
-				throw InvalidProviderPolicy::invalidProviderFactory();
+				BoosterLogger::log_exception( 'provider registration provider factory failed', $exception, array( 'step' => 'provider_factory' ) );
+				throw InvalidProviderPolicy::invalid_provider_factory();
 			}
 
 			if ( ! $provider instanceof RepositoryProvider ) {
-				throw InvalidProviderPolicy::invalidProviderFactory();
+				throw InvalidProviderPolicy::invalid_provider_factory();
 			}
 
 			$metadata = $this->read_metadata( $provider );
 
 			if ( $code->value !== $metadata->code->value ) {
-				throw InvalidProviderPolicy::mismatchedFactoryProvider();
+				throw InvalidProviderPolicy::mismatched_factory_provider();
 			}
 
 			$this->register_provider( $provider, $metadata );
@@ -156,30 +146,26 @@ final class ProviderRegistry {
 		try {
 			$provider->get_provider_diagnostics();
 		} catch ( \Throwable $exception ) {
-			BoosterLogger::logException( 'provider registration diagnostics unavailable', $exception, array( 'step' => 'provider_diagnostics' ) );
+			BoosterLogger::log_exception( 'provider registration diagnostics unavailable', $exception, array( 'step' => 'provider_diagnostics' ) );
 			throw new LogicException( 'Repository provider diagnostics could not be supplied.' );
 		}
 
 		$admin             = $metadata->admin;
 		$credential_policy = null;
 		$webhook_policy    = null;
-
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
-		if ( null !== $admin && array() !== $admin->credentialKinds && ! $provider instanceof ProviderCredentialPolicySupplier ) {
-			throw InvalidProviderPolicy::missingCredentialPolicy();
+		if ( null !== $admin && array() !== $admin->credential_kinds && ! $provider instanceof ProviderCredentialPolicySupplier ) {
+			throw InvalidProviderPolicy::missing_credential_policy();
 		}
-
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
-		if ( null !== $admin && array() !== $admin->webhookScopes && ! $provider instanceof WebhookNormalizer ) {
-			throw InvalidProviderPolicy::missingWebhookPolicy();
+		if ( null !== $admin && array() !== $admin->webhook_scopes && ! $provider instanceof WebhookNormalizer ) {
+			throw InvalidProviderPolicy::missing_webhook_policy();
 		}
 
 		if ( $provider instanceof ProviderCredentialPolicySupplier ) {
 			try {
 				$credential_policy = $provider->get_credential_policy();
 			} catch ( \Throwable $exception ) {
-				BoosterLogger::logException( 'provider registration credential policy unavailable', $exception, array( 'step' => 'provider_credential_policy' ) );
-				throw InvalidProviderPolicy::unavailableCredentialPolicy();
+				BoosterLogger::log_exception( 'provider registration credential policy unavailable', $exception, array( 'step' => 'provider_credential_policy' ) );
+				throw InvalidProviderPolicy::unavailable_credential_policy();
 			}
 		}
 
@@ -187,8 +173,8 @@ final class ProviderRegistry {
 			try {
 				$webhook_policy = $provider->get_webhook_policy();
 			} catch ( \Throwable $exception ) {
-				BoosterLogger::logException( 'provider registration webhook policy unavailable', $exception, array( 'step' => 'provider_webhook_policy' ) );
-				throw InvalidProviderPolicy::unavailableWebhookPolicy();
+				BoosterLogger::log_exception( 'provider registration webhook policy unavailable', $exception, array( 'step' => 'provider_webhook_policy' ) );
+				throw InvalidProviderPolicy::unavailable_webhook_policy();
 			}
 		}
 
@@ -206,7 +192,7 @@ final class ProviderRegistry {
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function isSealed(): bool {
+	public function is_sealed(): bool {
 		return $this->sealed;
 	}
 
@@ -214,7 +200,7 @@ final class ProviderRegistry {
 		$code = $this->normalize_code( $code );
 
 		if ( ! isset( $this->providers[ $code->value ] ) ) {
-			throw UnknownProvider::forCode();
+			throw UnknownProvider::for_code();
 		}
 
 		return $this->providers[ $code->value ];
@@ -241,10 +227,10 @@ final class ProviderRegistry {
 	 * @return list<ProviderMetadata>
 	 */
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function administrationMetadata(): array {
+	public function administration_metadata(): array {
 		return array_values(
 			array_filter(
-				$this->orderedMetadata(),
+				$this->ordered_metadata(),
 				static fn ( ProviderMetadata $metadata ): bool => null !== $metadata->admin
 			)
 		);
@@ -252,8 +238,8 @@ final class ProviderRegistry {
 
 	/** @return list<ProviderMetadata> */
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function orderedMetadata(): array {
-		return ( new ProviderNavigationOrderer() )->orderMetadata( $this->provider_metadata );
+	public function ordered_metadata(): array {
+		return ( new ProviderNavigationOrderer() )->order_metadata( $this->provider_metadata );
 	}
 
 	/**
@@ -265,18 +251,18 @@ final class ProviderRegistry {
 	 * @return TCapability
 	 */
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
-	public function requireCapability( ProviderCode|string $code, string $capability ): object {
+	public function require_capability( ProviderCode|string $code, string $capability ): object {
 		if ( RepositoryProvider::class === $capability
 			|| ProviderCapabilityContract::class === $capability
 			|| ! interface_exists( $capability )
 			|| ! is_a( $capability, ProviderCapabilityContract::class, true ) ) {
-			throw UnsupportedProviderCapability::unknownContract();
+			throw UnsupportedProviderCapability::unknown_contract();
 		}
 
 		$provider = $this->get( $code );
 
 		if ( ! $provider instanceof $capability ) {
-			throw UnsupportedProviderCapability::forProvider();
+			throw UnsupportedProviderCapability::for_provider();
 		}
 
 		return $provider;
@@ -290,8 +276,8 @@ final class ProviderRegistry {
 		try {
 			return $provider->get_metadata();
 		} catch ( \Throwable $exception ) {
-			BoosterLogger::logException( 'provider registration metadata unavailable', $exception, array( 'step' => 'provider_metadata' ) );
-			throw InvalidProviderPolicy::unavailableMetadata();
+			BoosterLogger::log_exception( 'provider registration metadata unavailable', $exception, array( 'step' => 'provider_metadata' ) );
+			throw InvalidProviderPolicy::unavailable_metadata();
 		}
 	}
 
@@ -304,7 +290,7 @@ final class ProviderRegistry {
 		);
 
 		if ( count( $types ) !== count( $parameters ) ) {
-			throw InvalidProviderPolicy::invalidProviderFactorySignature();
+			throw InvalidProviderPolicy::invalid_provider_factory_signature();
 		}
 
 		foreach ( $parameters as $index => $parameter ) {
@@ -317,7 +303,7 @@ final class ProviderRegistry {
 				|| $type->allowsNull()
 				|| $types[ $index ] !== $type->getName()
 			) {
-				throw InvalidProviderPolicy::invalidProviderFactorySignature();
+				throw InvalidProviderPolicy::invalid_provider_factory_signature();
 			}
 		}
 	}

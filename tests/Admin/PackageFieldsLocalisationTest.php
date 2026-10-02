@@ -36,13 +36,16 @@ final class PackageFieldsLocalisationTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'layoutProvider' )]
-	public function testFieldsTranslateCoreCopyInBothLayoutsWithoutChangingProviderData( string $layout ): void {
-		$packageView = 'grid' === $layout ? PackagePagePresenter::plugin() : PackagePagePresenter::theme();
+	#[DataProvider( 'layout_provider' )]
+	public function test_fields_translate_core_copy_in_both_layouts_without_changing_provider_data( string $layout ): void {
+		$package_view = 'grid' === $layout ? PackagePagePresenter::plugin() : PackagePagePresenter::theme();
 
 		$repository = $this->render(
 			'repository.php',
-			compact( 'layout', 'packageView' ) + array(
+			array(
+				'layout'      => $layout,
+				'packageView' => $package_view,
+			) + array(
 				'packageFieldLayout'      => $layout,
 				'repositoryValue'         => 'group/example',
 				'providerBrowseAvailable' => true,
@@ -118,7 +121,7 @@ final class PackageFieldsLocalisationTest extends TestCase {
 	}
 
 	/** @return iterable<string, array{string}> */
-	public static function layoutProvider(): iterable {
+	public static function layout_provider(): iterable {
 		yield 'grid' => array( 'grid' );
 		yield 'table' => array( 'table' );
 	}

@@ -10,66 +10,66 @@ use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
 final readonly class ProviderMetadata {
 
 	public string $label;
-	public string $repositoryUrlBase;
-	public string $ownerLabel;
+	public string $repository_url_base;
+	public string $owner_label;
 
 	public function __construct(
 		public ProviderCode $code,
 		string $label,
-		string $repositoryUrlBase,
-		string $ownerLabel,
+		string $repository_url_base,
+		string $owner_label,
 		public ?ProviderAdminMetadata $admin = null
 	) {
 		try {
 			$label = MetadataRules::required_text( $label, MetadataRules::LABEL_LENGTH );
 		} catch ( \InvalidArgumentException ) {
-			throw InvalidProvider::emptyLabel();
+			throw InvalidProvider::empty_label();
 		}
 
 		try {
-			$ownerLabel = MetadataRules::required_text( $ownerLabel, MetadataRules::LABEL_LENGTH );
+			$owner_label = MetadataRules::required_text( $owner_label, MetadataRules::LABEL_LENGTH );
 		} catch ( \InvalidArgumentException ) {
-			throw InvalidProvider::emptyOwnerLabel();
+			throw InvalidProvider::empty_owner_label();
 		}
 
-		if ( MetadataRules::contains_control_characters( $repositoryUrlBase ) ) {
-			throw InvalidProvider::invalidRepositoryUrlBase();
+		if ( MetadataRules::contains_control_characters( $repository_url_base ) ) {
+			throw InvalidProvider::invalid_repository_url_base();
 		}
 
-		$repositoryUrlBase = trim( $repositoryUrlBase );
+		$repository_url_base = trim( $repository_url_base );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- This domain value object remains usable without WordPress runtime.
-		$parts = parse_url( $repositoryUrlBase );
+		$parts = parse_url( $repository_url_base );
 
 		if (
-			strlen( $repositoryUrlBase ) > MetadataRules::URL_LENGTH
-			|| false === filter_var( $repositoryUrlBase, FILTER_VALIDATE_URL )
+			strlen( $repository_url_base ) > MetadataRules::URL_LENGTH
+			|| false === filter_var( $repository_url_base, FILTER_VALIDATE_URL )
 			|| ! is_array( $parts )
 			|| 'https' !== strtolower( $parts['scheme'] ?? '' )
 			|| '' === ( $parts['host'] ?? '' )
 			|| array_intersect_key( $parts, array_flip( array( 'user', 'pass', 'query', 'fragment' ) ) )
 		) {
-			throw InvalidProvider::invalidRepositoryUrlBase();
+			throw InvalidProvider::invalid_repository_url_base();
 		}
 
 		$path = '/' . trim( $parts['path'] ?? '', '/' );
 		$path = '/' === $path ? $path : $path . '/';
 		$port = isset( $parts['port'] ) ? ':' . $parts['port'] : '';
 
-		$this->label             = $label;
-		$this->ownerLabel        = $ownerLabel;
-		$this->repositoryUrlBase = 'https://' . strtolower( $parts['host'] ) . $port . $path;
+		$this->label               = $label;
+		$this->owner_label         = $owner_label;
+		$this->repository_url_base = 'https://' . strtolower( $parts['host'] ) . $port . $path;
 	}
 
 	/**
 	 * @return array{code: string, label: string, repository_url_base: string, owner_label: string}
 	 */
-	public function toArray(): array {
+	public function to_array(): array {
 		return array(
 			'code'                => $this->code->value,
 			'label'               => $this->label,
-			'repository_url_base' => $this->repositoryUrlBase,
-			'owner_label'         => $this->ownerLabel,
+			'repository_url_base' => $this->repository_url_base,
+			'owner_label'         => $this->owner_label,
 		);
 	}
 }

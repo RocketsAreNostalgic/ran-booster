@@ -33,7 +33,7 @@ use RuntimeException;
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Installed fixture aggregates belong together.
 
 interface FixturePrivateCapability extends ProviderCapability {
-	public function privateValue(): string;
+	public function private_value(): string;
 }
 
 abstract class BaseProvider implements RepositoryProvider {
@@ -78,7 +78,7 @@ final class ZeroProvider extends BaseProvider implements FixturePrivateCapabilit
 		parent::__construct( 'p2-zero' );
 	}
 
-	public function privateValue(): string {
+	public function private_value(): string {
 		return 'private';
 	}
 }
@@ -96,30 +96,30 @@ final class PartialProvider extends BaseProvider implements RepositoryReleaseMet
 		return $this->expected_update_uri( $repository ) . '/releases/' . rawurlencode( $tag );
 	}
 
-	public function list_release_candidates( string $packageType, RepositoryReference $repository, string $channel ): RepositoryReleaseCandidateList {
-		unset( $packageType, $repository, $channel );
+	public function list_release_candidates( string $package_type, RepositoryReference $repository, string $channel ): RepositoryReleaseCandidateList {
+		unset( $package_type, $repository, $channel );
 
 		update_option( 'ran_booster_p2_partial_called', true, false );
 
 		return new RepositoryReleaseCandidateList( array() );
 	}
 
-	public function has_registered_native_target( string $packageType, string $installedIdentifier ): bool {
-		unset( $packageType, $installedIdentifier );
+	public function has_registered_native_target( string $package_type, string $installed_identifier ): bool {
+		unset( $package_type, $installed_identifier );
 
 		return false;
 	}
 
 	public function create_native_target(
-		string $packageType,
+		string $package_type,
 		RepositoryReference $repository,
-		string $metadataFile,
-		string $packageRoot,
-		string $installedIdentifier,
+		string $metadata_file,
+		string $package_root,
+		string $installed_identifier,
 		string $channel,
-		string $deploymentPolicy
+		string $deployment_policy
 	): RepositoryReleaseNativeTarget {
-		unset( $packageType, $repository, $metadataFile, $packageRoot, $installedIdentifier, $channel, $deploymentPolicy );
+		unset( $package_type, $repository, $metadata_file, $package_root, $installed_identifier, $channel, $deployment_policy );
 
 		throw new RuntimeException( 'The partial fixture must remain inert.' );
 	}
@@ -132,7 +132,7 @@ final class ReleaseProvider extends BaseProvider implements RepositoryReleaseMet
 		parent::__construct( 'p2-release' );
 	}
 
-	public function privateValue(): string {
+	public function private_value(): string {
 		return 'private';
 	}
 
@@ -144,8 +144,8 @@ final class ReleaseProvider extends BaseProvider implements RepositoryReleaseMet
 		return $this->expected_update_uri( $repository ) . '/releases/' . rawurlencode( $tag );
 	}
 
-	public function list_release_candidates( string $packageType, RepositoryReference $repository, string $channel ): RepositoryReleaseCandidateList {
-		unset( $packageType, $repository, $channel );
+	public function list_release_candidates( string $package_type, RepositoryReference $repository, string $channel ): RepositoryReleaseCandidateList {
+		unset( $package_type, $repository, $channel );
 
 		return new RepositoryReleaseCandidateList(
 			array( new RepositoryReleaseCandidate( '42', 'v2.0.0', '2.0.0', false, '2026-08-18T00:00:00Z', array( 'fixture.zip' ) ) )
@@ -153,43 +153,43 @@ final class ReleaseProvider extends BaseProvider implements RepositoryReleaseMet
 	}
 
 	public function inspect_release(
-		string $packageType,
+		string $package_type,
 		RepositoryReference $repository,
-		string $providerReleaseId,
+		string $provider_release_id,
 		string $tag,
 		string $channel
 	): RepositoryReleaseInspection {
 		unset( $repository, $channel );
 
-		if ( '42' !== $providerReleaseId || 'v2.0.0' !== $tag ) {
+		if ( '42' !== $provider_release_id || 'v2.0.0' !== $tag ) {
 			throw new RuntimeException( 'The requested fixture release is invalid.' );
 		}
 
 		return new RepositoryReleaseInspection(
-			$providerReleaseId,
+			$provider_release_id,
 			$tag,
 			'2.0.0',
 			str_repeat( 'a', 40 ),
-			'plugin' === $packageType ? 'ran-booster-p2-fixture-plugin' : 'ran-booster-p2-fixture-theme',
-			'plugin' === $packageType ? 'ran-booster-p2-fixture-plugin.php' : 'style.css',
+			'plugin' === $package_type ? 'ran-booster-p2-fixture-plugin' : 'ran-booster-p2-fixture-theme',
+			'plugin' === $package_type ? 'ran-booster-p2-fixture-plugin.php' : 'style.css',
 			self::FINGERPRINT
 		);
 	}
 
 	public function acquire_release(
-		string $packageType,
+		string $package_type,
 		RepositoryReference $repository,
-		string $providerReleaseId,
+		string $provider_release_id,
 		string $tag,
-		string $expectedFingerprint,
+		string $expected_fingerprint,
 		string $channel
 	): RepositoryReleaseArtifact {
 		unset( $repository, $channel );
 
-		if ( '42' !== $providerReleaseId || 'v2.0.0' !== $tag || self::FINGERPRINT !== $expectedFingerprint ) {
-			throw RepositoryReleaseAcquisitionRejected::invalidRelease();
+		if ( '42' !== $provider_release_id || 'v2.0.0' !== $tag || self::FINGERPRINT !== $expected_fingerprint ) {
+			throw RepositoryReleaseAcquisitionRejected::invalid_release();
 		}
-		$source = get_option( 'ran_booster_p2_' . $packageType . '_archive', '' );
+		$source = get_option( 'ran_booster_p2_' . $package_type . '_archive', '' );
 		if ( ! is_string( $source ) || ! is_file( $source ) || is_link( $source ) ) {
 			throw new RuntimeException( 'The fixture release archive is unavailable.' );
 		}
@@ -202,27 +202,27 @@ final class ReleaseProvider extends BaseProvider implements RepositoryReleaseMet
 
 		return new FixtureReleaseArtifact(
 			$copy,
-			'plugin' === $packageType ? 'ran-booster-p2-fixture-plugin' : 'ran-booster-p2-fixture-theme',
-			'plugin' === $packageType ? 'ran-booster-p2-fixture-plugin.php' : 'style.css'
+			'plugin' === $package_type ? 'ran-booster-p2-fixture-plugin' : 'ran-booster-p2-fixture-theme',
+			'plugin' === $package_type ? 'ran-booster-p2-fixture-plugin.php' : 'style.css'
 		);
 	}
 
-	public function has_registered_native_target( string $packageType, string $installedIdentifier ): bool {
-		unset( $packageType, $installedIdentifier );
+	public function has_registered_native_target( string $package_type, string $installed_identifier ): bool {
+		unset( $package_type, $installed_identifier );
 
 		return false;
 	}
 
 	public function create_native_target(
-		string $packageType,
+		string $package_type,
 		RepositoryReference $repository,
-		string $metadataFile,
-		string $packageRoot,
-		string $installedIdentifier,
+		string $metadata_file,
+		string $package_root,
+		string $installed_identifier,
 		string $channel,
-		string $deploymentPolicy
+		string $deployment_policy
 	): RepositoryReleaseNativeTarget {
-		unset( $packageType, $repository, $metadataFile, $packageRoot, $installedIdentifier, $channel, $deploymentPolicy );
+		unset( $package_type, $repository, $metadata_file, $package_root, $installed_identifier, $channel, $deployment_policy );
 
 		return new class() implements RepositoryReleaseNativeTarget {
 			public function register(): bool {
@@ -241,17 +241,17 @@ final class ReleaseProvider extends BaseProvider implements RepositoryReleaseMet
 }
 
 final class FixtureReleaseArtifact implements RepositoryReleaseArtifact {
-	private bool $handedOff = false;
+	private bool $handed_off = false;
 
 	public function __construct(
 		private readonly string $path,
 		private readonly string $root,
-		private readonly string $mainFile
+		private readonly string $main_file
 	) {
 	}
 
 	public function discard(): bool {
-		if ( $this->handedOff || ! file_exists( $this->path ) ) {
+		if ( $this->handed_off || ! file_exists( $this->path ) ) {
 			return true;
 		}
 
@@ -260,7 +260,7 @@ final class FixtureReleaseArtifact implements RepositoryReleaseArtifact {
 	}
 
 	public function handoff_to_core(): PreparedArtifact {
-		if ( $this->handedOff ) {
+		if ( $this->handed_off ) {
 			throw new RuntimeException( 'The fixture artifact was already handed off.' );
 		}
 		$identity = PreparedArtifact::regularFileIdentity( $this->path );
@@ -268,7 +268,7 @@ final class FixtureReleaseArtifact implements RepositoryReleaseArtifact {
 		if ( null === $identity || ! is_string( $digest ) ) {
 			throw new RuntimeException( 'The fixture artifact identity is invalid.' );
 		}
-		$this->handedOff = true;
+		$this->handed_off = true;
 
 		return new PreparedArtifact(
 			$this->path,
@@ -292,10 +292,10 @@ final class FixtureReleaseArtifact implements RepositoryReleaseArtifact {
 	}
 
 	public function main_file(): string {
-		return $this->mainFile;
+		return $this->main_file;
 	}
 
-	public function identifier( string $packageType ): string {
-		return 'plugin' === $packageType ? $this->root . '/' . $this->mainFile : $this->root;
+	public function identifier( string $package_type ): string {
+		return 'plugin' === $package_type ? $this->root . '/' . $this->main_file : $this->root;
 	}
 }

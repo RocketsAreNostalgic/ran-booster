@@ -18,9 +18,9 @@ final class StaleReleaseDeploymentsBeta8Fixture {
 
 	public int $targets = 0;
 
-	public int $credentialReads = 0;
+	public int $credential_reads = 0;
 
-	public int $remoteCalls = 0;
+	public int $remote_calls = 0;
 
 	public int $mutations = 0;
 
@@ -28,8 +28,8 @@ final class StaleReleaseDeploymentsBeta8Fixture {
 	}
 
 	public function boot(): void {
-		$this->hooks->addAction( 'plugins_loaded', array( $this, 'register' ), 5 );
-		$this->hooks->addAction( 'admin_notices', static function (): void {} );
+		$this->hooks->add_action( 'plugins_loaded', array( $this, 'register' ), 5 );
+		$this->hooks->add_action( 'admin_notices', static function (): void {} );
 	}
 
 	public function register(): void {
@@ -40,14 +40,14 @@ final class StaleReleaseDeploymentsBeta8Fixture {
 			return;
 		}
 
-		$this->hooks->addAction(
+		$this->hooks->add_action(
 			'ran_booster_release_tracking_ready',
 			function (): void {
 				++$this->facades;
 				++$this->targets;
 			}
 		);
-		$this->hooks->addAction(
+		$this->hooks->add_action(
 			'ran_booster_prospective_release_ready',
 			function (): void {
 				++$this->facades;
@@ -67,11 +67,11 @@ final class StaleReleaseDeploymentsBeta8Fixture {
 			'wp_ajax_ran_booster_release_deployments_list_candidates',
 			'wp_ajax_ran_booster_release_deployments_inspect',
 		) as $hook ) {
-			$this->hooks->addAction(
+			$this->hooks->add_action(
 				$hook,
 				function (): void {
-					++$this->credentialReads;
-					++$this->remoteCalls;
+					++$this->credential_reads;
+					++$this->remote_calls;
 					++$this->mutations;
 				}
 			);
@@ -84,7 +84,7 @@ final class StaleReleaseDeploymentsBeta8Fixture {
 			'ran_booster_admin_package_advanced_source_summary',
 			'ran_booster_documentation_sections_before_about',
 		) as $hook ) {
-			$this->hooks->addFilter( $hook, static fn ( mixed $value ): mixed => $value );
+			$this->hooks->add_filter( $hook, static fn ( mixed $value ): mixed => $value );
 		}
 	}
 }

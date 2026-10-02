@@ -34,9 +34,9 @@ interface ProviderWebhookPolicy {
 
 	public function authorize_webhook(
 		SignedWebhookVerification $verification,
-		string $repositoryAuthorityId,
+		string $repository_authority_id,
 		string $repository
 	): bool;
 
-	public function repository_target_matches( string $target, string $repositoryLocator ): bool;
+	public function repository_target_matches( string $target, string $repository_locator ): bool;
 }

@@ -15,7 +15,7 @@ use RAN\Secrets\SecretsFile;
 
 final class CredentialSelfDestructPurgerTest extends TestCase {
 
-	public function testPurgingAnExpiredCredentialInvalidatesItsBranchCheckEvidence(): void {
+	public function test_purging_an_expired_credential_invalidates_its_branch_check_evidence(): void {
 		$profiles           = new PurgerLookupProfiles();
 		$profiles->profiles = array( 'gh' => 'expired-profile' );
 		$evidence           = new PurgerEvidenceStore();
@@ -33,7 +33,7 @@ final class CredentialSelfDestructPurgerTest extends TestCase {
 		self::assertNull( $profiles->get( 'gh' ) );
 	}
 
-	public function testPurgingAnExpiredDefaultCredentialStillClearsItsDefaultWhenEvidenceInvalidationFails(): void {
+	public function test_purging_an_expired_default_credential_still_clears_its_default_when_evidence_invalidation_fails(): void {
 		$profiles           = new PurgerLookupProfiles();
 		$profiles->profiles = array( 'gh' => 'expired-profile' );
 		$purger             = new CredentialSelfDestructPurger(
@@ -57,7 +57,7 @@ final class PurgerSecretsFile extends SecretsFile {
 	}
 
 	/** @return array<string, list<string>> */
-	public function purgeExpiredCredentials(): array {
+	public function purge_expired_credentials(): array {
 		return $this->removed;
 	}
 }

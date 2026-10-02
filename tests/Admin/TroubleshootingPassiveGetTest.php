@@ -48,7 +48,7 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 	}
 
 	/** @return list<array{string|null, array<string, mixed>, bool}> */
-	public static function exactRequestProvider(): array {
+	public static function exact_request_provider(): array {
 		return array(
 			array(
 				'GET',
@@ -145,8 +145,8 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'exactRequestProvider' )]
-	public function testPassiveGuardMatchesOnlyTheExactGetRequest( ?string $method, array $query, bool $expected ): void {
+	#[DataProvider( 'exact_request_provider' )]
+	public function test_passive_guard_matches_only_the_exact_get_request( ?string $method, array $query, bool $expected ): void {
 		if ( null === $method ) {
 			unset( $_SERVER['REQUEST_METHOD'] );
 		} else {
@@ -157,11 +157,11 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 		self::assertSame( $expected, ( new Booster() )->is_passive_troubleshooting_request() );
 	}
 
-	public function testRealAdminInitHooksDeferSidecarValidationForDiagnosticsGet(): void {
-		$fixture = $this->registeredFixture();
+	public function test_real_admin_init_hooks_defer_sidecar_validation_for_diagnostics_get(): void {
+		$fixture = $this->registered_fixture();
 		$this->request( 'GET', 'troubleshooting' );
 
-		$this->runAdminInit();
+		$this->run_admin_init();
 
 		self::assertSame( 0, $fixture['secrets']->validations );
 		self::assertSame( 0, $fixture['database']->upgrades );
@@ -169,39 +169,39 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 	}
 
 	/** @return list<array{string, string}> */
-	public static function activeRequestProvider(): array {
+	public static function active_request_provider(): array {
 		return array(
 			array( 'POST', 'troubleshooting' ),
 			array( 'GET', 'gh' ),
 		);
 	}
 
-	#[DataProvider( 'activeRequestProvider' )]
-	public function testPostAndOtherBoosterPagesRetainSidecarValidationSchemaAndPackageReads( string $method, string $tab ): void {
-		$fixture = $this->registeredFixture();
+	#[DataProvider( 'active_request_provider' )]
+	public function test_post_and_other_booster_pages_retain_sidecar_validation_schema_and_package_reads( string $method, string $tab ): void {
+		$fixture = $this->registered_fixture();
 		$this->request( $method, $tab );
 
-		$this->runAdminInit();
+		$this->run_admin_init();
 
 		self::assertSame( 1, $fixture['secrets']->validations );
 		self::assertSame( 1, $fixture['database']->upgrades );
 		self::assertSame( 1, $fixture['plugins']->reads );
 	}
 
-	public function testDeploymentActivityGetRetainsDurableBootstrapReads(): void {
-		$fixture = $this->registeredFixture();
+	public function test_deployment_activity_get_retains_durable_bootstrap_reads(): void {
+		$fixture = $this->registered_fixture();
 		$this->request( 'GET', 'troubleshooting' );
 		$_GET['panel'] = 'deployment-activity';
 
-		$this->runAdminInit();
+		$this->run_admin_init();
 
 		self::assertSame( 1, $fixture['secrets']->validations );
 		self::assertSame( 1, $fixture['database']->upgrades );
 		self::assertSame( 1, $fixture['plugins']->reads );
 	}
 
-	public function testCredentialPhysicalCleanupRunsOnlyOnTheAdminLifecycle(): void {
-		$fixture = $this->registeredFixture();
+	public function test_credential_physical_cleanup_runs_only_on_the_admin_lifecycle(): void {
+		$fixture = $this->registered_fixture();
 
 		self::assertArrayNotHasKey( 'init', $GLOBALS['ran_booster_get_test_actions'] );
 		self::assertCount(
@@ -213,26 +213,26 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 					&& 'purge' === $callback[1]
 			)
 		);
-		$this->runAdminInit();
+		$this->run_admin_init();
 		self::assertSame( 1, $fixture['secrets']->purges );
 	}
 
-	public function testTypedStorageFailureUsesTheDedicatedNoticeWithoutAGenericDuplicate(): void {
-		$fixture = $this->registeredFixture();
+	public function test_typed_storage_failure_uses_the_dedicated_notice_without_ageneric_duplicate(): void {
+		$fixture = $this->registered_fixture();
 		$fixture['dashboard']->expects( self::never() )->method( 'add_failure_message' );
-		$fixture['secrets']->validationFailure = new SecretsStorageUnavailable(
+		$fixture['secrets']->validation_failure = new SecretsStorageUnavailable(
 			'The encrypted Booster secrets store is incomplete.',
 			'storage_file_missing'
 		);
 		$this->request( 'GET', 'overview' );
 
-		$this->runAdminInit();
+		$this->run_admin_init();
 
 		self::assertSame( 1, $fixture['secrets']->validations );
 	}
 
 	/** @return array{secrets: TrackingSecretsFile, database: TrackingDatabase, plugins: TrackingPluginRepository, dashboard: \RAN\Dashboard} */
-	private function registeredFixture(): array {
+	private function registered_fixture(): array {
 		$secrets   = null;
 		$database  = new TrackingDatabase();
 		$plugins   = new TrackingPluginRepository();
@@ -295,7 +295,7 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 		$_POST                     = 'POST' === $method ? array( 'ran_booster' => array() ) : array();
 	}
 
-	private function runAdminInit(): void {
+	private function run_admin_init(): void {
 		foreach ( $GLOBALS['ran_booster_get_test_actions']['admin_init'] ?? array() as $callback ) {
 			$callback();
 		}
@@ -303,24 +303,24 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 }
 
 final class TrackingSecretsFile extends SecretsFile {
-	public int $validations               = 0;
-	public int $purges                    = 0;
-	public ?\Throwable $validationFailure = null;
+	public int $validations                = 0;
+	public int $purges                     = 0;
+	public ?\Throwable $validation_failure = null;
 
 	public function __construct( ProviderSecretPolicyCatalog $policies ) {
 		parent::__construct( '/unused/troubleshooting-get-secrets.php', array(), $policies );
 	}
 
-	public function verifyAndSecure(): bool {
+	public function verify_and_secure(): bool {
 		++$this->validations;
-		if ( null !== $this->validationFailure ) {
-			throw $this->validationFailure;
+		if ( null !== $this->validation_failure ) {
+			throw $this->validation_failure;
 		}
 
 		return false;
 	}
 
-	public function purgeExpiredCredentials(): array {
+	public function purge_expired_credentials(): array {
 		++$this->purges;
 
 		return array();
@@ -330,17 +330,17 @@ final class TrackingSecretsFile extends SecretsFile {
 final class TrackingDatabase extends Database {
 	public int $upgrades = 0;
 
-	public function requireSupported(): void {
+	public function require_supported(): void {
 	}
 
-	public function maybeUpgrade(): void {
+	public function maybe_upgrade(): void {
 		++$this->upgrades;
 	}
 
-	public function requireReady(): void {
+	public function require_ready(): void {
 	}
 
-	public function isReady(): bool {
+	public function is_ready(): bool {
 		return true;
 	}
 }

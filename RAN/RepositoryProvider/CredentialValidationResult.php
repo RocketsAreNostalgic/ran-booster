@@ -47,12 +47,12 @@ final readonly class CredentialValidationResult {
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public static function rateLimited(): self {
+	public static function rate_limited(): self {
 		return self::failure( self::RATE_LIMITED );
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public static function invalidResponse(): self {
+	public static function invalid_response(): self {
 		return self::failure( self::INVALID_RESPONSE );
 	}
 
@@ -61,12 +61,12 @@ final readonly class CredentialValidationResult {
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function isValid(): bool {
+	public function is_valid(): bool {
 		return self::VALID === $this->reason;
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function getDisplayMessage(): ?string {
+	public function get_display_message(): ?string {
 		return self::VALID === $this->reason
 			? null
 			: self::bounded_failure_message( $this->reason );

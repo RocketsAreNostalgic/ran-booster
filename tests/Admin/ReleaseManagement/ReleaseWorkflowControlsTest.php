@@ -31,16 +31,16 @@ use Tests\Admin\ReleaseManagement\Support\PartialRepositoryReleaseWorkflowProvid
 
 final class ReleaseWorkflowControlsTest extends TestCase {
 	#[Before]
-	public function resetWordPress(): void {
-		ReleaseManagementFixture::resetWordPress(); }
+	public function reset_word_press(): void {
+		ReleaseManagementFixture::reset_word_press(); }
 
-	public function testRegistersNeutralReleaseRoutesWithoutAddingCoreRowsToThePublicExtensionFilter(): void {
+	public function test_registers_neutral_release_routes_without_adding_core_rows_to_the_public_extension_filter(): void {
 		$controls = $this->controls();
 		$controls->register();
 
 		self::assertArrayHasKey( 'ran_booster_admin_package_source_choices', $GLOBALS['ran_booster_release_management_test_filters'] );
 		self::assertSame(
-			array( $controls, 'keepReleaseSettingsDiscoverable' ),
+			array( $controls, 'keep_release_settings_discoverable' ),
 			$GLOBALS['ran_booster_release_management_test_filters']['ran_booster_admin_package_source_choices'][0]['callback']
 		);
 		self::assertSame( 20, $GLOBALS['ran_booster_release_management_test_filters']['ran_booster_admin_package_source_choices'][0]['priority'] );
@@ -48,31 +48,31 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertArrayNotHasKey( 'ran_booster_provider_repository_rows', $GLOBALS['ran_booster_release_management_test_filters'] );
 		self::assertArrayHasKey( 'ran_booster_admin_package_release_readiness_actions', $GLOBALS['ran_booster_release_management_test_actions'] );
 		self::assertSame(
-			array( $controls, 'renderPackageReleaseAutomationLink' ),
+			array( $controls, 'render_package_release_automation_link' ),
 			$GLOBALS['ran_booster_release_management_test_actions']['ran_booster_admin_package_release_readiness_actions'][0]['callback']
 		);
 		self::assertSame( 20, $GLOBALS['ran_booster_release_management_test_actions']['ran_booster_admin_package_release_readiness_actions'][0]['priority'] );
 		self::assertSame( 2, $GLOBALS['ran_booster_release_management_test_actions']['ran_booster_admin_package_release_readiness_actions'][0]['accepted_args'] );
 		self::assertArrayHasKey( 'ran_booster_admin_repository_release_sections', $GLOBALS['ran_booster_release_management_test_actions'] );
 		self::assertSame(
-			array( $controls, 'renderRepositoryReleaseSections' ),
+			array( $controls, 'render_repository_release_sections' ),
 			$GLOBALS['ran_booster_release_management_test_actions']['ran_booster_admin_repository_release_sections'][0]['callback']
 		);
 		self::assertSame( 20, $GLOBALS['ran_booster_release_management_test_actions']['ran_booster_admin_repository_release_sections'][0]['priority'] );
 		self::assertSame( 2, $GLOBALS['ran_booster_release_management_test_actions']['ran_booster_admin_repository_release_sections'][0]['accepted_args'] );
 		self::assertArrayHasKey( 'admin_post_ran_booster_release_workflow', $GLOBALS['ran_booster_release_management_test_actions'] );
 		self::assertCount( 1, $GLOBALS['ran_booster_release_management_test_actions']['admin_post_ran_booster_release_workflow'] );
-		self::assertSame( array( $controls, 'handleWorkflow' ), $GLOBALS['ran_booster_release_management_test_actions']['admin_post_ran_booster_release_workflow'][0]['callback'] );
+		self::assertSame( array( $controls, 'handle_workflow' ), $GLOBALS['ran_booster_release_management_test_actions']['admin_post_ran_booster_release_workflow'][0]['callback'] );
 		self::assertSame( 10, $GLOBALS['ran_booster_release_management_test_actions']['admin_post_ran_booster_release_workflow'][0]['priority'] );
 		self::assertSame( 1, $GLOBALS['ran_booster_release_management_test_actions']['admin_post_ran_booster_release_workflow'][0]['accepted_args'] );
 	}
 
-	public function testPresenterOmitsRepositorySectionsWithoutACurrentProviderRow(): void {
+	public function test_presenter_omits_repository_sections_without_a_current_provider_row(): void {
 		$presenter = $this->presenter();
 
-		self::assertNull( $presenter->repositorySectionProjection( array(), 'https://example.test/return', '', null ) );
+		self::assertNull( $presenter->repository_section_projection( array(), 'https://example.test/return', '', null ) );
 		self::assertNull(
-			$presenter->repositorySectionProjection(
+			$presenter->repository_section_projection(
 				array(
 					'provider_code' => 'fixture',
 					'historical'    => true,
@@ -84,7 +84,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		);
 	}
 
-	public function testRegisteredWorkflowProviderWithoutMetadataLeavesRepositoryRowsUntouchedWithoutWarningOrOutput(): void {
+	public function test_registered_workflow_provider_without_metadata_leaves_repository_rows_untouched_without_warning_or_output(): void {
 		$provider = new RepositoryReleaseWorkflowProviderDouble();
 		$rows     = array(
 			'101' => array(
@@ -104,7 +104,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		);
 		// phpcs:enable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler, WordPress.Security.EscapeOutput.ExceptionNotEscaped
 		try {
-			$actual = $this->controls( provider: $provider, providers: $this->registryWithoutMetadata( $provider ) )->enrichRepositoryRows( $rows, 'fixture', array(), 'https://example.test/return' );
+			$actual = $this->controls( provider: $provider, providers: $this->registry_without_metadata( $provider ) )->enrich_repository_rows( $rows, 'fixture', array(), 'https://example.test/return' );
 		} finally {
 			$output = (string) ob_get_clean();
 			restore_error_handler();
@@ -114,41 +114,41 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( '', $output );
 	}
 
-	public function testCapableEditKeepsReleaseAssetSelectableWhileOtherContextsRemainUnchanged(): void {
+	public function test_capable_edit_keeps_release_asset_selectable_while_other_contexts_remain_unchanged(): void {
 		$choices = array( 'release_asset' => array( 'disabled' => true ) );
-		$package = new class() { public function providerCode(): string {
+		$package = new class() { public function provider_code(): string {
 				return 'fixture';
 		} };
 
-		self::assertFalse( $this->controls()->keepReleaseSettingsDiscoverable( $choices, 'edit', 'plugin', $package, 'https://example.test' )['release_asset']['disabled'] );
-		self::assertSame( $choices, $this->controls()->keepReleaseSettingsDiscoverable( $choices, 'create', 'plugin', $package, 'https://example.test' ) );
-		self::assertSame( $choices, $this->controls( registered: false )->keepReleaseSettingsDiscoverable( $choices, 'edit', 'plugin', $package, 'https://example.test' ) );
+		self::assertFalse( $this->controls()->keep_release_settings_discoverable( $choices, 'edit', 'plugin', $package, 'https://example.test' )['release_asset']['disabled'] );
+		self::assertSame( $choices, $this->controls()->keep_release_settings_discoverable( $choices, 'create', 'plugin', $package, 'https://example.test' ) );
+		self::assertSame( $choices, $this->controls( registered: false )->keep_release_settings_discoverable( $choices, 'edit', 'plugin', $package, 'https://example.test' ) );
 	}
 
-	public function testHandleWorkflowUsesNativeAndHtmxRedirectTransports(): void {
+	public function test_handle_workflow_uses_native_and_htmx_redirect_transports(): void {
 		$request = $this->request( 'inspect' );
 		$_POST   = $request;
 		try {
-			$this->controls()->handleWorkflow();
+			$this->controls()->handle_workflow();
 			self::fail( 'Expected the native redirect to stop execution.' );
 		} catch ( \RuntimeException $exception ) {
 			self::assertSame( 'native-redirect', $exception->getMessage() );
 		}
 		$native = (string) $GLOBALS['ran_booster_release_management_test_redirect'];
 		self::assertStringStartsWith( 'https://example.test/wp-admin/admin.php?', $native );
-		parse_str( (string) \RAN\Admin\ReleaseManagement\wp_parse_url( $native, PHP_URL_QUERY ), $nativeQuery );
-		self::assertSame( 'ran-booster', $nativeQuery['page'] );
-		self::assertSame( 'fixture', $nativeQuery['tab'] );
-		self::assertSame( 'repositories', $nativeQuery['panel'] );
-		self::assertSame( '101', $nativeQuery['repository'] );
-		self::assertSame( 'releases', $nativeQuery['repository_view'] );
+		parse_str( (string) \RAN\Admin\ReleaseManagement\wp_parse_url( $native, PHP_URL_QUERY ), $native_query );
+		self::assertSame( 'ran-booster', $native_query['page'] );
+		self::assertSame( 'fixture', $native_query['tab'] );
+		self::assertSame( 'repositories', $native_query['panel'] );
+		self::assertSame( '101', $native_query['repository'] );
+		self::assertSame( 'releases', $native_query['repository_view'] );
 		self::assertSame( 'ran-booster-repository-release-workflows', \RAN\Admin\ReleaseManagement\wp_parse_url( $native, PHP_URL_FRAGMENT ) );
 
 		try {
 			$_POST                      = $request;
 			$_SERVER['HTTP_HX_REQUEST'] = 'true';
 			try {
-				$this->controls()->handleWorkflow();
+				$this->controls()->handle_workflow();
 				self::fail( 'Expected the HX response to stop execution.' );
 			} catch ( \RuntimeException $exception ) {
 				self::assertSame( 'hx-redirect', $exception->getMessage() );
@@ -171,24 +171,24 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		}
 	}
 
-	public function testFallbackPackageSettingsRenderTheSignedWorkflowResultWithoutWorkflowControls(): void {
+	public function test_fallback_package_settings_render_the_signed_workflow_result_without_workflow_controls(): void {
 		$request                           = $this->request( 'inspect' );
 		$request['expected_repository_id'] = 'missing-repository';
-		$url                               = $this->controller()->processWorkflowRequest( $request );
+		$url                               = $this->controller()->process_workflow_request( $request );
 		parse_str( (string) \RAN\Admin\ReleaseManagement\wp_parse_url( $url, PHP_URL_QUERY ), $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Exercises a URL signed by the immediately preceding control call.
 
 		$package = new class() {
-			public function providerCode(): string {
+			public function provider_code(): string {
 				return 'fixture'; }
 			public function type(): string {
 				return 'plugin'; }
 			public function identifier(): string {
 				return 'example/example.php'; }
-			public function sourceRevision(): int {
+			public function source_revision(): int {
 				return 3; }
 		};
 		ob_start();
-		$this->controls()->renderPackageReleaseAutomationLink( $package, ReleaseManagementFixture::status() );
+		$this->controls()->render_package_release_automation_link( $package, ReleaseManagementFixture::status() );
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'data-ran-booster-release-workflow-result', $html );
@@ -196,29 +196,29 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertStringNotContainsString( '<form', $html );
 	}
 
-	public function testFallbackPackageWorkflowNoticeRequiresAnUnchangedSignedResultAndMatchingScreen(): void {
+	public function test_fallback_package_workflow_notice_requires_an_unchanged_signed_result_and_matching_screen(): void {
 		$request                           = $this->request( 'inspect' );
 		$request['expected_repository_id'] = 'missing-repository';
-		$url                               = $this->controller()->processWorkflowRequest( $request );
+		$url                               = $this->controller()->process_workflow_request( $request );
 		parse_str( (string) \RAN\Admin\ReleaseManagement\wp_parse_url( $url, PHP_URL_QUERY ), $query );
 		$package       = new class() {
-			public function providerCode(): string {
+			public function provider_code(): string {
 				return 'fixture'; }
 			public function type(): string {
 				return 'plugin'; }
 			public function identifier(): string {
 				return 'example/example.php'; }
-			public function sourceRevision(): int {
+			public function source_revision(): int {
 				return 3; }
 		};
-		$rendersNotice = function ( array $get ) use ( $package ): bool {
+		$renders_notice = function ( array $get ) use ( $package ): bool {
 			$_GET = $get; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Exercises display-only signed-result verification.
 			ob_start();
-			$this->controls()->renderPackageReleaseAutomationLink( $package, ReleaseManagementFixture::status() );
+			$this->controls()->render_package_release_automation_link( $package, ReleaseManagementFixture::status() );
 			return str_contains( (string) ob_get_clean(), 'data-ran-booster-release-workflow-result' );
 		};
 
-		self::assertTrue( $rendersNotice( $query ) );
+		self::assertTrue( $renders_notice( $query ) );
 		foreach ( array(
 			'ran_booster_release_workflow_result'          => 'workflow_remote_unavailable',
 			'ran_booster_release_workflow_success'         => '1',
@@ -238,17 +238,17 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		) as $field => $value ) {
 			$mutated           = $query;
 			$mutated[ $field ] = $value;
-			self::assertFalse( $rendersNotice( $mutated ), $field );
+			self::assertFalse( $renders_notice( $mutated ), $field );
 		}
-		$wrongPage         = $query;
-		$wrongPage['page'] = 'ran-booster-themes';
-		self::assertFalse( $rendersNotice( $wrongPage ) );
-		$wrongPackage            = $query;
-		$wrongPackage['package'] = 'other/other.php';
-		self::assertFalse( $rendersNotice( $wrongPackage ) );
+		$wrong_page         = $query;
+		$wrong_page['page'] = 'ran-booster-themes';
+		self::assertFalse( $renders_notice( $wrong_page ) );
+		$wrong_package            = $query;
+		$wrong_package['package'] = 'other/other.php';
+		self::assertFalse( $renders_notice( $wrong_package ) );
 	}
 
-	public function testPassiveRowsRemainUntouchedWhenTheProviderHasNoCompleteWorkflowAggregate(): void {
+	public function test_passive_rows_remain_untouched_when_the_provider_has_no_complete_workflow_aggregate(): void {
 		$rows     = array(
 			'101' => array(
 				'provider_code'     => 'partial',
@@ -261,11 +261,11 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		);
 		$controls = $this->controls( provider: new PartialRepositoryReleaseWorkflowProviderDouble() );
 
-		self::assertSame( $rows, $controls->enrichRepositoryRows( $rows, 'partial', array(), 'https://example.test/return' ) );
+		self::assertSame( $rows, $controls->enrich_repository_rows( $rows, 'partial', array(), 'https://example.test/return' ) );
 	}
 
-	public function testIncompleteWorkflowProviderDoesNotPresentRepositoryAutomationAsReadyToAssess(): void {
-		$controls = $this->controls( provider: new PartialRepositoryReleaseWorkflowProviderDouble(), sourceGuard: $this->sourceGuard( 'partial' ) );
+	public function test_incomplete_workflow_provider_does_not_present_repository_automation_as_ready_to_assess(): void {
+		$controls = $this->controls( provider: new PartialRepositoryReleaseWorkflowProviderDouble(), source_guard: $this->source_guard( 'partial' ) );
 		$row      = array(
 			'provider_code'     => 'partial',
 			'repository_id'     => '101',
@@ -281,7 +281,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		);
 
 		ob_start();
-		$controls->renderRepositoryReleaseSections( $row, 'https://example.test/repositories' );
+		$controls->render_repository_release_sections( $row, 'https://example.test/repositories' );
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( '>Unavailable<', $html );
@@ -289,7 +289,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertStringContainsString( 'button type="submit" class="button" disabled aria-disabled="true">Assess release setup</button>', $html );
 	}
 
-	public function testPassiveRepositoryRenderReadsOnlyStatusAndOpaquePreviewWithoutAWorkflowMutation(): void {
+	public function test_passive_repository_render_reads_only_status_and_opaque_preview_without_a_workflow_mutation(): void {
 		$key      = str_repeat( 'a', 32 );
 		$provider = new RepositoryReleaseWorkflowProviderDouble(
 			preview: new \RAN\RepositoryProvider\RepositoryReleaseWorkflowPreview(
@@ -308,12 +308,12 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 				),
 				array()
 			),
-			workflowResult: new \RAN\RepositoryProvider\RepositoryReleaseWorkflowResult( 'workflow_inspected', true, $key )
+			workflow_result: new \RAN\RepositoryProvider\RepositoryReleaseWorkflowResult( 'workflow_inspected', true, $key )
 		);
-		$url      = $this->controller( provider: $provider )->processWorkflowRequest( $this->request( 'inspect' ) );
+		$url      = $this->controller( provider: $provider )->process_workflow_request( $this->request( 'inspect' ) );
 		parse_str( (string) \RAN\Admin\ReleaseManagement\wp_parse_url( $url, PHP_URL_QUERY ), $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Uses the immediately preceding signed result and opaque preview key.
 		$provider->calls       = array();
-		$provider->statusReads = 0;
+		$provider->status_reads = 0;
 		$row                   = array(
 			'provider_code'     => 'fixture',
 			'repository_id'     => '101',
@@ -329,16 +329,16 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		);
 
 		ob_start();
-		$this->controls( provider: $provider )->renderRepositoryReleaseSections( $row, 'https://example.test/repositories' );
+		$this->controls( provider: $provider )->render_repository_release_sections( $row, 'https://example.test/repositories' );
 		$html = (string) ob_get_clean();
 
-		self::assertGreaterThan( 0, $provider->statusReads );
+		self::assertGreaterThan( 0, $provider->status_reads );
 		self::assertSame( array( 'preview' ), array_column( $provider->calls, 'operation' ) );
 		self::assertStringContainsString( 'Release publishing', $html );
 		self::assertStringContainsString( 'example/example</strong> · main', $html );
 	}
 
-	public function testPassiveRowsRemainUntouchedWhenTheCapableProviderHasNoRegisteredAdminSurface(): void {
+	public function test_passive_rows_remain_untouched_when_the_capable_provider_has_no_registered_admin_surface(): void {
 		$rows = array(
 			'101' => array(
 				'provider_code'     => 'fixture',
@@ -357,10 +357,10 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 			),
 		);
 
-		self::assertSame( $rows, $this->controls( provider: new RepositoryReleaseWorkflowProviderDouble( adminSurface: false ) )->enrichRepositoryRows( $rows, 'fixture', array(), 'https://example.test/return' ) );
+		self::assertSame( $rows, $this->controls( provider: new RepositoryReleaseWorkflowProviderDouble( admin_surface: false ) )->enrich_repository_rows( $rows, 'fixture', array(), 'https://example.test/return' ) );
 	}
 
-	public function testIncompleteRepositoryInventoryReceivesNoWorkflowEnrichment(): void {
+	public function test_incomplete_repository_inventory_receives_no_workflow_enrichment(): void {
 		$rows = array(
 			'101' => array(
 				'provider_code'             => 'fixture',
@@ -380,27 +380,27 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 			),
 		);
 
-		self::assertSame( $rows, $this->controls()->enrichRepositoryRows( $rows, 'fixture', array(), 'https://example.test/return' ) );
+		self::assertSame( $rows, $this->controls()->enrich_repository_rows( $rows, 'fixture', array(), 'https://example.test/return' ) );
 	}
 
-	public function testUnavailableRepositorySourceKeepsItsDiagnosticCode(): void {
-		$presenter = $this->presenter( sourceGuard: $this->unavailableSourceGuard() );
-		$url       = $this->controller( sourceGuard: $this->unavailableSourceGuard() )->processWorkflowRequest( $this->request( 'inspect' ) );
+	public function test_unavailable_repository_source_keeps_its_diagnostic_code(): void {
+		$presenter = $this->presenter( source_guard: $this->unavailable_source_guard() );
+		$url       = $this->controller( source_guard: $this->unavailable_source_guard() )->process_workflow_request( $this->request( 'inspect' ) );
 
 		self::assertStringContainsString( 'workflow_invalid_request', $url );
 		self::assertStringContainsString( 'repository_source_unavailable', $url );
 		self::assertStringNotContainsString( 'repository_release_owner_exists', $url );
 
-		$workflowViewFor = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'workflow_view_for' );
-		$view            = $workflowViewFor->invoke( $presenter, 'plugin', 'example/example.php', 3, '', false, '', 'stable' );
+		$workflow_view_for = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'workflow_view_for' );
+		$view            = $workflow_view_for->invoke( $presenter, 'plugin', 'example/example.php', 3, '', false, '', 'stable' );
 
 		self::assertTrue( $view['unavailable'] );
 		self::assertSame( 'Booster could not safely read this package\'s repository source relationship. Check package storage and retry.', $view['unavailable_reason'] );
 		self::assertTrue( $view['forms']['inspect']['disabled'] );
 	}
 
-	public function testReleaseWorkflowRepositoryActionUsesTheCoreNamespacedActionContract(): void {
-		$rows   = $this->controls()->enrichRepositoryRows(
+	public function test_release_workflow_repository_action_uses_the_core_namespaced_action_contract(): void {
+		$rows   = $this->controls()->enrich_repository_rows(
 			array(
 				'101' => array(
 					'provider_code'     => 'fixture',
@@ -430,17 +430,17 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( 'release_workflow', $rows['101']['details'][0]['category'] );
 	}
 
-	public function testRepositoryProjectionUsesTheSameBenignExistingWorkflowObservationAsTheRepositoryPanel(): void {
+	public function test_repository_projection_uses_the_same_benign_existing_workflow_observation_as_the_repository_panel(): void {
 		$status   = new \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus(
 			'fixture',
 			'101',
 			false,
 			false,
-			observationKind: 'existing_automation_detected',
-			observedAt: '2026-08-31T12:00:00Z'
+			observation_kind: 'existing_automation_detected',
+			observed_at: '2026-08-31T12:00:00Z'
 		);
 		$controls = $this->controls( provider: new RepositoryReleaseWorkflowProviderDouble( status: $status ) );
-		$rows     = $controls->enrichRepositoryRows(
+		$rows     = $controls->enrich_repository_rows(
 			array(
 				'101' => array(
 					'provider_code'     => 'fixture',
@@ -468,11 +468,11 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( 'info', $rows['101']['details'][0]['tone'] );
 	}
 
-	public function testRepositoryProjectionMarksARepositoryRelationshipConflictAsBlocked(): void {
+	public function test_repository_projection_marks_a_repository_relationship_conflict_as_blocked(): void {
 		$tracking = new ReleaseTrackingFacadeDouble(
-			ReleaseManagementFixture::status( failureCode: 'release_repository_conflict' )
+			ReleaseManagementFixture::status( failure_code: 'release_repository_conflict' )
 		);
-		$rows     = $this->controls( tracking: $tracking )->enrichRepositoryRows(
+		$rows     = $this->controls( tracking: $tracking )->enrich_repository_rows(
 			array(
 				'101' => array(
 					'provider_code'     => 'fixture',
@@ -501,8 +501,8 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertNotSame( 'Ready to assess', $rows['101']['details'][0]['value'] );
 	}
 
-	public function testReleaseWorkflowRepositoryEnrichmentHonoursRemainingRowCapacityForFullRows(): void {
-		$rows          = $this->controls()->enrichRepositoryRows(
+	public function test_release_workflow_repository_enrichment_honours_remaining_row_capacity_for_full_rows(): void {
+		$rows          = $this->controls()->enrich_repository_rows(
 			array(
 				'101' => array(
 					'provider_code'     => 'fixture',
@@ -546,9 +546,9 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 			array(),
 			'https://example.test/repositories'
 		);
-		$resultDetails = $rows['101']['details'] ?? array();
+		$result_details = $rows['101']['details'] ?? array();
 
-		self::assertCount( 20, $resultDetails );
+		self::assertCount( 20, $result_details );
 		self::assertArrayHasKey( 'core:existing', $rows['101']['actions'] );
 		self::assertCount( 1, $rows['101']['actions'] );
 		self::assertSame(
@@ -562,25 +562,25 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 					'tone'  => 'success',
 				)
 			),
-			$resultDetails
+			$result_details
 		);
 	}
 
-	public function testReleaseWorkflowRepositoryEnrichmentAddsOneRowWhenOneSlotRemains(): void {
-		$rowSummary    = array(
+	public function test_release_workflow_repository_enrichment_adds_one_row_when_one_slot_remains(): void {
+		$row_summary    = array(
 			'type'            => 'plugin',
 			'identifier'      => 'example/example.php',
 			'source'          => 'branch',
 			'source_revision' => 3,
 		);
-		$rows          = $this->controls()->enrichRepositoryRows(
+		$rows          = $this->controls()->enrich_repository_rows(
 			array(
 				'101' => array(
 					'provider_code'     => 'fixture',
 					'repository_id'     => '101',
 					'repository'        => 'example/example',
 					'historical'        => false,
-					'package_summaries' => array( $rowSummary, $rowSummary ),
+					'package_summaries' => array( $row_summary, $row_summary ),
 					'details'           => array_fill(
 						0,
 						19,
@@ -610,9 +610,9 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 			array(),
 			'https://example.test/repositories'
 		);
-		$resultDetails = $rows['101']['details'] ?? array();
+		$result_details = $rows['101']['details'] ?? array();
 
-		self::assertCount( 20, $resultDetails );
+		self::assertCount( 20, $result_details );
 		self::assertCount( 2, $rows['101']['actions'] );
 		self::assertSame(
 			1,
@@ -627,22 +627,22 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 			1,
 			count(
 				array_filter(
-					$resultDetails,
+					$result_details,
 					static fn ( array $detail ): bool => str_starts_with( (string) ( $detail['key'] ?? '' ), 'core:release-workflow-' )
 				)
 			)
 		);
 	}
 
-	public function testOptionalPackageHelperRendersNothingForMissingOrIncompleteWorkflowProviders(): void {
+	public function test_optional_package_helper_renders_nothing_for_missing_or_incomplete_workflow_providers(): void {
 		$package = new class() {
-			public function providerCode(): string {
+			public function provider_code(): string {
 				return 'partial'; }
 			public function type(): string {
 				return 'plugin'; }
 			public function identifier(): string {
 				return 'example/example.php'; }
-			public function sourceRevision(): int {
+			public function source_revision(): int {
 				return 3; }
 		};
 
@@ -651,34 +651,34 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 			'incomplete' => $this->controls( provider: new PartialRepositoryReleaseWorkflowProviderDouble() ),
 		) as $case => $controls ) {
 			ob_start();
-			$controls->renderPackageReleaseAutomationLink( $package, ReleaseManagementFixture::status() );
+			$controls->render_package_release_automation_link( $package, ReleaseManagementFixture::status() );
 			$html = (string) ob_get_clean();
 
 			self::assertSame( '', $html, $case );
 		}
 	}
 
-	public function testSignedWorkflowResultPreservesProviderMessageAndRemediationForDisplay(): void {
+	public function test_signed_workflow_result_preserves_provider_message_and_remediation_for_display(): void {
 		$provider = new RepositoryReleaseWorkflowProviderDouble(
-			workflowResult: new \RAN\RepositoryProvider\RepositoryReleaseWorkflowResult(
+			workflow_result: new \RAN\RepositoryProvider\RepositoryReleaseWorkflowResult(
 				'workflow_partial',
 				false,
-				failureStage: 'repository_mutation',
-				diagnosticCode: 'repository_mutation_unverified',
+				failure_stage: 'repository_mutation',
+				diagnostic_code: 'repository_mutation_unverified',
 				message: 'Provider-specific workflow message.',
 				remediation: 'Provider-specific remediation.'
 			)
 		);
-		$url      = $this->controller( provider: $provider )->processWorkflowRequest( $this->request( 'inspect' ) );
+		$url      = $this->controller( provider: $provider )->process_workflow_request( $this->request( 'inspect' ) );
 		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url,WordPress.Security.NonceVerification.Recommended -- Exercises the signed PRG result parser.
 
-		$result = $this->controller( provider: $provider )->requestedResult();
+		$result = $this->controller( provider: $provider )->requested_result();
 
 		self::assertSame( 'Provider-specific workflow message.', $result['message'] );
 		self::assertSame( 'Provider-specific remediation.', $result['remediation'] );
 
-		$workflowViewFor = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'workflow_view_for' );
-		$view            = $workflowViewFor->invoke(
+		$workflow_view_for = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'workflow_view_for' );
+		$view            = $workflow_view_for->invoke(
 			$this->presenter( provider: $provider ),
 			'plugin',
 			'example/example.php',
@@ -699,7 +699,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( 'Provider-specific remediation.', $view['result_remediation'] );
 	}
 
-	public function testOnlyBootstrapRecordsExposeOutcomeControlsForTheSamePackage(): void {
+	public function test_only_bootstrap_records_expose_outcome_controls_for_the_same_package(): void {
 		foreach ( array( '', 'bootstrap' ) as $operation ) {
 			$record          = new \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus(
 				'fixture',
@@ -713,8 +713,8 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 				$operation
 			);
 			$provider        = new RepositoryReleaseWorkflowProviderDouble( status: $record );
-			$workflowViewFor = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'workflow_view_for' );
-			$view            = $workflowViewFor->invoke( $this->presenter( provider: $provider ), 'plugin', 'example/example.php', 3, '', false, '', 'stable' );
+			$workflow_view_for = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'workflow_view_for' );
+			$view            = $workflow_view_for->invoke( $this->presenter( provider: $provider ), 'plugin', 'example/example.php', 3, '', false, '', 'stable' );
 
 			if ( '' === $operation ) {
 				self::assertTrue( $view['unavailable'] );
@@ -733,13 +733,13 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		}
 	}
 
-	public function testEmptyProviderWriteGuidanceUsesTheCoreFallback(): void {
+	public function test_empty_provider_write_guidance_uses_the_core_fallback(): void {
 		$status    = new \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus(
 			'fixture',
 			'101',
 			false,
 			false,
-			credentialChoices: array(
+			credential_choices: array(
 				array(
 					'id'    => 'credential_1',
 					'label' => 'Fixture credential',
@@ -748,8 +748,8 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		);
 		$presenter = $this->presenter( provider: new RepositoryReleaseWorkflowProviderDouble( status: $status ) );
 
-		$workflowViewFor = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'workflow_view_for' );
-		$view            = $workflowViewFor->invoke( $presenter, 'plugin', 'example/example.php', 3, '', false, '', 'stable' );
+		$workflow_view_for = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'workflow_view_for' );
+		$view            = $workflow_view_for->invoke( $presenter, 'plugin', 'example/example.php', 3, '', false, '', 'stable' );
 
 		self::assertSame(
 			'Choose a saved credential that can manage release workflows and open pull requests. Its secret is never stored with this setup.',
@@ -757,32 +757,32 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		);
 	}
 
-	private function controller( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $sourceGuard = null ): ReleaseWorkflowRequestController {
+	private function controller( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $source_guard = null ): ReleaseWorkflowRequestController {
 		$provider ??= new RepositoryReleaseWorkflowProviderDouble();
-		return new ReleaseWorkflowRequestController( $tracking ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), new PluginRepositoryDouble( providerCode: $provider->get_metadata()->code->value ), new ThemeRepositoryDouble(), new ProviderRegistry( $registered ? array( $provider ) : array() ), $sourceGuard ?? $this->sourceGuard() );
+		return new ReleaseWorkflowRequestController( $tracking ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), new PluginRepositoryDouble( provider_code: $provider->get_metadata()->code->value ), new ThemeRepositoryDouble(), new ProviderRegistry( $registered ? array( $provider ) : array() ), $source_guard ?? $this->source_guard() );
 	}
 
-	private function controls( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $sourceGuard = null, ?ProviderRegistry $providers = null ): ReleaseWorkflowControls {
+	private function controls( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $source_guard = null, ?ProviderRegistry $providers = null ): ReleaseWorkflowControls {
 		$provider ??= new RepositoryReleaseWorkflowProviderDouble();
-		return new ReleaseWorkflowControls( $tracking ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), new PluginRepositoryDouble( providerCode: $provider->get_metadata()->code->value ), new ThemeRepositoryDouble(), $providers ?? new ProviderRegistry( $registered ? array( $provider ) : array() ), $sourceGuard ?? $this->sourceGuard() );
+		return new ReleaseWorkflowControls( $tracking ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), new PluginRepositoryDouble( provider_code: $provider->get_metadata()->code->value ), new ThemeRepositoryDouble(), $providers ?? new ProviderRegistry( $registered ? array( $provider ) : array() ), $source_guard ?? $this->source_guard() );
 	}
 
-	private function registryWithoutMetadata( RepositoryProvider $provider ): ProviderRegistry {
+	private function registry_without_metadata( RepositoryProvider $provider ): ProviderRegistry {
 		$providers = new ProviderRegistry( array( $provider ) );
 		( new \ReflectionProperty( ProviderRegistry::class, 'provider_metadata' ) )->setValue( $providers, array() );
 		return $providers;
 	}
 
-	private function presenter( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $sourceGuard = null ): ReleaseWorkflowPresenter {
+	private function presenter( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $source_guard = null ): ReleaseWorkflowPresenter {
 		$provider    ??= new RepositoryReleaseWorkflowProviderDouble();
 		$tracking    ??= new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
-		$sourceGuard ??= $this->sourceGuard();
-		$plugins       = new PluginRepositoryDouble( providerCode: $provider->get_metadata()->code->value );
+		$source_guard ??= $this->source_guard();
+		$plugins       = new PluginRepositoryDouble( provider_code: $provider->get_metadata()->code->value );
 		$themes        = new ThemeRepositoryDouble();
 		$providers     = new ProviderRegistry( $registered ? array( $provider ) : array() );
-		$requests      = new ReleaseWorkflowRequestController( $tracking, $plugins, $themes, $providers, $sourceGuard );
+		$requests      = new ReleaseWorkflowRequestController( $tracking, $plugins, $themes, $providers, $source_guard );
 
-		return new ReleaseWorkflowPresenter( $tracking, $plugins, $themes, $providers, $requests, $sourceGuard );
+		return new ReleaseWorkflowPresenter( $tracking, $plugins, $themes, $providers, $requests, $source_guard );
 	}
 
 	/** @return array<string,string> */
@@ -807,9 +807,9 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		return $request;
 	}
 
-	private function sourceGuard( string $providerCode = 'fixture' ): RepositorySourceGuard {
-		$database  = new class( $providerCode ) { public string $last_error = '';
-			public function __construct( private string $providerCode ) {}
+	private function source_guard( string $provider_code = 'fixture' ): RepositorySourceGuard {
+		$database  = new class( $provider_code ) { public string $last_error = '';
+			public function __construct( private string $provider_code ) {}
 			public function prepare( string $query, mixed ...$arguments ): string {
 				return $query;
 			} public function get_results( string $query ): array {
@@ -818,23 +818,23 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 						'type'                   => 1,
 						'package'                => 'example/example.php',
 						'source'                 => 'branch',
-						'provider'               => $this->providerCode,
+						'provider'               => $this->provider_code,
 						'provider_repository_id' => '101',
 					),
 				);
 			} };
-		$lifecycle = new class() extends Database { public function requireReady(): void {} };
+		$lifecycle = new class() extends Database { public function require_ready(): void {} };
 		return new RepositorySourceGuard( $database, $lifecycle );
 	}
 
-	private function unavailableSourceGuard(): RepositorySourceGuard {
+	private function unavailable_source_guard(): RepositorySourceGuard {
 		$database  = new class() { public string $last_error = 'fixture unavailable';
 			public function prepare( string $query, mixed ...$arguments ): string {
 				return $query;
 			} public function get_results( string $query ): array {
 				return array();
 			} };
-		$lifecycle = new class() extends Database { public function requireReady(): void {} };
+		$lifecycle = new class() extends Database { public function require_ready(): void {} };
 		return new RepositorySourceGuard( $database, $lifecycle );
 	}
 }

@@ -9,7 +9,7 @@ use RAN\Admin\WebhookCleanupContext;
 
 final class WebhookCleanupContextTest extends TestCase {
 
-	public function testItExposesOnlyBoundedDisplayAndCleanupAuthority(): void {
+	public function test_it_exposes_only_bounded_display_and_cleanup_authority(): void {
 		$context = new WebhookCleanupContext(
 			'plugin',
 			'plugin/plugin.php',
@@ -26,16 +26,16 @@ final class WebhookCleanupContextTest extends TestCase {
 			'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=plugin%2Fplugin.php'
 		);
 
-		self::assertSame( 'gh', $context->providerCode() );
-		self::assertSame( 'repository-42', $context->repositoryId() );
+		self::assertSame( 'gh', $context->provider_code() );
+		self::assertSame( 'repository-42', $context->repository_id() );
 		self::assertSame( 'owner/repository', $context->repository() );
-		self::assertSame( 'repository', $context->localSecretCoverage() );
-		self::assertTrue( $context->evidenceAvailable() );
-		self::assertSame( array( 'branch/branch.php' ), $context->branchPackageReferences() );
-		self::assertFalse( $context->cleanupAllowed() );
+		self::assertSame( 'repository', $context->local_secret_coverage() );
+		self::assertTrue( $context->evidence_available() );
+		self::assertSame( array( 'branch/branch.php' ), $context->branch_package_references() );
+		self::assertFalse( $context->cleanup_allowed() );
 	}
 
-	public function testItRejectsUnsafeLinks(): void {
+	public function test_it_rejects_unsafe_links(): void {
 		$this->expectException( \InvalidArgumentException::class );
 
 		new WebhookCleanupContext(

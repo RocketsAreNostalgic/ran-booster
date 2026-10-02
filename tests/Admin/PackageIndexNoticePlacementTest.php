@@ -21,7 +21,7 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		unset( $GLOBALS['ran_booster_admin_test_translations'], $GLOBALS['ran_booster_package_view_translations'] );
 	}
 
-	public function testStructuredContentionInfoNoticeKeepsItsProtectedActivityLink(): void {
+	public function test_structured_contention_info_notice_keeps_its_protected_activity_link(): void {
 		$messages = array(
 			array(
 				'type'    => 'info',
@@ -39,20 +39,20 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		self::assertStringContainsString( 'Review activity', $html );
 	}
 
-	public function testPackageIndexCanReorderTheCompleteManagedPackageHeadingWithoutChangingPackageIdentity(): void {
+	public function test_package_index_can_reorder_the_complete_managed_package_heading_without_changing_package_identity(): void {
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Managed %s'] = '%s administrés';
-		$packageView             = PackagePagePresenter::plugin();
-		$messages                = array();
-		$name                    = 'RAN Booster';
-		$view                    = 'packages/index';
-		$developmentSafetyNotice = false;
-		$packages                = array();
-		$packageProviders        = array();
-		$packageActivity         = array(
+		$package_view              = PackagePagePresenter::plugin();
+		$messages                  = array();
+		$name                      = 'RAN Booster';
+		$view                      = 'packages/index';
+		$development_safety_notice = false;
+		$packages                  = array();
+		$package_providers         = array();
+		$package_activity          = array(
 			'items'       => array(),
 			'unavailable' => false,
 		);
-		$tabs                    = array();
+		$tabs                      = array();
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/base.php';
@@ -60,23 +60,23 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 
 		self::assertStringContainsString( '>Plugins administrés</h2>', $html );
 		self::assertStringNotContainsString( '>Managed Plugins</h2>', $html );
-		self::assertSame( 'plugin', $packageView->get_type() );
-		self::assertSame( 'ran-booster-plugins', $packageView->get_page_slug() );
+		self::assertSame( 'plugin', $package_view->get_type() );
+		self::assertSame( 'ran-booster-plugins', $package_view->get_page_slug() );
 		self::assertStringContainsString( 'ran-booster-admin--packages', $html );
 		self::assertStringContainsString( 'page=ran-booster-plugins-create', $html );
 	}
 
 	/** @return array<string, array{PackagePagePresenter, string}> */
-	public static function packageTypes(): array {
+	public static function package_types(): array {
 		return array(
 			'plugins' => array( PackagePagePresenter::plugin(), 'Managed Plugins' ),
 			'themes'  => array( PackagePagePresenter::theme(), 'Managed Themes' ),
 		);
 	}
 
-	#[DataProvider( 'packageTypes' )]
-	public function testPackageIndexPlacesNoticesAfterItsHeadingAndDescription( PackagePagePresenter $packageView, string $heading ): void {
-		$messages                = array(
+	#[DataProvider( 'package_types' )]
+	public function test_package_index_places_notices_after_its_heading_and_description( PackagePagePresenter $package_view, string $heading ): void {
+		$messages                  = array(
 			array(
 				'type'            => 'success',
 				'message'         => 'Scoped package result.',
@@ -85,16 +85,16 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 				'skipped_updates' => 1,
 			),
 		);
-		$name                    = 'RAN Booster';
-		$view                    = 'packages/index';
-		$developmentSafetyNotice = true;
-		$packages                = array();
-		$packageProviders        = array();
-		$packageActivity         = array(
+		$name                      = 'RAN Booster';
+		$view                      = 'packages/index';
+		$development_safety_notice = true;
+		$packages                  = array();
+		$package_providers         = array();
+		$package_activity          = array(
 			'items'       => array(),
 			'unavailable' => false,
 		);
-		$tabs                    = array(
+		$tabs                      = array(
 			array(
 				'key'    => 'overview',
 				'label'  => 'Overview',
@@ -113,21 +113,21 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/base.php';
 		$html = (string) ob_get_clean();
 
-		$mastheadPosition    = strpos( $html, 'Deploy themes and plugins straight from your Git repos.' );
-		$headingPosition     = strpos( $html, $heading );
-		$descriptionPosition = strpos( $html, 'Review package health, deploy saved branches and hand published releases to WordPress.' );
-		$resultPosition      = strpos( $html, 'Scoped package result.' );
-		$safetyPosition      = strpos( $html, '<strong>Development safety:</strong>' );
-		$tablePosition       = strpos( $html, 'ran-booster-package-table' );
+		$masthead_position    = strpos( $html, 'Deploy themes and plugins straight from your Git repos.' );
+		$heading_position     = strpos( $html, $heading );
+		$description_position = strpos( $html, 'Review package health, deploy saved branches and hand published releases to WordPress.' );
+		$result_position      = strpos( $html, 'Scoped package result.' );
+		$safety_position      = strpos( $html, '<strong>Development safety:</strong>' );
+		$table_position       = strpos( $html, 'ran-booster-package-table' );
 
-		foreach ( array( $mastheadPosition, $headingPosition, $descriptionPosition, $resultPosition, $safetyPosition, $tablePosition ) as $position ) {
+		foreach ( array( $masthead_position, $heading_position, $description_position, $result_position, $safety_position, $table_position ) as $position ) {
 			self::assertIsInt( $position );
 		}
-		self::assertTrue( $mastheadPosition < $headingPosition );
-		self::assertTrue( $headingPosition < $descriptionPosition );
-		self::assertTrue( $descriptionPosition < $resultPosition );
-		self::assertTrue( $resultPosition < $safetyPosition );
-		self::assertTrue( $safetyPosition < $tablePosition );
+		self::assertTrue( $masthead_position < $heading_position );
+		self::assertTrue( $heading_position < $description_position );
+		self::assertTrue( $description_position < $result_position );
+		self::assertTrue( $result_position < $safety_position );
+		self::assertTrue( $safety_position < $table_position );
 		self::assertSame( 1, substr_count( $html, 'Scoped package result.' ) );
 		self::assertSame( 1, substr_count( $html, '<strong>Development safety:</strong>' ) );
 		self::assertSame( 1, substr_count( $html, 'class="ran-booster-package-intro"' ) );
@@ -147,7 +147,7 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		self::assertStringNotContainsString( '>Transporter</a>', $html );
 		self::assertSame( 1, substr_count( $html, 'aria-current="page"' ) );
 		self::assertStringContainsString(
-			'plugin' === $packageView->get_type()
+			'plugin' === $package_view->get_type()
 				? 'href="https://example.test/wp-admin/admin.php?page=ran-booster-plugins" aria-current="page">Plugins</a>'
 				: 'href="https://example.test/wp-admin/admin.php?page=ran-booster-themes" aria-current="page">Themes</a>',
 			$html

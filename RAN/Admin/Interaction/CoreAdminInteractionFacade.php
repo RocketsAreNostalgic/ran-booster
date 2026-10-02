@@ -36,37 +36,30 @@ final class CoreAdminInteractionFacade implements
 	private SignedAdminInteractionFlow $flow;
 
 	public function __construct(
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		?callable $emitHeader = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		?callable $emitStatus = null,
+		?callable $emit_header = null,
+		?callable $emit_status = null,
 		?callable $redirect = null,
 		?callable $terminate = null
 	) {
 		$this->flow = new SignedAdminInteractionFlow(
 			$this->resolve_pending_request( ... ),
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-			$emitHeader,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-			$emitStatus,
+			$emit_header,
+			$emit_status,
 			$redirect,
 			$terminate
 		);
 	}
 
 	public function register(): void {
-		add_action( 'admin_init', array( $this, 'preparePendingFeedback' ) );
+		add_action( 'admin_init', array( $this, 'prepare_pending_feedback' ) );
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public interaction methods retain the existing connected caller and callback contracts.
-	public function renderFormAttributes( AdminInteractionRequest $request ): void {
+	public function render_form_attributes( AdminInteractionRequest $request ): void {
 		$this->assert_canonical_url( $request );
 		$signed_request = $this->signed_request( $request );
 		$values         = wp_json_encode(
 			array(
 				'ran_booster_interaction[operation]' => $signed_request->operation,
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- The signed-request DTO retains its separately owned public property contract.
-				'ran_booster_interaction[target]'    => $signed_request->targetKey,
+				'ran_booster_interaction[target]'    => $signed_request->target_key,
 			)
 		);
 		if ( ! is_string( $values ) ) {
@@ -75,14 +68,11 @@ final class CoreAdminInteractionFacade implements
 
 		$attributes = array(
 			'data-ran-booster-enhanced-mutation'     => '',
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- The signed-request DTO retains its separately owned public property contract.
-			'data-ran-booster-error-target'          => '#' . $signed_request->errorRegionId,
+			'data-ran-booster-error-target'          => '#' . $signed_request->error_region_id,
 			'data-ran-booster-interaction-operation' => $signed_request->operation,
 			'hx-post'                                => wp_make_link_relative( admin_url( 'admin-post.php' ) ),
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- The signed-request DTO retains its separately owned public property contract.
-			'hx-target'                              => $signed_request->targetSelector,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- The signed-request DTO retains its separately owned public property contract.
-			'hx-select'                              => $signed_request->targetSelector,
+			'hx-target'                              => $signed_request->target_selector,
+			'hx-select'                              => $signed_request->target_selector,
 			'hx-swap'                                => 'outerHTML transition:true show:none',
 			'hx-sync'                                => 'this:drop',
 			'hx-vals'                                => $values,
@@ -95,12 +85,10 @@ final class CoreAdminInteractionFacade implements
 			}
 		}
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public interaction methods retain the existing connected caller and callback contracts.
-	public function isEnhancedRequest( AdminInteractionRequest $request ): bool {
+	public function is_enhanced_request( AdminInteractionRequest $request ): bool {
 		$this->assert_canonical_url( $request );
 
-		return $this->flow->isEnhancedRequest( $this->signed_request( $request ) );
+		return $this->flow->is_enhanced_request( $this->signed_request( $request ) );
 	}
 
 	public function respond( AdminInteractionOutcome $outcome ): never {
@@ -112,34 +100,26 @@ final class CoreAdminInteractionFacade implements
 			$outcome->message()
 		);
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public interaction methods retain the existing connected caller and callback contracts.
-	public function respondWithTransporterRowFragment(
+	public function respond_with_transporter_row_fragment(
 		AdminInteractionOutcome $outcome,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		callable $renderFragment
+		callable $render_fragment
 	): never {
 		$request = $outcome->request();
 		if ( AdminInteractionTarget::TRANSPORTER_MIGRATION_SOURCE !== $request->target() ) {
 			throw new InvalidArgumentException( 'Direct row fragments are limited to Transporter migration source rows.' );
 		}
 		$this->assert_canonical_url( $request );
-		$this->flow->respondWithFragment(
+		$this->flow->respond_with_fragment(
 			$this->signed_request( $request ),
 			$outcome->kind(),
 			$outcome->message(),
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-			$renderFragment
+			$render_fragment
 		);
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public interaction methods retain the existing connected caller and callback contracts.
-	public function preparePendingFeedback(): void {
-		$this->flow->preparePendingFeedback();
+	public function prepare_pending_feedback(): void {
+		$this->flow->prepare_pending_feedback();
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public interaction methods retain the existing connected caller and callback contracts.
-	public function providerProfileRequest(
+	public function provider_profile_request(
 		string $action,
 		string $provider
 	): SignedAdminInteractionRequest {
@@ -181,9 +161,7 @@ final class CoreAdminInteractionFacade implements
 			$contract['error']
 		);
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public interaction methods retain the existing connected caller and callback contracts.
-	public function respondToProviderProfileSuccess( SignedAdminInteractionRequest $request, string $message ): never {
+	public function respond_to_provider_profile_success( SignedAdminInteractionRequest $request, string $message ): never {
 		$this->flow->respond(
 			$request,
 			AdminInteractionOutcome::SUCCESS,
@@ -195,18 +173,14 @@ final class CoreAdminInteractionFacade implements
 			)
 		);
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public interaction methods retain the existing connected caller and callback contracts.
-	public function respondToProviderProfileValidationFailure( SignedAdminInteractionRequest $request, string $message ): never {
+	public function respond_to_provider_profile_validation_failure( SignedAdminInteractionRequest $request, string $message ): never {
 		$this->flow->respond(
 			$request,
 			AdminInteractionOutcome::VALIDATION_FAILURE,
 			$message
 		);
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public interaction methods retain the existing connected caller and callback contracts.
-	public function respondToProviderProfileUnexpectedFailure( SignedAdminInteractionRequest $request ): never {
+	public function respond_to_provider_profile_unexpected_failure( SignedAdminInteractionRequest $request ): never {
 		$this->flow->respond(
 			$request,
 			AdminInteractionOutcome::UNEXPECTED_FAILURE,
@@ -217,10 +191,10 @@ final class CoreAdminInteractionFacade implements
 	private function signed_request( AdminInteractionRequest $request ): SignedAdminInteractionRequest {
 		return new SignedAdminInteractionRequest(
 			$request->operation(),
-			$request->targetKey(),
-			$request->targetSelector(),
-			$request->canonicalUrl(),
-			$request->errorRegionId()
+			$request->target_key(),
+			$request->target_selector(),
+			$request->canonical_url(),
+			$request->error_region_id()
 		);
 	}
 
@@ -231,7 +205,7 @@ final class CoreAdminInteractionFacade implements
 		string $error_id
 	): ?SignedAdminInteractionRequest {
 		if ( AdminInteractionTarget::PROVIDER_REPOSITORIES->value === $target ) {
-			$request = AdminInteractionRequest::providerRepositories( $operation, $return_url, $error_id );
+			$request = AdminInteractionRequest::provider_repositories( $operation, $return_url, $error_id );
 			$this->assert_canonical_url( $request );
 
 			return $this->signed_request( $request );
@@ -265,15 +239,12 @@ final class CoreAdminInteractionFacade implements
 				return null;
 			}
 			parse_str( (string) ( $url['query'] ?? '' ), $query );
-			$request = $this->providerProfileRequest(
+			$request = $this->provider_profile_request(
 				substr( $operation, strlen( 'core:' ) ),
 				is_string( $query['tab'] ?? null ) ? $query['tab'] : ''
 			);
-
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- The signed-request DTO retains its separately owned public property contract.
-			return hash_equals( $return_url, $request->canonicalUrl )
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- The signed-request DTO retains its separately owned public property contract.
-				&& hash_equals( $error_id, $request->errorRegionId )
+			return hash_equals( $return_url, $request->canonical_url )
+				&& hash_equals( $error_id, $request->error_region_id )
 					? $request
 					: null;
 		}
@@ -282,7 +253,7 @@ final class CoreAdminInteractionFacade implements
 	}
 
 	private function assert_canonical_url( AdminInteractionRequest $request ): void {
-		$this->assert_canonical_url_for_target( $request->canonicalUrl(), $request->target() );
+		$this->assert_canonical_url_for_target( $request->canonical_url(), $request->target() );
 	}
 
 	private function assert_canonical_url_for_target(

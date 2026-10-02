@@ -26,28 +26,28 @@ namespace Tests\Deployment {
 		/** @var list<array<string, mixed>> */
 		public array $rows = array();
 		/** @var array<string, string> */
-		public array $optionRows = array();
+		public array $option_rows = array();
 		/** @var list<string> */
 		public array $queries = array();
-		public ?string $failQueryContains = null;
-		public ?string $zeroQueryContains = null;
-		public bool $failInsert = false;
-		public ?int $failInsertNumber = null;
-		public bool $failReads = false;
-		public bool $failCommit = false;
-		public ?string $tamperInsertColumn = null;
-		public mixed $tamperInsertValue = null;
-		public ?string $tamperUpdateColumn = null;
-		public mixed $tamperUpdateValue = null;
+		public ?string $fail_query_contains = null;
+		public ?string $zero_query_contains = null;
+		public bool $fail_insert = false;
+		public ?int $fail_insert_number = null;
+		public bool $fail_reads = false;
+		public bool $fail_commit = false;
+		public ?string $tamper_insert_column = null;
+		public mixed $tamper_insert_value = null;
+		public ?string $tamper_update_column = null;
+		public mixed $tamper_update_value = null;
 		/** @var array{rows: list<array<string, mixed>>, options: array<string, string>}|null */
 		private ?array $snapshot = null;
-		private int $insertCalls = 0;
-		public string $serverInfo = '8.4.6';
-		public string $innodbSupport = 'DEFAULT';
-		public int $capabilityReads = 0;
+		private int $insert_calls = 0;
+		public string $server_info = '8.4.6';
+		public string $innodb_support = 'DEFAULT';
+		public int $capability_reads = 0;
 
 		public function db_server_info(): string {
-			return $this->serverInfo;
+			return $this->server_info;
 		}
 
 		public function prepare( string $query, mixed ...$arguments ): string {
@@ -69,8 +69,8 @@ namespace Tests\Deployment {
 
 		/** @param array<string, mixed> $data */
 		public function insert( string $table, array $data ): int|false {
-			++$this->insertCalls;
-			if ( $this->failInsert || $this->insertCalls === $this->failInsertNumber ) {
+			++$this->insert_calls;
+			if ( $this->fail_insert || $this->insert_calls === $this->fail_insert_number ) {
 				return false;
 			}
 			foreach ( $this->rows as $row ) {
@@ -90,8 +90,8 @@ namespace Tests\Deployment {
 				static fn ( int $maximum, array $row ): int => max( $maximum, (int) ( $row['id'] ?? 0 ) ),
 				0
 			) + 1;
-			if ( null !== $this->tamperInsertColumn ) {
-				$data[ $this->tamperInsertColumn ] = $this->tamperInsertValue;
+			if ( null !== $this->tamper_insert_column ) {
+				$data[ $this->tamper_insert_column ] = $this->tamper_insert_value;
 			}
 			$this->rows[] = $data;
 
@@ -100,21 +100,21 @@ namespace Tests\Deployment {
 
 		public function query( string $query ): int|false {
 			$this->queries[] = $query;
-			if ( null !== $this->failQueryContains && str_contains( $query, $this->failQueryContains ) ) {
+			if ( null !== $this->fail_query_contains && str_contains( $query, $this->fail_query_contains ) ) {
 				$this->last_error = 'database details must not escape';
 
 				return false;
 			}
-			if ( null !== $this->zeroQueryContains && str_contains( $query, $this->zeroQueryContains ) ) {
+			if ( null !== $this->zero_query_contains && str_contains( $query, $this->zero_query_contains ) ) {
 				return 0;
 			}
 			if ( 'START TRANSACTION' === $query ) {
-				$this->snapshot = array( 'rows' => $this->rows, 'options' => $this->optionRows );
+				$this->snapshot = array( 'rows' => $this->rows, 'options' => $this->option_rows );
 
 				return 1;
 			}
 			if ( 'COMMIT' === $query ) {
-				if ( $this->failCommit ) {
+				if ( $this->fail_commit ) {
 					return false;
 				}
 				$this->snapshot = null;
@@ -124,27 +124,27 @@ namespace Tests\Deployment {
 			if ( 'ROLLBACK' === $query ) {
 				if ( null !== $this->snapshot ) {
 					$this->rows       = $this->snapshot['rows'];
-					$this->optionRows = $this->snapshot['options'];
+					$this->option_rows = $this->snapshot['options'];
 				}
 				$this->snapshot = null;
 
 				return 1;
 			}
 			if ( preg_match( "/^INSERT IGNORE INTO `wp_options` .* VALUES \('([^']+)', '([^']+)', 'no'\)$/", $query, $matches ) === 1 ) {
-				if ( isset( $this->optionRows[ stripslashes( $matches[1] ) ] ) ) {
+				if ( isset( $this->option_rows[ stripslashes( $matches[1] ) ] ) ) {
 					return 0;
 				}
-				$this->optionRows[ stripslashes( $matches[1] ) ] = stripslashes( $matches[2] );
+				$this->option_rows[ stripslashes( $matches[1] ) ] = stripslashes( $matches[2] );
 
 				return 1;
 			}
 			if ( preg_match( "/^DELETE FROM `wp_options` WHERE option_name = '([^']+)' AND option_value = '([^']+)'$/", $query, $matches ) === 1 ) {
 				$name  = stripslashes( $matches[1] );
 				$value = stripslashes( $matches[2] );
-				if ( ! isset( $this->optionRows[ $name ] ) || ! hash_equals( $value, $this->optionRows[ $name ] ) ) {
+				if ( ! isset( $this->option_rows[ $name ] ) || ! hash_equals( $value, $this->option_rows[ $name ] ) ) {
 					return 0;
 				}
-				unset( $this->optionRows[ $name ] );
+				unset( $this->option_rows[ $name ] );
 
 				return 1;
 			}
@@ -158,8 +158,8 @@ namespace Tests\Deployment {
 						preg_match( '/^([a-z_]+) = (NULL|\'(.*)\')$/', $assignment, $parts );
 						$row[ $parts[1] ] = 'NULL' === $parts[2] ? null : stripslashes( $parts[3] );
 					}
-					if ( null !== $this->tamperUpdateColumn ) {
-						$row[ $this->tamperUpdateColumn ] = $this->tamperUpdateValue;
+					if ( null !== $this->tamper_update_column ) {
+						$row[ $this->tamper_update_column ] = $this->tamper_update_value;
 					}
 					unset( $row );
 
@@ -173,11 +173,11 @@ namespace Tests\Deployment {
 				$ids     = array_map( 'intval', explode( ',', $matches[1] ) );
 				$deleted = 0;
 				foreach ( $this->rows as $index => $row ) {
-					$resolvedAttention = 'needs_attention' === $row['state']
+					$resolved_attention = 'needs_attention' === $row['state']
 						&& null !== ( $row['resolved_at'] ?? null )
 						&& null !== ( $row['resolved_by'] ?? null );
 					if ( in_array( (int) $row['id'], $ids, true )
-						&& ( in_array( $row['state'], array( 'succeeded', 'failed' ), true ) || $resolvedAttention ) ) {
+						&& ( in_array( $row['state'], array( 'succeeded', 'failed' ), true ) || $resolved_attention ) ) {
 						unset( $this->rows[ $index ] );
 						++$deleted;
 					}
@@ -192,13 +192,13 @@ namespace Tests\Deployment {
 
 		public function get_var( string $query ): mixed {
 			$this->queries[] = $query;
-			if ( $this->failReads ) {
+			if ( $this->fail_reads ) {
 				$this->last_error = 'database details must not escape';
 
 				return null;
 			}
 			if ( preg_match( "/FROM `wp_options` WHERE option_name = '([^']+)'/", $query, $matches ) === 1 ) {
-				return $this->optionRows[ stripslashes( $matches[1] ) ] ?? null;
+				return $this->option_rows[ stripslashes( $matches[1] ) ] ?? null;
 			}
 
 			return null;
@@ -207,17 +207,17 @@ namespace Tests\Deployment {
 		/** @return list<object>|null */
 		public function get_results( string $query ): ?array {
 			if ( 'SHOW ENGINES' === $query ) {
-				++$this->capabilityReads;
+				++$this->capability_reads;
 
 				return array(
 					(object) array(
 						'Engine'  => 'InnoDB',
-						'Support' => $this->innodbSupport,
+						'Support' => $this->innodb_support,
 					),
 				);
 			}
 			$this->queries[] = $query;
-			if ( $this->failReads ) {
+			if ( $this->fail_reads ) {
 				$this->last_error = 'database details must not escape';
 
 				return null;

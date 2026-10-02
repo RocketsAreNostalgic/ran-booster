@@ -49,16 +49,16 @@ if ( ! function_exists( __NAMESPACE__ . '\\wp_kses_allowed_html' ) ) {
 
 if ( ! function_exists( __NAMESPACE__ . '\\wp_kses' ) ) {
 	/** @param array<string, array<string, true>> $allowedHtml */
-	function wp_kses( string $content, array $allowedHtml ): string {
+	function wp_kses( string $content, array $allowed_html ): string {
 		$content = wp_kses_post( $content );
 
 		$content = (string) preg_replace_callback(
 			'/<(h3|p|strong)\\b([^>]*)>/i',
-			static function ( array $matches ) use ( $allowedHtml ): string {
+			static function ( array $matches ) use ( $allowed_html ): string {
 				$tag        = strtolower( $matches[1] );
 				$attributes = $matches[2];
 
-				if ( ! isset( $allowedHtml[ $tag ]['id'] ) ) {
+				if ( ! isset( $allowed_html[ $tag ]['id'] ) ) {
 					$attributes = (string) preg_replace( "/\\s+id\\s*=\\s*(?:\\\"[^\\\"]*\\\"|'[^']*'|[^\\s>]+)/i", '', $attributes );
 				}
 

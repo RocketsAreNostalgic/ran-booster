@@ -16,11 +16,11 @@ final class RepositoryReleaseInspectionRejected extends RuntimeException {
 		parent::__construct( 'The exact repository release could not be inspected.' );
 	}
 
-	public static function noReleases(): self {
+	public static function no_releases(): self {
 		return new self( self::NO_RELEASES );
 	}
 
-	public static function invalidRelease(): self {
+	public static function invalid_release(): self {
 		return new self( self::INVALID_RELEASE );
 	}
 

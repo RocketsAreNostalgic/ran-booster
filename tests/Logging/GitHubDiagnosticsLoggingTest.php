@@ -36,55 +36,55 @@ final class GitHubDiagnosticsLoggingTest extends TestCase {
 
 	private const SECRET_CANARY = 'github_pat_diagnostic_canary_secret';
 
-	private string $captureDirectory;
+	private string $capture_directory;
 	private TemporaryDebugCapture $capture;
 
 	protected function setUp(): void {
-		$this->captureDirectory = sys_get_temp_dir() . '/ran-booster-github-diagnostics-' . bin2hex( random_bytes( 8 ) );
-		self::assertTrue( mkdir( $this->captureDirectory, 0700 ) );
+		$this->capture_directory = sys_get_temp_dir() . '/ran-booster-github-diagnostics-' . bin2hex( random_bytes( 8 ) );
+		self::assertTrue( mkdir( $this->capture_directory, 0700 ) );
 		$this->capture = new TemporaryDebugCapture(
-			$this->captureDirectory . '/secrets.php',
+			$this->capture_directory . '/secrets.php',
 			static fn(): int => strtotime( '2026-08-13T12:00:00Z' )
 		);
 		$this->capture->start();
-		BoosterLogger::configureCapture( $this->capture );
+		BoosterLogger::configure_capture( $this->capture );
 	}
 
 	protected function tearDown(): void {
-		BoosterLogger::configureCapture( null );
+		BoosterLogger::configure_capture( null );
 		foreach ( array( 'ran-booster-debug.php', 'ran-booster-debug.php.lock' ) as $name ) {
-			$path = $this->captureDirectory . '/' . $name;
+			$path = $this->capture_directory . '/' . $name;
 			if ( is_file( $path ) || is_link( $path ) ) {
 				unlink( $path );
 			}
 		}
-		if ( is_dir( $this->captureDirectory ) ) {
-			rmdir( $this->captureDirectory );
+		if ( is_dir( $this->capture_directory ) ) {
+			rmdir( $this->capture_directory );
 		}
 	}
 
 	/** @return iterable<string, array{bool,string,int}> */
-	public static function unexpectedFailures(): iterable {
+	public static function unexpected_failures(): iterable {
 		yield 'credential' => array( true, 'credential-secret-canary', 73 );
 		yield 'repository' => array( false, 'owner/repository-secret-canary', 74 );
 	}
 
-	#[DataProvider( 'unexpectedFailures' )]
-	public function testUnexpectedFailureIsLoggedWithoutProviderInputOrExceptionMessage(
+	#[DataProvider( 'unexpected_failures' )]
+	public function test_unexpected_failure_is_logged_without_provider_input_or_exception_message(
 		bool $credential,
-		string $providerInput,
+		string $provider_input,
 		int $code
 	): void {
 		$browser = new class() extends RepositoryBrowser {
-			public ?Throwable $credentialException = null;
-			public ?Throwable $repositoryException = null;
+			public ?Throwable $credential_exception = null;
+			public ?Throwable $repository_exception = null;
 
 			public function __construct() {
 			}
 
 			public function validate_credential( string $credential_id, float $timeout = 15.0 ): CredentialValidationResult {
 				unset( $credential_id, $timeout );
-				throw $this->credentialException ?? new LogicException( 'Unexpected credential fixture state.' );
+				throw $this->credential_exception ?? new LogicException( 'Unexpected credential fixture state.' );
 			}
 
 			public function repository(
@@ -95,18 +95,18 @@ final class GitHubDiagnosticsLoggingTest extends TestCase {
 				bool $authenticate_default = false
 			): RepositoryDescriptor {
 				unset( $full_name, $credential_id, $timeout, $response_size, $authenticate_default );
-				throw $this->repositoryException ?? new LogicException( 'Unexpected repository fixture state.' );
+				throw $this->repository_exception ?? new LogicException( 'Unexpected repository fixture state.' );
 			}
 		};
 		$failure = new LogicException( self::SECRET_CANARY, $code );
 		if ( $credential ) {
-			$browser->credentialException = $failure;
-			$results                      = ( new GitHubDiagnostics( $browser ) )->diagnose( new ProviderDiagnosticRequest( $providerInput ) );
-			$result                       = $results[0];
+			$browser->credential_exception = $failure;
+			$results                       = ( new GitHubDiagnostics( $browser ) )->diagnose( new ProviderDiagnosticRequest( $provider_input ) );
+			$result                        = $results[0];
 		} else {
-			$browser->repositoryException = $failure;
-			$results                      = ( new GitHubDiagnostics( $browser ) )->diagnose( new ProviderDiagnosticRequest( null, $providerInput ) );
-			$result                       = $results[1];
+			$browser->repository_exception = $failure;
+			$results                       = ( new GitHubDiagnostics( $browser ) )->diagnose( new ProviderDiagnosticRequest( null, $provider_input ) );
+			$result                        = $results[1];
 		}
 		self::assertSame( $failure, $result->failure );
 		$service = ( new ReflectionClass( TroubleshootingService::class ) )->newInstanceWithoutConstructor();
@@ -119,17 +119,17 @@ final class GitHubDiagnosticsLoggingTest extends TestCase {
 			$line
 		);
 		self::assertStringNotContainsString( self::SECRET_CANARY, $line );
-		self::assertStringNotContainsString( $providerInput, $line );
+		self::assertStringNotContainsString( $provider_input, $line );
 	}
 
 	/** @return iterable<string, array{bool,string}> */
-	public static function escapingFailures(): iterable {
+	public static function escaping_failures(): iterable {
 		yield 'diagnostics' => array( false, 'provider_diagnostics' );
 		yield 'webhook readiness' => array( true, 'provider_webhook_readiness' );
 	}
 
-	#[DataProvider( 'escapingFailures' )]
-	public function testEscapingProviderFailureIsLoggedOnlyAtTheCoreBoundary( bool $readiness, string $step ): void {
+	#[DataProvider( 'escaping_failures' )]
+	public function test_escaping_provider_failure_is_logged_only_at_the_core_boundary( bool $readiness, string $step ): void {
 		$failure  = new LogicException( self::SECRET_CANARY, 75 );
 		$provider = new EscapingDiagnosticProvider( $failure, $readiness );
 		$local    = new class() extends \RAN\Troubleshooting\LocalTroubleshootingService {
@@ -168,7 +168,7 @@ final class GitHubDiagnosticsLoggingTest extends TestCase {
 final class EscapingDiagnosticProvider implements RepositoryProvider, WebhookNormalizer {
 	use \Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
 
-	public function __construct( private Throwable $failure, private bool $failReadiness ) {
+	public function __construct( private Throwable $failure, private bool $fail_readiness ) {
 	}
 
 	public function get_metadata(): ProviderMetadata {
@@ -176,13 +176,13 @@ final class EscapingDiagnosticProvider implements RepositoryProvider, WebhookNor
 	}
 
 	public function get_provider_diagnostics(): \RAN\RepositoryProvider\ProviderDiagnostics {
-		return new class( $this->failure, $this->failReadiness ) implements \RAN\RepositoryProvider\ProviderDiagnostics {
-			public function __construct( private Throwable $failure, private bool $failReadiness ) {
+		return new class( $this->failure, $this->fail_readiness ) implements \RAN\RepositoryProvider\ProviderDiagnostics {
+			public function __construct( private Throwable $failure, private bool $fail_readiness ) {
 			}
 
 			public function diagnose( ProviderDiagnosticRequest $request ): array {
 				unset( $request );
-				if ( ! $this->failReadiness ) {
+				if ( ! $this->fail_readiness ) {
 					throw $this->failure;
 				}
 
@@ -213,12 +213,12 @@ final class EscapingDiagnosticProvider implements RepositoryProvider, WebhookNor
 				unset( $constants );
 				return null;
 			}
-			public function authorize_webhook( \RAN\RepositoryProvider\SignedWebhookVerification $verification, string $repositoryAuthorityId, string $repository ): bool {
-				unset( $verification, $repositoryAuthorityId, $repository );
+			public function authorize_webhook( \RAN\RepositoryProvider\SignedWebhookVerification $verification, string $repository_authority_id, string $repository ): bool {
+				unset( $verification, $repository_authority_id, $repository );
 				return false;
 			}
-			public function repository_target_matches( string $target, string $repositoryLocator ): bool {
-				return $target === $repositoryLocator;
+			public function repository_target_matches( string $target, string $repository_locator ): bool {
+				return $target === $repository_locator;
 			}
 		};
 	}

@@ -8,7 +8,7 @@ use PHPUnit\Framework\TestCase;
 
 final class WebhookManagementCurrentRuntimeBoundaryTest extends TestCase {
 
-	public function testProductionRuntimeCarriesNoAssistedHooksCompatibilityAdapter(): void {
+	public function test_production_runtime_carries_no_assisted_hooks_compatibility_adapter(): void {
 		$root  = dirname( __DIR__, 3 );
 		$paths = array( $root . '/ran-booster.php' );
 

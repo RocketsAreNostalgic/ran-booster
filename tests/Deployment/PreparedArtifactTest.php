@@ -23,17 +23,17 @@ final class PreparedArtifactTest extends TestCase {
 		}
 	}
 
-	public function testCleanupDeletesTheExactUnchangedArtifact(): void {
+	public function test_cleanup_deletes_the_exact_unchanged_artifact(): void {
 		$artifact = $this->artifact();
-		$path     = $artifact->getPath();
+		$path     = $artifact->get_path();
 
 		$artifact->cleanup();
 		self::assertFileDoesNotExist( $path );
 	}
 
-	public function testCleanupRejectsChangedArtifactWithoutDeletingIt(): void {
+	public function test_cleanup_rejects_changed_artifact_without_deleting_it(): void {
 		$artifact = $this->artifact();
-		$path     = $artifact->getPath();
+		$path     = $artifact->get_path();
 		file_put_contents( $path, 'changed Core artifact' );
 		try {
 			$artifact->cleanup();
@@ -51,7 +51,7 @@ final class PreparedArtifactTest extends TestCase {
 		$this->paths[] = $path;
 		file_put_contents( $path, 'immutable Core artifact' );
 		chmod( $path, 0600 );
-		$identity = PreparedArtifact::regularFileIdentity( $path );
+		$identity = PreparedArtifact::regular_file_identity( $path );
 		self::assertIsArray( $identity );
 
 		return new PreparedArtifact(

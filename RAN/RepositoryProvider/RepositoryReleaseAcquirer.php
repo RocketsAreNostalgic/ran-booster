@@ -9,11 +9,11 @@ use RAN\Provider\ProviderCapability;
 interface RepositoryReleaseAcquirer extends ProviderCapability {
 	/** @throws RepositoryReleaseAcquisitionRejected When acquisition rejects the release or cannot clean up its bytes. */
 	public function acquire_release(
-		string $packageType,
+		string $package_type,
 		RepositoryReference $repository,
-		string $providerReleaseId,
+		string $provider_release_id,
 		string $tag,
-		string $expectedFingerprint,
+		string $expected_fingerprint,
 		string $channel
 	): RepositoryReleaseArtifact;
 }

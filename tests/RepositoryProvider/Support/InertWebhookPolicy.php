@@ -39,11 +39,11 @@ final readonly class InertWebhookPolicy implements ProviderWebhookPolicy {
 		return null;
 	}
 
-	public function authorize_webhook( SignedWebhookVerification $verification, string $repositoryAuthorityId, string $repository ): bool {
+	public function authorize_webhook( SignedWebhookVerification $verification, string $repository_authority_id, string $repository ): bool {
 		return true;
 	}
 
-	public function repository_target_matches( string $target, string $repositoryLocator ): bool {
-		return $target === $repositoryLocator;
+	public function repository_target_matches( string $target, string $repository_locator ): bool {
+		return $target === $repository_locator;
 	}
 }

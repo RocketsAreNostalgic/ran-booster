@@ -21,14 +21,14 @@ function is_email( string $email ): bool {
 	return false !== filter_var( $email, FILTER_VALIDATE_EMAIL );
 }
 
-function wp_specialchars_decode( string $text, int $quoteStyle = ENT_NOQUOTES ): string {
-	return htmlspecialchars_decode( $text, $quoteStyle );
+function wp_specialchars_decode( string $text, int $quote_style = ENT_NOQUOTES ): string {
+	return htmlspecialchars_decode( $text, $quote_style );
 }
 
 function home_url( string $path = '' ): string {
-	$baseUrl = (string) ( $GLOBALS['ran_booster_admin_test_home_url'] ?? 'https://example.test' );
+	$base_url = (string) ( $GLOBALS['ran_booster_admin_test_home_url'] ?? 'https://example.test' );
 
-	return rtrim( $baseUrl, '/' ) . '/' . ltrim( $path, '/' );
+	return rtrim( $base_url, '/' ) . '/' . ltrim( $path, '/' );
 }
 
 function wp_parse_url( string $url, int $component = -1 ): mixed {
@@ -59,8 +59,12 @@ function wp_mail( string $to, string $subject, string $message, array $headers =
 	return (bool) ( $GLOBALS['ran_booster_background_failure_mail_result'] ?? true );
 }
 
-function add_action( string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1 ): bool {
-	$GLOBALS['ran_booster_background_failure_actions'][ $hook ][] = compact( 'callback', 'priority', 'acceptedArgs' );
+function add_action( string $hook, callable $callback, int $priority = 10, int $accepted_args = 1 ): bool {
+	$GLOBALS['ran_booster_background_failure_actions'][ $hook ][] = array(
+		'callback'     => $callback,
+		'priority'     => $priority,
+		'acceptedArgs' => $accepted_args,
+	);
 
 	return true;
 }

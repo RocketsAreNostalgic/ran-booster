@@ -8,39 +8,39 @@ interface RepositoryWebhookManagement extends ProviderCapability {
 	public const OPERATION = 'repository-webhook-management';
 	public const VERSION   = 3;
 	public function setup(
-		string $repositoryId,
+		string $repository_id,
 		string $repository,
-		string $callbackUrl,
-		?string $credentialProfileId,
-		#[\SensitiveParameter] string $signingSecret
+		string $callback_url,
+		?string $credential_profile_id,
+		#[\SensitiveParameter] string $signing_secret
 	): RepositoryWebhookOperationResult;
 	public function check(
-		string $repositoryId,
+		string $repository_id,
 		string $repository,
-		string $hookId,
-		string $callbackUrl,
-		?string $credentialProfileId
+		string $hook_id,
+		string $callback_url,
+		?string $credential_profile_id
 	): RepositoryWebhookOperationResult;
 	public function reconfigure(
-		string $repositoryId,
+		string $repository_id,
 		string $repository,
-		string $hookId,
-		string $callbackUrl,
-		?string $credentialProfileId,
-		#[\SensitiveParameter] string $signingSecret
+		string $hook_id,
+		string $callback_url,
+		?string $credential_profile_id,
+		#[\SensitiveParameter] string $signing_secret
 	): RepositoryWebhookOperationResult;
 	public function remove(
-		string $repositoryId,
+		string $repository_id,
 		string $repository,
-		string $hookId,
-		string $callbackUrl,
-		?string $credentialProfileId
+		string $hook_id,
+		string $callback_url,
+		?string $credential_profile_id
 	): RepositoryWebhookOperationResult;
 	public function test(
-		string $repositoryId,
+		string $repository_id,
 		string $repository,
-		string $hookId,
-		string $callbackUrl,
-		?string $credentialProfileId
+		string $hook_id,
+		string $callback_url,
+		?string $credential_profile_id
 	): RepositoryWebhookOperationResult;
 }

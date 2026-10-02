@@ -21,7 +21,7 @@ final class SecretsRuntimeAvailabilityNoticeTest extends TestCase {
 		unset( $GLOBALS['ran_booster_repository_admin_allowed'] );
 	}
 
-	public function testUnsupportedRuntimeRendersOnePersistentSafeScopedWarning(): void {
+	public function test_unsupported_runtime_renders_one_persistent_safe_scoped_warning(): void {
 		$notice = new SecretsRuntimeAvailabilityNotice(
 			new SecretsRuntimeAvailability( false, false ),
 			'plugins-network'
@@ -39,18 +39,18 @@ final class SecretsRuntimeAvailabilityNoticeTest extends TestCase {
 		self::assertStringNotContainsString( '/srv/', $html );
 	}
 
-	public function testAvailableUnauthorizedAndUnrelatedScreensRenderNothing(): void {
+	public function test_available_unauthorized_and_unrelated_screens_render_nothing(): void {
 		self::assertFalse(
 			( new SecretsRuntimeAvailabilityNotice(
 				new SecretsRuntimeAvailability( true, false ),
 				'plugins'
-			) )->shouldRender()
+			) )->should_render()
 		);
 		self::assertFalse(
 			( new SecretsRuntimeAvailabilityNotice(
 				new SecretsRuntimeAvailability( false, false ),
 				'dashboard'
-			) )->shouldRender()
+			) )->should_render()
 		);
 
 		$GLOBALS['ran_booster_repository_admin_allowed'] = false;
@@ -58,11 +58,11 @@ final class SecretsRuntimeAvailabilityNoticeTest extends TestCase {
 			( new SecretsRuntimeAvailabilityNotice(
 				new SecretsRuntimeAvailability( false, false ),
 				'plugins'
-			) )->shouldRender()
+			) )->should_render()
 		);
 	}
 
-	public function testMultisiteMessageIsSafeAndSpecific(): void {
+	public function test_multisite_message_is_safe_and_specific(): void {
 		$availability = new SecretsRuntimeAvailability( true, true );
 
 		self::assertFalse( $availability->is_available() );

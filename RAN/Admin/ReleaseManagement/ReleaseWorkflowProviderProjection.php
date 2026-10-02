@@ -15,15 +15,15 @@ final class ReleaseWorkflowProviderProjection {
 		return new RepositoryReleaseWorkflowTarget(
 			$status->type(),
 			$status->identifier(),
-			$status->sourceRevision(),
-			$status->providerRepositoryId(),
-			$status->packageRoot(),
-			$status->installedVersion(),
-			$status->eligibility()->expectedUpdateUri()
+			$status->source_revision(),
+			$status->provider_repository_id(),
+			$status->package_root(),
+			$status->installed_version(),
+			$status->eligibility()->expected_update_uri()
 		);
 	}
 
 	public static function preflight( ReleaseTrackingPreflight $preflight ): RepositoryReleaseWorkflowPreflight {
-		return new RepositoryReleaseWorkflowPreflight( $preflight->code(), $preflight->reasonCode() );
+		return new RepositoryReleaseWorkflowPreflight( $preflight->code(), $preflight->reason_code() );
 	}
 }

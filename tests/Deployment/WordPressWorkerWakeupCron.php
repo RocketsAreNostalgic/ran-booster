@@ -7,16 +7,16 @@ namespace Tests\Deployment;
 final class WordPressWorkerWakeupCron {
 
 	/** @var list<object> */
-	public static array $events            = array();
-	public static bool $scheduleSucceeds   = true;
-	public static bool $unscheduleSucceeds = true;
-	public static bool $clearSucceeds      = true;
+	public static array $events             = array();
+	public static bool $schedule_succeeds   = true;
+	public static bool $unschedule_succeeds = true;
+	public static bool $clear_succeeds      = true;
 
 	public static function reset(): void {
-		self::$events             = array();
-		self::$scheduleSucceeds   = true;
-		self::$unscheduleSucceeds = true;
-		self::$clearSucceeds      = true;
+		self::$events              = array();
+		self::$schedule_succeeds   = true;
+		self::$unschedule_succeeds = true;
+		self::$clear_succeeds      = true;
 	}
 
 	public static function next( string $hook, array $arguments ): object|false {
@@ -35,7 +35,7 @@ final class WordPressWorkerWakeupCron {
 	}
 
 	public static function schedule( int $timestamp, string $hook, array $arguments ): bool {
-		if ( ! self::$scheduleSucceeds ) {
+		if ( ! self::$schedule_succeeds ) {
 			return false;
 		}
 		self::$events[] = (object) array(
@@ -49,7 +49,7 @@ final class WordPressWorkerWakeupCron {
 	}
 
 	public static function unschedule( int $timestamp, string $hook, array $arguments ): bool {
-		if ( ! self::$unscheduleSucceeds ) {
+		if ( ! self::$unschedule_succeeds ) {
 			return false;
 		}
 		self::$events = array_values(
@@ -63,7 +63,7 @@ final class WordPressWorkerWakeupCron {
 	}
 
 	public static function clear( string $hook ): int|false {
-		if ( ! self::$clearSucceeds ) {
+		if ( ! self::$clear_succeeds ) {
 			return false;
 		}
 		$before       = count( self::$events );

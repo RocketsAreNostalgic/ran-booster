@@ -16,7 +16,7 @@ use ReflectionNamedType;
 final class RepositoryReleaseWorkflowCompatibilityTest extends TestCase {
 	#[PreserveGlobalState( false )]
 	#[RunInSeparateProcess]
-	public function testApiThreeAwareProviderRemainsLoadableOnOlderApiTenHost(): void {
+	public function test_api_three_aware_provider_remains_loadable_on_older_api_ten_host(): void {
 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 10 );
 		$autoloaders = spl_autoload_functions();
 
@@ -36,19 +36,19 @@ final class RepositoryReleaseWorkflowCompatibilityTest extends TestCase {
 		self::assertFalse( class_exists( 'RANBoosterWorkflowV3FeatureDetectionProviderV3', false ) );
 	}
 
-	public function testApiThreeIsProviderNeutralFacet(): void {
+	public function test_api_three_is_provider_neutral_facet(): void {
 		self::assertSame( 3, RepositoryReleaseWorkflowManagementV3::RELEASE_WORKFLOW_API_VERSION );
 
 		$reflection = new ReflectionClass( RepositoryReleaseWorkflowManagementV3::class );
 		self::assertFalse( $reflection->hasMethod( 'workflowInspectUpdate' ) );
 		self::assertFalse( $reflection->hasMethod( 'workflowSetupUpdate' ) );
 		self::assertFalse( interface_exists( 'RAN\\RepositoryProvider\\RepositoryReleaseWorkflowManagementV2' ) );
-		$statusType  = $reflection->getMethod( 'workflow_status' )->getParameters()[0]->getType();
-		$inspectType = $reflection->getMethod( 'workflow_inspect' )->getParameters()[2]->getType();
+		$status_type  = $reflection->getMethod( 'workflow_status' )->getParameters()[0]->getType();
+		$inspect_type = $reflection->getMethod( 'workflow_inspect' )->getParameters()[2]->getType();
 
-		self::assertInstanceOf( ReflectionNamedType::class, $statusType );
-		self::assertInstanceOf( ReflectionNamedType::class, $inspectType );
-		self::assertSame( RepositoryReleaseWorkflowTarget::class, $statusType->getName() );
-		self::assertSame( RepositoryReleaseWorkflowPreflight::class, $inspectType->getName() );
+		self::assertInstanceOf( ReflectionNamedType::class, $status_type );
+		self::assertInstanceOf( ReflectionNamedType::class, $inspect_type );
+		self::assertSame( RepositoryReleaseWorkflowTarget::class, $status_type->getName() );
+		self::assertSame( RepositoryReleaseWorkflowPreflight::class, $inspect_type->getName() );
 	}
 }

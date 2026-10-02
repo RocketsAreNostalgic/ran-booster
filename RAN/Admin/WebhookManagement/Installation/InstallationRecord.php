@@ -10,72 +10,47 @@ final readonly class InstallationRecord {
 	private const UNKNOWN_HOOK_ID = 'recovery:hook-identity-unavailable';
 
 	public function __construct(
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		private string $providerCode,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		private string $repositoryId,
+		private string $provider_code,
+		private string $repository_id,
 		private string $repository,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		private string $hookId,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		private string $managementCredentialId,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		private string $webhookProfileId,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		private string $webhookProfileScope,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		private int $webhookProfileRevision,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		private string $webhookProfileDisposition,
+		private string $hook_id,
+		private string $management_credential_id,
+		private string $webhook_profile_id,
+		private string $webhook_profile_scope,
+		private int $webhook_profile_revision,
+		private string $webhook_profile_disposition,
 		private string $endpoint,
 		private string $status,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		private string $createdAt,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		private string $checkedAt
+		private string $created_at,
+		private string $checked_at
 	) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		if ( 1 !== preg_match( '/^[a-z][a-z0-9-]{0,31}$/', $providerCode )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-			|| '' === trim( $repositoryId )
+		if ( 1 !== preg_match( '/^[a-z][a-z0-9-]{0,31}$/', $provider_code )
+			|| '' === trim( $repository_id )
 			|| '' === trim( $repository )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-			|| '' === trim( $hookId )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-			|| strlen( $hookId ) > 191
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $hookId )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-			|| 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/', $managementCredentialId )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-			|| '' === trim( $webhookProfileId )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-			|| ! in_array( $webhookProfileScope, array( 'owner', 'repository' ), true )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-			|| $webhookProfileRevision < 1
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-			|| ! in_array( $webhookProfileDisposition, array( 'created', 'reused' ), true )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-			|| ( 'created' === $webhookProfileDisposition && 'repository' !== $webhookProfileScope )
+			|| '' === trim( $hook_id )
+			|| strlen( $hook_id ) > 191
+			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $hook_id )
+			|| 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/', $management_credential_id )
+			|| '' === trim( $webhook_profile_id )
+			|| ! in_array( $webhook_profile_scope, array( 'owner', 'repository' ), true )
+			|| $webhook_profile_revision < 1
+			|| ! in_array( $webhook_profile_disposition, array( 'created', 'reused' ), true )
+			|| ( 'created' === $webhook_profile_disposition && 'repository' !== $webhook_profile_scope )
 			|| ! $this->valid_endpoint( $endpoint )
 			|| ! in_array( $status, array( 'configured', 'needs_verification', 'orphaned', 'remote_missing', 'configuration_drift', 'local_profile_missing', 'profile_revision_stale', 'removal_pending' ), true )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-			|| ! $this->valid_timestamp( $createdAt )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-			|| ! $this->valid_timestamp( $checkedAt )
+			|| ! $this->valid_timestamp( $created_at )
+			|| ! $this->valid_timestamp( $checked_at )
 		) {
 			throw new InvalidArgumentException( 'Invalid repository webhook-management installation record.' );
 		}
 	}
 
 	public function provider_code(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return $this->providerCode;
+		return $this->provider_code;
 	}
 
 	public function repository_id(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return $this->repositoryId;
+		return $this->repository_id;
 	}
 
 	public function repository(): string {
@@ -83,13 +58,11 @@ final readonly class InstallationRecord {
 	}
 
 	public function hook_id(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return $this->hookId;
+		return $this->hook_id;
 	}
 
 	public function requires_hook_identification(): bool {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return hash_equals( self::UNKNOWN_HOOK_ID, $this->hookId );
+		return hash_equals( self::UNKNOWN_HOOK_ID, $this->hook_id );
 	}
 
 	public static function unknown_hook_id(): string {
@@ -97,28 +70,23 @@ final readonly class InstallationRecord {
 	}
 
 	public function management_credential_id(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return $this->managementCredentialId;
+		return $this->management_credential_id;
 	}
 
 	public function webhook_profile_id(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return $this->webhookProfileId;
+		return $this->webhook_profile_id;
 	}
 
 	public function webhook_profile_scope(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return $this->webhookProfileScope;
+		return $this->webhook_profile_scope;
 	}
 
 	public function webhook_profile_revision(): int {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return $this->webhookProfileRevision;
+		return $this->webhook_profile_revision;
 	}
 
 	public function webhook_profile_disposition(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return $this->webhookProfileDisposition;
+		return $this->webhook_profile_disposition;
 	}
 
 	public function endpoint(): string {
@@ -130,66 +98,46 @@ final readonly class InstallationRecord {
 	}
 
 	public function checked_at(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return $this->checkedAt;
+		return $this->checked_at;
 	}
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-	public function with_check( string $status, string $checkedAt, ?string $endpoint = null ): self {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names; retain promoted constructor properties.
-		return new self( $this->providerCode, $this->repositoryId, $this->repository, $this->hookId, $this->managementCredentialId, $this->webhookProfileId, $this->webhookProfileScope, $this->webhookProfileRevision, $this->webhookProfileDisposition, $endpoint ?? $this->endpoint, $status, $this->createdAt, $checkedAt );
+	public function with_check( string $status, string $checked_at, ?string $endpoint = null ): self {
+		return new self( $this->provider_code, $this->repository_id, $this->repository, $this->hook_id, $this->management_credential_id, $this->webhook_profile_id, $this->webhook_profile_scope, $this->webhook_profile_revision, $this->webhook_profile_disposition, $endpoint ?? $this->endpoint, $status, $this->created_at, $checked_at );
 	}
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-	public function with_management_credential( string $managementCredentialId, string $status, string $checkedAt, ?string $endpoint = null ): self {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names; retain promoted constructor properties.
-		return new self( $this->providerCode, $this->repositoryId, $this->repository, $this->hookId, $managementCredentialId, $this->webhookProfileId, $this->webhookProfileScope, $this->webhookProfileRevision, $this->webhookProfileDisposition, $endpoint ?? $this->endpoint, $status, $this->createdAt, $checkedAt );
+	public function with_management_credential( string $management_credential_id, string $status, string $checked_at, ?string $endpoint = null ): self {
+		return new self( $this->provider_code, $this->repository_id, $this->repository, $this->hook_id, $management_credential_id, $this->webhook_profile_id, $this->webhook_profile_scope, $this->webhook_profile_revision, $this->webhook_profile_disposition, $endpoint ?? $this->endpoint, $status, $this->created_at, $checked_at );
 	}
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-	public function with_profile( string $managementCredentialId, string $profileId, string $scope, int $revision, string $disposition, string $endpoint, string $status, string $checkedAt ): self {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names; retain promoted constructor properties.
-		return new self( $this->providerCode, $this->repositoryId, $this->repository, $this->hookId, $managementCredentialId, $profileId, $scope, $revision, $disposition, $endpoint, $status, $this->createdAt, $checkedAt );
+	public function with_profile( string $management_credential_id, string $profile_id, string $scope, int $revision, string $disposition, string $endpoint, string $status, string $checked_at ): self {
+		return new self( $this->provider_code, $this->repository_id, $this->repository, $this->hook_id, $management_credential_id, $profile_id, $scope, $revision, $disposition, $endpoint, $status, $this->created_at, $checked_at );
 	}
 
 	public function storage_key(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return self::key( $this->providerCode, $this->repositoryId );
+		return self::key( $this->provider_code, $this->repository_id );
 	}
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-	public static function key( string $providerCode, string $repositoryId ): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		return $providerCode . ':' . $repositoryId;
+	public static function key( string $provider_code, string $repository_id ): string {
+		return $provider_code . ':' . $repository_id;
 	}
 
 	/** @return array{schema_version: int, provider_code: string, repository_id: string, repository: string, hook_id: string, management_credential_id: string, webhook_profile_id: string, webhook_profile_scope: string, webhook_profile_revision: int, webhook_profile_disposition: string, endpoint: string, status: string, created_at: string, checked_at: string} */
 	public function to_array(): array {
 		return array(
 			'schema_version'              => 4,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-			'provider_code'               => $this->providerCode,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-			'repository_id'               => $this->repositoryId,
+			'provider_code'               => $this->provider_code,
+			'repository_id'               => $this->repository_id,
 			'repository'                  => $this->repository,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-			'hook_id'                     => $this->hookId,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-			'management_credential_id'    => $this->managementCredentialId,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-			'webhook_profile_id'          => $this->webhookProfileId,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-			'webhook_profile_scope'       => $this->webhookProfileScope,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-			'webhook_profile_revision'    => $this->webhookProfileRevision,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-			'webhook_profile_disposition' => $this->webhookProfileDisposition,
+			'hook_id'                     => $this->hook_id,
+			'management_credential_id'    => $this->management_credential_id,
+			'webhook_profile_id'          => $this->webhook_profile_id,
+			'webhook_profile_scope'       => $this->webhook_profile_scope,
+			'webhook_profile_revision'    => $this->webhook_profile_revision,
+			'webhook_profile_disposition' => $this->webhook_profile_disposition,
 			'endpoint'                    => $this->endpoint,
 			'status'                      => $this->status,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-			'created_at'                  => $this->createdAt,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-			'checked_at'                  => $this->checkedAt,
+			'created_at'                  => $this->created_at,
+			'checked_at'                  => $this->checked_at,
 		);
 	}
 

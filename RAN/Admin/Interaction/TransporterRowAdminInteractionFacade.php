@@ -18,10 +18,10 @@ interface TransporterRowAdminInteractionFacade {
 	 * The renderer receives the Core-derived target element ID and must emit one
 	 * escaped <tr> with that ID. Ordinary requests retain the signed PRG path.
 	 *
-	 * @param callable(string): void $renderFragment
+	 * @param callable(string): void $render_fragment
 	 */
-	public function respondWithTransporterRowFragment(
+	public function respond_with_transporter_row_fragment(
 		AdminInteractionOutcome $outcome,
-		callable $renderFragment
+		callable $render_fragment
 	): never;
 }

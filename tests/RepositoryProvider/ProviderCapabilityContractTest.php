@@ -23,7 +23,7 @@ use Tests\RepositoryProvider\Support\SecondProviderOwnedCapability;
 
 final class ProviderCapabilityContractTest extends TestCase {
 
-	public function testCapabilityHostExposesNoEnumerationOrDescriptorSurface(): void {
+	public function test_capability_host_exposes_no_enumeration_or_descriptor_surface(): void {
 		$marker   = new ReflectionClass( ProviderCapability::class );
 		$registry = new ReflectionClass( ProviderRegistry::class );
 
@@ -36,21 +36,21 @@ final class ProviderCapabilityContractTest extends TestCase {
 		self::assertFalse( $registry->hasMethod( 'executeCapability' ) );
 	}
 
-	public function testProviderOwnedFacetsResolveToTheSameRegisteredAggregate(): void {
+	public function test_provider_owned_facets_resolve_to_the_same_registered_aggregate(): void {
 		$provider = $this->provider();
 		$registry = new ProviderRegistry( array( $provider ) );
 
-		$first  = $registry->requireCapability( 'facet-fixture', ProviderOwnedCapability::class );
-		$second = $registry->requireCapability( 'facet-fixture', SecondProviderOwnedCapability::class );
+		$first  = $registry->require_capability( 'facet-fixture', ProviderOwnedCapability::class );
+		$second = $registry->require_capability( 'facet-fixture', SecondProviderOwnedCapability::class );
 
 		self::assertSame( $provider, $first );
 		self::assertSame( $provider, $second );
-		self::assertSame( 'first', $first->providerOwnedValue() );
-		self::assertSame( 'second', $second->secondProviderOwnedValue() );
+		self::assertSame( 'first', $first->provider_owned_value() );
+		self::assertSame( 'second', $second->second_provider_owned_value() );
 	}
 
 	/** @return iterable<string, array{class-string|string}> */
-	public static function unknownContracts(): iterable {
+	public static function unknown_contracts(): iterable {
 		yield 'bare capability marker' => array( ProviderCapability::class );
 		yield 'loaded non-marker interface' => array( Stringable::class );
 		yield 'base provider contract' => array( RepositoryProvider::class );
@@ -58,13 +58,13 @@ final class ProviderCapabilityContractTest extends TestCase {
 		yield 'unloaded symbol' => array( __NAMESPACE__ . '\\MissingProviderCapability' );
 	}
 
-	#[DataProvider( 'unknownContracts' )]
-	public function testUnknownContractsFailWithoutChangingTheRegistry( string $capability ): void {
+	#[DataProvider( 'unknown_contracts' )]
+	public function test_unknown_contracts_fail_without_changing_the_registry( string $capability ): void {
 		$provider = $this->provider();
 		$registry = new ProviderRegistry( array( $provider ) );
 
 		try {
-			$registry->requireCapability( 'facet-fixture', $capability );
+			$registry->require_capability( 'facet-fixture', $capability );
 			self::fail( 'An unknown capability contract must be rejected.' );
 		} catch ( UnsupportedProviderCapability $exception ) {
 			self::assertSame( 'Unknown repository provider capability.', $exception->getMessage() );
@@ -73,12 +73,12 @@ final class ProviderCapabilityContractTest extends TestCase {
 		}
 	}
 
-	public function testValidAbsentFacetFailsUnsupportedWithoutChangingTheRegistry(): void {
+	public function test_valid_absent_facet_fails_unsupported_without_changing_the_registry(): void {
 		$provider = $this->provider();
 		$registry = new ProviderRegistry( array( $provider ) );
 
 		try {
-			$registry->requireCapability( 'facet-fixture', RepositoryWebhookFitness::class );
+			$registry->require_capability( 'facet-fixture', RepositoryWebhookFitness::class );
 			self::fail( 'A valid capability absent from the provider must be rejected.' );
 		} catch ( UnsupportedProviderCapability $exception ) {
 			self::assertSame( 'Repository provider does not support the requested capability.', $exception->getMessage() );
@@ -95,11 +95,11 @@ final class ProviderCapabilityContractTest extends TestCase {
 				return new ProviderMetadata( ProviderCode::parse( 'facet-fixture' ), 'Facet fixture', 'https://example.test/', 'Owner' );
 			}
 
-			public function providerOwnedValue(): string {
+			public function provider_owned_value(): string {
 				return 'first';
 			}
 
-			public function secondProviderOwnedValue(): string {
+			public function second_provider_owned_value(): string {
 				return 'second';
 			}
 		};

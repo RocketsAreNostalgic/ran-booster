@@ -43,7 +43,7 @@ use RAN\WordPress\WordPressUpdaterLock;
 final class PackageOperationServiceTest extends TestCase {
 
 	/** @return list<array{string, bool}> */
-	public static function operationMatrix(): array {
+	public static function operation_matrix(): array {
 		return array(
 			array( 'install-plugin', true ),
 			array( 'install-theme', true ),
@@ -58,15 +58,15 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'operationMatrix' )]
-	public function testTheExplicitOperationMatrixClassifiesDeployments( string $action, bool $deployment ): void {
+	#[DataProvider( 'operation_matrix' )]
+	public function test_the_explicit_operation_matrix_classifies_deployments( string $action, bool $deployment ): void {
 		$operation = PackageOperation::from_input( action: $action, input: $this->input( $action ) );
 
 		self::assertSame( $deployment, $operation->is_deployment() );
 		self::assertSame( str_ends_with( $action, 'plugin' ) ? 'plugin' : 'theme', $operation->package_type );
 	}
 
-	public function testReinstallAfterSaveDeploysTheAuthoritativeEditedPackageAndReturnsToSettings(): void {
+	public function test_reinstall_after_save_deploys_the_authoritative_edited_package_and_returns_to_settings(): void {
 		$package = $this->plugin();
 		$package->set_deployment_policy( DeploymentPolicy::DISABLED );
 		$coordinator = new OperationCoordinator();
@@ -86,17 +86,17 @@ final class PackageOperationServiceTest extends TestCase {
 
 		self::assertIsString( $redirect );
 		self::assertSame( 1, $coordinator->calls );
-		self::assertInstanceOf( PackageOperation::class, $coordinator->lastCommand );
-		self::assertSame( 'update', $coordinator->lastCommand->operation );
-		self::assertSame( DeploymentPolicy::MANUAL, $coordinator->lastCommand->expected_package['deployment_policy'] );
-		self::assertTrue( $coordinator->lastCommand->has_expected_package() );
+		self::assertInstanceOf( PackageOperation::class, $coordinator->last_command );
+		self::assertSame( 'update', $coordinator->last_command->operation );
+		self::assertSame( DeploymentPolicy::MANUAL, $coordinator->last_command->expected_package['deployment_policy'] );
+		self::assertTrue( $coordinator->last_command->has_expected_package() );
 		self::assertSame( 'manual', $package->get_deployment_policy()->value );
-		$query = $this->redirectQuery( $redirect );
+		$query = $this->redirect_query( $redirect );
 		self::assertSame( 'update', $query['ran_booster_result'] );
 		self::assertSame( 'example/example.php', $query['package'] );
 	}
 
-	public function testSaveAndCheckRedirectUsesTheAuthoritativeEditedPackageWithoutASuccessNotice(): void {
+	public function test_save_and_check_redirect_uses_the_authoritative_edited_package_without_asuccess_notice(): void {
 		$package   = $this->plugin();
 		$dashboard = $this->dashboard( new OperationCoordinator(), $package );
 
@@ -115,7 +115,7 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertIsString( $redirect );
 		self::assertSame( 'feature/verified-after-save', $package->get_branch() );
 		self::assertSame( 'packages/example', $package->get_subdirectory() );
-		$query = $this->redirectQuery( $redirect );
+		$query = $this->redirect_query( $redirect );
 		self::assertSame( 'ran-booster-plugins', $query['page'] );
 		self::assertSame( 'example/example.php', $query['package'] );
 		self::assertSame( 'branch', $query['source_view'] );
@@ -131,7 +131,7 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 	}
 
-	public function testFailedSaveNeverProducesARepositoryBranchCheckRedirect(): void {
+	public function test_failed_save_never_produces_arepository_branch_check_redirect(): void {
 		$dashboard = $this->dashboard( new OperationCoordinator() );
 		$input     = $this->input(
 			'edit-plugin',
@@ -150,7 +150,7 @@ final class PackageOperationServiceTest extends TestCase {
 		unset( $GLOBALS['ran_booster_test_status_header'] );
 	}
 
-	public function testFailedReinstallKeepsTheSavedSettingsNoticeBesideTheDeploymentError(): void {
+	public function test_failed_reinstall_keeps_the_saved_settings_notice_beside_the_deployment_error(): void {
 		$coordinator         = new OperationCoordinator();
 		$coordinator->result = array(
 			'status'         => 'failed',
@@ -170,8 +170,8 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 'error', $dashboard->messages[1]['type'] );
 	}
 
-	#[DataProvider( 'conflictingBranchOperations' )]
-	public function testBranchAdmissionRefusesAnotherReleaseOwnerBeforeWriting( string $action ): void {
+	#[DataProvider( 'conflicting_branch_operations' )]
+	public function test_branch_admission_refuses_another_release_owner_before_writing( string $action ): void {
 		$plugins = new OperationPluginRepository( $this->plugin() );
 		$themes  = new OperationThemeRepository( new OperationTheme( 'example' ) );
 		$themes->package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
@@ -198,11 +198,11 @@ final class PackageOperationServiceTest extends TestCase {
 		}
 	}
 
-	public static function conflictingBranchOperations(): array {
+	public static function conflicting_branch_operations(): array {
 		return array( array( 'install-plugin' ), array( 'install-theme' ), array( 'edit-plugin' ), array( 'edit-theme' ) );
 	}
 
-	public function testLinkEditAndUnlinkUseTheExplicitRepositories(): void {
+	public function test_link_edit_and_unlink_use_the_explicit_repositories(): void {
 		$plugin      = $this->plugin();
 		$plugins     = new OperationPluginRepository( $plugin );
 		$themes      = new OperationThemeRepository( new OperationTheme( 'example' ) );
@@ -225,18 +225,18 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 0, $coordinator->calls );
 	}
 
-	public function testLinkTreatsTheSameReleaseManagedTargetAsAlreadyManaged(): void {
-		$plugins                     = new OperationPluginRepository( $this->plugin() );
-		$plugins->freshAfterMutation = $this->plugin();
-		$plugins->freshAfterMutation->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'release', true, 'existing-access' ) );
-		$plugins->freshAfterMutation->set_deployment_policy( DeploymentPolicy::AUTOMATIC );
-		$plugins->freshAfterMutation->set_source( PackageSource::RELEASE_ASSET, 7 );
-		$plugins->adoptionResult = PackageMutationResult::conflict(
+	public function test_link_treats_the_same_release_managed_target_as_already_managed(): void {
+		$plugins                       = new OperationPluginRepository( $this->plugin() );
+		$plugins->fresh_after_mutation = $this->plugin();
+		$plugins->fresh_after_mutation->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'release', true, 'existing-access' ) );
+		$plugins->fresh_after_mutation->set_deployment_policy( DeploymentPolicy::AUTOMATIC );
+		$plugins->fresh_after_mutation->set_source( PackageSource::RELEASE_ASSET, 7 );
+		$plugins->adoption_result = PackageMutationResult::conflict(
 			PackageStorageOperation::INSERT,
 			'ran_booster_storage_adoption_conflict',
 			'Booster found existing package management data. No package changes were made.'
 		);
-		$dashboard               = new Dashboard(
+		$dashboard                = new Dashboard(
 			new Database(),
 			$plugins,
 			new Booster(),
@@ -254,7 +254,7 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 
 		self::assertIsString( $redirect );
-		$query = $this->redirectQuery( $redirect );
+		$query = $this->redirect_query( $redirect );
 		self::assertSame( 'ran-booster-plugins', $query['page'] );
 		self::assertSame( 'already-managed', $query['ran_booster_result'] );
 		self::assertSame( 'example/example.php', $query['ran_booster_package'] );
@@ -267,7 +267,7 @@ final class PackageOperationServiceTest extends TestCase {
 			)
 		);
 		$_GET   = $query;
-		$notice = $this->invokePackageSuccessNotice( $dashboard, 'plugin' );
+		$notice = $this->invoke_package_success_notice( $dashboard, 'plugin' );
 		self::assertSame(
 			array(
 				'operation'  => 'already-managed',
@@ -279,16 +279,16 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 'Plugin is already installed and managed by Booster. No package settings were changed.', $dashboard->messages[0]['message'] );
 	}
 
-	public function testLinkKeepsMismatchedExistingManagementAsStorageFailure(): void {
-		$plugins                     = new OperationPluginRepository( $this->plugin() );
-		$plugins->freshAfterMutation = $this->plugin();
-		$plugins->freshAfterMutation->set_repository( new ManagedRepository( 'gh', 'owner/other', 'R_other', 'main' ) );
-		$plugins->adoptionResult = PackageMutationResult::conflict(
+	public function test_link_keeps_mismatched_existing_management_as_storage_failure(): void {
+		$plugins                       = new OperationPluginRepository( $this->plugin() );
+		$plugins->fresh_after_mutation = $this->plugin();
+		$plugins->fresh_after_mutation->set_repository( new ManagedRepository( 'gh', 'owner/other', 'R_other', 'main' ) );
+		$plugins->adoption_result = PackageMutationResult::conflict(
 			PackageStorageOperation::INSERT,
 			'ran_booster_storage_adoption_conflict',
 			'Booster found existing package management data. No package changes were made.'
 		);
-		$service                 = $this->service(
+		$service                  = $this->service(
 			$plugins,
 			new OperationThemeRepository( new OperationTheme( 'example' ) ),
 			new OperationCoordinator()
@@ -304,7 +304,7 @@ final class PackageOperationServiceTest extends TestCase {
 		}
 	}
 
-	public function testLinkAndEditUseTheSharedUpdaterLock(): void {
+	public function test_link_and_edit_use_the_shared_updater_lock(): void {
 		$plugins = new OperationPluginRepository( $this->plugin() );
 		$lock    = new OperationUpdaterLock();
 		$service = $this->service(
@@ -327,8 +327,8 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'linkAndEditActions' )]
-	public function testUpdaterLockContentionPreventsLinkAndEdit( string $action ): void {
+	#[DataProvider( 'link_and_edit_actions' )]
+	public function test_updater_lock_contention_prevents_link_and_edit( string $action ): void {
 		$plugins         = new OperationPluginRepository( $this->plugin() );
 		$lock            = new OperationUpdaterLock();
 		$lock->available = false;
@@ -350,7 +350,7 @@ final class PackageOperationServiceTest extends TestCase {
 	}
 
 	/** @return list<array{string}> */
-	public static function linkAndEditActions(): array {
+	public static function link_and_edit_actions(): array {
 		return array(
 			array( 'install-plugin' ),
 			array( 'edit-plugin' ),
@@ -358,15 +358,15 @@ final class PackageOperationServiceTest extends TestCase {
 	}
 
 	/** @return list<array{string}> */
-	public static function editActions(): array {
+	public static function edit_actions(): array {
 		return array(
 			array( 'edit-plugin' ),
 			array( 'edit-theme' ),
 		);
 	}
 
-	#[DataProvider( 'editActions' )]
-	public function testEditRejectsMissingMalformedAndStaleExpectedSnapshotsBeforeWriting( string $action ): void {
+	#[DataProvider( 'edit_actions' )]
+	public function test_edit_rejects_missing_malformed_and_stale_expected_snapshots_before_writing( string $action ): void {
 		foreach (
 			array(
 				'missing'   => static function ( array $input ): array {
@@ -401,7 +401,7 @@ final class PackageOperationServiceTest extends TestCase {
 		}
 	}
 
-	public function testDashboardKeepsAStaleEditOnTheFormWithAPersistentConflict(): void {
+	public function test_dashboard_keeps_astale_edit_on_the_form_with_apersistent_conflict(): void {
 		$dashboard = $this->dashboard( new OperationCoordinator() );
 		$input     = $this->input( 'edit-plugin', array( 'expected_branch' => 'older-branch' ) );
 
@@ -416,7 +416,7 @@ final class PackageOperationServiceTest extends TestCase {
 		unset( $GLOBALS['ran_booster_test_status_header'] );
 	}
 
-	public function testUpdaterLockReleaseFailureDoesNotReportLinkSuccess(): void {
+	public function test_updater_lock_release_failure_does_not_report_link_success(): void {
 		$plugins          = new OperationPluginRepository( $this->plugin() );
 		$lock             = new OperationUpdaterLock();
 		$lock->releasable = false;
@@ -434,7 +434,7 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 	}
 
-	public function testThemeLinkEditAndUnlinkUseTheExplicitRepositories(): void {
+	public function test_theme_link_edit_and_unlink_use_the_explicit_repositories(): void {
 		$plugins     = new OperationPluginRepository( $this->plugin() );
 		$themes      = new OperationThemeRepository( new OperationTheme( 'example' ) );
 		$coordinator = new OperationCoordinator();
@@ -454,7 +454,7 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 0, $coordinator->calls );
 	}
 
-	public function testReleaseManagedPackageRetainsItsRepositoryIdentityWhileUpdatingAccessAndPolicy(): void {
+	public function test_release_managed_package_retains_its_repository_identity_while_updating_access_and_policy(): void {
 		$plugin = $this->plugin();
 		$plugin->set_repository( new ManagedRepository( 'gh', 'owner/release', 'R_release', 'stable', true, 'old-access' ) );
 		$plugin->set_source( PackageSource::RELEASE_ASSET, 2 );
@@ -511,7 +511,7 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 'example/example.php', $plugins->unlinked );
 	}
 
-	public function testLegacyReleaseManagedPackageWithSubdirectoryCannotBeEdited(): void {
+	public function test_legacy_release_managed_package_with_subdirectory_cannot_be_edited(): void {
 		$plugin = $this->plugin();
 		$plugin->set_subdirectory( 'packages/example' );
 		$plugin->set_source( PackageSource::RELEASE_ASSET, 2 );
@@ -535,7 +535,7 @@ final class PackageOperationServiceTest extends TestCase {
 		$service->execute( PackageOperation::from_input( 'edit-plugin', $input ) );
 	}
 
-	public function testLinkOnlyReturnsTheDisabledPackageReadBack(): void {
+	public function test_link_only_returns_the_disabled_package_read_back(): void {
 		$plugins   = new OperationPluginRepository( $this->plugin() );
 		$service   = $this->service(
 			$plugins,
@@ -560,19 +560,19 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( $plugins->stored, $result['package'] );
 	}
 
-	public function testLinkOnlyPreservesMixedCaseInstalledPackageSlugs(): void {
+	public function test_link_only_preserves_mixed_case_installed_package_slugs(): void {
 		$plugins = new OperationPluginRepository( $this->plugin() );
 		$themes  = new OperationThemeRepository( new OperationTheme( 'tnyGmaps' ) );
 		$service = $this->service( $plugins, $themes, new OperationCoordinator() );
 
-		$pluginInput = $this->input(
+		$plugin_input = $this->input(
 			'install-plugin',
 			array(
 				'dry-run'      => '1',
 				'package_slug' => 'tnyGmaps',
 			)
 		);
-		$themeInput  = $this->input(
+		$theme_input  = $this->input(
 			'install-theme',
 			array(
 				'dry-run'      => '1',
@@ -580,13 +580,13 @@ final class PackageOperationServiceTest extends TestCase {
 			)
 		);
 
-		self::assertSame( 'linked', $service->execute( PackageOperation::from_input( 'install-plugin', $pluginInput ) )['status'] );
-		self::assertSame( 'linked', $service->execute( PackageOperation::from_input( 'install-theme', $themeInput ) )['status'] );
-		self::assertSame( 'tnyGmaps', $plugins->requestedSlug );
-		self::assertSame( 'tnyGmaps', $themes->requestedSlug );
+		self::assertSame( 'linked', $service->execute( PackageOperation::from_input( 'install-plugin', $plugin_input ) )['status'] );
+		self::assertSame( 'linked', $service->execute( PackageOperation::from_input( 'install-theme', $theme_input ) )['status'] );
+		self::assertSame( 'tnyGmaps', $plugins->requested_slug );
+		self::assertSame( 'tnyGmaps', $themes->requested_slug );
 	}
 
-	public function testActualInstallAndUpdateUseOnlyTheCoordinator(): void {
+	public function test_actual_install_and_update_use_only_the_coordinator(): void {
 		$coordinator = new OperationCoordinator();
 		$service     = $this->service(
 			new OperationPluginRepository( $this->plugin() ),
@@ -604,7 +604,7 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 4, $coordinator->calls );
 	}
 
-	public function testAlreadyManagedInstallIsReportedAsAlreadyManaged(): void {
+	public function test_already_managed_install_is_reported_as_already_managed(): void {
 		$coordinator         = new OperationCoordinator();
 		$coordinator->result = array(
 			'status'         => 'succeeded',
@@ -624,7 +624,7 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertInstanceOf( Package::class, $result['package'] );
 	}
 
-	public function testAlreadyManagedInstallRedirectsToTheSignedAlreadyManagedWarning(): void {
+	public function test_already_managed_install_redirects_to_the_signed_already_managed_warning(): void {
 		$coordinator         = new OperationCoordinator();
 		$coordinator->result = array(
 			'status'         => 'succeeded',
@@ -636,7 +636,7 @@ final class PackageOperationServiceTest extends TestCase {
 		$redirect = $dashboard->post_package_operation( 'install-plugin', $this->input( 'install-plugin' ) );
 
 		self::assertIsString( $redirect );
-		$query = $this->redirectQuery( $redirect );
+		$query = $this->redirect_query( $redirect );
 		self::assertSame( 'already-managed', $query['ran_booster_result'] );
 		self::assertSame( 'example/example.php', $query['ran_booster_package'] );
 		self::assertSame(
@@ -652,7 +652,7 @@ final class PackageOperationServiceTest extends TestCase {
 				'operation'  => 'already-managed',
 				'identifier' => 'example/example.php',
 			),
-			$this->invokePackageSuccessNotice( $dashboard, 'plugin' )
+			$this->invoke_package_success_notice( $dashboard, 'plugin' )
 		);
 		self::assertSame(
 			array(
@@ -663,7 +663,7 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 	}
 
-	public function testTerminalDeploymentFailureReturnsOnlyFixedSafeData(): void {
+	public function test_terminal_deployment_failure_returns_only_fixed_safe_data(): void {
 		$coordinator         = new OperationCoordinator();
 		$coordinator->result = array(
 			'status'           => 'failed',
@@ -688,7 +688,7 @@ final class PackageOperationServiceTest extends TestCase {
 	}
 
 	/** @return list<array{string, string, string, string|null}> */
-	public static function deploymentRedirectMatrix(): array {
+	public static function deployment_redirect_matrix(): array {
 		return array(
 			array( 'install-plugin', 'ran-booster-plugins', 'install', 'example/example.php' ),
 			array( 'install-theme', 'ran-booster-themes', 'install', 'example' ),
@@ -697,40 +697,40 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'deploymentRedirectMatrix' )]
-	public function testDashboardReturnsSignedMatchingRedirectAfterDeploymentSuccess(
+	#[DataProvider( 'deployment_redirect_matrix' )]
+	public function test_dashboard_returns_signed_matching_redirect_after_deployment_success(
 		string $action,
 		string $page,
 		string $result,
-		?string $settingsPackage
+		?string $settings_package
 	): void {
 		$dashboard = $this->dashboard( new OperationCoordinator() );
 
 		$redirect = $dashboard->post_package_operation( $action, $this->input( $action ) );
 
 		self::assertIsString( $redirect );
-		$query = $this->redirectQuery( $redirect );
+		$query = $this->redirect_query( $redirect );
 		self::assertSame( $page, $query['page'] );
 		self::assertSame( $result, $query['ran_booster_result'] );
 		self::assertArrayHasKey( '_ran_booster_notice_nonce', $query );
 		self::assertArrayNotHasKey( 'open_picker', $query );
-		if ( null === $settingsPackage ) {
+		if ( null === $settings_package ) {
 			self::assertArrayNotHasKey( 'package', $query );
 		} else {
-			self::assertSame( $settingsPackage, $query['package'] );
+			self::assertSame( $settings_package, $query['package'] );
 		}
 	}
 
 	/** @return list<array{string, string, string}> */
-	public static function repeatInstallRedirectMatrix(): array {
+	public static function repeat_install_redirect_matrix(): array {
 		return array(
 			array( 'install-plugin', 'ran-booster-plugins-create', 'example/example.php' ),
 			array( 'install-theme', 'ran-booster-themes-create', 'example' ),
 		);
 	}
 
-	#[DataProvider( 'repeatInstallRedirectMatrix' )]
-	public function testDashboardReturnsSignedCreateRedirectForRepeatInstall( string $action, string $page, string $identifier ): void {
+	#[DataProvider( 'repeat_install_redirect_matrix' )]
+	public function test_dashboard_returns_signed_create_redirect_for_repeat_install( string $action, string $page, string $identifier ): void {
 		$dashboard = $this->dashboard( new OperationCoordinator() );
 
 		$redirect = $dashboard->post_package_operation(
@@ -739,7 +739,7 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 
 		self::assertIsString( $redirect );
-		$query = $this->redirectQuery( $redirect );
+		$query = $this->redirect_query( $redirect );
 		self::assertSame( $page, $query['page'] );
 		self::assertSame( 'install', $query['ran_booster_result'] );
 		self::assertSame( $identifier, $query['ran_booster_package'] );
@@ -754,8 +754,8 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'repeatInstallRedirectMatrix' )]
-	public function testRepeatCreateRedirectConsumesSignedPlainTextNotice(
+	#[DataProvider( 'repeat_install_redirect_matrix' )]
+	public function test_repeat_create_redirect_consumes_signed_plain_text_notice(
 		string $action,
 		string $page,
 		string $identifier
@@ -766,11 +766,11 @@ final class PackageOperationServiceTest extends TestCase {
 			$this->input( $action, array( 'install_another' => '1' ) )
 		);
 		self::assertIsString( $redirect );
-		$query = $this->redirectQuery( $redirect );
+		$query = $this->redirect_query( $redirect );
 		$_GET  = $query;
 
 		$type    = str_ends_with( $action, 'plugin' ) ? 'plugin' : 'theme';
-		$success = $this->invokePackageSuccessNotice( $dashboard, $type );
+		$success = $this->invoke_package_success_notice( $dashboard, $type );
 
 		self::assertSame( $page, $query['page'] );
 		self::assertSame( $identifier, $query['ran_booster_package'] );
@@ -789,7 +789,7 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 	}
 
-	public function testForgedGetMarkerCannotCreateSuccessNotice(): void {
+	public function test_forged_get_marker_cannot_create_success_notice(): void {
 		$dashboard = $this->dashboard( new OperationCoordinator() );
 		$_GET      = array(
 			'ran_booster_result'        => 'install',
@@ -797,13 +797,13 @@ final class PackageOperationServiceTest extends TestCase {
 			'_ran_booster_notice_nonce' => 'forged',
 		);
 
-		$success = $this->invokePackageSuccessNotice( $dashboard, 'plugin' );
+		$success = $this->invoke_package_success_notice( $dashboard, 'plugin' );
 
 		self::assertNull( $success );
 		self::assertSame( array(), $dashboard->messages );
 	}
 
-	public function testForgedAlreadyManagedMarkerCannotCreateSuccessNotice(): void {
+	public function test_forged_already_managed_marker_cannot_create_success_notice(): void {
 		$dashboard = $this->dashboard( new OperationCoordinator() );
 		$_GET      = array(
 			'ran_booster_result'        => 'already-managed',
@@ -811,11 +811,11 @@ final class PackageOperationServiceTest extends TestCase {
 			'_ran_booster_notice_nonce' => 'forged',
 		);
 
-		self::assertNull( $this->invokePackageSuccessNotice( $dashboard, 'plugin' ) );
+		self::assertNull( $this->invoke_package_success_notice( $dashboard, 'plugin' ) );
 		self::assertSame( array(), $dashboard->messages );
 	}
 
-	public function testSignedSuccessNoticeCannotBeCrossBoundAcrossTypeOperationOrPackage(): void {
+	public function test_signed_success_notice_cannot_be_cross_bound_across_type_operation_or_package(): void {
 		$nonce = \RAN\wp_create_nonce( 'ran-booster-package-success|plugin|install|example/example.php' );
 		$cases = array(
 			'type'                      => array( 'theme', 'install', 'example/example.php' ),
@@ -833,36 +833,36 @@ final class PackageOperationServiceTest extends TestCase {
 				'_ran_booster_notice_nonce' => $nonce,
 			);
 
-			$this->invokePackageSuccessNotice( $dashboard, $type );
+			$this->invoke_package_success_notice( $dashboard, $type );
 
 			self::assertSame( array(), $dashboard->messages, $case );
 		}
 	}
 
-	#[DataProvider( 'editActions' )]
-	public function testEditReturnsADistinctAuthoritativeRepositoryReread( string $action ): void {
-		$pluginOriginal = $this->plugin();
-		$pluginFresh    = $this->plugin();
-		$themeOriginal  = new OperationTheme( 'example' );
-		$themeOriginal->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
-		$themeFresh = new OperationTheme( 'example' );
-		$themeFresh->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
-		$plugins                     = new OperationPluginRepository( $pluginOriginal );
-		$themes                      = new OperationThemeRepository( $themeOriginal );
-		$plugins->freshAfterMutation = $pluginFresh;
-		$themes->freshAfterMutation  = $themeFresh;
+	#[DataProvider( 'edit_actions' )]
+	public function test_edit_returns_adistinct_authoritative_repository_reread( string $action ): void {
+		$plugin_original = $this->plugin();
+		$plugin_fresh    = $this->plugin();
+		$theme_original  = new OperationTheme( 'example' );
+		$theme_original->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
+		$theme_fresh = new OperationTheme( 'example' );
+		$theme_fresh->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
+		$plugins                       = new OperationPluginRepository( $plugin_original );
+		$themes                        = new OperationThemeRepository( $theme_original );
+		$plugins->fresh_after_mutation = $plugin_fresh;
+		$themes->fresh_after_mutation  = $theme_fresh;
 
 		$result = $this->service( $plugins, $themes, new OperationCoordinator() )
 			->execute( PackageOperation::from_input( $action, $this->input( $action ) ) );
 
-		$original = 'edit-plugin' === $action ? $pluginOriginal : $themeOriginal;
-		$fresh    = 'edit-plugin' === $action ? $pluginFresh : $themeFresh;
+		$original = 'edit-plugin' === $action ? $plugin_original : $theme_original;
+		$fresh    = 'edit-plugin' === $action ? $plugin_fresh : $theme_fresh;
 		self::assertSame( 'edited', $result['status'] );
 		self::assertSame( $fresh, $result['package'] );
 		self::assertNotSame( $original, $result['package'] );
 	}
 
-	public function testFailedPostDoesNotReusePickerAutoOpenMarker(): void {
+	public function test_failed_post_does_not_reuse_picker_auto_open_marker(): void {
 		$dashboard = $this->dashboard( new OperationCoordinator() );
 		$_GET      = array( 'open_picker' => '1' );
 		$_POST     = array( 'ran_booster' => $this->input( 'install-plugin' ) );
@@ -876,7 +876,7 @@ final class PackageOperationServiceTest extends TestCase {
 		$_GET = array();
 	}
 
-	public function testSignedThemeUpdateMarkerAddsFixedSuccessNoticeWithoutActivationAction(): void {
+	public function test_signed_theme_update_marker_adds_fixed_success_notice_without_activation_action(): void {
 		$dashboard = $this->dashboard( new OperationCoordinator() );
 		$_GET      = array(
 			'ran_booster_result'        => 'update',
@@ -884,7 +884,7 @@ final class PackageOperationServiceTest extends TestCase {
 			'_ran_booster_notice_nonce' => \RAN\wp_create_nonce( 'ran-booster-package-success|theme|update|example' ),
 		);
 
-		$this->invokePackageSuccessNotice( $dashboard, 'theme' );
+		$this->invoke_package_success_notice( $dashboard, 'theme' );
 
 		self::assertSame(
 			array(
@@ -898,15 +898,15 @@ final class PackageOperationServiceTest extends TestCase {
 	}
 
 	/** @return list<array{string, string}> */
-	public static function updateRedirectMatrix(): array {
+	public static function update_redirect_matrix(): array {
 		return array(
 			array( 'update-plugin', 'ran-booster-plugins' ),
 			array( 'update-theme', 'ran-booster-themes' ),
 		);
 	}
 
-	#[DataProvider( 'updateRedirectMatrix' )]
-	public function testUpdatesIgnoreRepeatInstallIntent( string $action, string $page ): void {
+	#[DataProvider( 'update_redirect_matrix' )]
+	public function test_updates_ignore_repeat_install_intent( string $action, string $page ): void {
 		$dashboard = $this->dashboard( new OperationCoordinator() );
 
 		$redirect = $dashboard->post_package_operation(
@@ -915,15 +915,15 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 
 		self::assertIsString( $redirect );
-		$query = $this->redirectQuery( $redirect );
+		$query = $this->redirect_query( $redirect );
 		self::assertSame( $page, $query['page'] );
 		self::assertSame( 'update', $query['ran_booster_result'] );
 		self::assertArrayNotHasKey( 'provider', $query );
 		self::assertArrayNotHasKey( 'open_picker', $query );
 	}
 
-	#[DataProvider( 'updateRedirectMatrix' )]
-	public function testUpdatesPreserveNormalizedPackageListFilters( string $action, string $page ): void {
+	#[DataProvider( 'update_redirect_matrix' )]
+	public function test_updates_preserve_normalized_package_list_filters( string $action, string $page ): void {
 		$_GET      = array(
 			's'        => ' release ',
 			'provider' => 'GH',
@@ -937,7 +937,7 @@ final class PackageOperationServiceTest extends TestCase {
 		$_GET     = array();
 
 		self::assertIsString( $redirect );
-		$query = $this->redirectQuery( $redirect );
+		$query = $this->redirect_query( $redirect );
 		self::assertSame( $page, $query['page'] );
 		self::assertSame( 'release', $query['s'] );
 		self::assertSame( 'gh', $query['provider'] );
@@ -946,8 +946,8 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertArrayNotHasKey( 'unsafe', $query );
 	}
 
-	#[DataProvider( 'updateRedirectMatrix' )]
-	public function testSettingsReinstallReturnsToTheSamePackageSettingsPage( string $action, string $page ): void {
+	#[DataProvider( 'update_redirect_matrix' )]
+	public function test_settings_reinstall_returns_to_the_same_package_settings_page( string $action, string $page ): void {
 		$dashboard = $this->dashboard( new OperationCoordinator() );
 
 		$redirect = $dashboard->post_package_operation(
@@ -956,7 +956,7 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 
 		self::assertIsString( $redirect );
-		$query = $this->redirectQuery( $redirect );
+		$query = $this->redirect_query( $redirect );
 		self::assertSame( $page, $query['page'] );
 		self::assertSame(
 			str_ends_with( $action, 'plugin' ) ? 'example/example.php' : 'example',
@@ -964,7 +964,7 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 	}
 
-	public function testDashboardKeepsTerminalFailureOnTheFormWithSafeActivityMessage(): void {
+	public function test_dashboard_keeps_terminal_failure_on_the_form_with_safe_activity_message(): void {
 		$coordinator         = new OperationCoordinator();
 		$coordinator->result = array(
 			'status'           => 'failed',
@@ -988,7 +988,7 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertStringNotContainsString( 'secret-canary-token', $dashboard->messages[0]['message'] );
 	}
 
-	public function testMalformedDeploymentCorrelationCannotFallThroughToRemovalCopy(): void {
+	public function test_malformed_deployment_correlation_cannot_fall_through_to_removal_copy(): void {
 		$coordinator         = new OperationCoordinator();
 		$coordinator->result = array(
 			'status'         => 'failed',
@@ -1005,7 +1005,7 @@ final class PackageOperationServiceTest extends TestCase {
 		unset( $GLOBALS['ran_booster_test_status_header'] );
 	}
 
-	public function testDashboardExplainsAnAlreadyActiveDeployment(): void {
+	public function test_dashboard_explains_an_already_active_deployment(): void {
 		$coordinator          = new OperationCoordinator();
 		$coordinator->failure = DeploymentStorageFailure::contention(
 			active_attempt: array(
@@ -1029,7 +1029,7 @@ final class PackageOperationServiceTest extends TestCase {
 		unset( $GLOBALS['ran_booster_test_status_header'] );
 	}
 
-	public function testDashboardExplainsThatAnUnresolvedDeploymentIsNotRunning(): void {
+	public function test_dashboard_explains_that_an_unresolved_deployment_is_not_running(): void {
 		$coordinator          = new OperationCoordinator();
 		$coordinator->failure = DeploymentStorageFailure::contention(
 			active_attempt: array(
@@ -1053,15 +1053,15 @@ final class PackageOperationServiceTest extends TestCase {
 	}
 
 	/** @return list<array{string, string, string}> */
-	public static function linkedPackageSettingsRedirectMatrix(): array {
+	public static function linked_package_settings_redirect_matrix(): array {
 		return array(
 			array( 'install-plugin', 'ran-booster-plugins', 'example/example.php' ),
 			array( 'install-theme', 'ran-booster-themes', 'example' ),
 		);
 	}
 
-	#[DataProvider( 'linkedPackageSettingsRedirectMatrix' )]
-	public function testStandardDryRunLinkRedirectsToPackageSettings(
+	#[DataProvider( 'linked_package_settings_redirect_matrix' )]
+	public function test_standard_dry_run_link_redirects_to_package_settings(
 		string $action,
 		string $page,
 		string $identifier
@@ -1073,14 +1073,14 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 
 		self::assertIsString( $redirect );
-		$query = $this->redirectQuery( $redirect );
+		$query = $this->redirect_query( $redirect );
 		self::assertSame( $page, $query['page'] );
 		self::assertSame( $identifier, $query['package'] );
 		self::assertSame( 'install', $query['ran_booster_result'] );
 		self::assertSame( $identifier, $query['ran_booster_package'] );
 	}
 
-	public function testRepeatDryRunLinkRedirectsToCreate(): void {
+	public function test_repeat_dry_run_link_redirects_to_create(): void {
 		$repeat   = $this->dashboard( new OperationCoordinator() );
 		$redirect = $repeat->post_package_operation(
 			'install-plugin',
@@ -1094,7 +1094,7 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 
 		self::assertIsString( $redirect );
-		$query = $this->redirectQuery( $redirect );
+		$query = $this->redirect_query( $redirect );
 		self::assertSame( 'ran-booster-plugins-create', $query['page'] );
 		self::assertSame( 'install', $query['ran_booster_result'] );
 		self::assertSame( 'gh', $query['provider'] );
@@ -1106,11 +1106,11 @@ final class PackageOperationServiceTest extends TestCase {
 				'operation'  => 'install',
 				'identifier' => 'example/example.php',
 			),
-			$this->invokePackageSuccessNotice( $repeat, 'plugin' )
+			$this->invoke_package_success_notice( $repeat, 'plugin' )
 		);
 	}
 
-	public function testLinkingTheInstalledBoosterPluginIsRejectedBeforeStorage(): void {
+	public function test_linking_the_installed_booster_plugin_is_rejected_before_storage(): void {
 		$plugin  = $this->plugin( 'ran-booster/ran-booster.php' );
 		$plugins = new OperationPluginRepository( $plugin );
 		$service = $this->service( $plugins, new OperationThemeRepository( new OperationTheme( 'example' ) ), new OperationCoordinator() );
@@ -1135,7 +1135,7 @@ final class PackageOperationServiceTest extends TestCase {
 		}
 	}
 
-	public function testSimilarPluginNameCanStillBeLinked(): void {
+	public function test_similar_plugin_name_can_still_be_linked(): void {
 		$plugin  = $this->plugin( 'ran-booster-extra/ran-booster.php' );
 		$plugins = new OperationPluginRepository( $plugin );
 		$service = $this->service( $plugins, new OperationThemeRepository( new OperationTheme( 'example' ) ), new OperationCoordinator() );
@@ -1158,7 +1158,7 @@ final class PackageOperationServiceTest extends TestCase {
 	}
 
 	/** @return list<array{string, array<string, mixed>}> */
-	public static function malformedOperations(): array {
+	public static function malformed_operations(): array {
 		return array(
 			array( 'remove-plugin', array() ),
 			array( 'install-plugin', array( 'repository' => array() ) ),
@@ -1168,8 +1168,8 @@ final class PackageOperationServiceTest extends TestCase {
 	}
 
 	/** @param array<string, mixed> $overrides */
-	#[DataProvider( 'malformedOperations' )]
-	public function testMalformedOperationsAreRejected( string $action, array $overrides ): void {
+	#[DataProvider( 'malformed_operations' )]
+	public function test_malformed_operations_are_rejected( string $action, array $overrides ): void {
 		$input = array_merge( $this->input( $action ), $overrides );
 		if ( 'unlink-plugin' === $action ) {
 			unset( $input['file'] );
@@ -1180,7 +1180,7 @@ final class PackageOperationServiceTest extends TestCase {
 	}
 
 	/** @return array<string, array{string, string, string, string}> */
-	public static function removalRedirects(): array {
+	public static function removal_redirects(): array {
 		return array(
 			'unlink plugin' => array( 'unlink-plugin', 'ran-booster-plugins', 'unlink', 'example/example.php' ),
 			'delete plugin' => array( 'unlink-delete-plugin', 'ran-booster-plugins', 'unlink-and-delete', 'example/example.php' ),
@@ -1189,8 +1189,8 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'removalRedirects' )]
-	public function testDashboardReturnsEachRemovalToItsOwnershipIndex(
+	#[DataProvider( 'removal_redirects' )]
+	public function test_dashboard_returns_each_removal_to_its_ownership_index(
 		string $action,
 		string $page,
 		string $result,
@@ -1220,7 +1220,7 @@ final class PackageOperationServiceTest extends TestCase {
 
 		$redirect = $dashboard->post_package_operation( $action, $this->input( $action ) );
 		self::assertIsString( $redirect );
-		$query = $this->redirectQuery( $redirect );
+		$query = $this->redirect_query( $redirect );
 		self::assertSame( $page, $query['page'] );
 		self::assertSame( $result, $query['ran_booster_result'] );
 		self::assertSame( $identifier, $query['ran_booster_package'] );
@@ -1235,11 +1235,11 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( array(), $dashboard->messages );
 	}
 
-	public function testDashboardRedactsUnexpectedOperationFailures(): void {
-		$plugins                = new OperationPluginRepository( $this->plugin() );
-		$plugins->unlinkFailure = new \RuntimeException( 'secret-canary-token' );
-		$themes                 = new OperationThemeRepository( new OperationTheme( 'example' ) );
-		$dashboard              = new Dashboard(
+	public function test_dashboard_redacts_unexpected_operation_failures(): void {
+		$plugins                 = new OperationPluginRepository( $this->plugin() );
+		$plugins->unlink_failure = new \RuntimeException( 'secret-canary-token' );
+		$themes                  = new OperationThemeRepository( new OperationTheme( 'example' ) );
+		$dashboard               = new Dashboard(
 			new Database(),
 			$plugins,
 			new Booster(),
@@ -1258,7 +1258,7 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertStringNotContainsString( 'secret-canary-token', $dashboard->messages[0]['message'] );
 	}
 
-	public function testDashboardExplainsRepositoryReleaseOwnerRefusal(): void {
+	public function test_dashboard_explains_repository_release_owner_refusal(): void {
 		$database       = new RepositorySourceGuardDatabase();
 		$database->rows = array(
 			(object) array(
@@ -1272,7 +1272,7 @@ final class PackageOperationServiceTest extends TestCase {
 		$guard          = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
 		$coordinator    = new OperationCoordinator();
 		try {
-			$guard->assertAllowed( 'gh', '1315521150', 1, 'branch-fixture', PackageSource::BRANCH );
+			$guard->assert_allowed( 'gh', '1315521150', 1, 'branch-fixture', PackageSource::BRANCH );
 			self::fail( 'A release-owned repository must refuse another package.' );
 		} catch ( \RuntimeException $failure ) {
 			$coordinator->failure = $failure;
@@ -1324,12 +1324,12 @@ final class PackageOperationServiceTest extends TestCase {
 		OperationPluginRepository $plugins,
 		OperationThemeRepository $themes,
 		OperationCoordinator $coordinator,
-		?OperationUpdaterLock $updaterLock = null,
-		?RepositorySourceGuardDatabase $sourceDatabase = null
+		?OperationUpdaterLock $updater_lock = null,
+		?RepositorySourceGuardDatabase $source_database = null
 	): PackageOperationService {
-		$updaterLock ??= new OperationUpdaterLock();
-		if ( null === $sourceDatabase ) {
-			$sourceDatabase = new RepositorySourceGuardDatabase();
+		$updater_lock ??= new OperationUpdaterLock();
+		if ( null === $source_database ) {
+			$source_database = new RepositorySourceGuardDatabase();
 			foreach ( array(
 				1 => $plugins->package,
 				2 => $themes->package,
@@ -1340,7 +1340,7 @@ final class PackageOperationServiceTest extends TestCase {
 					continue; // Installed-only fixtures do not yet represent a managed relationship.
 				}
 				if ( null !== $package->get_provider_code() && null !== $package->get_provider_repository_id() ) {
-					$sourceDatabase->rows[] = (object) array(
+					$source_database->rows[] = (object) array(
 						'type'                   => $type,
 						'package'                => $package->get_identifier(),
 						'provider'               => $package->get_provider_code(),
@@ -1355,9 +1355,9 @@ final class PackageOperationServiceTest extends TestCase {
 			$plugins,
 			$themes,
 			$coordinator,
-			new PackageRemovalService( $plugins, $themes, new OperationRemovalGateway(), null, $updaterLock ),
-			$updaterLock,
-			new RepositorySourceGuard( $sourceDatabase, $this->createStub( Database::class ) )
+			new PackageRemovalService( $plugins, $themes, new OperationRemovalGateway(), null, $updater_lock ),
+			$updater_lock,
+			new RepositorySourceGuard( $source_database, $this->createStub( Database::class ) )
 		);
 	}
 
@@ -1379,7 +1379,7 @@ final class PackageOperationServiceTest extends TestCase {
 	}
 
 	/** @return array{operation: string, identifier: string}|null */
-	private function invokePackageSuccessNotice( Dashboard $dashboard, string $type ): ?array {
+	private function invoke_package_success_notice( Dashboard $dashboard, string $type ): ?array {
 		$method = new \ReflectionMethod( Dashboard::class, 'add_package_success_notice' );
 		$result = $method->invoke( $dashboard, $type );
 
@@ -1388,7 +1388,7 @@ final class PackageOperationServiceTest extends TestCase {
 	}
 
 	/** @return array<string, string> */
-	private function redirectQuery( string $redirect ): array {
+	private function redirect_query( string $redirect ): array {
 		$query = parse_url( $redirect, PHP_URL_QUERY ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- No WordPress runtime is available in this unit test.
 		self::assertIsString( $query );
 		parse_str( $query, $parameters );
@@ -1422,9 +1422,9 @@ final class PackageOperationServiceTest extends TestCase {
 }
 
 final class OperationCoordinator extends DeploymentCoordinator {
-	public int $calls                     = 0;
-	public ?\Throwable $failure           = null;
-	public ?PackageOperation $lastCommand = null;
+	public int $calls                      = 0;
+	public ?\Throwable $failure            = null;
+	public ?PackageOperation $last_command = null;
 	/** @var array<string, mixed> */
 	public array $result = array(
 		'status'         => 'succeeded',
@@ -1432,9 +1432,9 @@ final class OperationCoordinator extends DeploymentCoordinator {
 		'outcome_code'   => 'deployed',
 	);
 	public function __construct() {}
-	public function executeManual( PackageOperation $command ): array {
+	public function execute_manual( PackageOperation $command ): array {
 		++$this->calls;
-		$this->lastCommand = $command;
+		$this->last_command = $command;
 		if ( null !== $this->failure ) {
 			throw $this->failure;
 		}
@@ -1469,17 +1469,17 @@ final class OperationPluginRepository extends PluginRepository {
 	/** @var array<string, mixed> */ public array $edited = array();
 	public bool $installed                                = true;
 	public ?string $unlinked                              = null;
-	public ?string $requestedSlug                         = null;
-	public ?\Throwable $unlinkFailure                     = null;
-	public ?Plugin $freshAfterMutation                    = null;
-	public ?PackageMutationResult $adoptionResult         = null;
+	public ?string $requested_slug                        = null;
+	public ?\Throwable $unlink_failure                    = null;
+	public ?Plugin $fresh_after_mutation                  = null;
+	public ?PackageMutationResult $adoption_result        = null;
 	public function __construct( public Plugin $package ) {}
 	public function from_slug( $slug ) {
-		$this->requestedSlug = (string) $slug;
+		$this->requested_slug = (string) $slug;
 		return $this->package; }
 	public function booster_plugin_from_file( $file ) {
-		return null !== $this->freshAfterMutation && ( null !== $this->stored || array() !== $this->edited )
-			? $this->freshAfterMutation
+		return null !== $this->fresh_after_mutation && ( null !== $this->stored || array() !== $this->edited )
+			? $this->fresh_after_mutation
 			: $this->package; }
 	public function store( Plugin $plugin ): PackageMutationResult {
 		$this->stored = $plugin;
@@ -1487,7 +1487,7 @@ final class OperationPluginRepository extends PluginRepository {
 	}
 	public function adopt( Plugin $plugin ): PackageMutationResult {
 		$this->stored = $plugin;
-		return $this->adoptionResult ?? PackageMutationResult::changed( PackageStorageOperation::INSERT );
+		return $this->adoption_result ?? PackageMutationResult::changed( PackageStorageOperation::INSERT );
 	}
 	public function edit_plugin( $file, $input ): PackageMutationResult {
 		$this->edited = $input;
@@ -1501,8 +1501,8 @@ final class OperationPluginRepository extends PluginRepository {
 		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
 	}
 	public function unlink( $file ): PackageMutationResult {
-		if ( null !== $this->unlinkFailure ) {
-			throw $this->unlinkFailure;
+		if ( null !== $this->unlink_failure ) {
+			throw $this->unlink_failure;
 		}
 		$this->unlinked = (string) $file;
 		return PackageMutationResult::changed( PackageStorageOperation::DELETE );
@@ -1518,15 +1518,15 @@ final class OperationThemeRepository extends ThemeRepository {
 	/** @var array<string, mixed> */ public array $edited = array();
 	public bool $installed                                = true;
 	public ?string $unlinked                              = null;
-	public ?string $requestedSlug                         = null;
-	public ?Theme $freshAfterMutation                     = null;
+	public ?string $requested_slug                        = null;
+	public ?Theme $fresh_after_mutation                   = null;
 	public function __construct( public Theme $package ) {}
 	public function from_slug( $slug ) {
-		$this->requestedSlug = (string) $slug;
+		$this->requested_slug = (string) $slug;
 		return $this->package; }
 	public function booster_theme_from_stylesheet( $stylesheet ) {
-		return null !== $this->freshAfterMutation && ( null !== $this->stored || array() !== $this->edited )
-			? $this->freshAfterMutation
+		return null !== $this->fresh_after_mutation && ( null !== $this->stored || array() !== $this->edited )
+			? $this->fresh_after_mutation
 			: $this->package; }
 	public function store( Theme $theme ): PackageMutationResult {
 		$this->stored = $theme;

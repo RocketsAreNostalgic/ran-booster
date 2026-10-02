@@ -30,6 +30,7 @@ require_once dirname( __DIR__, 2 ) . '/Support/WebhookManagementCapabilityProvid
 require_once dirname( __DIR__, 2 ) . '/Support/PackageViewWordPressFunctions.php';
 
 final class RepositoryWebhookManagementControlsTest extends TestCase {
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override requires this method name.
 	protected function setUp(): void {
 		if ( ! defined( 'ABSPATH' ) ) {
 			define( 'ABSPATH', __DIR__ . '/' );
@@ -42,7 +43,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$_GET = array();
 	}
 
-	public function testItRegistersTheCompleteNonGitHubProviderPresentationAndRequestBoundaryOnce(): void {
+	public function test_it_registers_the_complete_non_git_hub_provider_presentation_and_request_boundary_once(): void {
 		$provider = new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' );
 		$controls = $this->controls( $provider );
 		$controls->register();
@@ -59,10 +60,10 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		foreach ( array_merge( $GLOBALS['ran_booster_repository_webhook_management_actions'], $GLOBALS['ran_booster_repository_webhook_management_filters'] ) as $registrations ) {
 			self::assertCount( 1, $registrations );
 		}
-		self::assertSame( 0, $provider->providerOperationCalls );
+		self::assertSame( 0, $provider->provider_operation_calls );
 	}
 
-	public function testItLoadsScopedStylesOnCapableProviderAndPackageSettingsScreens(): void {
+	public function test_it_loads_scoped_styles_on_capable_provider_and_package_settings_screens(): void {
 		$controls = $this->controls( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) );
 		$controls->register();
 		$_GET = array(
@@ -92,7 +93,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertCount( 2, $GLOBALS['ran_booster_repository_webhook_management_styles'] );
 	}
 
-	public function testPartialAbsentMissingAndMalformedProvidersReceiveNoPlacementBeforeProviderWork(): void {
+	public function test_partial_absent_missing_and_malformed_providers_receive_no_placement_before_provider_work(): void {
 		$providers = array(
 			new FitnessOnlyWebhookManagementCapabilityProvider( 'fitness-only', 'Fitness only' ),
 			new ManagementOnlyWebhookManagementCapabilityProvider( 'management-only', 'Management only' ),
@@ -103,35 +104,35 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$controls->register();
 		$rows = array( 'repository' => array( 'actions' => array() ) );
 
-		foreach ( array( 'fitness-only', 'management-only', 'no-policy', 'absent', 'missing', "bad\0code" ) as $providerCode ) {
-			self::assertFalse( $controls->supports_provider( $providerCode ) );
-			self::assertSame( $rows, $controls->enrich_repository_rows( $rows, $providerCode, array(), 'https://example.test/' ) );
+		foreach ( array( 'fitness-only', 'management-only', 'no-policy', 'absent', 'missing', "bad\0code" ) as $provider_code ) {
+			self::assertFalse( $controls->supports_provider( $provider_code ) );
+			self::assertSame( $rows, $controls->enrich_repository_rows( $rows, $provider_code, array(), 'https://example.test/' ) );
 			ob_start();
-			self::assertFalse( $controls->render_repository_panel( $providerCode, 'repository', 'https://example.test/' ) );
+			self::assertFalse( $controls->render_repository_panel( $provider_code, 'repository', 'https://example.test/' ) );
 			self::assertSame( '', ob_get_clean() );
 		}
-		foreach ( array( 'fitness-only', 'management-only', 'no-policy' ) as $providerCode ) {
-			self::assertTrue( $controls->has_management_capability( $providerCode ) );
+		foreach ( array( 'fitness-only', 'management-only', 'no-policy' ) as $provider_code ) {
+			self::assertTrue( $controls->has_management_capability( $provider_code ) );
 		}
-		foreach ( array( 'absent', 'missing', "bad\0code" ) as $providerCode ) {
-			self::assertFalse( $controls->has_management_capability( $providerCode ) );
+		foreach ( array( 'absent', 'missing', "bad\0code" ) as $provider_code ) {
+			self::assertFalse( $controls->has_management_capability( $provider_code ) );
 		}
 
 		foreach ( $providers as $provider ) {
-			self::assertSame( 0, $provider->providerOperationCalls );
+			self::assertSame( 0, $provider->provider_operation_calls );
 		}
 		self::assertSame( array(), $GLOBALS['ran_booster_repository_webhook_management_filters'] );
-		foreach ( array( 'fitness-only', 'management-only', 'no-policy', 'absent', 'missing' ) as $providerCode ) {
+		foreach ( array( 'fitness-only', 'management-only', 'no-policy', 'absent', 'missing' ) as $provider_code ) {
 			$_GET = array(
 				'page' => 'ran-booster',
-				'tab'  => $providerCode,
+				'tab'  => $provider_code,
 			);
 			$controls->enqueue_admin_assets( 'toplevel_page_ran-booster' );
 		}
 		self::assertSame( array(), $GLOBALS['ran_booster_repository_webhook_management_styles'] );
 	}
 
-	public function testClaimedIncompleteCapabilityRendersADisabledCoreShellWithoutFacadeOrProviderWork(): void {
+	public function test_claimed_incomplete_capability_renders_a_disabled_core_shell_without_facade_or_provider_work(): void {
 		$provider = new FitnessOnlyWebhookManagementCapabilityProvider( 'fitness-only', 'Fitness only' );
 		$controls = $this->controls( $provider );
 		$controls->register();
@@ -145,10 +146,10 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-repository-webhook-setup is-inactive', $html );
 		self::assertStringContainsString( 'aria-disabled="true"', $html );
 		self::assertStringNotContainsString( 'name="repository_webhook_management_operation"', $html );
-		self::assertSame( 0, $provider->providerOperationCalls );
+		self::assertSame( 0, $provider->provider_operation_calls );
 	}
 
-	public function testRepositoryPanelReportsUnavailableTargetsWithoutRenderingMarkup(): void {
+	public function test_repository_panel_reports_unavailable_targets_without_rendering_markup(): void {
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
 		foreach ( array( 'missing', 'throws' ) as $mode ) {
 			$facade = $this->createMock( WebhookAssistanceFacade::class );
@@ -177,7 +178,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		}
 	}
 
-	public function testRepositoryPageReusesTheFixedNormalPostWebhookSection(): void {
+	public function test_repository_page_reuses_the_fixed_normal_post_webhook_section(): void {
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
 		$facade = $this->createMock( WebhookAssistanceFacade::class );
 		$facade->expects( self::once() )->method( 'readiness' )->with( 'fixture-provider' )->willReturn(
@@ -213,7 +214,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 				'https://example.test/webhook'
 			)
 		);
-		$facade->expects( self::once() )->method( 'credentialChoices' )->with( 'fixture-provider' )->willReturn(
+		$facade->expects( self::once() )->method( 'credential_choices' )->with( 'fixture-provider' )->willReturn(
 			array(
 				array(
 					'id'    => 'credential-1',
@@ -222,7 +223,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 				),
 			)
 		);
-		$controls = new RepositoryWebhookManagementControls( $facade, $this->createMock( AdminInteractionFacade::class ), new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ), dirname( __DIR__, 3 ) . '/', 'https://example.test/wp-content/plugins/ran-booster/', $this->packageAuthorities() );
+		$controls = new RepositoryWebhookManagementControls( $facade, $this->createMock( AdminInteractionFacade::class ), new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ), dirname( __DIR__, 3 ) . '/', 'https://example.test/wp-content/plugins/ran-booster/', $this->package_authorities() );
 		$controls->register();
 
 		ob_start();
@@ -276,7 +277,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringNotContainsString( 'hx-target=', $html );
 	}
 
-	public function testRepositoryChecklistRemainsVisibleWhenWebhookOperationsAreUnavailable(): void {
+	public function test_repository_checklist_remains_visible_when_webhook_operations_are_unavailable(): void {
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options']                           = true;
 		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
 			'fixture-provider:1234' => array(
@@ -311,7 +312,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ),
 			dirname( __DIR__, 3 ) . '/',
 			'https://example.test/wp-content/plugins/ran-booster/',
-			$this->packageAuthorities()
+			$this->package_authorities()
 		);
 		$controls->register();
 
@@ -339,7 +340,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'Manage signing secrets</a>', $html );
 	}
 
-	public function testPackageWebhookDisclosureOpensForAnOperationResultAndRecoveryContext(): void {
+	public function test_package_webhook_disclosure_opens_for_an_operation_result_and_recovery_context(): void {
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
 		$_GET    = array(
 			'webhook_management_result' => 'operation_failed',
@@ -368,7 +369,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 				'https://example.test/webhook'
 			)
 		);
-		$facade->expects( self::once() )->method( 'credentialChoices' )->with( 'fixture-provider' )->willReturn( array() );
+		$facade->expects( self::once() )->method( 'credential_choices' )->with( 'fixture-provider' )->willReturn( array() );
 		$controls = new RepositoryWebhookManagementControls(
 			$facade,
 			$this->createMock( AdminInteractionFacade::class ),
@@ -388,7 +389,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'returned recovery references', strtolower( $html ) );
 	}
 
-	public function testRepositoryWebhookShellKeepsItsChildZonesAndControlLabelsAcrossActiveAndInactiveStates(): void {
+	public function test_repository_webhook_shell_keeps_its_child_zones_and_control_labels_across_active_and_inactive_states(): void {
 		$method = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_section' );
 		$items  = array(
 			array(
@@ -432,22 +433,22 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		);
 		$inactive = (string) ob_get_clean();
 
-		self::assertSame( $this->repositoryWebhookShellStructure( $active ), $this->repositoryWebhookShellStructure( $inactive ) );
+		self::assertSame( $this->repository_webhook_shell_structure( $active ), $this->repository_webhook_shell_structure( $inactive ) );
 		foreach ( array( 'Push-to-deploy', 'Repository webhook lifecycle', 'Webhook readiness', 'Webhook setup', 'Set up webhook', 'Test webhook' ) as $label ) {
 			self::assertStringContainsString( $label, $active );
 			self::assertStringContainsString( $label, $inactive );
 		}
 	}
 
-	public function testWebhookControlTemplateKeepsCredentialSecretAndOperationIdentitiesAcrossRecordStates(): void {
+	public function test_webhook_control_template_keeps_credential_secret_and_operation_identities_across_record_states(): void {
 		$method = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_panel_model' );
 		$states = array(
-			'unconfigured'       => $this->webhookPanelModel(
+			'unconfigured'       => $this->webhook_panel_model(
 				false,
 				false,
 				array( 'setup' => false )
 			),
-			'configured_healthy' => $this->webhookPanelModel(
+			'configured_healthy' => $this->webhook_panel_model(
 				true,
 				false,
 				array(
@@ -456,7 +457,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 					'remove' => false,
 				)
 			),
-			'drift'              => $this->webhookPanelModel(
+			'drift'              => $this->webhook_panel_model(
 				true,
 				false,
 				array(
@@ -466,7 +467,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 					'remove'      => false,
 				)
 			),
-			'inactive'           => $this->webhookPanelModel( true, true, array() ),
+			'inactive'           => $this->webhook_panel_model( true, true, array() ),
 		);
 
 		foreach ( $states as $state => $model ) {
@@ -479,7 +480,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		}
 	}
 
-	public function testRepositoryWebhookSetupRegionRemainsLabelledWhenTheTargetIsUnavailable(): void {
+	public function test_repository_webhook_setup_region_remains_labelled_when_the_target_is_unavailable(): void {
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
 		$facade = $this->createMock( WebhookAssistanceFacade::class );
 		$facade->expects( self::exactly( 2 ) )->method( 'readiness' )->with( 'fixture-provider' )->willReturn( new AssistanceReadiness( array( 'callback_requires_public_https' ), 'http://localhost:10008/webhook', array() ) );
@@ -490,7 +491,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ),
 			dirname( __DIR__, 3 ) . '/',
 			'https://example.test/wp-content/plugins/ran-booster/',
-			$this->packageAuthorities()
+			$this->package_authorities()
 		);
 		$controls->register();
 
@@ -520,7 +521,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringNotContainsString( 'Manage signing secrets</a> disabled', $html );
 	}
 
-	public function testPartialProviderKeepsReleaseRowHistoryLocalAndInert(): void {
+	public function test_partial_provider_keeps_release_row_history_local_and_inert(): void {
 		$provider = new FitnessOnlyWebhookManagementCapabilityProvider( 'fitness-only', 'Fitness only' );
 		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
 			'fitness-only:1234' => array(
@@ -556,14 +557,14 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertSame( array( 'Recorded hook status', 'Observation', 'Management credential', 'Recorded signing secret', 'Last checked' ), array_column( $result['1234']['details'], 'label' ) );
 		self::assertSame( 'Needs attention: Needs Verification at last check', $result['1234']['details'][0]['value'] );
 		self::assertSame( array(), $result['1234']['actions'] );
-		self::assertSame( 0, $provider->providerOperationCalls );
+		self::assertSame( 0, $provider->provider_operation_calls );
 	}
 
 	private function controls( WebhookManagementCapabilityProvider ...$providers ): RepositoryWebhookManagementControls {
 		$facade = $this->createMock( WebhookAssistanceFacade::class );
 		$facade->expects( self::never() )->method( 'readiness' );
 		$facade->expects( self::never() )->method( 'target' );
-		$facade->expects( self::never() )->method( 'credentialChoices' );
+		$facade->expects( self::never() )->method( 'credential_choices' );
 		$facade->expects( self::never() )->method( 'profile' );
 
 		return new RepositoryWebhookManagementControls(
@@ -572,11 +573,11 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			new ProviderRegistry( $providers ),
 			dirname( __DIR__, 3 ) . '/',
 			'https://example.test/wp-content/plugins/ran-booster/',
-			$this->packageAuthorities()
+			$this->package_authorities()
 		);
 	}
 
-	private function packageAuthorities(): ManagedPackageWebhookAuthorityResolver {
+	private function package_authorities(): ManagedPackageWebhookAuthorityResolver {
 		return new ManagedPackageWebhookAuthorityResolver(
 			$this->createMock( PluginRepository::class ),
 			$this->createMock( ThemeRepository::class )
@@ -584,7 +585,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 	}
 
 	/** @return list<string> */
-	private function repositoryWebhookShellStructure( string $html ): array {
+	private function repository_webhook_shell_structure( string $html ): array {
 		$zones     = array(
 			'ran-booster-settings-section__header',
 			'ran-booster-repository-webhook-management__notices',
@@ -603,8 +604,8 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		return array_values( $positions );
 	}
 
-	/** @param array<string,bool> $enabledOperations @return array<string,mixed> */
-	private function webhookPanelModel( bool $recorded, bool $disabled, array $enabledOperations ): array {
+	/** @param array<string,bool> $enabled_operations @return array<string,mixed> */
+	private function webhook_panel_model( bool $recorded, bool $disabled, array $enabled_operations ): array {
 		$operations = array();
 		$labels     = array(
 			'setup'       => 'Set up webhook',
@@ -619,7 +620,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 				'label'    => $label,
 				'url'      => 'https://example.test/' . $key,
 				'primary'  => 'setup' === $key,
-				'disabled' => ! ( $enabledOperations[ $key ] ?? true ),
+				'disabled' => ! ( $enabled_operations[ $key ] ?? true ),
 			);
 		}
 

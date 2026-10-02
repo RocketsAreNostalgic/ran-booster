@@ -81,15 +81,15 @@ final class CredentialExpiryReminderTest extends TestCase {
 		parent::tearDown();
 	}
 
-	public function testExactWarningUrgentAndExpiredBoundariesUseTheInjectedClock(): void {
+	public function test_exact_warning_urgent_and_expired_boundaries_use_the_injected_clock(): void {
 		$this->credential( 'future', 'Future' );
 		$this->credential( 'warning', 'Warning' );
 		$this->credential( 'urgent', 'Urgent' );
 		$this->credential( 'expired', 'Expired' );
-		$this->providerExpiry( 'future', $this->now->modify( '+30 days +1 second' ) );
-		$this->providerExpiry( 'warning', $this->now->modify( '+30 days' ) );
-		$this->providerExpiry( 'urgent', $this->now->modify( '+7 days' ) );
-		$this->providerExpiry( 'expired', $this->now );
+		$this->provider_expiry( 'future', $this->now->modify( '+30 days +1 second' ) );
+		$this->provider_expiry( 'warning', $this->now->modify( '+30 days' ) );
+		$this->provider_expiry( 'urgent', $this->now->modify( '+7 days' ) );
+		$this->provider_expiry( 'expired', $this->now );
 
 		$reminders = $this->reminders();
 
@@ -100,11 +100,11 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertSame( array( 'expired', 'urgent', 'warning' ), array_column( $reminders->affected(), 'stage' ) );
 	}
 
-	public function testProviderExpiryPrecedesManualDateAndMissingMetadataIsUnknown(): void {
+	public function test_provider_expiry_precedes_manual_date_and_missing_metadata_is_unknown(): void {
 		$this->credential( 'precedence', 'Precedence' );
 		$this->credential( 'unknown', 'Unknown' );
 		$this->observations->set_manual_expiry( provider: 'gh', profile_id: 'precedence', expires_on: '2026-07-24' );
-		$this->providerExpiry( 'precedence', $this->now->modify( '+40 days' ) );
+		$this->provider_expiry( 'precedence', $this->now->modify( '+40 days' ) );
 
 		$status = $this->reminders()->status( 'gh', $this->profile( 'precedence' ) );
 
@@ -113,9 +113,9 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertSame( 'Expiry unknown', $this->reminders()->status( 'gh', $this->profile( 'unknown' ) )['badge_label'] );
 	}
 
-	public function testReminderAndNoticeRenderTranslatedAdministratorCopy(): void {
+	public function test_reminder_and_notice_render_translated_administrator_copy(): void {
 		$this->credential( 'translated', 'Translated credential' );
-		$this->providerExpiry( 'translated', $this->now->modify( '+2 days' ) );
+		$this->provider_expiry( 'translated', $this->now->modify( '+2 days' ) );
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']       = array(
 			'Expires in %d day' . "\0" . 'Expires in %d days' => array(
 				'single' => 'Expires in %d translated day',
@@ -134,9 +134,9 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertStringContainsString( 'Review translated GitHub credentials', $html );
 	}
 
-	public function testDismissalIsPerUserAndReappearsAtTheNextSeverityStage(): void {
+	public function test_dismissal_is_per_user_and_reappears_at_the_next_severity_stage(): void {
 		$this->credential( 'dismiss_me', 'Dismiss me' );
-		$this->providerExpiry( 'dismiss_me', $this->now->modify( '+8 days' ) );
+		$this->provider_expiry( 'dismiss_me', $this->now->modify( '+8 days' ) );
 		$reminders  = $this->reminders();
 		$controller = new CredentialExpiryNoticeController( $reminders );
 
@@ -150,24 +150,24 @@ final class CredentialExpiryReminderTest extends TestCase {
 		);
 		self::assertFalse( ( new CredentialExpiryNotice( $reminders ) )->should_render() );
 
-		$this->providerExpiry( 'dismiss_me', $this->now->modify( '+9 days' ) );
+		$this->provider_expiry( 'dismiss_me', $this->now->modify( '+9 days' ) );
 		self::assertTrue( ( new CredentialExpiryNotice( $reminders ) )->should_render() );
 		self::assertNotSame( $fingerprint, $reminders->fingerprint() );
 
-		$this->providerExpiry( 'dismiss_me', $this->now->modify( '+8 days' ) );
+		$this->provider_expiry( 'dismiss_me', $this->now->modify( '+8 days' ) );
 		$controller->handle();
 		$GLOBALS['ran_booster_repository_admin_user_id'] = 18;
 		self::assertTrue( ( new CredentialExpiryNotice( $reminders ) )->should_render() );
 
 		$GLOBALS['ran_booster_repository_admin_user_id'] = 17;
-		$this->advanceClockOneDay();
+		$this->advance_clock_one_day();
 		self::assertTrue( ( new CredentialExpiryNotice( $reminders ) )->should_render() );
 		self::assertNotSame( $fingerprint, $reminders->fingerprint() );
 	}
 
-	public function testDismissalRejectsUnauthorizedInvalidNonceAndPersistenceFailure(): void {
+	public function test_dismissal_rejects_unauthorized_invalid_nonce_and_persistence_failure(): void {
 		$this->credential( 'dismiss_failures', 'Dismiss failures' );
-		$this->providerExpiry( 'dismiss_failures', $this->now->modify( '+2 days' ) );
+		$this->provider_expiry( 'dismiss_failures', $this->now->modify( '+2 days' ) );
 		$controller = new CredentialExpiryNoticeController( $this->reminders() );
 
 		$GLOBALS['ran_booster_repository_admin_allowed'] = false;
@@ -180,9 +180,9 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertSame( 500, $controller->handle()['status'] );
 	}
 
-	public function testNoticeEscapesContentDeepLinksAndRendersOnlyOnceForAdministrators(): void {
+	public function test_notice_escapes_content_deep_links_and_renders_only_once_for_administrators(): void {
 		$this->credential( 'replace_me', '<script>Replace me</script>' );
-		$this->providerExpiry( 'replace_me', $this->now->modify( '+2 days' ) );
+		$this->provider_expiry( 'replace_me', $this->now->modify( '+2 days' ) );
 		$notice = new CredentialExpiryNotice( $this->reminders() );
 
 		ob_start();
@@ -204,7 +204,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 	/**
 	 * @return list<array{string}>
 	 */
-	public static function unreadableSidecarProvider(): array {
+	public static function unreadable_sidecar_provider(): array {
 		return array(
 			array( 'key_only' ),
 			array( 'ciphertext_only' ),
@@ -214,17 +214,17 @@ final class CredentialExpiryReminderTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'unreadableSidecarProvider' )]
-	public function testUnreadableSidecarRendersOnePathlessPersistentNoticeWithoutChangingStorage( string $state ): void {
+	#[DataProvider( 'unreadable_sidecar_provider' )]
+	public function test_unreadable_sidecar_renders_one_pathless_persistent_notice_without_changing_storage( string $state ): void {
 		$this->credential( 'storage_failure', 'Storage failure' );
-		$keyStore  = SecretsFileTestFactory::keyStore( $this->path );
-		$keyBefore = $keyStore->load();
-		self::assertIsString( $keyBefore );
+		$key_store  = SecretsFileTestFactory::key_store( $this->path );
+		$key_before = $key_store->load();
+		self::assertIsString( $key_before );
 
-		$this->makeSidecarUnreadable( $state );
-		$bytesBefore = is_file( $this->path ) ? file_get_contents( $this->path ) : null;
-		$keyBefore   = $keyStore->load();
-		$notice      = new CredentialExpiryNotice( $this->reminders() );
+		$this->make_sidecar_unreadable( $state );
+		$bytes_before = is_file( $this->path ) ? file_get_contents( $this->path ) : null;
+		$key_before   = $key_store->load();
+		$notice       = new CredentialExpiryNotice( $this->reminders() );
 
 		ob_start();
 		$notice->render();
@@ -241,16 +241,16 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertStringNotContainsString( 'could not be authenticated', $html );
 		self::assertStringNotContainsString( 'test-token-storage_failure', $html );
 		self::assertFalse( $notice->should_load_dismissal_script() );
-		self::assertSame( $bytesBefore, is_file( $this->path ) ? file_get_contents( $this->path ) : null );
-		self::assertSame( $keyBefore, $keyStore->load() );
+		self::assertSame( $bytes_before, is_file( $this->path ) ? file_get_contents( $this->path ) : null );
+		self::assertSame( $key_before, $key_store->load() );
 	}
 
-	public function testDismissalEndpointContainsUnreadableSidecarWithoutChangingStorage(): void {
+	public function test_dismissal_endpoint_contains_unreadable_sidecar_without_changing_storage(): void {
 		$this->credential( 'storage_failure', 'Storage failure' );
-		$bytesBefore = (string) file_get_contents( $this->path );
-		$keyStore    = SecretsFileTestFactory::keyStore( $this->path );
-		$keyBefore   = $keyStore->load();
-		$this->makeSidecarUnreadable( 'authentication_failure' );
+		$bytes_before = (string) file_get_contents( $this->path );
+		$key_store    = SecretsFileTestFactory::key_store( $this->path );
+		$key_before   = $key_store->load();
+		$this->make_sidecar_unreadable( 'authentication_failure' );
 		$tampered = (string) file_get_contents( $this->path );
 
 		$result = ( new CredentialExpiryNoticeController( $this->reminders() ) )->handle();
@@ -260,8 +260,8 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertStringNotContainsString( $this->directory, $result['data']['message'] );
 		self::assertStringNotContainsString( 'authenticated', $result['data']['message'] );
 		self::assertSame( $tampered, file_get_contents( $this->path ) );
-		self::assertNotSame( $bytesBefore, $tampered );
-		self::assertSame( $keyBefore, $keyStore->load() );
+		self::assertNotSame( $bytes_before, $tampered );
+		self::assertSame( $key_before, $key_store->load() );
 	}
 
 	private function reminders(): CredentialExpiryReminder {
@@ -274,7 +274,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 	}
 
 	private function credential( string $id, string $label ): void {
-		$this->secrets->saveCredential(
+		$this->secrets->save_credential(
 			'gh',
 			$id,
 			array(
@@ -286,7 +286,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 		);
 	}
 
-	private function makeSidecarUnreadable( string $state ): void {
+	private function make_sidecar_unreadable( string $state ): void {
 		if ( 'key_only' === $state ) {
 			self::assertTrue( unlink( $this->path ) );
 			return;
@@ -320,7 +320,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertTrue( chmod( $this->path, 0600 ) );
 	}
 
-	private function providerExpiry( string $id, DateTimeImmutable $expiry ): void {
+	private function provider_expiry( string $id, DateTimeImmutable $expiry ): void {
 		$this->observations->record_provider_expiry(
 			provider: 'gh',
 			profile_id: $id,
@@ -329,13 +329,13 @@ final class CredentialExpiryReminderTest extends TestCase {
 		);
 	}
 
-	private function advanceClockOneDay(): void {
+	private function advance_clock_one_day(): void {
 		$this->now = $this->now->modify( '+1 day' );
 	}
 
 	/** @return array<string, mixed> */
 	private function profile( string $id ): array {
-		$profile = $this->secrets->credentialProfiles( 'gh' )[ $id ] ?? null;
+		$profile = $this->secrets->credential_profiles( 'gh' )[ $id ] ?? null;
 		self::assertIsArray( $profile );
 
 		return $profile;

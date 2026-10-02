@@ -31,11 +31,11 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		unset( $GLOBALS['ran_booster_package_view_multisite'] );
 	}
 
-	public function testProjectAppliesBoundedProviderEnrichmentBeforeNormalization(): void {
-		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_provider_repository_rows'][] = static function ( array $rows, string $providerCode, array $projections, string $returnUrl ): array {
-			self::assertSame( 'gh', $providerCode );
+	public function test_project_applies_bounded_provider_enrichment_before_normalization(): void {
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_provider_repository_rows'][] = static function ( array $rows, string $provider_code, array $projections, string $return_url ): array {
+			self::assertSame( 'gh', $provider_code );
 			self::assertNotEmpty( $projections );
-			self::assertSame( 'https://example.test/repositories', $returnUrl );
+			self::assertSame( 'https://example.test/repositories', $return_url );
 			$key                       = (string) array_key_first( $rows );
 			$rows[ $key ]['details'][] = array(
 				'key'      => 'gh:release-automation-example',
@@ -111,7 +111,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertSame( 'gh:release-automation', $row['actions']['gh:release-automation']['key'] );
 	}
 
-	public function testProjectRetainsCoreAndWebhookRowsWhenProviderRowExtensionThrows(): void {
+	public function test_project_retains_core_and_webhook_rows_when_provider_row_extension_throws(): void {
 		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
 			'gh:101' => array(
 				'schema_version'              => 4,
@@ -134,7 +134,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 			throw new \RuntimeException( 'Extension unavailable.' );
 		};
 
-		$result = $this->projectSingleRepositoryPage( $this->webhookManagementControls() );
+		$result = $this->project_single_repository_page( $this->webhook_management_controls() );
 		$row    = $result['repositoryTableRows'][0];
 
 		self::assertArrayHasKey( 'core:package-' . substr( hash( 'sha256', 'example/example.php' ), 0, 16 ), $row['actions'] );
@@ -142,7 +142,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertContains( 'Configured at last check', array_column( $row['details'], 'value' ) );
 	}
 
-	public function testProjectRetainsWebhookEvidenceWhenProviderExtensionRemovesIt(): void {
+	public function test_project_retains_webhook_evidence_when_provider_extension_removes_it(): void {
 		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
 			'gh:101' => array(
 				'schema_version'              => 4,
@@ -167,13 +167,13 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 			return $rows;
 		};
 
-		$result = $this->projectSingleRepositoryPage( $this->webhookManagementControls() );
+		$result = $this->project_single_repository_page( $this->webhook_management_controls() );
 
 		self::assertSame( 'core:webhook-recorded-status', $result['repositoryTableRows'][0]['details'][0]['key'] );
 		self::assertSame( 'Configured at last check', $result['repositoryTableRows'][0]['details'][0]['value'] );
 	}
 
-	public function testProjectRejectsExtensionForgedWebhookEvidence(): void {
+	public function test_project_rejects_extension_forged_webhook_evidence(): void {
 		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_provider_repository_rows'][] = static function ( array $rows ): array {
 			$rows['101']['details'][] = array(
 				'key'      => 'core:webhook-recorded-status',
@@ -186,17 +186,17 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 			return $rows;
 		};
 
-		$result = $this->projectSingleRepositoryPage( null, true );
+		$result = $this->project_single_repository_page( null, true );
 
 		self::assertSame( array(), $result['repositoryTableRows'][0]['details'] );
 		self::assertSame( 0, $result['repositoryIntegrationSummary']['recorded_hooks'] );
 		self::assertSame( 1, $result['repositoryIntegrationSummary']['needs_review'] );
 	}
 
-	public function testProjectRetainsCoreRowsWhenProviderRowEnrichmentIsInvalid(): void {
+	public function test_project_retains_core_rows_when_provider_row_enrichment_is_invalid(): void {
 		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_provider_repository_rows'][] = static fn(): string => 'invalid enrichment';
 
-		$result = $this->projectSingleRepositoryPage();
+		$result = $this->project_single_repository_page();
 
 		self::assertCount( 1, $result['repositoryTableRows'] );
 		self::assertSame( 'example/example', $result['repositoryTableRows'][0]['repository'] );
@@ -205,7 +205,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testReleaseWebhookCleanupLinkUsesRepositoryBranchManagement(): void {
+	public function test_release_webhook_cleanup_link_uses_repository_branch_management(): void {
 		$GLOBALS['ran_booster_package_view_multisite'] = true;
 		$result                                        = ( new ProviderRepositoryRowsNormalizer() )->project(
 			array(
@@ -253,8 +253,8 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?', $settings['url'] );
 	}
 
-	public function testAllowsBundledManagementStateAndNamespacedHistoricalRows(): void {
-		$base                              = $this->baseRows();
+	public function test_allows_bundled_management_state_and_namespaced_historical_rows(): void {
+		$base                              = $this->base_rows();
 		$presented                         = $base;
 		$presented['repo-42']['details'][] = array(
 			'label' => 'Remote hook',
@@ -287,8 +287,8 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertSame( 'fixture:inspect', $rows['fixture:historical:abc123']['actions']['fixture:inspect']['key'] );
 	}
 
-	public function testPreservesUnknownAddOnDetailKindMetadata(): void {
-		$base                         = $this->baseRows();
+	public function test_preserves_unknown_add_on_detail_kind_metadata(): void {
+		$base                         = $this->base_rows();
 		$base['repo-42']['details'][] = array(
 			'label' => 'Add-on detail',
 			'value' => 'Observed',
@@ -300,8 +300,8 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertSame( array( 'unbounded' => str_repeat( 'x', 128 ) ), $rows['repo-42']['details'][1]['kind'] );
 	}
 
-	public function testRejectsHistoricalPostActions(): void {
-		$presented                              = $this->baseRows();
+	public function test_rejects_historical_post_actions(): void {
+		$presented                              = $this->base_rows();
 		$presented['fixture:historical:abc123'] = array(
 			'provider_code' => 'gh',
 			'historical'    => true,
@@ -321,46 +321,46 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		$this->expectException( LogicException::class );
 		$this->expectExceptionMessage( 'Historical rows may contain link actions only.' );
 
-		( new ProviderRepositoryRowsNormalizer() )->normalize( $this->baseRows(), $presented, 'gh' );
+		( new ProviderRepositoryRowsNormalizer() )->normalize( $this->base_rows(), $presented, 'gh' );
 	}
 
-	public function testRequiresEveryCoreRow(): void {
+	public function test_requires_every_core_row(): void {
 		$this->expectException( LogicException::class );
 		$this->expectExceptionMessage( 'preserve every Core repository row' );
 
-		( new ProviderRepositoryRowsNormalizer() )->normalize( $this->baseRows(), array(), 'gh' );
+		( new ProviderRepositoryRowsNormalizer() )->normalize( $this->base_rows(), array(), 'gh' );
 	}
 
-	public function testRejectsCoreFieldRewrites(): void {
-		$presented                          = $this->baseRows();
+	public function test_rejects_core_field_rewrites(): void {
+		$presented                          = $this->base_rows();
 		$presented['repo-42']['repository'] = 'attacker/rewrite';
 
 		$this->expectException( LogicException::class );
 		$this->expectExceptionMessage( 'must not rewrite Core repository fields' );
 
-		( new ProviderRepositoryRowsNormalizer() )->normalize( $this->baseRows(), $presented, 'gh' );
+		( new ProviderRepositoryRowsNormalizer() )->normalize( $this->base_rows(), $presented, 'gh' );
 	}
 
-	public function testRejectsRemovalOfCoreIntegrationDetails(): void {
-		$coreRows                         = $this->baseRows();
-		$coreRows['repo-42']['details'][] = array(
+	public function test_rejects_removal_of_core_integration_details(): void {
+		$core_rows                         = $this->base_rows();
+		$core_rows['repo-42']['details'][] = array(
 			'key'      => 'core:release-workflow:example/example.php',
 			'label'    => 'Release workflow',
 			'value'    => 'Ready to assess',
 			'tone'     => 'pending',
 			'category' => 'release_workflow',
 		);
-		$presented                        = $coreRows;
+		$presented                         = $core_rows;
 		array_pop( $presented['repo-42']['details'] );
 
 		$this->expectException( LogicException::class );
 		$this->expectExceptionMessage( 'may append but not replace Core details' );
 
-		( new ProviderRepositoryRowsNormalizer() )->normalize( $coreRows, $presented, 'gh' );
+		( new ProviderRepositoryRowsNormalizer() )->normalize( $core_rows, $presented, 'gh' );
 	}
 
-	public function testRejectsNonHistoricalOrWrongProviderAppends(): void {
-		$presented                      = $this->baseRows();
+	public function test_rejects_non_historical_or_wrong_provider_appends(): void {
+		$presented                      = $this->base_rows();
 		$presented['fixture:extra-row'] = array(
 			'provider_code' => 'bb',
 			'historical'    => true,
@@ -370,11 +370,11 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		$this->expectException( LogicException::class );
 		$this->expectExceptionMessage( 'namespaced historical rows' );
 
-		( new ProviderRepositoryRowsNormalizer() )->normalize( $this->baseRows(), $presented, 'gh' );
+		( new ProviderRepositoryRowsNormalizer() )->normalize( $this->base_rows(), $presented, 'gh' );
 	}
 
-	public function testRejectsUnknownIntegrationDetailCategories(): void {
-		$presented                         = $this->baseRows();
+	public function test_rejects_unknown_integration_detail_categories(): void {
+		$presented                         = $this->base_rows();
 		$presented['repo-42']['details'][] = array(
 			'key'      => 'provider:unknown',
 			'label'    => 'Nicht klassifiziert',
@@ -385,13 +385,13 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		$this->expectException( LogicException::class );
 		$this->expectExceptionMessage( 'detail categories are invalid' );
 
-		( new ProviderRepositoryRowsNormalizer() )->normalize( $this->baseRows(), $presented, 'gh' );
+		( new ProviderRepositoryRowsNormalizer() )->normalize( $this->base_rows(), $presented, 'gh' );
 	}
 
-	public function testProjectsMixedSourcesAndKeepsWebhookConsumersBranchOnly(): void {
-		$capturedProjections = array();
-		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_provider_repository_rows'][] = static function ( array $rows, string $providerCode, array $projections ) use ( &$capturedProjections ): array {
-			$capturedProjections = $projections;
+	public function test_projects_mixed_sources_and_keeps_webhook_consumers_branch_only(): void {
+		$captured_projections = array();
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_provider_repository_rows'][] = static function ( array $rows, string $provider_code, array $projections ) use ( &$captured_projections ): array {
+			$captured_projections = $projections;
 
 			return $rows;
 		};
@@ -523,18 +523,18 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		);
 		self::assertSame( 'Automatic: 1', $result['rows']['101']['policies'][0]['label'] );
 		self::assertSame( 'Manual: 1', $result['rows']['101']['policies'][1]['label'] );
-		self::assertSame( array( 'owner/plugin.php' ), $capturedProjections['101']['package_references'] );
+		self::assertSame( array( 'owner/plugin.php' ), $captured_projections['101']['package_references'] );
 		self::assertTrue( $result['rows']['101']['has_branch_consumer'] );
-		self::assertArrayNotHasKey( '202', $capturedProjections );
+		self::assertArrayNotHasKey( '202', $captured_projections );
 		self::assertFalse( $result['rows']['303']['historical'] );
 		self::assertTrue( $result['rows'][ 'repository:' . hash( 'sha256', 'gh|owner/unresolved|branch' ) ]['historical'] );
 		self::assertSame( array(), $result['rows'][ 'repository:' . hash( 'sha256', 'gh|owner/unresolved|branch' ) ]['actions'] );
 		self::assertTrue( $result['rows']['404']['historical'] );
 		self::assertSame( array(), $result['rows']['404']['actions'] );
-		self::assertArrayNotHasKey( '404', $capturedProjections );
+		self::assertArrayNotHasKey( '404', $captured_projections );
 	}
 
-	public function testProjectPageBuildsExactRepositoryViewUrlsAndLocalReleaseSummary(): void {
+	public function test_project_page_builds_exact_repository_view_urls_and_local_release_summary(): void {
 		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_provider_repository_rows'][] = static function ( array $rows ): array {
 			$rows['101']['details'][] = array(
 				'key'            => 'gh:release-automation-release-plugin',
@@ -627,7 +627,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testRepositorySubtabsUseNetworkAdminHrefsButKeepRelativeHtmxRequestsOnMultisite(): void {
+	public function test_repository_subtabs_use_network_admin_hrefs_but_keep_relative_htmx_requests_on_multisite(): void {
 		$GLOBALS['ran_booster_package_view_multisite'] = true;
 		$result                                        = ( new ProviderRepositoryRowsNormalizer() )->project_page(
 			array(
@@ -657,7 +657,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertSame( 'admin.php?page=ran-booster&tab=gh&panel=repositories&repository=101&repository_view=branch', $result['repositoryViewRequestUrls']['branch'] );
 	}
 
-	public function testRepositorySummaryUsesAutomaticBranchAggregateBeyondPackageSummaryCap(): void {
+	public function test_repository_summary_uses_automatic_branch_aggregate_beyond_package_summary_cap(): void {
 		$summaries = array();
 		for ( $index = 1; $index <= 20; ++$index ) {
 			$summaries[] = $this->summary( 'plugin', 'owner/manual-' . $index . '.php', 'Manual ' . $index, 'branch', 'main', '', 'manual' );
@@ -716,8 +716,8 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertSame( 0, $result['repositoryIntegrationSummary']['needs_review'] );
 	}
 
-	public function testRejectsProviderRewriteOfImmutablePackageSummaries(): void {
-		$base                                 = $this->baseRows();
+	public function test_rejects_provider_rewrite_of_immutable_package_summaries(): void {
+		$base                                 = $this->base_rows();
 		$base['repo-42']['package_summaries'] = array( $this->summary( 'plugin', 'example/example.php', 'Example', 'branch', 'main', '', 'manual' ) );
 		$presented                            = $base;
 		$presented['repo-42']['package_summaries'][0]['source'] = 'release_asset';
@@ -729,11 +729,11 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 	}
 
 	/** @return array<string, int|string> */
-	private function summary( string $type, string $identifier, string $displayName, string $source, string $branch, string $subdirectory, string $policy ): array {
+	private function summary( string $type, string $identifier, string $display_name, string $source, string $branch, string $subdirectory, string $policy ): array {
 		return array(
 			'type'              => $type,
 			'identifier'        => $identifier,
-			'display_name'      => $displayName,
+			'display_name'      => $display_name,
 			'settings_url'      => 'https://example.test/wp-admin/admin.php?page=ran-booster-' . ( 'theme' === $type ? 'themes' : 'plugins' ) . '&package=' . rawurlencode( $identifier ),
 			'source'            => $source,
 			'source_revision'   => 1,
@@ -744,7 +744,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 	}
 
 	/** @return array<string,mixed> */
-	private function projectSingleRepositoryPage( ?RepositoryWebhookManagementControls $webhookManagement = null, bool $automatic = false ): array {
+	private function project_single_repository_page( ?RepositoryWebhookManagementControls $webhook_management = null, bool $automatic = false ): array {
 		return ( new ProviderRepositoryRowsNormalizer() )->project_page(
 			array(
 				'provider'                     => array(
@@ -800,11 +800,11 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 					),
 				),
 			),
-			$webhookManagement
+			$webhook_management
 		);
 	}
 
-	private function webhookManagementControls(): RepositoryWebhookManagementControls {
+	private function webhook_management_controls(): RepositoryWebhookManagementControls {
 		return new RepositoryWebhookManagementControls(
 			$this->createMock( WebhookAssistanceFacade::class ),
 			$this->createMock( AdminInteractionFacade::class ),
@@ -819,7 +819,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 	}
 
 	/** @return array<string, array<string, mixed>> */
-	private function baseRows(): array {
+	private function base_rows(): array {
 		return array(
 			'repo-42' => array(
 				'key'           => 'repo-42',

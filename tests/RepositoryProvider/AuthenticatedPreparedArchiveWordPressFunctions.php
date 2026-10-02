@@ -29,12 +29,12 @@ function authenticated_archive_actions( string $hook ): array {
 	);
 }
 
-function add_filter( string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1 ): bool {
+function add_filter( string $hook, callable $callback, int $priority = 10, int $accepted_args = 1 ): bool {
 	$GLOBALS['ran_booster_authenticated_archive_filters'][] = array(
 		'hook'          => $hook,
 		'callback'      => $callback,
 		'priority'      => $priority,
-		'accepted_args' => $acceptedArgs,
+		'accepted_args' => $accepted_args,
 	);
 
 	return true;
@@ -44,12 +44,12 @@ function remove_filter( string $hook, callable $callback, int $priority = 10 ): 
 	return authenticated_archive_remove_hook( 'ran_booster_authenticated_archive_filters', $hook, $callback, $priority );
 }
 
-function add_action( string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1 ): bool {
+function add_action( string $hook, callable $callback, int $priority = 10, int $accepted_args = 1 ): bool {
 	$GLOBALS['ran_booster_authenticated_archive_actions'][] = array(
 		'hook'          => $hook,
 		'callback'      => $callback,
 		'priority'      => $priority,
-		'accepted_args' => $acceptedArgs,
+		'accepted_args' => $accepted_args,
 	);
 
 	return true;

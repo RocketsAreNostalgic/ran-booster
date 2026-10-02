@@ -65,16 +65,12 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		private readonly PluginRepository $plugins,
 		private readonly ThemeRepository $themes,
 		private readonly ProviderRegistry $providers,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private readonly RepositorySourceGuard $sourceGuard,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private readonly WordPressUpdaterLock $updaterLock,
+		private readonly RepositorySourceGuard $source_guard,
+		private readonly WordPressUpdaterLock $updater_lock,
 		private readonly WordPressCorePackageExecutor $executor,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private readonly string $maintenancePath
+		private readonly string $maintenance_path
 	) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( '' === trim( $maintenancePath ) ) {
+		if ( '' === trim( $maintenance_path ) ) {
 			throw new RuntimeException( 'The WordPress maintenance path is invalid.' );
 		}
 	}
@@ -121,7 +117,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	public function record_resolved_ref( string $ref ): void {
 		try {
-			$this->attempt = $this->attempts->recordResolvedRef( $this->attempt->get_id(), $ref );
+			$this->attempt = $this->attempts->record_resolved_ref( $this->attempt->get_id(), $ref );
 		} catch ( DeploymentStorageFailure $failure ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed failure text and chained exceptions preserve durable failure mapping; they are not output.
 			throw new AdmittedBranchDurabilityFailure( previous: $failure );
@@ -130,7 +126,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	public function mark_mutation_started(): void {
 		try {
-			$this->attempt = $this->attempts->markMutationStarted( $this->attempt->get_id() );
+			$this->attempt = $this->attempts->mark_mutation_started( $this->attempt->get_id() );
 		} catch ( DeploymentStorageFailure $failure ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed failure text and chained exceptions preserve durable failure mapping; they are not output.
 			throw new AdmittedBranchDurabilityFailure( previous: $failure );
@@ -145,9 +141,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			throw new AdmittedBranchDurabilityFailure( previous: $failure );
 		}
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function terminalAttempt(): DeploymentAttempt {
+	public function terminal_attempt(): DeploymentAttempt {
 		if ( ! $this->attempt->get_state()->is_terminal() || null === $this->attempt->get_outcome() ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
@@ -186,7 +180,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 		$provider_archive = $this->provider_archive;
 		try {
-			$resolved_ref = $provider_archive->getResolvedRef();
+			$resolved_ref = $provider_archive->get_resolved_ref();
 			if ( '' === $resolved_ref || trim( $resolved_ref ) !== $resolved_ref || strlen( $resolved_ref ) > 191 || preg_match( '/[[:cntrl:]]/', $resolved_ref ) === 1 ) {
 				$this->stage( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID );
 			}
@@ -283,8 +277,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 					}
 					$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_DESTINATION_EXISTS );
 				}
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				$this->sourceGuard->assertAllowed(
+				$this->source_guard->assert_allowed(
 					(string) $data['provider'],
 					(string) $data['provider_repository_id'],
 					'plugin' === $data['package_type'] ? 1 : 2,
@@ -307,8 +300,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	}
 
 	public function maintenance_active(): bool {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		return file_exists( $this->maintenancePath );
+		return file_exists( $this->maintenance_path );
 	}
 
 	public function recheck_managed( BranchDeploymentDeclaration $deployment ): void {
@@ -394,8 +386,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	public function run( callable $operation ): mixed {
 		try {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$token = $this->updaterLock->acquire();
+			$token = $this->updater_lock->acquire();
 		} catch ( DeploymentStorageFailure $failure ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed failure text and chained exceptions preserve durable failure mapping; they are not output.
 			throw new BranchDeploymentLockStorageFailure( 'The WordPress updater lock storage is uncertain.', 0, $failure );
@@ -405,8 +396,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			return $operation();
 		} finally {
 			try {
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				$released = $this->updaterLock->release( $token );
+				$released = $this->updater_lock->release( $token );
 			} catch ( DeploymentStorageFailure $failure ) {
 				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed failure text and chained exceptions preserve durable failure mapping; they are not output.
 				throw new BranchDeploymentLockStorageFailure( 'The WordPress updater lock storage is uncertain.', 0, $failure );
@@ -426,7 +416,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	private function download_provider_archive( ProviderPreparedArchive $archive, string $destination, int $maximum_artifact_bytes ): void {
 		try {
-			$url = $archive->getUrl();
+			$url = $archive->get_url();
 			$this->assert_safe_https_url( $url );
 			for ( $attempt = 1; $attempt <= self::DOWNLOAD_ATTEMPTS; ++$attempt ) {
 				$response = wp_safe_remote_get(
@@ -462,7 +452,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	private function verify_provider_head( ProviderPreparedArchive $archive ): void {
 		try {
-			$archive->verifyCurrentHead();
+			$archive->verify_current_head();
 		} catch ( StaleDeployment ) {
 			$this->stage( DeploymentOutcome::CODE_STALE_EVENT );
 		} catch ( Throwable $failure ) {

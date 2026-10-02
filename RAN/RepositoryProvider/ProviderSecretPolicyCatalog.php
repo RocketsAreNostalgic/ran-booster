@@ -12,49 +12,43 @@ final class ProviderSecretPolicyCatalog {
 
 	public function register(
 		ProviderCode $provider,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public provider policy API preserves established method and named-argument contracts.
-		?ProviderCredentialPolicy $credentialPolicy,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public provider policy API preserves established method and named-argument contracts.
-		?ProviderWebhookPolicy $webhookPolicy
+		?ProviderCredentialPolicy $credential_policy,
+		?ProviderWebhookPolicy $webhook_policy
 	): void {
 		$code = $provider->value;
 
 		if ( isset( $this->policies[ $code ] ) ) {
-			throw InvalidProviderPolicy::duplicateProvider();
+			throw InvalidProviderPolicy::duplicate_provider();
 		}
 
 		try {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public provider policy API preserves established method and named-argument contracts.
-			$credential_provider = null === $credentialPolicy ? null : $credentialPolicy->get_provider();
+			$credential_provider = null === $credential_policy ? null : $credential_policy->get_provider();
 		} catch ( \Throwable ) {
-			throw InvalidProviderPolicy::unavailableCredentialPolicy();
+			throw InvalidProviderPolicy::unavailable_credential_policy();
 		}
 
 		try {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public provider policy API preserves established method and named-argument contracts.
-			$webhook_provider = null === $webhookPolicy ? null : $webhookPolicy->get_provider();
+			$webhook_provider = null === $webhook_policy ? null : $webhook_policy->get_provider();
 		} catch ( \Throwable ) {
-			throw InvalidProviderPolicy::unavailableWebhookPolicy();
+			throw InvalidProviderPolicy::unavailable_webhook_policy();
 		}
 
 		if ( null !== $credential_provider && ! $credential_provider->equals( $provider ) ) {
-			throw InvalidProviderPolicy::mismatchedProvider();
+			throw InvalidProviderPolicy::mismatched_provider();
 		}
 
 		if ( null !== $webhook_provider && ! $webhook_provider->equals( $provider ) ) {
-			throw InvalidProviderPolicy::mismatchedProvider();
+			throw InvalidProviderPolicy::mismatched_provider();
 		}
 
 		$this->policies[ $code ] = array(
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public provider policy API preserves established method and named-argument contracts.
-			'credential' => $credentialPolicy,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public provider policy API preserves established method and named-argument contracts.
-			'webhook'    => $webhookPolicy,
+			'credential' => $credential_policy,
+			'webhook'    => $webhook_policy,
 		);
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public provider policy API preserves established method and named-argument contracts.
-	public function credentialPolicy( ProviderCode|string $provider ): ProviderCredentialPolicy {
+	public function credential_policy( ProviderCode|string $provider ): ProviderCredentialPolicy {
 		$provider = $this->normalize_code( $provider );
 		$policy   = $this->policies[ $provider->value ]['credential'] ?? null;
 
@@ -66,14 +60,14 @@ final class ProviderSecretPolicyCatalog {
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public provider policy API preserves established method and named-argument contracts.
-	public function findCredentialPolicy( ProviderCode|string $provider ): ?ProviderCredentialPolicy {
+	public function find_credential_policy( ProviderCode|string $provider ): ?ProviderCredentialPolicy {
 		$provider = $this->normalize_code( $provider );
 
 		return $this->policies[ $provider->value ]['credential'] ?? null;
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public provider policy API preserves established method and named-argument contracts.
-	public function webhookPolicy( ProviderCode|string $provider ): ProviderWebhookPolicy {
+	public function webhook_policy( ProviderCode|string $provider ): ProviderWebhookPolicy {
 		$provider = $this->normalize_code( $provider );
 		$policy   = $this->policies[ $provider->value ]['webhook'] ?? null;
 
@@ -85,7 +79,7 @@ final class ProviderSecretPolicyCatalog {
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public provider policy API preserves established method and named-argument contracts.
-	public function findWebhookPolicy( ProviderCode|string $provider ): ?ProviderWebhookPolicy {
+	public function find_webhook_policy( ProviderCode|string $provider ): ?ProviderWebhookPolicy {
 		$provider = $this->normalize_code( $provider );
 
 		return $this->policies[ $provider->value ]['webhook'] ?? null;

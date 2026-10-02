@@ -10,11 +10,11 @@ function current_user_can( string $capability ): bool {
 	return $GLOBALS['ran_booster_test_capabilities'][ $capability ] ?? true;
 }
 
-function check_admin_referer( string $action, string $queryArg = '_wpnonce' ): bool {
+function check_admin_referer( string $action, string $query_arg = '_wpnonce' ): bool {
 	$GLOBALS['ran_booster_test_nonce_checks'][] = $action;
 	if ( false === ( $GLOBALS['ran_booster_test_nonce_valid'] ?? true )
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- This test shim is the nonce-verification boundary.
-		|| ( '_wpnonce' !== $queryArg && ! isset( $_POST[ $queryArg ] ) )
+		|| ( '_wpnonce' !== $query_arg && ! isset( $_POST[ $query_arg ] ) )
 	) {
 		throw new \RuntimeException( 'Invalid nonce.' );
 	}

@@ -28,7 +28,7 @@ final class DeploymentWorkerTest extends TestCase {
 	private AttemptRepositoryDatabase $database;
 	private DeploymentAttemptRepository $attempts;
 	private WorkerCoordinator $coordinator;
-	private int $randomByte = 1;
+	private int $random_byte = 1;
 
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_worker_doing_cron'] = true;
@@ -39,7 +39,7 @@ final class DeploymentWorkerTest extends TestCase {
 			'wp_ran_booster_deployment_attempts',
 			static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-07-19 00:00:00 UTC' ),
 			function ( int $length ): string {
-				return str_repeat( chr( $this->randomByte++ ), $length );
+				return str_repeat( chr( $this->random_byte++ ), $length );
 			}
 		);
 		$this->coordinator = new WorkerCoordinator();
@@ -53,7 +53,7 @@ final class DeploymentWorkerTest extends TestCase {
 		WordPressWorkerWakeupCron::reset();
 	}
 
-	public function testNonCronInvocationDoesNotClaimWork(): void {
+	public function test_non_cron_invocation_does_not_claim_work(): void {
 		$GLOBALS['ran_booster_worker_doing_cron'] = false;
 		$this->admit( 'first' );
 
@@ -62,7 +62,7 @@ final class DeploymentWorkerTest extends TestCase {
 		self::assertSame( 'queued', $this->database->rows[0]['state'] );
 	}
 
-	public function testActiveWpPusherDoesNotClaimQueuedWork(): void {
+	public function test_active_wp_pusher_does_not_claim_queued_work(): void {
 		$this->admit( 'first' );
 		$GLOBALS['ran_booster_wp_pusher_active_plugins'] = array( 'wppusher/wppusher.php' );
 
@@ -71,7 +71,7 @@ final class DeploymentWorkerTest extends TestCase {
 		self::assertSame( 0, $this->coordinator->calls );
 	}
 
-	public function testOneCronPassClaimsAndProcessesOnlyTheFirstAttempt(): void {
+	public function test_one_cron_pass_claims_and_processes_only_the_first_attempt(): void {
 		$first = $this->admit( 'first' );
 		$this->admit( 'second' );
 
@@ -80,29 +80,29 @@ final class DeploymentWorkerTest extends TestCase {
 		self::assertSame( 'processed', $result['status'] );
 		self::assertSame( $first->get_correlation_id(), $result['correlation_id'] );
 		self::assertSame( 'scheduled', $result['runner_status'] );
-		self::assertSame( array( $first->get_id() ), $this->coordinator->attemptIds );
+		self::assertSame( array( $first->get_id() ), $this->coordinator->attempt_ids );
 		self::assertSame( 'running', $this->database->rows[0]['state'] );
 		self::assertSame( 'queued', $this->database->rows[1]['state'] );
 		self::assertCount( 1, WordPressWorkerWakeupCron::$events );
 	}
 
-	public function testCronWorkerSelectsManualAndWebhookAttemptsInFifoOrder(): void {
-		$this->attempts->admitAndClaimManual( 'update', 'plugin', 'gh', 'R_manual', $this->request( 'manual' ), 'main', 'branch', 1 );
+	public function test_cron_worker_selects_manual_and_webhook_attempts_in_fifo_order(): void {
+		$this->attempts->admit_and_claim_manual( 'update', 'plugin', 'gh', 'R_manual', $this->request( 'manual' ), 'main', 'branch', 1 );
 		$this->database->rows[0]['state'] = DeploymentState::QUEUED->value;
-		$manualCorrelation                = $this->database->rows[0]['correlation_id'];
+		$manual_correlation               = $this->database->rows[0]['correlation_id'];
 		$this->admit( 'webhook' );
 
 		$result = $this->worker()->run_once();
 
-		self::assertSame( $manualCorrelation, $result['correlation_id'] );
-		self::assertSame( array( 1 ), $this->coordinator->attemptIds );
+		self::assertSame( $manual_correlation, $result['correlation_id'] );
+		self::assertSame( array( 1 ), $this->coordinator->attempt_ids );
 		self::assertSame( 'manual', $this->database->rows[0]['source'] );
 		self::assertSame( 'running', $this->database->rows[0]['state'] );
-		self::assertSame( $manualCorrelation, $this->database->rows[0]['correlation_id'] );
+		self::assertSame( $manual_correlation, $this->database->rows[0]['correlation_id'] );
 		self::assertSame( 'queued', $this->database->rows[1]['state'] );
 	}
 
-	public function testEmptyCronPassReturnsWithoutScheduling(): void {
+	public function test_empty_cron_pass_returns_without_scheduling(): void {
 		self::assertSame(
 			array(
 				'status'        => 'empty',
@@ -113,7 +113,7 @@ final class DeploymentWorkerTest extends TestCase {
 		self::assertSame( array(), WordPressWorkerWakeupCron::$events );
 	}
 
-	public function testAPreviouslyRunningAttemptDoesNotHideTheNextQueuedAttempt(): void {
+	public function test_a_previously_running_attempt_does_not_hide_the_next_queued_attempt(): void {
 		$active                           = $this->admit( 'active' );
 		$waiting                          = $this->admit( 'waiting' );
 		$this->database->rows[0]['state'] = DeploymentState::RUNNING->value;
@@ -122,19 +122,19 @@ final class DeploymentWorkerTest extends TestCase {
 
 		self::assertSame( 'processed', $result['status'] );
 		self::assertSame( $waiting->get_correlation_id(), $result['correlation_id'] );
-		self::assertSame( array( $waiting->get_id() ), $this->coordinator->attemptIds );
+		self::assertSame( array( $waiting->get_id() ), $this->coordinator->attempt_ids );
 		self::assertSame( 'running', $this->database->rows[0]['state'] );
 		self::assertSame( 'running', $this->database->rows[1]['state'] );
 	}
 
-	public function testCoordinatorThrowableLeavesTheRunningAttemptProtected(): void {
+	public function test_coordinator_throwable_leaves_the_running_attempt_protected(): void {
 		$attempt                    = $this->admit( 'failure' );
 		$this->coordinator->failure = new RuntimeException( 'sensitive execution failure' );
 
 		$result = $this->worker()->run_once();
 
 		self::assertSame( 'unavailable', $result['status'] );
-		self::assertSame( DeploymentState::RUNNING, $this->attempts->findExact( $attempt->get_id() )?->get_state() );
+		self::assertSame( DeploymentState::RUNNING, $this->attempts->find_exact( $attempt->get_id() )?->get_state() );
 	}
 
 	private function worker(): DeploymentWorker {
@@ -142,7 +142,7 @@ final class DeploymentWorkerTest extends TestCase {
 	}
 
 	private function admit( string $slug ): DeploymentAttempt {
-		return $this->attempts->admitWebhookBatch(
+		return $this->attempts->admit_webhook_batch(
 			'gh',
 			'delivery-' . $slug,
 			hash( 'sha256', 'delivery-' . $slug ),
@@ -170,15 +170,15 @@ final class WorkerCoordinator extends DeploymentCoordinator {
 
 	public int $calls = 0;
 	/** @var list<int> */
-	public array $attemptIds          = array();
+	public array $attempt_ids         = array();
 	public ?RuntimeException $failure = null;
 
 	public function __construct() {
 	}
 
-	public function executeClaimed( DeploymentAttempt $attempt ): DeploymentOutcome {
+	public function execute_claimed( DeploymentAttempt $attempt ): DeploymentOutcome {
 		++$this->calls;
-		$this->attemptIds[] = $attempt->get_id();
+		$this->attempt_ids[] = $attempt->get_id();
 		if ( null !== $this->failure ) {
 			throw $this->failure;
 		}

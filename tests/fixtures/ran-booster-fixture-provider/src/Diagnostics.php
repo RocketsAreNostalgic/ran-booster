@@ -15,7 +15,7 @@ final readonly class Diagnostics implements ProviderDiagnostics {
 	}
 
 	public function diagnose( ProviderDiagnosticRequest $request ): array {
-		$this->client->checkPublicAccess( $request->claimRemoteCall() );
+		$this->client->check_public_access( $request->claim_remote_call() );
 		$results = array(
 			new ProviderDiagnosticResult(
 				ProviderDiagnosticResult::PASSED,
@@ -25,8 +25,8 @@ final readonly class Diagnostics implements ProviderDiagnostics {
 			),
 		);
 
-		$credentialId = $request->getCredentialId();
-		if ( null === $credentialId ) {
+		$credential_id = $request->get_credential_id();
+		if ( null === $credential_id ) {
 			$results[] = new ProviderDiagnosticResult(
 				ProviderDiagnosticResult::NOT_CONFIGURED,
 				'fixture-provider.credential.not_configured',
@@ -34,9 +34,9 @@ final readonly class Diagnostics implements ProviderDiagnostics {
 				'Select a fixture credential to verify it.'
 			);
 		} else {
-			$valid     = $this->client->validateCredential(
-				$this->credentials->credentialMaterial( $credentialId ),
-				$request->claimRemoteCall()
+			$valid     = $this->client->validate_credential(
+				$this->credentials->credential_material( $credential_id ),
+				$request->claim_remote_call()
 			);
 			$results[] = new ProviderDiagnosticResult(
 				$valid ? ProviderDiagnosticResult::PASSED : ProviderDiagnosticResult::FAILED,
@@ -46,7 +46,7 @@ final readonly class Diagnostics implements ProviderDiagnostics {
 			);
 		}
 
-		$locator = $request->getRepository();
+		$locator = $request->get_repository();
 		if ( null === $locator ) {
 			$results[] = new ProviderDiagnosticResult(
 				ProviderDiagnosticResult::NOT_CONFIGURED,
@@ -55,7 +55,7 @@ final readonly class Diagnostics implements ProviderDiagnostics {
 				'Enter a fixture repository locator to verify it.'
 			);
 		} else {
-			$this->client->repository( $locator, $request->claimRemoteCall() );
+			$this->client->repository( $locator, $request->claim_remote_call() );
 			$results[] = new ProviderDiagnosticResult(
 				ProviderDiagnosticResult::PASSED,
 				'fixture-provider.repository.reachable',

@@ -12,13 +12,13 @@ use RAN\PackageSubdirectory;
 
 final class PackageSubdirectoryTest extends TestCase {
 
-	#[DataProvider( 'validPaths' )]
-	public function testItNormalizesValidRelativePaths( mixed $input, ?string $expected ): void {
+	#[DataProvider( 'valid_paths' )]
+	public function test_it_normalizes_valid_relative_paths( mixed $input, ?string $expected ): void {
 		self::assertSame( $expected, PackageSubdirectory::normalize( $input ) );
 	}
 
 	/** @return array<string, array{mixed, string|null}> */
-	public static function validPaths(): array {
+	public static function valid_paths(): array {
 		return array(
 			'absent'               => array( null, null ),
 			'empty'                => array( '', null ),
@@ -33,15 +33,15 @@ final class PackageSubdirectoryTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'invalidPaths' )]
-	public function testItRejectsUnsafePaths( mixed $path ): void {
+	#[DataProvider( 'invalid_paths' )]
+	public function test_it_rejects_unsafe_paths( mixed $path ): void {
 		$this->expectException( InvalidArgumentException::class );
 
 		PackageSubdirectory::normalize( $path );
 	}
 
 	/** @return array<string, array{mixed}> */
-	public static function invalidPaths(): array {
+	public static function invalid_paths(): array {
 		return array(
 			'non-string'                => array( array( 'packages/example' ) ),
 			'absolute'                  => array( '/packages/example' ),
@@ -71,14 +71,14 @@ final class PackageSubdirectoryTest extends TestCase {
 		);
 	}
 
-	public function testItMapsSharedPathFailuresToBoosterException(): void {
+	public function test_it_maps_shared_path_failures_to_booster_exception(): void {
 		$this->expectException( InvalidPackageSubdirectory::class );
 		$this->expectExceptionMessage( 'The package subdirectory must be a normalized relative path.' );
 
 		PackageSubdirectory::normalize( 'C%3A/packages/example' );
 	}
 
-	public function testItDerivesOnlyValidatedSlugs(): void {
+	public function test_it_derives_only_validated_slugs(): void {
 		self::assertSame( 'example-plugin', PackageSubdirectory::slug( 'packages/example-plugin' ) );
 		self::assertSame( 'example-plugin', PackageSubdirectory::normalize_slug( value: 'example-plugin' ) );
 		self::assertSame( 'repository', PackageSubdirectory::installation_slug( 'repository', null ) );
@@ -92,13 +92,13 @@ final class PackageSubdirectoryTest extends TestCase {
 		PackageSubdirectory::normalize_slug( 'packages/example-plugin' );
 	}
 
-	public function testItRejectsTrailingSeparatorForProviderDestinationSlug(): void {
+	public function test_it_rejects_trailing_separator_for_provider_destination_slug(): void {
 		$this->expectException( InvalidArgumentException::class );
 
 		PackageSubdirectory::normalize_slug( 'foo/' );
 	}
 
-	public function testItIsIdempotentAfterTrailingSeparatorCanonicalization(): void {
+	public function test_it_is_idempotent_after_trailing_separator_canonicalization(): void {
 		$normalized = PackageSubdirectory::normalize( 'branch-fixture/' );
 
 		self::assertSame( 'branch-fixture', $normalized );

@@ -13,44 +13,44 @@ final class ProspectiveReleaseFacadeDouble implements ProspectiveReleaseFacade {
 	public array $calls = array();
 
 	/** @var list<string> */
-	public array $supportedProviders = array( 'gh' );
+	public array $supported_providers = array( 'gh' );
 
 	/** @var array<string, ProspectiveReleaseResult> */
 	public array $results = array();
 
-	public string $nonceFailure = '';
+	public string $nonce_failure = '';
 
-	public function nonceAction( string $operation, string $type ): string {
-		if ( 'throw' === $this->nonceFailure ) {
+	public function nonce_action( string $operation, string $type ): string {
+		if ( 'throw' === $this->nonce_failure ) {
 			throw new RuntimeException( 'nonce-failure' );
 		}
-		if ( 'empty' === $this->nonceFailure ) {
+		if ( 'empty' === $this->nonce_failure ) {
 			return '';
 		}
 
 		return 'prospective-release-' . $operation . '-' . $type;
 	}
 
-	public function supportedProviderCodes( string $type ): array {
+	public function supported_provider_codes( string $type ): array {
 		unset( $type );
 
-		return $this->supportedProviders;
+		return $this->supported_providers;
 	}
 
-	public function listCandidates( string $type, array $repositoryRequest, string $channel, string $nonce ): ProspectiveReleaseResult {
-		$this->calls[] = array( 'list_candidates', $type, $repositoryRequest, $channel, $nonce );
+	public function list_candidates( string $type, array $repository_request, string $channel, string $nonce ): ProspectiveReleaseResult {
+		$this->calls[] = array( 'list_candidates', $type, $repository_request, $channel, $nonce );
 
 		return $this->result( 'list_candidates' );
 	}
 
-	public function inspect( string $type, array $repositoryRequest, string $releaseId, string $tag, string $channel, string $nonce ): ProspectiveReleaseResult {
-		$this->calls[] = array( 'inspect', $type, $repositoryRequest, $releaseId, $tag, $channel, $nonce );
+	public function inspect( string $type, array $repository_request, string $release_id, string $tag, string $channel, string $nonce ): ProspectiveReleaseResult {
+		$this->calls[] = array( 'inspect', $type, $repository_request, $release_id, $tag, $channel, $nonce );
 
 		return $this->result( 'inspect' );
 	}
 
-	public function install( string $type, array $repositoryRequest, string $releaseId, string $tag, string $expectedFingerprint, string $channel, string $nonce ): ProspectiveReleaseResult {
-		$this->calls[] = array( 'install', $type, $repositoryRequest, $releaseId, $tag, $expectedFingerprint, $channel, $nonce );
+	public function install( string $type, array $repository_request, string $release_id, string $tag, string $expected_fingerprint, string $channel, string $nonce ): ProspectiveReleaseResult {
+		$this->calls[] = array( 'install', $type, $repository_request, $release_id, $tag, $expected_fingerprint, $channel, $nonce );
 
 		return $this->result( 'install' );
 	}

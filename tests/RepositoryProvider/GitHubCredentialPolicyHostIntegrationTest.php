@@ -21,7 +21,7 @@ use Tests\Secrets\SecretsFileTestFactory;
 
 final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 
-	public function testLegacyConstantDoesNotReclassifyOrRejectAProviderTokenFormat(): void {
+	public function test_legacy_constant_does_not_reclassify_or_reject_aprovider_token_format(): void {
 		$catalog = new ProviderSecretPolicyCatalog();
 		$catalog->register( ProviderCode::parse( 'gh' ), new GitHubCredentialPolicy(), null );
 		$secrets    = SecretsFileTestFactory::create(
@@ -29,13 +29,13 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 			array( 'RAN_BOOSTER_GITHUB_TOKEN' => 'github_pat_existing-constant' ),
 			$catalog
 		);
-		$credential = $secrets->credentialMaterial( 'gh', SecretsFile::CONSTANT_PROFILE );
+		$credential = $secrets->credential_material( 'gh', SecretsFile::CONSTANT_PROFILE );
 
 		self::assertSame( 'classic', $credential['kind'] );
 		self::assertSame( 'github_pat_existing-constant', $credential['secret'] );
 	}
 
-	public function testBlankSecretEditRetainsTheExistingTokenWithoutSubmittedValidation(): void {
+	public function test_blank_secret_edit_retains_the_existing_token_without_submitted_validation(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-github-legacy-edit-' . bin2hex( random_bytes( 8 ) );
 		$path      = $directory . '/secrets.json';
 		self::assertTrue( mkdir( $directory, 0700 ) );
@@ -44,7 +44,7 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 		$secrets = SecretsFileTestFactory::create( $path, array(), $catalog );
 
 		try {
-			$id = $secrets->saveCredential(
+			$id = $secrets->save_credential(
 				'gh',
 				null,
 				array(
@@ -56,7 +56,7 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 				true
 			);
 
-			$secrets->saveCredential(
+			$secrets->save_credential(
 				'gh',
 				$id,
 				array(
@@ -67,7 +67,7 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 				null,
 				true
 			);
-			self::assertSame( 'ghp_' . str_repeat( 'a', 36 ), $secrets->credentialMaterial( 'gh', $id )['secret'] );
+			self::assertSame( 'ghp_' . str_repeat( 'a', 36 ), $secrets->credential_material( 'gh', $id )['secret'] );
 		} finally {
 			InMemorySiteKeyStore::reset( $path );
 			foreach ( array( $path, $path . '.lock' ) as $file ) {
@@ -81,7 +81,7 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 		}
 	}
 
-	public function testRecoveryFitnessRejectsADecryptableStoredGitHubPrefixMismatch(): void {
+	public function test_recovery_fitness_rejects_adecryptable_stored_git_hub_prefix_mismatch(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-github-recovery-' . bin2hex( random_bytes( 8 ) );
 		$path      = $directory . '/secrets.json';
 		self::assertTrue( mkdir( $directory, 0700 ) );
@@ -90,7 +90,7 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 		$secrets = SecretsFileTestFactory::create( $path, array(), $catalog );
 
 		try {
-			$id = $secrets->saveCredential(
+			$id = $secrets->save_credential(
 				'gh',
 				null,
 				array(
@@ -103,7 +103,7 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 			);
 
 			self::assertFalse( $secrets->recovery_credentials_fit_at( $path ) );
-			$secrets->saveCredential(
+			$secrets->save_credential(
 				'gh',
 				$id,
 				array(
@@ -128,7 +128,7 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 		}
 	}
 
-	public function testEncryptedStorePreservesOnlyTheClosedSubmittedTokenFailure(): void {
+	public function test_encrypted_store_preserves_only_the_closed_submitted_token_failure(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-github-input-' . bin2hex( random_bytes( 8 ) );
 		$path      = $directory . '/secrets.json';
 		self::assertTrue( mkdir( $directory, 0700 ) );
@@ -138,7 +138,7 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 
 		try {
 			$token = 'github_pat_' . str_repeat( 'a', 40 );
-			$secrets->saveCredential(
+			$secrets->save_credential(
 				'gh',
 				null,
 				array(
@@ -170,7 +170,7 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 		}
 	}
 
-	public function testBlueprintImportRejectsAMismatchedDecodedTokenBeforePersistence(): void {
+	public function test_blueprint_import_rejects_amismatched_decoded_token_before_persistence(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-github-blueprint-' . bin2hex( random_bytes( 8 ) );
 		$path      = $directory . '/secrets.json';
 		self::assertTrue( mkdir( $directory, 0700 ) );
@@ -194,12 +194,12 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 		$blueprint  = new PackageBlueprint( array( $package ), array( $credential ) );
 
 		try {
-			$secrets->importCredentialsIfAbsent( $blueprint, $credential );
+			$secrets->import_credentials_if_absent( $blueprint, $credential );
 			self::fail( 'Blueprint material with a mismatched token prefix must be rejected.' );
 		} catch ( InvalidCredentialInput $failure ) {
 			self::assertSame( InvalidCredentialInput::CREDENTIAL_KIND_MISMATCH, $failure->reason );
 			self::assertFileDoesNotExist( $path );
-			self::assertSame( array(), $secrets->credentialProfiles( 'gh' ) );
+			self::assertSame( array(), $secrets->credential_profiles( 'gh' ) );
 		} finally {
 			InMemorySiteKeyStore::reset( $path );
 			foreach ( array( $path, $path . '.lock' ) as $file ) {

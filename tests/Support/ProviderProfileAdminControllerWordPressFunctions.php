@@ -11,8 +11,8 @@ if ( ! function_exists( __NAMESPACE__ . '\\current_user_can' ) ) {
 }
 
 if ( ! function_exists( __NAMESPACE__ . '\\check_admin_referer' ) ) {
-	function check_admin_referer( string $action, string $queryArg = '_wpnonce' ): bool {
-		return \RAN\check_admin_referer( $action, $queryArg );
+	function check_admin_referer( string $action, string $query_arg = '_wpnonce' ): bool {
+		return \RAN\check_admin_referer( $action, $query_arg );
 	}
 }
 

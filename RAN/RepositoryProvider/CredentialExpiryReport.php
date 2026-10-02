@@ -16,20 +16,13 @@ use InvalidArgumentException;
 final readonly class CredentialExpiryReport {
 
 	private const UTC_PATTERN = '/\A(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})Z\z/D';
-
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-	private function __construct( public ?string $expiresAt ) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		if ( null !== $expiresAt ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-			self::require_utc_timestamp( $expiresAt );
+	private function __construct( public ?string $expires_at ) {
+		if ( null !== $expires_at ) {
+			self::require_utc_timestamp( $expires_at );
 		}
 	}
-
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-	public static function known( string $expiresAt ): self {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		return new self( $expiresAt );
+	public static function known( string $expires_at ): self {
+		return new self( $expires_at );
 	}
 
 	public static function unknown(): self {
@@ -37,9 +30,8 @@ final readonly class CredentialExpiryReport {
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function isKnown(): bool {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		return null !== $this->expiresAt;
+	public function is_known(): bool {
+		return null !== $this->expires_at;
 	}
 
 	private static function require_utc_timestamp( string $value ): void {

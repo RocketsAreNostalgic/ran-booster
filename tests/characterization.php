@@ -52,9 +52,9 @@ $assert( DeploymentPolicy::AUTOMATIC->allows_webhook_mutation(), 'Automatic poli
 $assert( ! DeploymentPolicy::DISABLED->allows_manual_mutation(), 'Disabled policy must reject deployment.' );
 
 $browse = RepositoryBrowseRequest::accessible( 'profile_1' );
-$assert( 'profile_1' === $browse->getCredentialId(), 'Repository browsing must use one explicitly selected credential.' );
+$assert( 'profile_1' === $browse->get_credential_id(), 'Repository browsing must use one explicitly selected credential.' );
 $assert( 5 === RepositoryBrowseRequest::MAX_REMOTE_CALLS, 'Repository browsing must retain the five-call limit.' );
-$assert( ( new RepositoryBrowseResult( array(), RepositoryBrowseResult::LIMIT ) )->isPartial(), 'Bounded repository results must report truncation.' );
+$assert( ( new RepositoryBrowseResult( array(), RepositoryBrowseResult::LIMIT ) )->is_partial(), 'Bounded repository results must report truncation.' );
 
 $success = DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED );
 $failed  = DeploymentOutcome::from_code( DeploymentOutcome::CODE_PREFLIGHT_FAILED );
@@ -70,12 +70,12 @@ $assert( is_string( $source ) && str_contains( $source, "RAN_BOOSTER_PROVIDER_AP
 $assert( is_string( $source ) && str_contains( $source, "RAN_BOOSTER_ADDON_API_VERSION', 16" ), 'Add-on API 16 must remain explicit.' );
 $assert( is_string( $source ) && ! str_contains( $source, 'RAN_BOOSTER_WEBHOOK_CLEANUP_API_VERSION' ), 'The removed Webhook Cleanup marker must stay absent.' );
 $assert( is_string( $source ) && ! str_contains( $source, 'RAN_BOOSTER_LOGGING_API_VERSION' ), 'The removed Logging API marker must stay absent.' );
-$updaterRegistration = is_string( $source ) ? strpos( $source, 'ReleaseUpdaterBootstrap::register' ) : false;
-$pluginsLoaded       = is_string( $source ) ? strpos( $source, "'plugins_loaded'" ) : false;
-$assert( false !== $updaterRegistration, 'Bootstrap must register the shared release updater.' );
+$updater_registration = is_string( $source ) ? strpos( $source, 'ReleaseUpdaterBootstrap::register' ) : false;
+$plugins_loaded       = is_string( $source ) ? strpos( $source, "'plugins_loaded'" ) : false;
+$assert( false !== $updater_registration, 'Bootstrap must register the shared release updater.' );
 $assert( ! str_contains( $source, 'GitHubReleaseUpdaterBootstrap' ), 'Bootstrap must remove the GitHub-specific updater facade.' );
 $assert(
-	false !== $pluginsLoaded && $updaterRegistration < $pluginsLoaded,
+	false !== $plugins_loaded && $updater_registration < $plugins_loaded,
 	'The shared release updater must register before plugins_loaded.'
 );
 $assert(

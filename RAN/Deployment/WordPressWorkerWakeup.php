@@ -17,7 +17,7 @@ final readonly class WordPressWorkerWakeup {
 	/** @return 'scheduled'|'already_scheduled'|'unavailable'|'not_required' */
 	public function request(): string {
 		try {
-			$queued_at = $this->attempts->earliestQueuedAt();
+			$queued_at = $this->attempts->earliest_queued_at();
 			if ( null === $queued_at ) {
 				return 'not_required';
 			}

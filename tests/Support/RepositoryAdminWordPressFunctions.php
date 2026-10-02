@@ -37,8 +37,8 @@ function wp_add_inline_style( string $handle, string $css ): bool {
 	return true;
 }
 
-function check_ajax_referer( string $action, string $queryArg, bool $stop ): bool {
-	unset( $action, $queryArg, $stop );
+function check_ajax_referer( string $action, string $query_arg, bool $stop ): bool {
+	unset( $action, $query_arg, $stop );
 
 	return (bool) ( $GLOBALS['ran_booster_repository_admin_nonce_valid'] ?? true );
 }
@@ -69,11 +69,11 @@ function file_get_contents( string $filename ): string|false {
  * @param array<string, mixed> $data
  * @return array{success: false, data: array<string, mixed>, status: int|null}
  */
-function wp_send_json_error( array $data, ?int $statusCode = null ): array {
+function wp_send_json_error( array $data, ?int $status_code = null ): array {
 	return array(
 		'success' => false,
 		'data'    => $data,
-		'status'  => $statusCode,
+		'status'  => $status_code,
 	);
 }
 
@@ -97,20 +97,20 @@ function get_current_user_id(): int {
 	return (int) ( $GLOBALS['ran_booster_repository_admin_user_id'] ?? 1 );
 }
 
-function update_user_meta( int $userId, string $key, mixed $value ): int|bool {
+function update_user_meta( int $user_id, string $key, mixed $value ): int|bool {
 	if ( (bool) ( $GLOBALS['ran_booster_repository_admin_user_meta_write_fails'] ?? false ) ) {
 		return false;
 	}
 
-	$GLOBALS['ran_booster_repository_admin_user_meta'][ $userId ][ $key ] = $value;
+	$GLOBALS['ran_booster_repository_admin_user_meta'][ $user_id ][ $key ] = $value;
 
 	return 1;
 }
 
-function get_user_meta( int $userId, string $key, bool $single ): mixed {
+function get_user_meta( int $user_id, string $key, bool $single ): mixed {
 	unset( $single );
 
-	return $GLOBALS['ran_booster_repository_admin_user_meta'][ $userId ][ $key ] ?? '';
+	return $GLOBALS['ran_booster_repository_admin_user_meta'][ $user_id ][ $key ] ?? '';
 }
 
 function wp_unslash( mixed $value ): mixed {

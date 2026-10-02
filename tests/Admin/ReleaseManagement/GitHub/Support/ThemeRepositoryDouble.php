@@ -14,10 +14,10 @@ final class ThemeRepositoryDouble extends ThemeRepository {
 	public array $identifiers = array();
 
 	public function __construct(
-		private readonly string $providerCode = 'gh',
-		private readonly int $sourceRevision = 3,
+		private readonly string $provider_code = 'gh',
+		private readonly int $source_revision = 3,
 		private readonly bool $missing = false,
-		private readonly string $repositoryId = '101',
+		private readonly string $repository_id = '101',
 		private readonly string $repository = 'example/example',
 		private readonly bool $private = false
 	) {
@@ -31,23 +31,23 @@ final class ThemeRepositoryDouble extends ThemeRepository {
 			throw new RuntimeException( 'missing-package' );
 		}
 
-		return new class( $this->providerCode, $this->sourceRevision, (string) $stylesheet, $this->repositoryId, $this->repository, $this->private ) {
-			public function __construct( private readonly string $providerCode, private readonly int $sourceRevision, private readonly string $identifier, private readonly string $repositoryId, private readonly string $repository, private readonly bool $private ) {
+		return new class( $this->provider_code, $this->source_revision, (string) $stylesheet, $this->repository_id, $this->repository, $this->private ) {
+			public function __construct( private readonly string $provider_code, private readonly int $source_revision, private readonly string $identifier, private readonly string $repository_id, private readonly string $repository, private readonly bool $private ) {
 			}
 			public function get_identifier(): string {
 				return $this->identifier;
 			}
 			public function get_provider_code(): string {
-				return $this->providerCode;
+				return $this->provider_code;
 			}
 			public function get_provider_repository_id(): string {
-				return $this->repositoryId;
+				return $this->repository_id;
 			}
 			public function get_repository(): string {
 				return $this->repository;
 			}
 			public function get_source_revision(): int {
-				return $this->sourceRevision;
+				return $this->source_revision;
 			}
 			public function is_private(): bool {
 				return $this->private;

@@ -22,8 +22,8 @@ final readonly class ReleaseTrackingEligibility {
 
 	public function __construct(
 		private string $code,
-		private string $expectedUpdateUri = '',
-		private string $packageRoot = ''
+		private string $expected_update_uri = '',
+		private string $package_root = ''
 	) {
 		if ( ! in_array(
 			$this->code,
@@ -38,8 +38,8 @@ final readonly class ReleaseTrackingEligibility {
 				self::TARGET_ALREADY_USES_RAN_UPDATER,
 			),
 			true
-		) || strlen( $this->expectedUpdateUri ) > 255
-			|| strlen( $this->packageRoot ) > 100 ) {
+		) || strlen( $this->expected_update_uri ) > 255
+			|| strlen( $this->package_root ) > 100 ) {
 			throw new InvalidArgumentException( 'Release tracking eligibility is invalid.' );
 		}
 	}
@@ -52,11 +52,11 @@ final readonly class ReleaseTrackingEligibility {
 		return self::ELIGIBLE === $this->code;
 	}
 
-	public function expectedUpdateUri(): string {
-		return $this->expectedUpdateUri;
+	public function expected_update_uri(): string {
+		return $this->expected_update_uri;
 	}
 
-	public function packageRoot(): string {
-		return $this->packageRoot;
+	public function package_root(): string {
+		return $this->package_root;
 	}
 }

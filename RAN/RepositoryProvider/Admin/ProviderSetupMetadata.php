@@ -10,36 +10,36 @@ use InvalidArgumentException;
  * Provider-owned, display-safe onboarding guidance.
  */
 final readonly class ProviderSetupMetadata {
-	public string $credentialSummary;
-	public string $webhookLocation;
-	public string $webhookEvent;
-	public string $webhookDocumentationUrl;
-	public string $deliveryDocumentationUrl;
+	public string $credential_summary;
+	public string $webhook_location;
+	public string $webhook_event;
+	public string $webhook_documentation_url;
+	public string $delivery_documentation_url;
 
 	/**
 	 * @var list<array{label: string, url: string}>
 	 */
-	public array $credentialLinks;
+	public array $credential_links;
 
 	/**
-	 * @param list<array{label: string, url: string}> $credentialLinks Official credential documentation.
+	 * @param list<array{label: string, url: string}> $credential_links Official credential documentation.
 	 */
 	public function __construct(
-		string $credentialSummary,
-		array $credentialLinks,
-		string $webhookLocation,
-		string $webhookEvent,
-		string $webhookDocumentationUrl,
-		string $deliveryDocumentationUrl
+		string $credential_summary,
+		array $credential_links,
+		string $webhook_location,
+		string $webhook_event,
+		string $webhook_documentation_url,
+		string $delivery_documentation_url
 	) {
-		$this->credentialSummary        = MetadataRules::required_text( $credentialSummary, MetadataRules::SUMMARY_LENGTH );
-		$this->webhookLocation          = MetadataRules::required_text( $webhookLocation, MetadataRules::DETAIL_LENGTH );
-		$this->webhookEvent             = MetadataRules::required_text( $webhookEvent, MetadataRules::DETAIL_LENGTH );
-		$this->webhookDocumentationUrl  = MetadataRules::https_url( $webhookDocumentationUrl );
-		$this->deliveryDocumentationUrl = MetadataRules::https_url( $deliveryDocumentationUrl );
+		$this->credential_summary         = MetadataRules::required_text( $credential_summary, MetadataRules::SUMMARY_LENGTH );
+		$this->webhook_location           = MetadataRules::required_text( $webhook_location, MetadataRules::DETAIL_LENGTH );
+		$this->webhook_event              = MetadataRules::required_text( $webhook_event, MetadataRules::DETAIL_LENGTH );
+		$this->webhook_documentation_url  = MetadataRules::https_url( $webhook_documentation_url );
+		$this->delivery_documentation_url = MetadataRules::https_url( $delivery_documentation_url );
 
 		$links = array();
-		foreach ( $credentialLinks as $link ) {
+		foreach ( $credential_links as $link ) {
 			if ( ! is_array( $link ) || ! isset( $link['label'], $link['url'] ) || ! is_string( $link['label'] ) || ! is_string( $link['url'] ) ) {
 				throw new InvalidArgumentException( 'Provider credential links require labels and URLs.' );
 			}
@@ -54,6 +54,6 @@ final readonly class ProviderSetupMetadata {
 			throw new InvalidArgumentException( 'Provider setup guidance requires official HTTPS documentation.' );
 		}
 
-		$this->credentialLinks = $links;
+		$this->credential_links = $links;
 	}
 }

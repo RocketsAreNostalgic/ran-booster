@@ -10,8 +10,8 @@ require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class DebugCaptureViewTest extends TestCase {
 
-	public function testInactiveStateExplainsScopeAndOffersABoundedCapture(): void {
-		$html = $this->renderView(
+	public function test_inactive_state_explains_scope_and_offers_abounded_capture(): void {
+		$html = $this->render_view(
 			array(
 				'state'         => 'inactive',
 				'filename'      => '/private/site/ran-booster-debug.php',
@@ -43,8 +43,8 @@ final class DebugCaptureViewTest extends TestCase {
 		self::assertStringNotContainsString( 'ignored-delete-time', $html );
 	}
 
-	public function testActiveStateEscapesContentAndProvidesRefreshStopAndDelete(): void {
-		$html = $this->renderView(
+	public function test_active_state_escapes_content_and_provides_refresh_stop_and_delete(): void {
+		$html = $this->render_view(
 			array(
 				'state'         => 'active',
 				'filename'      => 'ran-booster-debug.php',
@@ -70,22 +70,22 @@ final class DebugCaptureViewTest extends TestCase {
 		self::assertStringNotContainsString( 'name="ran_booster[operation]" value="start"', $html );
 		self::assertSame( 2, substr_count( $html, '<form' ) );
 		self::assertSame( 2, preg_match_all( '/<form\b.*?<\/form>/s', $html, $forms ) );
-		$deleteForms = array_values(
+		$delete_forms = array_values(
 			array_filter(
 				$forms[0],
 				static fn ( string $form ): bool => str_contains( $form, 'value="delete"' )
 			)
 		);
-		self::assertCount( 1, $deleteForms );
-		self::assertStringContainsString( 'name="_wpnonce" value="ran-booster-manage-debug-capture"', $deleteForms[0] );
-		self::assertStringNotContainsString( 'data-ran-booster-enhanced-mutation', $deleteForms[0] );
-		self::assertStringNotContainsString( 'hx-', $deleteForms[0] );
+		self::assertCount( 1, $delete_forms );
+		self::assertStringContainsString( 'name="_wpnonce" value="ran-booster-manage-debug-capture"', $delete_forms[0] );
+		self::assertStringNotContainsString( 'data-ran-booster-enhanced-mutation', $delete_forms[0] );
+		self::assertStringNotContainsString( 'hx-', $delete_forms[0] );
 		self::assertStringNotContainsString( '<event>', $html );
 		self::assertStringNotContainsString( 'active-secret-canary', $html );
 	}
 
-	public function testRetainedStateShowsSafeContentAndOffersStartNewAndDelete(): void {
-		$html = $this->renderView(
+	public function test_retained_state_shows_safe_content_and_offers_start_new_and_delete(): void {
+		$html = $this->render_view(
 			array(
 				'state'        => 'retained',
 				'filename'     => 'ran-booster-debug.php',
@@ -105,14 +105,14 @@ final class DebugCaptureViewTest extends TestCase {
 		self::assertSame( 2, substr_count( $html, '<form' ) );
 	}
 
-	public function testUnsafeStatesExposeNoPayloadOrManagementControls(): void {
+	public function test_unsafe_states_expose_no_payload_or_management_controls(): void {
 		$states = array(
 			'unavailable' => 'Temporary logging capture is unavailable because Booster cannot safely use its capture file location.',
 			'malformed'   => 'The temporary capture file could not be read safely. Booster left it unchanged.',
 		);
 
 		foreach ( $states as $state => $message ) {
-			$html = $this->renderView(
+			$html = $this->render_view(
 				array(
 					'state'         => $state,
 					'filename'      => 'ran-booster-debug.php',
@@ -136,9 +136,9 @@ final class DebugCaptureViewTest extends TestCase {
 	/**
 	 * @param array<string, mixed> $payload Debug capture view payload.
 	 */
-	private function renderView( array $payload ): string {
-		$debugCapture        = $payload;
-		$troubleshootingBase = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+	private function render_view( array $payload ): string {
+		$debug_capture        = $payload;
+		$troubleshooting_base = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/debug-capture.php';

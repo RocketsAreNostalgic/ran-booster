@@ -13,7 +13,7 @@ use RAN\Admin\Component\AdminPackageSourceChoiceNormalizer;
 
 final class AdminPackageSourceChoiceNormalizerTest extends TestCase {
 
-	public function testNormalizesCoreShellAndHydratedReleaseChoice(): void {
+	public function test_normalizes_core_shell_and_hydrated_release_choice(): void {
 		$choices = ( new AdminPackageSourceChoiceNormalizer() )->normalize(
 			array(
 				'branch'        => array(
@@ -40,7 +40,7 @@ final class AdminPackageSourceChoiceNormalizerTest extends TestCase {
 		self::assertTrue( $choices['release_asset']['client_hydratable'] );
 	}
 
-	public function testRejectsUnknownSourceKeys(): void {
+	public function test_rejects_unknown_source_keys(): void {
 		$this->expectException( LogicException::class );
 		$this->expectExceptionMessage( 'known source key' );
 
@@ -65,7 +65,7 @@ final class AdminPackageSourceChoiceNormalizerTest extends TestCase {
 		);
 	}
 
-	public function testRejectsUnsafeEnabledUrls(): void {
+	public function test_rejects_unsafe_enabled_urls(): void {
 		$this->expectException( LogicException::class );
 		$this->expectExceptionMessage( 'safe absolute URL' );
 

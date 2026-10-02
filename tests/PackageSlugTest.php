@@ -11,16 +11,16 @@ use RAN\Theme;
 
 final class PackageSlugTest extends TestCase {
 
-	public function testInstalledPluginSlugComesFromItsWordPressIdentifier(): void {
+	public function test_installed_plugin_slug_comes_from_its_word_press_identifier(): void {
 		self::assertSame( 'installed-plugin', $this->plugin( 'installed-plugin/plugin.php' )->get_slug() );
 		self::assertSame( 'single-plugin', $this->plugin( 'single-plugin.php' )->get_slug() );
 	}
 
-	public function testInstalledThemeSlugComesFromItsStylesheet(): void {
+	public function test_installed_theme_slug_comes_from_its_stylesheet(): void {
 		self::assertSame( 'installed-theme', $this->theme( 'installed-theme' )->get_slug() );
 	}
 
-	public function testExistingRuntimeAndSubdirectoryCaseArePreserved(): void {
+	public function test_existing_runtime_and_subdirectory_case_are_preserved(): void {
 		self::assertSame( 'MixedCasePlugin', $this->plugin( 'MixedCasePlugin/plugin.php' )->get_slug() );
 
 		$package = $this->plugin( 'installed-plugin/plugin.php' );
@@ -30,7 +30,7 @@ final class PackageSlugTest extends TestCase {
 		self::assertSame( 'packages/MixedCasePlugin', $package->get_subdirectory() );
 	}
 
-	public function testProviderInstallationSlugIsTransientAndSubdirectoryRemainsAuthoritative(): void {
+	public function test_provider_installation_slug_is_transient_and_subdirectory_remains_authoritative(): void {
 		$package = $this->plugin( 'installed-plugin/plugin.php' );
 		$package->set_installation_slug( 'provider-package' );
 

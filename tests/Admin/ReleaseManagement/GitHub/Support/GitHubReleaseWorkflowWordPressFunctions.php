@@ -28,12 +28,12 @@ function esc_html__( string $text, string $domain = 'default' ): string {
 	return \RAN\Admin\ReleaseManagement\esc_html__( $text, $domain );
 }
 
-function add_action( string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1 ): bool {
-	return \RAN\Admin\ReleaseManagement\add_action( $hook, $callback, $priority, $acceptedArgs );
+function add_action( string $hook, callable $callback, int $priority = 10, int $accepted_args = 1 ): bool {
+	return \RAN\Admin\ReleaseManagement\add_action( $hook, $callback, $priority, $accepted_args );
 }
 
-function add_filter( string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1 ): bool {
-	return \RAN\Admin\ReleaseManagement\add_filter( $hook, $callback, $priority, $acceptedArgs );
+function add_filter( string $hook, callable $callback, int $priority = 10, int $accepted_args = 1 ): bool {
+	return \RAN\Admin\ReleaseManagement\add_filter( $hook, $callback, $priority, $accepted_args );
 }
 
 function wp_json_encode( mixed $value ): string|false {
@@ -44,8 +44,8 @@ function wp_safe_redirect( string $url ): bool {
 	return \RAN\Admin\ReleaseManagement\wp_safe_redirect( $url );
 }
 
-function header( string $header, bool $replace = true, int $responseCode = 0 ): void {
-	\RAN\Admin\ReleaseManagement\header( $header, $replace, $responseCode );
+function header( string $header, bool $replace = true, int $response_code = 0 ): void {
+	\RAN\Admin\ReleaseManagement\header( $header, $replace, $response_code );
 }
 
 function wp_unslash( mixed $value ): mixed {

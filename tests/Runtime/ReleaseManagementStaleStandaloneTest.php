@@ -13,17 +13,17 @@ use Tests\Runtime\Support\StaleReleaseDeploymentsBeta8Fixture;
 final class ReleaseManagementStaleStandaloneTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testStaleBetaEightLoadedBeforeCoreGetsNoActionableAuthority(): void {
-		$this->assertStaleStandaloneIsInert( true );
+	public function test_stale_beta_eight_loaded_before_core_gets_no_actionable_authority(): void {
+		$this->assert_stale_standalone_is_inert( true );
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testStaleBetaEightLoadedAfterCoreGetsNoActionableAuthority(): void {
-		$this->assertStaleStandaloneIsInert( false );
+	public function test_stale_beta_eight_loaded_after_core_gets_no_actionable_authority(): void {
+		$this->assert_stale_standalone_is_inert( false );
 	}
 
-	private function assertStaleStandaloneIsInert( bool $staleFirst ): void {
+	private function assert_stale_standalone_is_inert( bool $stale_first ): void {
 		$hooks   = new ReleaseManagementCutoverHookBus();
 		$stale   = new StaleReleaseDeploymentsBeta8Fixture( $hooks );
 		$records = array(
@@ -39,18 +39,18 @@ final class ReleaseManagementStaleStandaloneTest extends TestCase {
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Raw option bytes are the cutover invariant.
 		$before = serialize( $records );
 
-		if ( $staleFirst ) {
+		if ( $stale_first ) {
 			$stale->boot();
-			$this->publishCoreAddOnApi();
+			$this->publish_core_add_on_api();
 		} else {
-			$this->publishCoreAddOnApi();
+			$this->publish_core_add_on_api();
 			$stale->boot();
 		}
 		$hooks->fire( 'plugins_loaded' );
 
 		self::assertSame( 16, RAN_BOOSTER_ADDON_API_VERSION );
-		self::assertSame( array( 'plugins_loaded', 'admin_notices' ), $hooks->actionHooks() );
-		self::assertSame( array(), $hooks->filterHooks() );
+		self::assertSame( array( 'plugins_loaded', 'admin_notices' ), $hooks->action_hooks() );
+		self::assertSame( array(), $hooks->filter_hooks() );
 		foreach ( array(
 			'ran_booster_release_tracking_ready',
 			'ran_booster_prospective_release_ready',
@@ -66,21 +66,21 @@ final class ReleaseManagementStaleStandaloneTest extends TestCase {
 			'admin_post_ran_booster_release_deployments_workflow_update_setup',
 			'wp_ajax_ran_booster_release_deployments_list_candidates',
 			'wp_ajax_ran_booster_release_deployments_inspect',
-		) as $legacyHook ) {
-			$hooks->fire( $legacyHook, new \stdClass() );
+		) as $legacy_hook ) {
+			$hooks->fire( $legacy_hook, new \stdClass() );
 		}
 
 		self::assertSame( 0, $stale->facades );
 		self::assertSame( 0, $stale->targets );
-		self::assertSame( 0, $stale->credentialReads );
-		self::assertSame( 0, $stale->remoteCalls );
+		self::assertSame( 0, $stale->credential_reads );
+		self::assertSame( 0, $stale->remote_calls );
 		self::assertSame( 0, $stale->mutations );
 		self::assertSame( array(), $GLOBALS['ran_booster_release_deployments_test_option_updates'] );
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Raw option bytes are the cutover invariant.
 		self::assertSame( $before, serialize( $GLOBALS['ran_booster_release_deployments_test_options']['ran_booster_release_deployments_setup_records'] ) );
 	}
 
-	private function publishCoreAddOnApi(): void {
+	private function publish_core_add_on_api(): void {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Direct local bootstrap contract read.
 		$bootstrap = file_get_contents( dirname( __DIR__, 2 ) . '/ran-booster.php' );
 		self::assertIsString( $bootstrap );

@@ -18,6 +18,6 @@ function delete_plugins( array $plugins ): mixed {
 	return $result;
 }
 
-function wp_clean_plugins_cache( bool $clearUpdateCache = true ): void {
-	$GLOBALS['ran_booster_package_removal_gateway_events'][] = array( 'clean', $clearUpdateCache );
+function wp_clean_plugins_cache( bool $clear_update_cache = true ): void {
+	$GLOBALS['ran_booster_package_removal_gateway_events'][] = array( 'clean', $clear_update_cache );
 }

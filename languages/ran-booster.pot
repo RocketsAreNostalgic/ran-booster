@@ -40,24 +40,24 @@ msgstr ""
 msgid "https://github.com/RocketsAreNostalgic"
 msgstr ""
 
-#: RAN/AddOn/Portability/NativePortabilityFacade.php:50
-#: RAN/AddOn/Portability/NativePortabilityFacade.php:84
+#: RAN/AddOn/Portability/NativePortabilityFacade.php:44
+#: RAN/AddOn/Portability/NativePortabilityFacade.php:77
 msgid "Portability is unavailable on WordPress Multisite."
 msgstr ""
 
-#: RAN/AddOn/Portability/NativePortabilityFacade.php:57
+#: RAN/AddOn/Portability/NativePortabilityFacade.php:51
 msgid "The package could not be reviewed."
 msgstr ""
 
-#: RAN/AddOn/Portability/NativePortabilityFacade.php:69
+#: RAN/AddOn/Portability/NativePortabilityFacade.php:63
 msgid "The package could not be reviewed safely."
 msgstr ""
 
-#: RAN/AddOn/Portability/NativePortabilityFacade.php:93
+#: RAN/AddOn/Portability/NativePortabilityFacade.php:85
 msgid "The package could not be adopted."
 msgstr ""
 
-#: RAN/AddOn/Portability/NativePortabilityFacade.php:107
+#: RAN/AddOn/Portability/NativePortabilityFacade.php:98
 msgid "The package could not be adopted safely."
 msgstr ""
 
@@ -1515,7 +1515,7 @@ msgid "Target encrypted credential storage is unavailable. Configure secure stor
 msgstr ""
 
 #: RAN/Admin/PortabilityController.php:515
-#: RAN/Portability/PortabilityApplicationService.php:265
+#: RAN/Portability/PortabilityApplicationService.php:263
 msgid "Booster could not apply this package. Review the Transporter Blueprint again and check repository access."
 msgstr ""
 
@@ -4490,51 +4490,51 @@ msgstr ""
 msgid "This package is already managed with the exact disabled configuration."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:161
-#: RAN/Portability/PortabilityApplicationService.php:186
+#: RAN/Portability/PortabilityApplicationService.php:159
+#: RAN/Portability/PortabilityApplicationService.php:184
 msgid "This package changed since review. Review the Transporter Blueprint again."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:164
+#: RAN/Portability/PortabilityApplicationService.php:162
 msgid "This package was left unchanged by the repository credential decision."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:171
-#: RAN/Portability/PortabilityApplicationService.php:231
+#: RAN/Portability/PortabilityApplicationService.php:169
+#: RAN/Portability/PortabilityApplicationService.php:229
 msgid "You do not have permission to apply this package type."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:174
-#: RAN/Portability/PortabilityApplicationService.php:234
+#: RAN/Portability/PortabilityApplicationService.php:172
+#: RAN/Portability/PortabilityApplicationService.php:232
 msgid "This installed package was not selected for adoption."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:208
+#: RAN/Portability/PortabilityApplicationService.php:206
 msgid "This package is already managed."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:216
+#: RAN/Portability/PortabilityApplicationService.php:214
 msgid "The repository credential is available on this site. The managed package settings were not changed."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:222
+#: RAN/Portability/PortabilityApplicationService.php:220
 msgid "Booster could not import this repository credential. Review the Transporter Blueprint again and check repository access."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:228
+#: RAN/Portability/PortabilityApplicationService.php:226
 msgid "This package changed or cannot be applied. Review the Transporter Blueprint again."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:252
+#: RAN/Portability/PortabilityApplicationService.php:250
 msgid "Adopted: deployment disabled"
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:360
+#: RAN/Portability/PortabilityApplicationService.php:357
 msgid "Package installed and managed by Booster with deployment disabled. Re-enable deployment deliberately when this site is ready."
 msgstr ""
 
 #. translators: 1: safe deployment failure reason, 2: random support reference.
-#: RAN/Portability/PortabilityApplicationService.php:372
+#: RAN/Portability/PortabilityApplicationService.php:369
 #, php-format
 msgid "%1$s Reference: %2$s."
 msgstr ""

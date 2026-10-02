@@ -118,8 +118,8 @@ for required_api_marker in \
 		|| fail "release ref is missing the coordinated API marker: $required_api_marker"
 done
 portability_facade_source=$(git show "$commit:RAN/AddOn/Portability/PortabilityFacade.php")
-grep -Fq 'public const API_VERSION = 2;' <<< "$portability_facade_source" \
-	|| fail 'release ref is missing exact Portability API 2.'
+grep -Fq 'public const API_VERSION = 3;' <<< "$portability_facade_source" \
+	|| fail 'release ref is missing exact Portability API 3.'
 for removed_api_marker in \
 	RAN_BOOSTER_LOGGING_API_VERSION \
 	RAN_BOOSTER_WEBHOOK_CLEANUP_API_VERSION \

@@ -697,3 +697,15 @@ same-spelled APIs remain unchanged. Exact API13 admission prevents API11/12
 implementations from loading; workflow V3 and Add-on API16 remain unchanged.
 Source overlays are preparation only until a matching immutable Provider
 release is adopted and the complete installed composition is qualified.
+
+### Portability API 3 connected naming
+
+The five Portability facade/DTO classes and their receiver-resolved consumers use
+snake_case methods, owned parameters and promoted properties. Portability API 3
+is a breaking PHP contract; AdminInteraction API 2 is unchanged. Canonical nonce
+and review-fingerprint payload generation remains 2, preserving existing bytes,
+stored/wire keys, validation and adoption behavior. No old-name aliases are added.
+PortabilityCandidate and PortabilityApplyResult join both audited naming scopes.
+Foreign Provider/Blueprint DTO members retain their own contracts. The extension
+catalogue continues to describe the published API2 Migrator until its matching
+API3 package is actually released; candidate-source checks are not certification.

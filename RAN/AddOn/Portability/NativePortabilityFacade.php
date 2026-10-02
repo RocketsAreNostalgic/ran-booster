@@ -19,27 +19,21 @@ final class NativePortabilityFacade extends PortabilityFacade {
 	private \Closure $verify_nonce;
 
 	/**
-	 * @param callable(string, bool): bool|null $canManage
-	 * @param callable(string, string): bool|null $verifyNonce
+	 * @param callable(string, bool): bool|null $can_manage
+	 * @param callable(string, string): bool|null $verify_nonce
 	 */
 	public function __construct(
 		private PortabilityApplicationService $application,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		?callable $canManage = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		?callable $verifyNonce = null
+		?callable $can_manage = null,
+		?callable $verify_nonce = null
 	) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		$this->can_manage = null === $canManage
+		$this->can_manage   = null === $can_manage
 			? static fn ( string $type, bool $apply ): bool => current_user_can( 'manage_options' )
 				&& ( ! $apply || current_user_can( 'plugin' === $type ? 'install_plugins' : 'install_themes' ) )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-			: \Closure::fromCallable( $canManage );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		$this->verify_nonce = null === $verifyNonce
+			: \Closure::fromCallable( $can_manage );
+		$this->verify_nonce = null === $verify_nonce
 			? static fn ( string $nonce, string $action ): bool => false !== wp_verify_nonce( $nonce, $action )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-			: \Closure::fromCallable( $verifyNonce );
+			: \Closure::fromCallable( $verify_nonce );
 	}
 
 	public function review( PortabilityCandidate $candidate, string $nonce ): PortabilityReviewResult {
@@ -73,8 +67,7 @@ final class NativePortabilityFacade extends PortabilityFacade {
 
 	public function apply(
 		PortabilityCandidate $candidate,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		string $expectedFingerprint,
+		string $expected_fingerprint,
 		string $nonce
 	): PortabilityApplyResult {
 		if ( ! RuntimeSupport::current()->allowsManagedOperations() ) {
@@ -85,8 +78,7 @@ final class NativePortabilityFacade extends PortabilityFacade {
 				false
 			);
 		}
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		if ( ! $this->authorized( 'apply', $candidate, $expectedFingerprint, $nonce, true ) ) {
+		if ( ! $this->authorized( 'apply', $candidate, $expected_fingerprint, $nonce, true ) ) {
 			return new PortabilityApplyResult(
 				PortabilityApplyResult::FAILED,
 				'forbidden',
@@ -96,8 +88,7 @@ final class NativePortabilityFacade extends PortabilityFacade {
 		}
 
 		try {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-			return $this->application->applyCandidate( $candidate, $expectedFingerprint );
+			return $this->application->applyCandidate( $candidate, $expected_fingerprint );
 		} catch ( Throwable $failure ) {
 			$this->log_failure( 'apply', $failure );
 
@@ -121,7 +112,7 @@ final class NativePortabilityFacade extends PortabilityFacade {
 			return ( $this->can_manage )( $candidate->type, $apply )
 				&& ( $this->verify_nonce )(
 					$nonce,
-					$this->nonceAction( $operation, $candidate, $expected_fingerprint )
+					$this->nonce_action( $operation, $candidate, $expected_fingerprint )
 				);
 		} catch ( Throwable ) {
 			return false;
@@ -133,7 +124,7 @@ final class NativePortabilityFacade extends PortabilityFacade {
 		string $reason,
 		string $message
 	): PortabilityReviewResult {
-		return PortabilityReviewResult::fromResolved(
+		return PortabilityReviewResult::from_resolved(
 			$candidate,
 			PortabilityReviewResult::BLOCKED,
 			$reason,

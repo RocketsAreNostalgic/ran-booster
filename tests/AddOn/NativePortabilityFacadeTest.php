@@ -44,7 +44,7 @@ final class NativePortabilityFacadeTest extends TestCase {
 		$bootstrap = file_get_contents( dirname( __DIR__, 2 ) . '/ran-booster.php' );
 
 		self::assertIsString( $bootstrap );
-		self::assertSame( 2, NativePortabilityFacade::API_VERSION );
+		self::assertSame( 3, NativePortabilityFacade::API_VERSION );
 		self::assertStringContainsString( "'RAN_BOOSTER_PORTABILITY_API_VERSION'", $bootstrap );
 		self::assertStringContainsString(
 			"do_action( 'ran_booster_portability_ready', \$portability )",
@@ -94,7 +94,7 @@ final class NativePortabilityFacadeTest extends TestCase {
 
 		self::assertSame( PortabilityReviewResult::MANAGED, $review->action );
 		self::assertSame( PortabilityApplyResult::UNCHANGED, $result->status );
-		self::assertTrue( $result->targetVerified );
+		self::assertTrue( $result->target_verified );
 
 		$manual = $this->facade( true, true, $this->managedPlugin( false, DeploymentPolicy::MANUAL ) )
 			->review( $this->candidate(), 'valid-nonce' );
@@ -112,14 +112,14 @@ final class NativePortabilityFacadeTest extends TestCase {
 
 		self::assertSame( PortabilityApplyResult::BLOCKED, $result->status );
 		self::assertSame( 'review_changed', $result->reason );
-		self::assertFalse( $result->targetVerified );
+		self::assertFalse( $result->target_verified );
 	}
 
 	public function testProviderPrivacyDriftCannotClaimManagedVerification(): void {
 		$public  = $this->facade( true, true, $this->managedPlugin( false ) )
 			->review( $this->candidate(), 'valid-nonce' );
 		$private = $this->facade( true, true, $this->managedPlugin( true ), true, true )
-			->review( $this->candidate( array( 'credentialId' => null ) ), 'valid-nonce' );
+			->review( $this->candidate( array( 'credential_id' => null ) ), 'valid-nonce' );
 
 		self::assertSame( PortabilityReviewResult::MANAGED, $public->action );
 		self::assertSame( PortabilityReviewResult::BLOCKED, $private->action );
@@ -176,9 +176,9 @@ final class NativePortabilityFacadeTest extends TestCase {
 		);
 
 		return new NativePortabilityFacade(
-			$service,
-			static fn ( string $type, bool $apply ): bool => $authorized,
-			static fn ( string $nonce, string $action ): bool => 'valid-nonce' === $nonce
+			application: $service,
+			can_manage: static fn ( string $type, bool $apply ): bool => $authorized,
+			verify_nonce: static fn ( string $nonce, string $action ): bool => 'valid-nonce' === $nonce
 		);
 	}
 
@@ -187,14 +187,14 @@ final class NativePortabilityFacadeTest extends TestCase {
 		return new PortabilityCandidate(
 			...array_merge(
 				array(
-					'type'         => 'plugin',
-					'identifier'   => 'example/example.php',
-					'displayName'  => 'Example',
-					'providerCode' => 'gh',
-					'repository'   => 'owner/repository',
-					'branch'       => 'main',
-					'subdirectory' => null,
-					'credentialId' => null,
+					'type'          => 'plugin',
+					'identifier'    => 'example/example.php',
+					'display_name'  => 'Example',
+					'provider_code' => 'gh',
+					'repository'    => 'owner/repository',
+					'branch'        => 'main',
+					'subdirectory'  => null,
+					'credential_id' => null,
 				),
 				$overrides
 			)

@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: RAN Booster Fixture Portability Add-on
- * Description: Test-only Portability API 3 consumer fixture.
+ * Description: Test-only Portability API 2 consumer fixture.
  * Version: 0.0.0
  * Requires PHP: 8.2
  * License: GPL-2.0-only
@@ -17,7 +17,7 @@ add_action(
 	'plugins_loaded',
 	static function (): void {
 		if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' )
-			|| 3 !== RAN_BOOSTER_PORTABILITY_API_VERSION ) {
+			|| 2 !== RAN_BOOSTER_PORTABILITY_API_VERSION ) {
 			return;
 		}
 

@@ -26,9 +26,7 @@ enum AdminInteractionTarget: string {
 			self::TRANSPORTER_MIGRATION_SOURCE => '#ran-booster-transporter-migration-source-' . $this->migration_instance( $instance ),
 		};
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public interaction methods retain the existing connected caller and callback contracts.
-	public function elementId( ?string $instance = null ): string {
+	public function element_id( ?string $instance = null ): string {
 		return substr( $this->selector( $instance ), 1 );
 	}
 

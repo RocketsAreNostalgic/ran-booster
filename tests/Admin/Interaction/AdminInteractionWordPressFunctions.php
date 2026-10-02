@@ -31,11 +31,11 @@ function wp_json_encode( mixed $value ): string|false {
 	return json_encode( $value, JSON_UNESCAPED_SLASHES );
 }
 
-function add_action( string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1 ): bool {
+function add_action( string $hook, callable $callback, int $priority = 10, int $accepted_args = 1 ): bool {
 	$GLOBALS['ran_booster_interaction_test_actions'][ $hook ][] = array(
 		'callback'      => $callback,
 		'priority'      => $priority,
-		'accepted_args' => $acceptedArgs,
+		'accepted_args' => $accepted_args,
 	);
 
 	return true;

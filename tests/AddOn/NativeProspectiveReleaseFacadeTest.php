@@ -108,6 +108,28 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		unset( $GLOBALS['ran_booster_wp_pusher_active_plugins'] );
 	}
 
+	public function test_installed_fixture_hands_the_exact_artifact_to_core_once(): void {
+		$this->set_ready_release();
+		$path    = (string) $this->artifact_path;
+		$release = new \RANBoosterReleaseCapabilityFixture\FixtureReleaseArtifact( $path, 'example', 'example.php' );
+
+		$artifact = $release->handoff_to_core();
+		self::assertSame( $path, $artifact->get_path() );
+		self::assertSame( '2.0.0', $artifact->get_expected_version() );
+		self::assertSame(
+			hash( 'sha256', 'verified-release-archive' ),
+			$artifact->inspect( static fn ( string $owned_path ): string => hash_file( 'sha256', $owned_path ) )
+		);
+		self::assertTrue( $release->discard() );
+		self::assertFileExists( $path );
+		$artifact->cleanup();
+		self::assertFileDoesNotExist( $path );
+
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionMessage( 'The fixture artifact was already handed off.' );
+		$release->handoff_to_core();
+	}
+
 	public function test_supported_provider_codes_are_bounded_and_local(): void {
 		$plugins  = new ProspectivePluginRepository();
 		$executor = new ProspectiveExecutor();

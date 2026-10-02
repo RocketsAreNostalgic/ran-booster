@@ -263,7 +263,7 @@ final class FixtureReleaseArtifact implements RepositoryReleaseArtifact {
 		if ( $this->handed_off ) {
 			throw new RuntimeException( 'The fixture artifact was already handed off.' );
 		}
-		$identity = PreparedArtifact::regularFileIdentity( $this->path );
+		$identity = PreparedArtifact::regular_file_identity( $this->path );
 		$digest   = hash_file( 'sha256', $this->path );
 		if ( null === $identity || ! is_string( $digest ) ) {
 			throw new RuntimeException( 'The fixture artifact identity is invalid.' );

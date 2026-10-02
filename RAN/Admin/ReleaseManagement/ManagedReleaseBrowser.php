@@ -9,7 +9,7 @@ use RAN\RepositoryProvider\RepositoryReleaseCandidateList;
 
 /** @internal Core-admin-only read capability for managed release candidates. */
 interface ManagedReleaseBrowser {
-	public function listCandidates( string $type, string $identifier, int $revision, string $channel, string $nonce ): ?RepositoryReleaseCandidateList;
+	public function list_candidates( string $type, string $identifier, int $revision, string $channel, string $nonce ): ?RepositoryReleaseCandidateList;
 
-	public function inspectCandidate( string $type, string $identifier, int $revision, string $releaseId, string $tag, string $channel, string $nonce ): ?ReleaseTrackingPreflight;
+	public function inspect_candidate( string $type, string $identifier, int $revision, string $release_id, string $tag, string $channel, string $nonce ): ?ReleaseTrackingPreflight;
 }

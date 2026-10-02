@@ -23,20 +23,20 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 
 	public function __construct(
 		private string $code,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private string $packageRoot,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private string $latestVersion = '',
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private string $releaseUrl = '',
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private string $releaseTag = '',
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private string $packageHeaderVersion = '',
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private string $versionRelationship = '',
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private string $reasonCode = ''
+
+		private string $package_root,
+
+		private string $latest_version = '',
+
+		private string $release_url = '',
+
+		private string $release_tag = '',
+
+		private string $package_header_version = '',
+
+		private string $version_relationship = '',
+
+		private string $reason_code = ''
 	) {
 		if ( ! in_array(
 			$this->code,
@@ -51,29 +51,29 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 				self::RELEASE_ARCHIVE_UNREADABLE,
 			),
 			true
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		) || 1 !== preg_match( '/\A[A-Za-z0-9](?:[A-Za-z0-9._-]{0,99})\z/D', $this->packageRoot )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			|| strlen( $this->latestVersion ) > 64
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			|| strlen( $this->releaseUrl ) > 512
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			|| strlen( $this->releaseTag ) > 128
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			|| strlen( $this->packageHeaderVersion ) > 64
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			|| ! in_array( $this->versionRelationship, array( '', 'newer', 'same', 'older', 'invalid' ), true )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			|| ( '' !== $this->reasonCode && ! in_array( $this->reasonCode, self::reason_codes(), true ) )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $this->releaseTag . $this->packageHeaderVersion )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			|| ( '' !== $this->releaseUrl && ! $this->valid_release_url( $this->releaseUrl ) ) ) {
+
+		) || 1 !== preg_match( '/\A[A-Za-z0-9](?:[A-Za-z0-9._-]{0,99})\z/D', $this->package_root )
+
+			|| strlen( $this->latest_version ) > 64
+
+			|| strlen( $this->release_url ) > 512
+
+			|| strlen( $this->release_tag ) > 128
+
+			|| strlen( $this->package_header_version ) > 64
+
+			|| ! in_array( $this->version_relationship, array( '', 'newer', 'same', 'older', 'invalid' ), true )
+
+			|| ( '' !== $this->reason_code && ! in_array( $this->reason_code, self::reason_codes(), true ) )
+
+			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $this->release_tag . $this->package_header_version )
+
+			|| ( '' !== $this->release_url && ! $this->valid_release_url( $this->release_url ) ) ) {
 			throw new InvalidArgumentException( 'Release tracking preflight is invalid.' );
 		}
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		parent::__construct( $this->code, $this->reasonCode );
+
+		parent::__construct( $this->code, $this->reason_code );
 	}
 
 	public function code(): string {
@@ -84,49 +84,49 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 		return self::READY === $this->code;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function packageRoot(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		return $this->packageRoot;
+
+	public function package_root(): string {
+
+		return $this->package_root;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function latestVersion(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		return $this->latestVersion;
+
+	public function latest_version(): string {
+
+		return $this->latest_version;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function releaseUrl(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		return $this->releaseUrl;
+
+	public function release_url(): string {
+
+		return $this->release_url;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function releaseTag(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		return $this->releaseTag;
+
+	public function release_tag(): string {
+
+		return $this->release_tag;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function packageHeaderVersion(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		return $this->packageHeaderVersion;
+
+	public function package_header_version(): string {
+
+		return $this->package_header_version;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function versionRelationship(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		return $this->versionRelationship;
+
+	public function version_relationship(): string {
+
+		return $this->version_relationship;
 	}
 
 	/**
 	 * Return a bounded machine-readable cause without provider response data.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function reasonCode(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		return $this->reasonCode;
+
+	public function reason_code(): string {
+
+		return $this->reason_code;
 	}
 
 	/** @return list<string> */

@@ -14,21 +14,21 @@ final class ManagedReleaseBrowserOperations {
 	}
 
 	/** @return array{code:string,successful:bool,data:array<mixed>} */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function listCandidates( string $type, string $identifier, int $revision, string $channel, string $nonce ): array {
+
+	public function list_candidates( string $type, string $identifier, int $revision, string $channel, string $nonce ): array {
 		if ( ! $this->valid_request( $type, $identifier, $revision, $channel ) ) {
 			return $this->outcome( 'invalid_request' );
 		}
 		$status = $this->releases->status( $type, $identifier );
-		if ( $revision !== $status->sourceRevision() || 'release_asset' !== $status->source() ) {
+		if ( $revision !== $status->source_revision() || 'release_asset' !== $status->source() ) {
 			return $this->outcome( 'source_changed' );
 		}
-		$candidates = $this->browser->listCandidates( $type, $identifier, $revision, $channel, $nonce );
+		$candidates = $this->browser->list_candidates( $type, $identifier, $revision, $channel, $nonce );
 		if ( null === $candidates ) {
 			return $this->outcome( 'unable_to_check' );
 		}
 		$status = $this->releases->status( $type, $identifier );
-		if ( $revision !== $status->sourceRevision() || 'release_asset' !== $status->source() ) {
+		if ( $revision !== $status->source_revision() || 'release_asset' !== $status->source() ) {
 			return $this->outcome( 'source_changed' );
 		}
 		$eligible_candidates = $candidates->candidates;
@@ -38,7 +38,7 @@ final class ManagedReleaseBrowserOperations {
 				true,
 				array(
 					'channel'           => $channel,
-					'installed_version' => $status->installedVersion(),
+					'installed_version' => $status->installed_version(),
 					'candidates'        => array(),
 				)
 			);
@@ -49,29 +49,29 @@ final class ManagedReleaseBrowserOperations {
 			true,
 			array(
 				'channel'           => $channel,
-				'installed_version' => $status->installedVersion(),
-				'candidates'        => array_map( $this->candidate_projection( $status->installedVersion() ), array_slice( $eligible_candidates, 0, 8 ) ),
+				'installed_version' => $status->installed_version(),
+				'candidates'        => array_map( $this->candidate_projection( $status->installed_version() ), array_slice( $eligible_candidates, 0, 8 ) ),
 			)
 		);
 	}
 
 	/** @return array{code:string,successful:bool,data:array<mixed>} */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function inspect( string $type, string $identifier, int $revision, string $releaseId, string $tag, string $channel, string $nonce ): array {
+
+	public function inspect( string $type, string $identifier, int $revision, string $release_id, string $tag, string $channel, string $nonce ): array {
 		if ( ! $this->valid_request( $type, $identifier, $revision, $channel )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			|| ! $this->valid_opaque( $releaseId, 191 )
+
+			|| ! $this->valid_opaque( $release_id, 191 )
 			|| ! $this->valid_opaque( $tag, 100 ) ) {
 			return $this->outcome( 'invalid_request' );
 		}
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$inspection = $this->browser->inspectCandidate( $type, $identifier, $revision, $releaseId, $tag, $channel, $nonce );
+
+		$inspection = $this->browser->inspect_candidate( $type, $identifier, $revision, $release_id, $tag, $channel, $nonce );
 		if ( null === $inspection || ! $inspection->ready()
-			|| ! hash_equals( $tag, $inspection->releaseTag() ) ) {
+			|| ! hash_equals( $tag, $inspection->release_tag() ) ) {
 			return $this->outcome( 'unable_to_check' );
 		}
 		$status = $this->releases->status( $type, $identifier );
-		if ( $revision !== $status->sourceRevision() || 'release_asset' !== $status->source() ) {
+		if ( $revision !== $status->source_revision() || 'release_asset' !== $status->source() ) {
 			return $this->outcome( 'source_changed' );
 		}
 
@@ -79,15 +79,15 @@ final class ManagedReleaseBrowserOperations {
 			'release_ready',
 			true,
 			array(
-				'tag'                  => $inspection->releaseTag(),
-				'version'              => $inspection->latestVersion(),
-				'details_url'          => $inspection->releaseUrl(),
-				'installed_version'    => $status->installedVersion(),
-				'version_relationship' => self::version_relationship( $inspection->latestVersion(), $status->installedVersion() ),
+				'tag'                  => $inspection->release_tag(),
+				'version'              => $inspection->latest_version(),
+				'details_url'          => $inspection->release_url(),
+				'installed_version'    => $status->installed_version(),
+				'version_relationship' => self::version_relationship( $inspection->latest_version(), $status->installed_version() ),
 				'native_offer'         => array(
-					'available'  => $status->updateAvailable(),
-					'release_id' => $status->nativeOfferReleaseId(),
-					'version'    => $status->latestVersion(),
+					'available'  => $status->update_available(),
+					'release_id' => $status->native_offer_release_id(),
+					'version'    => $status->latest_version(),
 				),
 			)
 		);
@@ -96,13 +96,13 @@ final class ManagedReleaseBrowserOperations {
 	/** @return \Closure(RepositoryReleaseCandidate):array{release_id:string,tag:string,version:string,prerelease:bool,published_at:string,version_relationship:string} */
 	private function candidate_projection( string $installed_version ): \Closure {
 		return static fn ( RepositoryReleaseCandidate $candidate ): array => array(
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the external DTO or promoted constructor property contract.
-			'release_id'           => $candidate->providerReleaseId,
+
+			'release_id'           => $candidate->provider_release_id,
 			'tag'                  => $candidate->tag,
 			'version'              => $candidate->version,
 			'prerelease'           => $candidate->prerelease,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the external DTO or promoted constructor property contract.
-			'published_at'         => $candidate->publishedAt,
+
+			'published_at'         => $candidate->published_at,
 			'version_relationship' => self::version_relationship( $candidate->version, $installed_version ),
 		);
 	}

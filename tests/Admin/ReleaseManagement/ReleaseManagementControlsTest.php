@@ -17,11 +17,11 @@ use Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble;
 
 final class ReleaseManagementControlsTest extends TestCase {
 	#[Before]
-	public function resetWordPress(): void {
-		ReleaseManagementFixture::resetWordPress();
+	public function reset_word_press(): void {
+		ReleaseManagementFixture::reset_word_press();
 	}
 
-	public function testRegistersOneCoreOwnedNeutralControlSurfaceWithNewRouteNames(): void {
+	public function test_registers_one_core_owned_neutral_control_surface_with_new_route_names(): void {
 		$controls = ReleaseManagementFixture::controls();
 		$controls->register();
 
@@ -59,7 +59,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 		self::assertStringNotContainsString( 'release_deployments', implode( '|', array_merge( $filters, $actions ) ) );
 	}
 
-	public function testHydratesTheExistingSourceChoiceWithoutAStandaloneProductIdentity(): void {
+	public function test_hydrates_the_existing_source_choice_without_a_standalone_product_identity(): void {
 		$controls = ReleaseManagementFixture::controls();
 		$choices  = array(
 			'release_asset' => array(
@@ -71,7 +71,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 			),
 		);
 
-		$hydrated = $controls->filterSourceChoices(
+		$hydrated = $controls->filter_source_choices(
 			$choices,
 			'create',
 			'plugin',
@@ -89,13 +89,13 @@ final class ReleaseManagementControlsTest extends TestCase {
 		);
 	}
 
-	public function testCreateAssetsExposeOnlyCompleteProviderProjectionAndNewActions(): void {
+	public function test_create_assets_expose_only_complete_provider_projection_and_new_actions(): void {
 		$prospective                     = new ProspectiveReleaseFacadeDouble();
-		$prospective->supportedProviders = array( 'gh', 'acme' );
+		$prospective->supported_providers = array( 'gh', 'acme' );
 		$controls                        = ReleaseManagementFixture::controls( prospective: $prospective );
 		$_GET['page']                    = 'ran-booster-themes-create'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only screen fixture.
 
-		$controls->enqueueProspectiveAssets();
+		$controls->enqueue_prospective_assets();
 
 		self::assertSame( array( 'ran-booster-release-management' ), array_keys( $GLOBALS['ran_booster_release_management_test_scripts'] ?? array() ) );
 		self::assertSame( array( 'ran-booster-release-management' ), array_keys( $GLOBALS['ran_booster_release_management_test_styles'] ?? array() ) );
@@ -131,9 +131,9 @@ final class ReleaseManagementControlsTest extends TestCase {
 		);
 	}
 
-	public function testDocumentationIsCoreOwnedAndContainsNoRetiredProductNames(): void {
+	public function test_documentation_is_core_owned_and_contains_no_retired_product_names(): void {
 		$controls = ReleaseManagementFixture::controls();
-		$sections = $controls->filterDocumentationSections( array(), 'https://example.test/docs', 'site' );
+		$sections = $controls->filter_documentation_sections( array(), 'https://example.test/docs', 'site' );
 
 		self::assertCount( 1, $sections );
 		self::assertStringNotContainsString( 'release-deployments', $sections[0]['id'] );
@@ -155,18 +155,18 @@ final class ReleaseManagementControlsTest extends TestCase {
 		self::assertStringNotContainsString( 'PU-032', $html );
 	}
 
-	public function testAdvancedSourceSummaryReflectsPersistedSourceInEditModeRegardlessOfSelectedTab(): void {
+	public function test_advanced_source_summary_reflects_persisted_source_in_edit_mode_regardless_of_selected_tab(): void {
 		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
 		$controls = ReleaseManagementFixture::controls( $tracking );
 		$package  = new PackageProjection( 'branch' );
 
 		self::assertSame(
 			'Releases · Active',
-			$controls->filterAdvancedSourceSummary( 'Branch', 'edit', 'plugin', 'branch', $package )
+			$controls->filter_advanced_source_summary( 'Branch', 'edit', 'plugin', 'branch', $package )
 		);
 		self::assertSame(
 			'Releases · Active',
-			$controls->filterAdvancedSourceSummary( 'Branch', 'edit', 'plugin', 'release_asset', $package )
+			$controls->filter_advanced_source_summary( 'Branch', 'edit', 'plugin', 'release_asset', $package )
 		);
 
 		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'branch' ) );
@@ -175,20 +175,20 @@ final class ReleaseManagementControlsTest extends TestCase {
 
 		self::assertSame(
 			'Branch · Active',
-			$controls->filterAdvancedSourceSummary( 'Releases', 'edit', 'plugin', 'branch', $package )
+			$controls->filter_advanced_source_summary( 'Releases', 'edit', 'plugin', 'branch', $package )
 		);
 		self::assertSame(
 			'Branch · Active',
-			$controls->filterAdvancedSourceSummary( 'Releases', 'edit', 'plugin', 'release_asset', $package )
+			$controls->filter_advanced_source_summary( 'Releases', 'edit', 'plugin', 'release_asset', $package )
 		);
 	}
 
-	public function testAdvancedSourceSummaryCreateModePreservesProspectivePublishedReleaseBehavior(): void {
+	public function test_advanced_source_summary_create_mode_preserves_prospective_published_release_behavior(): void {
 		$controls = ReleaseManagementFixture::controls();
 
 		self::assertSame(
 			'Releases · Stable',
-			$controls->filterAdvancedSourceSummary(
+			$controls->filter_advanced_source_summary(
 				'Branch',
 				'create',
 				'plugin',
@@ -198,7 +198,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 		);
 	}
 
-	public function testAdvancedSourceSummaryProjectionTracksPersistedSource(): void {
+	public function test_advanced_source_summary_projection_tracks_persisted_source(): void {
 		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', 'plugin', ReleaseTrackingEligibility::ELIGIBLE, false, 'prerelease' ) );
 		$controls = ReleaseManagementFixture::controls( $tracking );
 		$package  = new PackageProjection(
@@ -207,7 +207,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 			3
 		);
 
-		$result = $controls->filterAdvancedSourceSummaryProjection(
+		$result = $controls->filter_advanced_source_summary_projection(
 			array(
 				'heading' => 'Branch',
 				'badges'  => array(
@@ -242,7 +242,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 			'src/plugins'
 		);
 
-		$result = $controls->filterAdvancedSourceSummaryProjection(
+		$result = $controls->filter_advanced_source_summary_projection(
 			array(
 				'heading' => 'Releases',
 				'badges'  => array(
@@ -270,7 +270,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 		);
 	}
 
-	public function testNeutralControlSourceContainsNoRetiredRouteQueryAssetOrTextDomain(): void {
+	public function test_neutral_control_source_contains_no_retired_route_query_asset_or_text_domain(): void {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Direct local source-conformance read.
 		$source = file_get_contents( dirname( __DIR__, 3 ) . '/RAN/Admin/ReleaseManagement/ReleaseManagementControls.php' );
 		self::assertIsString( $source );
@@ -280,8 +280,8 @@ final class ReleaseManagementControlsTest extends TestCase {
 			'ran-booster-release-deployments',
 			"'ran-booster-release-deployments'",
 			'Release Deployments add-on',
-		) as $retiredName ) {
-			self::assertStringNotContainsString( $retiredName, $source );
+		) as $retired_name ) {
+			self::assertStringNotContainsString( $retired_name, $source );
 		}
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Direct local fallback-view conformance read.

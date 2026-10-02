@@ -163,11 +163,11 @@ function wp_parse_str( string $input, array &$output ): void {
 	parse_str( $input, $output );
 }
 
-function add_action( string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1 ): bool {
+function add_action( string $hook, callable $callback, int $priority = 10, int $accepted_args = 1 ): bool {
 	$GLOBALS['ran_booster_release_management_test_actions'][ $hook ][] = array(
 		'callback'      => $callback,
 		'priority'      => $priority,
-		'accepted_args' => $acceptedArgs,
+		'accepted_args' => $accepted_args,
 	);
 
 	return true;
@@ -187,16 +187,16 @@ function do_action( string $hook, mixed ...$args ): void {
 		if ( ! is_array( $registered ) || ! is_callable( $registered['callback'] ?? null ) ) {
 			continue;
 		}
-		$acceptedArgs = max( 0, (int) ( $registered['accepted_args'] ?? 1 ) );
-		call_user_func_array( $registered['callback'], array_slice( $args, 0, $acceptedArgs ) );
+		$accepted_args = max( 0, (int) ( $registered['accepted_args'] ?? 1 ) );
+		call_user_func_array( $registered['callback'], array_slice( $args, 0, $accepted_args ) );
 	}
 }
 
-function add_filter( string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1 ): bool {
+function add_filter( string $hook, callable $callback, int $priority = 10, int $accepted_args = 1 ): bool {
 	$GLOBALS['ran_booster_release_management_test_filters'][ $hook ][] = array(
 		'callback'      => $callback,
 		'priority'      => $priority,
-		'accepted_args' => $acceptedArgs,
+		'accepted_args' => $accepted_args,
 	);
 
 	return true;
@@ -252,16 +252,16 @@ function wp_safe_redirect( string $url ): bool {
 	throw new RuntimeException( 'native-redirect' );
 }
 
-function header( string $header, bool $replace = true, int $responseCode = 0 ): void {
-	unset( $replace, $responseCode );
+function header( string $header, bool $replace = true, int $response_code = 0 ): void {
+	unset( $replace, $response_code );
 	$GLOBALS['ran_booster_release_management_test_header'] = $header;
 	throw new RuntimeException( 'hx-redirect' );
 }
 
-function wp_send_json( mixed $response, ?int $statusCode = null, int $flags = 0 ): never {
+function wp_send_json( mixed $response, ?int $status_code = null, int $flags = 0 ): never {
 	$GLOBALS['ran_booster_release_management_test_json'] = array(
 		'response'    => $response,
-		'status_code' => $statusCode,
+		'status_code' => $status_code,
 		'flags'       => $flags,
 	);
 	throw new RuntimeException( 'json-response' );

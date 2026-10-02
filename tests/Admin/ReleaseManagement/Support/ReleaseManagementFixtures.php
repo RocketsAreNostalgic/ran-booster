@@ -13,28 +13,28 @@ final class ReleaseManagementFixture {
 	public static function controls(
 		?ReleaseTrackingFacadeDouble $tracking = null,
 		?ProspectiveReleaseFacadeDouble $prospective = null,
-		?callable $readCandidates = null,
-		?\RAN\Storage\RepositorySourceGuard $sourceGuard = null
+		?callable $read_candidates = null,
+		?\RAN\Storage\RepositorySourceGuard $source_guard = null
 	): ReleaseManagementControls {
 		$prospective ??= new ProspectiveReleaseFacadeDouble();
 		$tracking    ??= new ReleaseTrackingFacadeDouble( self::status() );
 		return new ReleaseManagementControls(
 			$tracking,
 			$prospective,
-			$readCandidates ?? static fn ( string $type, array $repository, string $channel ): \RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult => $prospective->listCandidates( $type, $repository, $channel, '' ),
+			$read_candidates ?? static fn ( string $type, array $repository, string $channel ): \RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult => $prospective->list_candidates( $type, $repository, $channel, '' ),
 			$tracking,
-			$sourceGuard
+			$source_guard
 		);
 	}
 
 	public static function status(
 		string $source = 'branch',
 		string $type = 'plugin',
-		string $eligibilityCode = ReleaseTrackingEligibility::ELIGIBLE,
-		bool $updateAvailable = false,
+		string $eligibility_code = ReleaseTrackingEligibility::ELIGIBLE,
+		bool $update_available = false,
 		string $channel = 'stable',
-		string $failureCode = '',
-		string $deploymentPolicy = 'manual'
+		string $failure_code = '',
+		string $deployment_policy = 'manual'
 	): ReleaseTrackingStatus {
 		$identifier = 'theme' === $type ? 'example-theme' : 'example/example.php';
 
@@ -44,9 +44,9 @@ final class ReleaseManagementFixture {
 			$source,
 			3,
 			'101',
-			$deploymentPolicy,
+			$deployment_policy,
 			new ReleaseTrackingEligibility(
-				$eligibilityCode,
+				$eligibility_code,
 				'https://github.com/example/example',
 				'example-plugin'
 			),
@@ -59,15 +59,15 @@ final class ReleaseManagementFixture {
 			'example-plugin',
 			'1.0.0',
 			'1.1.0',
-			$updateAvailable,
+			$update_available,
 			'2026-07-24T20:00:00+00:00',
 			'',
-			$failureCode,
+			$failure_code,
 			$channel
 		);
 	}
 
-	public static function resetWordPress(): void {
+	public static function reset_word_press(): void {
 		foreach ( array(
 			'actions',
 			'filters',

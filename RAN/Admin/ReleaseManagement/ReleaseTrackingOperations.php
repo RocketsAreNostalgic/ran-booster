@@ -15,9 +15,9 @@ final class ReleaseTrackingOperations {
 	public function __construct( private readonly ReleaseTrackingFacade $releases ) {
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function nonceAction( string $operation, string $type, string $identifier, int $revision, string $channel = '' ): string {
-		return $this->releases->nonceAction( $operation, $type, $identifier, $revision, $channel );
+
+	public function nonce_action( string $operation, string $type, string $identifier, int $revision, string $channel = '' ): string {
+		return $this->releases->nonce_action( $operation, $type, $identifier, $revision, $channel );
 	}
 
 	public function status( string $type, string $identifier, int $revision ): ?ReleaseTrackingStatus {
@@ -31,8 +31,8 @@ final class ReleaseTrackingOperations {
 		return $this->statuses[ $key ];
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function freshStatus( string $type, string $identifier ): ?ReleaseTrackingStatus {
+
+	public function fresh_status( string $type, string $identifier ): ?ReleaseTrackingStatus {
 		$status = $this->releases->status( $type, $identifier );
 
 		return $this->matches_identity( $status, $type, $identifier ) ? $status : null;
@@ -61,9 +61,9 @@ final class ReleaseTrackingOperations {
 	public function execute( string $operation, string $type, string $identifier, int $revision, string $channel, string $nonce ): array {
 		$result = match ( $operation ) {
 			'enable' => $this->releases->enable( $type, $identifier, $revision, $channel, $nonce ),
-			'change_channel' => $this->releases->changeChannel( $type, $identifier, $revision, $channel, $nonce ),
+			'change_channel' => $this->releases->change_channel( $type, $identifier, $revision, $channel, $nonce ),
 			'refresh' => $this->releases->refresh( $type, $identifier, $revision, $nonce ),
-			'return_to_branch' => $this->releases->returnToBranch( $type, $identifier, $revision, $nonce ),
+			'return_to_branch' => $this->releases->return_to_branch( $type, $identifier, $revision, $nonce ),
 		};
 		$code       = $result->code();
 		$successful = $result->successful();
@@ -72,17 +72,17 @@ final class ReleaseTrackingOperations {
 			if ( ! $this->matches_identity( $status, $type, $identifier ) ) {
 				return $this->outcome( $type, $identifier, 'refresh_failed', false );
 			}
-			if ( '' !== $status->failureCode() ) {
-				return $this->outcome( $type, $identifier, $status->failureCode(), false );
+			if ( '' !== $status->failure_code() ) {
+				return $this->outcome( $type, $identifier, $status->failure_code(), false );
 			}
-			$code = $status->updateAvailable() ? 'release_update_available' : 'release_current';
+			$code = $status->update_available() ? 'release_update_available' : 'release_current';
 		}
 
 		return $this->outcome( $type, $identifier, $code, $successful );
 	}
 
 	private function matches( ReleaseTrackingStatus $status, string $type, string $identifier, int $revision ): bool {
-		return $revision === $status->sourceRevision() && $this->matches_identity( $status, $type, $identifier );
+		return $revision === $status->source_revision() && $this->matches_identity( $status, $type, $identifier );
 	}
 
 	private function matches_identity( ReleaseTrackingStatus $status, string $type, string $identifier ): bool {

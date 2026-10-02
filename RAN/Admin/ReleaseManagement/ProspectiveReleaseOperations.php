@@ -13,26 +13,26 @@ final class ProspectiveReleaseOperations {
 	private readonly \Closure $read_candidates;
 
 	/** @param callable(string, array<string, mixed>, string): \RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult $readCandidates */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function __construct( private readonly ProspectiveReleaseFacade $prospective, callable $readCandidates ) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->read_candidates = \Closure::fromCallable( $readCandidates );
+
+	public function __construct( private readonly ProspectiveReleaseFacade $prospective, callable $read_candidates ) {
+
+		$this->read_candidates = \Closure::fromCallable( $read_candidates );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function nonceAction( string $operation, string $type ): string {
-		return $this->prospective->nonceAction( $operation, $type );
+
+	public function nonce_action( string $operation, string $type ): string {
+		return $this->prospective->nonce_action( $operation, $type );
 	}
 
 	/** @return list<string> */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function supportedProviderCodes( string $type ): array {
-		return $this->prospective->supportedProviderCodes( $type );
+
+	public function supported_provider_codes( string $type ): array {
+		return $this->prospective->supported_provider_codes( $type );
 	}
 
 	/** @param array<string, mixed> $repository @return array{type:string,identifier:string,code:string,successful:bool,data:array<mixed>} */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function listCandidates( string $type, array $repository, string $channel ): array {
+
+	public function list_candidates( string $type, array $repository, string $channel ): array {
 		$outcome    = static fn ( string $code, bool $successful, array $data = array() ): array => array(
 			'type'       => in_array( $type, array( 'plugin', 'theme' ), true ) ? $type : 'plugin',
 			'identifier' => '',
@@ -64,10 +64,10 @@ final class ProspectiveReleaseOperations {
 	public function execute(
 		string $operation,
 		string $type,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		array $untrustedRepository,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		string $releaseId,
+
+		array $untrusted_repository,
+
+		string $release_id,
 		string $tag,
 		string $fingerprint,
 		string $channel,
@@ -85,23 +85,23 @@ final class ProspectiveReleaseOperations {
 			return $outcome( 'invalid_request', false );
 		}
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$repository = $this->normalize_prospective_repository( $untrustedRepository );
+
+		$repository = $this->normalize_prospective_repository( $untrusted_repository );
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true )
 			|| null === $repository
 			|| ! in_array( $channel, array( 'stable', 'prerelease' ), true )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			|| ! $this->valid_release_id( $releaseId )
+
+			|| ! $this->valid_release_id( $release_id )
 			|| ! $this->valid_release_tag( $tag )
 			|| ( 'install' === $operation && ! $this->valid_fingerprint( $fingerprint ) ) ) {
 			return $outcome( 'invalid_request', false );
 		}
 
 		$result = match ( $operation ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'inspect' => $this->prospective->inspect( $type, $repository, $releaseId, $tag, $channel, $nonce ),
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'install' => $this->prospective->install( $type, $repository, $releaseId, $tag, $fingerprint, $channel, $nonce ),
+
+			'inspect' => $this->prospective->inspect( $type, $repository, $release_id, $tag, $channel, $nonce ),
+
+			'install' => $this->prospective->install( $type, $repository, $release_id, $tag, $fingerprint, $channel, $nonce ),
 		};
 		$code       = $result->code();
 		$data       = $this->normalize_prospective_data( $result->data() );
@@ -110,8 +110,8 @@ final class ProspectiveReleaseOperations {
 			|| ( isset( $data['channel'] ) && ! hash_equals( $channel, (string) $data['channel'] ) )
 			|| ( 'inspect' === $operation
 				&& $successful
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				&& ( ( $data['release_id'] ?? null ) !== $releaseId
+
+				&& ( ( $data['release_id'] ?? null ) !== $release_id
 					|| ! hash_equals( $tag, (string) ( $data['tag'] ?? '' ) ) ) ) ) {
 			return $outcome( 'operation_failed', false );
 		}

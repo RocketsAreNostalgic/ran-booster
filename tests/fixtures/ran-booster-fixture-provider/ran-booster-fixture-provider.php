@@ -17,7 +17,7 @@ add_action(
 	'ran_booster_register_providers',
 	static function ( object $registry ): void {
 		if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-			|| 13 !== RAN_BOOSTER_PROVIDER_API_VERSION
+			|| 14 !== RAN_BOOSTER_PROVIDER_API_VERSION
 			|| ! $registry instanceof \RAN\RepositoryProvider\ProviderRegistry
 		) {
 			return;
@@ -31,18 +31,18 @@ add_action(
 				'PreparedArchive.php',
 				'Diagnostics.php',
 				'Provider.php',
-			) as $fixtureFile
+			) as $fixture_file
 		) {
-			require_once __DIR__ . '/src/' . $fixtureFile;
+			require_once __DIR__ . '/src/' . $fixture_file;
 		}
 
-		$registry->registerWithCredentialStore(
+		$registry->register_with_credential_store(
 			'fixture-provider',
 			static fn (
 				\RAN\RepositoryProvider\ProviderCredentialStore $credentials,
-				\RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-				\RAN\RepositoryProvider\ProviderRegistrationContext $registrationContext
-			): \RAN\RepositoryProvider\RepositoryProvider => new \RANBoosterFixtureProvider\Provider( $credentials, $deliveryEvidence )
+				\RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
+				\RAN\RepositoryProvider\ProviderRegistrationContext $registration_context
+			): \RAN\RepositoryProvider\RepositoryProvider => new \RANBoosterFixtureProvider\Provider( $credentials, $delivery_evidence )
 		);
 	}
 );

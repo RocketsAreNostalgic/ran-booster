@@ -17,19 +17,19 @@ add_action(
 	'plugins_loaded',
 	static function (): void {
 		if ( ! defined( 'RAN_BOOSTER_ADDON_API_VERSION' )
-			|| 16 !== RAN_BOOSTER_ADDON_API_VERSION ) {
+			|| 17 !== RAN_BOOSTER_ADDON_API_VERSION ) {
 			return;
 		}
 
 		add_filter(
 			'ran_booster_documentation_sections_after_provider_gh',
-			static function ( array $sections, string $documentationUrl, string $scope ): array {
+			static function ( array $sections, string $documentation_url, string $scope ): array {
 				$sections[] = array(
 					'id'      => 'ran-booster-fixture-documentation',
 					'summary' => 'Fixture documentation',
 					'content' => sprintf(
 						'<p data-ran-booster-fixture-documentation-url="%s" data-ran-booster-fixture-documentation-scope="%s">Fixture documentation</p>',
-						esc_attr( $documentationUrl ),
+						esc_attr( $documentation_url ),
 						esc_attr( $scope )
 					),
 				);

@@ -11,22 +11,22 @@ final readonly class PreparedArchive implements PreparedArchiveContract {
 
 	public function __construct(
 		private string $url,
-		private string $resolvedRef,
-		private ?Closure $headVerifier = null
+		private string $resolved_ref,
+		private ?Closure $head_verifier = null
 	) {
 	}
 
-	public function getUrl(): string {
+	public function get_url(): string {
 		return $this->url;
 	}
 
-	public function getResolvedRef(): string {
-		return $this->resolvedRef;
+	public function get_resolved_ref(): string {
+		return $this->resolved_ref;
 	}
 
-	public function verifyCurrentHead(): void {
-		if ( null !== $this->headVerifier ) {
-			( $this->headVerifier )();
+	public function verify_current_head(): void {
+		if ( null !== $this->head_verifier ) {
+			( $this->head_verifier )();
 		}
 	}
 

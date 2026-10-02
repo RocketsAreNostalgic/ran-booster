@@ -17,7 +17,7 @@ add_action(
 	'ran_booster_register_providers',
 	static function ( object $registry ): void {
 		if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-			|| 13 !== RAN_BOOSTER_PROVIDER_API_VERSION
+			|| 14 !== RAN_BOOSTER_PROVIDER_API_VERSION
 			|| ! $registry instanceof \RAN\RepositoryProvider\ProviderRegistry
 		) {
 			return;

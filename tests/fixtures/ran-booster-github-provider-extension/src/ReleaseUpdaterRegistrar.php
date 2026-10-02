@@ -16,7 +16,7 @@ use ReflectionClass;
  */
 final class ReleaseUpdaterRegistrar {
 	/** @var list<mixed>|null */
-	private ?array $releaseArguments = null;
+	private ?array $release_arguments = null;
 
 	public function __construct( private readonly object $inner ) {
 	}
@@ -30,17 +30,17 @@ final class ReleaseUpdaterRegistrar {
 	}
 
 	public function releases( mixed ...$arguments ): object {
-		$this->releaseArguments = $arguments;
+		$this->release_arguments = $arguments;
 
 		return $this->invoke( 'releases', $arguments );
 	}
 
 	/** @return list<mixed>|null */
-	public function releaseArguments(): ?array {
-		return $this->releaseArguments;
+	public function release_arguments(): ?array {
+		return $this->release_arguments;
 	}
 
-	public function innerSource(): string {
+	public function inner_source(): string {
 		$file = ( new ReflectionClass( $this->inner ) )->getFileName();
 
 		return is_string( $file ) ? $file : '';

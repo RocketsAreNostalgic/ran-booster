@@ -56,8 +56,8 @@ final readonly class ProviderMetadata {
 		$path = '/' === $path ? $path : $path . '/';
 		$port = isset( $parts['port'] ) ? ':' . $parts['port'] : '';
 
-		$this->label             = $label;
-		$this->owner_label        = $owner_label;
+		$this->label               = $label;
+		$this->owner_label         = $owner_label;
 		$this->repository_url_base = 'https://' . strtolower( $parts['host'] ) . $port . $path;
 	}
 

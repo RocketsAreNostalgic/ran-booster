@@ -405,9 +405,9 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 
 	public function test_sealed_credential_registration_rejects_before_either_factory_runs(): void {
 		$credential_store_calls = 0;
-		$provider_calls        = 0;
-		$catalog              = new ProviderSecretPolicyCatalog();
-		$registry             = new ProviderRegistry(
+		$provider_calls         = 0;
+		$catalog                = new ProviderSecretPolicyCatalog();
+		$registry               = new ProviderRegistry(
 			array(),
 			$catalog,
 			static function ( ProviderCode $code ) use ( &$credential_store_calls ): ProviderCredentialStore {
@@ -549,10 +549,10 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 	}
 
 	public function test_deactivated_provider_records_remain_opaque_while_shipped_records_stay_usable(): void {
-		$path          = sys_get_temp_dir() . '/ran-booster-deactivated-' . bin2hex( random_bytes( 8 ) ) . '.php';
+		$path           = sys_get_temp_dir() . '/ran-booster-deactivated-' . bin2hex( random_bytes( 8 ) ) . '.php';
 		$active_catalog = ShippedSecretPolicyCatalog::create();
 		$active_secrets = SecretsFileTestFactory::create( $path, array(), $active_catalog );
-		$registry      = new ProviderRegistry(
+		$registry       = new ProviderRegistry(
 			array(),
 			$active_catalog,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $active_secrets->credentials_for( $code ),

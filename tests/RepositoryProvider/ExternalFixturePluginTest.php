@@ -203,8 +203,8 @@ final class ExternalFixturePluginTest extends TestCase {
 			self::assertTrue( $package_provider['webhooks'] );
 
 			$before_diagnostics = $provider->get_client()->get_request_count();
-			$now               = 100.0;
-			$request           = new ProviderDiagnosticRequest(
+			$now                = 100.0;
+			$request            = new ProviderDiagnosticRequest(
 				$credential_id,
 				'group/subgroup/package',
 				ProviderDiagnosticRequest::MAX_REMOTE_CALLS,
@@ -213,7 +213,7 @@ final class ExternalFixturePluginTest extends TestCase {
 					return $now;
 				}
 			);
-			$results           = $provider->get_provider_diagnostics()->diagnose( $request );
+			$results            = $provider->get_provider_diagnostics()->diagnose( $request );
 			self::assertCount( 3, $results );
 			self::assertSame(
 				array(
@@ -230,13 +230,13 @@ final class ExternalFixturePluginTest extends TestCase {
 				self::assertSame( array( 'status', 'code', 'message', 'remediation' ), array_keys( $result->to_array() ) );
 			}
 
-			$reference   = new RepositoryReference(
+			$reference    = new RepositoryReference(
 				$resolved['repository'],
 				$resolved['provider_repository_id'],
 				true,
 				$credential_id
 			);
-			$archive     = $provider->prepare_archive( new ArchiveRequest( $reference, 'main' ) );
+			$archive      = $provider->prepare_archive( new ArchiveRequest( $reference, 'main' ) );
 			$resolved_ref = sha1( "group/subgroup/package\0main" );
 			self::assertSame( $resolved_ref, $archive->get_resolved_ref() );
 			self::assertSame( 'https://fixtures.example.test/group/subgroup/package/' . $resolved_ref . '.zip', $archive->get_url() );
@@ -265,7 +265,7 @@ final class ExternalFixturePluginTest extends TestCase {
 			self::assertSame( $provider, $normalizer );
 			self::assertSame( array( 'x-fixture-event', 'x-fixture-signature' ), $normalizer->get_webhook_policy()->get_retained_headers() );
 			$before_normalization = $provider->get_client()->get_request_count();
-			$request             = new WebhookRequest(
+			$request              = new WebhookRequest(
 				ProviderCode::parse( 'fixture-provider' ),
 				'',
 				array( 'x-fixture-event' => 'ping' ),
@@ -378,10 +378,10 @@ final class ExternalFixturePluginTest extends TestCase {
 		 * @return array{ProviderRegistry, SecretsFile, string}
 		 */
 	private function registry(): array {
-		$path           = sys_get_temp_dir() . '/ran-booster-external-fixture-' . bin2hex( random_bytes( 8 ) ) . '.php';
+		$path            = sys_get_temp_dir() . '/ran-booster-external-fixture-' . bin2hex( random_bytes( 8 ) ) . '.php';
 		$secret_policies = new ProviderSecretPolicyCatalog();
-		$secrets        = SecretsFileTestFactory::create( $path, array(), $secret_policies );
-		$registry       = new ProviderRegistry(
+		$secrets         = SecretsFileTestFactory::create( $path, array(), $secret_policies );
+		$registry        = new ProviderRegistry(
 			array(),
 			$secret_policies,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentials_for( $code ),

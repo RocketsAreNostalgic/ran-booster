@@ -11,13 +11,11 @@ final readonly class ProviderAdminMetadata {
 	/**
 	 * @var list<CredentialKindMetadata>
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase -- Retain the public DTO or promoted constructor contract.
 	public array $credential_kinds;
 
 	/**
 	 * @var list<WebhookScopeMetadata>
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase -- Retain the public DTO or promoted constructor contract.
 	public array $webhook_scopes;
 
 	/**
@@ -25,24 +23,18 @@ final readonly class ProviderAdminMetadata {
 	 * @param list<WebhookScopeMetadata>    $webhook_scopes
 	 */
 	public function __construct(
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		array $credential_kinds,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		array $webhook_scopes,
 		public ?ProviderSetupMetadata $setup = null,
 		public ?ProviderNavigationPlacement $navigation = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		public string $repository_locator_hint = ''
 	) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the promoted constructor or external DTO property contract. Retain the public named-parameter contract.
 		$this->credential_kinds = $this->validate_credential_kinds( $credential_kinds );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the promoted constructor or external DTO property contract. Retain the public named-parameter contract.
-		$this->webhook_scopes = $this->validate_webhook_scopes( $webhook_scopes );
+		$this->webhook_scopes   = $this->validate_webhook_scopes( $webhook_scopes );
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function get_credential_kind( string $code ): ?CredentialKindMetadata {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		foreach ( $this->credential_kinds as $kind ) {
 			if ( $kind->code === $code ) {
 				return $kind;
@@ -54,7 +46,6 @@ final readonly class ProviderAdminMetadata {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function get_webhook_scope( string $code ): ?WebhookScopeMetadata {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		foreach ( $this->webhook_scopes as $scope ) {
 			if ( $scope->code === $code ) {
 				return $scope;

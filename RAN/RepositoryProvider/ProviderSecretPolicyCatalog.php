@@ -12,9 +12,7 @@ final class ProviderSecretPolicyCatalog {
 
 	public function register(
 		ProviderCode $provider,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public provider policy API preserves established method and named-argument contracts.
 		?ProviderCredentialPolicy $credential_policy,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public provider policy API preserves established method and named-argument contracts.
 		?ProviderWebhookPolicy $webhook_policy
 	): void {
 		$code = $provider->value;
@@ -24,14 +22,12 @@ final class ProviderSecretPolicyCatalog {
 		}
 
 		try {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public provider policy API preserves established method and named-argument contracts.
 			$credential_provider = null === $credential_policy ? null : $credential_policy->get_provider();
 		} catch ( \Throwable ) {
 			throw InvalidProviderPolicy::unavailable_credential_policy();
 		}
 
 		try {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public provider policy API preserves established method and named-argument contracts.
 			$webhook_provider = null === $webhook_policy ? null : $webhook_policy->get_provider();
 		} catch ( \Throwable ) {
 			throw InvalidProviderPolicy::unavailable_webhook_policy();
@@ -46,9 +42,7 @@ final class ProviderSecretPolicyCatalog {
 		}
 
 		$this->policies[ $code ] = array(
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public provider policy API preserves established method and named-argument contracts.
 			'credential' => $credential_policy,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public provider policy API preserves established method and named-argument contracts.
 			'webhook'    => $webhook_policy,
 		);
 	}

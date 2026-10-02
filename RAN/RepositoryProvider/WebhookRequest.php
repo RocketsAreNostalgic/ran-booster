@@ -39,18 +39,15 @@ final class WebhookRequest {
 		private ProviderCode $provider,
 		private string $body,
 		array $headers,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		array $retained_headers
 	) {
 		if ( strlen( $body ) > self::MAX_BODY_BYTES ) {
 			throw new WebhookRejected( 413, 'Webhook request is too large.' );
 		}
-
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		$retained_headers = $this->validate_retained_headers( $retained_headers );
-		$normalized      = array();
-		$retained        = array();
-		$retained_bytes  = 0;
+		$normalized       = array();
+		$retained         = array();
+		$retained_bytes   = 0;
 
 		foreach ( $headers as $name => $value ) {
 			if ( ! is_string( $name ) ) {
@@ -58,8 +55,6 @@ final class WebhookRequest {
 			}
 
 			$name = $this->normalize_header_name( $name );
-
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 			if ( ! in_array( $name, $retained_headers, true ) ) {
 				continue;
 			}

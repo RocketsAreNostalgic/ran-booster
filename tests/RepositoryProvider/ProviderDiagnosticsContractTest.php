@@ -54,11 +54,11 @@ use Tests\RepositoryProvider\Support\EmptyAuthenticatedWebhookDeliveryEvidenceRe
 final class ProviderDiagnosticsContractTest extends TestCase {
 
 	public function test_novel_provider_supplies_diagnostics_and_supports_the_manual_package_path(): void {
-		$path           = sys_get_temp_dir() . '/ran-booster-fixture-' . bin2hex( random_bytes( 8 ) ) . '.php';
+		$path            = sys_get_temp_dir() . '/ran-booster-fixture-' . bin2hex( random_bytes( 8 ) ) . '.php';
 		$secret_policies = new ProviderSecretPolicyCatalog();
-		$secrets        = SecretsFileTestFactory::create( $path, array(), $secret_policies );
-		$provider       = null;
-		$registry       = new ProviderRegistry(
+		$secrets         = SecretsFileTestFactory::create( $path, array(), $secret_policies );
+		$provider        = null;
+		$registry        = new ProviderRegistry(
 			array(),
 			$secret_policies,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentials_for( $code ),
@@ -231,7 +231,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 
 	public function test_sealed_registry_rejects_late_registration(): void {
 		$metadata_calls = 0;
-		$provider      = new class( $metadata_calls ) implements RepositoryProvider {
+		$provider       = new class( $metadata_calls ) implements RepositoryProvider {
 			use \Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
 
 			public function __construct( private int &$metadata_calls ) {
@@ -247,7 +247,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 				throw new \LogicException( 'Diagnostics must not be requested after sealing.' );
 			}
 		};
-		$registry      = new ProviderRegistry( array( new ExternalFixtureProvider() ) );
+		$registry       = new ProviderRegistry( array( new ExternalFixtureProvider() ) );
 		$registry->seal();
 
 		try {

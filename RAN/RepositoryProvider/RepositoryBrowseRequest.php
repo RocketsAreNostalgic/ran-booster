@@ -26,11 +26,9 @@ final class RepositoryBrowseRequest {
 	public function __construct(
 		RepositoryBrowseMode $mode,
 		?string $owner = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
 		?string $credential_id = null
 	) {
 		$this->reject_empty_value( $owner );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
 		$this->reject_empty_value( $credential_id );
 
 		if ( RepositoryBrowseMode::PUBLIC_OWNER === $mode && null === $owner ) {
@@ -40,31 +38,25 @@ final class RepositoryBrowseRequest {
 		if ( RepositoryBrowseMode::ACCESSIBLE === $mode && null !== $owner ) {
 			throw new InvalidArgumentException( 'Accessible repository browsing does not accept an owner.' );
 		}
-
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
 		if ( RepositoryBrowseMode::ACCESSIBLE === $mode && null === $credential_id ) {
 			throw new InvalidArgumentException( 'Accessible repository browsing requires a credential.' );
 		}
 
-		$this->mode  = $mode;
-		$this->owner = $owner;
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
+		$this->mode          = $mode;
+		$this->owner         = $owner;
 		$this->credential_id = $credential_id;
 		$this->started_at    = hrtime( true );
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public methods and named parameters retain the existing caller contract.
 	public static function public_owner( string $owner, ?string $credential_id = null ): self {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
 		return new self( RepositoryBrowseMode::PUBLIC_OWNER, $owner, $credential_id );
 	}
 
 	/**
 	 * Browse repositories available through one selected access profile.
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
 	public static function accessible( string $credential_id ): self {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
 		return new self( RepositoryBrowseMode::ACCESSIBLE, null, $credential_id );
 	}
 

@@ -25,15 +25,12 @@ final class ProviderDiagnosticRequest {
 	private ?string $exhaustion_reason = null;
 
 	public function __construct(
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		?string $credential_id = null,
 		?string $repository = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		int $remote_call_limit = self::MAX_REMOTE_CALLS,
 		float $seconds = self::MAX_SECONDS,
 		?Closure $clock = null
 	) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		if ( $remote_call_limit < 1 || $remote_call_limit > self::MAX_REMOTE_CALLS ) {
 			throw new InvalidArgumentException( 'Provider diagnostics allow between one and five remote calls.' );
 		}
@@ -41,11 +38,8 @@ final class ProviderDiagnosticRequest {
 		if ( $seconds <= 0.0 || $seconds > self::MAX_SECONDS ) {
 			throw new InvalidArgumentException( 'Provider diagnostics allow a deadline of up to ten seconds.' );
 		}
-
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		$this->credential_id = $this->optional_credential_id( $credential_id );
-		$this->repository    = null === $repository ? null : RepositoryLocator::require_valid( $repository );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
+		$this->credential_id     = $this->optional_credential_id( $credential_id );
+		$this->repository        = null === $repository ? null : RepositoryLocator::require_valid( $repository );
 		$this->remote_call_limit = $remote_call_limit;
 		$this->clock             = $clock ?? static fn(): float => hrtime( true ) / 1_000_000_000;
 		$this->deadline          = ( $this->clock )() + $seconds;

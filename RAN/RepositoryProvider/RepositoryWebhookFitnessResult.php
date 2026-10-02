@@ -8,21 +8,17 @@ final readonly class RepositoryWebhookFitnessResult {
 	public function __construct(
 		private string $support,
 		private string $suitability,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		private string $least_privilege,
 		private string $evidence,
 		private string $code,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		private string $checked_at,
 		private string $remediation
 	) {
 		$this->assert_value( $support, array( 'supported', 'unsupported', 'unknown' ) );
 		$this->assert_value( $suitability, array( 'suitable', 'insufficient', 'unknown' ) );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		$this->assert_value( $least_privilege, array( 'appropriate', 'overscoped', 'unknown' ) );
 		$this->assert_value( $evidence, array( 'observed', 'inferred', 'unknown_by_design', 'assessment_unavailable', 'stale' ) );
 		$this->assert_text( $code, 96, '/\A[a-z0-9][a-z0-9._-]*\z/D' );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		$this->assert_text( $checked_at, 32, '/\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\z/D' );
 		$this->assert_text( $remediation, 512 );
 	}
@@ -32,11 +28,9 @@ final readonly class RepositoryWebhookFitnessResult {
 		return array(
 			'support'         => $this->support,
 			'suitability'     => $this->suitability,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 			'least_privilege' => $this->least_privilege,
 			'evidence'        => $this->evidence,
 			'code'            => $this->code,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 			'checked_at'      => $this->checked_at,
 			'remediation'     => $this->remediation,
 		);

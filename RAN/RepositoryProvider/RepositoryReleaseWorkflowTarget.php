@@ -11,28 +11,18 @@ readonly class RepositoryReleaseWorkflowTarget {
 	public function __construct(
 		private string $type,
 		private string $identifier,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 		private int $source_revision,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 		private string $provider_repository_id,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 		private string $package_root = '',
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 		private string $installed_version = '',
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 		private string $expected_update_uri = ''
 	) {
 		if ( ! in_array( $this->type, array( 'plugin', 'theme' ), true )
 			|| ! $this->text( $this->identifier, 255 )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 			|| $this->source_revision < 1
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 			|| ! $this->text( $this->provider_repository_id, 191 )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 			|| ! $this->optional_text( $this->package_root, 255 )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 			|| ! $this->optional_text( $this->installed_version, 255 )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 			|| ! $this->optional_url( $this->expected_update_uri ) ) {
 			throw new InvalidArgumentException( 'Release workflow target is invalid.' );
 		}
@@ -48,31 +38,26 @@ readonly class RepositoryReleaseWorkflowTarget {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 	public function source_revision(): int {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 		return $this->source_revision;
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 	public function provider_repository_id(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 		return $this->provider_repository_id;
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 	public function package_root(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 		return $this->package_root;
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 	public function installed_version(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 		return $this->installed_version;
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 	public function expected_update_uri(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
 		return $this->expected_update_uri;
 	}
 

@@ -129,7 +129,7 @@ final class ProviderContractsTest extends TestCase {
 
 	public function test_release_candidate_values_are_bounded_and_typed(): void {
 		$long_asset_name = str_repeat( 'a', 216 ) . '.zip';
-		$candidate     = new RepositoryReleaseCandidate(
+		$candidate       = new RepositoryReleaseCandidate(
 			'42',
 			'v1.2.3',
 			'1.2.3',
@@ -137,7 +137,7 @@ final class ProviderContractsTest extends TestCase {
 			'2026-08-17T12:00:00Z',
 			array( 'example-1.2.3+build.zip', $long_asset_name )
 		);
-		$list          = new RepositoryReleaseCandidateList( array( $candidate ) );
+		$list            = new RepositoryReleaseCandidateList( array( $candidate ) );
 
 		self::assertSame( array( $candidate ), $list->candidates );
 		self::assertSame( '42', $candidate->provider_release_id );
@@ -301,7 +301,7 @@ final class ProviderContractsTest extends TestCase {
 	}
 
 	public function test_release_inspection_rejects_unsafe_or_unbounded_evidence(): void {
-		$valid         = array(
+		$valid          = array(
 			'42',
 			'v1.2.3',
 			'1.2.3',
@@ -338,7 +338,7 @@ final class ProviderContractsTest extends TestCase {
 	}
 
 	public function test_release_inspection_rejection_has_only_the_bounded_domain_reasons(): void {
-		$no_releases   = RepositoryReleaseInspectionRejected::no_releases();
+		$no_releases  = RepositoryReleaseInspectionRejected::no_releases();
 		$invalid      = RepositoryReleaseInspectionRejected::invalid_release();
 		$incompatible = RepositoryReleaseInspectionRejected::incompatible();
 

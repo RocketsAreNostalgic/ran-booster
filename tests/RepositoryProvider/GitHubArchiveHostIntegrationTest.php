@@ -452,12 +452,12 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 	}
 
 	public function test_redirect_scrubber_only_removes_auth_inherited_from_the_exact_git_hub_archive_origin(): void {
-		$archive          = $this->private_immutable_archive( new RepositoryResolverSecretsStub( array( 'private-profile' => self::TOKEN ) ) );
+		$archive           = $this->private_immutable_archive( new RepositoryResolverSecretsStub( array( 'private-profile' => self::TOKEN ) ) );
 		$request_callback  = \RAN\RepositoryProvider\authenticated_archive_filters( 'http_request_args' )[0]['callback'];
 		$redirect_callback = \RAN\RepositoryProvider\authenticated_archive_actions( AuthenticatedPreparedArchive::REDIRECT_HOOK )[0]['callback'];
-		$url              = $archive->get_url();
-		$arguments        = $request_callback( array( 'headers' => array() ), $url );
-		$location         = 'https://codeload.github.com/RocketsAreNostalgic/example-plugin/legacy.zip/tokenless';
+		$url               = $archive->get_url();
+		$arguments         = $request_callback( array( 'headers' => array() ), $url );
+		$location          = 'https://codeload.github.com/RocketsAreNostalgic/example-plugin/legacy.zip/tokenless';
 		$unrelated_headers = $arguments['headers'];
 		$archive_headers   = array(
 			'authorization' => $arguments['headers']['Authorization'],

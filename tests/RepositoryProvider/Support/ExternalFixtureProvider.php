@@ -31,9 +31,9 @@ final readonly class ExternalFixtureProvider implements RepositoryProvider, Prov
 	private ProviderCredentialPolicy $credential_policy;
 
 	public function __construct( string $code = 'fixture', private ?ProviderCredentialStore $credentials = null ) {
-		$this->code             = ProviderCode::parse( $code );
-		$this->client           = new ExternalFixtureClient( $this->code );
-		$this->diagnostics      = new ExternalFixtureDiagnostics( $this->client );
+		$this->code              = ProviderCode::parse( $code );
+		$this->client            = new ExternalFixtureClient( $this->code );
+		$this->diagnostics       = new ExternalFixtureDiagnostics( $this->client );
 		$this->credential_policy = new ExternalFixtureCredentialPolicy( $this->code );
 	}
 
@@ -96,8 +96,8 @@ final readonly class ExternalFixtureProvider implements RepositoryProvider, Prov
 	}
 
 	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
-		$repository     = $request->repository;
-		$locator        = $repository->locator;
+		$repository      = $request->repository;
+		$locator         = $repository->locator;
 		$expected_branch = $request->expected_branch;
 		$resolved_ref    = null === $expected_branch
 			? $this->client->resolve_ref( $locator, $request->ref )

@@ -26,7 +26,7 @@ final readonly class RepositoryLookupRequest {
 			}
 		}
 
-		$this->locator      = RepositoryLocator::require_valid( $locator );
+		$this->locator       = RepositoryLocator::require_valid( $locator );
 		$this->credential_id = $credential_id;
 		$this->public_only   = $public_only;
 	}

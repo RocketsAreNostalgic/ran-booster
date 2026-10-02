@@ -38,7 +38,7 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 			self::REF,
 			$this->authorizer( 'Bearer github-two-canary' )
 		);
-		$bitbucket = new AuthenticatedPreparedArchive(
+		$bitbucket  = new AuthenticatedPreparedArchive(
 			'https://bitbucket.org/example/plugin/get/' . self::REF . '.zip',
 			self::REF,
 			$this->authorizer( 'Basic bitbucket-canary' )

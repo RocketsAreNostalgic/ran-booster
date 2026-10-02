@@ -32,9 +32,9 @@ final readonly class ProviderSetupMetadata {
 		string $webhook_documentation_url,
 		string $delivery_documentation_url
 	) {
-		$this->credential_summary        = MetadataRules::required_text( $credential_summary, MetadataRules::SUMMARY_LENGTH );
-		$this->webhook_location          = MetadataRules::required_text( $webhook_location, MetadataRules::DETAIL_LENGTH );
-		$this->webhook_event             = MetadataRules::required_text( $webhook_event, MetadataRules::DETAIL_LENGTH );
+		$this->credential_summary         = MetadataRules::required_text( $credential_summary, MetadataRules::SUMMARY_LENGTH );
+		$this->webhook_location           = MetadataRules::required_text( $webhook_location, MetadataRules::DETAIL_LENGTH );
+		$this->webhook_event              = MetadataRules::required_text( $webhook_event, MetadataRules::DETAIL_LENGTH );
 		$this->webhook_documentation_url  = MetadataRules::https_url( $webhook_documentation_url );
 		$this->delivery_documentation_url = MetadataRules::https_url( $delivery_documentation_url );
 

@@ -33,29 +33,19 @@ final class ProviderRegistry {
 	 */
 	public function __construct(
 		iterable $providers = array(),
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?ProviderSecretPolicyCatalog $secret_policies = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?callable $credential_store_factory = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?callable $delivery_evidence_reader_factory = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?ProviderRegistrationContext $registration_context = null
 	) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->secret_policies = $secret_policies ?? new ProviderSecretPolicyCatalog();
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->credential_store_factory = null === $credential_store_factory
+		$this->secret_policies                  = $secret_policies ?? new ProviderSecretPolicyCatalog();
+		$this->credential_store_factory         = null === $credential_store_factory
 			? null
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			: \Closure::fromCallable( $credential_store_factory );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		$this->delivery_evidence_reader_factory = null === $delivery_evidence_reader_factory
 			? null
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			: \Closure::fromCallable( $delivery_evidence_reader_factory );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->registration_context = $registration_context ?? new ProviderRegistrationContext(
+		$this->registration_context             = $registration_context ?? new ProviderRegistrationContext(
 			static fn (): int => PackageArtifactLimit::resolve()
 		);
 
@@ -163,13 +153,9 @@ final class ProviderRegistry {
 		$admin             = $metadata->admin;
 		$credential_policy = null;
 		$webhook_policy    = null;
-
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
 		if ( null !== $admin && array() !== $admin->credential_kinds && ! $provider instanceof ProviderCredentialPolicySupplier ) {
 			throw InvalidProviderPolicy::missing_credential_policy();
 		}
-
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the public property or external DTO contract.
 		if ( null !== $admin && array() !== $admin->webhook_scopes && ! $provider instanceof WebhookNormalizer ) {
 			throw InvalidProviderPolicy::missing_webhook_policy();
 		}

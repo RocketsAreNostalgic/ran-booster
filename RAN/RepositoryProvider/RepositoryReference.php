@@ -11,16 +11,12 @@ final readonly class RepositoryReference {
 
 	public function __construct(
 		string $locator,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
 		public ?string $provider_repository_id,
 		public bool $private,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
 		public ?string $credential_id
 	) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
 		$this->assert_provider_repository_id( $provider_repository_id );
 		$this->locator = RepositoryLocator::require_valid( $locator );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
 		$this->reject_empty_value( $credential_id );
 	}
 
@@ -28,10 +24,8 @@ final readonly class RepositoryReference {
 	public static function from_descriptor( RepositoryDescriptor $repository ): self {
 		return new self(
 			$repository->locator,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
 			$repository->provider_repository_id,
 			$repository->private,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
 			$repository->credential_id
 		);
 	}
@@ -40,10 +34,8 @@ final readonly class RepositoryReference {
 	public function with_credential( ?string $credential_id ): self {
 		return new self(
 			$this->locator,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
 			$this->provider_repository_id,
 			$this->private,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
 			$credential_id
 		);
 	}

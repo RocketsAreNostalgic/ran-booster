@@ -23,11 +23,11 @@ final readonly class WebhookScopeMetadata {
 		string $description = '',
 		public bool $requires_managed_target = false
 	) {
-		$code              = MetadataRules::identifier( $code );
-		$label             = MetadataRules::required_text( $label, MetadataRules::LABEL_LENGTH );
+		$code               = MetadataRules::identifier( $code );
+		$label              = MetadataRules::required_text( $label, MetadataRules::LABEL_LENGTH );
 		$target_label       = MetadataRules::optional_text( $target_label, MetadataRules::LABEL_LENGTH );
 		$target_placeholder = MetadataRules::optional_text( $target_placeholder, MetadataRules::DETAIL_LENGTH );
-		$description       = MetadataRules::optional_text( $description, MetadataRules::DETAIL_LENGTH );
+		$description        = MetadataRules::optional_text( $description, MetadataRules::DETAIL_LENGTH );
 
 		if ( ! in_array( $code, array( 'owner', 'repository' ), true ) ) {
 			throw new InvalidArgumentException( 'Webhook scope codes must be owner or repository.' );
@@ -37,10 +37,10 @@ final readonly class WebhookScopeMetadata {
 			throw new InvalidArgumentException( 'Webhook scopes that require a target must provide a target label.' );
 		}
 
-		$this->code              = $code;
-		$this->label             = $label;
+		$this->code               = $code;
+		$this->label              = $label;
 		$this->target_label       = $target_label;
 		$this->target_placeholder = $target_placeholder;
-		$this->description       = $description;
+		$this->description        = $description;
 	}
 }

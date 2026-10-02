@@ -24,10 +24,8 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 
 	public function __construct(
 		private readonly string $url,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		private readonly string $resolved_ref,
 		?Closure $authorizer = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		private readonly ?Closure $head_verifier = null
 	) {
 		if ( isset( self::$reserved_urls[ $url ] ) && null !== self::$reserved_urls[ $url ]->get() ) {
@@ -54,15 +52,12 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function get_resolved_ref(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		return $this->resolved_ref;
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function verify_current_head(): void {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 		if ( null !== $this->head_verifier ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 			( $this->head_verifier )();
 		}
 	}

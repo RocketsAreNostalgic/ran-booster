@@ -416,7 +416,7 @@ final class NormalizedValuesTest extends TestCase {
 		string $expected_message
 	): void {
 		$factory_method = new \ReflectionMethod( CredentialValidationResult::class, $factory );
-		$result        = $factory_method->invokeArgs( null, array( $untrusted_message ) );
+		$result         = $factory_method->invokeArgs( null, array( $untrusted_message ) );
 
 		self::assertSame( 0, $factory_method->getNumberOfParameters() );
 		self::assertInstanceOf( CredentialValidationResult::class, $result );

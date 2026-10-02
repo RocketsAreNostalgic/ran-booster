@@ -21,7 +21,7 @@ final class MetadataRules {
 
 	public static function identifier( string $value ): string {
 		$has_controls = self::contains_control_characters( $value );
-		$value       = trim( $value );
+		$value        = trim( $value );
 
 		if ( $has_controls || strlen( $value ) > self::IDENTIFIER_LENGTH || 1 !== preg_match( '/^[a-z][a-z0-9_-]*$/', $value ) ) {
 			throw new InvalidArgumentException( 'Provider admin identifiers must be bounded lowercase identifiers.' );
@@ -32,7 +32,7 @@ final class MetadataRules {
 
 	public static function required_text( string $value, int $maximum_length ): string {
 		$has_controls = self::contains_control_characters( $value );
-		$value       = trim( $value );
+		$value        = trim( $value );
 
 		if ( $has_controls || '' === $value || strlen( $value ) > $maximum_length ) {
 			throw new InvalidArgumentException( 'Provider admin text must be bounded, non-empty single-line text.' );
@@ -43,7 +43,7 @@ final class MetadataRules {
 
 	public static function optional_text( string $value, int $maximum_length ): string {
 		$has_controls = self::contains_control_characters( $value );
-		$value       = trim( $value );
+		$value        = trim( $value );
 
 		if ( $has_controls || strlen( $value ) > $maximum_length ) {
 			throw new InvalidArgumentException( 'Provider admin text must be bounded single-line text.' );
@@ -54,7 +54,7 @@ final class MetadataRules {
 
 	public static function https_url( string $url ): string {
 		$has_controls = self::contains_control_characters( $url );
-		$url         = trim( $url );
+		$url          = trim( $url );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Provider metadata remains usable without WordPress runtime.
 		$parts = parse_url( $url );

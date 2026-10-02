@@ -11,19 +11,15 @@ final readonly class PushEvent {
 	public function __construct(
 		public ProviderCode $provider,
 		public string $repository,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		public string $provider_repository_id,
 		public string $branch,
 		public string $commit,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		public string $delivery_id
 	) {
 		$this->require_value( $repository );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		$this->require_value( $provider_repository_id );
 		$this->require_value( $branch );
 		$this->require_value( $commit );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		$this->require_value( $delivery_id );
 	}
 
@@ -42,11 +38,9 @@ final readonly class PushEvent {
 		return array(
 			'provider'               => $this->provider->value,
 			'repository'             => $this->repository,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 			'provider_repository_id' => $this->provider_repository_id,
 			'branch'                 => $this->branch,
 			'commit'                 => $this->commit,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 			'delivery_id'            => $this->delivery_id,
 		);
 	}

@@ -11,29 +11,21 @@ final readonly class RepositoryReleaseCandidate {
 
 	/** @param list<string> $expected_asset_names */
 	public function __construct(
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		public string $provider_release_id,
 		public string $tag,
 		public string $version,
 		public bool $prerelease,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		public string $published_at,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		public array $expected_asset_names
 	) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		if ( 1 !== preg_match( '/\A[^\x00-\x1F\x7F]{1,191}\z/D', $provider_release_id )
 			|| 1 !== preg_match( '/\A[^\x00-\x1F\x7F]{1,100}\z/D', $tag )
 			|| 1 !== preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._+-]{0,63}\z/D', $version )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 			|| ! self::valid_utc_timestamp( $published_at )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 			|| ! array_is_list( $expected_asset_names )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 			|| count( $expected_asset_names ) > 8 ) {
 			throw new InvalidArgumentException( 'The repository release candidate is invalid.' );
 		}
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
 		foreach ( $expected_asset_names as $asset_name ) {
 			if ( ! is_string( $asset_name )
 				|| strlen( $asset_name ) > 220

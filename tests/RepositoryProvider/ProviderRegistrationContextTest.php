@@ -230,7 +230,7 @@ final class ProviderRegistrationContextTest extends TestCase {
 	}
 
 	private function registry( ProviderRegistrationContext $context ): ProviderRegistry {
-		$credentials      = new class() implements ProviderCredentialStore {
+		$credentials       = new class() implements ProviderCredentialStore {
 			public function credential_profiles(): array {
 				return array();
 			}

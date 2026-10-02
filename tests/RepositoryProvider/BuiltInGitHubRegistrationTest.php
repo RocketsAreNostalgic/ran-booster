@@ -115,7 +115,7 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 
 		( new BoosterServiceProvider() )->register( $container, $runtime, new \stdClass(), 'ran-booster.php' );
 
-		$provider              = $container->make( ProviderRegistry::class )->get( 'gh' );
+		$provider                = $container->make( ProviderRegistry::class )->get( 'gh' );
 		$artifact_limit_supplier = ( new \ReflectionProperty( GitHubProvider::class, 'maximum_artifact_bytes' ) )->getValue( $provider );
 
 		self::assertInstanceOf( \Closure::class, $artifact_limit_supplier );
@@ -136,7 +136,7 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 
 		( new BoosterServiceProvider() )->register( $container, $runtime, new \stdClass(), 'ran-booster.php' );
 
-		$provider              = $container->make( ProviderRegistry::class )->get( 'gh' );
+		$provider                = $container->make( ProviderRegistry::class )->get( 'gh' );
 		$artifact_limit_supplier = ( new \ReflectionProperty( GitHubProvider::class, 'maximum_artifact_bytes' ) )->getValue( $provider );
 
 		self::assertInstanceOf( GitHubProvider::class, $provider );

@@ -226,7 +226,7 @@ final class PackageOperationServiceTest extends TestCase {
 	}
 
 	public function test_link_treats_the_same_release_managed_target_as_already_managed(): void {
-		$plugins                     = new OperationPluginRepository( $this->plugin() );
+		$plugins                       = new OperationPluginRepository( $this->plugin() );
 		$plugins->fresh_after_mutation = $this->plugin();
 		$plugins->fresh_after_mutation->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'release', true, 'existing-access' ) );
 		$plugins->fresh_after_mutation->set_deployment_policy( DeploymentPolicy::AUTOMATIC );
@@ -236,7 +236,7 @@ final class PackageOperationServiceTest extends TestCase {
 			'ran_booster_storage_adoption_conflict',
 			'Booster found existing package management data. No package changes were made.'
 		);
-		$dashboard               = new Dashboard(
+		$dashboard                = new Dashboard(
 			new Database(),
 			$plugins,
 			new Booster(),
@@ -280,7 +280,7 @@ final class PackageOperationServiceTest extends TestCase {
 	}
 
 	public function test_link_keeps_mismatched_existing_management_as_storage_failure(): void {
-		$plugins                     = new OperationPluginRepository( $this->plugin() );
+		$plugins                       = new OperationPluginRepository( $this->plugin() );
 		$plugins->fresh_after_mutation = $this->plugin();
 		$plugins->fresh_after_mutation->set_repository( new ManagedRepository( 'gh', 'owner/other', 'R_other', 'main' ) );
 		$plugins->adoption_result = PackageMutationResult::conflict(
@@ -288,7 +288,7 @@ final class PackageOperationServiceTest extends TestCase {
 			'ran_booster_storage_adoption_conflict',
 			'Booster found existing package management data. No package changes were made.'
 		);
-		$service                 = $this->service(
+		$service                  = $this->service(
 			$plugins,
 			new OperationThemeRepository( new OperationTheme( 'example' ) ),
 			new OperationCoordinator()
@@ -847,8 +847,8 @@ final class PackageOperationServiceTest extends TestCase {
 		$theme_original->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
 		$theme_fresh = new OperationTheme( 'example' );
 		$theme_fresh->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
-		$plugins                     = new OperationPluginRepository( $plugin_original );
-		$themes                      = new OperationThemeRepository( $theme_original );
+		$plugins                       = new OperationPluginRepository( $plugin_original );
+		$themes                        = new OperationThemeRepository( $theme_original );
 		$plugins->fresh_after_mutation = $plugin_fresh;
 		$themes->fresh_after_mutation  = $theme_fresh;
 
@@ -1236,10 +1236,10 @@ final class PackageOperationServiceTest extends TestCase {
 	}
 
 	public function test_dashboard_redacts_unexpected_operation_failures(): void {
-		$plugins                = new OperationPluginRepository( $this->plugin() );
+		$plugins                 = new OperationPluginRepository( $this->plugin() );
 		$plugins->unlink_failure = new \RuntimeException( 'secret-canary-token' );
-		$themes                 = new OperationThemeRepository( new OperationTheme( 'example' ) );
-		$dashboard              = new Dashboard(
+		$themes                  = new OperationThemeRepository( new OperationTheme( 'example' ) );
+		$dashboard               = new Dashboard(
 			new Database(),
 			$plugins,
 			new Booster(),
@@ -1422,8 +1422,8 @@ final class PackageOperationServiceTest extends TestCase {
 }
 
 final class OperationCoordinator extends DeploymentCoordinator {
-	public int $calls                     = 0;
-	public ?\Throwable $failure           = null;
+	public int $calls                      = 0;
+	public ?\Throwable $failure            = null;
 	public ?PackageOperation $last_command = null;
 	/** @var array<string, mixed> */
 	public array $result = array(
@@ -1469,10 +1469,10 @@ final class OperationPluginRepository extends PluginRepository {
 	/** @var array<string, mixed> */ public array $edited = array();
 	public bool $installed                                = true;
 	public ?string $unlinked                              = null;
-	public ?string $requested_slug                         = null;
-	public ?\Throwable $unlink_failure                     = null;
-	public ?Plugin $fresh_after_mutation                    = null;
-	public ?PackageMutationResult $adoption_result         = null;
+	public ?string $requested_slug                        = null;
+	public ?\Throwable $unlink_failure                    = null;
+	public ?Plugin $fresh_after_mutation                  = null;
+	public ?PackageMutationResult $adoption_result        = null;
 	public function __construct( public Plugin $package ) {}
 	public function from_slug( $slug ) {
 		$this->requested_slug = (string) $slug;
@@ -1518,8 +1518,8 @@ final class OperationThemeRepository extends ThemeRepository {
 	/** @var array<string, mixed> */ public array $edited = array();
 	public bool $installed                                = true;
 	public ?string $unlinked                              = null;
-	public ?string $requested_slug                         = null;
-	public ?Theme $fresh_after_mutation                     = null;
+	public ?string $requested_slug                        = null;
+	public ?Theme $fresh_after_mutation                   = null;
 	public function __construct( public Theme $package ) {}
 	public function from_slug( $slug ) {
 		$this->requested_slug = (string) $slug;

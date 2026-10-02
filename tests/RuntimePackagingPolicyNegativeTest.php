@@ -17,7 +17,7 @@ final class RuntimePackagingPolicyNegativeTest extends TestCase {
 			self::assertIsArray( $policy['packages'][0] ?? null );
 			$policy['packages'][0]['name']         = $package_name;
 			$policy['packages'][0]['archive_root'] = 'vendor/' . $package_name;
-			$policy_path                            = $this->write_temporary_json( $policy );
+			$policy_path                           = $this->write_temporary_json( $policy );
 
 			try {
 				$result = $this->run_verifier( dirname( __DIR__ ) . '/composer.lock', $policy_path );
@@ -40,7 +40,7 @@ final class RuntimePackagingPolicyNegativeTest extends TestCase {
 			$lock = $this->read_json( dirname( __DIR__ ) . '/composer.lock' );
 			self::assertIsArray( $lock['packages'][0] ?? null );
 			$lock['packages'][0]['version'] = $version;
-			$lock_path                       = $this->write_temporary_json( $lock );
+			$lock_path                      = $this->write_temporary_json( $lock );
 
 			try {
 				$result = $this->run_verifier( $lock_path, dirname( __DIR__ ) . '/runtime-packaging-policy.json' );
@@ -56,7 +56,7 @@ final class RuntimePackagingPolicyNegativeTest extends TestCase {
 		$lock = $this->read_json( dirname( __DIR__ ) . '/composer.lock' );
 		self::assertIsArray( $lock['packages'][0] ?? null );
 		$lock['packages'][0]['version'] = 'v1.2.3+dist.1';
-		$lock_path                       = $this->write_temporary_json( $lock );
+		$lock_path                      = $this->write_temporary_json( $lock );
 
 		try {
 			$result = $this->run_verifier( $lock_path, dirname( __DIR__ ) . '/runtime-packaging-policy.json' );
@@ -70,7 +70,7 @@ final class RuntimePackagingPolicyNegativeTest extends TestCase {
 		$policy = $this->read_json( dirname( __DIR__ ) . '/runtime-packaging-policy.json' );
 		self::assertIsArray( $policy['packages'][0]['surfaces'][0] ?? null );
 		$policy['packages'][0]['surfaces'][0]['kind'] = 'blob';
-		$policy_path                                   = $this->write_temporary_json( $policy );
+		$policy_path                                  = $this->write_temporary_json( $policy );
 
 		try {
 			$result = $this->run_verifier( dirname( __DIR__ ) . '/composer.lock', $policy_path );

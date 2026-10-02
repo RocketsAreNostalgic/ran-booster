@@ -324,12 +324,12 @@ final class ReleasePlatformContractTest extends TestCase {
 
 	public function test_disposable_lifecycle_fixture_uses_the_vendored_updaters_stable_user_agent(): void {
 		$release_updater_path = $this->neutral_updater_archive_root();
-		$updater            = $this->read_text(
+		$updater              = $this->read_text(
 			dirname( __DIR__ )
 				. '/' . $release_updater_path
 				. '/src/Provider/GitHub/GitHubApiClient.php'
 		);
-		$fixture            = $this->read_text(
+		$fixture              = $this->read_text(
 			dirname( __DIR__ )
 				. '/tests/Integration/phase-4.4-core-disposable-harness.php'
 		);

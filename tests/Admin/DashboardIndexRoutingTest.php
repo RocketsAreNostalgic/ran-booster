@@ -83,6 +83,7 @@ require_once dirname( __DIR__, 2 ) . '/RAN/Dashboard.php';
 
 final class DashboardIndexRoutingTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$_GET = array();
 		$GLOBALS['ran_booster_dashboard_test_multisite']         = false;
@@ -99,6 +100,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$GLOBALS['ran_booster_documentation_test_filters']       = array();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_GET = array();
 		unset(
@@ -191,7 +193,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'owner/example', $provider->request?->repository->locator );
 		self::assertSame( 'repo-42', $provider->request?->repository->provider_repository_id );
 		self::assertSame( 'feature/test', $provider->request?->ref );
-		self::assertNull( $provider->request?->expectedBranch );
+		self::assertNull( $provider->request?->expected_branch );
 		self::assertFalse( $provider->request?->repository->private );
 		self::assertNull( $provider->request?->repository->credential_id );
 	}
@@ -1565,7 +1567,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 		$provider->method( 'get_metadata' )->willReturn( new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://example.test/', 'Owner' ) );
 		$policies = ShippedSecretPolicyCatalog::create();
-		$provider->method( 'get_credential_policy' )->willReturn( $policies->credentialPolicy( ProviderCode::parse( 'gh' ) ) );
+		$provider->method( 'get_credential_policy' )->willReturn( $policies->credential_policy( ProviderCode::parse( 'gh' ) ) );
 		$provider->method( 'get_webhook_policy' )->willReturn( $policies->webhook_policy( ProviderCode::parse( 'gh' ) ) );
 		$provider->expects( self::never() )->method( 'resolve_repository' );
 		$provider->expects( self::never() )->method( 'prepare_archive' );
@@ -2378,7 +2380,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 2, $first_page['next_cursor'] );
 
 		$_GET['before'] = '2';
-		$last_page       = $this->dashboard( $this->throwing_secrets(), null, null, $attempts )->get_index()['data']['deployment_activity'];
+		$last_page      = $this->dashboard( $this->throwing_secrets(), null, null, $attempts )->get_index()['data']['deployment_activity'];
 
 		self::assertCount( 1, $last_page['items'] );
 		self::assertSame( 1, $last_page['items'][0]->get_id() );
@@ -2715,7 +2717,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			}
 
 			public function get_credential_policy(): ProviderCredentialPolicy {
-				return ShippedSecretPolicyCatalog::create()->credentialPolicy( $this->code );
+				return ShippedSecretPolicyCatalog::create()->credential_policy( $this->code );
 			}
 
 			public function get_webhook_policy(): \RAN\RepositoryProvider\ProviderWebhookPolicy {

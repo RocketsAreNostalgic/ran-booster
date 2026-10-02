@@ -5,26 +5,26 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$debug_capture      = isset( $debug_capture ) && is_array( $debug_capture )
+$debug_capture       = isset( $debug_capture ) && is_array( $debug_capture )
 	? $debug_capture
 	: array();
-$capture_state      = isset( $debug_capture['state'] ) && in_array(
+$capture_state       = isset( $debug_capture['state'] ) && in_array(
 	$debug_capture['state'],
 	array( 'inactive', 'active', 'retained', 'unavailable', 'malformed' ),
 	true
 )
 	? $debug_capture['state']
 	: 'unavailable';
-$filename          = is_string( $debug_capture['filename'] ?? null )
+$filename            = is_string( $debug_capture['filename'] ?? null )
 	? basename( str_replace( '\\', '/', $debug_capture['filename'] ) )
 	: 'ran-booster-debug.php';
-$capture_until      = is_string( $debug_capture['capture_until'] ?? null )
+$capture_until       = is_string( $debug_capture['capture_until'] ?? null )
 	? $debug_capture['capture_until']
 	: '';
-$delete_after       = is_string( $debug_capture['delete_after'] ?? null )
+$delete_after        = is_string( $debug_capture['delete_after'] ?? null )
 	? $debug_capture['delete_after']
 	: '';
-$content           = is_string( $debug_capture['content'] ?? null )
+$content             = is_string( $debug_capture['content'] ?? null )
 	? $debug_capture['content']
 	: '';
 $debug_capture_error = isset( $debug_capture_error ) && is_string( $debug_capture_error )

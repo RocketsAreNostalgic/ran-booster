@@ -36,6 +36,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 
 	private WordPressUpdaterLock $updater_lock;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_package_mutation_guard_multisite']         = false;
 		$GLOBALS['ran_booster_bulk_active_plugins']                      = array();
@@ -51,6 +52,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$this->updater_lock->method( 'release' )->willReturn( true );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset(
 			$GLOBALS['ran_booster_package_mutation_guard_multisite'],

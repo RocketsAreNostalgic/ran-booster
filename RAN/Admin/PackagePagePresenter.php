@@ -20,8 +20,8 @@ final class PackagePagePresenter {
 
 	private function __construct(
 		private readonly string $type,
-		private readonly string $identifier_field, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Promoted constructor property preserves its named parameter contract.
-		private readonly string $page_slug // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Promoted constructor property preserves its named parameter contract.
+		private readonly string $identifier_field,
+		private readonly string $page_slug
 	) {
 	}
 
@@ -58,15 +58,15 @@ final class PackagePagePresenter {
 	}
 
 	public function get_identifier_field(): string {
-		return $this->identifier_field; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor property preserves its named parameter contract.
+		return $this->identifier_field;
 	}
 
 	public function get_page_slug(): string {
-		return $this->page_slug; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor property preserves its named parameter contract.
+		return $this->page_slug;
 	}
 
 	public function get_create_page_slug(): string {
-		return $this->page_slug . '-create'; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor property preserves its named parameter contract.
+		return $this->page_slug . '-create';
 	}
 
 	public function get_admin_url(): string {
@@ -87,26 +87,26 @@ final class PackagePagePresenter {
 	 */
 	public function index(
 		array $packages,
-		array $package_providers, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-		array $package_list_state, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		array $package_providers,
+		array $package_list_state,
 		DeploymentAdminPresenter $deployments
 	): array {
-		$package_provider_options = $this->provider_filter_options( $packages, $package_providers ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-		if ( '' !== $package_list_state['provider'] // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-			&& ! in_array( $package_list_state['provider'], array_column( $package_provider_options, 'code' ), true ) // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		$package_provider_options = $this->provider_filter_options( $packages, $package_providers );
+		if ( '' !== $package_list_state['provider']
+			&& ! in_array( $package_list_state['provider'], array_column( $package_provider_options, 'code' ), true )
 		) {
-			$package_list_state['provider'] = ''; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			$package_list_state['provider'] = '';
 		}
-		$filtered_packages = $this->filter_packages( $packages, $package_list_state, $package_provider_options ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		$filtered_packages = $this->filter_packages( $packages, $package_list_state, $package_provider_options );
 
 		return array(
-			'packages'                => $filtered_packages,
+			'packages'                  => $filtered_packages,
 			'package_list_total'        => count( $packages ),
-			'package_list_state'        => $package_list_state, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			'package_list_state'        => $package_list_state,
 			'package_provider_options'  => $package_provider_options,
-			'package_view'             => $this,
-			'package_providers'        => $package_providers, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-			'package_activity'         => $deployments->package_activity( $filtered_packages, $this->type ),
+			'package_view'              => $this,
+			'package_providers'         => $package_providers,
+			'package_activity'          => $deployments->package_activity( $filtered_packages, $this->type ),
 			'package_extension_rows'    => $this->extension_rows( $filtered_packages ),
 			'package_extension_actions' => $this->extension_actions( $filtered_packages ),
 		);
@@ -115,46 +115,46 @@ final class PackagePagePresenter {
 	/** @return array<string, mixed> */
 	public function edit(
 		Package $package,
-		array $package_provider_settings, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-		?array $package_branch_readiness, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-		string $requested_source_view, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-		bool $open_advanced = false // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		array $package_provider_settings,
+		?array $package_branch_readiness,
+		string $requested_source_view,
+		bool $open_advanced = false
 	): array {
 		return array(
-			'package_provider_settings' => $package_provider_settings, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-			'package_branch_readiness'  => $package_branch_readiness, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-			'package'                 => $package,
-			'package_view'             => $this,
+			'package_provider_settings' => $package_provider_settings,
+			'package_branch_readiness'  => $package_branch_readiness,
+			'package'                   => $package,
+			'package_view'              => $this,
 			'package_extension_panels'  => $this->extension_panels( $package ),
-			'package_source'           => $this->source_composition( 'edit', $requested_source_view, $package, $open_advanced ), // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			'package_source'            => $this->source_composition( 'edit', $requested_source_view, $package, $open_advanced ),
 		);
 	}
 
 	/** @return array<string, mixed> */
 	public function create(
-		array $package_provider_settings, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-		bool $explicit_provider, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-		bool $open_repository_picker, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-		string $requested_source_view, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-		?string $managed_package_identifier = null, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-		bool $open_advanced = false // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		array $package_provider_settings,
+		bool $explicit_provider,
+		bool $open_repository_picker,
+		string $requested_source_view,
+		?string $managed_package_identifier = null,
+		bool $open_advanced = false
 	): array {
 		return array(
-			'package_provider_settings'  => $package_provider_settings, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-			'package_view'              => $this,
-			'explicit_provider'         => $explicit_provider, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-			'open_repository_picker'     => $open_repository_picker, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-			'package_source'            => $this->source_composition( 'create', $requested_source_view, null, $open_advanced ), // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-			'managed_package_identifier' => $managed_package_identifier, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			'package_provider_settings'  => $package_provider_settings,
+			'package_view'               => $this,
+			'explicit_provider'          => $explicit_provider,
+			'open_repository_picker'     => $open_repository_picker,
+			'package_source'             => $this->source_composition( 'create', $requested_source_view, null, $open_advanced ),
+			'managed_package_identifier' => $managed_package_identifier,
 		);
 	}
 
 	/** @return array<string, mixed> */
-	public function unavailable_create( array $package_provider_settings, bool $explicit_provider ): array { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve caller compatibility.
+	public function unavailable_create( array $package_provider_settings, bool $explicit_provider ): array {
 		return array(
-			'package_provider_settings'  => $package_provider_settings, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-			'package_view'              => $this,
-			'explicit_provider'         => $explicit_provider, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			'package_provider_settings'  => $package_provider_settings,
+			'package_view'               => $this,
+			'explicit_provider'          => $explicit_provider,
 			'open_repository_picker'     => false,
 			'package_mutation_available' => false,
 		);
@@ -665,7 +665,7 @@ final class PackagePagePresenter {
 			$package->get_deployment_policy()->value,
 			add_query_arg(
 				array(
-					'page'    => $this->page_slug, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor property preserves its named parameter contract.
+					'page'    => $this->page_slug,
 					'package' => (string) $package->get_identifier(),
 				),
 				$this->get_admin_url()

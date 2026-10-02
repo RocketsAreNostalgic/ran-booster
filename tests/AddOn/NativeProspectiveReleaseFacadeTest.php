@@ -69,14 +69,15 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 	private const FINGERPRINT = 'v2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
-	private ?string $artifact_path                                = null;
-	private ?ProspectiveRepositoryReleaseArtifact $acquisition   = null;
+	private ?string $artifact_path                                 = null;
+	private ?ProspectiveRepositoryReleaseArtifact $acquisition     = null;
 	private ?ProspectiveSourceGuardDatabase $source_guard_database = null;
 
 	public function test_prospective_facade_api_version_tracks_the_opaque_release_id_contract(): void {
-		self::assertSame( 7, ProspectiveReleaseFacade::API_VERSION );
+		self::assertSame( 8, ProspectiveReleaseFacade::API_VERSION );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		ProspectiveRepositoryProvider::$resolve_calls     = 0;
 		ProspectiveRepositoryProvider::$listing_calls     = 0;
@@ -85,8 +86,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		ProspectiveRepositoryProvider::$metadata_calls    = 0;
 		ProspectiveRepositoryProvider::$inspection_input  = array();
 		ProspectiveRepositoryProvider::$acquisition_input = array();
-		ProspectiveRepositoryProvider::$acquisition      = null;
-		$this->source_guard_database                       = null;
+		ProspectiveRepositoryProvider::$acquisition       = null;
+		$this->source_guard_database                      = null;
 
 		$GLOBALS['ran_booster_prospective_options']              = array();
 		$GLOBALS['ran_booster_package_mutation_guard_multisite'] = false;
@@ -94,6 +95,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$GLOBALS['ran_booster_package_mutation_guard_contexts']  = array();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		ProspectiveRepositoryProvider::$acquisition = null;
 		if ( null !== $this->artifact_path && file_exists( $this->artifact_path ) ) {
@@ -101,7 +103,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			unlink( $this->artifact_path );
 		}
 		$this->artifact_path = null;
-		$this->acquisition  = null;
+		$this->acquisition   = null;
 		unset( $GLOBALS['ran_booster_prospective_options'] );
 		unset( $GLOBALS['ran_booster_wp_pusher_active_plugins'] );
 	}
@@ -415,7 +417,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 
 	public function test_opaque_provider_release_identity_survives_the_prospective_facade(): void {
-		$opaque_id   = 'release:opaque/42';
+		$opaque_id  = 'release:opaque/42';
 		$provider   = new ProspectiveRepositoryProvider(
 			'gh',
 			new RepositoryReleaseCandidateList(
@@ -795,9 +797,9 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 	public function test_opaque_release_id_propagates_exactly_through_facade_inspection_and_installation(): void {
 		$opaque_id = 'gid://forge/release/{042}:leading-000';
-		$plugins  = new ProspectivePluginRepository();
-		$executor = new ProspectiveExecutor();
-		$facade   = $this->facade( $plugins, $executor );
+		$plugins   = new ProspectivePluginRepository();
+		$executor  = new ProspectiveExecutor();
+		$facade    = $this->facade( $plugins, $executor );
 		$this->set_ready_release();
 
 		$inspection = $facade->inspect(
@@ -1023,13 +1025,13 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 
 	public function test_identity_that_appears_after_lock_acquisition_stops_before_handoff(): void {
-		$plugins         = new ProspectivePluginRepository();
-		$executor        = new ProspectiveExecutor();
-		$lock            = new ProspectiveUpdaterLock();
+		$plugins          = new ProspectivePluginRepository();
+		$executor         = new ProspectiveExecutor();
+		$lock             = new ProspectiveUpdaterLock();
 		$lock->on_acquire = static function () use ( $plugins ): void {
 			$plugins->installed = true;
 		};
-		$facade          = $this->facade( $plugins, $executor, 7, $lock );
+		$facade           = $this->facade( $plugins, $executor, 7, $lock );
 		$this->set_ready_release();
 
 		$result = $facade->install(
@@ -1051,13 +1053,13 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 
 	public function test_wp_pusher_activated_after_lock_acquisition_stops_before_handoff(): void {
-		$plugins         = new ProspectivePluginRepository();
-		$executor        = new ProspectiveExecutor();
-		$lock            = new ProspectiveUpdaterLock();
+		$plugins          = new ProspectivePluginRepository();
+		$executor         = new ProspectiveExecutor();
+		$lock             = new ProspectiveUpdaterLock();
 		$lock->on_acquire = static function (): void {
 			$GLOBALS['ran_booster_wp_pusher_active_plugins'] = array( 'wppusher/wppusher.php' );
 		};
-		$facade          = $this->facade( $plugins, $executor, 7, $lock );
+		$facade           = $this->facade( $plugins, $executor, 7, $lock );
 		$this->set_ready_release();
 
 		$result = $facade->install(
@@ -1079,11 +1081,11 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 
 	public function test_conflict_discovered_after_lock_acquisition_returns_cleanup_failure_when_lock_release_fails(): void {
-		$plugins             = new ProspectivePluginRepository();
-		$executor            = new ProspectiveExecutor();
-		$lock                = new ProspectiveUpdaterLock();
+		$plugins              = new ProspectivePluginRepository();
+		$executor             = new ProspectiveExecutor();
+		$lock                 = new ProspectiveUpdaterLock();
 		$lock->release_result = false;
-		$database            = new SequencedSourceGuardDatabase(
+		$database             = new SequencedSourceGuardDatabase(
 			array(
 				array(),
 				array(),
@@ -1122,9 +1124,9 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 
 	public function test_conflict_discovered_before_lock_acquisition_returns_cleanup_failure_when_discard_fails(): void {
-		$plugins     = new ProspectivePluginRepository();
-		$executor    = new ProspectiveExecutor();
-		$database    = new SequencedSourceGuardDatabase(
+		$plugins      = new ProspectivePluginRepository();
+		$executor     = new ProspectiveExecutor();
+		$database     = new SequencedSourceGuardDatabase(
 			array(
 				array(),
 				array(
@@ -1138,12 +1140,12 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 				),
 			)
 		);
-		$lock        = new ProspectiveUpdaterLock();
+		$lock         = new ProspectiveUpdaterLock();
 		$source_guard = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
 		$this->set_ready_release();
 		self::assertNotNull( $this->acquisition );
 		$this->acquisition->discard_result = false;
-		$facade                           = $this->facade( $plugins, $executor, 7, $lock, null, $source_guard );
+		$facade                            = $this->facade( $plugins, $executor, 7, $lock, null, $source_guard );
 
 		$result = $facade->install(
 			'plugin',
@@ -1167,10 +1169,10 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 
 	public function test_unavailable_relationship_before_lock_acquisition_stops_without_mutation(): void {
-		$plugins     = new ProspectivePluginRepository();
-		$executor    = new ProspectiveExecutor();
-		$database    = new SequencedSourceGuardDatabase( array( array(), array( (object) array() ) ) );
-		$lock        = new ProspectiveUpdaterLock();
+		$plugins      = new ProspectivePluginRepository();
+		$executor     = new ProspectiveExecutor();
+		$database     = new SequencedSourceGuardDatabase( array( array(), array( (object) array() ) ) );
+		$lock         = new ProspectiveUpdaterLock();
 		$source_guard = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
 		$this->set_ready_release();
 		$facade = $this->facade( $plugins, $executor, 7, $lock, null, $source_guard );
@@ -1183,10 +1185,10 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 
 	public function test_unavailable_relationship_after_lock_acquisition_stops_without_mutation(): void {
-		$plugins     = new ProspectivePluginRepository();
-		$executor    = new ProspectiveExecutor();
-		$database    = new SequencedSourceGuardDatabase( array( array(), array(), array( (object) array() ) ) );
-		$lock        = new ProspectiveUpdaterLock();
+		$plugins      = new ProspectivePluginRepository();
+		$executor     = new ProspectiveExecutor();
+		$database     = new SequencedSourceGuardDatabase( array( array(), array(), array( (object) array() ) ) );
+		$lock         = new ProspectiveUpdaterLock();
 		$source_guard = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
 		$this->set_ready_release();
 		$facade = $this->facade( $plugins, $executor, 7, $lock, null, $source_guard );
@@ -1200,12 +1202,12 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 
 	public function test_unrelated_concurrent_activation_does_not_block_adoption(): void {
-		$plugins             = new ProspectivePluginRepository();
-		$executor            = new ProspectiveExecutor();
+		$plugins              = new ProspectivePluginRepository();
+		$executor             = new ProspectiveExecutor();
 		$executor->on_install = static function (): void {
 			$GLOBALS['ran_booster_prospective_options']['active_plugins'] = array( 'unrelated/unrelated.php' );
 		};
-		$facade              = $this->facade( $plugins, $executor );
+		$facade               = $this->facade( $plugins, $executor );
 		$this->set_ready_release();
 
 		$result = $facade->install(
@@ -1225,12 +1227,12 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 
 	public function test_target_activation_change_reports_installed_but_unmanaged_without_adoption(): void {
-		$plugins             = new ProspectivePluginRepository();
-		$executor            = new ProspectiveExecutor();
+		$plugins              = new ProspectivePluginRepository();
+		$executor             = new ProspectiveExecutor();
 		$executor->on_install = static function (): void {
 			$GLOBALS['ran_booster_prospective_options']['active_plugins'] = array( 'example/example.php' );
 		};
-		$facade              = $this->facade( $plugins, $executor );
+		$facade               = $this->facade( $plugins, $executor );
 		$this->set_ready_release();
 
 		$result = $facade->install(
@@ -1250,10 +1252,10 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 
 	public function test_wrong_installed_version_is_reported_with_its_actual_identity(): void {
-		$plugins                   = new ProspectivePluginRepository();
+		$plugins                    = new ProspectivePluginRepository();
 		$plugins->installed_version = '9.9.9';
-		$executor                  = new ProspectiveExecutor();
-		$facade                    = $this->facade( $plugins, $executor );
+		$executor                   = new ProspectiveExecutor();
+		$facade                     = $this->facade( $plugins, $executor );
 		$this->set_ready_release();
 
 		$result = $facade->install(
@@ -1279,11 +1281,11 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 
 	public function test_lock_acquisition_exception_reports_updater_cleanup_failure(): void {
-		$plugins              = new ProspectivePluginRepository();
-		$executor             = new ProspectiveExecutor();
-		$lock                 = new ProspectiveUpdaterLock();
+		$plugins                = new ProspectivePluginRepository();
+		$executor               = new ProspectiveExecutor();
+		$lock                   = new ProspectiveUpdaterLock();
 		$lock->throw_on_acquire = true;
-		$facade               = $this->facade( $plugins, $executor, 7, $lock );
+		$facade                 = $this->facade( $plugins, $executor, 7, $lock );
 		$this->set_ready_release();
 		self::assertNotNull( $this->acquisition );
 		$this->acquisition->discard_result = false;
@@ -1328,11 +1330,11 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 
 	public function test_core_failure_returns_ordinary_failure_only_when_target_is_proven_absent(): void {
-		$plugins                 = new ProspectivePluginRepository();
-		$executor                = new ProspectiveExecutor();
+		$plugins                  = new ProspectivePluginRepository();
+		$executor                 = new ProspectiveExecutor();
 		$executor->mark_installed = false;
-		$executor->result        = CorePackageExecutionResult::failed( CorePackageExecutionFailure::WORDPRESS_FAILED );
-		$facade                  = $this->facade( $plugins, $executor );
+		$executor->result         = CorePackageExecutionResult::failed( CorePackageExecutionFailure::WORDPRESS_FAILED );
+		$facade                   = $this->facade( $plugins, $executor );
 		$this->set_ready_release();
 
 		$result = $facade->install(
@@ -1351,14 +1353,14 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 
 	public function test_absent_target_ignores_unrelated_activation_side_effect(): void {
-		$plugins                 = new ProspectivePluginRepository();
-		$executor                = new ProspectiveExecutor();
+		$plugins                  = new ProspectivePluginRepository();
+		$executor                 = new ProspectiveExecutor();
 		$executor->mark_installed = false;
-		$executor->result        = CorePackageExecutionResult::failed( CorePackageExecutionFailure::WORDPRESS_FAILED );
+		$executor->result         = CorePackageExecutionResult::failed( CorePackageExecutionFailure::WORDPRESS_FAILED );
 		$executor->on_install     = static function (): void {
 			$GLOBALS['ran_booster_prospective_options']['active_plugins'] = array( 'unrelated/unrelated.php' );
 		};
-		$facade                  = $this->facade( $plugins, $executor );
+		$facade                   = $this->facade( $plugins, $executor );
 		$this->set_ready_release();
 
 		$result = $facade->install(
@@ -1378,10 +1380,10 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 
 	public function test_unreadable_installed_target_reports_bounded_uncertainty(): void {
-		$plugins                            = new ProspectivePluginRepository();
+		$plugins                              = new ProspectivePluginRepository();
 		$plugins->installed_package_available = false;
-		$executor                           = new ProspectiveExecutor();
-		$facade                             = $this->facade( $plugins, $executor );
+		$executor                             = new ProspectiveExecutor();
+		$facade                               = $this->facade( $plugins, $executor );
 		$this->set_ready_release();
 
 		$result = $facade->install(
@@ -1401,11 +1403,11 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 
 	public function test_release_exception_converts_installed_outcome_to_cleanup_failure(): void {
-		$plugins              = new ProspectivePluginRepository();
-		$executor             = new ProspectiveExecutor();
-		$lock                 = new ProspectiveUpdaterLock();
+		$plugins                = new ProspectivePluginRepository();
+		$executor               = new ProspectiveExecutor();
+		$lock                   = new ProspectiveUpdaterLock();
 		$lock->throw_on_release = true;
-		$facade               = $this->facade( $plugins, $executor, 7, $lock );
+		$facade                 = $this->facade( $plugins, $executor, 7, $lock );
 		$this->set_ready_release();
 
 		$result = $facade->install(
@@ -1432,11 +1434,11 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 
 	public function test_false_lock_release_converts_installed_outcome_to_cleanup_failure(): void {
-		$plugins             = new ProspectivePluginRepository();
-		$executor            = new ProspectiveExecutor();
-		$lock                = new ProspectiveUpdaterLock();
+		$plugins              = new ProspectivePluginRepository();
+		$executor             = new ProspectiveExecutor();
+		$lock                 = new ProspectiveUpdaterLock();
 		$lock->release_result = false;
-		$facade              = $this->facade( $plugins, $executor, 7, $lock );
+		$facade               = $this->facade( $plugins, $executor, 7, $lock );
 		$this->set_ready_release();
 
 		$result = $facade->install(
@@ -1462,15 +1464,15 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 
 	public function test_persistence_failure_after_install_reports_management_state_uncertain(): void {
-		$plugins                 = new ProspectivePluginRepository();
+		$plugins                  = new ProspectivePluginRepository();
 		$plugins->adoption_result = PackageMutationResult::failed(
 			PackageStorageOperation::INSERT,
 			'ran_booster_storage_write_failed',
 			'The release management record could not be saved.',
 			true
 		);
-		$executor                = new ProspectiveExecutor();
-		$facade                  = $this->facade( $plugins, $executor );
+		$executor                 = new ProspectiveExecutor();
+		$facade                   = $this->facade( $plugins, $executor );
 		$this->set_ready_release();
 
 		$result = $facade->install(
@@ -1530,7 +1532,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$registry          = new ProviderRegistry( $providers );
 		$resolver          = new PackageRepositoryRequestResolver( $registry );
 		$executor->plugins = $plugins;
-		$source_guard     ??= $this->source_guard();
+		$source_guard    ??= $this->source_guard();
 
 		return new NativeProspectiveReleaseFacade(
 			$resolver,
@@ -1567,11 +1569,11 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 final class ProspectiveRepositoryProvider implements RepositoryProvider, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseMetadata, RepositoryReleaseNativeTargets {
 	private const EXPECTED_FINGERPRINT = 'v2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
-	public static int $resolve_calls                                     = 0;
-	public static int $listing_calls                                     = 0;
-	public static int $inspection_calls                                  = 0;
-	public static int $acquisition_calls                                 = 0;
-	public static int $metadata_calls                                    = 0;
+	public static int $resolve_calls                                    = 0;
+	public static int $listing_calls                                    = 0;
+	public static int $inspection_calls                                 = 0;
+	public static int $acquisition_calls                                = 0;
+	public static int $metadata_calls                                   = 0;
 	public static RepositoryReleaseArtifact|Throwable|null $acquisition = null;
 
 	/** @var array{package_type?: string, repository?: RepositoryReference, release_id?: string, tag?: string, channel?: string} */
@@ -1967,7 +1969,7 @@ final class ProspectiveRepositoryReleaseArtifact implements RepositoryReleaseArt
 	public bool $discard_result        = true;
 	public ?Throwable $handoff_failure = null;
 	private bool $handed_off           = false;
-	private bool $discarded           = false;
+	private bool $discarded            = false;
 
 	public function __construct(
 		private string $path,
@@ -2052,14 +2054,14 @@ final class ProspectiveRepositoryReleaseArtifact implements RepositoryReleaseArt
 
 final class ProspectiveExecutor extends CorePackageExecutor {
 
-	public int $install_calls           = 0;
-	public string $package_slug         = '';
+	public int $install_calls          = 0;
+	public string $package_slug        = '';
 	public ?string $subdirectory       = null;
 	public ?PreparedArtifact $artifact = null;
 	public CorePackageExecutionResult $result;
-	public ?\Closure $on_install                  = null;
+	public ?\Closure $on_install                 = null;
 	public ?ProspectivePluginRepository $plugins = null;
-	public bool $mark_installed                   = true;
+	public bool $mark_installed                  = true;
 
 	public function __construct() {
 		$this->result = CorePackageExecutionResult::succeeded();
@@ -2072,7 +2074,7 @@ final class ProspectiveExecutor extends CorePackageExecutor {
 	): CorePackageExecutionResult {
 		++$this->install_calls;
 		$this->artifact     = $artifact;
-		$this->package_slug  = $package_slug;
+		$this->package_slug = $package_slug;
 		$this->subdirectory = $subdirectory;
 		if ( $this->mark_installed && null !== $this->plugins ) {
 			$this->plugins->installed = true;
@@ -2088,14 +2090,14 @@ final class ProspectiveExecutor extends CorePackageExecutor {
 final class ProspectivePluginRepository extends PluginRepository {
 
 	public int $adoption_calls                                 = 0;
-	public int $adoption_user_id                                = 0;
+	public int $adoption_user_id                               = 0;
 	public ?Plugin $adopted_package                            = null;
 	public ?ManagedReleaseConfiguration $adopted_configuration = null;
 	public PackageMutationResult $adoption_result;
-	public bool $installed                 = false;
-	public bool $managed                   = false;
+	public bool $installed                   = false;
+	public bool $managed                     = false;
 	public bool $installed_package_available = true;
-	public string $installed_version        = '1.2.3';
+	public string $installed_version         = '1.2.3';
 
 	public function __construct() {
 		$this->adoption_result = PackageMutationResult::changed( PackageStorageOperation::INSERT );
@@ -2129,7 +2131,7 @@ final class ProspectivePluginRepository extends PluginRepository {
 		++$this->adoption_calls;
 		$this->adopted_package       = $plugin;
 		$this->adopted_configuration = $configuration;
-		$this->adoption_user_id       = $user_id;
+		$this->adoption_user_id      = $user_id;
 
 		return $this->adoption_result;
 	}
@@ -2143,12 +2145,12 @@ final class ProspectiveThemeRepository extends ThemeRepository {
 
 final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 
-	public int $acquire_calls    = 0;
-	public int $release_calls    = 0;
-	public bool $release_result  = true;
+	public int $acquire_calls     = 0;
+	public int $release_calls     = 0;
+	public bool $release_result   = true;
 	public bool $throw_on_acquire = false;
 	public bool $throw_on_release = false;
-	public ?\Closure $on_acquire = null;
+	public ?\Closure $on_acquire  = null;
 
 	public function acquire(): string {
 		++$this->acquire_calls;
@@ -2178,7 +2180,7 @@ final class SequencedSourceGuardDatabase {
 	public function __construct( public array $rows_by_read ) {
 	}
 
-	public int $reads            = 0;
+	public int $reads             = 0;
 	public string $prepared_query = '';
 
 	public function prepare( string $query, mixed ...$arguments ): string {

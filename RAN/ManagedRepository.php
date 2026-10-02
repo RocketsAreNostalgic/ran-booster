@@ -22,7 +22,7 @@ final readonly class ManagedRepository {
 		bool $private = false,
 		?string $credential_id = null
 	) {
-		$credential_id    = null === $credential_id || '' === trim( $credential_id ) ? null : $credential_id;
+		$credential_id   = null === $credential_id || '' === trim( $credential_id ) ? null : $credential_id;
 		$this->provider  = is_string( $provider ) ? ProviderCode::parse( $provider ) : $provider;
 		$this->reference = new RepositoryReference( $locator, $provider_repository_id, $private, $credential_id );
 		$this->branch    = '' === $branch ? 'main' : $branch;

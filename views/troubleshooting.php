@@ -36,7 +36,7 @@ $secondary_navigation  = array(
 	),
 );
 
-$status_labels     = array(
+$status_labels      = array(
 	'pass'           => __( 'Passed', 'ran-booster' ),
 	'warning'        => __( 'Warning', 'ran-booster' ),
 	'fail'           => __( 'Failed', 'ran-booster' ),
@@ -48,7 +48,7 @@ $status_badge_tones = array(
 	'fail'           => 'error',
 	'not_configured' => 'warning',
 );
-$partial_messages  = array(
+$partial_messages   = array(
 	'local_incomplete'         => __( 'Local checks could not finish, so provider checks were not started.', 'ran-booster' ),
 	'deadline_exhausted'       => __( 'The ten-second diagnostic deadline was reached. Completed checks are shown below.', 'ran-booster' ),
 	'remote_calls_exhausted'   => __( 'The five-request provider budget was reached. Completed checks are shown below.', 'ran-booster' ),
@@ -56,17 +56,17 @@ $partial_messages  = array(
 	'provider_results_invalid' => __( 'The provider returned an unsafe or invalid diagnostic result, which Booster omitted.', 'ran-booster' ),
 	'result_limit_exhausted'   => __( 'The eight-result limit was reached. Earlier results are shown below.', 'ran-booster' ),
 );
-$selected_provider = $troubleshooting['selected_provider'] ?? '';
-$results          = is_array( $troubleshooting['results'] ?? null ) ? $troubleshooting['results'] : array();
-$credentials      = is_array( $troubleshooting['credentials'] ?? null ) ? $troubleshooting['credentials'] : array();
-$credential_id     = is_string( $troubleshooting['credential_id'] ?? null ) ? $troubleshooting['credential_id'] : '';
-$repository       = is_string( $troubleshooting['repository'] ?? null ) ? $troubleshooting['repository'] : '';
+$selected_provider  = $troubleshooting['selected_provider'] ?? '';
+$results            = is_array( $troubleshooting['results'] ?? null ) ? $troubleshooting['results'] : array();
+$credentials        = is_array( $troubleshooting['credentials'] ?? null ) ? $troubleshooting['credentials'] : array();
+$credential_id      = is_string( $troubleshooting['credential_id'] ?? null ) ? $troubleshooting['credential_id'] : '';
+$repository         = is_string( $troubleshooting['repository'] ?? null ) ? $troubleshooting['repository'] : '';
 $show_specific_form = '' !== $credential_id || '' !== $repository;
 $core_self_update   = is_array( $troubleshooting['core_self_update'] ?? null )
 	? $troubleshooting['core_self_update']
 	: array();
-$locator_hints     = is_array( $troubleshooting['provider_locator_hints'] ?? null ) ? $troubleshooting['provider_locator_hints'] : array();
-$locator_examples  = array();
+$locator_hints      = is_array( $troubleshooting['provider_locator_hints'] ?? null ) ? $troubleshooting['provider_locator_hints'] : array();
+$locator_examples   = array();
 foreach ( $troubleshooting['providers'] ?? array() as $provider_code => $provider_label ) {
 	$hint = $locator_hints[ $provider_code ] ?? '';
 	if ( is_string( $hint ) && is_string( $provider_label ) && '' !== $hint ) {
@@ -113,7 +113,7 @@ $repository_placeholder = array() === $locator_examples
 			<?php
 			$self_update_mode   = $core_self_update['effective_mode'] ?? 'disabled';
 			$self_update_reason = $core_self_update['reason'] ?? 'release_marker_missing_or_invalid';
-			$updater_state     = $core_self_update['updater_state'] ?? null;
+			$updater_state      = $core_self_update['updater_state'] ?? null;
 			$self_update_tone   = 'notice-info';
 			if ( 'unavailable' === $updater_state || 'blocked' === $updater_state ) {
 				$self_update_tone    = 'notice-warning';

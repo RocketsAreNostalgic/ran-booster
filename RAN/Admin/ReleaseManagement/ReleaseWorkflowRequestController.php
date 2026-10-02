@@ -42,7 +42,6 @@ final class ReleaseWorkflowRequestController {
 		private readonly PluginRepository $plugins,
 		private readonly ThemeRepository $themes,
 		private readonly ProviderRegistry $providers,
-
 		private readonly RepositorySourceGuard $source_guard
 	) {}
 
@@ -250,7 +249,6 @@ final class ReleaseWorkflowRequestController {
 		}
 		$type_id = 'plugin' === $type ? 1 : ( 'theme' === $type ? 2 : 0 );
 		return $this->request_boundary(
-
 			fn (): array => $this->source_guard->assess( $package->get_provider_code(), $package->get_provider_repository_id(), $type_id, $identifier, PackageSource::RELEASE_ASSET ),
 			$failure
 		);

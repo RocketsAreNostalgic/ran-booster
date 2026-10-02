@@ -64,7 +64,7 @@ final class AdminAddOnRegistry {
 			throw new LogicException( 'Add-on tabs must support the published Booster API.' );
 		}
 
-		$this->tabs[ $tab->key() ]             = $tab;
+		$this->tabs[ $tab->key() ]                 = $tab;
 		$this->add_on_slugs[ $tab->add_on_slug() ] = true;
 	}
 

@@ -43,6 +43,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 	/** @var list<string> */
 	private array $capture_directories = array();
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		require_once dirname( __DIR__ ) . '/Support/ProviderProfileAdminControllerWordPressFunctions.php';
 		$_POST                     = array();
@@ -54,6 +55,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		$this->coordinator                             = new OperatorDispatcherCoordinator();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_POST = array();
 		foreach ( $this->capture_directories as $directory ) {

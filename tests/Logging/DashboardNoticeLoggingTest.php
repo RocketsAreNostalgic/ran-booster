@@ -25,6 +25,7 @@ final class DashboardNoticeLoggingTest extends TestCase {
 	private TemporaryDebugCapture $capture;
 	private Dashboard $dashboard;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->directory = sys_get_temp_dir() . '/ran-booster-dashboard-log-' . bin2hex( random_bytes( 8 ) );
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
@@ -39,6 +40,7 @@ final class DashboardNoticeLoggingTest extends TestCase {
 		$this->dashboard = ( new \ReflectionClass( Dashboard::class ) )->newInstanceWithoutConstructor();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		BoosterLogger::configure_capture( null );
 

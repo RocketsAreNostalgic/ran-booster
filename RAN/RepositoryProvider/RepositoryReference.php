@@ -20,7 +20,7 @@ final readonly class RepositoryReference {
 		$this->reject_empty_value( $credential_id );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
+
 	public static function from_descriptor( RepositoryDescriptor $repository ): self {
 		return new self(
 			$repository->locator,
@@ -30,7 +30,7 @@ final readonly class RepositoryReference {
 		);
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public methods and named parameters retain the existing caller contract.
+
 	public function with_credential( ?string $credential_id ): self {
 		return new self(
 			$this->locator,

@@ -28,12 +28,14 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 	/** @var list<string> */
 	private array $files = array();
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->ensure_directory( WP_CONTENT_DIR );
 		$this->ensure_directory( WP_PLUGIN_DIR );
 		unset( $GLOBALS['ran_booster_admitted_disk_free_space'] );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset( $GLOBALS['ran_booster_admitted_disk_free_space'] );
 		foreach ( $this->files as $file ) {

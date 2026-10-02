@@ -15,12 +15,14 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 
 	private const REF = '0123456789abcdef0123456789abcdef01234567';
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		parent::setUp();
 
 		\RAN\RepositoryProvider\authenticated_archive_hooks_reset();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		\RAN\RepositoryProvider\authenticated_archive_hooks_reset();
 

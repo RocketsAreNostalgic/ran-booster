@@ -20,6 +20,7 @@ require_once __DIR__ . '/StorageTestEnvironment.php';
 #[CoversClass( DatabaseLifecycleFailure::class )]
 final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		global $ran_booster_storage_test_option_apply_write,
 			$ran_booster_storage_test_option_write_result,
@@ -34,6 +35,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		$wpdb = new StorageTestWpdb();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset( $GLOBALS['ran_booster_storage_test_schema_unset'] );
 	}

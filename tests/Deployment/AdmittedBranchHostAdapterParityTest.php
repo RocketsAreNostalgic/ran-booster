@@ -68,6 +68,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 	/** @var list<string> */
 	private array $fixtures = array();
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_worker_doing_cron']                = true;
 		$GLOBALS['ran_booster_package_mutation_guard_multisite'] = false;
@@ -102,6 +103,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		$this->plugins->managed = array( $this->plugin() );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		foreach ( $this->fixtures as $fixture ) {
 			if ( file_exists( $fixture ) || is_link( $fixture ) ) {

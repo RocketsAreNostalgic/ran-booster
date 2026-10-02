@@ -29,6 +29,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class TroubleshootingPassiveGetTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$_GET                                    = array();
 		$_POST                                   = array();
@@ -41,6 +42,7 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 		};
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_GET  = array();
 		$_POST = array();

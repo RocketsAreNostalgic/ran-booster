@@ -45,12 +45,12 @@ final class ProviderDiagnosticRequest {
 		$this->deadline          = ( $this->clock )() + $seconds;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
+
 	public function get_credential_id(): ?string {
 		return $this->credential_id;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
+
 	public function get_repository(): ?string {
 		return $this->repository;
 	}
@@ -58,7 +58,7 @@ final class ProviderDiagnosticRequest {
 	/**
 	 * Claim one remote call and return its maximum remaining timeout in seconds.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
+
 	public function claim_remote_call(): float {
 		$remaining = $this->remaining_seconds();
 
@@ -77,17 +77,17 @@ final class ProviderDiagnosticRequest {
 		return $remaining;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
+
 	public function get_remote_calls(): int {
 		return $this->remote_calls;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
+
 	public function get_exhaustion_reason(): ?string {
 		return $this->exhaustion_reason;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
+
 	public function remaining_seconds(): float {
 		return max( 0.0, $this->deadline - ( $this->clock )() );
 	}

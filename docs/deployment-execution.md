@@ -152,7 +152,7 @@ custody and bounds. Neither adoption path downloads an archive.
 
 ## Manual and web hook entry points
 
-`DeploymentCoordinator::executeManual()` handles a protected administrator
+`DeploymentCoordinator::execute_manual()` handles a protected administrator
 request. For installs, it expects a complete package request that already
 defines provider, repository, branch, package slug, credential ID, privacy,
 and deployment policy. For updates, it reloads the managed package and compares
@@ -160,12 +160,12 @@ it to the submitted snapshot before claiming the attempt. A single manual
 operation inserts and claims its row, then executes synchronously in that
 administrator request. Bulk manual updates instead enter the durable queue.
 
-`DeploymentCoordinator::acceptWebhook()` handles authenticated web hook events.
+`DeploymentCoordinator::accept_webhook()` handles authenticated web hook events.
 It groups matching events by package, enforces a single provider delivery, and
 writes one attempt row per target. Empty deliveries are acknowledged with a
 hidden delivery acknowledgement row and no worker mutation.
 
-`DeploymentCoordinator::executeClaimed()` is the cron-only execution path for a
+`DeploymentCoordinator::execute_claimed()` is the cron-only execution path for a
 claimed queued attempt, whether it came from a bulk manual action or a web hook.
 It refuses to run outside `wp_doing_cron()`.
 

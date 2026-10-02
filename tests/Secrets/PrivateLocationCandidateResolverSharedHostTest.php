@@ -18,6 +18,7 @@ final class PrivateLocationCandidateResolverSharedHostTest extends TestCase {
 	private string $root;
 	private string $temporary_boundary;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$suffix                   = bin2hex( random_bytes( 6 ) );
 		$this->root               = sys_get_temp_dir() . '/ran-booster-shared-host-' . $suffix;
@@ -29,6 +30,7 @@ final class PrivateLocationCandidateResolverSharedHostTest extends TestCase {
 		$this->root = (string) realpath( $this->root );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset( $GLOBALS['ran_booster_shared_host_stat'] );
 		unset( $GLOBALS['ran_booster_shared_host_identity'] );

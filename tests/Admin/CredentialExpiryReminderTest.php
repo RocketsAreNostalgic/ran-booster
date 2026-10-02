@@ -37,6 +37,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 	private DateTimeImmutable $now;
 	private ProviderRegistry $providers;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		parent::setUp();
 		$GLOBALS['ran_booster_admin_test_translations']       = array();
@@ -58,6 +59,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 		$GLOBALS['ran_booster_repository_admin_user_meta_write_fails'] = false;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		InMemorySiteKeyStore::reset( $this->path );
 		foreach ( array( $this->path, $this->path . '.lock' ) as $path ) {

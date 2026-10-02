@@ -22,16 +22,16 @@ class Plugin extends AbstractPackage {
 
 		$plugin->file        = $file;
 		$plugin->name        = $array['Name'];
-		$plugin->plugin_uri   = $array['PluginURI'];
+		$plugin->plugin_uri  = $array['PluginURI'];
 		$plugin->version     = $array['Version'];
 		$plugin->description = $array['Description'];
 		$plugin->author      = $array['Author'];
-		$plugin->author_uri   = $array['AuthorURI'];
-		$plugin->text_domain  = $array['TextDomain'];
-		$plugin->domain_path  = $array['DomainPath'];
+		$plugin->author_uri  = $array['AuthorURI'];
+		$plugin->text_domain = $array['TextDomain'];
+		$plugin->domain_path = $array['DomainPath'];
 		$plugin->network     = $array['Network'];
 		$plugin->title       = $array['Title'];
-		$plugin->author_name  = $array['AuthorName'];
+		$plugin->author_name = $array['AuthorName'];
 
 		return $plugin;
 	}

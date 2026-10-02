@@ -11,8 +11,8 @@
 defined( 'WPINC' ) || die;
 
 $repository_picker_hidden_attribute = $provider_browse_available ? '' : ' hidden';
-$package_field_grid                = isset( $package_field_layout ) && 'grid' === $package_field_layout;
-$repository_read_only              = isset( $repository_read_only ) && true === $repository_read_only;
+$package_field_grid                 = isset( $package_field_layout ) && 'grid' === $package_field_layout;
+$repository_read_only               = isset( $repository_read_only ) && true === $repository_read_only;
 
 ?>
 <?php if ( $package_field_grid ) { ?>

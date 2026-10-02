@@ -35,6 +35,7 @@ final class LocalDataRemoverTest extends TestCase {
 
 	private UninstallDatabase $database;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->database = new UninstallDatabase();
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Focused database double.

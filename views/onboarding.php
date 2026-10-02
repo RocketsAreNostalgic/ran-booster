@@ -11,16 +11,16 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$secrets_storage                    = isset( $onboarding['secrets_storage'] ) && is_array( $onboarding['secrets_storage'] )
+$secrets_storage                      = isset( $onboarding['secrets_storage'] ) && is_array( $onboarding['secrets_storage'] )
 	? $onboarding['secrets_storage']
 	: null;
-$storage_status                     = null === $secrets_storage ? '' : (string) $secrets_storage['status'];
-$storage_reason_code                 = null === $secrets_storage ? '' : (string) ( $secrets_storage['reason_code'] ?? '' );
-$storage_candidate_path              = null === $secrets_storage ? null : ( $secrets_storage['candidate_path'] ?? null );
-$storage_directory                  = null === $secrets_storage
+$storage_status                       = null === $secrets_storage ? '' : (string) $secrets_storage['status'];
+$storage_reason_code                  = null === $secrets_storage ? '' : (string) ( $secrets_storage['reason_code'] ?? '' );
+$storage_candidate_path               = null === $secrets_storage ? null : ( $secrets_storage['candidate_path'] ?? null );
+$storage_directory                    = null === $secrets_storage
 	? null
 	: ( $secrets_storage['candidate_directory'] ?? ( is_string( $storage_candidate_path ) ? dirname( $storage_candidate_path ) : null ) );
-$storage_status_labels               = array(
+$storage_status_labels                = array(
 	'path_configured'         => __( 'Path configured', 'ran-booster' ),
 	'storage_healthy'         => __( 'Storage healthy', 'ran-booster' ),
 	'storage_needs_attention' => __( 'Storage needs attention', 'ran-booster' ),
@@ -29,7 +29,7 @@ $storage_status_labels               = array(
 	'unsupported'             => __( 'Unavailable', 'ran-booster' ),
 	'pending_verification'    => __( 'Verification pending', 'ran-booster' ),
 );
-$storage_status_classes              = array(
+$storage_status_classes               = array(
 	'path_configured'         => 'neutral',
 	'storage_healthy'         => 'ok',
 	'storage_needs_attention' => 'warning',
@@ -38,27 +38,27 @@ $storage_status_classes              = array(
 	'unsupported'             => 'error',
 	'pending_verification'    => 'pending',
 );
-$storage_path_source                 = null === $secrets_storage ? null : ( $secrets_storage['path_source'] ?? null );
+$storage_path_source                  = null === $secrets_storage ? null : ( $secrets_storage['path_source'] ?? null );
 $storage_path_source_labels           = array(
 	'automatic' => __( 'Booster default', 'ran-booster' ),
 	'manual'    => __( 'Custom wp-config.php path', 'ran-booster' ),
 );
-$storage_recovery                   = null === $secrets_storage || ! is_array( $secrets_storage['recovery'] ?? null )
+$storage_recovery                     = null === $secrets_storage || ! is_array( $secrets_storage['recovery'] ?? null )
 	? null
 	: $secrets_storage['recovery'];
-$storage_can_reset                   = null !== $storage_recovery && true === ( $storage_recovery['can_reset'] ?? false );
-$storage_discarded_candidates        = null === $secrets_storage || ! is_array( $secrets_storage['discarded_candidates'] ?? null )
+$storage_can_reset                    = null !== $storage_recovery && true === ( $storage_recovery['can_reset'] ?? false );
+$storage_discarded_candidates         = null === $secrets_storage || ! is_array( $secrets_storage['discarded_candidates'] ?? null )
 	? array()
 	: $secrets_storage['discarded_candidates'];
 $credential_storage_documentation_url = $onboarding['documentation_url'] . '#ran-booster-credential-storage';
-$storage_details_open                = in_array(
+$storage_details_open                 = in_array(
 	$storage_status,
 	array( 'storage_needs_attention', 'setup_available', 'manual_required', 'unsupported', 'pending_verification' ),
 	true
 );
-$shows_storage_override              = in_array( $storage_status, array( 'storage_needs_attention', 'manual_required' ), true )
+$shows_storage_override               = in_array( $storage_status, array( 'storage_needs_attention', 'manual_required' ), true )
 	&& null === ( $secrets_storage['config_alternatives'] ?? null );
-$has_storage_details                 = null !== $secrets_storage
+$has_storage_details                  = null !== $secrets_storage
 	&& (
 		null !== $secrets_storage['candidate_path']
 		|| $secrets_storage['can_provision']

@@ -54,7 +54,7 @@ final readonly class WebhookProcessor {
 			}
 
 			foreach ( $envelope->get_events() as $event ) {
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Shared PushEvent property retains its provider contract until its coordinated #167 cohort.
+
 				if ( ! $policy->authorize_webhook( $verification, $event->provider_repository_id, $event->repository ) ) {
 					throw new WebhookRejected( 401, 'Webhook authentication failed.' );
 				}

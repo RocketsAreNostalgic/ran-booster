@@ -28,7 +28,6 @@ final class ReleaseWorkflowPresenter {
 		private readonly ThemeRepository $themes,
 		private readonly ProviderRegistry $providers,
 		private readonly ReleaseWorkflowRequestController $requests,
-
 		?RepositorySourceGuard $source_guard = null
 	) {
 		$this->tracking = new ReleaseTrackingOperations( $releases );
@@ -42,7 +41,6 @@ final class ReleaseWorkflowPresenter {
 		string $mode,
 		string $type,
 		?object $package,
-
 		string $page_url
 	): array {
 
@@ -204,7 +202,6 @@ final class ReleaseWorkflowPresenter {
 					$revision,
 					(string) ( $matching_result['code'] ?? '' ),
 					true === ( $matching_result['successful'] ?? false ),
-
 					$preview_key,
 					(string) ( $matching_result['channel'] ?? '' ),
 					(string) ( $matching_result['failure_stage'] ?? '' ),

@@ -73,6 +73,24 @@ final class PackageMagicReadTest extends TestCase {
 		}
 	}
 
+	public function test_renamed_header_backing_fields_use_exact_snake_case_fallbacks(): void {
+		foreach ( array(
+			Plugin::class => array( 'plugin_uri', 'author_uri', 'text_domain', 'domain_path', 'author_name' ),
+			Theme::class  => array( 'theme_uri', 'author_uri', 'text_domain', 'domain_path' ),
+		) as $class => $fields ) {
+			$reflection = new ReflectionClass( $class );
+			$package    = $reflection->newInstanceWithoutConstructor();
+			foreach ( $fields as $field ) {
+				$value = 'header-' . $field;
+				$reflection->getProperty( $field )->setValue( $package, $value );
+				self::assertSame( $value, $package->$field );
+				$old_field = lcfirst( str_replace( ' ', '', ucwords( str_replace( '_', ' ', $field ) ) ) );
+				self::assertNull( $package->$old_field );
+				self::assertNull( $package->{strtoupper( $field )} );
+			}
+		}
+	}
+
 	public function test_overrides_and_unmapped_property_fallback_keep_their_precedence(): void {
 		$package = new class() extends AbstractPackage {
 			protected $version     = 'raw-version';
@@ -90,6 +108,7 @@ final class PackageMagicReadTest extends TestCase {
 			}
 
 			// Intentional legacy spelling: this fixture proves existing magic getter fallback precedence.
+			// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Intentional legacy getter fixture proves existing magic fallback precedence.
 			public function getCustom(): string {
 				return 'legacy-custom';
 			}
@@ -100,13 +119,16 @@ final class PackageMagicReadTest extends TestCase {
 		};
 
 		self::assertSame( 'getter-version', $package->version );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Intentional case-variant probe of the magic getter contract.
 		self::assertSame( 'getter-version', $package->VERSION );
 		self::assertSame( 'raw-value', $package->raw );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Intentional case-variant probe of the magic getter contract.
 		self::assertNull( $package->RAW );
 		self::assertNull( $package->absent );
 		self::assertNull( $package->unknown );
 		self::assertNull( $package->{''} );
 		self::assertSame( 'legacy-custom', $package->custom );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Intentional case-variant probe of the magic getter contract.
 		self::assertSame( 'legacy-custom', $package->CUSTOM );
 		self::assertSame( 'underscore-custom', $package->_custom );
 		self::assertSame( 'raw-underscore-identifier', $package->_identifier );

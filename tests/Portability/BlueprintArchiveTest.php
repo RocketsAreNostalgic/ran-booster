@@ -18,10 +18,12 @@ final class BlueprintArchiveTest extends TestCase {
 
 	private string $file;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->file = sys_get_temp_dir() . '/ran-booster-' . bin2hex( random_bytes( 8 ) ) . '.zip';
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		if ( is_file( $this->file ) ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test-only temporary archive cleanup.
@@ -36,6 +38,7 @@ final class BlueprintArchiveTest extends TestCase {
 		$archive->write_to( $this->file, $blueprint, null );
 
 		$zip = $this->open();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- ZipArchive exposes the native numFiles property.
 		self::assertSame( 1, $zip->numFiles );
 		self::assertSame( BlueprintArchive::ENTRY, $zip->getNameIndex( 0 ) );
 		self::assertSame( ZipArchive::EM_NONE, $zip->statIndex( 0 )['encryption_method'] );

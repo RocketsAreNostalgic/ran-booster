@@ -27,6 +27,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 	private string $plugin_directory;
 	private string $theme_directory;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$temporary_root = realpath( sys_get_temp_dir() );
 		self::assertIsString( $temporary_root );
@@ -41,6 +42,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 		}
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		if ( ! is_dir( $this->directory ) ) {
 			return;

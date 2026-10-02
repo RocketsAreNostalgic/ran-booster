@@ -11,6 +11,7 @@ use PHPUnit\Framework\TestCase;
 use RAN\Admin\PackagePagePresenter;
 
 final class PackageIndexFilterControlsTest extends TestCase {
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset(
 			$GLOBALS['ran_booster_package_view_multisite'],

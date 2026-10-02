@@ -2,14 +2,14 @@
 
 defined( 'WPINC' ) || die;
 
-$package_advanced_summary                  = isset( $package_advanced_summary ) && is_string( $package_advanced_summary )
+$package_advanced_summary                    = isset( $package_advanced_summary ) && is_string( $package_advanced_summary )
 	? $package_advanced_summary
 	: __( 'Branch · provider default', 'ran-booster' );
-$package_advanced_open                     = isset( $package_advanced_open ) && true === $package_advanced_open;
-$package_advanced_body                     = isset( $package_advanced_body ) && is_string( $package_advanced_body )
+$package_advanced_open                       = isset( $package_advanced_open ) && true === $package_advanced_open;
+$package_advanced_body                       = isset( $package_advanced_body ) && is_string( $package_advanced_body )
 	? $package_advanced_body
 	: '';
-$package_advanced_summary_projection        = isset( $package_source ) && is_array( $package_source['advanced_summary_projection'] ?? null )
+$package_advanced_summary_projection         = isset( $package_source ) && is_array( $package_source['advanced_summary_projection'] ?? null )
 	? $package_source['advanced_summary_projection']
 	: null;
 $package_advanced_summary_projection_heading = null === $package_advanced_summary_projection || ! is_string( $package_advanced_summary_projection['heading'] ?? null )

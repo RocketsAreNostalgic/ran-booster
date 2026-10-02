@@ -27,12 +27,10 @@ final readonly class PackageOperationService {
 		private ThemeRepository $themes,
 		private DeploymentCoordinator $deployments,
 		private PackageRemovalService $removals,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		private WordPressUpdaterLock $updater_lock,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		?RepositorySourceGuard $source_guard = null
 	) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
+
 		$this->source_guard = $source_guard ?? new RepositorySourceGuard();
 	}
 
@@ -44,13 +42,13 @@ final readonly class PackageOperationService {
 		}
 
 		return match ( $operation->operation ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor properties retain the existing public named-parameter contract.
+
 			'install'                         => $this->updater_lock->run(
 				fn (): array => $this->link_installed( $operation ),
 				'Another package operation is in progress.',
 				'The package operation lock could not be released.'
 			),
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor properties retain the existing public named-parameter contract.
+
 			'edit'                            => $this->updater_lock->run(
 				fn (): array => $this->edit( $operation ),
 				'Another package operation is in progress.',

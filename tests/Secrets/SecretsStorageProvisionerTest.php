@@ -33,6 +33,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 	private string $candidate;
 	private string $temporary_boundary;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_secrets_test_translations'] = array();
 		$suffix                   = bin2hex( random_bytes( 8 ) );
@@ -58,6 +59,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertTrue( chmod( $this->config_path, 0600 ) );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset( $GLOBALS['ran_booster_secrets_test_translations'] );
 		$this->remove_tree( $this->root );

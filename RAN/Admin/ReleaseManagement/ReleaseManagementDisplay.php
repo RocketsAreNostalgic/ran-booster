@@ -21,17 +21,11 @@ final class ReleaseManagementDisplay {
 	public function render_settings(
 		object $package,
 		?ReleaseTrackingStatus $status,
-
 		string $settings_url,
-
 		string $selected_channel = '',
-
 		array $nonce_actions = array(),
-
 		bool $eligibility_recheck = false,
-
 		string $operation_notice_html = '',
-
 		array $repository_conflict = array()
 	): void {
 		if ( ! $this->is_projection( $package ) ) {
@@ -132,9 +126,9 @@ final class ReleaseManagementDisplay {
 								?>
 							(<?php echo esc_html( (string) ( $other['type'] ?? '' ) ); ?>)<?php } ?></li><?php } ?></ul><?php } ?></div>
 				<?php } ?>
-				<?php /* phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract. */ if ( '' !== $operation_notice_html ) { ?>
+				<?php if ( '' !== $operation_notice_html ) { ?>
 					<div class="ran-booster-release-notices" data-ran-booster-release-notices>
-						<?php // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract. Captured trusted admin operation notice. ?>
+						<?php // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Retain the public named-parameter contract. Captured trusted admin operation notice. ?>
 						<?php echo $operation_notice_html; ?>
 					</div>
 				<?php } ?>
@@ -149,12 +143,12 @@ final class ReleaseManagementDisplay {
 						<button type="submit" class="button button-primary" form="<?php echo esc_attr( $track_form_id ); ?>"<?php disabled( $track_disabled ); ?> aria-disabled="<?php echo $track_disabled ? 'true' : 'false'; ?>"><?php esc_html_e( 'Use releases', 'ran-booster' ); ?></button>
 					</div>
 				<?php } elseif ( $status_available && 'release_asset' === $source && $subdirectory_incompatible ) { ?>
-					<?php /* phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract. */ $this->render_return_to_branch( $package, $nonce_actions['return_to_branch'] ?? null, '', $automatic_policy ); ?>
+					<?php $this->render_return_to_branch( $package, $nonce_actions['return_to_branch'] ?? null, '', $automatic_policy ); ?>
 				<?php } ?>
 				<h3 id="ran-booster-release-management-heading"><?php esc_html_e( 'Release readiness', 'ran-booster' ); ?></h3>
 			</header>
 			<div class="ran-booster-readiness-panel">
-				<?php /* phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract. */ if ( $eligibility_recheck ) { ?>
+				<?php if ( $eligibility_recheck ) { ?>
 					<div class="notice notice-success inline" data-ran-booster-package-success data-ran-booster-eligibility-recheck>
 						<p><strong><?php esc_html_e( 'Eligibility recheck complete.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'The current eligibility evidence is shown below.', 'ran-booster' ); ?></p>
 					</div>
@@ -239,7 +233,7 @@ final class ReleaseManagementDisplay {
 				</div>
 			</div>
 		</section>
-		<?php /* phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract. */ $release_track_summary = null === $selected_channel ? __( 'Unknown', 'ran-booster' ) : $this->release_track_label( $selected_channel ); ?>
+		<?php $release_track_summary = null === $selected_channel ? __( 'Unknown', 'ran-booster' ) : $this->release_track_label( $selected_channel ); ?>
 		<details id="ran-booster-release-track-settings" class="ran-booster-settings-disclosure ran-booster-release-track-section" data-ran-booster-package-disclosure>
 			<summary>
 				<h3 class="ran-booster-section__title ran-booster-settings-disclosure__label"><?php esc_html_e( 'Release Track', 'ran-booster' ); ?></h3>
@@ -248,8 +242,8 @@ final class ReleaseManagementDisplay {
 				</small>
 			</summary>
 			<div class="ran-booster-settings-disclosure__body">
-				<?php /* phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract. */ $this->render_release_track_settings( $track_mode, $track_disabled, $selected_channel, $package, $track_nonce_action, $track_form_id ); ?>
-				<?php /* phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract. */ $this->render_managed_candidate_browser( $status, $nonce_actions, $browser_enabled ); ?>
+				<?php $this->render_release_track_settings( $track_mode, $track_disabled, $selected_channel, $package, $track_nonce_action, $track_form_id ); ?>
+				<?php $this->render_managed_candidate_browser( $status, $nonce_actions, $browser_enabled ); ?>
 			</div>
 		</details>
 		<?php
@@ -337,22 +331,15 @@ final class ReleaseManagementDisplay {
 	public function render_advanced_source_section(
 		string $mode,
 		string $type,
-
 		string $selected_source,
 		?object $package,
 		?ReleaseTrackingStatus $status,
-
 		string $page_url,
-
 		string $selected_channel = '',
-
 		array $nonce_actions = array(),
 		array $prospective = array(),
-
 		bool $eligibility_recheck = false,
-
 		string $operation_notice_html = '',
-
 		array $repository_conflict = array()
 	): void {
 		if ( ! in_array( $mode, array( 'create', 'edit' ), true )
@@ -379,7 +366,7 @@ final class ReleaseManagementDisplay {
 			} elseif ( '' !== $operation_notice_html ) {
 				?>
 				<div class="ran-booster-release-notices" data-ran-booster-release-notices>
-					<?php // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract. Captured trusted admin operation notice. ?>
+					<?php // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Retain the public named-parameter contract. Captured trusted admin operation notice. ?>
 					<?php echo $operation_notice_html; ?>
 				</div>
 				<?php
@@ -418,7 +405,6 @@ final class ReleaseManagementDisplay {
 	public function advanced_source_summary(
 		string $fallback,
 		string $mode,
-
 		string $selected_source,
 		?object $package,
 		?ReleaseTrackingStatus $status
@@ -847,7 +833,7 @@ final class ReleaseManagementDisplay {
 		<?php
 	}
 
-
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- Retain the existing positional package identifier slot; naming does not alter notice arguments.
 	public function render_operation_notice(
 		string $code,
 		bool $successful,

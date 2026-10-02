@@ -90,10 +90,10 @@ final class ReleaseManagementControlsTest extends TestCase {
 	}
 
 	public function test_create_assets_expose_only_complete_provider_projection_and_new_actions(): void {
-		$prospective                     = new ProspectiveReleaseFacadeDouble();
+		$prospective                      = new ProspectiveReleaseFacadeDouble();
 		$prospective->supported_providers = array( 'gh', 'acme' );
-		$controls                        = ReleaseManagementFixture::controls( prospective: $prospective );
-		$_GET['page']                    = 'ran-booster-themes-create'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only screen fixture.
+		$controls                         = ReleaseManagementFixture::controls( prospective: $prospective );
+		$_GET['page']                     = 'ran-booster-themes-create'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only screen fixture.
 
 		$controls->enqueue_prospective_assets();
 

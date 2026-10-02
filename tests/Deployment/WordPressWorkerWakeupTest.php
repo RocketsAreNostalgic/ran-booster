@@ -21,6 +21,7 @@ final class WordPressWorkerWakeupTest extends TestCase {
 	private WordPressWorkerWakeupDatabase $database;
 	private WordPressWorkerWakeup $wakeup;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		WordPressWorkerWakeupCron::reset();
 		$this->database = new WordPressWorkerWakeupDatabase();

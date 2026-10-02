@@ -539,7 +539,7 @@ final class RepositoryWebhookManagementControls {
 			return $sections;
 		}
 		/* translators: %s: repository provider name. */
-		$summary    = sprintf( __( '%s webhook management', 'ran-booster' ), $provider_label ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$summary    = sprintf( __( '%s webhook management', 'ran-booster' ), $provider_label );
 		$sections[] = array(
 			'id'      => 'ran-booster-repository-webhook-management-guide-' . $provider_code,
 			'summary' => $summary,

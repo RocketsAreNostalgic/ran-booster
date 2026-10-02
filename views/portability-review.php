@@ -44,10 +44,10 @@ $has_credential_decisions    = array() !== array_filter(
 	<div class="ran-booster-portability__credential-list">
 	<?php foreach ( $portability_credential_rows as $credential ) : ?>
 		<?php
-		$ordinal          = max( 0, (int) ( $credential['ordinal'] ?? 0 ) );
+		$ordinal           = max( 0, (int) ( $credential['ordinal'] ?? 0 ) );
 		$credential_action = is_string( $credential['action'] ?? null ) ? $credential['action'] : '';
 		$decision_required = (bool) ( $credential['decision_required'] ?? true );
-		$packages         = array_values( array_filter( (array) ( $credential['packages'] ?? array() ), 'is_array' ) );
+		$packages          = array_values( array_filter( (array) ( $credential['packages'] ?? array() ), 'is_array' ) );
 		$package_count     = count( $packages );
 		$proposed_count    = max( 0, (int) ( $credential['proposed_count'] ?? 0 ) );
 		$recovery_count    = max( 0, (int) ( $credential['recovery_count'] ?? 0 ) );

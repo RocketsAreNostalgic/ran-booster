@@ -24,7 +24,7 @@ final class ReleaseWorkflowControls {
 		ProviderRegistry $providers,
 		?RepositorySourceGuard $source_guard = null
 	) {
-		$source_guard   ??= new RepositorySourceGuard();
+		$source_guard  ??= new RepositorySourceGuard();
 		$this->display   = new ReleaseWorkflowDisplay();
 		$this->requests  = new ReleaseWorkflowRequestController( $releases, $plugins, $themes, $providers, $source_guard );
 		$this->presenter = new ReleaseWorkflowPresenter( $releases, $plugins, $themes, $providers, $this->requests, $source_guard );

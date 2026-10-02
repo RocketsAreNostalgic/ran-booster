@@ -768,7 +768,7 @@ final class DeploymentAttemptRepository {
 
 	/** @param array<string, int|string|null> $data */
 	private function insert_and_read( array $data ): DeploymentAttempt {
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- This is the deployment persistence boundary. Retain the promoted constructor or external DTO property contract.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- This is the deployment persistence boundary. Retain the promoted constructor or external DTO property contract.
 		if ( 1 !== $this->database->insert( $this->table_name, $data ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
@@ -808,7 +808,7 @@ final class DeploymentAttemptRepository {
 			'resolved_at'             => null,
 			'resolved_by'             => null,
 		);
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- This is the durable zero-target delivery acknowledgement. Retain the promoted constructor or external DTO property contract.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- This is the durable zero-target delivery acknowledgement. Retain the promoted constructor or external DTO property contract.
 		if ( 1 !== $this->database->insert( $this->table_name, $data ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}

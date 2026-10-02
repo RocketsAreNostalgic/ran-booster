@@ -12,7 +12,7 @@ defined( 'WPINC' ) || die;
 
 $source_choice_mode = isset( $package_source_mode ) && 'create' === $package_source_mode ? 'create' : 'edit';
 if ( ! is_array( $package_source_choices ) || array() === $package_source_choices ) {
-	$page_url              = 'create' === $source_choice_mode
+	$page_url               = 'create' === $source_choice_mode
 		? add_query_arg( 'page', $package_view->get_create_page_slug(), $package_view->get_admin_url() )
 		: add_query_arg(
 			array(
@@ -66,9 +66,9 @@ if ( ! is_array( $package_source_choices ) || array() === $package_source_choice
 			<?php
 			$is_selected          = $source_key === $package_source_view;
 			$is_current           = 'edit' === $source_choice_mode && isset( $package_current_source ) && $source_key === $package_current_source;
-			$is_navigation_link    = 'edit' === $source_choice_mode && ! $source_choice['disabled'] && ! $is_selected;
-			$is_current_view       = 'edit' === $source_choice_mode && ! $source_choice['disabled'] && $is_selected;
-			$classes             = 'ran-booster-source-choice' . ( 'edit' === $source_choice_mode ? ' ran-booster-source-choice--navigation nav-tab' : '' ) . ( $is_selected ? ' is-selected' : '' ) . ( 'edit' === $source_choice_mode && $is_selected ? ' nav-tab-active' : '' ) . ( $source_choice['disabled'] ? ' is-disabled' : '' );
+			$is_navigation_link   = 'edit' === $source_choice_mode && ! $source_choice['disabled'] && ! $is_selected;
+			$is_current_view      = 'edit' === $source_choice_mode && ! $source_choice['disabled'] && $is_selected;
+			$classes              = 'ran-booster-source-choice' . ( 'edit' === $source_choice_mode ? ' ran-booster-source-choice--navigation nav-tab' : '' ) . ( $is_selected ? ' is-selected' : '' ) . ( 'edit' === $source_choice_mode && $is_selected ? ' nav-tab-active' : '' ) . ( $source_choice['disabled'] ? ' is-disabled' : '' );
 			$source_heading       = $source_choice['heading'];
 			$source_slug          = preg_replace( '/[^a-z0-9_-]/', '', strtolower( (string) $source_key ) );
 			$tab_id               = 'ran-booster-source-tab-' . $source_slug;

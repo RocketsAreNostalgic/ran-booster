@@ -36,12 +36,14 @@ use WP_Error;
 
 final class PackageRemovalServiceTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = true;
 		$GLOBALS['ran_booster_package_mutation_guard_multisite'] = false;
 		$GLOBALS['ran_booster_repository_admin_translations']    = array();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset(
 			$GLOBALS['ran_booster_package_mutation_guard_file_mods'],

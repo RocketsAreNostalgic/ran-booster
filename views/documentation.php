@@ -16,13 +16,13 @@ foreach ( $tabs as $documentation_tab ) {
 		$tab_urls[ $documentation_tab['key'] ] = $documentation_tab['url'];
 	}
 }
-$admin_url           = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
+$admin_url            = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
 $install_plugin_url   = $admin_url . '?page=ran-booster-plugins-create';
 $install_theme_url    = $admin_url . '?page=ran-booster-themes-create';
 $manage_plugins_url   = $admin_url . '?page=ran-booster-plugins';
 $manage_themes_url    = $admin_url . '?page=ran-booster-themes';
-$portability_url     = $tab_urls['portability'] ?? $admin_url . '?page=ran-booster-transporter';
-$troubleshooting_url = $tab_urls['troubleshooting'] ?? $admin_url . '?page=ran-booster&tab=troubleshooting';
+$portability_url      = $tab_urls['portability'] ?? $admin_url . '?page=ran-booster-transporter';
+$troubleshooting_url  = $tab_urls['troubleshooting'] ?? $admin_url . '?page=ran-booster&tab=troubleshooting';
 $archive_limit_status = array(
 	'valid'      => true,
 	'compressed' => null,
@@ -34,9 +34,9 @@ try {
 } catch ( \InvalidArgumentException ) {
 	$archive_limit_status['valid'] = false;
 }
-$compressed_limit_mi_b       = is_int( $archive_limit_status['compressed'] ) ? intdiv( $archive_limit_status['compressed'], 1048576 ) : null;
-$expanded_limit_mi_b         = is_int( $archive_limit_status['expanded'] ) ? intdiv( $archive_limit_status['expanded'], 1048576 ) : null;
-$archive_providers         = array_values(
+$compressed_limit_mi_b      = is_int( $archive_limit_status['compressed'] ) ? intdiv( $archive_limit_status['compressed'], 1048576 ) : null;
+$expanded_limit_mi_b        = is_int( $archive_limit_status['expanded'] ) ? intdiv( $archive_limit_status['expanded'], 1048576 ) : null;
+$archive_providers          = array_values(
 	array_filter(
 		array_map(
 			static fn ( mixed $provider ): string => is_array( $provider ) && is_string( $provider['label'] ?? null ) ? $provider['label'] : '',
@@ -47,8 +47,8 @@ $archive_providers         = array_values(
 $archive_provider_labels    = 0 === count( $archive_providers )
 	? __( 'Repository providers', 'ran-booster' )
 	: ( 1 === count( $archive_providers ) ? $archive_providers[0] : implode( ' and ', $archive_providers ) );
-$documentation_index       = array();
-$documentation_ids         = array();
+$documentation_index        = array();
+$documentation_ids          = array();
 $reserved_documentation_ids = array_fill_keys(
 	array(
 		'ran-booster-documentation-heading',
@@ -104,8 +104,8 @@ foreach ( $provider_documentation as $provider_guide ) {
 		continue;
 	}
 
-	$sections                        = $documentation_hooks->prepare_sections( 'ran_booster_documentation_sections_after_provider_' . $provider_code, $documentation_url, $documentation_scope, $provider_code );
-	$sections                        = array_values(
+	$sections                          = $documentation_hooks->prepare_sections( 'ran_booster_documentation_sections_after_provider_' . $provider_code, $documentation_url, $documentation_scope, $provider_code );
+	$sections                          = array_values(
 		array_filter(
 			$sections,
 			static function ( array $section ) use ( $add_documentation_item, $reserved_documentation_ids ): bool {
@@ -306,7 +306,7 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 			$provider_code   = isset( $provider_guide['code'] ) && is_string( $provider_guide['code'] ) ? $provider_guide['code'] : '';
 			$provider_label  = isset( $provider_guide['label'] ) && is_string( $provider_guide['label'] ) ? $provider_guide['label'] : '';
 			$setup_available = ! empty( $provider_guide['setup_available'] );
-			$credentials    = isset( $provider_guide['credentials'] ) && is_array( $provider_guide['credentials'] ) ? $provider_guide['credentials'] : array();
+			$credentials     = isset( $provider_guide['credentials'] ) && is_array( $provider_guide['credentials'] ) ? $provider_guide['credentials'] : array();
 			$settings_url    = $tab_urls[ $provider_code ] ?? '';
 			?>
 			<details class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section id="ran-booster-documentation-provider-<?php echo esc_attr( $provider_code ); ?>">

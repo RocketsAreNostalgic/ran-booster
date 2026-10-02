@@ -27,6 +27,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 
 	private InMemoryPublicRepositoryLookupProfileStore $public_lookup_profiles;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -35,6 +36,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		$GLOBALS['ran_booster_repository_admin_translations'] = array();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_POST = array();
 		unset( $GLOBALS['ran_booster_repository_admin_translations'] );
@@ -70,7 +72,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertSame( 'workspace/repository', $result['data']['repositories'][0]['locator'] );
 		self::assertSame( 'repository', $result['data']['repositories'][0]['package_slug'] );
 		self::assertInstanceOf( RepositoryBrowseRequest::class, $provider->request );
-		self::assertSame( 'bitbucket-deploy', $provider->request->getCredentialId() );
+		self::assertSame( 'bitbucket-deploy', $provider->request->get_credential_id() );
 	}
 
 	public function test_accessible_browse_requires_one_selected_credential(): void {
@@ -84,7 +86,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		$this->controller( $provider )->handle();
 
 		self::assertInstanceOf( RepositoryBrowseRequest::class, $provider->request );
-		self::assertSame( 'all', $provider->request->getCredentialId() );
+		self::assertSame( 'all', $provider->request->get_credential_id() );
 
 		$_POST = array(
 			'provider' => 'bb',
@@ -95,7 +97,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 
 		self::assertFalse( $missing['success'] );
 		self::assertSame( 400, $missing['status'] );
-		self::assertSame( 'all', $provider->request->getCredentialId() );
+		self::assertSame( 'all', $provider->request->get_credential_id() );
 	}
 
 	public function test_anonymous_public_browse_keeps_using_the_existing_browser_capability(): void {
@@ -110,8 +112,8 @@ final class RepositoryPickerControllerTest extends TestCase {
 
 		self::assertTrue( $result['success'] );
 		self::assertInstanceOf( RepositoryBrowseRequest::class, $provider->request );
-		self::assertSame( 'RocketsAreNostalgic', $provider->request->getOwner() );
-		self::assertNull( $provider->request->getCredentialId() );
+		self::assertSame( 'RocketsAreNostalgic', $provider->request->get_owner() );
+		self::assertNull( $provider->request->get_credential_id() );
 	}
 
 	public function test_unreadable_sidecar_blocks_credentialed_browsing_before_the_provider_request(): void {
@@ -151,7 +153,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		$result = $this->controller( $provider, array( 'Public_Profile' ) )->handle();
 
 		self::assertTrue( $result['success'] );
-		self::assertSame( 'Public_Profile', $provider->request->getCredentialId() );
+		self::assertSame( 'Public_Profile', $provider->request->get_credential_id() );
 		self::assertSame( 'Public_Profile', $result['data']['public_lookup_profile_id'] );
 	}
 
@@ -187,7 +189,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		$result = $this->controller( $provider, array( 'Public_Profile' ) )->handle();
 
 		self::assertTrue( $result['success'] );
-		self::assertNull( $provider->request->getCredentialId() );
+		self::assertNull( $provider->request->get_credential_id() );
 		self::assertSame( '', $result['data']['public_lookup_profile_id'] );
 	}
 
@@ -262,8 +264,8 @@ final class RepositoryPickerControllerTest extends TestCase {
 
 		self::assertTrue( $result['success'] );
 		self::assertInstanceOf( RepositoryBrowseRequest::class, $provider->request );
-		self::assertSame( 'RocketsAreNostalgic', $provider->request->getOwner() );
-		self::assertSame( 'Public_Profile', $provider->request->getCredentialId() );
+		self::assertSame( 'RocketsAreNostalgic', $provider->request->get_owner() );
+		self::assertSame( 'Public_Profile', $provider->request->get_credential_id() );
 		self::assertSame( 'Public_Profile', $result['data']['public_lookup_profile_id'] );
 	}
 

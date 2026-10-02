@@ -33,11 +33,11 @@ final class TemporaryDebugCapture {
 	private ?string $path;
 	private Closure $clock;
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
+
 	public function __construct( ?string $secrets_path, ?callable $clock = null ) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
+
 		$this->path = is_string( $secrets_path ) && '' !== trim( $secrets_path )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
+
 			? dirname( $secrets_path ) . DIRECTORY_SEPARATOR . self::FILE_NAME
 			: null;
 		$this->clock = null === $clock

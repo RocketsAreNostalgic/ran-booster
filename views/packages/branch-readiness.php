@@ -13,24 +13,24 @@
 
 defined( 'WPINC' ) || die;
 
-$is_package_edit                = true === ( $is_package_edit ?? false );
-$provider_base_url              = admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $provider_code ) );
-$repository_readiness          = is_array( $package_branch_readiness['repository'] ?? null )
+$is_package_edit                 = true === ( $is_package_edit ?? false );
+$provider_base_url               = admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $provider_code ) );
+$repository_readiness            = is_array( $package_branch_readiness['repository'] ?? null )
 	? $package_branch_readiness['repository']
 	: null;
-$repository_reasons            = is_array( $repository_readiness['reason_codes'] ?? null )
+$repository_reasons              = is_array( $repository_readiness['reason_codes'] ?? null )
 	? $repository_readiness['reason_codes']
 	: array();
-$readiness_repository_id        = is_string( $repository_readiness['repository_id'] ?? null )
+$readiness_repository_id         = is_string( $repository_readiness['repository_id'] ?? null )
 	? trim( $repository_readiness['repository_id'] )
 	: '';
-$persisted_repository_id        = trim( (string) ( $provider_repository_id ?? '' ) );
-$identity_conflict             = in_array( 'repository_identity_conflict', $repository_reasons, true );
-$repository_locator_invalid     = in_array( 'repository_locator_invalid', $repository_reasons, true );
-$repository_id                 = '' !== $readiness_repository_id
+$persisted_repository_id         = trim( (string) ( $provider_repository_id ?? '' ) );
+$identity_conflict               = in_array( 'repository_identity_conflict', $repository_reasons, true );
+$repository_locator_invalid      = in_array( 'repository_locator_invalid', $repository_reasons, true );
+$repository_id                   = '' !== $readiness_repository_id
 	? $readiness_repository_id
 	: ( ! $identity_conflict && ! $repository_locator_invalid ? $persisted_repository_id : '' );
-$provider_settings_url          = add_query_arg(
+$provider_settings_url           = add_query_arg(
 	array_filter(
 		array(
 			'panel'           => 'repositories',
@@ -41,48 +41,48 @@ $provider_settings_url          = add_query_arg(
 	),
 	$provider_base_url
 );
-$check_return_url               = $is_package_edit
+$check_return_url                = $is_package_edit
 	? add_query_arg( array( 'source_view' => 'branch' ), $settings_url ) . '#ran-booster-branch-readiness'
 	: '';
-$site_readiness                = is_array( $package_branch_readiness['site'] ?? null )
+$site_readiness                  = is_array( $package_branch_readiness['site'] ?? null )
 	? $package_branch_readiness['site']
 	: null;
-$site_reasons                  = is_array( $site_readiness['reason_codes'] ?? null )
+$site_reasons                    = is_array( $site_readiness['reason_codes'] ?? null )
 	? $site_readiness['reason_codes']
 	: array();
-$receiver_ready                = 'ready' === ( $site_readiness['status'] ?? null );
+$receiver_ready                  = 'ready' === ( $site_readiness['status'] ?? null );
 $repository_branch_check_outcome = isset( $repository_branch_check_outcome ) && is_string( $repository_branch_check_outcome )
 	? $repository_branch_check_outcome
 	: null;
-$saved_identity_ready           = ! $identity_conflict
+$saved_identity_ready            = ! $identity_conflict
 	&& ! $repository_locator_invalid
 	&& '' !== $persisted_repository_id
 	&& '' !== trim( (string) ( $repository_value ?? '' ) );
-$identity_ready                = $saved_identity_ready || ( null !== $repository_readiness
+$identity_ready                  = $saved_identity_ready || ( null !== $repository_readiness
 	&& array() === array_intersect(
 		array( 'repository_locator_invalid', 'repository_identity_unavailable', 'repository_identity_conflict' ),
 		$repository_reasons
 	) );
-$repository_detail_available    = '' !== $repository_id && $identity_ready;
-$secret_coverage               = (string) ( $repository_readiness['local_secret_coverage'] ?? 'unknown' );
-$secret_ready                  = in_array( $secret_coverage, array( 'repository', 'shared' ), true );
-$published_release_source       = true === ( $release_managed ?? false )
+$repository_detail_available     = '' !== $repository_id && $identity_ready;
+$secret_coverage                 = (string) ( $repository_readiness['local_secret_coverage'] ?? 'unknown' );
+$secret_ready                    = in_array( $secret_coverage, array( 'repository', 'shared' ), true );
+$published_release_source        = true === ( $release_managed ?? false )
 	|| 'release_asset' === ( $package_current_source ?? null )
 	|| 'release_asset' === ( $package_source_view ?? null );
-$retained_readiness            = true === ( $package_branch_readiness['retained'] ?? false );
-$secret_label                  = match ( $secret_coverage ) {
+$retained_readiness              = true === ( $package_branch_readiness['retained'] ?? false );
+$secret_label                    = match ( $secret_coverage ) {
 	'repository' => __( 'A repository-specific signing secret is saved.', 'ran-booster' ),
 	'shared' => __( 'A shared owner signing secret covers this repository.', 'ran-booster' ),
 	'none' => __( 'No matching local signing secret is saved.', 'ran-booster' ),
 	default => __( 'Local signing-secret status is unavailable.', 'ran-booster' ),
 };
-$receiver_label       = __( 'The site exposes a structurally valid HTTPS webhook endpoint.', 'ran-booster' );
+$receiver_label        = __( 'The site exposes a structurally valid HTTPS webhook endpoint.', 'ran-booster' );
 $receiver_action_url   = null;
 $receiver_action_label = null;
 if ( ! $receiver_ready ) {
 	$receiver_action_url   = admin_url( 'admin.php?page=ran-booster&tab=troubleshooting' );
 	$receiver_action_label = __( 'Review Booster diagnostics', 'ran-booster' );
-	$receiver_label       = match ( true ) {
+	$receiver_label        = match ( true ) {
 		in_array( 'callback_requires_public_https', $site_reasons, true )
 			=> __( 'This WordPress URL cannot receive provider webhooks. Use a public HTTPS WordPress URL or a secure tunnel. Manual deployments remain available.', 'ran-booster' ),
 		in_array( 'database_unavailable', $site_reasons, true )
@@ -99,15 +99,15 @@ if ( ! $receiver_ready ) {
 		$receiver_action_label = __( 'Review WordPress URLs', 'ran-booster' );
 	}
 }
-$needs_attention                = ! $published_release_source
+$needs_attention                  = ! $published_release_source
 	&& \RAN\Deployment\DeploymentPolicy::AUTOMATIC->value === $deployment_policy
 	&& ( ! $receiver_ready || ! $identity_ready || ! $secret_ready );
 $repository_branch_check_evidence = is_array( $repository_branch_check_evidence ?? null )
 	? $repository_branch_check_evidence
 	: null;
-$repository_branch_verified      = in_array( $repository_branch_check_outcome ?? null, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified' ), true )
+$repository_branch_verified       = in_array( $repository_branch_check_outcome ?? null, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified' ), true )
 	|| ( null === $repository_branch_check_outcome && 'verified' === ( $repository_branch_check_evidence['outcome'] ?? null ) );
-$saved_subdirectory_value        = isset( $saved_subdirectory_value ) && is_string( $saved_subdirectory_value )
+$saved_subdirectory_value         = isset( $saved_subdirectory_value ) && is_string( $saved_subdirectory_value )
 	? trim( $saved_subdirectory_value )
 	: '';
 $repository_branch_check_message  = match ( $repository_branch_check_outcome ?? null ) {
@@ -118,7 +118,7 @@ $repository_branch_check_message  = match ( $repository_branch_check_outcome ?? 
 	default                => null,
 };
 $repository_branch_check_notice_class = null !== $repository_branch_check_message ? 'notice-warning' : 'notice-error';
-$repository_state_class             = match ( true ) {
+$repository_state_class               = match ( true ) {
 	! $identity_ready                         => 'is-warning',
 	$repository_branch_verified                => 'is-ok',
 	$saved_identity_ready                      => 'is-ok',

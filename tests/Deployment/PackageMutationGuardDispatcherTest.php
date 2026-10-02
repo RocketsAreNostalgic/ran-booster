@@ -57,6 +57,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		);
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$_POST                     = array();
 		$_SERVER['REQUEST_METHOD'] = 'POST';
@@ -67,6 +68,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		$GLOBALS['ran_booster_test_nonce_valid']                 = true;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_POST = array();
 		unset( $_SERVER['REQUEST_METHOD'], $_SERVER['HTTP_HX_REQUEST'] );

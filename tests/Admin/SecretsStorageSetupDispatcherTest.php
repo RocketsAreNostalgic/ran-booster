@@ -26,6 +26,7 @@ use RAN\WordPress\WordPressUpdaterLock;
 
 final class SecretsStorageSetupDispatcherTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$_POST                     = array(
 			'ran_booster' => array( 'action' => 'create-secure-storage' ),
@@ -39,6 +40,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		$GLOBALS['ran_booster_admin_test_translations'] = array();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_POST = array();
 		unset(

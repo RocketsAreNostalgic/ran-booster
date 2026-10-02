@@ -18,15 +18,12 @@ final class DocumentationHookRenderer {
 	 * @param non-empty-string $filter_hook
 	 */
 	public function render_sections(
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		string $filter_hook,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		string $documentation_url,
 		string $scope,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		?string $provider_code = null
 	): void {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
+
 		$this->render_prepared_sections( $this->prepare_sections( $filter_hook, $documentation_url, $scope, $provider_code ) );
 	}
 
@@ -37,21 +34,18 @@ final class DocumentationHookRenderer {
 	 * @return list<array{id: string, summary: string, content: string, open: bool}>
 	 */
 	public function prepare_sections(
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		string $filter_hook,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		string $documentation_url,
 		string $scope,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
 		?string $provider_code = null
 	): array {
-		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound, WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Filter is a validated Core-owned documentation extension point. Public named parameters are retained.
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- Filter is a validated Core-owned documentation extension point. Public named parameters are retained.
 		$sections = apply_filters( $filter_hook, array(), $documentation_url, $scope );
 		$prepared = array();
 
 		if ( is_array( $sections ) ) {
 			foreach ( $sections as $section ) {
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
+
 				$normalized = $this->normalize_section( $section, $provider_code );
 				if ( null !== $normalized ) {
 					$prepared[] = $normalized;

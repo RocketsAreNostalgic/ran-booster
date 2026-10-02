@@ -15,6 +15,7 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 	private string $root;
 	private string $temporary_boundary;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$suffix                   = bin2hex( random_bytes( 6 ) );
 		$this->root               = sys_get_temp_dir() . '/ran-booster-location-' . $suffix;
@@ -25,6 +26,7 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 		$this->root = (string) realpath( $this->root );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$this->remove( $this->root );
 		$this->remove( $this->temporary_boundary );

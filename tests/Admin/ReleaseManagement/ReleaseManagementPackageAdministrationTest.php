@@ -328,10 +328,10 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	}
 
 	public function test_missing_managed_status_keeps_the_known_release_shell_disabled_without_inventing_versions(): void {
-		$tracking                = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
+		$tracking                  = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
 		$tracking->throw_on_status = true;
-		$controls                = ReleaseManagementFixture::controls( $tracking );
-		$package                 = new PackageProjection( 'release_asset' );
+		$controls                  = ReleaseManagementFixture::controls( $tracking );
+		$package                   = new PackageProjection( 'release_asset' );
 
 		ob_start();
 		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
@@ -354,7 +354,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	}
 
 	public function test_managed_browser_uses_saved_identity_and_keeps_word_press_as_installer(): void {
-		$tracking                      = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
+		$tracking                       = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
 		$tracking->candidate_list       = new RepositoryReleaseCandidateList(
 			array(
 				new RepositoryReleaseCandidate( '42', 'v1.2.0', '1.2.0', false, '2026-08-20T09:00:00Z', array( 'example.zip' ) ),
@@ -362,8 +362,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			)
 		);
 		$tracking->candidate_inspection = new ReleaseTrackingPreflight( ReleaseTrackingPreflight::READY, 'example-plugin', '1.2.0', 'https://example.test/releases/v1.2.0', 'v1.2.0', '1.2.0', 'newer' );
-		$controls                      = ReleaseManagementFixture::controls( $tracking );
-		$package                       = new PackageProjection( 'release_asset' );
+		$controls                       = ReleaseManagementFixture::controls( $tracking );
+		$package                        = new PackageProjection( 'release_asset' );
 
 		ob_start();
 		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
@@ -387,7 +387,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$inspect_request                = $this->managed_request( 'inspect_candidate' );
 		$inspect_request['release_id']  = '42';
 		$inspect_request['release_tag'] = 'v1.2.0';
-		$inspect                       = $controls->process_managed_browser_request( 'inspect_candidate', $inspect_request );
+		$inspect                        = $controls->process_managed_browser_request( 'inspect_candidate', $inspect_request );
 		self::assertTrue( $inspect['successful'] );
 		self::assertSame( '1.0.0', $inspect['data']['installed_version'] );
 		self::assertSame(
@@ -402,14 +402,14 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	}
 
 	public function test_managed_candidate_listing_rejects_a_source_change_during_provider_read(): void {
-		$tracking                     = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
-		$tracking->candidate_list      = new RepositoryReleaseCandidateList(
+		$tracking                       = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
+		$tracking->candidate_list       = new RepositoryReleaseCandidateList(
 			array( new RepositoryReleaseCandidate( '42', 'v1.2.0', '1.2.0', false, '2026-08-20T09:00:00Z', array( 'example.zip' ) ) )
 		);
 		$tracking->after_candidate_list = static function () use ( $tracking ): void {
 			$tracking->set_status( ReleaseManagementFixture::status( 'branch' ) );
 		};
-		$controls                     = ReleaseManagementFixture::controls( $tracking );
+		$controls                       = ReleaseManagementFixture::controls( $tracking );
 
 		$result = $controls->process_managed_browser_request( 'list_candidates', $this->managed_request( 'list_candidates' ) );
 
@@ -420,8 +420,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	}
 
 	public function test_managed_candidate_inspection_recomputes_relationship_from_the_fresh_installed_version(): void {
-		$tracking                           = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
-		$tracking->candidate_inspection      = new ReleaseTrackingPreflight( ReleaseTrackingPreflight::READY, 'example-plugin', '1.2.0', 'https://example.test/releases/v1.2.0', 'v1.2.0', '1.2.0', 'newer' );
+		$tracking                             = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
+		$tracking->candidate_inspection       = new ReleaseTrackingPreflight( ReleaseTrackingPreflight::READY, 'example-plugin', '1.2.0', 'https://example.test/releases/v1.2.0', 'v1.2.0', '1.2.0', 'newer' );
 		$tracking->after_candidate_inspection = static function () use ( $tracking ): void {
 			$tracking->set_status(
 				new ReleaseTrackingStatus(
@@ -439,10 +439,10 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 				)
 			);
 		};
-		$controls                           = ReleaseManagementFixture::controls( $tracking );
-		$request                            = $this->managed_request( 'inspect_candidate' );
-		$request['release_id']              = '42';
-		$request['release_tag']             = 'v1.2.0';
+		$controls                             = ReleaseManagementFixture::controls( $tracking );
+		$request                              = $this->managed_request( 'inspect_candidate' );
+		$request['release_id']                = '42';
+		$request['release_tag']               = 'v1.2.0';
 
 		$result = $controls->process_managed_browser_request( 'inspect_candidate', $request );
 
@@ -542,9 +542,9 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	}
 
 	public function test_managed_browser_separates_empty_stable_and_preview_tracks_from_read_failures(): void {
-		$tracking                = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
+		$tracking                 = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
 		$tracking->candidate_list = new RepositoryReleaseCandidateList( array() );
-		$controls                = ReleaseManagementFixture::controls( $tracking );
+		$controls                 = ReleaseManagementFixture::controls( $tracking );
 
 		foreach ( array( 'stable', 'prerelease' ) as $channel ) {
 			$list = $controls->process_managed_browser_request( 'list_candidates', $this->managed_request( 'list_candidates', $channel ) );
@@ -556,7 +556,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	}
 
 	public function test_managed_browser_preview_preserves_stable_and_prerelease_candidates(): void {
-		$tracking                = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', channel: 'prerelease' ) );
+		$tracking                 = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', channel: 'prerelease' ) );
 		$tracking->candidate_list = new RepositoryReleaseCandidateList(
 			array(
 				new RepositoryReleaseCandidate( '42', 'v1.2.0', '1.2.0', false, '2026-08-20T09:00:00Z', array( 'example.zip' ) ),
@@ -564,7 +564,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 				new RepositoryReleaseCandidate( '40', 'v1.2.0-beta.1', '1.2.0-beta.1', true, '2026-08-18T09:00:00Z', array( 'example.zip' ) ),
 			)
 		);
-		$controls                = ReleaseManagementFixture::controls( $tracking );
+		$controls                 = ReleaseManagementFixture::controls( $tracking );
 
 		$list = $controls->process_managed_browser_request( 'list_candidates', $this->managed_request( 'list_candidates', 'prerelease' ) );
 
@@ -575,14 +575,14 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	}
 
 	public function test_managed_browser_preview_retains_an_all_stable_list(): void {
-		$tracking                = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', channel: 'prerelease' ) );
+		$tracking                 = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', channel: 'prerelease' ) );
 		$tracking->candidate_list = new RepositoryReleaseCandidateList(
 			array(
 				new RepositoryReleaseCandidate( '42', 'v1.2.0', '1.2.0', false, '2026-08-20T09:00:00Z', array( 'example.zip' ) ),
 				new RepositoryReleaseCandidate( '41', 'v1.1.0', '1.1.0', false, '2026-08-19T09:00:00Z', array( 'example.zip' ) ),
 			)
 		);
-		$controls                = ReleaseManagementFixture::controls( $tracking );
+		$controls                 = ReleaseManagementFixture::controls( $tracking );
 
 		$list = $controls->process_managed_browser_request( 'list_candidates', $this->managed_request( 'list_candidates', 'prerelease' ) );
 
@@ -743,9 +743,9 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 
 		ob_start();
 		$controls->render_advanced_source_section( 'edit', $type, 'release_asset', $package, $package->settings_url() );
-		$html                = (string) ob_get_clean();
+		$html                  = (string) ob_get_clean();
 		$use_releases_position = strpos( $html, 'Use releases' );
-		$checklist_position   = strpos( $html, 'Installed identity and Update URI' );
+		$checklist_position    = strpos( $html, 'Installed identity and Update URI' );
 
 		self::assertStringContainsString( 'data-ran-booster-release-gate-notice', $html );
 		self::assertStringContainsString( 'continue using its configured repository subdirectory with Branch deployments', $html );
@@ -906,11 +906,11 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
 		$html = (string) ob_get_clean();
 
-		$heading_position   = strpos( $html, 'id="ran-booster-release-management-heading"' );
-		$action_position    = strpos( $html, 'form="ran-booster-release-track-form"' );
+		$heading_position    = strpos( $html, 'id="ran-booster-release-management-heading"' );
+		$action_position     = strpos( $html, 'form="ran-booster-release-track-form"' );
 		$track_form_position = strpos( $html, '<form id="ran-booster-release-track-form"' );
-		$track_position     = strpos( $html, 'data-ran-booster-release-channel-control' );
-		$checklist_position = strpos( $html, 'Installed identity and Update URI' );
+		$track_position      = strpos( $html, 'data-ran-booster-release-channel-control' );
+		$checklist_position  = strpos( $html, 'Installed identity and Update URI' );
 		self::assertIsInt( $heading_position );
 		self::assertIsInt( $action_position );
 		self::assertIsInt( $track_form_position );
@@ -957,10 +957,10 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	}
 
 	public function test_missing_transition_nonce_disables_the_published_release_action_at_the_top(): void {
-		$tracking               = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$tracking                 = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
 		$tracking->throw_on_nonce = true;
-		$controls               = ReleaseManagementFixture::controls( $tracking );
-		$package                = new PackageProjection();
+		$controls                 = ReleaseManagementFixture::controls( $tracking );
+		$package                  = new PackageProjection();
 
 		ob_start();
 		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
@@ -973,10 +973,10 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	}
 
 	public function test_missing_branch_status_renders_the_disabled_shell_and_single_top_gate_notice(): void {
-		$tracking                = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$tracking                  = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
 		$tracking->throw_on_status = true;
-		$controls                = ReleaseManagementFixture::controls( $tracking );
-		$package                 = new PackageProjection();
+		$controls                  = ReleaseManagementFixture::controls( $tracking );
+		$package                   = new PackageProjection();
 
 		ob_start();
 		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );

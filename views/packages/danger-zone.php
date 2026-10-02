@@ -11,9 +11,9 @@
 
 defined( 'WPINC' ) || die;
 
-$package_type_label  = strtolower( $package_view->get_singular_label() );
-$unlink_checkbox_id  = 'ran-booster-confirm-unlink-' . $package_view->get_type();
-$delete_checkbox_id  = 'ran-booster-confirm-delete-' . $package_view->get_type();
+$package_type_label = strtolower( $package_view->get_singular_label() );
+$unlink_checkbox_id = 'ran-booster-confirm-unlink-' . $package_view->get_type();
+$delete_checkbox_id = 'ran-booster-confirm-delete-' . $package_view->get_type();
 $delete_description = 'plugin' === $package_view->get_type()
 	? __( 'WordPress will deactivate the plugin and run its package-defined uninstall before deletion. Settings may be permanently removed, while incomplete cleanup may leave incompatible data. This is not a rollback.', 'ran-booster' )
 	: __( 'WordPress will delete the inactive theme before Booster unlinks it. Active, parent and depended-on themes are protected. Theme deletion is not a database rollback.', 'ran-booster' );

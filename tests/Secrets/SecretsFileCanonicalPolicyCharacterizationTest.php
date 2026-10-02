@@ -37,6 +37,7 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 	private ProviderSecretPolicyCatalog $policies;
 	private SecretsFile $secrets;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -50,6 +51,7 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		$this->secrets   = $this->new_secrets( array(), $this->policies );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		InMemorySiteKeyStore::reset( $this->path );
 		foreach ( array( $this->path, $this->path . '.lock' ) as $file ) {

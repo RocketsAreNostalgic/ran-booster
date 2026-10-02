@@ -47,7 +47,7 @@ final class ProviderSecretPolicyCatalog {
 		);
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public provider policy API preserves established method and named-argument contracts.
+
 	public function credential_policy( ProviderCode|string $provider ): ProviderCredentialPolicy {
 		$provider = $this->normalize_code( $provider );
 		$policy   = $this->policies[ $provider->value ]['credential'] ?? null;
@@ -59,14 +59,14 @@ final class ProviderSecretPolicyCatalog {
 		return $policy;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public provider policy API preserves established method and named-argument contracts.
+
 	public function find_credential_policy( ProviderCode|string $provider ): ?ProviderCredentialPolicy {
 		$provider = $this->normalize_code( $provider );
 
 		return $this->policies[ $provider->value ]['credential'] ?? null;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public provider policy API preserves established method and named-argument contracts.
+
 	public function webhook_policy( ProviderCode|string $provider ): ProviderWebhookPolicy {
 		$provider = $this->normalize_code( $provider );
 		$policy   = $this->policies[ $provider->value ]['webhook'] ?? null;
@@ -78,7 +78,7 @@ final class ProviderSecretPolicyCatalog {
 		return $policy;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public provider policy API preserves established method and named-argument contracts.
+
 	public function find_webhook_policy( ProviderCode|string $provider ): ?ProviderWebhookPolicy {
 		$provider = $this->normalize_code( $provider );
 

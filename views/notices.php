@@ -12,7 +12,7 @@ foreach ( $notice_messages as $message ) {
 		&& in_array( $message['type'] ?? null, array( 'info', 'warning', 'error', 'success' ), true )
 		&& is_string( $message['message'] ?? null )
 	) {
-		$notice_class       = 'error' === $message['type'] ? 'notice-error' : ( 'warning' === $message['type'] ? 'notice-warning' : ( 'info' === $message['type'] ? 'notice-info' : 'notice-success' ) );
+		$notice_class         = 'error' === $message['type'] ? 'notice-error' : ( 'warning' === $message['type'] ? 'notice-warning' : ( 'info' === $message['type'] ? 'notice-info' : 'notice-success' ) );
 		$is_bulk_queue_notice = 'bulk_update_queue' === ( $message['code'] ?? null )
 			&& is_int( $message['queued_updates'] ?? null )
 			&& is_int( $message['skipped_updates'] ?? null );

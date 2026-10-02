@@ -25,7 +25,7 @@ final class TroubleshootingViewTest extends TestCase {
 
 	/** @param array<string,mixed> $data @return array<string,mixed> */
 	private function provider_view_data( array $data ): array {
-		$presenter                   = ( new \ReflectionClass( ProviderSettingsPresenter::class ) )->newInstanceWithoutConstructor();
+		$presenter                     = ( new \ReflectionClass( ProviderSettingsPresenter::class ) )->newInstanceWithoutConstructor();
 		$data['provider_list_state'] ??= array(
 			'search'   => '',
 			'kind'     => '',
@@ -42,21 +42,23 @@ final class TroubleshootingViewTest extends TestCase {
 			$presenter->build_profile_list_projection( $data ),
 			( new ProviderRepositoryRowsNormalizer() )->project_page( $data ),
 			array(
-				'webhook_management'               => null,
-				'status_summary_renderer'           => new AdminStatusSummaryRenderer(),
+				'webhook_management'                 => null,
+				'status_summary_renderer'            => new AdminStatusSummaryRenderer(),
 				'provider_management_table_renderer' => new ProviderManagementTableRenderer(),
-				'repository_detail_renderer'        => new RepositoryDetailRenderer(),
-				'repository_table_renderer'         => new RepositoryTableRenderer(),
+				'repository_detail_renderer'         => new RepositoryDetailRenderer(),
+				'repository_table_renderer'          => new RepositoryTableRenderer(),
 			)
 		);
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_admin_view_filters']      = array();
 		$GLOBALS['ran_booster_admin_view_actions']      = array();
 		$GLOBALS['ran_booster_admin_test_translations'] = array();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset(
 			$GLOBALS['ran_booster_admin_view_filters'],

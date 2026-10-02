@@ -22,6 +22,7 @@ require_once __DIR__ . '/StorageTestEnvironment.php';
 
 final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		global $wpdb;
 

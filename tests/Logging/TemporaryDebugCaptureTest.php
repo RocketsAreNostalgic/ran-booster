@@ -22,6 +22,7 @@ final class TemporaryDebugCaptureTest extends TestCase {
 	private string $capture_path;
 	private int $now;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->directory    = sys_get_temp_dir() . '/ran-booster-debug-' . bin2hex( random_bytes( 8 ) );
 		$this->secrets_path = $this->directory . '/custom-secrets.php';
@@ -31,6 +32,7 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		foreach (
 			array(

@@ -19,6 +19,7 @@ use RuntimeException;
 
 final class ManagedReleaseStoreTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset( $GLOBALS['ran_booster_wp_pusher_active_plugins'] );
 	}

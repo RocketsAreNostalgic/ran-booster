@@ -15,6 +15,7 @@ final class PreparedArtifactTest extends TestCase {
 	/** @var list<string> */
 	private array $paths = array();
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		foreach ( $this->paths as $path ) {
 			if ( file_exists( $path ) || is_link( $path ) ) {

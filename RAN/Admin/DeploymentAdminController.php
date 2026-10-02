@@ -42,9 +42,9 @@ final class DeploymentAdminController {
 	}
 
 	/** @param array<string, mixed> $request */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 	public function manage_deployment_attempt( string $action, array $request, bool $post_request ): void {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
+
 		if ( ! $post_request ) {
 			return;
 		}

@@ -22,6 +22,7 @@ require_once __DIR__ . '/BoosterAssetsWordPressFunctions.php';
 
 final class BoosterAssetsTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$_GET = array();
 		$GLOBALS['ran_booster_asset_test_registered_styles']   = array();
@@ -33,6 +34,7 @@ final class BoosterAssetsTest extends TestCase {
 		$GLOBALS['ran_booster_asset_test_script_translations'] = array();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_GET = array();
 		unset(

@@ -23,7 +23,7 @@ final readonly class RepositoryWebhookFitnessResult {
 		$this->assert_text( $remediation, 512 );
 	}
 	/** @return array{support:string,suitability:string,least_privilege:string,evidence:string,code:string,checked_at:string,remediation:string} */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
+
 	public function to_array(): array {
 		return array(
 			'support'         => $this->support,

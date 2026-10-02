@@ -18,12 +18,14 @@ use RAN\ManagedRepository;
 use RAN\PackageSource;
 
 final class UnavailableProviderPackageViewTest extends TestCase {
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$_GET                                       = array();
 		$_POST                                      = array();
 		$GLOBALS['ran_booster_bulk_active_plugins'] = array();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_GET  = array();
 		$_POST = array();

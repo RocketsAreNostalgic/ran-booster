@@ -29,7 +29,12 @@ function add_action(
 	int $priority = 10,
 	int $accepted_args = 1
 ): bool {
-	$GLOBALS['ran_booster_bootstrap_actions'][] = array( 'hook' => $hook, 'callback' => $callback, 'priority' => $priority, 'acceptedArgs' => $accepted_args );
+	$GLOBALS['ran_booster_bootstrap_actions'][] = array(
+		'hook'         => $hook,
+		'callback'     => $callback,
+		'priority'     => $priority,
+		'acceptedArgs' => $accepted_args,
+	);
 
 	return true;
 }
@@ -40,7 +45,12 @@ function add_filter(
 	int $priority = 10,
 	int $accepted_args = 1
 ): bool {
-	$GLOBALS['ran_booster_bootstrap_filters'][] = array( 'hook' => $hook, 'callback' => $callback, 'priority' => $priority, 'acceptedArgs' => $accepted_args );
+	$GLOBALS['ran_booster_bootstrap_filters'][] = array(
+		'hook'         => $hook,
+		'callback'     => $callback,
+		'priority'     => $priority,
+		'acceptedArgs' => $accepted_args,
+	);
 
 	return true;
 }

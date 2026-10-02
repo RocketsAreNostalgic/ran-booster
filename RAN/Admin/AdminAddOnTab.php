@@ -35,8 +35,8 @@ final readonly class AdminAddOnTab {
 		private ?string $facade_name = null
 	) {
 		$add_on_slug = trim( $add_on_slug );
-		$key       = trim( $key );
-		$label     = trim( $label );
+		$key         = trim( $key );
+		$label       = trim( $label );
 
 		if ( 1 !== preg_match( '/^[a-z][a-z0-9-]{0,63}$/', $add_on_slug ) ) {
 			throw new InvalidArgumentException( 'Add-on slugs must be short lowercase identifiers.' );
@@ -62,9 +62,9 @@ final readonly class AdminAddOnTab {
 		}
 
 		$this->add_on_slug = $add_on_slug;
-		$this->key       = $key;
-		$this->label     = $label;
-		$this->renderer  = Closure::fromCallable( $renderer );
+		$this->key         = $key;
+		$this->label       = $label;
+		$this->renderer    = Closure::fromCallable( $renderer );
 	}
 
 	public function add_on_slug(): string {

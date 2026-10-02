@@ -12,6 +12,7 @@ require_once __DIR__ . '/../Support/ThemeRepositoryWordPressFunctions.php';
 
 final class ThemeRepositoryTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_theme_repository_test_themes'] = array(
 			'example-theme' => new class() {

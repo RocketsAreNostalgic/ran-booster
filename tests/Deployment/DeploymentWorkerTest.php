@@ -30,6 +30,7 @@ final class DeploymentWorkerTest extends TestCase {
 	private WorkerCoordinator $coordinator;
 	private int $random_byte = 1;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_worker_doing_cron'] = true;
 		WordPressWorkerWakeupCron::reset();
@@ -45,6 +46,7 @@ final class DeploymentWorkerTest extends TestCase {
 		$this->coordinator = new WorkerCoordinator();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset(
 			$GLOBALS['ran_booster_worker_doing_cron'],

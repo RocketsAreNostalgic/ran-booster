@@ -11,7 +11,7 @@ abstract class AbstractPackage implements Package {
 
 	protected $repository;
 	protected DeploymentPolicy $deployment_policy = DeploymentPolicy::MANUAL;
-	protected PackageSource $source              = PackageSource::BRANCH;
+	protected PackageSource $source               = PackageSource::BRANCH;
 	protected int $source_revision                = 1;
 	protected $subdirectory;
 	protected ?string $deployment_ref    = null;
@@ -75,7 +75,7 @@ abstract class AbstractPackage implements Package {
 			throw new \InvalidArgumentException( 'The managed package source revision is invalid.' );
 		}
 
-		$this->source         = $source;
+		$this->source          = $source;
 		$this->source_revision = $revision;
 	}
 

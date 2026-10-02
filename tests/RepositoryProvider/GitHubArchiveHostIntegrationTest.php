@@ -22,6 +22,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 
 	private const TOKEN = 'github-resolution-token-canary';
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -39,6 +40,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 		);
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		\RAN\RepositoryProvider\authenticated_archive_hooks_reset();
 

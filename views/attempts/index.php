@@ -14,20 +14,20 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$items        = array_map(
+$items         = array_map(
 	static fn ( DeploymentAttempt $attempt ): array => $attempt->safe_data(),
 	array_filter(
 		$deployment_activity['items'] ?? array(),
 		static fn ( mixed $item ): bool => $item instanceof DeploymentAttempt
 	)
 );
-$unavailable  = true === ( $deployment_activity['unavailable'] ?? false );
+$unavailable   = true === ( $deployment_activity['unavailable'] ?? false );
 $has_cursor    = true === ( $deployment_activity['has_cursor'] ?? false );
 $base_url      = $troubleshooting_base . '&panel=activity';
 $settings_urls = is_array( $deployment_activity['package_settings_urls'] ?? null )
 	? $deployment_activity['package_settings_urls']
 	: array();
-$next         = is_string( $deployment_activity['next_cursor'] ?? null ) ? $deployment_activity['next_cursor'] : null;
+$next          = is_string( $deployment_activity['next_cursor'] ?? null ) ? $deployment_activity['next_cursor'] : null;
 $has_queued    = count( array_filter( $items, static fn ( array $item ): bool => 'queued' === ( $item['state'] ?? null ) ) ) > 0;
 $state_tones   = array(
 	'queued'          => 'pending',
@@ -81,17 +81,17 @@ $origin_labels = array(
 			<ul class="ran-booster-attempt-list">
 			<?php
 			foreach ( $items as $item ) {
-				$state                = (string) ( $item['state'] ?? '' );
-				$summary              = DeploymentOutcomeMessage::for_code( (string) ( $item['outcome_code'] ?? 'pending' ) );
-				$project_label         = (string) ( $item['package_slug'] ?? '' );
-				$package_type          = (string) ( $item['package_type'] ?? '' );
+				$state                  = (string) ( $item['state'] ?? '' );
+				$summary                = DeploymentOutcomeMessage::for_code( (string) ( $item['outcome_code'] ?? 'pending' ) );
+				$project_label          = (string) ( $item['package_slug'] ?? '' );
+				$package_type           = (string) ( $item['package_type'] ?? '' );
 				$package_settings_url   = is_string( $settings_urls[ $package_type ][ $project_label ] ?? null )
 					? $settings_urls[ $package_type ][ $project_label ]
 					: '';
 				$package_settings_label = 'theme' === $package_type
 					? __( 'Open theme settings', 'ran-booster' )
 					: __( 'Open plugin settings', 'ran-booster' );
-				$activity_label        = ucfirst( (string) ( $item['operation'] ?? '' ) );
+				$activity_label         = ucfirst( (string) ( $item['operation'] ?? '' ) );
 				?>
 				<li class="ran-booster-attempt-row">
 					<div class="ran-booster-attempt-row__summary" role="row">

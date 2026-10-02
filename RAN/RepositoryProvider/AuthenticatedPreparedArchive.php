@@ -45,17 +45,17 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 		$this->redirect_scrubber_registered = true;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
+
 	public function get_url(): string {
 		return $this->url;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
+
 	public function get_resolved_ref(): string {
 		return $this->resolved_ref;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
+
 	public function verify_current_head(): void {
 		if ( null !== $this->head_verifier ) {
 			( $this->head_verifier )();
@@ -66,7 +66,7 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 	 * @param array<string, mixed> $arguments WordPress HTTP request arguments.
 	 * @return array<string, mixed>
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
+
 	public function authenticate_request( array $arguments, mixed $url ): array {
 		if ( ! is_string( $url ) || $url !== $this->url ) {
 			return $arguments;
@@ -102,7 +102,7 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 	 * @param mixed                $location Redirect target, passed by reference by Requests.
 	 * @param array<string, mixed> $headers  Headers Requests would reuse for the redirect.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
+
 	public function strip_authentication_from_redirect( mixed &$location, array &$headers, mixed $data, mixed $options, mixed $original ): void {
 		if ( ! is_object( $original ) || ! isset( $original->url ) || $original->url !== $this->url ) {
 			return;

@@ -36,27 +36,27 @@ readonly class RepositoryReleaseWorkflowTarget {
 		return $this->identifier;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
+
 	public function source_revision(): int {
 		return $this->source_revision;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
+
 	public function provider_repository_id(): string {
 		return $this->provider_repository_id;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
+
 	public function package_root(): string {
 		return $this->package_root;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
+
 	public function installed_version(): string {
 		return $this->installed_version;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
+
 	public function expected_update_uri(): string {
 		return $this->expected_update_uri;
 	}

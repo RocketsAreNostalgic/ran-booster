@@ -72,22 +72,14 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		private ThemeRepository $themes,
 		private ManagedReleaseStore $store,
 		private ManagedReleaseTargetRegistrar $registrar,
-
 		WordPressUpdaterLock $updater_lock,
 		private ProviderRegistry $providers,
-
 		?callable $can_manage = null,
-
 		?callable $verify_nonce = null,
-
 		?callable $refresh_native = null,
-
 		?callable $metadata_eligible = null,
-
 		?callable $invalidate_native = null,
-
 		?callable $public_lookup_profile = null,
-
 		?RepositorySourceGuard $source_guard = null
 	) {
 
@@ -143,7 +135,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		string $operation,
 		string $type,
 		string $identifier,
-
 		int $source_revision,
 		string $channel = ''
 	): string {
@@ -157,7 +148,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			|| ( ! $preflight && '' !== $channel ) ) {
 			throw new InvalidArgumentException( 'The release tracking nonce scope is invalid.' );
 		}
-
 
 		$action = 'ran-booster-release-tracking-' . $operation . '-' . $type . '-' . $identifier . '-' . $source_revision;
 
@@ -244,13 +234,10 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			'newer' === $version_relationship
 				&& '' !== $latest_version
 				&& ( null === $preflight || $preflight->ready() ),
-
 			$this->diagnostic_time( $target_status?->last_check ),
-
 			$this->diagnostic_time( $target_status?->next_check ),
 			$failure_code,
 			$configuration?->channel() ?? 'stable',
-
 			$target_status?->candidate_provider_release_id ?? ''
 		);
 	}
@@ -274,7 +261,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	public function preflight(
 		string $type,
 		string $identifier,
-
 		int $expected_source_revision,
 		string $channel,
 		string $nonce
@@ -292,7 +278,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			return $this->branch_preflight(
 				$type,
 				$identifier,
-
 				$expected_source_revision,
 				$channel,
 				$package,
@@ -307,7 +292,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	public function assessment_preflight(
 		string $type,
 		string $identifier,
-
 		int $expected_source_revision,
 		string $channel,
 		string $nonce
@@ -348,7 +332,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	public function list_candidates(
 		string $type,
 		string $identifier,
-
 		int $expected_source_revision,
 		string $channel,
 		string $nonce
@@ -386,9 +369,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	public function inspect_candidate(
 		string $type,
 		string $identifier,
-
 		int $expected_source_revision,
-
 		string $release_id,
 		string $tag,
 		string $channel,
@@ -448,7 +429,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 
 			return new ReleaseTrackingPreflight(
 				ReleaseTrackingPreflight::READY,
-
 				$inspection->package_root,
 				$inspection->version,
 				$url,
@@ -500,7 +480,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	public function enable(
 		string $type,
 		string $identifier,
-
 		int $expected_source_revision,
 		string $channel,
 		string $nonce
@@ -539,7 +518,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			$preflight = $this->branch_preflight(
 				$type,
 				$identifier,
-
 				$expected_source_revision,
 				$channel,
 				$package,
@@ -566,7 +544,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			$conflict      = false;
 			$unavailable   = false;
 			$changed       = $this->mutate_with_updater_lock(
-
 				function () use ( $type, $identifier, $expected_source_revision, $configuration, &$incompatible, &$conflict, &$unavailable ): bool {
 					$package = $this->package( $type, $identifier );
 					if ( ! $this->release_source_supported( $package ) ) {
@@ -589,7 +566,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 						$type,
 						$identifier,
 						PackageSource::BRANCH,
-
 						$expected_source_revision,
 						PackageSource::RELEASE_ASSET,
 						$configuration,
@@ -640,7 +616,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	public function change_channel(
 		string $type,
 		string $identifier,
-
 		int $expected_source_revision,
 		string $channel,
 		string $nonce
@@ -675,7 +650,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			}
 			$incompatible = false;
 			$changed      = $this->mutate_with_updater_lock(
-
 				function () use ( $type, $identifier, $expected_source_revision, $channel, &$incompatible ): bool {
 					if ( ! $this->release_source_supported( $this->package( $type, $identifier ) ) ) {
 						$incompatible = true;
@@ -685,7 +659,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 					$changed = $this->store->change_channel(
 						$type,
 						$identifier,
-
 						$expected_source_revision,
 						$channel,
 						function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0
@@ -721,7 +694,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	public function refresh(
 		string $type,
 		string $identifier,
-
 		int $expected_source_revision,
 		string $nonce
 	): ReleaseTrackingResult {
@@ -731,7 +703,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				'Release tracking is unavailable on WordPress Multisite.'
 			);
 		}
-
 
 		if ( ! $this->authorized( 'refresh', $type, $identifier, $expected_source_revision, $nonce ) ) {
 			return ReleaseTrackingResult::failed( 'forbidden', 'Release tracking could not be refreshed.' );
@@ -769,7 +740,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	public function return_to_branch(
 		string $type,
 		string $identifier,
-
 		int $expected_source_revision,
 		string $nonce
 	): ReleaseTrackingResult {
@@ -779,7 +749,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				'Release tracking is unavailable on WordPress Multisite.'
 			);
 		}
-
 
 		if ( ! $this->authorized( 'return_to_branch', $type, $identifier, $expected_source_revision, $nonce ) ) {
 			return ReleaseTrackingResult::failed( 'forbidden', 'The package source could not be changed.' );
@@ -792,13 +761,11 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				return ReleaseTrackingResult::failed( 'source_changed', self::SOURCE_CHANGED_MESSAGE );
 			}
 			$changed = $this->mutate_with_updater_lock(
-
 				function () use ( $type, $identifier, $expected_source_revision ): bool {
 					return $this->store->transition(
 						$type,
 						$identifier,
 						PackageSource::RELEASE_ASSET,
-
 						$expected_source_revision,
 						PackageSource::BRANCH,
 						null,
@@ -1089,7 +1056,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				$inspection = $inspector->inspect_release(
 					$type,
 					$repository,
-
 					$candidate->provider_release_id,
 					$candidate->tag,
 					$channel
@@ -1112,7 +1078,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 						: 'invalid_release'
 				);
 			}
-
 
 			if ( ! hash_equals( $candidate->provider_release_id, $inspection->provider_release_id )
 				|| ! hash_equals( $candidate->tag, $inspection->tag )
@@ -1194,7 +1159,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			return null;
 		}
 
-
 		$code = match ( $target_status->candidate_code ) {
 			'release_identity_verified' => ReleaseTrackingPreflight::READY,
 			'release_version_mismatch' => ReleaseTrackingPreflight::RELEASE_VERSION_MISMATCH,
@@ -1234,15 +1198,10 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			return new ReleaseTrackingPreflight(
 				$code,
 				$package_root,
-
 				$target_status->candidate_release_version,
-
 				$this->release_url( $package, $target_status->candidate_release_tag ),
-
 				$target_status->candidate_release_tag,
-
 				$target_status->candidate_package_header_version,
-
 				'' !== $target_status->version_relationship ? $target_status->version_relationship : 'invalid',
 				$reason_code
 			);

@@ -33,7 +33,7 @@ final readonly class ProviderAdminMetadata {
 		$this->webhook_scopes   = $this->validate_webhook_scopes( $webhook_scopes );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
+
 	public function get_credential_kind( string $code ): ?CredentialKindMetadata {
 		foreach ( $this->credential_kinds as $kind ) {
 			if ( $kind->code === $code ) {
@@ -44,7 +44,7 @@ final readonly class ProviderAdminMetadata {
 		return null;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
+
 	public function get_webhook_scope( string $code ): ?WebhookScopeMetadata {
 		foreach ( $this->webhook_scopes as $scope ) {
 			if ( $scope->code === $code ) {

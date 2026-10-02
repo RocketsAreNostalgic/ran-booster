@@ -20,12 +20,14 @@ final class CoreSelfUpdatePolicyTest extends TestCase {
 
 	private string $directory;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->directory = sys_get_temp_dir() . '/ran-booster-self-update-' . bin2hex( random_bytes( 6 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable focused fixture setup.
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		foreach ( array( '.git', 'composer.json', 'ran-booster-release.json', 'ran-booster.php' ) as $entry ) {
 			$path = $this->directory . '/' . $entry;

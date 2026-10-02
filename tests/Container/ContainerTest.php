@@ -11,6 +11,7 @@ final class ContainerTest extends RANBoosterTestCase {
 
 	private CoreContainer $container;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->container = new CoreContainer();
 	}

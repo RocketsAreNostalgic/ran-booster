@@ -33,12 +33,14 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 	private string $directory;
 	private string $path;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->directory = sys_get_temp_dir() . '/ran-booster-portability-' . bin2hex( random_bytes( 8 ) );
 		$this->path      = $this->directory . '/secrets.json';
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		foreach ( array( $this->path, $this->path . '.lock' ) as $path ) {
 			if ( is_file( $path ) ) {

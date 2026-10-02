@@ -110,7 +110,7 @@ $render_credential_cell = static function ( array $profile, string $column ) use
 		return;
 	}
 
-	$usage           = $profile['usage'];
+	$usage             = $profile['usage'];
 	$usage_template_id = 'ran-booster-delete-credential-usage-' . (string) $profile['profile_index'];
 	if ( $profile['configured'] && $provider['capabilities']['credentials'] ) {
 		?>

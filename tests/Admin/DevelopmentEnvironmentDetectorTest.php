@@ -13,12 +13,14 @@ require_once __DIR__ . '/DevelopmentEnvironmentDetectorWordPressFunctions.php';
 
 final class DevelopmentEnvironmentDetectorTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_development_detector_environment_type'] = 'production';
 		$GLOBALS['ran_booster_development_detector_modes']            = array();
 		$GLOBALS['ran_booster_admin_test_home_url']                   = 'https://example.com';
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset(
 			$GLOBALS['ran_booster_development_detector_environment_type'],

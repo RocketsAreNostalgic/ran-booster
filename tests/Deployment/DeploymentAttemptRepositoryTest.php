@@ -28,6 +28,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 	private Database $database_lifecycle;
 	private int $random_byte = 1;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->database                               = new AttemptRepositoryDatabase();
 		$this->database_lifecycle                     = $this->createStub( Database::class );

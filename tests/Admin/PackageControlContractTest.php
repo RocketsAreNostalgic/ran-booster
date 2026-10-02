@@ -72,7 +72,7 @@ final class PackageControlContractTest extends TestCase {
 	public function test_plugin_and_theme_use_one_shared_template_set(): void {
 		foreach ( array( 'create.php', 'edit.php', 'index.php', 'danger-zone.php', 'source-choices.php' ) as $view ) {
 			$source = $this->view( $view );
-			self::assertStringContainsString( '$packageView', $source, $view );
+			self::assertStringContainsString( '$package_view', $source, $view );
 			self::assertStringNotContainsString( 'PackagePagePresenter::plugin()', $source, $view );
 			self::assertStringNotContainsString( 'PackagePagePresenter::theme()', $source, $view );
 		}

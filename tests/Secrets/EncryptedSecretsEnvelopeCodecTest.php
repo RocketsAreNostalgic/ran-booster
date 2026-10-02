@@ -21,6 +21,7 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 	private const WRONG_KEY = 'abcdefghijklmnopqrstuvwxyzABCDEF';
 	private const PLAINTEXT = '{"schema_version":2,"credentials":{"gh":{"profile":{"secret":"sentinel-plaintext-secret"}}},"webhooks":{}}';
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		if ( ! extension_loaded( 'sodium' ) ) {
 			self::markTestSkipped( 'The Sodium extension is required for envelope codec tests.' );

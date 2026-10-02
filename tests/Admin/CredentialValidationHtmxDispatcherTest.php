@@ -29,6 +29,7 @@ use RAN\WordPress\WordPressUpdaterLock;
 final class CredentialValidationHtmxDispatcherTest extends TestCase {
 	private HtmxCredentialValidationTestController $controller;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$_POST                     = array();
 		$_SERVER['REQUEST_METHOD'] = 'POST';
@@ -40,6 +41,7 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 		$GLOBALS['ran_booster_repository_admin_translations'] = array();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_POST = array();
 		unset(
@@ -114,7 +116,7 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 	public function test_htmx_validation_failure_remains_local_and_does_not_claim_success(): void {
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::never() )->method( 'add_message' );
-		$dispatcher                 = $this->dispatcher( $dashboard, CredentialValidationResult::rateLimited() );
+		$dispatcher                 = $this->dispatcher( $dashboard, CredentialValidationResult::rate_limited() );
 		$_SERVER['HTTP_HX_REQUEST'] = 'TRUE';
 		$_POST['ran_booster']       = $this->request();
 

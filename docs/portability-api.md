@@ -42,7 +42,7 @@ Core's container, repositories, provider clients, credential store, filesystem
 paths, or cleanup authority.
 
 Portability API 3 is independently versioned. A source bridge does not need
-Add-on API 16 or Provider API 13, although Core continues to use its registered
+Add-on API 17 or Provider API 14, although Core continues to use its registered
 providers internally.
 
 A source bridge may separately feature-detect Core's additive

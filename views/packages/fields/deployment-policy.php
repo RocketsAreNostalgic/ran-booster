@@ -12,14 +12,14 @@ defined( 'WPINC' ) || die;
 
 $push_to_deploy_documentation_url = admin_url( 'admin.php?page=ran-booster&tab=documentation#ran-booster-push-to-deploy' );
 $push_to_deploy_provider_url      = admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $provider_code ) . '#ran-booster-webhook-secrets-heading' );
-$release_automation            = isset( $package_automation_source ) && 'release_asset' === $package_automation_source;
-$automatic_available           = $release_automation || $provider_webhook_available;
-$package_field_grid             = isset( $package_field_layout ) && 'grid' === $package_field_layout;
-$package_field_form             = isset( $package_field_form ) && is_string( $package_field_form )
+$release_automation               = isset( $package_automation_source ) && 'release_asset' === $package_automation_source;
+$automatic_available              = $release_automation || $provider_webhook_available;
+$package_field_grid               = isset( $package_field_layout ) && 'grid' === $package_field_layout;
+$package_field_form               = isset( $package_field_form ) && is_string( $package_field_form )
 	? $package_field_form
 	: '';
-$show_development_safety_notice  = ! empty( $development_environment_detected );
-$hide_development_safety_notice  = \RAN\Deployment\DeploymentPolicy::DISABLED->value === $deployment_policy;
+$show_development_safety_notice   = ! empty( $development_environment_detected );
+$hide_development_safety_notice   = \RAN\Deployment\DeploymentPolicy::DISABLED->value === $deployment_policy;
 
 ?>
 <?php if ( $package_field_grid ) { ?>

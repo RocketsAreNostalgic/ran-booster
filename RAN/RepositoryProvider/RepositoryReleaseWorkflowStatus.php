@@ -40,67 +40,67 @@ final readonly class RepositoryReleaseWorkflowStatus {
 				throw new InvalidArgumentException( 'Release workflow documentation links are invalid.' ); }
 		}
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
+
 	public function provider_code(): string {
 		return $this->provider_code;
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
+
 	public function repository_id(): string {
 		return $this->repository_id;
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
+
 	public function record_exact(): bool {
 		return $this->record_exact;
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
+
 	public function record_occupied(): bool {
 		return $this->record_occupied;
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
+
 	public function pull_request_url(): string {
 		return $this->pull_request_url;
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
+
 	public function package_type(): string {
 		return $this->package_type;
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
+
 	public function package_identifier(): string {
 		return $this->package_identifier;
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
+
 	public function source_revision(): int {
 		return $this->source_revision;
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
+
 	public function record_operation(): string {
 		return $this->record_operation;
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
+
 	public function observation_kind(): string {
 		return $this->observation_kind;
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
+
 	public function observed_at(): string {
 		return $this->observed_at;
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
+
 	public function failure_history(): array {
 		return $this->failure_history;
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
+
 	public function credential_choices(): array {
 		return $this->credential_choices;
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
+
 	public function documentation_links(): array {
 		return $this->documentation_links;
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
+
 	public function provider_workflow_url(): string {
 		return $this->provider_workflow_url;
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
+
 	public function write_guidance(): string {
 		return $this->write_guidance; }
 	private function text( string $value, int $limit, bool $empty = false ): bool {

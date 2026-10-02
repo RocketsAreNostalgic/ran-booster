@@ -54,65 +54,45 @@ class Dispatcher {
 		Dashboard $dashboard,
 		ProviderRegistry $providers,
 		SecretsFile $secrets,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		PackageRepositoryRequestResolver $package_repositories,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		ManagedPackageWebhookAuthorityResolver $webhook_authorities,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		PackageAdminController $package_admin,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		WordPressUpdaterLock $updater_lock,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?DeploymentCoordinator $deployment_coordinator = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?CredentialUsageReader $credential_usage = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?BulkPackageActionService $bulk_package_actions = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?PublicRepositoryLookupProfileStore $public_lookup_profiles = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?TemporaryDebugCapture $debug_capture = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?CredentialExpiryObservationStore $expiry_observations = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?SecretsStorageProvisioner $secrets_storage = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?DeploymentAttemptRepository $deployment_attempts = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		?ProviderProfileAdminController $provider_profile_interaction = null
 	) {
 		// Retained for positional container and test compatibility; their owners are injected below.
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 		unset( $package_repositories, $bulk_package_actions );
 
 		$this->dashboard = $dashboard;
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 		$this->package_admin = $package_admin;
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 		$this->debug_capture = $debug_capture;
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 		$this->secrets_storage = $secrets_storage;
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 		$this->provider_profiles = $provider_profile_interaction ?? new ProviderProfileAdminController(
 			$dashboard,
 			$providers,
 			$secrets,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			$webhook_authorities,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			$updater_lock,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			$credential_usage ?? new CredentialUsageReader(),
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			$public_lookup_profiles ?? new PublicRepositoryLookupProfileStore(),
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			$expiry_observations ?? new CredentialExpiryObservationStore()
 		);
-		$this->deployment_admin = new DeploymentAdminController(
+		$this->deployment_admin  = new DeploymentAdminController(
 			$dashboard,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			$deployment_coordinator,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			$deployment_attempts
 		);
 	}

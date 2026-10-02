@@ -1,5 +1,10 @@
 # Connected Branch and Provider naming adoption
 
+> Historical tranche evidence: the package identities, boundaries and retained
+> symbols below describe this earlier handoff. The current beta.31 naming
+> contract is documented in [CONTRIBUTING](../CONTRIBUTING.md#current-php-naming-contract).
+> These earlier checks do not qualify the recovered combined candidate.
+
 This is the accepted #167 connected naming tranche, coordinated through the
 [operative checkpoint](https://github.com/RocketsAreNostalgic/ran-booster/issues/167#issuecomment-5939201056).
 Live exact Core candidate heads, checks and ownership belong in that checkpoint

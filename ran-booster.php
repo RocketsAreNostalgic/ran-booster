@@ -26,19 +26,19 @@ if ( ! defined( 'WPINC' ) ) {
 if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) ) {
 	define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
 } elseif ( 14 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
-	throw new LogicException( 'RAN Booster Provider API 13 conflicts with an existing API version marker.' );
+	throw new LogicException( 'RAN Booster Provider API 14 conflicts with an existing API version marker.' );
 }
 
 if ( ! defined( 'RAN_BOOSTER_ADDON_API_VERSION' ) ) {
 	define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
 } elseif ( 17 !== RAN_BOOSTER_ADDON_API_VERSION ) {
-	throw new LogicException( 'RAN Booster Add-on API 16 conflicts with an existing API version marker.' );
+	throw new LogicException( 'RAN Booster Add-on API 17 conflicts with an existing API version marker.' );
 }
 
 if ( ! defined( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION' ) ) {
 	define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 3 );
 } elseif ( 3 !== RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION ) {
-	throw new LogicException( 'RAN Booster Admin Interaction API 2 conflicts with an existing API version marker.' );
+	throw new LogicException( 'RAN Booster Admin Interaction API 3 conflicts with an existing API version marker.' );
 }
 
 require __DIR__ . '/autoload.php';
@@ -110,8 +110,8 @@ $ran_booster_core_development_notice = new CoreSelfUpdateDevelopmentNotice( $ran
 $ran_booster_core_development_notice->register();
 
 ( static function () use ( $ran_booster_core_development_notice, $ran_booster_self_update_policy, $ran_booster_release_updater ): void {
-	$ran_booster_container            = new CoreContainer();
-	$ran_booster_runtime              = new Booster( $ran_booster_container );
+	$ran_booster_container             = new CoreContainer();
+	$ran_booster_runtime               = new Booster( $ran_booster_container );
 	$ran_booster_runtime->booster_path = plugin_dir_path( __FILE__ );
 	$ran_booster_runtime->booster_url  = plugin_dir_url( __FILE__ );
 	( new BoosterServiceProvider() )->register( $ran_booster_container, $ran_booster_runtime, $ran_booster_release_updater, plugin_basename( __FILE__ ) );
@@ -130,11 +130,11 @@ $ran_booster_core_development_notice->register();
 			do_action( 'ran_booster_register_providers', $provider_registry );
 			$provider_registry->seal();
 
-			$core_version       = (string) ( get_file_data( __FILE__, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );
+			$core_version        = (string) ( get_file_data( __FILE__, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );
 			$core_release_target = null;
 			if ( $ran_booster_self_update_policy->allows_native_discovery() ) {
 				try {
-					$core_updater       = $ran_booster_container->make( ManagedReleaseUpdaterRegistrar::class )->plugin(
+					$core_updater        = $ran_booster_container->make( ManagedReleaseUpdaterRegistrar::class )->plugin(
 						'github',
 						__FILE__,
 						'RocketsAreNostalgic/ran-booster',
@@ -177,7 +177,7 @@ $ran_booster_core_development_notice->register();
 				);
 			}
 
-			$portability      = $ran_booster_container->make( PortabilityFacade::class );
+			$portability       = $ran_booster_container->make( PortabilityFacade::class );
 			$admin_interaction = $ran_booster_container->make( AdminInteractionFacade::class );
 			add_action(
 				'plugins_loaded',

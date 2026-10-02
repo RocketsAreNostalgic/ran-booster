@@ -15,6 +15,7 @@ use RAN\Secrets\SecretsStorageProvisioner;
 
 final class SecretsStorageSetupPresenterTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		parent::setUp();
 		$GLOBALS['ran_booster_admin_test_translations']       = array();
@@ -22,6 +23,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		$GLOBALS['ran_booster_secrets_test_translations']     = array();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset( $GLOBALS['ran_booster_admin_test_translations'], $GLOBALS['ran_booster_repository_admin_translations'], $GLOBALS['ran_booster_secrets_test_translations'] );
 

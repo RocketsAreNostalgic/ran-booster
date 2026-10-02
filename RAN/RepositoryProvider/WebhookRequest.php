@@ -86,17 +86,17 @@ final class WebhookRequest {
 		$this->raw_headers = $retained;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
+
 	public function get_provider(): ProviderCode {
 		return $this->provider;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
+
 	public function get_body(): string {
 		return $this->body;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
+
 	public function with_verification( SignedWebhookVerification $verification ): self {
 		if ( ! $verification->get_provider()->equals( $this->provider ) ) {
 			throw new InvalidArgumentException( 'Webhook verification provider does not match the request.' );
@@ -108,7 +108,7 @@ final class WebhookRequest {
 		return $verified;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
+
 	public function require_verification(): SignedWebhookVerification {
 		if ( null === $this->verification ) {
 			throw new WebhookRejected( 401, 'Webhook authentication failed.' );
@@ -117,7 +117,7 @@ final class WebhookRequest {
 		return $this->verification;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
+
 	public function get_header( string $name ): ?string {
 		return $this->headers[ $this->normalize_header_name( $name ) ] ?? null;
 	}
@@ -127,7 +127,7 @@ final class WebhookRequest {
 	 *
 	 * @return list<string>
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
+
 	public function get_raw_header_values( string $name ): array {
 		return $this->raw_headers[ $this->normalize_header_name( $name ) ] ?? array();
 	}

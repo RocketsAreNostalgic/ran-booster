@@ -27,7 +27,7 @@ $extension_state_labels = array(
 			$availability_label  = $extension['availability'];
 			$state_label         = $extension_state_labels[ $extension['state'] ] ?? $extension['state'];
 			$compatibility_label = $extension['compatible'] ? __( 'Compatible with your version of Booster', 'ran-booster' ) : __( 'Requires a different version of Booster', 'ran-booster' );
-			$more_details_label   = sprintf(
+			$more_details_label  = sprintf(
 				/* translators: %s: Extension name. */
 				__( 'More details about %s', 'ran-booster' ),
 				$extension['name']
@@ -94,7 +94,7 @@ $extension_state_labels = array(
 		<?php foreach ( $extensions as $extension ) : ?>
 			<?php
 			$details_id          = 'ran-booster-extension-details-' . $extension['id'];
-			$details_title_id     = $details_id . '-title';
+			$details_title_id    = $details_id . '-title';
 			$availability_label  = $extension['availability'];
 			$state_label         = $extension_state_labels[ $extension['state'] ] ?? $extension['state'];
 			$compatibility_label = $extension['compatible'] ? __( 'Compatible with your version of Booster', 'ran-booster' ) : __( 'Requires a different version of Booster', 'ran-booster' );

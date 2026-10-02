@@ -5,9 +5,9 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$portability_review_rows                   = is_array( $portability_review_rows ?? null ) ? $portability_review_rows : array();
-$portability_export_rows                   = is_array( $portability_export_rows ?? null ) ? $portability_export_rows : array();
-$portability_export_unavailable            = true === ( $portability_export_unavailable ?? false );
+$portability_review_rows                    = is_array( $portability_review_rows ?? null ) ? $portability_review_rows : array();
+$portability_export_rows                    = is_array( $portability_export_rows ?? null ) ? $portability_export_rows : array();
+$portability_export_unavailable             = true === ( $portability_export_unavailable ?? false );
 $portability_export_credential_groups       = is_array( $portability_export_credential_groups ?? null ) ? $portability_export_credential_groups : array();
 $portability_export_credentials_unavailable = true === ( $portability_export_credentials_unavailable ?? false );
 $portability_export_package_count           = count( $portability_export_rows );
@@ -21,7 +21,7 @@ $portability_protected_summary = __( 'Create a Transporter Blueprint for %1$s us
 $portability_package_only_summary = __( 'Create a Transporter Blueprint for %s without repository credentials.', 'ran-booster' );
 /* translators: %d: number of selected managed packages. */
 $portability_initial_package_count = sprintf( _nx( '%d package', '%d packages', $portability_export_package_count, 'Selected managed packages', 'ran-booster' ), $portability_export_package_count );
-$render_portability_extension     = static function ( string $hook, string $step ): void {
+$render_portability_extension      = static function ( string $hook, string $step ): void {
 	$buffer_level = ob_get_level();
 	ob_start();
 	try {
@@ -110,7 +110,7 @@ $render_portability_extension     = static function ( string $hook, string $step
 						<?php
 						$provider_code  = is_string( $group['code'] ?? null ) ? $group['code'] : '';
 						$provider_label = is_string( $group['label'] ?? null ) ? $group['label'] : $provider_code;
-						$credentials   = is_array( $group['credentials'] ?? null ) ? array_filter( $group['credentials'], static fn ( array $credential ): bool => ! empty( $credential['available'] ) === $section_available ) : array();
+						$credentials    = is_array( $group['credentials'] ?? null ) ? array_filter( $group['credentials'], static fn ( array $credential ): bool => ! empty( $credential['available'] ) === $section_available ) : array();
 						if ( array() === $credentials ) {
 							continue;
 						}
@@ -122,10 +122,10 @@ $render_portability_extension     = static function ( string $hook, string $step
 							<?php
 							$control_id      = 'ran-booster-portability-export-credential-' . $group_index . '-' . $credential_index;
 							$reason_id       = $control_id . '-reason';
-							$available      = ! empty( $credential['available'] );
-							$label          = is_string( $credential['label'] ?? null ) && '' !== $credential['label'] ? $credential['label'] : __( 'Unavailable saved credential', 'ran-booster' );
+							$available       = ! empty( $credential['available'] );
+							$label           = is_string( $credential['label'] ?? null ) && '' !== $credential['label'] ? $credential['label'] : __( 'Unavailable saved credential', 'ran-booster' );
 							$kind_label      = is_string( $credential['kind_label'] ?? null ) ? $credential['kind_label'] : '';
-							$packages       = is_array( $credential['packages'] ?? null ) ? $credential['packages'] : array();
+							$packages        = is_array( $credential['packages'] ?? null ) ? $credential['packages'] : array();
 							$package_count   = count( $packages );
 							$package_summary = sprintf(
 								/* translators: %d: number of packages using the credential. */
@@ -239,8 +239,8 @@ $render_portability_extension     = static function ( string $hook, string $step
 						<?php foreach ( $portability_export_rows as $row_index => $row ) : ?>
 							<?php
 							$package_type = 'theme' === ( $row['type'] ?? null ) ? 'theme' : 'plugin';
-							$identifier  = is_string( $row['identifier'] ?? null ) ? $row['identifier'] : '';
-							$name        = is_string( $row['name'] ?? null ) ? $row['name'] : '';
+							$identifier   = is_string( $row['identifier'] ?? null ) ? $row['identifier'] : '';
+							$name         = is_string( $row['name'] ?? null ) ? $row['name'] : '';
 							?>
 							<tr>
 								<?php /* translators: %s: managed plugin or theme name. */ ?>

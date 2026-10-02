@@ -317,26 +317,26 @@ commit_epoch=$(git show -s --format=%ct "$commit")
 # committed Core modes still come from git archive.
 # shellcheck disable=SC2016
 php -r '
-	$packageRoot = $argv[1];
-	$archiveRoot = $argv[2];
+	$package_root = $argv[1];
+	$archive_root = $argv[2];
 	$epoch = (int) $argv[3];
 	$marker = $argv[4];
-	$packageIterator = new RecursiveIteratorIterator(
-		new RecursiveDirectoryIterator( $packageRoot, FilesystemIterator::SKIP_DOTS ),
+	$package_iterator = new RecursiveIteratorIterator(
+		new RecursiveDirectoryIterator( $package_root, FilesystemIterator::SKIP_DOTS ),
 		RecursiveIteratorIterator::SELF_FIRST
 	);
-	foreach ( $packageIterator as $item ) {
+	foreach ( $package_iterator as $item ) {
 		chmod( $item->getPathname(), $item->isDir() ? 0755 : 0644 );
 	}
 	chmod( $marker, 0644 );
-	$archiveIterator = new RecursiveIteratorIterator(
-		new RecursiveDirectoryIterator( $archiveRoot, FilesystemIterator::SKIP_DOTS ),
+	$archive_iterator = new RecursiveIteratorIterator(
+		new RecursiveDirectoryIterator( $archive_root, FilesystemIterator::SKIP_DOTS ),
 		RecursiveIteratorIterator::CHILD_FIRST
 	);
-	foreach ( $archiveIterator as $item ) {
+	foreach ( $archive_iterator as $item ) {
 		touch( $item->getPathname(), $epoch );
 	}
-	touch( $archiveRoot, $epoch );
+	touch( $archive_root, $epoch );
 	' "$stage_root/vendor/ran" "$stage_root" "$commit_epoch" "$stage_root/ran-booster-release.json"
 
 archive_name="ran-booster-$expected_version.zip"

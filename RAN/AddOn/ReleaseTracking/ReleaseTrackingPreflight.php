@@ -23,19 +23,12 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 
 	public function __construct(
 		private string $code,
-
 		private string $package_root,
-
 		private string $latest_version = '',
-
 		private string $release_url = '',
-
 		private string $release_tag = '',
-
 		private string $package_header_version = '',
-
 		private string $version_relationship = '',
-
 		private string $reason_code = ''
 	) {
 		if ( ! in_array(
@@ -51,7 +44,6 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 				self::RELEASE_ARCHIVE_UNREADABLE,
 			),
 			true
-
 		) || 1 !== preg_match( '/\A[A-Za-z0-9](?:[A-Za-z0-9._-]{0,99})\z/D', $this->package_root )
 
 			|| strlen( $this->latest_version ) > 64
@@ -71,7 +63,6 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 			|| ( '' !== $this->release_url && ! $this->valid_release_url( $this->release_url ) ) ) {
 			throw new InvalidArgumentException( 'Release tracking preflight is invalid.' );
 		}
-
 
 		parent::__construct( $this->code, $this->reason_code );
 	}

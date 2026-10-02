@@ -13,10 +13,10 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$package_providers_by_code     = array_column( $package_providers, null, 'code' );
+$package_providers_by_code    = array_column( $package_providers, null, 'code' );
 $package_activity_payload     = isset( $package_activity ) && is_array( $package_activity ) ? $package_activity : array();
 $package_activity_unavailable = true === ( $package_activity_payload['unavailable'] ?? false );
-$package_activity            = isset( $package_activity_payload['items'] ) && is_array( $package_activity_payload['items'] )
+$package_activity             = isset( $package_activity_payload['items'] ) && is_array( $package_activity_payload['items'] )
 	? $package_activity_payload['items']
 	: $package_activity_payload;
 $package_extension_rows       = isset( $package_extension_rows ) && is_array( $package_extension_rows )
@@ -49,7 +49,7 @@ $package_provider_options     = isset( $package_provider_options ) && is_array( 
 	: array();
 $extension_action_renderer    = new \RAN\Admin\Component\AdminActionRenderer();
 $package_admin_url            = $package_view->get_admin_url();
-$activity_detail_base_url      = add_query_arg(
+$activity_detail_base_url     = add_query_arg(
 	array(
 		'page'  => 'ran-booster',
 		'tab'   => 'troubleshooting',
@@ -73,18 +73,18 @@ $activity_badge_variants      = array(
 );
 $bulk_form_id                 = 'ran-booster-' . $package_view->get_type() . '-bulk-form';
 $bulk_action_id               = 'ran-booster-' . $package_view->get_type() . '-bulk-action';
-$bulk_select_all_id            = 'ran-booster-' . $package_view->get_type() . '-select-all';
+$bulk_select_all_id           = 'ran-booster-' . $package_view->get_type() . '-select-all';
 $bulk_type_label              = strtolower( $package_view->get_plural_label() );
 $bulk_type_singular           = strtolower( $package_view->get_singular_label() );
 $is_plugin_list               = 'plugin' === $package_view->get_type();
 $install_another_url          = add_query_arg( 'page', $package_view->get_create_page_slug(), $package_admin_url );
 $clear_filters_url            = add_query_arg( 'page', $package_view->get_page_slug(), $package_admin_url );
-$has_package_list_filters      = array() !== array_filter(
+$has_package_list_filters     = array() !== array_filter(
 	$package_list_state,
 	static fn ( mixed $value ): bool => is_string( $value ) && '' !== $value
 );
 $filtered_package_count       = count( $packages );
-$package_list_count_label      = $has_package_list_filters
+$package_list_count_label     = $has_package_list_filters
 	? sprintf(
 		/* translators: 1: filtered item count, 2: total item count. */
 		_n( '%1$d of %2$d item', '%1$d of %2$d items', $package_list_total, 'ran-booster' ),
@@ -242,26 +242,26 @@ $policy_labels = array(
 		<?php foreach ( $packages as $package ) { ?>
 			<?php
 			++$package_row_number;
-			$provider_code            = (string) ( $package->get_provider_code() ?? '' );
-			$package_provider         = $package_providers_by_code[ $provider_code ] ?? null;
-			$provider_unavailable     = null === $package_provider;
-			$deployment_policy        = $package->get_deployment_policy();
-			$policy_disabled          = \RAN\Deployment\DeploymentPolicy::DISABLED === $deployment_policy;
-			$package_identifier       = (string) $package->get_identifier();
-			$release_managed          = \RAN\PackageSource::RELEASE_ASSET === $package->get_source();
+			$provider_code             = (string) ( $package->get_provider_code() ?? '' );
+			$package_provider          = $package_providers_by_code[ $provider_code ] ?? null;
+			$provider_unavailable      = null === $package_provider;
+			$deployment_policy         = $package->get_deployment_policy();
+			$policy_disabled           = \RAN\Deployment\DeploymentPolicy::DISABLED === $deployment_policy;
+			$package_identifier        = (string) $package->get_identifier();
+			$release_managed           = \RAN\PackageSource::RELEASE_ASSET === $package->get_source();
 			$package_extension_row     = isset( $package_extension_rows[ $package_identifier ] ) && is_array( $package_extension_rows[ $package_identifier ] )
 				? $package_extension_rows[ $package_identifier ]
 				: array();
-			$package_actions          = isset( $package_extension_actions[ $package_identifier ] ) && is_array( $package_extension_actions[ $package_identifier ] )
+			$package_actions           = isset( $package_extension_actions[ $package_identifier ] ) && is_array( $package_extension_actions[ $package_identifier ] )
 				? $package_extension_actions[ $package_identifier ]
 				: array();
-			$word_press_plugin_active   = $is_plugin_list && is_plugin_active( $package_identifier );
+			$word_press_plugin_active  = $is_plugin_list && is_plugin_active( $package_identifier );
 			$package_activity_summary  = ! $release_managed && isset( $package_activity[ $package_identifier ] ) && is_array( $package_activity[ $package_identifier ] )
 				? $package_activity[ $package_identifier ]
 				: array();
-			$latest_attempt           = $package_activity_summary['latest'] ?? null;
+			$latest_attempt            = $package_activity_summary['latest'] ?? null;
 			$last_successful_attempt   = $package_activity_summary['last_successful'] ?? null;
-			$latest_activity          = $latest_attempt instanceof \RAN\Deployment\DeploymentAttempt ? $latest_attempt->safe_data() : null;
+			$latest_activity           = $latest_attempt instanceof \RAN\Deployment\DeploymentAttempt ? $latest_attempt->safe_data() : null;
 			$last_successful_activity  = $last_successful_attempt instanceof \RAN\Deployment\DeploymentAttempt ? $last_successful_attempt->safe_data() : null;
 			$latest_activity_state     = is_array( $latest_activity ) && is_string( $latest_activity['state'] ?? null )
 				? $latest_activity['state']
@@ -275,17 +275,17 @@ $policy_labels = array(
 			$last_successful_at        = is_array( $last_successful_activity ) && is_string( $last_successful_activity['finished_at'] ?? null )
 				? $last_successful_activity['finished_at']
 				: '';
-			$installed_version        = $package->get_version();
-			$credential_profiles      = is_array( $package_provider['credentials'] ?? null ) ? $package_provider['credentials'] : array();
+			$installed_version         = $package->get_version();
+			$credential_profiles       = is_array( $package_provider['credentials'] ?? null ) ? $package_provider['credentials'] : array();
 			$credentials_by_id         = array_column( $credential_profiles, null, 'id' );
 			$stored_credential_id      = $package->get_credential_id();
 			$effective_credential_id   = '' !== $stored_credential_id
 				? $stored_credential_id
 				: (string) ( $package_provider['default_credential_id'] ?? '' );
-			$configured_credential    = $credentials_by_id[ $effective_credential_id ] ?? null;
-			$credential_available     = ! $package->get_private() || is_array( $configured_credential );
+			$configured_credential     = $credentials_by_id[ $effective_credential_id ] ?? null;
+			$credential_available      = ! $package->get_private() || is_array( $configured_credential );
 			$provider_can_deploy       = ! $provider_unavailable && true === $package_provider['deploy'];
-			$deployment_available     = $provider_can_deploy && $credential_available;
+			$deployment_available      = $provider_can_deploy && $credential_available;
 			$update_can_run            = $deployment_available && ! $policy_disabled;
 			$update_in_progress        = ! $release_managed && in_array( $latest_activity_state, array( 'queued', 'running' ), true );
 			$update_needs_attention    = ! $release_managed
@@ -333,7 +333,7 @@ $policy_labels = array(
 					$access_label = __( 'Private; credential missing', 'ran-booster' );
 				}
 			}
-			$prominent_status         = null;
+			$prominent_status          = null;
 			$prominent_status_activity = false;
 			if ( $provider_unavailable ) {
 				$prominent_status = array(
@@ -354,7 +354,7 @@ $policy_labels = array(
 				&& ! $policy_disabled
 				&& ( in_array( $latest_activity_state, array( 'queued', 'running', 'failed' ), true ) || $update_needs_attention )
 			) {
-				$prominent_status         = array(
+				$prominent_status          = array(
 					'label' => $activity_state_labels[ $latest_activity_state ] ?? $latest_activity_state,
 					'tone'  => $activity_badge_variants[ $latest_activity_state ] ?? 'error',
 				);
@@ -370,7 +370,7 @@ $policy_labels = array(
 					}
 				}
 			}
-			$edit_url              = add_query_arg(
+			$edit_url               = add_query_arg(
 				array(
 					'page'    => $package_view->get_page_slug(),
 					'package' => $package->get_identifier(),

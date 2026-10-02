@@ -23,6 +23,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 	private string $config_path;
 	private string $sidecar_path;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->directory    = sys_get_temp_dir() . '/ran-booster-wp-config-' . bin2hex( random_bytes( 8 ) );
 		$this->config_path  = $this->directory . '/wp-config.php';
@@ -32,6 +33,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		$this->write_config( $this->valid_config() );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$this->remove_tree( $this->directory );
 	}

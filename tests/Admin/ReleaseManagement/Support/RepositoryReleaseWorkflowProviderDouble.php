@@ -34,8 +34,8 @@ use RuntimeException;
 
 final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvider, RepositoryReleaseWorkflowManagementV3, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseNativeTargets {
 	/** @var list<array{operation:string,credential_id:?string,channel?:string,key?:string,confirmation?:string}> */
-	public array $calls           = array();
-	public int $status_reads       = 0;
+	public array $calls             = array();
+	public int $status_reads        = 0;
 	public bool $throw_on_workflow  = false;
 	public bool $throw_on_operation = false;
 

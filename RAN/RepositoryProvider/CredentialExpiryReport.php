@@ -29,7 +29,7 @@ final readonly class CredentialExpiryReport {
 		return new self( null );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
+
 	public function is_known(): bool {
 		return null !== $this->expires_at;
 	}

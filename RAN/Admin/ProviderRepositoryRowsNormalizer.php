@@ -18,7 +18,7 @@ final class ProviderRepositoryRowsNormalizer {
 	// Placeholder meanings are fixed by the named projection fields below.
 	// phpcs:disable WordPress.WP.I18n.MissingTranslatorsComment
 	/** Build the managed-repository projection consumed by the provider page. */
-	public function project_page( array $data, ?RepositoryWebhookManagementControls $webhook_management = null, ?ReleaseWorkflowControls $release_workflow = null ): array { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve caller compatibility.
+	public function project_page( array $data, ?RepositoryWebhookManagementControls $webhook_management = null, ?ReleaseWorkflowControls $release_workflow = null ): array {
 		$provider       = is_array( $data['provider'] ?? null ) ? $data['provider'] : array();
 		$provider_code  = is_string( $provider['code'] ?? null ) ? $provider['code'] : '';
 		$provider_label = is_string( $provider['label'] ?? null ) ? $provider['label'] : '';
@@ -61,11 +61,11 @@ final class ProviderRepositoryRowsNormalizer {
 			$site_endpoint,
 			$site_ready,
 			$this->readiness_indexes( $readiness['repositories'] ?? null, $provider_code ),
-			$webhook_management, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			$webhook_management,
 			is_string( $data['requested_repository_id'] ?? null ) ? $data['requested_repository_id'] : '',
 			$provider_url,
 			$task_urls['repositories'],
-			$release_workflow // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			$release_workflow
 		);
 		$repository_summary           = $this->repository_summary( $model['webhook_rows'], $model['rows'] );
 		$repository_view              = in_array( $data['repository_view'] ?? null, array( 'status', 'branch', 'releases' ), true ) ? $data['repository_view'] : 'status';
@@ -101,32 +101,32 @@ final class ProviderRepositoryRowsNormalizer {
 		}
 
 		return array(
-			'provider_task'                     => in_array( $data['provider_task'] ?? null, array( 'repositories', 'setup' ), true ) ? $data['provider_task'] : 'status',
-			'managed_repositories'              => $managed,
-			'webhook_endpoint'                  => $endpoint,
+			'provider_task'                       => in_array( $data['provider_task'] ?? null, array( 'repositories', 'setup' ), true ) ? $data['provider_task'] : 'status',
+			'managed_repositories'                => $managed,
+			'webhook_endpoint'                    => $endpoint,
 			'webhook_assistance_provider_capable' => null !== $site,
 			'webhook_assistance_site_ready'       => $site_ready,
-			'repository_integration_available'   => array() !== $model['rows'] || ( ! empty( $provider['capabilities']['webhooks'] ) && ! empty( $provider['webhook_scopes'] ) ),
-			'repository_integration_summary'     => $repository_summary,
-			'webhook_site_reasons'               => $this->site_reasons( $reason_codes, $site_endpoint ),
+			'repository_integration_available'    => array() !== $model['rows'] || ( ! empty( $provider['capabilities']['webhooks'] ) && ! empty( $provider['webhook_scopes'] ) ),
+			'repository_integration_summary'      => $repository_summary,
+			'webhook_site_reasons'                => $this->site_reasons( $reason_codes, $site_endpoint ),
 			'webhook_has_hard_failure'            => array() !== array_intersect( $reason_codes, array( 'database_unavailable', 'secrets_storage_unavailable', 'managed_packages_unavailable' ) ),
-			'task_urls'                         => $task_urls,
-			'task_request_urls'                  => $task_requests,
-			'wordpress_urls_url'                 => admin_url( 'options-general.php' ),
-			'webhook_operations_url'             => admin_url( 'admin.php?page=ran-booster&tab=documentation#ran-booster-push-to-deploy' ),
-			'install_plugin_url'                 => admin_url( 'admin.php?page=ran-booster-plugins-create&provider=' . rawurlencode( $provider_code ) ),
-			'install_theme_url'                  => admin_url( 'admin.php?page=ran-booster-themes-create&provider=' . rawurlencode( $provider_code ) ),
-			'automaticPackageCount'            => $counts['automatic'],
-			'requested_repository_id'            => $model['requested_id'],
-			'repository_view'                   => $repository_view,
-			'repository_view_urls'               => $repository_view_urls,
+			'task_urls'                           => $task_urls,
+			'task_request_urls'                   => $task_requests,
+			'wordpress_urls_url'                  => admin_url( 'options-general.php' ),
+			'webhook_operations_url'              => admin_url( 'admin.php?page=ran-booster&tab=documentation#ran-booster-push-to-deploy' ),
+			'install_plugin_url'                  => admin_url( 'admin.php?page=ran-booster-plugins-create&provider=' . rawurlencode( $provider_code ) ),
+			'install_theme_url'                   => admin_url( 'admin.php?page=ran-booster-themes-create&provider=' . rawurlencode( $provider_code ) ),
+			'automaticPackageCount'               => $counts['automatic'],
+			'requested_repository_id'             => $model['requested_id'],
+			'repository_view'                     => $repository_view,
+			'repository_view_urls'                => $repository_view_urls,
 			'repository_view_request_urls'        => $repository_view_request_urls,
-			'repository_list_url'                => $model['list_url'],
-			'provider_return_url'                => $model['return_url'],
-			'repository_table_rows'              => array_values( $model['rows'] ),
+			'repository_list_url'                 => $model['list_url'],
+			'provider_return_url'                 => $model['return_url'],
+			'repository_table_rows'               => array_values( $model['rows'] ),
 			'repository_row_count_label'          => sprintf( _nx( /* translators: %d is the number of repositories shown. */ '%d repository shown', '%d repositories shown', count( $model['rows'] ), 'Provider table repository count', 'ran-booster' ), count( $model['rows'] ) ),
-			'selected_repository_row'            => $model['selected'],
-			'activity_url'                      => admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ),
+			'selected_repository_row'             => $model['selected'],
+			'activity_url'                        => admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ),
 		) + $this->copy( $provider_label, is_array( $provider['webhook_setup'] ?? null ) ? $provider['webhook_setup'] : null, $counts, $shared_label );
 	}
 
@@ -135,14 +135,14 @@ final class ProviderRepositoryRowsNormalizer {
 	 * @param mixed                               $presented
 	 * @return array<string, array<string, mixed>>
 	 */
-	public function normalize( array $base_rows, mixed $presented, string $provider_code, bool $allow_core_detail_append = false ): array { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+	public function normalize( array $base_rows, mixed $presented, string $provider_code, bool $allow_core_detail_append = false ): array {
 		if ( ! is_array( $presented ) ) {
 			throw new LogicException( 'Provider repository rows must be a keyed array.' );
 		}
 
 		$normalizer = new AdminActionNormalizer();
 		$rows       = array();
-		foreach ( $base_rows as $key => $base_row ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		foreach ( $base_rows as $key => $base_row ) {
 			if ( ! isset( $presented[ $key ] ) || ! is_array( $presented[ $key ] ) ) {
 				throw new LogicException( 'Provider filters must preserve every Core repository row.' );
 			}
@@ -167,7 +167,7 @@ final class ProviderRepositoryRowsNormalizer {
 			if ( array_slice( $details, 0, count( $base_details ) ) !== $base_details ) {
 				throw new LogicException( 'Provider filters may append but not replace Core details.' );
 			}
-			$this->assert_details( $details, count( $base_details ), $allow_core_detail_append ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			$this->assert_details( $details, count( $base_details ), $allow_core_detail_append );
 
 			$base_actions = is_array( $base_row['actions'] ?? null ) ? $base_row['actions'] : array();
 			$actions      = is_array( $row['actions'] ?? null ) ? $row['actions'] : array();
@@ -197,14 +197,14 @@ final class ProviderRepositoryRowsNormalizer {
 		}
 
 		foreach ( $presented as $key => $row ) {
-			if ( isset( $base_rows[ $key ] ) ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			if ( isset( $base_rows[ $key ] ) ) {
 				continue;
 			}
 			if ( ! is_string( $key )
 				|| 1 !== preg_match( '/^[a-z][a-z0-9-]{0,63}:[a-z0-9:-]{1,127}$/', $key )
 				|| ! is_array( $row )
 				|| true !== ( $row['historical'] ?? false )
-				|| ( $row['provider_code'] ?? null ) !== $provider_code ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+				|| ( $row['provider_code'] ?? null ) !== $provider_code ) {
 				throw new LogicException( 'Provider filters may append only namespaced historical rows.' );
 			}
 			$row_actions = is_array( $row['actions'] ?? null ) ? $row['actions'] : array();
@@ -217,7 +217,7 @@ final class ProviderRepositoryRowsNormalizer {
 					throw new LogicException( 'Historical rows may contain link actions only.' );
 				}
 			}
-			$rows[ $key ] = $this->normalize_historical_row( $key, $row, $provider_code ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			$rows[ $key ] = $this->normalize_historical_row( $key, $row, $provider_code );
 		}
 
 		return $rows;
@@ -231,23 +231,23 @@ final class ProviderRepositoryRowsNormalizer {
 	 */
 	public function project(
 		array $repositories,
-		string $provider_code, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-		string $provider_label, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-		string $provider_webhook_settings_label, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-		string $shared_secret_label, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		string $provider_code,
+		string $provider_label,
+		string $provider_webhook_settings_label,
+		string $shared_secret_label,
 		string $endpoint,
-		bool $site_ready, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		bool $site_ready,
 		array $readiness,
-		?RepositoryWebhookManagementControls $webhook_management, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-		string $requested_id, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-		callable $provider_url, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-		string $list_url, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-		?ReleaseWorkflowControls $release_workflow = null // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		?RepositoryWebhookManagementControls $webhook_management,
+		string $requested_id,
+		callable $provider_url,
+		string $list_url,
+		?ReleaseWorkflowControls $release_workflow = null
 	): array {
-		$return_url   = '' === $requested_id ? $list_url : $provider_url( // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		$return_url   = '' === $requested_id ? $list_url : $provider_url(
 			array(
 				'panel'      => 'repositories',
-				'repository' => $requested_id, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+				'repository' => $requested_id,
 			)
 		);
 		$rows         = array();
@@ -276,7 +276,7 @@ final class ProviderRepositoryRowsNormalizer {
 			$repository_id    = $is_release
 				? $managed_id
 				: ( is_string( $readiness_row['repository_id'] ?? null ) && '' !== $readiness_row['repository_id'] ? $readiness_row['repository_id'] : $managed_id );
-			$row_key          = '' !== $repository_id ? $repository_id : 'repository:' . hash( 'sha256', $provider_code . '|' . strtolower( $locator ) . '|' . $source ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			$row_key          = '' !== $repository_id ? $repository_id : 'repository:' . hash( 'sha256', $provider_code . '|' . strtolower( $locator ) . '|' . $source );
 			$reason_codes     = is_array( $readiness_row['reason_codes'] ?? null ) ? $readiness_row['reason_codes'] : array();
 			if ( true === ( $repository['identity_conflict'] ?? false ) && ! in_array( 'repository_identity_conflict', $reason_codes, true ) ) {
 				$reason_codes[] = 'repository_identity_conflict';
@@ -361,10 +361,10 @@ final class ProviderRepositoryRowsNormalizer {
 			}
 			$statuses[] = array(
 				'label' => match ( $coverage ) {
-				'repository' => __( 'Repository secret', 'ran-booster' ), 'shared' => $shared_secret_label, 'none' => __( 'No secret', 'ran-booster' ), default => __( 'Secret coverage unavailable', 'ran-booster' ) }, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+				'repository' => __( 'Repository secret', 'ran-booster' ), 'shared' => $shared_secret_label, 'none' => __( 'No secret', 'ran-booster' ), default => __( 'Secret coverage unavailable', 'ran-booster' ) },
 				'tone'  => in_array( $coverage, array( 'repository', 'shared' ), true ) ? 'ok' : 'warning',
 			);
-			if ( ! $site_ready ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			if ( ! $site_ready ) {
 				$statuses[] = array(
 					'label' => __( 'Push-to-Deploy disabled', 'ran-booster' ),
 					'tone'  => 'error',
@@ -383,7 +383,7 @@ final class ProviderRepositoryRowsNormalizer {
 			$management_label = 1 === count( $non_zero ) ? match ( (string) array_key_first( $non_zero ) ) {
 				'automatic' => __( 'Automatic', 'ran-booster' ), 'manual' => __( 'Manual', 'ran-booster' ), default => __( 'Disabled', 'ran-booster' ) } : __( 'Mixed policies', 'ran-booster' );
 			$management_detail = match ( $coverage ) {
-				'repository' => __( 'Repository secret', 'ran-booster' ), 'shared' => $shared_secret_label, 'none' => __( 'No secret', 'ran-booster' ), 'not_applicable' => '', default => __( 'Secret coverage unavailable', 'ran-booster' ) }; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+				'repository' => __( 'Repository secret', 'ran-booster' ), 'shared' => $shared_secret_label, 'none' => __( 'No secret', 'ran-booster' ), 'not_applicable' => '', default => __( 'Secret coverage unavailable', 'ran-booster' ) };
 			$management_tone = in_array( $coverage, array( 'repository', 'shared' ), true ) ? 'ok' : 'warning';
 			$consequence     = match ( true ) {
 				$source_conflict => __( 'Conflicting sources. Review the package settings before using release workflow.', 'ran-booster' ),
@@ -392,7 +392,7 @@ final class ProviderRepositoryRowsNormalizer {
 				$is_release => __( 'Pushes are ignored.', 'ran-booster' ),
 				1 === count( $non_zero ) && isset( $non_zero['disabled'] ) => __( 'Push-to-Deploy disabled; pushes are ignored.', 'ran-booster' ),
 				'' !== ( $issues[0] ?? '' ) => (string) $issues[0],
-				! $site_ready => __( 'Push-to-Deploy is unavailable until the site-level readiness issue is resolved.', 'ran-booster' ), // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+				! $site_ready => __( 'Push-to-Deploy is unavailable until the site-level readiness issue is resolved.', 'ran-booster' ),
 				'none' === $coverage => __( 'Push-to-Deploy is blocked until a signing secret is selected.', 'ran-booster' ),
 				1 === count( $non_zero ) && isset( $non_zero['automatic'] ) => __( 'Push-to-Deploy enabled; signed pushes can queue eligible packages.', 'ran-booster' ),
 				1 === count( $non_zero ) && isset( $non_zero['manual'] ) => __( 'Push-to-Deploy remains off until the package Updates setting is Automatic.', 'ran-booster' ),
@@ -409,14 +409,14 @@ final class ProviderRepositoryRowsNormalizer {
 				$consequence       = sprintf( /* translators: %d is the number of omitted package summaries. */ __( '%d package summary is not shown. Refresh the repository inventory before relying on aggregate deployment state or workflow controls.', 'ran-booster' ), $package_summaries_omitted );
 			}
 			$release_reason_id = ( $is_release || $source_conflict ) && '' !== $consequence ? $reason_id . '-release-source' : '';
-			$described_by      = array_filter( array( $release_reason_id, ( '' !== ( $issues[0] ?? '' ) ) ? $reason_id : '', ! $site_ready && ! $is_release ? $reason_id . '-site' : '' ) ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-			$actions           = ! $inventory_incomplete && null !== $webhook_management && $webhook_management->supports_provider( $provider_code ) && $has_branch && ! $historical // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			$described_by      = array_filter( array( $release_reason_id, ( '' !== ( $issues[0] ?? '' ) ) ? $reason_id : '', ! $site_ready && ! $is_release ? $reason_id . '-site' : '' ) );
+			$actions           = ! $inventory_incomplete && null !== $webhook_management && $webhook_management->supports_provider( $provider_code ) && $has_branch && ! $historical
 				? $this->webhook_management_action( $locator, $described_by )
 				: array();
 			$secret_target     = 'shared' === $coverage ? (string) strtok( $locator, '/' ) : $locator;
 			$secret_link       = 'none' === $coverage ? array(
 				'label'  => __( 'Add repository secret', 'ran-booster' ),
-				'url'    => $provider_url( // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+				'url'    => $provider_url(
 					array_filter(
 						array(
 							'panel'              => 'repositories',
@@ -434,7 +434,7 @@ final class ProviderRepositoryRowsNormalizer {
 			)
 				: ( in_array( $coverage, array( 'repository', 'shared' ), true ) ? array(
 					'label'  => 'shared' === $coverage ? __( 'Review shared owner secret', 'ran-booster' ) : __( 'Review repository secret', 'ran-booster' ),
-					'url'    => $provider_url( // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+					'url'    => $provider_url(
 						array(
 							'view' => 'secrets',
 							's'    => $secret_target,
@@ -445,7 +445,7 @@ final class ProviderRepositoryRowsNormalizer {
 					'target' => '',
 				) : null );
 			$detail_url        = '' !== $repository_id && ! $historical
-				? $provider_url( // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+				? $provider_url(
 					array(
 						'panel'      => 'repositories',
 						'repository' => $repository_id,
@@ -453,14 +453,14 @@ final class ProviderRepositoryRowsNormalizer {
 				)
 				: '';
 			if ( ! $inventory_incomplete && ! $historical ) {
-				$this->append_repository_actions( $actions, $repository, $references, $is_release, $coverage, $provider_webhook_settings_label, $release_reason_id, $locator, $detail_url ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+				$this->append_repository_actions( $actions, $repository, $references, $is_release, $coverage, $provider_webhook_settings_label, $release_reason_id, $locator, $detail_url );
 			}
 			$rows[ $row_key ] = array(
 				'key'                           => $row_key,
-				'provider_code'                 => $provider_code, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+				'provider_code'                 => $provider_code,
 				'repository_id'                 => $repository_id,
 				'historical'                    => $historical,
-				'provider_label'                => $provider_label, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+				'provider_label'                => $provider_label,
 				'repository'                    => $locator,
 				'repository_url'                => is_string( $repository['repository_url'] ?? null ) ? $repository['repository_url'] : '',
 				'detail_url'                    => $detail_url,
@@ -489,7 +489,7 @@ final class ProviderRepositoryRowsNormalizer {
 			);
 			if ( $has_branch && ! $historical ) {
 				$projections[ $row_key ] = array(
-					'provider_code'         => $provider_code, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+					'provider_code'         => $provider_code,
 					'repository_id'         => $repository_id,
 					'repository'            => $locator,
 					'label'                 => $locator,
@@ -500,29 +500,29 @@ final class ProviderRepositoryRowsNormalizer {
 						'disabled'  => $disabled,
 					),
 					'endpoint'              => $endpoint,
-					'eligible'              => is_array( $readiness_row ) && true === ( $readiness_row['eligible'] ?? false ) && $site_ready && '' !== $repository_id, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+					'eligible'              => is_array( $readiness_row ) && true === ( $readiness_row['eligible'] ?? false ) && $site_ready && '' !== $repository_id,
 					'reason_codes'          => $reason_codes,
 					'local_secret_coverage' => $coverage,
 				);
 			}
 		}
-		$core_rows    = null !== $webhook_management // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-			? $webhook_management->enrich_repository_rows( $rows, $provider_code, $projections, $return_url ) // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		$core_rows    = null !== $webhook_management
+			? $webhook_management->enrich_repository_rows( $rows, $provider_code, $projections, $return_url )
 			: $rows;
-		$webhook_rows = $this->normalize( $rows, $core_rows, $provider_code, true ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-		$core_rows    = null !== $release_workflow // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-			? $release_workflow->enrich_repository_rows( $webhook_rows, $provider_code, $projections, $return_url ) // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		$webhook_rows = $this->normalize( $rows, $core_rows, $provider_code, true );
+		$core_rows    = null !== $release_workflow
+			? $release_workflow->enrich_repository_rows( $webhook_rows, $provider_code, $projections, $return_url )
 			: $webhook_rows;
-		$core_rows    = $this->normalize( $webhook_rows, $core_rows, $provider_code, true ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+		$core_rows    = $this->normalize( $webhook_rows, $core_rows, $provider_code, true );
 		try {
 			$presented = apply_filters(
 				'ran_booster_provider_repository_rows',
 				$core_rows,
-				$provider_code, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+				$provider_code,
 				$projections,
 				$return_url
 			);
-			$rows      = $this->normalize( $core_rows, $presented, $provider_code ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			$rows      = $this->normalize( $core_rows, $presented, $provider_code );
 		} catch ( Throwable $failure ) {
 			$rows = $core_rows;
 			BoosterLogger::log_exception(
@@ -531,20 +531,20 @@ final class ProviderRepositoryRowsNormalizer {
 				array(
 					'source'   => 'admin',
 					'step'     => 'provider_repository_row_enrichment',
-					'provider' => $provider_code, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+					'provider' => $provider_code,
 				)
 			);
 		}
 		$selected = null;
 		foreach ( $rows as $row ) {
-			if ( '' !== $requested_id && false === ( $row['historical'] ?? false ) && ( $row['repository_id'] ?? null ) === $requested_id ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			if ( '' !== $requested_id && false === ( $row['historical'] ?? false ) && ( $row['repository_id'] ?? null ) === $requested_id ) {
 				$selected = $row;
 				break; }
 		}
 
 		return array(
-			'requested_id' => $requested_id, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
-			'list_url'     => $list_url, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names preserve named-argument compatibility.
+			'requested_id' => $requested_id,
+			'list_url'     => $list_url,
 			'return_url'   => $return_url,
 			'webhook_rows' => $webhook_rows,
 			'rows'         => $rows,
@@ -1008,12 +1008,12 @@ final class ProviderRepositoryRowsNormalizer {
 			: __( 'None set to Automatic', 'ran-booster' );
 
 		return array(
-			'providerPushDescription'      => sprintf( /* translators: %s is the repository provider name. */ __( '%s push webhooks can trigger managed branch deployments whose Updates setting is Automatic.', 'ran-booster' ), $label ),
-			'automaticPackageLabel'        => $automatic_label,
-			'managedPackageDescription'    => sprintf( _n( /* translators: 1: number of repositories, 2: number of managed packages. */ '%1$d repository contains %2$d managed package.', '%1$d repositories contain %2$d managed packages.', $counts['repositories'], 'ran-booster' ), $counts['repositories'], $counts['packages'] ),
+			'providerPushDescription'        => sprintf( /* translators: %s is the repository provider name. */ __( '%s push webhooks can trigger managed branch deployments whose Updates setting is Automatic.', 'ran-booster' ), $label ),
+			'automaticPackageLabel'          => $automatic_label,
+			'managedPackageDescription'      => sprintf( _n( /* translators: 1: number of repositories, 2: number of managed packages. */ '%1$d repository contains %2$d managed package.', '%1$d repositories contain %2$d managed packages.', $counts['repositories'], 'ran-booster' ), $counts['repositories'], $counts['packages'] ),
 			'provider_instructions_label'    => sprintf( /* translators: %s is the repository provider name. */ __( 'Open %s instructions', 'ran-booster' ), $label ),
-			'secretChoiceDescription'      => sprintf( /* translators: %s is the shared secret label. */ __( 'Use a saved %s or create a repository-scoped secret when isolation is required.', 'ran-booster' ), strtolower( $shared_secret_label ) ),
-			'createProviderWebhookLabel'   => sprintf( /* translators: %s is the repository provider name. */ __( 'Create the %s webhook', 'ran-booster' ), $label ),
+			'secretChoiceDescription'        => sprintf( /* translators: %s is the shared secret label. */ __( 'Use a saved %s or create a repository-scoped secret when isolation is required.', 'ran-booster' ), strtolower( $shared_secret_label ) ),
+			'createProviderWebhookLabel'     => sprintf( /* translators: %s is the repository provider name. */ __( 'Create the %s webhook', 'ran-booster' ), $label ),
 			'manual_setup_description'       => null === $setup ? '' : sprintf( /* translators: 1: repository provider name, 2: provider webhook settings location. */ __( 'In %1$s, go to %2$s and create the remote webhook.', 'ran-booster' ), $label, $setup['location'] ),
 			'repository_webhook_description' => sprintf(
 				/* translators: %s is the repository provider name. */

@@ -20,6 +20,7 @@ use RAN\Storage\DatabaseLifecycleFailure;
 
 final class ActivationRequirementsTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset( $GLOBALS['ran_booster_wp_pusher_active_plugins'] );
 	}

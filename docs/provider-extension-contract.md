@@ -1,12 +1,12 @@
 # Provider extension contract
 
-> API13 dependency-adoption candidate: the lock selects the immutable Provider
-> beta.11 release. Final archive/installed qualification must use this exact
-> composition; earlier source overlays are not adoption proof. Core beta.31
-> remains held for the coordinated work and its separate release decision.
+> Provider API14 naming candidate: consumers must use matching API14 source.
+> The inherited Provider beta.11 dependency lock is not the new candidate's
+> adoption proof. Fresh combined, archive and installed qualification and a
+> separate release decision are required before Core beta.31 can ship.
 
 
-RAN Booster Provider API 13 accepts trusted repository providers through its late
+RAN Booster Provider API 14 accepts trusted repository providers through its late
 registration action. A provider plugin attaches a callback from its main plugin
 file during normal plugin loading. Credential-bearing providers use one required
 three-argument factory contract:
@@ -16,21 +16,21 @@ add_action(
 	'ran_booster_register_providers',
 	static function ( \RAN\RepositoryProvider\ProviderRegistry $registry ): void {
 		if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-			|| 13 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+			|| 14 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
 			return;
 		}
 
-		$registry->registerWithCredentialStore(
+		$registry->register_with_credential_store(
 			'example',
 			static function (
 				\RAN\RepositoryProvider\ProviderCredentialStore $credentials,
-				\RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-				\RAN\RepositoryProvider\ProviderRegistrationContext $registrationContext
+				\RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
+				\RAN\RepositoryProvider\ProviderRegistrationContext $registration_context
 			): ExampleProvider {
 				return new ExampleProvider(
 					$credentials,
-					$deliveryEvidence,
-					static fn (): int => $registrationContext->maximumArtifactBytes()
+					$delivery_evidence,
+					static fn (): int => $registration_context->maximum_artifact_bytes()
 				);
 			}
 		);
@@ -39,11 +39,11 @@ add_action(
 ```
 
 Booster defines the integer `RAN_BOOSTER_PROVIDER_API_VERSION` marker before the
-registration action can run. The callback must check for exact Provider API 13.
+registration action can run. The callback must check for exact Provider API 14.
 `Requires Plugins: ran-booster` only tells WordPress about the package
 dependency; it does not replace this exact runtime marker check or make a
 mismatched provider contract safe.
-Provider API 13 publishes no logging facade, generic service resolver, Core
+Provider API 14 publishes no logging facade, generic service resolver, Core
 container, credential writer, sidecar path or database/deployment repository.
 Providers report bounded diagnostics and operation results. Core owns logging
 at its call boundaries and never supplies a logger to provider code.
@@ -54,7 +54,7 @@ the provider plugin file loads before or after Booster because both attach
 their callbacks before `plugins_loaded` runs. Registration after sealing fails;
 a newly activated provider becomes available on the next request.
 
-`registerWithCredentialStore()` is the required path for a provider that reads
+`register_with_credential_store()` is the required path for a provider that reads
 stored credentials. Booster verifies that the requested code is novel before it
 issues three bounded values bound to that registration. The factory must declare
 a non-variadic, by-value third parameter typed exactly
@@ -62,16 +62,16 @@ a non-variadic, by-value third parameter typed exactly
 signatures are rejected before provider construction. Core then verifies that the
 returned provider uses the same requested code before atomic registration:
 
-- `ProviderCredentialStore` exposes display-safe `credentialProfiles()`, one
-  selected/default `credentialMaterial()` read and boolean
-  `hasWebhookProfile()` readiness. It has no provider argument, write methods,
+- `ProviderCredentialStore` exposes display-safe `credential_profiles()`, one
+  selected/default `credential_material()` read and boolean
+  `has_webhook_profile()` readiness. It has no provider argument, write methods,
   path access or webhook-secret access.
 - `AuthenticatedWebhookDeliveryEvidenceReader` exposes only
-  `latestAuthenticatedDelivery()` for the already-bound provider. It has no
+  `latest_authenticated_delivery()` for the already-bound provider. It has no
   provider argument and exposes neither the deployment database repository nor
   general attempt history.
 - `ProviderRegistrationContext` currently exposes only
-  `maximumArtifactBytes()`. That method lazily resolves Core's provider-neutral
+  `maximum_artifact_bytes()`. That method lazily resolves Core's provider-neutral
   archive ceiling and returns it as an integer. The lazy resolution preserves
   the existing operation/admission failure boundary: an invalid site override
   does not make plugin bootstrap fatal. The context is not a service locator and
@@ -79,11 +79,11 @@ returned provider uses the same requested code before atomic registration:
   repository or other Core implementation service.
 
 A provider that retains the host artifact policy should retain the bounded
-supplier and invoke `maximumArtifactBytes()` only when the relevant archive or
+supplier and invoke `maximum_artifact_bytes()` only when the relevant archive or
 release operation needs the ceiling, not while its registration factory is
-constructing the aggregate. Provider API 13 guarantees that the registration
+constructing the aggregate. Provider API 14 guarantees that the registration
 context is part of the credential-bearing factory contract; providers targeting
-API 13 must not feature-detect or fall back to the retired two-argument shape.
+API 14 must not feature-detect or fall back to the retired two-argument shape.
 The context remains bounded and does not create a generic dependency-injection
 seam.
 
@@ -109,7 +109,7 @@ registration window.
 
 The current collision and same-vendor coexistence behavior is characterized in
 [Provider registration and coexistence](provider-registration-and-coexistence.md).
-Provider API 13 rejects an exact duplicate code but does not reserve vendor
+Provider API 14 rejects an exact duplicate code but does not reserve vendor
 aliases, identify two implementations of the same vendor, or merge their
 capabilities and state.
 
@@ -205,7 +205,7 @@ requests and latest outcomes remain separate evidence.
 See [Provider release-workflow capability](provider-release-workflow-api.md) for
 the v1 API 3 baseline and feature-detection boundary.
 
-`RepositoryReleaseWorkflowResult::failureStage()` is a closed, Core-owned
+`RepositoryReleaseWorkflowResult::failure_stage()` is a closed, Core-owned
 display category, never a provider-defined value. Successful results must use
 an empty failure stage. A failed result may use an empty stage or only
 `credential_authorisation`, `release_preflight`, `repository_snapshot`,
@@ -234,18 +234,20 @@ Deployment tabs and independently supported release consumption remain usable.
 Remote inspection requires an explicit action. Outcomes return to the exact
 repository Releases tab, with diagnostics inside its notice area.
 
-These optional workflow facets do not further widen Provider API 13's bounded
+These optional workflow facets do not further widen Provider API 14's bounded
 registration context and introduce no repository settings object or shared
 workflow storage.
 
-Provider API 13 identifies the breaking snake_case capability contracts and retains initial-only V3 behavior. Providers must
-check this exact marker before loading their implementation. API-11 and API-12 providers
-must remain unregistered on this host; there is no V2 compatibility shim. The
-registration signature and Add-on API 16 are unchanged. See the
-[coordinated compatibility boundary](provider-release-workflow-api.md#provider-api-13-compatibility-boundary).
-The bundled lock selects immutable GitHub Provider `v1.0.0-beta.11`
-(`c88045d0b6d6048599454b9549e59ddf176d56f0`), including the Provider-owned
-helper naming migration and preserved bootstrap record operation projection.
+Provider API 14 completes the breaking snake_case method, parameter, property
+and DTO contract migration while retaining initial-only V3 behavior. Providers
+must check this exact marker before loading their implementation. API11, API12
+and API13 providers remain unregistered; there is no V2 compatibility shim.
+The registration factory still receives three arguments. Add-on API17 and Admin
+Interaction API3 are separate connected boundaries. See the
+[coordinated compatibility boundary](provider-release-workflow-api.md#provider-api-14-compatibility-boundary).
+The inherited GitHub Provider `v1.0.0-beta.11` lock
+(`c88045d0b6d6048599454b9549e59ddf176d56f0`) is the API13 baseline;
+the API14 candidate requires matching consumer source and fresh qualification.
 Merged Core #177 passed repository, archive and installed checks for its
 historical beta.8 composition (`556f19923f6564f1bbd5cecee089d6b136afc5cd`).
 That evidence does not qualify this new lock; see the
@@ -333,7 +335,7 @@ structured WordPress filter:
 
 ```php
 add_filter(
-	'ran_booster_documentation_sections_after_provider_' . $providerCode,
+	'ran_booster_documentation_sections_after_provider_' . $provider_code,
 	$callback,
 	10,
 	3
@@ -380,9 +382,9 @@ archive into its private preflight file; WordPress receives only that verified
 local file. Providers remain responsible for any stricter origin, path and
 signed query policy required by their service.
 
-Provider API 13 owns two shared helpers for ordinary vendor implementations:
+Provider API 14 owns two shared helpers for ordinary vendor implementations:
 
-- `GitReferenceSyntax::isValidNamedReference()` applies Core's bounded generic
+- `GitReferenceSyntax::is_valid_named_reference()` applies Core's bounded generic
   branch/ref syntax check without assuming a particular hosting vendor.
 - `AuthenticatedPreparedArchive` implements `PreparedArchive` and owns the
   one-request authentication, redirect scrubbing, current-head verification and
@@ -395,9 +397,9 @@ storage or deployment machinery.
 
 `prepare_archive()` resolves the requested branch, tag or commit exactly once to
 an immutable commit and builds the archive URL from that resolved value.
-`PreparedArchive::getResolvedRef()` exposes it to the deployment journal. For an
+`PreparedArchive::get_resolved_ref()` exposes it to the deployment journal. For an
 automatic request with an expected branch, the provider checks the branch while
-preparing and supplies `verifyCurrentHead()` to repeat that fixed provider-owned
+preparing and supplies `verify_current_head()` to repeat that fixed provider-owned
 check immediately before WordPress mutates the package. Manual preparations use
 a no-op verification. Provider resolution and head verification are limited to
 three 15-second requests in total. Private authentication applies only to the
@@ -423,7 +425,7 @@ and deployment. It returns only `ProviderDiagnosticResult` objects containing:
   for Core-owned observability.
 
 Core validates the bounded display fields before it logs that request-local
-failure at the troubleshooting call boundary. `ProviderDiagnosticResult::toArray()`
+failure at the troubleshooting call boundary. `ProviderDiagnosticResult::to_array()`
 omits the failure, so it is never administrator copy, persisted diagnostic
 state or a transport value. Expected denial, not-found, rate-limit, invalid-data
 and ordinary unavailability outcomes remain typed results without a failure.
@@ -435,7 +437,7 @@ ten seconds. Troubleshooting renders at most eight diagnostic rows in total:
 five Core-local rows and at most three rows from the selected provider,
 including optional webhook readiness. If a provider returns more than the
 remaining slots, Core truncates the results and marks the report
-`result_limit_exhausted`. Provider code calls `claimRemoteCall()` immediately
+`result_limit_exhausted`. Provider code calls `claim_remote_call()` immediately
 before each request and passes the returned remaining timeout to its production
 client. Raw responses, headers, exceptions and credentials must not be returned.
 Supplying the diagnostics object during registration must be a local,
@@ -525,7 +527,7 @@ plus the opaque fingerprint returned by inspection. The provider must
 re-describe, re-download and revalidate the release before returning one
 `RepositoryReleaseArtifact`. That artifact exposes no URL, path, credential or
 archive bytes. It permits one typed handoff to Core and otherwise owns bounded
-discard. `RepositoryReleaseAcquisitionRejected::invalidRelease()` is the only
+discard. `RepositoryReleaseAcquisitionRejected::invalid_release()` is the only
 release-domain rejection. If cleanup of provider-owned bytes fails before Core
 can take custody, the provider must instead throw the bounded
 `cleanup_failed` rejection; Core reports that failure without attempting an
@@ -625,7 +627,7 @@ Credentialed public browsing remains public-only. Providers must not return
 private descriptors or attach the selected lookup profile to result
 descriptors. The profile authorizes only repository browsing and exact
 server-side save verification; it is not a durable package credential. During
-that exact verification, `RepositoryLookupRequest::$publicOnly` is `true`.
+that exact verification, `RepositoryLookupRequest::$public_only` is `true`.
 Providers may use that context to relax a restriction that applies only to
 durable private access, but must then reject any private exact result. All
 ordinary, Accessible-mode and deployment lookups receive `false`.
@@ -694,7 +696,7 @@ Core's separately versioned prospective-release facade resolves
 `RepositoryReleaseCandidateListing` before repository resolution and maps its
 typed values to the current add-on response. Candidate listing can therefore be
 implemented independently without granting authority over inspection,
-acquisition or installation. `supportedProviderCodes()` remains the
+acquisition or installation. `supported_provider_codes()` remains the
 complete-product projection used by the unchanged add-on and currently exposes
 only the bundled GitHub provider when it implements the listing facet. It does
 not resolve a repository, read credentials or make a remote request.

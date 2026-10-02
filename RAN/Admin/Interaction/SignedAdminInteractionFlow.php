@@ -362,7 +362,7 @@ final class SignedAdminInteractionFlow {
 	}
 
 	private function current_request_matches( SignedAdminInteractionRequest $request ): bool {
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Project the validated URL into read-only route values using the existing signed-request DTO contract.
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Project the validated URL into read-only route values using the existing signed-request DTO contract.
 		$url = parse_url( $request->canonical_url );
 		if ( ! is_array( $url ) ) {
 			return false;

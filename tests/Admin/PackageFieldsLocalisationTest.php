@@ -11,6 +11,7 @@ use PHPUnit\Framework\TestCase;
 use RAN\Admin\PackagePagePresenter;
 
 final class PackageFieldsLocalisationTest extends TestCase {
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_admin_test_translations']       = array();
 		$GLOBALS['ran_booster_repository_admin_translations'] = array();
@@ -42,21 +43,24 @@ final class PackageFieldsLocalisationTest extends TestCase {
 
 		$repository = $this->render(
 			'repository.php',
-			array( 'layout' => $layout, 'package_view' => $package_view ) + array(
-				'packageFieldLayout'      => $layout,
-				'repositoryValue'         => 'group/example',
-				'providerBrowseAvailable' => true,
-				'repositoryReadOnly'      => false,
+			array(
+				'layout'       => $layout,
+				'package_view' => $package_view,
+			) + array(
+				'package_field_layout'      => $layout,
+				'repository_value'          => 'group/example',
+				'provider_browse_available' => true,
+				'repository_read_only'      => false,
 			)
 		);
 		$provider   = $this->render(
 			'provider.php',
 			array(
-				'packageFieldLayout'       => $layout,
-				'repositoryReadOnly'       => false,
+				'package_field_layout'       => $layout,
+				'repository_read_only'       => false,
 				'package_mutation_available' => true,
-				'providerCode'             => 'provider-code',
-				'providerOptions'          => array(
+				'provider_code'              => 'provider-code',
+				'provider_options'           => array(
 					array(
 						'code'                => 'provider-code',
 						'label'               => 'Provider <owned>',
@@ -72,19 +76,19 @@ final class PackageFieldsLocalisationTest extends TestCase {
 		$branch     = $this->render(
 			'branch.php',
 			array(
-				'packageFieldLayout' => $layout,
-				'branchReadOnly'     => false,
-				'branchValue'        => 'main',
-				'packageFieldForm'   => '',
+				'package_field_layout' => $layout,
+				'branch_read_only'     => false,
+				'branch_value'         => 'main',
+				'package_field_form'   => '',
 			)
 		);
 		$credential = $this->render(
 			'credential.php',
 			array(
-				'packageFieldLayout'   => $layout,
-				'providerCode'         => 'provider-code',
-				'selectedCredentialId' => 'credential-id',
-				'providerOptions'      => array(
+				'package_field_layout'   => $layout,
+				'provider_code'          => 'provider-code',
+				'selected_credential_id' => 'credential-id',
+				'provider_options'       => array(
 					array(
 						'code'                => 'provider-code',
 						'credential_profiles' => array(

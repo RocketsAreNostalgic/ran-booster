@@ -17,14 +17,14 @@ if ( ! defined( 'WPINC' ) ) {
 // The dispatcher verifies the action nonce before this template repopulates submitted values.
 // phpcs:disable WordPress.Security.NonceVerification.Missing
 
-$provider_options       = $package_provider_settings['providers'];
-$default_provider_code   = $package_provider_settings['default_provider'];
-$selected_credential_id  = isset( $_POST['ran_booster']['credential_id'] )
+$provider_options         = $package_provider_settings['providers'];
+$default_provider_code    = $package_provider_settings['default_provider'];
+$selected_credential_id   = isset( $_POST['ran_booster']['credential_id'] )
 	? sanitize_text_field( (string) $_POST['ran_booster']['credential_id'] )
 	: '';
-$repository_value       = isset( $_POST['ran_booster']['repository'] ) ? (string) $_POST['ran_booster']['repository'] : '';
-$branch_value           = isset( $_POST['ran_booster']['branch'] ) ? (string) $_POST['ran_booster']['branch'] : '';
-$subdirectory_value     = isset( $_POST['ran_booster']['subdirectory'] ) ? (string) $_POST['ran_booster']['subdirectory'] : '';
+$repository_value         = isset( $_POST['ran_booster']['repository'] ) ? (string) $_POST['ran_booster']['repository'] : '';
+$branch_value             = isset( $_POST['ran_booster']['branch'] ) ? (string) $_POST['ran_booster']['branch'] : '';
+$subdirectory_value       = isset( $_POST['ran_booster']['subdirectory'] ) ? (string) $_POST['ran_booster']['subdirectory'] : '';
 $public_lookup_profile_id = isset( $_POST['ran_booster']['public_lookup_profile_id'] ) && is_string( $_POST['ran_booster']['public_lookup_profile_id'] )
 	? sanitize_text_field( $_POST['ran_booster']['public_lookup_profile_id'] )
 	: '';
@@ -32,11 +32,11 @@ if ( '' !== $public_lookup_profile_id && 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64
 	$public_lookup_profile_id = '';
 }
 
-$deployment_policy                 = isset( $_POST['ran_booster']['deployment_policy'] )
+$deployment_policy                   = isset( $_POST['ran_booster']['deployment_policy'] )
 	? sanitize_key( (string) $_POST['ran_booster']['deployment_policy'] )
 	: \RAN\Deployment\DeploymentPolicy::MANUAL->value;
-$provider_code                     = isset( $_POST['ran_booster']['provider'] ) ? sanitize_key( (string) $_POST['ran_booster']['provider'] ) : $default_provider_code;
-$provider_repository_id             = isset( $_POST['ran_booster']['provider_repository_id'] ) ? wp_strip_all_tags( wp_unslash( (string) $_POST['ran_booster']['provider_repository_id'] ), true ) : '';
+$provider_code                       = isset( $_POST['ran_booster']['provider'] ) ? sanitize_key( (string) $_POST['ran_booster']['provider'] ) : $default_provider_code;
+$provider_repository_id              = isset( $_POST['ran_booster']['provider_repository_id'] ) ? wp_strip_all_tags( wp_unslash( (string) $_POST['ran_booster']['provider_repository_id'] ), true ) : '';
 $provider_repository_identity_source = isset( $_POST['ran_booster']['provider_repository_identity_source'] )
 	? sanitize_key( (string) $_POST['ran_booster']['provider_repository_identity_source'] )
 	: 'manual';
@@ -54,12 +54,12 @@ foreach ( $provider_options as $provider_option ) {
 }
 if ( null === $selected_provider_option ) {
 	$selected_provider_option = $provider_options[0];
-	$provider_code           = $selected_provider_option['code'];
+	$provider_code            = $selected_provider_option['code'];
 }
 $provider_browse_available  = $selected_provider_option['browse'];
 $provider_webhook_available = $selected_provider_option['webhooks'];
 $package_mutation_available = isset( $package_mutation_available ) ? true === $package_mutation_available : true;
-$release_managed           = false;
+$release_managed            = false;
 $repository_read_only       = false;
 $branch_read_only           = false;
 $package_source_choices     = isset( $package_source ) && is_array( $package_source['choices'] ?? null ) ? $package_source['choices'] : array();
@@ -73,8 +73,8 @@ $package_advanced_open      = isset( $_POST['ran_booster'] ) && is_array( $_POST
 $package_repository_ready   = '' !== trim( $repository_value )
 	&& strlen( $repository_value ) <= 512
 	&& 1 !== preg_match( '/[\x00-\x1F\x7F]/', $repository_value );
-$admin_url                 = $package_view->get_admin_url();
-$back_url                  = add_query_arg( 'page', $package_view->get_page_slug(), $admin_url );
+$admin_url                  = $package_view->get_admin_url();
+$back_url                   = add_query_arg( 'page', $package_view->get_page_slug(), $admin_url );
 $managed_package_identifier = isset( $managed_package_identifier ) && is_string( $managed_package_identifier )
 	? trim( $managed_package_identifier )
 	: '';

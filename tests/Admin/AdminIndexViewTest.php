@@ -12,6 +12,7 @@ require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class AdminIndexViewTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset(
 			$GLOBALS['ran_booster_admin_view_year'],

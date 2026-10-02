@@ -26,9 +26,7 @@ class LocalTroubleshootingService {
 
 	public function __construct(
 		private readonly SecretsFile $secrets,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		private readonly ?DeploymentAttemptRepository $deployment_attempts = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
 		private readonly ?WordPressWorkerWakeup $worker_wakeup = null,
 		private readonly ?Database $database = null
 	) {
@@ -275,12 +273,12 @@ class LocalTroubleshootingService {
 
 	/** @return array{queued: int, running: int, needs_attention: int, earliest_queued_at: string|null, latest_terminal_at: string|null}|null */
 	protected function deployment_snapshot(): ?array {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
+
 		if ( null === $this->deployment_attempts ) {
 			return null;
 		}
 		try {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
+
 			return $this->deployment_attempts->operational_snapshot();
 		} catch ( Throwable ) {
 			return null;
@@ -289,12 +287,12 @@ class LocalTroubleshootingService {
 
 	/** @return array{valid: bool, maximum_rows: int, source: 'configured'|'default'}|null */
 	protected function retention_configuration(): ?array {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
+
 		if ( null === $this->deployment_attempts ) {
 			return null;
 		}
 		try {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
+
 			return $this->deployment_attempts->retention_configuration_status();
 		} catch ( Throwable ) {
 			return null;
@@ -303,12 +301,12 @@ class LocalTroubleshootingService {
 
 	/** @return array{status: 'scheduled'|'missing'|'unavailable', scheduled_at: int|null}|null */
 	protected function worker_inspection(): ?array {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
+
 		if ( null === $this->worker_wakeup ) {
 			return null;
 		}
 		try {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
+
 			return $this->worker_wakeup->inspect();
 		} catch ( Throwable ) {
 			return null;

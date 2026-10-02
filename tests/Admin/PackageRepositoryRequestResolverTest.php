@@ -100,7 +100,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		self::assertSame( 'resolved-package', $result['package_slug'] );
 		self::assertSame( 'packages/resolved-package', $result['subdirectory'] );
 		self::assertSame( 'bitbucket-deploy', $provider->request->credential_id );
-		self::assertFalse( $provider->request->publicOnly );
+		self::assertFalse( $provider->request->public_only );
 	}
 
 	public function test_install_command_derives_its_slug_from_the_configured_subdirectory(): void {
@@ -288,7 +288,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		);
 
 		self::assertSame( 'public_lookup', $provider->request->credential_id );
-		self::assertTrue( $provider->request->publicOnly );
+		self::assertTrue( $provider->request->public_only );
 		self::assertSame( '', $result['credential_id'] );
 		self::assertSame( '0', $result['private'] );
 		self::assertArrayNotHasKey( 'public_lookup_profile_id', $result );

@@ -64,9 +64,7 @@ final class ProspectiveReleaseOperations {
 	public function execute(
 		string $operation,
 		string $type,
-
 		array $untrusted_repository,
-
 		string $release_id,
 		string $tag,
 		string $fingerprint,
@@ -84,7 +82,6 @@ final class ProspectiveReleaseOperations {
 		if ( ! in_array( $operation, array( 'inspect', 'install' ), true ) ) {
 			return $outcome( 'invalid_request', false );
 		}
-
 
 		$repository = $this->normalize_prospective_repository( $untrusted_repository );
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true )

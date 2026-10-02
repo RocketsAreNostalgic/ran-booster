@@ -22,6 +22,7 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 	private AttemptRepositoryDatabase $database;
 	private DeploymentAttemptRepository $repository;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$_POST = array();
 		$GLOBALS['ran_booster_repository_admin_allowed']      = true;
@@ -36,6 +37,7 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 		);
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_POST = array();
 		unset(
@@ -119,9 +121,9 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 	}
 
 	public function test_storage_failure_returns_one_safe_error(): void {
-		$attempt                   = $this->queued_attempt();
-		$_POST                     = $this->request_for( $attempt );
-		$this->database->failReads = true;
+		$attempt                    = $this->queued_attempt();
+		$_POST                      = $this->request_for( $attempt );
+		$this->database->fail_reads = true;
 
 		$result = ( new PackageUpdateProgressController( $this->repository ) )->handle();
 

@@ -26,9 +26,7 @@ final readonly class PackageRemovalService {
 		private ThemeRepository $themes,
 		private PackageRemovalGateway $wordpress,
 		private ?DeploymentAttemptRepository $attempts,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		private WordPressUpdaterLock $updater_lock,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
 		private ?RepositoryBranchCheckEvidenceStore $branch_check_evidence = null
 	) {
 	}
@@ -45,7 +43,7 @@ final readonly class PackageRemovalService {
 			PackageMutationGuard::assert_filesystem_mutation_allowed();
 		}
 		try {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor properties retain the existing public named-parameter contract.
+
 			$lock_token = $this->updater_lock->acquire();
 		} catch ( Throwable $failure ) {
 			$this->log_failure( $failure, 'package_removal_lock_acquire' );
@@ -84,7 +82,7 @@ final readonly class PackageRemovalService {
 			$this->log_failure( $failure, 'package_removal_state' );
 		} finally {
 			try {
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor properties retain the existing public named-parameter contract.
+
 				if ( ! $this->updater_lock->release( $lock_token ) ) {
 					$result = PackageRemovalResult::failed( 'operation_lock_failed' );
 				}
@@ -188,7 +186,7 @@ final readonly class PackageRemovalService {
 	}
 
 	private function unlink( string $type, string $identifier, Package $package ): void {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor properties retain the existing public named-parameter contract.
+
 		$this->branch_check_evidence?->clear( $type, $package );
 		$result = 'plugin' === $type
 			? $this->plugins->unlink( $identifier )

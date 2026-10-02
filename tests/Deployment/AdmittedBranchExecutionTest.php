@@ -55,6 +55,7 @@ final class AdmittedBranchExecutionTest extends TestCase {
 	private BoundaryThemeRepository $themes;
 	private int $random_byte = 1;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->database         = new AttemptRepositoryDatabase();
 		$GLOBALS['wpdb']        = $this->database;
@@ -71,6 +72,7 @@ final class AdmittedBranchExecutionTest extends TestCase {
 		$this->plugins->package = $this->plugin();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset( $GLOBALS['wpdb'] );
 	}

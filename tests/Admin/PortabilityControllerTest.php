@@ -52,6 +52,7 @@ require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class PortabilityControllerTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -65,6 +66,7 @@ final class PortabilityControllerTest extends TestCase {
 		unset( $_SERVER['HTTP_HX_REQUEST'] );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_FILES = array();
 		$_POST  = array();

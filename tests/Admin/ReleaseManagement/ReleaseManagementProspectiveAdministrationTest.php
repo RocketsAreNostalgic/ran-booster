@@ -24,9 +24,9 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 	}
 
 	public function test_legacy_candidate_execute_rejects_before_facade_or_reader_work(): void {
-		$prospective = new ProspectiveReleaseFacadeDouble();
+		$prospective  = new ProspectiveReleaseFacadeDouble();
 		$reader_calls = 0;
-		$operations  = new ProspectiveReleaseOperations(
+		$operations   = new ProspectiveReleaseOperations(
 			$prospective,
 			static function ( string $type, array $repository, string $channel ) use ( &$reader_calls ): ProspectiveReleaseResult {
 				unset( $type, $repository, $channel );
@@ -206,10 +206,10 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 			)
 		);
 
-		$fingerprint_outcome             = $controls->process_prospective_request( 'install', $request );
+		$fingerprint_outcome            = $controls->process_prospective_request( 'install', $request );
 		$request['release_fingerprint'] = 'v2:' . str_repeat( 'a', 64 );
 		$request['release_channel']     = 'nightly';
-		$channel_outcome                 = $controls->process_prospective_request( 'install', $request );
+		$channel_outcome                = $controls->process_prospective_request( 'install', $request );
 
 		self::assertSame( 'invalid_request', $fingerprint_outcome['code'] );
 		self::assertSame( 'invalid_request', $channel_outcome['code'] );
@@ -245,7 +245,7 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 
 	public function test_complete_projection_excludes_partial_provider_and_unsupported_outcome_stays_bounded(): void {
 		$prospective                             = new ProspectiveReleaseFacadeDouble();
-		$prospective->supported_providers         = array( 'gh', 'acme' );
+		$prospective->supported_providers        = array( 'gh', 'acme' );
 		$prospective->results['list_candidates'] = ProspectiveReleaseResult::failure( 'unsupported_provider' );
 		$controls                                = ReleaseManagementFixture::controls( prospective: $prospective );
 		$_GET['page']                            = 'ran-booster-plugins-create'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only screen fixture.

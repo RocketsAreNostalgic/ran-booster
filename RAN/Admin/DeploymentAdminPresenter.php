@@ -63,17 +63,16 @@ final class DeploymentAdminPresenter {
 	}
 
 	/** @return array{message: array<string, string>, context: array<string, string>}|null */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain public named-parameter names.
+
 	public function deployment_failure( mixed $outcome_code, mixed $reference, string $operation ): ?array {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
+
 		if ( ! is_string( $outcome_code ) || ! is_string( $reference ) || 1 !== preg_match( '/^[a-f0-9]{32}$/D', $reference ) ) {
 			return null;
 		}
 		status_header( 400 );
 		/* translators: 1: safe deployment result, 2: random support reference, 3: activity page URL. */
-		$message = sprintf( __( '%1$s Reference: <code>%2$s</code>. <a href="%3$s">View deployment activity</a>.', 'ran-booster' ), DeploymentOutcomeMessage::for_code( $outcome_code ), $reference, admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ) ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$message = sprintf( __( '%1$s Reference: <code>%2$s</code>. <a href="%3$s">View deployment activity</a>.', 'ran-booster' ), DeploymentOutcomeMessage::for_code( $outcome_code ), $reference, admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ) );
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
 		return $this->outcome( 'error', 'ran_booster_deployment_failed', $message, $reference, $operation, $outcome_code );
 	}
 

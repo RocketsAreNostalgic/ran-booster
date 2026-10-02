@@ -132,8 +132,8 @@ if ( $has_credential_settings ) {
 if ( $has_webhook_settings ) {
 	$configured_webhook_targets = array();
 	foreach ( $webhook_profiles as $webhook_profile ) {
-		$scope     = is_string( $webhook_profile['scope'] ?? null ) ? $webhook_profile['scope'] : '';
-		$target    = is_string( $webhook_profile['target'] ?? null )
+		$scope      = is_string( $webhook_profile['scope'] ?? null ) ? $webhook_profile['scope'] : '';
+		$target     = is_string( $webhook_profile['target'] ?? null )
 			? strtolower( trim( $webhook_profile['target'], " \t\n\r\0\x0B/" ) )
 			: '';
 		$profile_id = is_string( $webhook_profile['id'] ?? null ) ? $webhook_profile['id'] : '';

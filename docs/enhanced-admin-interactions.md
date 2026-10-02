@@ -1,6 +1,6 @@
 # Enhanced admin interactions
 
-Admin Interaction API 2 gives approved add-ons a request-local way to add HTMX
+Admin Interaction API 3 gives approved add-ons a request-local way to add HTMX
 attributes and shared success or error handling to their own protected forms.
 It does not grant authorization, discover handlers, expose credentials, or turn
 arbitrary markup into a mutation surface.
@@ -11,7 +11,7 @@ Consumers must require the exact marker before capturing the facade:
 
 ```php
 if ( ! defined( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION' )
-	|| 2 !== RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION ) {
+	|| 3 !== RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION ) {
 	return;
 }
 
@@ -22,6 +22,10 @@ add_action(
 	}
 );
 ```
+
+API3 completes owned method, parameter and DTO property naming in snake_case.
+API2 callers must migrate their exact guard and connected PHP calls together;
+Core provides no old-name aliases.
 
 The Admin Interaction API is independently versioned from the Add-on, Provider,
 Portability, and release APIs. Core contains and redacts a failed listener so
@@ -55,10 +59,10 @@ server-side values, then ask Core to append its allowlisted attributes:
 <form
 	method="post"
 	action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
-	<?php $interaction->renderFormAttributes( $request ); ?>
+	<?php $interaction->render_form_attributes( $request ); ?>
 >
 	<input type="hidden" name="action" value="example_protected_action">
-	<?php wp_nonce_field( $nonceAction ); ?>
+	<?php wp_nonce_field( $nonce_action ); ?>
 	<!-- Add-on-owned, escaped fields and local error region. -->
 </form>
 ```

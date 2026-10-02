@@ -94,7 +94,7 @@ final class RepositoryPickerController {
 				if ( ! $repository->provider->equals( $provider_code ) ) {
 					throw new RuntimeException( 'Repository provider returned mismatched repository identity.', 502 );
 				}
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryDescriptor property is a connected provider contract.
+
 				if ( 'public' === $mode && ( $repository->private || null !== $repository->credential_id ) ) {
 					throw new RuntimeException( 'Repository provider returned a non-public repository.', 502 );
 				}
@@ -217,7 +217,7 @@ final class RepositoryPickerController {
 		$metadata = $browser->get_public_repository_browse_metadata();
 
 		if ( 'default' === $identity ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Repository provider metadata property is a connected public contract.
+
 			if ( ! $metadata->supports_provider_default_profile || '' !== $profile_id ) {
 				throw new InvalidArgumentException( 'The public lookup default request is invalid.' );
 			}
@@ -244,7 +244,7 @@ final class RepositoryPickerController {
 	}
 
 	private function partial_message( RepositoryBrowseResult $result ): ?string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryBrowseResult property is a connected public contract.
+
 		return match ( $result->partial_reason ) {
 			RepositoryBrowseResult::AUTHORIZATION => __( 'Some repositories are shown, but the selected credential stopped authorizing the request.', 'ran-booster' ),
 			RepositoryBrowseResult::RATE_LIMIT => __( 'Some repositories are shown. The provider rate limit was reached; try again later for a complete list.', 'ran-booster' ),

@@ -30,17 +30,15 @@ final class PackageAdminController {
 		private ?ThemeRepository $themes = null,
 		private ?ProviderRegistry $providers = null,
 		private ?DeploymentAdminPresenter $deployments = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		private ?BulkPackageActionService $bulk_actions = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		private ?PublicRepositoryLookupProfileStore $public_lookup_profiles = null
 	) {
 	}
 
 	/** @param array<string, mixed> $request */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 	public function manage( Dashboard $dashboard, string $action, array $request, bool $post_request ): bool|string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 		if ( ! $post_request ) {
 			return false;
 		}
@@ -103,10 +101,9 @@ final class PackageAdminController {
 		Dashboard $dashboard,
 		string $action,
 		array $request,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		bool $post_request
 	): ?string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 		if ( ! $post_request || ! in_array( $action, array( 'bulk-plugin', 'bulk-theme' ), true ) ) {
 			return null;
 		}
@@ -128,11 +125,11 @@ final class PackageAdminController {
 			? min( count( $request['identifiers'] ), BulkPackageAction::MAX_IDENTIFIERS )
 			: 0;
 		try {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
+
 			if ( null === $this->bulk_actions ) {
 				throw new RuntimeException( 'Bulk package actions are unavailable.' );
 			}
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
+
 			$result = $this->bulk_actions->execute( BulkPackageAction::from_input( $type, $request ) );
 		} catch ( InvalidArgumentException $failure ) {
 			\RAN\Logging\BoosterLogger::log_exception(
@@ -172,9 +169,7 @@ final class PackageAdminController {
 		Dashboard $dashboard,
 		string $action,
 		array $request,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		array $list_arguments,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		\Closure $add_context_message
 	): bool|string {
 		try {
@@ -212,10 +207,10 @@ final class PackageAdminController {
 		} catch ( DeploymentStorageFailure $failure ) {
 			return null !== $failure->get_active_correlation_id()
 				? $this->active_deployment( $dashboard, $failure, $action )
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 				: $this->manual_failure( $dashboard, $add_context_message, $failure, $action );
 		} catch ( Throwable $failure ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 			return $this->manual_failure( $dashboard, $add_context_message, $failure, $action );
 		}
 
@@ -238,7 +233,7 @@ final class PackageAdminController {
 			);
 		}
 		if ( 'already-managed' === $status && ( $result['package'] ?? null ) instanceof Package ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 			return $this->success_redirect( $operation, $result['package'], $list_arguments, false, true, 'already-managed' );
 		}
 		if ( $check_repository_branch
@@ -249,11 +244,11 @@ final class PackageAdminController {
 			return $this->repository_branch_check_redirect( $operation, $result['package'] );
 		}
 		if ( in_array( $status, array( 'succeeded', 'edited', 'linked' ), true ) && ( $result['package'] ?? null ) instanceof Package ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 			return $this->success_redirect( $operation, $result['package'], $list_arguments, $install_another, $return_to_settings || 'edited' === $status );
 		}
 		if ( in_array( $status, array( 'unlinked', 'deleted' ), true ) ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 			return $this->success_redirect( $operation, (string) $operation->identifier, $list_arguments );
 		}
 		if ( 'conflict' === $status ) {
@@ -261,7 +256,7 @@ final class PackageAdminController {
 			$message = $check_repository_branch
 				? __( 'Package settings changed after this page was loaded. No settings were saved and no repository check ran. Review the refreshed current settings, then choose Save settings and check again.', 'ran-booster' )
 				: __( 'Package settings changed after this page was loaded. No settings were saved. Review the refreshed current settings, then resubmit your attempted changes.', 'ran-booster' );
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 			$add_context_message(
 				new WP_Error( 'ran_booster_package_edit_conflict', $message ),
 				array(
@@ -273,16 +268,15 @@ final class PackageAdminController {
 			return false;
 		}
 		if ( 'failed' === $status && array_key_exists( 'correlation_id', $result ) ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 			return $this->terminal_deployment_failure( $dashboard, $add_context_message, $result, $action );
 		}
 		if ( 'failed' === $status && is_string( $result['outcome_code'] ?? null ) ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 			$this->removal_failure( $operation, $result['outcome_code'], $add_context_message );
 			return false;
 		}
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		return $this->manual_failure( $dashboard, $add_context_message, null, $action );
 	}
 
@@ -339,7 +333,7 @@ final class PackageAdminController {
 	}
 
 	/** @param array<string, string> $list_arguments */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 	public function bulk_redirect( string $type, BulkPackageResult $result, array $list_arguments ): string {
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true )
 			|| ( 'theme' === $type && in_array( $result->operation, BulkPackageAction::plugin_activation_operations(), true ) ) ) {
@@ -354,7 +348,6 @@ final class PackageAdminController {
 		$admin_url                              = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
 
 		return $admin_url . '?' . http_build_query(
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 			array( 'page' => 'ran-booster-' . $type . 's' ) + $list_arguments + $args,
 			'',
 			'&',
@@ -363,7 +356,7 @@ final class PackageAdminController {
 	}
 
 	/** @param \Closure(array<string, mixed>, array<string, string>): void $add_context_message */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 	public function add_bulk_notice( Dashboard $dashboard, string $type, \Closure $add_context_message ): void {
 		$data = array();
 		foreach ( array( 'operation', 'selected', 'changed', 'unchanged', 'queued', 'skips', 'runner', 'error' ) as $key ) {
@@ -398,7 +391,7 @@ final class PackageAdminController {
 				'unavailable'            => __( 'Booster could not safely complete this bulk action. No success was reported.', 'ran-booster' ),
 				'webhook_unavailable'    => __( 'A selected package provider does not support Automatic deployment.', 'ran-booster' ),
 			);
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 			$add_context_message(
 				array(
 					'type'    => 'error',
@@ -437,7 +430,7 @@ final class PackageAdminController {
 			if ( 'unavailable' === $result->runner_status && $result->queued > 0 ) {
 				$message .= ' ' . __( 'The updates remain queued, but WordPress could not schedule the deployment runner. Open Troubleshooting to request it.', 'ran-booster' );
 			}
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 			$add_context_message(
 				array(
 					'type'            => $result->skipped() > 0 || 'unavailable' === $result->runner_status ? 'warning' : 'success',
@@ -475,7 +468,7 @@ final class PackageAdminController {
 					'stale'               => __( 'selection stale', 'ran-booster' ),
 				)
 			);
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 			$add_context_message(
 				array(
 					'type'    => $result->skipped() > 0 ? 'warning' : 'success',
@@ -597,7 +590,7 @@ final class PackageAdminController {
 		}
 
 		return array(
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
+
 			'profile_id' => $this->public_lookup_profiles?->get( $package->get_provider_code() ),
 		);
 	}

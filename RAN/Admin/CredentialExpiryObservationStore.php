@@ -67,7 +67,7 @@ class CredentialExpiryObservationStore {
 		$record                        = $profiles[ $provider ][ $profile_id ] ?? array();
 		$record['provider_checked_at'] = $checked_at;
 		if ( $report->is_known() ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- CredentialExpiryReport is a separately scoped provider contract.
+
 			$record['provider_expires_at'] = (string) $report->expires_at;
 		} else {
 			unset( $record['provider_expires_at'] );

@@ -43,7 +43,7 @@ final readonly class RepositoryDescriptor {
 	 *     credential_id: string|null
 	 * }
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
+
 	public function to_array(): array {
 		return array(
 			'provider'               => $this->provider->value,

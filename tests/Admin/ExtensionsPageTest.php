@@ -19,6 +19,7 @@ require_once __DIR__ . '/ExtensionsPageWordPressFunctions.php';
 
 final class ExtensionsPageTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_dashboard_test_multisite']          = false;
 		$GLOBALS['ran_booster_dashboard_test_actions']            = array();
@@ -33,6 +34,7 @@ final class ExtensionsPageTest extends TestCase {
 		$GLOBALS['ran_booster_admin_test_translations']           = array();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset(
 			$GLOBALS['ran_booster_dashboard_test_multisite'],
@@ -335,11 +337,11 @@ final class ExtensionsPageTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_api_fourteen_host_does_not_claim_compatibility_with_api_twelve_bitbucket(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
-		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
-		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );
+	public function test_api_twelve_host_does_not_claim_compatibility_with_api_fourteen_bitbucket(): void {
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
+		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 3 );
+		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 3 );
 		$GLOBALS['ran_booster_extensions_plugins']['ran-booster-bitbucket/ran-booster-bitbucket.php'] = array( 'Name' => 'Bitbucket' );
 		$GLOBALS['ran_booster_extensions_active_plugins'] = array( 'ran-booster-bitbucket/ran-booster-bitbucket.php' );
 
@@ -352,11 +354,11 @@ final class ExtensionsPageTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_api_three_host_does_not_claim_compatibility_with_api_two_migrator(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
-		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 3 );
-		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );
+	public function test_api_two_host_does_not_claim_compatibility_with_api_three_migrator(): void {
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
+		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
+		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 3 );
 		$GLOBALS['ran_booster_extensions_plugins']['ran-booster-wp-pusher-migrator/ran-booster-wp-pusher-migrator.php'] = array( 'Name' => 'Migrator' );
 		$GLOBALS['ran_booster_extensions_active_plugins'] = array( 'ran-booster-wp-pusher-migrator/ran-booster-wp-pusher-migrator.php' );
 
@@ -385,10 +387,10 @@ final class ExtensionsPageTest extends TestCase {
 	}
 
 	private function define_apis_compatible_with_existing_extension_catalogue(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
-		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
-		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
+		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 3 );
+		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 3 );
 	}
 
 	private function render(): string {

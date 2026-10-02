@@ -23,6 +23,7 @@ final class WebhookProfileStorageTest extends TestCase {
 	private string $path;
 	private SecretsFile $secrets;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -32,6 +33,7 @@ final class WebhookProfileStorageTest extends TestCase {
 		$this->secrets = SecretsFileTestFactory::create( $this->path, array(), ShippedSecretPolicyCatalog::create() );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		InMemorySiteKeyStore::reset( $this->path );
 		foreach ( array( $this->path, $this->path . '.lock' ) as $path ) {

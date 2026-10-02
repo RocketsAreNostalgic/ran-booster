@@ -45,6 +45,7 @@ use RAN\WordPress\WordPressUpdaterLock;
 #[PreserveGlobalState( false )]
 final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		require_once dirname( __DIR__ ) . '/Support/BootstrapRuntimeWordPressFunctions.php';
 	}
@@ -168,14 +169,14 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 
 		$coordinator = $this->deployment_coordinator();
 		try {
-			$coordinator->queueManualUpdates( array() );
+			$coordinator->queue_manual_updates( array() );
 			self::fail( 'Queued mutations must be unavailable.' );
 		} catch ( UnsupportedRuntimeException ) {
 			self::assertTrue( true );
 		}
 
 		$this->expectException( UnsupportedRuntimeException::class );
-		$coordinator->executeClaimed( $this->blank( DeploymentAttempt::class ) );
+		$coordinator->execute_claimed( $this->blank( DeploymentAttempt::class ) );
 	}
 
 	public function test_removal_and_managed_release_persistence_reject_before_storage(): void {
@@ -234,7 +235,7 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 	public function test_lowest_storage_and_attempt_mutation_seams_reject_direct_calls(): void {
 		$entry_points = array(
 			static fn (): mixed => ( new PluginRepository() )->unlink( 'example/example.php' ),
-			fn (): mixed => $this->blank( DeploymentAttemptRepository::class )->claimNext(),
+			fn (): mixed => $this->blank( DeploymentAttemptRepository::class )->claim_next(),
 			fn (): mixed => $this->blank( Database::class )->maybe_upgrade(),
 		);
 

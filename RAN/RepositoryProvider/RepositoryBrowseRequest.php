@@ -48,7 +48,7 @@ final class RepositoryBrowseRequest {
 		$this->started_at    = hrtime( true );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public methods and named parameters retain the existing caller contract.
+
 	public static function public_owner( string $owner, ?string $credential_id = null ): self {
 		return new self( RepositoryBrowseMode::PUBLIC_OWNER, $owner, $credential_id );
 	}
@@ -60,17 +60,17 @@ final class RepositoryBrowseRequest {
 		return new self( RepositoryBrowseMode::ACCESSIBLE, null, $credential_id );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
+
 	public function get_mode(): RepositoryBrowseMode {
 		return $this->mode;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
+
 	public function get_owner(): ?string {
 		return $this->owner;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
+
 	public function get_credential_id(): ?string {
 		return $this->credential_id;
 	}
@@ -78,7 +78,7 @@ final class RepositoryBrowseRequest {
 	/**
 	 * Claim one outbound request and receive its bounded timeout.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
+
 	public function claim_remote_call(): float {
 		$remaining = $this->remaining_seconds();
 		if ( self::MAX_REMOTE_CALLS <= $this->remote_calls || $remaining <= 0.0 ) {
@@ -90,12 +90,12 @@ final class RepositoryBrowseRequest {
 		return min( self::REQUEST_TIMEOUT, $remaining );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
+
 	public function get_response_size_limit(): int {
 		return self::PER_RESPONSE_BYTES + 1;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
+
 	public function accept_response_body( string $body ): void {
 		$bytes = strlen( $body );
 		if ( self::PER_RESPONSE_BYTES < $bytes || self::AGGREGATE_BYTES < $this->response_bytes + $bytes ) {
@@ -105,7 +105,7 @@ final class RepositoryBrowseRequest {
 		$this->response_bytes += $bytes;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
+
 	public function has_capacity(): bool {
 		return $this->remote_calls < self::MAX_REMOTE_CALLS && $this->remaining_seconds() > 0.0;
 	}

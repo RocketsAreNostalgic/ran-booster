@@ -130,7 +130,7 @@ final class PreparedArtifact implements RepositoryReleaseArtifactCustody {
 		if ( file_exists( $this->path ) || is_link( $this->path ) ) {
 			throw new RuntimeException( 'The prepared deployment artifact could not be removed safely.' );
 		}
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir,WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- This removes the exact empty Core-owned temporary directory. Retain the promoted constructor or external DTO property contract.
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- This removes the exact empty Core-owned temporary directory. Retain the promoted constructor or external DTO property contract.
 		if ( null !== $this->owned_directory && ! rmdir( $this->owned_directory ) ) {
 			throw new RuntimeException( 'The prepared deployment artifact could not be removed safely.' );
 		}

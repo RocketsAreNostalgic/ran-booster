@@ -67,7 +67,7 @@ final class ProviderRegistry {
 	 *
 	 * @param callable $factory Provider factory.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
+
 	public function register_with_credential_store( ProviderCode|string $code, callable $factory ): void {
 		$this->begin_registration();
 
@@ -191,7 +191,7 @@ final class ProviderRegistry {
 		$this->sealed = true;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
+
 	public function is_sealed(): bool {
 		return $this->sealed;
 	}
@@ -226,7 +226,7 @@ final class ProviderRegistry {
 	 *
 	 * @return list<ProviderMetadata>
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
+
 	public function administration_metadata(): array {
 		return array_values(
 			array_filter(
@@ -237,7 +237,7 @@ final class ProviderRegistry {
 	}
 
 	/** @return list<ProviderMetadata> */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
+
 	public function ordered_metadata(): array {
 		return ( new ProviderNavigationOrderer() )->order_metadata( $this->provider_metadata );
 	}
@@ -250,7 +250,7 @@ final class ProviderRegistry {
 	 * @param class-string<TCapability> $capability Capability contract.
 	 * @return TCapability
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected API names remain deferred to their connected caller cohort under #167.
+
 	public function require_capability( ProviderCode|string $code, string $capability ): object {
 		if ( RepositoryProvider::class === $capability
 			|| ProviderCapabilityContract::class === $capability

@@ -11,6 +11,7 @@ require_once dirname( __DIR__ ) . '/Support/RepositoryAdminWordPressFunctions.ph
 
 final class DevelopmentSafetyNoticeControllerTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_repository_admin_allowed']               = true;
 		$GLOBALS['ran_booster_repository_admin_nonce_valid']           = true;
@@ -19,6 +20,7 @@ final class DevelopmentSafetyNoticeControllerTest extends TestCase {
 		$GLOBALS['ran_booster_repository_admin_user_meta_write_fails'] = false;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset(
 			$GLOBALS['ran_booster_repository_admin_allowed'],

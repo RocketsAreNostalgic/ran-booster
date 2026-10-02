@@ -150,7 +150,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-tile {', $utilities );
 		self::assertStringContainsString( '.ran-booster-badge--pending', $utilities );
 		self::assertStringContainsString( 'notice notice-warning inline ran-booster-debug-capture__scope', $debug );
-		self::assertStringContainsString( 'ran-booster-badge ran-booster-badge--<?php echo esc_attr( $activityBadgeVariants[ $latestActivity[\'state\'] ] ?? \'neutral\' ); ?>', $packages );
+		self::assertStringContainsString( 'ran-booster-badge ran-booster-badge--<?php echo esc_attr( $activity_badge_variants[ $latest_activity[\'state\'] ] ?? \'neutral\' ); ?>', $packages );
 		self::assertStringContainsString( 'Stored · Validity checked on use', $projection );
 		self::assertStringContainsString( 'ran-booster-pill--label ran-booster-pill--info ran-booster-delete-credential-package-pill', $provider );
 		self::assertStringNotContainsString( '.ran-booster-admin .ran-booster-badge {', $component );
@@ -680,8 +680,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-repository-record__action-group', $renderer );
 		self::assertStringContainsString( 'ran-booster-repository-record__actions', $renderer );
 		self::assertStringContainsString( 'AdminStatusSummaryRenderer', $dashboard );
-		self::assertStringContainsString( '$statusSummaryRenderer->render(', $view );
-		self::assertSame( 2, substr_count( $view, '$statusSummaryRenderer->render(' ) );
+		self::assertStringContainsString( '$status_summary_renderer->render(', $view );
+		self::assertSame( 2, substr_count( $view, '$status_summary_renderer->render(' ) );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-status-summary {', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-status-dot.is-neutral {', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-status-dot.is-pending {', $css );
@@ -759,11 +759,11 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( 'Last successful revision', $view );
 		self::assertStringContainsString( 'rowspan="2"', $view );
 		self::assertStringContainsString(
-			'class="ran-booster-package-row ran-booster-package-row--primary<?php echo $wordPressPluginActive ? \' ran-booster-package-row--wordpress-active\' : \'\'; ?>"',
+			'class="ran-booster-package-row ran-booster-package-row--primary<?php echo $word_press_plugin_active ? \' ran-booster-package-row--wordpress-active\' : \'\'; ?>"',
 			$view
 		);
 		self::assertStringContainsString(
-			'class="ran-booster-package-row ran-booster-package-row--details<?php echo $wordPressPluginActive ? \' ran-booster-package-row--wordpress-active\' : \'\'; ?>"',
+			'class="ran-booster-package-row ran-booster-package-row--details<?php echo $word_press_plugin_active ? \' ran-booster-package-row--wordpress-active\' : \'\'; ?>"',
 			$view
 		);
 		self::assertStringContainsString( '<td colspan="3" class="ran-booster-package-row__details">', $view );
@@ -812,7 +812,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '.ran-booster-package-row__action-group {', $css );
 		self::assertStringContainsString( 'ran-booster-package-row__state ran-booster-package-row__wordpress-state', $view );
 		self::assertStringContainsString( 'ran-booster-package-row__state ran-booster-package-row__update-state', $view );
-		self::assertStringContainsString( 'is-<?php echo esc_attr( $deploymentPolicy->value ); ?>', $view );
+		self::assertStringContainsString( 'is-<?php echo esc_attr( $deployment_policy->value ); ?>', $view );
 		self::assertStringContainsString( '.ran-booster-package-row__state-value::before {', $package_css );
 		self::assertStringContainsString( '.ran-booster-package-row__update-state.is-automatic {', $package_css );
 		self::assertStringContainsString( '.ran-booster-package-row__update-state.is-manual {', $package_css );
@@ -873,7 +873,7 @@ final class AdminAssetContractTest extends TestCase {
 
 		self::assertStringContainsString( 'data-ran-booster-bulk-form', $view );
 		self::assertStringContainsString( 'name="ran_booster[identifiers][]"', $view );
-		self::assertStringContainsString( 'form="<?php echo esc_attr( $bulkFormId ); ?>"', $view );
+		self::assertStringContainsString( 'form="<?php echo esc_attr( $bulk_form_id ); ?>"', $view );
 		self::assertStringContainsString( 'data-ran-booster-select-all', $view );
 		self::assertStringContainsString( 'data-ran-booster-selection-status', $view );
 		self::assertStringContainsString( 'aria-live="polite"', $view );
@@ -882,7 +882,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( '$bulkEligible =', $view );
 		self::assertStringContainsString( '> .check-column,', $css );
 		self::assertStringContainsString( 'inline-size: 40px;', $css );
-		self::assertStringNotContainsString( '$policyDisabled ? \'inactive\' : \'active\'', $view );
+		self::assertStringNotContainsString( '$policy_disabled ? \'inactive\' : \'active\'', $view );
 		self::assertStringNotContainsString( '.ran-booster-package-row:nth-child(odd)', $css );
 		self::assertStringContainsString( 'initBulkPackageControls();', $script );
 		self::assertStringContainsString( 'initPackageUpdateProgress();', $script );

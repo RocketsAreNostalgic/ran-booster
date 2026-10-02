@@ -46,6 +46,7 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 	private string $target_path;
 	private string $archive_path;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->root         = sys_get_temp_dir() . '/ran-booster-two-site-' . bin2hex( random_bytes( 8 ) );
 		$this->source_path  = $this->root . '/source/secrets.json';
@@ -57,6 +58,7 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		InMemorySiteKeyStore::reset( $this->target_path );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$this->remove_tree( $this->root );
 		InMemorySiteKeyStore::reset( $this->source_path );

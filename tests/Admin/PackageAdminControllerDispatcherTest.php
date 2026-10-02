@@ -42,6 +42,7 @@ use WP_Error;
 
 final class PackageAdminControllerDispatcherTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$_POST                     = array();
 		$_SERVER['REQUEST_METHOD'] = 'POST';
@@ -52,6 +53,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		$GLOBALS['ran_booster_test_nonce_valid']                 = true;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_POST = array();
 		unset( $_SERVER['REQUEST_METHOD'] );
@@ -114,7 +116,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 
 		$this->dispatcher( $dashboard, $providers, $plugins, $themes )->dispatch_post_requests();
 
-		self::assertSame( 0, $submitted->getClient()->getRequests() );
+		self::assertSame( 0, $submitted->get_client()->get_requests() );
 		self::assertSame( 1, $plugins->lookups + $themes->lookups );
 	}
 
@@ -200,7 +202,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		self::assertSame( 'https://example.test/redirect', $result );
 		self::assertCount( 1, $provider->requests );
 		self::assertSame( $expected_lookup_credential, $provider->requests[0]->credential_id );
-		self::assertSame( $expected_public_only, $provider->requests[0]->publicOnly );
+		self::assertSame( $expected_public_only, $provider->requests[0]->public_only );
 	}
 
 	public function test_edit_save_and_branch_check_keeps_anonymous_public_lookup_distinct_from_submitted_package_access(): void {
@@ -242,7 +244,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		self::assertSame( 'https://example.test/redirect', $result );
 		self::assertCount( 1, $provider->requests );
 		self::assertNull( $provider->requests[0]->credential_id );
-		self::assertTrue( $provider->requests[0]->publicOnly );
+		self::assertTrue( $provider->requests[0]->public_only );
 	}
 
 	public function test_invalid_subdirectory_names_the_field_before_provider_resolution(): void {

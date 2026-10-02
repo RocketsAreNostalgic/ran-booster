@@ -33,11 +33,8 @@ final class ReleaseManagementControls {
 	public function __construct(
 		ReleaseTrackingFacade $releases,
 		ProspectiveReleaseFacade $prospective,
-
 		callable $read_candidates,
-
 		ManagedReleaseBrowser $managed_browser,
-
 		?RepositorySourceGuard $source_guard = null
 	) {
 		$this->display  = new ReleaseManagementDisplay();
@@ -123,7 +120,6 @@ final class ReleaseManagementControls {
 		string $mode,
 		string $type,
 		?object $package,
-
 		string $page_url
 	): array {
 		unset( $type );
@@ -176,10 +172,8 @@ final class ReleaseManagementControls {
 	public function render_advanced_source_section(
 		string $mode,
 		string $type,
-
 		string $selected_source,
 		?object $package,
-
 		string $page_url
 	): void {
 		if ( 'create' === $mode && null === $this->prospective_operations ) {
@@ -237,7 +231,6 @@ final class ReleaseManagementControls {
 		string $summary,
 		string $mode,
 		string $type,
-
 		string $selected_source,
 		?object $package
 	): string {
@@ -245,7 +238,6 @@ final class ReleaseManagementControls {
 		if ( null === $this->tracking ) {
 			return $summary;
 		}
-
 
 		return $this->request_boundary( fn (): string => $this->display->advanced_source_summary( $summary, $mode, $selected_source, $package, null === $package ? null : $this->package_status( $package ) ), $summary );
 	}
@@ -258,7 +250,6 @@ final class ReleaseManagementControls {
 		array $projection,
 		string $mode,
 		string $type,
-
 		string $selected_source,
 		?object $package
 	): array {

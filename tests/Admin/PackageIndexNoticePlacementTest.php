@@ -12,11 +12,13 @@ require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class PackageIndexNoticePlacementTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_admin_test_translations']   = array();
 		$GLOBALS['ran_booster_package_view_translations'] = array();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset( $GLOBALS['ran_booster_admin_test_translations'], $GLOBALS['ran_booster_package_view_translations'] );
 	}

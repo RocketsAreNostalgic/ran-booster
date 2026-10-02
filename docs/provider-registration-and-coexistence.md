@@ -1,6 +1,6 @@
 # Provider registration and coexistence: current state
 
-**Status:** Current-source characterization for Provider API 13, reconciled on
+**Status:** Current-source characterization for Provider API 14, reconciled on
 1 October 2026 for the methods-only naming candidate. Earlier extraction and
 external-composition proofs do not certify this candidate. This document does not
 reserve new vendor names or change registration semantics.
@@ -33,7 +33,7 @@ filesystem, database, hook, or process access.
 ## Registration lifecycle
 
 Core publishes the exact integer marker
-`RAN_BOOSTER_PROVIDER_API_VERSION = 13`. Compatible provider plugins attach a
+`RAN_BOOSTER_PROVIDER_API_VERSION = 14`. Compatible provider plugins attach a
 callback to `ran_booster_register_providers` during normal plugin loading and
 must fail closed unless the marker is exactly the generation they support.
 
@@ -42,7 +42,7 @@ boundary, Booster:
 
 1. creates the `ProviderRegistry`;
 2. registers the bundled released GitHub package as `gh` through
-   `registerWithCredentialStore()`;
+   `register_with_credential_store()`;
 3. fires `ran_booster_register_providers` once; and
 4. seals the registry.
 

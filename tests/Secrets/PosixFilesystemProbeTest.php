@@ -14,11 +14,13 @@ final class PosixFilesystemProbeTest extends TestCase {
 
 	private string $root;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->root = sys_get_temp_dir() . '/ran-booster-probe-' . bin2hex( random_bytes( 6 ) );
 		mkdir( $this->root, 0700 );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$this->remove( $this->root );
 	}

@@ -35,7 +35,7 @@ final readonly class RepositoryWebhookOperationResult {
 	public function succeeded(): bool {
 		return 'succeeded' === $this->state;
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
+
 	public function confirms_absence(): bool {
 		return $this->succeeded() && 'absent' === $this->delivery;
 	}
@@ -45,23 +45,23 @@ final readonly class RepositoryWebhookOperationResult {
 	public function code(): string {
 		return $this->code;
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
+
 	public function hook_id(): ?string {
 		return $this->hook_id;
 	}
 	public function profile(): ?WebhookProfileMetadata {
 		return $this->profile;
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
+
 	public function with_profile( WebhookProfileMetadata $profile ): self {
 		return new self( $this->state, $this->code, $this->observed_at, $this->hook_id, $this->configuration, $this->delivery, $this->remediation, $profile );
 	}
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
+
 	public function as_partial( string $code, string $remediation ): self {
 		return new self( 'partial', $code, $this->observed_at, $this->hook_id, $this->configuration, $this->delivery, $remediation, $this->profile );
 	}
 	/** @return array{state:string,code:string,observed_at:string,hook_id:?string,configuration:array{endpoint:string,events:string,content_type:string,active:string},delivery:string,remediation:string,profile:?array<string,mixed>} */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
+
 	public function to_array(): array {
 		return array(
 			'state'         => $this->state,

@@ -58,6 +58,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	private ProviderRegistry $providers;
 	private WordPressUpdaterLock $updater_lock;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -83,6 +84,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$this->seed_stored_profiles();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_GET  = array();
 		$_POST = array();

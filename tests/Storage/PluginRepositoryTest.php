@@ -17,6 +17,7 @@ if ( ! defined( 'WP_PLUGIN_DIR' ) ) {
 
 final class PluginRepositoryTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_plugin_repository_test_plugins'] = array(
 			'example/example.php' => array(

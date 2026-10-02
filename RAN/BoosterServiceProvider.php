@@ -85,10 +85,10 @@ final class BoosterServiceProvider {
 
 	/** @internal Core bootstrap composition only. */
 	public function register( CoreContainer $container, Booster $runtime, object $release_updater, string $self_plugin_identifier ): void {
-		$database       = new Database();
+		$database        = new Database();
 		$secrets_runtime = new SecretsRuntimeAvailability();
 		$secret_policies = new ProviderSecretPolicyCatalog();
-		$secrets        = null === $this->secrets_factory
+		$secrets         = null === $this->secrets_factory
 			? new SecretsFile( provider_policies: $secret_policies, availability: $secrets_runtime )
 			: ( $this->secrets_factory )( $secret_policies );
 		if ( ! $secrets instanceof SecretsFile ) {
@@ -112,7 +112,7 @@ final class BoosterServiceProvider {
 				// sidecar lock and performs no WordPress/database mutation.
 				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only routing determines whether to inspect the sidecar.
 				$page_input = $_GET['page'] ?? '';
-				$page      = is_string( $page_input )
+				$page       = is_string( $page_input )
 					? sanitize_key( wp_unslash( $page_input ) )
 					: '';
 				if ( ! str_starts_with( $page, 'ran-booster' ) ) {
@@ -226,7 +226,7 @@ final class BoosterServiceProvider {
 		$provider_registration_context = new \RAN\RepositoryProvider\ProviderRegistrationContext(
 			static fn (): int => PackageArtifactLimit::resolve()
 		);
-		$providers                   = new ProviderRegistry(
+		$providers                     = new ProviderRegistry(
 			array(),
 			$secret_policies,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentials_for( $code ),

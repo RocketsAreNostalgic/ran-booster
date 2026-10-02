@@ -215,12 +215,12 @@ class RepositoryBranchCheckEvidenceStore {
 					(string) $package->get_source()->value,
 					(string) $package->get_source_revision(),
 					(string) $package->get_provider_code(),
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
+
 					(string) $reference->provider_repository_id,
 					(string) $reference->locator,
 					(string) $package->get_branch(),
 					$reference->private ? '1' : '0',
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
+
 					(string) $reference->credential_id,
 					(string) $package->get_subdirectory(),
 				)

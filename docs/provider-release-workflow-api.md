@@ -1,12 +1,12 @@
 # Provider release-workflow capability
 
-> API13 dependency-adoption candidate: the lock selects the immutable Provider
-> beta.11 release. Final archive/installed qualification must use this exact
-> composition; earlier source overlays are not adoption proof. Core beta.31
-> remains held for the coordinated work and its separate release decision.
+> Provider API14 naming candidate: consumers must use matching API14 source.
+> The inherited Provider beta.11 dependency lock is not the new candidate's
+> adoption proof. Fresh combined, archive and installed qualification and a
+> separate release decision are required before Core beta.31 can ship.
 
 
-Provider API 13 keeps release-workflow setup as an optional, separately versioned
+Provider API 14 keeps release-workflow setup as an optional, separately versioned
 provider facet. The base provider registration seam does not change when this
 facet evolves.
 
@@ -69,20 +69,24 @@ workflow-helper controls and calls also require that aggregate's
 `ProviderMetadata` to expose non-null `ProviderAdminMetadata`. Admin metadata
 remains optional for ordinary provider registration and other capabilities.
 
-## Provider API 13 compatibility boundary
+## Provider API 14 compatibility boundary
 
-Provider API 13 identifies the snake_case provider capability contracts while retaining initial-only workflow V3. API 11
-promised V2 and is no longer advertised by Core. External providers
-must check the exact outer API marker before loading their implementation:
-old API-11 and API-12 providers remain unregistered on API 13, and API-13 providers remain
-unregistered on older or unknown future hosts. Tests cover both plugin load
-orders. No V2 shim, range negotiation or registration redesign is introduced.
+Provider API 14 completes snake_case naming of owned methods, parameters,
+properties and DTO accessors while retaining initial-only workflow V3. API 11
+promised V2 and is no longer advertised by Core. External providers must check
+the exact outer API marker before loading their implementation. API11, API12
+and API13 providers remain unregistered on API14; API14 providers remain
+unregistered on older or unknown future hosts. Both plugin load orders must
+be covered. No V2 shim, range negotiation or registration redesign is introduced.
 
-The earlier API12 initial-only V3 change was approved under organisation #81.
-The methods-only API13 migration is coordinated under Core #167. The registration factory signature and Add-on API 16
-remain unchanged. GitHub Provider host qualification and Bitbucket registration
-must move together with Core; Branch Updater and Release Updater protocols do
-not change as part of this work.
+The earlier API12 initial-only V3 change was approved under organisation #81;
+API13 then migrated capability methods. Core #167 coordinates the remaining
+API14 naming and matching consumers. The credential-bearing registration factory
+still takes three arguments, but its owned PHP members use snake_case. Add-on
+API17 and Admin Interaction API3 are separately versioned connected changes.
+GitHub Provider host qualification and Bitbucket registration must move together
+with Core; Branch Updater and Release Updater protocols do not change as part of
+this work.
 
 ## Persisted history
 

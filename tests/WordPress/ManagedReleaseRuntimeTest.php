@@ -66,10 +66,12 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		'type'   => 'plugin',
 	);
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_runtime_actions'] = array();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset( $GLOBALS['ran_booster_runtime_action'], $GLOBALS['ran_booster_runtime_actions'], $GLOBALS['ran_booster_wp_pusher_active_plugins'] );
 	}

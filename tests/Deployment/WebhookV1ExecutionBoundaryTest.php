@@ -37,6 +37,7 @@ final class WebhookV1ExecutionBoundaryTest extends TestCase {
 	/** @var list<string> */
 	private array $operations;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		require_once __DIR__ . '/WebhookV1BoundaryWordPressFunctions.php';
 
@@ -52,6 +53,7 @@ final class WebhookV1ExecutionBoundaryTest extends TestCase {
 		BoosterLogger::configure_capture( $this->capture );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		BoosterLogger::configure_capture( null );
 		unset( $GLOBALS['ran_booster_webhook_v1_operations'] );

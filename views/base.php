@@ -11,7 +11,7 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$footer_plugin_headers    = get_file_data(
+$footer_plugin_headers     = get_file_data(
 	dirname( __DIR__ ) . '/ran-booster.php',
 	array(
 		'author'     => 'Author',
@@ -19,14 +19,14 @@ $footer_plugin_headers    = get_file_data(
 	),
 	'plugin'
 );
-$footer_plugin_author     = is_string( $footer_plugin_headers['author'] ?? null )
+$footer_plugin_author      = is_string( $footer_plugin_headers['author'] ?? null )
 	? trim( $footer_plugin_headers['author'] )
 	: '';
 $footer_plugin_author_url  = is_string( $footer_plugin_headers['author_uri'] ?? null )
 	? trim( $footer_plugin_headers['author_uri'] )
 	: '';
 $footer_plugin_author_link = esc_url( $footer_plugin_author_url );
-$admin_page_modifier      = match ( $view ) {
+$admin_page_modifier       = match ( $view ) {
 	'extensions'      => ' ran-booster-admin--extensions',
 	'packages/index',
 	'packages/create',
@@ -34,11 +34,11 @@ $admin_page_modifier      = match ( $view ) {
 	default           => '',
 };
 $ran_admin_shell_navigation = array();
-$package_type             = isset( $package_view ) ? $package_view->get_type() : '';
-$admin_url                = is_multisite()
+$package_type               = isset( $package_view ) ? $package_view->get_type() : '';
+$admin_url                  = is_multisite()
 	? network_admin_url( 'admin.php' )
 	: admin_url( 'admin.php' );
-$package_navigation       = array(
+$package_navigation         = array(
 	array(
 		'label'   => __( 'Plugins', 'ran-booster' ),
 		'url'     => $admin_url . '?page=ran-booster-plugins',

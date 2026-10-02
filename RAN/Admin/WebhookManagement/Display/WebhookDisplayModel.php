@@ -146,18 +146,18 @@ final class WebhookDisplayModel {
 		$help = null;
 		if ( null !== $record && 'local_profile_missing' === $status ) {
 			/* translators: %s: repository provider name. */
-			$help = sprintf( __( 'The recorded secret is no longer available. Update the %s webhook to use the current applicable secret; Booster creates a repository secret when none applies.', 'ran-booster' ), $provider_label ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+			$help = sprintf( __( 'The recorded secret is no longer available. Update the %s webhook to use the current applicable secret; Booster creates a repository secret when none applies.', 'ran-booster' ), $provider_label );
 		} elseif ( null !== $record && 'remote_missing' === $status ) {
 			/* translators: %s: repository provider name. */
-			$help = sprintf( __( 'Managed removal is unavailable because the recorded %1$s hook cannot be confirmed. Inspect %1$s manually before continuing.', 'ran-booster' ), $provider_label ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+			$help = sprintf( __( 'Managed removal is unavailable because the recorded %1$s hook cannot be confirmed. Inspect %1$s manually before continuing.', 'ran-booster' ), $provider_label );
 		}
 		$recovery_warning = null;
 		if ( null !== $record && $record->requires_hook_identification() ) {
 			/* translators: %s: repository provider name. */
-			$recovery_warning = sprintf( __( 'Provider state changed without a stable hook ID. Managed operations are disabled for this repository. Inspect its %s webhooks and the recorded Core signing profile manually; do not retry Setup until both sides are reconciled.', 'ran-booster' ), $provider_label ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+			$recovery_warning = sprintf( __( 'Provider state changed without a stable hook ID. Managed operations are disabled for this repository. Inspect its %s webhooks and the recorded Core signing profile manually; do not retry Setup until both sides are reconciled.', 'ran-booster' ), $provider_label );
 		} elseif ( null !== $recovery ) {
 			/* translators: %s: repository provider name. */
-			$recovery_warning = sprintf( __( 'Repository webhook management could not persist the returned recovery references. Setup is disabled on this recovery view. Inspect %s and Core manually before leaving or retrying.', 'ran-booster' ), $provider_label ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+			$recovery_warning = sprintf( __( 'Repository webhook management could not persist the returned recovery references. Setup is disabled on this recovery view. Inspect %s and Core manually before leaving or retrying.', 'ran-booster' ), $provider_label );
 		}
 
 		return array(
@@ -247,15 +247,15 @@ final class WebhookDisplayModel {
 	/** @return list<array{heading:?string,body:string}> */
 	public function documentation( string $provider_label ): array {
 		/* translators: %s: repository provider name. */
-		$intro = sprintf( __( 'Booster can set up, check, reconfigure and remove one %s webhook per managed repository. Manual webhook setup remains available.', 'ran-booster' ), $provider_label ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$intro = sprintf( __( 'Booster can set up, check, reconfigure and remove one %s webhook per managed repository. Manual webhook setup remains available.', 'ran-booster' ), $provider_label );
 		/* translators: %s: repository provider name. */
-		$credential_heading = sprintf( __( 'Saved %s access', 'ran-booster' ), $provider_label ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$credential_heading = sprintf( __( 'Saved %s access', 'ran-booster' ), $provider_label );
 		/* translators: %s: repository provider name. */
-		$readiness = sprintf( __( 'Current readiness verifies Booster storage, a public HTTPS callback and stable repository identity without contacting %s. Timestamped hook status is historical until an administrator runs Check.', 'ran-booster' ), $provider_label ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$readiness = sprintf( __( 'Current readiness verifies Booster storage, a public HTTPS callback and stable repository identity without contacting %s. Timestamped hook status is historical until an administrator runs Check.', 'ran-booster' ), $provider_label );
 		/* translators: %s: repository provider name. */
-		$lifecycle = sprintf( __( 'Webhook management never enables Automatic deployment. Blueprint import, plugin deactivation and plugin deletion do not contact %s or remove remote hooks.', 'ran-booster' ), $provider_label ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$lifecycle = sprintf( __( 'Webhook management never enables Automatic deployment. Blueprint import, plugin deactivation and plugin deletion do not contact %s or remove remote hooks.', 'ran-booster' ), $provider_label );
 		/* translators: %s: repository provider name. */
-		$cleanup = sprintf( __( 'Switching a package to Published releases does not remove the remote hook, its local recovery record or Core signing material. Remove the identified hook in %s first, then remove only unused local signing material in Core.', 'ran-booster' ), $provider_label ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$cleanup = sprintf( __( 'Switching a package to Published releases does not remove the remote hook, its local recovery record or Core signing material. Remove the identified hook in %s first, then remove only unused local signing material in Core.', 'ran-booster' ), $provider_label );
 
 		return array(
 			array(

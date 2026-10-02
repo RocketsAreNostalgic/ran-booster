@@ -37,7 +37,6 @@ final readonly class PortabilityController {
 		private ManagedPackageBlueprintExporter $exporter,
 		private BlueprintArchive $archive,
 		private PortabilityApplicationService $application,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		private ProviderSettingsPresenter $provider_settings
 	) {
 	}
@@ -198,13 +197,12 @@ final readonly class PortabilityController {
 	 * @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $credential_decisions
 	 * @param array<int, string> $target_credential_ids
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+
 	public function preview_file( string $path, ?string $password = null, array $credential_decisions = array(), array $target_credential_ids = array() ): string {
 		RuntimeSupport::assert_managed_operations_allowed();
 
 		$blueprint = $this->archive->read_from( $path, $password );
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		return $this->review_blueprint( $blueprint, $credential_decisions, $target_credential_ids );
 	}
 
@@ -297,7 +295,6 @@ final readonly class PortabilityController {
 				return sprintf(
 					$message,
 					'plugin' === $package_failure->type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' ),
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
 					$package_failure->display_name
 				);
 			},
@@ -518,7 +515,7 @@ final readonly class PortabilityController {
 
 	/** @return list<array{id:string,label:string,source:string}> */
 	private function credential_choices( string $provider ): array {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
+
 		foreach ( $this->provider_settings->build_package_list() as $candidate ) {
 			if ( ( $candidate['code'] ?? null ) === $provider && is_array( $candidate['credentials'] ?? null ) ) {
 				return array_values( array_filter( $candidate['credentials'], static fn ( array $credential ): bool => 'file' === ( $credential['source'] ?? null ) ) );
@@ -533,9 +530,9 @@ final readonly class PortabilityController {
 	 * @param list<array<string, mixed>> $credentials
 	 */
 	private function render_review( array $rows, array $credentials = array() ): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the existing portability view include-scope contract.
+
 		$portability_review_rows = $rows;
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the existing portability view include-scope contract.
+
 		$portability_credential_rows = $credentials;
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/portability-review.php';
@@ -551,7 +548,7 @@ final readonly class PortabilityController {
 	private function credential_rows( PackageBlueprint $blueprint, array $decisions, array $items ): array {
 		$providers = array();
 		try {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
+
 			$provider_list = $this->provider_settings->build_package_list();
 		} catch ( Throwable ) {
 			$provider_list = array();
@@ -580,7 +577,7 @@ final readonly class PortabilityController {
 				) ) {
 					$projected  = array(
 						'row'  => $package_row,
-						// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
+
 						'name' => $package->display_name,
 						'type' => 'plugin' === $package->type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' ),
 					);

@@ -33,7 +33,7 @@ final readonly class PushEvent {
 	 *     delivery_id: string
 	 * }
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
+
 	public function to_array(): array {
 		return array(
 			'provider'               => $this->provider->value,

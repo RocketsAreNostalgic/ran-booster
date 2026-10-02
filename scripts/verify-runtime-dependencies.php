@@ -8,10 +8,10 @@ declare(strict_types=1);
 // phpcs:disable WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 // phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped
 
-$arguments     = array_slice( $argv, 1 );
-$packaging     = false;
+$arguments      = array_slice( $argv, 1 );
+$packaging      = false;
 $installed_root = null;
-$usage         = 'Usage: php scripts/verify-runtime-dependencies.php '
+$usage          = 'Usage: php scripts/verify-runtime-dependencies.php '
 	. '[--packaging | --verify-install <installed-root>] '
 	. '<composer.lock> <runtime-packaging-policy.json>' . "\n";
 
@@ -72,7 +72,7 @@ if (
 	exit( 1 );
 }
 
-$expected        = array();
+$expected         = array();
 $archive_roots    = array();
 $neutral_updaters = 0;
 
@@ -89,10 +89,10 @@ foreach ( $policy['packages'] as $record ) {
 		exit( 1 );
 	}
 
-	$name        = $record['name'] ?? null;
-	$repository  = $record['repository'] ?? null;
+	$name         = $record['name'] ?? null;
+	$repository   = $record['repository'] ?? null;
 	$archive_root = $record['archive_root'] ?? null;
-	$surfaces    = $record['surfaces'] ?? null;
+	$surfaces     = $record['surfaces'] ?? null;
 	$build_role   = $record['build_role'] ?? null;
 
 	if (
@@ -149,7 +149,7 @@ foreach ( $policy['packages'] as $record ) {
 			exit( 1 );
 		}
 		$surface_paths[ $surface_path ] = true;
-		$validated_surfaces[]          = array(
+		$validated_surfaces[]           = array(
 			'path' => $surface_path,
 			'kind' => $surface_kind,
 		);
@@ -159,7 +159,7 @@ foreach ( $policy['packages'] as $record ) {
 		++$neutral_updaters;
 	}
 
-	$expected[ $name ]            = array(
+	$expected[ $name ]              = array(
 		'repository'   => $repository,
 		'archive_root' => $archive_root,
 		'surfaces'     => $validated_surfaces,
@@ -229,7 +229,7 @@ foreach ( $expected as $name => $identity ) {
 		exit( 1 );
 	}
 
-	$reference = $source['reference'];
+	$reference  = $source['reference'];
 	$source_url = 'https://github.com/' . $identity['repository'] . '.git';
 	$dist_url   = 'https://api.github.com/repos/' . $identity['repository'] . '/zipball/' . $reference;
 	if (

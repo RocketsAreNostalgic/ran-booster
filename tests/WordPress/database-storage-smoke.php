@@ -153,6 +153,7 @@ try {
 
 	foreach ( array( $package_table, $attempt_table ) as $table ) {
 		$table_status = $wpdb->get_row( $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', $table ) );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- MySQL SHOW TABLE STATUS returns the native Engine field.
 		if ( ! is_object( $table_status ) || 0 !== strcasecmp( 'InnoDB', (string) ( $table_status->Engine ?? '' ) ) ) {
 			throw new RuntimeException( 'The database smoke found a non-InnoDB Booster table.' );
 		}

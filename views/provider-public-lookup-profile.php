@@ -18,7 +18,7 @@ defined( 'ABSPATH' ) || exit;
 $public_lookup_profile_error = isset( $public_lookup_profile_error ) && is_string( $public_lookup_profile_error )
 	? $public_lookup_profile_error
 	: null;
-$public_lookup_profile      = isset( $public_lookup_profile ) && is_array( $public_lookup_profile )
+$public_lookup_profile       = isset( $public_lookup_profile ) && is_array( $public_lookup_profile )
 	? $public_lookup_profile
 	: array(
 		'configured_id' => '',

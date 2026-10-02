@@ -156,7 +156,6 @@ final class ReleaseWorkflowDisplay {
 		$model = $this->workflow_model( $view );
 		$html  = '<div class="ran-booster-release-workflow">';
 
-
 		if ( $include_result_notice ) {
 			$html .= '<div class="ran-booster-release-workflow__notices">' . $model['notice'] . '</div>';
 		}

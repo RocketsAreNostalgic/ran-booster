@@ -25,6 +25,7 @@ use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 
 final class ProviderRepositoryRowsNormalizerTest extends TestCase {
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_documentation_test_filters']                 = array();
 		$GLOBALS['ran_booster_repository_webhook_management_test_options'] = array();
@@ -572,16 +573,16 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 
 		$result = ( new ProviderRepositoryRowsNormalizer() )->project_page(
 			array(
-				'provider'              => array(
+				'provider'                => array(
 					'code'           => 'gh',
 					'label'          => 'GitHub',
 					'capabilities'   => array(),
 					'webhook_scopes' => array(),
 				),
-				'provider_task'          => 'repositories',
-				'repository_view'        => 'releases',
+				'provider_task'           => 'repositories',
+				'repository_view'         => 'releases',
 				'requested_repository_id' => '101',
-				'provider_repositories' => array(
+				'provider_repositories'   => array(
 					'repositories' => array(
 						array(
 							'target'            => 'owner/release',
@@ -631,16 +632,16 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		$GLOBALS['ran_booster_package_view_multisite'] = true;
 		$result                                        = ( new ProviderRepositoryRowsNormalizer() )->project_page(
 			array(
-				'provider'              => array(
+				'provider'                => array(
 					'code'           => 'gh',
 					'label'          => 'GitHub',
 					'capabilities'   => array(),
 					'webhook_scopes' => array(),
 				),
-				'provider_task'          => 'repositories',
-				'repository_view'        => 'branch',
+				'provider_task'           => 'repositories',
+				'repository_view'         => 'branch',
 				'requested_repository_id' => '101',
-				'provider_repositories' => array(
+				'provider_repositories'   => array(
 					'repositories' => array(
 						array(
 							'target'            => 'owner/repository',
@@ -672,7 +673,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 					'capabilities'   => array( 'webhooks' => true ),
 					'webhook_scopes' => array( array( 'code' => 'repository' ) ),
 				),
-				'provider_task'                 => 'repositories',
+				'provider_task'                => 'repositories',
 				'provider_repositories'        => array(
 					'available'    => true,
 					'repositories' => array(
@@ -754,7 +755,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 					'capabilities'   => array( 'webhooks' => true ),
 					'webhook_scopes' => array( array( 'code' => 'repository' ) ),
 				),
-				'provider_task'                 => 'repositories',
+				'provider_task'                => 'repositories',
 				'provider_repositories'        => array(
 					'available'    => true,
 					'repositories' => array(

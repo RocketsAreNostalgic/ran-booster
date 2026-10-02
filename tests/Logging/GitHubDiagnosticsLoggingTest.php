@@ -39,6 +39,7 @@ final class GitHubDiagnosticsLoggingTest extends TestCase {
 	private string $capture_directory;
 	private TemporaryDebugCapture $capture;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->capture_directory = sys_get_temp_dir() . '/ran-booster-github-diagnostics-' . bin2hex( random_bytes( 8 ) );
 		self::assertTrue( mkdir( $this->capture_directory, 0700 ) );
@@ -50,6 +51,7 @@ final class GitHubDiagnosticsLoggingTest extends TestCase {
 		BoosterLogger::configure_capture( $this->capture );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		BoosterLogger::configure_capture( null );
 		foreach ( array( 'ran-booster-debug.php', 'ran-booster-debug.php.lock' ) as $name ) {

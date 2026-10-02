@@ -65,9 +65,9 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 	}
 
 	public function test_workflow_provider_exception_becomes_a_signed_unavailable_result_without_a_workflow_operation(): void {
-		$provider                   = new RepositoryReleaseWorkflowProviderDouble();
+		$provider                     = new RepositoryReleaseWorkflowProviderDouble();
 		$provider->throw_on_operation = true;
-		$url                        = $this->controller( provider: $provider )->process_workflow_request( $this->request( 'inspect' ) );
+		$url                          = $this->controller( provider: $provider )->process_workflow_request( $this->request( 'inspect' ) );
 		parse_str( (string) \RAN\Admin\ReleaseManagement\wp_parse_url( $url, PHP_URL_QUERY ), $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verifies the immediately preceding signed PRG result.
 		$result = $this->controller( provider: $provider )->requested_result();
 

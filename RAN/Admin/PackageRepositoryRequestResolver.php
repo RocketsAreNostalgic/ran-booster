@@ -123,7 +123,7 @@ final readonly class PackageRepositoryRequestResolver {
 		);
 
 		if ( ! $repository->provider->equals( $provider )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
+
 			|| ( '' === $verification_credential_id ? null : $verification_credential_id ) !== $repository->credential_id
 			|| ( $public_picker && $repository->private ) ) {
 			throw new RuntimeException( 'Repository provider returned mismatched repository identity.' );
@@ -134,20 +134,20 @@ final readonly class PackageRepositoryRequestResolver {
 
 		$request['provider']   = $provider->value;
 		$request['repository'] = $repository->locator;
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
+
 		$request['package_slug'] = PackageSubdirectory::installation_slug( $repository->package_slug, $subdirectory );
 		$request['subdirectory'] = $subdirectory ?? '';
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
+
 		$request['provider_repository_id']              = $repository->provider_repository_id;
 		$request['provider_repository_identity_source'] = 'resolved';
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
+
 		$request['repository_default_branch'] = $repository->default_branch;
 		$request['private']                   = $repository->private ? '1' : '0';
 		$request['credential_id']             = $trusted_public_lookup
 			? $credential_id
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
+
 			: ( $public_picker ? '' : $repository->credential_id ?? '' );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
+
 		$request['branch']            = '' === $branch ? $repository->default_branch : $branch;
 		$request['deployment_policy'] = $deployment_policy->value;
 		unset( $request['public_lookup_profile_id'] );

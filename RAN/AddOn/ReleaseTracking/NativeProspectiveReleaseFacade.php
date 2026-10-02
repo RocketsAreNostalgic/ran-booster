@@ -63,16 +63,11 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		private CorePackageExecutor $executor,
 		private PluginRepository $plugins,
 		private ThemeRepository $themes,
-
 		private WordPressUpdaterLock $updater_lock,
 		private ProviderRegistry $providers,
-
 		?callable $can_manage = null,
-
 		?callable $verify_nonce = null,
-
 		?callable $current_user_id = null,
-
 		?RepositorySourceGuard $source_guard = null
 	) {
 		$this->candidate_reader = new ProspectiveReleaseCandidateReader( $repositories, $providers );
@@ -128,7 +123,6 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 
 	public function list_candidates(
 		string $type,
-
 		array $repository_request,
 		string $channel,
 		string $nonce
@@ -150,9 +144,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 
 	public function inspect(
 		string $type,
-
 		array $repository_request,
-
 		string $release_id,
 		string $tag,
 		string $channel,
@@ -180,7 +172,6 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			$inspection = $capabilities['inspector']->inspect_release(
 				$type,
 				$repository,
-
 				$release_id,
 				$tag,
 				$channel
@@ -225,12 +216,9 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 
 	public function install(
 		string $type,
-
 		array $repository_request,
-
 		string $release_id,
 		string $tag,
-
 		string $expected_fingerprint,
 		string $channel,
 		string $nonce
@@ -274,10 +262,8 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			$release = $acquirer->acquire_release(
 				$type,
 				$repository_reference,
-
 				$release_id,
 				$tag,
-
 				$expected_fingerprint,
 				$channel
 			);

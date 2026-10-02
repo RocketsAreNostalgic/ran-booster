@@ -24,16 +24,16 @@ class Theme extends AbstractPackage {
 
 		$theme->stylesheet  = $object->get_stylesheet();
 		$theme->name        = $object->get( 'Name' );
-		$theme->theme_uri    = $object->get( 'ThemeURI' );
+		$theme->theme_uri   = $object->get( 'ThemeURI' );
 		$theme->description = $object->get( 'Description' );
 		$theme->author      = $object->get( 'Author' );
-		$theme->author_uri   = $object->get( 'AuthorURI' );
+		$theme->author_uri  = $object->get( 'AuthorURI' );
 		$theme->version     = $object->get( 'Version' );
 		$theme->template    = $object->get_template();
 		$theme->status      = $object->get( 'Status' );
 		$theme->tags        = $object->get( 'Tags' );
-		$theme->text_domain  = $object->get( 'TextDomain' );
-		$theme->domain_path  = $object->get( 'DomainPath' );
+		$theme->text_domain = $object->get( 'TextDomain' );
+		$theme->domain_path = $object->get( 'DomainPath' );
 
 		return $theme;
 	}

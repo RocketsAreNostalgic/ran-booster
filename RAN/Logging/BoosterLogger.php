@@ -60,7 +60,7 @@ final class BoosterLogger {
 		return $wordpress_logged || $capture_logged;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
+
 	public static function log_exception( string $message, Throwable $exception, array $context = array() ): void {
 		$context['exception_class'] = $exception::class;
 		$code                       = $exception->getCode();
@@ -71,7 +71,7 @@ final class BoosterLogger {
 		self::log( $message, $context );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
+
 	public static function configure_capture( ?TemporaryDebugCapture $capture ): void {
 		self::$capture = $capture;
 	}

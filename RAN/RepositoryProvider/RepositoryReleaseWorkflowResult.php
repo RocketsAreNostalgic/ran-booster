@@ -29,21 +29,21 @@ final readonly class RepositoryReleaseWorkflowResult {
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
+
 	public function workflow_code(): string {
 		return $this->workflow_code; }
 	public function successful(): bool {
 		return $this->successful; }
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
+
 	public function preview_key(): string {
 		return $this->preview_key; }
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
+
 	public function failure_stage(): string {
 		return $this->failure_stage; }
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
+
 	public function diagnostic_code(): string {
 		return $this->diagnostic_code; }
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public workflow DTO preserves established accessors and promoted named-argument properties.
+
 	public function correlation_reference(): string {
 		return $this->correlation_reference; }
 	public function message(): string {

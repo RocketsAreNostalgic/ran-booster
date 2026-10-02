@@ -14,12 +14,12 @@ final class ExternalFixtureDocumentationPluginTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testPluginRegistersOneStructuredProviderDocumentationFilter(): void {
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
-		$this->loadFixturePlugin();
-		$this->runHook( 'plugins_loaded' );
+	public function test_plugin_registers_one_structured_provider_documentation_filter(): void {
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
+		$this->load_fixture_plugin();
+		$this->run_hook( 'plugins_loaded' );
 
-		$sections = $this->runFilter(
+		$sections = $this->run_filter(
 			'ran_booster_documentation_sections_after_provider_gh',
 			array(),
 			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=documentation',
@@ -39,30 +39,30 @@ final class ExternalFixtureDocumentationPluginTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testPluginIsHarmlessWhenBoosterIsAbsentOrTheApiIsIncompatible(): void {
-		$this->loadFixturePlugin();
-		$this->runHook( 'plugins_loaded' );
+	public function test_plugin_is_harmless_when_booster_is_absent_or_the_api_is_incompatible(): void {
+		$this->load_fixture_plugin();
+		$this->run_hook( 'plugins_loaded' );
 		self::assertArrayNotHasKey( 'ran_booster_documentation_sections_after_provider_gh', $GLOBALS['ran_booster_external_fixture_addon_actions'] );
 
 		$GLOBALS['ran_booster_external_fixture_addon_actions'] = array();
 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 15 );
-		$this->loadFixturePlugin();
-		$this->runHook( 'plugins_loaded' );
+		$this->load_fixture_plugin();
+		$this->run_hook( 'plugins_loaded' );
 		self::assertArrayNotHasKey( 'ran_booster_documentation_sections_after_provider_gh', $GLOBALS['ran_booster_external_fixture_addon_actions'] );
 	}
 
-	private function loadFixturePlugin(): void {
+	private function load_fixture_plugin(): void {
 		$GLOBALS['ran_booster_external_fixture_addon_actions'] = array();
 		require dirname( __DIR__ ) . '/fixtures/ran-booster-fixture-documentation/ran-booster-fixture-documentation.php';
 	}
 
-	private function runHook( string $hook, mixed ...$arguments ): void {
+	private function run_hook( string $hook, mixed ...$arguments ): void {
 		$callbacks = $GLOBALS['ran_booster_external_fixture_addon_actions'][ $hook ] ?? array();
 		self::assertCount( 1, $callbacks, sprintf( 'The %s callback must be registered once.', $hook ) );
 		$callbacks[0]( ...$arguments );
 	}
 
-	private function runFilter( string $hook, mixed $value, mixed ...$arguments ): mixed {
+	private function run_filter( string $hook, mixed $value, mixed ...$arguments ): mixed {
 		$callbacks = $GLOBALS['ran_booster_external_fixture_addon_actions'][ $hook ] ?? array();
 		self::assertCount( 1, $callbacks, sprintf( 'The %s callback must be registered once.', $hook ) );
 

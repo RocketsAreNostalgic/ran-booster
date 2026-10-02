@@ -15,20 +15,17 @@ final readonly class WebhookProfileMetadata {
 
 	public function __construct(
 		private string $id,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		string $providerCode,
+		string $provider_code,
 		private string $scope,
 		private string $target,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private string $authorityId,
+		private string $authority_id,
 		private int $revision,
 		private string $disposition,
 		private string $source,
 		private bool $immutable
 	) {
 		try {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$this->provider_code = ProviderCode::parse( $providerCode )->value;
+			$this->provider_code = ProviderCode::parse( $provider_code )->value;
 		} catch ( InvalidArgumentException ) {
 			throw new InvalidArgumentException( 'Webhook profile metadata is invalid.' );
 		}
@@ -52,8 +49,7 @@ final readonly class WebhookProfileMetadata {
 		return $this->id;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function providerCode(): string {
+	public function provider_code(): string {
 		return $this->provider_code;
 	}
 
@@ -65,10 +61,8 @@ final readonly class WebhookProfileMetadata {
 		return $this->target;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function authorityId(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		return $this->authorityId;
+	public function authority_id(): string {
+		return $this->authority_id;
 	}
 
 	public function revision(): int {
@@ -82,15 +76,13 @@ final readonly class WebhookProfileMetadata {
 	/**
 	 * @return array{id: string, provider_code: string, scope: string, target: string, authority_id: string, revision: int, disposition: string, source: string, immutable: bool}
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function toArray(): array {
+	public function to_array(): array {
 		return array(
 			'id'            => $this->id,
 			'provider_code' => $this->provider_code,
 			'scope'         => $this->scope,
 			'target'        => $this->target,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			'authority_id'  => $this->authorityId,
+			'authority_id'  => $this->authority_id,
 			'revision'      => $this->revision,
 			'disposition'   => $this->disposition,
 			'source'        => $this->source,
@@ -111,15 +103,11 @@ final readonly class WebhookProfileMetadata {
 
 	private function valid_authority(): bool {
 		if ( 'owner' === $this->scope ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			return '' === $this->authorityId;
+			return '' === $this->authority_id;
 		}
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		return '' !== $this->authorityId
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			&& strlen( $this->authorityId ) <= 191
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			&& 1 !== preg_match( '/[\x00-\x1F\x7F]/', $this->authorityId );
+		return '' !== $this->authority_id
+			&& strlen( $this->authority_id ) <= 191
+			&& 1 !== preg_match( '/[\x00-\x1F\x7F]/', $this->authority_id );
 	}
 }

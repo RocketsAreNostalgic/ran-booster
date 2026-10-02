@@ -16,12 +16,12 @@ final readonly class AssistanceReadiness {
 	public const SECRET_UNKNOWN    = 'unknown';
 
 	/**
-	 * @param list<string>        $siteReasonCodes
+	 * @param list<string>        $site_reason_codes
 	 * @param list<array<string, mixed>> $repositories
 	 */
 	public function __construct(
-		private array $siteReasonCodes,
-		private string $callbackUrl,
+		private array $site_reason_codes,
+		private string $callback_url,
 		private array $repositories
 	) {
 	}
@@ -32,12 +32,12 @@ final readonly class AssistanceReadiness {
 	 *     repositories: list<array<string, mixed>>
 	 * }
 	 */
-	public function toArray(): array {
+	public function to_array(): array {
 		return array(
 			'site'         => array(
-				'status'       => array() === $this->siteReasonCodes ? self::READY : self::BLOCKED,
-				'reason_codes' => $this->siteReasonCodes,
-				'callback_url' => $this->callbackUrl,
+				'status'       => array() === $this->site_reason_codes ? self::READY : self::BLOCKED,
+				'reason_codes' => $this->site_reason_codes,
+				'callback_url' => $this->callback_url,
 			),
 			'repositories' => $this->repositories,
 		);

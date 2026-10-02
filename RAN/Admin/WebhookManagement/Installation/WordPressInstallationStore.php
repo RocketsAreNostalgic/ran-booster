@@ -14,11 +14,9 @@ final class WordPressInstallationStore implements InstallationStore {
 	/** @var Closure(string,mixed,mixed,bool): bool */
 	private Closure $compare_and_swap;
 
-	/** @param callable(string,mixed,mixed,bool): bool|null $compareAndSwap */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-	public function __construct( ?callable $compareAndSwap = null ) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		$this->compare_and_swap = null === $compareAndSwap
+	/** @param callable(string,mixed,mixed,bool): bool|null $compare_and_swap */
+	public function __construct( ?callable $compare_and_swap = null ) {
+		$this->compare_and_swap = null === $compare_and_swap
 			? static function ( string $option, mixed $expected, mixed $replacement, bool $exists ): bool {
 				if ( ! $exists ) {
 					return add_option( $option, $replacement, '', false );
@@ -42,30 +40,25 @@ final class WordPressInstallationStore implements InstallationStore {
 
 				return true;
 			}
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			: Closure::fromCallable( $compareAndSwap );
+			: Closure::fromCallable( $compare_and_swap );
 	}
 
 	public function all(): array {
 		return $this->records();
 	}
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-	public function find( string $providerCode, string $repositoryId ): ?InstallationRecord {
+	public function find( string $provider_code, string $repository_id ): ?InstallationRecord {
 		$records = $this->records();
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		return $records[ InstallationRecord::key( $providerCode, $repositoryId ) ] ?? null;
+		return $records[ InstallationRecord::key( $provider_code, $repository_id ) ] ?? null;
 	}
 
 	public function save_if_current( InstallationRecord $record, ?InstallationRecord $expected ): string {
 		return $this->write( $record, $expected );
 	}
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain public named-parameter names.
-	public function delete_if_current( string $providerCode, string $repositoryId, ?InstallationRecord $expected ): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		return $this->remove( $providerCode, $repositoryId, $expected );
+	public function delete_if_current( string $provider_code, string $repository_id, ?InstallationRecord $expected ): string {
+		return $this->remove( $provider_code, $repository_id, $expected );
 	}
 
 	/** @return array<string, InstallationRecord> */

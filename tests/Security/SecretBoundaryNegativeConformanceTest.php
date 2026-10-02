@@ -46,11 +46,15 @@ final class SecretBoundaryNegativeConformanceTest extends TestCase {
 	/** @var list<string> */
 	private const FORBIDDEN_ORDINARY_ADD_ON_METHODS = array(
 		'credentialMaterial',
+		'credential_material',
 		'credentialMaterials',
+		'credential_materials',
 		'make',
 		'path',
 		'webhookMaterials',
+		'webhook_materials',
 		'withCredential',
+		'with_credential',
 	);
 
 	/** @var list<string> */
@@ -62,7 +66,7 @@ final class SecretBoundaryNegativeConformanceTest extends TestCase {
 		'support',
 	);
 
-	public function testSafeOrdinaryAddOnContractsExposeNoSecretAuthorityTypesOrMethods(): void {
+	public function test_safe_ordinary_add_on_contracts_expose_no_secret_authority_types_or_methods(): void {
 		foreach ( self::SAFE_ORDINARY_ADD_ON_CONTRACTS as $contract ) {
 			$reflection = new ReflectionClass( $contract );
 
@@ -72,15 +76,15 @@ final class SecretBoundaryNegativeConformanceTest extends TestCase {
 					self::FORBIDDEN_ORDINARY_ADD_ON_METHODS,
 					'An ordinary add-on contract acquired a forbidden authority method.'
 				);
-				$this->assertTypeIsSafe( $method->getReturnType() );
+				$this->assert_type_is_safe( $method->getReturnType() );
 				foreach ( $method->getParameters() as $parameter ) {
-					$this->assertParameterIsSafe( $parameter );
+					$this->assert_parameter_is_safe( $parameter );
 				}
 			}
 		}
 	}
 
-	public function testCredentialBearingProviderContractRemainsProviderBoundAndReadOnly(): void {
+	public function test_credential_bearing_provider_contract_remains_provider_bound_and_read_only(): void {
 		$reflection = new ReflectionClass( ProviderCredentialStore::class );
 		$methods    = array_map(
 			static fn ( ReflectionMethod $method ): string => $method->name,
@@ -88,22 +92,22 @@ final class SecretBoundaryNegativeConformanceTest extends TestCase {
 		);
 		sort( $methods );
 
-		self::assertSame( array( 'credentialMaterial', 'credentialProfiles', 'hasWebhookProfile' ), $methods );
+		self::assertSame( array( 'credential_material', 'credential_profiles', 'has_webhook_profile' ), $methods );
 
-		$material   = $reflection->getMethod( 'credentialMaterial' );
+		$material   = $reflection->getMethod( 'credential_material' );
 		$parameters = $material->getParameters();
 		self::assertCount( 1, $parameters );
 		self::assertSame( 'id', $parameters[0]->name );
 		self::assertSame( '?string', (string) $parameters[0]->getType() );
-		self::assertFalse( $reflection->hasMethod( 'webhookMaterials' ) );
-		self::assertFalse( $reflection->hasMethod( 'saveCredential' ) );
+		self::assertFalse( $reflection->hasMethod( 'webhook_materials' ) );
+		self::assertFalse( $reflection->hasMethod( 'save_credential' ) );
 		self::assertFalse( $reflection->hasMethod( 'path' ) );
 	}
 
-	public function testGlobalAndBulkAcquisitionPathsAreClosed(): void {
-		$webhookAssistance = new ReflectionClass( WebhookAssistanceFacade::class );
-		foreach ( array( 'provision', 'releaseProfile', 'withCredential' ) as $removedMethod ) {
-			self::assertFalse( $webhookAssistance->hasMethod( $removedMethod ) );
+	public function test_global_and_bulk_acquisition_paths_are_closed(): void {
+		$webhook_assistance = new ReflectionClass( WebhookAssistanceFacade::class );
+		foreach ( array( 'provision', 'releaseProfile', 'release_profile', 'withCredential', 'with_credential' ) as $removed_method ) {
+			self::assertFalse( $webhook_assistance->hasMethod( $removed_method ) );
 		}
 		self::assertFalse( interface_exists( 'RAN\\AddOn\\WebhookAssistance\\WebhookCleanupFacade' ) );
 
@@ -127,7 +131,7 @@ final class SecretBoundaryNegativeConformanceTest extends TestCase {
 
 		$secrets = new ReflectionClass( SecretsFile::class );
 		self::assertFalse( $secrets->hasMethod( 'credentialMaterials' ) );
-		foreach ( array( 'credentialMaterial', 'path', 'webhookMaterials' ) as $method ) {
+		foreach ( array( 'credential_material', 'path', 'webhook_materials' ) as $method ) {
 			self::assertTrue( $secrets->getMethod( $method )->isPublic() );
 		}
 
@@ -149,7 +153,7 @@ final class SecretBoundaryNegativeConformanceTest extends TestCase {
 		self::assertStringNotContainsString( ', $logging', $bootstrap );
 	}
 
-	public function testSyntheticCanaryMatrixCoversEveryRequiredSurfaceAndTransform(): void {
+	public function test_synthetic_canary_matrix_covers_every_required_surface_and_transform(): void {
 		$surfaces = array( 'result', 'log', 'notice', 'support', 'archive' );
 		sort( $surfaces );
 		self::assertSame( self::REQUIRED_CANARY_SURFACES, $surfaces );
@@ -167,12 +171,12 @@ final class SecretBoundaryNegativeConformanceTest extends TestCase {
 		self::assertCount( 5, $variants );
 		foreach ( $variants as $variant ) {
 			self::assertTrue(
-				$this->surfaceContainsCanary( array( 'bounded_output' => $variant ), $canary ),
+				$this->surface_contains_canary( array( 'bounded_output' => $variant ), $canary ),
 				'The negative-conformance detector missed a required synthetic transform.'
 			);
 		}
 		self::assertFalse(
-			$this->surfaceContainsCanary(
+			$this->surface_contains_canary(
 				array(
 					'result'  => 'The operation could not be verified.',
 					'notice'  => 'Review the provider settings.',
@@ -184,17 +188,17 @@ final class SecretBoundaryNegativeConformanceTest extends TestCase {
 		);
 	}
 
-	private function assertParameterIsSafe( ReflectionParameter $parameter ): void {
-		$this->assertTypeIsSafe( $parameter->getType() );
+	private function assert_parameter_is_safe( ReflectionParameter $parameter ): void {
+		$this->assert_type_is_safe( $parameter->getType() );
 		self::assertNotContains(
 			'callable',
-			$this->typeNames( $parameter->getType() ),
+			$this->type_names( $parameter->getType() ),
 			'An ordinary add-on contract acquired a generic execution callback.'
 		);
 	}
 
-	private function assertTypeIsSafe( ?ReflectionType $type ): void {
-		foreach ( $this->typeNames( $type ) as $name ) {
+	private function assert_type_is_safe( ?ReflectionType $type ): void {
+		foreach ( $this->type_names( $type ) as $name ) {
 			self::assertNotContains(
 				$name,
 				self::FORBIDDEN_AUTHORITY_TYPES,
@@ -204,7 +208,7 @@ final class SecretBoundaryNegativeConformanceTest extends TestCase {
 	}
 
 	/** @return list<string> */
-	private function typeNames( ?ReflectionType $type ): array {
+	private function type_names( ?ReflectionType $type ): array {
 		if ( $type instanceof ReflectionNamedType ) {
 			return array( $type->getName() );
 		}
@@ -219,7 +223,7 @@ final class SecretBoundaryNegativeConformanceTest extends TestCase {
 	}
 
 	/** @param array<string, mixed> $surface */
-	private function surfaceContainsCanary( array $surface, string $canary ): bool {
+	private function surface_contains_canary( array $surface, string $canary ): bool {
 		$leaves = array();
 		array_walk_recursive(
 			$surface,

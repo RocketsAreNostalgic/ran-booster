@@ -29,14 +29,14 @@ final class WebhookControllerTest extends TestCase {
 	private const NO_STORE      = 'no-store, no-cache, must-revalidate, max-age=0';
 
 	protected function setUp(): void {
-		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_server['REQUEST_METHOD'] = 'POST';
 	}
 
 	protected function tearDown(): void {
-		unset( $_SERVER['REQUEST_METHOD'] );
+		unset( $_server['REQUEST_METHOD'] );
 	}
 
-	public function testUrlProviderCannotBeOverriddenByMergedRequestParameters(): void {
+	public function test_url_provider_cannot_be_overridden_by_merged_request_parameters(): void {
 		$processor  = $this->processor( new WebhookControllerProvider(), new WebhookControllerCoordinator() );
 		$controller = new WebhookController( $processor );
 		$request    = new \WP_REST_Request(
@@ -53,7 +53,7 @@ final class WebhookControllerTest extends TestCase {
 		self::assertSame( self::NO_STORE, $response->get_headers()['Cache-Control'] );
 	}
 
-	public function testOriginalMethodAndOverridesStopBeforeProviderOrBodyWork(): void {
+	public function test_original_method_and_overrides_stop_before_provider_or_body_work(): void {
 		$controller = new WebhookController( $this->processor( new WebhookControllerProvider(), new WebhookControllerCoordinator() ) );
 		$requests   = array(
 			new \WP_REST_Request( array( 'provider' => 'gh' ), array(), '{}', array(), 'GET' ),
@@ -65,20 +65,20 @@ final class WebhookControllerTest extends TestCase {
 			$response = $controller->receive( $request );
 
 			self::assertSame( 400, $response->get_status() );
-			self::assertSame( 0, $request->bodyCalls );
-			self::assertSame( 0, $request->headerCalls );
+			self::assertSame( 0, $request->body_calls );
+			self::assertSame( 0, $request->header_calls );
 			self::assertSame( self::NO_STORE, $response->get_headers()['Cache-Control'] );
 		}
 
-		$_SERVER['REQUEST_METHOD'] = 'GET';
+		$_server['REQUEST_METHOD'] = 'GET';
 		$request                   = new \WP_REST_Request( array( 'provider' => 'gh' ), array(), '{}', array(), 'POST' );
 		$response                  = $controller->receive( $request );
 
 		self::assertSame( 400, $response->get_status() );
-		self::assertSame( 0, $request->bodyCalls );
+		self::assertSame( 0, $request->body_calls );
 	}
 
-	public function testNullAndEmptyMethodOverrideHeadersAreAbsent(): void {
+	public function test_null_and_empty_method_override_headers_are_absent(): void {
 		$controller = new WebhookController( $this->processor( new WebhookControllerProvider(), new WebhookControllerCoordinator() ) );
 		$body       = '{}';
 		$signature  = 'sha256=' . hash_hmac( 'sha256', $body, self::WEBHOOK_SECRET );
@@ -101,7 +101,7 @@ final class WebhookControllerTest extends TestCase {
 		}
 	}
 
-	public function testOnlyTheExactQueryStyleRouteMetadataIsAccepted(): void {
+	public function test_only_the_exact_query_style_route_metadata_is_accepted(): void {
 		$controller = new WebhookController( $this->processor( new WebhookControllerProvider(), new WebhookControllerCoordinator() ) );
 		$route      = '/ran-booster/v1/webhooks/gh';
 		$accepted   = new \WP_REST_Request(
@@ -128,21 +128,21 @@ final class WebhookControllerTest extends TestCase {
 
 		self::assertSame( 200, $controller->receive( $accepted )->get_status() );
 		self::assertSame( 400, $controller->receive( $rejected )->get_status() );
-		self::assertSame( 0, $rejected->bodyCalls );
+		self::assertSame( 0, $rejected->body_calls );
 	}
 
-	public function testUnknownProviderStopsBeforeBodyAndHeadersAreRead(): void {
+	public function test_unknown_provider_stops_before_body_and_headers_are_read(): void {
 		$controller = new WebhookController( $this->processor( new WebhookControllerProvider(), new WebhookControllerCoordinator() ) );
 		$request    = new \WP_REST_Request( array( 'provider' => 'bb' ), array(), 'body-canary', array( 'secret-canary' => 'value' ) );
 		$response   = $controller->receive( $request );
 
 		self::assertSame( 404, $response->get_status() );
-		self::assertSame( 0, $request->bodyCalls );
-		self::assertSame( 0, $request->headerCalls );
+		self::assertSame( 0, $request->body_calls );
+		self::assertSame( 0, $request->header_calls );
 		self::assertSame( self::NO_STORE, $response->get_headers()['Cache-Control'] );
 	}
 
-	public function testControllerReturnsTheAsyncAdmissionReceipt(): void {
+	public function test_controller_returns_the_async_admission_receipt(): void {
 		$event       = new \RAN\RepositoryProvider\PushEvent(
 			ProviderCode::parse( 'gh' ),
 			'owner/example',
@@ -191,7 +191,7 @@ final class WebhookControllerTest extends TestCase {
 						parent::__construct( '/unused/controller-secrets.php', array() );
 					}
 
-					public function webhookMaterials( ProviderCode|string $provider ): array {
+					public function webhook_materials( ProviderCode|string $provider ): array {
 						return array(
 							'test-profile' => array(
 								'scope'        => 'owner',
@@ -245,9 +245,9 @@ final class WebhookControllerCoordinator extends DeploymentCoordinator {
 	public function __construct( private ?array $result = null ) {
 	}
 
-	public function acceptWebhook(
+	public function accept_webhook(
 		array $events,
-		string $authenticatedBodyDigest
+		string $authenticated_body_digest
 	): array {
 		return $this->result ?? array(
 			'status'           => 'accepted',

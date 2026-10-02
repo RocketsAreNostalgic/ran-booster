@@ -38,36 +38,24 @@ final class WebhookManagementController {
 		private readonly WebhookOperationCoordinator $operations,
 		private readonly WebhookDisplayModel $display,
 		private readonly ProviderRegistry $providers,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private readonly ManagedPackageWebhookAuthorityResolver $packageAuthorities,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?callable $canManage = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?callable $verifyNonce = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?callable $createNonce = null
+		private readonly ManagedPackageWebhookAuthorityResolver $package_authorities,
+		?callable $can_manage = null,
+		?callable $verify_nonce = null,
+		?callable $create_nonce = null
 	) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->can_manage = null === $canManage
+		$this->can_manage = null === $can_manage
 			? static fn (): bool => current_user_can( 'manage_options' )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			: \Closure::fromCallable( $canManage );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->verify_nonce = null === $verifyNonce
+			: \Closure::fromCallable( $can_manage );
+		$this->verify_nonce = null === $verify_nonce
 			? static fn ( string $nonce, string $action ): bool => 1 === wp_verify_nonce( $nonce, $action )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			: \Closure::fromCallable( $verifyNonce );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->create_nonce = null === $createNonce
+			: \Closure::fromCallable( $verify_nonce );
+		$this->create_nonce = null === $create_nonce
 			? static fn ( string $action ): string => wp_create_nonce( $action )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			: \Closure::fromCallable( $createNonce );
+			: \Closure::fromCallable( $create_nonce );
 	}
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function use_admin_interaction_facade( AdminInteractionFacade $adminInteraction ): void {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->admin_interaction = $adminInteraction;
+	public function use_admin_interaction_facade( AdminInteractionFacade $admin_interaction ): void {
+		$this->admin_interaction = $admin_interaction;
 	}
 
 	/**
@@ -110,7 +98,7 @@ final class WebhookManagementController {
 			&& true === $result['inline_safe'] ) {
 			$outcome = true === $result['successful']
 				? AdminInteractionOutcome::success( $interaction_request, $this->display->notice( $result_code, $result['recovery'], $result['remediation'] ) )
-				: AdminInteractionOutcome::validationFailure( $interaction_request, $this->display->notice( $result_code, $result['recovery'], $result['remediation'] ) );
+				: AdminInteractionOutcome::validation_failure( $interaction_request, $this->display->notice( $result_code, $result['recovery'], $result['remediation'] ) );
 			$this->admin_interaction->respond( $outcome );
 		}
 
@@ -133,7 +121,7 @@ final class WebhookManagementController {
 	/** @return list<ProviderMetadata> */
 	public function provider_metadata_list(): array {
 		$metadata = array();
-		foreach ( $this->providers->orderedMetadata() as $candidate ) {
+		foreach ( $this->providers->ordered_metadata() as $candidate ) {
 			$capable = $this->capable_provider_metadata( $candidate->code->value );
 			if ( $capable instanceof ProviderMetadata ) {
 				$metadata[] = $capable;
@@ -143,15 +131,13 @@ final class WebhookManagementController {
 		return $metadata;
 	}
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function provider_metadata( string $providerCode ): ?ProviderMetadata {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		return $this->capable_provider_metadata( $providerCode );
+	public function provider_metadata( string $provider_code ): ?ProviderMetadata {
+		return $this->capable_provider_metadata( $provider_code );
 	}
 
 	/** @return array{result:?string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string} */
 	public function panel_context(): array {
-		$query          = is_array( $_GET ) ? wp_unslash( $_GET ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Bounded display-only context.
+		$query          = is_array( $_get ) ? wp_unslash( $_get ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Bounded display-only context.
 		$code           = $this->string_value( $query, 'webhook_management_result' );
 		$safe_reference = static fn ( mixed $value ): ?string => is_string( $value )
 			&& 1 === preg_match( '/^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/', $value )
@@ -204,7 +190,7 @@ final class WebhookManagementController {
 			return null;
 		}
 
-		return AdminInteractionRequest::providerRepositories(
+		return AdminInteractionRequest::provider_repositories(
 			'repository-webhook-management:manage-webhook',
 			$return_url,
 			'repository-webhook-management-error'
@@ -245,8 +231,7 @@ final class WebhookManagementController {
 	/** Prove that a package-settings return URL belongs to this signed repository operation. */
 	private function package_return_matches_operation( string $page, string $package, string $provider_code, string $repository_id ): bool {
 		$type = 'ran-booster-plugins' === $page ? 'plugin' : 'theme';
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		$authority = $this->packageAuthorities->forPackage( $type, $package );
+		$authority = $this->package_authorities->for_package( $type, $package );
 
 		return null !== $authority
 			&& hash_equals( $provider_code, $authority['provider_code'] )
@@ -255,9 +240,9 @@ final class WebhookManagementController {
 
 	private function capable_provider_metadata( string $provider_code ): ?ProviderMetadata {
 		try {
-			$fitness    = $this->providers->requireCapability( $provider_code, RepositoryWebhookFitness::class );
-			$management = $this->providers->requireCapability( $provider_code, RepositoryWebhookManagement::class );
-			$normalizer = $this->providers->requireCapability( $provider_code, WebhookNormalizer::class );
+			$fitness    = $this->providers->require_capability( $provider_code, RepositoryWebhookFitness::class );
+			$management = $this->providers->require_capability( $provider_code, RepositoryWebhookManagement::class );
+			$normalizer = $this->providers->require_capability( $provider_code, WebhookNormalizer::class );
 			$metadata   = $this->providers->metadata()[ $provider_code ] ?? null;
 		} catch ( \Throwable ) {
 			return null;

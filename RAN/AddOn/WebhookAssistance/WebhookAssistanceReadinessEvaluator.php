@@ -18,33 +18,28 @@ final class WebhookAssistanceReadinessEvaluator {
 	/** @var \Closure(): bool */
 	private \Closure $can_manage;
 
-	/** @param callable(): bool|null $canManage */
+	/** @param callable(): bool|null $can_manage */
 	public function __construct(
 		private PluginRepository $plugins,
 		private ThemeRepository $themes,
 		private SecretsFile $secrets,
 		private Database $database,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?callable $canManage = null
+		?callable $can_manage = null
 	) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->can_manage = null === $canManage
+		$this->can_manage = null === $can_manage
 			? static fn (): bool => current_user_can( 'manage_options' )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			: \Closure::fromCallable( $canManage );
+			: \Closure::fromCallable( $can_manage );
 	}
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function evaluate( string $provider, string $callbackUrl ): AssistanceReadiness {
+	public function evaluate( string $provider, string $callback_url ): AssistanceReadiness {
 		if ( ! ( $this->can_manage )() ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			return new AssistanceReadiness( array( 'managed_packages_unavailable' ), $callbackUrl, array() );
+			return new AssistanceReadiness( array( 'managed_packages_unavailable' ), $callback_url, array() );
 		}
 
 		$site_reasons   = array();
 		$database_ready = true;
 		try {
-			$this->database->requireReady();
+			$this->database->require_ready();
 		} catch ( \Throwable ) {
 			$database_ready = false;
 			$site_reasons[] = 'database_unavailable';
@@ -52,14 +47,13 @@ final class WebhookAssistanceReadinessEvaluator {
 
 		$profiles = null;
 		try {
-			$this->secrets->assertManagedStorageReady();
-			$profiles = $this->secrets->webhookProfiles( $provider );
+			$this->secrets->assert_managed_storage_ready();
+			$profiles = $this->secrets->webhook_profiles( $provider );
 		} catch ( \Throwable ) {
 			$site_reasons[] = 'secrets_storage_unavailable';
 		}
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( ! $this->is_structurally_public_https( $callbackUrl ) ) {
+		if ( ! $this->is_structurally_public_https( $callback_url ) ) {
 			$site_reasons[] = 'callback_requires_public_https';
 		}
 
@@ -72,15 +66,13 @@ final class WebhookAssistanceReadinessEvaluator {
 			}
 		}
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		return new AssistanceReadiness( $site_reasons, $callbackUrl, $repositories );
+		return new AssistanceReadiness( $site_reasons, $callback_url, $repositories );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function managedStorageAvailable(): bool {
+	public function managed_storage_available(): bool {
 		try {
-			$this->database->requireReady();
-			$this->secrets->assertManagedStorageReady();
+			$this->database->require_ready();
+			$this->secrets->assert_managed_storage_ready();
 
 			return true;
 		} catch ( \Throwable ) {
@@ -96,15 +88,13 @@ final class WebhookAssistanceReadinessEvaluator {
 	 * optional release-package hygiene from removing setup that Branch still
 	 * consumes.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function cleanupTarget( string $provider, string $repositoryId, string $callbackUrl ): ?AssistanceTarget {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( ! ( $this->can_manage )() || ! $this->valid_repository_id( $repositoryId ) ) {
+	public function cleanup_target( string $provider, string $repository_id, string $callback_url ): ?AssistanceTarget {
+		if ( ! ( $this->can_manage )() || ! $this->valid_repository_id( $repository_id ) ) {
 			return null;
 		}
 
 		try {
-			$this->database->requireReady();
+			$this->database->require_ready();
 			$packages = array_merge(
 				$this->plugins->all_deployment_plugins(),
 				$this->themes->all_deployment_themes()
@@ -123,8 +113,7 @@ final class WebhookAssistanceReadinessEvaluator {
 			$locator          = (string) $package->get_repository();
 			$normalized       = strtolower( trim( $locator, '/' ) );
 			$package_identity = $package->get_provider_repository_id();
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$identity_matches = is_string( $package_identity ) && hash_equals( $repositoryId, $package_identity );
+			$identity_matches = is_string( $package_identity ) && hash_equals( $repository_id, $package_identity );
 			$locator_matches  = null !== $release_locator && hash_equals( $release_locator, $normalized );
 
 			if ( PackageSource::RELEASE_ASSET === $package->get_source() && $identity_matches ) {
@@ -172,14 +161,12 @@ final class WebhookAssistanceReadinessEvaluator {
 
 		return new AssistanceTarget(
 			$provider,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$repositoryId,
+			$repository_id,
 			$repository,
 			$repository,
 			$references,
 			$policies,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$callbackUrl
+			$callback_url
 		);
 	}
 
@@ -302,7 +289,7 @@ final class WebhookAssistanceReadinessEvaluator {
 
 	private function safe_repository( string $repository ): bool {
 		try {
-			RepositoryLocator::requireValid( $repository );
+			RepositoryLocator::require_valid( $repository );
 
 			return true;
 		} catch ( \InvalidArgumentException ) {

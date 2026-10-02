@@ -19,45 +19,45 @@ final class ExternalFixturePortabilityPluginTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testFixtureLoadedBeforeCoreReceivesOnlyExactApiThreeFacade(): void {
-		$this->loadFixture();
+	public function test_fixture_loaded_before_core_receives_only_exact_api_three_facade(): void {
+		$this->load_fixture();
 		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 3 );
 
-		$this->runHook( 'plugins_loaded' );
-		$this->runHook( 'ran_booster_portability_ready', $this->facade() );
+		$this->run_hook( 'plugins_loaded' );
+		$this->run_hook( 'ran_booster_portability_ready', $this->facade() );
 
-		$this->assertFixtureResults();
+		$this->assert_fixture_results();
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testFixtureLoadedAfterCoreUsesTheSameExactContract(): void {
+	public function test_fixture_loaded_after_core_uses_the_same_exact_contract(): void {
 		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 3 );
-		$this->loadFixture();
+		$this->load_fixture();
 
-		$this->runHook( 'plugins_loaded' );
-		$this->runHook( 'ran_booster_portability_ready', $this->facade() );
+		$this->run_hook( 'plugins_loaded' );
+		$this->run_hook( 'ran_booster_portability_ready', $this->facade() );
 
-		$this->assertFixtureResults();
+		$this->assert_fixture_results();
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	#[DataProvider( 'mismatchedCoreApis' )]
-	public function testFixtureFailsSoftWithoutCoreOrWithAnExactVersionMismatch( int $coreApi ): void {
-		$this->loadFixture();
-		$this->runHook( 'plugins_loaded' );
+	#[DataProvider( 'mismatched_core_apis' )]
+	public function test_fixture_fails_soft_without_core_or_with_an_exact_version_mismatch( int $core_api ): void {
+		$this->load_fixture();
+		$this->run_hook( 'plugins_loaded' );
 		self::assertArrayNotHasKey( 'ran_booster_portability_ready', $GLOBALS['ran_booster_external_fixture_addon_actions'] );
 
 		$GLOBALS['ran_booster_external_fixture_addon_actions'] = array();
-		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', $coreApi );
-		$this->loadFixture();
-		$this->runHook( 'plugins_loaded' );
+		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', $core_api );
+		$this->load_fixture();
+		$this->run_hook( 'plugins_loaded' );
 		self::assertArrayNotHasKey( 'ran_booster_portability_ready', $GLOBALS['ran_booster_external_fixture_addon_actions'] );
 	}
 
 	/** @return array<string, array{int}> */
-	public static function mismatchedCoreApis(): array {
+	public static function mismatched_core_apis(): array {
 		return array(
 			'API 1' => array( 1 ),
 			'API 2' => array( 2 ),
@@ -67,19 +67,19 @@ final class ExternalFixturePortabilityPluginTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	#[DataProvider( 'oldBridgeLoadOrders' )]
-	public function testApiTwoBridgeRegistersNoFeatureHooksOrFacadeCallsOnApiThree( bool $coreFirst ): void {
+	#[DataProvider( 'old_bridge_load_orders' )]
+	public function test_api_two_bridge_registers_no_feature_hooks_or_facade_calls_on_api_three( bool $core_first ): void {
 		$GLOBALS['ran_booster_external_fixture_addon_actions'] = array();
 		unset( $GLOBALS['ran_booster_fixture_portability_results'] );
-		if ( $coreFirst ) {
+		if ( $core_first ) {
 			define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 3 );
 		}
 		require dirname( __DIR__ ) . '/fixtures/ran-booster-fixture-portability-addon/old-api2-bridge.php';
-		if ( ! $coreFirst ) {
+		if ( ! $core_first ) {
 			define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 3 );
 		}
 
-		$this->runHook( 'plugins_loaded' );
+		$this->run_hook( 'plugins_loaded' );
 
 		self::assertSame( array( 'plugins_loaded' ), array_keys( $GLOBALS['ran_booster_external_fixture_addon_actions'] ) );
 		$facade = $this->createMock( PortabilityFacade::class );
@@ -92,20 +92,20 @@ final class ExternalFixturePortabilityPluginTest extends TestCase {
 	}
 
 	/** @return array<string, array{bool}> */
-	public static function oldBridgeLoadOrders(): array {
+	public static function old_bridge_load_orders(): array {
 		return array(
 			'Core before API 2 bridge' => array( true ),
 			'API 2 bridge before Core' => array( false ),
 		);
 	}
 
-	private function loadFixture(): void {
+	private function load_fixture(): void {
 		$GLOBALS['ran_booster_external_fixture_addon_actions'] = array();
 		unset( $GLOBALS['ran_booster_fixture_portability_results'] );
 		require dirname( __DIR__ ) . '/fixtures/ran-booster-fixture-portability-addon/ran-booster-fixture-portability-addon.php';
 	}
 
-	private function runHook( string $hook, mixed ...$arguments ): void {
+	private function run_hook( string $hook, mixed ...$arguments ): void {
 		$callbacks = $GLOBALS['ran_booster_external_fixture_addon_actions'][ $hook ] ?? array();
 		self::assertCount( 1, $callbacks, sprintf( 'The %s callback must be registered once.', $hook ) );
 		$callbacks[0]( ...$arguments );
@@ -141,7 +141,7 @@ final class ExternalFixturePortabilityPluginTest extends TestCase {
 		};
 	}
 
-	private function assertFixtureResults(): void {
+	private function assert_fixture_results(): void {
 		$results = $GLOBALS['ran_booster_fixture_portability_results'];
 		self::assertInstanceOf( PortabilityReviewResult::class, $results[0] );
 		self::assertInstanceOf( PortabilityApplyResult::class, $results[1] );

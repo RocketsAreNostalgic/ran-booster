@@ -24,34 +24,29 @@ final class WebhookDisplayModel {
 
 	/**
 	 * @param array<string, array<string, mixed>> $rows
-	 * @param array<string, array<string, mixed>> $repositoryProjections
+	 * @param array<string, array<string, mixed>> $repository_projections
 	 * @return array<string, array<string, mixed>>
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function enrich_rows( array $rows, string $providerCode, string $providerLabel, string $repositoryUrlBase, array $repositoryProjections, string $returnUrl ): array {
+	public function enrich_rows( array $rows, string $provider_code, string $provider_label, string $repository_url_base, array $repository_projections, string $return_url ): array {
 		$this->projected_statuses = array();
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$readiness = $this->readiness( $providerCode );
+		$readiness = $this->readiness( $provider_code );
 		if ( null === $readiness ) {
 			return $rows;
 		}
 
 		$records = array_filter(
 			$this->records->all(),
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			static fn ( InstallationRecord $record ): bool => hash_equals( $providerCode, $record->provider_code() )
+			static fn ( InstallationRecord $record ): bool => hash_equals( $provider_code, $record->provider_code() )
 		);
 		$current_record_keys = array();
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		foreach ( $repositoryProjections as $row_key => $projection ) {
+		foreach ( $repository_projections as $row_key => $projection ) {
 			$repository_id = $this->projection_repository_id( $row_key, $projection );
 			if ( null === $repository_id || ! isset( $rows[ $row_key ], $readiness['repositories'][ $repository_id ] ) ) {
 				continue;
 			}
 
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$record_key                         = InstallationRecord::key( $providerCode, $repository_id );
+			$record_key                         = InstallationRecord::key( $provider_code, $repository_id );
 			$current_record_keys[ $record_key ] = true;
 			$record                             = $records[ $record_key ] ?? null;
 			$status_code                        = $this->status_code( $record, $readiness['callback_url'] );
@@ -61,8 +56,7 @@ final class WebhookDisplayModel {
 			$actions = is_array( $rows[ $row_key ]['actions'] ?? null ) ? $rows[ $row_key ]['actions'] : array();
 			if ( isset( $actions['core:webhook-management'] ) && is_array( $actions['core:webhook-management'] ) ) {
 				if ( $readiness['repositories'][ $repository_id ]['eligible'] ) {
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-					$actions['core:webhook-management']['url']          = $this->panel_url( $returnUrl, $repository_id );
+					$actions['core:webhook-management']['url']          = $this->panel_url( $return_url, $repository_id );
 					$actions['core:webhook-management']['disabled']     = false;
 					$actions['core:webhook-management']['described_by'] = '';
 				}
@@ -71,13 +65,11 @@ final class WebhookDisplayModel {
 		}
 
 		foreach ( $rows as $row_key => &$row ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			if ( isset( $repositoryProjections[ $row_key ] ) || 'release_asset' !== ( $row['source_key'] ?? null ) ) {
+			if ( isset( $repository_projections[ $row_key ] ) || 'release_asset' !== ( $row['source_key'] ?? null ) ) {
 				continue;
 			}
 			$repository_id = is_string( $row['repository_id'] ?? null ) ? trim( $row['repository_id'] ) : '';
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$record_key = InstallationRecord::key( $providerCode, $repository_id );
+			$record_key = InstallationRecord::key( $provider_code, $repository_id );
 			$record     = '' === $repository_id ? null : ( $records[ $record_key ] ?? null );
 			if ( null === $record ) {
 				continue;
@@ -91,37 +83,31 @@ final class WebhookDisplayModel {
 		foreach ( $records as $record_key => $record ) {
 			if ( ! isset( $current_record_keys[ $record_key ] ) ) {
 				$synthetic_key = 'ran-booster-repository-webhook-management:historical:' . substr( hash( 'sha256', $record_key ), 0, 16 );
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				$rows[ $synthetic_key ] = $this->retained_record_row( $synthetic_key, $record, $providerLabel, $repositoryUrlBase );
+				$rows[ $synthetic_key ] = $this->retained_record_row( $synthetic_key, $record, $provider_label, $repository_url_base );
 			}
 		}
 
 		return $rows;
 	}
 
-	/** @param array<string,array<string,mixed>> $rows @param array<string,array<string,mixed>> $repositoryProjections @return array<string,array<string,mixed>> */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function enrich_historical_rows( array $rows, string $providerCode, array $repositoryProjections ): array {
+	/** @param array<string,array<string,mixed>> $rows @param array<string,array<string,mixed>> $repository_projections @return array<string,array<string,mixed>> */
+	public function enrich_historical_rows( array $rows, string $provider_code, array $repository_projections ): array {
 		$records = $this->records->all();
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		foreach ( $repositoryProjections as $row_key => $projection ) {
+		foreach ( $repository_projections as $row_key => $projection ) {
 			$repository_id = $this->projection_repository_id( $row_key, $projection );
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$record = null === $repository_id ? null : ( $records[ InstallationRecord::key( $providerCode, $repository_id ) ] ?? null );
+			$record = null === $repository_id ? null : ( $records[ InstallationRecord::key( $provider_code, $repository_id ) ] ?? null );
 			if ( null !== $record && isset( $rows[ $row_key ] ) ) {
 				$existing                    = is_array( $rows[ $row_key ]['details'] ?? null ) ? $rows[ $row_key ]['details'] : array();
 				$rows[ $row_key ]['details'] = array_merge( $existing, $this->historical_details( $record ) );
 			}
 		}
 		foreach ( $rows as $row_key => $row ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			if ( isset( $repositoryProjections[ $row_key ] ) || 'release_asset' !== ( $row['source_key'] ?? null ) ) {
+			if ( isset( $repository_projections[ $row_key ] ) || 'release_asset' !== ( $row['source_key'] ?? null ) ) {
 				continue;
 			}
 			$repository_id = is_string( $row['repository_id'] ?? null ) ? $row['repository_id'] : '';
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$record = '' === trim( $repository_id ) ? null : ( $records[ InstallationRecord::key( $providerCode, $repository_id ) ] ?? null );
+			$record = '' === trim( $repository_id ) ? null : ( $records[ InstallationRecord::key( $provider_code, $repository_id ) ] ?? null );
 			if ( null !== $record ) {
 				$existing                    = is_array( $row['details'] ?? null ) ? $row['details'] : array();
 				$rows[ $row_key ]['details'] = array_merge( $existing, $this->historical_details( $record ) );
@@ -135,51 +121,43 @@ final class WebhookDisplayModel {
 	 * @param array{hook_id:string,profile_id:string}|null $recovery
 	 * @return array<string, mixed>|null
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function panel( string $providerCode, string $providerLabel, string $repositoryId, string $returnUrl, ?string $resultCode, ?array $recovery, bool $canManage, ?string $remediation = null, ?string $webhooksUrl = null ): ?array {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( ! $canManage || '' === trim( $repositoryId ) ) {
+	public function panel( string $provider_code, string $provider_label, string $repository_id, string $return_url, ?string $result_code, ?array $recovery, bool $can_manage, ?string $remediation = null, ?string $webhooks_url = null ): ?array {
+		if ( ! $can_manage || '' === trim( $repository_id ) ) {
 			return null;
 		}
 
 		try {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$target = $this->facade->target( $providerCode, $repositoryId );
+			$target = $this->facade->target( $provider_code, $repository_id );
 		} catch ( \Throwable $exception ) {
 			unset( $exception );
 			return null;
 		}
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( null === $target || ! hash_equals( $repositoryId, $target->repositoryId() ) ) {
+		if ( null === $target || ! hash_equals( $repository_id, $target->repository_id() ) ) {
 			return null;
 		}
 
 		$this->projected_statuses = array();
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$record = $this->records->find( $providerCode, $repositoryId );
+		$record = $this->records->find( $provider_code, $repository_id );
 		$status = null === $record ? null : $this->projected_status( $record );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$credentials = $this->credential_choices( $providerCode );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$operations = null === $recovery ? $this->available_operations( $target, $record, $status, $providerLabel, array() !== $credentials ) : array();
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$operation_models = $this->operation_models( $operations, $providerCode, $repositoryId );
+		$credentials = $this->credential_choices( $provider_code );
+		$operations = null === $recovery ? $this->available_operations( $target, $record, $status, $provider_label, array() !== $credentials ) : array();
+		$operation_models = $this->operation_models( $operations, $provider_code, $repository_id );
 
 		$help = null;
 		if ( null !== $record && 'local_profile_missing' === $status ) {
 			/* translators: %s: repository provider name. */
-			$help = sprintf( __( 'The recorded secret is no longer available. Update the %s webhook to use the current applicable secret; Booster creates a repository secret when none applies.', 'ran-booster' ), $providerLabel ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+			$help = sprintf( __( 'The recorded secret is no longer available. Update the %s webhook to use the current applicable secret; Booster creates a repository secret when none applies.', 'ran-booster' ), $provider_label ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		} elseif ( null !== $record && 'remote_missing' === $status ) {
 			/* translators: %s: repository provider name. */
-			$help = sprintf( __( 'Managed removal is unavailable because the recorded %1$s hook cannot be confirmed. Inspect %1$s manually before continuing.', 'ran-booster' ), $providerLabel ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+			$help = sprintf( __( 'Managed removal is unavailable because the recorded %1$s hook cannot be confirmed. Inspect %1$s manually before continuing.', 'ran-booster' ), $provider_label ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		}
 		$recovery_warning = null;
 		if ( null !== $record && $record->requires_hook_identification() ) {
 			/* translators: %s: repository provider name. */
-			$recovery_warning = sprintf( __( 'Provider state changed without a stable hook ID. Managed operations are disabled for this repository. Inspect its %s webhooks and the recorded Core signing profile manually; do not retry Setup until both sides are reconciled.', 'ran-booster' ), $providerLabel ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+			$recovery_warning = sprintf( __( 'Provider state changed without a stable hook ID. Managed operations are disabled for this repository. Inspect its %s webhooks and the recorded Core signing profile manually; do not retry Setup until both sides are reconciled.', 'ran-booster' ), $provider_label ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		} elseif ( null !== $recovery ) {
 			/* translators: %s: repository provider name. */
-			$recovery_warning = sprintf( __( 'Repository webhook management could not persist the returned recovery references. Setup is disabled on this recovery view. Inspect %s and Core manually before leaving or retrying.', 'ran-booster' ), $providerLabel ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+			$recovery_warning = sprintf( __( 'Repository webhook management could not persist the returned recovery references. Setup is disabled on this recovery view. Inspect %s and Core manually before leaving or retrying.', 'ran-booster' ), $provider_label ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		}
 
 		return array(
@@ -189,37 +167,25 @@ final class WebhookDisplayModel {
 			'webhook_profile_placeholder' => null === $record
 				? __( 'Choose a signing secret', 'ran-booster' )
 				: ( 'local_profile_missing' === $status ? __( 'Recorded signing secret is unavailable', 'ran-booster' ) : __( 'Recorded signing secret', 'ran-booster' ) ),
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'credentials_url'             => $this->provider_settings_url( $providerCode, 'credentials' ),
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'secrets_url'                 => $this->provider_settings_url( $providerCode, 'secrets' ),
+			'credentials_url'             => $this->provider_settings_url( $provider_code, 'credentials' ),
+			'secrets_url'                 => $this->provider_settings_url( $provider_code, 'secrets' ),
 			'form_action'                 => WebhookManagementAdminUrl::for_path( 'admin-post.php' ),
 			'admin_action'                => 'ran_booster_repository_webhook_management_operation',
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'provider_code'               => $providerCode,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'provider_label'              => $providerLabel,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'repository_id'               => $repositoryId,
+			'provider_code'               => $provider_code,
+			'provider_label'              => $provider_label,
+			'repository_id'               => $repository_id,
 			'repository'                  => $target->repository(),
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'webhooks_url'                => $webhooksUrl,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'return_url'                  => $this->panel_url( $returnUrl, $repositoryId ),
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'interaction_request'         => AdminInteractionRequest::providerRepositories( 'repository-webhook-management:manage-webhook', $this->panel_url( $returnUrl, $repositoryId ), 'repository-webhook-management-error' ),
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'result'                      => null === $resultCode ? null : array(
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				'class'   => $this->result_notice_class( $resultCode ),
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				'message' => $this->notice( $resultCode, $recovery, $remediation ),
+			'webhooks_url'                => $webhooks_url,
+			'return_url'                  => $this->panel_url( $return_url, $repository_id ),
+			'interaction_request'         => AdminInteractionRequest::provider_repositories( 'repository-webhook-management:manage-webhook', $this->panel_url( $return_url, $repository_id ), 'repository-webhook-management-error' ),
+			'result'                      => null === $result_code ? null : array(
+				'class'   => $this->result_notice_class( $result_code ),
+				'message' => $this->notice( $result_code, $recovery, $remediation ),
 			),
 			'recovery_warning'            => $recovery_warning,
 			'management_credential_id'    => null === $record ? null : $record->management_credential_id(),
 			'credential_choices'          => $credentials,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'webhook_profile_choices'     => null === $record ? $this->webhook_profile_choices( $providerCode, $repositoryId ) : array(),
+			'webhook_profile_choices'     => null === $record ? $this->webhook_profile_choices( $provider_code, $repository_id ) : array(),
 			'operations'                  => $operation_models,
 			'action_help'                 => $help,
 		);
@@ -251,56 +217,45 @@ final class WebhookDisplayModel {
 	/**
 	 * @return array<string, mixed>
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function unavailable_panel( string $providerCode, string $providerLabel, string $repositoryId, string $repository, string $returnUrl, string $reason, ?string $webhooksUrl = null ): array {
+	public function unavailable_panel( string $provider_code, string $provider_label, string $repository_id, string $repository, string $return_url, string $reason, ?string $webhooks_url = null ): array {
 		return array(
 			'disabled'                    => true,
 			'unavailable_reason'          => $reason,
 			'webhook_profile_disabled'    => true,
 			'webhook_profile_placeholder' => __( 'Choose a signing secret', 'ran-booster' ),
 			'management_credential_id'    => null,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'credentials_url'             => $this->provider_settings_url( $providerCode, 'credentials' ),
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'secrets_url'                 => $this->provider_settings_url( $providerCode, 'secrets' ),
+			'credentials_url'             => $this->provider_settings_url( $provider_code, 'credentials' ),
+			'secrets_url'                 => $this->provider_settings_url( $provider_code, 'secrets' ),
 			'form_action'                 => WebhookManagementAdminUrl::for_path( 'admin-post.php' ),
 			'admin_action'                => 'ran_booster_repository_webhook_management_operation',
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'provider_code'               => $providerCode,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'provider_label'              => $providerLabel,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'repository_id'               => $repositoryId,
+			'provider_code'               => $provider_code,
+			'provider_label'              => $provider_label,
+			'repository_id'               => $repository_id,
 			'repository'                  => $repository,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'webhooks_url'                => $webhooksUrl,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'return_url'                  => $this->panel_url( $returnUrl, $repositoryId ),
+			'webhooks_url'                => $webhooks_url,
+			'return_url'                  => $this->panel_url( $return_url, $repository_id ),
 			'interaction_request'         => null,
 			'result'                      => null,
 			'recovery_warning'            => null,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'credential_choices'          => $this->credential_choices( $providerCode ),
+			'credential_choices'          => $this->credential_choices( $provider_code ),
 			'webhook_profile_choices'     => array(),
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'operations'                  => $this->operation_models( array(), $providerCode, $repositoryId ),
+			'operations'                  => $this->operation_models( array(), $provider_code, $repository_id ),
 			'action_help'                 => null,
 		);
 	}
 
 	/** @return list<array{heading:?string,body:string}> */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function documentation( string $providerLabel ): array {
+	public function documentation( string $provider_label ): array {
 		/* translators: %s: repository provider name. */
-		$intro = sprintf( __( 'Booster can set up, check, reconfigure and remove one %s webhook per managed repository. Manual webhook setup remains available.', 'ran-booster' ), $providerLabel ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$intro = sprintf( __( 'Booster can set up, check, reconfigure and remove one %s webhook per managed repository. Manual webhook setup remains available.', 'ran-booster' ), $provider_label ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		/* translators: %s: repository provider name. */
-		$credential_heading = sprintf( __( 'Saved %s access', 'ran-booster' ), $providerLabel ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$credential_heading = sprintf( __( 'Saved %s access', 'ran-booster' ), $provider_label ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		/* translators: %s: repository provider name. */
-		$readiness = sprintf( __( 'Current readiness verifies Booster storage, a public HTTPS callback and stable repository identity without contacting %s. Timestamped hook status is historical until an administrator runs Check.', 'ran-booster' ), $providerLabel ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$readiness = sprintf( __( 'Current readiness verifies Booster storage, a public HTTPS callback and stable repository identity without contacting %s. Timestamped hook status is historical until an administrator runs Check.', 'ran-booster' ), $provider_label ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		/* translators: %s: repository provider name. */
-		$lifecycle = sprintf( __( 'Webhook management never enables Automatic deployment. Blueprint import, plugin deactivation and plugin deletion do not contact %s or remove remote hooks.', 'ran-booster' ), $providerLabel ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$lifecycle = sprintf( __( 'Webhook management never enables Automatic deployment. Blueprint import, plugin deactivation and plugin deletion do not contact %s or remove remote hooks.', 'ran-booster' ), $provider_label ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 		/* translators: %s: repository provider name. */
-		$cleanup = sprintf( __( 'Switching a package to Published releases does not remove the remote hook, its local recovery record or Core signing material. Remove the identified hook in %s first, then remove only unused local signing material in Core.', 'ran-booster' ), $providerLabel ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$cleanup = sprintf( __( 'Switching a package to Published releases does not remove the remote hook, its local recovery record or Core signing material. Remove the identified hook in %s first, then remove only unused local signing material in Core.', 'ran-booster' ), $provider_label ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
 
 		return array(
 			array(
@@ -398,7 +353,7 @@ final class WebhookDisplayModel {
 	/** @return array{callback_url:string,repositories:array<string,array{eligible:bool}>}|null */
 	private function readiness( string $provider_code ): ?array {
 		try {
-			$projection = $this->facade->readiness( $provider_code )->toArray();
+			$projection = $this->facade->readiness( $provider_code )->to_array();
 		} catch ( \Throwable $exception ) {
 			unset( $exception );
 			return null;
@@ -446,7 +401,7 @@ final class WebhookDisplayModel {
 	/** @return list<array{id:string,label:string}> */
 	private function credential_choices( string $provider_code ): array {
 		try {
-			$choices = $this->facade->credentialChoices( $provider_code );
+			$choices = $this->facade->credential_choices( $provider_code );
 		} catch ( \Throwable ) {
 			return array();
 		}
@@ -476,7 +431,7 @@ final class WebhookDisplayModel {
 	/** @return list<array{id:string,label:string,scope:string}> */
 	private function webhook_profile_choices( string $provider_code, string $repository_id ): array {
 		try {
-			$choices = $this->facade->webhookProfileChoices( $provider_code, $repository_id );
+			$choices = $this->facade->webhook_profile_choices( $provider_code, $repository_id );
 		} catch ( \Throwable ) {
 			return array();
 		}
@@ -755,7 +710,7 @@ final class WebhookDisplayModel {
 
 	private function management_credential_label( InstallationRecord $record ): string {
 		try {
-			foreach ( $this->facade->credentialChoices( $record->provider_code() ) as $choice ) {
+			foreach ( $this->facade->credential_choices( $record->provider_code() ) as $choice ) {
 				if ( is_array( $choice ) && is_string( $choice['id'] ?? null ) && is_string( $choice['label'] ?? null ) && hash_equals( $record->management_credential_id(), $choice['id'] ) ) {
 					return sprintf(
 						/* translators: %s: current saved credential profile label. */
@@ -777,7 +732,7 @@ final class WebhookDisplayModel {
 
 	private function webhook_profile_label( InstallationRecord $record ): ?string {
 		try {
-			foreach ( $this->facade->webhookProfileChoices( $record->provider_code(), $record->repository_id() ) as $choice ) {
+			foreach ( $this->facade->webhook_profile_choices( $record->provider_code(), $record->repository_id() ) as $choice ) {
 				if ( is_array( $choice ) && is_string( $choice['id'] ?? null ) && is_string( $choice['label'] ?? null ) && hash_equals( $record->webhook_profile_id(), $choice['id'] ) ) {
 					return $choice['label'];
 				}

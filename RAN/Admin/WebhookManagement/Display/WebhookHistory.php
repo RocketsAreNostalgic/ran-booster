@@ -13,7 +13,7 @@ final readonly class WebhookHistory {
 	public function __construct( private ManagedPackageWebhookAuthorityResolver $authorities, private InstallationStore $records ) {}
 
 	public function for_package( string $type, string $identifier ): ?WebhookHistoryView {
-		$authority = $this->authorities->forPackage( $type, $identifier );
+		$authority = $this->authorities->for_package( $type, $identifier );
 		if ( null === $authority ) {
 			return null;
 		}

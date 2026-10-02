@@ -8,36 +8,36 @@ declare(strict_types=1);
 
 if ( ! class_exists( 'WP_REST_Request' ) ) {
 	class WP_REST_Request {
-		public int $bodyCalls   = 0;
-		public int $headerCalls = 0;
+		public int $body_calls   = 0;
+		public int $header_calls = 0;
 
 	public function __construct(
-			private array $urlParams,
-			private array $mergedParams,
+			private array $url_params,
+			private array $merged_params,
 			private string $body = '{}',
 			private array $headers = array(),
 			private string $method = 'POST',
-			private array $queryParams = array(),
+			private array $query_params = array(),
 			private string $route = '/ran-booster/v1/webhooks/gh'
 		) {
 		}
 
 		public function get_url_params(): array {
-			return $this->urlParams;
+			return $this->url_params;
 		}
 
 		public function get_param( string $key ): mixed {
-			return $this->mergedParams[ $key ] ?? null;
+			return $this->merged_params[ $key ] ?? null;
 		}
 
 		public function get_body(): string {
-			++$this->bodyCalls;
+			++$this->body_calls;
 
 			return $this->body;
 		}
 
 		public function get_headers(): array {
-			++$this->headerCalls;
+			++$this->header_calls;
 
 			return $this->headers;
 		}
@@ -53,7 +53,7 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 		}
 
 		public function get_query_params(): array {
-			return $this->queryParams;
+			return $this->query_params;
 		}
 
 		public function get_route(): string {

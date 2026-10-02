@@ -18,19 +18,19 @@ final class ExternalFixtureTabAddOnPluginTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testPluginLoadedBeforeCoreRegistersAndRendersOneTab(): void {
+	public function test_plugin_loaded_before_core_registers_and_renders_one_tab(): void {
 		$GLOBALS['ran_booster_external_fixture_addon_translations'] = array(
 			'ran-booster-fixture-tab-addon' => array( 'Fixture Tab' => 'Onglet témoin' ),
 		);
-		$this->loadFixturePlugin();
+		$this->load_fixture_plugin();
 		self::assertFalse( defined( 'RAN_BOOSTER_ADDON_API_VERSION' ) );
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
 
 		$registry = $this->register();
 		$tab      = $registry->get( 'fixture-tab' );
 
 		self::assertInstanceOf( AdminAddOnTab::class, $tab );
-		self::assertSame( 'ran-booster-fixture-tab-addon', $tab->addOnSlug() );
+		self::assertSame( 'ran-booster-fixture-tab-addon', $tab->add_on_slug() );
 		self::assertSame( 'fixture-tab', $tab->key() );
 		self::assertSame( 'Onglet témoin', $tab->label() );
 		self::assertSame( array( $tab ), $registry->all() );
@@ -42,9 +42,9 @@ final class ExternalFixtureTabAddOnPluginTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testPluginLoadedAfterCoreUsesTheSameTabContract(): void {
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
-		$this->loadFixturePlugin();
+	public function test_plugin_loaded_after_core_uses_the_same_tab_contract(): void {
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
+		$this->load_fixture_plugin();
 
 		$registry = $this->register();
 
@@ -53,34 +53,34 @@ final class ExternalFixtureTabAddOnPluginTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testPluginIsHarmlessWhenCoreOrItsApiVersionIsUnavailable(): void {
-		$this->loadFixturePlugin();
-		$this->runHook( 'plugins_loaded' );
+	public function test_plugin_is_harmless_when_core_or_its_api_version_is_unavailable(): void {
+		$this->load_fixture_plugin();
+		$this->run_hook( 'plugins_loaded' );
 		self::assertArrayNotHasKey( 'ran_booster_register_admin_tabs', $GLOBALS['ran_booster_external_fixture_addon_actions'] );
 
 		$GLOBALS['ran_booster_external_fixture_addon_actions'] = array();
 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 15 );
-		$this->loadFixturePlugin();
-		$this->runHook( 'plugins_loaded' );
+		$this->load_fixture_plugin();
+		$this->run_hook( 'plugins_loaded' );
 		self::assertArrayNotHasKey( 'ran_booster_register_admin_tabs', $GLOBALS['ran_booster_external_fixture_addon_actions'] );
 	}
 
-	private function loadFixturePlugin(): void {
+	private function load_fixture_plugin(): void {
 		$GLOBALS['ran_booster_external_fixture_addon_actions'] = array();
 		$GLOBALS['ran_booster_external_fixture_addon_admin']   = true;
 		require dirname( __DIR__ ) . '/fixtures/ran-booster-fixture-tab-addon/ran-booster-fixture-tab-addon.php';
 	}
 
 	private function register(): AdminAddOnRegistry {
-		$this->runHook( 'plugins_loaded' );
+		$this->run_hook( 'plugins_loaded' );
 		$registry = new AdminAddOnRegistry( array(), 7, 7 );
-		$this->runHook( 'ran_booster_register_admin_tabs', $registry );
+		$this->run_hook( 'ran_booster_register_admin_tabs', $registry );
 		$registry->seal();
 
 		return $registry;
 	}
 
-	private function runHook( string $hook, mixed ...$arguments ): void {
+	private function run_hook( string $hook, mixed ...$arguments ): void {
 		$callbacks = $GLOBALS['ran_booster_external_fixture_addon_actions'][ $hook ] ?? array();
 		self::assertCount( 1, $callbacks, sprintf( 'The %s callback must be registered once.', $hook ) );
 		$callbacks[0]( ...$arguments );
@@ -89,7 +89,7 @@ final class ExternalFixtureTabAddOnPluginTest extends TestCase {
 	private function render( AdminAddOnRegistry $registry, AdminAddOnTab $tab ): string {
 		ob_start();
 		$tab->render(
-			$registry->contextFor(
+			$registry->context_for(
 				$tab,
 				'https://example.test/wp-admin/admin.php?page=ran-booster&tab=fixture-tab',
 				'site'

@@ -7,9 +7,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /** @var array<string, mixed> $model */
-/** @var string $formAttributes */
+/** @var string $form_attributes */
 $disabled        = true === ( $model['disabled'] ?? false );
-$profileDisabled = $disabled || true === ( $model['webhook_profile_disabled'] ?? false );
+$profile_disabled = $disabled || true === ( $model['webhook_profile_disabled'] ?? false );
 ?>
 <div class="ran-booster-repository-webhook-management">
 
@@ -21,7 +21,7 @@ $profileDisabled = $disabled || true === ( $model['webhook_profile_disabled'] ??
 	<?php endif; ?>
 	<div class="ran-booster-repository-webhook-management__panel">
 		<div class="ran-booster-public-lookup-profile__layout ran-booster-repository-webhook-management__layout">
-			<form method="post" action="<?php echo esc_url( $model['form_action'] ); ?>" class="ran-booster-public-lookup-profile__form ran-booster-repository-webhook-management__form"<?php echo $formAttributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Exact Core Admin Interaction facade owns these form attributes. ?>>
+			<form method="post" action="<?php echo esc_url( $model['form_action'] ); ?>" class="ran-booster-public-lookup-profile__form ran-booster-repository-webhook-management__form"<?php echo $form_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Exact Core Admin Interaction facade owns these form attributes. ?>>
 				<input type="hidden" name="action" value="<?php echo esc_attr( $model['admin_action'] ); ?>">
 				<input type="hidden" name="provider_code" value="<?php echo esc_attr( $model['provider_code'] ); ?>">
 				<input type="hidden" name="repository_id" value="<?php echo esc_attr( $model['repository_id'] ); ?>">
@@ -44,7 +44,7 @@ $profileDisabled = $disabled || true === ( $model['webhook_profile_disabled'] ??
 					<div class="ran-booster-repository-webhook-management__field ran-booster-repository-webhook-management__field--wide">
 						<label class="ran-booster-eyebrow ran-booster-eyebrow--compact ran-booster-public-lookup-profile__label" for="repository-webhook-management-webhook-profile"><?php esc_html_e( 'Signing secret', 'ran-booster' ); ?></label>
 						<div class="ran-booster-repository-webhook-management__select-action">
-							<select id="repository-webhook-management-webhook-profile" name="webhook_profile_id"<?php disabled( $profileDisabled ); ?><?php echo $profileDisabled ? '' : ' required'; ?>>
+							<select id="repository-webhook-management-webhook-profile" name="webhook_profile_id"<?php disabled( $profile_disabled ); ?><?php echo $profile_disabled ? '' : ' required'; ?>>
 								<option value="" selected disabled><?php echo esc_html( $model['webhook_profile_placeholder'] ); ?></option>
 								<option value="create_repository_secret"><?php esc_html_e( 'Create a repository signing secret', 'ran-booster' ); ?></option>
 								<?php foreach ( $model['webhook_profile_choices'] as $choice ) : ?>
@@ -58,8 +58,8 @@ $profileDisabled = $disabled || true === ( $model['webhook_profile_disabled'] ??
 
 				<div class="ran-booster-action-row ran-booster-repository-webhook-management__actions">
 					<?php foreach ( $model['operations'] as $operation ) : ?>
-						<?php $operationDisabled = $disabled || true === ( $operation['disabled'] ?? false ); ?>
-						<button class="<?php echo esc_attr( $operation['primary'] ? 'button button-primary' : 'button' ); ?>" name="repository_webhook_management_operation" value="<?php echo esc_attr( str_replace( 'disabled:', '', $operation['key'] ) ); ?>" formaction="<?php echo esc_url( $operation['url'] ); ?>"<?php disabled( $operationDisabled ); ?> aria-disabled="<?php echo $operationDisabled ? 'true' : 'false'; ?>"><?php echo esc_html( $operation['label'] ); ?></button>
+						<?php $operation_disabled = $disabled || true === ( $operation['disabled'] ?? false ); ?>
+						<button class="<?php echo esc_attr( $operation['primary'] ? 'button button-primary' : 'button' ); ?>" name="repository_webhook_management_operation" value="<?php echo esc_attr( str_replace( 'disabled:', '', $operation['key'] ) ); ?>" formaction="<?php echo esc_url( $operation['url'] ); ?>"<?php disabled( $operation_disabled ); ?> aria-disabled="<?php echo $operation_disabled ? 'true' : 'false'; ?>"><?php echo esc_html( $operation['label'] ); ?></button>
 					<?php endforeach; ?>
 					<?php if ( is_string( $model['webhooks_url'] ?? null ) && '' !== $model['webhooks_url'] ) : ?>
 						<?php /* translators: %s: repository provider name. */ ?>

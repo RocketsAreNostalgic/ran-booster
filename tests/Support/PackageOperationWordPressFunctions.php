@@ -41,8 +41,8 @@ if ( ! function_exists( __NAMESPACE__ . '\\is_wp_error' ) ) {
 }
 
 if ( ! function_exists( __NAMESPACE__ . '\\wp_strip_all_tags' ) ) {
-	function wp_strip_all_tags( mixed $value, bool $removeBreaks = false ): string {
-		unset( $removeBreaks );
+	function wp_strip_all_tags( mixed $value, bool $remove_breaks = false ): string {
+		unset( $remove_breaks );
 
 		return (string) $value;
 	}
@@ -67,8 +67,8 @@ if ( ! function_exists( __NAMESPACE__ . '\\network_admin_url' ) ) {
 }
 
 if ( ! function_exists( __NAMESPACE__ . '\\get_admin_url' ) ) {
-	function get_admin_url( ?int $blogId = null, string $path = '' ): string {
-		unset( $blogId );
+	function get_admin_url( ?int $blog_id = null, string $path = '' ): string {
+		unset( $blog_id );
 
 		return admin_url( $path );
 	}

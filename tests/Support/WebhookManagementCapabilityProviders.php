@@ -29,7 +29,7 @@ use RuntimeException;
 use Tests\RepositoryProvider\Support\InertWebhookPolicy;
 
 abstract class WebhookManagementCapabilityProvider implements RepositoryProvider {
-	public int $providerOperationCalls = 0;
+	public int $provider_operation_calls = 0;
 
 	public function __construct(
 		private readonly string $code,
@@ -53,67 +53,67 @@ abstract class WebhookManagementCapabilityProvider implements RepositoryProvider
 
 	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 		unset( $request );
-		++$this->providerOperationCalls;
+		++$this->provider_operation_calls;
 		throw new RuntimeException( 'Repository resolution is outside this presentation test.' );
 	}
 
 	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 		unset( $request );
-		++$this->providerOperationCalls;
+		++$this->provider_operation_calls;
 		throw new RuntimeException( 'Archive preparation is outside this presentation test.' );
 	}
 }
 
 trait SuppliesWebhookFitness {
-	public function assess_setup( string $repositoryId, string $repository, ?string $credentialProfileId ): RepositoryWebhookFitnessResult {
-		return $this->unexpectedFitnessOperation();
+	public function assess_setup( string $repository_id, string $repository, ?string $credential_profile_id ): RepositoryWebhookFitnessResult {
+		return $this->unexpected_fitness_operation();
 	}
 
-	public function assess_check( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
-		return $this->unexpectedFitnessOperation();
+	public function assess_check( string $repository_id, string $repository, ?string $credential_profile_id, string $hook_id ): RepositoryWebhookFitnessResult {
+		return $this->unexpected_fitness_operation();
 	}
 
-	public function assess_reconfigure( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
-		return $this->unexpectedFitnessOperation();
+	public function assess_reconfigure( string $repository_id, string $repository, ?string $credential_profile_id, string $hook_id ): RepositoryWebhookFitnessResult {
+		return $this->unexpected_fitness_operation();
 	}
 
-	public function assess_remove( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
-		return $this->unexpectedFitnessOperation();
+	public function assess_remove( string $repository_id, string $repository, ?string $credential_profile_id, string $hook_id ): RepositoryWebhookFitnessResult {
+		return $this->unexpected_fitness_operation();
 	}
 
-	public function assess_test( string $repositoryId, string $repository, ?string $credentialProfileId, string $hookId ): RepositoryWebhookFitnessResult {
-		return $this->unexpectedFitnessOperation();
+	public function assess_test( string $repository_id, string $repository, ?string $credential_profile_id, string $hook_id ): RepositoryWebhookFitnessResult {
+		return $this->unexpected_fitness_operation();
 	}
 
-	private function unexpectedFitnessOperation(): RepositoryWebhookFitnessResult {
-		++$this->providerOperationCalls;
+	private function unexpected_fitness_operation(): RepositoryWebhookFitnessResult {
+		++$this->provider_operation_calls;
 		throw new RuntimeException( 'Capability presence checks must not assess provider credentials.' );
 	}
 }
 
 trait SuppliesWebhookManagement {
-	public function setup( string $repositoryId, string $repository, string $callbackUrl, ?string $credentialProfileId, string $signingSecret ): RepositoryWebhookOperationResult {
-		return $this->unexpectedManagementOperation();
+	public function setup( string $repository_id, string $repository, string $callback_url, ?string $credential_profile_id, string $signing_secret ): RepositoryWebhookOperationResult {
+		return $this->unexpected_management_operation();
 	}
 
-	public function check( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId ): RepositoryWebhookOperationResult {
-		return $this->unexpectedManagementOperation();
+	public function check( string $repository_id, string $repository, string $hook_id, string $callback_url, ?string $credential_profile_id ): RepositoryWebhookOperationResult {
+		return $this->unexpected_management_operation();
 	}
 
-	public function reconfigure( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId, string $signingSecret ): RepositoryWebhookOperationResult {
-		return $this->unexpectedManagementOperation();
+	public function reconfigure( string $repository_id, string $repository, string $hook_id, string $callback_url, ?string $credential_profile_id, string $signing_secret ): RepositoryWebhookOperationResult {
+		return $this->unexpected_management_operation();
 	}
 
-	public function remove( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId ): RepositoryWebhookOperationResult {
-		return $this->unexpectedManagementOperation();
+	public function remove( string $repository_id, string $repository, string $hook_id, string $callback_url, ?string $credential_profile_id ): RepositoryWebhookOperationResult {
+		return $this->unexpected_management_operation();
 	}
 
-	public function test( string $repositoryId, string $repository, string $hookId, string $callbackUrl, ?string $credentialProfileId ): RepositoryWebhookOperationResult {
-		return $this->unexpectedManagementOperation();
+	public function test( string $repository_id, string $repository, string $hook_id, string $callback_url, ?string $credential_profile_id ): RepositoryWebhookOperationResult {
+		return $this->unexpected_management_operation();
 	}
 
-	private function unexpectedManagementOperation(): RepositoryWebhookOperationResult {
-		++$this->providerOperationCalls;
+	private function unexpected_management_operation(): RepositoryWebhookOperationResult {
+		++$this->provider_operation_calls;
 		throw new RuntimeException( 'Capability presence checks must not mutate a remote provider.' );
 	}
 }

@@ -7,7 +7,7 @@ namespace RAN;
 require_once __DIR__ . '/ProviderCredentialDispatcherWordPressFunctions.php';
 
 if ( ! function_exists( __NAMESPACE__ . '\\add_action' ) ) {
-	function add_action( string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1 ): bool {
+	function add_action( string $hook, callable $callback, int $priority = 10, int $accepted_args = 1 ): bool {
 		$GLOBALS['ran_booster_get_test_actions'][ $hook ][] = $callback;
 
 		return true;
@@ -33,7 +33,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\wp_doing_ajax' ) ) {
 }
 
 if ( ! function_exists( __NAMESPACE__ . '\\get_admin_url' ) ) {
-	function get_admin_url( ?int $blogId = null, string $path = '' ): string {
+	function get_admin_url( ?int $blog_id = null, string $path = '' ): string {
 		return 'https://example.test/wp-admin/' . ltrim( $path, '/' );
 	}
 }

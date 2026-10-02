@@ -11,11 +11,11 @@ final class RepositorySourceGuardDatabase {
 	public array $rows           = array();
 	public string $last_error    = '';
 	public int $reads            = 0;
-	public string $preparedQuery = '';
+	public string $prepared_query = '';
 
 	/** @return list<mixed> */
 	public function prepare( string $query, mixed ...$arguments ): array {
-		$this->preparedQuery = $query;
+		$this->prepared_query = $query;
 		return $arguments;
 	}
 

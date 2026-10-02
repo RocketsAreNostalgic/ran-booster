@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! function_exists( 'add_action' ) ) {
-	function add_action( string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1 ): bool {
+	function add_action( string $hook, callable $callback, int $priority = 10, int $accepted_args = 1 ): bool {
 		$GLOBALS['ran_booster_external_fixture_actions'][ $hook ][] = $callback;
 
 		return true;

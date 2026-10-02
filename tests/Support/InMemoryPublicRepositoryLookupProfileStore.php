@@ -11,7 +11,7 @@ final class InMemoryPublicRepositoryLookupProfileStore extends PublicRepositoryL
 	/** @var array<string, mixed> */
 	public array $profiles = array();
 
-	public bool $failWrites = false;
+	public bool $fail_writes = false;
 
 	/**
 	 * @return array<string, mixed>
@@ -24,7 +24,7 @@ final class InMemoryPublicRepositoryLookupProfileStore extends PublicRepositoryL
 	 * @param array<string, string> $profiles Provider-to-profile mapping.
 	 */
 	protected function write_option( array $profiles ): bool {
-		if ( $this->failWrites ) {
+		if ( $this->fail_writes ) {
 			return false;
 		}
 

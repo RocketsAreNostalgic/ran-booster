@@ -30,20 +30,18 @@ final readonly class PortabilityApplicationService {
 	}
 
 	/**
-	 * @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $credentialDecisions
-	 * @param array<int, string> $targetCredentialIds
+	 * @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $credential_decisions
+	 * @param array<int, string> $target_credential_ids
 	 * @return list<BlueprintPlanItem>
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-	public function review( PackageBlueprint $blueprint, array $credentialDecisions = array(), array $targetCredentialIds = array() ): array {
+	public function review( PackageBlueprint $blueprint, array $credential_decisions = array(), array $target_credential_ids = array() ): array {
 		$items    = $this->reviewer->review( $blueprint );
 		$verified = array();
 
 		foreach ( $items as $index => $item ) {
 			$ordinal    = null;
 			$credential = $this->credential_for( $blueprint, $item, $ordinal );
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-			$decision   = null === $ordinal ? null : ( $credentialDecisions[ $ordinal ] ?? null );
+			$decision   = null === $ordinal ? null : ( $credential_decisions[ $ordinal ] ?? null );
 			$action     = $decision['action'] ?? null;
 			$verified[] = BlueprintCredentialAction::IMPORT === $action && $this->can_import_credential( $item ) && ! $this->credential_storage_ready()
 				? new BlueprintPlanItem(
@@ -55,29 +53,24 @@ final readonly class PortabilityApplicationService {
 					$item,
 					$credential,
 					$action,
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-					$decision['target_id'] ?? ( null === $credential ? ( $targetCredentialIds[ $index ] ?? null ) : null )
+					$decision['target_id'] ?? ( null === $credential ? ( $target_credential_ids[ $index ] ?? null ) : null )
 				);
 		}
 
 		return $verified;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function reviewCandidate( PortabilityCandidate $candidate ): PortabilityReviewResult {
+	public function review_candidate( PortabilityCandidate $candidate ): PortabilityReviewResult {
 		return $this->candidate_context( $candidate )['review'];
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function applyCandidate(
+	public function apply_candidate(
 		PortabilityCandidate $candidate,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-		string $expectedFingerprint
+		string $expected_fingerprint
 	): PortabilityApplyResult {
 		$context = $this->candidate_context( $candidate );
 		$review  = $context['review'];
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-		if ( ! hash_equals( $review->fingerprint, $expectedFingerprint ) ) {
+		if ( ! hash_equals( $review->fingerprint, $expected_fingerprint ) ) {
 			return new PortabilityApplyResult(
 				PortabilityApplyResult::BLOCKED,
 				'review_changed',
@@ -127,35 +120,28 @@ final readonly class PortabilityApplicationService {
 	}
 
 	/**
-	 * @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $credentialDecisions
+	 * @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $credential_decisions
 	 * @return array{status:string,message:string,credential_state:string}
 	 */
 	public function apply(
 		PackageBlueprint $blueprint,
 		int $row,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-		?string $expectedAction,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-		array $credentialDecisions,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-		?string $targetCredentialId,
+		?string $expected_action,
+		array $credential_decisions,
+		?string $target_credential_id,
 		bool $adopt,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-		bool $canInstall
+		bool $can_install
 	): array {
 		$item = $this->reviewer->review( $blueprint )[ $row ] ?? null;
 		if ( ! $item instanceof BlueprintPlanItem ) {
 			throw new InvalidArgumentException();
 		}
-		$ordinal    = null;
-		$credential = $this->credential_for( $blueprint, $item, $ordinal );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-		$decision          = null === $ordinal ? null : ( $credentialDecisions[ $ordinal ] ?? null );
-		$credential_action = $decision['action'] ?? null;
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-		$targetCredentialId = $decision['target_id'] ?? ( null === $credential ? $targetCredentialId : null );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-		if ( $expectedAction !== $item->action->value ) {
+		$ordinal              = null;
+		$credential           = $this->credential_for( $blueprint, $item, $ordinal );
+		$decision             = null === $ordinal ? null : ( $credential_decisions[ $ordinal ] ?? null );
+		$credential_action    = $decision['action'] ?? null;
+		$target_credential_id = $decision['target_id'] ?? ( null === $credential ? $target_credential_id : null );
+		if ( $expected_action !== $item->action->value ) {
 			return $this->result( 'skipped', __( 'This package changed since review. Review the Transporter Blueprint again.', 'ran-booster' ) );
 		}
 		if ( null !== $credential && ( null === $credential_action || BlueprintCredentialAction::LEAVE === $credential_action ) ) {
@@ -164,8 +150,7 @@ final readonly class PortabilityApplicationService {
 		$credential_only = TargetPackageAction::MANAGED === $item->action
 			&& null !== $credential
 			&& BlueprintCredentialAction::IMPORT === $credential_action;
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-		if ( ! $credential_only && ! $canInstall ) {
+		if ( ! $credential_only && ! $can_install ) {
 			return $this->result( 'failed', __( 'You do not have permission to apply this package type.', 'ran-booster' ) );
 		}
 		if ( TargetPackageAction::ADOPT === $item->action && ! $adopt ) {
@@ -175,10 +160,8 @@ final readonly class PortabilityApplicationService {
 			$this->assert_local_secret_store_ready();
 		}
 		$repository_private = null;
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-		$item = $this->verifier->verify( $item, $credential, $credential_action, $targetCredentialId, $repository_private );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-		if ( $expectedAction !== $item->action->value ) {
+		$item               = $this->verifier->verify( $item, $credential, $credential_action, $target_credential_id, $repository_private );
+		if ( $expected_action !== $item->action->value ) {
 			return $this->result(
 				'skipped',
 				__( 'This package changed since review. Review the Transporter Blueprint again.', 'ran-booster' ),
@@ -186,8 +169,7 @@ final readonly class PortabilityApplicationService {
 			);
 		}
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-		return $this->apply_item( $blueprint, $item, $credential, $credential_action?->value, $targetCredentialId, $repository_private, $adopt, $canInstall );
+		return $this->apply_item( $blueprint, $item, $credential, $credential_action?->value, $target_credential_id, $repository_private, $adopt, $can_install );
 	}
 
 	/** @return array{status:string,message:string,credential_state:string} */
@@ -301,7 +283,7 @@ final readonly class PortabilityApplicationService {
 	 * @return array{review:PortabilityReviewResult,package:BlueprintPackage|null,private:bool|null}
 	 */
 	private function candidate_context( PortabilityCandidate $candidate ): array {
-		$resolved = $this->verifier->resolveCandidate( $candidate );
+		$resolved = $this->verifier->resolve_candidate( $candidate );
 		$package  = $resolved['package'];
 		$private  = $resolved['private'];
 		if ( ! $package instanceof BlueprintPackage || ! is_bool( $private ) ) {
@@ -322,7 +304,7 @@ final readonly class PortabilityApplicationService {
 		}
 
 		$managed = null;
-		$item    = $this->reviewer->reviewPackage( $package, $managed );
+		$item    = $this->reviewer->review_package( $package, $managed );
 		if ( TargetPackageAction::INSTALL === $item->action ) {
 			$item = new BlueprintPlanItem( $package, TargetPackageAction::BLOCKED, TargetPackageReason::DESTINATION_CONFLICT );
 		} elseif ( TargetPackageAction::MANAGED === $item->action
@@ -337,8 +319,7 @@ final readonly class PortabilityApplicationService {
 				$item->action->value,
 				$item->reason->value,
 				$item->reason->message(),
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-				$package->providerRepositoryId,
+				$package->provider_repository_id,
 				$private
 			),
 			'package' => $package,
@@ -392,7 +373,7 @@ final readonly class PortabilityApplicationService {
 
 		$this->assert_local_secret_store_ready();
 
-		return $this->secrets->importCredentialsIfAbsent( $blueprint, $credential )[0] ?? throw new InvalidArgumentException();
+		return $this->secrets->import_credentials_if_absent( $blueprint, $credential )[0] ?? throw new InvalidArgumentException();
 	}
 
 	/** @return array<string, string> */
@@ -402,8 +383,7 @@ final readonly class PortabilityApplicationService {
 			'provider'                            => $package->provider,
 			'repository'                          => $package->repository,
 			'branch'                              => $package->branch,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-			'provider_repository_id'              => $package->providerRepositoryId,
+			'provider_repository_id'              => $package->provider_repository_id,
 			'provider_repository_identity_source' => 'resolved',
 			'credential_id'                       => $credential_id ?? '',
 			'private'                             => $repository_private ? '1' : '0',
@@ -443,7 +423,7 @@ final readonly class PortabilityApplicationService {
 
 	private function credential_storage_ready(): bool {
 		try {
-			$this->secrets->assertManagedStorageReady();
+			$this->secrets->assert_managed_storage_ready();
 
 			return true;
 		} catch ( Throwable ) {
@@ -453,7 +433,7 @@ final readonly class PortabilityApplicationService {
 
 	private function assert_local_secret_store_ready(): void {
 		try {
-			$this->secrets->assertManagedStorageReady();
+			$this->secrets->assert_managed_storage_ready();
 		} catch ( Throwable $failure ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The typed exception is caught by the controller and never rendered directly.
 			throw LocalSecretStoreUnavailable::for_portability( $failure );

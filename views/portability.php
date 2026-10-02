@@ -5,24 +5,24 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$portabilityReviewRows                   = is_array( $portabilityReviewRows ?? null ) ? $portabilityReviewRows : array();
-$portabilityExportRows                   = is_array( $portabilityExportRows ?? null ) ? $portabilityExportRows : array();
-$portabilityExportUnavailable            = true === ( $portabilityExportUnavailable ?? false );
-$portabilityExportCredentialGroups       = is_array( $portabilityExportCredentialGroups ?? null ) ? $portabilityExportCredentialGroups : array();
-$portabilityExportCredentialsUnavailable = true === ( $portabilityExportCredentialsUnavailable ?? false );
-$portabilityExportPackageCount           = count( $portabilityExportRows );
+$portability_review_rows                   = is_array( $portability_review_rows ?? null ) ? $portability_review_rows : array();
+$portability_export_rows                   = is_array( $portability_export_rows ?? null ) ? $portability_export_rows : array();
+$portability_export_unavailable            = true === ( $portability_export_unavailable ?? false );
+$portability_export_credential_groups       = is_array( $portability_export_credential_groups ?? null ) ? $portability_export_credential_groups : array();
+$portability_export_credentials_unavailable = true === ( $portability_export_credentials_unavailable ?? false );
+$portability_export_package_count           = count( $portability_export_rows );
 /* translators: %d: number of selected managed packages. */
-$portabilityPackagePlural = __( '%d packages', 'ran-booster' );
+$portability_package_plural = __( '%d packages', 'ran-booster' );
 /* translators: %d: number of selected repository credential profiles. */
-$portabilityCredentialPlural = __( '%d selected repository credential profiles', 'ran-booster' );
+$portability_credential_plural = __( '%d selected repository credential profiles', 'ran-booster' );
 /* translators: 1: selected package count and noun. 2: selected credential-profile count and noun. */
-$portabilityProtectedSummary = __( 'Create a Transporter Blueprint for %1$s using %2$s. Credential permissions have not been assessed.', 'ran-booster' );
+$portability_protected_summary = __( 'Create a Transporter Blueprint for %1$s using %2$s. Credential permissions have not been assessed.', 'ran-booster' );
 /* translators: %s: selected package count and noun. */
-$portabilityPackageOnlySummary = __( 'Create a Transporter Blueprint for %s without repository credentials.', 'ran-booster' );
+$portability_package_only_summary = __( 'Create a Transporter Blueprint for %s without repository credentials.', 'ran-booster' );
 /* translators: %d: number of selected managed packages. */
-$portabilityInitialPackageCount = sprintf( _nx( '%d package', '%d packages', $portabilityExportPackageCount, 'Selected managed packages', 'ran-booster' ), $portabilityExportPackageCount );
-$renderPortabilityExtension     = static function ( string $hook, string $step ): void {
-	$bufferLevel = ob_get_level();
+$portability_initial_package_count = sprintf( _nx( '%d package', '%d packages', $portability_export_package_count, 'Selected managed packages', 'ran-booster' ), $portability_export_package_count );
+$render_portability_extension     = static function ( string $hook, string $step ): void {
+	$buffer_level = ob_get_level();
 	ob_start();
 	try {
 		do_action( $hook );
@@ -30,10 +30,10 @@ $renderPortabilityExtension     = static function ( string $hook, string $step )
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Add-ons own and escape their bounded extension markup.
 		echo $markup;
 	} catch ( \Throwable $failure ) {
-		while ( ob_get_level() > $bufferLevel ) {
+		while ( ob_get_level() > $buffer_level ) {
 			ob_end_clean();
 		}
-		\RAN\Logging\BoosterLogger::logException( 'portability extension rendering failed', $failure, array( 'step' => $step ) );
+		\RAN\Logging\BoosterLogger::log_exception( 'portability extension rendering failed', $failure, array( 'step' => $step ) );
 	}
 };
 
@@ -62,7 +62,7 @@ $renderPortabilityExtension     = static function ( string $hook, string $step )
 					<span class="ran-booster-portability__mode-description"><?php esc_html_e( 'Open a Transporter Blueprint created elsewhere and decide what should happen here.', 'ran-booster' ); ?></span>
 				</span>
 			</button>
-			<?php $renderPortabilityExtension( 'ran_booster_portability_render_migration_modes', 'portability_migration_modes_render' ); ?>
+			<?php $render_portability_extension( 'ran_booster_portability_render_migration_modes', 'portability_migration_modes_render' ); ?>
 		</div>
 	</section>
 
@@ -83,86 +83,86 @@ $renderPortabilityExtension     = static function ( string $hook, string $step )
 		<section class="ran-booster-portability__credential-option" aria-labelledby="ran-booster-portability-export-credentials-heading">
 			<h5 id="ran-booster-portability-export-credentials-heading" class="ran-booster-portability__subsection-title ran-booster-portability__credentials-title"><?php esc_html_e( 'Repository credentials', 'ran-booster' ); ?></h5>
 			<p><?php esc_html_e( 'Select only the saved credentials that should be copied. Credential permissions have not been assessed.', 'ran-booster' ); ?></p>
-			<?php if ( $portabilityExportCredentialsUnavailable ) : ?>
+			<?php if ( $portability_export_credentials_unavailable ) : ?>
 				<div class="notice notice-warning inline"><p><?php esc_html_e( 'Booster could not load repository credential choices. You can still create a package-only Blueprint.', 'ran-booster' ); ?></p></div>
-			<?php elseif ( array() === $portabilityExportCredentialGroups ) : ?>
+			<?php elseif ( array() === $portability_export_credential_groups ) : ?>
 				<p class="description"><?php esc_html_e( 'No saved repository credentials are available on this site.', 'ran-booster' ); ?></p>
 			<?php else : ?>
 				<?php
-				$availabilitySections = array(
+				$availability_sections = array(
 					'available'   => true,
 					'unavailable' => false,
 				);
-				foreach ( $availabilitySections as $sectionKey => $sectionAvailable ) :
-					$sectionCredentialCount = 0;
-					foreach ( $portabilityExportCredentialGroups as $group ) {
+				foreach ( $availability_sections as $section_key => $section_available ) :
+					$section_credential_count = 0;
+					foreach ( $portability_export_credential_groups as $group ) {
 						foreach ( (array) ( $group['credentials'] ?? array() ) as $credential ) {
-							$sectionCredentialCount += ! empty( $credential['available'] ) === $sectionAvailable ? 1 : 0;
+							$section_credential_count += ! empty( $credential['available'] ) === $section_available ? 1 : 0;
 						}
 					}
-					if ( 0 === $sectionCredentialCount ) {
+					if ( 0 === $section_credential_count ) {
 						continue;
 					}
 					?>
-				<div class="ran-booster-portability__credential-availability-group ran-booster-portability__credential-availability-group--<?php echo esc_attr( $sectionKey ); ?>">
+				<div class="ran-booster-portability__credential-availability-group ran-booster-portability__credential-availability-group--<?php echo esc_attr( $section_key ); ?>">
 				<div class="ran-booster-portability__credential-groups">
-					<?php foreach ( $portabilityExportCredentialGroups as $groupIndex => $group ) : ?>
+					<?php foreach ( $portability_export_credential_groups as $group_index => $group ) : ?>
 						<?php
-						$providerCode  = is_string( $group['code'] ?? null ) ? $group['code'] : '';
-						$providerLabel = is_string( $group['label'] ?? null ) ? $group['label'] : $providerCode;
-						$credentials   = is_array( $group['credentials'] ?? null ) ? array_filter( $group['credentials'], static fn ( array $credential ): bool => ! empty( $credential['available'] ) === $sectionAvailable ) : array();
+						$provider_code  = is_string( $group['code'] ?? null ) ? $group['code'] : '';
+						$provider_label = is_string( $group['label'] ?? null ) ? $group['label'] : $provider_code;
+						$credentials   = is_array( $group['credentials'] ?? null ) ? array_filter( $group['credentials'], static fn ( array $credential ): bool => ! empty( $credential['available'] ) === $section_available ) : array();
 						if ( array() === $credentials ) {
 							continue;
 						}
 						?>
 					<fieldset class="ran-booster-portability__credential-group">
-						<legend class="screen-reader-text"><?php echo esc_html( $providerLabel ); ?> <?php esc_html_e( 'credential choices', 'ran-booster' ); ?></legend>
+						<legend class="screen-reader-text"><?php echo esc_html( $provider_label ); ?> <?php esc_html_e( 'credential choices', 'ran-booster' ); ?></legend>
 						<ul class="ran-booster-portability__credential-list">
-						<?php foreach ( $credentials as $credentialIndex => $credential ) : ?>
+						<?php foreach ( $credentials as $credential_index => $credential ) : ?>
 							<?php
-							$controlId      = 'ran-booster-portability-export-credential-' . $groupIndex . '-' . $credentialIndex;
-							$reasonId       = $controlId . '-reason';
+							$control_id      = 'ran-booster-portability-export-credential-' . $group_index . '-' . $credential_index;
+							$reason_id       = $control_id . '-reason';
 							$available      = ! empty( $credential['available'] );
 							$label          = is_string( $credential['label'] ?? null ) && '' !== $credential['label'] ? $credential['label'] : __( 'Unavailable saved credential', 'ran-booster' );
-							$kindLabel      = is_string( $credential['kind_label'] ?? null ) ? $credential['kind_label'] : '';
+							$kind_label      = is_string( $credential['kind_label'] ?? null ) ? $credential['kind_label'] : '';
 							$packages       = is_array( $credential['packages'] ?? null ) ? $credential['packages'] : array();
-							$packageCount   = count( $packages );
-							$packageSummary = sprintf(
+							$package_count   = count( $packages );
+							$package_summary = sprintf(
 								/* translators: %d: number of packages using the credential. */
-								_n( 'Used by %d package', 'Used by %d packages', $packageCount, 'ran-booster' ),
-								$packageCount
+								_n( 'Used by %d package', 'Used by %d packages', $package_count, 'ran-booster' ),
+								$package_count
 							);
-							$packageIndexes = implode( ' ', array_map( static fn ( array $package ): string => (string) ( $package['index'] ?? '' ), $packages ) );
+							$package_indexes = implode( ' ', array_map( static fn ( array $package ): string => (string) ( $package['index'] ?? '' ), $packages ) );
 							if ( $available ) {
 								$description = __( 'The provider permissions for this credential have not been assessed.', 'ran-booster' );
 							} elseif ( 'self_destruct' === ( $credential['reason'] ?? null ) ) {
-								$destroyOn = is_string( $credential['destroy_on'] ?? null ) ? $credential['destroy_on'] : '';
+								$destroy_on = is_string( $credential['destroy_on'] ?? null ) ? $credential['destroy_on'] : '';
 								/* translators: %s: local automatic-removal date. */
-								$description = '' === $destroyOn ? __( 'Booster will automatically remove this saved credential.', 'ran-booster' ) : sprintf( __( 'Booster will automatically remove this saved credential on %s.', 'ran-booster' ), $destroyOn );
+								$description = '' === $destroy_on ? __( 'Booster will automatically remove this saved credential.', 'ran-booster' ) : sprintf( __( 'Booster will automatically remove this saved credential on %s.', 'ran-booster' ), $destroy_on );
 							} elseif ( 'unassociated' === ( $credential['reason'] ?? null ) ) {
 								$description = __( 'No Booster-managed plugin or theme uses this credential.', 'ran-booster' );
 							} else {
 								$description = 'configuration' === ( $credential['reason'] ?? null ) ? __( 'This credential is supplied by site configuration.', 'ran-booster' ) : __( 'This saved credential no longer exists.', 'ran-booster' );
 							}
 							?>
-							<li class="ran-booster-portability__credential-row ran-booster-portability__credential-card<?php echo $available ? '' : ' ran-booster-portability__credential-card--unavailable'; ?>" data-portability-export-credential-row data-portability-credential-packages="<?php echo esc_attr( $packageIndexes ); ?>">
-								<label for="<?php echo esc_attr( $controlId ); ?>" class="ran-booster-portability__credential-selection">
+							<li class="ran-booster-portability__credential-row ran-booster-portability__credential-card<?php echo $available ? '' : ' ran-booster-portability__credential-card--unavailable'; ?>" data-portability-export-credential-row data-portability-credential-packages="<?php echo esc_attr( $package_indexes ); ?>">
+								<label for="<?php echo esc_attr( $control_id ); ?>" class="ran-booster-portability__credential-selection">
 									<?php if ( $available ) : ?>
-										<input id="<?php echo esc_attr( $controlId ); ?>" type="checkbox" name="credentials[<?php echo esc_attr( $providerCode ); ?>][]" value="<?php echo esc_attr( (string) $credential['id'] ); ?>" data-portability-export-credential aria-describedby="<?php echo esc_attr( $reasonId ); ?>">
+										<input id="<?php echo esc_attr( $control_id ); ?>" type="checkbox" name="credentials[<?php echo esc_attr( $provider_code ); ?>][]" value="<?php echo esc_attr( (string) $credential['id'] ); ?>" data-portability-export-credential aria-describedby="<?php echo esc_attr( $reason_id ); ?>">
 									<?php else : ?>
-										<input id="<?php echo esc_attr( $controlId ); ?>" type="checkbox" disabled aria-describedby="<?php echo esc_attr( $reasonId ); ?>">
+										<input id="<?php echo esc_attr( $control_id ); ?>" type="checkbox" disabled aria-describedby="<?php echo esc_attr( $reason_id ); ?>">
 									<?php endif; ?>
 									<span class="ran-booster-portability__credential-heading">
 										<strong class="ran-booster-portability__credential-name"><?php echo esc_html( $label ); ?></strong>
-										<span class="ran-booster-tile ran-booster-portability__credential-provider"><span class="screen-reader-text"><?php esc_html_e( 'Provider:', 'ran-booster' ); ?> </span><span class="ran-booster-tile__value"><?php echo esc_html( $providerLabel ); ?></span></span>
-										<?php if ( '' !== $kindLabel ) : ?>
-											<span class="ran-booster-tile ran-booster-portability__credential-kind"><span class="screen-reader-text"><?php esc_html_e( 'Credential type:', 'ran-booster' ); ?> </span><span class="ran-booster-tile__value"><?php echo esc_html( $kindLabel ); ?></span></span>
+										<span class="ran-booster-tile ran-booster-portability__credential-provider"><span class="screen-reader-text"><?php esc_html_e( 'Provider:', 'ran-booster' ); ?> </span><span class="ran-booster-tile__value"><?php echo esc_html( $provider_label ); ?></span></span>
+										<?php if ( '' !== $kind_label ) : ?>
+											<span class="ran-booster-tile ran-booster-portability__credential-kind"><span class="screen-reader-text"><?php esc_html_e( 'Credential type:', 'ran-booster' ); ?> </span><span class="ran-booster-tile__value"><?php echo esc_html( $kind_label ); ?></span></span>
 										<?php endif; ?>
 									</span>
 								</label>
-								<?php if ( 0 < $packageCount ) : ?>
+								<?php if ( 0 < $package_count ) : ?>
 									<details class="ran-booster-portability__credential-packages">
-										<summary><?php echo esc_html( $packageSummary ); ?></summary>
+										<summary><?php echo esc_html( $package_summary ); ?></summary>
 										<ul>
 										<?php foreach ( $packages as $package ) : ?>
 											<li><span><?php echo esc_html( (string) ( $package['name'] ?? '' ) ); ?></span> <span class="description"><?php echo esc_html( 'theme' === ( $package['type'] ?? null ) ? __( 'Theme', 'ran-booster' ) : __( 'Plugin', 'ran-booster' ) ); ?></span></li>
@@ -171,9 +171,9 @@ $renderPortabilityExtension     = static function ( string $hook, string $step )
 									</details>
 								<?php endif; ?>
 								<?php if ( $available ) : ?>
-									<span class="screen-reader-text" id="<?php echo esc_attr( $reasonId ); ?>"><?php echo esc_html( $description ); ?></span>
+									<span class="screen-reader-text" id="<?php echo esc_attr( $reason_id ); ?>"><?php echo esc_html( $description ); ?></span>
 								<?php else : ?>
-									<div class="ran-booster-portability__credential-decision-state ran-booster-portability__credential-decision-state--unavailable" id="<?php echo esc_attr( $reasonId ); ?>"><strong><?php esc_html_e( 'Unavailable for transfer', 'ran-booster' ); ?></strong><span class="description"><?php echo esc_html( $description ); ?></span></div>
+									<div class="ran-booster-portability__credential-decision-state ran-booster-portability__credential-decision-state--unavailable" id="<?php echo esc_attr( $reason_id ); ?>"><strong><?php esc_html_e( 'Unavailable for transfer', 'ran-booster' ); ?></strong><span class="description"><?php echo esc_html( $description ); ?></span></div>
 								<?php endif; ?>
 							</li>
 						<?php endforeach; ?>
@@ -226,27 +226,27 @@ $renderPortabilityExtension     = static function ( string $hook, string $step )
 				<table class="widefat striped ran-booster-portability__review-table ran-booster-portability__export-table">
 					<caption class="screen-reader-text"><?php esc_html_e( 'Managed packages available for export', 'ran-booster' ); ?></caption>
 					<thead><tr>
-						<td class="check-column"><input type="checkbox" data-portability-export-select-all aria-label="<?php esc_attr_e( 'Select all managed packages', 'ran-booster' ); ?>"<?php checked( array() !== $portabilityExportRows ); ?><?php disabled( array() === $portabilityExportRows ); ?>></td>
+						<td class="check-column"><input type="checkbox" data-portability-export-select-all aria-label="<?php esc_attr_e( 'Select all managed packages', 'ran-booster' ); ?>"<?php checked( array() !== $portability_export_rows ); ?><?php disabled( array() === $portability_export_rows ); ?>></td>
 						<th scope="col"><?php esc_html_e( 'Package', 'ran-booster' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Type', 'ran-booster' ); ?></th>
 					</tr></thead>
 					<tbody>
-					<?php if ( $portabilityExportUnavailable ) : ?>
+					<?php if ( $portability_export_unavailable ) : ?>
 						<tr><td colspan="3"><?php esc_html_e( 'Booster could not load the managed package list. Reload this page and try again.', 'ran-booster' ); ?></td></tr>
-					<?php elseif ( array() === $portabilityExportRows ) : ?>
+					<?php elseif ( array() === $portability_export_rows ) : ?>
 						<tr><td colspan="3"><?php esc_html_e( 'Booster is not managing any packages on this site yet.', 'ran-booster' ); ?></td></tr>
 					<?php else : ?>
-						<?php foreach ( $portabilityExportRows as $rowIndex => $row ) : ?>
+						<?php foreach ( $portability_export_rows as $row_index => $row ) : ?>
 							<?php
-							$packageType = 'theme' === ( $row['type'] ?? null ) ? 'theme' : 'plugin';
+							$package_type = 'theme' === ( $row['type'] ?? null ) ? 'theme' : 'plugin';
 							$identifier  = is_string( $row['identifier'] ?? null ) ? $row['identifier'] : '';
 							$name        = is_string( $row['name'] ?? null ) ? $row['name'] : '';
 							?>
 							<tr>
 								<?php /* translators: %s: managed plugin or theme name. */ ?>
-				<th scope="row" class="check-column"><input id="ran-booster-portability-export-package-<?php echo esc_attr( (string) $rowIndex ); ?>" name="packages[<?php echo esc_attr( $packageType ); ?>][]" value="<?php echo esc_attr( $identifier ); ?>" type="checkbox" checked data-portability-export-select data-portability-export-package-index="<?php echo esc_attr( (string) $rowIndex ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Include %s', 'ran-booster' ), $name ) ); ?>"></th>
-								<td><label for="ran-booster-portability-export-package-<?php echo esc_attr( (string) $rowIndex ); ?>"><strong><?php echo esc_html( $name ); ?></strong></label><code><?php echo esc_html( $identifier ); ?></code></td>
-								<td><?php echo esc_html( 'plugin' === $packageType ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' ) ); ?></td>
+				<th scope="row" class="check-column"><input id="ran-booster-portability-export-package-<?php echo esc_attr( (string) $row_index ); ?>" name="packages[<?php echo esc_attr( $package_type ); ?>][]" value="<?php echo esc_attr( $identifier ); ?>" type="checkbox" checked data-portability-export-select data-portability-export-package-index="<?php echo esc_attr( (string) $row_index ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Include %s', 'ran-booster' ), $name ) ); ?>"></th>
+								<td><label for="ran-booster-portability-export-package-<?php echo esc_attr( (string) $row_index ); ?>"><strong><?php echo esc_html( $name ); ?></strong></label><code><?php echo esc_html( $identifier ); ?></code></td>
+								<td><?php echo esc_html( 'plugin' === $package_type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' ) ); ?></td>
 							</tr>
 						<?php endforeach; ?>
 					<?php endif; ?>
@@ -255,8 +255,8 @@ $renderPortabilityExtension     = static function ( string $hook, string $step )
 			</div>
 		</section>
 		</section>
-		<p class="ran-booster-portability__export-summary" data-portability-export-summary data-package-singular="<?php esc_attr_e( '1 package', 'ran-booster' ); ?>" data-package-plural="<?php echo esc_attr( $portabilityPackagePlural ); ?>" data-credential-singular="<?php esc_attr_e( '1 selected repository credential profile', 'ran-booster' ); ?>" data-credential-plural="<?php echo esc_attr( $portabilityCredentialPlural ); ?>" data-protected-template="<?php echo esc_attr( $portabilityProtectedSummary ); ?>" data-package-only-template="<?php echo esc_attr( $portabilityPackageOnlySummary ); ?>" aria-live="polite"><?php echo esc_html( sprintf( $portabilityPackageOnlySummary, $portabilityInitialPackageCount ) ); ?></p>
-		<p><button type="submit" class="button button-primary" data-portability-export-submit<?php disabled( $portabilityExportUnavailable || array() === $portabilityExportRows ); ?>><?php esc_html_e( 'Download Transporter Blueprint', 'ran-booster' ); ?></button></p>
+		<p class="ran-booster-portability__export-summary" data-portability-export-summary data-package-singular="<?php esc_attr_e( '1 package', 'ran-booster' ); ?>" data-package-plural="<?php echo esc_attr( $portability_package_plural ); ?>" data-credential-singular="<?php esc_attr_e( '1 selected repository credential profile', 'ran-booster' ); ?>" data-credential-plural="<?php echo esc_attr( $portability_credential_plural ); ?>" data-protected-template="<?php echo esc_attr( $portability_protected_summary ); ?>" data-package-only-template="<?php echo esc_attr( $portability_package_only_summary ); ?>" aria-live="polite"><?php echo esc_html( sprintf( $portability_package_only_summary, $portability_initial_package_count ) ); ?></p>
+		<p><button type="submit" class="button button-primary" data-portability-export-submit<?php disabled( $portability_export_unavailable || array() === $portability_export_rows ); ?>><?php esc_html_e( 'Download Transporter Blueprint', 'ran-booster' ); ?></button></p>
 		<div class="notice notice-error inline" data-portability-export-message role="alert" hidden><p data-portability-export-message-text></p></div>
 		</form>
 	</section>
@@ -297,5 +297,5 @@ $renderPortabilityExtension     = static function ( string $hook, string $step )
 		</section>
 	</section>
 
-	<?php $renderPortabilityExtension( 'ran_booster_portability_render_migration_flows', 'portability_migration_flows_render' ); ?>
+	<?php $render_portability_extension( 'ran_booster_portability_render_migration_flows', 'portability_migration_flows_render' ); ?>
 </section>

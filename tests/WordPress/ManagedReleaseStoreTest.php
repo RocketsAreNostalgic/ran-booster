@@ -23,7 +23,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 		unset( $GLOBALS['ran_booster_wp_pusher_active_plugins'] );
 	}
 
-	public function testActiveWpPusherBlocksReleaseConfigurationWrites(): void {
+	public function test_active_wp_pusher_blocks_release_configuration_writes(): void {
 		$GLOBALS['ran_booster_wp_pusher_active_plugins'] = array( 'wppusher/wppusher.php' );
 
 		$database = new ManagedReleaseStoreDatabase(
@@ -55,7 +55,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 		self::assertSame( array(), $database->updates );
 	}
 
-	public function testExactSourceRevisionCasPreservesPolicyAndVerifiesTheWrite(): void {
+	public function test_exact_source_revision_cas_preserves_policy_and_verifies_the_write(): void {
 		$database  = new ManagedReleaseStoreDatabase(
 			array(
 				'type'                  => 1,
@@ -70,7 +70,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 			)
 		);
 		$lifecycle = $this->createMock( Database::class );
-		$lifecycle->expects( self::exactly( 4 ) )->method( 'requireReady' );
+		$lifecycle->expects( self::exactly( 4 ) )->method( 'require_ready' );
 		$store         = new ManagedReleaseStore(
 			$database,
 			$lifecycle,
@@ -102,14 +102,14 @@ final class ManagedReleaseStoreTest extends TestCase {
 		self::assertSame( 'manual', $database->row['deployment_policy'] );
 		self::assertSame( 'release_asset', $database->row['source'] );
 		self::assertSame( 5, $database->row['source_revision'] );
-		self::assertSame( $configuration->toJson(), $database->row['release_configuration'] );
+		self::assertSame( $configuration->to_json(), $database->row['release_configuration'] );
 		self::assertSame(
-			$configuration->toArray(),
-			$store->configuration( 'plugin', 'installed/example.php' )?->toArray()
+			$configuration->to_array(),
+			$store->configuration( 'plugin', 'installed/example.php' )?->to_array()
 		);
 	}
 
-	public function testStaleRevisionDoesNotWrite(): void {
+	public function test_stale_revision_does_not_write(): void {
 		$database = new ManagedReleaseStoreDatabase(
 			array(
 				'type'                  => 2,
@@ -140,8 +140,8 @@ final class ManagedReleaseStoreTest extends TestCase {
 		self::assertSame( 'disabled', $database->row['deployment_policy'] );
 	}
 
-	public function testReturningToBranchDistinguishesAnUnavailableRepositorySourceGuardFromStaleState(): void {
-		$database                         = new ManagedReleaseStoreDatabase(
+	public function test_returning_to_branch_distinguishes_an_unavailable_repository_source_guard_from_stale_state(): void {
+		$database                           = new ManagedReleaseStoreDatabase(
 			array(
 				'type'                  => 1,
 				'package'               => 'installed/example.php',
@@ -151,8 +151,8 @@ final class ManagedReleaseStoreTest extends TestCase {
 				'release_configuration' => '{}',
 			)
 		);
-		$database->sourceGuardUnavailable = true;
-		$store                            = new ManagedReleaseStore( $database, $this->createStub( Database::class ) );
+		$database->source_guard_unavailable = true;
+		$store                              = new ManagedReleaseStore( $database, $this->createStub( Database::class ) );
 
 		try {
 			$store->transition(
@@ -172,22 +172,22 @@ final class ManagedReleaseStoreTest extends TestCase {
 		self::assertSame( array(), $database->updates );
 	}
 
-	public function testChangingReleaseChannelDistinguishesAnUnavailableRepositorySourceGuardFromStaleState(): void {
-		$database                         = new ManagedReleaseStoreDatabase(
+	public function test_changing_release_channel_distinguishes_an_unavailable_repository_source_guard_from_stale_state(): void {
+		$database                           = new ManagedReleaseStoreDatabase(
 			array(
 				'type'                  => 1,
 				'package'               => 'installed/example.php',
 				'source'                => 'release_asset',
 				'source_revision'       => 4,
 				'deployment_policy'     => 'manual',
-				'release_configuration' => ( new ManagedReleaseConfiguration( 'example', 'example.php', 'stable' ) )->toJson(),
+				'release_configuration' => ( new ManagedReleaseConfiguration( 'example', 'example.php', 'stable' ) )->to_json(),
 			)
 		);
-		$database->sourceGuardUnavailable = true;
-		$store                            = new ManagedReleaseStore( $database, $this->createStub( Database::class ) );
+		$database->source_guard_unavailable = true;
+		$store                              = new ManagedReleaseStore( $database, $this->createStub( Database::class ) );
 
 		try {
-			$store->changeChannel( 'plugin', 'installed/example.php', 4, 'prerelease', 7 );
+			$store->change_channel( 'plugin', 'installed/example.php', 4, 'prerelease', 7 );
 			self::fail( 'An unavailable repository source guard must not be reported as a stale channel change.' );
 		} catch ( ManagedReleaseRepositorySourceUnavailable $failure ) {
 			self::assertStringContainsString( 'repository source relationship', $failure->getMessage() );
@@ -196,7 +196,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 		self::assertSame( array(), $database->updates );
 	}
 
-	public function testReleaseTransitionAndChannelChangeRejectNestedRowsWithoutWriting(): void {
+	public function test_release_transition_and_channel_change_reject_nested_rows_without_writing(): void {
 		$database = new ManagedReleaseStoreDatabase(
 			array(
 				'type'                  => 1,
@@ -227,9 +227,9 @@ final class ManagedReleaseStoreTest extends TestCase {
 		self::assertSame( array(), $database->updates );
 
 		$database->row['source']                = PackageSource::RELEASE_ASSET->value;
-		$database->row['release_configuration'] = ( new ManagedReleaseConfiguration( 'example', 'example.php' ) )->toJson();
+		$database->row['release_configuration'] = ( new ManagedReleaseConfiguration( 'example', 'example.php' ) )->to_json();
 		try {
-			$store->changeChannel( 'plugin', 'installed/example.php', 4, 'prerelease', 7 );
+			$store->change_channel( 'plugin', 'installed/example.php', 4, 'prerelease', 7 );
 			self::fail( 'A release channel change must reject a configured subdirectory.' );
 		} catch ( ManagedReleaseSubdirectoryNotSupported $failure ) {
 			self::assertStringContainsString( 'subdirectory is not supported', $failure->getMessage() );
@@ -237,28 +237,28 @@ final class ManagedReleaseStoreTest extends TestCase {
 		self::assertSame( array(), $database->updates );
 	}
 
-	public function testSourceTransitionsPreserveDisabledAndManualAndResetAutomatic(): void {
+	public function test_source_transitions_preserve_disabled_and_manual_and_reset_automatic(): void {
 		foreach ( array(
 			'disabled'  => 'disabled',
 			'manual'    => 'manual',
 			'automatic' => 'manual',
-		) as $policy => $expectedPolicy ) {
+		) as $policy => $expected_policy ) {
 			foreach ( array(
 				array( PackageSource::BRANCH, PackageSource::RELEASE_ASSET, new ManagedReleaseConfiguration( 'example', 'example.php' ) ),
 				array( PackageSource::RELEASE_ASSET, PackageSource::BRANCH, null ),
 			) as $transition ) {
-				list( $expectedSource, $newSource, $configuration ) = $transition;
+				list( $expected_source, $new_source, $configuration ) = $transition;
 				$database = new ManagedReleaseStoreDatabase(
 					array(
 						'type'                  => 1,
 						'package'               => 'installed/example.php',
-						'source'                => $expectedSource->value,
+						'source'                => $expected_source->value,
 						'source_revision'       => 4,
 						'source_previous'       => null,
 						'source_changed_at'     => null,
 						'source_changed_by'     => null,
 						'deployment_policy'     => $policy,
-						'release_configuration' => PackageSource::RELEASE_ASSET === $expectedSource ? '{}' : null,
+						'release_configuration' => PackageSource::RELEASE_ASSET === $expected_source ? '{}' : null,
 					)
 				);
 				$store    = new ManagedReleaseStore(
@@ -270,20 +270,20 @@ final class ManagedReleaseStoreTest extends TestCase {
 					$store->transition(
 						'plugin',
 						'installed/example.php',
-						$expectedSource,
+						$expected_source,
 						4,
-						$newSource,
+						$new_source,
 						$configuration,
 						7
 					)
 				);
-				self::assertSame( $expectedPolicy, $database->row['deployment_policy'] );
-				self::assertSame( $expectedPolicy, $database->updates[0][1]['deployment_policy'] );
+				self::assertSame( $expected_policy, $database->row['deployment_policy'] );
+				self::assertSame( $expected_policy, $database->updates[0][1]['deployment_policy'] );
 			}
 		}
 	}
 
-	public function testSameSourceChannelCasPreservesReleaseIdentityAndResetsAutomatic(): void {
+	public function test_same_source_channel_cas_preserves_release_identity_and_resets_automatic(): void {
 		$configuration = new ManagedReleaseConfiguration(
 			'canonical-example',
 			'example.php',
@@ -299,11 +299,11 @@ final class ManagedReleaseStoreTest extends TestCase {
 				'source_changed_at'     => '2026-07-20 08:00:00',
 				'source_changed_by'     => 3,
 				'deployment_policy'     => 'automatic',
-				'release_configuration' => $configuration->toJson(),
+				'release_configuration' => $configuration->to_json(),
 			)
 		);
 		$lifecycle     = $this->createMock( Database::class );
-		$lifecycle->expects( self::exactly( 3 ) )->method( 'requireReady' );
+		$lifecycle->expects( self::exactly( 3 ) )->method( 'require_ready' );
 		$store = new ManagedReleaseStore(
 			$database,
 			$lifecycle,
@@ -311,7 +311,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 		);
 
 		self::assertTrue(
-			$store->changeChannel(
+			$store->change_channel(
 				'plugin',
 				'installed/example.php',
 				4,
@@ -326,7 +326,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 				'source'                => 'release_asset',
 				'source_revision'       => 4,
 				'deployment_policy'     => 'automatic',
-				'release_configuration' => $configuration->toJson(),
+				'release_configuration' => $configuration->to_json(),
 			),
 			$database->updates[0][2]
 		);
@@ -337,13 +337,13 @@ final class ManagedReleaseStoreTest extends TestCase {
 		self::assertSame( '2026-07-28 11:00:00', $database->row['source_changed_at'] );
 		self::assertSame( 17, $database->row['source_changed_by'] );
 
-		$changed = ManagedReleaseConfiguration::fromJson( $database->row['release_configuration'] );
+		$changed = ManagedReleaseConfiguration::from_json( $database->row['release_configuration'] );
 		self::assertSame( 'stable', $changed->channel() );
-		self::assertSame( $configuration->packageRoot(), $changed->packageRoot() );
-		self::assertSame( $configuration->metadataFile(), $changed->metadataFile() );
+		self::assertSame( $configuration->package_root(), $changed->package_root() );
+		self::assertSame( $configuration->metadata_file(), $changed->metadata_file() );
 	}
 
-	public function testSameSourceChannelCasRejectsStaleAndUnchangedRequestsWithoutWriting(): void {
+	public function test_same_source_channel_cas_rejects_stale_and_unchanged_requests_without_writing(): void {
 		$configuration = new ManagedReleaseConfiguration( 'example', 'example.php' );
 		foreach (
 			array(
@@ -358,13 +358,13 @@ final class ManagedReleaseStoreTest extends TestCase {
 					'source'                => 'release_asset',
 					'source_revision'       => 4,
 					'deployment_policy'     => 'manual',
-					'release_configuration' => $configuration->toJson(),
+					'release_configuration' => $configuration->to_json(),
 				)
 			);
 			$store    = new ManagedReleaseStore( $database, $this->createStub( Database::class ) );
 
 			self::assertFalse(
-				$store->changeChannel(
+				$store->change_channel(
 					'plugin',
 					'installed/example.php',
 					$request[0],

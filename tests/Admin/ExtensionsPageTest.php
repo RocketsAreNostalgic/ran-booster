@@ -166,7 +166,7 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertTrue( $dashboard->get_extensions( array( array( 'id' => 'example' ) ), '/plugins.php' ) );
 		self::assertSame( 'extensions', $dashboard->captured['view'] );
 		self::assertArrayNotHasKey( 'tabs', $dashboard->captured['data'] );
-		self::assertSame( '/plugins.php', $dashboard->captured['data']['pluginsUrl'] );
+		self::assertSame( '/plugins.php', $dashboard->captured['data']['plugins_url'] );
 	}
 
 	#[RunInSeparateProcess]

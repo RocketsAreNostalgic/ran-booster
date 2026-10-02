@@ -28,12 +28,12 @@ final readonly class PackageOperationService {
 		private DeploymentCoordinator $deployments,
 		private PackageRemovalService $removals,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		private WordPressUpdaterLock $updaterLock,
+		private WordPressUpdaterLock $updater_lock,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		?RepositorySourceGuard $sourceGuard = null
+		?RepositorySourceGuard $source_guard = null
 	) {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		$this->source_guard = $sourceGuard ?? new RepositorySourceGuard();
+		$this->source_guard = $source_guard ?? new RepositorySourceGuard();
 	}
 
 	/** @return array{status: string, package?: Package, correlation_id?: string, outcome_code?: string} */
@@ -45,13 +45,13 @@ final readonly class PackageOperationService {
 
 		return match ( $operation->operation ) {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor properties retain the existing public named-parameter contract.
-			'install'                         => $this->updaterLock->run(
+			'install'                         => $this->updater_lock->run(
 				fn (): array => $this->link_installed( $operation ),
 				'Another package operation is in progress.',
 				'The package operation lock could not be released.'
 			),
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor properties retain the existing public named-parameter contract.
-			'edit'                            => $this->updaterLock->run(
+			'edit'                            => $this->updater_lock->run(
 				fn (): array => $this->edit( $operation ),
 				'Another package operation is in progress.',
 				'The package operation lock could not be released.'
@@ -63,7 +63,7 @@ final readonly class PackageOperationService {
 
 	/** @return array{status: 'succeeded'|'already-managed'|'failed', package?: Package, correlation_id: string, outcome_code: string} */
 	private function deploy( PackageOperation $operation ): array {
-		$result         = $this->deployments->executeManual( $operation );
+		$result         = $this->deployments->execute_manual( $operation );
 		$status         = $result['status'] ?? null;
 		$correlation_id = $result['correlation_id'] ?? null;
 		$outcome_code   = $result['outcome_code'] ?? null;
@@ -126,7 +126,7 @@ final readonly class PackageOperationService {
 			PackageMutationGuard::assert_plugin_file_allowed( $package->get_identifier() );
 		}
 		$this->apply_repository( $package, $operation );
-		$this->source_guard->assertAllowed( (string) $package->get_provider_code(), (string) $package->get_provider_repository_id(), 'plugin' === $operation->package_type ? 1 : 2, (string) $package->get_identifier(), PackageSource::BRANCH );
+		$this->source_guard->assert_allowed( (string) $package->get_provider_code(), (string) $package->get_provider_repository_id(), 'plugin' === $operation->package_type ? 1 : 2, (string) $package->get_identifier(), PackageSource::BRANCH );
 		$adoption = $this->adopt( $operation->package_type, $package );
 		if ( 'ran_booster_storage_adoption_conflict' === $adoption->get_diagnostic_id() ) {
 			$existing = $this->matching_existing_target( $operation, $package );
@@ -194,7 +194,7 @@ final readonly class PackageOperationService {
 				'' === (string) $operation->credential_id ? null : $operation->credential_id
 			)
 			: $this->repository( $operation, $this->provider_repository_id_for_edit( $operation, $existing ) );
-		$this->source_guard->assertAllowed( $repository->provider->value, $repository->reference->providerRepositoryId, 'plugin' === $operation->package_type ? 1 : 2, $identifier, $existing->get_source() );
+		$this->source_guard->assert_allowed( $repository->provider->value, $repository->reference->provider_repository_id, 'plugin' === $operation->package_type ? 1 : 2, $identifier, $existing->get_source() );
 		$result = 'plugin' === $operation->package_type
 			? $this->plugins->edit_plugin( $identifier, $this->edit_input( $operation, $repository, $existing, $release_managed ) )
 			: $this->themes->edit_theme( $identifier, $this->edit_input( $operation, $repository, $existing, $release_managed ) );
@@ -263,9 +263,9 @@ final readonly class PackageOperationService {
 			'deployment_policy'        => $operation->deployment_policy->value,
 			'subdirectory'             => $release_managed ? $existing->get_subdirectory() : $operation->subdirectory,
 			'private'                  => $repository->reference->private,
-			'credential_id'            => $repository->reference->credentialId ?? '',
+			'credential_id'            => $repository->reference->credential_id ?? '',
 			'provider'                 => $repository->provider->value,
-			'provider_repository_id'   => $repository->reference->providerRepositoryId,
+			'provider_repository_id'   => $repository->reference->provider_repository_id,
 			'expected_source'          => $expected_source->value,
 			'expected_source_revision' => $expected_source_revision,
 		);

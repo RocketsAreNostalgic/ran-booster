@@ -60,7 +60,7 @@ final class CoreSelfUpdateNativeTarget implements RepositoryReleaseNativeTarget 
 
 					return new RepositoryReleaseNativeTargetStatus(
 						false,
-						failureCode: '' === $code ? 'github_updater_status_unavailable' : 'github_updater_' . substr( $code, 0, 48 )
+						failure_code: '' === $code ? 'github_updater_status_unavailable' : 'github_updater_' . substr( $code, 0, 48 )
 					);
 				}
 
@@ -150,7 +150,7 @@ final class CoreSelfUpdateNativeTarget implements RepositoryReleaseNativeTarget 
 	}
 
 	private function unavailable_status(): RepositoryReleaseNativeTargetStatus {
-		return new RepositoryReleaseNativeTargetStatus( false, failureCode: 'github_updater_status_unavailable' );
+		return new RepositoryReleaseNativeTargetStatus( false, failure_code: 'github_updater_status_unavailable' );
 	}
 
 	private function status_code( mixed $value ): string {

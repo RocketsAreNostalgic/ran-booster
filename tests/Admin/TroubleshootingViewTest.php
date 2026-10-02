@@ -26,7 +26,7 @@ final class TroubleshootingViewTest extends TestCase {
 	/** @param array<string,mixed> $data @return array<string,mixed> */
 	private function provider_view_data( array $data ): array {
 		$presenter                   = ( new \ReflectionClass( ProviderSettingsPresenter::class ) )->newInstanceWithoutConstructor();
-		$data['providerListState'] ??= array(
+		$data['provider_list_state'] ??= array(
 			'search'   => '',
 			'kind'     => '',
 			'scope'    => '',
@@ -42,11 +42,11 @@ final class TroubleshootingViewTest extends TestCase {
 			$presenter->build_profile_list_projection( $data ),
 			( new ProviderRepositoryRowsNormalizer() )->project_page( $data ),
 			array(
-				'webhookManagement'               => null,
-				'statusSummaryRenderer'           => new AdminStatusSummaryRenderer(),
-				'providerManagementTableRenderer' => new ProviderManagementTableRenderer(),
-				'repositoryDetailRenderer'        => new RepositoryDetailRenderer(),
-				'repositoryTableRenderer'         => new RepositoryTableRenderer(),
+				'webhook_management'               => null,
+				'status_summary_renderer'           => new AdminStatusSummaryRenderer(),
+				'provider_management_table_renderer' => new ProviderManagementTableRenderer(),
+				'repository_detail_renderer'        => new RepositoryDetailRenderer(),
+				'repository_table_renderer'         => new RepositoryTableRenderer(),
 			)
 		);
 	}

@@ -18,7 +18,7 @@ try {
 	$ran_booster_diagnostic = $failure instanceof \RAN\Secrets\SecretsStorageUnavailable
 		? $failure->reason()
 		: 'uninstall_failed';
-	\RAN\Logging\BoosterLogger::logException(
+	\RAN\Logging\BoosterLogger::log_exception(
 		'secrets or local data cleanup blocked uninstall',
 		$failure,
 		array(

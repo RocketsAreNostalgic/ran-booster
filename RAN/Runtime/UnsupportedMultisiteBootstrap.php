@@ -16,14 +16,14 @@ final class UnsupportedMultisiteBootstrap {
 	private bool $notice_rendered = false;
 
 	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function __construct( private readonly string $pluginFile ) {
+	public function __construct( private readonly string $plugin_file ) {
 	}
 
 	public function register(): void {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		register_activation_hook( $this->pluginFile, array( $this, 'activate' ) );
+		register_activation_hook( $this->plugin_file, array( $this, 'activate' ) );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		register_deactivation_hook( $this->pluginFile, array( $this, 'deactivate' ) );
+		register_deactivation_hook( $this->plugin_file, array( $this, 'deactivate' ) );
 		add_action( 'network_admin_notices', array( $this, 'render_notice' ) );
 	}
 
@@ -72,6 +72,6 @@ final class UnsupportedMultisiteBootstrap {
 
 	private function recovery_url(): string {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		return plugin_dir_url( $this->pluginFile ) . self::RECOVERY_DOCUMENT;
+		return plugin_dir_url( $this->plugin_file ) . self::RECOVERY_DOCUMENT;
 	}
 }

@@ -6,32 +6,32 @@ class Plugin extends AbstractPackage {
 
 	protected $file;
 	protected $name;
-	protected $pluginURI;
+	protected $plugin_uri;
 	protected $version;
 	protected $description;
 	protected $author;
-	protected $authorURI;
-	protected $textDomain;
-	protected $domainPath;
+	protected $author_uri;
+	protected $text_domain;
+	protected $domain_path;
 	protected $network;
 	protected $title;
-	protected $authorName;
+	protected $author_name;
 
 	public static function from_wp_array( $file, array $array ) {
 		$plugin = new static();
 
 		$plugin->file        = $file;
 		$plugin->name        = $array['Name'];
-		$plugin->pluginURI   = $array['PluginURI'];
+		$plugin->plugin_uri   = $array['PluginURI'];
 		$plugin->version     = $array['Version'];
 		$plugin->description = $array['Description'];
 		$plugin->author      = $array['Author'];
-		$plugin->authorURI   = $array['AuthorURI'];
-		$plugin->textDomain  = $array['TextDomain'];
-		$plugin->domainPath  = $array['DomainPath'];
+		$plugin->author_uri   = $array['AuthorURI'];
+		$plugin->text_domain  = $array['TextDomain'];
+		$plugin->domain_path  = $array['DomainPath'];
 		$plugin->network     = $array['Network'];
 		$plugin->title       = $array['Title'];
-		$plugin->authorName  = $array['AuthorName'];
+		$plugin->author_name  = $array['AuthorName'];
 
 		return $plugin;
 	}

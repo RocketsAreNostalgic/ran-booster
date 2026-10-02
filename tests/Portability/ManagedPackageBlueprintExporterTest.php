@@ -30,7 +30,7 @@ require_once dirname( __DIR__ ) . '/Storage/StorageTestEnvironment.php';
 #[CoversClass( ManagedPackageBlueprintExporter::class )]
 final class ManagedPackageBlueprintExporterTest extends TestCase {
 
-	public function testItUsesOnlyTheNonCleaningManagedPackageReaders(): void {
+	public function test_it_uses_only_the_non_cleaning_managed_package_readers(): void {
 		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id' );
 		$theme   = $this->package( 'example-theme', 'example-theme', 'theme-repository-id' );
 		$plugins = $this->createMock( PluginRepository::class );
@@ -43,11 +43,11 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 
 		self::assertSame( array( 'plugin', 'theme' ), array_column( $blueprint->packages, 'type' ) );
 		self::assertSame( array( 'plugin/example.php', 'example-theme' ), array_column( $blueprint->packages, 'identifier' ) );
-		self::assertSame( array( 'Plugin Example', 'Example Theme' ), array_column( $blueprint->packages, 'displayName' ) );
+		self::assertSame( array( 'Plugin Example', 'Example Theme' ), array_column( $blueprint->packages, 'display_name' ) );
 		self::assertStringNotContainsString( 'credential-id-canary', $blueprint->canonical_json() );
 	}
 
-	public function testPackageOnlyExportRemainsAvailableWhenEncryptedSecretsRuntimeIsUnavailable(): void {
+	public function test_package_only_export_remains_available_when_encrypted_secrets_runtime_is_unavailable(): void {
 		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id' );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
@@ -55,7 +55,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 		$secrets = new SecretsFile(
 			constants: array(),
-			providerPolicies: new ProviderSecretPolicyCatalog(),
+			provider_policies: new ProviderSecretPolicyCatalog(),
 			availability: new SecretsRuntimeAvailability( false, false )
 		);
 
@@ -65,9 +65,9 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		self::assertSame( array(), $blueprint->credentials );
 	}
 
-	public function testLifecycleSafeStateBlocksExportThroughThePackageStorageReader(): void {
+	public function test_lifecycle_safe_state_blocks_export_through_the_package_storage_reader(): void {
 		$lifecycle = $this->createStub( Database::class );
-		$lifecycle->method( 'requireReady' )->willThrowException( new DatabaseLifecycleFailure( 'schema_operation_failed' ) );
+		$lifecycle->method( 'require_ready' )->willThrowException( new DatabaseLifecycleFailure( 'schema_operation_failed' ) );
 		$exporter = new ManagedPackageBlueprintExporter(
 			new PluginRepository( $lifecycle ),
 			new ThemeRepository( $lifecycle ),
@@ -82,7 +82,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		}
 	}
 
-	public function testBlueprintV1RejectsReleaseManagedPackagesInsteadOfConvertingThemToBranch(): void {
+	public function test_blueprint_v1_rejects_release_managed_packages_instead_of_converting_them_to_branch(): void {
 		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id', source: PackageSource::RELEASE_ASSET );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
@@ -94,11 +94,11 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 			self::fail( 'Release-managed packages must not be converted to branch packages.' );
 		} catch ( UnsupportedBlueprintPackages $failure ) {
 			self::assertSame( 'The selected packages are unavailable to the current Blueprint format.', $failure->getMessage() );
-			self::assertSame( 'Plugin Example', $failure->failures[0]->displayName );
+			self::assertSame( 'Plugin Example', $failure->failures[0]->display_name );
 		}
 	}
 
-	public function testBlueprintV1ReportsEverySelectedUnsupportedPackageBeforeRejectingTheExport(): void {
+	public function test_blueprint_v1_reports_every_selected_unsupported_package_before_rejecting_the_export(): void {
 		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id', source: PackageSource::RELEASE_ASSET );
 		$theme   = $this->package( 'example-theme', 'example-theme', 'theme-repository-id', source: PackageSource::RELEASE_ASSET );
 		$plugins = $this->createStub( PluginRepository::class );
@@ -110,11 +110,11 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 			( new ManagedPackageBlueprintExporter( $plugins, $themes, new SecretsFile( null, array() ) ) )->export();
 			self::fail( 'Every selected unsupported package must block an all-or-nothing Blueprint export.' );
 		} catch ( UnsupportedBlueprintPackages $failure ) {
-			self::assertSame( array( 'Plugin Example', 'Example Theme' ), array_column( $failure->failures, 'displayName' ) );
+			self::assertSame( array( 'Plugin Example', 'Example Theme' ), array_column( $failure->failures, 'display_name' ) );
 		}
 	}
 
-	public function testCredentialBearingExportFailsWithTypedLocalStoreCategory(): void {
+	public function test_credential_bearing_export_fails_with_typed_local_store_category(): void {
 		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id' );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
@@ -122,7 +122,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 		$secrets = new SecretsFile(
 			constants: array(),
-			providerPolicies: new ProviderSecretPolicyCatalog(),
+			provider_policies: new ProviderSecretPolicyCatalog(),
 			availability: new SecretsRuntimeAvailability( false, false )
 		);
 
@@ -134,15 +134,15 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		}
 	}
 
-	public function testEmptyCredentialSelectionDoesNotInspectStorageForPackagesWithoutCredentials(): void {
-		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id', credentialId: '' );
+	public function test_empty_credential_selection_does_not_inspect_storage_for_packages_without_credentials(): void {
+		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id', credential_id: '' );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
 		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
 		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 		$secrets = new SecretsFile(
 			constants: array(),
-			providerPolicies: new ProviderSecretPolicyCatalog(),
+			provider_policies: new ProviderSecretPolicyCatalog(),
 			availability: new SecretsRuntimeAvailability( false, false )
 		);
 
@@ -152,7 +152,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		self::assertSame( array(), $blueprint->credentials );
 	}
 
-	public function testItExportsOneFileCredentialOnlyWhenExplicitlyRequested(): void {
+	public function test_it_exports_one_file_credential_only_when_explicitly_requested(): void {
 		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id', false );
 		$theme   = $this->package( 'example-theme', 'example-theme', 'theme-repository-id' );
 		$plugins = $this->createMock( PluginRepository::class );
@@ -160,7 +160,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		$path    = sys_get_temp_dir() . '/ran-booster-exporter-' . bin2hex( random_bytes( 8 ) ) . '.php';
 		$secrets = SecretsFileTestFactory::create( $path, array(), ShippedSecretPolicyCatalog::create() );
 		try {
-			$secrets->saveCredential(
+			$secrets->save_credential(
 				'gh',
 				'credential-id-canary',
 				array(
@@ -202,15 +202,15 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		}
 	}
 
-	public function testItExportsOnlyTheExactSelectedCredentialSubsetWithoutKindPreference(): void {
-		$plugin  = $this->package( 'plugin/classic.php', 'classic', 'classic-repository-id', credentialId: 'classic-profile' );
-		$theme   = $this->package( 'fine-theme', 'fine-theme', 'fine-repository-id', credentialId: 'fine-profile' );
+	public function test_it_exports_only_the_exact_selected_credential_subset_without_kind_preference(): void {
+		$plugin  = $this->package( 'plugin/classic.php', 'classic', 'classic-repository-id', credential_id: 'classic-profile' );
+		$theme   = $this->package( 'fine-theme', 'fine-theme', 'fine-repository-id', credential_id: 'fine-profile' );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
 		$path    = sys_get_temp_dir() . '/ran-booster-exporter-' . bin2hex( random_bytes( 8 ) ) . '.php';
 		$secrets = SecretsFileTestFactory::create( $path, array(), ShippedSecretPolicyCatalog::create() );
 		try {
-			$secrets->saveCredential(
+			$secrets->save_credential(
 				'gh',
 				'classic-profile',
 				array(
@@ -220,7 +220,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 				),
 				'classic-secret-canary'
 			);
-			$secrets->saveCredential(
+			$secrets->save_credential(
 				'gh',
 				'fine-profile',
 				array(
@@ -253,8 +253,8 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		}
 	}
 
-	public function testProviderAndManualExpiryObservationsDoNotBlockOrEnterTheBlueprint(): void {
-		$plugin  = $this->package( 'plugin/expiring.php', 'expiring', 'expiring-repository-id', credentialId: 'expiring-profile' );
+	public function test_provider_and_manual_expiry_observations_do_not_block_or_enter_the_blueprint(): void {
+		$plugin  = $this->package( 'plugin/expiring.php', 'expiring', 'expiring-repository-id', credential_id: 'expiring-profile' );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
 		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/expiring.php' => $plugin ) );
@@ -263,14 +263,14 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 			public function __construct() {
 				parent::__construct( null, array() );
 			}
-			public function assertManagedStorageReady(): void {
+			public function assert_managed_storage_ready(): void {
 			}
-			public function credentialMaterial( \RAN\RepositoryProvider\ProviderCode|string $provider, ?string $id = null ): ?array {
-				$providerCode = $provider instanceof \RAN\RepositoryProvider\ProviderCode ? $provider->value : $provider;
+			public function credential_material( \RAN\RepositoryProvider\ProviderCode|string $provider, ?string $id = null ): ?array {
+				$provider_code = $provider instanceof \RAN\RepositoryProvider\ProviderCode ? $provider->value : $provider;
 
 				return array(
 					'id'                  => $id,
-					'provider'            => $providerCode,
+					'provider'            => $provider_code,
 					'label'               => 'Normally expiring token',
 					'kind'                => 'fine-grained',
 					'configuration'       => array( 'owner' => 'RocketsAreNostalgic' ),
@@ -301,14 +301,14 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		self::assertStringNotContainsString( '2026-08-08', $json );
 	}
 
-	public function testItRejectsASelectedSelfDestructCredential(): void {
-		$plugin  = $this->package( 'plugin/lifecycle.php', 'lifecycle', 'lifecycle-repository-id', credentialId: 'lifecycle-profile-canary' );
+	public function test_it_rejects_aselected_self_destruct_credential(): void {
+		$plugin  = $this->package( 'plugin/lifecycle.php', 'lifecycle', 'lifecycle-repository-id', credential_id: 'lifecycle-profile-canary' );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
 		$path    = sys_get_temp_dir() . '/ran-booster-exporter-' . bin2hex( random_bytes( 8 ) ) . '.php';
 		$secrets = SecretsFileTestFactory::create( $path, array(), ShippedSecretPolicyCatalog::create() );
 		try {
-			$secrets->saveCredential(
+			$secrets->save_credential(
 				'gh',
 				'lifecycle-profile-canary',
 				array(
@@ -335,18 +335,18 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		}
 	}
 
-	public function testIdenticalMaterialAcrossTwoSourceProfilesDeduplicatesBySelectedPackageAssociations(): void {
-		$plugin  = $this->package( 'plugin/profile-a.php', 'profile-a', 'profile-a-repository-id', credentialId: 'profile-a-canary' );
-		$theme   = $this->package( 'profile-b-theme', 'profile-b-theme', 'profile-b-repository-id', credentialId: 'profile-b-canary' );
+	public function test_identical_material_across_two_source_profiles_deduplicates_by_selected_package_associations(): void {
+		$plugin  = $this->package( 'plugin/profile-a.php', 'profile-a', 'profile-a-repository-id', credential_id: 'profile-a-canary' );
+		$theme   = $this->package( 'profile-b-theme', 'profile-b-theme', 'profile-b-repository-id', credential_id: 'profile-b-canary' );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
 		$path    = sys_get_temp_dir() . '/ran-booster-exporter-' . bin2hex( random_bytes( 8 ) ) . '.php';
 		$secrets = SecretsFileTestFactory::create( $path, array(), ShippedSecretPolicyCatalog::create() );
 		try {
-			foreach ( array( 'profile-a-canary', 'profile-b-canary' ) as $profileId ) {
-				$secrets->saveCredential(
+			foreach ( array( 'profile-a-canary', 'profile-b-canary' ) as $profile_id ) {
+				$secrets->save_credential(
 					'gh',
-					$profileId,
+					$profile_id,
 					array(
 						'label'         => 'Identical material characterization credential',
 						'kind'          => 'classic',
@@ -359,7 +359,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 			$themes->method( 'all_deployment_themes' )->willReturn( array( 'profile-b-theme' => $theme ) );
 			$exporter = new ManagedPackageBlueprintExporter( $plugins, $themes, $secrets );
 
-			$profileA = $exporter->export(
+			$profile_a = $exporter->export(
 				array( 'gh' => array( 'profile-a-canary' ) ),
 				array(
 					array(
@@ -368,7 +368,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 					),
 				)
 			);
-			$profileB = $exporter->export(
+			$profile_b = $exporter->export(
 				array( 'gh' => array( 'profile-b-canary' ) ),
 				array(
 					array(
@@ -377,15 +377,15 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 					),
 				)
 			);
-			$both     = $exporter->export( array( 'gh' => array( 'profile-a-canary', 'profile-b-canary' ) ) );
+			$both      = $exporter->export( array( 'gh' => array( 'profile-a-canary', 'profile-b-canary' ) ) );
 
-			self::assertCount( 1, $profileA->credentials );
-			self::assertCount( 1, $profileB->credentials );
+			self::assertCount( 1, $profile_a->credentials );
+			self::assertCount( 1, $profile_b->credentials );
 			self::assertCount( 1, $both->credentials );
 
-			$profileARecord = $profileA->credentials[0]->to_array();
-			$profileBRecord = $profileB->credentials[0]->to_array();
-			$bothRecord     = $both->credentials[0]->to_array();
+			$profile_arecord = $profile_a->credentials[0]->to_array();
+			$profile_brecord = $profile_b->credentials[0]->to_array();
+			$both_record     = $both->credentials[0]->to_array();
 			self::assertSame(
 				array(
 					array(
@@ -393,7 +393,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 						'identifier' => 'plugin/profile-a.php',
 					),
 				),
-				$profileARecord['packages']
+				$profile_arecord['packages']
 			);
 			self::assertSame(
 				array(
@@ -402,7 +402,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 						'identifier' => 'profile-b-theme',
 					),
 				),
-				$profileBRecord['packages']
+				$profile_brecord['packages']
 			);
 			self::assertSame(
 				array(
@@ -415,13 +415,13 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 						'identifier' => 'profile-b-theme',
 					),
 				),
-				$bothRecord['packages']
+				$both_record['packages']
 			);
 
-			unset( $profileARecord['packages'], $profileBRecord['packages'], $bothRecord['packages'] );
-			self::assertSame( $profileARecord, $profileBRecord );
-			self::assertSame( $profileARecord, $bothRecord );
-			foreach ( array( $profileA, $profileB, $both ) as $blueprint ) {
+			unset( $profile_arecord['packages'], $profile_brecord['packages'], $both_record['packages'] );
+			self::assertSame( $profile_arecord, $profile_brecord );
+			self::assertSame( $profile_arecord, $both_record );
+			foreach ( array( $profile_a, $profile_b, $both ) as $blueprint ) {
 				self::assertStringNotContainsString( 'profile-a-canary', $blueprint->canonical_json() );
 				self::assertStringNotContainsString( 'profile-b-canary', $blueprint->canonical_json() );
 			}
@@ -435,7 +435,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		}
 	}
 
-	public function testItExportsOnlyTheExactSelectedPackages(): void {
+	public function test_it_exports_only_the_exact_selected_packages(): void {
 		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id' );
 		$theme   = $this->package( 'example-theme', 'example-theme', 'theme-repository-id' );
 		$plugins = $this->createStub( PluginRepository::class );
@@ -456,7 +456,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		self::assertSame( array( 'example-theme' ), array_column( $blueprint->packages, 'identifier' ) );
 	}
 
-	public function testItTrimsSharedCredentialAssociationsToTheSelection(): void {
+	public function test_it_trims_shared_credential_associations_to_the_selection(): void {
 		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id' );
 		$theme   = $this->package( 'example-theme', 'example-theme', 'theme-repository-id' );
 		$plugins = $this->createStub( PluginRepository::class );
@@ -464,7 +464,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		$path    = sys_get_temp_dir() . '/ran-booster-exporter-' . bin2hex( random_bytes( 8 ) ) . '.php';
 		$secrets = SecretsFileTestFactory::create( $path, array(), ShippedSecretPolicyCatalog::create() );
 		try {
-			$secrets->saveCredential(
+			$secrets->save_credential(
 				'gh',
 				'credential-id-canary',
 				array(
@@ -508,8 +508,8 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 	}
 
 	/** @param list<array{type:string,identifier:string}> $selection */
-	#[DataProvider( 'invalidSelections' )]
-	public function testItRejectsInvalidOrStaleSelections( array $selection ): void {
+	#[DataProvider( 'invalid_selections' )]
+	public function test_it_rejects_invalid_or_stale_selections( array $selection ): void {
 		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id' );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
@@ -521,7 +521,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 	}
 
 	/** @return iterable<string, array{list<array{type:string,identifier:string}>}> */
-	public static function invalidSelections(): iterable {
+	public static function invalid_selections(): iterable {
 		yield 'empty' => array( array() );
 		yield 'duplicate' => array(
 			array(
@@ -554,8 +554,8 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 	}
 
 	/** @param array<string, list<string>> $selection */
-	#[DataProvider( 'invalidCredentialSelections' )]
-	public function testItRejectsInvalidStaleOrUnrelatedCredentialSelections( array $selection ): void {
+	#[DataProvider( 'invalid_credential_selections' )]
+	public function test_it_rejects_invalid_stale_or_unrelated_credential_selections( array $selection ): void {
 		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id' );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
@@ -567,7 +567,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 	}
 
 	/** @return iterable<string, array{array<string, list<string>>}> */
-	public static function invalidCredentialSelections(): iterable {
+	public static function invalid_credential_selections(): iterable {
 		yield 'unknown profile' => array( array( 'gh' => array( 'unknown-profile' ) ) );
 		yield 'wrong provider' => array( array( 'bb' => array( 'credential-id-canary' ) ) );
 		yield 'constant' => array( array( 'gh' => array( SecretsFile::CONSTANT_PROFILE ) ) );
@@ -579,9 +579,9 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 	private function package(
 		string $identifier,
 		string $slug,
-		string $providerRepositoryId,
+		string $provider_repository_id,
 		bool $private = true,
-		string $credentialId = 'credential-id-canary',
+		string $credential_id = 'credential-id-canary',
 		PackageSource $source = PackageSource::BRANCH
 	): Package {
 		$package = $this->createStub( Package::class );
@@ -589,12 +589,12 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		$package->method( 'get_display_name' )->willReturn( 'example-theme' === $identifier ? 'Example Theme' : 'Plugin Example' );
 		$package->method( 'get_slug' )->willReturn( $slug );
 		$package->method( 'get_provider_code' )->willReturn( 'gh' );
-		$package->method( 'get_provider_repository_id' )->willReturn( $providerRepositoryId );
-		$package->method( 'get_repository' )->willReturn( new ManagedRepository( 'gh', 'owner/repository', $providerRepositoryId, 'main', $private, $credentialId ) );
+		$package->method( 'get_provider_repository_id' )->willReturn( $provider_repository_id );
+		$package->method( 'get_repository' )->willReturn( new ManagedRepository( 'gh', 'owner/repository', $provider_repository_id, 'main', $private, $credential_id ) );
 		$package->method( 'get_branch' )->willReturn( 'main' );
 		$package->method( 'is_private' )->willReturn( $private );
 		$package->method( 'get_subdirectory' )->willReturn( null );
-		$package->method( 'get_credential_id' )->willReturn( $credentialId );
+		$package->method( 'get_credential_id' )->willReturn( $credential_id );
 		$package->method( 'get_source' )->willReturn( $source );
 		$package->method( 'get_source_revision' )->willReturn( 1 );
 

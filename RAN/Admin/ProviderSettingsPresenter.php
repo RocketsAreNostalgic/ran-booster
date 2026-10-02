@@ -50,58 +50,58 @@ final readonly class ProviderSettingsPresenter {
 		private ProviderRegistry $providers,
 		private SecretsFile $secrets,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private CredentialUsageReader $credentialUsage,
+		private CredentialUsageReader $credential_usage,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?PublicRepositoryLookupProfileStore $publicLookupProfiles = null,
+		?PublicRepositoryLookupProfileStore $public_lookup_profiles = null,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?CredentialExpiryObservationStore $expiryObservations = null,
+		?CredentialExpiryObservationStore $expiry_observations = null,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?CredentialExpiryReminder $expiryReminders = null,
+		?CredentialExpiryReminder $expiry_reminders = null,
 		private ?PluginRepository $plugins = null,
 		private ?ThemeRepository $themes = null,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private ?WebhookAssistanceReadinessEvaluator $webhookAssistance = null,
+		private ?WebhookAssistanceReadinessEvaluator $webhook_assistance = null,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?RepositoryBranchCheckEvidenceStore $branchCheckEvidence = null,
+		?RepositoryBranchCheckEvidenceStore $branch_check_evidence = null,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?WordPressUpdaterLock $branchCheckLock = null
+		?WordPressUpdaterLock $branch_check_lock = null
 	) {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->public_lookup_profiles = $publicLookupProfiles ?? new PublicRepositoryLookupProfileStore();
+		$this->public_lookup_profiles = $public_lookup_profiles ?? new PublicRepositoryLookupProfileStore();
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->expiry_observations = $expiryObservations ?? new CredentialExpiryObservationStore();
+		$this->expiry_observations = $expiry_observations ?? new CredentialExpiryObservationStore();
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->expiry_reminders = $expiryReminders ?? new CredentialExpiryReminder(
+		$this->expiry_reminders = $expiry_reminders ?? new CredentialExpiryReminder(
 			$this->providers,
 			$this->secrets,
 			$this->expiry_observations
 		);
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->branch_check_evidence = $branchCheckEvidence ?? new RepositoryBranchCheckEvidenceStore();
+		$this->branch_check_evidence = $branch_check_evidence ?? new RepositoryBranchCheckEvidenceStore();
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->branch_check_lock = $branchCheckLock ?? new WordPressUpdaterLock();
+		$this->branch_check_lock = $branch_check_lock ?? new WordPressUpdaterLock();
 	}
 
 	/**
 	 * @return array<string, mixed>
 	 */
 	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function build( ?string $selectedProvider = null ): array {
+	public function build( ?string $selected_provider = null ): array {
 		$available = $this->admin_providers();
 		if ( array() === $available ) {
 			throw new RuntimeException( 'No repository provider settings are available.' );
 		}
 
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$selectedProvider = is_string( $selectedProvider ) ? trim( $selectedProvider ) : '';
+		$selected_provider = is_string( $selected_provider ) ? trim( $selected_provider ) : '';
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( ! isset( $available[ $selectedProvider ] ) ) {
+		if ( ! isset( $available[ $selected_provider ] ) ) {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$selectedProvider = array_key_first( $available );
+			$selected_provider = array_key_first( $available );
 		}
 
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$selected = $available[ $selectedProvider ];
+		$selected = $available[ $selected_provider ];
 		$metadata = $selected->get_metadata();
 		$admin    = $metadata->admin;
 
@@ -110,25 +110,25 @@ final readonly class ProviderSettingsPresenter {
 		}
 
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$managed_repositories = $this->managed_repositories( $selectedProvider, $selected, true );
+		$managed_repositories = $this->managed_repositories( $selected_provider, $selected, true );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$provider_repositories = $this->managed_repositories( $selectedProvider, $selected, false );
+		$provider_repositories = $this->managed_repositories( $selected_provider, $selected, false );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$webhook_readiness   = $this->webhook_assistance_readiness( $selectedProvider, $selected );
+		$webhook_readiness   = $this->webhook_assistance_readiness( $selected_provider, $selected );
 		$storage_unavailable = false;
 		try {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$credentials = $this->credential_profiles( $selectedProvider, $admin, true );
+			$credentials = $this->credential_profiles( $selected_provider, $admin, true );
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$webhooks              = $this->webhook_profiles( $selectedProvider, $admin, $managed_repositories );
+			$webhooks              = $this->webhook_profiles( $selected_provider, $admin, $managed_repositories );
 			$provider_repositories = $this->with_retained_webhook_evidence(
 				$provider_repositories,
 				$managed_repositories,
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				$selectedProvider
+				$selected_provider
 			);
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$public_lookup_profile = $this->public_lookup_profile( $selected, $selectedProvider, $credentials );
+			$public_lookup_profile = $this->public_lookup_profile( $selected, $selected_provider, $credentials );
 			if ( null !== $public_lookup_profile ) {
 				$configured_id = $public_lookup_profile['configured_id'];
 				$credentials   = array_map(
@@ -147,9 +147,9 @@ final readonly class ProviderSettingsPresenter {
 
 		return array(
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'selected_provider'            => $selectedProvider,
+			'selected_provider'            => $selected_provider,
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'providers'                    => $this->tabs( $available, $selectedProvider ),
+			'providers'                    => $this->tabs( $available, $selected_provider ),
 			'provider'                     => $this->provider( $selected, $metadata, $admin ),
 			'credential_profiles'          => $credentials,
 			'webhook_profiles'             => $webhooks,
@@ -164,7 +164,7 @@ final readonly class ProviderSettingsPresenter {
 	/** @return array<string, mixed>|null */
 	private function webhook_assistance_readiness( string $provider_code, RepositoryProvider $provider ): ?array {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		if ( null === $this->webhookAssistance || ! $provider instanceof WebhookNormalizer ) {
+		if ( null === $this->webhook_assistance || ! $provider instanceof WebhookNormalizer ) {
 			return null;
 		}
 
@@ -172,7 +172,7 @@ final readonly class ProviderSettingsPresenter {
 			$endpoint = rest_url( 'ran-booster/v1/webhooks/' . rawurlencode( $provider_code ) );
 
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			return $this->webhookAssistance->evaluate( $provider_code, $endpoint )->toArray();
+			return $this->webhook_assistance->evaluate( $provider_code, $endpoint )->to_array();
 		} catch ( Throwable ) {
 			return null;
 		}
@@ -184,7 +184,7 @@ final readonly class ProviderSettingsPresenter {
 	 * @return array{default_provider: string, providers: list<array<string, mixed>>}
 	 */
 	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function build_package_form( ?string $defaultProvider = null ): array {
+	public function build_package_form( ?string $default_provider = null ): array {
 		$providers = $this->package_providers();
 
 		$package_provider_codes = array_column(
@@ -195,14 +195,14 @@ final readonly class ProviderSettingsPresenter {
 			throw new RuntimeException( 'No repository provider can install packages.' );
 		}
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( ! is_string( $defaultProvider ) || ! in_array( $defaultProvider, $package_provider_codes, true ) ) {
+		if ( ! is_string( $default_provider ) || ! in_array( $default_provider, $package_provider_codes, true ) ) {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$defaultProvider = $package_provider_codes[0];
+			$default_provider = $package_provider_codes[0];
 		}
 
 		return array(
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'default_provider' => $defaultProvider,
+			'default_provider' => $default_provider,
 			'providers'        => $providers,
 		);
 	}
@@ -217,17 +217,17 @@ final readonly class ProviderSettingsPresenter {
 	 * @return array{default_provider: string, providers: list<array<string, mixed>>}
 	 */
 	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function build_existing_package_form( string $storedProvider ): array {
+	public function build_existing_package_form( string $stored_provider ): array {
 		$providers = $this->package_providers();
 		$codes     = array_column( $providers, 'code' );
 
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( ! in_array( $storedProvider, $codes, true ) ) {
+		if ( ! in_array( $stored_provider, $codes, true ) ) {
 			$providers[] = array(
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				'code'                                   => $storedProvider,
+				'code'                                   => $stored_provider,
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				'label'                                  => $storedProvider,
+				'label'                                  => $stored_provider,
 				'owner_label'                            => '',
 				'repository_url_base'                    => '',
 				'credentials_url'                        => '',
@@ -245,7 +245,7 @@ final readonly class ProviderSettingsPresenter {
 
 		return array(
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'default_provider' => $storedProvider,
+			'default_provider' => $stored_provider,
 			'providers'        => $providers,
 		);
 	}
@@ -267,7 +267,7 @@ final readonly class ProviderSettingsPresenter {
 	 */
 	public function build_package_branch_readiness( Package $package ): ?array {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		if ( ! in_array( $package->get_source(), array( PackageSource::BRANCH, PackageSource::RELEASE_ASSET ), true ) || null === $this->webhookAssistance ) {
+		if ( ! in_array( $package->get_source(), array( PackageSource::BRANCH, PackageSource::RELEASE_ASSET ), true ) || null === $this->webhook_assistance ) {
 			return null;
 		}
 
@@ -372,21 +372,21 @@ final readonly class ProviderSettingsPresenter {
 			$repository = $package->get_repository()->reference;
 			if ( ! $repository->private ) {
 				$credential_id = $provider instanceof CredentialedPublicRepositoryBrowser
-					&& $provider->get_public_repository_browse_metadata()->supportsProviderDefaultProfile
+					&& $provider->get_public_repository_browse_metadata()->supports_provider_default_profile
 						? $profile_id
 						: null;
 
 				$repository = new RepositoryReference(
 					$repository->locator,
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-					$repository->providerRepositoryId,
+					$repository->provider_repository_id,
 					false,
 					$credential_id
 				);
 			}
 
 			$archive      = $provider->prepare_archive( new ArchiveRequest( $repository, (string) $package->get_branch() ) );
-			$resolved_ref = $archive->getResolvedRef();
+			$resolved_ref = $archive->get_resolved_ref();
 			if ( '' !== trim( $resolved_ref )
 				&& strlen( $resolved_ref ) <= 191
 				&& ! preg_match( '/[\x00-\x1F\x7F]/', $resolved_ref )
@@ -502,7 +502,7 @@ final readonly class ProviderSettingsPresenter {
 		}
 
 		try {
-			$profiles  = $this->secrets->webhookProfiles( $provider_code );
+			$profiles  = $this->secrets->webhook_profiles( $provider_code );
 			$coverage  = $this->retained_secret_coverage( $repository, $repository_id, $profiles );
 			$available = true;
 		} catch ( Throwable ) {
@@ -559,7 +559,7 @@ final readonly class ProviderSettingsPresenter {
 	 */
 	public function build_portability_credentials( array $associations ): array {
 		$groups = array();
-		foreach ( $this->providers->administrationMetadata() as $metadata ) {
+		foreach ( $this->providers->administration_metadata() as $metadata ) {
 			$code       = $metadata->code->value;
 			$candidates = $associations[ $code ] ?? array();
 			$admin      = $metadata->admin;
@@ -567,7 +567,7 @@ final readonly class ProviderSettingsPresenter {
 				continue;
 			}
 
-			$profiles    = $this->secrets->credentialProfiles( $code );
+			$profiles    = $this->secrets->credential_profiles( $code );
 			$profile_ids = array_values( array_unique( array_merge( array_keys( $candidates ), array_keys( $profiles ) ) ) );
 			if ( array() === $profile_ids ) {
 				continue;
@@ -576,7 +576,7 @@ final readonly class ProviderSettingsPresenter {
 			foreach ( $profile_ids as $id ) {
 				$profile       = $profiles[ $id ] ?? null;
 				$packages      = $candidates[ $id ] ?? array();
-				$kind          = is_array( $profile ) ? $admin->getCredentialKind( (string) ( $profile['kind'] ?? '' ) ) : null;
+				$kind          = is_array( $profile ) ? $admin->get_credential_kind( (string) ( $profile['kind'] ?? '' ) ) : null;
 				$source        = is_array( $profile ) && is_string( $profile['source'] ?? null ) ? $profile['source'] : '';
 				$self_destruct = is_array( $profile ) && ! empty( $profile['self_destruct'] );
 				$reason        = ! is_array( $profile ) ? 'missing' : ( 'file' !== $source ? 'configuration' : ( $self_destruct ? 'self_destruct' : ( array() === $packages ? 'unassociated' : '' ) ) );
@@ -609,7 +609,7 @@ final readonly class ProviderSettingsPresenter {
 	private function package_providers(): array {
 		$providers = array();
 
-		foreach ( $this->providers->administrationMetadata() as $metadata ) {
+		foreach ( $this->providers->administration_metadata() as $metadata ) {
 			$code        = $metadata->code->value;
 			$provider    = $this->providers->get( $code );
 			$admin       = $metadata->admin;
@@ -622,7 +622,7 @@ final readonly class ProviderSettingsPresenter {
 					$profiles = array();
 				}
 				foreach ( $profiles as $profile ) {
-					$kind    = $admin->getCredentialKind( $profile['kind'] );
+					$kind    = $admin->get_credential_kind( $profile['kind'] );
 					$details = array();
 
 					if ( null !== $kind ) {
@@ -650,23 +650,23 @@ final readonly class ProviderSettingsPresenter {
 				'code'                                   => $code,
 				'label'                                  => $metadata->label,
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				'owner_label'                            => $metadata->ownerLabel,
+				'owner_label'                            => $metadata->owner_label,
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				'repository_url_base'                    => $metadata->repositoryUrlBase,
+				'repository_url_base'                    => $metadata->repository_url_base,
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				'credentials_url'                        => null !== $admin && array() !== $admin->credentialKinds
+				'credentials_url'                        => null !== $admin && array() !== $admin->credential_kinds
 					? 'admin.php?page=ran-booster&tab=' . rawurlencode( $code ) . '&view=credentials'
 					: '',
 				'available'                              => true,
 				'browse'                                 => $provider instanceof RepositoryBrowser,
 				'credentialed_public_browse'             => $provider instanceof CredentialedPublicRepositoryBrowser,
 				'provider_default_public_lookup_profile' => $provider instanceof CredentialedPublicRepositoryBrowser
-					&& $provider->get_public_repository_browse_metadata()->supportsProviderDefaultProfile,
+					&& $provider->get_public_repository_browse_metadata()->supports_provider_default_profile,
 				'deploy'                                 => true,
 				'webhooks'                               => $provider instanceof WebhookNormalizer,
 				'default_credential_id'                  => $this->default_credential_id( $credentials ),
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				'credential_kind_labels'                 => null === $admin ? array() : array_column( array_map( $this->credential_kind( ... ), $admin->credentialKinds ), 'label', 'code' ),
+				'credential_kind_labels'                 => null === $admin ? array() : array_column( array_map( $this->credential_kind( ... ), $admin->credential_kinds ), 'label', 'code' ),
 				'credential_profiles'                    => $credentials,
 				'public_lookup'                          => $this->package_public_lookup( $provider, $code, $credentials ),
 			);
@@ -697,7 +697,7 @@ final readonly class ProviderSettingsPresenter {
 			return null;
 		}
 
-		$supports_default = $provider->get_public_repository_browse_metadata()->supportsProviderDefaultProfile;
+		$supports_default = $provider->get_public_repository_browse_metadata()->supports_provider_default_profile;
 		$configured_id    = $supports_default ? $this->public_lookup_profiles->get( $provider_code ) ?? '' : '';
 		$configured_label = '';
 		$eligible_ids     = array();
@@ -727,7 +727,7 @@ final readonly class ProviderSettingsPresenter {
 	 */
 	private function public_lookup_profile( RepositoryProvider $provider, string $provider_code, array $credentials ): ?array {
 		if ( ! $provider instanceof CredentialedPublicRepositoryBrowser
-			|| ! $provider->get_public_repository_browse_metadata()->supportsProviderDefaultProfile ) {
+			|| ! $provider->get_public_repository_browse_metadata()->supports_provider_default_profile ) {
 			return null;
 		}
 
@@ -751,7 +751,7 @@ final readonly class ProviderSettingsPresenter {
 	 */
 	private function admin_providers(): array {
 		$providers = array();
-		foreach ( $this->providers->administrationMetadata() as $metadata ) {
+		foreach ( $this->providers->administration_metadata() as $metadata ) {
 			$providers[ $metadata->code->value ] = $this->providers->get( $metadata->code );
 		}
 
@@ -786,26 +786,26 @@ final readonly class ProviderSettingsPresenter {
 			'code'             => $metadata->code->value,
 			'label'            => $metadata->label,
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			'owner_label'      => $metadata->ownerLabel,
+			'owner_label'      => $metadata->owner_label,
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			'credential_kinds' => array_map( $this->credential_kind( ... ), $admin->credentialKinds ),
+			'credential_kinds' => array_map( $this->credential_kind( ... ), $admin->credential_kinds ),
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			'webhook_scopes'   => array_map( $this->webhook_scope( ... ), $admin->webhookScopes ),
+			'webhook_scopes'   => array_map( $this->webhook_scope( ... ), $admin->webhook_scopes ),
 			'webhook_setup'    => null === $setup ? null : array(
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				'location'                   => $setup->webhookLocation,
+				'location'                   => $setup->webhook_location,
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				'event'                      => $setup->webhookEvent,
+				'event'                      => $setup->webhook_event,
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				'documentation_url'          => $setup->webhookDocumentationUrl,
+				'documentation_url'          => $setup->webhook_documentation_url,
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				'delivery_documentation_url' => $setup->deliveryDocumentationUrl,
+				'delivery_documentation_url' => $setup->delivery_documentation_url,
 			),
 			'capabilities'     => array(
 				'browse'                                 => $provider instanceof RepositoryBrowser,
 				'credentialed_public_browse'             => $provider instanceof CredentialedPublicRepositoryBrowser,
 				'provider_default_public_lookup_profile' => $provider instanceof CredentialedPublicRepositoryBrowser
-					&& $provider->get_public_repository_browse_metadata()->supportsProviderDefaultProfile,
+					&& $provider->get_public_repository_browse_metadata()->supports_provider_default_profile,
 				'archive'                                => true,
 				'webhooks'                               => $provider instanceof WebhookNormalizer,
 				'package'                                => true,
@@ -1009,7 +1009,7 @@ final readonly class ProviderSettingsPresenter {
 		string $provider_code
 	): array {
 		try {
-			$profiles           = $this->secrets->webhookProfiles( $provider_code );
+			$profiles           = $this->secrets->webhook_profiles( $provider_code );
 			$evidence_available = true;
 		} catch ( Throwable ) {
 			$profiles           = array();
@@ -1137,7 +1137,7 @@ final readonly class ProviderSettingsPresenter {
 			return null;
 		}
 
-		return rtrim( $provider->get_metadata()->repositoryUrlBase, '/' )
+		return rtrim( $provider->get_metadata()->repository_url_base, '/' )
 			. '/'
 			. rawurlencode( $parts[0] )
 			. '/'
@@ -1181,11 +1181,11 @@ final readonly class ProviderSettingsPresenter {
 			'code'               => $kind->code,
 			'label'              => $kind->label,
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			'short_label'        => $kind->shortLabel,
+			'short_label'        => $kind->short_label,
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			'secret_label'       => $kind->secretLabel,
+			'secret_label'       => $kind->secret_label,
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			'secret_placeholder' => $kind->secretPlaceholder,
+			'secret_placeholder' => $kind->secret_placeholder,
 			'fields'             => array_map( $this->credential_field( ... ), $kind->fields ),
 		);
 	}
@@ -1212,11 +1212,11 @@ final readonly class ProviderSettingsPresenter {
 			'code'               => $scope->code,
 			'label'              => $scope->label,
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			'requires_target'    => $scope->requiresTarget,
+			'requires_target'    => $scope->requires_target,
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			'target_label'       => $scope->targetLabel,
+			'target_label'       => $scope->target_label,
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			'target_placeholder' => $scope->targetPlaceholder,
+			'target_placeholder' => $scope->target_placeholder,
 			'description'        => $scope->description,
 		);
 	}
@@ -1226,14 +1226,14 @@ final readonly class ProviderSettingsPresenter {
 	 */
 	private function credential_profiles( string $provider, ProviderAdminMetadata $admin, bool $include_usage = false ): array {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		if ( array() === $admin->credentialKinds ) {
+		if ( array() === $admin->credential_kinds ) {
 			return array();
 		}
 
 		$profiles = array();
 
-		foreach ( $this->secrets->credentialProfiles( $provider ) as $profile ) {
-			$kind          = $admin->getCredentialKind( (string) ( $profile['kind'] ?? '' ) );
+		foreach ( $this->secrets->credential_profiles( $provider ) as $profile ) {
+			$kind          = $admin->get_credential_kind( (string) ( $profile['kind'] ?? '' ) );
 			$configuration = array();
 
 			if ( null !== $kind ) {
@@ -1252,7 +1252,7 @@ final readonly class ProviderSettingsPresenter {
 			if ( $include_usage ) {
 				try {
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-					$usage = array( 'available' => true ) + $this->credentialUsage->read( $provider, $id );
+					$usage = array( 'available' => true ) + $this->credential_usage->read( $provider, $id );
 				} catch ( RuntimeException ) {
 					$usage['available'] = false;
 				}
@@ -1312,15 +1312,15 @@ final readonly class ProviderSettingsPresenter {
 		array $managed_repositories
 	): array {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		if ( array() === $admin->webhookScopes ) {
+		if ( array() === $admin->webhook_scopes ) {
 			return array();
 		}
 
 		$profiles = array();
 
-		foreach ( $this->secrets->webhookProfiles( $provider ) as $profile ) {
+		foreach ( $this->secrets->webhook_profiles( $provider ) as $profile ) {
 			$scope = is_string( $profile['scope'] ?? null ) ? $profile['scope'] : '';
-			if ( null === $admin->getWebhookScope( $scope ) ) {
+			if ( null === $admin->get_webhook_scope( $scope ) ) {
 				continue;
 			}
 
@@ -1433,7 +1433,7 @@ final readonly class ProviderSettingsPresenter {
 		$provider       = is_array( $data['provider'] ?? null ) ? $data['provider'] : array();
 		$credentials    = is_array( $data['credential_profiles'] ?? null ) ? $data['credential_profiles'] : array();
 		$webhooks       = is_array( $data['webhook_profiles'] ?? null ) ? $data['webhook_profiles'] : array();
-		$state          = $data['providerListState'];
+		$state          = $data['provider_list_state'];
 		$provider_code  = is_string( $provider['code'] ?? null ) ? $provider['code'] : '';
 		$provider_label = is_string( $provider['label'] ?? null ) ? $provider['label'] : '';
 		$owner_label    = is_string( $provider['owner_label'] ?? null ) && '' !== trim( $provider['owner_label'] )
@@ -1479,37 +1479,37 @@ final readonly class ProviderSettingsPresenter {
 		);
 
 		return array(
-			'providerView'                   => in_array( $data['providerView'] ?? null, array( 'credentials', 'secrets' ), true ) ? $data['providerView'] : 'overview',
-			'providerListState'              => $state,
-			'publicLookupProfile'            => is_array( $data['public_lookup_profile'] ?? null ) ? $data['public_lookup_profile'] : null,
-			'webhookSetup'                   => is_array( $provider['webhook_setup'] ?? null ) ? $provider['webhook_setup'] : null,
-			'storageUnavailable'             => $storage_unavailable,
-			'hasCredentialSettings'          => $has_credentials,
-			'providerHasWebhookSettings'     => $provider_has_webhooks,
-			'hasWebhookSettings'             => ! $storage_unavailable && $provider_has_webhooks,
+			'provider_view'                   => in_array( $data['provider_view'] ?? null, array( 'credentials', 'secrets' ), true ) ? $data['provider_view'] : 'overview',
+			'provider_list_state'              => $state,
+			'public_lookup_profile'            => is_array( $data['public_lookup_profile'] ?? null ) ? $data['public_lookup_profile'] : null,
+			'webhook_setup'                   => is_array( $provider['webhook_setup'] ?? null ) ? $provider['webhook_setup'] : null,
+			'storage_unavailable'             => $storage_unavailable,
+			'has_credential_settings'          => $has_credentials,
+			'provider_has_webhook_settings'     => $provider_has_webhooks,
+			'has_webhook_settings'             => ! $storage_unavailable && $provider_has_webhooks,
 			'providerTrustDescription'       => sprintf( /* translators: 1: repository provider name, 2: repository provider code. */ __( 'The active %1$s provider can read every credential saved under provider code %2$s. Install and activate only providers you trust; Booster does not authenticate a third-party publisher.', 'ran-booster' ), $provider_label, $provider_code ),
-			'packageTypeLabels'              => array(
+			'package_type_labels'              => array(
 				'plugin' => __( 'Plugin', 'ran-booster' ),
 				'theme'  => __( 'Theme', 'ran-booster' ),
 			),
-			'overviewUrl'                    => $provider_url(),
-			'credentialsUrl'                 => $provider_url( array( 'view' => 'credentials' ) ),
-			'secretsUrl'                     => $provider_url( array( 'view' => 'secrets' ) ),
-			'providerListActionUrl'          => admin_url( 'admin.php' ),
-			'providerMutationFields'         => $mutation_fields,
-			'deleteWebhookInteractionValues' => is_string( $interaction_values ) ? $interaction_values : '{}',
-			'credentialRowCount'             => count( $credential_projection['rows'] ),
-			'credentialScopes'               => $credential_projection['scopes'],
-			'webhookRowCount'                => count( $webhook_rows ),
-			'readyWebhookProfileCount'       => count( array_filter( $webhook_rows, static fn ( array $row ): bool => 'ready' === ( $row['status_key'] ?? null ) ) ),
-			'credentialSummary'              => $summaries['credential'],
-			'webhookSummary'                 => $summaries['webhook'],
-			'credentialList'                 => $credential_list,
-			'webhookList'                    => $webhook_list,
-			'credentialSortUrls'             => $urls['credentials']['sort'],
-			'webhookSortUrls'                => $urls['secrets']['sort'],
-			'credentialPagination'           => $urls['credentials']['pagination'],
-			'webhookPagination'              => $urls['secrets']['pagination'],
+			'overview_url'                    => $provider_url(),
+			'credentials_url'                 => $provider_url( array( 'view' => 'credentials' ) ),
+			'secrets_url'                     => $provider_url( array( 'view' => 'secrets' ) ),
+			'provider_list_action_url'          => admin_url( 'admin.php' ),
+			'provider_mutation_fields'         => $mutation_fields,
+			'delete_webhook_interaction_values' => is_string( $interaction_values ) ? $interaction_values : '{}',
+			'credential_row_count'             => count( $credential_projection['rows'] ),
+			'credential_scopes'               => $credential_projection['scopes'],
+			'webhook_row_count'                => count( $webhook_rows ),
+			'ready_webhook_profile_count'       => count( array_filter( $webhook_rows, static fn ( array $row ): bool => 'ready' === ( $row['status_key'] ?? null ) ) ),
+			'credential_summary'              => $summaries['credential'],
+			'webhook_summary'                 => $summaries['webhook'],
+			'credential_list'                 => $credential_list,
+			'webhook_list'                    => $webhook_list,
+			'credential_sort_urls'             => $urls['credentials']['sort'],
+			'webhook_sort_urls'                => $urls['secrets']['sort'],
+			'credential_pagination'           => $urls['credentials']['pagination'],
+			'webhook_pagination'              => $urls['secrets']['pagination'],
 		) + $this->profile_copy( $provider_label );
 	}
 
@@ -1772,9 +1772,9 @@ final readonly class ProviderSettingsPresenter {
 	/** @return array<string,string> */
 	private function profile_copy( string $label ): array {
 		return array(
-			'providerBackLabel'               => sprintf( /* translators: %s is the repository provider name. */ __( 'Back to %s overview', 'ran-booster' ), $label ),
-			'credentialManagementDescription' => sprintf( /* translators: %s is the repository provider name. */ __( 'Manage saved credentials used for %s repository access.', 'ran-booster' ), $label ),
-			'secretManagementDescription'     => sprintf( /* translators: %s is the repository provider name. */ __( 'Manage local signing material used to verify %s webhook deliveries.', 'ran-booster' ), $label ),
+			'provider_back_label'               => sprintf( /* translators: %s is the repository provider name. */ __( 'Back to %s overview', 'ran-booster' ), $label ),
+			'credential_management_description' => sprintf( /* translators: %s is the repository provider name. */ __( 'Manage saved credentials used for %s repository access.', 'ran-booster' ), $label ),
+			'secret_management_description'     => sprintf( /* translators: %s is the repository provider name. */ __( 'Manage local signing material used to verify %s webhook deliveries.', 'ran-booster' ), $label ),
 		);
 	}
 

@@ -16,7 +16,7 @@ use RAN\Portability\PackageBlueprint;
 #[CoversClass( BlueprintCredential::class )]
 final class PackageBlueprintTest extends TestCase {
 
-	public function testCanonicalJsonUsesTheExactV1SchemaAndSortsPackages(): void {
+	public function test_canonical_json_uses_the_exact_v1_schema_and_sorts_packages(): void {
 		$blueprint = new PackageBlueprint( array( $this->package( 'theme', 'example-theme', 'Example Theme' ), $this->package() ) );
 
 		$json = $blueprint->canonical_json();
@@ -32,7 +32,7 @@ final class PackageBlueprintTest extends TestCase {
 		self::assertStringNotContainsString( 'token-canary', $json );
 	}
 
-	public function testUnknownVersionsFailBeforeNestedPackageOrCredentialParsing(): void {
+	public function test_unknown_versions_fail_before_nested_package_or_credential_parsing(): void {
 		$records = array(
 			array(
 				'packages'    => array( array( 'invalid_package' => true ) ),
@@ -68,7 +68,7 @@ final class PackageBlueprintTest extends TestCase {
 		}
 	}
 
-	public function testCredentialsAreCanonicalAndContainNoSourceId(): void {
+	public function test_credentials_are_canonical_and_contain_no_source_id(): void {
 		$credential = new BlueprintCredential(
 			'gh',
 			'Team token',
@@ -88,7 +88,7 @@ final class PackageBlueprintTest extends TestCase {
 		self::assertStringNotContainsString( 'source_id', $json );
 	}
 
-	public function testEmptyAndStructuredCredentialConfigurationRoundTrips(): void {
+	public function test_empty_and_structured_credential_configuration_round_trips(): void {
 		foreach ( array(
 			array(),
 			array(
@@ -104,14 +104,14 @@ final class PackageBlueprintTest extends TestCase {
 			) )->canonical_json();
 			self::assertSame( $json, PackageBlueprint::from_json( $json )->canonical_json() );
 		}
-		$emptyJson = ( new PackageBlueprint(
+		$empty_json = ( new PackageBlueprint(
 			array( $this->package() ),
 			array( new BlueprintCredential( 'gh', 'Token', 'custom', array(), 'secret', array( $this->identity() ) ) )
 		) )->canonical_json();
-		self::assertStringContainsString( '"configuration":{}', $emptyJson );
+		self::assertStringContainsString( '"configuration":{}', $empty_json );
 	}
 
-	public function testCredentialAssociationsMustReferenceOnePackageOfTheSameProvider(): void {
+	public function test_credential_associations_must_reference_one_package_of_the_same_provider(): void {
 		foreach ( array(
 			new BlueprintCredential( 'bb', 'Token', 'app-password', array(), 'secret', array( $this->identity() ) ),
 			new BlueprintCredential( 'gh', 'Token', 'classic', array(), 'secret', array( $this->identity( identifier: 'missing/missing.php' ) ) ),
@@ -134,7 +134,7 @@ final class PackageBlueprintTest extends TestCase {
 		);
 	}
 
-	public function testEquivalentCredentialMaterialCannotBeSplitAcrossRecords(): void {
+	public function test_equivalent_credential_material_cannot_be_split_across_records(): void {
 		$this->expectException( InvalidArgumentException::class );
 		new PackageBlueprint(
 			array( $this->package(), $this->package( 'theme', 'example-theme', 'Example Theme' ) ),
@@ -145,7 +145,7 @@ final class PackageBlueprintTest extends TestCase {
 		);
 	}
 
-	public function testRejectsInvalidCredentialRecordsAndCredentialLimit(): void {
+	public function test_rejects_invalid_credential_records_and_credential_limit(): void {
 		$valid = new BlueprintCredential( 'gh', 'Token', 'classic', array(), 'secret', array( $this->identity() ) );
 		try {
 			new PackageBlueprint( array(), array_fill( 0, PackageBlueprint::MAX_CREDENTIALS + 1, $valid ) );
@@ -164,7 +164,7 @@ final class PackageBlueprintTest extends TestCase {
 		}
 	}
 
-	public function testCredentialSecretIsRedactedFromConstructorTrace(): void {
+	public function test_credential_secret_is_redacted_from_constructor_trace(): void {
 		try {
 			new BlueprintCredential( 'gh', 'Token', 'classic', array(), "trace-secret-canary\n", array( $this->identity() ) );
 			self::fail( 'Expected an invalid credential secret.' );
@@ -174,7 +174,7 @@ final class PackageBlueprintTest extends TestCase {
 		}
 	}
 
-	public function testCredentialSecretIsRedactedFromParserTrace(): void {
+	public function test_credential_secret_is_redacted_from_parser_trace(): void {
 		$json = ( new PackageBlueprint(
 			array( $this->package() ),
 			array( new BlueprintCredential( 'gh', 'Token', 'classic', array(), 'parser-trace-secret-canary', array( $this->identity() ) ) )
@@ -190,7 +190,7 @@ final class PackageBlueprintTest extends TestCase {
 		}
 	}
 
-	public function testRejectsUnknownAndSecretAdjacentFields(): void {
+	public function test_rejects_unknown_and_secret_adjacent_fields(): void {
 		$record                 = $this->package()->to_array();
 		$record['access_token'] = 'token-canary';
 
@@ -198,10 +198,10 @@ final class PackageBlueprintTest extends TestCase {
 		BlueprintPackage::from_array( $record );
 	}
 
-	public function testRejectsEveryRemovedV1Field(): void {
-		foreach ( array( 'private', 'destination_slug' ) as $legacyField ) {
-			$record                 = $this->package()->to_array();
-			$record[ $legacyField ] = 'removed';
+	public function test_rejects_every_removed_v1_field(): void {
+		foreach ( array( 'private', 'destination_slug' ) as $legacy_field ) {
+			$record                  = $this->package()->to_array();
+			$record[ $legacy_field ] = 'removed';
 			try {
 				BlueprintPackage::from_array( $record );
 				self::fail( 'Expected a removed V1 field to be rejected.' );
@@ -216,7 +216,7 @@ final class PackageBlueprintTest extends TestCase {
 		PackageBlueprint::from_json( $json );
 	}
 
-	public function testRejectsInvalidUtf8AndResourceLimits(): void {
+	public function test_rejects_invalid_utf8_and_resource_limits(): void {
 		foreach ( array( "\xB1", str_repeat( ' ', PackageBlueprint::MAX_BYTES + 1 ) ) as $invalid ) {
 			try {
 				PackageBlueprint::from_json( $invalid );
@@ -227,12 +227,12 @@ final class PackageBlueprintTest extends TestCase {
 		}
 	}
 
-	public function testRejectsJsonPastTheMaximumNestingDepth(): void {
+	public function test_rejects_json_past_the_maximum_nesting_depth(): void {
 		$this->expectException( InvalidArgumentException::class );
 		PackageBlueprint::from_json( str_repeat( '{"record":', 17 ) . 'null' . str_repeat( '}', 17 ) );
 	}
 
-	public function testRejectsTooManyOrDuplicatePackages(): void {
+	public function test_rejects_too_many_or_duplicate_packages(): void {
 		try {
 			new PackageBlueprint( array_fill( 0, PackageBlueprint::MAX_PACKAGES + 1, $this->package() ) );
 			self::fail( 'Expected the package limit to be enforced.' );
@@ -244,7 +244,7 @@ final class PackageBlueprintTest extends TestCase {
 		new PackageBlueprint( array( $this->package(), $this->package() ) );
 	}
 
-	public function testPackageIdentityIncludesItsType(): void {
+	public function test_package_identity_includes_its_type(): void {
 		$plugin = $this->package( identifier: 'example.php' );
 		$theme  = $this->package( 'theme', 'example.php', 'Example Theme' );
 		$result = new PackageBlueprint(
@@ -255,7 +255,7 @@ final class PackageBlueprintTest extends TestCase {
 		self::assertCount( 2, $result->packages );
 	}
 
-	public function testRejectsConstructedBlueprintWhenCanonicalEncodingExceedsTheByteLimit(): void {
+	public function test_rejects_constructed_blueprint_when_canonical_encoding_exceeds_the_byte_limit(): void {
 		$packages = array();
 		for ( $index = 0; $index < PackageBlueprint::MAX_PACKAGES; ++$index ) {
 			$packages[] = new BlueprintPackage(
@@ -274,7 +274,7 @@ final class PackageBlueprintTest extends TestCase {
 		( new PackageBlueprint( $packages ) )->canonical_json();
 	}
 
-	public function testRejectsUrlLocatorsThatCanEmbedCredentials(): void {
+	public function test_rejects_url_locators_that_can_embed_credentials(): void {
 		$locators = array(
 			'https://token-canary@example.test/owner/repository',
 			'https://example.test/owner/repository?token=token-canary',
@@ -292,7 +292,7 @@ final class PackageBlueprintTest extends TestCase {
 		}
 	}
 
-	public function testRejectsDuplicateOrNonCanonicalJsonObjectKeys(): void {
+	public function test_rejects_duplicate_or_non_canonical_json_object_keys(): void {
 		$json    = ( new PackageBlueprint( array( $this->package() ) ) )->canonical_json();
 		$invalid = array(
 			str_replace( '"format":"ran-booster-package-blueprint"', '"format":"invalid","format":"ran-booster-package-blueprint"', $json ),
@@ -308,15 +308,15 @@ final class PackageBlueprintTest extends TestCase {
 		}
 	}
 
-	public function testDisplayNameIsBoundedInformationNotManagementIdentity(): void {
-		$left  = $this->package( displayName: 'Old Label' );
-		$right = $this->package( displayName: 'New Label' );
+	public function test_display_name_is_bounded_information_not_management_identity(): void {
+		$left  = $this->package( display_name: 'Old Label' );
+		$right = $this->package( display_name: 'New Label' );
 
 		self::assertTrue( $left->same_management_as( $right ) );
 
-		foreach ( array( '', ' padded ', "line\nbreak", "\xB1", str_repeat( 'x', 192 ) ) as $displayName ) {
+		foreach ( array( '', ' padded ', "line\nbreak", "\xB1", str_repeat( 'x', 192 ) ) as $display_name ) {
 			try {
-				$this->package( displayName: $displayName );
+				$this->package( display_name: $display_name );
 				self::fail( 'Expected an invalid display name to be rejected.' );
 			} catch ( InvalidArgumentException ) {
 				self::addToAssertionCount( 1 );
@@ -324,7 +324,7 @@ final class PackageBlueprintTest extends TestCase {
 		}
 	}
 
-	public function testEveryAuthoritativeFieldAffectsManagementEquality(): void {
+	public function test_every_authoritative_field_affects_management_equality(): void {
 		$package = $this->package();
 		$changed = array(
 			$this->package( identifier: 'other/other.php' ),
@@ -344,7 +344,7 @@ final class PackageBlueprintTest extends TestCase {
 		self::assertFalse( $plugin->same_management_as( $theme ) );
 	}
 
-	public function testRejectsNonCanonicalSubdirectory(): void {
+	public function test_rejects_non_canonical_subdirectory(): void {
 		foreach ( array( ' packages/example ', str_repeat( 'x', 256 ) ) as $subdirectory ) {
 			try {
 				new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', '123', 'owner/repository', 'main', $subdirectory );
@@ -355,8 +355,8 @@ final class PackageBlueprintTest extends TestCase {
 		}
 	}
 
-	private function package( string $type = 'plugin', string $identifier = 'example/example.php', string $displayName = 'Example Plugin' ): BlueprintPackage {
-		return new BlueprintPackage( $type, $identifier, $displayName, 'gh', '123', 'owner/repository', 'main', null );
+	private function package( string $type = 'plugin', string $identifier = 'example/example.php', string $display_name = 'Example Plugin' ): BlueprintPackage {
+		return new BlueprintPackage( $type, $identifier, $display_name, 'gh', '123', 'owner/repository', 'main', null );
 	}
 
 	/** @return array{type:string,identifier:string} */

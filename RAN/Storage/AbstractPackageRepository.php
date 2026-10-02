@@ -18,10 +18,8 @@ abstract class AbstractPackageRepository {
 
 	private ?Database $database_lifecycle = null;
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-	public function __construct( ?Database $databaseLifecycle = null ) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-		$this->database_lifecycle = $databaseLifecycle;
+	public function __construct( ?Database $database_lifecycle = null ) {
+		$this->database_lifecycle = $database_lifecycle;
 	}
 
 	/**
@@ -47,7 +45,7 @@ abstract class AbstractPackageRepository {
 	}
 
 	public function unlink( mixed $identifier ): PackageMutationResult {
-		RuntimeSupport::assertManagedOperationsAllowed();
+		RuntimeSupport::assert_managed_operations_allowed();
 
 		global $wpdb;
 
@@ -81,7 +79,7 @@ abstract class AbstractPackageRepository {
 	 * Atomically fence every stale package command before destructive removal.
 	 */
 	protected function disable_package_for_removal( Package $package ): PackageMutationResult {
-		RuntimeSupport::assertManagedOperationsAllowed();
+		RuntimeSupport::assert_managed_operations_allowed();
 
 		global $wpdb;
 
@@ -122,7 +120,7 @@ abstract class AbstractPackageRepository {
 	 * @param array<string, mixed> $input Sanitized command input.
 	 */
 	protected function edit_package( mixed $identifier, array $input ): PackageMutationResult {
-		RuntimeSupport::assertManagedOperationsAllowed();
+		RuntimeSupport::assert_managed_operations_allowed();
 
 		global $wpdb;
 
@@ -156,9 +154,9 @@ abstract class AbstractPackageRepository {
 					'deployment_policy'      => $input['deployment_policy'] ?? DeploymentPolicy::MANUAL->value,
 					'subdirectory'           => $input['subdirectory'],
 					'private'                => $repository->reference->private,
-					'credential_id'          => $repository->reference->credentialId ?? '',
+					'credential_id'          => $repository->reference->credential_id ?? '',
 					'provider'               => $repository->provider->value,
-					'provider_repository_id' => $repository->reference->providerRepositoryId,
+					'provider_repository_id' => $repository->reference->provider_repository_id,
 				)
 			);
 		} catch ( InvalidArgumentException ) {
@@ -249,7 +247,7 @@ abstract class AbstractPackageRepository {
 	 * @return array{selected: int, changed: int, unchanged: int}
 	 */
 	protected function set_deployment_policies( array $snapshots, DeploymentPolicy $policy ): array {
-		RuntimeSupport::assertManagedOperationsAllowed();
+		RuntimeSupport::assert_managed_operations_allowed();
 
 		global $wpdb;
 
@@ -368,7 +366,7 @@ abstract class AbstractPackageRepository {
 	}
 
 	protected function store_package( Package $package ): PackageMutationResult {
-		RuntimeSupport::assertManagedOperationsAllowed();
+		RuntimeSupport::assert_managed_operations_allowed();
 
 		global $wpdb;
 
@@ -445,7 +443,7 @@ abstract class AbstractPackageRepository {
 
 	/** Store an installed package only when no management row exists yet. */
 	protected function adopt_package( Package $package ): PackageMutationResult {
-		RuntimeSupport::assertManagedOperationsAllowed();
+		RuntimeSupport::assert_managed_operations_allowed();
 
 		global $wpdb;
 
@@ -534,23 +532,21 @@ abstract class AbstractPackageRepository {
 	protected function adopt_release_package(
 		Package $package,
 		ManagedReleaseConfiguration $configuration,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-		int $userId
+		int $user_id
 	): PackageMutationResult {
-		RuntimeSupport::assertManagedOperationsAllowed();
+		RuntimeSupport::assert_managed_operations_allowed();
 
 		global $wpdb;
 
 		$identifier = (string) $package->get_identifier();
 		$expected   = 1 === $this->package_type()
-			? $configuration->packageRoot() . '/' . $configuration->metadataFile()
-			: $configuration->packageRoot();
+			? $configuration->package_root() . '/' . $configuration->metadata_file()
+			: $configuration->package_root();
 		if ( PackageSource::RELEASE_ASSET !== $package->get_source()
 			|| 1 !== $package->get_source_revision()
 			|| null !== $package->get_subdirectory()
 			|| ! hash_equals( $expected, $identifier )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-			|| $userId < 0 ) {
+			|| $user_id < 0 ) {
 			return $this->source_conflict_result();
 		}
 
@@ -592,9 +588,8 @@ abstract class AbstractPackageRepository {
 					'type'                  => $this->package_type(),
 					'source_previous'       => null,
 					'source_changed_at'     => current_time( 'mysql', true ),
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-					'source_changed_by'     => $userId > 0 ? $userId : null,
-					'release_configuration' => $configuration->toJson(),
+					'source_changed_by'     => $user_id > 0 ? $user_id : null,
+					'release_configuration' => $configuration->to_json(),
 				),
 				$data
 			);
@@ -641,13 +636,13 @@ abstract class AbstractPackageRepository {
 				'repository'             => (string) $repository,
 				'branch'                 => $repository->branch,
 				'provider'               => $repository->provider->value,
-				'provider_repository_id' => $repository->reference->providerRepositoryId,
+				'provider_repository_id' => $repository->reference->provider_repository_id,
 				'private'                => $repository->reference->private,
 				'deployment_policy'      => $package->get_deployment_policy()->value,
 				'source'                 => $package->get_source()->value,
 				'source_revision'        => $package->get_source_revision(),
 				'subdirectory'           => $package->get_subdirectory(),
-				'credential_id'          => $repository->reference->credentialId ?? '',
+				'credential_id'          => $repository->reference->credential_id ?? '',
 			)
 		);
 		if ( ! $this->package_exists( (string) $model->package ) ) {
@@ -951,7 +946,7 @@ abstract class AbstractPackageRepository {
 	private function require_storage_support( PackageStorageOperation $operation ): void {
 		$this->database_lifecycle ??= new Database();
 		try {
-			$this->database_lifecycle->requireReady();
+			$this->database_lifecycle->require_ready();
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The enum is converted into a display-safe typed storage failure.
 			throw PackageStorageFailure::unsupported_database( $operation );

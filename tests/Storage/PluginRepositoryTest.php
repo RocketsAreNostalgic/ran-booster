@@ -35,29 +35,29 @@ final class PluginRepositoryTest extends TestCase {
 		);
 	}
 
-	public function testSlugHydrationDoesNotRequireAGlobalContainer(): void {
+	public function test_slug_hydration_does_not_require_aglobal_container(): void {
 		$plugin = ( new PluginRepository() )->from_slug( 'example' );
 
 		self::assertInstanceOf( Plugin::class, $plugin );
 		self::assertSame( 'example/example.php', $plugin->get_identifier() );
 	}
 
-	public function testMissingSlugThrowsInsteadOfCreatingAnEmptyPluginIdentity(): void {
+	public function test_missing_slug_throws_instead_of_creating_an_empty_plugin_identity(): void {
 		$repository = new PluginRepository();
 
 		$this->expectException( PluginNotFound::class );
 		$repository->from_slug( 'missing-package' );
 	}
 
-	public function testPluginInstallationCheckRequiresAWordPressRegisteredPlugin(): void {
+	public function test_plugin_installation_check_requires_aword_press_registered_plugin(): void {
 		$repository = new class() extends PluginRepository {
-			public function packageExistsForTest( string $identifier ): bool {
+			public function package_exists_for_test( string $identifier ): bool {
 				return $this->package_exists( $identifier );
 			}
 		};
 
-		self::assertTrue( $repository->packageExistsForTest( 'example/example.php' ) );
-		self::assertFalse( $repository->packageExistsForTest( '' ) );
-		self::assertFalse( $repository->packageExistsForTest( 'example/other.php' ) );
+		self::assertTrue( $repository->package_exists_for_test( 'example/example.php' ) );
+		self::assertFalse( $repository->package_exists_for_test( '' ) );
+		self::assertFalse( $repository->package_exists_for_test( 'example/other.php' ) );
 	}
 }

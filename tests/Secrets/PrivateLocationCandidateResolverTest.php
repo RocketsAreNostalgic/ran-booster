@@ -13,25 +13,25 @@ use RAN\Secrets\PrivateLocationCandidateResolver;
 final class PrivateLocationCandidateResolverTest extends TestCase {
 
 	private string $root;
-	private string $temporaryBoundary;
+	private string $temporary_boundary;
 
 	protected function setUp(): void {
-		$suffix                  = bin2hex( random_bytes( 6 ) );
-		$this->root              = sys_get_temp_dir() . '/ran-booster-location-' . $suffix;
-		$this->temporaryBoundary = sys_get_temp_dir() . '/ran-booster-temporary-boundary-' . $suffix;
+		$suffix                   = bin2hex( random_bytes( 6 ) );
+		$this->root               = sys_get_temp_dir() . '/ran-booster-location-' . $suffix;
+		$this->temporary_boundary = sys_get_temp_dir() . '/ran-booster-temporary-boundary-' . $suffix;
 		mkdir( $this->root . '/account/site/public/wp-content/plugins/ran-booster', 0700, true );
 		mkdir( $this->root . '/account/site/.git', 0700 );
-		mkdir( $this->temporaryBoundary, 0700 );
+		mkdir( $this->temporary_boundary, 0700 );
 		$this->root = (string) realpath( $this->root );
 	}
 
 	protected function tearDown(): void {
 		$this->remove( $this->root );
-		$this->remove( $this->temporaryBoundary );
+		$this->remove( $this->temporary_boundary );
 	}
 
-	public function testSuggestsStableSiteSpecificPathOutsideRepositoryAndWebRoots(): void {
-		$resolver  = new PrivateLocationCandidateResolver( $this->temporaryBoundary );
+	public function test_suggests_stable_site_specific_path_outside_repository_and_web_roots(): void {
+		$resolver  = new PrivateLocationCandidateResolver( $this->temporary_boundary );
 		$candidate = $resolver->resolve(
 			$this->root . '/account/site/public',
 			$this->root . '/account/site/public/wp-content',
@@ -64,9 +64,9 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 		self::assertDirectoryDoesNotExist( $this->root . '/account/.ran-booster' );
 	}
 
-	public function testNeverSuggestsAPathThatFailsTheConfiguredAncestorPolicy(): void {
+	public function test_never_suggests_apath_that_fails_the_configured_ancestor_policy(): void {
 		self::assertTrue( chmod( $this->root . '/account', 0770 ) );
-		$resolver  = new PrivateLocationCandidateResolver( $this->temporaryBoundary );
+		$resolver  = new PrivateLocationCandidateResolver( $this->temporary_boundary );
 		$discarded = array();
 
 		self::assertNull(
@@ -91,9 +91,9 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 		);
 	}
 
-	public function testRejectsAGroupWritableAncestorOwnedByPhpEvenWhenOwnerWriteIsDisabled(): void {
+	public function test_rejects_agroup_writable_ancestor_owned_by_php_even_when_owner_write_is_disabled(): void {
 		self::assertTrue( chmod( $this->root, 0570 ) );
-		$resolver  = new PrivateLocationCandidateResolver( $this->temporaryBoundary );
+		$resolver  = new PrivateLocationCandidateResolver( $this->temporary_boundary );
 		$discarded = array();
 
 		try {
@@ -113,9 +113,9 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 		}
 	}
 
-	public function testRejectsAWorldWritableHostAncestor(): void {
+	public function test_rejects_aworld_writable_host_ancestor(): void {
 		self::assertTrue( chmod( $this->root, 0777 ) );
-		$resolver  = new PrivateLocationCandidateResolver( $this->temporaryBoundary );
+		$resolver  = new PrivateLocationCandidateResolver( $this->temporary_boundary );
 		$discarded = array();
 
 		try {
@@ -135,9 +135,9 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 		}
 	}
 
-	public function testRejectsUnrelatedOrSymlinkedBoundaries(): void {
+	public function test_rejects_unrelated_or_symlinked_boundaries(): void {
 		mkdir( $this->root . '/other', 0700 );
-		$resolver = new PrivateLocationCandidateResolver( $this->temporaryBoundary );
+		$resolver = new PrivateLocationCandidateResolver( $this->temporary_boundary );
 		self::assertNull(
 			$resolver->resolve(
 				$this->root . '/account/site/public',
@@ -156,8 +156,8 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 		);
 	}
 
-	public function testConfiguredPathMustRemainOutsideUnsafeRootsAndHaveNoSymlinkedComponents(): void {
-		$resolver  = new PrivateLocationCandidateResolver( $this->temporaryBoundary );
+	public function test_configured_path_must_remain_outside_unsafe_roots_and_have_no_symlinked_components(): void {
+		$resolver  = new PrivateLocationCandidateResolver( $this->temporary_boundary );
 		$wordpress = $this->root . '/account/site/public';
 		$content   = $wordpress . '/wp-content';
 		$plugin    = $content . '/plugins/ran-booster';

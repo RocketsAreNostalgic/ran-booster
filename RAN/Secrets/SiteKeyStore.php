@@ -25,16 +25,14 @@ class SiteKeyStore {
 		$this->missing_value = new \stdClass();
 	}
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-	public function load( bool $repairAutoload = true ): ?string {
+	public function load( bool $repair_autoload = true ): ?string {
 		$value = $this->read_stored_value();
 		if ( $this->missing_value === $value ) {
 			return null;
 		}
 
 		$key = $this->decode_stored_key( $value );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		$this->verify_non_autoloaded( $repairAutoload );
+		$this->verify_non_autoloaded( $repair_autoload );
 
 		return $key;
 	}

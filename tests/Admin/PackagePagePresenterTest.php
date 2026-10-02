@@ -104,7 +104,7 @@ final class PackagePagePresenterTest extends TestCase {
 		);
 
 		$view       = PackagePagePresenter::plugin()->create( array(), false, false, 'branch' );
-		$projection = $view['packageSource']['advanced_summary_projection'];
+		$projection = $view['package_source']['advanced_summary_projection'];
 
 		self::assertSame( 'Branch', $projection['heading'] );
 		self::assertSame( array(), $projection['badges'] );

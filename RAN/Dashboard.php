@@ -87,15 +87,15 @@ class Dashboard {
 	 * @param PluginRepository $plugins
 	 * @param Booster $booster
 	 * @param ThemeRepository               $themes           Theme packages.
-	 * @param ProviderSettingsPresenter $providerSettings Provider settings presenter.
+	 * @param ProviderSettingsPresenter $provider_settings Provider settings presenter.
 	 * @param TroubleshootingService    $troubleshooting Bounded same-request diagnostics.
-	 * @param AdminTabRegistry|null      $adminTabs        Allowlisted admin navigation.
-	 * @param ProviderDocumentationPresenter|null $providerDocumentation Display-safe provider documentation.
-	 * @param PackageOperationService|null      $packageOperations Explicit package-operation boundary.
-	 * @param DeploymentAttemptRepository|null $deploymentAttempts    Bounded operator history reads.
-	 * @param TemporaryDebugCapture|null        $debugCapture          Bounded Booster-only event capture.
-	 * @param AdminAddOnRegistry|null            $adminAddOns           Registered public add-on tabs.
-	 * @param CoreSelfUpdateDevelopmentNotice|null $coreSelfUpdateDevelopmentNotice Core-owned source-checkout notice.
+	 * @param AdminTabRegistry|null      $admin_tabs        Allowlisted admin navigation.
+	 * @param ProviderDocumentationPresenter|null $provider_documentation Display-safe provider documentation.
+	 * @param PackageOperationService|null      $package_operations Explicit package-operation boundary.
+	 * @param DeploymentAttemptRepository|null $deployment_attempts    Bounded operator history reads.
+	 * @param TemporaryDebugCapture|null        $debug_capture          Bounded Booster-only event capture.
+	 * @param AdminAddOnRegistry|null            $admin_add_ons           Registered public add-on tabs.
+	 * @param CoreSelfUpdateDevelopmentNotice|null $core_self_update_development_notice Core-owned source-checkout notice.
 	 */
 	public function __construct(
 		Database $db,
@@ -103,67 +103,67 @@ class Dashboard {
 		Booster $booster,
 		ThemeRepository $themes,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		ProviderSettingsPresenter $providerSettings,
+		ProviderSettingsPresenter $provider_settings,
 		TroubleshootingService $troubleshooting,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?AdminTabRegistry $adminTabs = null,
+		?AdminTabRegistry $admin_tabs = null,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?ProviderDocumentationPresenter $providerDocumentation = null,
+		?ProviderDocumentationPresenter $provider_documentation = null,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?PackageOperationService $packageOperations = null,
+		?PackageOperationService $package_operations = null,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?DeploymentAttemptRepository $deploymentAttempts = null,
+		?DeploymentAttemptRepository $deployment_attempts = null,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?TemporaryDebugCapture $debugCapture = null,
+		?TemporaryDebugCapture $debug_capture = null,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?SecretsStorageProvisioner $secretsStorage = null,
+		?SecretsStorageProvisioner $secrets_storage = null,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?AdminAddOnRegistry $adminAddOns = null,
+		?AdminAddOnRegistry $admin_add_ons = null,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?RepositoryWebhookManagementControls $webhookManagement = null,
+		?RepositoryWebhookManagementControls $webhook_management = null,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?CoreSelfUpdateDevelopmentNotice $coreSelfUpdateDevelopmentNotice = null,
+		?CoreSelfUpdateDevelopmentNotice $core_self_update_development_notice = null,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?ReleaseWorkflowControls $releaseWorkflow = null
+		?ReleaseWorkflowControls $release_workflow = null
 	) {
 		$this->db      = $db;
 		$this->plugins = $plugins;
 		$this->booster = $booster;
 		$this->themes  = $themes;
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->provider_settings = $providerSettings;
+		$this->provider_settings = $provider_settings;
 		$this->troubleshooting   = $troubleshooting;
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->admin_tabs = $adminTabs;
+		$this->admin_tabs = $admin_tabs;
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->provider_documentation = $providerDocumentation;
+		$this->provider_documentation = $provider_documentation;
 		$this->deployment_admin       = new DeploymentAdminPresenter(
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			attempts: $deploymentAttempts,
+			attempts: $deployment_attempts,
 			plugins: $plugins,
 			themes: $themes
 		);
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->package_admin = new PackageAdminController( $packageOperations, deployments: $this->deployment_admin );
+		$this->package_admin = new PackageAdminController( $package_operations, deployments: $this->deployment_admin );
 		$this->plugin_pages  = PackagePagePresenter::plugin();
 		$this->theme_pages   = PackagePagePresenter::theme();
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->debug_capture = $debugCapture;
+		$this->debug_capture = $debug_capture;
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->secrets_storage = $secretsStorage;
+		$this->secrets_storage = $secrets_storage;
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->admin_add_ons = $adminAddOns;
+		$this->admin_add_ons = $admin_add_ons;
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->webhook_management = $webhookManagement;
+		$this->webhook_management = $webhook_management;
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->release_workflow = $releaseWorkflow;
+		$this->release_workflow = $release_workflow;
 
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->core_self_update_development_notice = $coreSelfUpdateDevelopmentNotice;
+		$this->core_self_update_development_notice = $core_self_update_development_notice;
 	}
 
 	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function get_index( ?string $forcedTab = null ) {
+	public function get_index( ?string $forced_tab = null ) {
 		if ( null === $this->admin_tabs ) {
 			throw new LogicException( 'Booster admin tabs are not configured.' );
 		}
@@ -171,9 +171,9 @@ class Dashboard {
 		$requested_tab = null;
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only allowlisted navigation state.
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( null !== $forcedTab && '' !== $forcedTab ) {
+		if ( null !== $forced_tab && '' !== $forced_tab ) {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$requested_tab = $forcedTab;
+			$requested_tab = $forced_tab;
 		} elseif ( isset( $_GET['tab'] ) && is_string( $_GET['tab'] ) ) {
 			// Read-only navigation state; no action is performed from this query value.
 			$requested_tab = wp_unslash( $_GET['tab'] );
@@ -185,7 +185,7 @@ class Dashboard {
 			? null
 			: $this->admin_add_ons->get( $requested_add_on_key );
 		$selected_tab         = null === $selected_add_on ? $this->admin_tabs->resolve( $requested_tab ) : null;
-		$selected_key         = null === $selected_add_on ? $selected_tab->getKey() : $selected_add_on->key();
+		$selected_key         = null === $selected_add_on ? $selected_tab->get_key() : $selected_add_on->key();
 		$tabs                 = $this->tab_navigation( $selected_key );
 		$admin_url            = is_multisite()
 			? network_admin_url( 'admin.php' )
@@ -195,17 +195,17 @@ class Dashboard {
 			'tabs' => $tabs,
 		);
 		if ( null !== $selected_add_on && null !== $this->admin_add_ons ) {
-			$data['addOnTab']     = $selected_add_on;
-			$data['addOnContext'] = $this->admin_add_ons->contextFor(
+			$data['add_on_tab']     = $selected_add_on;
+			$data['add_on_context'] = $this->admin_add_ons->context_for(
 				$selected_add_on,
 				$admin_url . '?page=ran-booster&tab=' . rawurlencode( $selected_add_on->key() ),
 				is_multisite() ? 'network' : 'site'
 			);
 		} else {
-			$data['tabView'] = $selected_tab->getView();
+			$data['tab_view'] = $selected_tab->get_view();
 		}
 
-		if ( null !== $selected_tab && 'overview' === $selected_tab->getKey() ) {
+		if ( null !== $selected_tab && 'overview' === $selected_tab->get_key() ) {
 			$data['onboarding'] = ( new OnboardingPresenter() )->build(
 				$tabs,
 				$admin_url . '?page=ran-booster-plugins-create',
@@ -232,36 +232,36 @@ class Dashboard {
 			}
 		}
 
-		if ( null !== $selected_tab && $selected_tab->isProvider() ) {
-			$provider                  = $selected_tab->getProvider();
+		if ( null !== $selected_tab && $selected_tab->is_provider() ) {
+			$provider                  = $selected_tab->get_provider();
 			$data                      = array_merge(
 				$data,
 				$this->provider_settings->build( null === $provider ? null : $provider->value )
 			);
-			$data['providerView']      = $this->requested_provider_view();
-			$data['providerTask']      = $this->requested_provider_task();
-			$data['repositoryView']    = $this->requested_provider_repository_view();
-			$data['providerListState'] = $this->requested_provider_list_state();
+			$data['provider_view']      = $this->requested_provider_view();
+			$data['provider_task']      = $this->requested_provider_task();
+			$data['repository_view']    = $this->requested_provider_repository_view();
+			$data['provider_list_state'] = $this->requested_provider_list_state();
 
-			$data['requestedRepositoryId']           = $this->requested_provider_repository_id();
+			$data['requested_repository_id']           = $this->requested_provider_repository_id();
 			$data                                    = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->project_page( $data, $this->webhook_management, $this->release_workflow ) );
 			$data                                    = array_merge( $data, $this->provider_settings->build_profile_list_projection( $data ) );
-			$data['webhookManagement']               = $this->webhook_management;
+			$data['webhook_management']               = $this->webhook_management;
 			$data['releaseWorkflow']                 = $this->release_workflow;
-			$data['statusSummaryRenderer']           = new AdminStatusSummaryRenderer();
-			$data['providerManagementTableRenderer'] = new ProviderManagementTableRenderer();
-			$data['repositoryDetailRenderer']        = new RepositoryDetailRenderer();
-			$data['repositoryTableRenderer']         = new RepositoryTableRenderer();
-		} elseif ( null !== $selected_tab && 'portability' === $selected_tab->getKey() ) {
+			$data['status_summary_renderer']           = new AdminStatusSummaryRenderer();
+			$data['provider_management_table_renderer'] = new ProviderManagementTableRenderer();
+			$data['repository_detail_renderer']        = new RepositoryDetailRenderer();
+			$data['repository_table_renderer']         = new RepositoryTableRenderer();
+		} elseif ( null !== $selected_tab && 'portability' === $selected_tab->get_key() ) {
 			try {
 				$export                               = $this->portability_export_data();
-				$data['portabilityExportRows']        = $export['rows'];
-				$data['portabilityExportUnavailable'] = false;
+				$data['portability_export_rows']        = $export['rows'];
+				$data['portability_export_unavailable'] = false;
 				try {
-					$data['portabilityExportCredentialGroups']       = $this->provider_settings->build_portability_credentials( $export['credentials'] );
-					$data['portabilityExportCredentialsUnavailable'] = false;
+					$data['portability_export_credential_groups']       = $this->provider_settings->build_portability_credentials( $export['credentials'] );
+					$data['portability_export_credentials_unavailable'] = false;
 				} catch ( Throwable $failure ) {
-					BoosterLogger::logException(
+					BoosterLogger::log_exception(
 						'portability export credentials unavailable',
 						$failure,
 						array(
@@ -269,11 +269,11 @@ class Dashboard {
 							'step'   => 'portability_export_credentials',
 						)
 					);
-					$data['portabilityExportCredentialGroups']       = array();
-					$data['portabilityExportCredentialsUnavailable'] = true;
+					$data['portability_export_credential_groups']       = array();
+					$data['portability_export_credentials_unavailable'] = true;
 				}
 			} catch ( Throwable $failure ) {
-				BoosterLogger::logException(
+				BoosterLogger::log_exception(
 					'portability export rows unavailable',
 					$failure,
 					array(
@@ -281,28 +281,28 @@ class Dashboard {
 						'step'   => 'portability_export_rows',
 					)
 				);
-				$data['portabilityExportRows']                   = array();
-				$data['portabilityExportUnavailable']            = true;
-				$data['portabilityExportCredentialGroups']       = array();
-				$data['portabilityExportCredentialsUnavailable'] = false;
+				$data['portability_export_rows']                   = array();
+				$data['portability_export_unavailable']            = true;
+				$data['portability_export_credential_groups']       = array();
+				$data['portability_export_credentials_unavailable'] = false;
 			}
-		} elseif ( null !== $selected_tab && 'documentation' === $selected_tab->getKey() ) {
-			$data['providerDocumentation'] = null === $this->provider_documentation
+		} elseif ( null !== $selected_tab && 'documentation' === $selected_tab->get_key() ) {
+			$data['provider_documentation'] = null === $this->provider_documentation
 				? array()
 				: $this->provider_documentation->build();
-			$data['documentationUrl']      = $admin_url . '?page=ran-booster&tab=documentation';
-			$data['documentationScope']    = is_multisite() ? 'network' : 'site';
-		} elseif ( null !== $selected_tab && 'troubleshooting' === $selected_tab->getKey() ) {
+			$data['documentation_url']      = $admin_url . '?page=ran-booster&tab=documentation';
+			$data['documentation_scope']    = is_multisite() ? 'network' : 'site';
+		} elseif ( null !== $selected_tab && 'troubleshooting' === $selected_tab->get_key() ) {
 			$panel                        = $this->requested_troubleshooting_panel();
-			$data['troubleshootingPanel'] = $panel;
+			$data['troubleshooting_panel'] = $panel;
 			if ( 'debug-capture' === $panel ) {
 				$data['troubleshooting'] = array();
-				$data['debugCapture']    = $this->debug_capture_payload();
+				$data['debug_capture']    = $this->debug_capture_payload();
 			} elseif ( 'activity' === $panel ) {
 				$data['troubleshooting']    = array();
-				$data['deploymentActivity'] = $this->deployment_admin->activity();
+				$data['deployment_activity'] = $this->deployment_admin->activity();
 			} else {
-				$data['troubleshooting'] = $this->troubleshooting_payload ?? $this->troubleshooting->formPayload();
+				$data['troubleshooting'] = $this->troubleshooting_payload ?? $this->troubleshooting->form_payload();
 			}
 		}
 
@@ -320,10 +320,10 @@ class Dashboard {
 	 * has performed the action's ordinary capability and nonce checks.
 	 */
 	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function render_public_lookup_profile_region( string $providerCode, ?string $error = null ): string {
+	public function render_public_lookup_profile_region( string $provider_code, ?string $error = null ): string {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$settings                             = $this->provider_settings->build( $providerCode );
-		$settings['publicLookupProfileError'] = $error;
+		$settings                             = $this->provider_settings->build( $provider_code );
+		$settings['public_lookup_profile_error'] = $error;
 
 		ob_start();
 		// Internal controllers provide the fixed presentation payload. No request
@@ -342,9 +342,9 @@ class Dashboard {
 	 */
 	public function render_debug_capture_region( ?string $error = null ): string {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the include-scope view input contract.
-		$debugCapture = $this->debug_capture_payload();
+		$debug_capture = $this->debug_capture_payload();
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the include-scope view input contract.
-		$debugCaptureError = $error;
+		$debug_capture_error = $error;
 
 		ob_start();
 		require __DIR__ . '/../views/debug-capture.php';
@@ -398,7 +398,7 @@ class Dashboard {
 				$index         = count( $rows );
 				$rows[]        = array(
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-					'name'       => $blueprint->displayName,
+					'name'       => $blueprint->display_name,
 					'identifier' => $blueprint->identifier,
 					'type'       => $blueprint->type,
 				);
@@ -407,7 +407,7 @@ class Dashboard {
 					$credentials[ $blueprint->provider ][ $credential_id ][] = array(
 						'index' => $index,
 						// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-						'name'  => $blueprint->displayName,
+						'name'  => $blueprint->display_name,
 						'type'  => $blueprint->type,
 					);
 				}
@@ -429,8 +429,8 @@ class Dashboard {
 	/** Render the Core-owned Diagnostics panel after an explicit HTMX request. */
 	public function render_troubleshooting_diagnostics_region(): string {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the include-scope view input contract.
-		$troubleshootingPanel = 'diagnostics';
-		$troubleshooting      = $this->troubleshooting_payload ?? $this->troubleshooting->formPayload();
+		$troubleshooting_panel = 'diagnostics';
+		$troubleshooting      = $this->troubleshooting_payload ?? $this->troubleshooting->form_payload();
 
 		ob_start();
 		require __DIR__ . '/../views/troubleshooting.php';
@@ -472,13 +472,13 @@ class Dashboard {
 
 	/** @param list<array<string, mixed>> $extensions */
 	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function get_extensions( array $extensions, string $pluginsUrl ) {
+	public function get_extensions( array $extensions, string $plugins_url ) {
 		return $this->render(
 			'extensions',
 			array(
 				'extensions' => $extensions,
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				'pluginsUrl' => $pluginsUrl,
+				'plugins_url' => $plugins_url,
 			)
 		);
 	}
@@ -508,8 +508,8 @@ class Dashboard {
 					$this->requested_package_source_view(),
 					$this->requested_advanced_settings_open()
 				);
-				$edit_data['repositoryBranchCheckOutcome']  = $repository_branch_check_outcome;
-				$edit_data['repositoryBranchCheckEvidence'] = $repository_branch_check_evidence;
+				$edit_data['repository_branch_check_outcome']  = $repository_branch_check_outcome;
+				$edit_data['repository_branch_check_evidence'] = $repository_branch_check_evidence;
 				return $this->render(
 					'packages/edit',
 					$edit_data
@@ -666,7 +666,7 @@ class Dashboard {
 
 	private function render_package_create( PackagePagePresenter $package_view ): mixed {
 		try {
-			$this->db->requireReady();
+			$this->db->require_ready();
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
 			return $this->database_unavailable_create( $package_view, $package_view->get_type() );
 		}
@@ -722,7 +722,7 @@ class Dashboard {
 			if ( null === $failure ) {
 				BoosterLogger::log( 'admin ' . $severity . ' notice emitted', $context );
 			} else {
-				BoosterLogger::logException( 'admin ' . $severity . ' notice emitted', $failure, $context );
+				BoosterLogger::log_exception( 'admin ' . $severity . ' notice emitted', $failure, $context );
 			}
 		}
 
@@ -980,7 +980,7 @@ class Dashboard {
 		try {
 			$snapshot = $this->debug_capture->snapshot();
 		} catch ( Throwable $failure ) {
-			BoosterLogger::logException(
+			BoosterLogger::log_exception(
 				'debug capture snapshot unavailable',
 				$failure,
 				array(
@@ -1019,15 +1019,15 @@ class Dashboard {
 		$tabs      = array();
 
 		foreach ( $this->admin_tabs->all() as $tab ) {
-			$tab_key = $tab->getKey();
+			$tab_key = $tab->get_key();
 			$tabs[]  = array(
 				'key'      => $tab_key,
-				'label'    => $tab->getLabel(),
+				'label'    => $tab->get_label(),
 				'url'      => 'portability' === $tab_key
 					? $admin_url . '?page=ran-booster-transporter'
 					: $admin_url . '?page=ran-booster&tab=' . rawurlencode( $tab_key ),
 				'active'   => $selected_key === $tab_key,
-				'provider' => $tab->isProvider(),
+				'provider' => $tab->is_provider(),
 			);
 		}
 		if ( null !== $this->admin_add_ons ) {
@@ -1050,15 +1050,15 @@ class Dashboard {
 		}
 
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the include-scope view input contract.
-		$developmentEnvironmentDetected = DevelopmentEnvironmentDetector::is_likely();
+		$development_environment_detected = DevelopmentEnvironmentDetector::is_likely();
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the include-scope view input contract.
-		$data['developmentEnvironmentDetected'] = $developmentEnvironmentDetected;
+		$data['development_environment_detected'] = $development_environment_detected;
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the include-scope view input contract.
-		$data['developmentSafetyNotice'] = $this->should_show_development_safety_notice( $view, $data, $developmentEnvironmentDetected );
+		$data['development_safety_notice'] = $this->should_show_development_safety_notice( $view, $data, $development_environment_detected );
 		$data['messages']                = $this->messages;
 		$data['name']                    = $this->booster->get_name();
 
-		$data['coreSelfUpdateDevelopmentNotice'] = $this->core_self_update_development_notice;
+		$data['core_self_update_development_notice'] = $this->core_self_update_development_notice;
 		if ( ! isset( $data['tabs'] ) ) {
 			$data['tabs'] = $this->tab_navigation( '' );
 		}

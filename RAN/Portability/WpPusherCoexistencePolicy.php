@@ -11,15 +11,13 @@ final class WpPusherCoexistencePolicy {
 
 	public const WP_PUSHER_PLUGIN = 'wppusher/wppusher.php';
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing caller and activation callback contracts.
-	public static function assertPackageMutationAllowed(): void {
-		if ( self::conflictActive() ) {
+	public static function assert_package_mutation_allowed(): void {
+		if ( self::conflict_active() ) {
 			throw new RuntimeException( 'RAN Booster package mutations are unavailable while WP Pusher is active. Deactivate WP Pusher before continuing.' );
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing caller and activation callback contracts.
-	public static function blockWpPusherActivation( string $plugin ): void {
+	public static function block_wp_pusher_activation( string $plugin ): void {
 		if ( self::WP_PUSHER_PLUGIN === $plugin ) {
 			wp_die(
 				esc_html__(
@@ -30,8 +28,7 @@ final class WpPusherCoexistencePolicy {
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing caller and activation callback contracts.
-	public static function conflictActive(): bool {
+	public static function conflict_active(): bool {
 		return self::active( self::WP_PUSHER_PLUGIN );
 	}
 

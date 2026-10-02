@@ -14,10 +14,10 @@ final class RuntimeReleaseStore extends ManagedReleaseStore {
 	public array $transitions = array();
 
 	/** @var list<array<string, mixed>> */
-	public array $channelChanges = array();
+	public array $channel_changes = array();
 
-	public ?\Throwable $transitionFailure    = null;
-	public ?\Throwable $channelChangeFailure = null;
+	public ?\Throwable $transition_failure     = null;
+	public ?\Throwable $channel_change_failure = null;
 
 	/** @param array<string, ManagedReleaseConfiguration> $configurations */
 	public function __construct( private array $configurations = array() ) {
@@ -27,51 +27,51 @@ final class RuntimeReleaseStore extends ManagedReleaseStore {
 		return $this->configurations[ $type . "\0" . $identifier ] ?? null;
 	}
 
-	public function replaceConfiguration( string $type, string $identifier, ManagedReleaseConfiguration $configuration ): void {
+	public function replace_configuration( string $type, string $identifier, ManagedReleaseConfiguration $configuration ): void {
 		$this->configurations[ $type . "\0" . $identifier ] = $configuration;
 	}
 
 	public function transition(
 		string $type,
 		string $identifier,
-		PackageSource $expectedSource,
-		int $expectedRevision,
-		PackageSource $newSource,
+		PackageSource $expected_source,
+		int $expected_revision,
+		PackageSource $new_source,
 		?ManagedReleaseConfiguration $configuration,
-		int $userId
+		int $user_id
 	): bool {
-		if ( null !== $this->transitionFailure ) {
-			throw $this->transitionFailure;
+		if ( null !== $this->transition_failure ) {
+			throw $this->transition_failure;
 		}
 		$this->transitions[] = array(
 			'type'              => $type,
 			'identifier'        => $identifier,
-			'expected_source'   => $expectedSource,
-			'expected_revision' => $expectedRevision,
-			'new_source'        => $newSource,
+			'expected_source'   => $expected_source,
+			'expected_revision' => $expected_revision,
+			'new_source'        => $new_source,
 			'configuration'     => $configuration,
-			'user_id'           => $userId,
+			'user_id'           => $user_id,
 		);
 
 		return true;
 	}
 
-	public function changeChannel(
+	public function change_channel(
 		string $type,
 		string $identifier,
-		int $expectedRevision,
+		int $expected_revision,
 		string $channel,
-		int $userId
+		int $user_id
 	): bool {
-		if ( null !== $this->channelChangeFailure ) {
-			throw $this->channelChangeFailure;
+		if ( null !== $this->channel_change_failure ) {
+			throw $this->channel_change_failure;
 		}
-		$this->channelChanges[] = array(
+		$this->channel_changes[] = array(
 			'type'              => $type,
 			'identifier'        => $identifier,
-			'expected_revision' => $expectedRevision,
+			'expected_revision' => $expected_revision,
 			'channel'           => $channel,
-			'user_id'           => $userId,
+			'user_id'           => $user_id,
 		);
 
 		return true;

@@ -34,46 +34,46 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		$wpdb = new StorageTestWpdb();
 	}
 
-	public function testEmptyQueryIsDistinctFromDatabaseAndMalformedResultFailures(): void {
+	public function test_empty_query_is_distinct_from_database_and_malformed_result_failures(): void {
 		global $wpdb;
 
 		$storage = $this->storage();
-		self::assertSame( array(), $storage->allForTest() );
+		self::assertSame( array(), $storage->all_for_test() );
 
 		$wpdb->last_error = 'database details must not escape';
 
 		try {
-			$storage->allForTest();
+			$storage->all_for_test();
 			self::fail( 'Expected a query failure.' );
 		} catch ( PackageStorageFailure $failure ) {
 			self::assertSame( 'ran_booster_storage_query_failed', $failure->get_diagnostic_id() );
 			self::assertStringNotContainsString( 'database details', $failure->getMessage() );
 		}
 
-		$wpdb->last_error    = '';
-		$wpdb->forcedResults = array( 'not-a-row' );
+		$wpdb->last_error     = '';
+		$wpdb->forced_results = array( 'not-a-row' );
 
 		$this->expectException( PackageStorageFailure::class );
-		$storage->allForTest();
+		$storage->all_for_test();
 	}
 
-	public function testUnsupportedDatabaseBlocksPackageReadsAndWritesBeforeTableAccess(): void {
+	public function test_unsupported_database_blocks_package_reads_and_writes_before_table_access(): void {
 		global $wpdb;
 
-		$wpdb->serverInfo = '5.7.44';
-		$storage          = $this->storage();
+		$wpdb->server_info = '5.7.44';
+		$storage           = $this->storage();
 
 		try {
-			$storage->allForTest();
+			$storage->all_for_test();
 			self::fail( 'Unsupported package reads must fail closed.' );
 		} catch ( PackageStorageFailure $failure ) {
 			self::assertSame( 'ran_booster_storage_database_unsupported', $failure->get_diagnostic_id() );
 		}
 
 		foreach ( array(
-			array( PackageStorageOperation::UPDATE, fn (): PackageMutationResult => $storage->editForTest( 'example/example.php', $this->editInput() ) ),
-			array( PackageStorageOperation::INSERT, fn (): PackageMutationResult => $storage->storeForTest( $this->package() ) ),
-			array( PackageStorageOperation::INSERT, fn (): PackageMutationResult => $storage->adoptForTest( $this->package() ) ),
+			array( PackageStorageOperation::UPDATE, fn (): PackageMutationResult => $storage->edit_for_test( 'example/example.php', $this->edit_input() ) ),
+			array( PackageStorageOperation::INSERT, fn (): PackageMutationResult => $storage->store_for_test( $this->package() ) ),
+			array( PackageStorageOperation::INSERT, fn (): PackageMutationResult => $storage->adopt_for_test( $this->package() ) ),
 		) as $case ) {
 			[ $operation, $write ] = $case;
 			try {
@@ -91,25 +91,25 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		self::assertSame( array(), $wpdb->deletes );
 	}
 
-	public function testCachedLifecycleFailureBlocksPackageReadsAndWritesBeforeTableAccess(): void {
+	public function test_cached_lifecycle_failure_blocks_package_reads_and_writes_before_table_access(): void {
 		global $ran_booster_storage_test_options, $wpdb;
 
 		$lifecycle = new Database( $wpdb );
 		$ran_booster_storage_test_options[ Database::VERSION_OPTION ] = 'not-a-version';
 		try {
-			$lifecycle->requireReady();
+			$lifecycle->require_ready();
 			self::fail( 'Expected the lifecycle to enter its safe state.' );
 		} catch ( DatabaseLifecycleFailure ) {
 			$ran_booster_storage_test_options[ Database::VERSION_OPTION ] = Database::$booster_db_version;
 		}
 
-		$wpdb->readFailure = true;
-		$storage           = $this->storage( true, $lifecycle );
+		$wpdb->read_failure = true;
+		$storage            = $this->storage( true, $lifecycle );
 		foreach ( array(
-			static fn () => $storage->allForTest(),
-			fn () => $storage->editForTest( 'example/example.php', $this->editInput() ),
-			fn () => $storage->storeForTest( $this->package() ),
-			fn () => $storage->adoptForTest( $this->package() ),
+			static fn () => $storage->all_for_test(),
+			fn () => $storage->edit_for_test( 'example/example.php', $this->edit_input() ),
+			fn () => $storage->store_for_test( $this->package() ),
+			fn () => $storage->adopt_for_test( $this->package() ),
 		) as $operation ) {
 			try {
 				$operation();
@@ -125,76 +125,76 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		self::assertSame( array(), $wpdb->inserts );
 	}
 
-	public function testManagementPresenceUsesTheUnhydratedManagementRow(): void {
+	public function test_management_presence_uses_the_unhydrated_management_row(): void {
 		global $wpdb;
 
 		$storage = $this->storage();
-		self::assertFalse( $storage->hasManagementRecordForTest( 'example/example.php' ) );
+		self::assertFalse( $storage->has_management_record_for_test( 'example/example.php' ) );
 
 		$wpdb->rows[] = array(
 			'id'      => 12,
 			'package' => 'example/example.php',
 			'type'    => 1,
 		);
-		self::assertTrue( $storage->hasManagementRecordForTest( 'example/example.php' ) );
+		self::assertTrue( $storage->has_management_record_for_test( 'example/example.php' ) );
 
 		$wpdb->last_error = 'database details must not escape';
 		$this->expectException( PackageStorageFailure::class );
-		$storage->hasManagementRecordForTest( 'example/example.php' );
+		$storage->has_management_record_for_test( 'example/example.php' );
 	}
 
-	public function testInsertAndUpdateResultsAreVerifiedAgainstAuthoritativeState(): void {
+	public function test_insert_and_update_results_are_verified_against_authoritative_state(): void {
 		global $wpdb;
 
 		$storage = $this->storage();
 		$package = $this->package();
 
-		$wpdb->insertResult = false;
-		self::assertSame( PackageMutationStatus::FAILED, $storage->storeForTest( $package )->get_status() );
+		$wpdb->insert_result = false;
+		self::assertSame( PackageMutationStatus::FAILED, $storage->store_for_test( $package )->get_status() );
 
-		$wpdb->insertResult = null;
-		self::assertSame( PackageMutationStatus::CHANGED, $storage->storeForTest( $package )->get_status() );
+		$wpdb->insert_result = null;
+		self::assertSame( PackageMutationStatus::CHANGED, $storage->store_for_test( $package )->get_status() );
 
-		$wpdb->updateResult = 0;
-		self::assertSame( PackageMutationStatus::CONFLICT, $storage->storeForTest( $package )->get_status() );
+		$wpdb->update_result = 0;
+		self::assertSame( PackageMutationStatus::CONFLICT, $storage->store_for_test( $package )->get_status() );
 
 		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'next' ) );
-		self::assertSame( PackageMutationStatus::CONFLICT, $storage->storeForTest( $package )->get_status() );
+		self::assertSame( PackageMutationStatus::CONFLICT, $storage->store_for_test( $package )->get_status() );
 
-		$wpdb->updateResult = 1;
-		$wpdb->applyWrites  = false;
-		$result             = $storage->storeForTest( $package );
+		$wpdb->update_result = 1;
+		$wpdb->apply_writes  = false;
+		$result              = $storage->store_for_test( $package );
 
 		self::assertSame( PackageMutationStatus::CONFLICT, $result->get_status() );
 		self::assertSame( PackageStorageOperation::UPDATE, $result->get_operation() );
 		self::assertSame( 'ran_booster_storage_verification_conflict', $result->get_diagnostic_id() );
 
-		$wpdb->rows         = array();
-		$wpdb->updateResult = 0;
+		$wpdb->rows          = array();
+		$wpdb->update_result = 0;
 		self::assertSame(
 			PackageMutationStatus::CONFLICT,
-			$storage->editForTest( 'missing/example.php', $this->editInput() )->get_status()
+			$storage->edit_for_test( 'missing/example.php', $this->edit_input() )->get_status()
 		);
 	}
 
-	public function testAdoptionInsertsOnlyWhenNoManagementRecordExists(): void {
+	public function test_adoption_inserts_only_when_no_management_record_exists(): void {
 		global $wpdb;
 
 		$storage = $this->storage();
 		$package = $this->package();
 
-		$result = $storage->adoptForTest( $package );
+		$result = $storage->adopt_for_test( $package );
 		self::assertSame( PackageMutationStatus::CHANGED, $result->get_status() );
 		self::assertSame( PackageStorageOperation::INSERT, $result->get_operation() );
 		self::assertCount( 1, $wpdb->inserts );
 
-		$conflict = $storage->adoptForTest( $package );
+		$conflict = $storage->adopt_for_test( $package );
 		self::assertSame( PackageMutationStatus::CONFLICT, $conflict->get_status() );
 		self::assertSame( 'ran_booster_storage_adoption_conflict', $conflict->get_diagnostic_id() );
 		self::assertCount( 1, $wpdb->inserts );
 	}
 
-	public function testStorageRejectsAnEmptyOrUninstalledPackageIdentityBeforeAnyWrite(): void {
+	public function test_storage_rejects_an_empty_or_uninstalled_package_identity_before_any_write(): void {
 		global $wpdb;
 
 		foreach ( array(
@@ -202,9 +202,9 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 			array( $this->storage( false ), $this->package() ),
 		) as $case ) {
 			[$storage, $package] = $case;
-			$store               = $storage->storeForTest( $package );
-			$adopt               = $storage->adoptForTest( $package );
-			$edit                = $storage->editForTest( (string) $package->get_identifier(), $this->editInput() );
+			$store               = $storage->store_for_test( $package );
+			$adopt               = $storage->adopt_for_test( $package );
+			$edit                = $storage->edit_for_test( (string) $package->get_identifier(), $this->edit_input() );
 
 			self::assertSame( PackageMutationStatus::FAILED, $store->get_status() );
 			self::assertSame( PackageMutationStatus::FAILED, $adopt->get_status() );
@@ -218,43 +218,43 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		self::assertSame( array(), $wpdb->updates );
 	}
 
-	public function testAdoptionTreatsALateManagementRowAsAConflictRatherThanOverwritingIt(): void {
+	public function test_adoption_treats_alate_management_row_as_aconflict_rather_than_overwriting_it(): void {
 		global $wpdb;
 
-		$storage             = $this->storage();
-		$wpdb->insertResult  = false;
-		$wpdb->insertRaceRow = $this->storedRow();
+		$storage               = $this->storage();
+		$wpdb->insert_result   = false;
+		$wpdb->insert_race_row = $this->stored_row();
 
-		$result = $storage->adoptForTest( $this->package() );
+		$result = $storage->adopt_for_test( $this->package() );
 
 		self::assertSame( PackageMutationStatus::CONFLICT, $result->get_status() );
 		self::assertSame( 'ran_booster_storage_adoption_conflict', $result->get_diagnostic_id() );
 	}
 
-	public function testPackagePrivacyMatchesMysqlTinyintScalarsAfterPublicAndPrivateWrites(): void {
+	public function test_package_privacy_matches_mysql_tinyint_scalars_after_public_and_private_writes(): void {
 		global $wpdb;
 
-		$wpdb->coercePrivateAsMysqlTinyint = true;
-		$storage                           = $this->storage();
-		$package                           = $this->package();
+		$wpdb->coerce_private_as_mysql_tinyint = true;
+		$storage                               = $this->storage();
+		$package                               = $this->package();
 
-		self::assertSame( PackageMutationStatus::CHANGED, $storage->storeForTest( $package )->get_status() );
+		self::assertSame( PackageMutationStatus::CHANGED, $storage->store_for_test( $package )->get_status() );
 		self::assertSame( 0, $wpdb->inserts[0][1]['private'] );
 		self::assertSame( '0', $wpdb->rows[0]['private'] );
 
 		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'next' ) );
-		self::assertSame( PackageMutationStatus::CHANGED, $storage->storeForTest( $package )->get_status() );
+		self::assertSame( PackageMutationStatus::CHANGED, $storage->store_for_test( $package )->get_status() );
 		self::assertSame( 0, $wpdb->updates[0][1]['private'] );
 		self::assertSame( '0', $wpdb->rows[0]['private'] );
 
 		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'next', true, 'private-profile' ) );
 		$package->set_source( PackageSource::BRANCH, 2 );
-		self::assertSame( PackageMutationStatus::CHANGED, $storage->storeForTest( $package )->get_status() );
+		self::assertSame( PackageMutationStatus::CHANGED, $storage->store_for_test( $package )->get_status() );
 		self::assertSame( 1, $wpdb->updates[1][1]['private'] );
 		self::assertSame( '1', $wpdb->rows[0]['private'] );
 	}
 
-	public function testPackagePrivacyAcceptsOnlyCanonicalBooleanAndDatabaseForms(): void {
+	public function test_package_privacy_accepts_only_canonical_boolean_and_database_forms(): void {
 		foreach ( array( false, 0, '0', ' 0 ' ) as $value ) {
 			self::assertSame( 0, ( new PackageModel( array( 'private' => $value ) ) )->private );
 		}
@@ -273,7 +273,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		}
 	}
 
-	public function testPackageModelRejectsNonCanonicalPackageIdentities(): void {
+	public function test_package_model_rejects_non_canonical_package_identities(): void {
 		foreach ( array( '', ' example/example.php', 'example/example.php ', "example/\nexample.php", str_repeat( 'a', 256 ), 12 ) as $identifier ) {
 			try {
 				new PackageModel( array( 'package' => $identifier ) );
@@ -284,7 +284,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		}
 	}
 
-	public function testDeleteFailureAndUnverifiedDeleteCannotReportSuccess(): void {
+	public function test_delete_failure_and_unverified_delete_cannot_report_success(): void {
 		global $wpdb;
 
 		$storage      = $this->storage();
@@ -294,74 +294,74 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 			'type'    => 1,
 		);
 
-		$wpdb->deleteResult = false;
-		self::assertSame( PackageMutationStatus::FAILED, $storage->unlinkForTest( 'example/example.php' )->get_status() );
+		$wpdb->delete_result = false;
+		self::assertSame( PackageMutationStatus::FAILED, $storage->unlink_for_test( 'example/example.php' )->get_status() );
 
-		$wpdb->deleteResult = 0;
-		$wpdb->applyWrites  = false;
-		self::assertSame( PackageMutationStatus::CONFLICT, $storage->unlinkForTest( 'example/example.php' )->get_status() );
+		$wpdb->delete_result = 0;
+		$wpdb->apply_writes  = false;
+		self::assertSame( PackageMutationStatus::CONFLICT, $storage->unlink_for_test( 'example/example.php' )->get_status() );
 
 		$wpdb->rows = array();
-		self::assertSame( PackageMutationStatus::UNCHANGED, $storage->unlinkForTest( 'example/example.php' )->get_status() );
+		self::assertSame( PackageMutationStatus::UNCHANGED, $storage->unlink_for_test( 'example/example.php' )->get_status() );
 	}
 
-	public function testPostWriteVerificationFailuresRequireRecoveryForEveryMutation(): void {
+	public function test_post_write_verification_failures_require_recovery_for_every_mutation(): void {
 		global $wpdb;
 
 		$storage = $this->storage();
 		$package = $this->package();
 
-		$wpdb->successfulReadsBeforeFailure = 2;
-		$insertResult                       = $storage->storeForTest( $package );
-		$this->assertAmbiguousWrite( $insertResult, PackageStorageOperation::INSERT );
+		$wpdb->successful_reads_before_failure = 2;
+		$insert_result                         = $storage->store_for_test( $package );
+		$this->assert_ambiguous_write( $insert_result, PackageStorageOperation::INSERT );
 
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated database double.
-		$wpdb                               = new StorageTestWpdb();
-		$wpdb->rows[]                       = $this->storedRow();
-		$wpdb->successfulReadsBeforeFailure = 2;
+		$wpdb                                  = new StorageTestWpdb();
+		$wpdb->rows[]                          = $this->stored_row();
+		$wpdb->successful_reads_before_failure = 2;
 		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'next' ) );
-		$updateResult = $storage->storeForTest( $package );
-		$this->assertAmbiguousWrite( $updateResult, PackageStorageOperation::UPDATE );
+		$update_result = $storage->store_for_test( $package );
+		$this->assert_ambiguous_write( $update_result, PackageStorageOperation::UPDATE );
 
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated database double.
-		$wpdb                               = new StorageTestWpdb();
-		$wpdb->rows[]                       = $this->storedRow();
-		$wpdb->updateResult                 = 0;
-		$wpdb->successfulReadsBeforeFailure = 2;
-		$zeroUpdateResult                   = $storage->storeForTest( $package );
-		$this->assertAmbiguousWrite( $zeroUpdateResult, PackageStorageOperation::UPDATE );
+		$wpdb                                  = new StorageTestWpdb();
+		$wpdb->rows[]                          = $this->stored_row();
+		$wpdb->update_result                   = 0;
+		$wpdb->successful_reads_before_failure = 2;
+		$zero_update_result                    = $storage->store_for_test( $package );
+		$this->assert_ambiguous_write( $zero_update_result, PackageStorageOperation::UPDATE );
 
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated database double.
-		$wpdb                               = new StorageTestWpdb();
-		$wpdb->rows[]                       = $this->storedRow();
-		$wpdb->successfulReadsBeforeFailure = 1;
-		$editResult                         = $storage->editForTest( 'example/example.php', $this->editInput() );
-		$this->assertAmbiguousWrite( $editResult, PackageStorageOperation::UPDATE );
+		$wpdb                                  = new StorageTestWpdb();
+		$wpdb->rows[]                          = $this->stored_row();
+		$wpdb->successful_reads_before_failure = 1;
+		$edit_result                           = $storage->edit_for_test( 'example/example.php', $this->edit_input() );
+		$this->assert_ambiguous_write( $edit_result, PackageStorageOperation::UPDATE );
 
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated database double.
-		$wpdb                               = new StorageTestWpdb();
-		$wpdb->rows[]                       = $this->storedRow();
-		$wpdb->updateResult                 = 0;
-		$wpdb->successfulReadsBeforeFailure = 1;
-		$zeroEditResult                     = $storage->editForTest( 'example/example.php', $this->editInput() );
-		$this->assertAmbiguousWrite( $zeroEditResult, PackageStorageOperation::UPDATE );
+		$wpdb                                  = new StorageTestWpdb();
+		$wpdb->rows[]                          = $this->stored_row();
+		$wpdb->update_result                   = 0;
+		$wpdb->successful_reads_before_failure = 1;
+		$zero_edit_result                      = $storage->edit_for_test( 'example/example.php', $this->edit_input() );
+		$this->assert_ambiguous_write( $zero_edit_result, PackageStorageOperation::UPDATE );
 
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated database double.
-		$wpdb                               = new StorageTestWpdb();
-		$wpdb->rows[]                       = $this->storedRow();
-		$wpdb->successfulReadsBeforeFailure = 0;
-		$deleteResult                       = $storage->unlinkForTest( 'example/example.php' );
-		$this->assertAmbiguousWrite( $deleteResult, PackageStorageOperation::DELETE );
+		$wpdb                                  = new StorageTestWpdb();
+		$wpdb->rows[]                          = $this->stored_row();
+		$wpdb->successful_reads_before_failure = 0;
+		$delete_result                         = $storage->unlink_for_test( 'example/example.php' );
+		$this->assert_ambiguous_write( $delete_result, PackageStorageOperation::DELETE );
 
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated database double.
-		$wpdb                               = new StorageTestWpdb();
-		$wpdb->deleteResult                 = 0;
-		$wpdb->successfulReadsBeforeFailure = 0;
-		$zeroDeleteResult                   = $storage->unlinkForTest( 'example/example.php' );
-		$this->assertAmbiguousWrite( $zeroDeleteResult, PackageStorageOperation::DELETE );
+		$wpdb                                  = new StorageTestWpdb();
+		$wpdb->delete_result                   = 0;
+		$wpdb->successful_reads_before_failure = 0;
+		$zero_delete_result                    = $storage->unlink_for_test( 'example/example.php' );
+		$this->assert_ambiguous_write( $zero_delete_result, PackageStorageOperation::DELETE );
 	}
 
-	public function testMissingPackageReadPreservesTheManagementRow(): void {
+	public function test_missing_package_read_preserves_the_management_row(): void {
 		global $wpdb;
 
 		$storage      = $this->storage( false );
@@ -371,54 +371,54 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 			'type'    => 1,
 		);
 
-		self::assertSame( array(), $storage->allForTest() );
+		self::assertSame( array(), $storage->all_for_test() );
 		self::assertCount( 1, $wpdb->rows );
 		self::assertSame( array(), $wpdb->deletes );
 	}
 
-	public function testPackageReadCanFilterReleaseSourcesBeforeHydration(): void {
+	public function test_package_read_can_filter_release_sources_before_hydration(): void {
 		global $wpdb;
 
-		$branch             = $this->storedRow();
-		$release            = $this->storedRow();
+		$branch             = $this->stored_row();
+		$release            = $this->stored_row();
 		$release['id']      = 2;
 		$release['package'] = 'release/release.php';
 		$release['source']  = PackageSource::RELEASE_ASSET->value;
 		$wpdb->rows         = array( $branch, $release );
 
-		self::assertSame( array( 'release/release.php' ), array_keys( $this->storage()->allForTest( PackageSource::RELEASE_ASSET ) ) );
+		self::assertSame( array( 'release/release.php' ), array_keys( $this->storage()->all_for_test( PackageSource::RELEASE_ASSET ) ) );
 	}
 
-	private function storage( bool $packageExists = true, ?Database $database = null ): AbstractPackageRepository {
-		return new class( $packageExists, $database ) extends AbstractPackageRepository {
+	private function storage( bool $package_exists = true, ?Database $database = null ): AbstractPackageRepository {
+		return new class( $package_exists, $database ) extends AbstractPackageRepository {
 
 			public function __construct( private readonly bool $exists, ?Database $database ) {
 				parent::__construct( $database );
 			}
 
 			/** @return array<string, Package> */
-			public function allForTest( ?PackageSource $source = null ): array {
+			public function all_for_test( ?PackageSource $source = null ): array {
 				return $this->all_packages( $source );
 			}
 
-			public function hasManagementRecordForTest( string $identifier ): bool {
+			public function has_management_record_for_test( string $identifier ): bool {
 				return $this->has_management_record( $identifier );
 			}
 
-			public function storeForTest( Package $package ): PackageMutationResult {
+			public function store_for_test( Package $package ): PackageMutationResult {
 				return $this->store_package( $package );
 			}
 
-			public function adoptForTest( Package $package ): PackageMutationResult {
+			public function adopt_for_test( Package $package ): PackageMutationResult {
 				return $this->adopt_package( $package );
 			}
 
-			public function unlinkForTest( string $identifier ): PackageMutationResult {
+			public function unlink_for_test( string $identifier ): PackageMutationResult {
 				return $this->unlink( $identifier );
 			}
 
 			/** @param array<string, mixed> $input */
-			public function editForTest( string $identifier, array $input ): PackageMutationResult {
+			public function edit_for_test( string $identifier, array $input ): PackageMutationResult {
 				return $this->edit_package( $identifier, $input );
 			}
 
@@ -467,7 +467,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 	}
 
 	/** @return array<string, mixed> */
-	private function editInput(): array {
+	private function edit_input(): array {
 		$repository = new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'main' );
 
 		return array(
@@ -482,7 +482,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		);
 	}
 
-	private function assertAmbiguousWrite( PackageMutationResult $result, PackageStorageOperation $operation ): void {
+	private function assert_ambiguous_write( PackageMutationResult $result, PackageStorageOperation $operation ): void {
 		self::assertSame( PackageMutationStatus::FAILED, $result->get_status() );
 		self::assertSame( $operation, $result->get_operation() );
 		self::assertSame( 'ran_booster_storage_verification_failed', $result->get_diagnostic_id() );
@@ -491,7 +491,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 	}
 
 	/** @return array<string, mixed> */
-	private function storedRow(): array {
+	private function stored_row(): array {
 		return array(
 			'id'                     => 1,
 			'package'                => 'example/example.php',

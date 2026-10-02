@@ -25,7 +25,7 @@ interface Package {
 
 	public function get_deployment_policy(): DeploymentPolicy;
 
-	public function set_deployment_policy( DeploymentPolicy $deploymentPolicy ): void;
+	public function set_deployment_policy( DeploymentPolicy $deployment_policy ): void;
 
 	public function get_source(): PackageSource;
 
@@ -42,7 +42,7 @@ interface Package {
 
 	public function get_deployment_ref(): ?string;
 
-	public function set_deployment_ref( ?string $deploymentRef ): void;
+	public function set_deployment_ref( ?string $deployment_ref ): void;
 
 	public function get_credential_id(): string;
 

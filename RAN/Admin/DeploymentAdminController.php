@@ -43,9 +43,9 @@ final class DeploymentAdminController {
 
 	/** @param array<string, mixed> $request */
 	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function manage_deployment_attempt( string $action, array $request, bool $postRequest ): void {
+	public function manage_deployment_attempt( string $action, array $request, bool $post_request ): void {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		if ( ! $postRequest ) {
+		if ( ! $post_request ) {
 			return;
 		}
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -64,7 +64,7 @@ final class DeploymentAdminController {
 				wp_die( esc_html__( 'You do not have sufficient permissions to manage this package.', 'ran-booster' ) );
 			}
 			if ( 'request-deployment-runner' === $action ) {
-				$this->coordinator->requestRunner();
+				$this->coordinator->request_runner();
 				$this->dashboard->add_message( __( 'The deployment runner was requested.', 'ran-booster' ) );
 				return;
 			}
@@ -73,7 +73,7 @@ final class DeploymentAdminController {
 			if ( '1' !== ( $request['confirm_stopped'] ?? null ) ) {
 				throw new \RuntimeException( 'Explicit stopped-worker confirmation is required.' );
 			}
-			$this->coordinator->reconcileConfirmedStopped( $attempt_id, $correlation_id );
+			$this->coordinator->reconcile_confirmed_stopped( $attempt_id, $correlation_id );
 			$this->dashboard->add_message( __( 'The protected deployment action was accepted.', 'ran-booster' ) );
 		} catch ( \Throwable $exception ) {
 			$operation = $action;
@@ -93,7 +93,7 @@ final class DeploymentAdminController {
 		if ( '1' !== ( $request['confirm_reviewed'] ?? null ) ) {
 			throw new \RuntimeException( 'Explicit uncertainty-review confirmation is required.' );
 		}
-		$attempt = $this->attempts->findExact( $attempt_id );
+		$attempt = $this->attempts->find_exact( $attempt_id );
 		if ( null === $attempt || ! hash_equals( $attempt->get_correlation_id(), $correlation_id ) ) {
 			throw new \RuntimeException( 'The deployment activity identity no longer matches.' );
 		}
@@ -101,7 +101,7 @@ final class DeploymentAdminController {
 		if ( ! current_user_can( $capability ) ) {
 			wp_die( esc_html__( 'You do not have sufficient permissions to manage this package.', 'ran-booster' ) );
 		}
-		$this->attempts->resolveNeedsAttention( $attempt_id, $correlation_id, $this->current_user_id() );
+		$this->attempts->resolve_needs_attention( $attempt_id, $correlation_id, $this->current_user_id() );
 		$this->dashboard->add_message( __( 'Retry is allowed. No package files or settings were changed.', 'ran-booster' ) );
 	}
 

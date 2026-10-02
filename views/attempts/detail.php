@@ -3,8 +3,8 @@
 /**
  * View locals supplied by views/troubleshooting.php.
  *
- * @var array<string, mixed> $deploymentActivity
- * @var string $troubleshootingBase
+ * @var array<string, mixed> $deployment_activity
+ * @var string $troubleshooting_base
  */
 
 use RAN\Admin\DeploymentOutcomeMessage;
@@ -14,29 +14,29 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$attempt              = $deploymentActivity['detail'] ?? null;
-$unavailable          = true === ( $deploymentActivity['unavailable'] ?? false );
-$laterVerifiedAttempt = $deploymentActivity['later_verified_attempt'] ?? null;
-$backUrl              = $troubleshootingBase . '&panel=activity';
+$attempt              = $deployment_activity['detail'] ?? null;
+$unavailable          = true === ( $deployment_activity['unavailable'] ?? false );
+$later_verified_attempt = $deployment_activity['later_verified_attempt'] ?? null;
+$back_url              = $troubleshooting_base . '&panel=activity';
 $item                 = $attempt instanceof DeploymentAttempt ? $attempt->safe_data() : array();
-$packageType          = is_string( $item['package_type'] ?? null ) ? $item['package_type'] : '';
-$packageSlug          = is_string( $item['package_slug'] ?? null ) ? $item['package_slug'] : '';
-$settingsUrls         = is_array( $deploymentActivity['package_settings_urls'] ?? null )
-	? $deploymentActivity['package_settings_urls']
+$package_type          = is_string( $item['package_type'] ?? null ) ? $item['package_type'] : '';
+$package_slug          = is_string( $item['package_slug'] ?? null ) ? $item['package_slug'] : '';
+$settings_urls         = is_array( $deployment_activity['package_settings_urls'] ?? null )
+	? $deployment_activity['package_settings_urls']
 	: array();
-$packageSettingsUrl   = is_string( $settingsUrls[ $packageType ][ $packageSlug ] ?? null )
-	? $settingsUrls[ $packageType ][ $packageSlug ]
+$package_settings_url   = is_string( $settings_urls[ $package_type ][ $package_slug ] ?? null )
+	? $settings_urls[ $package_type ][ $package_slug ]
 	: '';
-$packageSettingsLabel = 'theme' === $packageType
+$package_settings_label = 'theme' === $package_type
 	? __( 'Open theme settings', 'ran-booster' )
 	: __( 'Open plugin settings', 'ran-booster' );
 ?>
 <section class="ran-booster-activity ran-booster-activity--detail">
 	<p>
-		<a href="<?php echo esc_url( $backUrl ); ?>">&larr; <?php esc_html_e( 'Back to Activity', 'ran-booster' ); ?></a>
-		<?php if ( '' !== $packageSettingsUrl ) { ?>
+		<a href="<?php echo esc_url( $back_url ); ?>">&larr; <?php esc_html_e( 'Back to Activity', 'ran-booster' ); ?></a>
+		<?php if ( '' !== $package_settings_url ) { ?>
 			<span aria-hidden="true"> | </span>
-			<a href="<?php echo esc_url( $packageSettingsUrl ); ?>"><?php echo esc_html( $packageSettingsLabel ); ?></a>
+			<a href="<?php echo esc_url( $package_settings_url ); ?>"><?php echo esc_html( $package_settings_label ); ?></a>
 		<?php } ?>
 	</p>
 	<h3><?php esc_html_e( 'Deployment activity details', 'ran-booster' ); ?></h3>
@@ -46,22 +46,22 @@ $packageSettingsLabel = 'theme' === $packageType
 		<div class="notice notice-warning inline"><p><?php esc_html_e( 'That deployment record was not found.', 'ran-booster' ); ?></p></div>
 		<?php
 	} else {
-		$originLabels = array(
+		$origin_labels = array(
 			'manual'  => __( 'Manual administrator action', 'ran-booster' ),
 			'webhook' => __( 'Repository webhook', 'ran-booster' ),
 		);
-		$outcomeLabel = in_array( $item['state'], array( 'failed', 'needs_attention' ), true )
+		$outcome_label = in_array( $item['state'], array( 'failed', 'needs_attention' ), true )
 			? __( 'Failure reason', 'ran-booster' )
 			: __( 'Outcome', 'ran-booster' );
 		?>
-		<p><strong><?php echo esc_html( $outcomeLabel ); ?>:</strong> <?php echo esc_html( null === $item['outcome_code'] ? __( 'This operation has not reached a recorded outcome.', 'ran-booster' ) : DeploymentOutcomeMessage::for_code( (string) $item['outcome_code'] ) ); ?></p>
+		<p><strong><?php echo esc_html( $outcome_label ); ?>:</strong> <?php echo esc_html( null === $item['outcome_code'] ? __( 'This operation has not reached a recorded outcome.', 'ran-booster' ) : DeploymentOutcomeMessage::for_code( (string) $item['outcome_code'] ) ); ?></p>
 		<?php if ( 'restoration_uncertain' === ( $item['outcome_code'] ?? null ) ) { ?>
 			<section class="notice notice-warning inline" aria-labelledby="ran-booster-historical-uncertainty-heading">
 				<h4 id="ran-booster-historical-uncertainty-heading"><?php esc_html_e( 'Before you retry', 'ran-booster' ); ?></h4>
 				<p><?php esc_html_e( 'WordPress reported that it changed this package, but Booster could not confirm the final result. The package may already contain the requested update.', 'ran-booster' ); ?></p>
-				<?php if ( $laterVerifiedAttempt instanceof DeploymentAttempt ) { ?>
-					<?php $laterVerifiedData = $laterVerifiedAttempt->safe_data(); ?>
-					<p><?php echo esc_html( sprintf( /* translators: 1: later verified deployment date, 2: later deployment ID. */ __( 'Booster verified a later deployment on %1$s (activity #%2$d), so the package has since reached a known state.', 'ran-booster' ), (string) ( $laterVerifiedData['finished_at'] ?? $laterVerifiedData['created_at'] ?? '' ), $laterVerifiedAttempt->get_id() ) ); ?></p>
+				<?php if ( $later_verified_attempt instanceof DeploymentAttempt ) { ?>
+					<?php $later_verified_data = $later_verified_attempt->safe_data(); ?>
+					<p><?php echo esc_html( sprintf( /* translators: 1: later verified deployment date, 2: later deployment ID. */ __( 'Booster verified a later deployment on %1$s (activity #%2$d), so the package has since reached a known state.', 'ran-booster' ), (string) ( $later_verified_data['finished_at'] ?? $later_verified_data['created_at'] ?? '' ), $later_verified_attempt->get_id() ) ); ?></p>
 				<?php } else { ?>
 					<p><?php esc_html_e( 'Check that the package is present, has the expected version and activation state, and that the site is not in maintenance mode.', 'ran-booster' ); ?></p>
 				<?php } ?>
@@ -74,12 +74,12 @@ $packageSettingsLabel = 'theme' === $packageType
 				<div><dt><?php esc_html_e( 'Provider request ID', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $item['delivery_id'] ); ?></code></dd></div>
 			<?php } ?>
 			<div><dt><?php esc_html_e( 'State', 'ran-booster' ); ?></dt><dd><?php echo esc_html( (string) $item['state'] ); ?></dd></div>
-			<div><dt><?php esc_html_e( 'Origin', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $originLabels[ $item['source'] ] ?? (string) $item['source'] ); ?></dd></div>
+			<div><dt><?php esc_html_e( 'Origin', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $origin_labels[ $item['source'] ] ?? (string) $item['source'] ); ?></dd></div>
 			<div><dt><?php esc_html_e( 'Package', 'ran-booster' ); ?></dt><dd>
 			<?php
-			if ( '' !== $packageSettingsUrl ) {
+			if ( '' !== $package_settings_url ) {
 				?>
-				<a href="<?php echo esc_url( $packageSettingsUrl ); ?>"><?php echo esc_html( (string) $item['package_slug'] ); ?></a>
+				<a href="<?php echo esc_url( $package_settings_url ); ?>"><?php echo esc_html( (string) $item['package_slug'] ); ?></a>
 				<?php
 			} else {
 				?>
@@ -94,7 +94,7 @@ $packageSettingsLabel = 'theme' === $packageType
 			<?php } ?>
 		</dl>
 		<?php if ( $attempt->requires_operator_resolution() ) { ?>
-			<form method="post" action="<?php echo esc_url( $packageSettingsUrl ); ?>">
+			<form method="post" action="<?php echo esc_url( $package_settings_url ); ?>">
 				<?php wp_nonce_field( 'ran-booster-resolve-needs-attention' ); ?>
 				<input type="hidden" name="ran_booster[action]" value="resolve-needs-attention">
 				<input type="hidden" name="ran_booster[attempt_id]" value="<?php echo esc_attr( (string) $item['id'] ); ?>">
@@ -102,9 +102,9 @@ $packageSettingsLabel = 'theme' === $packageType
 				<p><label><input type="checkbox" name="ran_booster[confirm_reviewed]" value="1" required> <?php esc_html_e( 'I have checked the package\'s current state and want to allow another deployment.', 'ran-booster' ); ?></label></p>
 				<button type="submit" class="button button-primary">
 					<?php
-					if ( '' === $packageSettingsUrl ) {
+					if ( '' === $package_settings_url ) {
 						esc_html_e( 'Allow retry', 'ran-booster' );
-					} elseif ( 'theme' === $packageType ) {
+					} elseif ( 'theme' === $package_type ) {
 						esc_html_e( 'Allow retry and return to theme settings', 'ran-booster' );
 					} else {
 						esc_html_e( 'Allow retry and return to plugin settings', 'ran-booster' );

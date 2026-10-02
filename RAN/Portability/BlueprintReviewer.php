@@ -22,16 +22,14 @@ final readonly class BlueprintReviewer {
 
 	/** @return list<BlueprintPlanItem> */
 	public function review( PackageBlueprint $blueprint ): array {
-		return array_map( fn ( BlueprintPackage $package ): BlueprintPlanItem => $this->reviewPackage( $package ), $blueprint->packages );
+		return array_map( fn ( BlueprintPackage $package ): BlueprintPlanItem => $this->review_package( $package ), $blueprint->packages );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public method and named by-reference parameter contracts remain unchanged pending their connected-caller audit.
-	public function reviewPackage( BlueprintPackage $blueprint, ?Package &$managedPackage = null ): BlueprintPlanItem {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		$managedPackage = null;
-		$repository     = 'plugin' === $blueprint->type ? $this->plugins : $this->themes;
-		$installed      = $repository->is_installed( $blueprint->identifier );
-		$managed        = $repository->has_management_record( $blueprint->identifier );
+	public function review_package( BlueprintPackage $blueprint, ?Package &$managed_package = null ): BlueprintPlanItem {
+		$managed_package = null;
+		$repository      = 'plugin' === $blueprint->type ? $this->plugins : $this->themes;
+		$installed       = $repository->is_installed( $blueprint->identifier );
+		$managed         = $repository->has_management_record( $blueprint->identifier );
 
 		if ( ! $installed ) {
 			return new BlueprintPlanItem(
@@ -46,11 +44,10 @@ final readonly class BlueprintReviewer {
 		}
 
 		try {
-			$package = 'plugin' === $blueprint->type
+			$package         = 'plugin' === $blueprint->type
 				? $this->plugins->booster_plugin_from_file( $blueprint->identifier )
 				: $this->themes->booster_theme_from_stylesheet( $blueprint->identifier );
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-			$managedPackage = $package;
+			$managed_package = $package;
 		} catch ( PackageStorageFailure $failure ) {
 			if ( $failure->is_database_unsupported() ) {
 				throw $failure;

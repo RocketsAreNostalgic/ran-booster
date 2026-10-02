@@ -12,7 +12,7 @@ use RAN\WordPress\CoreSelfUpdateNativeTarget;
 #[CoversClass( CoreSelfUpdateNativeTarget::class )]
 final class CoreSelfUpdateNativeTargetTest extends TestCase {
 
-	public function testDelegatesRegistrationRefreshAndBoundedPassiveStatus(): void {
+	public function test_delegates_registration_refresh_and_bounded_passive_status(): void {
 		$updater = new class() {
 			public int $registrations = 0;
 			public int $refreshes     = 0;
@@ -60,16 +60,16 @@ final class CoreSelfUpdateNativeTargetTest extends TestCase {
 		$status = $target->status();
 		self::assertInstanceOf( RepositoryReleaseNativeTargetStatus::class, $status );
 		self::assertTrue( $status->active );
-		self::assertSame( '1.1.0', $status->offeredVersion );
-		self::assertSame( 'newer', $status->versionRelationship );
-		self::assertSame( 1_700_000_000, $status->lastCheck );
-		self::assertSame( '', $status->failureCode );
+		self::assertSame( '1.1.0', $status->offered_version );
+		self::assertSame( 'newer', $status->version_relationship );
+		self::assertSame( 1_700_000_000, $status->last_check );
+		self::assertSame( '', $status->failure_code );
 
 		self::assertTrue( $target->refresh() );
 		self::assertSame( 1, $updater->refreshes );
 	}
 
-	public function testPreservesExistingInactiveUpdaterDiagnosticCode(): void {
+	public function test_preserves_existing_inactive_updater_diagnostic_code(): void {
 		$updater = new class() {
 			public function register(): bool {
 				return true;
@@ -94,10 +94,10 @@ final class CoreSelfUpdateNativeTargetTest extends TestCase {
 		$status = ( new CoreSelfUpdateNativeTarget( $updater ) )->status();
 
 		self::assertFalse( $status->active );
-		self::assertSame( 'github_updater_runtime_environment_invalid', $status->failureCode );
+		self::assertSame( 'github_updater_runtime_environment_invalid', $status->failure_code );
 	}
 
-	public function testRejectsIncompleteReleaseAndCandidateIdentityTuples(): void {
+	public function test_rejects_incomplete_release_and_candidate_identity_tuples(): void {
 		$updater = new class() {
 			/** @var array<string, mixed> */
 			public array $native = array(
@@ -136,22 +136,22 @@ final class CoreSelfUpdateNativeTargetTest extends TestCase {
 
 		$status = $target->status();
 		self::assertFalse( $status->active );
-		self::assertSame( 'github_updater_status_unavailable', $status->failureCode );
+		self::assertSame( 'github_updater_status_unavailable', $status->failure_code );
 
 		$updater->native['offered_version'] = null;
 		$updater->native['candidate_tag']   = 'v1.1.0';
 		$status                             = $target->status();
 		self::assertFalse( $status->active );
-		self::assertSame( 'github_updater_status_unavailable', $status->failureCode );
+		self::assertSame( 'github_updater_status_unavailable', $status->failure_code );
 
 		$updater->native['candidate_validation_code'] = 'archive_identity_verified';
 		$updater->native['candidate_version']         = '1.1.0';
 		$status                                       = $target->status();
 		self::assertFalse( $status->active );
-		self::assertSame( 'github_updater_status_unavailable', $status->failureCode );
+		self::assertSame( 'github_updater_status_unavailable', $status->failure_code );
 	}
 
-	public function testMalformedOrThrowingUpdaterStateFailsClosed(): void {
+	public function test_malformed_or_throwing_updater_state_fails_closed(): void {
 		$malformed = new class() {
 			public function register(): bool {
 				return true;
@@ -168,12 +168,12 @@ final class CoreSelfUpdateNativeTargetTest extends TestCase {
 		};
 		$target    = new CoreSelfUpdateNativeTarget( $malformed );
 
-		self::assertSame( 'github_updater_status_unavailable', $target->status()->failureCode );
+		self::assertSame( 'github_updater_status_unavailable', $target->status()->failure_code );
 		self::assertFalse( $target->refresh() );
 
 		$incompatible = new CoreSelfUpdateNativeTarget( new \stdClass() );
 		self::assertFalse( $incompatible->register() );
-		self::assertSame( 'github_updater_status_unavailable', $incompatible->status()->failureCode );
+		self::assertSame( 'github_updater_status_unavailable', $incompatible->status()->failure_code );
 		self::assertFalse( $incompatible->refresh() );
 	}
 }

@@ -15,12 +15,12 @@ final class AdminTabRegistry {
 	/** @var array<string, AdminTab> */
 	private array $tabs = array();
 
-	private string $defaultKey;
+	private string $default_key;
 
 	public function __construct( ProviderRegistry $providers ) {
 		$this->add( AdminTab::page( 'overview', 'Overview', 'onboarding.php' ) );
 
-		foreach ( $providers->administrationMetadata() as $metadata ) {
+		foreach ( $providers->administration_metadata() as $metadata ) {
 			$this->add( AdminTab::provider( $metadata ) );
 		}
 
@@ -28,7 +28,7 @@ final class AdminTabRegistry {
 		$this->add( AdminTab::page( 'documentation', 'Documentation', 'documentation.php' ) );
 		$this->add( AdminTab::page( 'troubleshooting', 'Troubleshooting', 'troubleshooting.php' ) );
 
-		$this->defaultKey = 'overview';
+		$this->default_key = 'overview';
 	}
 
 	/** @return list<AdminTab> */
@@ -36,25 +36,25 @@ final class AdminTabRegistry {
 		return array_values( $this->tabs );
 	}
 
-	public function resolve( mixed $requestedKey ): AdminTab {
-		if ( ! is_string( $requestedKey ) ) {
-			return $this->tabs[ $this->defaultKey ];
+	public function resolve( mixed $requested_key ): AdminTab {
+		if ( ! is_string( $requested_key ) ) {
+			return $this->tabs[ $this->default_key ];
 		}
 
-		$requestedKey = strtolower( trim( $requestedKey ) );
+		$requested_key = strtolower( trim( $requested_key ) );
 
-		return $this->tabs[ $requestedKey ] ?? $this->tabs[ $this->defaultKey ];
+		return $this->tabs[ $requested_key ] ?? $this->tabs[ $this->default_key ];
 	}
 
-	public function getDefault(): AdminTab {
-		return $this->tabs[ $this->defaultKey ];
+	public function get_default(): AdminTab {
+		return $this->tabs[ $this->default_key ];
 	}
 
 	private function add( AdminTab $tab ): void {
-		if ( isset( $this->tabs[ $tab->getKey() ] ) ) {
+		if ( isset( $this->tabs[ $tab->get_key() ] ) ) {
 			throw new InvalidArgumentException( 'Admin tab keys must be unique.' );
 		}
 
-		$this->tabs[ $tab->getKey() ] = $tab;
+		$this->tabs[ $tab->get_key() ] = $tab;
 	}
 }

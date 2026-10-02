@@ -46,31 +46,25 @@ class ManagedReleaseStore {
 			throw new RuntimeException( 'The managed release configuration is unavailable.' );
 		}
 
-		return ManagedReleaseConfiguration::fromJson( $value );
+		return ManagedReleaseConfiguration::from_json( $value );
 	}
 
 	public function transition(
 		string $type,
 		string $identifier,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		PackageSource $expectedSource,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		int $expectedRevision,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		PackageSource $newSource,
+		PackageSource $expected_source,
+		int $expected_revision,
+		PackageSource $new_source,
 		?ManagedReleaseConfiguration $configuration,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		int $userId
+		int $user_id
 	): bool {
 		PackageMutationGuard::assert_package_mutation_allowed();
 
 		$this->assert_identity( $type, $identifier );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( $expectedRevision < 1 || PHP_INT_MAX === $expectedRevision || $userId < 0 || $expectedSource === $newSource ) {
+		if ( $expected_revision < 1 || PHP_INT_MAX === $expected_revision || $user_id < 0 || $expected_source === $new_source ) {
 			return false;
 		}
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( ( PackageSource::RELEASE_ASSET === $newSource ) !== ( null !== $configuration ) ) {
+		if ( ( PackageSource::RELEASE_ASSET === $new_source ) !== ( null !== $configuration ) ) {
 			return false;
 		}
 
@@ -80,14 +74,11 @@ class ManagedReleaseStore {
 		}
 		try {
 			$before = $this->row( $type, $identifier, true );
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			if ( PackageSource::RELEASE_ASSET === $newSource ) {
+			if ( PackageSource::RELEASE_ASSET === $new_source ) {
 				$this->assert_release_subdirectory( $before );
 			}
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			if ( ( $before->source ?? null ) !== $expectedSource->value
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				|| (int) ( $before->source_revision ?? 0 ) !== $expectedRevision
+			if ( ( $before->source ?? null ) !== $expected_source->value
+				|| (int) ( $before->source_revision ?? 0 ) !== $expected_revision
 				|| ! is_string( $before->provider ?? null )
 				|| ! is_string( $before->provider_repository_id ?? null ) ) {
 				$wpdb = $this->database;
@@ -99,8 +90,7 @@ class ManagedReleaseStore {
 				$before->provider_repository_id,
 				self::type_id( $type ),
 				$identifier,
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				$newSource,
+				$new_source,
 				true
 			);
 			if ( ! $assessment['allowed'] ) {
@@ -116,25 +106,19 @@ class ManagedReleaseStore {
 			? DeploymentPolicy::MANUAL->value
 			: $policy;
 			$data        = array(
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				'source'                => $newSource->value,
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				'source_revision'       => $expectedRevision + 1,
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				'source_previous'       => $expectedSource->value,
+				'source'                => $new_source->value,
+				'source_revision'       => $expected_revision + 1,
+				'source_previous'       => $expected_source->value,
 				'source_changed_at'     => ( $this->clock )(),
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				'source_changed_by'     => $userId > 0 ? $userId : null,
+				'source_changed_by'     => $user_id > 0 ? $user_id : null,
 				'deployment_policy'     => $next_policy,
-				'release_configuration' => $configuration?->toJson(),
+				'release_configuration' => $configuration?->to_json(),
 			);
 			$where       = array(
 				'type'              => self::type_id( $type ),
 				'package'           => $identifier,
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				'source'            => $expectedSource->value,
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				'source_revision'   => $expectedRevision,
+				'source'            => $expected_source->value,
+				'source_revision'   => $expected_revision,
 				'deployment_policy' => $policy,
 			);
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- This is the exact source-transition CAS boundary.
@@ -145,12 +129,9 @@ class ManagedReleaseStore {
 
 			$after = $this->row( $type, $identifier, true );
 
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$verified = ( $after->source ?? null ) === $newSource->value
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			&& (int) ( $after->source_revision ?? 0 ) === $expectedRevision + 1
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			&& ( $after->source_previous ?? null ) === $expectedSource->value
+			$verified = ( $after->source ?? null ) === $new_source->value
+			&& (int) ( $after->source_revision ?? 0 ) === $expected_revision + 1
+			&& ( $after->source_previous ?? null ) === $expected_source->value
 			&& ( $after->release_configuration ?? null ) === $data['release_configuration']
 				&& ( $after->deployment_policy ?? null ) === $next_policy;
 			if ( ! $verified || false === $this->database->query( 'COMMIT' ) ) {
@@ -173,25 +154,19 @@ class ManagedReleaseStore {
 	 *
 	 * @param 'stable'|'prerelease' $channel
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function changeChannel(
+	public function change_channel(
 		string $type,
 		string $identifier,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		int $expectedRevision,
+		int $expected_revision,
 		string $channel,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		int $userId
+		int $user_id
 	): bool {
 		PackageMutationGuard::assert_package_mutation_allowed();
 
 		$this->assert_identity( $type, $identifier );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( $expectedRevision < 1
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			|| PHP_INT_MAX === $expectedRevision
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			|| $userId < 0
+		if ( $expected_revision < 1
+			|| PHP_INT_MAX === $expected_revision
+			|| $user_id < 0
 			|| ! in_array( $channel, array( 'stable', 'prerelease' ), true ) ) {
 			return false;
 		}
@@ -225,20 +200,19 @@ class ManagedReleaseStore {
 			}
 			$this->assert_release_subdirectory( $before );
 			if ( PackageSource::RELEASE_ASSET->value !== ( $before->source ?? null )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			|| (int) ( $before->source_revision ?? 0 ) !== $expectedRevision
+			|| (int) ( $before->source_revision ?? 0 ) !== $expected_revision
 			|| ! is_string( $before->release_configuration ?? null ) ) {
 				$this->database->query( 'ROLLBACK' );
 				return false;
 			}
-			$current = ManagedReleaseConfiguration::fromJson( $before->release_configuration );
+			$current = ManagedReleaseConfiguration::from_json( $before->release_configuration );
 			if ( $channel === $current->channel() ) {
 				$this->database->query( 'ROLLBACK' );
 				return false;
 			}
 			$next = new ManagedReleaseConfiguration(
-				$current->packageRoot(),
-				$current->metadataFile(),
+				$current->package_root(),
+				$current->metadata_file(),
 				$channel
 			);
 
@@ -247,22 +221,19 @@ class ManagedReleaseStore {
 			? DeploymentPolicy::MANUAL->value
 			: $policy;
 			$data        = array(
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				'source_revision'       => $expectedRevision + 1,
+				'source_revision'       => $expected_revision + 1,
 				'source_changed_at'     => ( $this->clock )(),
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				'source_changed_by'     => $userId > 0 ? $userId : null,
+				'source_changed_by'     => $user_id > 0 ? $user_id : null,
 				'deployment_policy'     => $next_policy,
-				'release_configuration' => $next->toJson(),
+				'release_configuration' => $next->to_json(),
 			);
 			$where       = array(
 				'type'                  => self::type_id( $type ),
 				'package'               => $identifier,
 				'source'                => PackageSource::RELEASE_ASSET->value,
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				'source_revision'       => $expectedRevision,
+				'source_revision'       => $expected_revision,
 				'deployment_policy'     => $policy,
-				'release_configuration' => $current->toJson(),
+				'release_configuration' => $current->to_json(),
 			);
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- This is the exact same-source configuration CAS boundary.
 			if ( 1 !== $this->database->update( ran_booster_table_name(), $data, $where ) ) {
@@ -273,9 +244,8 @@ class ManagedReleaseStore {
 			$after = $this->row( $type, $identifier, true );
 
 			$verified = PackageSource::RELEASE_ASSET->value === ( $after->source ?? null )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			&& (int) ( $after->source_revision ?? 0 ) === $expectedRevision + 1
-			&& $next->toJson() === ( $after->release_configuration ?? null )
+			&& (int) ( $after->source_revision ?? 0 ) === $expected_revision + 1
+			&& $next->to_json() === ( $after->release_configuration ?? null )
 			&& ( $after->deployment_policy ?? null ) === $next_policy;
 			if ( ! $verified || false === $this->database->query( 'COMMIT' ) ) {
 				$this->database->query( 'ROLLBACK' );
@@ -290,7 +260,7 @@ class ManagedReleaseStore {
 
 	private function row( string $type, string $identifier, bool $lock = false ): object {
 		$this->assert_identity( $type, $identifier );
-		$this->lifecycle?->requireReady();
+		$this->lifecycle?->require_ready();
 		$query = $this->database->prepare(
 			'SELECT * FROM %i WHERE type = %d AND package = %s LIMIT 2' . ( $lock ? ' FOR UPDATE' : '' ),
 			ran_booster_table_name(),

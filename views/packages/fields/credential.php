@@ -3,17 +3,17 @@
 /**
  * Inherited from the including package template.
  *
- * @var string $providerCode
- * @var list<array<string, mixed>> $providerOptions
- * @var string $selectedCredentialId
+ * @var string $provider_code
+ * @var list<array<string, mixed>> $provider_options
+ * @var string $selected_credential_id
  */
 
 defined( 'WPINC' ) || die;
 
-$packageFieldGrid = isset( $packageFieldLayout ) && 'grid' === $packageFieldLayout;
+$package_field_grid = isset( $package_field_layout ) && 'grid' === $package_field_layout;
 
 ?>
-<?php if ( $packageFieldGrid ) { ?>
+<?php if ( $package_field_grid ) { ?>
 	<div class="ran-booster-settings-field">
 		<label for="ran-booster-credential-id"><?php esc_html_e( 'Repository access', 'ran-booster' ); ?></label>
 <?php } else { ?>
@@ -22,16 +22,16 @@ $packageFieldGrid = isset( $packageFieldLayout ) && 'grid' === $packageFieldLayo
 		<td>
 <?php } ?>
 		<select id="ran-booster-credential-id" name="ran_booster[credential_id]" class="ran-booster-credential-input">
-			<option value="" <?php selected( $selectedCredentialId, '' ); ?>><?php esc_html_e( 'Default / public repository', 'ran-booster' ); ?></option>
+			<option value="" <?php selected( $selected_credential_id, '' ); ?>><?php esc_html_e( 'Default / public repository', 'ran-booster' ); ?></option>
 			<?php
-			foreach ( $providerOptions as $providerOption ) {
-				foreach ( $providerOption['credential_profiles'] as $profile ) {
-					$credentialLabel = $profile['label'] . ' — ' . $profile['kind_label'];
+			foreach ( $provider_options as $provider_option ) {
+				foreach ( $provider_option['credential_profiles'] as $profile ) {
+					$credential_label = $profile['label'] . ' — ' . $profile['kind_label'];
 					if ( '' !== $profile['detail'] ) {
-						$credentialLabel .= ' · ' . $profile['detail'];
+						$credential_label .= ' · ' . $profile['detail'];
 					}
 					?>
-					<option value="<?php echo esc_attr( $profile['id'] ); ?>" data-provider="<?php echo esc_attr( $providerOption['code'] ); ?>" <?php selected( $providerCode === $providerOption['code'] && $selectedCredentialId === $profile['id'] ); ?> <?php disabled( $providerCode !== $providerOption['code'] ); ?> <?php echo $providerCode !== $providerOption['code'] ? 'hidden' : ''; ?>><?php echo esc_html( $credentialLabel ); ?></option>
+					<option value="<?php echo esc_attr( $profile['id'] ); ?>" data-provider="<?php echo esc_attr( $provider_option['code'] ); ?>" <?php selected( $provider_code === $provider_option['code'] && $selected_credential_id === $profile['id'] ); ?> <?php disabled( $provider_code !== $provider_option['code'] ); ?> <?php echo $provider_code !== $provider_option['code'] ? 'hidden' : ''; ?>><?php echo esc_html( $credential_label ); ?></option>
 					<?php
 				}
 			}
@@ -39,7 +39,7 @@ $packageFieldGrid = isset( $packageFieldLayout ) && 'grid' === $packageFieldLayo
 			</select>
 			<p class="description"><?php esc_html_e( 'Private repos require a PAT with appropriate access.', 'ran-booster' ); ?></p>
 			<p class="description"><?php esc_html_e( 'Only install provider integrations you trust: an active provider can read its saved credentials. Booster does not authenticate a third-party publisher.', 'ran-booster' ); ?></p>
-<?php if ( $packageFieldGrid ) { ?>
+<?php if ( $package_field_grid ) { ?>
 	</div>
 <?php } else { ?>
 		</td>

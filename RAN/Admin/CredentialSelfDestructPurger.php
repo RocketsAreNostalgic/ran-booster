@@ -23,7 +23,7 @@ final class CredentialSelfDestructPurger {
 
 	public function purge(): void {
 		try {
-			$removed = $this->secrets->purgeExpiredCredentials();
+			$removed = $this->secrets->purge_expired_credentials();
 			foreach ( $removed as $provider => $ids ) {
 				foreach ( $ids as $id ) {
 					$this->observations->clear( $provider, $id );

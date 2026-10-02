@@ -42,10 +42,7 @@ final class PackageFieldsLocalisationTest extends TestCase {
 
 		$repository = $this->render(
 			'repository.php',
-			array(
-				'layout'      => $layout,
-				'packageView' => $package_view,
-			) + array(
+			array( 'layout' => $layout, 'package_view' => $package_view ) + array(
 				'packageFieldLayout'      => $layout,
 				'repositoryValue'         => 'group/example',
 				'providerBrowseAvailable' => true,
@@ -57,7 +54,7 @@ final class PackageFieldsLocalisationTest extends TestCase {
 			array(
 				'packageFieldLayout'       => $layout,
 				'repositoryReadOnly'       => false,
-				'packageMutationAvailable' => true,
+				'package_mutation_available' => true,
 				'providerCode'             => 'provider-code',
 				'providerOptions'          => array(
 					array(

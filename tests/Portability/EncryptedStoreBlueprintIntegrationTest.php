@@ -42,50 +42,50 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 	private const CLASSIC_TOKEN = 'ghp_' . 'abcdefghijklmnopqrstuvwxyz0123456789ABCD';
 
 	private string $root;
-	private string $sourcePath;
-	private string $targetPath;
-	private string $archivePath;
+	private string $source_path;
+	private string $target_path;
+	private string $archive_path;
 
 	protected function setUp(): void {
-		$this->root        = sys_get_temp_dir() . '/ran-booster-two-site-' . bin2hex( random_bytes( 8 ) );
-		$this->sourcePath  = $this->root . '/source/secrets.json';
-		$this->targetPath  = $this->root . '/target/secrets.json';
-		$this->archivePath = $this->root . '/blueprint.zip';
-		self::assertTrue( mkdir( dirname( $this->sourcePath ), 0700, true ) );
-		self::assertTrue( mkdir( dirname( $this->targetPath ), 0700, true ) );
-		InMemorySiteKeyStore::reset( $this->sourcePath );
-		InMemorySiteKeyStore::reset( $this->targetPath );
+		$this->root         = sys_get_temp_dir() . '/ran-booster-two-site-' . bin2hex( random_bytes( 8 ) );
+		$this->source_path  = $this->root . '/source/secrets.json';
+		$this->target_path  = $this->root . '/target/secrets.json';
+		$this->archive_path = $this->root . '/blueprint.zip';
+		self::assertTrue( mkdir( dirname( $this->source_path ), 0700, true ) );
+		self::assertTrue( mkdir( dirname( $this->target_path ), 0700, true ) );
+		InMemorySiteKeyStore::reset( $this->source_path );
+		InMemorySiteKeyStore::reset( $this->target_path );
 	}
 
 	protected function tearDown(): void {
-		$this->removeTree( $this->root );
-		InMemorySiteKeyStore::reset( $this->sourcePath );
-		InMemorySiteKeyStore::reset( $this->targetPath );
+		$this->remove_tree( $this->root );
+		InMemorySiteKeyStore::reset( $this->source_path );
+		InMemorySiteKeyStore::reset( $this->target_path );
 	}
 
-	public function testBlueprintV1ReencryptsImportedCredentialAndRetainsItAfterALaterPackageFailure(): void {
-		$codec          = new EncryptedSecretsEnvelopeCodec();
-		$sourceKeyStore = new InMemorySiteKeyStore( $this->sourcePath );
-		$targetKeyStore = new InMemorySiteKeyStore( $this->targetPath );
-		$sourcePolicies = new ProviderSecretPolicyCatalog();
-		$sourcePolicies->register( ProviderCode::parse( 'gh' ), new GitHubCredentialPolicy(), null );
-		$targetPolicies = new ProviderSecretPolicyCatalog();
-		$targetPolicies->register( ProviderCode::parse( 'gh' ), new GitHubCredentialPolicy(), null );
-		$sourceSecrets = new SecretsFile(
-			$this->sourcePath,
+	public function test_blueprint_v1_reencrypts_imported_credential_and_retains_it_after_alater_package_failure(): void {
+		$codec            = new EncryptedSecretsEnvelopeCodec();
+		$source_key_store = new InMemorySiteKeyStore( $this->source_path );
+		$target_key_store = new InMemorySiteKeyStore( $this->target_path );
+		$source_policies  = new ProviderSecretPolicyCatalog();
+		$source_policies->register( ProviderCode::parse( 'gh' ), new GitHubCredentialPolicy(), null );
+		$target_policies = new ProviderSecretPolicyCatalog();
+		$target_policies->register( ProviderCode::parse( 'gh' ), new GitHubCredentialPolicy(), null );
+		$source_secrets = new SecretsFile(
+			$this->source_path,
 			array(),
-			$sourcePolicies,
-			$sourceKeyStore,
+			$source_policies,
+			$source_key_store,
 			$codec
 		);
-		$targetSecrets = new SecretsFile(
-			$this->targetPath,
+		$target_secrets = new SecretsFile(
+			$this->target_path,
 			array(),
-			$targetPolicies,
-			$targetKeyStore,
+			$target_policies,
+			$target_key_store,
 			$codec
 		);
-		$sourceSecrets->saveCredential(
+		$source_secrets->save_credential(
 			'gh',
 			'source-credential',
 			array(
@@ -96,33 +96,33 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 			self::CLASSIC_TOKEN
 		);
 
-		$blueprint = $this->exporter( $sourceSecrets )->export( array( 'gh' => array( 'source-credential' ) ) );
+		$blueprint = $this->exporter( $source_secrets )->export( array( 'gh' => array( 'source-credential' ) ) );
 		$password  = 'correct-horse-battery-staple';
-		( new BlueprintArchive() )->write_to( $this->archivePath, $blueprint, $password );
-		$imported = ( new BlueprintArchive() )->read_from( $this->archivePath, $password );
+		( new BlueprintArchive() )->write_to( $this->archive_path, $blueprint, $password );
+		$imported = ( new BlueprintArchive() )->read_from( $this->archive_path, $password );
 		self::assertSame( $blueprint->canonical_json(), $imported->canonical_json() );
 
-		$credential  = $imported->credentials[0];
-		$orphanedKey = $targetKeyStore->load_or_create()['key'];
+		$credential   = $imported->credentials[0];
+		$orphaned_key = $target_key_store->load_or_create()['key'];
 		try {
-			$targetSecrets->importCredentialsIfAbsent( $imported, $credential );
+			$target_secrets->import_credentials_if_absent( $imported, $credential );
 			self::fail( 'Blueprint import must not overwrite a key whose encrypted sidecar is missing.' );
 		} catch ( \RAN\Secrets\SecretsStorageUnavailable $failure ) {
 			self::assertSame( 'storage_file_missing', $failure->reason() );
 		}
-		self::assertSame( $orphanedKey, $targetKeyStore->load( false ) );
-		self::assertTrue( $targetSecrets->can_reset_orphaned_key_at( $this->targetPath ) );
-		$targetSecrets->reset_orphaned_key_at( $this->targetPath );
-		self::assertNull( $targetKeyStore->load( false ) );
-		self::assertFileDoesNotExist( $this->targetPath );
-		self::assertFileExists( $this->targetPath . '.lock' );
+		self::assertSame( $orphaned_key, $target_key_store->load( false ) );
+		self::assertTrue( $target_secrets->can_reset_orphaned_key_at( $this->target_path ) );
+		$target_secrets->reset_orphaned_key_at( $this->target_path );
+		self::assertNull( $target_key_store->load( false ) );
+		self::assertFileDoesNotExist( $this->target_path );
+		self::assertFileExists( $this->target_path . '.lock' );
 
-		$targetSecrets->assertManagedStorageReady();
-		$provider = new TemporaryCredentialProvider( $targetSecrets->credentialsFor( 'gh' ), 0, 'repository-id', false, 'gh', 'GitHub', self::CLASSIC_TOKEN );
+		$target_secrets->assert_managed_storage_ready();
+		$provider = new TemporaryCredentialProvider( $target_secrets->credentials_for( 'gh' ), 0, 'repository-id', false, 'gh', 'GitHub', self::CLASSIC_TOKEN );
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$verifier = new BlueprintRepositoryVerifier(
 			new ProviderRegistry( array( $provider ), $catalog ),
-			$targetSecrets
+			$target_secrets
 		);
 		$preview  = $verifier->verify(
 			new BlueprintPlanItem( $imported->packages[0], TargetPackageAction::INSTALL, TargetPackageReason::NONE ),
@@ -131,37 +131,37 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		);
 
 		self::assertSame( TargetPackageAction::INSTALL, $preview->action );
-		self::assertFileDoesNotExist( $this->targetPath );
-		self::assertNull( $targetKeyStore->load() );
+		self::assertFileDoesNotExist( $this->target_path );
+		self::assertNull( $target_key_store->load() );
 
-		$managedPackage = $this->createStub( Package::class );
-		$managedPackage->method( 'get_identifier' )->willReturn( $imported->packages[0]->identifier );
-		$managedPackage->method( 'get_display_name' )->willReturn( $imported->packages[0]->displayName );
-		$managedPackage->method( 'get_provider_code' )->willReturn( $imported->packages[0]->provider );
-		$managedPackage->method( 'get_provider_repository_id' )->willReturn( $imported->packages[0]->providerRepositoryId );
-		$managedPackage->method( 'get_repository' )->willReturn(
+		$managed_package = $this->createStub( Package::class );
+		$managed_package->method( 'get_identifier' )->willReturn( $imported->packages[0]->identifier );
+		$managed_package->method( 'get_display_name' )->willReturn( $imported->packages[0]->display_name );
+		$managed_package->method( 'get_provider_code' )->willReturn( $imported->packages[0]->provider );
+		$managed_package->method( 'get_provider_repository_id' )->willReturn( $imported->packages[0]->provider_repository_id );
+		$managed_package->method( 'get_repository' )->willReturn(
 			new ManagedRepository(
 				$imported->packages[0]->provider,
 				$imported->packages[0]->repository,
-				$imported->packages[0]->providerRepositoryId,
+				$imported->packages[0]->provider_repository_id,
 				$imported->packages[0]->branch,
 				true,
 				'missing-source-profile'
 			)
 		);
-		$managedPackage->method( 'get_branch' )->willReturn( $imported->packages[0]->branch );
-		$managedPackage->method( 'get_subdirectory' )->willReturn( $imported->packages[0]->subdirectory );
+		$managed_package->method( 'get_branch' )->willReturn( $imported->packages[0]->branch );
+		$managed_package->method( 'get_subdirectory' )->willReturn( $imported->packages[0]->subdirectory );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
 		$plugins->method( 'is_installed' )->willReturn( true );
 		$plugins->method( 'has_management_record' )->willReturn( true );
-		$plugins->method( 'booster_plugin_from_file' )->willReturn( $managedPackage );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $managed_package );
 
 		$application = new PortabilityApplicationService(
 			new BlueprintReviewer( $plugins, $themes ),
 			$verifier,
 			( new ReflectionClass( PackageOperationService::class ) )->newInstanceWithoutConstructor(),
-			$targetSecrets
+			$target_secrets
 		);
 		$decisions   = array(
 			0 => array(
@@ -171,9 +171,9 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		);
 		$review      = $application->review( $imported, $decisions );
 		self::assertSame( TargetPackageAction::MANAGED, $review[0]->action );
-		self::assertFileDoesNotExist( $this->targetPath );
-		$applyItem = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'apply_item' );
-		$managed   = $application->apply(
+		self::assertFileDoesNotExist( $this->target_path );
+		$apply_item = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'apply_item' );
+		$managed    = $application->apply(
 			$imported,
 			0,
 			'managed',
@@ -185,23 +185,23 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		self::assertSame( 'credential_available', $managed['status'] );
 		self::assertSame( 'transferred_available', $managed['credential_state'] );
 		self::assertStringContainsString( 'managed package settings were not changed', $managed['message'] );
-		self::assertFileExists( $this->targetPath );
-		self::assertIsString( $targetKeyStore->load( false ) );
+		self::assertFileExists( $this->target_path );
+		self::assertIsString( $target_key_store->load( false ) );
 
-		$lostTargetKey = $targetKeyStore->load( false );
-		self::assertNotNull( $lostTargetKey );
-		self::assertTrue( $targetKeyStore->delete_exact( $lostTargetKey ) );
+		$lost_target_key = $target_key_store->load( false );
+		self::assertNotNull( $lost_target_key );
+		self::assertTrue( $target_key_store->delete_exact( $lost_target_key ) );
 		try {
-			$targetSecrets->importCredentialsIfAbsent( $imported, $credential );
+			$target_secrets->import_credentials_if_absent( $imported, $credential );
 			self::fail( 'Blueprint import must not overwrite ciphertext whose database key is missing.' );
 		} catch ( \RAN\Secrets\SecretsStorageUnavailable $failure ) {
 			self::assertSame( 'storage_key_missing', $failure->reason() );
 		}
-		self::assertTrue( $targetSecrets->can_reset_orphaned_ciphertext_at( $this->targetPath ) );
-		$targetSecrets->reset_orphaned_ciphertext_at( $this->targetPath );
-		self::assertFileDoesNotExist( $this->targetPath );
-		self::assertFileExists( $this->targetPath . '.lock' );
-		self::assertNull( $targetKeyStore->load( false ) );
+		self::assertTrue( $target_secrets->can_reset_orphaned_ciphertext_at( $this->target_path ) );
+		$target_secrets->reset_orphaned_ciphertext_at( $this->target_path );
+		self::assertFileDoesNotExist( $this->target_path );
+		self::assertFileExists( $this->target_path . '.lock' );
+		self::assertNull( $target_key_store->load( false ) );
 
 		$recovered = $application->apply(
 			$imported,
@@ -213,13 +213,13 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 			false
 		);
 		self::assertSame( 'credential_available', $recovered['status'] );
-		self::assertFileExists( $this->targetPath );
-		self::assertNotNull( $targetKeyStore->load( false ) );
+		self::assertFileExists( $this->target_path );
+		self::assertNotNull( $target_key_store->load( false ) );
 
-		$result     = $applyItem->invoke( $application, $imported, $preview, $credential, 'import', null, false, true, true );
-		$secondItem = new BlueprintPlanItem( $imported->packages[1], TargetPackageAction::INSTALL, TargetPackageReason::NONE );
-		$second     = $applyItem->invoke( $application, $imported, $secondItem, $credential, 'import', null, false, true, true );
-		$retry      = $applyItem->invoke( $application, $imported, $preview, $credential, 'import', null, false, true, true );
+		$result      = $apply_item->invoke( $application, $imported, $preview, $credential, 'import', null, false, true, true );
+		$second_item = new BlueprintPlanItem( $imported->packages[1], TargetPackageAction::INSTALL, TargetPackageReason::NONE );
+		$second      = $apply_item->invoke( $application, $imported, $second_item, $credential, 'import', null, false, true, true );
+		$retry       = $apply_item->invoke( $application, $imported, $preview, $credential, 'import', null, false, true, true );
 
 		self::assertSame( 'failed', $result['status'] );
 		self::assertSame( 'transferred_available', $result['credential_state'] );
@@ -228,26 +228,26 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		self::assertSame( 'transferred_available', $second['credential_state'] );
 		self::assertSame( 'failed', $retry['status'] );
 		self::assertSame( 'transferred_available', $retry['credential_state'] );
-		$targetId = $targetSecrets->importCredentialsIfAbsent( $imported, $credential )[0];
+		$target_id = $target_secrets->import_credentials_if_absent( $imported, $credential )[0];
 		self::assertSame(
 			self::CLASSIC_TOKEN,
-			$targetSecrets->credentialMaterial( 'gh', $targetId )['secret']
+			$target_secrets->credential_material( 'gh', $target_id )['secret']
 		);
-		self::assertSame( $targetId, $targetSecrets->importCredentialsIfAbsent( $imported, $credential )[0] );
-		self::assertSame( array( $targetId ), array_keys( $targetSecrets->credentialProfiles( 'gh' ) ) );
+		self::assertSame( $target_id, $target_secrets->import_credentials_if_absent( $imported, $credential )[0] );
+		self::assertSame( array( $target_id ), array_keys( $target_secrets->credential_profiles( 'gh' ) ) );
 
-		$sourceKey = $sourceKeyStore->load();
-		$targetKey = $targetKeyStore->load();
-		self::assertIsString( $sourceKey );
-		self::assertIsString( $targetKey );
-		self::assertNotSame( $sourceKey, $targetKey );
-		$envelope = (string) file_get_contents( $this->targetPath );
+		$source_key = $source_key_store->load();
+		$target_key = $target_key_store->load();
+		self::assertIsString( $source_key );
+		self::assertIsString( $target_key );
+		self::assertNotSame( $source_key, $target_key );
+		$envelope = (string) file_get_contents( $this->target_path );
 		self::assertStringNotContainsString( self::CLASSIC_TOKEN, $envelope );
-		self::assertStringNotContainsString( base64_encode( $sourceKey ), $envelope );
-		self::assertStringNotContainsString( base64_encode( $targetKey ), $envelope );
+		self::assertStringNotContainsString( base64_encode( $source_key ), $envelope );
+		self::assertStringNotContainsString( base64_encode( $target_key ), $envelope );
 
 		$this->expectException( RuntimeException::class );
-		$codec->decrypt( $envelope, $sourceKey );
+		$codec->decrypt( $envelope, $source_key );
 	}
 
 	private function exporter( SecretsFile $secrets ): ManagedPackageBlueprintExporter {
@@ -255,10 +255,10 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		foreach ( array(
 			'example/example.php' => 'Example',
 			'second/second.php'   => 'Second',
-		) as $identifier => $displayName ) {
+		) as $identifier => $display_name ) {
 			$package = $this->createStub( Package::class );
 			$package->method( 'get_identifier' )->willReturn( $identifier );
-			$package->method( 'get_display_name' )->willReturn( $displayName );
+			$package->method( 'get_display_name' )->willReturn( $display_name );
 			$package->method( 'get_slug' )->willReturn( explode( '/', $identifier, 2 )[0] );
 			$package->method( 'get_provider_code' )->willReturn( 'gh' );
 			$package->method( 'get_provider_repository_id' )->willReturn( 'repository-id' );
@@ -281,7 +281,7 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		return new ManagedPackageBlueprintExporter( $plugins, $themes, $secrets );
 	}
 
-	private function removeTree( string $path ): void {
+	private function remove_tree( string $path ): void {
 		if ( is_link( $path ) || is_file( $path ) ) {
 			unlink( $path );
 			return;
@@ -292,7 +292,7 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		$entries = scandir( $path );
 		foreach ( false === $entries ? array() : $entries as $entry ) {
 			if ( '.' !== $entry && '..' !== $entry ) {
-				$this->removeTree( $path . '/' . $entry );
+				$this->remove_tree( $path . '/' . $entry );
 			}
 		}
 		rmdir( $path );

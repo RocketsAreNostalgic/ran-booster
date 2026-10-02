@@ -26,14 +26,14 @@ final readonly class PackageUpdateProgressController {
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- The dedicated AJAX nonce is checked above.
-		$packageType = isset( $_POST['package_type'] ) && is_string( $_POST['package_type'] )
+		$package_type = isset( $_POST['package_type'] ) && is_string( $_POST['package_type'] )
 			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- The dedicated AJAX nonce is checked above.
 			? wp_unslash( $_POST['package_type'] )
 			: '';
-		if ( ! in_array( $packageType, array( 'plugin', 'theme' ), true ) ) {
+		if ( ! in_array( $package_type, array( 'plugin', 'theme' ), true ) ) {
 			return $this->error( __( 'The package type is invalid.', 'ran-booster' ), 400 );
 		}
-		$capability = 'plugin' === $packageType ? 'update_plugins' : 'update_themes';
+		$capability = 'plugin' === $package_type ? 'update_plugins' : 'update_themes';
 		if ( ! current_user_can( $capability ) ) {
 			return $this->error( __( 'You are not allowed to update these packages.', 'ran-booster' ), 403 );
 		}
@@ -45,9 +45,9 @@ final readonly class PackageUpdateProgressController {
 		}
 
 		$references = array();
-		foreach ( $input as $attemptId => $reference ) {
-			$id = is_int( $attemptId ) ? $attemptId : ( ctype_digit( (string) $attemptId ) ? (int) $attemptId : 0 );
-			if ( $id < 1 || (string) $id !== (string) $attemptId || ! is_string( $reference ) ) {
+		foreach ( $input as $attempt_id => $reference ) {
+			$id = is_int( $attempt_id ) ? $attempt_id : ( ctype_digit( (string) $attempt_id ) ? (int) $attempt_id : 0 );
+			if ( $id < 1 || (string) $id !== (string) $attempt_id || ! is_string( $reference ) ) {
 				return $this->error( __( 'The progress request is invalid.', 'ran-booster' ), 400 );
 			}
 			$reference = wp_unslash( $reference );
@@ -58,7 +58,7 @@ final readonly class PackageUpdateProgressController {
 		}
 
 		try {
-			$found = $this->attempts->findExactBatch( array_keys( $references ) );
+			$found = $this->attempts->find_exact_batch( array_keys( $references ) );
 		} catch ( Throwable ) {
 			return $this->error( __( 'Package update progress is temporarily unavailable.', 'ran-booster' ), 503 );
 		}

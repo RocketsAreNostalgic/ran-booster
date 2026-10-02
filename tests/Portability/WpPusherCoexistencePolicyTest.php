@@ -26,7 +26,7 @@ final class WpPusherCoexistencePolicyTest extends TestCase {
 	}
 
 	/** @return iterable<string, array{array<mixed>, array<mixed>, bool}> */
-	public static function stateProvider(): iterable {
+	public static function state_provider(): iterable {
 		yield 'inactive' => array( array(), array(), false );
 		yield 'site-active WP Pusher' => array(
 			array( WpPusherCoexistencePolicy::WP_PUSHER_PLUGIN ),
@@ -46,40 +46,40 @@ final class WpPusherCoexistencePolicyTest extends TestCase {
 	}
 
 	/**
-	 * @param array<mixed> $siteActive
-	 * @param array<mixed> $networkActive
+	 * @param array<mixed> $site_active
+	 * @param array<mixed> $network_active
 	 */
-	#[DataProvider( 'stateProvider' )]
-	public function testReportsOnlyExactActiveWordPressInventoryState(
-		array $siteActive,
-		array $networkActive,
-		bool $expectedConflict
+	#[DataProvider( 'state_provider' )]
+	public function test_reports_only_exact_active_word_press_inventory_state(
+		array $site_active,
+		array $network_active,
+		bool $expected_conflict
 	): void {
-		$GLOBALS['ran_booster_wp_pusher_active_plugins']  = $siteActive;
-		$GLOBALS['ran_booster_wp_pusher_network_plugins'] = $networkActive;
+		$GLOBALS['ran_booster_wp_pusher_active_plugins']  = $site_active;
+		$GLOBALS['ran_booster_wp_pusher_network_plugins'] = $network_active;
 
-		self::assertSame( $expectedConflict, WpPusherCoexistencePolicy::conflictActive() );
+		self::assertSame( $expected_conflict, WpPusherCoexistencePolicy::conflict_active() );
 	}
 
-	public function testMalformedActiveInventoryFailsClosed(): void {
+	public function test_malformed_active_inventory_fails_closed(): void {
 		$GLOBALS['ran_booster_wp_pusher_active_plugins'] = 'malformed';
 
-		self::assertTrue( WpPusherCoexistencePolicy::conflictActive() );
+		self::assertTrue( WpPusherCoexistencePolicy::conflict_active() );
 		$this->expectException( RuntimeException::class );
-		WpPusherCoexistencePolicy::assertPackageMutationAllowed();
+		WpPusherCoexistencePolicy::assert_package_mutation_allowed();
 	}
 
-	public function testInactiveWpPusherAllowsPackageMutation(): void {
-		WpPusherCoexistencePolicy::assertPackageMutationAllowed();
+	public function test_inactive_wp_pusher_allows_package_mutation(): void {
+		WpPusherCoexistencePolicy::assert_package_mutation_allowed();
 		$this->addToAssertionCount( 1 );
 	}
 
-	public function testBlocksOnlyExactWpPusherActivationWhileCoreIsActive(): void {
-		WpPusherCoexistencePolicy::blockWpPusherActivation( 'wppusher-copy/wppusher.php' );
+	public function test_blocks_only_exact_wp_pusher_activation_while_core_is_active(): void {
+		WpPusherCoexistencePolicy::block_wp_pusher_activation( 'wppusher-copy/wppusher.php' );
 		$this->addToAssertionCount( 1 );
 
 		$this->expectException( RuntimeException::class );
 		$this->expectExceptionMessage( 'cannot be activated while RAN Booster is active' );
-		WpPusherCoexistencePolicy::blockWpPusherActivation( WpPusherCoexistencePolicy::WP_PUSHER_PLUGIN );
+		WpPusherCoexistencePolicy::block_wp_pusher_activation( WpPusherCoexistencePolicy::WP_PUSHER_PLUGIN );
 	}
 }

@@ -8,14 +8,24 @@ $GLOBALS['ran_booster_updater_smoke_hooks'] = array();
 
 define( 'ABSPATH', dirname( __DIR__ ) . '/fixtures/wordpress/' );
 
-function add_action( string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1 ): bool {
-	$GLOBALS['ran_booster_updater_smoke_hooks'][] = compact( 'hook', 'callback', 'priority', 'acceptedArgs' );
+function add_action( string $hook, callable $callback, int $priority = 10, int $accepted_args = 1 ): bool {
+	$GLOBALS['ran_booster_updater_smoke_hooks'][] = array(
+		'hook'         => $hook,
+		'callback'     => $callback,
+		'priority'     => $priority,
+		'acceptedArgs' => $accepted_args,
+	);
 
 	return true;
 }
 
-function add_filter( string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1 ): bool {
-	$GLOBALS['ran_booster_updater_smoke_hooks'][] = compact( 'hook', 'callback', 'priority', 'acceptedArgs' );
+function add_filter( string $hook, callable $callback, int $priority = 10, int $accepted_args = 1 ): bool {
+	$GLOBALS['ran_booster_updater_smoke_hooks'][] = array(
+		'hook'         => $hook,
+		'callback'     => $callback,
+		'priority'     => $priority,
+		'acceptedArgs' => $accepted_args,
+	);
 
 	return true;
 }
@@ -52,7 +62,7 @@ $assert( is_object( $broker ), 'The release updater broker must register before 
 $assert( is_object( $registrar ), 'The release updater must return its public registrar.' );
 $assert( 5 === $broker->protocol_version(), 'The public registrar must use Protocol 5.' );
 
-$coreUpdater = ( new RAN\WordPress\ManagedReleaseUpdaterRegistrar( $registrar ) )->plugin(
+$core_updater = ( new RAN\WordPress\ManagedReleaseUpdaterRegistrar( $registrar ) )->plugin(
 	'github',
 	dirname( __DIR__, 2 ) . '/ran-booster.php',
 	'RocketsAreNostalgic/ran-booster',
@@ -62,7 +72,7 @@ $coreUpdater = ( new RAN\WordPress\ManagedReleaseUpdaterRegistrar( $registrar ) 
 	null,
 	RAN\PackageArtifactLimit::DEFAULT_MAXIMUM_ARTIFACT_BYTES
 );
-$target      = new RAN\WordPress\CoreSelfUpdateNativeTarget( $coreUpdater );
+$target       = new RAN\WordPress\CoreSelfUpdateNativeTarget( $core_updater );
 
 $assert( $target->register(), 'The Core target must register through the selected neutral runtime.' );
 $assert( ! $target->status()->active, 'A queued public target must not claim native authority.' );

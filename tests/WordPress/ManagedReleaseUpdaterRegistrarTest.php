@@ -11,7 +11,7 @@ use Tests\Support\RecordingReleaseUpdaterRuntime;
 
 /** Proves the current release-updater registrar argument contract. */
 final class ManagedReleaseUpdaterRegistrarTest extends TestCase {
-	public function testDefaultNativeTargetLimitUsesEightArgumentUpdaterContract(): void {
+	public function test_default_native_target_limit_uses_eight_argument_updater_contract(): void {
 		$runtime   = new RecordingReleaseUpdaterRuntime();
 		$registrar = new ManagedReleaseUpdaterRegistrar( $runtime );
 
@@ -30,7 +30,7 @@ final class ManagedReleaseUpdaterRegistrarTest extends TestCase {
 		self::assertSame( PackageArtifactLimit::DEFAULT_MAXIMUM_ARTIFACT_BYTES, $runtime->arguments[7] );
 	}
 
-	public function testNonDefaultNativeTargetLimitUsesEightArgumentUpdaterContract(): void {
+	public function test_non_default_native_target_limit_uses_eight_argument_updater_contract(): void {
 		$runtime   = new RecordingReleaseUpdaterRuntime();
 		$registrar = new ManagedReleaseUpdaterRegistrar( $runtime );
 

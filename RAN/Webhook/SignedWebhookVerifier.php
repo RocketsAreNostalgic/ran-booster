@@ -23,7 +23,7 @@ final readonly class SignedWebhookVerifier {
 		$signature = $this->signature( $request, $policy );
 
 		try {
-			$materials = $this->secrets->webhookMaterials( $request->getProvider() );
+			$materials = $this->secrets->webhook_materials( $request->get_provider() );
 		} catch ( Throwable ) {
 			throw $this->authentication_failed();
 		}
@@ -35,7 +35,7 @@ final readonly class SignedWebhookVerifier {
 		$matches = array();
 		foreach ( $materials as $id => $material ) {
 			$profile  = $this->profile( $id, $material );
-			$expected = 'sha256=' . hash_hmac( 'sha256', $request->getBody(), $profile['secret'] );
+			$expected = 'sha256=' . hash_hmac( 'sha256', $request->get_body(), $profile['secret'] );
 			if ( hash_equals( $expected, $signature ) ) {
 				unset( $profile['secret'] );
 				$matches[] = $profile;
@@ -59,11 +59,11 @@ final readonly class SignedWebhookVerifier {
 			}
 		);
 
-		return new SignedWebhookVerification( $request->getProvider(), $matches );
+		return new SignedWebhookVerification( $request->get_provider(), $matches );
 	}
 
 	private function signature( WebhookRequest $request, ProviderWebhookPolicy $policy ): string {
-		$values = $request->getRawHeaderValues( $policy->get_signature_header() );
+		$values = $request->get_raw_header_values( $policy->get_signature_header() );
 		if ( 1 !== count( $values ) || 1 !== preg_match( '/\Asha256=[a-f0-9]{64}\z/D', $values[0] ) ) {
 			throw $this->authentication_failed();
 		}

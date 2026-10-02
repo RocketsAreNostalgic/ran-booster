@@ -8,15 +8,15 @@ use RAN\Deployment\PreparedArtifact;
 use RAN\WordPress\CorePackageExecutionFailure;
 use RAN\WordPress\CorePackageExecutor;
 
-$wordpressPath = getenv( 'RAN_BOOSTER_WORDPRESS_PATH' );
-if ( ! is_string( $wordpressPath ) || '' === trim( $wordpressPath ) ) {
+$wordpress_path = getenv( 'RAN_BOOSTER_WORDPRESS_PATH' );
+if ( ! is_string( $wordpress_path ) || '' === trim( $wordpress_path ) ) {
 	throw new RuntimeException( 'The non-cron installed runtime path is unavailable.' );
 }
-$sharedPath = rtrim( $wordpressPath, '/\\' ) . '/wp-content/plugins/ran-booster/vendor/ran/updater-support/src/RepositoryRelativePath.php';
-if ( ! is_file( $sharedPath ) ) {
+$shared_path = rtrim( $wordpress_path, '/\\' ) . '/wp-content/plugins/ran-booster/vendor/ran/updater-support/src/RepositoryRelativePath.php';
+if ( ! is_file( $shared_path ) ) {
 	throw new RuntimeException( 'The non-cron shared path dependency is unavailable.' );
 }
-require_once $sharedPath;
+require_once $shared_path;
 require_once dirname( __DIR__, 2 ) . '/RAN/RepositoryProvider/RepositoryReleaseArtifactCustody.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/PackageSubdirectory.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Deployment/PreparedArtifact.php';
@@ -41,23 +41,23 @@ if ( ! defined( 'WP_PLUGIN_DIR' ) ) {
 	define( 'WP_PLUGIN_DIR', sys_get_temp_dir() );
 }
 
-$fixturePath = tempnam( sys_get_temp_dir(), 'ran-booster-non-cron-' );
-if ( false === $fixturePath ) {
+$fixture_path = tempnam( sys_get_temp_dir(), 'ran-booster-non-cron-' );
+if ( false === $fixture_path ) {
 	throw new RuntimeException( 'The non-cron fixture could not be created.' );
 }
 // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable identity fixture.
-file_put_contents( $fixturePath, 'immutable fixture' );
+file_put_contents( $fixture_path, 'immutable fixture' );
 // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- PreparedArtifact requires a private file.
-chmod( $fixturePath, 0600 );
-$identity = PreparedArtifact::regularFileIdentity( $fixturePath );
+chmod( $fixture_path, 0600 );
+$identity = PreparedArtifact::regular_file_identity( $fixture_path );
 if ( null === $identity ) {
 	throw new RuntimeException( 'The non-cron fixture identity is unavailable.' );
 }
 $artifact = new PreparedArtifact(
-	$fixturePath,
+	$fixture_path,
 	str_repeat( 'a', 40 ),
 	'1.0.0',
-	hash_file( 'sha256', $fixturePath ),
+	hash_file( 'sha256', $fixture_path ),
 	$identity['device'],
 	$identity['inode'],
 	$identity['size'],
@@ -74,11 +74,11 @@ $executor = new CorePackageExecutor(
 );
 
 try {
-	$result = $executor->updatePlugin( $artifact, 'example', null, 'example/example.php' );
+	$result = $executor->update_plugin( $artifact, 'example', null, 'example/example.php' );
 	if ( CorePackageExecutionFailure::WORDPRESS_REFUSED !== $result->get_failure() ) {
 		throw new RuntimeException( 'The non-cron update did not return the core operation result.' );
 	}
-	$result = $executor->installPlugin( $artifact, 'example', null );
+	$result = $executor->install_plugin( $artifact, 'example', null );
 	if ( CorePackageExecutionFailure::WORDPRESS_REFUSED !== $result->get_failure() ) {
 		throw new RuntimeException( 'The non-cron install did not return the core operation result.' );
 	}

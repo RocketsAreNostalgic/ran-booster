@@ -29,9 +29,14 @@ if ( ! function_exists( 'add_action' ) ) {
 		string $hook,
 		callable $callback,
 		int $priority = 10,
-		int $acceptedArgs = 1
+		int $accepted_args = 1
 	): bool {
-		$GLOBALS['ran_booster_runtime_actions'][] = compact( 'hook', 'callback', 'priority', 'acceptedArgs' );
+		$GLOBALS['ran_booster_runtime_actions'][] = array(
+			'hook'         => $hook,
+			'callback'     => $callback,
+			'priority'     => $priority,
+			'acceptedArgs' => $accepted_args,
+		);
 
 		return true;
 	}
@@ -42,8 +47,8 @@ if ( ! function_exists( 'add_filter' ) ) {
 		string $hook,
 		callable $callback,
 		int $priority = 10,
-		int $acceptedArgs = 1
+		int $accepted_args = 1
 	): bool {
-		return add_action( $hook, $callback, $priority, $acceptedArgs );
+		return add_action( $hook, $callback, $priority, $accepted_args );
 	}
 }

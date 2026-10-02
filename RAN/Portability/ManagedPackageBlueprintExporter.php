@@ -29,18 +29,15 @@ final readonly class ManagedPackageBlueprintExporter {
 	}
 
 	/**
-	 * @param array<string, list<string>>                     $credentialSelection
-	 * @param list<array{type:string,identifier:string}>|null $packageSelection
+	 * @param array<string, list<string>>                     $credential_selection
+	 * @param list<array{type:string,identifier:string}>|null $package_selection
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-	public function export( array $credentialSelection = array(), ?array $packageSelection = null ): PackageBlueprint {
+	public function export( array $credential_selection = array(), ?array $package_selection = null ): PackageBlueprint {
 		$packages    = array();
 		$managed     = array();
 		$unsupported = array();
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		$selected = $this->selection( $packageSelection );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		$credentials = $this->credential_selection( $credentialSelection );
+		$selected    = $this->selection( $package_selection );
+		$credentials = $this->credential_selection( $credential_selection );
 		foreach ( array(
 			'plugin' => $this->plugins->all_deployment_plugins(),
 			'theme'  => $this->themes->all_deployment_themes(),
@@ -155,10 +152,10 @@ final readonly class ManagedPackageBlueprintExporter {
 
 			try {
 				if ( ! $storage_checked ) {
-					$this->secrets->assertManagedStorageReady();
+					$this->secrets->assert_managed_storage_ready();
 					$storage_checked = true;
 				}
-				$material = $materials[ $key ] ??= $this->secrets->credentialMaterial( $blueprint->provider, $credential_id );
+				$material = $materials[ $key ] ??= $this->secrets->credential_material( $blueprint->provider, $credential_id );
 			} catch ( \Throwable $failure ) {
 				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The typed exception is caught at the admin boundary.
 				throw LocalSecretStoreUnavailable::for_portability( $failure );

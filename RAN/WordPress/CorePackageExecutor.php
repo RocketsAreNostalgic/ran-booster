@@ -26,75 +26,60 @@ class CorePackageExecutor {
 	/**
 	 * The optional operation seam exists only for focused adapter tests.
 	 *
-	 * @param callable(string, string, string, object|null): mixed|null $coreOperation
+	 * @param callable(string, string, string, object|null): mixed|null $core_operation
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-	public function __construct( ?callable $coreOperation = null ) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		$this->core_operation = null === $coreOperation ? null : Closure::fromCallable( $coreOperation );
+	public function __construct( ?callable $core_operation = null ) {
+		$this->core_operation = null === $core_operation ? null : Closure::fromCallable( $core_operation );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing gateway and executor override contracts.
-	public function installPlugin(
+	public function install_plugin(
 		PreparedArtifact $artifact,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		string $packageSlug,
+		string $package_slug,
 		?string $subdirectory
 	): CorePackageExecutionResult {
-		if ( ! RuntimeSupport::current()->allowsManagedOperations() ) {
+		if ( ! RuntimeSupport::current()->allows_managed_operations() ) {
 			return CorePackageExecutionResult::failed( CorePackageExecutionFailure::RUNTIME_UNSUPPORTED );
 		}
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		return $this->execute_install( 'plugin', $artifact, $packageSlug, $subdirectory );
+		return $this->execute_install( 'plugin', $artifact, $package_slug, $subdirectory );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing gateway and executor override contracts.
-	public function installTheme(
+	public function install_theme(
 		PreparedArtifact $artifact,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		string $packageSlug,
+		string $package_slug,
 		?string $subdirectory
 	): CorePackageExecutionResult {
-		if ( ! RuntimeSupport::current()->allowsManagedOperations() ) {
+		if ( ! RuntimeSupport::current()->allows_managed_operations() ) {
 			return CorePackageExecutionResult::failed( CorePackageExecutionFailure::RUNTIME_UNSUPPORTED );
 		}
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		return $this->execute_install( 'theme', $artifact, $packageSlug, $subdirectory );
+		return $this->execute_install( 'theme', $artifact, $package_slug, $subdirectory );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing gateway and executor override contracts.
-	public function updatePlugin(
+	public function update_plugin(
 		PreparedArtifact $artifact,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		string $packageSlug,
+		string $package_slug,
 		?string $subdirectory,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		string $pluginFile
+		string $plugin_file
 	): CorePackageExecutionResult {
-		if ( ! RuntimeSupport::current()->allowsManagedOperations() ) {
+		if ( ! RuntimeSupport::current()->allows_managed_operations() ) {
 			return CorePackageExecutionResult::failed( CorePackageExecutionFailure::RUNTIME_UNSUPPORTED );
 		}
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		return $this->execute_update( 'plugin', $artifact, $packageSlug, $subdirectory, $pluginFile );
+		return $this->execute_update( 'plugin', $artifact, $package_slug, $subdirectory, $plugin_file );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing gateway and executor override contracts.
-	public function updateTheme(
+	public function update_theme(
 		PreparedArtifact $artifact,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		string $packageSlug,
+		string $package_slug,
 		?string $subdirectory,
 		string $stylesheet
 	): CorePackageExecutionResult {
-		if ( ! RuntimeSupport::current()->allowsManagedOperations() ) {
+		if ( ! RuntimeSupport::current()->allows_managed_operations() ) {
 			return CorePackageExecutionResult::failed( CorePackageExecutionFailure::RUNTIME_UNSUPPORTED );
 		}
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		return $this->execute_update( 'theme', $artifact, $packageSlug, $subdirectory, $stylesheet );
+		return $this->execute_update( 'theme', $artifact, $package_slug, $subdirectory, $stylesheet );
 	}
 
 	private function execute_install(
@@ -200,7 +185,7 @@ class CorePackageExecutor {
 		string $installed_identifier = ''
 	): array|CorePackageExecutionResult {
 		try {
-			$artifact->assertUnchanged();
+			$artifact->assert_unchanged();
 			$slug         = PackageSubdirectory::normalize_slug( $package_slug );
 			$subdirectory = PackageSubdirectory::normalize( $subdirectory );
 			$identifier   = '' === $installed_identifier ? '' : $this->normalize_installed_identifier( $installed_identifier );
@@ -209,7 +194,7 @@ class CorePackageExecutor {
 		}
 
 		return array(
-			'path'         => $artifact->getPath(),
+			'path'         => $artifact->get_path(),
 			'slug'         => $slug,
 			'subdirectory' => $subdirectory,
 			'identifier'   => $identifier,
@@ -234,8 +219,8 @@ class CorePackageExecutor {
 		$offer          = array(
 			'id'           => 'ran-booster/' . $slug,
 			'slug'         => $slug,
-			'new_version'  => $artifact->getExpectedVersion(),
-			'package'      => $artifact->getPath(),
+			'new_version'  => $artifact->get_expected_version(),
+			'package'      => $artifact->get_path(),
 			'autoupdate'   => true,
 			'requires_php' => '8.2',
 		);
@@ -264,7 +249,7 @@ class CorePackageExecutor {
 			if ( false !== $reply ) {
 				return $reply;
 			}
-			$archive_path         = $artifact->getPath();
+			$archive_path         = $artifact->get_path();
 			$operation_identifier = null === $identifier || ( $extra[ $type ] ?? null ) === $identifier;
 			if ( is_string( $package )
 				&& hash_equals( $archive_path, $package )
@@ -272,7 +257,7 @@ class CorePackageExecutor {
 				&& ( $extra['action'] ?? null ) === $action
 				&& $operation_identifier
 			) {
-				$artifact->assertUnchanged();
+				$artifact->assert_unchanged();
 
 				return $archive_path;
 			}
@@ -384,7 +369,7 @@ class CorePackageExecutor {
 			return false;
 		}
 		$zip = new \ZipArchive();
-		if ( true !== $zip->open( $artifact->getPath(), \ZipArchive::RDONLY ) ) {
+		if ( true !== $zip->open( $artifact->get_path(), \ZipArchive::RDONLY ) ) {
 			return false;
 		}
 

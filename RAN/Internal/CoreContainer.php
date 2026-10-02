@@ -54,17 +54,17 @@ final class CoreContainer {
 			return new $class();
 		}
 
-		$newInstanceParams = array();
+		$new_instance_params = array();
 		foreach ( $params as $param ) {
 			$type = $param->getType();
 			if ( null === $type ) {
-				$newInstanceParams[] = null;
+				$new_instance_params[] = null;
 				continue;
 			}
 
-			$newInstanceParams[] = $this->make( $type->getName() );
+			$new_instance_params[] = $this->make( $type->getName() );
 		}
 
-		return $reflection->newInstanceArgs( $newInstanceParams );
+		return $reflection->newInstanceArgs( $new_instance_params );
 	}
 }

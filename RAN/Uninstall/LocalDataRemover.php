@@ -48,11 +48,11 @@ class LocalDataRemover {
 	public function __construct(
 		private readonly SecretsFile $secrets,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private readonly TemporaryDebugCapture $debugCapture,
+		private readonly TemporaryDebugCapture $debug_capture,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private readonly WpConfigSecretsPathWriter $configWriter,
+		private readonly WpConfigSecretsPathWriter $config_writer,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private readonly PrivateLocationCandidateResolver $locationResolver = new PrivateLocationCandidateResolver(),
+		private readonly PrivateLocationCandidateResolver $location_resolver = new PrivateLocationCandidateResolver(),
 		?object $database = null
 	) {
 		global $wpdb;
@@ -72,7 +72,7 @@ class LocalDataRemover {
 		if ( null !== $config_path ) {
 			if ( null !== $sidecar_path ) {
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				$owned_definition = $this->configWriter->assert_owned_definition_removable( $config_path, $sidecar_path );
+				$owned_definition = $this->config_writer->assert_owned_definition_removable( $config_path, $sidecar_path );
 				if ( function_exists( 'is_multisite' ) && is_multisite() && ! $owned_definition ) {
 					throw new RuntimeException( 'Booster could not verify the converted installation configuration ownership.' );
 				}
@@ -81,11 +81,11 @@ class LocalDataRemover {
 		}
 		$this->secrets->assert_managed_storage_deletable();
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		$this->debugCapture->assert_managed_storage_deletable();
+		$this->debug_capture->assert_managed_storage_deletable();
 		$this->assert_automatic_directories_removable( $sidecar_path );
 
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		$this->debugCapture->delete_managed_storage();
+		$this->debug_capture->delete_managed_storage();
 		$this->secrets->delete_managed_storage();
 		$this->clear_scheduled_work();
 		$this->clear_updater_state();
@@ -99,7 +99,7 @@ class LocalDataRemover {
 		if ( null !== $config_path ) {
 			if ( null !== $sidecar_path ) {
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				$this->configWriter->remove_owned_definition( $config_path, $sidecar_path );
+				$this->config_writer->remove_owned_definition( $config_path, $sidecar_path );
 			}
 			$this->remove_wp_config_lock( $config_path );
 		}
@@ -334,7 +334,7 @@ class LocalDataRemover {
 	protected function automatic_sidecar_path(): ?string {
 		try {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			return $this->locationResolver->resolve(
+			return $this->location_resolver->resolve(
 				defined( 'ABSPATH' ) && is_string( ABSPATH ) ? ABSPATH : '',
 				defined( 'WP_CONTENT_DIR' ) && is_string( WP_CONTENT_DIR ) ? WP_CONTENT_DIR : '',
 				dirname( __DIR__, 2 ),

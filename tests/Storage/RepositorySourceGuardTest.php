@@ -16,17 +16,17 @@ require_once __DIR__ . '/StorageTestEnvironment.php';
 
 final class RepositorySourceGuardTest extends TestCase {
 
-	#[DataProvider( 'truthMatrix' )]
-	public function testAssessRowsEnforcesTheExactRepositorySourceShape( array $rows, PackageSource $proposed, bool $allowed, string $code, int $releaseCount ): void {
-		$result = RepositorySourceGuard::assessRows( $rows, 'gh', 'R_1', 1, 'self/self.php', $proposed );
+	#[DataProvider( 'truth_matrix' )]
+	public function test_assess_rows_enforces_the_exact_repository_source_shape( array $rows, PackageSource $proposed, bool $allowed, string $code, int $release_count ): void {
+		$result = RepositorySourceGuard::assess_rows( $rows, 'gh', 'R_1', 1, 'self/self.php', $proposed );
 
 		self::assertSame( $allowed, $result['allowed'] );
 		self::assertSame( $code, $result['code'] );
-		self::assertSame( $releaseCount, $result['release_count'] );
+		self::assertSame( $release_count, $result['release_count'] );
 	}
 
 	/** @return iterable<string, array{list<object>, PackageSource, bool, string, int}> */
-	public static function truthMatrix(): iterable {
+	public static function truth_matrix(): iterable {
 		$branch  = static fn ( int|string $type, string $package ): object => (object) array(
 			'type'                   => $type,
 			'package'                => $package,
@@ -68,7 +68,7 @@ final class RepositorySourceGuardTest extends TestCase {
 		);
 	}
 
-	public function testAssertAllowedExplainsSharedBranchConflictWithoutInventingReleaseOwner(): void {
+	public function test_assert_allowed_explains_shared_branch_conflict_without_inventing_release_owner(): void {
 		$database       = new RepositorySourceGuardDatabase();
 		$database->rows = array(
 			(object) array(
@@ -89,7 +89,7 @@ final class RepositorySourceGuardTest extends TestCase {
 		$guard          = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
 
 		try {
-			$guard->assertAllowed( 'gh', 'R_1', 1, 'self/self.php', PackageSource::RELEASE_ASSET );
+			$guard->assert_allowed( 'gh', 'R_1', 1, 'self/self.php', PackageSource::RELEASE_ASSET );
 			self::fail( 'A shared Branch repository must reject Release source.' );
 		} catch ( PackageStorageFailure $failure ) {
 			self::assertSame( 'ran_booster_repository_source_conflict', $failure->get_diagnostic_id() );
@@ -98,32 +98,32 @@ final class RepositorySourceGuardTest extends TestCase {
 		}
 	}
 
-	public function testAssertAllowedRejectsInvalidArgumentsAsInvalidProviderIdentity(): void {
+	public function test_assert_allowed_rejects_invalid_arguments_as_invalid_provider_identity(): void {
 		$guard = new RepositorySourceGuard( new RepositorySourceGuardDatabase(), $this->createStub( Database::class ) );
 
 		try {
-			$guard->assertAllowed( '', 'R_1', 1, 'self/self.php', PackageSource::RELEASE_ASSET );
+			$guard->assert_allowed( '', 'R_1', 1, 'self/self.php', PackageSource::RELEASE_ASSET );
 			self::fail( 'Expected invalid provider identity to throw storage invalid identity.' );
 		} catch ( PackageStorageFailure $failure ) {
 			self::assertSame( 'ran_booster_storage_invalid_provider_identity', $failure->get_diagnostic_id() );
 		}
 	}
 
-	public function testAssertAllowedTreatsDatabaseReadFailureAsQueryFailure(): void {
+	public function test_assert_allowed_treats_database_read_failure_as_query_failure(): void {
 		$database             = new RepositorySourceGuardDatabase();
 		$database->last_error = 'database down';
 
 		$guard = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
 
 		try {
-			$guard->assertAllowed( 'gh', 'R_1', 1, 'self/self.php', PackageSource::RELEASE_ASSET );
+			$guard->assert_allowed( 'gh', 'R_1', 1, 'self/self.php', PackageSource::RELEASE_ASSET );
 			self::fail( 'Expected query failures to throw a storage query failure.' );
 		} catch ( PackageStorageFailure $failure ) {
 			self::assertSame( 'ran_booster_storage_query_failed', $failure->get_diagnostic_id() );
 		}
 	}
 
-	public function testAssertAllowedTreatsMalformedRowsAsQueryFailure(): void {
+	public function test_assert_allowed_treats_malformed_rows_as_query_failure(): void {
 		$database       = new RepositorySourceGuardDatabase();
 		$database->rows = array(
 			(object) array(
@@ -137,23 +137,23 @@ final class RepositorySourceGuardTest extends TestCase {
 		$guard          = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
 
 		try {
-			$guard->assertAllowed( 'gh', 'R_1', 1, 'self/self.php', PackageSource::RELEASE_ASSET );
+			$guard->assert_allowed( 'gh', 'R_1', 1, 'self/self.php', PackageSource::RELEASE_ASSET );
 			self::fail( 'Expected malformed source rows to throw query failure.' );
 		} catch ( PackageStorageFailure $failure ) {
 			self::assertSame( 'ran_booster_storage_query_failed', $failure->get_diagnostic_id() );
 		}
 	}
 
-	public function testAssessmentQueriesOpaqueRepositoryIdsWithBinaryComparison(): void {
+	public function test_assessment_queries_opaque_repository_ids_with_binary_comparison(): void {
 		$database = new RepositorySourceGuardDatabase();
 		$guard    = new RepositorySourceGuard( $database, $this->createStub( Database::class ) );
 
 		$guard->assess( 'gh', 'Repository_ID', 1, 'self/self.php', PackageSource::BRANCH );
 
-		self::assertStringContainsString( 'BINARY provider_repository_id = BINARY %s', $database->preparedQuery );
+		self::assertStringContainsString( 'BINARY provider_repository_id = BINARY %s', $database->prepared_query );
 	}
 
-	public function testConflictProjectionListsOtherPackagesOnlyAndIsBounded(): void {
+	public function test_conflict_projection_lists_other_packages_only_and_is_bounded(): void {
 		$rows = array(
 			(object) array(
 				'type'                   => 1,
@@ -178,7 +178,7 @@ final class RepositorySourceGuardTest extends TestCase {
 			),
 		);
 
-		$result = RepositorySourceGuard::assessRows( $rows, 'gh', 'R_1', 1, 'self/self.php', PackageSource::RELEASE_ASSET );
+		$result = RepositorySourceGuard::assess_rows( $rows, 'gh', 'R_1', 1, 'self/self.php', PackageSource::RELEASE_ASSET );
 
 		self::assertSame( 3, $result['relationship_count'] );
 		self::assertSame(

@@ -13,22 +13,22 @@ enum RuntimeSupport: string {
 
 	public static function current(): self {
 		if ( function_exists( __NAMESPACE__ . '\\is_multisite' ) ) {
-			return self::fromMultisite( is_multisite() );
+			return self::from_multisite( is_multisite() );
 		}
 
-		return self::fromMultisite( function_exists( 'is_multisite' ) && \is_multisite() );
+		return self::from_multisite( function_exists( 'is_multisite' ) && \is_multisite() );
 	}
 
-	public static function fromMultisite( bool $multisite ): self {
+	public static function from_multisite( bool $multisite ): self {
 		return $multisite ? self::MULTISITE_UNSUPPORTED : self::SINGLE_SITE_SUPPORTED;
 	}
 
-	public function allowsManagedOperations(): bool {
+	public function allows_managed_operations(): bool {
 		return self::SINGLE_SITE_SUPPORTED === $this;
 	}
 
-	public static function assertManagedOperationsAllowed(): void {
-		if ( ! self::current()->allowsManagedOperations() ) {
+	public static function assert_managed_operations_allowed(): void {
+		if ( ! self::current()->allows_managed_operations() ) {
 			throw UnsupportedRuntimeException::multisite();
 		}
 	}

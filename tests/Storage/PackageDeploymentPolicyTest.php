@@ -29,7 +29,7 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 		$wpdb = new StorageTestWpdb();
 	}
 
-	public function testPackagesDefaultToManualAndUseTheSharedPolicyEnum(): void {
+	public function test_packages_default_to_manual_and_use_the_shared_policy_enum(): void {
 		$package = $this->package();
 
 		self::assertSame( DeploymentPolicy::MANUAL, $package->get_deployment_policy() );
@@ -42,29 +42,29 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 		self::assertNull( DeploymentPolicy::tryFrom( 'enabled' ) );
 	}
 
-	public function testStoragePersistsAndHydratesOneDeploymentPolicyWithoutLegacyFields(): void {
+	public function test_storage_persists_and_hydrates_one_deployment_policy_without_legacy_fields(): void {
 		global $wpdb;
 
 		$package = $this->package();
 		$package->set_deployment_policy( DeploymentPolicy::AUTOMATIC );
 
-		$result = $this->storage()->storeForTest( $package );
+		$result = $this->storage()->store_for_test( $package );
 
 		self::assertTrue( $result->is_successful() );
 		self::assertSame( DeploymentPolicy::AUTOMATIC->value, $wpdb->inserts[0][1]['deployment_policy'] );
 		self::assertArrayNotHasKey( 'ptd', $wpdb->inserts[0][1] );
 		self::assertArrayNotHasKey( 'status', $wpdb->inserts[0][1] );
 
-		$hydrated = $this->storage()->findForTest( 'example/example.php' );
+		$hydrated = $this->storage()->find_for_test( 'example/example.php' );
 		self::assertSame( DeploymentPolicy::AUTOMATIC, $hydrated->get_deployment_policy() );
 	}
 
-	public function testPackageModelRejectsUnknownPolicies(): void {
+	public function test_package_model_rejects_unknown_policies(): void {
 		$this->expectException( \InvalidArgumentException::class );
 		new PackageModel( array( 'deployment_policy' => 'enabled' ) );
 	}
 
-	public function testPackageModelAcceptsOnlyCanonicalSourceState(): void {
+	public function test_package_model_accepts_only_canonical_source_state(): void {
 		self::assertSame( 'branch', ( new PackageModel( array() ) )->source );
 		self::assertSame( 1, ( new PackageModel( array() ) )->source_revision );
 		self::assertSame(
@@ -91,15 +91,15 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 		}
 	}
 
-	public function testBulkPolicyCanEnableNativeAutomaticUpdatesForAReleaseSource(): void {
+	public function test_bulk_policy_can_enable_native_automatic_updates_for_arelease_source(): void {
 		global $wpdb;
 
-		$row                    = $this->storedRow( 1, 'alpha/alpha.php', DeploymentPolicy::MANUAL );
+		$row                    = $this->stored_row( 1, 'alpha/alpha.php', DeploymentPolicy::MANUAL );
 		$row['source']          = PackageSource::RELEASE_ASSET->value;
 		$row['source_revision'] = 4;
 		$wpdb->rows             = array( $row );
 
-		$result = $this->storage()->setPoliciesForTest(
+		$result = $this->storage()->set_policies_for_test(
 			array( $this->snapshot( $row ) ),
 			DeploymentPolicy::AUTOMATIC
 		);
@@ -110,10 +110,10 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 		self::assertSame( 4, $wpdb->rows[0]['source_revision'] );
 	}
 
-	public function testBulkPolicyDoesNotMutateAQuarantinedNestedRelease(): void {
+	public function test_bulk_policy_does_not_mutate_aquarantined_nested_release(): void {
 		global $wpdb;
 
-		$row                    = $this->storedRow( 1, 'alpha/alpha.php', DeploymentPolicy::MANUAL );
+		$row                    = $this->stored_row( 1, 'alpha/alpha.php', DeploymentPolicy::MANUAL );
 		$row['source']          = PackageSource::RELEASE_ASSET->value;
 		$row['source_revision'] = 4;
 		$row['subdirectory']    = 'packages/alpha';
@@ -121,14 +121,14 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 
 		$this->expectException( PackageStorageFailure::class );
 		try {
-			$this->storage()->setPoliciesForTest( array( $this->snapshot( $row ) ), DeploymentPolicy::AUTOMATIC );
+			$this->storage()->set_policies_for_test( array( $this->snapshot( $row ) ), DeploymentPolicy::AUTOMATIC );
 		} finally {
 			self::assertSame( array(), $wpdb->updates );
 			self::assertSame( DeploymentPolicy::MANUAL->value, $wpdb->rows[0]['deployment_policy'] );
 		}
 	}
 
-	public function testPackageModelNormalizesPackagePrivacyValues(): void {
+	public function test_package_model_normalizes_package_privacy_values(): void {
 		foreach ( array( false, 0, '0' ) as $value ) {
 			self::assertSame( 0, ( new PackageModel( array( 'private' => $value ) ) )->private );
 		}
@@ -138,21 +138,21 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 		}
 	}
 
-	public function testPackageModelRejectsAmbiguousPackagePrivacyValues(): void {
+	public function test_package_model_rejects_ambiguous_package_privacy_values(): void {
 		$this->expectException( \InvalidArgumentException::class );
 
 		new PackageModel( array( 'private' => '' ) );
 	}
 
-	public function testBulkPolicyWritesOnlyThePolicyAndCountsChangedRows(): void {
+	public function test_bulk_policy_writes_only_the_policy_and_counts_changed_rows(): void {
 		global $wpdb;
 
 		$wpdb->rows = array(
-			$this->storedRow( 1, 'alpha/alpha.php', DeploymentPolicy::MANUAL ),
-			$this->storedRow( 2, 'beta/beta.php', DeploymentPolicy::DISABLED ),
+			$this->stored_row( 1, 'alpha/alpha.php', DeploymentPolicy::MANUAL ),
+			$this->stored_row( 2, 'beta/beta.php', DeploymentPolicy::DISABLED ),
 		);
 
-		$result = $this->storage()->setPoliciesForTest(
+		$result = $this->storage()->set_policies_for_test(
 			array(
 				$this->snapshot( $wpdb->rows[0] ),
 				$this->snapshot( $wpdb->rows[1] ),
@@ -174,18 +174,18 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 		self::assertSame( 'COMMIT', $wpdb->queries[ array_key_last( $wpdb->queries ) ] );
 	}
 
-	public function testBulkPolicyRollsBackEveryWriteWhenALaterUpdateFails(): void {
+	public function test_bulk_policy_rolls_back_every_write_when_alater_update_fails(): void {
 		global $wpdb;
 
-		$wpdb->rows             = array(
-			$this->storedRow( 1, 'alpha/alpha.php', DeploymentPolicy::MANUAL ),
-			$this->storedRow( 2, 'beta/beta.php', DeploymentPolicy::MANUAL ),
+		$wpdb->rows               = array(
+			$this->stored_row( 1, 'alpha/alpha.php', DeploymentPolicy::MANUAL ),
+			$this->stored_row( 2, 'beta/beta.php', DeploymentPolicy::MANUAL ),
 		);
-		$snapshots              = array( $this->snapshot( $wpdb->rows[0] ), $this->snapshot( $wpdb->rows[1] ) );
-		$wpdb->failUpdateNumber = 2;
+		$snapshots                = array( $this->snapshot( $wpdb->rows[0] ), $this->snapshot( $wpdb->rows[1] ) );
+		$wpdb->fail_update_number = 2;
 
 		try {
-			$this->storage()->setPoliciesForTest( $snapshots, DeploymentPolicy::AUTOMATIC );
+			$this->storage()->set_policies_for_test( $snapshots, DeploymentPolicy::AUTOMATIC );
 			self::fail( 'A partial bulk policy change must not survive.' );
 		} catch ( PackageStorageFailure ) {
 			self::assertSame( array( 'manual', 'manual' ), array_column( $wpdb->rows, 'deployment_policy' ) );
@@ -193,16 +193,16 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 		}
 	}
 
-	public function testBulkPolicyRejectsAStaleSnapshotBeforeWriting(): void {
+	public function test_bulk_policy_rejects_astale_snapshot_before_writing(): void {
 		global $wpdb;
 
-		$wpdb->rows         = array( $this->storedRow( 1, 'alpha/alpha.php', DeploymentPolicy::MANUAL ) );
+		$wpdb->rows         = array( $this->stored_row( 1, 'alpha/alpha.php', DeploymentPolicy::MANUAL ) );
 		$snapshot           = $this->snapshot( $wpdb->rows[0] );
 		$snapshot['branch'] = 'stale-branch';
 
 		$this->expectException( PackageStorageFailure::class );
 		try {
-			$this->storage()->setPoliciesForTest( array( $snapshot ), DeploymentPolicy::DISABLED );
+			$this->storage()->set_policies_for_test( array( $snapshot ), DeploymentPolicy::DISABLED );
 		} finally {
 			self::assertSame( array(), $wpdb->updates );
 			self::assertSame( 'manual', $wpdb->rows[0]['deployment_policy'] );
@@ -211,17 +211,17 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 
 	private function storage(): AbstractPackageRepository {
 		$lifecycle = new class() extends Database {
-			public function requireReady(): void {
+			public function require_ready(): void {
 			}
 		};
 
 		return new class( $lifecycle ) extends AbstractPackageRepository {
 
-			public function storeForTest( Package $package ): PackageMutationResult {
+			public function store_for_test( Package $package ): PackageMutationResult {
 				return $this->store_package( $package );
 			}
 
-			public function findForTest( string $identifier ): Package {
+			public function find_for_test( string $identifier ): Package {
 				return $this->managed_package( $identifier );
 			}
 
@@ -229,7 +229,7 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 			 * @param list<array<string, mixed>> $snapshots
 			 * @return array{selected: int, changed: int, unchanged: int}
 			 */
-			public function setPoliciesForTest( array $snapshots, DeploymentPolicy $policy ): array {
+			public function set_policies_for_test( array $snapshots, DeploymentPolicy $policy ): array {
 				return $this->set_deployment_policies( $snapshots, $policy );
 			}
 
@@ -273,7 +273,7 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 	}
 
 	/** @return array<string, mixed> */
-	private function storedRow( int $id, string $identifier, DeploymentPolicy $policy ): array {
+	private function stored_row( int $id, string $identifier, DeploymentPolicy $policy ): array {
 		return array(
 			'id'                     => $id,
 			'package'                => $identifier,

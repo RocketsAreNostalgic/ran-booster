@@ -15,7 +15,7 @@ final class AdminAddOnRegistry {
 	private array $tabs = array();
 
 	/** @var array<string, true> */
-	private array $addOnSlugs = array();
+	private array $add_on_slugs = array();
 
 	private bool $sealed = false;
 
@@ -25,10 +25,10 @@ final class AdminAddOnRegistry {
 	/** @param array<string, object> $facades Core-owned allowlisted facade map. */
 	public function __construct(
 		array $facades = array(),
-		private int $coreApiVersion = 1,
-		private int $addOnApiVersion = 1
+		private int $core_api_version = 1,
+		private int $add_on_api_version = 1
 	) {
-		if ( $this->coreApiVersion < 1 || $this->addOnApiVersion < 1 ) {
+		if ( $this->core_api_version < 1 || $this->add_on_api_version < 1 ) {
 			throw new LogicException( 'Add-on API versions must be positive integers.' );
 		}
 
@@ -52,20 +52,20 @@ final class AdminAddOnRegistry {
 			throw new LogicException( 'Add-on tab keys must be unique.' );
 		}
 
-		if ( isset( $this->addOnSlugs[ $tab->addOnSlug() ] ) ) {
+		if ( isset( $this->add_on_slugs[ $tab->add_on_slug() ] ) ) {
 			throw new LogicException( 'Each add-on may register only one tab.' );
 		}
 
-		if ( null !== $tab->facadeName() && ! isset( $this->facades[ $tab->facadeName() ] ) ) {
+		if ( null !== $tab->facade_name() && ! isset( $this->facades[ $tab->facade_name() ] ) ) {
 			throw new LogicException( 'Add-on tabs may request only approved facades.' );
 		}
 
-		if ( ! $tab->supportsApiVersions( $this->coreApiVersion, $this->addOnApiVersion ) ) {
+		if ( ! $tab->supports_api_versions( $this->core_api_version, $this->add_on_api_version ) ) {
 			throw new LogicException( 'Add-on tabs must support the published Booster API.' );
 		}
 
 		$this->tabs[ $tab->key() ]             = $tab;
-		$this->addOnSlugs[ $tab->addOnSlug() ] = true;
+		$this->add_on_slugs[ $tab->add_on_slug() ] = true;
 	}
 
 	public function seal(): void {
@@ -81,25 +81,25 @@ final class AdminAddOnRegistry {
 		return $this->tabs[ $key ] ?? null;
 	}
 
-	public function contextFor(
+	public function context_for(
 		AdminAddOnTab $tab,
-		string $boosterUrl,
+		string $booster_url,
 		string $scope
 	): AdminAddOnContext {
 		if ( ( $this->tabs[ $tab->key() ] ?? null ) !== $tab ) {
 			throw new LogicException( 'Add-on context requires a registered tab.' );
 		}
 
-		$facades = null === $tab->facadeName()
+		$facades = null === $tab->facade_name()
 			? array()
-			: array( $tab->facadeName() => $this->facades[ $tab->facadeName() ] );
+			: array( $tab->facade_name() => $this->facades[ $tab->facade_name() ] );
 
-		return AdminAddOnContext::forCurrentAdministrator(
+		return AdminAddOnContext::for_current_administrator(
 			$tab->key(),
-			$boosterUrl,
+			$booster_url,
 			$scope,
-			$this->coreApiVersion,
-			$this->addOnApiVersion,
+			$this->core_api_version,
+			$this->add_on_api_version,
 			$facades
 		);
 	}

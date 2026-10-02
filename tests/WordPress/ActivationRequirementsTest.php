@@ -25,15 +25,15 @@ final class ActivationRequirementsTest extends TestCase {
 	}
 
 	/** @return list<array{bool, bool, string}> */
-	public static function unsupportedEnvironmentProvider(): array {
+	public static function unsupported_environment_provider(): array {
 		return array(
 			array( false, false, 'requires the PHP Sodium extension' ),
 			array( true, true, 'not available on multisite' ),
 		);
 	}
 
-	#[DataProvider( 'unsupportedEnvironmentProvider' )]
-	public function testUnsupportedFreshActivationStopsBeforeDatabaseOrWakeupSideEffects( bool $sodium, bool $multisite, string $message ): void {
+	#[DataProvider( 'unsupported_environment_provider' )]
+	public function test_unsupported_fresh_activation_stops_before_database_or_wakeup_side_effects( bool $sodium, bool $multisite, string $message ): void {
 		$database  = new ActivationRequirementsDatabase();
 		$wakeup    = new ActivationRequirementsWakeup();
 		$container = new CoreContainer();
@@ -53,15 +53,15 @@ final class ActivationRequirementsTest extends TestCase {
 	}
 
 	/** @return array<string, array{DatabaseCompatibilityFailure|DatabaseLifecycleFailure}> */
-	public static function databaseFailureProvider(): array {
+	public static function database_failure_provider(): array {
 		return array(
 			'unsupported server' => array( new DatabaseCompatibilityFailure( 'unsupported_version' ) ),
 			'blocked lifecycle'  => array( new DatabaseLifecycleFailure( 'schema_operation_failed' ) ),
 		);
 	}
 
-	#[DataProvider( 'databaseFailureProvider' )]
-	public function testDatabaseFailureStopsFreshActivationThroughWpDieBeforeWakeup(
+	#[DataProvider( 'database_failure_provider' )]
+	public function test_database_failure_stops_fresh_activation_through_wp_die_before_wakeup(
 		DatabaseCompatibilityFailure|DatabaseLifecycleFailure $failure
 	): void {
 		$database  = new FailingActivationDatabase( $failure );
@@ -74,15 +74,15 @@ final class ActivationRequirementsTest extends TestCase {
 		try {
 			$booster->activate();
 			self::fail( 'Database activation failure must terminate through wp_die().' );
-		} catch ( \RuntimeException $wpDie ) {
-			self::assertSame( $failure->getMessage(), $wpDie->getMessage() );
+		} catch ( \RuntimeException $wp_die ) {
+			self::assertSame( $failure->getMessage(), $wp_die->getMessage() );
 		}
 
 		self::assertSame( 1, $database->installs );
 		self::assertSame( 0, $wakeup->requests );
 	}
 
-	public function testActiveWpPusherStopsActivationBeforeDatabaseOrWakeupSideEffects(): void {
+	public function test_active_wp_pusher_stops_activation_before_database_or_wakeup_side_effects(): void {
 		$GLOBALS['ran_booster_wp_pusher_active_plugins'] = array( 'wppusher/wppusher.php' );
 		$database                                        = new ActivationRequirementsDatabase();
 		$wakeup    = new ActivationRequirementsWakeup();

@@ -3,8 +3,8 @@
 // Executed by WP-CLI against the installed release ZIP in a disposable site.
 // phpcs:disable
 
-if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 13 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
-	throw new RuntimeException( 'The installed runtime does not expose Provider API 13.' );
+if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 14 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+	throw new RuntimeException( 'The installed runtime does not expose Provider API 14.' );
 }
 
 if ( 3 !== RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3::RELEASE_WORKFLOW_API_VERSION ) {
@@ -31,18 +31,18 @@ $provider  = $registry->get( 'gh' );
 $metadata  = $provider->get_metadata();
 $admin     = $metadata->admin;
 
-if ( ! $registry->isSealed()
+if ( ! $registry->is_sealed()
 	|| ! $provider instanceof RAN\BoosterGitHubProvider\V1\GitHubProvider
 	|| 'gh' !== $metadata->code->value
 	|| 'GitHub' !== $metadata->label
-	|| 'https://github.com/' !== $metadata->repositoryUrlBase
-	|| 'Owner' !== $metadata->ownerLabel
+	|| 'https://github.com/' !== $metadata->repository_url_base
+	|| 'Owner' !== $metadata->owner_label
 	|| null === $admin
 	|| 'git-host' !== $admin->navigation?->group
 	|| 100 !== $admin->navigation?->slot
-	|| 'owner/repository' !== $admin->repositoryLocatorHint
-	|| array( 'classic', 'fine-grained' ) !== array_map( static fn ( $kind ): string => $kind->code, $admin->credentialKinds )
-	|| array( 'owner', 'repository' ) !== array_map( static fn ( $scope ): string => $scope->code, $admin->webhookScopes )
+	|| 'owner/repository' !== $admin->repository_locator_hint
+	|| array( 'classic', 'fine-grained' ) !== array_map( static fn ( $kind ): string => $kind->code, $admin->credential_kinds )
+	|| array( 'owner', 'repository' ) !== array_map( static fn ( $scope ): string => $scope->code, $admin->webhook_scopes )
 ) {
 	throw new RuntimeException( 'The installed GitHub provider metadata does not match the bundled contract.' );
 }
@@ -65,7 +65,7 @@ foreach (
 		RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3::class,
 	) as $capability
 ) {
-	if ( $provider !== $registry->requireCapability( 'gh', $capability ) ) {
+	if ( $provider !== $registry->require_capability( 'gh', $capability ) ) {
 		throw new RuntimeException( 'The installed GitHub provider capability is not registered: ' . $capability );
 	}
 }
@@ -82,10 +82,10 @@ if ( 'gh' !== $credential_policy->get_provider()->value
 }
 
 $tabs = ( new RAN\Admin\AdminTabRegistry( $registry ) )->all();
-if ( array( 'overview', 'gh', 'portability', 'documentation', 'troubleshooting' ) !== array_map( static fn ( $tab ): string => $tab->getKey(), $tabs )
-	|| 'GitHub' !== $tabs[1]->getLabel()
-	|| 'provider.php' !== $tabs[1]->getView()
-	|| ! $tabs[1]->isProvider()
+if ( array( 'overview', 'gh', 'portability', 'documentation', 'troubleshooting' ) !== array_map( static fn ( $tab ): string => $tab->get_key(), $tabs )
+	|| 'GitHub' !== $tabs[1]->get_label()
+	|| 'provider.php' !== $tabs[1]->get_view()
+	|| ! $tabs[1]->is_provider()
 ) {
 	throw new RuntimeException( 'The installed GitHub provider navigation does not match the bundled contract.' );
 }

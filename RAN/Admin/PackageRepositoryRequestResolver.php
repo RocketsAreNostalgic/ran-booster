@@ -68,7 +68,7 @@ final readonly class PackageRepositoryRequestResolver {
 		}
 
 		if ( DeploymentPolicy::AUTOMATIC === $deployment_policy ) {
-			$this->providers->requireCapability( $provider, WebhookNormalizer::class );
+			$this->providers->require_capability( $provider, WebhookNormalizer::class );
 		}
 
 		$repository_input = $request['repository'] ?? null;
@@ -101,11 +101,11 @@ final readonly class PackageRepositoryRequestResolver {
 			if ( ! $public_picker ) {
 				throw new InvalidArgumentException( 'Public repository lookup identity conflicts with package access.' );
 			}
-			$this->providers->requireCapability( $provider, CredentialedPublicRepositoryBrowser::class );
+			$this->providers->require_capability( $provider, CredentialedPublicRepositoryBrowser::class );
 		}
 		if ( $trusted_public_lookup ) {
-			$browser = $this->providers->requireCapability( $provider, CredentialedPublicRepositoryBrowser::class );
-			if ( ! $browser->get_public_repository_browse_metadata()->supportsProviderDefaultProfile ) {
+			$browser = $this->providers->require_capability( $provider, CredentialedPublicRepositoryBrowser::class );
+			if ( ! $browser->get_public_repository_browse_metadata()->supports_provider_default_profile ) {
 				throw new InvalidArgumentException( 'A default public repository lookup profile is unavailable for this provider.' );
 			}
 			$public_picker = true;
@@ -124,7 +124,7 @@ final readonly class PackageRepositoryRequestResolver {
 
 		if ( ! $repository->provider->equals( $provider )
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
-			|| ( '' === $verification_credential_id ? null : $verification_credential_id ) !== $repository->credentialId
+			|| ( '' === $verification_credential_id ? null : $verification_credential_id ) !== $repository->credential_id
 			|| ( $public_picker && $repository->private ) ) {
 			throw new RuntimeException( 'Repository provider returned mismatched repository identity.' );
 		}
@@ -135,20 +135,20 @@ final readonly class PackageRepositoryRequestResolver {
 		$request['provider']   = $provider->value;
 		$request['repository'] = $repository->locator;
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
-		$request['package_slug'] = PackageSubdirectory::installation_slug( $repository->packageSlug, $subdirectory );
+		$request['package_slug'] = PackageSubdirectory::installation_slug( $repository->package_slug, $subdirectory );
 		$request['subdirectory'] = $subdirectory ?? '';
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
-		$request['provider_repository_id']              = $repository->providerRepositoryId;
+		$request['provider_repository_id']              = $repository->provider_repository_id;
 		$request['provider_repository_identity_source'] = 'resolved';
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
-		$request['repository_default_branch'] = $repository->defaultBranch;
+		$request['repository_default_branch'] = $repository->default_branch;
 		$request['private']                   = $repository->private ? '1' : '0';
 		$request['credential_id']             = $trusted_public_lookup
 			? $credential_id
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
-			: ( $public_picker ? '' : $repository->credentialId ?? '' );
+			: ( $public_picker ? '' : $repository->credential_id ?? '' );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryReference is a separately scoped provider contract.
-		$request['branch']            = '' === $branch ? $repository->defaultBranch : $branch;
+		$request['branch']            = '' === $branch ? $repository->default_branch : $branch;
 		$request['deployment_policy'] = $deployment_policy->value;
 		unset( $request['public_lookup_profile_id'] );
 

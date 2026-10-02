@@ -13,16 +13,16 @@ use ReflectionMethod;
 
 final class CorePackageExecutorTest extends TestCase {
 
-	public function testAutomaticUpdaterInstallationResultWithOneExactCompletionSucceeds(): void {
-		$result = $this->mapCoreResult(
-			$this->wordpressInstallationResult(),
+	public function test_automatic_updater_installation_result_with_one_exact_completion_succeeds(): void {
+		$result = $this->map_core_result(
+			$this->wordpress_installation_result(),
 			array( $this->extra() )
 		);
 
 		self::assertTrue( $result->is_successful() );
 	}
 
-	public function testInstallationResultArrayWithoutOneExactCompletionFailsClosed(): void {
+	public function test_installation_result_array_without_one_exact_completion_fails_closed(): void {
 		$cases = array(
 			'missing completion'   => array(),
 			'wrong completion'     => array(
@@ -39,7 +39,7 @@ final class CorePackageExecutorTest extends TestCase {
 		);
 
 		foreach ( $cases as $case => $completions ) {
-			$result = $this->mapCoreResult( $this->wordpressInstallationResult(), $completions );
+			$result = $this->map_core_result( $this->wordpress_installation_result(), $completions );
 
 			self::assertFalse( $result->is_successful(), $case );
 		}
@@ -55,7 +55,7 @@ final class CorePackageExecutorTest extends TestCase {
 	}
 
 	/** @return array{source: string, source_files: list<string>, destination: string, destination_name: string, local_destination: string, remote_destination: string, clear_destination: bool} */
-	private function wordpressInstallationResult(): array {
+	private function wordpress_installation_result(): array {
 		return array(
 			'source'             => '/tmp/upgrade/example/',
 			'source_files'       => array( 'example' ),
@@ -68,9 +68,9 @@ final class CorePackageExecutorTest extends TestCase {
 	}
 
 	/** @param list<array<string, mixed>> $completions */
-	private function mapCoreResult( mixed $coreResult, array $completions ): CorePackageExecutionResult {
+	private function map_core_result( mixed $core_result, array $completions ): CorePackageExecutionResult {
 		$method = new ReflectionMethod( CorePackageExecutor::class, 'map_result' );
 
-		return $method->invoke( new CorePackageExecutor(), $coreResult, 'plugin', 'update', 'example/example.php', $completions );
+		return $method->invoke( new CorePackageExecutor(), $core_result, 'plugin', 'update', 'example/example.php', $completions );
 	}
 }

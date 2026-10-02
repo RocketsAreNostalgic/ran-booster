@@ -125,7 +125,7 @@ final class CredentialExpiryReminder {
 		$affected = array();
 		foreach ( $this->providers->all() as $provider => $repository_provider ) {
 			unset( $repository_provider );
-			foreach ( $this->secrets->credentialProfiles( $provider ) as $profile ) {
+			foreach ( $this->secrets->credential_profiles( $provider ) as $profile ) {
 				$status = $this->status( $provider, $profile );
 				if ( in_array( $status['stage'], array( 'warning', 'urgent', 'expired' ), true ) ) {
 					/** @var array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:string,source:string,stage:string,days:int,badge_class:string,badge_label:string} $status */

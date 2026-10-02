@@ -12,28 +12,28 @@ use JsonException;
  */
 final readonly class ManagedReleaseConfiguration {
 
-	private string $packageRoot;
-	private string $metadataFile;
+	private string $package_root;
+	private string $metadata_file;
 	private string $channel;
 
 	public function __construct(
-		string $packageRoot,
-		string $metadataFile,
+		string $package_root,
+		string $metadata_file,
 		string $channel = 'stable'
 	) {
-		if ( 1 !== preg_match( '/\A[A-Za-z0-9](?:[A-Za-z0-9._-]{0,99})\z/D', $packageRoot )
-			|| 1 !== preg_match( '/\A[A-Za-z0-9](?:[A-Za-z0-9._-]{0,190})\z/D', $metadataFile ) ) {
+		if ( 1 !== preg_match( '/\A[A-Za-z0-9](?:[A-Za-z0-9._-]{0,99})\z/D', $package_root )
+			|| 1 !== preg_match( '/\A[A-Za-z0-9](?:[A-Za-z0-9._-]{0,190})\z/D', $metadata_file ) ) {
 			throw new InvalidArgumentException( 'The managed release configuration is invalid.' );
 		}
 		if ( ! in_array( $channel, array( 'stable', 'prerelease' ), true ) ) {
 			throw new InvalidArgumentException( 'The managed release channel is invalid.' );
 		}
-		$this->packageRoot  = $packageRoot;
-		$this->metadataFile = $metadataFile;
-		$this->channel      = $channel;
+		$this->package_root  = $package_root;
+		$this->metadata_file = $metadata_file;
+		$this->channel       = $channel;
 	}
 
-	public static function fromJson( string $json ): self {
+	public static function from_json( string $json ): self {
 		if ( '' === $json || strlen( $json ) > 4096 || 1 === preg_match( '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $json ) ) {
 			throw new InvalidArgumentException( 'The managed release configuration is invalid.' );
 		}
@@ -62,19 +62,19 @@ final readonly class ManagedReleaseConfiguration {
 			$value['metadata_file'],
 			$value['channel']
 		);
-		if ( ! hash_equals( $configuration->toJson(), $json ) ) {
+		if ( ! hash_equals( $configuration->to_json(), $json ) ) {
 			throw new InvalidArgumentException( 'The managed release configuration must use canonical JSON.' );
 		}
 
 		return $configuration;
 	}
 
-	public function packageRoot(): string {
-		return $this->packageRoot;
+	public function package_root(): string {
+		return $this->package_root;
 	}
 
-	public function metadataFile(): string {
-		return $this->metadataFile;
+	public function metadata_file(): string {
+		return $this->metadata_file;
 	}
 
 	public function channel(): string {
@@ -82,18 +82,18 @@ final readonly class ManagedReleaseConfiguration {
 	}
 
 	/** @return array<string, mixed> */
-	public function toArray(): array {
+	public function to_array(): array {
 		return array(
 			'channel'       => $this->channel,
-			'package_root'  => $this->packageRoot,
-			'metadata_file' => $this->metadataFile,
+			'package_root'  => $this->package_root,
+			'metadata_file' => $this->metadata_file,
 		);
 	}
 
-	public function toJson(): string {
+	public function to_json(): string {
 		try {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Canonical JSON must not depend on WordPress filters.
-			return json_encode( $this->toArray(), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES );
+			return json_encode( $this->to_array(), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES );
 		} catch ( JsonException ) {
 			throw new InvalidArgumentException( 'The managed release configuration is invalid.' );
 		}

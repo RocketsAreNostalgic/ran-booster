@@ -10,14 +10,14 @@ if ( ! in_array( $phase, array( 'pre', 'post', 'foreign' ), true ) || ! is_strin
 }
 $booster  = require __DIR__ . '/core-container-fixture.php';
 $attempts = $booster->make( RAN\Deployment\DeploymentAttemptRepository::class );
-$claimed  = $attempts->claimNext();
+$claimed  = $attempts->claim_next();
 if ( null === $claimed ) {
 	throw new RuntimeException( 'The hard-stop child could not claim the seeded attempt.' );
 }
 if ( 'pre' !== $phase ) {
 	$lock = $booster->make( RAN\WordPress\WordPressUpdaterLock::class );
 	$lock->acquire();
-	$attempts->markMutationStarted( $claimed->get_id() );
+	$attempts->mark_mutation_started( $claimed->get_id() );
 }
 $marker = fopen( $barrier, 'x' );
 if ( false === $marker ) {

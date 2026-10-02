@@ -22,21 +22,21 @@ class ProviderProfileAdminController {
 		private ProviderRegistry $providers,
 		private SecretsFile $secrets,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private ManagedPackageWebhookAuthorityResolver $webhookAuthorities,
+		private ManagedPackageWebhookAuthorityResolver $webhook_authorities,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private WordPressUpdaterLock $updaterLock,
+		private WordPressUpdaterLock $updater_lock,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private CredentialUsageReader $credentialUsage,
+		private CredentialUsageReader $credential_usage,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private PublicRepositoryLookupProfileStore $publicLookupProfiles,
+		private PublicRepositoryLookupProfileStore $public_lookup_profiles,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private CredentialExpiryObservationStore $expiryObservations,
+		private CredentialExpiryObservationStore $expiry_observations,
 		private ?CoreAdminInteractionFacade $interaction = null,
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?RepositoryBranchCheckEvidenceStore $branchCheckEvidence = null
+		?RepositoryBranchCheckEvidenceStore $branch_check_evidence = null
 	) {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->branch_check_evidence = $branchCheckEvidence ?? new RepositoryBranchCheckEvidenceStore();
+		$this->branch_check_evidence = $branch_check_evidence ?? new RepositoryBranchCheckEvidenceStore();
 	}
 	public function manage_credential_profiles( array $request ): void {
 		$this->authorize( 'ran-booster-save-secrets' );
@@ -45,7 +45,7 @@ class ProviderProfileAdminController {
 		try {
 			$provider = $this->provider_code( $request );
 			if ( null !== $this->interaction ) {
-				$interaction_request = $this->interaction->providerProfileRequest( $action, $provider->value );
+				$interaction_request = $this->interaction->provider_profile_request( $action, $provider->value );
 			}
 			$id = $this->profile_id( $request );
 			if ( 'delete-access-profile' === $action ) {
@@ -69,7 +69,7 @@ class ProviderProfileAdminController {
 		}
 	}
 	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function manage_credential_validation( array $request, bool $htmxRequest ): void {
+	public function manage_credential_validation( array $request, bool $htmx_request ): void {
 		$this->authorize( 'ran-booster-save-secrets' );
 		$provider = null;
 		$id       = null;
@@ -83,40 +83,40 @@ class ProviderProfileAdminController {
 				throw new CredentialRequestException( __( 'Choose a repository credential to validate.', 'ran-booster' ) );
 			}
 			try {
-				$validator = $this->providers->requireCapability( $provider, CredentialValidator::class );
+				$validator = $this->providers->require_capability( $provider, CredentialValidator::class );
 			} catch ( UnsupportedProviderCapability ) {
 				throw new CredentialRequestException( __( 'Credential validation is unavailable for this repository provider.', 'ran-booster' ) );
 			}
 			$result = $validator->validate_credential( $id );
-			if ( $result->isValid() ) {
+			if ( $result->is_valid() ) {
 				if ( null !== $result->expiry ) {
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-					$this->expiryObservations->record_provider_expiry(
+					$this->expiry_observations->record_provider_expiry(
 						$provider->value,
 						$id,
 						$result->expiry,
 						gmdate( 'Y-m-d\\TH:i:s\\Z' )
 					);
-					if ( $result->expiry->isKnown() && is_string( $result->expiry->expiresAt ) ) {
-						$this->secrets->recordCredentialProviderExpiry(
+					if ( $result->expiry->is_known() && is_string( $result->expiry->expires_at ) ) {
+						$this->secrets->record_credential_provider_expiry(
 							$provider,
 							$id,
-							substr( $result->expiry->expiresAt, 0, 10 )
+							substr( $result->expiry->expires_at, 0, 10 )
 						);
 					}
 				}
 				$message = __( 'Repository credential validated successfully.', 'ran-booster' );
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				if ( ! $htmxRequest ) {
+				if ( ! $htmx_request ) {
 					$this->dashboard->add_message( $message );
 				}
 			} else {
-				$error = $result->getDisplayMessage();
+				$error = $result->get_display_message();
 				if ( null === $error ) {
 					throw new \LogicException( 'Invalid credential validation results require a core display message.' );
 				}
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				if ( $htmxRequest ) {
+				if ( $htmx_request ) {
 					$status = 422;
 				} else {
 					$this->dashboard->add_message( new \WP_Error( 'ran_booster_credential_validation_error', $error ) );
@@ -127,12 +127,12 @@ class ProviderProfileAdminController {
 			$status = $exception instanceof CredentialRequestException ? 422 : 500;
 		}
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( $htmxRequest && $provider instanceof ProviderCode && is_string( $id ) ) {
+		if ( $htmx_request && $provider instanceof ProviderCode && is_string( $id ) ) {
 			$this->respond_to_htmx_credential_validation( $id, $message, $error, $status );
 		}
 	}
 	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function manage_public_lookup_profile( array $request, bool $htmxRequest ): void {
+	public function manage_public_lookup_profile( array $request, bool $htmx_request ): void {
 		$this->authorize( 'ran-booster-save-public-lookup-profile' );
 		$provider = null;
 		$message  = null;
@@ -141,11 +141,11 @@ class ProviderProfileAdminController {
 		try {
 			$provider = $this->provider_code( $request );
 			try {
-				$browser = $this->providers->requireCapability( $provider, CredentialedPublicRepositoryBrowser::class );
+				$browser = $this->providers->require_capability( $provider, CredentialedPublicRepositoryBrowser::class );
 			} catch ( UnsupportedProviderCapability ) {
 				throw new CredentialRequestException( __( 'A default public repository lookup profile is unavailable for this provider.', 'ran-booster' ) );
 			}
-			if ( ! $browser->get_public_repository_browse_metadata()->supportsProviderDefaultProfile ) {
+			if ( ! $browser->get_public_repository_browse_metadata()->supports_provider_default_profile ) {
 				throw new CredentialRequestException( __( 'A default public repository lookup profile is unavailable for this provider.', 'ran-booster' ) );
 			}
 			if ( ! array_key_exists( 'profile_id', $request ) || ! is_string( $request['profile_id'] ) ) {
@@ -156,19 +156,19 @@ class ProviderProfileAdminController {
 				throw new CredentialRequestException( __( 'Choose Anonymous or a saved repository credential.', 'ran-booster' ) );
 			}
 			if ( '' !== $profile_id ) {
-				$profile = $this->secrets->credentialProfiles( $provider )[ $profile_id ] ?? null;
+				$profile = $this->secrets->credential_profiles( $provider )[ $profile_id ] ?? null;
 				if ( ! is_array( $profile ) || empty( $profile['configured'] ) ) {
 					throw new CredentialRequestException( __( 'Choose Anonymous or a saved repository credential.', 'ran-booster' ) );
 				}
 			}
 			$this->branch_check_evidence->bump_provider_generation( $provider->value );
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$this->publicLookupProfiles->set( $provider->value, '' === $profile_id ? null : $profile_id );
+			$this->public_lookup_profiles->set( $provider->value, '' === $profile_id ? null : $profile_id );
 			$message = '' === $profile_id
 				? __( 'Public repository lookup will use anonymous access.', 'ran-booster' )
 				: __( 'Default public repository lookup profile saved.', 'ran-booster' );
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			if ( ! $htmxRequest ) {
+			if ( ! $htmx_request ) {
 				$this->dashboard->add_message( $message );
 			}
 		} catch ( \Throwable $exception ) {
@@ -176,7 +176,7 @@ class ProviderProfileAdminController {
 			$status = $exception instanceof CredentialRequestException ? 422 : 500;
 		}
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( $htmxRequest && $provider instanceof ProviderCode ) {
+		if ( $htmx_request && $provider instanceof ProviderCode ) {
 			$this->respond_to_htmx_public_lookup_profile( $provider->value, $message, $error, $status );
 		}
 	}
@@ -187,7 +187,7 @@ class ProviderProfileAdminController {
 		string $label
 	): string {
 		$kind          = is_string( $request['kind'] ?? null ) ? sanitize_key( wp_unslash( $request['kind'] ) ) : '';
-		$kind_metadata = $this->provider_admin( $provider )->getCredentialKind( $kind );
+		$kind_metadata = $this->provider_admin( $provider )->get_credential_kind( $kind );
 		if ( null === $kind_metadata ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Choose a supported credential type.', 'ran-booster' ) );
@@ -234,7 +234,7 @@ class ProviderProfileAdminController {
 		if ( null !== $id ) {
 			try {
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				$observation            = $this->expiryObservations->get( $provider->value, $id );
+				$observation            = $this->expiry_observations->get( $provider->value, $id );
 				$existing_manual_expiry = is_string( $observation['manual_expires_on'] ?? null ) ? $observation['manual_expires_on'] : null;
 				$provider_expires_at    = $observation['provider_expires_at'] ?? null;
 				$provider_expiry        = is_string( $provider_expires_at ) ? substr( $provider_expires_at, 0, 10 ) : null;
@@ -257,9 +257,9 @@ class ProviderProfileAdminController {
 			&& null !== $provider_expiry
 			&& $manual_expiry === $provider_expiry;
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		return $this->updaterLock->run(
+		return $this->updater_lock->run(
 			function () use ( $provider, $id, $secret, $label, $kind, $configuration, $self_destruct, $manual_expiry_submitted, $manual_expiry, $manual_expiry_is_provider_fallback ): string {
-				$existing_profile = null === $id ? null : ( $this->secrets->credentialProfiles( $provider )[ $id ] ?? null );
+				$existing_profile = null === $id ? null : ( $this->secrets->credential_profiles( $provider )[ $id ] ?? null );
 				$is_replacement   = is_array( $existing_profile ) && '' !== $secret;
 				$access_changed   = is_array( $existing_profile )
 					&& ( $is_replacement
@@ -269,7 +269,7 @@ class ProviderProfileAdminController {
 				if ( $access_changed && null !== $id ) {
 					$this->branch_check_evidence->bump_profile_generation( $provider->value, $id );
 				}
-				$saved_id      = $this->secrets->saveCredential(
+				$saved_id      = $this->secrets->save_credential(
 					$provider,
 					$id,
 					array(
@@ -282,7 +282,7 @@ class ProviderProfileAdminController {
 					$secret,
 					true
 				);
-				$saved_profile = $this->secrets->credentialProfiles( $provider )[ $saved_id ] ?? null;
+				$saved_profile = $this->secrets->credential_profiles( $provider )[ $saved_id ] ?? null;
 				if ( ! is_array( $saved_profile )
 					|| ( $saved_profile['label'] ?? null ) !== $label
 					|| ( $saved_profile['kind'] ?? null ) !== $kind
@@ -296,11 +296,11 @@ class ProviderProfileAdminController {
 				}
 				if ( $is_replacement ) {
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-					$this->expiryObservations->clear( $provider->value, $saved_id );
+					$this->expiry_observations->clear( $provider->value, $saved_id );
 				}
 				if ( $manual_expiry_submitted && ! $manual_expiry_is_provider_fallback ) {
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-					$this->expiryObservations->set_manual_expiry( $provider->value, $saved_id, $manual_expiry );
+					$this->expiry_observations->set_manual_expiry( $provider->value, $saved_id, $manual_expiry );
 				}
 				return $self_destruct
 						? __( 'Repository credential saved with automatic removal enabled.', 'ran-booster' )
@@ -317,17 +317,17 @@ class ProviderProfileAdminController {
 		string $label
 	): string {
 		$admin          = $this->provider_admin( $provider );
-		$normalizer     = $this->providers->requireCapability( $provider, WebhookNormalizer::class );
+		$normalizer     = $this->providers->require_capability( $provider, WebhookNormalizer::class );
 		$scope          = is_string( $request['scope'] ?? null ) ? sanitize_key( wp_unslash( $request['scope'] ) ) : '';
 		$target         = is_string( $request['target'] ?? null ) ? sanitize_text_field( wp_unslash( $request['target'] ) ) : '';
 		$secret         = is_string( $request['secret'] ?? null ) ? trim( wp_unslash( $request['secret'] ) ) : '';
-		$scope_metadata = $admin->getWebhookScope( $scope );
+		$scope_metadata = $admin->get_webhook_scope( $scope );
 		if ( null === $scope_metadata ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Choose a supported Push-to-Deploy scope.', 'ran-booster' ) );
 		}
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		if ( $scope_metadata->requiresTarget && '' === trim( $target ) ) {
+		if ( $scope_metadata->requires_target && '' === trim( $target ) ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Enter the target for this Push-to-Deploy scope.', 'ran-booster' ) );
 		}
@@ -338,13 +338,13 @@ class ProviderProfileAdminController {
 		$authority_id = '';
 		if ( 'repository' === $scope ) {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$authority_id = $this->webhookAuthorities->resolve( $provider, $normalizer->get_webhook_policy(), $target );
+			$authority_id = $this->webhook_authorities->resolve( $provider, $normalizer->get_webhook_policy(), $target );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		} elseif ( 'owner' === $scope && $scope_metadata->requiresManagedTarget ) {
+		} elseif ( 'owner' === $scope && $scope_metadata->requires_managed_target ) {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$target = $this->webhookAuthorities->resolveOwner( $provider, $target );
+			$target = $this->webhook_authorities->resolve_owner( $provider, $target );
 		}
-		$saved_id      = $this->secrets->saveWebhook(
+		$saved_id      = $this->secrets->save_webhook(
 			$provider,
 			$id,
 			array(
@@ -356,7 +356,7 @@ class ProviderProfileAdminController {
 			),
 			$secret
 		);
-		$saved_profile = $this->secrets->webhookProfiles( $provider )[ $saved_id ] ?? null;
+		$saved_profile = $this->secrets->webhook_profiles( $provider )[ $saved_id ] ?? null;
 		if ( ! is_array( $saved_profile )
 			|| ( $saved_profile['label'] ?? null ) !== $label
 			|| ( $saved_profile['scope'] ?? null ) !== $scope
@@ -375,15 +375,15 @@ class ProviderProfileAdminController {
 			throw new CredentialRequestException( __( 'Choose a repository credential to remove.', 'ran-booster' ) );
 		}
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		return $this->updaterLock->run(
+		return $this->updater_lock->run(
 			function () use ( $provider, $id ): string {
-				$profile = $this->secrets->credentialProfiles( $provider )[ $id ] ?? null;
+				$profile = $this->secrets->credential_profiles( $provider )[ $id ] ?? null;
 				if ( ! is_array( $profile ) || ! empty( $profile['immutable'] ) || 'file' !== ( $profile['source'] ?? null ) ) {
 					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 					throw new CredentialRequestException( __( 'Choose a saved repository credential to remove.', 'ran-booster' ) );
 				}
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				$usage_count = $this->credentialUsage->read( $provider, $id )['total'];
+				$usage_count = $this->credential_usage->read( $provider, $id )['total'];
 				if ( $usage_count > 0 ) {
 					throw new CredentialRequestException(
 						sprintf(
@@ -394,24 +394,24 @@ class ProviderProfileAdminController {
 					);
 				}
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				$cleared_default = $id === $this->publicLookupProfiles->get( $provider->value );
-				if ( ! $this->secrets->deleteCredential( $provider, $id ) || isset( $this->secrets->credentialProfiles( $provider )[ $id ] ) ) {
+				$cleared_default = $id === $this->public_lookup_profiles->get( $provider->value );
+				if ( ! $this->secrets->delete_credential( $provider, $id ) || isset( $this->secrets->credential_profiles( $provider )[ $id ] ) ) {
 					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 					throw new CredentialRequestException( __( 'Booster could not verify that the repository credential was removed.', 'ran-booster' ) );
 				}
 				if ( $cleared_default ) {
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-					$this->publicLookupProfiles->set( $provider->value, null );
+					$this->public_lookup_profiles->set( $provider->value, null );
 				}
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				$this->expiryObservations->clear( $provider->value, $id );
+				$this->expiry_observations->clear( $provider->value, $id );
 				try {
 					$this->branch_check_evidence->bump_profile_generation( $provider->value, $id );
 					if ( $cleared_default ) {
 						$this->branch_check_evidence->bump_provider_generation( $provider->value );
 					}
 				} catch ( \Throwable $failure ) {
-					BoosterLogger::logException(
+					BoosterLogger::log_exception(
 						'repository branch evidence invalidation failed after credential removal',
 						$failure,
 						array(
@@ -433,12 +433,12 @@ class ProviderProfileAdminController {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Choose a Push-to-Deploy secret to remove.', 'ran-booster' ) );
 		}
-		$profile = $this->secrets->webhookProfiles( $provider )[ $id ] ?? null;
+		$profile = $this->secrets->webhook_profiles( $provider )[ $id ] ?? null;
 		if ( ! is_array( $profile ) || ! empty( $profile['immutable'] ) || 'file' !== ( $profile['source'] ?? null ) ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Choose a saved Push-to-Deploy secret to remove.', 'ran-booster' ) );
 		}
-		if ( ! $this->secrets->deleteWebhook( $provider, $id ) || isset( $this->secrets->webhookProfiles( $provider )[ $id ] ) ) {
+		if ( ! $this->secrets->delete_webhook( $provider, $id ) || isset( $this->secrets->webhook_profiles( $provider )[ $id ] ) ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Booster could not verify that the Push-to-Deploy secret was removed.', 'ran-booster' ) );
 		}
@@ -473,7 +473,7 @@ class ProviderProfileAdminController {
 			$this->dashboard->add_message( $message );
 			return;
 		}
-		$this->interaction->respondToProviderProfileSuccess( $request, $message );
+		$this->interaction->respond_to_provider_profile_success( $request, $message );
 	}
 	private function profile_failure(
 		string $action,
@@ -485,9 +485,9 @@ class ProviderProfileAdminController {
 			return;
 		}
 		if ( $exception instanceof CredentialRequestException || $exception instanceof InvalidCredentialInput || $exception instanceof InvalidWebhookInput ) {
-			$this->interaction->respondToProviderProfileValidationFailure( $request, $error );
+			$this->interaction->respond_to_provider_profile_validation_failure( $request, $error );
 		}
-		$this->interaction->respondToProviderProfileUnexpectedFailure( $request );
+		$this->interaction->respond_to_provider_profile_unexpected_failure( $request );
 	}
 	private function record_failure( \Throwable $exception, string $operation, string $step ): string {
 		$error = $this->safe_error( $exception );
@@ -541,10 +541,10 @@ class ProviderProfileAdminController {
 		exit;
 	}
 	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	protected function respond_to_htmx_credential_validation( string $credentialId, ?string $message, ?string $error, int $status ): never {
+	protected function respond_to_htmx_credential_validation( string $credential_id, ?string $message, ?string $error, int $status ): never {
 		status_header( $status );
 		$this->emit_success_header( $message );
-		echo '<div id="' . esc_attr( 'ran-booster-credential-validation-error-' . $credentialId ) . '" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1"' . ( null === $error ? ' hidden' : '' ) . '><p>' . esc_html( $error ?? '' ) . '</p></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Core-owned escaped fragment. Retain the public named-parameter contract.
+		echo '<div id="' . esc_attr( 'ran-booster-credential-validation-error-' . $credential_id ) . '" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1"' . ( null === $error ? ' hidden' : '' ) . '><p>' . esc_html( $error ?? '' ) . '</p></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Core-owned escaped fragment. Retain the public named-parameter contract.
 		exit;
 	}
 	private function emit_success_header( ?string $message ): void {

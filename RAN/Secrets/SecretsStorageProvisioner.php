@@ -528,7 +528,7 @@ class SecretsStorageProvisioner {
 	}
 
 	protected function managed_storage_healthy(): bool {
-		return null !== $this->secrets && $this->secrets->hasHealthyManagedStorage();
+		return null !== $this->secrets && $this->secrets->has_healthy_managed_storage();
 	}
 
 	private function supported_posix_platform(): bool {

@@ -24,20 +24,20 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) ) {
-	define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 13 );
-} elseif ( 13 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+	define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
+} elseif ( 14 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
 	throw new LogicException( 'RAN Booster Provider API 13 conflicts with an existing API version marker.' );
 }
 
 if ( ! defined( 'RAN_BOOSTER_ADDON_API_VERSION' ) ) {
-	define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
-} elseif ( 16 !== RAN_BOOSTER_ADDON_API_VERSION ) {
+	define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
+} elseif ( 17 !== RAN_BOOSTER_ADDON_API_VERSION ) {
 	throw new LogicException( 'RAN Booster Add-on API 16 conflicts with an existing API version marker.' );
 }
 
 if ( ! defined( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION' ) ) {
-	define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );
-} elseif ( 2 !== RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION ) {
+	define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 3 );
+} elseif ( 3 !== RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION ) {
 	throw new LogicException( 'RAN Booster Admin Interaction API 2 conflicts with an existing API version marker.' );
 }
 
@@ -72,9 +72,9 @@ use RAN\WordPress\WordPressOrgUpdateRequestFilter;
 if ( ! function_exists( 'ran_booster_table_name' ) ) {
 	function ran_booster_table_name() {
 		global $wpdb;
-		$dbPrefix = is_multisite() ? $wpdb->base_prefix : $wpdb->prefix;
+		$db_prefix = is_multisite() ? $wpdb->base_prefix : $wpdb->prefix;
 
-		return $dbPrefix . 'ran_booster_packages';
+		return $db_prefix . 'ran_booster_packages';
 	}
 }
 
@@ -94,7 +94,7 @@ if ( ! defined( 'RAN_BOOSTER_RUNTIME_MODE' ) ) {
 	throw new LogicException( 'RAN Booster runtime mode conflicts with an existing runtime marker.' );
 }
 
-if ( ! $ran_booster_runtime_support->allowsManagedOperations() ) {
+if ( ! $ran_booster_runtime_support->allows_managed_operations() ) {
 	( new UnsupportedMultisiteBootstrap( __FILE__ ) )->register();
 
 	return;
@@ -112,8 +112,8 @@ $ran_booster_core_development_notice->register();
 ( static function () use ( $ran_booster_core_development_notice, $ran_booster_self_update_policy, $ran_booster_release_updater ): void {
 	$ran_booster_container            = new CoreContainer();
 	$ran_booster_runtime              = new Booster( $ran_booster_container );
-	$ran_booster_runtime->boosterPath = plugin_dir_path( __FILE__ );
-	$ran_booster_runtime->boosterUrl  = plugin_dir_url( __FILE__ );
+	$ran_booster_runtime->booster_path = plugin_dir_path( __FILE__ );
+	$ran_booster_runtime->booster_url  = plugin_dir_url( __FILE__ );
 	( new BoosterServiceProvider() )->register( $ran_booster_container, $ran_booster_runtime, $ran_booster_release_updater, plugin_basename( __FILE__ ) );
 	$ran_booster_container->bind( CoreSelfUpdatePolicy::class, $ran_booster_self_update_policy );
 	$ran_booster_container->bind( CoreSelfUpdateDevelopmentNotice::class, $ran_booster_core_development_notice );
@@ -126,34 +126,34 @@ $ran_booster_core_development_notice->register();
 			// All plugins have now had an opportunity to attach their provider
 			// registration callback. No provider consumer is resolved before this
 			// extension seam closes and the registry is sealed.
-			$providerRegistry = $ran_booster_container->make( ProviderRegistry::class );
-			do_action( 'ran_booster_register_providers', $providerRegistry );
-			$providerRegistry->seal();
+			$provider_registry = $ran_booster_container->make( ProviderRegistry::class );
+			do_action( 'ran_booster_register_providers', $provider_registry );
+			$provider_registry->seal();
 
-			$coreVersion       = (string) ( get_file_data( __FILE__, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );
-			$coreReleaseTarget = null;
+			$core_version       = (string) ( get_file_data( __FILE__, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );
+			$core_release_target = null;
 			if ( $ran_booster_self_update_policy->allows_native_discovery() ) {
 				try {
-					$coreUpdater       = $ran_booster_container->make( ManagedReleaseUpdaterRegistrar::class )->plugin(
+					$core_updater       = $ran_booster_container->make( ManagedReleaseUpdaterRegistrar::class )->plugin(
 						'github',
 						__FILE__,
 						'RocketsAreNostalgic/ran-booster',
 						'1319710173',
-						str_contains( $coreVersion, '-' ) ? 'prerelease' : 'stable',
+						str_contains( $core_version, '-' ) ? 'prerelease' : 'stable',
 						'manual',
 						null,
 						PackageArtifactLimit::resolve()
 					);
-					$coreReleaseTarget = new CoreSelfUpdateNativeTarget( $coreUpdater );
-					if ( ! $coreReleaseTarget->register() ) {
-						$coreReleaseTarget = null;
+					$core_release_target = new CoreSelfUpdateNativeTarget( $core_updater );
+					if ( ! $core_release_target->register() ) {
+						$core_release_target = null;
 					} else {
 						$ran_booster_container
 							->make( ManagedReleaseTargetRegistrar::class )
-							->reserveCoreSelfUpdateTarget( plugin_basename( __FILE__ ) );
+							->reserve_core_self_update_target( plugin_basename( __FILE__ ) );
 					}
 				} catch ( Throwable $exception ) {
-					\RAN\Logging\BoosterLogger::logException(
+					\RAN\Logging\BoosterLogger::log_exception(
 						'core self-update target registration unavailable',
 						$exception,
 						array( 'step' => 'core_self_update_target_registration' )
@@ -162,7 +162,7 @@ $ran_booster_core_development_notice->register();
 			}
 			$ran_booster_container->bind(
 				CoreSelfUpdateStatus::class,
-				new CoreSelfUpdateStatus( $ran_booster_self_update_policy, $coreReleaseTarget )
+				new CoreSelfUpdateStatus( $ran_booster_self_update_policy, $core_release_target )
 			);
 
 			// Release targets join the package broker after every provider is
@@ -170,7 +170,7 @@ $ran_booster_core_development_notice->register();
 			try {
 				$ran_booster_container->make( ManagedReleaseTargetRegistrar::class )->register();
 			} catch ( Throwable $exception ) {
-				\RAN\Logging\BoosterLogger::logException(
+				\RAN\Logging\BoosterLogger::log_exception(
 					'managed release target registration unavailable',
 					$exception,
 					array( 'step' => 'managed_release_target_registration' )
@@ -178,7 +178,7 @@ $ran_booster_core_development_notice->register();
 			}
 
 			$portability      = $ran_booster_container->make( PortabilityFacade::class );
-			$adminInteraction = $ran_booster_container->make( AdminInteractionFacade::class );
+			$admin_interaction = $ran_booster_container->make( AdminInteractionFacade::class );
 			add_action(
 				'plugins_loaded',
 				static function () use ( $ran_booster_container ): void {
@@ -189,19 +189,19 @@ $ran_booster_core_development_notice->register();
 				PHP_INT_MAX
 			);
 			$ran_booster_container->make( RepositoryWebhookManagementControls::class )->register();
-			$addOnRegistry = new AdminAddOnRegistry(
+			$add_on_registry = new AdminAddOnRegistry(
 				array(),
 				RAN_BOOSTER_ADDON_API_VERSION,
 				RAN_BOOSTER_ADDON_API_VERSION
 			);
-			do_action( 'ran_booster_register_admin_tabs', $addOnRegistry );
-			$addOnRegistry->seal();
-			$ran_booster_container->bind( AdminAddOnRegistry::class, $addOnRegistry );
+			do_action( 'ran_booster_register_admin_tabs', $add_on_registry );
+			$add_on_registry->seal();
+			$ran_booster_container->bind( AdminAddOnRegistry::class, $add_on_registry );
 
 			try {
-				do_action( 'ran_booster_admin_interaction_ready', $adminInteraction );
+				do_action( 'ran_booster_admin_interaction_ready', $admin_interaction );
 			} catch ( Throwable $failure ) {
-				\RAN\Logging\BoosterLogger::logException(
+				\RAN\Logging\BoosterLogger::log_exception(
 					'add-on service listener failed',
 					$failure,
 					array(
@@ -215,7 +215,7 @@ $ran_booster_core_development_notice->register();
 			try {
 				do_action( 'ran_booster_portability_ready', $portability );
 			} catch ( Throwable $failure ) {
-				\RAN\Logging\BoosterLogger::logException(
+				\RAN\Logging\BoosterLogger::log_exception(
 					'add-on service listener failed',
 					$failure,
 					array(

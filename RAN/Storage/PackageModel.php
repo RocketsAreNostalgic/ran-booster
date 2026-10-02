@@ -105,7 +105,7 @@ class PackageModel {
 			}
 
 			if ( 'repository' === $key ) {
-				$this->$key = RepositoryLocator::requireValid( $value );
+				$this->$key = RepositoryLocator::require_valid( $value );
 				continue;
 			}
 

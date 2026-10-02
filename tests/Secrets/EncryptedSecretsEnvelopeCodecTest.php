@@ -27,7 +27,7 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 		}
 	}
 
-	public function testRoundTripUsesCanonicalEnvelopeWithoutPlaintext(): void {
+	public function test_round_trip_uses_canonical_envelope_without_plaintext(): void {
 		$codec    = new EncryptedSecretsEnvelopeCodec();
 		$envelope = $codec->encrypt( self::PLAINTEXT, self::KEY );
 		$decoded  = json_decode( $envelope, true, 4, JSON_THROW_ON_ERROR );
@@ -47,7 +47,7 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 		self::assertSame( base64_encode( base64_decode( $decoded['ciphertext'], true ) ), $decoded['ciphertext'] );
 	}
 
-	public function testEveryWriteUsesAFreshNonce(): void {
+	public function test_every_write_uses_afresh_nonce(): void {
 		$codec = new EncryptedSecretsEnvelopeCodec();
 
 		$first  = $codec->encrypt( self::PLAINTEXT, self::KEY );
@@ -58,8 +58,8 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 		self::assertSame( self::PLAINTEXT, $codec->decrypt( $second, self::KEY ) );
 	}
 
-	#[DataProvider( 'nonCanonicalEnvelopeProvider' )]
-	public function testNonCanonicalEnvelopeFormsAreRejected( callable $mutate ): void {
+	#[DataProvider( 'non_canonical_envelope_provider' )]
+	public function test_non_canonical_envelope_forms_are_rejected( callable $mutate ): void {
 		$codec     = new EncryptedSecretsEnvelopeCodec();
 		$canonical = $codec->encrypt( self::PLAINTEXT, self::KEY );
 		$invalid   = $mutate( $canonical );
@@ -69,7 +69,7 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 	}
 
 	/** @return array<string, array{callable(string): string}> */
-	public static function nonCanonicalEnvelopeProvider(): array {
+	public static function non_canonical_envelope_provider(): array {
 		return array(
 			'missing field'           => array(
 				static function ( string $json ): string {
@@ -122,8 +122,8 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'invalidBase64Provider' )]
-	public function testNonCanonicalBase64AndNonceLengthsAreRejected( string $field, callable $mutate ): void {
+	#[DataProvider( 'invalid_base64_provider' )]
+	public function test_non_canonical_base64_and_nonce_lengths_are_rejected( string $field, callable $mutate ): void {
 		$codec           = new EncryptedSecretsEnvelopeCodec();
 		$value           = json_decode( $codec->encrypt( self::PLAINTEXT, self::KEY ), true, 4, JSON_THROW_ON_ERROR );
 		$original        = $value[ $field ];
@@ -135,7 +135,7 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 	}
 
 	/** @return array<string, array{string, callable(string): string}> */
-	public static function invalidBase64Provider(): array {
+	public static function invalid_base64_provider(): array {
 		return array(
 			'invalid alphabet'  => array( 'nonce', static fn( string $value ): string => '!' . substr( $value, 1 ) ),
 			'extra padding'     => array( 'nonce', static fn( string $value ): string => $value . '=' ),
@@ -146,7 +146,7 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 		);
 	}
 
-	public function testTamperAndWrongKeyFailAuthentication(): void {
+	public function test_tamper_and_wrong_key_fail_authentication(): void {
 		$codec               = new EncryptedSecretsEnvelopeCodec();
 		$envelope            = $codec->encrypt( self::PLAINTEXT, self::KEY );
 		$value               = json_decode( $envelope, true, 4, JSON_THROW_ON_ERROR );
@@ -167,16 +167,16 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 				self::assertStringNotContainsString( self::KEY, $exception->getMessage() );
 				self::assertStringNotContainsString( self::WRONG_KEY, $exception->getMessage() );
 				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export -- The trace is inspected only to prove secret redaction.
-				$traceArguments = var_export( $exception->getTrace()[0]['args'] ?? array(), true );
-				self::assertStringNotContainsString( self::PLAINTEXT, $traceArguments );
-				self::assertStringNotContainsString( self::KEY, $traceArguments );
-				self::assertStringNotContainsString( self::WRONG_KEY, $traceArguments );
+				$trace_arguments = var_export( $exception->getTrace()[0]['args'] ?? array(), true );
+				self::assertStringNotContainsString( self::PLAINTEXT, $trace_arguments );
+				self::assertStringNotContainsString( self::KEY, $trace_arguments );
+				self::assertStringNotContainsString( self::WRONG_KEY, $trace_arguments );
 			}
 		}
 	}
 
-	#[DataProvider( 'authenticatedByteMutationProvider' )]
-	public function testValidLengthNonceCiphertextAndTagMutationsFailAuthentication(
+	#[DataProvider( 'authenticated_byte_mutation_provider' )]
+	public function test_valid_length_nonce_ciphertext_and_tag_mutations_fail_authentication(
 		string $field,
 		int $offset
 	): void {
@@ -193,7 +193,7 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 	}
 
 	/** @return array<string, array{string, int}> */
-	public static function authenticatedByteMutationProvider(): array {
+	public static function authenticated_byte_mutation_provider(): array {
 		return array(
 			'nonce byte'      => array( 'nonce', 0 ),
 			'ciphertext byte' => array( 'ciphertext', 0 ),
@@ -201,7 +201,7 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 		);
 	}
 
-	public function testChangedAdditionalAuthenticatedDataCannotDecryptTheEnvelope(): void {
+	public function test_changed_additional_authenticated_data_cannot_decrypt_the_envelope(): void {
 		$envelope   = ( new EncryptedSecretsEnvelopeCodec() )->encrypt( self::PLAINTEXT, self::KEY );
 		$value      = json_decode( $envelope, true, 4, JSON_THROW_ON_ERROR );
 		$nonce      = base64_decode( $value['nonce'], true );
@@ -217,7 +217,7 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 		);
 	}
 
-	public function testWrongLengthKeysAreRejected(): void {
+	public function test_wrong_length_keys_are_rejected(): void {
 		$codec = new EncryptedSecretsEnvelopeCodec();
 
 		foreach ( array( '', 'short', str_repeat( 'x', 33 ) ) as $key ) {
@@ -232,7 +232,7 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 		}
 	}
 
-	public function testEnvelopeAndPlaintextSizeBoundsAreEnforced(): void {
+	public function test_envelope_and_plaintext_size_bounds_are_enforced(): void {
 		$codec = new EncryptedSecretsEnvelopeCodec();
 
 		try {

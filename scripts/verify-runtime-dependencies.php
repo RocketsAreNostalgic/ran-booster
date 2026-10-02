@@ -10,7 +10,7 @@ declare(strict_types=1);
 
 $arguments     = array_slice( $argv, 1 );
 $packaging     = false;
-$installedRoot = null;
+$installed_root = null;
 $usage         = 'Usage: php scripts/verify-runtime-dependencies.php '
 	. '[--packaging | --verify-install <installed-root>] '
 	. '<composer.lock> <runtime-packaging-policy.json>' . "\n";
@@ -20,12 +20,12 @@ if ( '--packaging' === ( $arguments[0] ?? null ) ) {
 	array_shift( $arguments );
 } elseif ( '--verify-install' === ( $arguments[0] ?? null ) ) {
 	array_shift( $arguments );
-	$candidateInstalledRoot = array_shift( $arguments );
-	if ( ! is_string( $candidateInstalledRoot ) || '' === $candidateInstalledRoot ) {
+	$candidate_installed_root = array_shift( $arguments );
+	if ( ! is_string( $candidate_installed_root ) || '' === $candidate_installed_root ) {
 		fwrite( STDERR, $usage );
 		exit( 2 );
 	}
-	$installedRoot = $candidateInstalledRoot;
+	$installed_root = $candidate_installed_root;
 }
 
 if ( PHP_SAPI !== 'cli' || 2 !== count( $arguments ) ) {
@@ -33,18 +33,18 @@ if ( PHP_SAPI !== 'cli' || 2 !== count( $arguments ) ) {
 	exit( 2 );
 }
 
-$lockPath   = $arguments[0];
-$policyPath = $arguments[1];
+$lock_path   = $arguments[0];
+$policy_path = $arguments[1];
 
 try {
-	$lock = json_decode( file_get_contents( $lockPath ), true, 512, JSON_THROW_ON_ERROR );
+	$lock = json_decode( file_get_contents( $lock_path ), true, 512, JSON_THROW_ON_ERROR );
 } catch ( Throwable $exception ) {
 	fwrite( STDERR, "Runtime dependency lock is unreadable: {$exception->getMessage()}\n" );
 	exit( 1 );
 }
 
 try {
-	$policy = json_decode( file_get_contents( $policyPath ), true, 512, JSON_THROW_ON_ERROR );
+	$policy = json_decode( file_get_contents( $policy_path ), true, 512, JSON_THROW_ON_ERROR );
 } catch ( Throwable $exception ) {
 	fwrite( STDERR, "Runtime packaging policy is unreadable: {$exception->getMessage()}\n" );
 	exit( 1 );
@@ -55,9 +55,9 @@ if ( ! is_array( $policy ) ) {
 	exit( 1 );
 }
 
-$policyKeys = array_keys( $policy );
-sort( $policyKeys );
-if ( array( 'packages', 'schema', 'schema_version' ) !== $policyKeys ) {
+$policy_keys = array_keys( $policy );
+sort( $policy_keys );
+if ( array( 'packages', 'schema', 'schema_version' ) !== $policy_keys ) {
 	fwrite( STDERR, "Runtime packaging policy contains an unsupported top-level field.\n" );
 	exit( 1 );
 }
@@ -73,8 +73,8 @@ if (
 }
 
 $expected        = array();
-$archiveRoots    = array();
-$neutralUpdaters = 0;
+$archive_roots    = array();
+$neutral_updaters = 0;
 
 foreach ( $policy['packages'] as $record ) {
 	if ( ! is_array( $record ) ) {
@@ -82,93 +82,93 @@ foreach ( $policy['packages'] as $record ) {
 		exit( 1 );
 	}
 
-	$recordKeys = array_keys( $record );
-	sort( $recordKeys );
-	if ( array( 'archive_root', 'build_role', 'name', 'repository', 'surfaces' ) !== $recordKeys ) {
+	$record_keys = array_keys( $record );
+	sort( $record_keys );
+	if ( array( 'archive_root', 'build_role', 'name', 'repository', 'surfaces' ) !== $record_keys ) {
 		fwrite( STDERR, "Runtime packaging policy package record contains an unsupported field.\n" );
 		exit( 1 );
 	}
 
 	$name        = $record['name'] ?? null;
 	$repository  = $record['repository'] ?? null;
-	$archiveRoot = $record['archive_root'] ?? null;
+	$archive_root = $record['archive_root'] ?? null;
 	$surfaces    = $record['surfaces'] ?? null;
-	$buildRole   = $record['build_role'] ?? null;
+	$build_role   = $record['build_role'] ?? null;
 
 	if (
 		! is_string( $name )
 		|| 1 !== preg_match( '/^ran\/(?!\.{1,2}$)[a-z0-9_.-]+$/D', $name )
 		|| ! is_string( $repository )
 		|| 1 !== preg_match( '/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/D', $repository )
-		|| ! is_string( $archiveRoot )
-		|| 'vendor/' . $name !== $archiveRoot
+		|| ! is_string( $archive_root )
+		|| 'vendor/' . $name !== $archive_root
 		|| ! is_array( $surfaces )
 		|| array() === $surfaces
-		|| ( null !== $buildRole && 'neutral-updater' !== $buildRole )
+		|| ( null !== $build_role && 'neutral-updater' !== $build_role )
 	) {
 		fwrite( STDERR, "Runtime packaging policy package record is invalid.\n" );
 		exit( 1 );
 	}
 
-	if ( isset( $expected[ $name ] ) || isset( $archiveRoots[ $archiveRoot ] ) ) {
+	if ( isset( $expected[ $name ] ) || isset( $archive_roots[ $archive_root ] ) ) {
 		fwrite( STDERR, "Runtime packaging policy contains a duplicate package or archive root.\n" );
 		exit( 1 );
 	}
 
-	$validatedSurfaces = array();
-	$surfacePaths      = array();
+	$validated_surfaces = array();
+	$surface_paths      = array();
 	foreach ( $surfaces as $surface ) {
 		if ( ! is_array( $surface ) ) {
 			fwrite( STDERR, "Runtime packaging policy contains an invalid surface record.\n" );
 			exit( 1 );
 		}
 
-		$surfaceKeys = array_keys( $surface );
-		sort( $surfaceKeys );
-		if ( array( 'kind', 'path' ) !== $surfaceKeys ) {
+		$surface_keys = array_keys( $surface );
+		sort( $surface_keys );
+		if ( array( 'kind', 'path' ) !== $surface_keys ) {
 			fwrite( STDERR, "Runtime packaging policy surface record contains an unsupported field.\n" );
 			exit( 1 );
 		}
 
-		$surfacePath = $surface['path'] ?? null;
-		$surfaceKind = $surface['kind'] ?? null;
+		$surface_path = $surface['path'] ?? null;
+		$surface_kind = $surface['kind'] ?? null;
 		if (
-			! is_string( $surfacePath )
-			|| 1 !== preg_match( '/^[A-Za-z0-9._-]+$/D', $surfacePath )
-			|| '.' === $surfacePath
-			|| '..' === $surfacePath
-			|| ! is_string( $surfaceKind )
-			|| ! in_array( $surfaceKind, array( 'file', 'directory' ), true )
+			! is_string( $surface_path )
+			|| 1 !== preg_match( '/^[A-Za-z0-9._-]+$/D', $surface_path )
+			|| '.' === $surface_path
+			|| '..' === $surface_path
+			|| ! is_string( $surface_kind )
+			|| ! in_array( $surface_kind, array( 'file', 'directory' ), true )
 		) {
 			fwrite( STDERR, "Runtime packaging policy contains an invalid top-level surface.\n" );
 			exit( 1 );
 		}
 
-		if ( isset( $surfacePaths[ $surfacePath ] ) ) {
+		if ( isset( $surface_paths[ $surface_path ] ) ) {
 			fwrite( STDERR, "Runtime packaging policy contains a duplicate surface path.\n" );
 			exit( 1 );
 		}
-		$surfacePaths[ $surfacePath ] = true;
-		$validatedSurfaces[]          = array(
-			'path' => $surfacePath,
-			'kind' => $surfaceKind,
+		$surface_paths[ $surface_path ] = true;
+		$validated_surfaces[]          = array(
+			'path' => $surface_path,
+			'kind' => $surface_kind,
 		);
 	}
 
-	if ( 'neutral-updater' === $buildRole ) {
-		++$neutralUpdaters;
+	if ( 'neutral-updater' === $build_role ) {
+		++$neutral_updaters;
 	}
 
 	$expected[ $name ]            = array(
 		'repository'   => $repository,
-		'archive_root' => $archiveRoot,
-		'surfaces'     => $validatedSurfaces,
-		'build_role'   => $buildRole,
+		'archive_root' => $archive_root,
+		'surfaces'     => $validated_surfaces,
+		'build_role'   => $build_role,
 	);
-	$archiveRoots[ $archiveRoot ] = true;
+	$archive_roots[ $archive_root ] = true;
 }
 
-if ( 1 !== $neutralUpdaters ) {
+if ( 1 !== $neutral_updaters ) {
 	fwrite( STDERR, "Runtime packaging policy must identify exactly one neutral updater package.\n" );
 	exit( 1 );
 }
@@ -202,7 +202,7 @@ if ( count( $actual ) !== count( array_intersect_key( $actual, $expected ) ) ) {
 	exit( 1 );
 }
 
-$versionPattern = '/^v?(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)'
+$version_pattern = '/^v?(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)'
 	. '(?:-(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)'
 	. '(?:\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?'
 	. '(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/D';
@@ -215,7 +215,7 @@ foreach ( $expected as $name => $identity ) {
 
 	if (
 		! is_string( $version )
-		|| 1 !== preg_match( $versionPattern, $version )
+		|| 1 !== preg_match( $version_pattern, $version )
 		|| ! is_array( $source )
 		|| 'git' !== ( $source['type'] ?? null )
 		|| ! is_string( $source['reference'] ?? null )
@@ -230,52 +230,52 @@ foreach ( $expected as $name => $identity ) {
 	}
 
 	$reference = $source['reference'];
-	$sourceUrl = 'https://github.com/' . $identity['repository'] . '.git';
-	$distUrl   = 'https://api.github.com/repos/' . $identity['repository'] . '/zipball/' . $reference;
+	$source_url = 'https://github.com/' . $identity['repository'] . '.git';
+	$dist_url   = 'https://api.github.com/repos/' . $identity['repository'] . '/zipball/' . $reference;
 	if (
-		$sourceUrl !== ( $source['url'] ?? null )
-		|| $distUrl !== ( $dist['url'] ?? null )
+		$source_url !== ( $source['url'] ?? null )
+		|| $dist_url !== ( $dist['url'] ?? null )
 	) {
 		fwrite( STDERR, "Runtime dependency repository identity mismatch for {$name}.\n" );
 		exit( 1 );
 	}
 }
 
-$contentHash = $lock['content-hash'] ?? null;
-if ( ! is_string( $contentHash ) || 1 !== preg_match( '/^[0-9a-f]{32}$/D', $contentHash ) ) {
+$content_hash = $lock['content-hash'] ?? null;
+if ( ! is_string( $content_hash ) || 1 !== preg_match( '/^[0-9a-f]{32}$/D', $content_hash ) ) {
 	fwrite( STDERR, "Runtime dependency lock content hash is invalid.\n" );
 	exit( 1 );
 }
 
-if ( null !== $installedRoot ) {
-	if ( ! is_dir( $installedRoot ) || is_link( $installedRoot ) ) {
+if ( null !== $installed_root ) {
+	if ( ! is_dir( $installed_root ) || is_link( $installed_root ) ) {
 		fwrite( STDERR, "Installed runtime root is missing or symbolic.\n" );
 		exit( 1 );
 	}
 
 	foreach ( $expected as $name => $identity ) {
-		$packageRoot = rtrim( $installedRoot, '/\\' ) . '/' . $identity['archive_root'];
-		if ( ! is_dir( $packageRoot ) || is_link( $packageRoot ) ) {
+		$package_root = rtrim( $installed_root, '/\\' ) . '/' . $identity['archive_root'];
+		if ( ! is_dir( $package_root ) || is_link( $package_root ) ) {
 			fwrite( STDERR, "Installed runtime package root is missing or symbolic for {$name}.\n" );
 			exit( 1 );
 		}
 
 		foreach ( $identity['surfaces'] as $surface ) {
-			$surfacePath = $packageRoot . '/' . $surface['path'];
+			$surface_path = $package_root . '/' . $surface['path'];
 			if ( 'file' === $surface['kind'] ) {
-				if ( ! is_file( $surfacePath ) || is_link( $surfacePath ) ) {
+				if ( ! is_file( $surface_path ) || is_link( $surface_path ) ) {
 					fwrite( STDERR, "Installed runtime file surface is missing or changed kind for {$name}: {$surface['path']}.\n" );
 					exit( 1 );
 				}
 				continue;
 			}
 
-			if ( ! is_dir( $surfacePath ) || is_link( $surfacePath ) ) {
+			if ( ! is_dir( $surface_path ) || is_link( $surface_path ) ) {
 				fwrite( STDERR, "Installed runtime directory surface is missing or changed kind for {$name}: {$surface['path']}.\n" );
 				exit( 1 );
 			}
 
-			$pending = array( $surfacePath );
+			$pending = array( $surface_path );
 			while ( array() !== $pending ) {
 				$directory = array_pop( $pending );
 				$entries   = scandir( $directory );
@@ -285,7 +285,7 @@ if ( null !== $installedRoot ) {
 				}
 				$entries = array_values( array_diff( $entries, array( '.', '..' ) ) );
 				if ( array() === $entries ) {
-					$relative = substr( $directory, strlen( $packageRoot ) + 1 );
+					$relative = substr( $directory, strlen( $package_root ) + 1 );
 					fwrite( STDERR, "Installed runtime directory surface contains an empty directory for {$name}: {$relative}.\n" );
 					exit( 1 );
 				}
@@ -318,7 +318,7 @@ foreach ( $expected as $name => $identity ) {
 	$reference = $package['source']['reference'];
 
 	if ( $packaging ) {
-		$surfaceSpecs = array_map(
+		$surface_specs = array_map(
 			static fn( array $surface ): string => $surface['kind'] . ':' . $surface['path'],
 			$identity['surfaces']
 		);
@@ -329,7 +329,7 @@ foreach ( $expected as $name => $identity ) {
 			$reference,
 			$identity['repository'],
 			$identity['archive_root'],
-			implode( ',', $surfaceSpecs ),
+			implode( ',', $surface_specs ),
 			$identity['build_role'] ?? '-'
 		);
 		continue;

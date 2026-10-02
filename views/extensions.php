@@ -1,11 +1,11 @@
 <?php
 
 /** @var list<array<string, mixed>> $extensions */
-/** @var string $pluginsUrl */
+/** @var string $plugins_url */
 
 defined( 'ABSPATH' ) || exit;
 
-$extensionStateLabels = array(
+$extension_state_labels = array(
 	'Not installed'       => __( 'Not installed', 'ran-booster' ),
 	'Incompatible'        => __( 'Incompatible', 'ran-booster' ),
 	'Active'              => __( 'Active', 'ran-booster' ),
@@ -22,12 +22,12 @@ $extensionStateLabels = array(
 		<div id="the-list" class="plugin-group ran-booster-extensions__grid">
 		<?php foreach ( $extensions as $extension ) : ?>
 			<?php
-			$detailsId          = 'ran-booster-extension-details-' . $extension['id'];
-			$detailsUrl         = '#TB_inline?width=772&height=600&inlineId=' . $detailsId;
-			$availabilityLabel  = $extension['availability'];
-			$stateLabel         = $extensionStateLabels[ $extension['state'] ] ?? $extension['state'];
-			$compatibilityLabel = $extension['compatible'] ? __( 'Compatible with your version of Booster', 'ran-booster' ) : __( 'Requires a different version of Booster', 'ran-booster' );
-			$moreDetailsLabel   = sprintf(
+			$details_id          = 'ran-booster-extension-details-' . $extension['id'];
+			$details_url         = '#TB_inline?width=772&height=600&inlineId=' . $details_id;
+			$availability_label  = $extension['availability'];
+			$state_label         = $extension_state_labels[ $extension['state'] ] ?? $extension['state'];
+			$compatibility_label = $extension['compatible'] ? __( 'Compatible with your version of Booster', 'ran-booster' ) : __( 'Requires a different version of Booster', 'ran-booster' );
+			$more_details_label   = sprintf(
 				/* translators: %s: Extension name. */
 				__( 'More details about %s', 'ran-booster' ),
 				$extension['name']
@@ -37,7 +37,7 @@ $extensionStateLabels = array(
 				<div class="plugin-card-top">
 					<div class="name column-name">
 						<h3>
-							<a class="thickbox ran-booster-extension-details-link" href="<?php echo esc_url( $detailsUrl ); ?>" data-title="<?php echo esc_attr( $extension['name'] ); ?>" aria-label="<?php echo esc_attr( $moreDetailsLabel ); ?>">
+							<a class="thickbox ran-booster-extension-details-link" href="<?php echo esc_url( $details_url ); ?>" data-title="<?php echo esc_attr( $extension['name'] ); ?>" aria-label="<?php echo esc_attr( $more_details_label ); ?>">
 								<?php echo esc_html( $extension['name'] ); ?>
 								<img class="plugin-icon" src="<?php echo esc_url( $extension['image_url'] ); ?>" alt="">
 							</a>
@@ -55,9 +55,9 @@ $extensionStateLabels = array(
 								<?php endif; ?>
 								</li>
 								<li>
-									<a class="thickbox ran-booster-extension-details-link" href="<?php echo esc_url( $detailsUrl ); ?>" data-title="<?php echo esc_attr( $extension['name'] ); ?>" aria-label="<?php echo esc_attr( $moreDetailsLabel ); ?>"><?php esc_html_e( 'More Details', 'ran-booster' ); ?></a>
+									<a class="thickbox ran-booster-extension-details-link" href="<?php echo esc_url( $details_url ); ?>" data-title="<?php echo esc_attr( $extension['name'] ); ?>" aria-label="<?php echo esc_attr( $more_details_label ); ?>"><?php esc_html_e( 'More Details', 'ran-booster' ); ?></a>
 								<?php if ( 'Active' !== $extension['state'] && 'Not installed' !== $extension['state'] ) : ?>
-									<br><a href="<?php echo esc_url( $pluginsUrl ); ?>"><?php esc_html_e( 'Open Plugins', 'ran-booster' ); ?></a>
+									<br><a href="<?php echo esc_url( $plugins_url ); ?>"><?php esc_html_e( 'Open Plugins', 'ran-booster' ); ?></a>
 								<?php endif; ?>
 								</li>
 						</ul>
@@ -76,15 +76,15 @@ $extensionStateLabels = array(
 				</div>
 				<div class="plugin-card-bottom">
 					<div class="vers column-rating ran-booster-extension-card__metadata">
-						<span class="ran-booster-extension-card__badge"><?php echo esc_html( $availabilityLabel ); ?></span>
+						<span class="ran-booster-extension-card__badge"><?php echo esc_html( $availability_label ); ?></span>
 						<span class="ran-booster-extension-card__badge"><?php esc_html_e( 'Beta', 'ran-booster' ); ?></span>
-						<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $extension['state_kind'] ); ?>"><?php echo esc_html( $stateLabel ); ?></span>
+						<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $extension['state_kind'] ); ?>"><?php echo esc_html( $state_label ); ?></span>
 					</div>
 					<div class="column-compatibility">
 					<?php if ( $extension['compatible'] ) : ?>
 						<span class="compatibility-compatible"><strong><?php esc_html_e( 'Compatible', 'ran-booster' ); ?></strong> <?php esc_html_e( 'with your version of Booster', 'ran-booster' ); ?></span>
 					<?php else : ?>
-						<span class="compatibility-incompatible"><?php echo esc_html( $compatibilityLabel ); ?></span>
+						<span class="compatibility-incompatible"><?php echo esc_html( $compatibility_label ); ?></span>
 					<?php endif; ?>
 					</div>
 				</div>
@@ -93,18 +93,18 @@ $extensionStateLabels = array(
 		</div>
 		<?php foreach ( $extensions as $extension ) : ?>
 			<?php
-			$detailsId          = 'ran-booster-extension-details-' . $extension['id'];
-			$detailsTitleId     = $detailsId . '-title';
-			$availabilityLabel  = $extension['availability'];
-			$stateLabel         = $extensionStateLabels[ $extension['state'] ] ?? $extension['state'];
-			$compatibilityLabel = $extension['compatible'] ? __( 'Compatible with your version of Booster', 'ran-booster' ) : __( 'Requires a different version of Booster', 'ran-booster' );
+			$details_id          = 'ran-booster-extension-details-' . $extension['id'];
+			$details_title_id     = $details_id . '-title';
+			$availability_label  = $extension['availability'];
+			$state_label         = $extension_state_labels[ $extension['state'] ] ?? $extension['state'];
+			$compatibility_label = $extension['compatible'] ? __( 'Compatible with your version of Booster', 'ran-booster' ) : __( 'Requires a different version of Booster', 'ran-booster' );
 			?>
-			<div id="<?php echo esc_attr( $detailsId ); ?>" class="hidden">
-				<article class="ran-booster-extension-details" aria-labelledby="<?php echo esc_attr( $detailsTitleId ); ?>">
+			<div id="<?php echo esc_attr( $details_id ); ?>" class="hidden">
+				<article class="ran-booster-extension-details" aria-labelledby="<?php echo esc_attr( $details_title_id ); ?>">
 					<header class="ran-booster-extension-details__header">
 						<img src="<?php echo esc_url( $extension['image_url'] ); ?>" alt="">
 						<div>
-							<h2 id="<?php echo esc_attr( $detailsTitleId ); ?>"><?php echo esc_html( $extension['name'] ); ?></h2>
+							<h2 id="<?php echo esc_attr( $details_title_id ); ?>"><?php echo esc_html( $extension['name'] ); ?></h2>
 							<p><?php echo esc_html( $extension['description'] ); ?></p>
 						</div>
 					</header>
@@ -132,15 +132,15 @@ $extensionStateLabels = array(
 							<h3><?php esc_html_e( 'Extension details', 'ran-booster' ); ?></h3>
 							<dl>
 								<dt><?php esc_html_e( 'Availability', 'ran-booster' ); ?></dt>
-								<dd><?php echo esc_html( $availabilityLabel ); ?></dd>
+								<dd><?php echo esc_html( $availability_label ); ?></dd>
 								<dt><?php esc_html_e( 'Maturity', 'ran-booster' ); ?></dt>
 								<dd><?php esc_html_e( 'Beta', 'ran-booster' ); ?></dd>
 								<dt><?php esc_html_e( 'Status', 'ran-booster' ); ?></dt>
-								<dd><?php echo esc_html( $stateLabel ); ?></dd>
+								<dd><?php echo esc_html( $state_label ); ?></dd>
 								<dt><?php esc_html_e( 'Compatibility', 'ran-booster' ); ?></dt>
 								<dd class="ran-booster-extension-details__compatibility<?php echo $extension['compatible'] ? '' : ' ran-booster-extension-details__compatibility--incompatible'; ?>">
 									<span aria-hidden="true"><?php echo $extension['compatible'] ? '✓' : '×'; ?></span>
-									<?php echo esc_html( $compatibilityLabel ); ?>
+									<?php echo esc_html( $compatibility_label ); ?>
 								</dd>
 							</dl>
 							<p><a href="<?php echo esc_url( $extension['docs_url'] ); ?>"><?php esc_html_e( 'Documentation', 'ran-booster' ); ?></a></p>

@@ -14,27 +14,20 @@ final class PrivateLocationCandidateResolver {
 
 	private string $temporary_root;
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-	public function __construct( ?string $temporaryRoot = null ) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		$resolved_temporary   = realpath( $temporaryRoot ?? sys_get_temp_dir() );
+	public function __construct( ?string $temporary_root = null ) {
+		$resolved_temporary   = realpath( $temporary_root ?? sys_get_temp_dir() );
 		$this->temporary_root = false === $resolved_temporary ? sys_get_temp_dir() : $resolved_temporary;
 	}
 
 	public function resolve(
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		string $wordpressRoot,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		string $contentDir,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		string $pluginDir,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		?string $documentRoot = null,
+		string $wordpress_root,
+		string $content_dir,
+		string $plugin_dir,
+		?string $document_root = null,
 		?array &$discarded = null
 	): ?string {
-		$discarded = array();
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		$boundaries = $this->unsafe_boundaries( $wordpressRoot, $contentDir, $pluginDir, $documentRoot );
+		$discarded  = array();
+		$boundaries = $this->unsafe_boundaries( $wordpress_root, $content_dir, $plugin_dir, $document_root );
 		if ( null === $boundaries ) {
 			return null;
 		}
@@ -45,8 +38,7 @@ final class PrivateLocationCandidateResolver {
 		}
 
 		$fingerprint = substr(
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-			hash( 'sha256', implode( "\0", array_map( array( $this, 'canonical_directory' ), array( $wordpressRoot, $contentDir, $pluginDir ) ) ) ),
+			hash( 'sha256', implode( "\0", array_map( array( $this, 'canonical_directory' ), array( $wordpress_root, $content_dir, $plugin_dir ) ) ) ),
 			0,
 			16
 		);
@@ -72,17 +64,12 @@ final class PrivateLocationCandidateResolver {
 	 */
 	public function validate_configured(
 		string $candidate,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		string $wordpressRoot,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		string $contentDir,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		string $pluginDir,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		?string $documentRoot = null
+		string $wordpress_root,
+		string $content_dir,
+		string $plugin_dir,
+		?string $document_root = null
 	): bool {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted properties retain the existing caller contract.
-		$boundaries = $this->unsafe_boundaries( $wordpressRoot, $contentDir, $pluginDir, $documentRoot );
+		$boundaries = $this->unsafe_boundaries( $wordpress_root, $content_dir, $plugin_dir, $document_root );
 		if ( null === $boundaries ) {
 			return false;
 		}

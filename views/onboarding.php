@@ -11,16 +11,16 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$secretsStorage                    = isset( $onboarding['secrets_storage'] ) && is_array( $onboarding['secrets_storage'] )
+$secrets_storage                    = isset( $onboarding['secrets_storage'] ) && is_array( $onboarding['secrets_storage'] )
 	? $onboarding['secrets_storage']
 	: null;
-$storageStatus                     = null === $secretsStorage ? '' : (string) $secretsStorage['status'];
-$storageReasonCode                 = null === $secretsStorage ? '' : (string) ( $secretsStorage['reason_code'] ?? '' );
-$storageCandidatePath              = null === $secretsStorage ? null : ( $secretsStorage['candidate_path'] ?? null );
-$storageDirectory                  = null === $secretsStorage
+$storage_status                     = null === $secrets_storage ? '' : (string) $secrets_storage['status'];
+$storage_reason_code                 = null === $secrets_storage ? '' : (string) ( $secrets_storage['reason_code'] ?? '' );
+$storage_candidate_path              = null === $secrets_storage ? null : ( $secrets_storage['candidate_path'] ?? null );
+$storage_directory                  = null === $secrets_storage
 	? null
-	: ( $secretsStorage['candidate_directory'] ?? ( is_string( $storageCandidatePath ) ? dirname( $storageCandidatePath ) : null ) );
-$storageStatusLabels               = array(
+	: ( $secrets_storage['candidate_directory'] ?? ( is_string( $storage_candidate_path ) ? dirname( $storage_candidate_path ) : null ) );
+$storage_status_labels               = array(
 	'path_configured'         => __( 'Path configured', 'ran-booster' ),
 	'storage_healthy'         => __( 'Storage healthy', 'ran-booster' ),
 	'storage_needs_attention' => __( 'Storage needs attention', 'ran-booster' ),
@@ -29,7 +29,7 @@ $storageStatusLabels               = array(
 	'unsupported'             => __( 'Unavailable', 'ran-booster' ),
 	'pending_verification'    => __( 'Verification pending', 'ran-booster' ),
 );
-$storageStatusClasses              = array(
+$storage_status_classes              = array(
 	'path_configured'         => 'neutral',
 	'storage_healthy'         => 'ok',
 	'storage_needs_attention' => 'warning',
@@ -38,34 +38,34 @@ $storageStatusClasses              = array(
 	'unsupported'             => 'error',
 	'pending_verification'    => 'pending',
 );
-$storagePathSource                 = null === $secretsStorage ? null : ( $secretsStorage['path_source'] ?? null );
-$storagePathSourceLabels           = array(
+$storage_path_source                 = null === $secrets_storage ? null : ( $secrets_storage['path_source'] ?? null );
+$storage_path_source_labels           = array(
 	'automatic' => __( 'Booster default', 'ran-booster' ),
 	'manual'    => __( 'Custom wp-config.php path', 'ran-booster' ),
 );
-$storageRecovery                   = null === $secretsStorage || ! is_array( $secretsStorage['recovery'] ?? null )
+$storage_recovery                   = null === $secrets_storage || ! is_array( $secrets_storage['recovery'] ?? null )
 	? null
-	: $secretsStorage['recovery'];
-$storageCanReset                   = null !== $storageRecovery && true === ( $storageRecovery['can_reset'] ?? false );
-$storageDiscardedCandidates        = null === $secretsStorage || ! is_array( $secretsStorage['discarded_candidates'] ?? null )
+	: $secrets_storage['recovery'];
+$storage_can_reset                   = null !== $storage_recovery && true === ( $storage_recovery['can_reset'] ?? false );
+$storage_discarded_candidates        = null === $secrets_storage || ! is_array( $secrets_storage['discarded_candidates'] ?? null )
 	? array()
-	: $secretsStorage['discarded_candidates'];
-$credentialStorageDocumentationUrl = $onboarding['documentation_url'] . '#ran-booster-credential-storage';
-$storageDetailsOpen                = in_array(
-	$storageStatus,
+	: $secrets_storage['discarded_candidates'];
+$credential_storage_documentation_url = $onboarding['documentation_url'] . '#ran-booster-credential-storage';
+$storage_details_open                = in_array(
+	$storage_status,
 	array( 'storage_needs_attention', 'setup_available', 'manual_required', 'unsupported', 'pending_verification' ),
 	true
 );
-$showsStorageOverride              = in_array( $storageStatus, array( 'storage_needs_attention', 'manual_required' ), true )
-	&& null === ( $secretsStorage['config_alternatives'] ?? null );
-$hasStorageDetails                 = null !== $secretsStorage
+$shows_storage_override              = in_array( $storage_status, array( 'storage_needs_attention', 'manual_required' ), true )
+	&& null === ( $secrets_storage['config_alternatives'] ?? null );
+$has_storage_details                 = null !== $secrets_storage
 	&& (
-		null !== $secretsStorage['candidate_path']
-		|| $secretsStorage['can_provision']
-		|| null !== $storageRecovery
-		|| array() !== $storageDiscardedCandidates
-		|| null !== $secretsStorage['config_alternatives']
-		|| $showsStorageOverride
+		null !== $secrets_storage['candidate_path']
+		|| $secrets_storage['can_provision']
+		|| null !== $storage_recovery
+		|| array() !== $storage_discarded_candidates
+		|| null !== $secrets_storage['config_alternatives']
+		|| $shows_storage_override
 	);
 
 ?>
@@ -89,9 +89,9 @@ $hasStorageDetails                 = null !== $secretsStorage
 			<h4 class="ran-booster-onboarding__provider-heading"><?php esc_html_e( 'Connect a provider', 'ran-booster' ); ?></h4>
 			<?php if ( array() !== $onboarding['provider_links'] ) { ?>
 				<ul class="ran-booster-onboarding__links">
-					<?php foreach ( $onboarding['provider_links'] as $providerLink ) { ?>
+					<?php foreach ( $onboarding['provider_links'] as $provider_link ) { ?>
 						<?php // translators: %s is the display name of a registered Git provider. ?>
-						<li><a href="<?php echo esc_url( $providerLink['url'] ); ?>"><?php echo esc_html( sprintf( __( 'Add %s access', 'ran-booster' ), $providerLink['label'] ) ); ?></a></li>
+						<li><a href="<?php echo esc_url( $provider_link['url'] ); ?>"><?php echo esc_html( sprintf( __( 'Add %s access', 'ran-booster' ), $provider_link['label'] ) ); ?></a></li>
 					<?php } ?>
 				</ul>
 			<?php } else { ?>
@@ -111,84 +111,84 @@ $hasStorageDetails                 = null !== $secretsStorage
 	</div>
 
 	<?php
-	$migrationPromptBufferLevel = ob_get_level();
+	$migration_prompt_buffer_level = ob_get_level();
 	ob_start();
 	try {
 		do_action( 'ran_booster_overview_render_migration_prompt' );
-		$migrationPrompt = (string) ob_get_clean();
+		$migration_prompt = (string) ob_get_clean();
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Add-ons own and escape their bounded migration prompt.
-		echo $migrationPrompt;
+		echo $migration_prompt;
 	} catch ( \Throwable $failure ) {
-		while ( ob_get_level() > $migrationPromptBufferLevel ) {
+		while ( ob_get_level() > $migration_prompt_buffer_level ) {
 			ob_end_clean();
 		}
-		\RAN\Logging\BoosterLogger::logException( 'overview migration prompt rendering failed', $failure, array( 'step' => 'overview_migration_prompt_render' ) );
+		\RAN\Logging\BoosterLogger::log_exception( 'overview migration prompt rendering failed', $failure, array( 'step' => 'overview_migration_prompt_render' ) );
 	}
 	?>
 
-	<?php if ( null !== $secretsStorage ) { ?>
-		<section class="ran-booster-onboarding__storage" aria-labelledby="ran-booster-onboarding-storage-heading" data-ran-booster-storage-reason="<?php echo esc_attr( $storageReasonCode ); ?>">
+	<?php if ( null !== $secrets_storage ) { ?>
+		<section class="ran-booster-onboarding__storage" aria-labelledby="ran-booster-onboarding-storage-heading" data-ran-booster-storage-reason="<?php echo esc_attr( $storage_reason_code ); ?>">
 			<div class="ran-booster-onboarding__storage-heading">
 				<h3 id="ran-booster-onboarding-storage-heading"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h3>
-				<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $storageStatusClasses[ $storageStatus ] ?? 'neutral' ); ?>" data-ran-booster-storage-status="<?php echo esc_attr( $storageStatus ); ?>"><?php echo esc_html( $storageStatusLabels[ $storageStatus ] ?? __( 'Status unknown', 'ran-booster' ) ); ?></span>
+				<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $storage_status_classes[ $storage_status ] ?? 'neutral' ); ?>" data-ran-booster-storage-status="<?php echo esc_attr( $storage_status ); ?>"><?php echo esc_html( $storage_status_labels[ $storage_status ] ?? __( 'Status unknown', 'ran-booster' ) ); ?></span>
 			</div>
-			<p><?php echo esc_html( $secretsStorage['message'] ); ?></p>
-			<?php if ( '' !== $storageReasonCode && in_array( $storageStatus, array( 'storage_needs_attention', 'manual_required', 'unsupported' ), true ) ) { ?>
-				<p class="description"><strong><?php esc_html_e( 'Diagnostic code:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $storageReasonCode ); ?></code></p>
+			<p><?php echo esc_html( $secrets_storage['message'] ); ?></p>
+			<?php if ( '' !== $storage_reason_code && in_array( $storage_status, array( 'storage_needs_attention', 'manual_required', 'unsupported' ), true ) ) { ?>
+				<p class="description"><strong><?php esc_html_e( 'Diagnostic code:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $storage_reason_code ); ?></code></p>
 			<?php } ?>
 
-			<?php if ( $hasStorageDetails ) { ?>
-				<details class="ran-booster-onboarding__storage-details"<?php echo $storageDetailsOpen ? ' open' : ''; ?>>
+			<?php if ( $has_storage_details ) { ?>
+				<details class="ran-booster-onboarding__storage-details"<?php echo $storage_details_open ? ' open' : ''; ?>>
 					<summary><?php esc_html_e( 'Storage details', 'ran-booster' ); ?></summary>
 					<div>
-						<?php if ( null !== $secretsStorage['candidate_path'] ) { ?>
+						<?php if ( null !== $secrets_storage['candidate_path'] ) { ?>
 							<dl class="ran-booster-onboarding__storage-facts">
-								<?php if ( null !== $storageDirectory ) { ?>
+								<?php if ( null !== $storage_directory ) { ?>
 									<div>
 										<dt><?php esc_html_e( 'Storage directory', 'ran-booster' ); ?></dt>
-										<dd><code><?php echo esc_html( $storageDirectory ); ?></code></dd>
+										<dd><code><?php echo esc_html( $storage_directory ); ?></code></dd>
 									</div>
 								<?php } ?>
 								<div>
 									<dt><?php esc_html_e( 'Storage file', 'ran-booster' ); ?></dt>
-									<dd><code><?php echo esc_html( $secretsStorage['candidate_path'] ); ?></code></dd>
+									<dd><code><?php echo esc_html( $secrets_storage['candidate_path'] ); ?></code></dd>
 								</div>
-								<?php if ( is_string( $storagePathSource ) && isset( $storagePathSourceLabels[ $storagePathSource ] ) && in_array( $storageStatus, array( 'path_configured', 'storage_healthy', 'storage_needs_attention' ), true ) ) { ?>
+								<?php if ( is_string( $storage_path_source ) && isset( $storage_path_source_labels[ $storage_path_source ] ) && in_array( $storage_status, array( 'path_configured', 'storage_healthy', 'storage_needs_attention' ), true ) ) { ?>
 									<div>
 										<dt><?php esc_html_e( 'Path selection', 'ran-booster' ); ?></dt>
-										<dd><?php echo esc_html( $storagePathSourceLabels[ $storagePathSource ] ); ?></dd>
+										<dd><?php echo esc_html( $storage_path_source_labels[ $storage_path_source ] ); ?></dd>
 									</div>
 								<?php } ?>
 							</dl>
-							<?php if ( 'setup_available' === $storageStatus ) { ?>
+							<?php if ( 'setup_available' === $storage_status ) { ?>
 								<p class="description"><?php esc_html_e( 'Booster selected this private location automatically; you do not need to choose a path.', 'ran-booster' ); ?></p>
-							<?php } elseif ( 'path_configured' === $storageStatus ) { ?>
+							<?php } elseif ( 'path_configured' === $storage_status ) { ?>
 								<p class="description"><?php esc_html_e( 'The encrypted file and its separate database key are created when you save the first credential.', 'ran-booster' ); ?></p>
-							<?php } elseif ( 'storage_healthy' === $storageStatus ) { ?>
+							<?php } elseif ( 'storage_healthy' === $storage_status ) { ?>
 								<p class="description"><?php esc_html_e( 'Credentials are encrypted in this file. WordPress stores the encryption key separately.', 'ran-booster' ); ?></p>
 							<?php } ?>
 						<?php } ?>
 
-						<?php if ( $secretsStorage['can_provision'] ) { ?>
-							<form class="ran-booster-onboarding__storage-actions" method="post" action="<?php echo esc_url( $secretsStorage['action_url'] ); ?>">
+						<?php if ( $secrets_storage['can_provision'] ) { ?>
+							<form class="ran-booster-onboarding__storage-actions" method="post" action="<?php echo esc_url( $secrets_storage['action_url'] ); ?>">
 								<?php wp_nonce_field( 'ran-booster-create-secure-storage' ); ?>
 								<input type="hidden" name="ran_booster[action]" value="create-secure-storage">
 								<button type="submit" class="button button-primary"><?php esc_html_e( 'Create secure storage', 'ran-booster' ); ?></button>
 							</form>
 						<?php } ?>
 
-						<?php if ( array() !== $storageDiscardedCandidates ) { ?>
+						<?php if ( array() !== $storage_discarded_candidates ) { ?>
 							<div class="ran-booster-onboarding__storage-discarded">
 								<h4><?php esc_html_e( 'Automatic locations considered and discarded', 'ran-booster' ); ?></h4>
 								<p class="description"><?php esc_html_e( 'This check is read-only; Booster did not create files in these locations.', 'ran-booster' ); ?></p>
 								<ul>
-									<?php foreach ( $storageDiscardedCandidates as $discardedCandidate ) { ?>
-										<?php if ( is_array( $discardedCandidate ) && is_string( $discardedCandidate['directory'] ?? null ) && is_string( $discardedCandidate['code'] ?? null ) && is_string( $discardedCandidate['reason'] ?? null ) ) { ?>
+									<?php foreach ( $storage_discarded_candidates as $discarded_candidate ) { ?>
+										<?php if ( is_array( $discarded_candidate ) && is_string( $discarded_candidate['directory'] ?? null ) && is_string( $discarded_candidate['code'] ?? null ) && is_string( $discarded_candidate['reason'] ?? null ) ) { ?>
 											<li>
-												<code><?php echo esc_html( $discardedCandidate['directory'] ); ?></code>
-												<p class="description"><strong><?php esc_html_e( 'Reason:', 'ran-booster' ); ?></strong> <?php echo esc_html( $discardedCandidate['reason'] ); ?> <code><?php echo esc_html( $discardedCandidate['code'] ); ?></code></p>
-												<?php if ( is_string( $discardedCandidate['component'] ?? null ) ) { ?>
-													<p class="description"><strong><?php esc_html_e( 'Blocking component:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $discardedCandidate['component'] ); ?></code></p>
+												<code><?php echo esc_html( $discarded_candidate['directory'] ); ?></code>
+												<p class="description"><strong><?php esc_html_e( 'Reason:', 'ran-booster' ); ?></strong> <?php echo esc_html( $discarded_candidate['reason'] ); ?> <code><?php echo esc_html( $discarded_candidate['code'] ); ?></code></p>
+												<?php if ( is_string( $discarded_candidate['component'] ?? null ) ) { ?>
+													<p class="description"><strong><?php esc_html_e( 'Blocking component:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $discarded_candidate['component'] ); ?></code></p>
 												<?php } ?>
 											</li>
 										<?php } ?>
@@ -197,34 +197,34 @@ $hasStorageDetails                 = null !== $secretsStorage
 							</div>
 						<?php } ?>
 
-						<?php if ( null !== $storageRecovery ) { ?>
+						<?php if ( null !== $storage_recovery ) { ?>
 							<div class="ran-booster-onboarding__storage-recovery">
-								<h4><?php echo esc_html( $storageCanReset ? __( 'Start over with empty credential storage', 'ran-booster' ) : __( 'Existing Booster storage found', 'ran-booster' ) ); ?></h4>
-								<p><?php echo esc_html( $storageRecovery['message'] ); ?></p>
-								<?php if ( $storageRecovery['can_adopt'] ) { ?>
-									<?php if ( null !== $storageRecovery['candidate_directory'] ) { ?>
-										<p class="description"><strong><?php esc_html_e( 'Verified storage directory:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $storageRecovery['candidate_directory'] ); ?></code></p>
+								<h4><?php echo esc_html( $storage_can_reset ? __( 'Start over with empty credential storage', 'ran-booster' ) : __( 'Existing Booster storage found', 'ran-booster' ) ); ?></h4>
+								<p><?php echo esc_html( $storage_recovery['message'] ); ?></p>
+								<?php if ( $storage_recovery['can_adopt'] ) { ?>
+									<?php if ( null !== $storage_recovery['candidate_directory'] ) { ?>
+										<p class="description"><strong><?php esc_html_e( 'Verified storage directory:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $storage_recovery['candidate_directory'] ); ?></code></p>
 									<?php } ?>
 									<p class="description"><?php esc_html_e( 'This proves decryption, canonical storage and the current registered provider credential shape. It does not contact a provider or prove that a credential is still active. Adoption changes only Booster’s owned wp-config.php pointer; it does not move or delete files.', 'ran-booster' ); ?></p>
-									<form class="ran-booster-onboarding__storage-actions" method="post" action="<?php echo esc_url( $secretsStorage['action_url'] ); ?>">
+									<form class="ran-booster-onboarding__storage-actions" method="post" action="<?php echo esc_url( $secrets_storage['action_url'] ); ?>">
 										<?php wp_nonce_field( 'ran-booster-adopt-secure-storage' ); ?>
 										<input type="hidden" name="ran_booster[action]" value="adopt-secure-storage">
-										<input type="hidden" name="ran_booster[recovery_token]" value="<?php echo esc_attr( $storageRecovery['token'] ); ?>">
+										<input type="hidden" name="ran_booster[recovery_token]" value="<?php echo esc_attr( $storage_recovery['token'] ); ?>">
 										<button type="submit" class="button button-primary"><?php esc_html_e( 'Adopt existing storage', 'ran-booster' ); ?></button>
 									</form>
-								<?php } elseif ( $storageCanReset ) { ?>
+								<?php } elseif ( $storage_can_reset ) { ?>
 									<p><strong><?php esc_html_e( 'Permanent reset:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Restore the matching secrets.json and database key from the same backup first if they are available. Resetting abandons every repository credential and webhook secret that cannot be recovered from that matching pair.', 'ran-booster' ); ?></p>
 									<p class="description"><?php esc_html_e( 'A Transporter Blueprint is not a complete credential backup. It may transfer selected repository credentials for applicable package rows, including explicit credential-only recovery for an already-managed package, but it never contains webhook secrets.', 'ran-booster' ); ?></p>
-									<form class="ran-booster-onboarding__storage-actions" method="post" action="<?php echo esc_url( $secretsStorage['action_url'] ); ?>">
+									<form class="ran-booster-onboarding__storage-actions" method="post" action="<?php echo esc_url( $secrets_storage['action_url'] ); ?>">
 										<?php wp_nonce_field( 'ran-booster-reset-empty-storage' ); ?>
 										<input type="hidden" name="ran_booster[action]" value="reset-empty-storage">
 										<label for="ran-booster-reset-confirmation">
 											<?php
 											// translators: %s is the exact confirmation phrase the administrator must type.
-											echo esc_html( sprintf( __( 'Type %s to confirm:', 'ran-booster' ), $storageRecovery['reset_confirmation'] ) );
+											echo esc_html( sprintf( __( 'Type %s to confirm:', 'ran-booster' ), $storage_recovery['reset_confirmation'] ) );
 											?>
 										</label>
-										<input id="ran-booster-reset-confirmation" type="text" name="ran_booster[reset_confirmation]" required autocomplete="off" pattern="<?php echo esc_attr( $storageRecovery['reset_confirmation'] ); ?>">
+										<input id="ran-booster-reset-confirmation" type="text" name="ran_booster[reset_confirmation]" required autocomplete="off" pattern="<?php echo esc_attr( $storage_recovery['reset_confirmation'] ); ?>">
 										<button type="submit" class="button"><?php esc_html_e( 'Reset credential storage', 'ran-booster' ); ?></button>
 									</form>
 								<?php } else { ?>
@@ -233,9 +233,9 @@ $hasStorageDetails                 = null !== $secretsStorage
 							</div>
 						<?php } ?>
 
-						<?php if ( $showsStorageOverride ) { ?>
+						<?php if ( $shows_storage_override ) { ?>
 							<details class="ran-booster-onboarding__storage-manual" open>
-								<summary><?php echo esc_html( 'storage_needs_attention' === $storageStatus ? __( 'Use a different storage location', 'ran-booster' ) : __( 'Set a storage location manually', 'ran-booster' ) ); ?></summary>
+								<summary><?php echo esc_html( 'storage_needs_attention' === $storage_status ? __( 'Use a different storage location', 'ran-booster' ) : __( 'Set a storage location manually', 'ran-booster' ) ); ?></summary>
 								<div>
 									<p><?php esc_html_e( 'Choose a durable absolute directory outside the public web root. Create it as a real directory owned by the PHP process user with mode 0700. Booster manages secrets.json and its lock inside it; if the file already exists, it must be owned by PHP with mode 0600.', 'ran-booster' ); ?></p>
 									<p><?php esc_html_e( 'Remove any existing RAN_BOOSTER_ENCRYPTED_SECRETS_FILE definition, then define this directory constant in wp-config.php before WordPress loads plugins. Use __DIR__ to anchor a relative layout to wp-config.php:', 'ran-booster' ); ?></p>
@@ -252,15 +252,15 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 							</details>
 						<?php } ?>
 
-						<?php if ( null !== $secretsStorage['config_alternatives'] ) { ?>
-							<details class="ran-booster-onboarding__storage-manual" <?php echo esc_attr( 'manual_required' === $storageStatus ? 'open' : '' ); ?>>
-								<summary><?php echo esc_html( $secretsStorage['can_provision'] ? __( 'Set up manually instead', 'ran-booster' ) : __( 'Manual setup instructions', 'ran-booster' ) ); ?></summary>
+						<?php if ( null !== $secrets_storage['config_alternatives'] ) { ?>
+							<details class="ran-booster-onboarding__storage-manual" <?php echo esc_attr( 'manual_required' === $storage_status ? 'open' : '' ); ?>>
+								<summary><?php echo esc_html( $secrets_storage['can_provision'] ? __( 'Set up manually instead', 'ran-booster' ) : __( 'Manual setup instructions', 'ran-booster' ) ); ?></summary>
 								<div>
-									<p><?php echo esc_html( $secretsStorage['manual_preflight'] ); ?></p>
+									<p><?php echo esc_html( $secrets_storage['manual_preflight'] ); ?></p>
 									<p><?php esc_html_e( 'Use an absolute private directory outside the public web root on durable local storage. It must be owned by PHP, readable and writable by PHP, and mode 0700; Booster manages secrets.json within it.', 'ran-booster' ); ?></p>
 									<p><?php esc_html_e( 'Create the owner-only private directories:', 'ran-booster' ); ?></p>
 									<ol>
-										<?php foreach ( $secretsStorage['directory_commands'] as $command ) { ?>
+										<?php foreach ( $secrets_storage['directory_commands'] as $command ) { ?>
 											<li><code><?php echo esc_html( $command ); ?></code></li>
 										<?php } ?>
 									</ol>
@@ -268,12 +268,12 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 									<ul>
 										<li>
 											<?php esc_html_e( 'Add this line to wp-config.php:', 'ran-booster' ); ?>
-											<code><?php echo esc_html( $secretsStorage['config_alternatives']['define'] ); ?></code>
+											<code><?php echo esc_html( $secrets_storage['config_alternatives']['define'] ); ?></code>
 										</li>
-										<?php if ( '' !== $secretsStorage['config_alternatives']['wp_cli'] ) { ?>
+										<?php if ( '' !== $secrets_storage['config_alternatives']['wp_cli'] ) { ?>
 											<li>
 												<?php esc_html_e( 'Or run this WP-CLI command:', 'ran-booster' ); ?>
-												<code><?php echo esc_html( $secretsStorage['config_alternatives']['wp_cli'] ); ?></code>
+												<code><?php echo esc_html( $secrets_storage['config_alternatives']['wp_cli'] ); ?></code>
 											</li>
 										<?php } ?>
 									</ul>
@@ -282,7 +282,7 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 						<?php } ?>
 
 						<p class="ran-booster-onboarding__storage-documentation">
-							<a href="<?php echo esc_url( $credentialStorageDocumentationUrl ); ?>"><?php esc_html_e( 'Learn how Booster manages credentials and keys', 'ran-booster' ); ?></a>
+							<a href="<?php echo esc_url( $credential_storage_documentation_url ); ?>"><?php esc_html_e( 'Learn how Booster manages credentials and keys', 'ran-booster' ); ?></a>
 						</p>
 					</div>
 				</details>

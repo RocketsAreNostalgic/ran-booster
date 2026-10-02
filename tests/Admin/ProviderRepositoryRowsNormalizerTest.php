@@ -135,7 +135,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		};
 
 		$result = $this->project_single_repository_page( $this->webhook_management_controls() );
-		$row    = $result['repositoryTableRows'][0];
+		$row    = $result['repository_table_rows'][0];
 
 		self::assertArrayHasKey( 'core:package-' . substr( hash( 'sha256', 'example/example.php' ), 0, 16 ), $row['actions'] );
 		self::assertContains( 'Recorded hook status', array_column( $row['details'], 'label' ) );
@@ -169,8 +169,8 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 
 		$result = $this->project_single_repository_page( $this->webhook_management_controls() );
 
-		self::assertSame( 'core:webhook-recorded-status', $result['repositoryTableRows'][0]['details'][0]['key'] );
-		self::assertSame( 'Configured at last check', $result['repositoryTableRows'][0]['details'][0]['value'] );
+		self::assertSame( 'core:webhook-recorded-status', $result['repository_table_rows'][0]['details'][0]['key'] );
+		self::assertSame( 'Configured at last check', $result['repository_table_rows'][0]['details'][0]['value'] );
 	}
 
 	public function test_project_rejects_extension_forged_webhook_evidence(): void {
@@ -188,9 +188,9 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 
 		$result = $this->project_single_repository_page( null, true );
 
-		self::assertSame( array(), $result['repositoryTableRows'][0]['details'] );
-		self::assertSame( 0, $result['repositoryIntegrationSummary']['recorded_hooks'] );
-		self::assertSame( 1, $result['repositoryIntegrationSummary']['needs_review'] );
+		self::assertSame( array(), $result['repository_table_rows'][0]['details'] );
+		self::assertSame( 0, $result['repository_integration_summary']['recorded_hooks'] );
+		self::assertSame( 1, $result['repository_integration_summary']['needs_review'] );
 	}
 
 	public function test_project_retains_core_rows_when_provider_row_enrichment_is_invalid(): void {
@@ -198,9 +198,9 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 
 		$result = $this->project_single_repository_page();
 
-		self::assertCount( 1, $result['repositoryTableRows'] );
-		self::assertSame( 'example/example', $result['repositoryTableRows'][0]['repository'] );
-		self::assertArrayHasKey( 'core:package-' . substr( hash( 'sha256', 'example/example.php' ), 0, 16 ), $result['repositoryTableRows'][0]['actions'] );
+		self::assertCount( 1, $result['repository_table_rows'] );
+		self::assertSame( 'example/example', $result['repository_table_rows'][0]['repository'] );
+		self::assertArrayHasKey( 'core:package-' . substr( hash( 'sha256', 'example/example.php' ), 0, 16 ), $result['repository_table_rows'][0]['actions'] );
 	}
 
 	#[RunInSeparateProcess]
@@ -578,9 +578,9 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 					'capabilities'   => array(),
 					'webhook_scopes' => array(),
 				),
-				'providerTask'          => 'repositories',
-				'repositoryView'        => 'releases',
-				'requestedRepositoryId' => '101',
+				'provider_task'          => 'repositories',
+				'repository_view'        => 'releases',
+				'requested_repository_id' => '101',
 				'provider_repositories' => array(
 					'repositories' => array(
 						array(
@@ -615,14 +615,14 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 			)
 		);
 
-		self::assertSame( 'releases', $result['repositoryView'] );
-		self::assertStringContainsString( 'panel=repositories&repository=101&repository_view=status', html_entity_decode( $result['repositoryViewUrls']['status'] ) );
-		self::assertSame( 'admin.php?page=ran-booster&tab=gh&panel=repositories&repository=101&repository_view=branch', $result['repositoryViewRequestUrls']['branch'] );
-		self::assertSame( 3, $result['repositoryIntegrationSummary']['release_packages'] );
-		self::assertSame( 2, $result['repositoryIntegrationSummary']['release_repositories'] );
-		self::assertFalse( $result['repositoryIntegrationSummary']['release_totals_incomplete'] );
-		self::assertTrue( $result['repositoryIntegrationSummary']['release_workflows_inventory_incomplete'] );
-		self::assertSame( 3, $result['repositoryIntegrationSummary']['release_workflows_needing_review'] );
+		self::assertSame( 'releases', $result['repository_view'] );
+		self::assertStringContainsString( 'panel=repositories&repository=101&repository_view=status', html_entity_decode( $result['repository_view_urls']['status'] ) );
+		self::assertSame( 'admin.php?page=ran-booster&tab=gh&panel=repositories&repository=101&repository_view=branch', $result['repository_view_request_urls']['branch'] );
+		self::assertSame( 3, $result['repository_integration_summary']['release_packages'] );
+		self::assertSame( 2, $result['repository_integration_summary']['release_repositories'] );
+		self::assertFalse( $result['repository_integration_summary']['release_totals_incomplete'] );
+		self::assertTrue( $result['repository_integration_summary']['release_workflows_inventory_incomplete'] );
+		self::assertSame( 3, $result['repository_integration_summary']['release_workflows_needing_review'] );
 	}
 
 	#[RunInSeparateProcess]
@@ -637,9 +637,9 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 					'capabilities'   => array(),
 					'webhook_scopes' => array(),
 				),
-				'providerTask'          => 'repositories',
-				'repositoryView'        => 'branch',
-				'requestedRepositoryId' => '101',
+				'provider_task'          => 'repositories',
+				'repository_view'        => 'branch',
+				'requested_repository_id' => '101',
 				'provider_repositories' => array(
 					'repositories' => array(
 						array(
@@ -653,8 +653,8 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 			)
 		);
 
-		self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=101&repository_view=status', html_entity_decode( $result['repositoryViewUrls']['status'] ) );
-		self::assertSame( 'admin.php?page=ran-booster&tab=gh&panel=repositories&repository=101&repository_view=branch', $result['repositoryViewRequestUrls']['branch'] );
+		self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=101&repository_view=status', html_entity_decode( $result['repository_view_urls']['status'] ) );
+		self::assertSame( 'admin.php?page=ran-booster&tab=gh&panel=repositories&repository=101&repository_view=branch', $result['repository_view_request_urls']['branch'] );
 	}
 
 	public function test_repository_summary_uses_automatic_branch_aggregate_beyond_package_summary_cap(): void {
@@ -672,7 +672,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 					'capabilities'   => array( 'webhooks' => true ),
 					'webhook_scopes' => array( array( 'code' => 'repository' ) ),
 				),
-				'providerTask'                 => 'repositories',
+				'provider_task'                 => 'repositories',
 				'provider_repositories'        => array(
 					'available'    => true,
 					'repositories' => array(
@@ -708,12 +708,12 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 			)
 		);
 
-		self::assertCount( 20, $result['repositoryTableRows'][0]['package_summaries'] );
-		self::assertSame( 1, $result['repositoryTableRows'][0]['package_summaries_omitted'] );
-		self::assertFalse( $result['repositoryTableRows'][0]['has_automatic_branch_consumer'] );
-		self::assertSame( 'Package inventory incomplete', $result['repositoryTableRows'][0]['management_label'] );
-		self::assertSame( array(), $result['repositoryTableRows'][0]['actions'] );
-		self::assertSame( 0, $result['repositoryIntegrationSummary']['needs_review'] );
+		self::assertCount( 20, $result['repository_table_rows'][0]['package_summaries'] );
+		self::assertSame( 1, $result['repository_table_rows'][0]['package_summaries_omitted'] );
+		self::assertFalse( $result['repository_table_rows'][0]['has_automatic_branch_consumer'] );
+		self::assertSame( 'Package inventory incomplete', $result['repository_table_rows'][0]['management_label'] );
+		self::assertSame( array(), $result['repository_table_rows'][0]['actions'] );
+		self::assertSame( 0, $result['repository_integration_summary']['needs_review'] );
 	}
 
 	public function test_rejects_provider_rewrite_of_immutable_package_summaries(): void {
@@ -754,7 +754,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 					'capabilities'   => array( 'webhooks' => true ),
 					'webhook_scopes' => array( array( 'code' => 'repository' ) ),
 				),
-				'providerTask'                 => 'repositories',
+				'provider_task'                 => 'repositories',
 				'provider_repositories'        => array(
 					'available'    => true,
 					'repositories' => array(

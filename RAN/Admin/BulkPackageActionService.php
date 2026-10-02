@@ -254,7 +254,7 @@ final readonly class BulkPackageActionService {
 			return BulkPackageResult::queue( count( $action->identifiers ), 0, $skipped, 'not_required' );
 		}
 
-		$admission = $this->deployments->queueManualUpdates( $targets );
+		$admission = $this->deployments->queue_manual_updates( $targets );
 		if ( $admission['busy'] > 0 ) {
 			$skipped['busy'] = ( $skipped['busy'] ?? 0 ) + $admission['busy'];
 		}
@@ -293,7 +293,7 @@ final readonly class BulkPackageActionService {
 
 		if ( $webhook_required ) {
 			try {
-				$this->providers->requireCapability( $provider_code, WebhookNormalizer::class );
+				$this->providers->require_capability( $provider_code, WebhookNormalizer::class );
 			} catch ( UnsupportedProviderCapability ) {
 				throw BulkPackageActionFailure::unavailable_webhook();
 			}
@@ -301,7 +301,7 @@ final readonly class BulkPackageActionService {
 
 		$credential_id = $package->get_credential_id();
 		if ( ( $package->get_private() || '' !== $credential_id )
-			&& null === $this->secrets->credentialMaterial( $provider_code, '' === $credential_id ? null : $credential_id ) ) {
+			&& null === $this->secrets->credential_material( $provider_code, '' === $credential_id ? null : $credential_id ) ) {
 			throw BulkPackageActionFailure::unavailable_credential();
 		}
 	}

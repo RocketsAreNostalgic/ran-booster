@@ -12,18 +12,15 @@ namespace RAN\Secrets;
  */
 final class PosixFilesystemProbe {
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public named-argument contract.
-	public function probe( string $candidateFile ): bool {
+	public function probe( string $candidate_file ): bool {
 		$probe_path = '';
 		$handles    = array();
 		$passed     = false;
 		try {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public named-argument contract.
-			if ( 'Windows' === PHP_OS_FAMILY || ! $this->valid_candidate( $candidateFile ) ) {
+			if ( 'Windows' === PHP_OS_FAMILY || ! $this->valid_candidate( $candidate_file ) ) {
 				return false;
 			}
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public named-argument contract.
-			$site_directory = dirname( $candidateFile );
+			$site_directory = dirname( $candidate_file );
 			$root_directory = dirname( $site_directory );
 			if ( ! $this->safe_directory( dirname( $root_directory ), false )
 				|| ! $this->ensure_private_directory( $root_directory )

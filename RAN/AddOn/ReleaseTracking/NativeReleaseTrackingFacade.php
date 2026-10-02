@@ -65,7 +65,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	 * @param callable(string): void|null         $refreshNative
 	 * @param callable(): bool|null $metadataEligible
 	 * @param callable(string): void|null         $invalidateNative
-	 * @param callable(string): ?string|null      $publicLookupProfile
+	 * @param callable(string): ?string|null      $public_lookup_profile
 	 */
 	public function __construct(
 		private PluginRepository $plugins,

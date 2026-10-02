@@ -20,18 +20,18 @@ if ( ! $container instanceof CoreContainer ) {
 }
 
 $database = $container->make( Database::class );
-$database->requireSupported();
+$database->require_supported();
 $database->install();
 
 global $wpdb;
-$packageTable = ran_booster_table_name();
-$attemptTable = Database::attemptTableName();
+$package_table = ran_booster_table_name();
+$attempt_table = Database::attempt_table_name();
 
 if ( '13.0' !== Database::$booster_db_version ) {
 	throw new RuntimeException( 'The database smoke requires the schema 13.0 lifecycle.' );
 }
 
-$schemaSevenPackage = array(
+$schema_seven_package = array(
 	'package'                => 'ran-booster-schema-seven-marker/ran-booster-schema-seven-marker.php',
 	'repository'             => 'example/schema-seven-marker',
 	'branch'                 => 'schema-seven',
@@ -43,7 +43,7 @@ $schemaSevenPackage = array(
 	'credential_id'          => null,
 	'subdirectory'           => 'preserved-subdirectory',
 );
-$schemaSevenAttempt = array(
+$schema_seven_attempt = array(
 	'correlation_id'         => 'schema7preservation0000000000000',
 	'source'                 => 'manual',
 	'operation'              => 'update',
@@ -62,10 +62,10 @@ $schemaSevenAttempt = array(
 	'created_at'             => '2026-01-02 03:04:00',
 	'finished_at'            => '2026-01-02 03:04:06',
 );
-$wpdb->delete( $packageTable, array( 'package' => $schemaSevenPackage['package'] ) );
-$wpdb->delete( $attemptTable, array( 'correlation_id' => $schemaSevenAttempt['correlation_id'] ) );
+$wpdb->delete( $package_table, array( 'package' => $schema_seven_package['package'] ) );
+$wpdb->delete( $attempt_table, array( 'correlation_id' => $schema_seven_attempt['correlation_id'] ) );
 
-$fetchRow              = static function ( string $table, string $column, int|string $value ) use ( $wpdb ): array {
+$fetch_row               = static function ( string $table, string $column, int|string $value ) use ( $wpdb ): array {
 	$query = is_int( $value )
 		? $wpdb->prepare( 'SELECT * FROM %i WHERE %i = %d', $table, $column, $value )
 		: $wpdb->prepare( 'SELECT * FROM %i WHERE %i = %s', $table, $column, $value );
@@ -78,7 +78,7 @@ $fetchRow              = static function ( string $table, string $column, int|st
 
 	return $row;
 };
-$showCreate            = static function ( string $table ) use ( $wpdb ): string {
+$show_create             = static function ( string $table ) use ( $wpdb ): string {
 	$row = $wpdb->get_row( $wpdb->prepare( 'SHOW CREATE TABLE %i', $table ), ARRAY_N );
 	if ( ! is_array( $row ) || ! isset( $row[1] ) || ! is_string( $row[1] ) ) {
 		throw new RuntimeException( 'The database smoke could not inspect a fixture schema.' );
@@ -86,35 +86,35 @@ $showCreate            = static function ( string $table ) use ( $wpdb ): string
 
 	return $row[1];
 };
-$setSchemaVersion      = static function ( string $version ): void {
+$set_schema_version      = static function ( string $version ): void {
 	if ( ! update_option( Database::VERSION_OPTION, $version, false )
 		&& $version !== (string) get_option( Database::VERSION_OPTION, '' ) ) {
 		throw new RuntimeException( 'The database smoke could not set its fixture schema version.' );
 	}
 };
-$assertRejectedVersion = static function (
+$assert_rejected_version = static function (
 	string $version,
-	string $expectedReason
+	string $expected_reason
 ) use (
-	$attemptTable,
-	$fetchRow,
-	$packageTable,
-	$schemaSevenAttempt,
-	$schemaSevenPackage,
-	$setSchemaVersion,
-	$showCreate
+	$attempt_table,
+	$fetch_row,
+	$package_table,
+	$schema_seven_attempt,
+	$schema_seven_package,
+	$set_schema_version,
+	$show_create
 ): void {
-	$packageBefore = $fetchRow( $packageTable, 'package', $schemaSevenPackage['package'] );
-	$attemptBefore = $fetchRow( $attemptTable, 'correlation_id', $schemaSevenAttempt['correlation_id'] );
-	$schemasBefore = array( $showCreate( $packageTable ), $showCreate( $attemptTable ) );
-	$setSchemaVersion( $version );
+	$package_before = $fetch_row( $package_table, 'package', $schema_seven_package['package'] );
+	$attempt_before = $fetch_row( $attempt_table, 'correlation_id', $schema_seven_attempt['correlation_id'] );
+	$schemas_before = array( $show_create( $package_table ), $show_create( $attempt_table ) );
+	$set_schema_version( $version );
 
 	$rejected = false;
 	try {
 		try {
-			( new Database() )->maybeUpgrade();
+			( new Database() )->maybe_upgrade();
 		} catch ( DatabaseLifecycleFailure $failure ) {
-			if ( $expectedReason !== $failure->reason() ) {
+			if ( $expected_reason !== $failure->reason() ) {
 				throw new RuntimeException( 'The database smoke received the wrong schema-version failure.' );
 			}
 			$rejected = true;
@@ -125,52 +125,52 @@ $assertRejectedVersion = static function (
 		if ( $version !== (string) get_option( Database::VERSION_OPTION, '' ) ) {
 			throw new RuntimeException( 'The database smoke changed a rejected schema version.' );
 		}
-		if ( $packageBefore !== $fetchRow( $packageTable, 'package', $schemaSevenPackage['package'] )
-			|| $attemptBefore !== $fetchRow( $attemptTable, 'correlation_id', $schemaSevenAttempt['correlation_id'] )
-			|| $schemasBefore !== array( $showCreate( $packageTable ), $showCreate( $attemptTable ) ) ) {
+		if ( $package_before !== $fetch_row( $package_table, 'package', $schema_seven_package['package'] )
+			|| $attempt_before !== $fetch_row( $attempt_table, 'correlation_id', $schema_seven_attempt['correlation_id'] )
+			|| $schemas_before !== array( $show_create( $package_table ), $show_create( $attempt_table ) ) ) {
 			throw new RuntimeException( 'The database smoke found mutation after a rejected schema version.' );
 		}
 	} finally {
-		$setSchemaVersion( Database::$booster_db_version );
+		$set_schema_version( Database::$booster_db_version );
 	}
 };
 
 try {
-	if ( false === $wpdb->insert( $packageTable, $schemaSevenPackage )
-		|| false === $wpdb->insert( $attemptTable, $schemaSevenAttempt ) ) {
+	if ( false === $wpdb->insert( $package_table, $schema_seven_package )
+		|| false === $wpdb->insert( $attempt_table, $schema_seven_attempt ) ) {
 		throw new RuntimeException( 'The database smoke could not seed hard-cut preservation rows.' );
 	}
-	$assertRejectedVersion( '6.0', 'unsupported_old_schema' );
-	$assertRejectedVersion( '7.0', 'unsupported_old_schema' );
-	$assertRejectedVersion( '8.0', 'unsupported_old_schema' );
-	$assertRejectedVersion( '9.0', 'unsupported_old_schema' );
-	$assertRejectedVersion( '10.0', 'unsupported_old_schema' );
-	$assertRejectedVersion( '11.0', 'unsupported_old_schema' );
-	$assertRejectedVersion( '12.0', 'unsupported_old_schema' );
-	$assertRejectedVersion( '10.5', 'unknown_schema_version' );
-	$assertRejectedVersion( '14.0', 'newer_schema' );
-	$assertRejectedVersion( 'not-a-version', 'malformed_schema_version' );
+	$assert_rejected_version( '6.0', 'unsupported_old_schema' );
+	$assert_rejected_version( '7.0', 'unsupported_old_schema' );
+	$assert_rejected_version( '8.0', 'unsupported_old_schema' );
+	$assert_rejected_version( '9.0', 'unsupported_old_schema' );
+	$assert_rejected_version( '10.0', 'unsupported_old_schema' );
+	$assert_rejected_version( '11.0', 'unsupported_old_schema' );
+	$assert_rejected_version( '12.0', 'unsupported_old_schema' );
+	$assert_rejected_version( '10.5', 'unknown_schema_version' );
+	$assert_rejected_version( '14.0', 'newer_schema' );
+	$assert_rejected_version( 'not-a-version', 'malformed_schema_version' );
 
-	foreach ( array( $packageTable, $attemptTable ) as $table ) {
-		$tableStatus = $wpdb->get_row( $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', $table ) );
-		if ( ! is_object( $tableStatus ) || 0 !== strcasecmp( 'InnoDB', (string) ( $tableStatus->Engine ?? '' ) ) ) {
+	foreach ( array( $package_table, $attempt_table ) as $table ) {
+		$table_status = $wpdb->get_row( $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', $table ) );
+		if ( ! is_object( $table_status ) || 0 !== strcasecmp( 'InnoDB', (string) ( $table_status->Engine ?? '' ) ) ) {
 			throw new RuntimeException( 'The database smoke found a non-InnoDB Booster table.' );
 		}
 	}
 } finally {
-	$wpdb->delete( $packageTable, array( 'package' => $schemaSevenPackage['package'] ) );
-	$wpdb->delete( $attemptTable, array( 'correlation_id' => $schemaSevenAttempt['correlation_id'] ) );
-	$setSchemaVersion( Database::$booster_db_version );
+	$wpdb->delete( $package_table, array( 'package' => $schema_seven_package['package'] ) );
+	$wpdb->delete( $attempt_table, array( 'correlation_id' => $schema_seven_attempt['correlation_id'] ) );
+	$set_schema_version( Database::$booster_db_version );
 }
 
-$identifier  = 'ran-booster-database-smoke/ran-booster-database-smoke.php';
-$directory   = WP_PLUGIN_DIR . '/ran-booster-database-smoke';
-$fixturePath = WP_PLUGIN_DIR . '/' . $identifier;
+$identifier   = 'ran-booster-database-smoke/ran-booster-database-smoke.php';
+$directory    = WP_PLUGIN_DIR . '/ran-booster-database-smoke';
+$fixture_path = WP_PLUGIN_DIR . '/' . $identifier;
 if ( ! wp_mkdir_p( $directory ) ) {
 	throw new RuntimeException( 'The database smoke could not create its disposable plugin directory.' );
 }
 $wpdb->delete(
-	$attemptTable,
+	$attempt_table,
 	array(
 		'provider_repository_id' => 'database-smoke',
 		'package_slug'           => 'ran-booster-database-smoke',
@@ -180,15 +180,15 @@ $wpdb->delete(
 try {
 	$contents = "<?php\n/**\n * Plugin Name: RAN Booster Database Smoke\n * Version: 1.0.0\n */\n";
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable CI fixture in the isolated WordPress checkout.
-	if ( strlen( $contents ) !== file_put_contents( $fixturePath, $contents ) ) {
+	if ( strlen( $contents ) !== file_put_contents( $fixture_path, $contents ) ) {
 		throw new RuntimeException( 'The database smoke could not create its disposable plugin.' );
 	}
 
-	$packages      = $container->make( PluginRepository::class );
-	$fixturePlugin = $packages->installed_plugin_from_file( $identifier );
-	$fixturePlugin->set_repository( new ManagedRepository( 'gh', 'example/database-smoke', 'database-smoke', 'main' ) );
-	$fixturePlugin->set_deployment_policy( DeploymentPolicy::DISABLED );
-	$packages->store( $fixturePlugin )->require_success();
+	$packages       = $container->make( PluginRepository::class );
+	$fixture_plugin = $packages->installed_plugin_from_file( $identifier );
+	$fixture_plugin->set_repository( new ManagedRepository( 'gh', 'example/database-smoke', 'database-smoke', 'main' ) );
+	$fixture_plugin->set_deployment_policy( DeploymentPolicy::DISABLED );
+	$packages->store( $fixture_plugin )->require_success();
 	$stored = $packages->booster_plugin_from_file( $identifier );
 	if ( DeploymentPolicy::DISABLED !== $stored->get_deployment_policy() ) {
 		throw new RuntimeException( 'The database smoke could not verify its package record.' );
@@ -206,7 +206,7 @@ try {
 		DeploymentPolicy::DISABLED,
 		1
 	);
-	$attempt  = $attempts->admitAndClaimManual(
+	$attempt  = $attempts->admit_and_claim_manual(
 		'update',
 		'plugin',
 		'gh',
@@ -217,20 +217,20 @@ try {
 		1
 	);
 	$finished = $attempts->finish( $attempt->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_NO_CHANGE ) );
-	if ( $finished->get_id() !== $attempts->findExact( $attempt->get_id() )?->get_id() ) {
+	if ( $finished->get_id() !== $attempts->find_exact( $attempt->get_id() )?->get_id() ) {
 		throw new RuntimeException( 'The database smoke could not verify its attempt record.' );
 	}
 } finally {
-	$wpdb->delete( $packageTable, array( 'package' => $identifier ) );
+	$wpdb->delete( $package_table, array( 'package' => $identifier ) );
 	$wpdb->delete(
-		$attemptTable,
+		$attempt_table,
 		array(
 			'provider_repository_id' => 'database-smoke',
 			'package_slug'           => 'ran-booster-database-smoke',
 		)
 	);
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Removes only the disposable CI fixture created above.
-	is_file( $fixturePath ) && unlink( $fixturePath );
+	is_file( $fixture_path ) && unlink( $fixture_path );
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Removes only the empty disposable CI fixture directory.
 	is_dir( $directory ) && rmdir( $directory );
 }

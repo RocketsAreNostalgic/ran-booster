@@ -8,7 +8,7 @@ if ( ! is_string( $root ) || '' === $root ) {
 	throw new RuntimeException( 'The executor source root is unavailable.' );
 }
 
-$executorSource = array(
+$executor_source = array(
 	RAN\PackageSubdirectory::class                    => '/RAN/PackageSubdirectory.php',
 	RAN\Deployment\PreparedArtifact::class             => '/RAN/Deployment/PreparedArtifact.php',
 	RAN\Runtime\RuntimeSupport::class                   => '/RAN/Runtime/RuntimeSupport.php',
@@ -16,18 +16,18 @@ $executorSource = array(
 	RAN\WordPress\CorePackageExecutionResult::class    => '/RAN/WordPress/CorePackageExecutionResult.php',
 	RAN\WordPress\CorePackageExecutor::class           => '/RAN/WordPress/CorePackageExecutor.php',
 );
-foreach ( $executorSource as $class => $relativePath ) {
-	$sourcePath = $root . $relativePath;
+foreach ( $executor_source as $class => $relative_path ) {
+	$source_path = $root . $relative_path;
 	if ( class_exists( $class, false ) ) {
-		$loadedPath = ( new ReflectionClass( $class ) )->getFileName();
-		$sourceHash = hash_file( 'sha256', $sourcePath );
-		$loadedHash = is_string( $loadedPath ) ? hash_file( 'sha256', $loadedPath ) : false;
-		if ( ! is_string( $sourceHash ) || ! is_string( $loadedHash ) || ! hash_equals( $sourceHash, $loadedHash ) ) {
+		$loaded_path = ( new ReflectionClass( $class ) )->getFileName();
+		$source_hash = hash_file( 'sha256', $source_path );
+		$loaded_hash = is_string( $loaded_path ) ? hash_file( 'sha256', $loaded_path ) : false;
+		if ( ! is_string( $source_hash ) || ! is_string( $loaded_hash ) || ! hash_equals( $source_hash, $loaded_hash ) ) {
 			throw new RuntimeException( 'The loaded executor source does not match the checkout under test.' );
 		}
 		continue;
 	}
-	require_once $sourcePath;
+	require_once $source_path;
 }
 
 require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -44,24 +44,24 @@ final class RanBoosterCorePackageExecutorSmoke {
 	private array $artifacts = array();
 	private array $plugins = array();
 	private array $themes = array();
-	private string $originalStylesheet;
+	private string $original_stylesheet;
 
-	public function __construct( private readonly string $runId ) {
-		$this->originalStylesheet = (string) get_option( 'stylesheet' );
+	public function __construct( private readonly string $run_id ) {
+		$this->original_stylesheet = (string) get_option( 'stylesheet' );
 	}
 
 	public function run(): void {
-		$this->assertMaintenanceAbsent();
-		$this->exercisePlugins();
-		$this->exerciseThemes();
-		$this->exerciseInstallHookIsolation();
-		$this->exerciseBoundedFailures();
-		$this->assertMaintenanceAbsent();
+		$this->assert_maintenance_absent();
+		$this->exercise_plugins();
+		$this->exercise_themes();
+		$this->exercise_install_hook_isolation();
+		$this->exercise_bounded_failures();
+		$this->assert_maintenance_absent();
 	}
 
 	public function cleanup(): void {
-		if ( $this->originalStylesheet !== (string) get_option( 'stylesheet' ) ) {
-			switch_theme( $this->originalStylesheet );
+		if ( $this->original_stylesheet !== (string) get_option( 'stylesheet' ) ) {
+			switch_theme( $this->original_stylesheet );
 		}
 		foreach ( array_reverse( $this->plugins ) as $identifier ) {
 			if ( is_plugin_active( $identifier ) ) {
@@ -81,54 +81,54 @@ final class RanBoosterCorePackageExecutorSmoke {
 		}
 	}
 
-	private function exercisePlugins(): void {
+	private function exercise_plugins(): void {
 		$slug       = $this->slug( 'plugin' );
 		$identifier = $slug . '/' . $slug . '.php';
 		$executor   = new RAN\WordPress\CorePackageExecutor();
 
 		$install = $this->artifact( 'plugin', $slug, '1.0.0', 'plugin-install', 'packages/' . $slug );
-		$this->assertSuccess( $this->withHookRestorationCheck( static fn () => $executor->installPlugin( $install, $slug, 'packages/' . $slug ) ) );
+		$this->assert_success( $this->with_hook_restoration_check( static fn () => $executor->install_plugin( $install, $slug, 'packages/' . $slug ) ) );
 		$this->plugins[] = $identifier;
-		$this->assertPlugin( $identifier, '1.0.0', 'plugin-install', false );
+		$this->assert_plugin( $identifier, '1.0.0', 'plugin-install', false );
 
 		$inactive = $this->artifact( 'plugin', $slug, '2.0.0', 'plugin-inactive' );
-		$this->assertScopedSinglePluginUpdate(
+		$this->assert_scoped_single_plugin_update(
 			$identifier,
-			fn () => $this->assertScopedUpdate(
-				fn () => $this->withMaintenanceObservation(
+			fn () => $this->assert_scoped_update(
+				fn () => $this->with_maintenance_observation(
 					'plugin',
 					$identifier,
 					false,
-					static fn () => $executor->updatePlugin( $inactive, $slug, null, $identifier )
+					static fn () => $executor->update_plugin( $inactive, $slug, null, $identifier )
 				),
 				WP_PLUGIN_DIR
 			)
 		);
-		$this->assertPlugin( $identifier, '2.0.0', 'plugin-inactive', false );
+		$this->assert_plugin( $identifier, '2.0.0', 'plugin-inactive', false );
 
 		$result = activate_plugin( $identifier, '', false, true );
 		if ( is_wp_error( $result ) ) {
 			throw new RuntimeException( 'The disposable plugin could not be activated.' );
 		}
-		$sameVersion = $this->artifact( 'plugin', $slug, '2.0.0', 'plugin-same-version', null, null, true );
-		$this->assertSuccess(
-			$this->withMaintenanceObservation(
+		$same_version = $this->artifact( 'plugin', $slug, '2.0.0', 'plugin-same-version', null, null, true );
+		$this->assert_success(
+			$this->with_maintenance_observation(
 				'plugin',
 				$identifier,
 				true,
-				fn () => $this->withScrapeResponse( false, static fn () => $executor->updatePlugin( $sameVersion, $slug, null, $identifier ) )
+				fn () => $this->with_scrape_response( false, static fn () => $executor->update_plugin( $same_version, $slug, null, $identifier ) )
 			)
 		);
-		$this->assertPlugin( $identifier, '2.0.0', 'plugin-same-version', true );
+		$this->assert_plugin( $identifier, '2.0.0', 'plugin-same-version', true );
 
 		$downgrade = $this->artifact( 'plugin', $slug, '1.5.0', 'plugin-downgrade' );
-		$this->assertSuccess( $this->withScrapeResponse( false, static fn () => $executor->updatePlugin( $downgrade, $slug, null, $identifier ) ) );
-		$this->assertPlugin( $identifier, '1.5.0', 'plugin-downgrade', true );
+		$this->assert_success( $this->with_scrape_response( false, static fn () => $executor->update_plugin( $downgrade, $slug, null, $identifier ) ) );
+		$this->assert_plugin( $identifier, '1.5.0', 'plugin-downgrade', true );
 
 		// Production processes one deployment per request, while this smoke performs
 		// several. Complete WordPress's deferred request-shutdown backup cleanup so
 		// a later failure cannot restore a stale package from an earlier operation.
-		$backupDeleted = ( new Plugin_Upgrader( new Automatic_Upgrader_Skin() ) )->delete_temp_backup(
+		$backup_deleted = ( new Plugin_Upgrader( new Automatic_Upgrader_Skin() ) )->delete_temp_backup(
 			array(
 				array(
 					'dir'  => 'plugins',
@@ -137,38 +137,38 @@ final class RanBoosterCorePackageExecutorSmoke {
 				),
 			)
 		);
-		if ( false === $backupDeleted || is_wp_error( $backupDeleted ) ) {
+		if ( false === $backup_deleted || is_wp_error( $backup_deleted ) ) {
 			throw new RuntimeException( 'WordPress could not clean the request-scoped temporary backup.' );
 		}
 
-		$sourceVeto = static function ( mixed $source, mixed $remote, mixed $upgrader, array $extra ) use ( $identifier ): mixed {
+		$source_veto = static function ( mixed $source, mixed $remote, mixed $upgrader, array $extra ) use ( $identifier ): mixed {
 			unset( $remote, $upgrader );
 			return $identifier === ( $extra['plugin'] ?? null )
 				? new WP_Error( 'disposable_source_veto' )
 				: $source;
 		};
-		add_filter( 'upgrader_source_selection', $sourceVeto, 5, 4 );
+		add_filter( 'upgrader_source_selection', $source_veto, 5, 4 );
 		try {
-			$failed = $executor->updatePlugin(
+			$failed = $executor->update_plugin(
 				$this->artifact( 'plugin', $slug, '1.6.0', 'plugin-source-veto', null, null, true ),
 				$slug,
 				null,
 				$identifier
 			);
 		} finally {
-			remove_filter( 'upgrader_source_selection', $sourceVeto, 5 );
+			remove_filter( 'upgrader_source_selection', $source_veto, 5 );
 		}
-		$this->assertFailure(
+		$this->assert_failure(
 			$failed,
 			RAN\WordPress\CorePackageExecutionFailure::WORDPRESS_UNCERTAIN,
 			RAN\WordPress\CorePackageExecutionFailure::WORDPRESS_RESTORED
 		);
-		$this->assertPlugin( $identifier, '1.5.0', 'plugin-downgrade', true );
+		$this->assert_plugin( $identifier, '1.5.0', 'plugin-downgrade', true );
 
 		$blocked = static fn (): bool => false;
 		add_filter( 'auto_update_plugin', $blocked, 100, 2 );
 		try {
-			$refused = $executor->updatePlugin(
+			$refused = $executor->update_plugin(
 				$this->artifact( 'plugin', $slug, '1.6.0', 'plugin-policy-refused' ),
 				$slug,
 				null,
@@ -177,80 +177,80 @@ final class RanBoosterCorePackageExecutorSmoke {
 		} finally {
 			remove_filter( 'auto_update_plugin', $blocked, 100 );
 		}
-		$this->assertFailure( $refused, RAN\WordPress\CorePackageExecutionFailure::WORDPRESS_REFUSED );
-		$this->assertPlugin( $identifier, '1.5.0', 'plugin-downgrade', true );
+		$this->assert_failure( $refused, RAN\WordPress\CorePackageExecutionFailure::WORDPRESS_REFUSED );
+		$this->assert_plugin( $identifier, '1.5.0', 'plugin-downgrade', true );
 
 		$fatal = $this->artifact( 'plugin', $slug, '4.0.0', 'plugin-fatal' );
-		$restored = $this->withScrapeResponse( true, static fn () => $executor->updatePlugin( $fatal, $slug, null, $identifier ) );
-		$this->assertFailure( $restored, RAN\WordPress\CorePackageExecutionFailure::WORDPRESS_RESTORED );
-		$this->assertPlugin( $identifier, '1.5.0', 'plugin-downgrade', true );
+		$restored = $this->with_scrape_response( true, static fn () => $executor->update_plugin( $fatal, $slug, null, $identifier ) );
+		$this->assert_failure( $restored, RAN\WordPress\CorePackageExecutionFailure::WORDPRESS_RESTORED );
+		$this->assert_plugin( $identifier, '1.5.0', 'plugin-downgrade', true );
 	}
 
-	private function exerciseThemes(): void {
+	private function exercise_themes(): void {
 		$slug          = $this->slug( 'theme' );
-		$parentSlug    = $this->slug( 'parent-theme' );
-		$childSlug     = $this->slug( 'child-theme' );
-		$missingParent = $this->slug( 'missing-parent' );
+		$parent_slug    = $this->slug( 'parent-theme' );
+		$child_slug     = $this->slug( 'child-theme' );
+		$missing_parent = $this->slug( 'missing-parent' );
 		$executor      = new RAN\WordPress\CorePackageExecutor();
 
-		$missingRequests = 0;
-		$blockRequest    = static function ( mixed $response ) use ( &$missingRequests ): WP_Error {
-			++$missingRequests;
+		$missing_requests = 0;
+		$block_request    = static function ( mixed $response ) use ( &$missing_requests ): WP_Error {
+			++$missing_requests;
 			return new WP_Error( 'unexpected_request' );
 		};
-		$before = $this->hookFingerprint();
-		add_filter( 'pre_http_request', $blockRequest, 100, 3 );
+		$before = $this->hook_fingerprint();
+		add_filter( 'pre_http_request', $block_request, 100, 3 );
 		try {
-			$missing = $executor->installTheme(
-				$this->artifact( 'theme', $childSlug, '1.0.0', 'missing-child', null, $missingParent ),
-				$childSlug,
+			$missing = $executor->install_theme(
+				$this->artifact( 'theme', $child_slug, '1.0.0', 'missing-child', null, $missing_parent ),
+				$child_slug,
 				null
 			);
 		} finally {
-			remove_filter( 'pre_http_request', $blockRequest, 100 );
+			remove_filter( 'pre_http_request', $block_request, 100 );
 		}
-		$this->assertFailure( $missing, RAN\WordPress\CorePackageExecutionFailure::INVALID_REQUEST );
-			if ( 0 !== $missingRequests || file_exists( get_theme_root() . '/' . $childSlug ) || $this->hasAddedHooks( $before, $this->hookFingerprint() ) ) {
+		$this->assert_failure( $missing, RAN\WordPress\CorePackageExecutionFailure::INVALID_REQUEST );
+			if ( 0 !== $missing_requests || file_exists( get_theme_root() . '/' . $child_slug ) || $this->has_added_hooks( $before, $this->hook_fingerprint() ) ) {
 			throw new RuntimeException( 'A child theme with a missing parent reached mutation or a secondary request.' );
 		}
 
-		$parent = $this->artifact( 'theme', $parentSlug, '1.0.0', 'parent-theme' );
-		$this->assertSuccess( $this->withHookRestorationCheck( static fn () => $executor->installTheme( $parent, $parentSlug, null ) ) );
-		$this->themes[] = $parentSlug;
-		$child = $this->artifact( 'theme', $childSlug, '1.0.0', 'child-theme', null, $parentSlug );
-		$this->assertSuccess( $this->withHookRestorationCheck( static fn () => $executor->installTheme( $child, $childSlug, null ) ) );
-		$this->themes[] = $childSlug;
-		if ( $parentSlug !== (string) wp_get_theme( $childSlug )->get( 'Template' ) ) {
+		$parent = $this->artifact( 'theme', $parent_slug, '1.0.0', 'parent-theme' );
+		$this->assert_success( $this->with_hook_restoration_check( static fn () => $executor->install_theme( $parent, $parent_slug, null ) ) );
+		$this->themes[] = $parent_slug;
+		$child = $this->artifact( 'theme', $child_slug, '1.0.0', 'child-theme', null, $parent_slug );
+		$this->assert_success( $this->with_hook_restoration_check( static fn () => $executor->install_theme( $child, $child_slug, null ) ) );
+		$this->themes[] = $child_slug;
+		if ( $parent_slug !== (string) wp_get_theme( $child_slug )->get( 'Template' ) ) {
 			throw new RuntimeException( 'The installed child theme did not retain its installed parent.' );
 		}
 
-		$themeInstall = $this->artifact( 'theme', $slug, '1.0.0', 'theme-install' );
-		$this->assertSuccess( $this->withHookRestorationCheck( static fn () => $executor->installTheme( $themeInstall, $slug, null ) ) );
+		$theme_install = $this->artifact( 'theme', $slug, '1.0.0', 'theme-install' );
+		$this->assert_success( $this->with_hook_restoration_check( static fn () => $executor->install_theme( $theme_install, $slug, null ) ) );
 		$this->themes[] = $slug;
-		$this->assertTheme( $slug, '1.0.0', 'theme-install', false );
+		$this->assert_theme( $slug, '1.0.0', 'theme-install', false );
 
-		$this->assertSuccess(
-			$this->withMaintenanceObservation(
+		$this->assert_success(
+			$this->with_maintenance_observation(
 				'theme',
 				$slug,
 				false,
-				fn () => $executor->updateTheme( $this->artifact( 'theme', $slug, '2.0.0', 'theme-inactive' ), $slug, null, $slug )
+				fn () => $executor->update_theme( $this->artifact( 'theme', $slug, '2.0.0', 'theme-inactive' ), $slug, null, $slug )
 			)
 		);
-		$this->assertTheme( $slug, '2.0.0', 'theme-inactive', false );
+		$this->assert_theme( $slug, '2.0.0', 'theme-inactive', false );
 		switch_theme( $slug );
-		$this->assertSuccess(
-			$this->withMaintenanceObservation(
+		$this->assert_success(
+			$this->with_maintenance_observation(
 				'theme',
 				$slug,
 				true,
-				fn () => $executor->updateTheme( $this->artifact( 'theme', $slug, '3.0.0', 'theme-active', null, null, true ), $slug, null, $slug )
+				fn () => $executor->update_theme( $this->artifact( 'theme', $slug, '3.0.0', 'theme-active', null, null, true ), $slug, null, $slug )
 			)
 		);
-		$this->assertTheme( $slug, '3.0.0', 'theme-active', true );
+		$this->assert_theme( $slug, '3.0.0', 'theme-active', true );
 	}
 
-	private function exerciseBoundedFailures(): void {
+	private function exercise_bounded_failures(): void {
 		$slug       = $this->slug( 'failure' );
 		$identifier = $slug . '/' . $slug . '.php';
 		$artifact   = $this->artifact( 'plugin', $slug, '1.0.0', 'failure-fixture' );
@@ -263,9 +263,9 @@ final class RanBoosterCorePackageExecutorSmoke {
 
 		foreach ( $cases as $case ) {
 			list( $value, $expected ) = $case;
-			$sourceIsolationObserved = false;
+			$source_isolation_observed = false;
 			$executor = new RAN\WordPress\CorePackageExecutor(
-				static function ( string $action, string $type, string $path, ?object $offer ) use ( $value, &$sourceIsolationObserved ): mixed {
+				static function ( string $action, string $type, string $path, ?object $offer ) use ( $value, &$source_isolation_observed ): mixed {
 					$unrelated = apply_filters(
 						'upgrader_source_selection',
 						'/unrelated-source',
@@ -287,23 +287,23 @@ final class RanBoosterCorePackageExecutorSmoke {
 						new stdClass(),
 						array( 'type' => $type, 'action' => $action, $type => $offer->{$type} )
 					);
-					$sourceIsolationObserved = '/unrelated-source' === $unrelated && '/nested-source' === $nested && $path === $consumed;
+					$source_isolation_observed = '/unrelated-source' === $unrelated && '/nested-source' === $nested && $path === $consumed;
 					if ( $value instanceof Throwable ) {
 						throw $value;
 					}
 					return $value;
 				}
 			);
-			$before = $this->hookFingerprint();
-			$result = $executor->updatePlugin( $artifact, $slug, null, $identifier );
-			$this->assertFailure( $result, $expected );
-			if ( ! $sourceIsolationObserved || $this->hasAddedHooks( $before, $this->hookFingerprint() ) || str_contains( serialize( $result ), $secret ) ) {
+			$before = $this->hook_fingerprint();
+			$result = $executor->update_plugin( $artifact, $slug, null, $identifier );
+			$this->assert_failure( $result, $expected );
+			if ( ! $source_isolation_observed || $this->has_added_hooks( $before, $this->hook_fingerprint() ) || str_contains( serialize( $result ), $secret ) ) {
 				throw new RuntimeException( 'A bounded executor result retained sensitive failure data.' );
 			}
 		}
 	}
 
-	private function exerciseInstallHookIsolation(): void {
+	private function exercise_install_hook_isolation(): void {
 		$slug = $this->slug( 'install-hook' );
 		$artifact = $this->artifact( 'plugin', $slug, '1.0.0', 'install-hook' );
 		$observed = false;
@@ -323,139 +323,139 @@ final class RanBoosterCorePackageExecutorSmoke {
 					new stdClass(),
 					array( 'type' => $type, 'action' => 'update', $type => 'other/other.php' )
 				);
-				$nestedSource = apply_filters(
+				$nested_source = apply_filters(
 					'upgrader_source_selection',
 					'/nested-install-source',
 					'/nested-install-remote',
 					new stdClass(),
 					array( 'type' => $type, 'action' => 'update', $type => 'other/other.php' )
 				);
-				$observed = $path === $exact && 'unrelated-reply' === $unrelated && '/nested-install-source' === $nestedSource;
+				$observed = $path === $exact && 'unrelated-reply' === $unrelated && '/nested-install-source' === $nested_source;
 				do_action( 'upgrader_process_complete', new stdClass(), array( 'type' => $type, 'action' => $action ) );
 
 				return true;
 			}
 		);
-		$this->assertSuccess( $this->withHookRestorationCheck( static fn () => $executor->installPlugin( $artifact, $slug, null ) ) );
+		$this->assert_success( $this->with_hook_restoration_check( static fn () => $executor->install_plugin( $artifact, $slug, null ) ) );
 		if ( ! $observed ) {
 			throw new RuntimeException( 'Install hooks were not isolated to the exact immutable package operation.' );
 		}
 
-		$vetoSlug     = $this->slug( 'install-veto' );
-		$vetoArtifact = $this->artifact( 'plugin', $vetoSlug, '1.0.0', 'install-veto' );
-		$vetoError     = new WP_Error( 'prior_download_veto', 'Blocked by an earlier download policy.' );
-		$veto          = static fn () => $vetoError;
+		$veto_slug     = $this->slug( 'install-veto' );
+		$veto_artifact = $this->artifact( 'plugin', $veto_slug, '1.0.0', 'install-veto' );
+		$veto_error     = new WP_Error( 'prior_download_veto', 'Blocked by an earlier download policy.' );
+		$veto          = static fn () => $veto_error;
 		$preserved     = false;
-		$observer      = static function ( mixed $reply ) use ( $vetoError, &$preserved ): mixed {
-			$preserved = $vetoError === $reply;
+		$observer      = static function ( mixed $reply ) use ( $veto_error, &$preserved ): mixed {
+			$preserved = $veto_error === $reply;
 
 			return $reply;
 		};
 		add_filter( 'upgrader_pre_download', $veto, 5, 4 );
 		add_filter( 'upgrader_pre_download', $observer, 20, 4 );
-		$before = $this->hookFingerprint();
+		$before = $this->hook_fingerprint();
 		try {
-			$vetoed = ( new RAN\WordPress\CorePackageExecutor() )->installPlugin( $vetoArtifact, $vetoSlug, null );
+			$vetoed = ( new RAN\WordPress\CorePackageExecutor() )->install_plugin( $veto_artifact, $veto_slug, null );
 		} finally {
 			remove_filter( 'upgrader_pre_download', $veto, 5 );
 			remove_filter( 'upgrader_pre_download', $observer, 20 );
 		}
 		if ( $vetoed->is_successful()
 			|| ! $preserved
-			|| file_exists( WP_PLUGIN_DIR . '/' . $vetoSlug )
-			|| $this->hasAddedHooks( $before, $this->hookFingerprint() )
+			|| file_exists( WP_PLUGIN_DIR . '/' . $veto_slug )
+			|| $this->has_added_hooks( $before, $this->hook_fingerprint() )
 		) {
 			throw new RuntimeException( 'The executor bypassed a prior download veto or leaked its scoped hooks.' );
 		}
 	}
 
-	private function assertScopedSinglePluginUpdate( string $identifier, callable $operation ): void {
-		$coreAutoUpdatePriority = has_action( 'wp_maybe_auto_update', 'wp_maybe_auto_update' );
+	private function assert_scoped_single_plugin_update( string $identifier, callable $operation ): void {
+		$core_auto_update_priority = has_action( 'wp_maybe_auto_update', 'wp_maybe_auto_update' );
 		$completions            = 0;
-		$cronStates             = array();
-		$coreRunnerSuppressed   = false;
-		$observer               = static function ( object $upgrader, array $extra ) use ( $identifier, &$completions, &$cronStates ): void {
+		$cron_states             = array();
+		$core_runner_suppressed   = false;
+		$observer               = static function ( object $upgrader, array $extra ) use ( $identifier, &$completions, &$cron_states ): void {
 			unset( $upgrader );
 			if ( 'plugin' === ( $extra['type'] ?? null )
 				&& 'update' === ( $extra['action'] ?? null )
 				&& $identifier === ( $extra['plugin'] ?? null )
 			) {
 				++$completions;
-				$cronStates[] = wp_doing_cron();
+				$cron_states[] = wp_doing_cron();
 			}
 		};
-		$preUpdate = static function ( string $type, object $item ) use ( $identifier, &$coreRunnerSuppressed ): void {
+		$pre_update = static function ( string $type, object $item ) use ( $identifier, &$core_runner_suppressed ): void {
 			if ( 'plugin' === $type && $identifier === ( $item->plugin ?? null ) ) {
-				$coreRunnerSuppressed = wp_doing_cron()
+				$core_runner_suppressed = wp_doing_cron()
 					&& false === has_action( 'wp_maybe_auto_update', 'wp_maybe_auto_update' );
 			}
 		};
 		add_action( 'upgrader_process_complete', $observer, 101, 2 );
-		add_action( 'pre_auto_update', $preUpdate, 101, 3 );
+		add_action( 'pre_auto_update', $pre_update, 101, 3 );
 		try {
 			$operation();
 		} finally {
 			remove_action( 'upgrader_process_complete', $observer, 101 );
-			remove_action( 'pre_auto_update', $preUpdate, 101 );
+			remove_action( 'pre_auto_update', $pre_update, 101 );
 		}
-		if ( false === $coreAutoUpdatePriority
-			|| $coreAutoUpdatePriority !== has_action( 'wp_maybe_auto_update', 'wp_maybe_auto_update' )
-			|| ! $coreRunnerSuppressed
+		if ( false === $core_auto_update_priority
+			|| $core_auto_update_priority !== has_action( 'wp_maybe_auto_update', 'wp_maybe_auto_update' )
+			|| ! $core_runner_suppressed
 			|| 1 !== $completions
-			|| array( true ) !== $cronStates
+			|| array( true ) !== $cron_states
 		) {
 			throw new RuntimeException( 'The selected plugin update did not complete exactly once inside the scoped updater context.' );
 		}
 	}
 
-	private function assertScopedUpdate( callable $operation, string $expectedContext ): void {
-		$before = $this->hookFingerprint();
-		$observedTarget = null;
-		$observedOther = null;
-		$observer = static function ( bool $checkout, string $context ) use ( &$observedTarget, $expectedContext ): bool {
-			if ( realpath( $context ) === realpath( $expectedContext ) ) {
-				$observedTarget = $checkout;
+	private function assert_scoped_update( callable $operation, string $expected_context ): void {
+		$before = $this->hook_fingerprint();
+		$observed_target = null;
+		$observed_other = null;
+		$observer = static function ( bool $checkout, string $context ) use ( &$observed_target, $expected_context ): bool {
+			if ( realpath( $context ) === realpath( $expected_context ) ) {
+				$observed_target = $checkout;
 			}
 			return $checkout;
 		};
-		$preUpdate = static function () use ( &$observedOther ): void {
-			$observedOther = apply_filters( 'automatic_updates_is_vcs_checkout', true, ABSPATH );
+		$pre_update = static function () use ( &$observed_other ): void {
+			$observed_other = apply_filters( 'automatic_updates_is_vcs_checkout', true, ABSPATH );
 		};
 		add_filter( 'automatic_updates_is_vcs_checkout', $observer, 20, 2 );
-		add_action( 'pre_auto_update', $preUpdate, 20, 3 );
+		add_action( 'pre_auto_update', $pre_update, 20, 3 );
 		try {
-			$this->assertSuccess( $operation() );
+			$this->assert_success( $operation() );
 		} finally {
 			remove_filter( 'automatic_updates_is_vcs_checkout', $observer, 20 );
-			remove_action( 'pre_auto_update', $preUpdate, 20 );
+			remove_action( 'pre_auto_update', $pre_update, 20 );
 		}
-		if ( false !== $observedTarget || true !== $observedOther || $this->hasAddedHooks( $before, $this->hookFingerprint() ) ) {
+		if ( false !== $observed_target || true !== $observed_other || $this->has_added_hooks( $before, $this->hook_fingerprint() ) ) {
 			throw new RuntimeException( 'The VCS exception or scoped hook cleanup exceeded the selected package operation.' );
 		}
 	}
 
-	private function withHookRestorationCheck( callable $operation ): mixed {
-		$before = $this->hookFingerprint();
+	private function with_hook_restoration_check( callable $operation ): mixed {
+		$before = $this->hook_fingerprint();
 		$result = $operation();
-		$after = $this->hookFingerprint();
-		if ( $this->hasAddedHooks( $before, $after ) ) {
+		$after = $this->hook_fingerprint();
+		if ( $this->has_added_hooks( $before, $after ) ) {
 			throw new RuntimeException( 'The executor did not remove its exact scoped WordPress hooks.' );
 		}
 
 		return $result;
 	}
 
-	private function withMaintenanceObservation( string $type, string $identifier, bool $expectedActive, callable $operation ): mixed {
+	private function with_maintenance_observation( string $type, string $identifier, bool $expected_active, callable $operation ): mixed {
 		$active = 'plugin' === $type
 			? is_plugin_active( $identifier )
 			: get_stylesheet() === $identifier;
-		if ( $expectedActive !== $active ) {
+		if ( $expected_active !== $active ) {
 			throw new RuntimeException( 'The maintenance-mode proof package has an unexpected activation state.' );
 		}
 
 		$observations = array();
-		$observer = static function ( mixed $response, mixed $destination, mixed $remoteDestination, array $extra ) use ( $type, $identifier, &$observations ): mixed {
-			unset( $destination, $remoteDestination );
+		$observer = static function ( mixed $response, mixed $destination, mixed $remote_destination, array $extra ) use ( $type, $identifier, &$observations ): mixed {
+			unset( $destination, $remote_destination );
 			if ( 'update' !== ( $extra['action'] ?? null )
 				|| $type !== ( $extra['type'] ?? null )
 				|| $identifier !== ( $extra[ $type ] ?? null )
@@ -482,7 +482,7 @@ final class RanBoosterCorePackageExecutorSmoke {
 			remove_filter( 'upgrader_clear_destination', $observer, 100 );
 		}
 
-		$this->assertMaintenanceAbsent();
+		$this->assert_maintenance_absent();
 		if ( array( true ) !== $observations ) {
 			throw new RuntimeException( 'WordPress maintenance mode was not active at the package mutation boundary.' );
 		}
@@ -497,14 +497,14 @@ final class RanBoosterCorePackageExecutorSmoke {
 		string $marker,
 		?string $subdirectory = null,
 		?string $parent = null,
-		bool $alignedRoot = false
+		bool $aligned_root = false
 	): RAN\Deployment\PreparedArtifact {
-		$path = wp_tempnam( 'ran-booster-executor-' . $this->runId . '.zip' );
+		$path = wp_tempnam( 'ran-booster-executor-' . $this->run_id . '.zip' );
 		$zip = new ZipArchive();
 		if ( ! is_string( $path ) || true !== $zip->open( $path, ZipArchive::CREATE | ZipArchive::OVERWRITE ) ) {
 			throw new RuntimeException( 'A disposable package archive could not be created.' );
 		}
-		$root = $alignedRoot ? $slug : 'repository-' . $marker;
+		$root = $aligned_root ? $slug : 'repository-' . $marker;
 		$directory = $root . ( null === $subdirectory ? '' : '/' . $subdirectory );
 		if ( 'plugin' === $kind ) {
 			$zip->addFromString( $directory . '/' . $slug . '.php', "<?php\n/*\nPlugin Name: Executor {$slug}\nVersion: {$version}\nRequires PHP: 8.2\n*/\n" );
@@ -516,7 +516,7 @@ final class RanBoosterCorePackageExecutorSmoke {
 		$zip->addFromString( $directory . '/ran-booster-executor.txt', $marker . "\n" );
 		$zip->close();
 		chmod( $path, 0600 );
-		$identity = RAN\Deployment\PreparedArtifact::regularFileIdentity( $path );
+		$identity = RAN\Deployment\PreparedArtifact::regular_file_identity( $path );
 		if ( null === $identity ) {
 			throw new RuntimeException( 'The disposable artifact identity is unavailable.' );
 		}
@@ -525,8 +525,8 @@ final class RanBoosterCorePackageExecutorSmoke {
 		return $artifact;
 	}
 
-	private function withScrapeResponse( bool $fatal, callable $operation ): mixed {
-		$scrape = $this->scrapeResponse( $fatal );
+	private function with_scrape_response( bool $fatal, callable $operation ): mixed {
+		$scrape = $this->scrape_response( $fatal );
 		add_filter( 'pre_http_request', $scrape, 10, 3 );
 		try {
 			return $operation();
@@ -535,7 +535,7 @@ final class RanBoosterCorePackageExecutorSmoke {
 		}
 	}
 
-	private function scrapeResponse( bool $fatal ): Closure {
+	private function scrape_response( bool $fatal ): Closure {
 		return static function ( mixed $preempt, array $arguments, string $url ) use ( $fatal ): mixed {
 			$query = wp_parse_url( $url, PHP_URL_QUERY );
 			if ( ! is_string( $query ) ) {
@@ -550,7 +550,7 @@ final class RanBoosterCorePackageExecutorSmoke {
 		};
 	}
 
-	private function assertPlugin( string $identifier, string $version, string $marker, bool $active ): void {
+	private function assert_plugin( string $identifier, string $version, string $marker, bool $active ): void {
 		wp_clean_plugins_cache( false );
 		$data = get_plugin_data( WP_PLUGIN_DIR . '/' . $identifier, false, false );
 		if ( $version !== ( $data['Version'] ?? null ) || $active !== is_plugin_active( $identifier ) || $marker . "\n" !== file_get_contents( WP_PLUGIN_DIR . '/' . dirname( $identifier ) . '/ran-booster-executor.txt' ) ) {
@@ -558,7 +558,7 @@ final class RanBoosterCorePackageExecutorSmoke {
 		}
 	}
 
-	private function assertTheme( string $stylesheet, string $version, string $marker, bool $active ): void {
+	private function assert_theme( string $stylesheet, string $version, string $marker, bool $active ): void {
 		wp_clean_themes_cache();
 		$theme = wp_get_theme( $stylesheet );
 		if ( ! $theme->exists() || $version !== (string) $theme->get( 'Version' ) || $active !== ( $stylesheet === (string) get_option( 'stylesheet' ) ) || $marker . "\n" !== file_get_contents( get_theme_root( $stylesheet ) . '/' . $stylesheet . '/ran-booster-executor.txt' ) ) {
@@ -566,24 +566,24 @@ final class RanBoosterCorePackageExecutorSmoke {
 		}
 	}
 
-	private function assertSuccess( RAN\WordPress\CorePackageExecutionResult $result ): void {
+	private function assert_success( RAN\WordPress\CorePackageExecutionResult $result ): void {
 		if ( ! $result->is_successful() ) {
 			throw new RuntimeException( 'WordPress core did not complete the disposable package operation: ' . $result->get_failure()->value );
 		}
 	}
 
-	private function assertFailure(
+	private function assert_failure(
 		RAN\WordPress\CorePackageExecutionResult $result,
 		RAN\WordPress\CorePackageExecutionFailure $failure,
-		RAN\WordPress\CorePackageExecutionFailure ...$alternativeFailures
+		RAN\WordPress\CorePackageExecutionFailure ...$alternative_failures
 	): void {
-		if ( ! in_array( $result->get_failure(), array( $failure, ...$alternativeFailures ), true ) ) {
+		if ( ! in_array( $result->get_failure(), array( $failure, ...$alternative_failures ), true ) ) {
 			$actual = $result->get_failure();
 			throw new RuntimeException( 'The executor did not return the expected bounded failure: ' . ( null === $actual ? 'success' : $actual->value ) );
 		}
 	}
 
-	private function assertMaintenanceAbsent(): void {
+	private function assert_maintenance_absent(): void {
 		$path = ABSPATH . '.maintenance';
 		clearstatcache( true, $path );
 		if ( file_exists( $path ) || is_link( $path ) ) {
@@ -591,7 +591,7 @@ final class RanBoosterCorePackageExecutorSmoke {
 		}
 	}
 
-	private function hookFingerprint(): array {
+	private function hook_fingerprint(): array {
 		global $wp_filter;
 		$fingerprint = array();
 		foreach ( array( 'pre_site_transient_update_plugins', 'pre_site_transient_update_themes', 'upgrader_pre_download', 'upgrader_source_selection', 'upgrader_clear_destination', 'automatic_updates_is_vcs_checkout', 'wp_doing_cron', 'upgrader_process_complete' ) as $hook ) {
@@ -600,15 +600,15 @@ final class RanBoosterCorePackageExecutorSmoke {
 				continue;
 			}
 			foreach ( $wp_filter[ $hook ]->callbacks as $priority => $callbacks ) {
-				foreach ( array_keys( $callbacks ) as $callbackId ) {
-					$fingerprint[ $hook ][] = $priority . ':' . $callbackId;
+				foreach ( array_keys( $callbacks ) as $callback_id ) {
+					$fingerprint[ $hook ][] = $priority . ':' . $callback_id;
 				}
 			}
 		}
 		return $fingerprint;
 	}
 
-	private function hasAddedHooks( array $before, array $after ): bool {
+	private function has_added_hooks( array $before, array $after ): bool {
 		foreach ( $after as $hook => $callbacks ) {
 			if ( array() !== array_diff( $callbacks, $before[ $hook ] ?? array() ) ) {
 				return true;
@@ -619,7 +619,7 @@ final class RanBoosterCorePackageExecutorSmoke {
 	}
 
 	private function slug( string $role ): string {
-		return 'ran-booster-executor-' . $role . '-' . $this->runId;
+		return 'ran-booster-executor-' . $role . '-' . $this->run_id;
 	}
 }
 
@@ -632,8 +632,8 @@ try {
 }
 try {
 	$smoke->cleanup();
-} catch ( Throwable $cleanupFailure ) {
-	$failure = $cleanupFailure;
+} catch ( Throwable $cleanup_failure ) {
+	$failure = $cleanup_failure;
 }
 if ( null !== $failure ) {
 	throw $failure;

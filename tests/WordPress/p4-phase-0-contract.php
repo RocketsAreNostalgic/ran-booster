@@ -12,11 +12,11 @@ if ( ! defined( 'WP_CLI' ) || ! WP_CLI
 	throw new RuntimeException( 'P4 Phase 0 requires an administrator in the disposable fixture site.' );
 }
 
-$expectedRoot   = getenv( 'RAN_BOOSTER_P4_WORDPRESS_PATH' );
-$wordpressRoot  = realpath( ABSPATH );
-$disposableMark = ABSPATH . '.ran-booster-p4-disposable-site';
-$subscriberId   = (int) getenv( 'RAN_BOOSTER_P4_SUBSCRIBER_ID' );
-$adminId        = get_current_user_id();
+$expected_root   = getenv( 'RAN_BOOSTER_P4_WORDPRESS_PATH' );
+$wordpress_root  = realpath( ABSPATH );
+$disposable_mark = ABSPATH . '.ran-booster-p4-disposable-site';
+$subscriber_id   = (int) getenv( 'RAN_BOOSTER_P4_SUBSCRIBER_ID' );
+$admin_id        = get_current_user_id();
 $assertions     = 0;
 
 $assert = static function ( bool $condition, string $message ) use ( &$assertions ): void {
@@ -27,12 +27,12 @@ $assert = static function ( bool $condition, string $message ) use ( &$assertion
 };
 
 $assert(
-	is_string( $expectedRoot )
-		&& false !== $wordpressRoot
-		&& $wordpressRoot === realpath( $expectedRoot )
-		&& ! is_link( $disposableMark )
-		&& is_file( $disposableMark )
-		&& "RAN Booster P4 disposable test site\n" === file_get_contents( $disposableMark ),
+	is_string( $expected_root )
+		&& false !== $wordpress_root
+		&& $wordpress_root === realpath( $expected_root )
+		&& ! is_link( $disposable_mark )
+		&& is_file( $disposable_mark )
+		&& "RAN Booster P4 disposable test site\n" === file_get_contents( $disposable_mark ),
 	'The P4 proof is not running in the exact disposable site.'
 );
 $assert( '7.0.4' === get_bloginfo( 'version' ), 'The exact WordPress fixture version changed.' );
@@ -57,29 +57,29 @@ $assert(
 	'The Core fixture schemas are not closed.'
 );
 
-$defaultResult = $ability->execute();
-$assert( is_array( $defaultResult ) && 'default-target' === ( $defaultResult['target'] ?? null ), 'Top-level input normalization failed.' );
-$assert( $adminId === ( $defaultResult['actor'] ?? null ), 'Direct PHP execution lost the explicit WordPress user.' );
-$invalidInput = $ability->execute( array( 'target' => 'valid', 'secret' => 'must-not-pass' ) );
-$assert( is_wp_error( $invalidInput ) && 'ability_invalid_input' === $invalidInput->get_error_code(), 'Closed input validation failed.' );
-$invalidOutput = wp_get_ability( Fixture\BAD_ABILITY )->execute( array( 'target' => 'valid' ) );
-$assert( is_wp_error( $invalidOutput ) && 'ability_invalid_output' === $invalidOutput->get_error_code(), 'Output validation failed.' );
+$default_result = $ability->execute();
+$assert( is_array( $default_result ) && 'default-target' === ( $default_result['target'] ?? null ), 'Top-level input normalization failed.' );
+$assert( $admin_id === ( $default_result['actor'] ?? null ), 'Direct PHP execution lost the explicit WordPress user.' );
+$invalid_input = $ability->execute( array( 'target' => 'valid', 'secret' => 'must-not-pass' ) );
+$assert( is_wp_error( $invalid_input ) && 'ability_invalid_input' === $invalid_input->get_error_code(), 'Closed input validation failed.' );
+$invalid_output = wp_get_ability( Fixture\BAD_ABILITY )->execute( array( 'target' => 'valid' ) );
+$assert( is_wp_error( $invalid_output ) && 'ability_invalid_output' === $invalid_output->get_error_code(), 'Output validation failed.' );
 
-wp_set_current_user( $subscriberId );
+wp_set_current_user( $subscriber_id );
 $denied = $ability->execute( array( 'target' => 'permission-check' ) );
 $assert( is_wp_error( $denied ), 'The explicit low-privilege WordPress user was permitted.' );
-wp_set_current_user( $adminId );
+wp_set_current_user( $admin_id );
 
-$addonAbility = wp_get_ability( \RANBoosterP4Phase0AddonFixture\ABILITY );
-$addonResult  = $addonAbility instanceof WP_Ability ? $addonAbility->execute( array() ) : null;
-$assert( is_array( $addonResult ) && 'addon' === ( $addonResult['owner'] ?? null ), 'The add-on did not own and execute its declaration.' );
+$addon_ability = wp_get_ability( \RANBoosterP4Phase0AddonFixture\ABILITY );
+$addon_result  = $addon_ability instanceof WP_Ability ? $addon_ability->execute( array() ) : null;
+$assert( is_array( $addon_result ) && 'addon' === ( $addon_result['owner'] ?? null ), 'The add-on did not own and execute its declaration.' );
 $assert( ! wp_has_ability( 'p4-incompatible-fixture/read-status' ), 'The incompatible component contributed an executable declaration.' );
 
 $adapter    = McpAdapter::instance();
 $dedicated  = $adapter->get_server( Fixture\MCP_SERVER );
-$defaultMcp = $adapter->get_server( 'mcp-adapter-default-server' );
+$default_mcp = $adapter->get_server( 'mcp-adapter-default-server' );
 $assert( null !== $dedicated, 'The dedicated Booster fixture MCP server is unavailable.' );
-$assert( null !== $defaultMcp, 'The MCP Adapter default server is unavailable for negative proof.' );
+$assert( null !== $default_mcp, 'The MCP Adapter default server is unavailable for negative proof.' );
 $assert( 1 === count( $dedicated->get_tools() ), 'The dedicated server does not expose exactly one direct read tool.' );
 $assert( null === $dedicated->get_mcp_tool( 'mcp-adapter-execute-ability' ), 'The dedicated server exposes a generic executor.' );
 $assert( null !== $dedicated->get_mcp_tool( 'p4-fixture-read-status' ), 'The dedicated server lacks its explicit read tool.' );
@@ -87,12 +87,12 @@ $assert( null !== $dedicated->get_mcp_tool( 'p4-fixture-read-status' ), 'The ded
 do_action( 'rest_api_init' );
 $routes = rest_get_server()->get_routes();
 $assert( ! array_key_exists( '/ran-booster-p4/v1/fixture', $routes ), 'The dedicated Booster fixture server registered an HTTP route.' );
-$restRequest = new WP_REST_Request( 'GET', '/wp-abilities/v1/abilities/' . Fixture\READ_ABILITY );
-$restRequest->set_param( 'name', Fixture\READ_ABILITY );
-$restResult = ( new WP_REST_Abilities_V1_List_Controller() )->get_item( $restRequest );
-$assert( is_wp_error( $restResult ) && 'rest_ability_not_found' === $restResult->get_error_code(), 'REST-hidden state was not enforced.' );
+$rest_request = new WP_REST_Request( 'GET', '/wp-abilities/v1/abilities/' . Fixture\READ_ABILITY );
+$rest_request->set_param( 'name', Fixture\READ_ABILITY );
+$rest_result = ( new WP_REST_Abilities_V1_List_Controller() )->get_item( $rest_request );
+$assert( is_wp_error( $rest_result ) && 'rest_ability_not_found' === $rest_result->get_error_code(), 'REST-hidden state was not enforced.' );
 
-$assert( $subscriberId > 0 && $subscriberId !== $adminId, 'The explicit low-privilege fixture user is invalid.' );
+$assert( $subscriber_id > 0 && $subscriber_id !== $admin_id, 'The explicit low-privilege fixture user is invalid.' );
 $assert( 1 === Fixture\API_VERSION, 'The fixture changed its exact compatibility marker.' );
 
 WP_CLI::line(

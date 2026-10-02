@@ -65,21 +65,21 @@ final class RepositoryPickerController {
 				$identity_input          = isset( $_POST['public_lookup_identity'] ) ? wp_unslash( $_POST['public_lookup_identity'] ) : 'anonymous';
 				$public_lookup_requested = is_string( $identity_input ) && 'anonymous' !== sanitize_key( $identity_input );
 				$credential_id           = $this->public_lookup_profile_id( $provider_code );
-				$browser                 = $this->providers->requireCapability(
+				$browser                 = $this->providers->require_capability(
 					$provider_code,
 					null === $credential_id ? RepositoryBrowser::class : CredentialedPublicRepositoryBrowser::class
 				);
 				$result                  = $browser->browse_repositories(
-					RepositoryBrowseRequest::publicOwner(
+					RepositoryBrowseRequest::public_owner(
 						$owner,
 						$credential_id
 					)
 				);
 			} elseif ( 'accessible' === $mode ) {
-				$browser          = $this->providers->requireCapability( $provider_code, RepositoryBrowser::class );
+				$browser          = $this->providers->require_capability( $provider_code, RepositoryBrowser::class );
 				$credential_input = isset( $_POST['credential_id'] ) ? wp_unslash( $_POST['credential_id'] ) : '';
 				$credential_id    = $this->credential_id( $credential_input, false );
-				$this->secrets->credentialProfiles( $provider_code );
+				$this->secrets->credential_profiles( $provider_code );
 				$result = $browser->browse_repositories(
 					RepositoryBrowseRequest::accessible(
 						$credential_id
@@ -95,7 +95,7 @@ final class RepositoryPickerController {
 					throw new RuntimeException( 'Repository provider returned mismatched repository identity.', 502 );
 				}
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryDescriptor property is a connected provider contract.
-				if ( 'public' === $mode && ( $repository->private || null !== $repository->credentialId ) ) {
+				if ( 'public' === $mode && ( $repository->private || null !== $repository->credential_id ) ) {
 					throw new RuntimeException( 'Repository provider returned a non-public repository.', 502 );
 				}
 			}
@@ -103,10 +103,10 @@ final class RepositoryPickerController {
 			return wp_send_json_success(
 				array(
 					'repositories'             => array_map(
-						static fn ( RepositoryDescriptor $repository ): array => $repository->toArray(),
+						static fn ( RepositoryDescriptor $repository ): array => $repository->to_array(),
 						$repositories
 					),
-					'partial'                  => $result->isPartial(),
+					'partial'                  => $result->is_partial(),
 					'message'                  => $this->partial_message( $result ),
 					'public_lookup_profile_id' => 'public' === $mode ? $credential_id ?? '' : '',
 				)
@@ -213,12 +213,12 @@ final class RepositoryPickerController {
 			return null;
 		}
 
-		$browser  = $this->providers->requireCapability( $provider, CredentialedPublicRepositoryBrowser::class );
+		$browser  = $this->providers->require_capability( $provider, CredentialedPublicRepositoryBrowser::class );
 		$metadata = $browser->get_public_repository_browse_metadata();
 
 		if ( 'default' === $identity ) {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Repository provider metadata property is a connected public contract.
-			if ( ! $metadata->supportsProviderDefaultProfile || '' !== $profile_id ) {
+			if ( ! $metadata->supports_provider_default_profile || '' !== $profile_id ) {
 				throw new InvalidArgumentException( 'The public lookup default request is invalid.' );
 			}
 
@@ -234,7 +234,7 @@ final class RepositoryPickerController {
 			throw new InvalidArgumentException( 'The public lookup identity is invalid.' );
 		}
 
-		foreach ( $this->secrets->credentialProfiles( $provider ) as $profile ) {
+		foreach ( $this->secrets->credential_profiles( $provider ) as $profile ) {
 			if ( ( $profile['id'] ?? null ) === $profile_id && ! empty( $profile['configured'] ) ) {
 				return $profile_id;
 			}
@@ -245,7 +245,7 @@ final class RepositoryPickerController {
 
 	private function partial_message( RepositoryBrowseResult $result ): ?string {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- RepositoryBrowseResult property is a connected public contract.
-		return match ( $result->partialReason ) {
+		return match ( $result->partial_reason ) {
 			RepositoryBrowseResult::AUTHORIZATION => __( 'Some repositories are shown, but the selected credential stopped authorizing the request.', 'ran-booster' ),
 			RepositoryBrowseResult::RATE_LIMIT => __( 'Some repositories are shown. The provider rate limit was reached; try again later for a complete list.', 'ran-booster' ),
 			RepositoryBrowseResult::LIMIT => __( 'The first available repositories are shown. Enter a repository manually if it is not listed.', 'ran-booster' ),

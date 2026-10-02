@@ -23,12 +23,12 @@ final class SecretsFileTestFactory {
 			$path,
 			$constants,
 			$policies,
-			self::keyStore( $path ),
+			self::key_store( $path ),
 			new EncryptedSecretsEnvelopeCodec()
 		);
 	}
 
-	public static function keyStore( ?string $path ): SiteKeyStore {
+	public static function key_store( ?string $path ): SiteKeyStore {
 		return new InMemorySiteKeyStore( $path ?? 'unconfigured' );
 	}
 }

@@ -31,27 +31,21 @@ final class RepositorySourceGuard {
 	 */
 	public function assess(
 		string $provider,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		string $providerRepositoryId,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		int $selfType,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		string $selfPackage,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		PackageSource $proposedSource,
+		string $provider_repository_id,
+		int $self_type,
+		string $self_package,
+		PackageSource $proposed_source,
 		bool $lock = false
 	): array {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		if ( ! self::identity_is_valid( $provider, $providerRepositoryId, $selfType, $selfPackage ) ) {
+		if ( ! self::identity_is_valid( $provider, $provider_repository_id, $self_type, $self_package ) ) {
 			return self::unavailable();
 		}
-		$this->lifecycle?->requireReady();
+		$this->lifecycle?->require_ready();
 		$query = $this->database->prepare(
 			'SELECT type, package, source, provider, provider_repository_id FROM %i WHERE provider = %s AND BINARY provider_repository_id = BINARY %s' . ( $lock ? ' FOR UPDATE' : '' ),
 			ran_booster_table_name(),
 			$provider,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-			$providerRepositoryId
+			$provider_repository_id
 		);
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery -- Prepared immediately above; exact raw storage rows are authoritative.
 		$rows  = $this->database->get_results( $query );
@@ -60,29 +54,22 @@ final class RepositorySourceGuard {
 			return self::unavailable();
 		}
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		return self::assessRows( $rows, $provider, $providerRepositoryId, $selfType, $selfPackage, $proposedSource );
+		return self::assess_rows( $rows, $provider, $provider_repository_id, $self_type, $self_package, $proposed_source );
 	}
 
 	/**
 	 * @param list<object> $rows
 	 * @return array{allowed: bool, code: string, relationship_count: int, release_count: int, owner_type: ?int, owner_package: ?string, other_packages: list<array{type:int,identifier:string}>}
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public static function assessRows(
+	public static function assess_rows(
 		array $rows,
 		string $provider,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		string $providerRepositoryId,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		int $selfType,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		string $selfPackage,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		PackageSource $proposedSource
+		string $provider_repository_id,
+		int $self_type,
+		string $self_package,
+		PackageSource $proposed_source
 	): array {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		if ( ! self::identity_is_valid( $provider, $providerRepositoryId, $selfType, $selfPackage ) ) {
+		if ( ! self::identity_is_valid( $provider, $provider_repository_id, $self_type, $self_package ) ) {
 			return self::unavailable();
 		}
 
@@ -94,8 +81,7 @@ final class RepositorySourceGuard {
 				|| ! is_string( $row->package ?? null ) || '' === $row->package
 				|| ! is_string( $row->source ?? null ) || ! in_array( $row->source, array( PackageSource::BRANCH->value, PackageSource::RELEASE_ASSET->value ), true )
 				|| ! is_string( $row->provider ?? null ) || ! hash_equals( $provider, $row->provider )
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-				|| ! is_string( $row->provider_repository_id ?? null ) || ! hash_equals( $providerRepositoryId, $row->provider_repository_id ) ) {
+				|| ! is_string( $row->provider_repository_id ?? null ) || ! hash_equals( $provider_repository_id, $row->provider_repository_id ) ) {
 				return self::unavailable();
 			}
 			$row->type  = (int) $row->type;
@@ -104,8 +90,7 @@ final class RepositorySourceGuard {
 				return self::unavailable();
 			}
 			$coordinates[ $coordinate ] = true;
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-			if ( $selfType === $row->type && hash_equals( $selfPackage, $row->package ) ) {
+			if ( $self_type === $row->type && hash_equals( $self_package, $row->package ) ) {
 				if ( null !== $self ) {
 					return self::unavailable();
 				}
@@ -115,8 +100,7 @@ final class RepositorySourceGuard {
 
 		$others = array();
 		foreach ( $rows as $row ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-			if ( $selfType !== $row->type || ! hash_equals( $selfPackage, $row->package ) ) {
+			if ( $self_type !== $row->type || ! hash_equals( $self_package, $row->package ) ) {
 				$others[] = array(
 					'type'       => $row->type,
 					'identifier' => $row->package,
@@ -134,21 +118,18 @@ final class RepositorySourceGuard {
 			'owner_package'      => null,
 			'other_packages'     => array_slice( $others, 0, 10 ),
 		);
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		if ( null !== $release && ( $release->type !== $selfType || ! hash_equals( $release->package, $selfPackage ) ) ) {
+		if ( null !== $release && ( $release->type !== $self_type || ! hash_equals( $release->package, $self_package ) ) ) {
 			$result['owner_type']    = $release->type;
 			$result['owner_package'] = $release->package;
 		}
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		if ( PackageSource::BRANCH === $proposedSource
+		if ( PackageSource::BRANCH === $proposed_source
 			&& ( 0 === count( $releases ) || ( null !== $self && PackageSource::BRANCH->value === $self->source ) || ( null !== $self && PackageSource::RELEASE_ASSET->value === $self->source ) ) ) {
 			$result['allowed'] = true;
 			$result['code']    = 'allowed';
 			return $result;
 		}
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		if ( PackageSource::RELEASE_ASSET === $proposedSource
+		if ( PackageSource::RELEASE_ASSET === $proposed_source
 			&& ( 0 === count( $rows ) || ( 1 === count( $rows ) && null !== $self ) ) ) {
 			$result['allowed'] = true;
 			$result['code']    = 'allowed';
@@ -157,15 +138,12 @@ final class RepositorySourceGuard {
 		return $result;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public/protected caller contract; retain public named-parameter names.
-	public function assertAllowed( string $provider, string $repositoryId, int $type, string $identifier, PackageSource $source ): void {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		if ( ! self::identity_is_valid( $provider, $repositoryId, $type, $identifier ) ) {
+	public function assert_allowed( string $provider, string $repository_id, int $type, string $identifier, PackageSource $source ): void {
+		if ( ! self::identity_is_valid( $provider, $repository_id, $type, $identifier ) ) {
 			throw PackageStorageFailure::invalid_provider_identity();
 		}
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		$result = $this->assess( $provider, $repositoryId, $type, $identifier, $source );
+		$result = $this->assess( $provider, $repository_id, $type, $identifier, $source );
 		if ( $result['allowed'] ) {
 			return;
 		}

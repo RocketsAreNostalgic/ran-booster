@@ -1,7 +1,7 @@
 # Custom git vendor setup
 
 > API13 dependency-adoption candidate: the lock selects the immutable Provider
-> beta.10 release. Final archive/installed qualification must use this exact
+> beta.11 release. Final archive/installed qualification must use this exact
 > composition; earlier source overlays are not adoption proof. Core beta.31
 > remains held for the coordinated work and its separate release decision.
 

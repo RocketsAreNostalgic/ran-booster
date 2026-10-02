@@ -132,7 +132,7 @@ promotions remain unchanged. API13 rejects old API11/12 implementations before
 loading; workflowV3, Add-on16 and unrelated protocol identities are unchanged.
 
 The initial API13 preparation retained the beta.9/API12 lock and was not
-mergeable adoption. The current candidate now selects immutable beta.10,
+mergeable adoption. The API13 candidate selected immutable beta.10,
 verified below; final combined archive/installed qualification remains required.
 Qualify the exact Core/Provider sources first; approve and publish Provider
 through its normal lifecycle; adopt the verified immutable release in Core;
@@ -161,3 +161,27 @@ The newly assigned Bitbucket and Release Updater coordinators supply separate
 bounded handoffs; no retired-agent acknowledgement is awaited. The protocol5
 consumer tranche follows this published Provider baseline and must provide its
 own compatible package publication before final Core dependency composition.
+
+
+### Protocol 5 released dependency composition
+
+The current candidate builds on merged Core #222 at
+`290fdd164a3f483b84e61b91daba123457aac672`, preserving Provider API13,
+Portability API3 and canonical Portability hash payload2. It adopts immutable
+GitHub Provider `v1.0.0-beta.11`, release401580118, source/dist/tag commit
+`c88045d0b6d6048599454b9549e59ddf176d56f0`, published2October2026 at06:14:38UTC.
+Provider exact-main CI36972421359 and publication workflow36972571174 passed.
+
+The paired updater is immutable `v1.0.0-beta.9`, release398230418, source/dist/tag
+`27889528442fc4e49ca060959218d5ec288c3055`. Protocol5 runtime revision is
+`07696b27292b1c999714e31b06f2fd0d79d0d3e19e334eb17136c37b027c9a24`.
+Core and its bundled Provider use the same Composer-installed updater copy.
+Separate compatible protocol5 copies may participate in canonical runtime
+selection; mixed protocol4/5 copies fail closed and are not supported together.
+
+The two-test handoff a12b2681 and shared proposal e40c34de are adopted onto the
+merged baseline. Composer generates the real lock; no source overlay or
+fabricated package alias is used. Final archive and installed qualification
+must bind this composition. Core beta.31 publication, Bitbucket and Migrator
+released-host certification, and owner interactive acceptance remain separate
+gates. Historical evidence above is not proof of the protocol5 composition.

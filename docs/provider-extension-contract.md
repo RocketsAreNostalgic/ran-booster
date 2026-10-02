@@ -1,7 +1,7 @@
 # Provider extension contract
 
 > API13 dependency-adoption candidate: the lock selects the immutable Provider
-> beta.10 release. Final archive/installed qualification must use this exact
+> beta.11 release. Final archive/installed qualification must use this exact
 > composition; earlier source overlays are not adoption proof. Core beta.31
 > remains held for the coordinated work and its separate release decision.
 
@@ -243,8 +243,8 @@ check this exact marker before loading their implementation. API-11 and API-12 p
 must remain unregistered on this host; there is no V2 compatibility shim. The
 registration signature and Add-on API 16 are unchanged. See the
 [coordinated compatibility boundary](provider-release-workflow-api.md#provider-api-13-compatibility-boundary).
-The bundled lock selects immutable GitHub Provider `v1.0.0-beta.10`
-(`d39d83747af3109a79e80fd307d50e4fcc34d412`), including the Provider-owned
+The bundled lock selects immutable GitHub Provider `v1.0.0-beta.11`
+(`c88045d0b6d6048599454b9549e59ddf176d56f0`), including the Provider-owned
 helper naming migration and preserved bootstrap record operation projection.
 Merged Core #177 passed repository, archive and installed checks for its
 historical beta.8 composition (`556f19923f6564f1bbd5cecee089d6b136afc5cd`).
@@ -534,7 +534,7 @@ The facet grants no WordPress installation or adoption authority. Core retains
 the updater claim through `PreparedArtifact`, owns installation and installed
 readback, and discards the exact claim after use.
 
-The bundled GitHub provider uses the public beta.7 registrar's `releases()`
+The bundled GitHub provider uses the public beta.9 registrar's `releases()`
 source. It maps operation-specific result envelopes into these existing Core
 contracts; it does not import updater implementation classes. Inspection returns
 an opaque `v2:` fingerprint after discarding its validation archive. Acquisition

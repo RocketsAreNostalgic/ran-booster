@@ -127,12 +127,18 @@ Use a verified release ZIP.
 
 ## Shared-updater handoff
 
-Core loads the released `ran/wp-release-updater` beta.7 bootstrap after its
+Core loads the released `ran/wp-release-updater` beta.9 bootstrap after its
 single-site admission check and retains the returned public registrar. The
-updater schedules Protocol 4 selection and activation at `after_setup_theme`,
+updater schedules Protocol 5 selection and activation at `after_setup_theme`,
 priority `PHP_INT_MAX`; Core does not activate a broker itself. Loading the
 registrar preserves runtime selection and prospective releases even when Core
 declares no self-update target.
+
+The bundled GitHub Provider shares this Composer-installed updater copy. Other
+plugins may register separate protocol-5 copies before the activation boundary;
+all copies must satisfy the updater identity and selection contract. Protocol-4
+and protocol-5 copies cannot jointly update targets: a conflicting copy fails
+closed, so mixed-version installations are not a supported adoption composition.
 
 When Core policy disables native discovery, Core omits its self-target
 declaration. No Core native discovery or installation hooks are registered, and

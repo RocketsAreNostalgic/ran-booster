@@ -90,14 +90,14 @@ final class ReleasePlatformContractTest extends TestCase {
 		),
 	);
 
-	public function testComposerDeclaresTheZipRuntimeRequirement(): void {
-		$composer = $this->readJson( dirname( __DIR__ ) . '/composer.json' );
+	public function test_composer_declares_the_zip_runtime_requirement(): void {
+		$composer = $this->read_json( dirname( __DIR__ ) . '/composer.json' );
 
 		self::assertSame( '*', $composer['require']['ext-zip'] ?? null );
 	}
 
-	public function testRuntimePackagingPolicyOwnsTheExactPackageSetAndSurfaces(): void {
-		$policy = $this->readPackagingPolicy();
+	public function test_runtime_packaging_policy_owns_the_exact_package_set_and_surfaces(): void {
+		$policy = $this->read_packaging_policy();
 
 		self::assertSame( 'ran-booster-runtime-packaging', $policy['schema'] ?? null );
 		self::assertSame( 1, $policy['schema_version'] ?? null );
@@ -119,38 +119,38 @@ final class ReleasePlatformContractTest extends TestCase {
 		self::assertSame( self::RUNTIME_PACKAGING_POLICY, $actual );
 	}
 
-	public function testComposerLockPinsExactlyThePolicyApprovedPackages(): void {
-		$lock   = $this->readJson( dirname( __DIR__ ) . '/composer.lock' );
-		$policy = $this->readPackagingPolicy();
+	public function test_composer_lock_pins_exactly_the_policy_approved_packages(): void {
+		$lock   = $this->read_json( dirname( __DIR__ ) . '/composer.lock' );
+		$policy = $this->read_packaging_policy();
 
 		$packages = is_array( $lock['packages'] ?? null )
 			? $lock['packages']
 			: array();
 		self::assertCount( count( self::RUNTIME_PACKAGING_POLICY ), $packages );
 
-		$byName = array();
+		$by_name = array();
 		foreach ( $packages as $package ) {
 			self::assertIsArray( $package );
 			$name = $package['name'] ?? null;
 			self::assertIsString( $name );
-			self::assertArrayNotHasKey( $name, $byName );
-			$byName[ $name ] = $package;
+			self::assertArrayNotHasKey( $name, $by_name );
+			$by_name[ $name ] = $package;
 		}
 
-		$policyByName = $this->policyByName( $policy );
-		self::assertSame( array_keys( $policyByName ), array_keys( $byName ) );
+		$policy_by_name = $this->policy_by_name( $policy );
+		self::assertSame( array_keys( $policy_by_name ), array_keys( $by_name ) );
 
-		$versionPattern = '/^v?[0-9]+\.[0-9]+\.[0-9]+'
+		$version_pattern = '/^v?[0-9]+\.[0-9]+\.[0-9]+'
 			. '(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/D';
-		foreach ( $policyByName as $name => $record ) {
-			$package    = $byName[ $name ];
+		foreach ( $policy_by_name as $name => $record ) {
+			$package    = $by_name[ $name ];
 			$repository = $record['repository'] ?? null;
 			self::assertIsString( $repository );
 			$reference = $package['source']['reference'] ?? null;
 			self::assertIsString( $reference );
 			self::assertMatchesRegularExpression( '/^[0-9a-f]{40}$/D', $reference );
 			self::assertMatchesRegularExpression(
-				$versionPattern,
+				$version_pattern,
 				(string) ( $package['version'] ?? '' )
 			);
 			self::assertSame( 'git', $package['source']['type'] ?? null );
@@ -167,8 +167,8 @@ final class ReleasePlatformContractTest extends TestCase {
 		}
 	}
 
-	public function testRuntimeDependencyVerifierAcceptsCurrentLockAndPolicy(): void {
-		$result = $this->runRuntimeDependencyVerifier(
+	public function test_runtime_dependency_verifier_accepts_current_lock_and_policy(): void {
+		$result = $this->run_runtime_dependency_verifier(
 			dirname( __DIR__ ) . '/composer.lock',
 			dirname( __DIR__ ) . '/runtime-packaging-policy.json'
 		);
@@ -178,106 +178,106 @@ final class ReleasePlatformContractTest extends TestCase {
 		self::assertCount( count( self::RUNTIME_PACKAGING_POLICY ), $records );
 	}
 
-	public function testRuntimeDependencyPackagingProjectionHasStableTypedFields(): void {
-		$lock   = $this->readJson( dirname( __DIR__ ) . '/composer.lock' );
-		$policy = $this->readPackagingPolicy();
-		$result = $this->runRuntimeDependencyVerifier(
+	public function test_runtime_dependency_packaging_projection_has_stable_typed_fields(): void {
+		$lock   = $this->read_json( dirname( __DIR__ ) . '/composer.lock' );
+		$policy = $this->read_packaging_policy();
+		$result = $this->run_runtime_dependency_verifier(
 			dirname( __DIR__ ) . '/composer.lock',
 			dirname( __DIR__ ) . '/runtime-packaging-policy.json',
 			true
 		);
 		self::assertSame( 0, $result['exit'], $result['stderr'] );
 
-		$lockByName = array();
+		$lock_by_name = array();
 		foreach ( $lock['packages'] as $package ) {
 			self::assertIsArray( $package );
 			$name = $package['name'] ?? null;
 			self::assertIsString( $name );
-			$lockByName[ $name ] = $package;
+			$lock_by_name[ $name ] = $package;
 		}
 
 		$records = array_filter( explode( "\n", trim( $result['stdout'] ) ) );
 		self::assertCount( count( self::RUNTIME_PACKAGING_POLICY ), $records );
-		$seenNeutralUpdater = false;
+		$seen_neutral_updater = false;
 		foreach ( $records as $line ) {
 			$fields = explode( "\t", $line );
 			self::assertCount( 7, $fields );
-			list( $name, $version, $reference, $repository, $root, $surfaceSpecs, $role ) = $fields;
+			list( $name, $version, $reference, $repository, $root, $surface_specs, $role ) = $fields;
 			self::assertArrayHasKey( $name, self::RUNTIME_PACKAGING_POLICY );
 			$expected = self::RUNTIME_PACKAGING_POLICY[ $name ];
-			self::assertSame( $lockByName[ $name ]['version'] ?? null, $version );
-			self::assertSame( $lockByName[ $name ]['source']['reference'] ?? null, $reference );
+			self::assertSame( $lock_by_name[ $name ]['version'] ?? null, $version );
+			self::assertSame( $lock_by_name[ $name ]['source']['reference'] ?? null, $reference );
 			self::assertSame( $expected['repository'], $repository );
 			self::assertSame( $expected['archive_root'], $root );
-			self::assertSame( $this->surfaceSpecs( $expected['surfaces'] ), $surfaceSpecs );
-			$expectedRole = $expected['build_role'] ?? '-';
-			self::assertSame( $expectedRole ?? '-', $role );
+			self::assertSame( $this->surface_specs( $expected['surfaces'] ), $surface_specs );
+			$expected_role = $expected['build_role'] ?? '-';
+			self::assertSame( $expected_role ?? '-', $role );
 			if ( 'neutral-updater' === $role ) {
-				self::assertFalse( $seenNeutralUpdater );
-				$seenNeutralUpdater = true;
+				self::assertFalse( $seen_neutral_updater );
+				$seen_neutral_updater = true;
 			}
 		}
-		self::assertTrue( $seenNeutralUpdater );
+		self::assertTrue( $seen_neutral_updater );
 	}
 
-	public function testRuntimeDependencyVerifierRejectsUnexpectedPackageAtTheSameCount(): void {
-		$lock = $this->readJson( dirname( __DIR__ ) . '/composer.lock' );
+	public function test_runtime_dependency_verifier_rejects_unexpected_package_at_the_same_count(): void {
+		$lock = $this->read_json( dirname( __DIR__ ) . '/composer.lock' );
 		self::assertIsArray( $lock['packages'] ?? null );
 		self::assertIsArray( $lock['packages'][0] ?? null );
 		$lock['packages'][0]['name'] = 'ran/unexpected-runtime';
-		$path                        = $this->writeTemporaryJson( $lock );
+		$path                        = $this->write_temporary_json( $lock );
 
 		try {
-			$result = $this->runRuntimeDependencyVerifier(
+			$result = $this->run_runtime_dependency_verifier(
 				$path,
 				dirname( __DIR__ ) . '/runtime-packaging-policy.json'
 			);
 			self::assertNotSame( 0, $result['exit'] );
 			self::assertStringContainsString( 'unexpected production package', $result['stderr'] );
 		} finally {
-			$this->removeTemporaryFile( $path );
+			$this->remove_temporary_file( $path );
 		}
 	}
 
-	public function testRuntimeDependencyVerifierRejectsRepositoryDrift(): void {
-		$policy = $this->readPackagingPolicy();
+	public function test_runtime_dependency_verifier_rejects_repository_drift(): void {
+		$policy = $this->read_packaging_policy();
 		self::assertIsArray( $policy['packages'][0] ?? null );
 		$policy['packages'][0]['repository'] = 'RocketsAreNostalgic/not-the-locked-package';
-		$path                                = $this->writeTemporaryJson( $policy );
+		$path                                = $this->write_temporary_json( $policy );
 
 		try {
-			$result = $this->runRuntimeDependencyVerifier(
+			$result = $this->run_runtime_dependency_verifier(
 				dirname( __DIR__ ) . '/composer.lock',
 				$path
 			);
 			self::assertNotSame( 0, $result['exit'] );
 		} finally {
-			$this->removeTemporaryFile( $path );
+			$this->remove_temporary_file( $path );
 		}
 	}
 
-	public function testRuntimeDependencyVerifierRejectsNestedSurfacePolicy(): void {
-		$policy = $this->readPackagingPolicy();
+	public function test_runtime_dependency_verifier_rejects_nested_surface_policy(): void {
+		$policy = $this->read_packaging_policy();
 		self::assertIsArray( $policy['packages'][0] ?? null );
 		self::assertIsArray( $policy['packages'][0]['surfaces'][0] ?? null );
 		$policy['packages'][0]['surfaces'][0]['path'] = 'nested/LICENSE';
-		$path = $this->writeTemporaryJson( $policy );
+		$path = $this->write_temporary_json( $policy );
 
 		try {
-			$result = $this->runRuntimeDependencyVerifier(
+			$result = $this->run_runtime_dependency_verifier(
 				dirname( __DIR__ ) . '/composer.lock',
 				$path
 			);
 			self::assertNotSame( 0, $result['exit'] );
 			self::assertStringContainsString( 'invalid top-level surface', $result['stderr'] );
 		} finally {
-			$this->removeTemporaryFile( $path );
+			$this->remove_temporary_file( $path );
 		}
 	}
 
-	public function testReleaseScriptsConsumeTheSharedTypedPackagingProjection(): void {
-		foreach ( array( 'build-release.sh', 'verify-release.sh' ) as $scriptName ) {
-			$script = $this->readText( dirname( __DIR__ ) . '/scripts/' . $scriptName );
+	public function test_release_scripts_consume_the_shared_typed_packaging_projection(): void {
+		foreach ( array( 'build-release.sh', 'verify-release.sh' ) as $script_name ) {
+			$script = $this->read_text( dirname( __DIR__ ) . '/scripts/' . $script_name );
 			self::assertStringContainsString( 'runtime-packaging-policy.json', $script );
 			self::assertStringContainsString( 'scripts/verify-runtime-dependencies.php', $script );
 			self::assertStringContainsString( '--packaging', $script );
@@ -292,9 +292,9 @@ final class ReleasePlatformContractTest extends TestCase {
 		}
 	}
 
-	public function testReleaseScriptsPreserveSurfaceKindsAndRejectSymlinks(): void {
-		foreach ( array( 'build-release.sh', 'verify-release.sh' ) as $scriptName ) {
-			$script = $this->readText( dirname( __DIR__ ) . '/scripts/' . $scriptName );
+	public function test_release_scripts_preserve_surface_kinds_and_reject_symlinks(): void {
+		foreach ( array( 'build-release.sh', 'verify-release.sh' ) as $script_name ) {
+			$script = $this->read_text( dirname( __DIR__ ) . '/scripts/' . $script_name );
 			self::assertStringContainsString( 'changed kind', $script );
 			self::assertStringContainsString( 'directory surface is empty', $script );
 			self::assertStringContainsString( '! -L "$installed_package"', $script );
@@ -302,16 +302,16 @@ final class ReleasePlatformContractTest extends TestCase {
 		}
 	}
 
-	public function testCoreReleaseFileManifestDoesNotDuplicatePackageSurfaces(): void {
-		$manifest = $this->readText( dirname( __DIR__ ) . '/release-files.txt' );
+	public function test_core_release_file_manifest_does_not_duplicate_package_surfaces(): void {
+		$manifest = $this->read_text( dirname( __DIR__ ) . '/release-files.txt' );
 		self::assertStringNotContainsString( 'vendor/ran/', $manifest );
 		self::assertStringContainsString( 'runtime-packaging-policy.json', $manifest );
 	}
 
-	public function testQualityKeepsPackagingPolicyInTheRepositoryOwnedArchiveBoundary(): void {
-		$quality = $this->readText( dirname( __DIR__ ) . '/.github/workflows/quality.yml' );
-		$release = $this->readText( dirname( __DIR__ ) . '/.github/workflows/release-please.yml' );
-		$builder = $this->readText( dirname( __DIR__ ) . '/scripts/build-release.sh' );
+	public function test_quality_keeps_packaging_policy_in_the_repository_owned_archive_boundary(): void {
+		$quality = $this->read_text( dirname( __DIR__ ) . '/.github/workflows/quality.yml' );
+		$release = $this->read_text( dirname( __DIR__ ) . '/.github/workflows/release-please.yml' );
+		$builder = $this->read_text( dirname( __DIR__ ) . '/scripts/build-release.sh' );
 
 		self::assertStringContainsString( 'bash scripts/build-release.sh', $quality );
 		self::assertStringContainsString( 'runtime-packaging-policy.json', $builder );
@@ -322,14 +322,14 @@ final class ReleasePlatformContractTest extends TestCase {
 		self::assertStringNotContainsString( 'dcd9ce2ca20769dc35d6b6bfd46042c17aa53bd3', $quality );
 	}
 
-	public function testDisposableLifecycleFixtureUsesTheVendoredUpdatersStableUserAgent(): void {
-		$releaseUpdaterPath = $this->neutralUpdaterArchiveRoot();
-		$updater            = $this->readText(
+	public function test_disposable_lifecycle_fixture_uses_the_vendored_updaters_stable_user_agent(): void {
+		$release_updater_path = $this->neutral_updater_archive_root();
+		$updater            = $this->read_text(
 			dirname( __DIR__ )
-				. '/' . $releaseUpdaterPath
+				. '/' . $release_updater_path
 				. '/src/Provider/GitHub/GitHubApiClient.php'
 		);
-		$fixture            = $this->readText(
+		$fixture            = $this->read_text(
 			dirname( __DIR__ )
 				. '/tests/Integration/phase-4.4-core-disposable-harness.php'
 		);
@@ -344,8 +344,8 @@ final class ReleasePlatformContractTest extends TestCase {
 		);
 	}
 
-	public function testReleaseVerifierRequiresTheSupportedCoreAndPolicyDrivenRuntimeProofs(): void {
-		$script = $this->readText( dirname( __DIR__ ) . '/scripts/verify-release.sh' );
+	public function test_release_verifier_requires_the_supported_core_and_policy_driven_runtime_proofs(): void {
+		$script = $this->read_text( dirname( __DIR__ ) . '/scripts/verify-release.sh' );
 
 		foreach ( array(
 			"define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 13 );",
@@ -361,8 +361,8 @@ final class ReleasePlatformContractTest extends TestCase {
 		}
 	}
 
-	public function testBuilderVerifiesTheArchiveBeforePublishingItToTheBuildDirectory(): void {
-		$script = $this->readText( dirname( __DIR__ ) . '/scripts/build-release.sh' );
+	public function test_builder_verifies_the_archive_before_publishing_it_to_the_build_directory(): void {
+		$script = $this->read_text( dirname( __DIR__ ) . '/scripts/build-release.sh' );
 
 		$verify = strpos(
 			$script,
@@ -381,29 +381,29 @@ final class ReleasePlatformContractTest extends TestCase {
 	/**
 	 * @return array<string, mixed>
 	 */
-	private function readPackagingPolicy(): array {
-		return $this->readJson( dirname( __DIR__ ) . '/runtime-packaging-policy.json' );
+	private function read_packaging_policy(): array {
+		return $this->read_json( dirname( __DIR__ ) . '/runtime-packaging-policy.json' );
 	}
 
 	/**
 	 * @param array<string, mixed> $policy
 	 * @return array<string, array<string, mixed>>
 	 */
-	private function policyByName( array $policy ): array {
-		$byName = array();
+	private function policy_by_name( array $policy ): array {
+		$by_name = array();
 		foreach ( $policy['packages'] as $record ) {
 			self::assertIsArray( $record );
 			$name = $record['name'] ?? null;
 			self::assertIsString( $name );
-			$byName[ $name ] = $record;
+			$by_name[ $name ] = $record;
 		}
-		return $byName;
+		return $by_name;
 	}
 
 	/**
 	 * @param array<int, array{path: string, kind: string}> $surfaces
 	 */
-	private function surfaceSpecs( array $surfaces ): string {
+	private function surface_specs( array $surfaces ): string {
 		return implode(
 			',',
 			array_map(
@@ -416,7 +416,7 @@ final class ReleasePlatformContractTest extends TestCase {
 	/**
 	 * @return array<string, mixed>
 	 */
-	private function readJson( string $path ): array {
+	private function read_json( string $path ): array {
 		$document = json_decode(
 			(string) file_get_contents( $path ),
 			true,
@@ -427,14 +427,14 @@ final class ReleasePlatformContractTest extends TestCase {
 		return $document;
 	}
 
-	private function readText( string $path ): string {
+	private function read_text( string $path ): string {
 		$text = file_get_contents( $path );
 		self::assertIsString( $text );
 		return $text;
 	}
 
-	private function neutralUpdaterArchiveRoot(): string {
-		foreach ( $this->readPackagingPolicy()['packages'] as $record ) {
+	private function neutral_updater_archive_root(): string {
+		foreach ( $this->read_packaging_policy()['packages'] as $record ) {
 			if (
 				is_array( $record )
 				&& 'neutral-updater' === ( $record['build_role'] ?? null )
@@ -447,7 +447,7 @@ final class ReleasePlatformContractTest extends TestCase {
 		self::fail( 'Runtime packaging policy does not identify a neutral updater.' );
 	}
 
-	private function trustPathBlock( string $workflow ): string {
+	private function trust_path_block( string $workflow ): string {
 		$start = strpos( $workflow, 'for trust_path in \\' );
 		self::assertIsInt( $start );
 
@@ -460,9 +460,9 @@ final class ReleasePlatformContractTest extends TestCase {
 	/**
 	 * @return array{exit: int, stdout: string, stderr: string}
 	 */
-	private function runRuntimeDependencyVerifier(
-		string $lockPath,
-		string $policyPath,
+	private function run_runtime_dependency_verifier(
+		string $lock_path,
+		string $policy_path,
 		bool $packaging = false
 	): array {
 		$command = array(
@@ -472,8 +472,8 @@ final class ReleasePlatformContractTest extends TestCase {
 		if ( $packaging ) {
 			$command[] = '--packaging';
 		}
-		$command[] = $lockPath;
-		$command[] = $policyPath;
+		$command[] = $lock_path;
+		$command[] = $policy_path;
 
 		$process = proc_open(
 			$command,
@@ -501,7 +501,7 @@ final class ReleasePlatformContractTest extends TestCase {
 	/**
 	 * @param array<string, mixed> $document
 	 */
-	private function writeTemporaryJson( array $document ): string {
+	private function write_temporary_json( array $document ): string {
 		$path = tempnam( sys_get_temp_dir(), 'ran-booster-runtime-policy-' );
 		self::assertIsString( $path );
 		$bytes = file_put_contents(
@@ -515,7 +515,7 @@ final class ReleasePlatformContractTest extends TestCase {
 		return $path;
 	}
 
-	private function removeTemporaryFile( string $path ): void {
+	private function remove_temporary_file( string $path ): void {
 		if ( is_file( $path ) ) {
 			unlink( $path );
 		}

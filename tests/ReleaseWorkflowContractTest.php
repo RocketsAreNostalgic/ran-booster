@@ -7,7 +7,7 @@ namespace RANTests;
 use PHPUnit\Framework\TestCase;
 
 final class ReleaseWorkflowContractTest extends TestCase {
-	public function testReleaseWorkflowIsThinPinnedSharedProfileBCaller(): void {
+	public function test_release_workflow_is_thin_pinned_shared_profile_bcaller(): void {
 		$workflow = $this->workflow( 'release-please.yml' );
 
 		self::assertStringContainsString(
@@ -26,7 +26,7 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringNotContainsString( 'pull_request:', $workflow );
 	}
 
-	public function testQualityUsesInputlessExactReleaseCandidateQualification(): void {
+	public function test_quality_uses_inputless_exact_release_candidate_qualification(): void {
 		$workflow = $this->workflow( 'quality.yml' );
 
 		self::assertStringContainsString( "  workflow_dispatch:\n  pull_request:", $workflow );
@@ -51,7 +51,7 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringNotContainsString( 'reconcile-release-candidate-marker', $workflow );
 	}
 
-	public function testQualityBuildsProfileBPromotionManifestAndKeepsCoreProofs(): void {
+	public function test_quality_builds_profile_bpromotion_manifest_and_keeps_core_proofs(): void {
 		$workflow = $this->workflow( 'quality.yml' );
 
 		self::assertStringContainsString( 'name: Runtime archive', $workflow );
@@ -67,7 +67,7 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertSame( 3, substr_count( $workflow, 'name: Verify exact source checkout' ) );
 	}
 
-	public function testTerminalQualityFansInFullAndCandidateProductEvidence(): void {
+	public function test_terminal_quality_fans_in_full_and_candidate_product_evidence(): void {
 		$workflow = $this->workflow( 'quality.yml' );
 
 		self::assertStringContainsString( '  repository-quality:', $workflow );
@@ -81,7 +81,7 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'test "$RELEASE_CANDIDATE_RESULT" = success', $workflow );
 	}
 
-	public function testQualityKeepsNeutralUpdaterRuntimeReadback(): void {
+	public function test_quality_keeps_neutral_updater_runtime_readback(): void {
 		$workflow = $this->workflow( 'quality.yml' );
 
 		self::assertStringContainsString( 'Read back the neutral updater runtime contract', $workflow );
@@ -91,7 +91,7 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'cmp -s "$expected_runtime_copy" "$runtime_copy"', $workflow );
 	}
 
-	public function testCandidateBehaviorInvokesTheValidatorThroughBash(): void {
+	public function test_candidate_behavior_invokes_the_validator_through_bash(): void {
 		$contract = file_get_contents( __DIR__ . '/release-candidate-contract.sh' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local workflow contract.
 
 		self::assertIsString( $contract );
@@ -99,7 +99,7 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertSame( 0, preg_match( '/^\s*"\$validator"/m', $contract ) );
 	}
 
-	public function testWorkflowActionsArePinnedToImmutableCommits(): void {
+	public function test_workflow_actions_are_pinned_to_immutable_commits(): void {
 		foreach ( array( 'quality.yml', 'release-please.yml' ) as $workflow_name ) {
 			$workflow = $this->workflow( $workflow_name );
 			$matches  = array();

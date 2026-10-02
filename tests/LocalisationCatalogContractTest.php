@@ -7,7 +7,7 @@ namespace Tests;
 use PHPUnit\Framework\TestCase;
 
 final class LocalisationCatalogContractTest extends TestCase {
-	public function testCatalogueCheckRejectsWarningsAndStaleOutput(): void {
+	public function test_catalogue_check_rejects_warnings_and_stale_output(): void {
 		$composer = json_decode(
 			(string) file_get_contents( dirname( __DIR__ ) . '/composer.json' ), // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local catalogue contract.
 			true,
@@ -40,13 +40,13 @@ final class LocalisationCatalogContractTest extends TestCase {
 		self::assertStringContainsString( '--include=ran-booster.php,autoload.php,index.php,uninstall.php,RAN,views,assets', $script );
 		self::assertStringContainsString( '--exclude=assets/lib,tests,vendor,build,node_modules,ran-booster-workbench,.git,.github,.agents,.dex,scripts', $script );
 
-		$fixtureScript = file_get_contents( dirname( __DIR__ ) . '/scripts/make-test-i18n-fixture.sh' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local catalogue contract.
-		self::assertIsString( $fixtureScript );
-		self::assertStringContainsString( 'php_runner=( php -n )', $fixtureScript );
-		self::assertStringContainsString( '"$wp_cli" --info >/dev/null 2>&1', $fixtureScript );
-		self::assertStringContainsString( 'php_runner=( php )', $fixtureScript );
-		self::assertStringContainsString( "grep -qx 'WP-CLI 2.12.0' <<< \"\$wp_cli_version\"", $fixtureScript );
-		self::assertStringContainsString( '"${php_runner[@]}" "$wp_cli" i18n make-mo', $fixtureScript );
+		$fixture_script = file_get_contents( dirname( __DIR__ ) . '/scripts/make-test-i18n-fixture.sh' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local catalogue contract.
+		self::assertIsString( $fixture_script );
+		self::assertStringContainsString( 'php_runner=( php -n )', $fixture_script );
+		self::assertStringContainsString( '"$wp_cli" --info >/dev/null 2>&1', $fixture_script );
+		self::assertStringContainsString( 'php_runner=( php )', $fixture_script );
+		self::assertStringContainsString( "grep -qx 'WP-CLI 2.12.0' <<< \"\$wp_cli_version\"", $fixture_script );
+		self::assertStringContainsString( '"${php_runner[@]}" "$wp_cli" i18n make-mo', $fixture_script );
 
 		$workflow = file_get_contents( dirname( __DIR__ ) . '/.github/workflows/quality.yml' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local catalogue contract.
 		$readme   = file_get_contents( dirname( __DIR__ ) . '/README.md' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local catalogue contract.
@@ -56,20 +56,20 @@ final class LocalisationCatalogContractTest extends TestCase {
 		self::assertStringContainsString( 'WP-CLI 2.12.0', $readme );
 	}
 
-	public function testReleaseAllowlistContainsOnlyTheRuntimeCatalogue(): void {
+	public function test_release_allowlist_contains_only_the_runtime_catalogue(): void {
 		$root     = dirname( __DIR__ );
 		$manifest = file( $root . '/release-files.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file -- Local release contract.
 		self::assertIsArray( $manifest );
 		self::assertContains( 'languages', $manifest );
 		self::assertFileExists( $root . '/languages/ran-booster.pot' );
-		$languageFiles = scandir( $root . '/languages' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_scandir -- Local release contract.
-		if ( false === $languageFiles ) {
+		$language_files = scandir( $root . '/languages' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_scandir -- Local release contract.
+		if ( false === $language_files ) {
 			self::fail( 'Could not list the release catalogue directory.' );
 		}
-		self::assertSame( array( 'ran-booster.pot' ), array_values( array_diff( $languageFiles, array( '.', '..' ) ) ) );
+		self::assertSame( array( 'ran-booster.pot' ), array_values( array_diff( $language_files, array( '.', '..' ) ) ) );
 
-		foreach ( array( 'build-release.sh', 'verify-release.sh' ) as $scriptName ) {
-			$script = file_get_contents( $root . '/scripts/' . $scriptName ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
+		foreach ( array( 'build-release.sh', 'verify-release.sh' ) as $script_name ) {
+			$script = file_get_contents( $root . '/scripts/' . $script_name ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
 			self::assertIsString( $script );
 			self::assertStringContainsString( "'languages'", $script );
 		}

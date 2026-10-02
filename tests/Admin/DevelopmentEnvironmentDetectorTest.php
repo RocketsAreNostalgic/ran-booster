@@ -28,7 +28,7 @@ final class DevelopmentEnvironmentDetectorTest extends TestCase {
 	}
 
 	/** @return list<array{string, string, list<string>, bool}> */
-	public static function environmentProvider(): array {
+	public static function environment_provider(): array {
 		return array(
 			array( 'https://example.com', 'local', array(), true ),
 			array( 'https://example.com', 'development', array(), true ),
@@ -46,19 +46,19 @@ final class DevelopmentEnvironmentDetectorTest extends TestCase {
 		);
 	}
 
-	/** @param list<string> $developmentModes */
-	#[DataProvider( 'environmentProvider' )]
-	public function testDetectsBoundedDevelopmentSignals( string $homeUrl, string $environmentType, array $developmentModes, bool $expected ): void {
-		$GLOBALS['ran_booster_admin_test_home_url']                   = $homeUrl;
-		$GLOBALS['ran_booster_development_detector_environment_type'] = $environmentType;
-		$GLOBALS['ran_booster_development_detector_modes']            = $developmentModes;
+	/** @param list<string> $development_modes */
+	#[DataProvider( 'environment_provider' )]
+	public function test_detects_bounded_development_signals( string $home_url, string $environment_type, array $development_modes, bool $expected ): void {
+		$GLOBALS['ran_booster_admin_test_home_url']                   = $home_url;
+		$GLOBALS['ran_booster_development_detector_environment_type'] = $environment_type;
+		$GLOBALS['ran_booster_development_detector_modes']            = $development_modes;
 
 		self::assertSame( $expected, DevelopmentEnvironmentDetector::is_likely() );
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testEnabledWpDebugIsADevelopmentSignal(): void {
+	public function test_enabled_wp_debug_is_adevelopment_signal(): void {
 		define( 'WP_DEBUG', true );
 
 		self::assertTrue( DevelopmentEnvironmentDetector::is_likely() );

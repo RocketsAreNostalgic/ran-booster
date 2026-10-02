@@ -12,20 +12,20 @@ use RAN\Admin\Component\ProviderManagementTableRenderer;
 
 final class ProviderManagementTableRendererTest extends TestCase {
 
-	public function testItRendersTheBoundedAccessColumnSchemaAndDelegatesCellContent(): void {
-		$renderedColumns = array();
+	public function test_it_renders_the_bounded_access_column_schema_and_delegates_cell_content(): void {
+		$rendered_columns = array();
 		$html            = $this->render(
 			ProviderManagementTableRenderer::ACCESS,
 			array( array( 'value' => 'Profile <one>' ) ),
-			static function ( array $row, string $column ) use ( &$renderedColumns ): void {
-				$renderedColumns[] = $column;
+			static function ( array $row, string $column ) use ( &$rendered_columns ): void {
+				$rendered_columns[] = $column;
 				?>
 				<span data-cell="<?php echo esc_attr( $column ); ?>"><?php echo esc_html( $row['value'] ); ?></span>
 				<?php
 			}
 		);
 
-		self::assertSame( array( 'name', 'kind', 'scope', 'usage', 'health', 'actions' ), $renderedColumns );
+		self::assertSame( array( 'name', 'kind', 'scope', 'usage', 'health', 'actions' ), $rendered_columns );
 		self::assertStringContainsString( 'ran-booster-credential-table--access', $html );
 		self::assertStringContainsString( '<th scope="col">', $html );
 		self::assertStringContainsString( '>Credential type</a>', $html );
@@ -37,39 +37,39 @@ final class ProviderManagementTableRendererTest extends TestCase {
 		self::assertSame( 2, substr_count( $html, 'aria-disabled="true" tabindex="-1"' ) );
 	}
 
-	public function testItRendersTheWebhookSchemaWithoutAccessOnlyColumns(): void {
-		$renderedColumns = array();
+	public function test_it_renders_the_webhook_schema_without_access_only_columns(): void {
+		$rendered_columns = array();
 		$html            = $this->render(
 			ProviderManagementTableRenderer::WEBHOOK,
 			array( array( 'value' => 'Secret' ) ),
-			static function ( array $row, string $column ) use ( &$renderedColumns ): void {
+			static function ( array $row, string $column ) use ( &$rendered_columns ): void {
 				unset( $row );
-				$renderedColumns[] = $column;
+				$rendered_columns[] = $column;
 			}
 		);
 
-		self::assertSame( array( 'name', 'scope', 'usage', 'health', 'actions' ), $renderedColumns );
+		self::assertSame( array( 'name', 'scope', 'usage', 'health', 'actions' ), $rendered_columns );
 		self::assertStringContainsString( 'ran-booster-credential-table--webhook', $html );
 		self::assertStringNotContainsString( 'Credential type', $html );
 		self::assertSame( 5, substr_count( $html, '<th scope="col">' ) );
 	}
 
-	public function testItEscapesTheEmptyStateAndDoesNotInvokeTheRowCallback(): void {
-		$callbackInvoked = false;
+	public function test_it_escapes_the_empty_state_and_does_not_invoke_the_row_callback(): void {
+		$callback_invoked = false;
 		$html            = $this->render(
 			ProviderManagementTableRenderer::WEBHOOK,
 			array(),
-			static function () use ( &$callbackInvoked ): void {
-				$callbackInvoked = true;
+			static function () use ( &$callback_invoked ): void {
+				$callback_invoked = true;
 			},
 			'No <matching> secrets.'
 		);
 
-		self::assertFalse( $callbackInvoked );
+		self::assertFalse( $callback_invoked );
 		self::assertStringContainsString( '<td colspan="5">No &lt;matching&gt; secrets.</td>', $html );
 	}
 
-	public function testItOwnsEscapedPaginationChromeAndPreservesStructuredQueryFields(): void {
+	public function test_it_owns_escaped_pagination_chrome_and_preserves_structured_query_fields(): void {
 		$html = $this->render(
 			ProviderManagementTableRenderer::ACCESS,
 			array(),
@@ -102,7 +102,7 @@ final class ProviderManagementTableRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'aria-disabled="true"', $html );
 	}
 
-	public function testItRejectsUnsupportedTableTypesBeforeRendering(): void {
+	public function test_it_rejects_unsupported_table_types_before_rendering(): void {
 		$this->expectException( InvalidArgumentException::class );
 
 		( new ProviderManagementTableRenderer() )->render(
@@ -127,15 +127,15 @@ final class ProviderManagementTableRendererTest extends TestCase {
 
 	/**
 	 * @param list<array<string, mixed>> $rows
-	 * @param \Closure(array<string, mixed>, string): void $renderCell
-	 * @param array<string, mixed> $paginationOverrides
+	 * @param \Closure(array<string, mixed>, string): void $render_cell
+	 * @param array<string, mixed> $pagination_overrides
 	 */
 	private function render(
 		string $type,
 		array $rows,
-		\Closure $renderCell,
-		string $emptyMessage = 'Nothing found.',
-		array $paginationOverrides = array()
+		\Closure $render_cell,
+		string $empty_message = 'Nothing found.',
+		array $pagination_overrides = array()
 	): string {
 		$pagination = array_merge(
 			array(
@@ -153,15 +153,15 @@ final class ProviderManagementTableRendererTest extends TestCase {
 				'previous_url'     => 'https://example.test/list?paged=1',
 				'next_url'         => 'https://example.test/list?paged=1',
 			),
-			$paginationOverrides
+			$pagination_overrides
 		);
 
 		ob_start();
 		( new ProviderManagementTableRenderer() )->render(
 			$type,
 			$rows,
-			$emptyMessage,
-			$renderCell,
+			$empty_message,
+			$render_cell,
 			array_fill_keys(
 				array( 'name', 'kind', 'scope', 'usage', 'health' ),
 				'https://example.test/list?orderby=name&next=<unsafe>'

@@ -10,8 +10,8 @@ require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class PortabilityViewTest extends TestCase {
 
-	public function testRendersTheTwoModesAndAnEmptyImportReview(): void {
-		$html = $this->renderView();
+	public function test_renders_the_two_modes_and_an_empty_import_review(): void {
+		$html = $this->render_view();
 
 		self::assertStringContainsString( '>Transporter<', $html );
 		self::assertStringContainsString( 'Create a Transporter Blueprint', $html );
@@ -112,9 +112,9 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringNotContainsString( 'credential_id', $html );
 	}
 
-	public function testExportRendersExplicitEligibleAndUnavailableCredentialChoicesWithoutSensitiveMetadata(): void {
-		$html = $this->renderView(
-			exportCredentialGroups: array(
+	public function test_export_renders_explicit_eligible_and_unavailable_credential_choices_without_sensitive_metadata(): void {
+		$html = $this->render_view(
+			export_credential_groups: array(
 				array(
 					'code'        => 'gh',
 					'label'       => 'GitHub',
@@ -212,8 +212,8 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringNotContainsString( 'expiry-canary', $html );
 	}
 
-	public function testRendersAllActionsAndCredentialReconciliationFromSafeRows(): void {
-		$html = $this->renderView(
+	public function test_renders_all_actions_and_credential_reconciliation_from_safe_rows(): void {
+		$html = $this->render_view(
 			array(
 				$this->row( 'Install me', 'plugin/install.php', 'install', 'Not installed' ),
 				$this->row( 'Adopt me', 'plugin/adopt.php', 'adopt', 'Installed outside Booster' ),
@@ -272,29 +272,29 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringNotContainsString( 'credential-secret-canary', $html );
 	}
 
-	public function testExportShowsEmptyAndUnavailableStatesWithoutAnEnabledDownload(): void {
-		$empty = $this->renderView( array(), array() );
+	public function test_export_shows_empty_and_unavailable_states_without_an_enabled_download(): void {
+		$empty = $this->render_view( array(), array() );
 
 		self::assertStringContainsString( 'Booster is not managing any packages on this site yet.', $empty );
 		self::assertMatchesRegularExpression( '/Download Transporter Blueprint<\\/button>/', $empty );
 		self::assertStringContainsString( 'data-portability-export-submit disabled="disabled"', $empty );
 
-		$unavailable = $this->renderView( array(), array(), true );
+		$unavailable = $this->render_view( array(), array(), true );
 
 		self::assertStringContainsString( 'Booster could not load the managed package list.', $unavailable );
 		self::assertStringContainsString( 'data-portability-export-submit disabled="disabled"', $unavailable );
 
-		$credentialUnavailable = $this->renderView( exportCredentialsUnavailable: true );
-		self::assertStringContainsString( 'You can still create a package-only Blueprint.', $credentialUnavailable );
-		self::assertStringNotContainsString( 'data-portability-export-submit disabled="disabled"', $credentialUnavailable );
+		$credential_unavailable = $this->render_view( export_credentials_unavailable: true );
+		self::assertStringContainsString( 'You can still create a package-only Blueprint.', $credential_unavailable );
+		self::assertStringNotContainsString( 'data-portability-export-submit disabled="disabled"', $credential_unavailable );
 	}
 
-	public function testCredentialReviewRequiresOneExplicitSafeDecision(): void {
+	public function test_credential_review_requires_one_explicit_safe_decision(): void {
 		$row                       = $this->row( 'Private package', 'private/package.php', 'blocked', 'Credential required' );
 		$row['credential_ordinal'] = 0;
-		$html                      = $this->renderView(
+		$html                      = $this->render_view(
 			array( $row ),
-			credentialRows: array(
+			credential_rows: array(
 				array(
 					'ordinal'           => 0,
 					'provider_label'    => 'GitHub <Cloud>',
@@ -367,12 +367,12 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringNotContainsString( 'source-id-canary', $html );
 	}
 
-	public function testCredentialReviewExplainsWhenOnlyProtectedPackagesRemainUnchanged(): void {
+	public function test_credential_review_explains_when_only_protected_packages_remain_unchanged(): void {
 		$protected                       = $this->row( 'Protected Theme', 'protected-theme', 'protected', 'Managed differently' );
 		$protected['credential_ordinal'] = 0;
-		$html                            = $this->renderView(
+		$html                            = $this->render_view(
 			array( $protected ),
-			credentialRows: array(
+			credential_rows: array(
 				array(
 					'ordinal'           => 0,
 					'provider_label'    => 'Provider <Cloud>',
@@ -410,13 +410,13 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringNotContainsString( 'unchanged-source-id-canary', $html );
 	}
 
-	public function testManagedCredentialRecoveryIsSelectableWithoutAPackageChange(): void {
+	public function test_managed_credential_recovery_is_selectable_without_apackage_change(): void {
 		$managed                        = $this->row( 'Managed <Plugin>', 'managed/plugin.php', 'managed', 'Configuration matches' );
 		$managed['credential_ordinal']  = 0;
 		$managed['credential_recovery'] = true;
-		$html                           = $this->renderView(
+		$html                           = $this->render_view(
 			array( $managed ),
-			credentialRows: array(
+			credential_rows: array(
 				array(
 					'ordinal'           => 0,
 					'provider_label'    => 'GitHub',
@@ -453,30 +453,30 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( 'data-portability-select-all aria-label="Select all actionable changes" checked="checked"', $html );
 	}
 
-	public function testReviewRendersTheCompleteBoundedBlueprint(): void {
+	public function test_review_renders_the_complete_bounded_blueprint(): void {
 		$rows = array_map(
 			fn( int $index ): array => $this->row( 'Package ' . $index, 'package-' . $index . '/package.php', 'install', 'Ready' ),
 			range( 0, 127 )
 		);
 
-		$html = $this->renderView( $rows );
+		$html = $this->render_view( $rows );
 
 		self::assertSame( 128, substr_count( $html, 'data-portability-row="' ) );
 		self::assertStringContainsString( 'data-portability-row="127" data-portability-action="install"', $html );
 	}
 
-	public function testMigrationFlowHookIsZeroArgumentAndDiscardsPartialFailureOutput(): void {
-		$argumentCount = null;
+	public function test_migration_flow_hook_is_zero_argument_and_discards_partial_failure_output(): void {
+		$argument_count = null;
 		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_portability_render_migration_flows'] = array(
-			static function () use ( &$argumentCount ): void {
-				$argumentCount = func_num_args();
+			static function () use ( &$argument_count ): void {
+				$argument_count = func_num_args();
 				echo '<p>Safe guidance</p>';
 			},
 		);
 
 		try {
-			$html = $this->renderView();
-			self::assertSame( 0, $argumentCount );
+			$html = $this->render_view();
+			self::assertSame( 0, $argument_count );
 			self::assertStringContainsString( '<p>Safe guidance</p>', $html );
 
 			$GLOBALS['ran_booster_admin_view_actions']['ran_booster_portability_render_migration_flows'] = array(
@@ -486,13 +486,13 @@ final class PortabilityViewTest extends TestCase {
 				},
 			);
 
-			self::assertStringNotContainsString( 'guidance-secret-canary', $this->renderView() );
+			self::assertStringNotContainsString( 'guidance-secret-canary', $this->render_view() );
 		} finally {
 			unset( $GLOBALS['ran_booster_admin_view_actions']['ran_booster_portability_render_migration_flows'] );
 		}
 	}
 
-	public function testExtensionModeRendersWithTheChooserBeforeItsFlow(): void {
+	public function test_extension_mode_renders_with_the_chooser_before_its_flow(): void {
 		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_portability_render_migration_modes'] = array(
 			static function (): void {
 				echo '<button data-portability-mode="fixture" aria-controls="ran-booster-portability-fixture">Fixture migration</button>';
@@ -505,7 +505,7 @@ final class PortabilityViewTest extends TestCase {
 		);
 
 		try {
-			$html = $this->renderView();
+			$html = $this->render_view();
 		} finally {
 			unset(
 				$GLOBALS['ran_booster_admin_view_actions']['ran_booster_portability_render_migration_modes'],
@@ -531,26 +531,26 @@ final class PortabilityViewTest extends TestCase {
 	/**
 	 * @param array<int, array<string, mixed>> $rows Review rows.
 	 */
-	private function renderView(
+	private function render_view(
 		array $rows = array(),
-		?array $exportRows = null,
-		bool $exportUnavailable = false,
-		array $exportCredentialGroups = array(),
-		bool $exportCredentialsUnavailable = false,
-		array $credentialRows = array()
+		?array $export_rows = null,
+		bool $export_unavailable = false,
+		array $export_credential_groups = array(),
+		bool $export_credentials_unavailable = false,
+		array $credential_rows = array()
 	): string {
-		$portabilityReviewRows                   = $rows;
-		$portabilityCredentialRows               = $credentialRows;
-		$portabilityExportRows                   = $exportRows ?? array(
+		$portability_review_rows                   = $rows;
+		$portability_credential_rows               = $credential_rows;
+		$portability_export_rows                   = $export_rows ?? array(
 			array(
 				'name'       => 'Example <Plugin>',
 				'identifier' => 'example/example.php',
 				'type'       => 'plugin',
 			),
 		);
-		$portabilityExportUnavailable            = $exportUnavailable;
-		$portabilityExportCredentialGroups       = $exportCredentialGroups;
-		$portabilityExportCredentialsUnavailable = $exportCredentialsUnavailable;
+		$portability_export_unavailable            = $export_unavailable;
+		$portability_export_credential_groups       = $export_credential_groups;
+		$portability_export_credentials_unavailable = $export_credentials_unavailable;
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/portability.php';

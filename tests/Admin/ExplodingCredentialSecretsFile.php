@@ -18,7 +18,7 @@ final class ExplodingCredentialSecretsFile extends SecretsFile {
 		parent::__construct( $path, $constants );
 	}
 
-	public function saveCredential(
+	public function save_credential(
 		ProviderCode|string $provider,
 		?string $id,
 		array $metadata,

@@ -47,7 +47,7 @@ final class BoosterAssetsTest extends TestCase {
 	}
 
 	/** @return list<array{string}> */
-	public static function unrelatedAdminHookProvider(): array {
+	public static function unrelated_admin_hook_provider(): array {
 		return array(
 			array( 'index.php' ),
 			array( 'plugins.php' ),
@@ -57,7 +57,7 @@ final class BoosterAssetsTest extends TestCase {
 		);
 	}
 
-	public function testExtensionsPageReceivesTheCommonAndNativeModalAssets(): void {
+	public function test_extensions_page_receives_the_common_and_native_modal_assets(): void {
 		$this->booster()->load_scripts( 'ran-booster_page_ran-booster-extensions' );
 
 		self::assertSame( array( 'ran-booster-admin-shell', 'ran-booster-styles', 'thickbox' ), $GLOBALS['ran_booster_asset_test_enqueued_styles'] );
@@ -71,8 +71,8 @@ final class BoosterAssetsTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_localized_scripts'] );
 	}
 
-	#[DataProvider( 'unrelatedAdminHookProvider' )]
-	public function testUnrelatedAdminPagesReceiveNoBoosterAssets( string $hook ): void {
+	#[DataProvider( 'unrelated_admin_hook_provider' )]
+	public function test_unrelated_admin_pages_receive_no_booster_assets( string $hook ): void {
 		$this->booster()->load_scripts( $hook );
 
 		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_registered_styles'] );
@@ -82,7 +82,7 @@ final class BoosterAssetsTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_localized_scripts'] );
 	}
 
-	public function testExpiryNoticeLoadsItsSmallAssetOnAnyAdminScreenOnlyWhenVisible(): void {
+	public function test_expiry_notice_loads_its_small_asset_on_any_admin_screen_only_when_visible(): void {
 		$booster = $this->booster( true );
 
 		$booster->load_credential_expiry_notice_script( 'plugins.php' );
@@ -101,21 +101,21 @@ final class BoosterAssetsTest extends TestCase {
 		);
 	}
 
-	public function testExpiryNoticeAssetIsAbsentWithoutAVisibleReminder(): void {
+	public function test_expiry_notice_asset_is_absent_without_avisible_reminder(): void {
 		$this->booster()->load_credential_expiry_notice_script( 'plugins.php' );
 
 		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_registered_scripts'] );
 		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
 	}
 
-	public function testExpiryNoticeAssetIsAbsentForThePersistentStorageFailureNotice(): void {
+	public function test_expiry_notice_asset_is_absent_for_the_persistent_storage_failure_notice(): void {
 		$this->booster( true, false, false )->load_credential_expiry_notice_script( 'plugins.php' );
 
 		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_registered_scripts'] );
 		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
 	}
 
-	public function testBackgroundFailureNoticeLoadsItsSmallAssetOnAnyAdminScreenOnlyWhenVisible(): void {
+	public function test_background_failure_notice_loads_its_small_asset_on_any_admin_screen_only_when_visible(): void {
 		$booster = $this->booster( false, true );
 
 		$booster->load_background_deployment_failure_notice_script( 'plugins.php' );
@@ -134,7 +134,7 @@ final class BoosterAssetsTest extends TestCase {
 		);
 	}
 
-	public function testBackgroundFailureNoticeAssetIsAbsentWithoutAVisibleFailure(): void {
+	public function test_background_failure_notice_asset_is_absent_without_avisible_failure(): void {
 		$this->booster()->load_background_deployment_failure_notice_script( 'plugins.php' );
 
 		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_registered_scripts'] );
@@ -142,7 +142,7 @@ final class BoosterAssetsTest extends TestCase {
 	}
 
 	/** @return list<array{string}> */
-	public static function packageAdminHookProvider(): array {
+	public static function package_admin_hook_provider(): array {
 		return array(
 			array( 'ran-booster_page_ran-booster-plugins-create' ),
 			array( 'ran-booster_page_ran-booster-plugins' ),
@@ -151,8 +151,8 @@ final class BoosterAssetsTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'packageAdminHookProvider' )]
-	public function testPackagePagesReceiveCommonAssetsAndPickerLocalization( string $hook ): void {
+	#[DataProvider( 'package_admin_hook_provider' )]
+	public function test_package_pages_receive_common_assets_and_picker_localization( string $hook ): void {
 		$_GET['page'] = 'untrusted-mismatch';
 
 		$this->booster()->load_scripts( $hook );
@@ -224,7 +224,7 @@ final class BoosterAssetsTest extends TestCase {
 			$GLOBALS['ran_booster_asset_test_script_translations']
 		);
 		foreach ( array_column( $GLOBALS['ran_booster_asset_test_script_translations'], 'handle' ) as $handle ) {
-			$registeredAt = array_search(
+			$registered_at = array_search(
 				array(
 					'function' => 'wp_register_script',
 					'handle'   => $handle,
@@ -232,7 +232,7 @@ final class BoosterAssetsTest extends TestCase {
 				$GLOBALS['ran_booster_asset_test_script_events'],
 				true
 			);
-			$translatedAt = array_search(
+			$translated_at = array_search(
 				array(
 					'function' => 'wp_set_script_translations',
 					'handle'   => $handle,
@@ -240,9 +240,9 @@ final class BoosterAssetsTest extends TestCase {
 				$GLOBALS['ran_booster_asset_test_script_events'],
 				true
 			);
-			self::assertIsInt( $registeredAt );
-			self::assertIsInt( $translatedAt );
-			self::assertLessThan( $translatedAt, $registeredAt );
+			self::assertIsInt( $registered_at );
+			self::assertIsInt( $translated_at );
+			self::assertLessThan( $translated_at, $registered_at );
 		}
 		self::assertSame(
 			array( 'ran-booster-enhanced-mutations', 'wp-i18n' ),
@@ -299,10 +299,10 @@ final class BoosterAssetsTest extends TestCase {
 		}
 	}
 
-	public function testCommonStylesheetsPreserveCascadeWithPerComponentVersions(): void {
+	public function test_common_stylesheets_preserve_cascade_with_per_component_versions(): void {
 		$this->booster()->load_scripts( 'ran-booster_page_ran-booster-themes' );
 
-		$expectedStyles = array(
+		$expected_styles = array(
 			'ran-booster-admin-shell'                     => 'ran-admin-shell.css',
 			'ran-booster-00-foundations'                  => '00-foundations.css',
 			'ran-booster-10-buttons'                      => '10-buttons.css',
@@ -319,23 +319,23 @@ final class BoosterAssetsTest extends TestCase {
 			'ran-booster-70-credential-dialog'            => '70-credential-dialog.css',
 			'ran-booster-styles'                          => '80-responsive.css',
 		);
-		$previousHandle = null;
+		$previous_handle = null;
 
-		self::assertSame( array_keys( $expectedStyles ), array_keys( $GLOBALS['ran_booster_asset_test_registered_styles'] ) );
-		foreach ( $expectedStyles as $handle => $file ) {
-			$registeredStyle = $GLOBALS['ran_booster_asset_test_registered_styles'][ $handle ];
+		self::assertSame( array_keys( $expected_styles ), array_keys( $GLOBALS['ran_booster_asset_test_registered_styles'] ) );
+		foreach ( $expected_styles as $handle => $file ) {
+			$registered_style = $GLOBALS['ran_booster_asset_test_registered_styles'][ $handle ];
 
 			self::assertStringEndsWith(
 				'ran-booster-admin-shell' === $handle ? '/assets/' . $file : '/assets/ran-booster/' . $file,
-				$registeredStyle['source']
+				$registered_style['source']
 			);
-			self::assertIsInt( $registeredStyle['version'] );
-			self::assertSame( null === $previousHandle ? array() : array( $previousHandle ), $registeredStyle['dependencies'] );
-			$previousHandle = $handle;
+			self::assertIsInt( $registered_style['version'] );
+			self::assertSame( null === $previous_handle ? array() : array( $previous_handle ), $registered_style['dependencies'] );
+			$previous_handle = $handle;
 		}
 	}
 
-	public function testDocumentationTabReceivesTopLevelAndPageSpecificStyles(): void {
+	public function test_documentation_tab_receives_top_level_and_page_specific_styles(): void {
 		$_GET['tab'] = 'documentation';
 
 		$this->booster()->load_scripts( 'toplevel_page_ran-booster' );
@@ -349,7 +349,7 @@ final class BoosterAssetsTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_localized_scripts'] );
 	}
 
-	public function testPortabilityTabReceivesItsNarrowAjaxConfiguration(): void {
+	public function test_portability_tab_receives_its_narrow_ajax_configuration(): void {
 		$_GET['tab'] = 'portability';
 
 		$this->booster()->load_scripts( 'toplevel_page_ran-booster' );
@@ -378,7 +378,7 @@ final class BoosterAssetsTest extends TestCase {
 		);
 	}
 
-	public function testNativeTransporterRouteReceivesTheCanonicalPortabilityAssets(): void {
+	public function test_native_transporter_route_receives_the_canonical_portability_assets(): void {
 		$this->booster()->load_scripts( 'ran-booster_page_ran-booster-transporter' );
 
 		self::assertSame(
@@ -395,14 +395,14 @@ final class BoosterAssetsTest extends TestCase {
 		);
 	}
 
-	public function testProviderTabDetectionUsesRegisteredAdministrationMetadata(): void {
+	public function test_provider_tab_detection_uses_registered_administration_metadata(): void {
 		$container = new CoreContainer();
 		$container->bind(
 			ProviderRegistry::class,
 			new class() {
 
 				/** @return list<object> */
-				public function administrationMetadata(): array {
+				public function administration_metadata(): array {
 					return array(
 						(object) array(
 							'code' => \RAN\RepositoryProvider\ProviderCode::parse( 'gh' ),
@@ -413,27 +413,27 @@ final class BoosterAssetsTest extends TestCase {
 		);
 		$booster = new class( $container ) extends Booster {
 
-			public function providerTab( ?string $tab ): bool {
+			public function provider_tab( ?string $tab ): bool {
 				return $this->is_provider_admin_tab( $tab );
 			}
 		};
 
-		self::assertTrue( $booster->providerTab( 'gh' ) );
-		self::assertFalse( $booster->providerTab( 'unknown' ) );
-		self::assertFalse( $booster->providerTab( 'documentation' ) );
-		self::assertFalse( $booster->providerTab( null ) );
+		self::assertTrue( $booster->provider_tab( 'gh' ) );
+		self::assertFalse( $booster->provider_tab( 'unknown' ) );
+		self::assertFalse( $booster->provider_tab( 'documentation' ) );
+		self::assertFalse( $booster->provider_tab( null ) );
 	}
 
 	/** @return list<array{string}> */
-	public static function providerTabProvider(): array {
+	public static function provider_tab_provider(): array {
 		return array(
 			array( 'gh' ),
 			array( 'bb' ),
 		);
 	}
 
-	#[DataProvider( 'providerTabProvider' )]
-	public function testProviderTabsReceiveBoundedHtmxAlongsideCommonAssets( string $tab ): void {
+	#[DataProvider( 'provider_tab_provider' )]
+	public function test_provider_tabs_receive_bounded_htmx_alongside_common_assets( string $tab ): void {
 		$_GET['tab'] = $tab;
 
 		$this->booster()->load_scripts( 'toplevel_page_ran-booster' );
@@ -463,7 +463,7 @@ final class BoosterAssetsTest extends TestCase {
 	}
 
 	/** @return list<array{mixed}> */
-	public static function fallbackTabProvider(): array {
+	public static function fallback_tab_provider(): array {
 		return array(
 			array( null ),
 			array( 'unknown' ),
@@ -471,8 +471,8 @@ final class BoosterAssetsTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'fallbackTabProvider' )]
-	public function testFallbackTabsDoNotLoadHtmx( mixed $tab ): void {
+	#[DataProvider( 'fallback_tab_provider' )]
+	public function test_fallback_tabs_do_not_load_htmx( mixed $tab ): void {
 		if ( null !== $tab ) {
 			$_GET['tab'] = $tab;
 		}
@@ -502,14 +502,14 @@ final class BoosterAssetsTest extends TestCase {
 	}
 
 	/** @return list<array{string}> */
-	public static function staticTabProvider(): array {
+	public static function static_tab_provider(): array {
 		return array(
 			array( 'troubleshooting' ),
 		);
 	}
 
-	#[DataProvider( 'staticTabProvider' )]
-	public function testStaticTabsReceiveTopLevelStyleAlongsideCommonAssets( string $tab ): void {
+	#[DataProvider( 'static_tab_provider' )]
+	public function test_static_tabs_receive_top_level_style_alongside_common_assets( string $tab ): void {
 		$_GET['tab'] = $tab;
 
 		$this->booster()->load_scripts( 'toplevel_page_ran-booster' );
@@ -531,16 +531,16 @@ final class BoosterAssetsTest extends TestCase {
 	}
 
 	private function booster(
-		bool $expiryNoticeVisible = false,
-		bool $backgroundFailureNoticeVisible = false,
-		bool $expiryNoticeDismissible = true
+		bool $expiry_notice_visible = false,
+		bool $background_failure_notice_visible = false,
+		bool $expiry_notice_dismissible = true
 	): Booster {
 		$container = new CoreContainer();
 		$booster   = new class( $container ) extends Booster {
 
-			public bool $expiryNoticeVisible            = false;
-			public bool $expiryNoticeDismissible        = true;
-			public bool $backgroundFailureNoticeVisible = false;
+			public bool $expiry_notice_visible            = false;
+			public bool $expiry_notice_dismissible        = true;
+			public bool $background_failure_notice_visible = false;
 
 			protected function is_provider_admin_tab( ?string $tab ): bool {
 				return in_array( $tab, array( 'gh', 'bb' ), true );
@@ -548,7 +548,7 @@ final class BoosterAssetsTest extends TestCase {
 		};
 		$container->bind(
 			CredentialExpiryNotice::class,
-			static fn (): object => new class( $booster->expiryNoticeVisible, $booster->expiryNoticeDismissible ) {
+			static fn (): object => new class( $booster->expiry_notice_visible, $booster->expiry_notice_dismissible ) {
 				public function __construct( private bool $visible, private bool $dismissible ) {
 				}
 
@@ -559,7 +559,7 @@ final class BoosterAssetsTest extends TestCase {
 		);
 		$container->bind(
 			DeploymentAdminPresenter::class,
-			static fn (): object => new class( $booster->backgroundFailureNoticeVisible ) {
+			static fn (): object => new class( $booster->background_failure_notice_visible ) {
 				public function __construct( private bool $visible ) {
 				}
 
@@ -580,11 +580,11 @@ final class BoosterAssetsTest extends TestCase {
 				}
 			}
 		);
-		$booster->boosterPath                    = dirname( __DIR__, 2 );
-		$booster->boosterUrl                     = 'https://example.test/wp-content/plugins/ran-booster';
-		$booster->expiryNoticeVisible            = $expiryNoticeVisible;
-		$booster->expiryNoticeDismissible        = $expiryNoticeDismissible;
-		$booster->backgroundFailureNoticeVisible = $backgroundFailureNoticeVisible;
+		$booster->booster_path                    = dirname( __DIR__, 2 );
+		$booster->booster_url                     = 'https://example.test/wp-content/plugins/ran-booster';
+		$booster->expiry_notice_visible            = $expiry_notice_visible;
+		$booster->expiry_notice_dismissible        = $expiry_notice_dismissible;
+		$booster->background_failure_notice_visible = $background_failure_notice_visible;
 
 		return $booster;
 	}

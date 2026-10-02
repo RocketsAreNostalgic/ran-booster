@@ -13,10 +13,10 @@ use RAN\Deployment\DeploymentPolicy;
 
 final class PackageBranchReadinessViewTest extends TestCase {
 
-	#[DataProvider( 'sourceSettingsModeProvider' )]
-	public function testSourceSettingsOnlyRenderBranchReadinessForSavedPackages( string $packageSourceMode, bool $expectsReadiness ): void {
-		$packageMutationAvailable = true;
-		$packageSourceChoices     = array(
+	#[DataProvider( 'source_settings_mode_provider' )]
+	public function test_source_settings_only_render_branch_readiness_for_saved_packages( string $package_source_mode, bool $expects_readiness ): void {
+		$package_mutation_available = true;
+		$package_source_choices     = array(
 			'branch' => array(
 				'heading'           => 'Branch',
 				'description'       => 'Deploy a saved repository branch.',
@@ -27,39 +27,39 @@ final class PackageBranchReadinessViewTest extends TestCase {
 				'client_hydratable' => false,
 			),
 		);
-		$packageFieldForm         = 'edit' === $packageSourceMode ? 'ran-booster-package-edit-form' : '';
-		$packageFieldLayout       = 'grid';
-		$packageSourceView        = 'branch';
-		$showBranchSettings       = true;
-		$releaseManaged           = false;
-		$branchReadOnly           = false;
-		$branchValue              = 'main';
-		$subdirectoryValue        = '';
-		$packageAdvancedSections  = array();
-		$packageAdvancedSummary   = 'Branch · provider default';
-		$packageAdvancedOpen      = false;
-		$packageRepositoryReady   = true;
-		$packageSource            = array();
-		$packageView              = new class() {
+		$package_field_form         = 'edit' === $package_source_mode ? 'ran-booster-package-edit-form' : '';
+		$package_field_layout       = 'grid';
+		$package_source_view        = 'branch';
+		$show_branch_settings       = true;
+		$release_managed           = false;
+		$branch_read_only           = false;
+		$branch_value              = 'main';
+		$subdirectory_value        = '';
+		$package_advanced_sections  = array();
+		$package_advanced_summary   = 'Branch · provider default';
+		$package_advanced_open      = false;
+		$package_repository_ready   = true;
+		$package_source            = array();
+		$package_view              = new class() {
 			public function get_type(): string {
 				return 'plugin';
 			}
 		};
 
-		if ( $expectsReadiness ) {
-			$providerCode                 = 'gh';
-			$settingsUrl                  = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
-			$providerWebhookAvailable     = true;
-			$deploymentPolicy             = DeploymentPolicy::MANUAL->value;
-			$packageBranchReadiness       = null;
-			$repositoryBranchCheckOutcome = null;
+		if ( $expects_readiness ) {
+			$provider_code                 = 'gh';
+			$settings_url                  = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+			$provider_webhook_available     = true;
+			$deployment_policy             = DeploymentPolicy::MANUAL->value;
+			$package_branch_readiness       = null;
+			$repository_branch_check_outcome = null;
 		}
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/source-settings.php';
 		$html = (string) ob_get_clean();
 
-		if ( $expectsReadiness ) {
+		if ( $expects_readiness ) {
 			self::assertStringContainsString( 'id="ran-booster-branch-readiness"', $html );
 			self::assertStringContainsString( '>Save settings and check</button>', $html );
 		} else {
@@ -69,21 +69,21 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	}
 
 	/** @return array<string, array{string, bool}> */
-	public static function sourceSettingsModeProvider(): array {
+	public static function source_settings_mode_provider(): array {
 		return array(
 			'new package'   => array( 'create', false ),
 			'saved package' => array( 'edit', true ),
 		);
 	}
 
-	public function testViewReportsBoundedLocalEvidenceWithoutClaimingRemoteWebhookState(): void {
-		$providerCode             = 'gh';
-		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
-		$providerWebhookAvailable = true;
-		$branchValue              = 'main';
-		$deploymentPolicy         = DeploymentPolicy::AUTOMATIC->value;
-		$isPackageEdit            = true;
-		$packageBranchReadiness   = array(
+	public function test_view_reports_bounded_local_evidence_without_claiming_remote_webhook_state(): void {
+		$provider_code             = 'gh';
+		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_webhook_available = true;
+		$branch_value              = 'main';
+		$deployment_policy         = DeploymentPolicy::AUTOMATIC->value;
+		$is_package_edit            = true;
+		$package_branch_readiness   = array(
 			'retained'             => false,
 			'webhook_settings_url' => 'https://github.com/owner/example/settings/hooks',
 			'site'                 => array(
@@ -99,10 +99,10 @@ final class PackageBranchReadinessViewTest extends TestCase {
 				'local_secret_coverage' => 'repository',
 			),
 		);
-		$providerCode             = 'gh';
-		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
-		$providerWebhookAvailable = true;
-		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
+		$provider_code             = 'gh';
+		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_webhook_available = true;
+		$deployment_policy         = DeploymentPolicy::MANUAL->value;
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
@@ -130,11 +130,11 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringContainsString( '>Manage webhooks</a>', $html );
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=gh&amp;panel=repositories&amp;repository=repo-42&amp;repository_view=branch"', $html );
 		self::assertStringNotContainsString( 'repository=repo-42#', $html );
-		$checkPosition  = strpos( $html, '>Save settings and check</button>' );
-		$managePosition = strrpos( $html, '>Manage webhooks</a>' );
-		self::assertIsInt( $checkPosition );
-		self::assertIsInt( $managePosition );
-		self::assertTrue( $checkPosition < $managePosition );
+		$check_position  = strpos( $html, '>Save settings and check</button>' );
+		$manage_position = strrpos( $html, '>Manage webhooks</a>' );
+		self::assertIsInt( $check_position );
+		self::assertIsInt( $manage_position );
+		self::assertTrue( $check_position < $manage_position );
 		self::assertStringContainsString( 'form="ran-booster-package-edit-form"', $html );
 		self::assertStringContainsString( 'hx-post=', $html );
 		self::assertStringContainsString( 'hx-post="/wp-admin/admin.php?', $html );
@@ -156,14 +156,14 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( 'ran-booster-badge--error', $html );
 	}
 
-	public function testMissingStableRepositoryIdentityDoesNotProvideANavigableWebhookRoute(): void {
-		$providerCode             = 'gh';
-		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
-		$providerWebhookAvailable = true;
-		$branchValue              = 'main';
-		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
-		$isPackageEdit            = true;
-		$packageBranchReadiness   = array(
+	public function test_missing_stable_repository_identity_does_not_provide_anavigable_webhook_route(): void {
+		$provider_code             = 'gh';
+		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_webhook_available = true;
+		$branch_value              = 'main';
+		$deployment_policy         = DeploymentPolicy::MANUAL->value;
+		$is_package_edit            = true;
+		$package_branch_readiness   = array(
 			'site'       => array(
 				'status'       => 'ready',
 				'reason_codes' => array(),
@@ -183,14 +183,14 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( 'panel=repositories', $html );
 	}
 
-	public function testMissingPackageEditContextDefaultsToNonEditableWithoutWarnings(): void {
-		$providerCode             = 'gh';
-		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
-		$providerWebhookAvailable = true;
-		$branchValue              = 'main';
-		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
-		$packageMutationAvailable = true;
-		$packageBranchReadiness   = array(
+	public function test_missing_package_edit_context_defaults_to_non_editable_without_warnings(): void {
+		$provider_code             = 'gh';
+		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_webhook_available = true;
+		$branch_value              = 'main';
+		$deployment_policy         = DeploymentPolicy::MANUAL->value;
+		$package_mutation_available = true;
+		$package_branch_readiness   = array(
 			'site'       => array(
 				'status'       => 'ready',
 				'reason_codes' => array(),
@@ -200,7 +200,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 				'local_secret_coverage' => 'unknown',
 			),
 		);
-		$bufferLevel              = ob_get_level();
+		$buffer_level              = ob_get_level();
 
 		// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler, WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test-only handler promotes render warnings to exceptions.
 		set_error_handler(
@@ -211,14 +211,14 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		// phpcs:enable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler, WordPress.Security.EscapeOutput.ExceptionNotEscaped
 
 		try {
-			$html = ( static function () use ( $providerCode, $settingsUrl, $providerWebhookAvailable, $branchValue, $deploymentPolicy, $packageMutationAvailable, $packageBranchReadiness ): string {
+			$html = ( static function () use ( $provider_code, $settings_url, $provider_webhook_available, $branch_value, $deployment_policy, $package_mutation_available, $package_branch_readiness ): string {
 				ob_start();
 				require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
 
 				return (string) ob_get_clean();
 			} )();
 		} finally {
-			while ( ob_get_level() > $bufferLevel ) {
+			while ( ob_get_level() > $buffer_level ) {
 				ob_end_clean();
 			}
 
@@ -229,11 +229,11 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringContainsString( '<button type="button" class="button" disabled aria-disabled="true">Manage webhooks</button>', $html );
 	}
 
-	public function testReleaseManagedBranchPaneRetainsCleanupWithoutBranchReadinessControls(): void {
-		$providerCode             = 'gh';
-		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
-		$packageMutationAvailable = true;
-		$packageSourceChoices     = array(
+	public function test_release_managed_branch_pane_retains_cleanup_without_branch_readiness_controls(): void {
+		$provider_code             = 'gh';
+		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$package_mutation_available = true;
+		$package_source_choices     = array(
 			'branch' => array(
 				'heading'           => 'Branch',
 				'description'       => 'Deploy a saved repository branch.',
@@ -244,25 +244,25 @@ final class PackageBranchReadinessViewTest extends TestCase {
 				'client_hydratable' => false,
 			),
 		);
-		$packageSourceMode        = 'edit';
-		$packageFieldLayout       = 'grid';
-		$packageSourceView        = 'branch';
-		$showBranchSettings       = true;
-		$releaseManaged           = true;
-		$branchReadOnly           = true;
-		$branchValue              = 'main';
-		$subdirectoryValue        = '';
-		$packageAdvancedSections  = array();
-		$packageAdvancedSummary   = 'Published releases · Active';
-		$packageAdvancedOpen      = false;
-		$packageRepositoryReady   = true;
-		$packageSource            = array();
-		$packageView              = new class() {
+		$package_source_mode        = 'edit';
+		$package_field_layout       = 'grid';
+		$package_source_view        = 'branch';
+		$show_branch_settings       = true;
+		$release_managed           = true;
+		$branch_read_only           = true;
+		$branch_value              = 'main';
+		$subdirectory_value        = '';
+		$package_advanced_sections  = array();
+		$package_advanced_summary   = 'Published releases · Active';
+		$package_advanced_open      = false;
+		$package_repository_ready   = true;
+		$package_source            = array();
+		$package_view              = new class() {
 			public function get_type(): string {
 				return 'plugin';
 			}
 		};
-		$packageWebhookCleanup    = array(
+		$package_webhook_cleanup    = array(
 			'context' => new WebhookCleanupContext(
 				'plugin',
 				'example/example.php',
@@ -280,7 +280,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 			),
 			'actions' => array(),
 		);
-		$packageBranchReadiness   = array(
+		$package_branch_readiness   = array(
 			'retained'   => true,
 			'site'       => array(
 				'status'       => 'ready',
@@ -307,17 +307,17 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringContainsString( '>Save settings and check</button>', $html );
 	}
 
-	#[DataProvider( 'subdirectoryChecklistProvider' )]
-	public function testSubdirectoryHasItsOwnReadinessChecklistRow( ?string $outcome, string $class, string $message ): void {
-		$providerCode             = 'gh';
-		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
-		$providerWebhookAvailable = true;
-		$branchValue              = 'main';
-		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
-		$savedSubdirectoryValue   = 'packages/example';
-		$packageMutationAvailable = true;
-		$isPackageEdit            = true;
-		$packageBranchReadiness   = array(
+	#[DataProvider( 'subdirectory_checklist_provider' )]
+	public function test_subdirectory_has_its_own_readiness_checklist_row( ?string $outcome, string $class, string $message ): void {
+		$provider_code             = 'gh';
+		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_webhook_available = true;
+		$branch_value              = 'main';
+		$deployment_policy         = DeploymentPolicy::MANUAL->value;
+		$saved_subdirectory_value   = 'packages/example';
+		$package_mutation_available = true;
+		$is_package_edit            = true;
+		$package_branch_readiness   = array(
 			'webhook_settings_url' => 'https://github.com/owner/example/settings/hooks',
 			'site'                 => array(
 				'status'       => 'ready',
@@ -332,7 +332,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 			),
 		);
 		if ( null !== $outcome ) {
-			$repositoryBranchCheckOutcome = $outcome;
+			$repository_branch_check_outcome = $outcome;
 		}
 
 		ob_start();
@@ -344,7 +344,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	}
 
 	/** @return array<string, array{string|null, string, string}> */
-	public static function subdirectoryChecklistProvider(): array {
+	public static function subdirectory_checklist_provider(): array {
 		return array(
 			'not checked'       => array( null, 'is-pending', 'The subdirectory <code>packages/example</code> will be checked when Booster prepares the deployment archive.' ),
 			'accessed'          => array( 'verified', 'is-ok', 'The subdirectory <code>packages/example</code> is accessible at this branch.' ),
@@ -353,14 +353,14 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		);
 	}
 
-	public function testSiteReadinessDoesNotMislabelAValidRepositoryIdentity(): void {
-		$providerCode             = 'gh';
-		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
-		$providerWebhookAvailable = true;
-		$branchValue              = 'main';
-		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
-		$isPackageEdit            = true;
-		$packageBranchReadiness   = array(
+	public function test_site_readiness_does_not_mislabel_avalid_repository_identity(): void {
+		$provider_code             = 'gh';
+		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_webhook_available = true;
+		$branch_value              = 'main';
+		$deployment_policy         = DeploymentPolicy::MANUAL->value;
+		$is_package_edit            = true;
+		$package_branch_readiness   = array(
 			'webhook_settings_url' => 'https://github.com/owner/example/settings/hooks',
 			'site'                 => array(
 				'status'       => 'blocked',
@@ -392,14 +392,14 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( 'GitHub', $html );
 	}
 
-	public function testSavedBranchUsesLocalIdentityEvidenceWithoutClaimingBranchReadiness(): void {
-		$providerCode             = 'gh';
-		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
-		$providerWebhookAvailable = true;
-		$branchValue              = 'test';
-		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
-		$isPackageEdit            = true;
-		$packageBranchReadiness   = array(
+	public function test_saved_branch_uses_local_identity_evidence_without_claiming_branch_readiness(): void {
+		$provider_code             = 'gh';
+		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_webhook_available = true;
+		$branch_value              = 'test';
+		$deployment_policy         = DeploymentPolicy::MANUAL->value;
+		$is_package_edit            = true;
+		$package_branch_readiness   = array(
 			'site'       => array(
 				'status'       => 'ready',
 				'reason_codes' => array(),
@@ -424,19 +424,19 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( 'ready for manual deployments', strtolower( $html ) );
 	}
 
-	public function testPublishedReleasesKeepsTheSavedRepositoryIdentityGreen(): void {
-		$providerCode             = 'gh';
-		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
-		$providerWebhookAvailable = true;
-		$branchValue              = 'main';
-		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
-		$isPackageEdit            = true;
-		$releaseManaged           = true;
-		$packageCurrentSource     = 'release_asset';
-		$packageSourceView        = 'branch';
-		$providerRepositoryId     = 'repo-42';
-		$repositoryValue          = 'owner/example';
-		$packageBranchReadiness   = null;
+	public function test_published_releases_keeps_the_saved_repository_identity_green(): void {
+		$provider_code             = 'gh';
+		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_webhook_available = true;
+		$branch_value              = 'main';
+		$deployment_policy         = DeploymentPolicy::MANUAL->value;
+		$is_package_edit            = true;
+		$release_managed           = true;
+		$package_current_source     = 'release_asset';
+		$package_source_view        = 'branch';
+		$provider_repository_id     = 'repo-42';
+		$repository_value          = 'owner/example';
+		$package_branch_readiness   = null;
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
@@ -450,17 +450,17 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Manage webhooks</button>', $html );
 	}
 
-	public function testBranchPackageUsesItsPersistedIdentityWhenReadinessOmitsIt(): void {
-		$providerCode             = 'gh';
-		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
-		$providerWebhookAvailable = true;
-		$branchValue              = 'main';
-		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
-		$providerRepositoryId     = '1315521150';
-		$repositoryValue          = 'owner/booster-fixture-plugin';
-		$releaseManaged           = false;
-		$isPackageEdit            = true;
-		$packageBranchReadiness   = array(
+	public function test_branch_package_uses_its_persisted_identity_when_readiness_omits_it(): void {
+		$provider_code             = 'gh';
+		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_webhook_available = true;
+		$branch_value              = 'main';
+		$deployment_policy         = DeploymentPolicy::MANUAL->value;
+		$provider_repository_id     = '1315521150';
+		$repository_value          = 'owner/booster-fixture-plugin';
+		$release_managed           = false;
+		$is_package_edit            = true;
+		$package_branch_readiness   = array(
 			'site'       => array(
 				'status'       => 'ready',
 				'reason_codes' => array(),
@@ -480,17 +480,17 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringContainsString( '>Manage webhooks</a>', $html );
 	}
 
-	public function testBranchPackageDoesNotUsePersistedIdentityWhenReadinessReportsAConflict(): void {
-		$providerCode             = 'gh';
-		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
-		$providerWebhookAvailable = true;
-		$branchValue              = 'main';
-		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
-		$providerRepositoryId     = '1315521150';
-		$repositoryValue          = 'owner/booster-fixture-plugin';
-		$releaseManaged           = false;
-		$isPackageEdit            = true;
-		$packageBranchReadiness   = array(
+	public function test_branch_package_does_not_use_persisted_identity_when_readiness_reports_aconflict(): void {
+		$provider_code             = 'gh';
+		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_webhook_available = true;
+		$branch_value              = 'main';
+		$deployment_policy         = DeploymentPolicy::MANUAL->value;
+		$provider_repository_id     = '1315521150';
+		$repository_value          = 'owner/booster-fixture-plugin';
+		$release_managed           = false;
+		$is_package_edit            = true;
+		$package_branch_readiness   = array(
 			'site'       => array(
 				'status'       => 'ready',
 				'reason_codes' => array(),
@@ -510,16 +510,16 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringContainsString( '<button type="button" class="button" disabled aria-disabled="true">Manage webhooks</button>', $html );
 	}
 
-	public function testBranchPackageDoesNotUsePersistedIdentityWhenRepositoryLocatorIsInvalid(): void {
-		$providerCode             = 'gh';
-		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
-		$providerWebhookAvailable = true;
-		$branchValue              = 'main';
-		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
-		$providerRepositoryId     = '1315521150';
-		$repositoryValue          = 'owner/booster-fixture-plugin';
-		$releaseManaged           = false;
-		$packageBranchReadiness   = array(
+	public function test_branch_package_does_not_use_persisted_identity_when_repository_locator_is_invalid(): void {
+		$provider_code             = 'gh';
+		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_webhook_available = true;
+		$branch_value              = 'main';
+		$deployment_policy         = DeploymentPolicy::MANUAL->value;
+		$provider_repository_id     = '1315521150';
+		$repository_value          = 'owner/booster-fixture-plugin';
+		$release_managed           = false;
+		$package_branch_readiness   = array(
 			'site'       => array(
 				'status'       => 'ready',
 				'reason_codes' => array(),
@@ -539,16 +539,16 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertMatchesRegularExpression( '/<button type="button" class="button" disabled aria-disabled="true">Manage webhooks<\\/button>/', $html );
 	}
 
-	#[DataProvider( 'repositoryBranchCheckOutcomeProvider' )]
-	public function testSavedRepositoryStateReflectsTheExplicitRemoteCheck( string $outcome, string $class, string $message ): void {
-		$providerCode                 = 'gh';
-		$settingsUrl                  = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
-		$providerWebhookAvailable     = true;
-		$branchValue                  = 'test';
-		$deploymentPolicy             = DeploymentPolicy::MANUAL->value;
-		$isPackageEdit                = true;
-		$repositoryBranchCheckOutcome = $outcome;
-		$packageBranchReadiness       = array(
+	#[DataProvider( 'repository_branch_check_outcome_provider' )]
+	public function test_saved_repository_state_reflects_the_explicit_remote_check( string $outcome, string $class, string $message ): void {
+		$provider_code                 = 'gh';
+		$settings_url                  = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_webhook_available     = true;
+		$branch_value                  = 'test';
+		$deployment_policy             = DeploymentPolicy::MANUAL->value;
+		$is_package_edit                = true;
+		$repository_branch_check_outcome = $outcome;
+		$package_branch_readiness       = array(
 			'site'       => array(
 				'status'       => 'ready',
 				'reason_codes' => array(),
@@ -568,7 +568,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	}
 
 	/** @return array<string, array{string, string, string}> */
-	public static function repositoryBranchCheckOutcomeProvider(): array {
+	public static function repository_branch_check_outcome_provider(): array {
 		return array(
 			'verified'             => array( 'verified', 'is-ok', 'The branch <code>test</code> is accessible with the saved repository settings.' ),
 			'unable to check'      => array( 'unable_to_check', 'is-warning', 'The branch <code>test</code> is saved, but access could not be verified.' ),
@@ -578,22 +578,22 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'blockedReceiverReasonProvider' )]
-	public function testBlockedReceiverReasonsProvideBoundedDiagnosticsGuidance(
-		string $reasonCode,
-		string $expectedMessage
+	#[DataProvider( 'blocked_receiver_reason_provider' )]
+	public function test_blocked_receiver_reasons_provide_bounded_diagnostics_guidance(
+		string $reason_code,
+		string $expected_message
 	): void {
-		$providerCode             = 'bb';
-		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
-		$providerWebhookAvailable = true;
-		$branchValue              = 'main';
-		$deploymentPolicy         = DeploymentPolicy::MANUAL->value;
-		$isPackageEdit            = true;
-		$packageBranchReadiness   = array(
+		$provider_code             = 'bb';
+		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_webhook_available = true;
+		$branch_value              = 'main';
+		$deployment_policy         = DeploymentPolicy::MANUAL->value;
+		$is_package_edit            = true;
+		$package_branch_readiness   = array(
 			'webhook_settings_url' => 'https://bitbucket.org/workspace/example/admin/webhooks',
 			'site'                 => array(
 				'status'       => 'blocked',
-				'reason_codes' => array( $reasonCode ),
+				'reason_codes' => array( $reason_code ),
 				'callback_url' => 'https://site.example/wp-json/ran-booster/v1/webhooks/bb',
 			),
 			'repository'           => array(
@@ -617,7 +617,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	}
 
 	/** @return array<string, array{string, string}> */
-	public static function blockedReceiverReasonProvider(): array {
+	public static function blocked_receiver_reason_provider(): array {
 		return array(
 			'database unavailable'         => array(
 				'database_unavailable',
@@ -638,14 +638,14 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		);
 	}
 
-	public function testAutomaticModeShowsAWarningWhenLocalReadinessIsIncomplete(): void {
-		$providerCode             = 'gh';
-		$settingsUrl              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
-		$providerWebhookAvailable = true;
-		$branchValue              = 'main';
-		$deploymentPolicy         = DeploymentPolicy::AUTOMATIC->value;
-		$isPackageEdit            = true;
-		$packageBranchReadiness   = null;
+	public function test_automatic_mode_shows_awarning_when_local_readiness_is_incomplete(): void {
+		$provider_code             = 'gh';
+		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_webhook_available = true;
+		$branch_value              = 'main';
+		$deployment_policy         = DeploymentPolicy::AUTOMATIC->value;
+		$is_package_edit            = true;
+		$package_branch_readiness   = null;
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
@@ -656,15 +656,15 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringContainsString( 'Local webhook requirements need attention.', $html );
 	}
 
-	public function testVerifiedRepositoryBranchCheckUsesOnlyTheGreenRepositoryRow(): void {
-		$providerCode                 = 'gh';
-		$settingsUrl                  = 'https://example.test/wp-admin/admin.php?page=ran-booster-themes&package=example-theme';
-		$providerWebhookAvailable     = true;
-		$branchValue                  = 'main';
-		$deploymentPolicy             = DeploymentPolicy::MANUAL->value;
-		$isPackageEdit                = true;
-		$savedSubdirectoryValue       = '';
-		$packageBranchReadiness       = array(
+	public function test_verified_repository_branch_check_uses_only_the_green_repository_row(): void {
+		$provider_code                 = 'gh';
+		$settings_url                  = 'https://example.test/wp-admin/admin.php?page=ran-booster-themes&package=example-theme';
+		$provider_webhook_available     = true;
+		$branch_value                  = 'main';
+		$deployment_policy             = DeploymentPolicy::MANUAL->value;
+		$is_package_edit                = true;
+		$saved_subdirectory_value       = '';
+		$package_branch_readiness       = array(
 			'site'       => array(
 				'status'       => 'ready',
 				'reason_codes' => array(),
@@ -675,7 +675,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 				'local_secret_coverage' => 'none',
 			),
 		);
-		$repositoryBranchCheckOutcome = 'verified';
+		$repository_branch_check_outcome = 'verified';
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
@@ -692,15 +692,15 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertDoesNotMatchRegularExpression( '/hx-push-url="[^"]*ran_booster_repository_branch_check/', $html );
 	}
 
-	public function testFailedRepositoryBranchCheckShowsOneTransientWarningWithoutClaimingReadiness(): void {
-		$providerCode                 = 'gh';
-		$settingsUrl                  = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
-		$providerWebhookAvailable     = true;
-		$branchValue                  = 'main';
-		$deploymentPolicy             = DeploymentPolicy::AUTOMATIC->value;
-		$isPackageEdit                = true;
-		$packageBranchReadiness       = null;
-		$repositoryBranchCheckOutcome = 'unable_to_check';
+	public function test_failed_repository_branch_check_shows_one_transient_warning_without_claiming_readiness(): void {
+		$provider_code                 = 'gh';
+		$settings_url                  = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_webhook_available     = true;
+		$branch_value                  = 'main';
+		$deployment_policy             = DeploymentPolicy::AUTOMATIC->value;
+		$is_package_edit                = true;
+		$package_branch_readiness       = null;
+		$repository_branch_check_outcome = 'unable_to_check';
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';

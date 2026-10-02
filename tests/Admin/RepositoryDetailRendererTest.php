@@ -11,7 +11,7 @@ use RAN\Admin\Component\RepositoryDetailRenderer;
 
 final class RepositoryDetailRendererTest extends TestCase {
 
-	public function testStatusRendersMixedPackagesAndIntegrationHistoryWithoutMutationAuthority(): void {
+	public function test_status_renders_mixed_packages_and_integration_history_without_mutation_authority(): void {
 		$row = array(
 			'repository'        => 'owner/shared',
 			'repository_url'    => 'https://github.com/owner/shared',
@@ -91,8 +91,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 			),
 		);
 
-		$webhookRendered = false;
-		$releaseRendered = false;
+		$webhook_rendered = false;
+		$release_rendered = false;
 		ob_start();
 		( new RepositoryDetailRenderer() )->render(
 			$row,
@@ -102,23 +102,23 @@ final class RepositoryDetailRendererTest extends TestCase {
 			true,
 			'Receiver ready.',
 			'status',
-			$this->viewUrls(),
-			$this->viewRequestUrls(),
-			static function () use ( &$webhookRendered ): bool {
-				$webhookRendered = true;
+			$this->view_urls(),
+			$this->view_request_urls(),
+			static function () use ( &$webhook_rendered ): bool {
+				$webhook_rendered = true;
 				echo '<div data-test-webhook></div>';
 
 				return true;
 			},
-			static function () use ( &$releaseRendered ): void {
-					$releaseRendered = true;
+			static function () use ( &$release_rendered ): void {
+					$release_rendered = true;
 					echo '<div data-test-release></div>';
 			}
 		);
 		$html = (string) ob_get_clean();
 
-		self::assertFalse( $webhookRendered );
-		self::assertFalse( $releaseRendered );
+		self::assertFalse( $webhook_rendered );
+		self::assertFalse( $release_rendered );
 		self::assertStringContainsString( '2 packages · Conflicting sources', $html );
 		self::assertStringContainsString( 'Conflicting sources.', $html );
 		self::assertStringContainsString( 'Review the package settings before using release workflow.', $html );
@@ -140,16 +140,16 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( '<h4>Release workflow</h4>', $html );
 		self::assertStringContainsString( 'Flux de publication — owner/theme', $html );
 		self::assertStringContainsString( 'Release automation — owner/legacy.php', $html );
-		$webhookHistoryPosition = strpos( $html, 'Configured at last check' );
-		$releaseHistoryPosition = strpos( $html, '<h4>Release workflow</h4>' );
-		$legacyHistoryPosition  = strpos( $html, 'Release automation — owner/legacy.php' );
-		self::assertIsInt( $webhookHistoryPosition );
-		self::assertIsInt( $releaseHistoryPosition );
-		self::assertIsInt( $legacyHistoryPosition );
-		self::assertTrue( $webhookHistoryPosition < $releaseHistoryPosition );
-		self::assertTrue( $releaseHistoryPosition < strrpos( $html, 'État du flux de publication' ) );
-		self::assertTrue( $releaseHistoryPosition < strrpos( $html, 'Flux de publication — owner/theme' ) );
-		self::assertTrue( $releaseHistoryPosition < $legacyHistoryPosition );
+		$webhook_history_position = strpos( $html, 'Configured at last check' );
+		$release_history_position = strpos( $html, '<h4>Release workflow</h4>' );
+		$legacy_history_position  = strpos( $html, 'Release automation — owner/legacy.php' );
+		self::assertIsInt( $webhook_history_position );
+		self::assertIsInt( $release_history_position );
+		self::assertIsInt( $legacy_history_position );
+		self::assertTrue( $webhook_history_position < $release_history_position );
+		self::assertTrue( $release_history_position < strrpos( $html, 'État du flux de publication' ) );
+		self::assertTrue( $release_history_position < strrpos( $html, 'Flux de publication — owner/theme' ) );
+		self::assertTrue( $release_history_position < $legacy_history_position );
 		self::assertStringNotContainsString( 'data-test-webhook', $html );
 		self::assertStringNotContainsString( 'data-test-release', $html );
 		self::assertStringNotContainsString( 'Provider receiver', $html );
@@ -163,7 +163,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'name="repository_webhook_management_operation"', $html );
 	}
 
-	public function testStatusKeepsExactSourceCountsForCompletePackageInventory(): void {
+	public function test_status_keeps_exact_source_counts_for_complete_package_inventory(): void {
 		ob_start();
 		( new RepositoryDetailRenderer() )->render(
 			array(
@@ -203,8 +203,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 			true,
 			'Receiver ready.',
 			'status',
-			$this->viewUrls(),
-			$this->viewRequestUrls(),
+			$this->view_urls(),
+			$this->view_request_urls(),
 			null,
 			null
 		);
@@ -215,7 +215,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'Exact counts are unavailable while package inventory is incomplete.', $html );
 	}
 
-	public function testBranchViewShowsWebhookGuidanceWithoutASetupControlWhenUnavailable(): void {
+	public function test_branch_view_shows_webhook_guidance_without_asetup_control_when_unavailable(): void {
 		ob_start();
 		( new RepositoryDetailRenderer() )->render(
 			array(
@@ -244,8 +244,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 			false,
 			'Receiver unavailable.',
 			'branch',
-			$this->viewUrls(),
-			$this->viewRequestUrls(),
+			$this->view_urls(),
+			$this->view_request_urls(),
 			null,
 			null
 		);
@@ -268,7 +268,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'GitHub', $html );
 	}
 
-	public function testBranchViewDoesNotRenderCoreReleaseWorkflowActions(): void {
+	public function test_branch_view_does_not_render_core_release_workflow_actions(): void {
 		ob_start();
 		( new RepositoryDetailRenderer() )->render(
 			array(
@@ -293,8 +293,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 			true,
 			'Receiver ready.',
 			'branch',
-			$this->viewUrls(),
-			$this->viewRequestUrls(),
+			$this->view_urls(),
+			$this->view_request_urls(),
 			null,
 			null
 		);
@@ -304,7 +304,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'https://example.test/releases', $html );
 	}
 
-	public function testIncompletePackageInventoryDisablesRepositoryWorkflowControls(): void {
+	public function test_incomplete_package_inventory_disables_repository_workflow_controls(): void {
 		ob_start();
 		( new RepositoryDetailRenderer() )->render(
 			array(
@@ -322,8 +322,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 			true,
 			'Receiver ready.',
 			'branch',
-			$this->viewUrls(),
-			$this->viewRequestUrls(),
+			$this->view_urls(),
+			$this->view_request_urls(),
 			static function (): void {
 				echo '<div data-test-webhook></div>';
 			},
@@ -337,8 +337,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'data-test-webhook', $html );
 	}
 
-	public function testIncompletePackageInventoryUsesTheReleaseSetupLabel(): void {
-		$releaseRendered = false;
+	public function test_incomplete_package_inventory_uses_the_release_setup_label(): void {
+		$release_rendered = false;
 		ob_start();
 		( new RepositoryDetailRenderer() )->render(
 			array(
@@ -356,23 +356,23 @@ final class RepositoryDetailRendererTest extends TestCase {
 			true,
 			'Receiver ready.',
 			'releases',
-			$this->viewUrls(),
-			$this->viewRequestUrls(),
+			$this->view_urls(),
+			$this->view_request_urls(),
 			null,
-			static function () use ( &$releaseRendered ): void {
-				$releaseRendered = true;
+			static function () use ( &$release_rendered ): void {
+				$release_rendered = true;
 				echo '<div data-test-release></div>';
 			}
 		);
 		$html = (string) ob_get_clean();
 
-		self::assertFalse( $releaseRendered );
+		self::assertFalse( $release_rendered );
 		self::assertStringContainsString( 'disabled aria-disabled="true">Assess release setup</button>', $html );
 		self::assertStringNotContainsString( 'Assess release automation', $html );
 		self::assertStringNotContainsString( 'data-test-release', $html );
 	}
 
-	public function testBranchRepositoryFallsBackWhenTheSupportedWebhookPanelCannotBeProjected(): void {
+	public function test_branch_repository_falls_back_when_the_supported_webhook_panel_cannot_be_projected(): void {
 		ob_start();
 		( new RepositoryDetailRenderer() )->render(
 			array(
@@ -390,8 +390,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 			true,
 			'Receiver ready.',
 			'branch',
-			$this->viewUrls(),
-			$this->viewRequestUrls(),
+			$this->view_urls(),
+			$this->view_request_urls(),
 			static fn (): bool => false,
 			null
 		);
@@ -402,7 +402,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( '<button type="button" class="button" disabled aria-disabled="true">Manage repository webhook</button>', $html );
 	}
 
-	public function testPublishedReleasesViewUsesProviderPanelAndKeepsPackageControlsLinked(): void {
+	public function test_published_releases_view_uses_provider_panel_and_keeps_package_controls_linked(): void {
 		$row             = array(
 			'repository'        => 'owner/releases',
 			'repository_url'    => 'https://github.com/owner/releases',
@@ -430,7 +430,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 			),
 			'actions'           => array(),
 		);
-		$releaseRendered = false;
+		$release_rendered = false;
 
 		ob_start();
 		( new RepositoryDetailRenderer() )->render(
@@ -441,17 +441,17 @@ final class RepositoryDetailRendererTest extends TestCase {
 			true,
 			'Receiver ready.',
 			'releases',
-			$this->viewUrls(),
-			$this->viewRequestUrls(),
+			$this->view_urls(),
+			$this->view_request_urls(),
 			null,
-			static function () use ( &$releaseRendered ): void {
-				$releaseRendered = true;
+			static function () use ( &$release_rendered ): void {
+				$release_rendered = true;
 				echo '<section data-test-release>Exact package workflow controls</section>';
 			}
 		);
 		$html = (string) ob_get_clean();
 
-		self::assertTrue( $releaseRendered );
+		self::assertTrue( $release_rendered );
 		self::assertStringContainsString( 'data-ran-booster-repository-view="releases" aria-controls="ran-booster-provider-profile-region" aria-current="page"', $html );
 		self::assertSame( 3, substr_count( $html, 'aria-controls="ran-booster-provider-profile-region"' ) );
 		self::assertStringContainsString( 'data-test-release', $html );
@@ -460,7 +460,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'Configured', $html );
 	}
 
-	public function testUnavailableReleaseWorkflowKeepsPackageSettingsLinksWithoutAFalseAction(): void {
+	public function test_unavailable_release_workflow_keeps_package_settings_links_without_afalse_action(): void {
 		$row = array(
 			'repository'        => 'owner/releases',
 			'repository_url'    => '',
@@ -491,8 +491,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 			false,
 			'Receiver unavailable.',
 			'releases',
-			$this->viewUrls(),
-			$this->viewRequestUrls(),
+			$this->view_urls(),
+			$this->view_request_urls(),
 			null,
 			null
 		);
@@ -504,7 +504,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'Assess release setup', $html );
 	}
 
-	public function testProviderActionsPreserveNormalizedDescriptions(): void {
+	public function test_provider_actions_preserve_normalized_descriptions(): void {
 		$row = array(
 			'repository'        => 'owner/branch',
 			'source_label'      => 'Branch',
@@ -541,7 +541,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 			),
 		);
 		ob_start();
-		( new RepositoryDetailRenderer() )->render( $row, 'Fixture', 'https://example.test/repositories', 'https://example.test/activity', true, '', 'branch', $this->viewUrls(), $this->viewRequestUrls(), null, null );
+		( new RepositoryDetailRenderer() )->render( $row, 'Fixture', 'https://example.test/repositories', 'https://example.test/activity', true, '', 'branch', $this->view_urls(), $this->view_request_urls(), null, null );
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'aria-describedby="post-help"', $html );
@@ -549,7 +549,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'aria-describedby="link-help"', $html );
 	}
 
-	public function testBranchRepositoryWithoutAssistedManagementRetainsManualGuidanceWithoutInventingAnAction(): void {
+	public function test_branch_repository_without_assisted_management_retains_manual_guidance_without_inventing_an_action(): void {
 		ob_start();
 		( new RepositoryDetailRenderer() )->render(
 			array(
@@ -567,8 +567,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 			true,
 			'Receiver ready.',
 			'branch',
-			$this->viewUrls(),
-			$this->viewRequestUrls(),
+			$this->view_urls(),
+			$this->view_request_urls(),
 			null,
 			null
 		);
@@ -582,7 +582,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 	}
 
 	/** @return array<string, string> */
-	private function viewUrls(): array {
+	private function view_urls(): array {
 		return array(
 			'status'   => 'https://example.test/repository?repository_view=status',
 			'branch'   => 'https://example.test/repository?repository_view=branch',
@@ -591,7 +591,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 	}
 
 	/** @return array<string, string> */
-	private function viewRequestUrls(): array {
-		return array_map( static fn ( string $url ): string => $url . '&ran_booster_provider_fragment=1', $this->viewUrls() );
+	private function view_request_urls(): array {
+		return array_map( static fn ( string $url ): string => $url . '&ran_booster_provider_fragment=1', $this->view_urls() );
 	}
 }

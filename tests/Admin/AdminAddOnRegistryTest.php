@@ -25,21 +25,21 @@ final class AdminAddOnRegistryTest extends TestCase {
 		unset( $GLOBALS['ran_booster_repository_admin_allowed'] );
 	}
 
-	public function testAddOnApiSevenConstructionBoundariesDoNotExposeGenericLogging(): void {
-		$registryParameters = array_map(
+	public function test_add_on_api_seven_construction_boundaries_do_not_expose_generic_logging(): void {
+		$registry_parameters = array_map(
 			static fn ( \ReflectionParameter $parameter ): string => $parameter->getName(),
 			( new ReflectionMethod( AdminAddOnRegistry::class, '__construct' ) )->getParameters()
 		);
-		$contextParameters  = array_map(
+		$context_parameters  = array_map(
 			static fn ( \ReflectionParameter $parameter ): string => $parameter->getName(),
-			( new ReflectionMethod( AdminAddOnContext::class, 'forCurrentAdministrator' ) )->getParameters()
+			( new ReflectionMethod( AdminAddOnContext::class, 'for_current_administrator' ) )->getParameters()
 		);
 
-		self::assertNotContains( 'logging', $registryParameters );
-		self::assertNotContains( 'logger', $contextParameters );
+		self::assertNotContains( 'logging', $registry_parameters );
+		self::assertNotContains( 'logger', $context_parameters );
 	}
 
-	public function testSealedRegistryProvidesOneTrustedCallableTab(): void {
+	public function test_sealed_registry_provides_one_trusted_callable_tab(): void {
 		$facade   = new \stdClass();
 		$registry = new AdminAddOnRegistry( array( 'example_service' => $facade ), 7, 7 );
 		$rendered = array();
@@ -48,7 +48,7 @@ final class AdminAddOnRegistryTest extends TestCase {
 			'example',
 			'Example',
 			static function ( AdminAddOnContext $context ) use ( &$rendered ): void {
-				$rendered[] = $context->tabKey();
+				$rendered[] = $context->tab_key();
 			},
 			7,
 			7,
@@ -59,7 +59,7 @@ final class AdminAddOnRegistryTest extends TestCase {
 
 		$registry->register( $tab );
 		$registry->seal();
-		$context = $registry->contextFor(
+		$context = $registry->context_for(
 			$tab,
 			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=example',
 			'site'
@@ -75,7 +75,7 @@ final class AdminAddOnRegistryTest extends TestCase {
 	}
 
 	/** @return list<array{string, string}> */
-	public static function invalidTabDefinitions(): array {
+	public static function invalid_tab_definitions(): array {
 		return array(
 			array( 'Uppercase', 'Valid label' ),
 			array( '../path', 'Valid label' ),
@@ -85,14 +85,14 @@ final class AdminAddOnRegistryTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'invalidTabDefinitions' )]
-	public function testTabRejectsUnsafeKeysAndLabels( string $key, string $label ): void {
+	#[DataProvider( 'invalid_tab_definitions' )]
+	public function test_tab_rejects_unsafe_keys_and_labels( string $key, string $label ): void {
 		$this->expectException( InvalidArgumentException::class );
 
 		new AdminAddOnTab( 'ran-booster-test', $key, $label, static function (): void {} );
 	}
 
-	public function testRegistryRejectsDuplicateAndLateRegistration(): void {
+	public function test_registry_rejects_duplicate_and_late_registration(): void {
 		$registry = new AdminAddOnRegistry();
 		$registry->register( $this->tab( 'first' ) );
 
@@ -108,7 +108,7 @@ final class AdminAddOnRegistryTest extends TestCase {
 		$registry->register( $this->tab( 'late' ) );
 	}
 
-	public function testRegistryAllowsOnlyOneTabPerAddOn(): void {
+	public function test_registry_allows_only_one_tab_per_add_on(): void {
 		$registry = new AdminAddOnRegistry();
 		$registry->register( $this->tab( 'first' ) );
 
@@ -116,7 +116,7 @@ final class AdminAddOnRegistryTest extends TestCase {
 		$registry->register( new AdminAddOnTab( 'ran-booster-test', 'second', 'Second', static function (): void {} ) );
 	}
 
-	public function testRegistryRejectsUndeclaredFacadeAndIncompatibleGeneration(): void {
+	public function test_registry_rejects_undeclared_facade_and_incompatible_generation(): void {
 		$registry = new AdminAddOnRegistry( array(), 7, 7 );
 
 		try {
@@ -142,19 +142,19 @@ final class AdminAddOnRegistryTest extends TestCase {
 		$registry->register( new AdminAddOnTab( 'ran-booster-future', 'future', 'Future', static function (): void {}, 8 ) );
 	}
 
-	public function testContextCannotBeCreatedForAnUnauthorizedUser(): void {
+	public function test_context_cannot_be_created_for_an_unauthorized_user(): void {
 		$GLOBALS['ran_booster_repository_admin_allowed'] = false;
 
 		$this->expectException( LogicException::class );
 		$this->context( 'example' );
 	}
 
-	public function testRendererRejectsAnotherTabsContext(): void {
+	public function test_renderer_rejects_another_tabs_context(): void {
 		$this->expectException( LogicException::class );
 		$this->tab( 'first' )->render( $this->context( 'other' ) );
 	}
 
-	public function testTabRendersOnlyInsideItsDeclaredApiBounds(): void {
+	public function test_tab_renders_only_inside_its_declared_api_bounds(): void {
 		$tab = new AdminAddOnTab( 'ran-booster-test', 'compatible', 'Compatible', static function (): void {}, 7, 7, 7, 7 );
 
 		self::assertFalse( $tab->supports( $this->context( 'compatible', 6, 7 ) ) );
@@ -166,13 +166,13 @@ final class AdminAddOnRegistryTest extends TestCase {
 		return new AdminAddOnTab( 'ran-booster-test', $key, 'Label', static function (): void {} );
 	}
 
-	private function context( string $tabKey, int $coreApiVersion = 7, int $addOnApiVersion = 7 ): AdminAddOnContext {
-		return AdminAddOnContext::forCurrentAdministrator(
-			$tabKey,
+	private function context( string $tab_key, int $core_api_version = 7, int $add_on_api_version = 7 ): AdminAddOnContext {
+		return AdminAddOnContext::for_current_administrator(
+			$tab_key,
 			'https://example.test/wp-admin/admin.php?page=ran-booster',
 			'site',
-			$coreApiVersion,
-			$addOnApiVersion
+			$core_api_version,
+			$add_on_api_version
 		);
 	}
 }

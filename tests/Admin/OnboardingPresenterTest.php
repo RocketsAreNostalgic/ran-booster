@@ -10,7 +10,7 @@ use RAN\Admin\OnboardingPresenter;
 
 final class OnboardingPresenterTest extends TestCase {
 
-	public function testBuildsProviderAndHelpLinksFromAllowlistedNavigation(): void {
+	public function test_builds_provider_and_help_links_from_allowlisted_navigation(): void {
 		$onboarding = ( new OnboardingPresenter() )->build(
 			$this->tabs(),
 			'https://example.test/wp-admin/admin.php?page=ran-booster-plugins-create',
@@ -52,7 +52,7 @@ final class OnboardingPresenterTest extends TestCase {
 		);
 	}
 
-	public function testAllowsNoRegisteredProviderWithoutInventingOne(): void {
+	public function test_allows_no_registered_provider_without_inventing_one(): void {
 		$tabs       = array_values(
 			array_filter(
 				$this->tabs(),
@@ -64,7 +64,7 @@ final class OnboardingPresenterTest extends TestCase {
 		self::assertSame( array(), $onboarding['provider_links'] );
 	}
 
-	public function testRejectsIncompleteFixedNavigation(): void {
+	public function test_rejects_incomplete_fixed_navigation(): void {
 		$tabs = array_values(
 			array_filter(
 				$this->tabs(),

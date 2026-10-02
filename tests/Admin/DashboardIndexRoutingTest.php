@@ -119,11 +119,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 		unset( $GLOBALS['ran_booster_test_capabilities'] );
 	}
 
-	public function testDevelopmentSafetyNoticeDismissalIsScopedToTheCurrentAdministrator(): void {
+	public function test_development_safety_notice_dismissal_is_scoped_to_the_current_administrator(): void {
 		$GLOBALS['ran_booster_dashboard_test_environment_type'] = 'local';
 		$GLOBALS['ran_booster_dashboard_test_user_meta'][7][ DevelopmentSafetyNoticeController::USER_META_KEY ] = '1';
 		$predicate = new ReflectionMethod( Dashboard::class, 'should_show_development_safety_notice' );
-		$dashboard = $this->dashboard( $this->throwingSecrets() );
+		$dashboard = $this->dashboard( $this->throwing_secrets() );
 
 		self::assertFalse( $predicate->invoke( $dashboard, 'packages/index', array(), true ) );
 		self::assertFalse( $predicate->invoke( $dashboard, 'packages/create', array(), true ) );
@@ -134,14 +134,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertFalse( $predicate->invoke( $dashboard, 'packages/create', array(), true ) );
 	}
 
-	public function testRepositoryBranchCheckRejectsMissingAndStaleNonceWithoutProviderWork(): void {
+	public function test_repository_branch_check_rejects_missing_and_stale_nonce_without_provider_work(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$provider  = new DashboardBranchCheckProvider();
 		$dashboard = $this->dashboard(
-			$this->throwingSecrets(),
+			$this->throwing_secrets(),
 			providers: new ProviderRegistry( array( $provider ) )
 		);
-		$package   = $this->managedPackage( 'example/example.php', 'Example', 'repo-42' );
+		$package   = $this->managed_package( 'example/example.php', 'Example', 'repo-42' );
 		$check     = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
 
 		self::assertNull( $check->invoke( $dashboard, $package, 'plugin' ) );
@@ -159,17 +159,17 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'ran-booster-repository-branch-check|plugin|example/example.php|branch|1'
 		);
 		self::assertNull( $check->invoke( $dashboard, $package, 'plugin' ) );
-		self::assertSame( 0, $provider->prepareCalls );
+		self::assertSame( 0, $provider->prepare_calls );
 	}
 
-	public function testRepositoryBranchCheckUsesExactSavedTargetAndCleansPreparedAuthority(): void {
+	public function test_repository_branch_check_uses_exact_saved_target_and_cleans_prepared_authority(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$provider  = new DashboardBranchCheckProvider();
 		$dashboard = $this->dashboard(
-			$this->throwingSecrets(),
+			$this->throwing_secrets(),
 			providers: new ProviderRegistry( array( $provider ) )
 		);
-		$package   = $this->managedPackage(
+		$package   = $this->managed_package(
 			'example/example.php',
 			'Example',
 			'repo-42',
@@ -185,26 +185,26 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
-		self::assertSame( 1, $provider->prepareCalls );
-		self::assertSame( 1, $provider->resolvedRefCalls );
-		self::assertSame( 1, $provider->cleanupCalls );
+		self::assertSame( 1, $provider->prepare_calls );
+		self::assertSame( 1, $provider->resolved_ref_calls );
+		self::assertSame( 1, $provider->cleanup_calls );
 		self::assertSame( 'owner/example', $provider->request?->repository->locator );
-		self::assertSame( 'repo-42', $provider->request?->repository->providerRepositoryId );
+		self::assertSame( 'repo-42', $provider->request?->repository->provider_repository_id );
 		self::assertSame( 'feature/test', $provider->request?->ref );
 		self::assertNull( $provider->request?->expectedBranch );
 		self::assertFalse( $provider->request?->repository->private );
-		self::assertNull( $provider->request?->repository->credentialId );
+		self::assertNull( $provider->request?->repository->credential_id );
 	}
 
-	public function testRepositoryBranchCheckConsumesItsOneTimeMarkerBeforeRepeatingRemoteWork(): void {
+	public function test_repository_branch_check_consumes_its_one_time_marker_before_repeating_remote_work(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$provider  = new DashboardBranchCheckProvider();
 		$dashboard = $this->dashboard(
-			$this->throwingSecrets(),
+			$this->throwing_secrets(),
 			providers: new ProviderRegistry( array( $provider ) ),
-			branchCheckEvidence: new DashboardBranchCheckEvidenceStore()
+			branch_check_evidence: new DashboardBranchCheckEvidenceStore()
 		);
-		$package   = $this->managedPackage( 'example/example.php', 'Example', 'repo-42' );
+		$package   = $this->managed_package( 'example/example.php', 'Example', 'repo-42' );
 		$check     = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
@@ -213,20 +213,20 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
-		self::assertSame( 1, $provider->prepareCalls );
+		self::assertSame( 1, $provider->prepare_calls );
 	}
 
-	public function testRepositoryBranchCheckHoldsTheSharedUpdaterLockDuringProviderAccess(): void {
+	public function test_repository_branch_check_holds_the_shared_updater_lock_during_provider_access(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$provider                   = new DashboardBranchCheckProvider();
 		$lock                       = new DashboardBranchCheckUpdaterLock();
 		$dashboard                  = $this->dashboard(
-			$this->throwingSecrets(),
+			$this->throwing_secrets(),
 			providers: new ProviderRegistry( array( $provider ) ),
-			branchCheckLock: $lock
+			branch_check_lock: $lock
 		);
-		$provider->onProviderAccess = static fn () => $lock->recordProviderAccess();
-		$package                    = $this->managedPackage( 'example/example.php', 'Example', 'repo-42' );
+		$provider->on_provider_access = static fn () => $lock->record_provider_access();
+		$package                    = $this->managed_package( 'example/example.php', 'Example', 'repo-42' );
 		$check                      = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
 		$_GET                       = array(
 			'ran_booster_repository_branch_check'  => '1',
@@ -235,19 +235,19 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
 		self::assertSame( array( 'acquire', 'release:branch-check-lock' ), $lock->events );
-		self::assertTrue( $lock->wasHeldDuring( 'provider_access' ) );
+		self::assertTrue( $lock->was_held_during( 'provider_access' ) );
 	}
 
-	public function testRepositoryBranchCheckDoesNotReuseVerifiedMarkerAfterItsExactEvidenceIsCleared(): void {
+	public function test_repository_branch_check_does_not_reuse_verified_marker_after_its_exact_evidence_is_cleared(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$provider  = new DashboardBranchCheckProvider();
 		$evidence  = new DashboardBranchCheckEvidenceStore();
 		$dashboard = $this->dashboard(
-			$this->throwingSecrets(),
+			$this->throwing_secrets(),
 			providers: new ProviderRegistry( array( $provider ) ),
-			branchCheckEvidence: $evidence
+			branch_check_evidence: $evidence
 		);
-		$package   = $this->managedPackage( 'example/example.php', 'Example', 'repo-42' );
+		$package   = $this->managed_package( 'example/example.php', 'Example', 'repo-42' );
 		$check     = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
@@ -257,18 +257,18 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
 		$evidence->clear( 'plugin', $package );
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
-		self::assertSame( 2, $provider->prepareCalls );
+		self::assertSame( 2, $provider->prepare_calls );
 	}
 
-	public function testRepositoryBranchCheckMapsAdvisoryEvidenceWriteFailureWithoutCrashingSettings(): void {
+	public function test_repository_branch_check_maps_advisory_evidence_write_failure_without_crashing_settings(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$provider  = new DashboardBranchCheckProvider();
 		$dashboard = $this->dashboard(
-			$this->throwingSecrets(),
+			$this->throwing_secrets(),
 			providers: new ProviderRegistry( array( $provider ) ),
-			branchCheckEvidence: new ThrowingDashboardBranchCheckEvidenceStore()
+			branch_check_evidence: new ThrowingDashboardBranchCheckEvidenceStore()
 		);
-		$package   = $this->managedPackage( 'example/example.php', 'Example', 'repo-42' );
+		$package   = $this->managed_package( 'example/example.php', 'Example', 'repo-42' );
 		$check     = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
@@ -276,22 +276,22 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 
 		self::assertSame( 'unable_to_check', $check->invoke( $dashboard, $package, 'plugin' ) );
-		self::assertSame( 1, $provider->prepareCalls );
+		self::assertSame( 1, $provider->prepare_calls );
 	}
 
-	public function testRepositoryBranchCheckDoesNotReuseItsMarkerAfterCredentialOrDefaultAccessGenerationChanges(): void {
+	public function test_repository_branch_check_does_not_reuse_its_marker_after_credential_or_default_access_generation_changes(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$provider         = new DashboardBranchCheckProvider();
 		$lookup           = new InMemoryPublicRepositoryLookupProfileStore();
 		$lookup->profiles = array( 'gh' => 'public-profile' );
 		$evidence         = new DashboardBranchCheckEvidenceStore();
 		$dashboard        = $this->dashboard(
-			$this->throwingSecrets(),
+			$this->throwing_secrets(),
 			providers: new ProviderRegistry( array( $provider ) ),
-			publicLookupProfiles: $lookup,
-			branchCheckEvidence: $evidence
+			public_lookup_profiles: $lookup,
+			branch_check_evidence: $evidence
 		);
-		$package          = $this->managedPackage( 'example/example.php', 'Example', 'repo-42' );
+		$package          = $this->managed_package( 'example/example.php', 'Example', 'repo-42' );
 		$check            = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
 		$_GET             = array(
 			'ran_booster_repository_branch_check'  => '1',
@@ -303,21 +303,21 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
 		$evidence->bump_provider_generation( 'gh' );
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
-		self::assertSame( 3, $provider->prepareCalls );
+		self::assertSame( 3, $provider->prepare_calls );
 	}
 
-	public function testRepositoryBranchCheckIsCapturedAsSanitizedOperationalEvidence(): void {
+	public function test_repository_branch_check_is_captured_as_sanitized_operational_evidence(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$directory = sys_get_temp_dir() . '/ran-booster-branch-check-' . bin2hex( random_bytes( 6 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Test-only private fixture directory.
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		$capture = new TemporaryDebugCapture( $directory . '/secrets.json' );
 		$capture->start();
-		BoosterLogger::configureCapture( $capture );
+		BoosterLogger::configure_capture( $capture );
 		try {
 			$provider  = new DashboardBranchCheckProvider();
-			$dashboard = $this->dashboard( $this->throwingSecrets(), providers: new ProviderRegistry( array( $provider ) ) );
-			$package   = $this->managedPackage( 'example/example.php', 'Example', 'repo-42' );
+			$dashboard = $this->dashboard( $this->throwing_secrets(), providers: new ProviderRegistry( array( $provider ) ) );
+			$package   = $this->managed_package( 'example/example.php', 'Example', 'repo-42' );
 			$_GET      = array(
 				'ran_booster_repository_branch_check'  => '1',
 				'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
@@ -328,7 +328,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			self::assertStringContainsString( '"event":"repository_branch_checked"', $line );
 			self::assertStringNotContainsString( 'owner/repository', $line );
 		} finally {
-			BoosterLogger::configureCapture( null );
+			BoosterLogger::configure_capture( null );
 			foreach ( array( $directory . '/ran-booster-debug.php', $directory . '/ran-booster-debug.php.lock' ) as $path ) {
 				if ( is_file( $path ) ) {
 					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test-only fixture cleanup.
@@ -342,17 +342,17 @@ final class DashboardIndexRoutingTest extends TestCase {
 		}
 	}
 
-	public function testRepositoryBranchCheckUsesProviderDefaultPublicLookupProfileInsteadOfPackageCredential(): void {
+	public function test_repository_branch_check_uses_provider_default_public_lookup_profile_instead_of_package_credential(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$provider         = new DashboardBranchCheckProvider();
 		$lookup           = new InMemoryPublicRepositoryLookupProfileStore();
 		$lookup->profiles = array( 'gh' => 'public-profile' );
 		$dashboard        = $this->dashboard(
-			$this->throwingSecrets(),
+			$this->throwing_secrets(),
 			providers: new ProviderRegistry( array( $provider ) ),
-			publicLookupProfiles: $lookup
+			public_lookup_profiles: $lookup
 		);
-		$package          = $this->managedPackage( 'example/example.php', 'Example', 'repo-42', credentialId: 'deployment-profile' );
+		$package          = $this->managed_package( 'example/example.php', 'Example', 'repo-42', credential_id: 'deployment-profile' );
 		$check            = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
 		$_GET             = array(
 			'ran_booster_repository_branch_check'  => '1',
@@ -363,20 +363,20 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
 		self::assertSame( 'owner/repository', $provider->request?->repository->locator );
-		self::assertSame( 'repo-42', $provider->request?->repository->providerRepositoryId );
+		self::assertSame( 'repo-42', $provider->request?->repository->provider_repository_id );
 		self::assertFalse( $provider->request?->repository->private );
-		self::assertSame( 'public-profile', $provider->request?->repository->credentialId );
+		self::assertSame( 'public-profile', $provider->request?->repository->credential_id );
 	}
 
-	public function testRepositoryBranchCheckClearsEarlierEvidenceWhenTheProviderIsUnavailable(): void {
+	public function test_repository_branch_check_clears_earlier_evidence_when_the_provider_is_unavailable(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$evidence = new DashboardBranchCheckEvidenceStore();
-		$package  = $this->managedPackage( 'provider-missing/example.php', 'Example', 'repo-42' );
+		$package  = $this->managed_package( 'provider-missing/example.php', 'Example', 'repo-42' );
 		$evidence->record( 'plugin', $package, null, 'verified' );
 		$dashboard = $this->dashboard(
-			$this->throwingSecrets(),
+			$this->throwing_secrets(),
 			providers: new ProviderRegistry(),
-			branchCheckEvidence: $evidence
+			branch_check_evidence: $evidence
 		);
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
@@ -391,17 +391,17 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertNull( $evidence->find( 'plugin', $package, null ) );
 	}
 
-	public function testRepositoryBranchCheckDropsAStoredPublicProfileWithoutTheDeclaredCapability(): void {
+	public function test_repository_branch_check_drops_astored_public_profile_without_the_declared_capability(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$provider         = new DashboardUncredentialedBranchCheckProvider();
 		$lookup           = new InMemoryPublicRepositoryLookupProfileStore();
 		$lookup->profiles = array( 'gh' => 'public-profile' );
 		$dashboard        = $this->dashboard(
-			$this->throwingSecrets(),
+			$this->throwing_secrets(),
 			providers: new ProviderRegistry( array( $provider ) ),
-			publicLookupProfiles: $lookup
+			public_lookup_profiles: $lookup
 		);
-		$package          = $this->managedPackage( 'no-capability/example.php', 'Example', 'repo-42' );
+		$package          = $this->managed_package( 'no-capability/example.php', 'Example', 'repo-42' );
 		$_GET             = array(
 			'ran_booster_repository_branch_check'  => '1',
 			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce(
@@ -412,20 +412,20 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$outcome = ( new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' ) )->invoke( $dashboard, $package, 'plugin' );
 
 		self::assertSame( 'verified', $outcome );
-		self::assertNull( $provider->request?->repository->credentialId );
+		self::assertNull( $provider->request?->repository->credential_id );
 	}
 
-	public function testRepositoryBranchCheckDoesNotRewritePrivatePackageAccessAsPublicLookup(): void {
+	public function test_repository_branch_check_does_not_rewrite_private_package_access_as_public_lookup(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$provider         = new DashboardBranchCheckProvider();
 		$lookup           = new InMemoryPublicRepositoryLookupProfileStore();
 		$lookup->profiles = array( 'gh' => 'public-profile' );
 		$dashboard        = $this->dashboard(
-			$this->throwingSecrets(),
+			$this->throwing_secrets(),
 			providers: new ProviderRegistry( array( $provider ) ),
-			publicLookupProfiles: $lookup
+			public_lookup_profiles: $lookup
 		);
-		$package          = $this->managedPackage( 'example/example.php', 'Example', 'repo-42', credentialId: 'deployment-profile', private: true );
+		$package          = $this->managed_package( 'example/example.php', 'Example', 'repo-42', credential_id: 'deployment-profile', private: true );
 		$check            = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
 		$_GET             = array(
 			'ran_booster_repository_branch_check'  => '1',
@@ -436,44 +436,44 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
 		self::assertTrue( $provider->request?->repository->private );
-		self::assertSame( 'deployment-profile', $provider->request?->repository->credentialId );
+		self::assertSame( 'deployment-profile', $provider->request?->repository->credential_id );
 	}
 
-	public function testRepositoryBranchCheckVerifiesAConfiguredSubdirectoryWhenTheProviderSupportsIt(): void {
+	public function test_repository_branch_check_verifies_aconfigured_subdirectory_when_the_provider_supports_it(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$provider  = new DashboardBranchCheckProvider();
-		$dashboard = $this->dashboard( $this->throwingSecrets(), providers: new ProviderRegistry( array( $provider ) ) );
-		$package   = $this->managedPackage( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/example' );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), providers: new ProviderRegistry( array( $provider ) ) );
+		$package   = $this->managed_package( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/example' );
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
 			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
 		);
 
 		self::assertSame( 'verified', ( new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' ) )->invoke( $dashboard, $package, 'plugin' ) );
-		self::assertSame( 1, $provider->pathCalls );
+		self::assertSame( 1, $provider->path_calls );
 		self::assertSame( 'packages/example', $provider->path );
 	}
 
-	public function testRepositoryBranchCheckReportsAMissingConfiguredSubdirectoryPrecisely(): void {
+	public function test_repository_branch_check_reports_amissing_configured_subdirectory_precisely(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
-		$provider  = new DashboardBranchCheckProvider( pathExists: false );
-		$dashboard = $this->dashboard( $this->throwingSecrets(), providers: new ProviderRegistry( array( $provider ) ) );
-		$package   = $this->managedPackage( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/missing' );
+		$provider  = new DashboardBranchCheckProvider( path_exists: false );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), providers: new ProviderRegistry( array( $provider ) ) );
+		$package   = $this->managed_package( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/missing' );
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
 			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
 		);
 
 		self::assertSame( 'subdirectory_unavailable', ( new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' ) )->invoke( $dashboard, $package, 'plugin' ) );
-		self::assertSame( 1, $provider->pathCalls );
-		self::assertSame( 1, $provider->cleanupCalls );
+		self::assertSame( 1, $provider->path_calls );
+		self::assertSame( 1, $provider->cleanup_calls );
 	}
 
-	public function testRepositoryBranchCheckReusesMissingConfiguredSubdirectoryOutcomeWithoutProviderOrPathWork(): void {
+	public function test_repository_branch_check_reuses_missing_configured_subdirectory_outcome_without_provider_or_path_work(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
-		$provider  = new DashboardBranchCheckProvider( pathExists: false );
-		$dashboard = $this->dashboard( $this->throwingSecrets(), providers: new ProviderRegistry( array( $provider ) ) );
-		$package   = $this->managedPackage( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/missing' );
+		$provider  = new DashboardBranchCheckProvider( path_exists: false );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), providers: new ProviderRegistry( array( $provider ) ) );
+		$package   = $this->managed_package( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/missing' );
 		$check     = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
@@ -482,30 +482,30 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertSame( 'subdirectory_unavailable', $check->invoke( $dashboard, $package, 'plugin' ) );
 		self::assertSame( 'subdirectory_unavailable', $check->invoke( $dashboard, $package, 'plugin' ) );
-		self::assertSame( 1, $provider->prepareCalls );
-		self::assertSame( 1, $provider->pathCalls );
+		self::assertSame( 1, $provider->prepare_calls );
+		self::assertSame( 1, $provider->path_calls );
 	}
 
-	public function testRepositoryBranchCheckDistinguishesAnUnavailablePathCheckFromAMissingPath(): void {
+	public function test_repository_branch_check_distinguishes_an_unavailable_path_check_from_amissing_path(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
-		$provider  = new DashboardBranchCheckProvider( pathCheckFails: true );
-		$dashboard = $this->dashboard( $this->throwingSecrets(), providers: new ProviderRegistry( array( $provider ) ) );
-		$package   = $this->managedPackage( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/example' );
+		$provider  = new DashboardBranchCheckProvider( path_check_fails: true );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), providers: new ProviderRegistry( array( $provider ) ) );
+		$package   = $this->managed_package( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/example' );
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
 			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
 		);
 
 		self::assertSame( 'subdirectory_unverified', ( new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' ) )->invoke( $dashboard, $package, 'plugin' ) );
-		self::assertSame( 1, $provider->pathCalls );
-		self::assertSame( 1, $provider->cleanupCalls );
+		self::assertSame( 1, $provider->path_calls );
+		self::assertSame( 1, $provider->cleanup_calls );
 	}
 
-	public function testRepositoryBranchCheckReusesUnavailableConfiguredSubdirectoryOutcomeWithoutProviderOrPathWork(): void {
+	public function test_repository_branch_check_reuses_unavailable_configured_subdirectory_outcome_without_provider_or_path_work(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
-		$provider  = new DashboardBranchCheckProvider( pathCheckFails: true );
-		$dashboard = $this->dashboard( $this->throwingSecrets(), providers: new ProviderRegistry( array( $provider ) ) );
-		$package   = $this->managedPackage( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/example' );
+		$provider  = new DashboardBranchCheckProvider( path_check_fails: true );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), providers: new ProviderRegistry( array( $provider ) ) );
+		$package   = $this->managed_package( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/example' );
 		$check     = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
@@ -514,32 +514,32 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertSame( 'subdirectory_unverified', $check->invoke( $dashboard, $package, 'plugin' ) );
 		self::assertSame( 'subdirectory_unverified', $check->invoke( $dashboard, $package, 'plugin' ) );
-		self::assertSame( 1, $provider->prepareCalls );
-		self::assertSame( 1, $provider->pathCalls );
+		self::assertSame( 1, $provider->prepare_calls );
+		self::assertSame( 1, $provider->path_calls );
 	}
 
-	public function testRepositoryBranchCheckDoesNotClaimAnUninspectedSubdirectoryIsVerified(): void {
+	public function test_repository_branch_check_does_not_claim_an_uninspected_subdirectory_is_verified(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$provider  = new DashboardBranchCheckProviderWithoutPathInspector();
-		$dashboard = $this->dashboard( $this->throwingSecrets(), providers: new ProviderRegistry( array( $provider ) ) );
-		$package   = $this->managedPackage( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/example' );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), providers: new ProviderRegistry( array( $provider ) ) );
+		$package   = $this->managed_package( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/example' );
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
 			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
 		);
 
 		self::assertSame( 'subdirectory_unverified', ( new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' ) )->invoke( $dashboard, $package, 'plugin' ) );
-		self::assertSame( 0, $provider->pathCalls );
+		self::assertSame( 0, $provider->path_calls );
 	}
 
-	public function testRepositoryBranchCheckFailsClosedWhenCleanupFails(): void {
+	public function test_repository_branch_check_fails_closed_when_cleanup_fails(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
-		$provider  = new DashboardBranchCheckProvider( cleanupFails: true );
+		$provider  = new DashboardBranchCheckProvider( cleanup_fails: true );
 		$dashboard = $this->dashboard(
-			$this->throwingSecrets(),
+			$this->throwing_secrets(),
 			providers: new ProviderRegistry( array( $provider ) )
 		);
-		$package   = $this->managedPackage( 'example/example.php', 'Example', 'repo-42' );
+		$package   = $this->managed_package( 'example/example.php', 'Example', 'repo-42' );
 		$check     = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
@@ -549,12 +549,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 
 		self::assertSame( 'unable_to_check', $check->invoke( $dashboard, $package, 'plugin' ) );
-		self::assertSame( 1, $provider->prepareCalls );
-		self::assertSame( 1, $provider->cleanupCalls );
+		self::assertSame( 1, $provider->prepare_calls );
+		self::assertSame( 1, $provider->cleanup_calls );
 	}
 
 	/** @return list<array{string, array<string, string>, bool, bool}> */
-	public static function developmentSafetyNoticeProvider(): array {
+	public static function development_safety_notice_provider(): array {
 		return array(
 			array( 'packages/index', array(), true, true ),
 			array( 'packages/create', array(), true, false ),
@@ -568,14 +568,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 	/**
 	 * @param array<string, string> $data             Selected view data.
 	 */
-	#[DataProvider( 'developmentSafetyNoticeProvider' )]
-	public function testDevelopmentSafetyNoticeUsesDetectedEnvironmentOnlyOnThePackageIndex( string $view, array $data, bool $developmentEnvironmentDetected, bool $expected ): void {
+	#[DataProvider( 'development_safety_notice_provider' )]
+	public function test_development_safety_notice_uses_detected_environment_only_on_the_package_index( string $view, array $data, bool $development_environment_detected, bool $expected ): void {
 		$predicate = new ReflectionMethod( Dashboard::class, 'should_show_development_safety_notice' );
 
-		self::assertSame( $expected, $predicate->invoke( $this->dashboard( $this->throwingSecrets() ), $view, $data, $developmentEnvironmentDetected ) );
+		self::assertSame( $expected, $predicate->invoke( $this->dashboard( $this->throwing_secrets() ), $view, $data, $development_environment_detected ) );
 	}
 
-	public function testProviderTabBuildsOnlyTheSelectedProviderSettings(): void {
+	public function test_provider_tab_builds_only_the_selected_provider_settings(): void {
 		$_GET['tab'] = 'bb';
 
 		$data = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
@@ -591,7 +591,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertArrayNotHasKey( 'onboarding', $data );
 	}
 
-	public function testProviderRouteSelectsFocusedViewsTasksAndBoundedListState(): void {
+	public function test_provider_route_selects_focused_views_tasks_and_bounded_list_state(): void {
 		$_GET = array(
 			'tab'             => 'bb',
 			'view'            => 'secrets',
@@ -636,7 +636,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'name', $fallback['providerListState']['orderby'] );
 	}
 
-	public function testProviderRouteRendersThePreparedAccessibleFilteredAndPaginatedOutcome(): void {
+	public function test_provider_route_renders_the_prepared_accessible_filtered_and_paginated_outcome(): void {
 		$_GET     = array(
 			'tab'      => 'bb',
 			'view'     => 'credentials',
@@ -670,15 +670,15 @@ final class DashboardIndexRoutingTest extends TestCase {
 			public function __construct( private array $profiles ) {
 				parent::__construct( '/unused/test-secrets.php', array(), ShippedSecretPolicyCatalog::create() );
 			}
-			public function credentialProfiles( ProviderCode|string $provider ): array {
+			public function credential_profiles( ProviderCode|string $provider ): array {
 				return 'bb' === (string) $provider ? $this->profiles : array();
 			}
-			public function webhookProfiles( ProviderCode|string $provider ): array {
+			public function webhook_profiles( ProviderCode|string $provider ): array {
 				unset( $provider );
 				return array();
 			}
 		};
-		$data       = $this->dashboard( $secrets, providerCredentials: true )->get_index()['data'];
+		$data       = $this->dashboard( $secrets, provider_credentials: true )->get_index()['data'];
 
 		// Dashboard supplies a fixed provider-route model; the passive view only renders and escapes it.
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract
@@ -700,7 +700,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringNotContainsString( 'profile-21', $html );
 	}
 
-	public function testProviderRouteRendersANormalizedRepositorySelection(): void {
+	public function test_provider_route_renders_anormalized_repository_selection(): void {
 		$_GET    = array(
 			'tab'        => 'bb',
 			'panel'      => 'repositories',
@@ -709,7 +709,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'all_deployment_plugins' )->willReturn(
 			array(
-				'plugin/route.php'     => $this->managedPackage(
+				'plugin/route.php'     => $this->managed_package(
 					'plugin/route.php',
 					'Route Plugin',
 					'repo-route',
@@ -717,7 +717,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 					'bb',
 					repository: 'workspace/route'
 				),
-				'plugin/automatic.php' => $this->managedPackage(
+				'plugin/automatic.php' => $this->managed_package(
 					'plugin/automatic.php',
 					'Automatic Plugin',
 					'repo-automatic',
@@ -731,7 +731,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$data = $this->dashboard(
 			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
 			plugins: $plugins,
-			providerCredentials: true
+			provider_credentials: true
 		)->get_index()['data'];
 
 		self::assertSame( 'repo-route', $data['requestedRepositoryId'] );
@@ -759,7 +759,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringNotContainsString( 'ran-booster-provider__footer', $html );
 	}
 
-	public function testRepositoryReleaseCallbackUsesTheExactPublishedReleasesReturnUrl(): void {
+	public function test_repository_release_callback_uses_the_exact_published_releases_return_url(): void {
 		$_GET    = array(
 			'tab'             => 'bb',
 			'panel'           => 'repositories',
@@ -769,7 +769,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'all_deployment_plugins' )->willReturn(
 			array(
-				'plugin/route.php' => $this->managedPackage(
+				'plugin/route.php' => $this->managed_package(
 					'plugin/route.php',
 					'Route Plugin',
 					'repo-route',
@@ -782,13 +782,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$data = $this->dashboard(
 			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
 			plugins: $plugins,
-			providerCredentials: true
+			provider_credentials: true
 		)->get_index()['data'];
 
-		$releaseReturnUrl = '';
-		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_repository_release_sections'][] = static function ( array $row, string $returnUrl ) use ( &$releaseReturnUrl ): void {
+		$release_return_url = '';
+		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_repository_release_sections'][] = static function ( array $row, string $return_url ) use ( &$release_return_url ): void {
 			unset( $row );
-			$releaseReturnUrl = $returnUrl;
+			$release_return_url = $return_url;
 		};
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed route model is rendered through the production view.
 		extract( $data );
@@ -797,11 +797,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 		ob_end_clean();
 
 		self::assertSame( 'releases', $data['repositoryView'] );
-		self::assertStringContainsString( 'repository=repo-route', $releaseReturnUrl );
-		self::assertStringContainsString( 'repository_view=releases', $releaseReturnUrl );
+		self::assertStringContainsString( 'repository=repo-route', $release_return_url );
+		self::assertStringContainsString( 'repository_view=releases', $release_return_url );
 	}
 
-	public function testProviderRepositoryProjectionUnifiesPackageTypesAndSourcesByStableIdentity(): void {
+	public function test_provider_repository_projection_unifies_package_types_and_sources_by_stable_identity(): void {
 		$_GET    = array(
 			'tab'   => 'bb',
 			'panel' => 'repositories',
@@ -809,7 +809,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'all_deployment_plugins' )->willReturn(
 			array(
-				$this->managedPackage(
+				$this->managed_package(
 					'plugin/shared.php',
 					'Shared Plugin',
 					'repo-shared',
@@ -822,7 +822,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$themes = $this->createStub( ThemeRepository::class );
 		$themes->method( 'all_deployment_themes' )->willReturn(
 			array(
-				$this->managedPackage(
+				$this->managed_package(
 					'shared-theme',
 					'Shared Theme',
 					'repo-shared',
@@ -837,7 +837,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
 			plugins: $plugins,
 			themes: $themes,
-			providerCredentials: true
+			provider_credentials: true
 		)->get_index()['data'];
 
 		self::assertCount( 1, $data['provider_repositories']['repositories'] );
@@ -852,21 +852,21 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'Conflicting sources', $data['repositoryTableRows'][0]['source_label'] );
 	}
 
-	public function testProviderRepositoryProjectionUsesNetworkPackageSettingsUrlsOnMultisite(): void {
-		$this->setMultisite( true );
+	public function test_provider_repository_projection_uses_network_package_settings_urls_on_multisite(): void {
+		$this->set_multisite( true );
 		$_GET    = array(
 			'tab'   => 'bb',
 			'panel' => 'repositories',
 		);
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'all_deployment_plugins' )->willReturn(
-			array( $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'repo-example', provider: 'bb' ) )
+			array( $this->managed_package( 'plugin/example.php', 'Example Plugin', 'repo-example', provider: 'bb' ) )
 		);
 
 		$data = $this->dashboard(
 			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
 			plugins: $plugins,
-			providerCredentials: true
+			provider_credentials: true
 		)->get_index()['data'];
 
 		self::assertSame(
@@ -875,14 +875,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 	}
 
-	public function testProviderRepositoryProjectionKeepsWebhookSettingsUrlWhenReleasePrecedesBranch(): void {
+	public function test_provider_repository_projection_keeps_webhook_settings_url_when_release_precedes_branch(): void {
 		$_GET            = array(
 			'tab'   => 'bb',
 			'panel' => 'repositories',
 		);
-		$releasePackages = array();
+		$release_packages = array();
 		for ( $index = 1; $index <= 20; ++$index ) {
-			$releasePackages[] = $this->managedPackage(
+			$release_packages[] = $this->managed_package(
 				'release-shared-' . $index . '.php',
 				'Release Shared ' . $index,
 				'repo-shared',
@@ -892,11 +892,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 			);
 		}
 		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'all_deployment_plugins' )->willReturn( $releasePackages );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( $release_packages );
 		$themes = $this->createStub( ThemeRepository::class );
 		$themes->method( 'all_deployment_themes' )->willReturn(
 			array(
-				$this->managedPackage(
+				$this->managed_package(
 					'branch-shared',
 					'Branch Shared',
 					'repo-shared',
@@ -911,7 +911,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
 			plugins: $plugins,
 			themes: $themes,
-			providerCredentials: true
+			provider_credentials: true
 		)->get_index()['data'];
 		$repository = $data['provider_repositories']['repositories'][0];
 
@@ -923,7 +923,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 0, $data['repositoryIntegrationSummary']['needs_review'] );
 	}
 
-	public function testProviderRepositoryProjectionFailsClosedForConflictingStableIdentity(): void {
+	public function test_provider_repository_projection_fails_closed_for_conflicting_stable_identity(): void {
 		$_GET    = array(
 			'tab'   => 'bb',
 			'panel' => 'repositories',
@@ -931,17 +931,17 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'all_deployment_plugins' )->willReturn(
 			array(
-				$this->managedPackage( 'plugin/one.php', 'One', 'repo-conflict', provider: 'bb', repository: 'workspace/one' ),
-				$this->managedPackage( 'plugin/two.php', 'Two', 'repo-conflict', provider: 'bb', repository: 'workspace/two' ),
-				$this->managedPackage( 'plugin/three.php', 'Three', 'repo-three', provider: 'bb', repository: 'workspace/shared-locator' ),
-				$this->managedPackage( 'plugin/four.php', 'Four', 'repo-four', provider: 'bb', repository: 'workspace/shared-locator' ),
+				$this->managed_package( 'plugin/one.php', 'One', 'repo-conflict', provider: 'bb', repository: 'workspace/one' ),
+				$this->managed_package( 'plugin/two.php', 'Two', 'repo-conflict', provider: 'bb', repository: 'workspace/two' ),
+				$this->managed_package( 'plugin/three.php', 'Three', 'repo-three', provider: 'bb', repository: 'workspace/shared-locator' ),
+				$this->managed_package( 'plugin/four.php', 'Four', 'repo-four', provider: 'bb', repository: 'workspace/shared-locator' ),
 			)
 		);
 
 		$data = $this->dashboard(
 			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
 			plugins: $plugins,
-			providerCredentials: true
+			provider_credentials: true
 		)->get_index()['data'];
 
 		self::assertCount( 3, $data['repositoryTableRows'] );
@@ -953,7 +953,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		}
 	}
 
-	public function testProviderRepositoryProjectionDoesNotFoldOpaqueProviderLocators(): void {
+	public function test_provider_repository_projection_does_not_fold_opaque_provider_locators(): void {
 		$_GET    = array(
 			'tab'   => 'bb',
 			'panel' => 'repositories',
@@ -961,15 +961,15 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'all_deployment_plugins' )->willReturn(
 			array(
-				$this->managedPackage( 'plugin/upper.php', 'Uppercase Locator', 'repo-upper', provider: 'bb', repository: 'Owner/Repo' ),
-				$this->managedPackage( 'plugin/lower.php', 'Lowercase Locator', 'repo-lower', provider: 'bb', repository: 'owner/repo' ),
+				$this->managed_package( 'plugin/upper.php', 'Uppercase Locator', 'repo-upper', provider: 'bb', repository: 'Owner/Repo' ),
+				$this->managed_package( 'plugin/lower.php', 'Lowercase Locator', 'repo-lower', provider: 'bb', repository: 'owner/repo' ),
 			)
 		);
 
 		$data = $this->dashboard(
 			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
 			plugins: $plugins,
-			providerCredentials: true
+			provider_credentials: true
 		)->get_index()['data'];
 
 		self::assertCount( 2, $data['repositoryTableRows'] );
@@ -979,7 +979,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		}
 	}
 
-	public function testSelectedAddOnUsesTheRegisteredTabAndSafeContext(): void {
+	public function test_selected_add_on_uses_the_registered_tab_and_safe_context(): void {
 		$registry = new AdminAddOnRegistry( array(), 7, 7 );
 		$registry->register(
 			new AdminAddOnTab(
@@ -996,23 +996,23 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$registry->seal();
 		$_GET['tab'] = 'fixture';
 
-		$data = $this->dashboard( $this->throwingSecrets(), adminAddOns: $registry )->get_index()['data'];
+		$data = $this->dashboard( $this->throwing_secrets(), admin_add_ons: $registry )->get_index()['data'];
 
 		self::assertSame( 'fixture', $data['tab'] );
 		self::assertArrayNotHasKey( 'tabView', $data );
 		self::assertInstanceOf( AdminAddOnTab::class, $data['addOnTab'] );
-		self::assertSame( 'fixture', $data['addOnContext']->tabKey() );
+		self::assertSame( 'fixture', $data['addOnContext']->tab_key() );
 		self::assertSame(
 			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=fixture',
-			$data['addOnContext']->boosterUrl()
+			$data['addOnContext']->booster_url()
 		);
 		self::assertSame( array( false, false, false, false, false, false, true ), array_column( $data['tabs'], 'active' ) );
 	}
 
-	public function testPortabilityBuildsDisplaySafeRowsFromTheNonCleaningInventory(): void {
+	public function test_portability_builds_display_safe_rows_from_the_non_cleaning_inventory(): void {
 		$_GET['tab'] = 'portability';
-		$plugin      = $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id' );
-		$theme       = $this->managedPackage( 'example-theme', 'Example Theme', 'theme-repository-id' );
+		$plugin      = $this->managed_package( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id' );
+		$theme       = $this->managed_package( 'example-theme', 'Example Theme', 'theme-repository-id' );
 		$plugins     = $this->createStub( PluginRepository::class );
 		$themes      = $this->createStub( ThemeRepository::class );
 		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
@@ -1022,7 +1022,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			public function __construct() {
 				parent::__construct( '/unused/test-secrets.php', array() );
 			}
-			public function credentialProfiles( ProviderCode|string $provider ): array {
+			public function credential_profiles( ProviderCode|string $provider ): array {
 				return array();
 			}
 		};
@@ -1048,11 +1048,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertFalse( $data['portabilityExportCredentialsUnavailable'] );
 	}
 
-	public function testNativeTransporterRouteForcesTheCanonicalTabWithoutMutatingTheRequest(): void {
+	public function test_native_transporter_route_forces_the_canonical_tab_without_mutating_the_request(): void {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Fixture verifies the route leaves the request intact.
 		$_GET = array( 'tab' => 'documentation' );
 
-		$data = $this->dashboard( $this->throwingSecrets() )->get_transporter()['data'];
+		$data = $this->dashboard( $this->throwing_secrets() )->get_transporter()['data'];
 
 		self::assertSame( array( 'tab' => 'documentation' ), $_GET );
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
@@ -1061,20 +1061,20 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( array( false, false, false, true, false, false ), array_column( $data['tabs'], 'active' ) );
 	}
 
-	public function testEmptyWordPressActionArgumentLeavesCanonicalTabRoutingIntact(): void {
+	public function test_empty_word_press_action_argument_leaves_canonical_tab_routing_intact(): void {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Fixture models WordPress's empty action argument.
 		$_GET = array( 'tab' => 'documentation' );
 
-		$data = $this->dashboard( $this->throwingSecrets() )->get_index( '' )['data'];
+		$data = $this->dashboard( $this->throwing_secrets() )->get_index( '' )['data'];
 
 		self::assertSame( 'documentation', $data['tab'] );
 		self::assertSame( 'documentation.php', $data['tabView'] );
 	}
 
-	public function testPortabilityGroupsOnlyDisplaySafeCredentialMetadataAndKeepsPackageOnlyFallback(): void {
+	public function test_portability_groups_only_display_safe_credential_metadata_and_keeps_package_only_fallback(): void {
 		$_GET['tab'] = 'portability';
-		$plugin      = $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id', credentialId: 'shared-profile' );
-		$theme       = $this->managedPackage( 'example-theme', 'Example Theme', 'theme-repository-id', credentialId: 'shared-profile' );
+		$plugin      = $this->managed_package( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id', credential_id: 'shared-profile' );
+		$theme       = $this->managed_package( 'example-theme', 'Example Theme', 'theme-repository-id', credential_id: 'shared-profile' );
 		$plugins     = $this->createStub( PluginRepository::class );
 		$themes      = $this->createStub( ThemeRepository::class );
 		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
@@ -1083,7 +1083,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			public function __construct() {
 				parent::__construct( '/unused/test-secrets.php', array() );
 			}
-			public function credentialProfiles( ProviderCode|string $provider ): array {
+			public function credential_profiles( ProviderCode|string $provider ): array {
 				return array(
 					'shared-profile'       => array(
 						'id'            => 'shared-profile',
@@ -1125,14 +1125,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertArrayNotHasKey( 'configuration', $unassociated );
 		self::assertStringNotContainsString( 'unused-configuration-canary', (string) wp_json_encode( $data['portabilityExportCredentialGroups'] ) );
 
-		$unavailable = $this->dashboard( $this->throwingSecrets(), null, null, null, $plugins, $themes )->get_index()['data'];
+		$unavailable = $this->dashboard( $this->throwing_secrets(), null, null, null, $plugins, $themes )->get_index()['data'];
 		self::assertFalse( $unavailable['portabilityExportUnavailable'] );
 		self::assertCount( 2, $unavailable['portabilityExportRows'] );
 		self::assertTrue( $unavailable['portabilityExportCredentialsUnavailable'] );
 	}
 
 	/** @return list<array{string, string}> */
-	public static function staticTabProvider(): array {
+	public static function static_tab_provider(): array {
 		return array(
 			array( 'overview', 'onboarding.php' ),
 			array( 'documentation', 'documentation.php' ),
@@ -1140,11 +1140,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'staticTabProvider' )]
-	public function testStaticTabsDoNotReadCredentialOrWebhookProfiles( string $key, string $view ): void {
+	#[DataProvider( 'static_tab_provider' )]
+	public function test_static_tabs_do_not_read_credential_or_webhook_profiles( string $key, string $view ): void {
 		$_GET['tab'] = $key;
 
-		$data = $this->dashboard( $this->throwingSecrets() )->get_index()['data'];
+		$data = $this->dashboard( $this->throwing_secrets() )->get_index()['data'];
 
 		self::assertSame( $key, $data['tab'] );
 		self::assertSame( $view, $data['tabView'] );
@@ -1161,7 +1161,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 	}
 
 	/** @return list<array{mixed}> */
-	public static function fallbackTabProvider(): array {
+	public static function fallback_tab_provider(): array {
 		return array(
 			array( null ),
 			array( '' ),
@@ -1170,13 +1170,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'fallbackTabProvider' )]
-	public function testMissingUnknownAndArrayTabsFallBackWithoutDerivingAView( mixed $requested ): void {
+	#[DataProvider( 'fallback_tab_provider' )]
+	public function test_missing_unknown_and_array_tabs_fall_back_without_deriving_aview( mixed $requested ): void {
 		if ( null !== $requested ) {
 			$_GET['tab'] = $requested;
 		}
 
-		$data = $this->dashboard( $this->throwingSecrets() )->get_index()['data'];
+		$data = $this->dashboard( $this->throwing_secrets() )->get_index()['data'];
 
 		self::assertSame( 'overview', $data['tab'] );
 		self::assertSame( 'onboarding.php', $data['tabView'] );
@@ -1188,52 +1188,52 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 	}
 
-	public function testNavigationUsesTheCorrectSingleAndNetworkAdminBases(): void {
+	public function test_navigation_uses_the_correct_single_and_network_admin_bases(): void {
 		$_GET['tab'] = 'documentation';
-		$singleSite  = $this->dashboard( $this->throwingSecrets() )->get_index()['data'];
+		$single_site  = $this->dashboard( $this->throwing_secrets() )->get_index()['data'];
 
 		self::assertSame(
 			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview',
-			$singleSite['tabs'][0]['url']
+			$single_site['tabs'][0]['url']
 		);
 
-		$this->setMultisite( true );
-		$networkSite = $this->dashboard( $this->throwingSecrets() )->get_index()['data'];
+		$this->set_multisite( true );
+		$network_site = $this->dashboard( $this->throwing_secrets() )->get_index()['data'];
 
 		self::assertSame(
 			'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=overview',
-			$networkSite['tabs'][0]['url']
+			$network_site['tabs'][0]['url']
 		);
 
 		$_GET['tab']     = 'overview';
-		$networkOverview = $this->dashboard( $this->throwingSecrets() )->get_index()['data'];
+		$network_overview = $this->dashboard( $this->throwing_secrets() )->get_index()['data'];
 		self::assertSame(
 			'https://example.test/wp-admin/network/admin.php?page=ran-booster-plugins-create',
-			$networkOverview['onboarding']['install_plugin_url']
+			$network_overview['onboarding']['install_plugin_url']
 		);
 	}
 
-	public function testLegacyAddOnTabRequestsFallBackToTheOverview(): void {
+	public function test_legacy_add_on_tab_requests_fall_back_to_the_overview(): void {
 		$_GET['tab'] = 'assisted-hooks';
 
-		$data = $this->dashboard( $this->throwingSecrets() )->get_index()['data'];
+		$data = $this->dashboard( $this->throwing_secrets() )->get_index()['data'];
 
 		self::assertSame( 'overview', $data['tab'] );
 		self::assertSame( 'onboarding.php', $data['tabView'] );
 		self::assertArrayNotHasKey( 'addOnTab', $data );
 	}
 
-	public function testNativePackageHooksReceiveBoundedProjectionsForSettingsRowsAndActions(): void {
-		$settingsReads   = array();
-		$managementReads = array();
+	public function test_native_package_hooks_receive_bounded_projections_for_settings_rows_and_actions(): void {
+		$settings_reads   = array();
+		$management_reads = array();
 		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_package_settings_sections'][]          =
-			static function ( \RAN\Admin\AdminPackageProjection $package, string $settingsUrl ) use ( &$settingsReads ): void {
-				$settingsReads[] = array( $package->identifier(), $settingsUrl );
+			static function ( \RAN\Admin\AdminPackageProjection $package, string $settings_url ) use ( &$settings_reads ): void {
+				$settings_reads[] = array( $package->identifier(), $settings_url );
 				echo '<section>Release settings</section>';
 			};
 		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_admin_package_management_rows'][]    =
-			static function ( array $rows, string $surface, array $packages ) use ( &$managementReads ): array {
-				$managementReads[] = array( $surface, array_keys( $packages ) );
+			static function ( array $rows, string $surface, array $packages ) use ( &$management_reads ): array {
+				$management_reads[] = array( $surface, array_keys( $packages ) );
 
 				$rows['plugin/example.php'] = array(
 					'badges' => array(
@@ -1255,15 +1255,15 @@ final class DashboardIndexRoutingTest extends TestCase {
 					'fixture:manage' => array(
 						'label' => 'Manage releases',
 						'type'  => 'link',
-						'url'   => $package->settingsUrl(),
+						'url'   => $package->settings_url(),
 					),
 				);
 			};
-		$package = $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id' );
+		$package = $this->managed_package( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id' );
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$plugins->method( 'all_booster_plugins' )->willReturn( array( $package ) );
-		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins );
 
 		$_GET  = array( 'package' => 'plugin/example.php' );
 		$edit  = $dashboard->get_plugins()['data'];
@@ -1277,9 +1277,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 					'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php',
 				),
 			),
-			$settingsReads
+			$settings_reads
 		);
-		self::assertSame( array( array( 'plugin', array( 'plugin/example.php' ) ) ), $managementReads );
+		self::assertSame( array( array( 'plugin', array( 'plugin/example.php' ) ) ), $management_reads );
 		self::assertSame( array( '<section>Release settings</section>' ), $edit['packageExtensionPanels'] );
 		self::assertNull( $edit['repositoryBranchCheckOutcome'] );
 		self::assertArrayNotHasKey( 'repositoryBranchCheckNonce', $edit );
@@ -1290,7 +1290,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 	}
 
-	public function testFailingNativePackageHooksDoNotBreakCorePackagePages(): void {
+	public function test_failing_native_package_hooks_do_not_break_core_package_pages(): void {
 		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_package_settings_sections'][]       =
 			static function (): void {
 				throw new RuntimeException( 'Settings unavailable.' );
@@ -1299,11 +1299,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 			static function (): array {
 				throw new RuntimeException( 'Management unavailable.' );
 			};
-		$package = $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id' );
+		$package = $this->managed_package( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id' );
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$plugins->method( 'all_booster_plugins' )->willReturn( array( $package ) );
-		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins );
 
 		$_GET = array( 'package' => 'plugin/example.php' );
 		self::assertSame( array(), $dashboard->get_plugins()['data']['packageExtensionPanels'] );
@@ -1311,7 +1311,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( array(), $dashboard->get_plugins()['data']['packageExtensionRows'] );
 	}
 
-	public function testExplicitPackageSourceViewUsesOnlySharedAdvancedSectionsForPluginsAndThemes(): void {
+	public function test_explicit_package_source_view_uses_only_shared_advanced_sections_for_plugins_and_themes(): void {
 		$_GET['source_view'] = 'branch';
 		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_package_advanced_source_sections'][] =
 			static function (): void {
@@ -1319,12 +1319,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 			};
 		foreach ( array( 'plugin', 'theme' ) as $type ) {
 			$identifier = 'plugin' === $type ? 'plugin/example.php' : 'example-theme';
-			$package    = $this->managedPackage( $identifier, 'Example Package', 'repository-id' );
+			$package    = $this->managed_package( $identifier, 'Example Package', 'repository-id' );
 			$plugins    = $this->createStub( PluginRepository::class );
 			$themes     = $this->createStub( ThemeRepository::class );
 			$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 			$themes->method( 'booster_theme_from_stylesheet' )->willReturn( $package );
-			$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins, themes: $themes );
+			$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes );
 			$_GET      = array(
 				'package'     => $identifier,
 				'source_view' => 'branch',
@@ -1337,11 +1337,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 		}
 	}
 
-	public function testExplicitAdvancedOpenFlagOpensTheSelectedSourceView(): void {
-		$package = $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id' );
+	public function test_explicit_advanced_open_flag_opens_the_selected_source_view(): void {
+		$package = $this->managed_package( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id' );
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
-		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins );
 		$_GET      = array(
 			'package'                   => 'plugin/example.php',
 			'source_view'               => 'branch',
@@ -1354,8 +1354,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'branch', $data['packageSource']['selected'] );
 	}
 
-	public function testAdvancedSourceSummaryProjectionIncludesTheSavedBranchSubdirectory(): void {
-		$package = $this->managedPackage(
+	public function test_advanced_source_summary_projection_includes_the_saved_branch_subdirectory(): void {
+		$package = $this->managed_package(
 			'plugin/example.php',
 			'Example Plugin',
 			'plugin-repository-id',
@@ -1363,7 +1363,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
-		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins );
 		$_GET      = array( 'package' => 'plugin/example.php' );
 
 		$data = $dashboard->get_plugins()['data'];
@@ -1383,46 +1383,46 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'Releases', $data['packageSource']['choices']['release_asset']['heading'] );
 	}
 
-	public function testReleaseDeploymentHooksReceiveExactOuterCreateEditAndIndexArguments(): void {
-		$sourceCalls  = array();
-		$sectionCalls = array();
-		$summaryCalls = array();
-		$rowCalls     = array();
-		$actionCalls  = array();
+	public function test_release_deployment_hooks_receive_exact_outer_create_edit_and_index_arguments(): void {
+		$source_calls  = array();
+		$section_calls = array();
+		$summary_calls = array();
+		$row_calls     = array();
+		$action_calls  = array();
 		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_admin_package_source_choices'][]          =
-			static function ( array $choices, string $mode, string $type, ?\RAN\Admin\AdminPackageProjection $package, string $pageUrl ) use ( &$sourceCalls ): array {
-				$sourceCalls[]                        = array( $mode, $type, $package?->identifier(), $pageUrl );
+			static function ( array $choices, string $mode, string $type, ?\RAN\Admin\AdminPackageProjection $package, string $page_url ) use ( &$source_calls ): array {
+				$source_calls[]                        = array( $mode, $type, $package?->identifier(), $page_url );
 				$choices['release_asset']['disabled'] = false;
 				$choices['release_asset']['hydrated'] = true;
-				$choices['release_asset']['url']      = add_query_arg( 'source_view', 'release_asset', $pageUrl );
+				$choices['release_asset']['url']      = add_query_arg( 'source_view', 'release_asset', $page_url );
 
 				return $choices;
 			};
 		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_package_advanced_source_sections'][]        =
-			static function ( string $mode, string $type, string $selected, ?\RAN\Admin\AdminPackageProjection $package, string $pageUrl ) use ( &$sectionCalls ): void {
-				$sectionCalls[] = array( $mode, $type, $selected, $package?->identifier(), $pageUrl );
+			static function ( string $mode, string $type, string $selected, ?\RAN\Admin\AdminPackageProjection $package, string $page_url ) use ( &$section_calls ): void {
+				$section_calls[] = array( $mode, $type, $selected, $package?->identifier(), $page_url );
 				echo '<section>Release deployment source</section>';
 			};
 		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_admin_package_advanced_source_summary'][] =
-			static function ( string $summary, string $mode, string $type, string $selected, ?\RAN\Admin\AdminPackageProjection $package ) use ( &$summaryCalls ): string {
-				$summaryCalls[] = array( $summary, $mode, $type, $selected, $package?->identifier() );
+			static function ( string $summary, string $mode, string $type, string $selected, ?\RAN\Admin\AdminPackageProjection $package ) use ( &$summary_calls ): string {
+				$summary_calls[] = array( $summary, $mode, $type, $selected, $package?->identifier() );
 
 				return 'Published release fixture';
 			};
 		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_admin_package_management_rows'][]         =
-			static function ( array $rows, string $type, array $packages ) use ( &$rowCalls ): array {
-				$rowCalls[] = array( array_keys( $rows ), $type, array_keys( $packages ) );
+			static function ( array $rows, string $type, array $packages ) use ( &$row_calls ): array {
+				$row_calls[] = array( array_keys( $rows ), $type, array_keys( $packages ) );
 
 				return $rows;
 			};
 		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_admin_package_management_actions'][]      =
-			static function ( array $actions, string $type, \RAN\Admin\AdminPackageProjection $package ) use ( &$actionCalls ): array {
-				$actionCalls[] = array( $actions, $type, $package->identifier(), $package->settingsUrl() );
+			static function ( array $actions, string $type, \RAN\Admin\AdminPackageProjection $package ) use ( &$action_calls ): array {
+				$action_calls[] = array( $actions, $type, $package->identifier(), $package->settings_url() );
 
 				return $actions;
 			};
 
-		$package = $this->managedPackage(
+		$package = $this->managed_package(
 			'plugin/example.php',
 			'Example Plugin',
 			'plugin-repository-id',
@@ -1432,7 +1432,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$plugins->method( 'all_booster_plugins' )->willReturn( array( $package ) );
 		$dashboard = $this->dashboard(
-			$this->throwingSecrets(),
+			$this->throwing_secrets(),
 			plugins: $plugins,
 			database: new ReadyDashboardDatabase()
 		);
@@ -1447,36 +1447,36 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$_GET   = array();
 		$index  = $dashboard->get_plugins()['data'];
 
-		$createUrl = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins-create';
-		$editUrl   = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php';
+		$create_url = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins-create';
+		$edit_url   = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php';
 		self::assertSame(
 			array(
-				array( 'create', 'plugin', null, $createUrl ),
-				array( 'edit', 'plugin', 'plugin/example.php', $editUrl ),
+				array( 'create', 'plugin', null, $create_url ),
+				array( 'edit', 'plugin', 'plugin/example.php', $edit_url ),
 			),
-			$sourceCalls
+			$source_calls
 		);
 		self::assertSame(
 			array(
-				array( 'create', 'plugin', 'branch', null, $createUrl ),
-				array( 'edit', 'plugin', 'release_asset', 'plugin/example.php', $editUrl ),
+				array( 'create', 'plugin', 'branch', null, $create_url ),
+				array( 'edit', 'plugin', 'release_asset', 'plugin/example.php', $edit_url ),
 			),
-			$sectionCalls
+			$section_calls
 		);
-		self::assertSame( array( 'create', 'edit' ), array_column( $summaryCalls, 1 ) );
-		self::assertSame( array( 'branch', 'release_asset' ), array_column( $summaryCalls, 3 ) );
-		self::assertSame( array( array( array( 'plugin/example.php' ), 'plugin', array( 'plugin/example.php' ) ) ), $rowCalls );
-		self::assertSame( array( array( array(), 'plugin', 'plugin/example.php', $editUrl ) ), $actionCalls );
+		self::assertSame( array( 'create', 'edit' ), array_column( $summary_calls, 1 ) );
+		self::assertSame( array( 'branch', 'release_asset' ), array_column( $summary_calls, 3 ) );
+		self::assertSame( array( array( array( 'plugin/example.php' ), 'plugin', array( 'plugin/example.php' ) ) ), $row_calls );
+		self::assertSame( array( array( array(), 'plugin', 'plugin/example.php', $edit_url ) ), $action_calls );
 		self::assertSame( 'branch', $create['packageSource']['selected'] );
 		self::assertSame( 'release_asset', $edit['packageSource']['selected'] );
 		self::assertSame( 'Published release fixture', $edit['packageSource']['advanced_summary'] );
 		self::assertArrayHasKey( 'plugin/example.php', $index['packageExtensionRows'] );
 	}
 
-	#[DataProvider( 'packageTypeProvider' )]
-	public function testSavedReleaseSourceRemainsUnavailableWithoutItsAddOnForBothPackageTypes( string $type ): void {
+	#[DataProvider( 'package_type_provider' )]
+	public function test_saved_release_source_remains_unavailable_without_its_add_on_for_both_package_types( string $type ): void {
 		$identifier = 'plugin' === $type ? 'release/release.php' : 'release-theme';
-		$package    = $this->managedPackage(
+		$package    = $this->managed_package(
 			$identifier,
 			'Release Package',
 			'release-repository',
@@ -1486,7 +1486,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$themes     = $this->createStub( ThemeRepository::class );
 		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$themes->method( 'booster_theme_from_stylesheet' )->willReturn( $package );
-		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins, themes: $themes );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes );
 		$_GET      = array(
 			'package'     => $identifier,
 			'source_view' => 'branch',
@@ -1499,8 +1499,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertTrue( $data['packageSource']['unavailable'] );
 	}
 
-	public function testReleasePackageRetainsCurrentBranchReadinessWithoutProviderOperations(): void {
-		$package  = $this->managedPackage(
+	public function test_release_package_retains_current_branch_readiness_without_provider_operations(): void {
+		$package  = $this->managed_package(
 			'release/release.php',
 			'Release Package',
 			'101',
@@ -1542,10 +1542,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 				parent::__construct( '/unused/test-secrets.php', array() );
 			}
 
-			public function assertManagedStorageReady(): void {
+			public function assert_managed_storage_ready(): void {
 			}
 
-			public function webhookProfiles( ProviderCode|string $provider ): array {
+			public function webhook_profiles( ProviderCode|string $provider ): array {
 				return array(
 					'webhook-profile' => array(
 						'scope'        => 'repository',
@@ -1566,19 +1566,19 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$provider->method( 'get_metadata' )->willReturn( new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://example.test/', 'Owner' ) );
 		$policies = ShippedSecretPolicyCatalog::create();
 		$provider->method( 'get_credential_policy' )->willReturn( $policies->credentialPolicy( ProviderCode::parse( 'gh' ) ) );
-		$provider->method( 'get_webhook_policy' )->willReturn( $policies->webhookPolicy( ProviderCode::parse( 'gh' ) ) );
+		$provider->method( 'get_webhook_policy' )->willReturn( $policies->webhook_policy( ProviderCode::parse( 'gh' ) ) );
 		$provider->expects( self::never() )->method( 'resolve_repository' );
 		$provider->expects( self::never() )->method( 'prepare_archive' );
 		self::assertInstanceOf( \RAN\RepositoryProvider\WebhookNormalizer::class, $provider );
 		$evaluator = new WebhookAssistanceReadinessEvaluator( $plugins, $themes, $secrets, new ReadyDashboardDatabase(), static fn (): bool => true );
-		self::assertSame( 'ready', $evaluator->evaluate( 'gh', rest_url( 'ran-booster/v1/webhooks/gh' ) )->toArray()['site']['status'] );
+		self::assertSame( 'ready', $evaluator->evaluate( 'gh', rest_url( 'ran-booster/v1/webhooks/gh' ) )->to_array()['site']['status'] );
 		$dashboard = $this->dashboard(
 			$secrets,
 			plugins: $plugins,
 			themes: $themes,
 			database: new ReadyDashboardDatabase(),
 			providers: new ProviderRegistry( array( $provider ) ),
-			webhookAssistance: $evaluator
+			webhook_assistance: $evaluator
 		);
 		$_GET      = array(
 			'package'     => 'release/release.php',
@@ -1595,7 +1595,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'repository', $readiness['repository']['local_secret_coverage'] );
 	}
 
-	public function testTroubleshootingResultsRenderOnlyInTheSameDashboardRequest(): void {
+	public function test_troubleshooting_results_render_only_in_the_same_dashboard_request(): void {
 		$_GET['tab'] = 'troubleshooting';
 		$secrets     = new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() );
 		$providers   = $this->providers();
@@ -1627,13 +1627,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertFalse( $this->dashboard( $secrets, $service )->get_index()['data']['troubleshooting']['ran'] );
 	}
 
-	public function testDeploymentActivityUsesItsOwnReadPayloadWithoutDiagnosticsResults(): void {
+	public function test_deployment_activity_uses_its_own_read_payload_without_diagnostics_results(): void {
 		$_GET = array(
 			'tab'   => 'troubleshooting',
 			'panel' => 'deployment-activity',
 		);
 
-		$data = $this->dashboard( $this->throwingSecrets() )->get_index()['data'];
+		$data = $this->dashboard( $this->throwing_secrets() )->get_index()['data'];
 
 		self::assertSame( 'activity', $data['troubleshootingPanel'] );
 		self::assertSame( array(), $data['troubleshooting'] );
@@ -1641,7 +1641,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'list', $data['deploymentActivity']['mode'] );
 	}
 
-	public function testDebugCaptureUsesOnlyItsBoundedFilePayload(): void {
+	public function test_debug_capture_uses_only_its_bounded_file_payload(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-dashboard-capture-' . bin2hex( random_bytes( 6 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable focused fixture setup.
 		self::assertTrue( mkdir( $directory, 0700 ) );
@@ -1655,7 +1655,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 				'panel' => 'debug-capture',
 			);
 
-			$data = $this->dashboard( $this->throwingSecrets(), null, null, null, null, null, $capture )->get_index()['data'];
+			$data = $this->dashboard( $this->throwing_secrets(), null, null, null, null, null, $capture )->get_index()['data'];
 
 			self::assertSame( 'debug-capture', $data['troubleshootingPanel'] );
 			self::assertSame( array(), $data['troubleshooting'] );
@@ -1677,7 +1677,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 	}
 
 	/** @return list<array{string, bool}> */
-	public static function packageStorageReadProvider(): array {
+	public static function package_storage_read_provider(): array {
 		return array(
 			array( 'plugin', false ),
 			array( 'plugin', true ),
@@ -1686,10 +1686,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'packageTypeProvider' )]
-	public function testSelectedPackageRoutesRenderTheSharedEditPayload( string $type ): void {
+	#[DataProvider( 'package_type_provider' )]
+	public function test_selected_package_routes_render_the_shared_edit_payload( string $type ): void {
 		$identifier = 'plugin' === $type ? 'example/example.php' : 'example-theme';
-		$package    = $this->managedPackage( $identifier, 'Example Package', 'example-repository' );
+		$package    = $this->managed_package( $identifier, 'Example Package', 'example-repository' );
 		$plugins    = $this->createMock( PluginRepository::class );
 		$themes     = $this->createMock( ThemeRepository::class );
 		$_GET       = array( 'package' => $identifier );
@@ -1703,7 +1703,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			->with( $identifier )
 			->willReturn( $package );
 
-		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins, themes: $themes );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes );
 		$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
 
 		self::assertSame( 'packages/edit', $result['view'] );
@@ -1727,15 +1727,15 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'branch', $result['data']['packageSource']['selected'] );
 	}
 
-	#[DataProvider( 'packageTypeProvider' )]
-	public function testNetworkCreateEditAndIndexRoutesShareTheCanonicalPackageAdminBase( string $type ): void {
-		$this->setMultisite( true );
+	#[DataProvider( 'package_type_provider' )]
+	public function test_network_create_edit_and_index_routes_share_the_canonical_package_admin_base( string $type ): void {
+		$this->set_multisite( true );
 		$identifier   = 'plugin' === $type ? 'example/example.php' : 'example-theme';
-		$package      = $this->managedPackage( $identifier, 'Example Package', 'example-repository' );
-		$settingsUrls = array();
+		$package      = $this->managed_package( $identifier, 'Example Package', 'example-repository' );
+		$settings_urls = array();
 		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_package_settings_sections'][] =
-			static function ( \RAN\Admin\AdminPackageProjection $projection, string $settingsUrl ) use ( &$settingsUrls ): void {
-				$settingsUrls[] = array( $projection->settingsUrl(), $settingsUrl );
+			static function ( \RAN\Admin\AdminPackageProjection $projection, string $settings_url ) use ( &$settings_urls ): void {
+				$settings_urls[] = array( $projection->settings_url(), $settings_url );
 			};
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
@@ -1744,7 +1744,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$themes->method( 'booster_theme_from_stylesheet' )->willReturn( $package );
 		$themes->method( 'all_booster_themes' )->willReturn( 'theme' === $type ? array( $package ) : array() );
 		$dashboard = $this->dashboard(
-			$this->throwingSecrets(),
+			$this->throwing_secrets(),
 			plugins: $plugins,
 			themes: $themes,
 			database: new ReadyDashboardDatabase()
@@ -1762,12 +1762,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( $base, $edit['packageView']->get_admin_url() );
 		self::assertSame( $base, $index['packageView']->get_admin_url() );
 		self::assertStringStartsWith( $base . '?page=', $create['packageSource']['choices']['branch']['url'] );
-		self::assertSame( array( array( $settingsUrls[0][0], $settingsUrls[0][0] ) ), $settingsUrls );
-		self::assertStringStartsWith( $base . '?page=', $settingsUrls[0][0] );
+		self::assertSame( array( array( $settings_urls[0][0], $settings_urls[0][0] ) ), $settings_urls );
+		self::assertStringStartsWith( $base . '?page=', $settings_urls[0][0] );
 	}
 
-	#[DataProvider( 'packageTypeProvider' )]
-	public function testSignedInstallNoticeProjectsTheManagedPackageIntoTheCreateView( string $type ): void {
+	#[DataProvider( 'package_type_provider' )]
+	public function test_signed_install_notice_projects_the_managed_package_into_the_create_view( string $type ): void {
 		$identifier = 'plugin' === $type ? 'example/example.php' : 'example-theme';
 		$_GET       = array(
 			'ran_booster_result'        => 'install',
@@ -1775,7 +1775,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'_ran_booster_notice_nonce' => wp_create_nonce( 'ran-booster-package-success|' . $type . '|install|' . $identifier ),
 		);
 		$dashboard  = $this->dashboard(
-			$this->throwingSecrets(),
+			$this->throwing_secrets(),
 			database: new ReadyDashboardDatabase()
 		);
 
@@ -1786,8 +1786,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( ucfirst( $type ) . ' was successfully installed.', $dashboard->messages[0]['message'] );
 	}
 
-	#[DataProvider( 'packageTypeProvider' )]
-	public function testSignedAlreadyManagedNoticeProjectsTheManagedPackageIntoTheCreateView( string $type ): void {
+	#[DataProvider( 'package_type_provider' )]
+	public function test_signed_already_managed_notice_projects_the_managed_package_into_the_create_view( string $type ): void {
 		$identifier = 'plugin' === $type ? 'example/example.php' : 'example-theme';
 		$_GET       = array(
 			'ran_booster_result'        => 'already-managed',
@@ -1795,7 +1795,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'_ran_booster_notice_nonce' => wp_create_nonce( 'ran-booster-package-success|' . $type . '|already-managed|' . $identifier ),
 		);
 		$dashboard  = $this->dashboard(
-			$this->throwingSecrets(),
+			$this->throwing_secrets(),
 			database: new ReadyDashboardDatabase()
 		);
 
@@ -1811,15 +1811,15 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'packageTypeProvider' )]
-	public function testForgedInstallNoticeDoesNotChangeTheCreateActions( string $type ): void {
+	#[DataProvider( 'package_type_provider' )]
+	public function test_forged_install_notice_does_not_change_the_create_actions( string $type ): void {
 		$_GET      = array(
 			'ran_booster_result'        => 'install',
 			'ran_booster_package'       => 'forged-package',
 			'_ran_booster_notice_nonce' => 'forged',
 		);
 		$dashboard = $this->dashboard(
-			$this->throwingSecrets(),
+			$this->throwing_secrets(),
 			database: new ReadyDashboardDatabase()
 		);
 
@@ -1829,10 +1829,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( array(), $dashboard->messages );
 	}
 
-	#[DataProvider( 'packageTypeProvider' )]
-	public function testMissingSelectedPackagesFallBackToTheMatchingIndex( string $type ): void {
+	#[DataProvider( 'package_type_provider' )]
+	public function test_missing_selected_packages_fall_back_to_the_matching_index( string $type ): void {
 		$identifier = 'plugin' === $type ? 'missing/missing.php' : 'missing-theme';
-		$fallback   = $this->managedPackage(
+		$fallback   = $this->managed_package(
 			'plugin' === $type ? 'available/available.php' : 'available-theme',
 			'Available Package',
 			'available-repository'
@@ -1859,7 +1859,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$plugins->expects( self::never() )->method( 'all_booster_plugins' );
 		}
 
-		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins, themes: $themes );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes );
 		$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
 
 		self::assertSame( 'packages/index', $result['view'] );
@@ -1869,29 +1869,29 @@ final class DashboardIndexRoutingTest extends TestCase {
 	}
 
 	/** @return list<array{string, string}> */
-	public static function packageListFilterProvider(): array {
+	public static function package_list_filter_provider(): array {
 		return array(
 			array( 'plugin', 'Release Plugin' ),
 			array( 'theme', 'Release Theme' ),
 		);
 	}
 
-	#[DataProvider( 'packageListFilterProvider' )]
-	public function testPackageIndexesApplyCombinedNormalizedFiltersForBothPackageTypes( string $type, string $releaseName ): void {
+	#[DataProvider( 'package_list_filter_provider' )]
+	public function test_package_indexes_apply_combined_normalized_filters_for_both_package_types( string $type, string $release_name ): void {
 		$_GET    = array(
 			's'        => ' release ',
 			'provider' => 'BB',
 			'source'   => 'release_asset',
 			'policy'   => 'automatic',
 		);
-		$branch  = $this->managedPackage(
+		$branch  = $this->managed_package(
 			'plugin' === $type ? 'alpha/alpha.php' : 'alpha-theme',
 			'plugin' === $type ? 'Alpha Plugin' : 'Alpha Theme',
 			'alpha-repository'
 		);
-		$release = $this->managedPackage(
+		$release = $this->managed_package(
 			'plugin' === $type ? 'release/release.php' : 'release-theme',
-			$releaseName,
+			$release_name,
 			'release-repository',
 			\RAN\PackageSource::RELEASE_ASSET,
 			'bb',
@@ -1899,7 +1899,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'studio/release-package',
 			'stable'
 		);
-		$other   = $this->managedPackage(
+		$other   = $this->managed_package(
 			'plugin' === $type ? 'other/other.php' : 'other-theme',
 			'plugin' === $type ? 'Other Plugin' : 'Other Theme',
 			'other-repository',
@@ -1933,14 +1933,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( array( $release->get_identifier() ), array_map( static fn ( Package $package ): mixed => $package->get_identifier(), $data['packages'] ) );
 	}
 
-	public function testRepeatedPackageIndexRenderingUsesFreshRepositoryReadback(): void {
-		$first   = $this->managedPackage( 'first/first.php', 'First Plugin', 'first-repository' );
-		$second  = $this->managedPackage( 'second/second.php', 'Second Plugin', 'second-repository' );
+	public function test_repeated_package_index_rendering_uses_fresh_repository_readback(): void {
+		$first   = $this->managed_package( 'first/first.php', 'First Plugin', 'first-repository' );
+		$second  = $this->managed_package( 'second/second.php', 'Second Plugin', 'second-repository' );
 		$plugins = $this->createMock( PluginRepository::class );
 		$plugins->expects( self::exactly( 2 ) )
 			->method( 'all_booster_plugins' )
 			->willReturnOnConsecutiveCalls( array( $first ), array( $second ) );
-		$dashboard = $this->dashboard( $this->throwingSecrets(), plugins: $plugins );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins );
 
 		$initial = $dashboard->get_plugins()['data'];
 		$fresh   = $dashboard->get_plugins()['data'];
@@ -1949,16 +1949,16 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( array( $second ), $fresh['packages'] );
 	}
 
-	#[DataProvider( 'packageListFilterProvider' )]
-	public function testPackageIndexesDiscardMalformedAndUnsupportedFilterValues( string $type, string $releaseName ): void {
-		unset( $releaseName );
+	#[DataProvider( 'package_list_filter_provider' )]
+	public function test_package_indexes_discard_malformed_and_unsupported_filter_values( string $type, string $release_name ): void {
+		unset( $release_name );
 		$_GET    = array(
 			's'        => array( 'not-scalar' ),
 			'provider' => 'missing-provider',
 			'source'   => 'archive',
 			'policy'   => 'sometimes',
 		);
-		$package = $this->managedPackage(
+		$package = $this->managed_package(
 			'plugin' === $type ? 'example/example.php' : 'example-theme',
 			'Example Package',
 			'example-repository'
@@ -1987,8 +1987,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( array( $package ), $data['packages'] );
 	}
 
-	#[DataProvider( 'packageStorageReadProvider' )]
-	public function testInvalidPackageStorageRendersASafeEmptyIndex( string $type, bool $detail ): void {
+	#[DataProvider( 'package_storage_read_provider' )]
+	public function test_invalid_package_storage_renders_asafe_empty_index( string $type, bool $detail ): void {
 		if ( $detail ) {
 			$_GET['package'] = 'upstream-provider-canary';
 		}
@@ -2012,8 +2012,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringNotContainsString( 'upstream-provider-canary', $dashboard->messages[0]['message'] );
 	}
 
-	#[DataProvider( 'packageTypeProvider' )]
-	public function testIncompatibleDatabaseRendersADisabledCreateScreen( string $type ): void {
+	#[DataProvider( 'package_type_provider' )]
+	public function test_incompatible_database_renders_adisabled_create_screen( string $type ): void {
 		$connection = new class() {
 			public string $last_error = '';
 
@@ -2036,14 +2036,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 	}
 
 	/** @return list<array{string}> */
-	public static function packageTypeProvider(): array {
+	public static function package_type_provider(): array {
 		return array(
 			array( 'plugin' ),
 			array( 'theme' ),
 		);
 	}
 
-	public function testBulkPackageRedirectPreservesOnlyNormalizedListFilters(): void {
+	public function test_bulk_package_redirect_preserves_only_normalized_list_filters(): void {
 		$_GET = array(
 			's'        => ' release ',
 			'provider' => 'BB',
@@ -2052,7 +2052,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'unsafe'   => '<script>',
 		);
 
-		$url = $this->dashboard( $this->throwingSecrets() )->bulk_package_redirect(
+		$url = $this->dashboard( $this->throwing_secrets() )->bulk_package_redirect(
 			'theme',
 			BulkPackageResult::policy(
 				BulkPackageAction::POLICY_AUTOMATIC,
@@ -2075,10 +2075,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertArrayHasKey( '_ran_booster_bulk_notice_nonce', $query );
 	}
 
-	public function testBulkPackageRedirectRejectsAPluginActivationResultForTheThemeList(): void {
+	public function test_bulk_package_redirect_rejects_aplugin_activation_result_for_the_theme_list(): void {
 		$this->expectException( \LogicException::class );
 
-		$this->dashboard( $this->throwingSecrets() )->bulk_package_redirect(
+		$this->dashboard( $this->throwing_secrets() )->bulk_package_redirect(
 			'theme',
 			BulkPackageResult::plugin_activation(
 				BulkPackageAction::ACTIVATE_PLUGINS,
@@ -2090,8 +2090,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 	}
 
-	public function testSignedBulkQueueNoticeReportsPartialSuccessAndUnavailableRunner(): void {
-		$dashboard = $this->dashboard( $this->throwingSecrets() );
+	public function test_signed_bulk_queue_notice_reports_partial_success_and_unavailable_runner(): void {
+		$dashboard = $this->dashboard( $this->throwing_secrets() );
 		$url       = $dashboard->bulk_package_redirect(
 			'plugin',
 			BulkPackageResult::queue(
@@ -2122,8 +2122,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 2, $dashboard->messages[0]['skipped_updates'] );
 	}
 
-	public function testSignedBulkQueueNoticeReportsWhenEverySelectionWasSkipped(): void {
-		$dashboard = $this->dashboard( $this->throwingSecrets() );
+	public function test_signed_bulk_queue_notice_reports_when_every_selection_was_skipped(): void {
+		$dashboard = $this->dashboard( $this->throwing_secrets() );
 		$url       = $dashboard->bulk_package_redirect(
 			'plugin',
 			BulkPackageResult::queue(
@@ -2147,8 +2147,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringNotContainsString( 'could not schedule the deployment runner', $dashboard->messages[0]['message'] );
 	}
 
-	public function testSignedBulkPolicyNoticeReportsChangedAndUnchangedCounts(): void {
-		$dashboard = $this->dashboard( $this->throwingSecrets() );
+	public function test_signed_bulk_policy_notice_reports_changed_and_unchanged_counts(): void {
+		$dashboard = $this->dashboard( $this->throwing_secrets() );
 		$url       = $dashboard->bulk_package_redirect(
 			'theme',
 			BulkPackageResult::policy(
@@ -2174,8 +2174,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 	}
 
-	public function testSignedBulkActivationNoticeReportsPartialWordPressStateChange(): void {
-		$dashboard = $this->dashboard( $this->throwingSecrets() );
+	public function test_signed_bulk_activation_notice_reports_partial_word_press_state_change(): void {
+		$dashboard = $this->dashboard( $this->throwing_secrets() );
 		$url       = $dashboard->bulk_package_redirect(
 			'plugin',
 			BulkPackageResult::plugin_activation(
@@ -2203,8 +2203,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringContainsString( 'Booster cannot disable itself: 1', $dashboard->messages[0]['message'] );
 	}
 
-	public function testTamperedBulkNoticeIsIgnored(): void {
-		$dashboard = $this->dashboard( $this->throwingSecrets() );
+	public function test_tampered_bulk_notice_is_ignored(): void {
+		$dashboard = $this->dashboard( $this->throwing_secrets() );
 		$url       = $dashboard->bulk_package_redirect(
 			'plugin',
 			BulkPackageResult::queue( 1, 1, array(), 'scheduled' )
@@ -2219,8 +2219,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( array(), $dashboard->messages );
 	}
 
-	public function testBulkNoticeSignatureCannotBeReplayedAcrossPackageTypes(): void {
-		$dashboard = $this->dashboard( $this->throwingSecrets() );
+	public function test_bulk_notice_signature_cannot_be_replayed_across_package_types(): void {
+		$dashboard = $this->dashboard( $this->throwing_secrets() );
 		$url       = $dashboard->bulk_package_redirect(
 			'plugin',
 			BulkPackageResult::queue( 1, 1, array(), 'scheduled' )
@@ -2234,8 +2234,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( array(), $dashboard->messages );
 	}
 
-	public function testForgedBulkNoticeMarkerIsIgnored(): void {
-		$dashboard = $this->dashboard( $this->throwingSecrets() );
+	public function test_forged_bulk_notice_marker_is_ignored(): void {
+		$dashboard = $this->dashboard( $this->throwing_secrets() );
 		$url       = $dashboard->bulk_package_redirect(
 			'plugin',
 			BulkPackageResult::queue( 1, 1, array(), 'scheduled' )
@@ -2250,12 +2250,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( array(), $dashboard->messages );
 	}
 
-	public function testPackageOverviewReadsBranchActivityOnly(): void {
+	public function test_package_overview_reads_branch_activity_only(): void {
 		$database       = new DashboardActivityWpdb();
 		$database->rows = array( DashboardActivityWpdb::attempt( 1, 'succeeded' ) );
-		$attempts       = $this->deploymentAttempts( $database );
-		$branch         = $this->managedPackage( 'plugin/branch.php', 'Branch Plugin', 'branch-repository' );
-		$release        = $this->managedPackage(
+		$attempts       = $this->deployment_attempts( $database );
+		$branch         = $this->managed_package( 'plugin/branch.php', 'Branch Plugin', 'branch-repository' );
+		$release        = $this->managed_package(
 			'plugin/release.php',
 			'Release Plugin',
 			'release-repository',
@@ -2269,7 +2269,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertArrayNotHasKey( 'plugin/release.php', $activity['items'] );
 	}
 
-	public function testShortDeploymentHistoryDoesNotOfferAnOlderPage(): void {
+	public function test_short_deployment_history_does_not_offer_an_older_page(): void {
 		$database       = new DashboardActivityWpdb();
 		$database->rows = array_map( static fn ( int $id ): array => DashboardActivityWpdb::attempt( $id, 'succeeded' ), range( 1, 9 ) );
 		$_GET           = array(
@@ -2278,10 +2278,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 
 		$data = $this->dashboard(
-			$this->throwingSecrets(),
+			$this->throwing_secrets(),
 			null,
 			null,
-			$this->deploymentAttempts( $database )
+			$this->deployment_attempts( $database )
 		)->get_index()['data']['deploymentActivity'];
 
 		self::assertCount( 9, $data['items'] );
@@ -2290,19 +2290,19 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertFalse( $data['has_cursor'] );
 	}
 
-	public function testDeploymentActivityProvidesExactManagedPackageSettingsUrls(): void {
+	public function test_deployment_activity_provides_exact_managed_package_settings_urls(): void {
 		$database       = new DashboardActivityWpdb();
 		$database->rows = array( DashboardActivityWpdb::attempt( 1, 'failed' ) );
 		$plugins        = $this->createStub( PluginRepository::class );
 		$themes         = $this->createStub( ThemeRepository::class );
 		$plugins->method( 'all_deployment_plugins' )->willReturn(
 			array(
-				'plugin/example.php' => $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'repository-1' ),
+				'plugin/example.php' => $this->managed_package( 'plugin/example.php', 'Example Plugin', 'repository-1' ),
 			)
 		);
 		$themes->method( 'all_deployment_themes' )->willReturn(
 			array(
-				'example-theme' => $this->managedPackage( 'example-theme', 'Example Theme', 'repository-2' ),
+				'example-theme' => $this->managed_package( 'example-theme', 'Example Theme', 'repository-2' ),
 			)
 		);
 		$_GET = array(
@@ -2311,10 +2311,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 
 		$data = $this->dashboard(
-			$this->throwingSecrets(),
+			$this->throwing_secrets(),
 			null,
 			null,
-			$this->deploymentAttempts( $database ),
+			$this->deployment_attempts( $database ),
 			$plugins,
 			$themes
 		)->get_index()['data']['deploymentActivity'];
@@ -2329,15 +2329,15 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 	}
 
-	public function testDeploymentActivityLinksFailClosedForAmbiguousOrUnavailableInventory(): void {
+	public function test_deployment_activity_links_fail_closed_for_ambiguous_or_unavailable_inventory(): void {
 		$database       = new DashboardActivityWpdb();
 		$database->rows = array( DashboardActivityWpdb::attempt( 1, 'failed' ) );
 		$plugins        = $this->createStub( PluginRepository::class );
 		$themes         = $this->createStub( ThemeRepository::class );
 		$plugins->method( 'all_deployment_plugins' )->willReturn(
 			array(
-				'plugin/example.php'       => $this->managedPackage( 'plugin/example.php', 'Example Plugin', 'repository-1' ),
-				'other-example/plugin.php' => $this->managedPackage( 'other-example/plugin.php', 'Other Example Plugin', 'repository-2' ),
+				'plugin/example.php'       => $this->managed_package( 'plugin/example.php', 'Example Plugin', 'repository-1' ),
+				'other-example/plugin.php' => $this->managed_package( 'other-example/plugin.php', 'Other Example Plugin', 'repository-2' ),
 			)
 		);
 		$themes->method( 'all_deployment_themes' )->willThrowException( PackageStorageFailure::invalid_provider_identity() );
@@ -2347,10 +2347,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 
 		$data = $this->dashboard(
-			$this->throwingSecrets(),
+			$this->throwing_secrets(),
 			null,
 			null,
-			$this->deploymentAttempts( $database ),
+			$this->deployment_attempts( $database ),
 			$plugins,
 			$themes
 		)->get_index()['data']['deploymentActivity'];
@@ -2361,32 +2361,32 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( array(), $data['package_settings_urls']['theme'] );
 	}
 
-	public function testDeploymentHistoryUsesLookaheadWithoutOverlappingPages(): void {
+	public function test_deployment_history_uses_lookahead_without_overlapping_pages(): void {
 		$database       = new DashboardActivityWpdb();
 		$database->rows = array_map( static fn ( int $id ): array => DashboardActivityWpdb::attempt( $id, 'succeeded' ), range( 1, 51 ) );
-		$attempts       = $this->deploymentAttempts( $database );
+		$attempts       = $this->deployment_attempts( $database );
 		$_GET           = array(
 			'tab'   => 'troubleshooting',
 			'panel' => 'deployment-activity',
 		);
 
-		$firstPage = $this->dashboard( $this->throwingSecrets(), null, null, $attempts )->get_index()['data']['deploymentActivity'];
+		$first_page = $this->dashboard( $this->throwing_secrets(), null, null, $attempts )->get_index()['data']['deploymentActivity'];
 
-		self::assertCount( 50, $firstPage['items'] );
-		self::assertSame( 51, $firstPage['items'][0]->get_id() );
-		self::assertSame( 2, $firstPage['items'][49]->get_id() );
-		self::assertSame( 2, $firstPage['next_cursor'] );
+		self::assertCount( 50, $first_page['items'] );
+		self::assertSame( 51, $first_page['items'][0]->get_id() );
+		self::assertSame( 2, $first_page['items'][49]->get_id() );
+		self::assertSame( 2, $first_page['next_cursor'] );
 
 		$_GET['before'] = '2';
-		$lastPage       = $this->dashboard( $this->throwingSecrets(), null, null, $attempts )->get_index()['data']['deploymentActivity'];
+		$last_page       = $this->dashboard( $this->throwing_secrets(), null, null, $attempts )->get_index()['data']['deploymentActivity'];
 
-		self::assertCount( 1, $lastPage['items'] );
-		self::assertSame( 1, $lastPage['items'][0]->get_id() );
-		self::assertNull( $lastPage['next_cursor'] );
-		self::assertTrue( $lastPage['has_cursor'] );
+		self::assertCount( 1, $last_page['items'] );
+		self::assertSame( 1, $last_page['items'][0]->get_id() );
+		self::assertNull( $last_page['next_cursor'] );
+		self::assertTrue( $last_page['has_cursor'] );
 	}
 
-	public function testExhaustedDeploymentHistoryCursorRemainsAnOlderPage(): void {
+	public function test_exhausted_deployment_history_cursor_remains_an_older_page(): void {
 		$database       = new DashboardActivityWpdb();
 		$database->rows = array( DashboardActivityWpdb::attempt( 1, 'succeeded' ) );
 		$_GET           = array(
@@ -2396,10 +2396,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 
 		$data = $this->dashboard(
-			$this->throwingSecrets(),
+			$this->throwing_secrets(),
 			null,
 			null,
-			$this->deploymentAttempts( $database )
+			$this->deployment_attempts( $database )
 		)->get_index()['data']['deploymentActivity'];
 
 		self::assertSame( array(), $data['items'] );
@@ -2407,14 +2407,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertFalse( $data['unavailable'] );
 	}
 
-	public function testMalformedDeploymentHistoryCursorFailsClosed(): void {
+	public function test_malformed_deployment_history_cursor_fails_closed(): void {
 		$_GET = array(
 			'tab'    => 'troubleshooting',
 			'panel'  => 'deployment-activity',
 			'before' => '01',
 		);
 
-		$data = $this->dashboard( $this->throwingSecrets(), null, null, $this->deploymentAttempts( new DashboardActivityWpdb() ) )
+		$data = $this->dashboard( $this->throwing_secrets(), null, null, $this->deployment_attempts( new DashboardActivityWpdb() ) )
 			->get_index()['data']['deploymentActivity'];
 
 		self::assertSame( array(), $data['items'] );
@@ -2422,7 +2422,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertTrue( $data['unavailable'] );
 	}
 
-	public function testMalformedActivityIdentityDoesNotFallBackToABroadList(): void {
+	public function test_malformed_activity_identity_does_not_fall_back_to_abroad_list(): void {
 		$_GET = array(
 			'tab'       => 'troubleshooting',
 			'panel'     => 'deployment-activity',
@@ -2430,14 +2430,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'reference' => str_repeat( 'a', 32 ),
 		);
 
-		$data = $this->dashboard( $this->throwingSecrets() )->get_index()['data']['deploymentActivity'];
+		$data = $this->dashboard( $this->throwing_secrets() )->get_index()['data']['deploymentActivity'];
 
 		self::assertSame( 'detail', $data['mode'] );
 		self::assertSame( array(), $data['items'] );
 		self::assertTrue( $data['unavailable'] );
 	}
 
-	public function testArrayActivityIdentityDoesNotFallBackToABroadList(): void {
+	public function test_array_activity_identity_does_not_fall_back_to_abroad_list(): void {
 		$_GET = array(
 			'tab'       => 'troubleshooting',
 			'panel'     => 'deployment-activity',
@@ -2445,18 +2445,18 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'reference' => array( str_repeat( 'a', 32 ) ),
 		);
 
-		$data = $this->dashboard( $this->throwingSecrets() )->get_index()['data']['deploymentActivity'];
+		$data = $this->dashboard( $this->throwing_secrets() )->get_index()['data']['deploymentActivity'];
 
 		self::assertSame( 'detail', $data['mode'] );
 		self::assertSame( array(), $data['items'] );
 		self::assertTrue( $data['unavailable'] );
 	}
 
-	public function testAttemptDetailLoadsOnlyTheRequestedAttempt(): void {
+	public function test_attempt_detail_loads_only_the_requested_attempt(): void {
 		$attempt        = DashboardActivityWpdb::attempt( 1, 'succeeded' );
 		$database       = new DashboardActivityWpdb();
 		$database->rows = array( $attempt, DashboardActivityWpdb::attempt( 2, 'failed' ) );
-		$attempts       = $this->deploymentAttempts( $database );
+		$attempts       = $this->deployment_attempts( $database );
 		$_GET           = array(
 			'tab'       => 'troubleshooting',
 			'panel'     => 'deployment-activity',
@@ -2464,7 +2464,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'reference' => $attempt['correlation_id'],
 		);
 
-		$data = $this->dashboard( $this->throwingSecrets(), null, null, $attempts )->get_index()['data']['deploymentActivity'];
+		$data = $this->dashboard( $this->throwing_secrets(), null, null, $attempts )->get_index()['data']['deploymentActivity'];
 
 		self::assertFalse( $data['unavailable'] );
 		self::assertSame( 1, $data['detail']->get_id() );
@@ -2472,14 +2472,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertArrayNotHasKey( 'actions', $data );
 	}
 
-	public function testNeedsAttentionContentionRefusesMutationUntilAcknowledgedThenAllowsRetry(): void {
-		$attemptDatabase         = new AttemptRepositoryDatabase();
+	public function test_needs_attention_contention_refuses_mutation_until_acknowledged_then_allows_retry(): void {
+		$attempt_database         = new AttemptRepositoryDatabase();
 		$attempt                 = DashboardActivityWpdb::attempt( 43, 'failed' );
 		$attempt['state']        = 'needs_attention';
 		$attempt['outcome_code'] = DeploymentOutcome::CODE_INTERRUPTED;
-		$attemptDatabase->rows   = array( $attempt );
+		$attempt_database->rows   = array( $attempt );
 		$attempts                = new DeploymentAttemptRepository(
-			$attemptDatabase,
+			$attempt_database,
 			'wp_ran_booster_deployment_attempts',
 			static fn (): \DateTimeImmutable => new \DateTimeImmutable( '2026-07-27 12:00:00 UTC' ),
 			static fn ( int $length ): string => str_repeat( "\x0b", $length ),
@@ -2488,7 +2488,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$plugins                 = $this->createMock( PluginRepository::class );
 		$plugins->expects( self::never() )->method( 'from_slug' );
 		$themes      = $this->createStub( ThemeRepository::class );
-		$updaterLock = $this->createStub( WordPressUpdaterLock::class );
+		$updater_lock = $this->createStub( WordPressUpdaterLock::class );
 		$coordinator = new DashboardNeedsAttentionCoordinator( $attempts );
 		$operations  = new PackageOperationService(
 			$plugins,
@@ -2499,14 +2499,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 				$themes,
 				$this->createStub( PackageRemovalGateway::class ),
 				null,
-				$updaterLock
+				$updater_lock
 			),
-			$updaterLock
+			$updater_lock
 		);
 		$dashboard   = $this->dashboard(
-			$this->throwingSecrets(),
-			packageOperations: $operations,
-			deploymentAttempts: $attempts
+			$this->throwing_secrets(),
+			package_operations: $operations,
+			deployment_attempts: $attempts
 		);
 		$request     = array(
 			'provider'                            => 'gh',
@@ -2526,20 +2526,20 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 409, $GLOBALS['ran_booster_test_status_header'] );
 		self::assertStringContainsString( 'attempt=43', $dashboard->messages[0]['message'] );
 		self::assertStringContainsString( 'reference=' . $attempt['correlation_id'], $dashboard->messages[0]['message'] );
-		self::assertCount( 1, $attemptDatabase->rows );
+		self::assertCount( 1, $attempt_database->rows );
 
 		self::assertFalse( $dashboard->post_package_operation( 'install-plugin', $request ) );
 		self::assertSame( 2, $coordinator->calls );
-		self::assertCount( 1, $attemptDatabase->rows );
+		self::assertCount( 1, $attempt_database->rows );
 
-		$attempts->resolveNeedsAttention( 43, $attempt['correlation_id'], 7 );
-		self::assertNotNull( $attemptDatabase->rows[0]['resolved_at'] );
-		self::assertSame( '7', $attemptDatabase->rows[0]['resolved_by'] );
+		$attempts->resolve_needs_attention( 43, $attempt['correlation_id'], 7 );
+		self::assertNotNull( $attempt_database->rows[0]['resolved_at'] );
+		self::assertSame( '7', $attempt_database->rows[0]['resolved_by'] );
 
 		self::assertFalse( $dashboard->post_package_operation( 'install-plugin', $request ) );
 		self::assertSame( 3, $coordinator->calls );
-		self::assertCount( 2, $attemptDatabase->rows );
-		self::assertSame( 'failed', $attemptDatabase->rows[1]['state'] );
+		self::assertCount( 2, $attempt_database->rows );
+		self::assertSame( 'failed', $attempt_database->rows[1]['state'] );
 
 		$_GET     = array(
 			'tab'       => 'troubleshooting',
@@ -2553,39 +2553,39 @@ final class DashboardIndexRoutingTest extends TestCase {
 		unset( $GLOBALS['ran_booster_test_status_header'] );
 	}
 
-	private function setMultisite( bool $multisite ): void {
+	private function set_multisite( bool $multisite ): void {
 		$GLOBALS['ran_booster_dashboard_test_multisite'] = $multisite;
 		$GLOBALS['ran_booster_package_view_multisite']   = $multisite;
 	}
 
-	private function deploymentAttempts( DashboardActivityWpdb $database ): DeploymentAttemptRepository {
+	private function deployment_attempts( DashboardActivityWpdb $database ): DeploymentAttemptRepository {
 		return new DeploymentAttemptRepository(
 			$database,
 			'wp_ran_booster_deployment_attempts',
-			databaseLifecycle: new ReadyDashboardDatabase()
+			database_lifecycle: new ReadyDashboardDatabase()
 		);
 	}
 
 	private function dashboard(
 		SecretsFile $secrets,
 		?TroubleshootingService $troubleshooting = null,
-		?\RAN\PackageOperationService $packageOperations = null,
-		?DeploymentAttemptRepository $deploymentAttempts = null,
+		?\RAN\PackageOperationService $package_operations = null,
+		?DeploymentAttemptRepository $deployment_attempts = null,
 		?PluginRepository $plugins = null,
 		?ThemeRepository $themes = null,
-		?TemporaryDebugCapture $debugCapture = null,
+		?TemporaryDebugCapture $debug_capture = null,
 		?Database $database = null,
-		?AdminAddOnRegistry $adminAddOns = null,
-		bool $providerCredentials = false,
+		?AdminAddOnRegistry $admin_add_ons = null,
+		bool $provider_credentials = false,
 		?ProviderRegistry $providers = null,
-		?PublicRepositoryLookupProfileStore $publicLookupProfiles = null,
-		?RepositoryBranchCheckEvidenceStore $branchCheckEvidence = null,
-		?WebhookAssistanceReadinessEvaluator $webhookAssistance = null,
-		?WordPressUpdaterLock $branchCheckLock = null
+		?PublicRepositoryLookupProfileStore $public_lookup_profiles = null,
+		?RepositoryBranchCheckEvidenceStore $branch_check_evidence = null,
+		?WebhookAssistanceReadinessEvaluator $webhook_assistance = null,
+		?WordPressUpdaterLock $branch_check_lock = null
 	): RoutingDashboard {
-		$providers        = $providers ?? $this->providers( $providerCredentials );
-		$branchCheckLock  = $branchCheckLock ?? new DashboardBranchCheckUpdaterLock();
-		$pluginRepository = $plugins ?? new class() extends PluginRepository {
+		$providers        = $providers ?? $this->providers( $provider_credentials );
+		$branch_check_lock  = $branch_check_lock ?? new DashboardBranchCheckUpdaterLock();
+		$plugin_repository = $plugins ?? new class() extends PluginRepository {
 
 			public function __construct() {
 			}
@@ -2598,7 +2598,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 				return array();
 			}
 		};
-		$themeRepository  = $themes ?? new class() extends ThemeRepository {
+		$theme_repository  = $themes ?? new class() extends ThemeRepository {
 
 			public function __construct() {
 			}
@@ -2614,48 +2614,48 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		return new RoutingDashboard(
 			$database ?? new Database(),
-			$pluginRepository,
+			$plugin_repository,
 			new Booster(),
-			$themeRepository,
-			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), $publicLookupProfiles, null, null, $pluginRepository, $themeRepository, $webhookAssistance, $branchCheckEvidence, $branchCheckLock ),
+			$theme_repository,
+			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), $public_lookup_profiles, null, null, $plugin_repository, $theme_repository, $webhook_assistance, $branch_check_evidence, $branch_check_lock ),
 			$troubleshooting ?? new TroubleshootingService( new LocalTroubleshootingService( $secrets ), $providers ),
 			new AdminTabRegistry( $providers ),
 			new ProviderDocumentationPresenter( $providers ),
-			$packageOperations,
-			$deploymentAttempts,
-			$debugCapture,
+			$package_operations,
+			$deployment_attempts,
+			$debug_capture,
 			null,
-			$adminAddOns
+			$admin_add_ons
 		);
 	}
 
-	private function throwingSecrets(): SecretsFile {
+	private function throwing_secrets(): SecretsFile {
 		return new class() extends SecretsFile {
 
 			public function __construct() {
 				parent::__construct( '/unused/test-secrets.php', array() );
 			}
 
-			public function credentialProfiles( ProviderCode|string $provider ): array {
+			public function credential_profiles( ProviderCode|string $provider ): array {
 				throw new RuntimeException( 'Static tabs must not read credential profiles.' );
 			}
 
-			public function webhookProfiles( ProviderCode|string $provider ): array {
+			public function webhook_profiles( ProviderCode|string $provider ): array {
 				throw new RuntimeException( 'Static tabs must not read webhook profiles.' );
 			}
 		};
 	}
 
-	private function managedPackage(
+	private function managed_package(
 		string $identifier,
 		string $name,
-		string $providerRepositoryId,
+		string $provider_repository_id,
 		\RAN\PackageSource $source = \RAN\PackageSource::BRANCH,
 		string $provider = 'gh',
 		\RAN\Deployment\DeploymentPolicy $policy = \RAN\Deployment\DeploymentPolicy::MANUAL,
 		string $repository = 'owner/repository',
 		string $branch = 'main',
-		string $credentialId = '',
+		string $credential_id = '',
 		bool $private = false,
 		?string $subdirectory = null
 	): Package {
@@ -2664,36 +2664,36 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$package->method( 'get_display_name' )->willReturn( $name );
 		$package->method( 'get_slug' )->willReturn( 'example' );
 		$package->method( 'get_provider_code' )->willReturn( $provider );
-		$package->method( 'get_provider_repository_id' )->willReturn( $providerRepositoryId );
-		$package->method( 'get_repository' )->willReturn( new ManagedRepository( $provider, $repository, $providerRepositoryId, $branch, $private, $credentialId ) );
+		$package->method( 'get_provider_repository_id' )->willReturn( $provider_repository_id );
+		$package->method( 'get_repository' )->willReturn( new ManagedRepository( $provider, $repository, $provider_repository_id, $branch, $private, $credential_id ) );
 		$package->method( 'get_branch' )->willReturn( $branch );
 		$package->method( 'get_subdirectory' )->willReturn( $subdirectory );
 		$package->method( 'get_source' )->willReturn( $source );
 		$package->method( 'get_source_revision' )->willReturn( 1 );
 		$package->method( 'get_deployment_policy' )->willReturn( $policy );
-		$package->method( 'get_credential_id' )->willReturn( $credentialId );
+		$package->method( 'get_credential_id' )->willReturn( $credential_id );
 
 		return $package;
 	}
 
-	private function providers( bool $withCredentials = false ): ProviderRegistry {
+	private function providers( bool $with_credentials = false ): ProviderRegistry {
 		return new ProviderRegistry(
 			array(
-				$this->provider( ProviderCode::parse( 'gh' ), 'GitHub', $withCredentials ),
-				$this->provider( ProviderCode::parse( 'bb' ), 'Bitbucket', $withCredentials ),
+				$this->provider( ProviderCode::parse( 'gh' ), 'GitHub', $with_credentials ),
+				$this->provider( ProviderCode::parse( 'bb' ), 'Bitbucket', $with_credentials ),
 			)
 		);
 	}
 
-	private function provider( ProviderCode $code, string $label, bool $withCredentials = false ): RepositoryProvider {
-		return new class( $code, $label, $withCredentials ) implements RepositoryProvider, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, \RAN\RepositoryProvider\WebhookNormalizer {
+	private function provider( ProviderCode $code, string $label, bool $with_credentials = false ): RepositoryProvider {
+		return new class( $code, $label, $with_credentials ) implements RepositoryProvider, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, \RAN\RepositoryProvider\WebhookNormalizer {
 
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public function __construct(
 				private ProviderCode $code,
 				private string $label,
-				private bool $withCredentials
+				private bool $with_credentials
 			) {
 			}
 
@@ -2704,8 +2704,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 					'https://example.test/',
 					'Owner',
 					new ProviderAdminMetadata(
-						$this->withCredentials ? array( new CredentialKindMetadata( 'api-key', 'API key', 'API key' ) ) : array(),
-						$this->withCredentials ? array( new WebhookScopeMetadata( 'repository', 'Repository', true, 'Repository' ) ) : array(),
+						$this->with_credentials ? array( new CredentialKindMetadata( 'api-key', 'API key', 'API key' ) ) : array(),
+						$this->with_credentials ? array( new WebhookScopeMetadata( 'repository', 'Repository', true, 'Repository' ) ) : array(),
 						navigation: new \RAN\RepositoryProvider\Admin\ProviderNavigationPlacement(
 							\RAN\RepositoryProvider\Admin\ProviderNavigationPlacement::GIT_HOST,
 							'gh' === $this->code->value ? 100 : 200
@@ -2719,7 +2719,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			}
 
 			public function get_webhook_policy(): \RAN\RepositoryProvider\ProviderWebhookPolicy {
-				return ShippedSecretPolicyCatalog::create()->webhookPolicy( $this->code );
+				return ShippedSecretPolicyCatalog::create()->webhook_policy( $this->code );
 			}
 
 			public function diagnose_webhook_readiness(): ProviderDiagnosticResult {
@@ -2765,7 +2765,7 @@ final class DashboardNeedsAttentionCoordinator extends DeploymentCoordinator {
 	public function __construct( private DeploymentAttemptRepository $attempts ) {
 	}
 
-	public function executeManual( PackageOperation $command ): array {
+	public function execute_manual( PackageOperation $command ): array {
 		++$this->calls;
 		$request  = new DeploymentRequest(
 			(string) $command->repository,
@@ -2777,7 +2777,7 @@ final class DashboardNeedsAttentionCoordinator extends DeploymentCoordinator {
 			$command->deployment_policy,
 			7
 		);
-		$attempt  = $this->attempts->admitAndClaimManual(
+		$attempt  = $this->attempts->admit_and_claim_manual(
 			$command->operation,
 			$command->package_type,
 			(string) $command->provider_code,
@@ -2868,7 +2868,7 @@ final class DashboardActivityWpdb {
 
 	/** @return array<string, mixed> */
 	public static function attempt( int $id, string $state ): array {
-		$outcomeCode = 'succeeded' === $state ? 'deployed' : 'preflight_failed';
+		$outcome_code = 'succeeded' === $state ? 'deployed' : 'preflight_failed';
 
 		return array(
 			'id'                      => $id,
@@ -2888,7 +2888,7 @@ final class DashboardActivityWpdb {
 			'delivery_digest'         => null,
 			'state'                   => $state,
 			'mutation_started_at'     => null,
-			'outcome_code'            => $outcomeCode,
+			'outcome_code'            => $outcome_code,
 			'request_json'            => '{"repository":"org/example","credential_id":null,"private":false,"configured_branch":"main","package_slug":"example","subdirectory":null,"deployment_policy":"automatic","initiating_user_id":1,"maximum_artifact_bytes":52428800}',
 			'created_at'              => '2026-07-19 00:00:00',
 			'finished_at'             => '2026-07-19 00:00:00',
@@ -2900,7 +2900,7 @@ final class ReadyDashboardDatabase extends Database {
 	public function __construct() {
 	}
 
-	public function requireReady(): void {
+	public function require_ready(): void {
 	}
 }
 
@@ -2908,19 +2908,19 @@ final class DashboardBranchCheckProvider implements RepositoryProvider, Credenti
 
 	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
-	public int $prepareCalls        = 0;
-	public int $resolvedRefCalls    = 0;
-	public int $cleanupCalls        = 0;
-	public int $pathCalls           = 0;
+	public int $prepare_calls        = 0;
+	public int $resolved_ref_calls    = 0;
+	public int $cleanup_calls        = 0;
+	public int $path_calls           = 0;
 	public ?ArchiveRequest $request = null;
 	public ?string $path            = null;
 	/** @var \Closure(): void|null */
-	public ?\Closure $onProviderAccess = null;
+	public ?\Closure $on_provider_access = null;
 
 	public function __construct(
-		public readonly bool $cleanupFails = false,
-		public readonly bool $pathExists = true,
-		public readonly bool $pathCheckFails = false
+		public readonly bool $cleanup_fails = false,
+		public readonly bool $path_exists = true,
+		public readonly bool $path_check_fails = false
 	) {
 	}
 
@@ -2948,32 +2948,32 @@ final class DashboardBranchCheckProvider implements RepositoryProvider, Credenti
 	}
 
 	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
-		if ( null !== $this->onProviderAccess ) {
-			( $this->onProviderAccess )();
+		if ( null !== $this->on_provider_access ) {
+			( $this->on_provider_access )();
 		}
-		++$this->prepareCalls;
+		++$this->prepare_calls;
 		$this->request = $request;
 
 		return new class( $this ) implements PreparedArchive {
 			public function __construct( private DashboardBranchCheckProvider $provider ) {
 			}
 
-			public function getUrl(): string {
+			public function get_url(): string {
 				return 'https://example.test/archive.zip';
 			}
 
-			public function getResolvedRef(): string {
-				++$this->provider->resolvedRefCalls;
+			public function get_resolved_ref(): string {
+				++$this->provider->resolved_ref_calls;
 
 				return str_repeat( 'a', 40 );
 			}
 
-			public function verifyCurrentHead(): void {
+			public function verify_current_head(): void {
 			}
 
 			public function cleanup(): void {
-				++$this->provider->cleanupCalls;
-				if ( $this->provider->cleanupFails ) {
+				++$this->provider->cleanup_calls;
+				if ( $this->provider->cleanup_fails ) {
 					throw new RuntimeException( 'Cleanup fixture failure.' );
 				}
 			}
@@ -2982,12 +2982,12 @@ final class DashboardBranchCheckProvider implements RepositoryProvider, Credenti
 
 	public function repository_path_exists( \RAN\RepositoryProvider\RepositoryReference $repository, string $ref, string $path ): bool {
 		unset( $repository, $ref );
-		++$this->pathCalls;
+		++$this->path_calls;
 		$this->path = $path;
-		if ( $this->pathCheckFails ) {
+		if ( $this->path_check_fails ) {
 			throw new RuntimeException( 'Path check fixture failure.' );
 		}
-		return $this->pathExists;
+		return $this->path_exists;
 	}
 }
 
@@ -2995,7 +2995,7 @@ final class DashboardBranchCheckProviderWithoutPathInspector implements Reposito
 
 	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
-	public int $pathCalls = 0;
+	public int $path_calls = 0;
 
 	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata(
@@ -3023,15 +3023,15 @@ final class DashboardBranchCheckProviderWithoutPathInspector implements Reposito
 	public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 		unset( $request );
 		return new class() implements PreparedArchive {
-			public function getUrl(): string {
+			public function get_url(): string {
 				return 'https://example.test/archive.zip';
 			}
 
-			public function getResolvedRef(): string {
+			public function get_resolved_ref(): string {
 				return str_repeat( 'a', 40 );
 			}
 
-			public function verifyCurrentHead(): void {
+			public function verify_current_head(): void {
 			}
 
 			public function cleanup(): void {
@@ -3045,7 +3045,7 @@ final class DashboardBranchCheckUpdaterLock extends WordPressUpdaterLock {
 	/** @var list<string> */
 	public array $events             = array();
 	private bool $held               = false;
-	private bool $providerAccessHeld = false;
+	private bool $provider_access_held = false;
 
 	public function acquire(): string {
 		$this->events[] = 'acquire';
@@ -3061,12 +3061,12 @@ final class DashboardBranchCheckUpdaterLock extends WordPressUpdaterLock {
 		return 'branch-check-lock' === $token;
 	}
 
-	public function recordProviderAccess(): void {
-		$this->providerAccessHeld = $this->held;
+	public function record_provider_access(): void {
+		$this->provider_access_held = $this->held;
 	}
 
-	public function wasHeldDuring( string $event ): bool {
-		return 'provider_access' === $event && $this->providerAccessHeld;
+	public function was_held_during( string $event ): bool {
+		return 'provider_access' === $event && $this->provider_access_held;
 	}
 }
 
@@ -3094,15 +3094,15 @@ final class DashboardUncredentialedBranchCheckProvider implements RepositoryProv
 		$this->request = $request;
 
 		return new class() implements PreparedArchive {
-			public function getUrl(): string {
+			public function get_url(): string {
 				return 'https://example.test/archive.zip';
 			}
 
-			public function getResolvedRef(): string {
+			public function get_resolved_ref(): string {
 				return str_repeat( 'a', 40 );
 			}
 
-			public function verifyCurrentHead(): void {
+			public function verify_current_head(): void {
 			}
 
 			public function cleanup(): void {

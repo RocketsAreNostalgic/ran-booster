@@ -164,8 +164,8 @@ if ( ! function_exists( 'activate_plugin' ) ) {
 }
 
 if ( ! function_exists( 'deactivate_plugins' ) ) {
-	function deactivate_plugins( string|array $plugins, bool $silent = false, ?bool $networkWide = null ): void {
-		unset( $silent, $networkWide );
+	function deactivate_plugins( string|array $plugins, bool $silent = false, ?bool $network_wide = null ): void {
+		unset( $silent, $network_wide );
 		foreach ( (array) $plugins as $plugin ) {
 			if ( in_array( $plugin, $GLOBALS['ran_booster_bulk_deactivation_failures'] ?? array(), true ) ) {
 				continue;
@@ -184,8 +184,8 @@ if ( ! function_exists( 'wp_kses_post' ) ) {
 }
 
 if ( ! function_exists( 'wp_strip_all_tags' ) ) {
-	function wp_strip_all_tags( mixed $value, bool $removeBreaks = false ): string {
-		unset( $removeBreaks );
+	function wp_strip_all_tags( mixed $value, bool $remove_breaks = false ): string {
+		unset( $remove_breaks );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags -- Focused WordPress test shim.
 		return strip_tags( (string) $value );
@@ -238,8 +238,8 @@ if ( ! function_exists( 'wp_date' ) ) {
 }
 
 if ( ! function_exists( 'get_file_data' ) ) {
-	function get_file_data( string $file, array $defaultHeaders, string $context = '' ): array {
-		unset( $file, $defaultHeaders, $context );
+	function get_file_data( string $file, array $default_headers, string $context = '' ): array {
+		unset( $file, $default_headers, $context );
 
 		return $GLOBALS['ran_booster_admin_view_plugin_headers'] ?? array(
 			'author'     => 'Rockets Are Nostalgic',

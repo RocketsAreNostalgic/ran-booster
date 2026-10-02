@@ -19,7 +19,7 @@ final class AdminIndexViewTest extends TestCase {
 		);
 	}
 
-	public function testStaticPageRendersScopedRootLabelledNavigationAndOnePageHeading(): void {
+	public function test_static_page_renders_scoped_root_labelled_navigation_and_one_page_heading(): void {
 		$GLOBALS['ran_booster_admin_view_year']           = '2042';
 		$GLOBALS['ran_booster_admin_view_plugin_headers'] = array(
 			'author'     => 'Header Author',
@@ -28,15 +28,15 @@ final class AdminIndexViewTest extends TestCase {
 		$messages                = array();
 		$name                    = 'RAN Booster';
 		$view                    = 'index';
-		$developmentSafetyNotice = true;
+		$development_safety_notice = true;
 
-		$coreSelfUpdateDevelopmentNotice = new CoreSelfUpdateDevelopmentNotice(
+		$core_self_update_development_notice = new CoreSelfUpdateDevelopmentNotice(
 			CoreSelfUpdatePolicy::detect( dirname( __DIR__, 2 ) . '/ran-booster.php', '0.1.0-alpha.23' ),
 			'toplevel_page_ran-booster'
 		);
 
 		$tab     = 'documentation';
-		$tabView = 'documentation.php';
+		$tab_view = 'documentation.php';
 		$tabs    = array(
 			array(
 				'key'    => 'overview',
@@ -115,39 +115,39 @@ final class AdminIndexViewTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-development-safety', $html );
 		self::assertStringContainsString( '<strong>Development safety:</strong>', $html );
 		self::assertStringContainsString( 'set Updates to Disabled', $html );
-		$straplinePosition  = strpos( $html, 'Deploy themes and plugins straight from your Git repos.' );
-		$navigationPosition = strpos( $html, '<nav class="ran-admin-shell__navigation"' );
-		$coreNoticePosition = strpos( $html, 'data-ran-booster-core-development-notice' );
-		$wrapPosition       = strpos( $html, '<div class="wrap ran-booster-admin">' );
-		$markerPosition     = strpos( $html, '<hr class="wp-header-end">' );
-		$noticePosition     = strpos( $html, '<strong>Development safety:</strong>' );
-		foreach ( array( $straplinePosition, $navigationPosition, $coreNoticePosition, $wrapPosition, $markerPosition, $noticePosition ) as $position ) {
+		$strapline_position  = strpos( $html, 'Deploy themes and plugins straight from your Git repos.' );
+		$navigation_position = strpos( $html, '<nav class="ran-admin-shell__navigation"' );
+		$core_notice_position = strpos( $html, 'data-ran-booster-core-development-notice' );
+		$wrap_position       = strpos( $html, '<div class="wrap ran-booster-admin">' );
+		$marker_position     = strpos( $html, '<hr class="wp-header-end">' );
+		$notice_position     = strpos( $html, '<strong>Development safety:</strong>' );
+		foreach ( array( $strapline_position, $navigation_position, $core_notice_position, $wrap_position, $marker_position, $notice_position ) as $position ) {
 			self::assertIsInt( $position );
 		}
-		self::assertTrue( $straplinePosition < $navigationPosition );
-		self::assertTrue( $navigationPosition < $wrapPosition );
-		self::assertTrue( $wrapPosition < $markerPosition );
-		self::assertTrue( $markerPosition < $coreNoticePosition );
-		self::assertTrue( $coreNoticePosition < $noticePosition );
+		self::assertTrue( $strapline_position < $navigation_position );
+		self::assertTrue( $navigation_position < $wrap_position );
+		self::assertTrue( $wrap_position < $marker_position );
+		self::assertTrue( $marker_position < $core_notice_position );
+		self::assertTrue( $core_notice_position < $notice_position );
 		self::assertStringContainsString( 'Copyright © 2042', $html );
 		self::assertStringContainsString(
 			'<a href="https://example.test/header-author">Header Author</a>',
 			$html
 		);
 
-		$developmentSafetyNotice = false;
+		$development_safety_notice = false;
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/base.php';
-		$withoutNotice = (string) ob_get_clean();
+		$without_notice = (string) ob_get_clean();
 
-		self::assertStringNotContainsString( '<strong>Development safety:</strong>', $withoutNotice );
+		self::assertStringNotContainsString( '<strong>Development safety:</strong>', $without_notice );
 
 		$tab     = 'overview';
-		$tabView = 'onboarding.php';
-		foreach ( $tabs as &$adminTab ) {
-			$adminTab['active'] = 'overview' === $adminTab['key'];
+		$tab_view = 'onboarding.php';
+		foreach ( $tabs as &$admin_tab ) {
+			$admin_tab['active'] = 'overview' === $admin_tab['key'];
 		}
-		unset( $adminTab );
+		unset( $admin_tab );
 		$onboarding = array(
 			'provider_links'      => array(),
 			'install_plugin_url'  => '/plugins',

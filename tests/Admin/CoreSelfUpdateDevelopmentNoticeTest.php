@@ -25,7 +25,7 @@ final class CoreSelfUpdateDevelopmentNoticeTest extends TestCase {
 		);
 	}
 
-	public function testSourceCheckoutRendersOneFriendlyScopedNotice(): void {
+	public function test_source_checkout_renders_one_friendly_scoped_notice(): void {
 		$policy = CoreSelfUpdatePolicy::detect(
 			dirname( __DIR__, 2 ) . '/ran-booster.php',
 			'0.1.0-alpha.23'
@@ -45,7 +45,7 @@ final class CoreSelfUpdateDevelopmentNoticeTest extends TestCase {
 		self::assertStringNotContainsString( 'is-dismissible', $html );
 	}
 
-	public function testSourceCheckoutLoadsItsScopedTintOnEveryAllowedScreen(): void {
+	public function test_source_checkout_loads_its_scoped_tint_on_every_allowed_screen(): void {
 		$policy = CoreSelfUpdatePolicy::detect(
 			dirname( __DIR__, 2 ) . '/ran-booster.php',
 			'0.1.0-alpha.23'
@@ -60,27 +60,27 @@ final class CoreSelfUpdateDevelopmentNoticeTest extends TestCase {
 		);
 	}
 
-	public function testPluginsScreenUsesTheGlobalCallbackAndBoosterScreenUsesTheShellCallback(): void {
+	public function test_plugins_screen_uses_the_global_callback_and_booster_screen_uses_the_shell_callback(): void {
 		$policy = CoreSelfUpdatePolicy::detect( dirname( __DIR__, 2 ) . '/ran-booster.php', '0.1.0-alpha.23' );
 
-		$pluginsNotice = new CoreSelfUpdateDevelopmentNotice( $policy, 'plugins' );
+		$plugins_notice = new CoreSelfUpdateDevelopmentNotice( $policy, 'plugins' );
 		ob_start();
-		$pluginsNotice->render_global();
-		$pluginsNotice->render_shell_inline();
-		$pluginsHtml = (string) ob_get_clean();
-		self::assertSame( 1, substr_count( $pluginsHtml, 'data-ran-booster-core-development-notice' ) );
-		self::assertStringContainsString( 'class="notice notice-info"', $pluginsHtml );
+		$plugins_notice->render_global();
+		$plugins_notice->render_shell_inline();
+		$plugins_html = (string) ob_get_clean();
+		self::assertSame( 1, substr_count( $plugins_html, 'data-ran-booster-core-development-notice' ) );
+		self::assertStringContainsString( 'class="notice notice-info"', $plugins_html );
 
-		$boosterNotice = new CoreSelfUpdateDevelopmentNotice( $policy, 'toplevel_page_ran-booster' );
+		$booster_notice = new CoreSelfUpdateDevelopmentNotice( $policy, 'toplevel_page_ran-booster' );
 		ob_start();
-		$boosterNotice->render_global();
-		$boosterNotice->render_shell_inline();
-		$boosterHtml = (string) ob_get_clean();
-		self::assertSame( 1, substr_count( $boosterHtml, 'data-ran-booster-core-development-notice' ) );
-		self::assertStringContainsString( 'class="notice notice-info inline"', $boosterHtml );
+		$booster_notice->render_global();
+		$booster_notice->render_shell_inline();
+		$booster_html = (string) ob_get_clean();
+		self::assertSame( 1, substr_count( $booster_html, 'data-ran-booster-core-development-notice' ) );
+		self::assertStringContainsString( 'class="notice notice-info inline"', $booster_html );
 	}
 
-	public function testUnverifiedNonSourceUnauthorizedAndUnrelatedScreensRenderNothing(): void {
+	public function test_unverified_non_source_unauthorized_and_unrelated_screens_render_nothing(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-development-notice-' . bin2hex( random_bytes( 6 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable focused fixture setup.
 		self::assertTrue( mkdir( $directory, 0700 ) );

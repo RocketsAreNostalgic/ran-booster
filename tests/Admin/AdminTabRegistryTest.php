@@ -19,7 +19,7 @@ use RAN\RepositoryProvider\RepositoryProvider;
 
 final class AdminTabRegistryTest extends TestCase {
 
-	public function testRegistryCombinesProviderMetadataWithFixedPageDefinitions(): void {
+	public function test_registry_combines_provider_metadata_with_fixed_page_definitions(): void {
 		$registry = new AdminTabRegistry(
 			new ProviderRegistry(
 				array(
@@ -31,22 +31,22 @@ final class AdminTabRegistryTest extends TestCase {
 
 		self::assertSame(
 			array( 'overview', 'gh', 'bb', 'portability', 'documentation', 'troubleshooting' ),
-			array_map( static fn ( AdminTab $tab ): string => $tab->getKey(), $registry->all() )
+			array_map( static fn ( AdminTab $tab ): string => $tab->get_key(), $registry->all() )
 		);
 		self::assertSame(
 			array( 'Overview', 'GitHub', 'Bitbucket', 'Transporter', 'Documentation', 'Troubleshooting' ),
-			array_map( static fn ( AdminTab $tab ): string => $tab->getLabel(), $registry->all() )
+			array_map( static fn ( AdminTab $tab ): string => $tab->get_label(), $registry->all() )
 		);
-		self::assertSame( 'overview', $registry->getDefault()->getKey() );
-		self::assertSame( 'onboarding.php', $registry->resolve( 'overview' )->getView() );
-		self::assertSame( AdminTabKind::PROVIDER, $registry->resolve( 'bb' )->getKind() );
-		self::assertTrue( $registry->resolve( 'bb' )->getProvider()->equals( 'bb' ) );
-		self::assertSame( 'documentation.php', $registry->resolve( 'documentation' )->getView() );
-		self::assertSame( 'portability.php', $registry->resolve( 'portability' )->getView() );
-		self::assertSame( AdminTabKind::PAGE, $registry->resolve( 'documentation' )->getKind() );
+		self::assertSame( 'overview', $registry->get_default()->get_key() );
+		self::assertSame( 'onboarding.php', $registry->resolve( 'overview' )->get_view() );
+		self::assertSame( AdminTabKind::PROVIDER, $registry->resolve( 'bb' )->get_kind() );
+		self::assertTrue( $registry->resolve( 'bb' )->get_provider()->equals( 'bb' ) );
+		self::assertSame( 'documentation.php', $registry->resolve( 'documentation' )->get_view() );
+		self::assertSame( 'portability.php', $registry->resolve( 'portability' )->get_view() );
+		self::assertSame( AdminTabKind::PAGE, $registry->resolve( 'documentation' )->get_kind() );
 	}
 
-	public function testProviderTabsUseDeterministicHostOrderInsteadOfRegistrationOrder(): void {
+	public function test_provider_tabs_use_deterministic_host_order_instead_of_registration_order(): void {
 		$registry = new AdminTabRegistry(
 			new ProviderRegistry(
 				array(
@@ -59,12 +59,12 @@ final class AdminTabRegistryTest extends TestCase {
 
 		self::assertSame(
 			array( 'overview', 'gh', 'bb', 'fixture', 'portability', 'documentation', 'troubleshooting' ),
-			array_map( static fn ( AdminTab $tab ): string => $tab->getKey(), $registry->all() )
+			array_map( static fn ( AdminTab $tab ): string => $tab->get_key(), $registry->all() )
 		);
 	}
 
 	/** @return list<array{mixed}> */
-	public static function invalidRequestedTabProvider(): array {
+	public static function invalid_requested_tab_provider(): array {
 		return array(
 			array( null ),
 			array( '' ),
@@ -74,20 +74,20 @@ final class AdminTabRegistryTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'invalidRequestedTabProvider' )]
-	public function testInvalidRequestedTabsUseTheShippedDefaultWithoutFilenameDerivation( mixed $requested ): void {
+	#[DataProvider( 'invalid_requested_tab_provider' )]
+	public function test_invalid_requested_tabs_use_the_shipped_default_without_filename_derivation( mixed $requested ): void {
 		$registry = new AdminTabRegistry(
 			new ProviderRegistry( array( $this->provider( ProviderCode::parse( 'gh' ), 'GitHub' ) ) )
 		);
 
 		$resolved = $registry->resolve( $requested );
 
-		self::assertSame( 'overview', $resolved->getKey() );
-		self::assertSame( 'onboarding.php', $resolved->getView() );
+		self::assertSame( 'overview', $resolved->get_key() );
+		self::assertSame( 'onboarding.php', $resolved->get_view() );
 	}
 
-	public function testMetadataOnlyProvidersDoNotBecomeSettingsTabs(): void {
-		$metadataOnly = new class() implements RepositoryProvider {
+	public function test_metadata_only_providers_do_not_become_settings_tabs(): void {
+		$metadata_only = new class() implements RepositoryProvider {
 
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
@@ -95,22 +95,22 @@ final class AdminTabRegistryTest extends TestCase {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'Metadata only', 'https://example.test/', 'Owner' );
 			}
 		};
-		$registry     = new AdminTabRegistry( new ProviderRegistry( array( $metadataOnly ) ) );
+		$registry     = new AdminTabRegistry( new ProviderRegistry( array( $metadata_only ) ) );
 
 		self::assertSame(
 			array( 'overview', 'portability', 'documentation', 'troubleshooting' ),
-			array_map( static fn ( AdminTab $tab ): string => $tab->getKey(), $registry->all() )
+			array_map( static fn ( AdminTab $tab ): string => $tab->get_key(), $registry->all() )
 		);
-		self::assertSame( 'overview', $registry->getDefault()->getKey() );
+		self::assertSame( 'overview', $registry->get_default()->get_key() );
 	}
 
-	public function testPageDefinitionsRejectViewsOutsideTheAllowlist(): void {
+	public function test_page_definitions_reject_views_outside_the_allowlist(): void {
 		$this->expectException( InvalidArgumentException::class );
 
 		AdminTab::page( 'unsafe', 'Unsafe', '../../unsafe.php' );
 	}
 
-	public function testDeletedLogViewCannotBeRegistered(): void {
+	public function test_deleted_log_view_cannot_be_registered(): void {
 		$this->expectException( InvalidArgumentException::class );
 
 		AdminTab::page( 'log', 'Log', 'log.php' );

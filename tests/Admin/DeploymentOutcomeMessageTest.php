@@ -13,7 +13,7 @@ require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class DeploymentOutcomeMessageTest extends TestCase {
 
-	public function testRateLimitMessageIsActionableAndContainsNoProviderEvidence(): void {
+	public function test_rate_limit_message_is_actionable_and_contains_no_provider_evidence(): void {
 		$message = DeploymentOutcomeMessage::for_code( 'provider_rate_limited' );
 
 		self::assertStringContainsString( 'rate limit', $message );
@@ -21,15 +21,15 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 		self::assertStringNotContainsString( 'Authorization', $message );
 	}
 
-	public function testUnknownOutcomeUsesSafeFallbackCopy(): void {
+	public function test_unknown_outcome_uses_safe_fallback_copy(): void {
 		self::assertSame(
 			'Booster recorded an unavailable deployment outcome. Open Troubleshooting, verify the package state before retrying, and submit a redacted report if it repeats.',
 			DeploymentOutcomeMessage::for_code( 'provider said Authorization: Bearer secret-canary' )
 		);
 	}
 
-	public function testEveryFailedOutcomeHasIndependentActionableRemediation(): void {
-		$expectedRemediation = array(
+	public function test_every_failed_outcome_has_independent_actionable_remediation(): void {
+		$expected_remediation = array(
 			'provider_failed'                   => 'Check the repository and credential settings',
 			'provider_request_invalid'          => 'Review the managed package settings',
 			'provider_credential_rejected'      => 'Replace or update it',
@@ -96,7 +96,7 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 			'deployment_release_source_blocked' => 'Use Published releases or WordPress Updates',
 			'deployment_maintenance_active'     => 'Wait for the current update to finish',
 		);
-		$definedFailedCodes  = array_filter(
+		$defined_failed_codes  = array_filter(
 			( new \ReflectionClass( DeploymentOutcome::class ) )->getConstants(),
 			static function ( mixed $code ): bool {
 				if ( ! is_string( $code ) ) {
@@ -110,26 +110,26 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 				);
 			}
 		);
-		$expectedCodes       = array_keys( $expectedRemediation );
+		$expected_codes       = array_keys( $expected_remediation );
 
-		sort( $definedFailedCodes );
-		sort( $expectedCodes );
+		sort( $defined_failed_codes );
+		sort( $expected_codes );
 
-		self::assertSame( $expectedCodes, $definedFailedCodes );
+		self::assertSame( $expected_codes, $defined_failed_codes );
 
-		foreach ( $expectedRemediation as $code => $fragment ) {
+		foreach ( $expected_remediation as $code => $fragment ) {
 			self::assertStringContainsString( $fragment, DeploymentOutcomeMessage::for_code( $code ), $code );
 		}
 	}
 
-	public function testNewPreflightCodesDescribeTheSpecificProblem(): void {
+	public function test_new_preflight_codes_describe_the_specific_problem(): void {
 		self::assertStringContainsString( 'Version: 0.1.0', DeploymentOutcomeMessage::for_code( 'package_version_missing' ) );
 		self::assertStringContainsString( 'subdirectory is missing', DeploymentOutcomeMessage::for_code( 'package_subdirectory_missing' ) );
 		self::assertStringContainsString( 'newer PHP version', DeploymentOutcomeMessage::for_code( 'package_requires_newer_php' ) );
 		self::assertStringContainsString( 'integrity check', DeploymentOutcomeMessage::for_code( 'archive_integrity_failed' ) );
 	}
 
-	public function testGenericFailuresEscalateWithoutLeakingInput(): void {
+	public function test_generic_failures_escalate_without_leaking_input(): void {
 		$preflight = DeploymentOutcomeMessage::for_code( 'preflight_failed' );
 		$unknown   = DeploymentOutcomeMessage::for_code( 'Authorization: Bearer secret-canary' );
 
@@ -141,7 +141,7 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 		self::assertStringNotContainsString( 'secret-canary', $unknown );
 	}
 
-	public function testArchiveLimitMessagesExplainTheTargetLocalRemedy(): void {
+	public function test_archive_limit_messages_explain_the_target_local_remedy(): void {
 		$compressed = DeploymentOutcomeMessage::for_code( 'archive_compressed_too_large' );
 		$expanded   = DeploymentOutcomeMessage::for_code( 'archive_expanded_too_large' );
 		$invalid    = DeploymentOutcomeMessage::for_code( 'archive_limit_invalid' );
@@ -155,13 +155,13 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 		self::assertStringNotContainsString( 'Authorization', $compressed . $expanded . $invalid );
 	}
 
-	public function testPostconditionMessagesExplainTheSpecificSafeFailure(): void {
+	public function test_postcondition_messages_explain_the_specific_safe_failure(): void {
 		self::assertStringContainsString( 'maintenance mode', DeploymentOutcomeMessage::for_code( 'maintenance_remaining' ) );
 		self::assertStringContainsString( 'version', DeploymentOutcomeMessage::for_code( 'installed_version_mismatch' ) );
 		self::assertStringContainsString( 'activation state', DeploymentOutcomeMessage::for_code( 'activation_state_changed' ) );
 	}
 
-	public function testPersistenceUncertainMessageDirectsTheOperatorToBothRecoverySurfaces(): void {
+	public function test_persistence_uncertain_message_directs_the_operator_to_both_recovery_surfaces(): void {
 		$message = DeploymentOutcomeMessage::for_code( 'persistence_uncertain' );
 
 		self::assertStringContainsString( 'activity', $message );
@@ -169,7 +169,7 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 		self::assertStringContainsString( 'before retrying', $message );
 	}
 
-	public function testAlreadyManagedOutcomeDoesNotClaimTheRequestedBytesWereInstalled(): void {
+	public function test_already_managed_outcome_does_not_claim_the_requested_bytes_were_installed(): void {
 		$message = DeploymentOutcomeMessage::for_code( 'already_managed' );
 
 		self::assertStringContainsString( 'already manages', $message );

@@ -33,7 +33,7 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 		unset( $GLOBALS['ran_booster_repository_admin_translations'] );
 	}
 
-	public function testItReturnsTheOnlyProviderOwnedStableRepositoryIdentity(): void {
+	public function test_it_returns_the_only_provider_owned_stable_repository_identity(): void {
 		$resolver = $this->resolver(
 			array( AuthorityPackage::make( 'plugin/example.php', 'Owner/Example', 'gh', 'repository-42' ) )
 		);
@@ -44,7 +44,7 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 		);
 	}
 
-	public function testItAcceptsMultiplePackagesForTheSameProviderRepository(): void {
+	public function test_it_accepts_multiple_packages_for_the_same_provider_repository(): void {
 		$resolver = $this->resolver(
 			array( AuthorityPackage::make( 'plugin/example.php', 'owner/example', 'gh', 'repository-42' ) ),
 			array( AuthorityPackage::make( 'example-theme', 'owner/example', 'gh', 'repository-42' ) )
@@ -56,7 +56,7 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 		);
 	}
 
-	public function testItRejectsConflictingStableIdentitiesForOneLocator(): void {
+	public function test_it_rejects_conflicting_stable_identities_for_one_locator(): void {
 		$GLOBALS['ran_booster_repository_admin_translations']['ran-booster']['Choose a managed repository with exactly one stable provider identity before creating a repository-scoped webhook secret.'] = 'Identité unique traduite.';
 		$resolver = $this->resolver(
 			array( AuthorityPackage::make( 'plugin/example.php', 'owner/example', 'gh', 'repository-42' ) ),
@@ -68,7 +68,7 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 		$resolver->resolve( ProviderCode::parse( 'gh' ), new AuthorityWebhookPolicy(), 'owner/example' );
 	}
 
-	public function testItRejectsAMatchingPackageWithoutStableIdentity(): void {
+	public function test_it_rejects_amatching_package_without_stable_identity(): void {
 		$GLOBALS['ran_booster_repository_admin_translations']['ran-booster']['This managed package does not have a stable repository identity. Re-save its repository settings before creating a repository-scoped webhook secret.'] = 'Identité traduite.';
 		$resolver = $this->resolver(
 			array( AuthorityPackage::make( 'plugin/example.php', 'owner/example', 'gh', null ) )
@@ -79,7 +79,7 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 		$resolver->resolve( ProviderCode::parse( 'gh' ), new AuthorityWebhookPolicy(), 'owner/example' );
 	}
 
-	public function testItIgnoresOtherProvidersAndLocatorMismatches(): void {
+	public function test_it_ignores_other_providers_and_locator_mismatches(): void {
 		$resolver = $this->resolver(
 			array(
 				AuthorityPackage::make( 'plugin/other-provider.php', 'owner/example', 'bb', 'bb-42' ),
@@ -92,15 +92,15 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 		$resolver->resolve( ProviderCode::parse( 'gh' ), new AuthorityWebhookPolicy(), 'owner/example' );
 	}
 
-	public function testItReturnsTheCanonicalManagedOwnerCaseInsensitively(): void {
+	public function test_it_returns_the_canonical_managed_owner_case_insensitively(): void {
 		$resolver = $this->resolver(
 			array( AuthorityPackage::make( 'plugin/example.php', 'ExampleOwner/example', 'gh', 'repository-42' ) )
 		);
 
-		self::assertSame( 'ExampleOwner', $resolver->resolveOwner( ProviderCode::parse( 'gh' ), 'exampleowner' ) );
+		self::assertSame( 'ExampleOwner', $resolver->resolve_owner( ProviderCode::parse( 'gh' ), 'exampleowner' ) );
 	}
 
-	public function testItRejectsOwnersWithoutAManagedRepository(): void {
+	public function test_it_rejects_owners_without_amanaged_repository(): void {
 		$GLOBALS['ran_booster_repository_admin_translations']['ran-booster']['Choose an account owner from the managed repositories before creating an owner-scoped webhook secret.'] = 'Propriétaire traduit.';
 		$resolver = $this->resolver(
 			array( AuthorityPackage::make( 'plugin/example.php', 'owner/example', 'gh', 'repository-42' ) )
@@ -108,10 +108,10 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 
 		$this->expectException( CredentialRequestException::class );
 		$this->expectExceptionMessage( 'Propriétaire traduit.' );
-		$resolver->resolveOwner( ProviderCode::parse( 'gh' ), 'other-owner' );
+		$resolver->resolve_owner( ProviderCode::parse( 'gh' ), 'other-owner' );
 	}
 
-	public function testItExcludesReleaseManagedPackagesFromRepositoryAndOwnerWebhookAuthority(): void {
+	public function test_it_excludes_release_managed_packages_from_repository_and_owner_webhook_authority(): void {
 		$package = AuthorityPackage::make( 'plugin/example.php', 'owner/example', 'gh', 'repository-42' );
 		$package->set_source( PackageSource::RELEASE_ASSET, 2 );
 		$resolver = $this->resolver( array( $package ) );
@@ -121,7 +121,7 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 				if ( 'repository' === $scope ) {
 					$resolver->resolve( ProviderCode::parse( 'gh' ), new AuthorityWebhookPolicy(), 'owner/example' );
 				} else {
-					$resolver->resolveOwner( ProviderCode::parse( 'gh' ), 'owner' );
+					$resolver->resolve_owner( ProviderCode::parse( 'gh' ), 'owner' );
 				}
 				self::fail( 'Release-managed packages must not establish branch webhook authority.' );
 			} catch ( CredentialRequestException ) {
@@ -130,7 +130,7 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 		}
 	}
 
-	public function testExactPluginAndThemeHistoryReadsUseOnlyTheirExactRepositoryLookups(): void {
+	public function test_exact_plugin_and_theme_history_reads_use_only_their_exact_repository_lookups(): void {
 		$plugin  = AuthorityPackage::make( 'plugin/example.php', 'owner/example', 'gh', 'repository-42' );
 		$theme   = AuthorityPackage::make( 'example-theme', 'owner/theme', 'gh', 'repository-43' );
 		$history = new WebhookHistory(
@@ -162,8 +162,8 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 		self::assertNull( $history->for_package( 'other', 'example-theme' ) );
 	}
 
-	private function record( string $repositoryId ): InstallationRecord {
-		return new InstallationRecord( 'gh', $repositoryId, 'owner/example', '77', 'credential_1', 'wh_0123456789abcdef01234567', 'repository', 1, 'created', 'https://hooks.example.test/webhook', 'needs_verification', '2026-08-20T01:02:03Z', '2026-08-20T01:02:03Z' );
+	private function record( string $repository_id ): InstallationRecord {
+		return new InstallationRecord( 'gh', $repository_id, 'owner/example', '77', 'credential_1', 'wh_0123456789abcdef01234567', 'repository', 1, 'created', 'https://hooks.example.test/webhook', 'needs_verification', '2026-08-20T01:02:03Z', '2026-08-20T01:02:03Z' );
 	}
 
 	/**
@@ -180,23 +180,23 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 
 final class AuthorityPackage extends AbstractPackage {
 
-	private function __construct( private readonly string $identifier, private readonly ?string $authorityId ) {
+	private function __construct( private readonly string $identifier, private readonly ?string $authority_id ) {
 	}
 
 	public static function make(
 		string $identifier,
 		string $locator,
 		string $provider,
-		?string $authorityId
+		?string $authority_id
 	): self {
-		$package = new self( $identifier, $authorityId );
-		$package->set_repository( new ManagedRepository( $provider, $locator, $authorityId ?? 'missing-for-test', 'main' ) );
+		$package = new self( $identifier, $authority_id );
+		$package->set_repository( new ManagedRepository( $provider, $locator, $authority_id ?? 'missing-for-test', 'main' ) );
 
 		return $package;
 	}
 
 	public function get_provider_repository_id(): ?string {
-		return $this->authorityId;
+		return $this->authority_id;
 	}
 
 	public function get_identifier(): mixed {
@@ -268,15 +268,15 @@ final class AuthorityInstallationStore implements InstallationStore {
 		throw new \LogicException( 'Exact history reads must not scan installation records.' );
 	}
 
-	public function find( string $providerCode, string $repositoryId ): ?InstallationRecord {
-		return 'gh' === $providerCode ? ( $this->records[ $repositoryId ] ?? null ) : null;
+	public function find( string $provider_code, string $repository_id ): ?InstallationRecord {
+		return 'gh' === $provider_code ? ( $this->records[ $repository_id ] ?? null ) : null;
 	}
 
 	public function save_if_current( InstallationRecord $record, ?InstallationRecord $expected ): string {
 		throw new \LogicException( 'History is read-only.' );
 	}
 
-	public function delete_if_current( string $providerCode, string $repositoryId, ?InstallationRecord $expected ): string {
+	public function delete_if_current( string $provider_code, string $repository_id, ?InstallationRecord $expected ): string {
 		throw new \LogicException( 'History is read-only.' );
 	}
 }
@@ -309,13 +309,13 @@ final readonly class AuthorityWebhookPolicy implements ProviderWebhookPolicy {
 
 	public function authorize_webhook(
 		SignedWebhookVerification $verification,
-		string $repositoryAuthorityId,
+		string $repository_authority_id,
 		string $repository
 	): bool {
 		return false;
 	}
 
-	public function repository_target_matches( string $target, string $repositoryLocator ): bool {
-		return 0 === strcasecmp( trim( $target, '/' ), trim( $repositoryLocator, '/' ) );
+	public function repository_target_matches( string $target, string $repository_locator ): bool {
+		return 0 === strcasecmp( trim( $target, '/' ), trim( $repository_locator, '/' ) );
 	}
 }

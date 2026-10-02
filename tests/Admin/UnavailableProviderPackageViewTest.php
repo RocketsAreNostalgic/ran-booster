@@ -30,14 +30,14 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		unset( $GLOBALS['ran_booster_bulk_active_plugins'] );
 	}
 
-	public function testEditViewPreservesUnknownProviderIdentityAndKeepsConfirmedRemovalAvailable(): void {
+	public function test_edit_view_preserves_unknown_provider_identity_and_keeps_confirmed_removal_available(): void {
 		$package                 = $this->package();
-		$packageView             = PackagePagePresenter::plugin();
-		$packageProviderSettings = array(
+		$package_view             = PackagePagePresenter::plugin();
+		$package_provider_settings = array(
 			'default_provider' => 'temporarily-offline',
 			'providers'        => array(
-				$this->providerOption( 'gh', true ),
-				$this->providerOption( 'temporarily-offline', false ),
+				$this->provider_option( 'gh', true ),
+				$this->provider_option( 'temporarily-offline', false ),
 			),
 		);
 
@@ -63,11 +63,11 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'name="_ran_booster_reinstall_nonce"', $html );
 	}
 
-	public function testListViewLabelsUnavailableProviderAndDisablesOnlyDeploymentAction(): void {
+	public function test_list_view_labels_unavailable_provider_and_disables_only_deployment_action(): void {
 		$GLOBALS['ran_booster_bulk_active_plugins'] = array( 'exact/exact.php' );
 		$packages                                   = array( $this->package() );
-		$packageView                                = PackagePagePresenter::plugin();
-		$packageProviders                           = array(
+		$package_view                                = PackagePagePresenter::plugin();
+		$package_providers                           = array(
 			array(
 				'code'      => 'gh',
 				'label'     => 'GitHub',
@@ -126,12 +126,12 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'Deployment activity', $html );
 	}
 
-	public function testListViewShowsConfiguredPrivateCredentialAndBoundedActivityTruth(): void {
+	public function test_list_view_shows_configured_private_credential_and_bounded_activity_truth(): void {
 		$package          = $this->package( true, 'agency_profile' );
 		$packages         = array( $package );
-		$packageView      = PackagePagePresenter::plugin();
-		$packageProviders = array( $this->packageListProvider() );
-		$packageActivity  = array(
+		$package_view      = PackagePagePresenter::plugin();
+		$package_providers = array( $this->package_list_provider() );
+		$package_activity  = array(
 			'items'       => array(
 				(string) $package->get_identifier() => array(
 					'latest'          => $this->attempt( 2, 'failed', null ),
@@ -155,11 +155,11 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'button-update-package"  disabled="disabled"', $html );
 	}
 
-	public function testListViewDisablesPrivateDeploymentWhenTheLocalCredentialIdentityIsMissing(): void {
+	public function test_list_view_disables_private_deployment_when_the_local_credential_identity_is_missing(): void {
 		$packages         = array( $this->package( true, 'missing_profile' ) );
-		$packageView      = PackagePagePresenter::plugin();
-		$packageProviders = array( $this->packageListProvider() );
-		$packageActivity  = array(
+		$package_view      = PackagePagePresenter::plugin();
+		$package_providers = array( $this->package_list_provider() );
+		$package_activity  = array(
 			'items'       => array(),
 			'unavailable' => false,
 		);
@@ -178,15 +178,15 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( '>Disabled</span>', $html );
 	}
 
-	public function testDisabledAutomationSuppressesHistoricalDeploymentStatus(): void {
+	public function test_disabled_automation_suppresses_historical_deployment_status(): void {
 		$package = $this->package();
 		$package->set_deployment_policy( DeploymentPolicy::DISABLED );
 		$GLOBALS['ran_booster_bulk_active_plugins'] = array( 'exact/exact.php' );
 
 		$packages         = array( $package );
-		$packageView      = PackagePagePresenter::plugin();
-		$packageProviders = array( $this->packageListProvider() );
-		$packageActivity  = array(
+		$package_view      = PackagePagePresenter::plugin();
+		$package_providers = array( $this->package_list_provider() );
+		$package_activity  = array(
 			'items'       => array(
 				(string) $package->get_identifier() => array(
 					'latest'          => $this->attempt( 2, 'failed', null ),
@@ -229,13 +229,13 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( '0 plugins selected', $html );
 	}
 
-	public function testManualAutomationRemainsIndependentFromWordPressActivation(): void {
+	public function test_manual_automation_remains_independent_from_word_press_activation(): void {
 		$package = $this->package();
 		$package->set_deployment_policy( DeploymentPolicy::MANUAL );
 		$packages         = array( $package );
-		$packageView      = PackagePagePresenter::plugin();
-		$packageProviders = array( $this->packageListProvider() );
-		$packageActivity  = array(
+		$package_view      = PackagePagePresenter::plugin();
+		$package_providers = array( $this->package_list_provider() );
+		$package_activity  = array(
 			'items'       => array(),
 			'unavailable' => false,
 		);
@@ -252,11 +252,11 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Branch · release · Manual', $html );
 	}
 
-	public function testThemeListDoesNotOfferOrDisplayPluginActivationControls(): void {
+	public function test_theme_list_does_not_offer_or_display_plugin_activation_controls(): void {
 		$packages         = array( $this->package() );
-		$packageView      = PackagePagePresenter::theme();
-		$packageProviders = array( $this->packageListProvider() );
-		$packageActivity  = array(
+		$package_view      = PackagePagePresenter::theme();
+		$package_providers = array( $this->package_list_provider() );
+		$package_activity  = array(
 			'items'       => array(),
 			'unavailable' => false,
 		);
@@ -276,15 +276,15 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'Branch · release', $html );
 	}
 
-	public function testReleaseManagedEditViewKeepsCoreAndAddOnFormsSeparate(): void {
+	public function test_release_managed_edit_view_keeps_core_and_add_on_forms_separate(): void {
 		$package = $this->package();
 		$package->set_source( PackageSource::RELEASE_ASSET, 2 );
-		$packageView             = PackagePagePresenter::plugin();
-		$packageProviderSettings = array(
+		$package_view             = PackagePagePresenter::plugin();
+		$package_provider_settings = array(
 			'default_provider' => 'temporarily-offline',
-			'providers'        => array( $this->providerOption( 'temporarily-offline', true ) ),
+			'providers'        => array( $this->provider_option( 'temporarily-offline', true ) ),
 		);
-		$packageExtensionPanels  = array(
+		$package_extension_panels  = array(
 			'<section><h3>Published releases</h3><form method="POST"><input name="ran_booster_release_deployments[action]" value="return_to_branch"><button>Release to branch deploys</button></form></section>',
 		);
 
@@ -305,30 +305,30 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'value="unlink-plugin"', $html );
 		self::assertStringContainsString( 'value="unlink-delete-plugin"', $html );
 
-		$packageExtensionPanels = array();
+		$package_extension_panels = array();
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
-		$withoutAddOn = (string) ob_get_clean();
+		$without_add_on = (string) ob_get_clean();
 
 		self::assertStringContainsString(
 			'Update source unavailable',
-			$withoutAddOn
+			$without_add_on
 		);
-		self::assertStringNotContainsString( 'release deployments add-on', $withoutAddOn );
-		self::assertSame( 2, substr_count( $withoutAddOn, '<form' ) );
-		self::assertStringContainsString( 'value="unlink-plugin"', $withoutAddOn );
-		self::assertStringContainsString( 'value="unlink-delete-plugin"', $withoutAddOn );
+		self::assertStringNotContainsString( 'release deployments add-on', $without_add_on );
+		self::assertSame( 2, substr_count( $without_add_on, '<form' ) );
+		self::assertStringContainsString( 'value="unlink-plugin"', $without_add_on );
+		self::assertStringContainsString( 'value="unlink-delete-plugin"', $without_add_on );
 	}
 
-	public function testReleaseManagedEditRoutesWebhookManagementToTheRepositoryPage(): void {
+	public function test_release_managed_edit_routes_webhook_management_to_the_repository_page(): void {
 		$package = $this->package();
 		$package->set_source( PackageSource::RELEASE_ASSET, 2 );
-		$packageView             = PackagePagePresenter::plugin();
-		$packageProviderSettings = array(
+		$package_view             = PackagePagePresenter::plugin();
+		$package_provider_settings = array(
 			'default_provider' => 'temporarily-offline',
-			'providers'        => array( $this->providerOption( 'temporarily-offline', true ) ),
+			'providers'        => array( $this->provider_option( 'temporarily-offline', true ) ),
 		);
-		$packageSource           = array(
+		$package_source           = array(
 			'current'     => PackageSource::RELEASE_ASSET->value,
 			'selected'    => PackageSource::BRANCH->value,
 			'unavailable' => false,
@@ -340,21 +340,21 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'panel=repositories&amp;repository=stable-provider-id&amp;repository_view=branch', $html );
 		self::assertStringContainsString( '>Manage webhooks</a>', $html );
 
-		$packageSource['selected'] = PackageSource::RELEASE_ASSET->value;
+		$package_source['selected'] = PackageSource::RELEASE_ASSET->value;
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
-		$releaseView = (string) ob_get_clean();
-		self::assertStringNotContainsString( 'Webhook setup', $releaseView );
-		self::assertStringContainsString( '>Manage webhooks</a>', $releaseView );
+		$release_view = (string) ob_get_clean();
+		self::assertStringNotContainsString( 'Webhook setup', $release_view );
+		self::assertStringContainsString( '>Manage webhooks</a>', $release_view );
 	}
 
-	public function testReleaseManagedListUsesTheExistingDeploymentPositionAndReadOnlySummary(): void {
+	public function test_release_managed_list_uses_the_existing_deployment_position_and_read_only_summary(): void {
 		$package = $this->package();
 		$package->set_source( PackageSource::RELEASE_ASSET, 2 );
 		$packages                = array( $package );
-		$packageView             = PackagePagePresenter::plugin();
-		$packageProviders        = array( $this->packageListProvider() );
-		$packageActivity         = array(
+		$package_view             = PackagePagePresenter::plugin();
+		$package_providers        = array( $this->package_list_provider() );
+		$package_activity         = array(
 			'items'       => array(
 				'exact/exact.php' => array(
 					'latest'          => $this->attempt( 4, 'queued', null ),
@@ -363,7 +363,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 			),
 			'unavailable' => false,
 		);
-		$packageExtensionRows    = array(
+		$package_extension_rows    = array(
 			'exact/exact.php' => array(
 				'badges' => array(
 					array(
@@ -374,7 +374,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 				'status' => 'Installed 1.0.0; latest <1.1.0>.',
 			),
 		);
-		$packageExtensionActions = array(
+		$package_extension_actions = array(
 			'exact/exact.php' => array(
 				'fixture:manage'  => array(
 					'key'           => 'fixture:manage',
@@ -436,7 +436,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertSame( 1, substr_count( $html, '<span class="ran-booster-badge ' ) );
 	}
 
-	public function testListViewMakesActiveAndNeedsAttentionAttemptsExplicit(): void {
+	public function test_list_view_makes_active_and_needs_attention_attempts_explicit(): void {
 		foreach ( array(
 			'queued'          => array( 'Reinstall queued', true ),
 			'running'         => array( 'Reinstall in progress…', true ),
@@ -445,9 +445,9 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 			list( , $spins )  = $expectation;
 			$package          = $this->package( true, 'agency_profile' );
 			$packages         = array( $package );
-			$packageView      = PackagePagePresenter::plugin();
-			$packageProviders = array( $this->packageListProvider() );
-			$packageActivity  = array(
+			$package_view      = PackagePagePresenter::plugin();
+			$package_providers = array( $this->package_list_provider() );
+			$package_activity  = array(
 				'items'       => array(
 					(string) $package->get_identifier() => array(
 						'latest'          => $this->attempt( 3, $state, null ),
@@ -467,12 +467,12 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		}
 	}
 
-	public function testResolvedNeedsAttentionHistoryDoesNotDisableABranchRetry(): void {
+	public function test_resolved_needs_attention_history_does_not_disable_abranch_retry(): void {
 		$package          = $this->package( true, 'agency_profile' );
 		$packages         = array( $package );
-		$packageView      = PackagePagePresenter::plugin();
-		$packageProviders = array( $this->packageListProvider() );
-		$packageActivity  = array(
+		$package_view      = PackagePagePresenter::plugin();
+		$package_providers = array( $this->package_list_provider() );
+		$package_activity  = array(
 			'items'       => array(
 				(string) $package->get_identifier() => array(
 					'latest'          => $this->attempt( 5, 'needs_attention', null, true ),
@@ -492,11 +492,11 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'button-update-package"  disabled="disabled"', $html );
 	}
 
-	public function testRepositoryFieldExplainsProviderOwnedNestedLocators(): void {
-		$packageView             = PackagePagePresenter::plugin();
-		$repositoryValue         = 'group/subgroup/example-plugin';
-		$providerBrowseAvailable = false;
-		$releaseManaged          = false;
+	public function test_repository_field_explains_provider_owned_nested_locators(): void {
+		$package_view             = PackagePagePresenter::plugin();
+		$repository_value         = 'group/subgroup/example-plugin';
+		$provider_browse_available = false;
+		$release_managed          = false;
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/fields/repository.php';
@@ -508,11 +508,11 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertMatchesRegularExpression( '/ran-booster-open-repository-picker"[^>]* hidden\s+disabled="disabled"/', $html );
 	}
 
-	public function testRepositoryPickerRemainsVisibleForBrowsingProviders(): void {
-		$packageView             = PackagePagePresenter::plugin();
-		$repositoryValue         = 'owner/example-plugin';
-		$providerBrowseAvailable = true;
-		$releaseManaged          = false;
+	public function test_repository_picker_remains_visible_for_browsing_providers(): void {
+		$package_view             = PackagePagePresenter::plugin();
+		$repository_value         = 'owner/example-plugin';
+		$provider_browse_available = true;
+		$release_managed          = false;
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/fields/repository.php';
@@ -523,11 +523,11 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'hidden disabled="disabled"', $html );
 	}
 
-	public function testDeploymentPolicyDisablesAutomaticWithoutWebhookSupport(): void {
-		$deploymentPolicy               = DeploymentPolicy::AUTOMATIC->value;
-		$providerWebhookAvailable       = false;
-		$providerCode                   = 'temporarily-offline';
-		$developmentEnvironmentDetected = false;
+	public function test_deployment_policy_disables_automatic_without_webhook_support(): void {
+		$deployment_policy               = DeploymentPolicy::AUTOMATIC->value;
+		$provider_webhook_available       = false;
+		$provider_code                   = 'temporarily-offline';
+		$development_environment_detected = false;
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/fields/deployment-policy.php';
@@ -540,11 +540,11 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Editing this package’s files on this site? Choose Disabled.', $html );
 	}
 
-	public function testDeploymentPolicyEnablesAutomaticForWebhookProviders(): void {
-		$deploymentPolicy               = DeploymentPolicy::AUTOMATIC->value;
-		$providerWebhookAvailable       = true;
-		$providerCode                   = 'gh';
-		$developmentEnvironmentDetected = true;
+	public function test_deployment_policy_enables_automatic_for_webhook_providers(): void {
+		$deployment_policy               = DeploymentPolicy::AUTOMATIC->value;
+		$provider_webhook_available       = true;
+		$provider_code                   = 'gh';
+		$development_environment_detected = true;
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/fields/deployment-policy.php';
@@ -560,11 +560,11 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'tab=gh#ran-booster-webhook-secrets-heading', $html );
 	}
 
-	public function testDeploymentPolicyHidesLocalWarningWhenAutomationIsDisabled(): void {
-		$deploymentPolicy               = DeploymentPolicy::DISABLED->value;
-		$providerWebhookAvailable       = true;
-		$providerCode                   = 'gh';
-		$developmentEnvironmentDetected = true;
+	public function test_deployment_policy_hides_local_warning_when_automation_is_disabled(): void {
+		$deployment_policy               = DeploymentPolicy::DISABLED->value;
+		$provider_webhook_available       = true;
+		$provider_code                   = 'gh';
+		$development_environment_detected = true;
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/fields/deployment-policy.php';
@@ -574,12 +574,12 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'Editing this package’s files on this site? Choose Disabled.', $html );
 	}
 
-	public function testDeploymentPolicyOffersAutomaticWordPressUpdatesForPublishedReleases(): void {
-		$deploymentPolicy               = DeploymentPolicy::AUTOMATIC->value;
-		$providerWebhookAvailable       = false;
-		$providerCode                   = 'gh';
-		$packageAutomationSource        = 'release_asset';
-		$developmentEnvironmentDetected = false;
+	public function test_deployment_policy_offers_automatic_word_press_updates_for_published_releases(): void {
+		$deployment_policy               = DeploymentPolicy::AUTOMATIC->value;
+		$provider_webhook_available       = false;
+		$provider_code                   = 'gh';
+		$package_automation_source        = 'release_asset';
+		$development_environment_detected = false;
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/fields/deployment-policy.php';
@@ -593,7 +593,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 	}
 
 	/** @return array<string, mixed> */
-	private function providerOption( string $code, bool $available ): array {
+	private function provider_option( string $code, bool $available ): array {
 		return array(
 			'code'                  => $code,
 			'label'                 => $code,
@@ -609,7 +609,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 	}
 
 	/** @return array<string, mixed> */
-	private function packageListProvider(): array {
+	private function package_list_provider(): array {
 		return array(
 			'code'                  => 'temporarily-offline',
 			'label'                 => 'Fixture provider',
@@ -626,7 +626,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		);
 	}
 
-	private function attempt( int $id, string $state, ?string $resolvedRef, bool $resolved = false ): DeploymentAttempt {
+	private function attempt( int $id, string $state, ?string $resolved_ref, bool $resolved = false ): DeploymentAttempt {
 		$terminal = in_array( $state, array( 'succeeded', 'failed', 'needs_attention' ), true );
 		$outcome  = match ( $state ) {
 			'succeeded' => 'deployed',
@@ -649,7 +649,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 				'provider'                => 'temporarily-offline',
 				'provider_repository_id'  => 'stable-provider-id',
 				'requested_ref'           => 'release',
-				'resolved_ref'            => $resolvedRef,
+				'resolved_ref'            => $resolved_ref,
 				'delivery_id'             => null,
 				'delivery_digest'         => null,
 				'state'                   => $state,
@@ -664,14 +664,14 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		);
 	}
 
-	private function package( bool $private = false, string $credentialId = '' ): UnavailableProviderPackage {
+	private function package( bool $private = false, string $credential_id = '' ): UnavailableProviderPackage {
 		$repository = new ManagedRepository(
 			'temporarily-offline',
 			'owner/exact-repository',
 			'stable-provider-id',
 			'release',
 			$private,
-			'' === $credentialId ? null : $credentialId
+			'' === $credential_id ? null : $credential_id
 		);
 
 		$package = new UnavailableProviderPackage();

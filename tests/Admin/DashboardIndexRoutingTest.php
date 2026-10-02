@@ -218,17 +218,17 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 	public function test_repository_branch_check_holds_the_shared_updater_lock_during_provider_access(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
-		$provider                   = new DashboardBranchCheckProvider();
-		$lock                       = new DashboardBranchCheckUpdaterLock();
-		$dashboard                  = $this->dashboard(
+		$provider                     = new DashboardBranchCheckProvider();
+		$lock                         = new DashboardBranchCheckUpdaterLock();
+		$dashboard                    = $this->dashboard(
 			$this->throwing_secrets(),
 			providers: new ProviderRegistry( array( $provider ) ),
 			branch_check_lock: $lock
 		);
 		$provider->on_provider_access = static fn () => $lock->record_provider_access();
-		$package                    = $this->managed_package( 'example/example.php', 'Example', 'repo-42' );
-		$check                      = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
-		$_GET                       = array(
+		$package                      = $this->managed_package( 'example/example.php', 'Example', 'repo-42' );
+		$check                        = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
+		$_GET                         = array(
 			'ran_booster_repository_branch_check'  => '1',
 			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
 		);
@@ -876,7 +876,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 	}
 
 	public function test_provider_repository_projection_keeps_webhook_settings_url_when_release_precedes_branch(): void {
-		$_GET            = array(
+		$_GET             = array(
 			'tab'   => 'bb',
 			'panel' => 'repositories',
 		);
@@ -1190,7 +1190,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 	public function test_navigation_uses_the_correct_single_and_network_admin_bases(): void {
 		$_GET['tab'] = 'documentation';
-		$single_site  = $this->dashboard( $this->throwing_secrets() )->get_index()['data'];
+		$single_site = $this->dashboard( $this->throwing_secrets() )->get_index()['data'];
 
 		self::assertSame(
 			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview',
@@ -1205,7 +1205,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$network_site['tabs'][0]['url']
 		);
 
-		$_GET['tab']     = 'overview';
+		$_GET['tab']      = 'overview';
 		$network_overview = $this->dashboard( $this->throwing_secrets() )->get_index()['data'];
 		self::assertSame(
 			'https://example.test/wp-admin/network/admin.php?page=ran-booster-plugins-create',
@@ -1391,7 +1391,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$action_calls  = array();
 		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_admin_package_source_choices'][]          =
 			static function ( array $choices, string $mode, string $type, ?\RAN\Admin\AdminPackageProjection $package, string $page_url ) use ( &$source_calls ): array {
-				$source_calls[]                        = array( $mode, $type, $package?->identifier(), $page_url );
+				$source_calls[]                       = array( $mode, $type, $package?->identifier(), $page_url );
 				$choices['release_asset']['disabled'] = false;
 				$choices['release_asset']['hydrated'] = true;
 				$choices['release_asset']['url']      = add_query_arg( 'source_view', 'release_asset', $page_url );
@@ -1730,8 +1730,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 	#[DataProvider( 'package_type_provider' )]
 	public function test_network_create_edit_and_index_routes_share_the_canonical_package_admin_base( string $type ): void {
 		$this->set_multisite( true );
-		$identifier   = 'plugin' === $type ? 'example/example.php' : 'example-theme';
-		$package      = $this->managed_package( $identifier, 'Example Package', 'example-repository' );
+		$identifier    = 'plugin' === $type ? 'example/example.php' : 'example-theme';
+		$package       = $this->managed_package( $identifier, 'Example Package', 'example-repository' );
 		$settings_urls = array();
 		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_package_settings_sections'][] =
 			static function ( \RAN\Admin\AdminPackageProjection $projection, string $settings_url ) use ( &$settings_urls ): void {
@@ -2378,7 +2378,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 2, $first_page['next_cursor'] );
 
 		$_GET['before'] = '2';
-		$last_page       = $this->dashboard( $this->throwing_secrets(), null, null, $attempts )->get_index()['data']['deploymentActivity'];
+		$last_page      = $this->dashboard( $this->throwing_secrets(), null, null, $attempts )->get_index()['data']['deploymentActivity'];
 
 		self::assertCount( 1, $last_page['items'] );
 		self::assertSame( 1, $last_page['items'][0]->get_id() );
@@ -2473,11 +2473,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 	}
 
 	public function test_needs_attention_contention_refuses_mutation_until_acknowledged_then_allows_retry(): void {
-		$attempt_database         = new AttemptRepositoryDatabase();
+		$attempt_database        = new AttemptRepositoryDatabase();
 		$attempt                 = DashboardActivityWpdb::attempt( 43, 'failed' );
 		$attempt['state']        = 'needs_attention';
 		$attempt['outcome_code'] = DeploymentOutcome::CODE_INTERRUPTED;
-		$attempt_database->rows   = array( $attempt );
+		$attempt_database->rows  = array( $attempt );
 		$attempts                = new DeploymentAttemptRepository(
 			$attempt_database,
 			'wp_ran_booster_deployment_attempts',
@@ -2487,10 +2487,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 		$plugins                 = $this->createMock( PluginRepository::class );
 		$plugins->expects( self::never() )->method( 'from_slug' );
-		$themes      = $this->createStub( ThemeRepository::class );
+		$themes       = $this->createStub( ThemeRepository::class );
 		$updater_lock = $this->createStub( WordPressUpdaterLock::class );
-		$coordinator = new DashboardNeedsAttentionCoordinator( $attempts );
-		$operations  = new PackageOperationService(
+		$coordinator  = new DashboardNeedsAttentionCoordinator( $attempts );
+		$operations   = new PackageOperationService(
 			$plugins,
 			$themes,
 			$coordinator,
@@ -2503,12 +2503,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 			),
 			$updater_lock
 		);
-		$dashboard   = $this->dashboard(
+		$dashboard    = $this->dashboard(
 			$this->throwing_secrets(),
 			package_operations: $operations,
 			deployment_attempts: $attempts
 		);
-		$request     = array(
+		$request      = array(
 			'provider'                            => 'gh',
 			'repository'                          => 'owner/example',
 			'branch'                              => 'main',
@@ -2583,8 +2583,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		?WebhookAssistanceReadinessEvaluator $webhook_assistance = null,
 		?WordPressUpdaterLock $branch_check_lock = null
 	): RoutingDashboard {
-		$providers        = $providers ?? $this->providers( $provider_credentials );
-		$branch_check_lock  = $branch_check_lock ?? new DashboardBranchCheckUpdaterLock();
+		$providers         = $providers ?? $this->providers( $provider_credentials );
+		$branch_check_lock = $branch_check_lock ?? new DashboardBranchCheckUpdaterLock();
 		$plugin_repository = $plugins ?? new class() extends PluginRepository {
 
 			public function __construct() {
@@ -2908,10 +2908,10 @@ final class DashboardBranchCheckProvider implements RepositoryProvider, Credenti
 
 	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
-	public int $prepare_calls        = 0;
-	public int $resolved_ref_calls    = 0;
-	public int $cleanup_calls        = 0;
-	public int $path_calls           = 0;
+	public int $prepare_calls       = 0;
+	public int $resolved_ref_calls  = 0;
+	public int $cleanup_calls       = 0;
+	public int $path_calls          = 0;
 	public ?ArchiveRequest $request = null;
 	public ?string $path            = null;
 	/** @var \Closure(): void|null */
@@ -3043,8 +3043,8 @@ final class DashboardBranchCheckProviderWithoutPathInspector implements Reposito
 final class DashboardBranchCheckUpdaterLock extends WordPressUpdaterLock {
 
 	/** @var list<string> */
-	public array $events             = array();
-	private bool $held               = false;
+	public array $events               = array();
+	private bool $held                 = false;
 	private bool $provider_access_held = false;
 
 	public function acquire(): string {

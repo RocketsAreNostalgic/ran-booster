@@ -30,7 +30,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 	protected function setUp(): void {
 		parent::setUp();
 
-		$_POST                      = array();
+		$_POST                        = array();
 		$this->public_lookup_profiles = new InMemoryPublicRepositoryLookupProfileStore();
 		$GLOBALS['ran_booster_repository_admin_translations'] = array();
 	}
@@ -577,7 +577,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		bool $storage_unavailable = false
 	): RepositoryPickerController {
 		$provider_code = $provider->get_metadata()->code->value;
-		$profiles     = array();
+		$profiles      = array();
 		foreach ( $profile_ids as $profile_id ) {
 			$profiles[ $profile_id ] = array(
 				'id'         => $profile_id,

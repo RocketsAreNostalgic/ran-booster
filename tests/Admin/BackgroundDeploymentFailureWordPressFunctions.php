@@ -60,7 +60,11 @@ function wp_mail( string $to, string $subject, string $message, array $headers =
 }
 
 function add_action( string $hook, callable $callback, int $priority = 10, int $accepted_args = 1 ): bool {
-	$GLOBALS['ran_booster_background_failure_actions'][ $hook ][] = array( 'callback' => $callback, 'priority' => $priority, 'acceptedArgs' => $accepted_args );
+	$GLOBALS['ran_booster_background_failure_actions'][ $hook ][] = array(
+		'callback'     => $callback,
+		'priority'     => $priority,
+		'acceptedArgs' => $accepted_args,
+	);
 
 	return true;
 }

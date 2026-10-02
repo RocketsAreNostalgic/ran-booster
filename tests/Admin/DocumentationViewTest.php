@@ -441,7 +441,7 @@ final class DocumentationViewTest extends TestCase {
 	 * @param list<array<string, mixed>> $provider_documentation Display-safe provider guidance.
 	 */
 	private function render_view( array $provider_documentation ): string {
-		$tabs               = array(
+		$tabs                = array(
 			array(
 				'key'   => 'gh',
 				'label' => 'GitHub',

@@ -539,16 +539,16 @@ final class PortabilityViewTest extends TestCase {
 		bool $export_credentials_unavailable = false,
 		array $credential_rows = array()
 	): string {
-		$portability_review_rows                   = $rows;
-		$portability_credential_rows               = $credential_rows;
-		$portability_export_rows                   = $export_rows ?? array(
+		$portability_review_rows                    = $rows;
+		$portability_credential_rows                = $credential_rows;
+		$portability_export_rows                    = $export_rows ?? array(
 			array(
 				'name'       => 'Example <Plugin>',
 				'identifier' => 'example/example.php',
 				'type'       => 'plugin',
 			),
 		);
-		$portability_export_unavailable            = $export_unavailable;
+		$portability_export_unavailable             = $export_unavailable;
 		$portability_export_credential_groups       = $export_credential_groups;
 		$portability_export_credentials_unavailable = $export_credentials_unavailable;
 

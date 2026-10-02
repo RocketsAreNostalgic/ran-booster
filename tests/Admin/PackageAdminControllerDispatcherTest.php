@@ -123,7 +123,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		$plugins              = new EditBoundaryPluginRepository( $package );
 		$themes               = new EditBoundaryThemeRepository( $package );
 		$providers            = new ProviderRegistry();
-		$unlink_input          = array(
+		$unlink_input         = array(
 			'action' => 'unlink-plugin',
 			'file'   => 'fixture/fixture.php',
 		);
@@ -143,7 +143,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		$plugins              = new EditBoundaryPluginRepository( $package );
 		$themes               = new EditBoundaryThemeRepository( $package );
 		$providers            = new ProviderRegistry();
-		$unlink_input          = array(
+		$unlink_input         = array(
 			'action'     => 'unlink-theme',
 			'stylesheet' => 'fixture-theme',
 		);

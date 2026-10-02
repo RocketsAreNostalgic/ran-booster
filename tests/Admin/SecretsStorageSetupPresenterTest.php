@@ -235,7 +235,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 
 	public function test_builds_an_adoption_offer_only_for_an_available_recovery_state(): void {
 		$recovery_path = '/private/.ran-booster/abcdef0123456789/secrets.json';
-		$payload      = ( new SecretsStorageSetupPresenter() )->build(
+		$payload       = ( new SecretsStorageSetupPresenter() )->build(
 			SecretsStorageProvisioningResult::storage_needs_attention(
 				'/private/.ran-booster/0123456789abcdef/secrets.json',
 				SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC

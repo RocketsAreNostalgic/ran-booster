@@ -89,7 +89,7 @@ final class ModalLocalisationTest extends TestCase {
 	private function render_modals(): string {
 		$has_credential_settings = true;
 		$has_webhook_settings    = true;
-		$provider              = array(
+		$provider                = array(
 			'code'             => 'provider-code',
 			'label'            => 'Provider <data>',
 			'credential_kinds' => array(
@@ -121,7 +121,7 @@ final class ModalLocalisationTest extends TestCase {
 				),
 			),
 		);
-		$webhook_profiles      = array(
+		$webhook_profiles        = array(
 			array(
 				'id'     => 'workspace-hook',
 				'scope'  => 'owner',
@@ -133,7 +133,7 @@ final class ModalLocalisationTest extends TestCase {
 				'target' => 'workspace/example',
 			),
 		);
-		$managed_repositories   = array(
+		$managed_repositories    = array(
 			'owners'       => array( 'workspace' ),
 			'repositories' => array( array( 'target' => 'workspace/example' ) ),
 		);

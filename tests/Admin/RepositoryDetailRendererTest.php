@@ -403,7 +403,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 	}
 
 	public function test_published_releases_view_uses_provider_panel_and_keeps_package_controls_linked(): void {
-		$row             = array(
+		$row              = array(
 			'repository'        => 'owner/releases',
 			'repository_url'    => 'https://github.com/owner/releases',
 			'source_label'      => 'Published releases',

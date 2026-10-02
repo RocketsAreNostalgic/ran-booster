@@ -136,7 +136,7 @@ final class RepeatPackageViewTest extends TestCase {
 		bool $open_repository_picker
 	): void {
 		$package_provider_settings = $this->provider_settings( true );
-		$buffer_level             = ob_get_level();
+		$buffer_level              = ob_get_level();
 
 		// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler, WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test-only handler promotes render warnings to exceptions.
 		set_error_handler(
@@ -178,9 +178,9 @@ final class RepeatPackageViewTest extends TestCase {
 	): void {
 		$GLOBALS['ran_booster_package_view_multisite']   = $multisite;
 		$GLOBALS['ran_booster_dashboard_test_multisite'] = $multisite;
-		$package_provider_settings                         = $this->provider_settings( true );
-		$explicit_provider                                = true;
-		$open_repository_picker                            = true;
+		$package_provider_settings                       = $this->provider_settings( true );
+		$explicit_provider                               = true;
+		$open_repository_picker                          = true;
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/create.php';
@@ -224,20 +224,20 @@ final class RepeatPackageViewTest extends TestCase {
 	): void {
 		$GLOBALS['ran_booster_package_view_multisite']   = $multisite;
 		$GLOBALS['ran_booster_dashboard_test_multisite'] = $multisite;
-		$package                 = $this->package( $package_view );
+		$package                   = $this->package( $package_view );
 		$package_provider_settings = $this->provider_settings( $provider_available );
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 		$html = (string) ob_get_clean();
 
-		$base_url            = $multisite ? 'https://example.test/wp-admin/network/admin.php' : 'https://example.test/wp-admin/admin.php';
+		$base_url             = $multisite ? 'https://example.test/wp-admin/network/admin.php' : 'https://example.test/wp-admin/admin.php';
 		$expected_install_url = $base_url
 			. '?page=' . $package_view->get_create_page_slug()
 			. '&amp;provider=gh&amp;open_picker=1';
 		$expected_back_url    = $base_url . '?page=' . $package_view->get_page_slug();
 		$install_another_link = '<a class="button" href="' . $expected_install_url . '">Install another ' . $package_view->get_type() . '</a>';
-		$back_link           = '<a class="button" href="' . $expected_back_url . '">Back to Managed ' . $package_view->get_plural_label() . '</a>';
+		$back_link            = '<a class="button" href="' . $expected_back_url . '">Back to Managed ' . $package_view->get_plural_label() . '</a>';
 
 		self::assertStringNotContainsString( 'ran-booster-package-settings__install-another', $html );
 		self::assertStringNotContainsString( '>Cancel</a>', $html );
@@ -247,9 +247,9 @@ final class RepeatPackageViewTest extends TestCase {
 		$save_actions = $this->action_group_by_class( $html, 'ran-booster-package-settings__save-actions' );
 		self::assertStringContainsString( $install_another_link, $save_actions );
 		self::assertStringContainsString( $back_link, $save_actions );
-		$save_position           = strpos( $save_actions, 'data-ran-booster-package-settings-save' );
+		$save_position            = strpos( $save_actions, 'data-ran-booster-package-settings-save' );
 		$install_another_position = strpos( $save_actions, $install_another_link );
-		$back_position           = strpos( $save_actions, $back_link );
+		$back_position            = strpos( $save_actions, $back_link );
 		self::assertIsInt( $save_position );
 		self::assertIsInt( $install_another_position );
 		self::assertIsInt( $back_position );
@@ -267,14 +267,14 @@ final class RepeatPackageViewTest extends TestCase {
 				'<a href="https://github.com/owner/example" class="ran-booster-repository-link"',
 				$html
 			);
-			$advanced_position    = strpos( $html, '<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings"' );
-			$advanced_end         = strpos( $html, '</details>', $advanced_position );
-			$readiness_position   = strpos( $html, 'id="ran-booster-branch-readiness"', $advanced_position );
-			$automation_position  = strpos( $html, 'name="ran_booster[deployment_policy]"' );
-			$operation_position   = strpos( $html, 'class="ran-booster-settings-section ran-booster-package-operation-settings"' );
-			$actions_position     = strpos( $html, 'class="ran-booster-package-operation-settings__actions"', $operation_position );
-			$reinstall_position   = strpos( $html, 'data-ran-booster-settings-reinstall', $actions_position );
-			$operation_end        = strpos( $html, '</section>', $operation_position );
+			$advanced_position     = strpos( $html, '<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings"' );
+			$advanced_end          = strpos( $html, '</details>', $advanced_position );
+			$readiness_position    = strpos( $html, 'id="ran-booster-branch-readiness"', $advanced_position );
+			$automation_position   = strpos( $html, 'name="ran_booster[deployment_policy]"' );
+			$operation_position    = strpos( $html, 'class="ran-booster-settings-section ran-booster-package-operation-settings"' );
+			$actions_position      = strpos( $html, 'class="ran-booster-package-operation-settings__actions"', $operation_position );
+			$reinstall_position    = strpos( $html, 'data-ran-booster-settings-reinstall', $actions_position );
+			$operation_end         = strpos( $html, '</section>', $operation_position );
 			$save_actions_position = strpos( $html, 'class="ran-booster-settings-actions ran-booster-package-settings__save-actions"', $operation_end );
 			self::assertIsInt( $advanced_position );
 			self::assertIsInt( $advanced_end );
@@ -316,7 +316,7 @@ final class RepeatPackageViewTest extends TestCase {
 		}
 
 		$danger_zone = $this->danger_zone( $html );
-		$type       = $package_view->get_type();
+		$type        = $package_view->get_type();
 		self::assertStringStartsWith( '<details id="ran-booster-package-danger-zone"', $danger_zone );
 		self::assertStringNotContainsString( 'data-ran-booster-package-disclosure open', $danger_zone );
 		self::assertLessThan( strpos( $danger_zone, '<form' ), strpos( $danger_zone, '<summary>' ) );
@@ -356,18 +356,18 @@ final class RepeatPackageViewTest extends TestCase {
 
 	public function test_unavailable_package_source_keeps_navigation_actions_without_save(): void {
 		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $package_view ) {
-			$package                 = $this->package( $package_view );
+			$package                   = $this->package( $package_view );
 			$package_provider_settings = $this->provider_settings( true );
-			$package_source           = array( 'unavailable' => true );
+			$package_source            = array( 'unavailable' => true );
 
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 			$html = (string) ob_get_clean();
 
-			$base_url            = 'https://example.test/wp-admin/admin.php';
+			$base_url             = 'https://example.test/wp-admin/admin.php';
 			$install_another_link = '<a class="button" href="' . $base_url . '?page=' . $package_view->get_create_page_slug() . '&amp;provider=gh&amp;open_picker=1">Install another ' . $package_view->get_type() . '</a>';
-			$back_link           = '<a class="button" href="' . $base_url . '?page=' . $package_view->get_page_slug() . '">Back to Managed ' . $package_view->get_plural_label() . '</a>';
-			$actions            = $this->action_group_by_class( $html, 'ran-booster-settings-actions' );
+			$back_link            = '<a class="button" href="' . $base_url . '?page=' . $package_view->get_page_slug() . '">Back to Managed ' . $package_view->get_plural_label() . '</a>';
+			$actions              = $this->action_group_by_class( $html, 'ran-booster-settings-actions' );
 
 			self::assertStringNotContainsString( 'data-ran-booster-package-settings-save', $html, $package_view->get_type() );
 			self::assertStringContainsString( $install_another_link, $actions, $package_view->get_type() );
@@ -379,9 +379,9 @@ final class RepeatPackageViewTest extends TestCase {
 	public function test_submitted_removal_actions_reopen_danger_zone_for_native_failures(): void {
 		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $package_view ) {
 			foreach ( array( 'unlink', 'unlink-delete' ) as $action ) {
-				$package                 = $this->package( $package_view );
+				$package                   = $this->package( $package_view );
 				$package_provider_settings = $this->provider_settings( true );
-				$_POST['ran_booster']    = array( 'action' => $package_view->get_action( $action ) );
+				$_POST['ran_booster']      = array( 'action' => $package_view->get_action( $action ) );
 
 				ob_start();
 				require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
@@ -409,9 +409,9 @@ final class RepeatPackageViewTest extends TestCase {
 
 	public function test_explicit_source_view_opens_stable_advanced_disclosure_for_plugins_and_themes(): void {
 		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $package_view ) {
-			$package                 = $this->package( $package_view );
+			$package                   = $this->package( $package_view );
 			$package_provider_settings = $this->provider_settings( true );
-			$package_source           = array( 'advanced_open' => true );
+			$package_source            = array( 'advanced_open' => true );
 
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
@@ -427,9 +427,9 @@ final class RepeatPackageViewTest extends TestCase {
 
 	public function test_edit_and_reinstall_snapshots_stay_authoritative_while_attempted_values_are_retained(): void {
 		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $package_view ) {
-			$package                 = $this->package( $package_view );
+			$package                   = $this->package( $package_view );
 			$package_provider_settings = $this->provider_settings( true );
-			$_POST['ran_booster']    = array(
+			$_POST['ran_booster']      = array(
 				'provider'                            => 'gh',
 				'repository'                          => 'owner/attempted',
 				'branch'                              => 'attempted-branch',
@@ -470,7 +470,7 @@ final class RepeatPackageViewTest extends TestCase {
 
 	public function test_edit_source_choices_use_in_place_navigation_with_anchored_fallback(): void {
 		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $package_view ) {
-			$identifier_value      = 'plugin' === $package_view->get_type() ? 'example/example.php' : 'example-theme';
+			$identifier_value       = 'plugin' === $package_view->get_type() ? 'example/example.php' : 'example-theme';
 			$package_source_mode    = 'edit';
 			$package_source_view    = 'branch';
 			$package_current_source = 'release_asset';
@@ -538,7 +538,7 @@ final class RepeatPackageViewTest extends TestCase {
 	}
 
 	public function test_disabled_source_choice_remains_readable_focusable_and_explains_itself(): void {
-		$package_view          = PackagePagePresenter::plugin();
+		$package_view           = PackagePagePresenter::plugin();
 		$package_source_mode    = 'create';
 		$package_source_view    = 'branch';
 		$package_source_choices = array(
@@ -592,7 +592,7 @@ final class RepeatPackageViewTest extends TestCase {
 			$package->set_source( $current_source, 2 );
 
 			$package_provider_settings = $this->provider_settings( true );
-			$package_source           = array(
+			$package_source            = array(
 				'current'           => $current_source->value,
 				'selected'          => PackageSource::BRANCH->value,
 				'unavailable'       => false,
@@ -636,9 +636,9 @@ final class RepeatPackageViewTest extends TestCase {
 			);
 			self::assertStringContainsString( 'id="ran-booster-branch-readiness"', $html, $package_view->get_type() );
 			$branch_pane_position   = strpos( $html, 'id="ran-booster-source-pane-branch"' );
-			$return_position       = strpos( $html, 'class="ran-booster-release-return"' );
+			$return_position        = strpos( $html, 'class="ran-booster-release-return"' );
 			$branch_fields_position = strpos( $html, '<fieldset class="ran-booster-branch-settings' );
-			$readiness_position    = strpos( $html, 'id="ran-booster-branch-readiness"' );
+			$readiness_position     = strpos( $html, 'id="ran-booster-branch-readiness"' );
 			self::assertIsInt( $branch_pane_position, $package_view->get_type() );
 			self::assertIsInt( $return_position, $package_view->get_type() );
 			self::assertIsInt( $branch_fields_position, $package_view->get_type() );

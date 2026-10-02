@@ -96,7 +96,7 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 			'deployment_release_source_blocked' => 'Use Published releases or WordPress Updates',
 			'deployment_maintenance_active'     => 'Wait for the current update to finish',
 		);
-		$defined_failed_codes  = array_filter(
+		$defined_failed_codes = array_filter(
 			( new \ReflectionClass( DeploymentOutcome::class ) )->getConstants(),
 			static function ( mixed $code ): bool {
 				if ( ! is_string( $code ) ) {

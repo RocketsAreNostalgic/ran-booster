@@ -41,18 +41,18 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 
 	public function test_package_index_can_reorder_the_complete_managed_package_heading_without_changing_package_identity(): void {
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Managed %s'] = '%s administrés';
-		$package_view             = PackagePagePresenter::plugin();
-		$messages                = array();
-		$name                    = 'RAN Booster';
-		$view                    = 'packages/index';
+		$package_view              = PackagePagePresenter::plugin();
+		$messages                  = array();
+		$name                      = 'RAN Booster';
+		$view                      = 'packages/index';
 		$development_safety_notice = false;
-		$packages                = array();
-		$package_providers        = array();
-		$package_activity         = array(
+		$packages                  = array();
+		$package_providers         = array();
+		$package_activity          = array(
 			'items'       => array(),
 			'unavailable' => false,
 		);
-		$tabs                    = array();
+		$tabs                      = array();
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/base.php';
@@ -76,7 +76,7 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 
 	#[DataProvider( 'package_types' )]
 	public function test_package_index_places_notices_after_its_heading_and_description( PackagePagePresenter $package_view, string $heading ): void {
-		$messages                = array(
+		$messages                  = array(
 			array(
 				'type'            => 'success',
 				'message'         => 'Scoped package result.',
@@ -85,16 +85,16 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 				'skipped_updates' => 1,
 			),
 		);
-		$name                    = 'RAN Booster';
-		$view                    = 'packages/index';
+		$name                      = 'RAN Booster';
+		$view                      = 'packages/index';
 		$development_safety_notice = true;
-		$packages                = array();
-		$package_providers        = array();
-		$package_activity         = array(
+		$packages                  = array();
+		$package_providers         = array();
+		$package_activity          = array(
 			'items'       => array(),
 			'unavailable' => false,
 		);
-		$tabs                    = array(
+		$tabs                      = array(
 			array(
 				'key'    => 'overview',
 				'label'  => 'Overview',

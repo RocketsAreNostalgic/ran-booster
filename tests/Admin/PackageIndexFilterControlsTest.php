@@ -176,15 +176,15 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		int $package_list_total,
 		array $package_provider_options
 	): string {
-		$packages                = array();
-		$package_providers        = array();
-		$package_activity         = array(
+		$packages                  = array();
+		$package_providers         = array();
+		$package_activity          = array(
 			'items'       => array(),
 			'unavailable' => false,
 		);
 		$package_extension_rows    = array();
 		$package_extension_actions = array();
-		$messages                = array();
+		$messages                  = array();
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/index.php';

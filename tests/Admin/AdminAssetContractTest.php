@@ -220,7 +220,7 @@ final class AdminAssetContractTest extends TestCase {
 	}
 
 	public function test_repository_status_markers_keep_the_shared_checklist_footprint(): void {
-		$foundations       = $this->asset( 'ran-booster/00-foundations.css' );
+		$foundations        = $this->asset( 'ran-booster/00-foundations.css' );
 		$package_settings   = $this->asset( 'ran-booster/65-package-settings.css' );
 		$webhook_management = $this->asset( 'ran-booster-repository-webhook-management.css' );
 
@@ -288,7 +288,7 @@ final class AdminAssetContractTest extends TestCase {
 
 	public function test_repository_webhook_setup_keeps_its_form_full_width(): void {
 		$webhook_management = $this->asset( 'ran-booster-repository-webhook-management.css' );
-		$controls          = $this->source( 'RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php' );
+		$controls           = $this->source( 'RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php' );
 
 		self::assertStringContainsString( 'class="ran-booster-readiness-panel ran-booster-repository-webhook-setup', $controls );
 		self::assertStringContainsString( 'class="ran-booster-readiness-panel__top"><div><h4 id="ran-booster-repository-webhook-setup-heading"', $controls );
@@ -313,13 +313,13 @@ final class AdminAssetContractTest extends TestCase {
 	}
 
 	public function test_admin_primitives_own_shared_headings_and_credential_dialog_chrome(): void {
-		$primitives       = $this->asset( 'ran-booster/25-admin-primitives.css' );
-		$onboarding       = $this->view( 'onboarding.php' );
-		$provider         = $this->view( 'provider.php' );
-		$portability      = $this->view( 'portability.php' );
-		$documentation    = $this->view( 'documentation.php' );
-		$troubleshooting  = $this->view( 'troubleshooting.php' );
-		$modals           = $this->view( 'provider/modals.php' );
+		$primitives        = $this->asset( 'ran-booster/25-admin-primitives.css' );
+		$onboarding        = $this->view( 'onboarding.php' );
+		$provider          = $this->view( 'provider.php' );
+		$portability       = $this->view( 'portability.php' );
+		$documentation     = $this->view( 'documentation.php' );
+		$troubleshooting   = $this->view( 'troubleshooting.php' );
+		$modals            = $this->view( 'provider/modals.php' );
 		$credential_styles = $this->asset( 'ran-booster/70-credential-dialog.css' );
 		$picker_script     = $this->asset( 'ran-booster-repository-picker.js' );
 		$picker_styles     = $this->asset( 'ran-booster/20-repository-picker.css' );
@@ -355,7 +355,7 @@ final class AdminAssetContractTest extends TestCase {
 	}
 
 	public function test_admin_style_foundations_are_root_scoped_and_constrain_shared_literals(): void {
-		$css          = $this->asset( 'ran-booster.css' );
+		$css           = $this->asset( 'ran-booster.css' );
 		$component_css = preg_replace( '/\\A[\\s\\S]*?:root \\{[\\s\\S]*?\\n\\}\\n/', '', $css );
 
 		self::assertIsString( $component_css );
@@ -713,11 +713,11 @@ final class AdminAssetContractTest extends TestCase {
 	}
 
 	public function test_managed_package_table_controls_desktop_widths_and_allows_package_identity_to_wrap(): void {
-		$css        = $this->asset( 'ran-booster.css' );
+		$css         = $this->asset( 'ran-booster.css' );
 		$package_css = $this->asset( 'ran-booster/60-packages.css' );
-		$script     = $this->asset( 'ran-booster-packages.js' );
-		$base       = $this->view( 'base.php' );
-		$view       = $this->view( 'packages/index.php' );
+		$script      = $this->asset( 'ran-booster-packages.js' );
+		$base        = $this->view( 'base.php' );
+		$view        = $this->view( 'packages/index.php' );
 
 		self::assertStringContainsString( "'extensions'      => ' ran-booster-admin--extensions'", $base );
 		self::assertStringContainsString( "'packages/index',", $base );
@@ -915,10 +915,10 @@ final class AdminAssetContractTest extends TestCase {
 	}
 
 	public function test_package_removal_controls_require_explicit_checkbox_confirmation(): void {
-		$css        = $this->asset( 'ran-booster.css' );
-		$script     = $this->asset( 'ran-booster-packages.js' );
+		$css         = $this->asset( 'ran-booster.css' );
+		$script      = $this->asset( 'ran-booster-packages.js' );
 		$danger_zone = $this->view( 'packages/danger-zone.php' );
-		$index      = $this->view( 'packages/index.php' );
+		$index       = $this->view( 'packages/index.php' );
 
 		self::assertStringContainsString( 'initConfirmedPackageRemovals();', $script );
 		self::assertStringContainsString( 'function initConfirmedPackageRemovals()', $script );
@@ -953,13 +953,13 @@ final class AdminAssetContractTest extends TestCase {
 	}
 
 	public function test_package_mutations_share_the_core_htmx_feedback_contract(): void {
-		$index      = $this->view( 'packages/index.php' );
-		$reinstall  = $this->view( 'packages/reinstall.php' );
+		$index       = $this->view( 'packages/index.php' );
+		$reinstall   = $this->view( 'packages/reinstall.php' );
 		$danger_zone = $this->view( 'packages/danger-zone.php' );
-		$notices    = $this->view( 'notices.php' );
-		$renderer   = $this->source( 'RAN/Admin/Component/AdminActionRenderer.php' );
-		$feedback   = $this->asset( 'ran-booster-enhanced-mutations.js' );
-		$packages   = $this->asset( 'ran-booster-packages.js' );
+		$notices     = $this->view( 'notices.php' );
+		$renderer    = $this->source( 'RAN/Admin/Component/AdminActionRenderer.php' );
+		$feedback    = $this->asset( 'ran-booster-enhanced-mutations.js' );
+		$packages    = $this->asset( 'ran-booster-packages.js' );
 
 		foreach ( array( $index, $reinstall, $danger_zone, $renderer ) as $markup ) {
 			self::assertStringContainsString( 'data-ran-booster-package-mutation', $markup );

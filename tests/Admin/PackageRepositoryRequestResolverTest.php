@@ -61,7 +61,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 
 	public function test_resolved_metadata_overrides_client_values_and_scopes_the_selected_credential(): void {
 		$opaque_locator = 'workspace/%2Frepository<tag>';
-		$provider      = $this->resolving_provider(
+		$provider       = $this->resolving_provider(
 			new RepositoryDescriptor(
 				ProviderCode::parse( 'bb' ),
 				$opaque_locator,
@@ -72,7 +72,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 				'bitbucket-deploy'
 			)
 		);
-		$resolver      = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
+		$resolver       = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
 
 		$result = $resolver->resolve(
 			array(

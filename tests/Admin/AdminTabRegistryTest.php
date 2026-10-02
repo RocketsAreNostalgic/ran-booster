@@ -95,7 +95,7 @@ final class AdminTabRegistryTest extends TestCase {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'Metadata only', 'https://example.test/', 'Owner' );
 			}
 		};
-		$registry     = new AdminTabRegistry( new ProviderRegistry( array( $metadata_only ) ) );
+		$registry      = new AdminTabRegistry( new ProviderRegistry( array( $metadata_only ) ) );
 
 		self::assertSame(
 			array( 'overview', 'portability', 'documentation', 'troubleshooting' ),

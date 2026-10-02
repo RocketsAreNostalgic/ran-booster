@@ -31,27 +31,27 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$package_field_layout       = 'grid';
 		$package_source_view        = 'branch';
 		$show_branch_settings       = true;
-		$release_managed           = false;
+		$release_managed            = false;
 		$branch_read_only           = false;
-		$branch_value              = 'main';
-		$subdirectory_value        = '';
+		$branch_value               = 'main';
+		$subdirectory_value         = '';
 		$package_advanced_sections  = array();
 		$package_advanced_summary   = 'Branch · provider default';
 		$package_advanced_open      = false;
 		$package_repository_ready   = true;
-		$package_source            = array();
-		$package_view              = new class() {
+		$package_source             = array();
+		$package_view               = new class() {
 			public function get_type(): string {
 				return 'plugin';
 			}
 		};
 
 		if ( $expects_readiness ) {
-			$provider_code                 = 'gh';
-			$settings_url                  = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
-			$provider_webhook_available     = true;
-			$deployment_policy             = DeploymentPolicy::MANUAL->value;
-			$package_branch_readiness       = null;
+			$provider_code                   = 'gh';
+			$settings_url                    = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+			$provider_webhook_available      = true;
+			$deployment_policy               = DeploymentPolicy::MANUAL->value;
+			$package_branch_readiness        = null;
 			$repository_branch_check_outcome = null;
 		}
 
@@ -77,11 +77,11 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	}
 
 	public function test_view_reports_bounded_local_evidence_without_claiming_remote_webhook_state(): void {
-		$provider_code             = 'gh';
-		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_code              = 'gh';
+		$settings_url               = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
 		$provider_webhook_available = true;
-		$branch_value              = 'main';
-		$deployment_policy         = DeploymentPolicy::AUTOMATIC->value;
+		$branch_value               = 'main';
+		$deployment_policy          = DeploymentPolicy::AUTOMATIC->value;
 		$is_package_edit            = true;
 		$package_branch_readiness   = array(
 			'retained'             => false,
@@ -99,10 +99,10 @@ final class PackageBranchReadinessViewTest extends TestCase {
 				'local_secret_coverage' => 'repository',
 			),
 		);
-		$provider_code             = 'gh';
-		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_code              = 'gh';
+		$settings_url               = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
 		$provider_webhook_available = true;
-		$deployment_policy         = DeploymentPolicy::MANUAL->value;
+		$deployment_policy          = DeploymentPolicy::MANUAL->value;
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
@@ -157,11 +157,11 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	}
 
 	public function test_missing_stable_repository_identity_does_not_provide_anavigable_webhook_route(): void {
-		$provider_code             = 'gh';
-		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_code              = 'gh';
+		$settings_url               = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
 		$provider_webhook_available = true;
-		$branch_value              = 'main';
-		$deployment_policy         = DeploymentPolicy::MANUAL->value;
+		$branch_value               = 'main';
+		$deployment_policy          = DeploymentPolicy::MANUAL->value;
 		$is_package_edit            = true;
 		$package_branch_readiness   = array(
 			'site'       => array(
@@ -184,11 +184,11 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	}
 
 	public function test_missing_package_edit_context_defaults_to_non_editable_without_warnings(): void {
-		$provider_code             = 'gh';
-		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_code              = 'gh';
+		$settings_url               = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
 		$provider_webhook_available = true;
-		$branch_value              = 'main';
-		$deployment_policy         = DeploymentPolicy::MANUAL->value;
+		$branch_value               = 'main';
+		$deployment_policy          = DeploymentPolicy::MANUAL->value;
 		$package_mutation_available = true;
 		$package_branch_readiness   = array(
 			'site'       => array(
@@ -200,7 +200,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 				'local_secret_coverage' => 'unknown',
 			),
 		);
-		$buffer_level              = ob_get_level();
+		$buffer_level               = ob_get_level();
 
 		// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler, WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test-only handler promotes render warnings to exceptions.
 		set_error_handler(
@@ -230,8 +230,8 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	}
 
 	public function test_release_managed_branch_pane_retains_cleanup_without_branch_readiness_controls(): void {
-		$provider_code             = 'gh';
-		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_code              = 'gh';
+		$settings_url               = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
 		$package_mutation_available = true;
 		$package_source_choices     = array(
 			'branch' => array(
@@ -248,16 +248,16 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$package_field_layout       = 'grid';
 		$package_source_view        = 'branch';
 		$show_branch_settings       = true;
-		$release_managed           = true;
+		$release_managed            = true;
 		$branch_read_only           = true;
-		$branch_value              = 'main';
-		$subdirectory_value        = '';
+		$branch_value               = 'main';
+		$subdirectory_value         = '';
 		$package_advanced_sections  = array();
 		$package_advanced_summary   = 'Published releases · Active';
 		$package_advanced_open      = false;
 		$package_repository_ready   = true;
-		$package_source            = array();
-		$package_view              = new class() {
+		$package_source             = array();
+		$package_view               = new class() {
 			public function get_type(): string {
 				return 'plugin';
 			}
@@ -309,11 +309,11 @@ final class PackageBranchReadinessViewTest extends TestCase {
 
 	#[DataProvider( 'subdirectory_checklist_provider' )]
 	public function test_subdirectory_has_its_own_readiness_checklist_row( ?string $outcome, string $class, string $message ): void {
-		$provider_code             = 'gh';
-		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_code              = 'gh';
+		$settings_url               = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
 		$provider_webhook_available = true;
-		$branch_value              = 'main';
-		$deployment_policy         = DeploymentPolicy::MANUAL->value;
+		$branch_value               = 'main';
+		$deployment_policy          = DeploymentPolicy::MANUAL->value;
 		$saved_subdirectory_value   = 'packages/example';
 		$package_mutation_available = true;
 		$is_package_edit            = true;
@@ -354,11 +354,11 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	}
 
 	public function test_site_readiness_does_not_mislabel_avalid_repository_identity(): void {
-		$provider_code             = 'gh';
-		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_code              = 'gh';
+		$settings_url               = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
 		$provider_webhook_available = true;
-		$branch_value              = 'main';
-		$deployment_policy         = DeploymentPolicy::MANUAL->value;
+		$branch_value               = 'main';
+		$deployment_policy          = DeploymentPolicy::MANUAL->value;
 		$is_package_edit            = true;
 		$package_branch_readiness   = array(
 			'webhook_settings_url' => 'https://github.com/owner/example/settings/hooks',
@@ -393,11 +393,11 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	}
 
 	public function test_saved_branch_uses_local_identity_evidence_without_claiming_branch_readiness(): void {
-		$provider_code             = 'gh';
-		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_code              = 'gh';
+		$settings_url               = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
 		$provider_webhook_available = true;
-		$branch_value              = 'test';
-		$deployment_policy         = DeploymentPolicy::MANUAL->value;
+		$branch_value               = 'test';
+		$deployment_policy          = DeploymentPolicy::MANUAL->value;
 		$is_package_edit            = true;
 		$package_branch_readiness   = array(
 			'site'       => array(
@@ -425,17 +425,17 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	}
 
 	public function test_published_releases_keeps_the_saved_repository_identity_green(): void {
-		$provider_code             = 'gh';
-		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_code              = 'gh';
+		$settings_url               = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
 		$provider_webhook_available = true;
-		$branch_value              = 'main';
-		$deployment_policy         = DeploymentPolicy::MANUAL->value;
+		$branch_value               = 'main';
+		$deployment_policy          = DeploymentPolicy::MANUAL->value;
 		$is_package_edit            = true;
-		$release_managed           = true;
+		$release_managed            = true;
 		$package_current_source     = 'release_asset';
 		$package_source_view        = 'branch';
 		$provider_repository_id     = 'repo-42';
-		$repository_value          = 'owner/example';
+		$repository_value           = 'owner/example';
 		$package_branch_readiness   = null;
 
 		ob_start();
@@ -451,14 +451,14 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	}
 
 	public function test_branch_package_uses_its_persisted_identity_when_readiness_omits_it(): void {
-		$provider_code             = 'gh';
-		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_code              = 'gh';
+		$settings_url               = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
 		$provider_webhook_available = true;
-		$branch_value              = 'main';
-		$deployment_policy         = DeploymentPolicy::MANUAL->value;
+		$branch_value               = 'main';
+		$deployment_policy          = DeploymentPolicy::MANUAL->value;
 		$provider_repository_id     = '1315521150';
-		$repository_value          = 'owner/booster-fixture-plugin';
-		$release_managed           = false;
+		$repository_value           = 'owner/booster-fixture-plugin';
+		$release_managed            = false;
 		$is_package_edit            = true;
 		$package_branch_readiness   = array(
 			'site'       => array(
@@ -481,14 +481,14 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	}
 
 	public function test_branch_package_does_not_use_persisted_identity_when_readiness_reports_aconflict(): void {
-		$provider_code             = 'gh';
-		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_code              = 'gh';
+		$settings_url               = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
 		$provider_webhook_available = true;
-		$branch_value              = 'main';
-		$deployment_policy         = DeploymentPolicy::MANUAL->value;
+		$branch_value               = 'main';
+		$deployment_policy          = DeploymentPolicy::MANUAL->value;
 		$provider_repository_id     = '1315521150';
-		$repository_value          = 'owner/booster-fixture-plugin';
-		$release_managed           = false;
+		$repository_value           = 'owner/booster-fixture-plugin';
+		$release_managed            = false;
 		$is_package_edit            = true;
 		$package_branch_readiness   = array(
 			'site'       => array(
@@ -511,14 +511,14 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	}
 
 	public function test_branch_package_does_not_use_persisted_identity_when_repository_locator_is_invalid(): void {
-		$provider_code             = 'gh';
-		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_code              = 'gh';
+		$settings_url               = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
 		$provider_webhook_available = true;
-		$branch_value              = 'main';
-		$deployment_policy         = DeploymentPolicy::MANUAL->value;
+		$branch_value               = 'main';
+		$deployment_policy          = DeploymentPolicy::MANUAL->value;
 		$provider_repository_id     = '1315521150';
-		$repository_value          = 'owner/booster-fixture-plugin';
-		$release_managed           = false;
+		$repository_value           = 'owner/booster-fixture-plugin';
+		$release_managed            = false;
 		$package_branch_readiness   = array(
 			'site'       => array(
 				'status'       => 'ready',
@@ -541,14 +541,14 @@ final class PackageBranchReadinessViewTest extends TestCase {
 
 	#[DataProvider( 'repository_branch_check_outcome_provider' )]
 	public function test_saved_repository_state_reflects_the_explicit_remote_check( string $outcome, string $class, string $message ): void {
-		$provider_code                 = 'gh';
-		$settings_url                  = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
-		$provider_webhook_available     = true;
-		$branch_value                  = 'test';
-		$deployment_policy             = DeploymentPolicy::MANUAL->value;
-		$is_package_edit                = true;
+		$provider_code                   = 'gh';
+		$settings_url                    = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_webhook_available      = true;
+		$branch_value                    = 'test';
+		$deployment_policy               = DeploymentPolicy::MANUAL->value;
+		$is_package_edit                 = true;
 		$repository_branch_check_outcome = $outcome;
-		$package_branch_readiness       = array(
+		$package_branch_readiness        = array(
 			'site'       => array(
 				'status'       => 'ready',
 				'reason_codes' => array(),
@@ -583,11 +583,11 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		string $reason_code,
 		string $expected_message
 	): void {
-		$provider_code             = 'bb';
-		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_code              = 'bb';
+		$settings_url               = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
 		$provider_webhook_available = true;
-		$branch_value              = 'main';
-		$deployment_policy         = DeploymentPolicy::MANUAL->value;
+		$branch_value               = 'main';
+		$deployment_policy          = DeploymentPolicy::MANUAL->value;
 		$is_package_edit            = true;
 		$package_branch_readiness   = array(
 			'webhook_settings_url' => 'https://bitbucket.org/workspace/example/admin/webhooks',
@@ -639,11 +639,11 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	}
 
 	public function test_automatic_mode_shows_awarning_when_local_readiness_is_incomplete(): void {
-		$provider_code             = 'gh';
-		$settings_url              = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_code              = 'gh';
+		$settings_url               = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
 		$provider_webhook_available = true;
-		$branch_value              = 'main';
-		$deployment_policy         = DeploymentPolicy::AUTOMATIC->value;
+		$branch_value               = 'main';
+		$deployment_policy          = DeploymentPolicy::AUTOMATIC->value;
 		$is_package_edit            = true;
 		$package_branch_readiness   = null;
 
@@ -657,14 +657,14 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	}
 
 	public function test_verified_repository_branch_check_uses_only_the_green_repository_row(): void {
-		$provider_code                 = 'gh';
-		$settings_url                  = 'https://example.test/wp-admin/admin.php?page=ran-booster-themes&package=example-theme';
-		$provider_webhook_available     = true;
-		$branch_value                  = 'main';
-		$deployment_policy             = DeploymentPolicy::MANUAL->value;
-		$is_package_edit                = true;
-		$saved_subdirectory_value       = '';
-		$package_branch_readiness       = array(
+		$provider_code                   = 'gh';
+		$settings_url                    = 'https://example.test/wp-admin/admin.php?page=ran-booster-themes&package=example-theme';
+		$provider_webhook_available      = true;
+		$branch_value                    = 'main';
+		$deployment_policy               = DeploymentPolicy::MANUAL->value;
+		$is_package_edit                 = true;
+		$saved_subdirectory_value        = '';
+		$package_branch_readiness        = array(
 			'site'       => array(
 				'status'       => 'ready',
 				'reason_codes' => array(),
@@ -693,13 +693,13 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	}
 
 	public function test_failed_repository_branch_check_shows_one_transient_warning_without_claiming_readiness(): void {
-		$provider_code                 = 'gh';
-		$settings_url                  = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
-		$provider_webhook_available     = true;
-		$branch_value                  = 'main';
-		$deployment_policy             = DeploymentPolicy::AUTOMATIC->value;
-		$is_package_edit                = true;
-		$package_branch_readiness       = null;
+		$provider_code                   = 'gh';
+		$settings_url                    = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_webhook_available      = true;
+		$branch_value                    = 'main';
+		$deployment_policy               = DeploymentPolicy::AUTOMATIC->value;
+		$is_package_edit                 = true;
+		$package_branch_readiness        = null;
 		$repository_branch_check_outcome = 'unable_to_check';
 
 		ob_start();

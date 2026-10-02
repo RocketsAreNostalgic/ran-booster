@@ -271,7 +271,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			$lock->expects( self::never() )->method( 'release' );
 		}
 		$this->updater_lock = $lock;
-		$dispatcher        = $this->dispatcher( $dashboard, $this->secrets, $interaction, $lookup );
+		$dispatcher         = $this->dispatcher( $dashboard, $this->secrets, $interaction, $lookup );
 
 		$response = $interaction->dispatch( $dispatcher );
 		self::assertNotNull( $response );
@@ -389,9 +389,9 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	}
 
 	public function test_automatic_removal_uses_the_recorded_expiry_as_its_encrypted_deadline(): void {
-		$expires_on         = gmdate( 'Y-m-d', time() + 30 * 86400 );
-		$interaction        = new CapturingProviderProfileInteraction();
-		$dashboard          = $this->createMock( Dashboard::class );
+		$expires_on          = gmdate( 'Y-m-d', time() + 30 * 86400 );
+		$interaction         = new CapturingProviderProfileInteraction();
+		$dashboard           = $this->createMock( Dashboard::class );
 		$expiry_observations = new InMemoryCredentialExpiryObservationStore();
 		$dashboard->expects( self::never() )->method( 'add_message' );
 		$dashboard->expects( self::never() )->method( 'add_failure_message' );
@@ -435,8 +435,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	}
 
 	public function test_known_provider_expiry_rejects_alater_submitted_date_before_saving(): void {
-		$interaction        = new CapturingProviderProfileInteraction();
-		$dashboard          = $this->createMock( Dashboard::class );
+		$interaction         = new CapturingProviderProfileInteraction();
+		$dashboard           = $this->createMock( Dashboard::class );
 		$expiry_observations = new InMemoryCredentialExpiryObservationStore();
 		$expiry_observations->record_provider_expiry(
 			'fixture',
@@ -481,8 +481,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	}
 
 	public function test_unchanged_provider_fallback_does_not_become_amanual_expiry(): void {
-		$interaction        = new CapturingProviderProfileInteraction();
-		$dashboard          = $this->createMock( Dashboard::class );
+		$interaction         = new CapturingProviderProfileInteraction();
+		$dashboard           = $this->createMock( Dashboard::class );
 		$expiry_observations = new InMemoryCredentialExpiryObservationStore();
 		$expiry_observations->record_provider_expiry(
 			'fixture',
@@ -521,8 +521,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	}
 
 	public function test_replacement_does_not_inherit_the_previous_tokens_provider_expiry(): void {
-		$interaction        = new CapturingProviderProfileInteraction();
-		$dashboard          = $this->createMock( Dashboard::class );
+		$interaction         = new CapturingProviderProfileInteraction();
+		$dashboard           = $this->createMock( Dashboard::class );
 		$expiry_observations = new InMemoryCredentialExpiryObservationStore();
 		$expiry_observations->record_provider_expiry(
 			'fixture',
@@ -599,8 +599,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	}
 
 	public function test_credential_replacement_does_not_persist_when_evidence_invalidation_fails(): void {
-		$interaction   = new CapturingProviderProfileInteraction();
-		$dashboard     = $this->createMock( Dashboard::class );
+		$interaction    = new CapturingProviderProfileInteraction();
+		$dashboard      = $this->createMock( Dashboard::class );
 		$profile_before = $this->secrets->credential_profiles( 'fixture' )['credential_existing'];
 		$secret_before  = $this->secrets->credential_material( 'fixture', 'credential_existing' )['secret'];
 		$dashboard->expects( self::once() )->method( 'add_failure_message' );
@@ -668,8 +668,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	}
 
 	public function test_credential_configuration_change_does_not_persist_when_evidence_invalidation_fails(): void {
-		$interaction   = new CapturingProviderProfileInteraction();
-		$dashboard     = $this->createMock( Dashboard::class );
+		$interaction    = new CapturingProviderProfileInteraction();
+		$dashboard      = $this->createMock( Dashboard::class );
 		$profile_before = $this->secrets->credential_profiles( 'fixture' )['credential_existing'];
 		$secret_before  = $this->secrets->credential_material( 'fixture', 'credential_existing' )['secret'];
 		$dashboard->expects( self::once() )->method( 'add_failure_message' );
@@ -775,7 +775,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			->method( 'acquire' )
 			->willThrowException( new \RuntimeException( 'busy' ) );
 		$lock->expects( self::never() )->method( 'release' );
-		$this->updater_lock    = $lock;
+		$this->updater_lock   = $lock;
 		$_GET['view']         = 'credentials';
 		$_POST['ran_booster'] = array(
 			'action'   => 'delete-access-profile',
@@ -800,7 +800,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$lock = $this->createMock( WordPressUpdaterLock::class );
 		$lock->expects( self::once() )->method( 'acquire' )->willReturn( 'credential-lock' );
 		$lock->expects( self::once() )->method( 'release' )->with( 'credential-lock' )->willReturn( false );
-		$this->updater_lock    = $lock;
+		$this->updater_lock   = $lock;
 		$_GET['view']         = 'credentials';
 		$_POST['ran_booster'] = array(
 			'action'        => 'save-access-profile',
@@ -879,8 +879,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 					'The submitted credential does not match the selected credential kind. Choose the matching kind or enter another credential secret.'
 				)
 			);
-		$interaction        = new CapturingProviderProfileInteraction();
-		$dashboard          = $this->createMock( Dashboard::class );
+		$interaction         = new CapturingProviderProfileInteraction();
+		$dashboard           = $this->createMock( Dashboard::class );
 		$expiry_observations = new InMemoryCredentialExpiryObservationStore();
 		$expiry_observations->set_manual_expiry( 'fixture', 'credential_existing', '2026-09-01' );
 		$expiry_observations->record_provider_expiry(
@@ -1016,7 +1016,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	}
 
 	private function provider(): RepositoryProvider {
-		$code          = ProviderCode::parse( 'fixture' );
+		$code           = ProviderCode::parse( 'fixture' );
 		$webhook_policy = $this->createStub( ProviderWebhookPolicy::class );
 		$webhook_policy->method( 'get_provider' )->willReturn( $code );
 		$webhook_policy->method( 'normalize_webhook' )
@@ -1151,7 +1151,7 @@ final class CapturingProviderProfileInteraction {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Focused signed redirect fixture.
 		$query = parse_url( $url, PHP_URL_QUERY );
 		parse_str( is_string( $query ) ? $query : '', $args );
-		$return_url      = is_string( $args['ran_booster_interaction_return'] ?? null )
+		$return_url     = is_string( $args['ran_booster_interaction_return'] ?? null )
 			? $args['ran_booster_interaction_return']
 			: '';
 		$request        = new SignedAdminInteractionRequest(
@@ -1172,7 +1172,7 @@ final class CapturingProviderProfileInteraction {
 final class ReplacementAwareBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenceStore {
 
 	/** @var list<string> */
-	public array $invalidated_profiles    = array();
+	public array $invalidated_profiles     = array();
 	public bool $replacement_was_persisted = false;
 
 	/** @param \Closure(): bool $replacement_material_was_persisted */
@@ -1180,7 +1180,7 @@ final class ReplacementAwareBranchCheckEvidenceStore extends RepositoryBranchChe
 
 	public function bump_profile_generation( string $provider, string $profile_id ): void {
 		$this->replacement_was_persisted = ( $this->replacement_material_was_persisted )();
-		$this->invalidated_profiles[]   = $provider . ':' . $profile_id;
+		$this->invalidated_profiles[]    = $provider . ':' . $profile_id;
 	}
 }
 

@@ -350,7 +350,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 			'tone'     => 'pending',
 			'category' => 'release_workflow',
 		);
-		$presented                        = $core_rows;
+		$presented                         = $core_rows;
 		array_pop( $presented['repo-42']['details'] );
 
 		$this->expectException( LogicException::class );

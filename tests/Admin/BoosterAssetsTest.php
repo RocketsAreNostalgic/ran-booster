@@ -538,8 +538,8 @@ final class BoosterAssetsTest extends TestCase {
 		$container = new CoreContainer();
 		$booster   = new class( $container ) extends Booster {
 
-			public bool $expiry_notice_visible            = false;
-			public bool $expiry_notice_dismissible        = true;
+			public bool $expiry_notice_visible             = false;
+			public bool $expiry_notice_dismissible         = true;
 			public bool $background_failure_notice_visible = false;
 
 			protected function is_provider_admin_tab( ?string $tab ): bool {
@@ -580,10 +580,10 @@ final class BoosterAssetsTest extends TestCase {
 				}
 			}
 		);
-		$booster->booster_path                    = dirname( __DIR__, 2 );
-		$booster->booster_url                     = 'https://example.test/wp-content/plugins/ran-booster';
-		$booster->expiry_notice_visible            = $expiry_notice_visible;
-		$booster->expiry_notice_dismissible        = $expiry_notice_dismissible;
+		$booster->booster_path                      = dirname( __DIR__, 2 );
+		$booster->booster_url                       = 'https://example.test/wp-content/plugins/ran-booster';
+		$booster->expiry_notice_visible             = $expiry_notice_visible;
+		$booster->expiry_notice_dismissible         = $expiry_notice_dismissible;
 		$booster->background_failure_notice_visible = $background_failure_notice_visible;
 
 		return $booster;

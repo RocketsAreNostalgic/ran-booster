@@ -14,7 +14,7 @@ final class ProviderManagementTableRendererTest extends TestCase {
 
 	public function test_it_renders_the_bounded_access_column_schema_and_delegates_cell_content(): void {
 		$rendered_columns = array();
-		$html            = $this->render(
+		$html             = $this->render(
 			ProviderManagementTableRenderer::ACCESS,
 			array( array( 'value' => 'Profile <one>' ) ),
 			static function ( array $row, string $column ) use ( &$rendered_columns ): void {
@@ -39,7 +39,7 @@ final class ProviderManagementTableRendererTest extends TestCase {
 
 	public function test_it_renders_the_webhook_schema_without_access_only_columns(): void {
 		$rendered_columns = array();
-		$html            = $this->render(
+		$html             = $this->render(
 			ProviderManagementTableRenderer::WEBHOOK,
 			array( array( 'value' => 'Secret' ) ),
 			static function ( array $row, string $column ) use ( &$rendered_columns ): void {
@@ -56,7 +56,7 @@ final class ProviderManagementTableRendererTest extends TestCase {
 
 	public function test_it_escapes_the_empty_state_and_does_not_invoke_the_row_callback(): void {
 		$callback_invoked = false;
-		$html            = $this->render(
+		$html             = $this->render(
 			ProviderManagementTableRenderer::WEBHOOK,
 			array(),
 			static function () use ( &$callback_invoked ): void {

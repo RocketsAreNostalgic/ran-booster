@@ -25,9 +25,9 @@ final class AdminIndexViewTest extends TestCase {
 			'author'     => 'Header Author',
 			'author_uri' => 'https://example.test/header-author',
 		);
-		$messages                = array();
-		$name                    = 'RAN Booster';
-		$view                    = 'index';
+		$messages                  = array();
+		$name                      = 'RAN Booster';
+		$view                      = 'index';
 		$development_safety_notice = true;
 
 		$core_self_update_development_notice = new CoreSelfUpdateDevelopmentNotice(
@@ -35,9 +35,9 @@ final class AdminIndexViewTest extends TestCase {
 			'toplevel_page_ran-booster'
 		);
 
-		$tab     = 'documentation';
+		$tab      = 'documentation';
 		$tab_view = 'documentation.php';
-		$tabs    = array(
+		$tabs     = array(
 			array(
 				'key'    => 'overview',
 				'label'  => 'Overview',
@@ -115,12 +115,12 @@ final class AdminIndexViewTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-development-safety', $html );
 		self::assertStringContainsString( '<strong>Development safety:</strong>', $html );
 		self::assertStringContainsString( 'set Updates to Disabled', $html );
-		$strapline_position  = strpos( $html, 'Deploy themes and plugins straight from your Git repos.' );
-		$navigation_position = strpos( $html, '<nav class="ran-admin-shell__navigation"' );
+		$strapline_position   = strpos( $html, 'Deploy themes and plugins straight from your Git repos.' );
+		$navigation_position  = strpos( $html, '<nav class="ran-admin-shell__navigation"' );
 		$core_notice_position = strpos( $html, 'data-ran-booster-core-development-notice' );
-		$wrap_position       = strpos( $html, '<div class="wrap ran-booster-admin">' );
-		$marker_position     = strpos( $html, '<hr class="wp-header-end">' );
-		$notice_position     = strpos( $html, '<strong>Development safety:</strong>' );
+		$wrap_position        = strpos( $html, '<div class="wrap ran-booster-admin">' );
+		$marker_position      = strpos( $html, '<hr class="wp-header-end">' );
+		$notice_position      = strpos( $html, '<strong>Development safety:</strong>' );
 		foreach ( array( $strapline_position, $navigation_position, $core_notice_position, $wrap_position, $marker_position, $notice_position ) as $position ) {
 			self::assertIsInt( $position );
 		}
@@ -142,7 +142,7 @@ final class AdminIndexViewTest extends TestCase {
 
 		self::assertStringNotContainsString( '<strong>Development safety:</strong>', $without_notice );
 
-		$tab     = 'overview';
+		$tab      = 'overview';
 		$tab_view = 'onboarding.php';
 		foreach ( $tabs as &$admin_tab ) {
 			$admin_tab['active'] = 'overview' === $admin_tab['key'];

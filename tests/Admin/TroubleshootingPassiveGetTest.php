@@ -303,8 +303,8 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 }
 
 final class TrackingSecretsFile extends SecretsFile {
-	public int $validations               = 0;
-	public int $purges                    = 0;
+	public int $validations                = 0;
+	public int $purges                     = 0;
 	public ?\Throwable $validation_failure = null;
 
 	public function __construct( ProviderSecretPolicyCatalog $policies ) {

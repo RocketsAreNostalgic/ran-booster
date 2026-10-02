@@ -111,10 +111,10 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 	}
 
 	public function test_mutation_lock_prevents_astale_record_from_undoing_aqueued_generation_bump(): void {
-		$locked           = false;
-		$queued           = false;
-		$store            = null;
-		$acquire          = static function () use ( &$locked, &$queued ): bool {
+		$locked            = false;
+		$queued            = false;
+		$store             = null;
+		$acquire           = static function () use ( &$locked, &$queued ): bool {
 			if ( $locked ) {
 				$queued = true;
 				return false;
@@ -123,7 +123,7 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 
 			return true;
 		};
-		$release          = static function () use ( &$locked, &$queued, &$store ): bool {
+		$release           = static function () use ( &$locked, &$queued, &$store ): bool {
 			$locked = false;
 			if ( $queued && $store instanceof InMemoryRepositoryBranchCheckEvidenceStore ) {
 				$queued = false;
@@ -132,9 +132,9 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 
 			return true;
 		};
-		$store            = new InMemoryRepositoryBranchCheckEvidenceStore( $acquire, $release );
-		$package          = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
-		$profile          = $store->profile_fingerprint_for( $package, 'profile-a' );
+		$store             = new InMemoryRepositoryBranchCheckEvidenceStore( $acquire, $release );
+		$package           = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
+		$profile           = $store->profile_fingerprint_for( $package, 'profile-a' );
 		$store->after_read = static function () use ( $store ): void {
 			try {
 				$store->bump_profile_generation( 'gh', 'profile-a' );
@@ -173,7 +173,7 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 final class InMemoryRepositoryBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenceStore {
 
 	/** @var array<string, mixed> */
-	public array $records       = array();
+	public array $records        = array();
 	public ?\Closure $after_read = null;
 	private \Closure $acquire_mutation_lock_callback;
 	private \Closure $release_mutation_lock_callback;

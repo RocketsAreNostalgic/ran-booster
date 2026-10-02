@@ -415,7 +415,7 @@ final class ExtensionsPageTest extends TestCase {
 				}
 			}
 		);
-		$booster              = new Booster( $container );
+		$booster               = new Booster( $container );
 		$booster->booster_path = dirname( __DIR__, 2 );
 		$booster->booster_url  = 'https://example.test/wp-content/plugins/ran-booster';
 

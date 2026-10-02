@@ -224,7 +224,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 		$this->make_sidecar_unreadable( $state );
 		$bytes_before = is_file( $this->path ) ? file_get_contents( $this->path ) : null;
 		$key_before   = $key_store->load();
-		$notice      = new CredentialExpiryNotice( $this->reminders() );
+		$notice       = new CredentialExpiryNotice( $this->reminders() );
 
 		ob_start();
 		$notice->render();

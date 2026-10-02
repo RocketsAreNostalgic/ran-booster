@@ -563,19 +563,19 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$policy_package = BulkActionPackage::make( 'policy/policy.php', 'fixture' );
 		$active_package = BulkActionPackage::make( 'active/active.php', 'fixture' );
 		$queue_package  = BulkActionPackage::make( 'queue/queue.php', 'fixture' );
-		$plugins       = new BulkActionPluginRepository(
+		$plugins        = new BulkActionPluginRepository(
 			array(
 				'policy/policy.php' => $policy_package,
 				'active/active.php' => $active_package,
 				'queue/queue.php'   => $queue_package,
 			)
 		);
-		$coordinator   = new BulkActionCoordinator();
-		$lock          = $this->createMock( WordPressUpdaterLock::class );
+		$coordinator    = new BulkActionCoordinator();
+		$lock           = $this->createMock( WordPressUpdaterLock::class );
 		$lock->expects( self::exactly( 2 ) )->method( 'acquire' )->willReturn( 'bulk-lock' );
 		$lock->expects( self::exactly( 2 ) )->method( 'release' )->with( 'bulk-lock' )->willReturn( true );
 		$this->updater_lock = $lock;
-		$service           = $this->service( $plugins, true, $coordinator );
+		$service            = $this->service( $plugins, true, $coordinator );
 
 		$policy     = $service->execute(
 			BulkPackageAction::from_input(

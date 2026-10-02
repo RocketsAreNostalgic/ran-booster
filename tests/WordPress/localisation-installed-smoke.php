@@ -39,7 +39,7 @@ foreach (
 		'RAN_BOOSTER_PROVIDER_API_VERSION'          => 13,
 		'RAN_BOOSTER_ADDON_API_VERSION'             => 16,
 		'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION' => 2,
-		'RAN_BOOSTER_PORTABILITY_API_VERSION'       => 2,
+		'RAN_BOOSTER_PORTABILITY_API_VERSION'       => 3,
 	) as $constant => $expectedVersion
 ) {
 	if ( ! defined( $constant ) || $expectedVersion !== constant( $constant ) ) {

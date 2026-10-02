@@ -12,7 +12,7 @@ evidence. Preserve the earlier rationale when recording a changed decision.
 Current Transporter behavior is documented in the
 [Transporter Blueprint guide](portability-briefcase.md), and the independent
 public extension boundary is documented in
-[Portability API 2](portability-api.md).
+[Portability API 3](portability-api.md).
 
 ## Evidence baseline
 

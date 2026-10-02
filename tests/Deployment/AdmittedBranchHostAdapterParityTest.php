@@ -62,9 +62,9 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 	private DeploymentAttemptRepository $attempts;
 	private ParityPluginRepository $plugins;
 	private ParityThemeRepository $themes;
-	private RepositorySourceGuardDatabase $sourceDatabase;
-	private RepositorySourceGuard $sourceGuard;
-	private int $randomByte = 1;
+	private RepositorySourceGuardDatabase $source_database;
+	private RepositorySourceGuard $source_guard;
+	private int $random_byte = 1;
 	/** @var list<string> */
 	private array $fixtures = array();
 
@@ -76,10 +76,10 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		$GLOBALS['ran_booster_admitted_http_calls']              = array();
 		$GLOBALS['ran_booster_admitted_http_responses']          = array( 200 );
 		$GLOBALS['ran_booster_admitted_temp_root']               = sys_get_temp_dir() . '/ran-booster-admitted-parity-temp';
-		$this->ensureDirectory( ABSPATH . 'wp-admin/includes' );
-		$this->ensureDirectory( WP_CONTENT_DIR );
-		$this->ensureDirectory( WP_PLUGIN_DIR );
-		$this->ensureDirectory( (string) $GLOBALS['ran_booster_admitted_temp_root'] );
+		$this->ensure_directory( ABSPATH . 'wp-admin/includes' );
+		$this->ensure_directory( WP_CONTENT_DIR );
+		$this->ensure_directory( WP_PLUGIN_DIR );
+		$this->ensure_directory( (string) $GLOBALS['ran_booster_admitted_temp_root'] );
 		$file = ABSPATH . 'wp-admin/includes/file.php';
 		if ( ! file_exists( $file ) ) {
 			file_put_contents( $file, "<?php\n" );
@@ -92,13 +92,13 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			'wp_ran_booster_deployment_attempts',
 			static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-09-14 00:00:00 UTC' ),
 			function ( int $length ): string {
-				return str_repeat( chr( $this->randomByte++ ), $length );
+				return str_repeat( chr( $this->random_byte++ ), $length );
 			}
 		);
 		$this->plugins          = new ParityPluginRepository();
 		$this->themes           = new ParityThemeRepository();
-		$this->sourceDatabase   = new RepositorySourceGuardDatabase();
-		$this->sourceGuard      = new RepositorySourceGuard( $this->sourceDatabase, $this->createStub( Database::class ) );
+		$this->source_database   = new RepositorySourceGuardDatabase();
+		$this->source_guard      = new RepositorySourceGuard( $this->source_database, $this->createStub( Database::class ) );
 		$this->plugins->managed = array( $this->plugin() );
 	}
 
@@ -108,9 +108,9 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 				unlink( $fixture );
 			}
 		}
-		$this->removeTree( (string) ( $GLOBALS['ran_booster_admitted_temp_root'] ?? '' ) . '/ran-booster-branch-updater' );
+		$this->remove_tree( (string) ( $GLOBALS['ran_booster_admitted_temp_root'] ?? '' ) . '/ran-booster-branch-updater' );
 		foreach ( array( 'new-branch', 'adopt-example' ) as $slug ) {
-			$this->removeTree( WP_PLUGIN_DIR . '/' . $slug );
+			$this->remove_tree( WP_PLUGIN_DIR . '/' . $slug );
 		}
 		unset(
 			$GLOBALS['wpdb'],
@@ -125,98 +125,98 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		);
 	}
 
-	public function testConcreteProviderDownloadIsBoundedAndCleansAfterSuccess(): void {
+	public function test_concrete_provider_download_is_bounded_and_cleans_after_success(): void {
 		$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
 		$provider = new ParityRepositoryProvider( $archive );
-		$adapter  = $this->adapter( $this->runningUpdate(), $provider );
-		$this->downloadFixture( 'example' );
+		$adapter  = $this->adapter( $this->running_update(), $provider );
+		$this->download_fixture( 'example' );
 
-		$artifact = $adapter->prepare( $adapter->declaration(), $this->updateBaseline() );
+		$artifact = $adapter->prepare( $adapter->declaration(), $this->update_baseline() );
 
 		self::assertCount( 1, $GLOBALS['ran_booster_admitted_http_calls'] );
 		$arguments = $GLOBALS['ran_booster_admitted_http_calls'][0]['arguments'];
 		self::assertTrue( $arguments['stream'] );
 		self::assertTrue( $arguments['reject_unsafe_urls'] );
 		self::assertSame( self::MAXIMUM_ARTIFACT_BYTES + 1, $arguments['limit_response_size'] );
-		self::assertSame( 1, $archive->cleanupCalls );
+		self::assertSame( 1, $archive->cleanup_calls );
 		$artifact->cleanup();
 	}
 
-	public function testConcreteProviderDownloadRetriesTransientStatusBeforeSuccess(): void {
+	public function test_concrete_provider_download_retries_transient_status_before_success(): void {
 		$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
 		$provider = new ParityRepositoryProvider( $archive );
-		$adapter  = $this->adapter( $this->runningUpdate(), $provider );
-		$this->downloadFixture( 'example' );
+		$adapter  = $this->adapter( $this->running_update(), $provider );
+		$this->download_fixture( 'example' );
 		$GLOBALS['ran_booster_admitted_http_responses'] = array( 503, 200 );
 
-		$artifact = $adapter->prepare( $adapter->declaration(), $this->updateBaseline() );
+		$artifact = $adapter->prepare( $adapter->declaration(), $this->update_baseline() );
 
 		self::assertCount( 2, $GLOBALS['ran_booster_admitted_http_calls'] );
-		self::assertSame( 1, $archive->cleanupCalls );
+		self::assertSame( 1, $archive->cleanup_calls );
 		$artifact->cleanup();
 	}
 
-	public function testConcreteProviderDownloadMapsWpErrorAndCleans(): void {
+	public function test_concrete_provider_download_maps_wp_error_and_cleans(): void {
 		$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
 		$provider = new ParityRepositoryProvider( $archive );
-		$adapter  = $this->adapter( $this->runningUpdate(), $provider );
-		$this->downloadFixture( 'example' );
+		$adapter  = $this->adapter( $this->running_update(), $provider );
+		$this->download_fixture( 'example' );
 		$GLOBALS['ran_booster_admitted_http_responses'] = array( 'wp_error' );
 
 		try {
-			$adapter->prepare( $adapter->declaration(), $this->updateBaseline() );
+			$adapter->prepare( $adapter->declaration(), $this->update_baseline() );
 			self::fail( 'A WordPress transport error must fail the admitted archive acquisition.' );
 		} catch ( AdmittedBranchStageFailure $failure ) {
 			self::assertSame( DeploymentOutcome::CODE_ARCHIVE_DOWNLOAD_FAILED, $failure->outcome_code );
 		}
 
-		self::assertSame( 1, $archive->cleanupCalls );
+		self::assertSame( 1, $archive->cleanup_calls );
 	}
 
-	public function testConcreteProviderDownloadMapsTerminalStatusAndCleans(): void {
+	public function test_concrete_provider_download_maps_terminal_status_and_cleans(): void {
 		$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
 		$provider = new ParityRepositoryProvider( $archive );
-		$adapter  = $this->adapter( $this->runningUpdate(), $provider );
-		$this->downloadFixture( 'example' );
+		$adapter  = $this->adapter( $this->running_update(), $provider );
+		$this->download_fixture( 'example' );
 		$GLOBALS['ran_booster_admitted_http_responses'] = array( 404 );
 
 		try {
-			$adapter->prepare( $adapter->declaration(), $this->updateBaseline() );
+			$adapter->prepare( $adapter->declaration(), $this->update_baseline() );
 			self::fail( 'A terminal provider response must fail the admitted archive acquisition.' );
 		} catch ( AdmittedBranchStageFailure $failure ) {
 			self::assertSame( DeploymentOutcome::CODE_PROVIDER_REPOSITORY_MISSING, $failure->outcome_code );
 		}
 
-		self::assertSame( 1, $archive->cleanupCalls );
+		self::assertSame( 1, $archive->cleanup_calls );
 	}
 
-	public function testConcreteProviderDownloadRejectsUnsafeUrlBeforeHttpAndCleans(): void {
+	public function test_concrete_provider_download_rejects_unsafe_url_before_http_and_cleans(): void {
 		$archive      = new ParityProviderArchive( str_repeat( 'a', 40 ) );
 		$archive->url = 'http://example.test/archive.zip';
 		$provider     = new ParityRepositoryProvider( $archive );
-		$adapter      = $this->adapter( $this->runningUpdate(), $provider );
-		$this->downloadFixture( 'example' );
+		$adapter      = $this->adapter( $this->running_update(), $provider );
+		$this->download_fixture( 'example' );
 
 		try {
-			$adapter->prepare( $adapter->declaration(), $this->updateBaseline() );
+			$adapter->prepare( $adapter->declaration(), $this->update_baseline() );
 			self::fail( 'An unsafe provider URL must be rejected before HTTP.' );
 		} catch ( AdmittedBranchStageFailure $failure ) {
 			self::assertSame( DeploymentOutcome::CODE_ARCHIVE_URL_INVALID, $failure->outcome_code );
 		}
 
 		self::assertSame( array(), $GLOBALS['ran_booster_admitted_http_calls'] );
-		self::assertSame( 1, $archive->cleanupCalls );
+		self::assertSame( 1, $archive->cleanup_calls );
 	}
 
-	public function testPostMutationManagedSnapshotDriftFinishesInterrupted(): void {
+	public function test_post_mutation_managed_snapshot_drift_finishes_interrupted(): void {
 		$archive                  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
 		$provider                 = new ParityRepositoryProvider( $archive );
 		$executor                 = new ParityCoreExecutor();
-		$attempt                  = $this->runningUpdate();
+		$attempt                  = $this->running_update();
 		$adapter                  = $this->adapter( $attempt, $provider, executor: $executor );
 		$this->plugins->installed = $this->plugin( version: '2.0.0' );
-		$this->downloadFixture( 'example' );
-		$executor->afterExecution = function (): void {
+		$this->download_fixture( 'example' );
+		$executor->after_execution = function (): void {
 			$this->plugins->managed = array( $this->plugin( repository: 'other/example' ) );
 		};
 
@@ -228,15 +228,15 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		self::assertSame( DeploymentOutcome::CODE_INTERRUPTED, $this->database->rows[0]['outcome_code'] );
 	}
 
-	public function testRepositorySourceOwnerAppearingAfterPreparationBlocksMutation(): void {
+	public function test_repository_source_owner_appearing_after_preparation_blocks_mutation(): void {
 		$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
 		$provider = new ParityRepositoryProvider( $archive );
 		$executor = new ParityCoreExecutor();
-		$attempt  = $this->runningInstall( 'new-branch' );
+		$attempt  = $this->running_install( 'new-branch' );
 		$adapter  = $this->adapter( $attempt, $provider, executor: $executor );
-		$this->downloadFixture( 'new-branch' );
-		$archive->onCleanup = function (): void {
-			$this->sourceDatabase->rows[] = (object) array(
+		$this->download_fixture( 'new-branch' );
+		$archive->on_cleanup = function (): void {
+			$this->source_database->rows[] = (object) array(
 				'type'                   => '2',
 				'package'                => 'release-theme',
 				'source'                 => PackageSource::RELEASE_ASSET->value,
@@ -250,108 +250,108 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		self::assertSame( DeploymentOutcome::CODE_REPOSITORY_SOURCE_CONFLICT, $code );
 		self::assertSame( 0, $executor->calls );
 		self::assertNull( $this->database->rows[0]['mutation_started_at'] );
-		self::assertSame( 1, $archive->cleanupCalls );
+		self::assertSame( 1, $archive->cleanup_calls );
 	}
 
-	public function testExactReplacementLockTokenIsPreservedAndAttemptRemainsRunning(): void {
-		$attempt = $this->runningUpdate();
+	public function test_exact_replacement_lock_token_is_preserved_and_attempt_remains_running(): void {
+		$attempt = $this->running_update();
 		$adapter = $this->adapter( $attempt, new ParityRepositoryProvider( new ParityProviderArchive( str_repeat( 'a', 40 ) ) ) );
 
 		try {
 			$adapter->run(
 				function (): void {
-					$this->database->optionRows['auto_updater.lock'] = '1777777777';
+					$this->database->option_rows['auto_updater.lock'] = '1777777777';
 				}
 			);
 			self::fail( 'Replacing the exact updater-lock token must fail closed.' );
 		} catch ( BranchDeploymentLockReleaseFailure ) {
-			self::assertSame( '1777777777', $this->database->optionRows['auto_updater.lock'] );
+			self::assertSame( '1777777777', $this->database->option_rows['auto_updater.lock'] );
 			self::assertSame( DeploymentState::RUNNING->value, $this->database->rows[0]['state'] );
 		}
 	}
 
-	public function testLockReleaseStorageFailureLeavesAttemptRunning(): void {
-		$attempt                           = $this->runningUpdate();
+	public function test_lock_release_storage_failure_leaves_attempt_running(): void {
+		$attempt                           = $this->running_update();
 		$adapter                           = $this->adapter( $attempt, new ParityRepositoryProvider( new ParityProviderArchive( str_repeat( 'a', 40 ) ) ) );
-		$this->database->failQueryContains = 'DELETE FROM `wp_options`';
+		$this->database->fail_query_contains = 'DELETE FROM `wp_options`';
 
 		try {
 			$adapter->run( static fn (): string => 'mutated' );
 			self::fail( 'A storage failure while releasing the updater lock must remain ambiguous.' );
 		} catch ( BranchDeploymentLockStorageFailure ) {
 			self::assertSame( DeploymentState::RUNNING->value, $this->database->rows[0]['state'] );
-			self::assertArrayHasKey( 'auto_updater.lock', $this->database->optionRows );
+			self::assertArrayHasKey( 'auto_updater.lock', $this->database->option_rows );
 		}
 	}
 
-	public function testSingleFilePluginIsRejectedBeforeProviderContact(): void {
+	public function test_single_file_plugin_is_rejected_before_provider_contact(): void {
 		$this->plugins->managed = array( $this->plugin( identifier: 'example.php' ) );
 		$provider               = new ParityRepositoryProvider( new ParityProviderArchive( str_repeat( 'a', 40 ) ) );
-		$attempt                = $this->runningUpdate();
+		$attempt                = $this->running_update();
 		$coordinator            = $this->coordinator( $provider );
 
-		$outcome = $coordinator->executeClaimed( $attempt );
+		$outcome = $coordinator->execute_claimed( $attempt );
 
 		self::assertSame( DeploymentOutcome::CODE_PACKAGE_SINGLE_FILE_UNSUPPORTED, $outcome->get_code() );
-		self::assertSame( 0, $provider->prepareCalls );
+		self::assertSame( 0, $provider->prepare_calls );
 		self::assertSame( DeploymentState::FAILED->value, $this->database->rows[0]['state'] );
 	}
 
-	public function testExactAdoptionConflictRemainsVerifiedSuccess(): void {
-		$outcome = $this->adoptionConflictOutcome( true );
+	public function test_exact_adoption_conflict_remains_verified_success(): void {
+		$outcome = $this->adoption_conflict_outcome( true );
 
 		self::assertSame( DeploymentOutcome::CODE_DEPLOYED, $outcome );
 		self::assertSame( DeploymentState::SUCCEEDED->value, $this->database->rows[0]['state'] );
-		self::assertSame( 1, $this->plugins->adoptCalls );
+		self::assertSame( 1, $this->plugins->adopt_calls );
 	}
 
-	public function testMismatchedAdoptionConflictBecomesPersistenceUncertain(): void {
-		$outcome = $this->adoptionConflictOutcome( false );
+	public function test_mismatched_adoption_conflict_becomes_persistence_uncertain(): void {
+		$outcome = $this->adoption_conflict_outcome( false );
 
 		self::assertSame( DeploymentOutcome::CODE_PERSISTENCE_UNCERTAIN, $outcome );
 		self::assertSame( DeploymentState::NEEDS_ATTENTION->value, $this->database->rows[0]['state'] );
-		self::assertSame( 1, $this->plugins->adoptCalls );
+		self::assertSame( 1, $this->plugins->adopt_calls );
 	}
 
-	public function testTerminalWebhookFailureNotifiesOnlyAfterDurableFinish(): void {
+	public function test_terminal_webhook_failure_notifies_only_after_durable_finish(): void {
 		$provider                 = new ParityRepositoryProvider( null );
-		$provider->prepareFailure = new RuntimeException( 'expired credential', 401 );
+		$provider->prepare_failure = new RuntimeException( 'expired credential', 401 );
 		$notifier                 = new ParityFailureNotifier( $this->database );
-		$attempt                  = $this->runningWebhookUpdate();
+		$attempt                  = $this->running_webhook_update();
 		$coordinator              = $this->coordinator( $provider, $notifier );
 
-		$outcome = $coordinator->executeClaimed( $attempt );
+		$outcome = $coordinator->execute_claimed( $attempt );
 
 		self::assertSame( DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED, $outcome->get_code() );
 		self::assertCount( 1, $notifier->attempts );
-		self::assertSame( 'failed', $notifier->storedStates[0] );
+		self::assertSame( 'failed', $notifier->stored_states[0] );
 		self::assertSame( DeploymentState::FAILED, $notifier->attempts[0]->get_state() );
 		self::assertSame( DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED, $notifier->attempts[0]->get_outcome()?->get_code() );
 	}
 
-	private function adoptionConflictOutcome( bool $exact ): string {
+	private function adoption_conflict_outcome( bool $exact ): string {
 		$slug     = 'adopt-example';
 		$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
 		$provider = new ParityRepositoryProvider( $archive );
 		$executor = new ParityCoreExecutor();
-		$attempt  = $this->runningInstall( $slug, DeploymentPolicy::MANUAL );
+		$attempt  = $this->running_install( $slug, DeploymentPolicy::MANUAL );
 		$adapter  = $this->adapter( $attempt, $provider, executor: $executor );
-		$this->downloadFixture( $slug );
+		$this->download_fixture( $slug );
 		$this->plugins->installed      = $this->plugin(
 			identifier: $slug . '/' . $slug . '.php',
 			version: '2.0.0',
 			repository: 'owner/install-plugin',
-			repositoryId: 'R_install_plugin',
+			repository_id: 'R_install_plugin',
 			policy: DeploymentPolicy::MANUAL
 		);
-		$this->plugins->byIdentifier   = $this->plugin(
+		$this->plugins->by_identifier   = $this->plugin(
 			identifier: $slug . '/' . $slug . '.php',
 			version: '2.0.0',
 			repository: $exact ? 'owner/install-plugin' : 'owner/other',
-			repositoryId: $exact ? 'R_install_plugin' : 'R_other',
+			repository_id: $exact ? 'R_install_plugin' : 'R_other',
 			policy: DeploymentPolicy::MANUAL
 		);
-		$this->plugins->adoptionResult = PackageMutationResult::conflict(
+		$this->plugins->adoption_result = PackageMutationResult::conflict(
 			PackageStorageOperation::INSERT,
 			'ran_booster_storage_adoption_conflict',
 			'Existing package management data was found.'
@@ -385,7 +385,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			sys_get_temp_dir() . '/ran-booster-admitted-parity-maintenance',
 			new WordPressUpdaterLock(),
 			$notifier,
-			$this->sourceGuard,
+			$this->source_guard,
 			new ParityCoreExecutor()
 		);
 	}
@@ -402,14 +402,14 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			$this->plugins,
 			$this->themes,
 			new ProviderRegistry( array( $provider ) ),
-			$this->sourceGuard,
+			$this->source_guard,
 			$lock ?? new WordPressUpdaterLock(),
 			$executor ?? new ParityCoreExecutor(),
 			sys_get_temp_dir() . '/ran-booster-admitted-parity-maintenance'
 		);
 	}
 
-	private function runningUpdate(): DeploymentAttempt {
+	private function running_update(): DeploymentAttempt {
 		$request = new DeploymentRequest(
 			'owner/example',
 			null,
@@ -422,7 +422,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			self::MAXIMUM_ARTIFACT_BYTES
 		);
 
-		return $this->attempts->admitAndClaimManual(
+		return $this->attempts->admit_and_claim_manual(
 			'update',
 			'plugin',
 			'gh',
@@ -434,7 +434,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		);
 	}
 
-	private function runningInstall( string $slug, DeploymentPolicy $policy = DeploymentPolicy::AUTOMATIC ): DeploymentAttempt {
+	private function running_install( string $slug, DeploymentPolicy $policy = DeploymentPolicy::AUTOMATIC ): DeploymentAttempt {
 		$request = new DeploymentRequest(
 			'owner/install-plugin',
 			null,
@@ -447,7 +447,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			self::MAXIMUM_ARTIFACT_BYTES
 		);
 
-		return $this->attempts->admitAndClaimManual(
+		return $this->attempts->admit_and_claim_manual(
 			'install',
 			'plugin',
 			'gh',
@@ -459,7 +459,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		);
 	}
 
-	private function runningWebhookUpdate(): DeploymentAttempt {
+	private function running_webhook_update(): DeploymentAttempt {
 		$request = new DeploymentRequest(
 			'owner/example',
 			null,
@@ -471,7 +471,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			null,
 			self::MAXIMUM_ARTIFACT_BYTES
 		);
-		$this->attempts->admitWebhookBatch(
+		$this->attempts->admit_webhook_batch(
 			'gh',
 			'delivery-parity-failure',
 			str_repeat( 'e', 64 ),
@@ -487,12 +487,12 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 				),
 			)
 		);
-		$attempt = $this->attempts->claimNext();
+		$attempt = $this->attempts->claim_next();
 		return $attempt ?? throw new RuntimeException( 'Missing webhook attempt.' );
 	}
 
 	/** @return array{identifier:string,version:string,active:bool} */
-	private function updateBaseline(): array {
+	private function update_baseline(): array {
 		return array(
 			'identifier' => 'example/example.php',
 			'version'    => '1.0.0',
@@ -500,7 +500,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		);
 	}
 
-	private function downloadFixture( string $slug, string $version = '2.0.0' ): string {
+	private function download_fixture( string $slug, string $version = '2.0.0' ): string {
 		$path = tempnam( sys_get_temp_dir(), 'ran-booster-parity-' );
 		if ( false === $path ) {
 			throw new RuntimeException( 'Unable to create ZIP fixture path.' );
@@ -524,7 +524,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		string $identifier = 'example/example.php',
 		string $version = '1.0.0',
 		string $repository = 'owner/example',
-		string $repositoryId = 'R_example',
+		string $repository_id = 'R_example',
 		DeploymentPolicy $policy = DeploymentPolicy::AUTOMATIC
 	): Plugin {
 		$plugin = Plugin::from_wp_array(
@@ -543,19 +543,19 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 				'AuthorName'  => '',
 			)
 		);
-		$plugin->set_repository( new ManagedRepository( 'gh', $repository, $repositoryId, 'main' ) );
+		$plugin->set_repository( new ManagedRepository( 'gh', $repository, $repository_id, 'main' ) );
 		$plugin->set_deployment_policy( $policy );
 		$plugin->set_source( PackageSource::BRANCH, 1 );
 		return $plugin;
 	}
 
-	private function ensureDirectory( string $path ): void {
+	private function ensure_directory( string $path ): void {
 		if ( ! is_dir( $path ) && ! mkdir( $path, 0777, true ) && ! is_dir( $path ) ) {
 			throw new RuntimeException( 'Unable to create parity test directory.' );
 		}
 	}
 
-	private function removeTree( string $path ): void {
+	private function remove_tree( string $path ): void {
 		if ( '' === $path || ! is_dir( $path ) ) {
 			return;
 		}
@@ -569,7 +569,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			}
 			$child = $path . DIRECTORY_SEPARATOR . $item;
 			if ( is_dir( $child ) && ! is_link( $child ) ) {
-				$this->removeTree( $child );
+				$this->remove_tree( $child );
 			} elseif ( file_exists( $child ) || is_link( $child ) ) {
 				unlink( $child );
 			}
@@ -582,9 +582,9 @@ final class ParityPluginRepository extends PluginRepository {
 	/** @var list<Plugin> */
 	public array $managed                         = array();
 	public ?Plugin $installed                     = null;
-	public ?Plugin $byIdentifier                  = null;
-	public ?PackageMutationResult $adoptionResult = null;
-	public int $adoptCalls                        = 0;
+	public ?Plugin $by_identifier                  = null;
+	public ?PackageMutationResult $adoption_result = null;
+	public int $adopt_calls                        = 0;
 
 	public function __construct() {}
 
@@ -605,8 +605,8 @@ final class ParityPluginRepository extends PluginRepository {
 	}
 
 	public function booster_plugin_from_file( $file ) {
-		if ( null !== $this->byIdentifier ) {
-			return $this->byIdentifier;
+		if ( null !== $this->by_identifier ) {
+			return $this->by_identifier;
 		}
 		foreach ( $this->managed as $plugin ) {
 			if ( (string) $plugin->get_identifier() === (string) $file ) {
@@ -617,8 +617,8 @@ final class ParityPluginRepository extends PluginRepository {
 	}
 
 	public function adopt( Plugin $plugin ): PackageMutationResult {
-		++$this->adoptCalls;
-		return $this->adoptionResult ?? PackageMutationResult::changed( PackageStorageOperation::INSERT );
+		++$this->adopt_calls;
+		return $this->adoption_result ?? PackageMutationResult::changed( PackageStorageOperation::INSERT );
 	}
 }
 
@@ -628,32 +628,32 @@ final class ParityThemeRepository extends ThemeRepository {
 
 final class ParityProviderArchive implements ProviderPreparedArchive {
 	public string $url       = 'https://example.test/archive.zip';
-	public int $cleanupCalls = 0;
+	public int $cleanup_calls = 0;
 	/** @var null|callable(): void */
-	public $onCleanup = null;
+	public $on_cleanup = null;
 	/** @var null|callable(): void */
-	public $onVerify = null;
+	public $on_verify = null;
 
-	public function __construct( private string $resolvedRef ) {}
+	public function __construct( private string $resolved_ref ) {}
 
-	public function getUrl(): string {
+	public function get_url(): string {
 		return $this->url;
 	}
 
-	public function getResolvedRef(): string {
-		return $this->resolvedRef;
+	public function get_resolved_ref(): string {
+		return $this->resolved_ref;
 	}
 
-	public function verifyCurrentHead(): void {
-		if ( null !== $this->onVerify ) {
-			( $this->onVerify )();
+	public function verify_current_head(): void {
+		if ( null !== $this->on_verify ) {
+			( $this->on_verify )();
 		}
 	}
 
 	public function cleanup(): void {
-		++$this->cleanupCalls;
-		if ( null !== $this->onCleanup ) {
-			( $this->onCleanup )();
+		++$this->cleanup_calls;
+		if ( null !== $this->on_cleanup ) {
+			( $this->on_cleanup )();
 		}
 	}
 }
@@ -661,8 +661,8 @@ final class ParityProviderArchive implements ProviderPreparedArchive {
 final class ParityRepositoryProvider implements RepositoryProvider {
 	use SuppliesProviderDiagnostics;
 
-	public int $prepareCalls                 = 0;
-	public ?RuntimeException $prepareFailure = null;
+	public int $prepare_calls                 = 0;
+	public ?RuntimeException $prepare_failure = null;
 
 	public function __construct( private ?ParityProviderArchive $archive ) {}
 
@@ -675,9 +675,9 @@ final class ParityRepositoryProvider implements RepositoryProvider {
 	}
 
 	public function prepare_archive( ArchiveRequest $request ): ProviderPreparedArchive {
-		++$this->prepareCalls;
-		if ( null !== $this->prepareFailure ) {
-			throw $this->prepareFailure;
+		++$this->prepare_calls;
+		if ( null !== $this->prepare_failure ) {
+			throw $this->prepare_failure;
 		}
 		return $this->archive ?? throw new RuntimeException( 'Missing prepared archive.' );
 	}
@@ -686,22 +686,22 @@ final class ParityRepositoryProvider implements RepositoryProvider {
 final class ParityCoreExecutor extends WordPressCorePackageExecutor {
 	public int $calls = 0;
 	/** @var null|callable(): void */
-	public $afterExecution = null;
+	public $after_execution = null;
 
 	public function __construct() {}
 
 	public function update_plugin( PreparedPackageArtifact $artifact, string $package_slug, ?string $subdirectory, string $plugin_file ): CorePackageExecutionResult {
 		++$this->calls;
-		if ( null !== $this->afterExecution ) {
-			( $this->afterExecution )();
+		if ( null !== $this->after_execution ) {
+			( $this->after_execution )();
 		}
 		return CorePackageExecutionResult::succeeded();
 	}
 
 	public function install_plugin( PreparedPackageArtifact $artifact, string $package_slug, ?string $subdirectory ): CorePackageExecutionResult {
 		++$this->calls;
-		if ( null !== $this->afterExecution ) {
-			( $this->afterExecution )();
+		if ( null !== $this->after_execution ) {
+			( $this->after_execution )();
 		}
 		return CorePackageExecutionResult::succeeded();
 	}
@@ -711,13 +711,13 @@ final class ParityFailureNotifier implements DeploymentFailureNotifier {
 	/** @var list<DeploymentAttempt> */
 	public array $attempts = array();
 	/** @var list<string> */
-	public array $storedStates = array();
+	public array $stored_states = array();
 
 	public function __construct( private AttemptRepositoryDatabase $database ) {}
 
 	public function notify( DeploymentAttempt $attempt ): bool {
 		$this->attempts[]     = $attempt;
-		$this->storedStates[] = (string) ( $this->database->rows[0]['state'] ?? '' );
+		$this->stored_states[] = (string) ( $this->database->rows[0]['state'] ?? '' );
 		return true;
 	}
 }

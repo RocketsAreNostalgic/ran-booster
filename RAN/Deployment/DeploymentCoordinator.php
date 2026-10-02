@@ -38,30 +38,21 @@ class DeploymentCoordinator {
 		private ThemeRepository $themes,
 		private ProviderRegistry $providers,
 		private WordPressWorkerWakeup $wakeup,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private string $maintenancePath,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private WordPressUpdaterLock $updaterLock,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private ?DeploymentFailureNotifier $failureNotifier = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private ?RepositorySourceGuard $sourceGuard = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?WordPressCorePackageExecutor $branchExecutor = null
+		private string $maintenance_path,
+		private WordPressUpdaterLock $updater_lock,
+		private ?DeploymentFailureNotifier $failure_notifier = null,
+		private ?RepositorySourceGuard $source_guard = null,
+		?WordPressCorePackageExecutor $branch_executor = null
 	) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->branch_executor = $branchExecutor ?? new WordPressCorePackageExecutor();
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		$this->sourceGuard ??= new RepositorySourceGuard();
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( '' === trim( $maintenancePath ) ) {
+		$this->branch_executor = $branch_executor ?? new WordPressCorePackageExecutor();
+		$this->source_guard ??= new RepositorySourceGuard();
+		if ( '' === trim( $maintenance_path ) ) {
 			throw new RuntimeException( 'The WordPress maintenance path is invalid.' );
 		}
 	}
 
 	/** @return array{status: 'succeeded'|'failed', correlation_id: string, outcome_code: string} */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function executeManual( PackageOperation $command ): array {
+	public function execute_manual( PackageOperation $command ): array {
 		PackageMutationGuard::assert_filesystem_mutation_allowed();
 		$user_id = function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0;
 
@@ -76,8 +67,7 @@ class DeploymentCoordinator {
 			if ( null === $command->provider_code || null === $command->repository || null === $command->branch || null === $command->package_slug ) {
 				throw new RuntimeException( 'The package request is incomplete.' );
 			}
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$this->sourceGuard->assertAllowed( $command->provider_code, $provider_id, 'plugin' === $type ? 1 : 2, $command->identifier ?? $command->package_slug, PackageSource::BRANCH );
+			$this->source_guard->assert_allowed( $command->provider_code, $provider_id, 'plugin' === $type ? 1 : 2, $command->identifier ?? $command->package_slug, PackageSource::BRANCH );
 			$this->providers->get( ProviderCode::parse( $command->provider_code ) );
 			$request = new DeploymentRequest(
 				$command->repository,
@@ -89,7 +79,7 @@ class DeploymentCoordinator {
 				$command->deployment_policy,
 				$user_id > 0 ? $user_id : null
 			);
-			$attempt = $this->attempts->admitAndClaimManual(
+			$attempt = $this->attempts->admit_and_claim_manual(
 				'install',
 				$type,
 				$command->provider_code,
@@ -110,7 +100,7 @@ class DeploymentCoordinator {
 			}
 			$request       = $this->request_from_package( $package, $user_id > 0 ? $user_id : null );
 			$requested_ref = null !== $command->ref ? $command->ref : $request->configured_branch;
-			$attempt       = $this->attempts->admitAndClaimManual(
+			$attempt       = $this->attempts->admit_and_claim_manual(
 				'update',
 				$type,
 				(string) $package->get_provider_code(),
@@ -139,10 +129,9 @@ class DeploymentCoordinator {
 	 * @param list<array{package_type: string, provider: string, provider_repository_id: string, requested_ref: string, request: DeploymentRequest}> $targets
 	 * @return array{queued: int, busy: int, runner_status: string}
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function queueManualUpdates( array $targets ): array {
-		RuntimeSupport::assertManagedOperationsAllowed();
-		$admission = $this->attempts->admitManualBatch( $targets );
+	public function queue_manual_updates( array $targets ): array {
+		RuntimeSupport::assert_managed_operations_allowed();
+		$admission = $this->attempts->admit_manual_batch( $targets );
 		$queued    = count( $admission['admitted'] );
 
 		return array(
@@ -174,22 +163,18 @@ class DeploymentCoordinator {
 	 * @param list<PushEvent> $events
 	 * @return array{status: string, correlation_id: string, accepted_targets: int, runner_status: string}
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function acceptWebhook( array $events, string $authenticatedBodyDigest ): array {
+	public function accept_webhook( array $events, string $authenticated_body_digest ): array {
 		PackageMutationGuard::assert_webhook_dispatch_allowed();
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( array() === $events || preg_match( '/^[a-f0-9]{64}$/D', $authenticatedBodyDigest ) !== 1 ) {
+		if ( array() === $events || preg_match( '/^[a-f0-9]{64}$/D', $authenticated_body_digest ) !== 1 ) {
 			throw new RuntimeException( 'The authenticated webhook delivery is invalid.' );
 		}
 		$first    = $events[0];
 		$provider = $first->provider->value;
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		$delivery_id = $first->deliveryId;
+		$delivery_id = $first->delivery_id;
 		$targets     = array();
 
 		foreach ( $events as $event ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			if ( ! $event instanceof PushEvent || $event->provider->value !== $provider || $event->deliveryId !== $delivery_id ) {
+			if ( ! $event instanceof PushEvent || $event->provider->value !== $provider || $event->delivery_id !== $delivery_id ) {
 				throw new RuntimeException( 'One webhook request must identify one provider delivery.' );
 			}
 			try {
@@ -208,8 +193,7 @@ class DeploymentCoordinator {
 				$targets[ $key ] = array(
 					'operation'               => 'update',
 					'package_type'            => $match['type'],
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-					'provider_repository_id'  => $event->providerRepositoryId,
+					'provider_repository_id'  => $event->provider_repository_id,
 					'requested_ref'           => $event->commit,
 					'package_source'          => $match['package']->get_source()->value,
 					'package_source_revision' => $match['package']->get_source_revision(),
@@ -219,13 +203,10 @@ class DeploymentCoordinator {
 		}
 		PackageMutationGuard::assert_deployment_target_count( count( $targets ) );
 		if ( array() === $targets ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$this->attempts->admitWebhookBatch( $provider, $delivery_id, $authenticatedBodyDigest, array() );
+			$this->attempts->admit_webhook_batch( $provider, $delivery_id, $authenticated_body_digest, array() );
 			return $this->admission( 'accepted', substr( hash( 'sha256', $provider . "\0" . $delivery_id ), 0, 32 ), 0, 'not_required' );
 		}
-
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$attempts = $this->attempts->admitWebhookBatch( $provider, $delivery_id, $authenticatedBodyDigest, array_values( $targets ) );
+		$attempts = $this->attempts->admit_webhook_batch( $provider, $delivery_id, $authenticated_body_digest, array_values( $targets ) );
 		if ( array() === $attempts ) {
 			return $this->admission( 'duplicate', substr( hash( 'sha256', $provider . "\0" . $delivery_id ), 0, 32 ), 0, 'not_required' );
 		}
@@ -234,9 +215,8 @@ class DeploymentCoordinator {
 	}
 
 	/** Execute one queued row claimed by the real WordPress cron worker. */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function executeClaimed( DeploymentAttempt $attempt ): DeploymentOutcome {
-		RuntimeSupport::assertManagedOperationsAllowed();
+	public function execute_claimed( DeploymentAttempt $attempt ): DeploymentOutcome {
+		RuntimeSupport::assert_managed_operations_allowed();
 		if ( ! wp_doing_cron() ) {
 			throw new RuntimeException( 'The deployment worker is unavailable outside WordPress cron.' );
 		}
@@ -257,20 +237,17 @@ class DeploymentCoordinator {
 			$this->plugins,
 			$this->themes,
 			$this->providers,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$this->sourceGuard,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$this->updaterLock,
+			$this->source_guard,
+			$this->updater_lock,
 			$this->branch_executor,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$this->maintenancePath
+			$this->maintenance_path
 		);
 
 		try {
 			$declaration = $host->declaration();
 		} catch ( AdmittedBranchStageFailure $failure ) {
 			$host->finish( $failure->outcome_code );
-			return $this->finished_outcome( $host->terminalAttempt() );
+			return $this->finished_outcome( $host->terminal_attempt() );
 		}
 
 		$updater    = BranchUpdater::for_admitted_attempt( $declaration, $host, $host, $host, $host, $host );
@@ -291,7 +268,7 @@ class DeploymentCoordinator {
 				$declaration->subdirectory
 			);
 		$code       = $deployment->deploy();
-		$outcome    = $this->finished_outcome( $host->terminalAttempt() );
+		$outcome    = $this->finished_outcome( $host->terminal_attempt() );
 		if ( ! hash_equals( $code, $outcome->get_code() ) ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
@@ -311,16 +288,14 @@ class DeploymentCoordinator {
 			)
 		);
 		$data = $finished->safe_data();
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		if ( null !== $this->failureNotifier
+		if ( null !== $this->failure_notifier
 			&& 'webhook' === $data['source']
 			&& in_array( $finished->get_state(), array( DeploymentState::FAILED, DeploymentState::NEEDS_ATTENTION ), true )
 		) {
 			try {
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				$this->failureNotifier->notify( $finished );
+				$this->failure_notifier->notify( $finished );
 			} catch ( Throwable $exception ) {
-				BoosterLogger::logException(
+				BoosterLogger::log_exception(
 					'background deployment failure notification unavailable',
 					$exception,
 					$finished->log_context() + array( 'step' => 'background_failure_notification' )
@@ -331,26 +306,21 @@ class DeploymentCoordinator {
 	}
 
 	/** Reconcile only after the protected controller confirms the worker stopped. */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function reconcileConfirmedStopped( int $attemptId, string $correlationId ): DeploymentAttempt {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$attempt = $this->attempts->findExact( $attemptId );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( null === $attempt || ! hash_equals( $attempt->get_correlation_id(), $correlationId ) ) {
+	public function reconcile_confirmed_stopped( int $attempt_id, string $correlation_id ): DeploymentAttempt {
+		$attempt = $this->attempts->find_exact( $attempt_id );
+		if ( null === $attempt || ! hash_equals( $attempt->get_correlation_id(), $correlation_id ) ) {
 			throw DeploymentStorageFailure::not_found();
 		}
 		if ( DeploymentState::RUNNING !== $attempt->get_state() ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$result = $this->attempts->reconcileConfirmedStopped( $attemptId );
+		$result = $this->attempts->reconcile_confirmed_stopped( $attempt_id );
 		$this->request_worker();
 		return $result;
 	}
 
 	/** Protected admin seam for re-prompting the one-shot runner. */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function requestRunner(): string {
+	public function request_runner(): string {
 		return $this->request_worker( true );
 	}
 
@@ -401,7 +371,7 @@ class DeploymentCoordinator {
 	/** @return list<array{type: string, package: Package}> */
 	private function matching_packages( PushEvent $event ): array {
 		$matches    = array();
-		$normalizer = $this->providers->requireCapability( $event->provider, WebhookNormalizer::class );
+		$normalizer = $this->providers->require_capability( $event->provider, WebhookNormalizer::class );
 		$policy     = $normalizer->get_webhook_policy();
 		foreach ( array(
 			'plugin' => $this->plugins->all_deployment_plugins(),
@@ -415,8 +385,7 @@ class DeploymentCoordinator {
 					&& $policy->repository_target_matches( $event->repository, (string) $package->get_repository() )
 					&& (string) $package->get_branch() === $event->branch
 					&& null !== $package->get_provider_repository_id()
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-					&& hash_equals( (string) $package->get_provider_repository_id(), $event->providerRepositoryId ) ) {
+					&& hash_equals( (string) $package->get_provider_repository_id(), $event->provider_repository_id ) ) {
 					$matches[] = array(
 						'type'    => $type,
 						'package' => $package,

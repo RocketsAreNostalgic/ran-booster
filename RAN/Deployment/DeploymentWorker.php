@@ -20,8 +20,8 @@ final readonly class DeploymentWorker {
 
 	/** @return array{status: 'empty'|'processed'|'contended'|'unavailable', runner_status: string, correlation_id?: string} */
 	public function run_once(): array {
-		if ( ! RuntimeSupport::current()->allowsManagedOperations()
-			|| WpPusherCoexistencePolicy::conflictActive()
+		if ( ! RuntimeSupport::current()->allows_managed_operations()
+			|| WpPusherCoexistencePolicy::conflict_active()
 			|| ! wp_doing_cron() ) {
 			return array(
 				'status'        => 'unavailable',
@@ -30,14 +30,14 @@ final readonly class DeploymentWorker {
 		}
 
 		try {
-			$attempt = $this->attempts->claimNext();
+			$attempt = $this->attempts->claim_next();
 			if ( null === $attempt ) {
 				return array(
 					'status'        => 'empty',
 					'runner_status' => 'not_required',
 				);
 			}
-			$this->coordinator->executeClaimed( $attempt );
+			$this->coordinator->execute_claimed( $attempt );
 
 			return array(
 				'status'         => 'processed',

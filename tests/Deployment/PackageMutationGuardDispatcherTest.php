@@ -32,7 +32,7 @@ use WP_Error;
 final class PackageMutationGuardDispatcherTest extends TestCase {
 
 	/** @return array<string, array{string, list<string>}> */
-	public static function packageActionCapabilities(): array {
+	public static function package_action_capabilities(): array {
 		return array(
 			'install plugin'           => array( 'install-plugin', array( 'install_plugins' ) ),
 			'install theme'            => array( 'install-theme', array( 'install_themes' ) ),
@@ -48,7 +48,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 	}
 
 	/** @return array<string, array{string, string, string}> */
-	public static function bulkActionCapabilities(): array {
+	public static function bulk_action_capabilities(): array {
 		return array(
 			'bulk plugin update'       => array( 'bulk-plugin', 'queue-update', 'update_plugins' ),
 			'bulk plugin activation'   => array( 'bulk-plugin', 'activate-plugins', 'activate_plugins' ),
@@ -79,7 +79,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		);
 	}
 
-	public function testPackageRouteRejectsANonPostRequestBeforeAuthorityOrMutation(): void {
+	public function test_package_route_rejects_a_non_post_request_before_authority_or_mutation(): void {
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$_POST['ran_booster']      = array(
 			'action' => 'update-plugin',
@@ -94,7 +94,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
-	public function testBulkRouteRejectsANonPostRequestBeforeAuthorityOrMutation(): void {
+	public function test_bulk_route_rejects_a_non_post_request_before_authority_or_mutation(): void {
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$_POST['ran_booster']      = array(
 			'action'      => 'bulk-plugin',
@@ -110,7 +110,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
-	public function testControllerRejectsAnUnknownBulkRouteBeforeAuthorityOrRequestParsing(): void {
+	public function test_controller_rejects_an_unknown_bulk_route_before_authority_or_request_parsing(): void {
 		$dashboard  = $this->createMock( Dashboard::class );
 		$controller = new PackageAdminController();
 
@@ -130,7 +130,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 	}
 
 	#[DataProvider( 'bulkActionCapabilities' )]
-	public function testBulkRoutesUseTheirExactCapabilityBeforeTheirNonce( string $action, string $operation, string $capability ): void {
+	public function test_bulk_routes_use_their_exact_capability_before_their_nonce( string $action, string $operation, string $capability ): void {
 		$_SERVER['REQUEST_METHOD']               = 'POST';
 		$GLOBALS['ran_booster_test_nonce_valid'] = false;
 		$_POST['ran_booster']                    = array(
@@ -153,7 +153,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 	}
 
 	#[DataProvider( 'bulkActionCapabilities' )]
-	public function testBulkRoutesStopBeforeNonceWithoutTheirExactCapability( string $action, string $operation, string $capability ): void {
+	public function test_bulk_routes_stop_before_nonce_without_their_exact_capability( string $action, string $operation, string $capability ): void {
 		$GLOBALS['ran_booster_test_capabilities'][ $capability ] = false;
 		$_POST['ran_booster']                                    = array(
 			'action'      => $action,
@@ -175,7 +175,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 	}
 
 	/** @return array<string, array{string, string, string, bool}> */
-	public static function bulkPolicyJourneys(): array {
+	public static function bulk_policy_journeys(): array {
 		return array(
 			'plugin native' => array( 'plugin', 'bulk-plugin', 'example/example.php', false ),
 			'plugin htmx'   => array( 'plugin', 'bulk-plugin', 'example/example.php', true ),
@@ -185,7 +185,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 	}
 
 	#[DataProvider( 'bulkPolicyJourneys' )]
-	public function testRealBulkPolicyJourneysKeepAuthorityMutationReadbackAndSignedTransportTogether(
+	public function test_real_bulk_policy_journeys_keep_authority_mutation_readback_and_signed_transport_together(
 		string $type,
 		string $action,
 		string $identifier,
@@ -263,7 +263,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			$this->createStub( DeploymentCoordinator::class ),
 			$lock
 		);
-		$controller = new PackageAdminController( bulkActions: $service );
+		$controller = new PackageAdminController( bulk_actions: $service );
 		$dashboard  = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
 			->method( 'bulk_package_redirect' )
@@ -276,8 +276,8 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 				)
 			)
 			->willReturnCallback(
-				static fn ( string $actualType, \RAN\Admin\BulkPackageResult $result ): string => $controller->bulk_redirect(
-					$actualType,
+				static fn ( string $actual_type, \RAN\Admin\BulkPackageResult $result ): string => $controller->bulk_redirect(
+					$actual_type,
 					$result,
 					array( 's' => 'preserved-filter' )
 				)
@@ -301,7 +301,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		self::assertSame( array( $action ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
-	public function testAcceptedBulkPostAlwaysUsesSignedRedirectFlow(): void {
+	public function test_accepted_bulk_post_always_uses_signed_redirect_flow(): void {
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$_POST['ran_booster']      = array(
 			'action'      => 'bulk-plugin',
@@ -329,7 +329,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		}
 	}
 
-	public function testMultisiteBlocksInstallBeforeAnInvalidProviderCanBeResolved(): void {
+	public function test_multisite_blocks_install_before_an_invalid_provider_can_be_resolved(): void {
 		$GLOBALS['ran_booster_package_mutation_guard_multisite'] = true;
 		$_POST['ran_booster']                                    = array(
 			'action'   => 'install-plugin',
@@ -346,7 +346,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		self::assertSame( array( 'install-plugin' ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
-	public function testExactSelfUpdateIsBlockedBeforeItsMissingRepositoryCanBeLookedUp(): void {
+	public function test_exact_self_update_is_blocked_before_its_missing_repository_can_be_looked_up(): void {
 		$_POST['ran_booster'] = array(
 			'action' => 'update-plugin',
 			'file'   => 'ran-booster/ran-booster.php',
@@ -361,7 +361,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		$this->dispatcher( $dashboard )->dispatch_post_requests();
 	}
 
-	public function testRepositoryResolutionWarningKeepsSafeFailureContextForLogging(): void {
+	public function test_repository_resolution_warning_keeps_safe_failure_context_for_logging(): void {
 		$_POST['ran_booster'] = array(
 			'action'     => 'install-plugin',
 			'provider'   => 'gh',
@@ -389,7 +389,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 	}
 
 	#[DataProvider( 'packageActionCapabilities' )]
-	public function testEachPackageActionUsesItsExactCapabilityAndNonce( string $action, array $capabilities ): void {
+	public function test_each_package_action_uses_its_exact_capability_and_nonce( string $action, array $capabilities ): void {
 		$GLOBALS['ran_booster_test_nonce_valid'] = false;
 		$_POST['ran_booster']                    = array( 'action' => $action );
 
@@ -408,9 +408,9 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 	}
 
 	#[DataProvider( 'packageActionCapabilities' )]
-	public function testEachPackageActionFailsBeforeNonceWithoutItsExactCapability( string $action, array $capabilities ): void {
-		$deniedCapability = $capabilities[0];
-		$GLOBALS['ran_booster_test_capabilities'][ $deniedCapability ] = false;
+	public function test_each_package_action_fails_before_nonce_without_its_exact_capability( string $action, array $capabilities ): void {
+		$denied_capability = $capabilities[0];
+		$GLOBALS['ran_booster_test_capabilities'][ $denied_capability ] = false;
 		$_POST['ran_booster'] = array( 'action' => $action );
 
 		$dashboard = $this->createMock( Dashboard::class );
@@ -423,12 +423,12 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			self::assertStringContainsString( 'sufficient permissions', $exception->getMessage() );
 		}
 
-		self::assertSame( array( $deniedCapability ), $GLOBALS['ran_booster_test_capability_checks'] );
+		self::assertSame( array( $denied_capability ), $GLOBALS['ran_booster_test_capability_checks'] );
 		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
 	/** @return array<string, array{string, list<string>, string}> */
-	public static function laterCapabilityDenials(): array {
+	public static function later_capability_denials(): array {
 		return array(
 			'plugin delete'     => array( 'unlink-delete-plugin', array( 'update_plugins', 'delete_plugins' ), 'delete_plugins' ),
 			'plugin activation' => array( 'unlink-delete-plugin', array( 'update_plugins', 'delete_plugins', 'activate_plugins' ), 'activate_plugins' ),
@@ -437,12 +437,12 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 	}
 
 	#[DataProvider( 'laterCapabilityDenials' )]
-	public function testLaterDeleteCapabilitiesIndependentlyStopBeforeNonceAndMutation(
+	public function test_later_delete_capabilities_independently_stop_before_nonce_and_mutation(
 		string $action,
-		array $expectedChecks,
-		string $deniedCapability
+		array $expected_checks,
+		string $denied_capability
 	): void {
-		$GLOBALS['ran_booster_test_capabilities'][ $deniedCapability ] = false;
+		$GLOBALS['ran_booster_test_capabilities'][ $denied_capability ] = false;
 		$_POST['ran_booster'] = array( 'action' => $action );
 		$dashboard            = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::never() )->method( 'post_package_operation' );
@@ -454,12 +454,12 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			self::assertStringContainsString( 'sufficient permissions', $exception->getMessage() );
 		}
 
-		self::assertSame( $expectedChecks, $GLOBALS['ran_booster_test_capability_checks'] );
+		self::assertSame( $expected_checks, $GLOBALS['ran_booster_test_capability_checks'] );
 		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
 	/** @return array<string, array{string, string, string}> */
-	public static function reinstallNonceActions(): array {
+	public static function reinstall_nonce_actions(): array {
 		return array(
 			'plugin' => array( 'edit-plugin', 'update-plugin', 'update_plugins' ),
 			'theme'  => array( 'edit-theme', 'update-theme', 'update_themes' ),
@@ -467,9 +467,9 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 	}
 
 	#[DataProvider( 'reinstallNonceActions' )]
-	public function testReinstallAfterSaveRequiresBothEditAndUpdateNoncesBeforeMutation(
+	public function test_reinstall_after_save_requires_both_edit_and_update_nonces_before_mutation(
 		string $action,
-		string $updateAction,
+		string $update_action,
 		string $capability
 	): void {
 		$_POST['ran_booster'] = array(
@@ -487,10 +487,10 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		}
 
 		self::assertSame( array( $capability ), $GLOBALS['ran_booster_test_capability_checks'] );
-		self::assertSame( array( $action, $updateAction ), $GLOBALS['ran_booster_test_nonce_checks'] );
+		self::assertSame( array( $action, $update_action ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
-	public function testUnknownPackageActionDoesNotEnterAnAuthorizationOrMutationRoute(): void {
+	public function test_unknown_package_action_does_not_enter_an_authorization_or_mutation_route(): void {
 		$_POST['ran_booster'] = array( 'action' => 'remove-plugin' );
 
 		$dashboard = $this->createMock( Dashboard::class );
@@ -502,7 +502,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 	}
 
 	/** @return array<string, array{bool}> */
-	public static function packageTransports(): array {
+	public static function package_transports(): array {
 		return array(
 			'native'   => array( false ),
 			'enhanced' => array( true ),
@@ -510,7 +510,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 	}
 
 	#[DataProvider( 'packageTransports' )]
-	public function testSuccessfulPackageOperationUsesTheSameSignedDashboardTargetForNativeAndHtmx( bool $htmx ): void {
+	public function test_successful_package_operation_uses_the_same_signed_dashboard_target_for_native_and_htmx( bool $htmx ): void {
 		if ( $htmx ) {
 			$_SERVER['HTTP_HX_REQUEST'] = 'true';
 		}
@@ -534,7 +534,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		}
 	}
 
-	public function testFailedPackageOperationDoesNotRedirect(): void {
+	public function test_failed_package_operation_does_not_redirect(): void {
 		$_POST['ran_booster'] = array(
 			'action'     => 'update-theme',
 			'stylesheet' => 'example',
@@ -549,8 +549,8 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 
 	private function dispatcher(
 		Dashboard $dashboard,
-		bool $interceptRedirect = false,
-		?PackageAdminController $packageAdmin = null
+		bool $intercept_redirect = false,
+		?PackageAdminController $package_admin = null
 	): Dispatcher {
 		$providers = new ProviderRegistry();
 		$secrets   = new SecretsFile( null, array() );
@@ -562,10 +562,10 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			$secrets,
 			new PackageRepositoryRequestResolver( $providers ),
 			new ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
-			$packageAdmin ?? new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: $plugins, themes: $themes, providers: $providers ),
+			$package_admin ?? new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: $plugins, themes: $themes, providers: $providers ),
 			$this->createStub( WordPressUpdaterLock::class ),
 		);
-		if ( $interceptRedirect ) {
+		if ( $intercept_redirect ) {
 				return new class( ...$args ) extends Dispatcher {
 					protected function redirect_to( string $url ): never {
 						// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test-only interception preserves the exact redirect target.

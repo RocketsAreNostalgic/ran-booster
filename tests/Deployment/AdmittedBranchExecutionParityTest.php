@@ -22,9 +22,9 @@ use RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionResult;
 use RuntimeException;
 
 final class AdmittedBranchExecutionParityTest extends TestCase {
-	public function testDowngradeIsBlockedBeforeMutation(): void {
+	public function test_downgrade_is_blocked_before_mutation(): void {
 		$host                  = new ParityAdmittedHost();
-		$host->artifactVersion = '0.9.0';
+		$host->artifact_version = '0.9.0';
 
 		$code = $this->deploy( $host, 'update' );
 
@@ -35,9 +35,9 @@ final class AdmittedBranchExecutionParityTest extends TestCase {
 		self::assertContains( 'finish:downgrade_blocked', $host->events );
 	}
 
-	public function testPolicyFailureIsProjectedBeforeArtifactAcquisition(): void {
+	public function test_policy_failure_is_projected_before_artifact_acquisition(): void {
 		$host                = new ParityAdmittedHost();
-		$host->policyFailure = DeploymentOutcome::CODE_POLICY_BLOCKED;
+		$host->policy_failure = DeploymentOutcome::CODE_POLICY_BLOCKED;
 
 		$code = $this->deploy( $host, 'update' );
 
@@ -48,9 +48,9 @@ final class AdmittedBranchExecutionParityTest extends TestCase {
 		self::assertContains( 'finish:policy_blocked', $host->events );
 	}
 
-	public function testMutationStartDurabilityFailurePreventsCoreExecutionAndPreservesAmbiguity(): void {
+	public function test_mutation_start_durability_failure_prevents_core_execution_and_preserves_ambiguity(): void {
 		$host                       = new ParityAdmittedHost();
-		$host->mutationStartFailure = true;
+		$host->mutation_start_failure = true;
 
 		try {
 			$this->deploy( $host, 'update' );
@@ -62,10 +62,10 @@ final class AdmittedBranchExecutionParityTest extends TestCase {
 		self::assertContains( 'mutation', $host->events );
 		self::assertNotContains( 'execute', $host->events );
 		self::assertContains( 'cleanup', $host->events );
-		self::assertFalse( $this->containsPrefix( $host->events, 'finish:' ) );
+		self::assertFalse( $this->contains_prefix( $host->events, 'finish:' ) );
 	}
 
-	public function testSuccessfulInstallUsesDurableAdoptionAfterVerifiedMutation(): void {
+	public function test_successful_install_uses_durable_adoption_after_verified_mutation(): void {
 		$host           = new ParityAdmittedHost();
 		$host->baseline = null;
 
@@ -83,9 +83,9 @@ final class AdmittedBranchExecutionParityTest extends TestCase {
 		self::assertContains( 'finish:deployed', $host->events );
 	}
 
-	public function testCleanupFailureAfterMutationIsProjectedAsInterrupted(): void {
+	public function test_cleanup_failure_after_mutation_is_projected_as_interrupted(): void {
 		$host                 = new ParityAdmittedHost();
-		$host->cleanupFailure = true;
+		$host->cleanup_failure = true;
 
 		$code = $this->deploy( $host, 'update' );
 
@@ -114,7 +114,7 @@ final class AdmittedBranchExecutionParityTest extends TestCase {
 	}
 
 	/** @param list<string> $events */
-	private function containsPrefix( array $events, string $prefix ): bool {
+	private function contains_prefix( array $events, string $prefix ): bool {
 		foreach ( $events as $event ) {
 			if ( str_starts_with( $event, $prefix ) ) {
 				return true;
@@ -133,10 +133,10 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 		'version'    => '1.0.0',
 		'active'     => false,
 	);
-	public string $artifactVersion    = '2.0.0';
-	public ?string $policyFailure     = null;
-	public bool $mutationStartFailure = false;
-	public bool $cleanupFailure       = false;
+	public string $artifact_version    = '2.0.0';
+	public ?string $policy_failure     = null;
+	public bool $mutation_start_failure = false;
+	public bool $cleanup_failure       = false;
 	private ParityAdmittedArtifact $artifact;
 
 	public function __construct() {
@@ -149,7 +149,7 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 
 	public function mark_mutation_started(): void {
 		$this->events[] = 'mutation';
-		if ( $this->mutationStartFailure ) {
+		if ( $this->mutation_start_failure ) {
 			throw new AdmittedBranchDurabilityFailure( 'Unable to persist the mutation fence.' );
 		}
 	}
@@ -169,9 +169,9 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 
 	public function assert_mutation_allowed(): void {
 		$this->events[] = 'allowed';
-		if ( null !== $this->policyFailure ) {
+		if ( null !== $this->policy_failure ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test double transports a domain failure code.
-			throw new AdmittedBranchStageFailure( $this->policyFailure );
+			throw new AdmittedBranchStageFailure( $this->policy_failure );
 		}
 	}
 
@@ -193,7 +193,7 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 		$this->events[] = 'installed';
 		return array(
 			'identifier' => 'example/example.php',
-			'version'    => $this->artifactVersion,
+			'version'    => $this->artifact_version,
 			'active'     => false,
 		);
 	}
@@ -235,7 +235,7 @@ final class ParityAdmittedArtifact implements AdmittedBranchArtifact {
 	}
 
 	public function expected_version(): string {
-		return $this->host->artifactVersion;
+		return $this->host->artifact_version;
 	}
 
 	public function assert_unchanged(): void {
@@ -244,7 +244,7 @@ final class ParityAdmittedArtifact implements AdmittedBranchArtifact {
 
 	public function cleanup(): void {
 		$this->host->events[] = 'cleanup';
-		if ( $this->host->cleanupFailure ) {
+		if ( $this->host->cleanup_failure ) {
 			throw new RuntimeException( 'Unable to clean the admitted artifact.' );
 		}
 	}

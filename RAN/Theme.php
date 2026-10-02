@@ -8,32 +8,32 @@ class Theme extends AbstractPackage {
 
 	protected $stylesheet;
 	protected $name;
-	protected $themeURI;
+	protected $theme_uri;
 	protected $description;
 	protected $author;
-	protected $authorURI;
+	protected $author_uri;
 	protected $version;
 	protected $template;
 	protected $status;
 	protected $tags;
-	protected $textDomain;
-	protected $domainPath;
+	protected $text_domain;
+	protected $domain_path;
 
 	public static function from_wp_theme_object( WP_Theme $object ) {
 		$theme = new static();
 
 		$theme->stylesheet  = $object->get_stylesheet();
 		$theme->name        = $object->get( 'Name' );
-		$theme->themeURI    = $object->get( 'ThemeURI' );
+		$theme->theme_uri   = $object->get( 'ThemeURI' );
 		$theme->description = $object->get( 'Description' );
 		$theme->author      = $object->get( 'Author' );
-		$theme->authorURI   = $object->get( 'AuthorURI' );
+		$theme->author_uri  = $object->get( 'AuthorURI' );
 		$theme->version     = $object->get( 'Version' );
 		$theme->template    = $object->get_template();
 		$theme->status      = $object->get( 'Status' );
 		$theme->tags        = $object->get( 'Tags' );
-		$theme->textDomain  = $object->get( 'TextDomain' );
-		$theme->domainPath  = $object->get( 'DomainPath' );
+		$theme->text_domain = $object->get( 'TextDomain' );
+		$theme->domain_path = $object->get( 'DomainPath' );
 
 		return $theme;
 	}

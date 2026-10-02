@@ -15,18 +15,20 @@ use RAN\Admin\DocumentationHookRenderer;
 
 final class DocumentationHookRendererTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_documentation_test_actions'] = array();
 		$GLOBALS['ran_booster_documentation_test_filters'] = array();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset( $GLOBALS['ran_booster_documentation_test_actions'], $GLOBALS['ran_booster_documentation_test_filters'] );
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testRendersAValidatedStructuredSectionThroughTheCoreDisclosureShell(): void {
+	public function test_renders_avalidated_structured_section_through_the_core_disclosure_shell(): void {
 		$received = array();
 		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_after_provider_gh'][] =
 			static function ( array $sections, string $url, string $scope ) use ( &$received ): array {
@@ -64,7 +66,7 @@ final class DocumentationHookRendererTest extends TestCase {
 		self::assertStringNotContainsString( '<script>', $html );
 	}
 
-	public function testStripsNestedIdsFromSanitizedAddOnContent(): void {
+	public function test_strips_nested_ids_from_sanitized_add_on_content(): void {
 		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_before_about'][] =
 			static function ( array $sections ): array {
 				$sections[] = array(
@@ -92,17 +94,17 @@ final class DocumentationHookRendererTest extends TestCase {
 		self::assertStringNotContainsString( '<script>', $html );
 	}
 
-	public function testPreparesOnlyRenderableSectionsAndResolvesCallableContentOnce(): void {
-		$filterCalls   = 0;
-		$callableCalls = 0;
+	public function test_prepares_only_renderable_sections_and_resolves_callable_content_once(): void {
+		$filter_calls   = 0;
+		$callable_calls = 0;
 		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_before_about'][] =
-			static function ( array $sections ) use ( &$filterCalls, &$callableCalls ): array {
-				++$filterCalls;
+			static function ( array $sections ) use ( &$filter_calls, &$callable_calls ): array {
+				++$filter_calls;
 				$sections[] = array(
 					'id'      => 'resolved-guide',
 					'summary' => 'Resolved guide',
-					'content' => static function () use ( &$callableCalls ): void {
-						++$callableCalls;
+					'content' => static function () use ( &$callable_calls ): void {
+						++$callable_calls;
 						echo '<p>Resolved once.</p>';
 					},
 				);
@@ -126,13 +128,13 @@ final class DocumentationHookRendererTest extends TestCase {
 			'site'
 		);
 
-		self::assertSame( 1, $filterCalls );
-		self::assertSame( 1, $callableCalls );
+		self::assertSame( 1, $filter_calls );
+		self::assertSame( 1, $callable_calls );
 		self::assertSame( array( 'resolved-guide' ), array_column( $sections, 'id' ) );
 		self::assertSame( '<p>Resolved once.</p>', $sections[0]['content'] );
 	}
 
-	public function testCallableFailureKeepsTheOriginalStableIdAndSummary(): void {
+	public function test_callable_failure_keeps_the_original_stable_id_and_summary(): void {
 		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_before_about'][] =
 			static function ( array $sections ): array {
 				$sections[] = array(

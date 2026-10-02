@@ -12,6 +12,7 @@ require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class ModalLocalisationTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_admin_test_translations'] = array(
 			'ran-booster' => array(
@@ -38,14 +39,15 @@ final class ModalLocalisationTest extends TestCase {
 		);
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset( $GLOBALS['ran_booster_admin_test_translations'] );
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testModalCoreCopyTranslatesWithoutChangingProviderDataOrInteractionContracts(): void {
-		$html = $this->renderModals();
+	public function test_modal_core_copy_translates_without_changing_provider_data_or_interaction_contracts(): void {
+		$html = $this->render_modals();
 
 		self::assertStringContainsString( 'id="ran-booster-access-modal-title" class="ran-booster-dialog__title">Ajouter un identifiant de depot</h2>', $html );
 		self::assertStringContainsString( 'id="ran-booster-webhook-modal-title" class="ran-booster-dialog__title">Ajouter un secret Push-to-Deploy</h2>', $html );
@@ -86,10 +88,10 @@ final class ModalLocalisationTest extends TestCase {
 		self::assertSame( 3, substr_count( $html, 'hx-sync="this:drop"' ) );
 	}
 
-	private function renderModals(): string {
-		$hasCredentialSettings = true;
-		$hasWebhookSettings    = true;
-		$provider              = array(
+	private function render_modals(): string {
+		$has_credential_settings = true;
+		$has_webhook_settings    = true;
+		$provider                = array(
 			'code'             => 'provider-code',
 			'label'            => 'Provider <data>',
 			'credential_kinds' => array(
@@ -121,7 +123,7 @@ final class ModalLocalisationTest extends TestCase {
 				),
 			),
 		);
-		$webhook_profiles      = array(
+		$webhook_profiles        = array(
 			array(
 				'id'     => 'workspace-hook',
 				'scope'  => 'owner',
@@ -133,7 +135,7 @@ final class ModalLocalisationTest extends TestCase {
 				'target' => 'workspace/example',
 			),
 		);
-		$managedRepositories   = array(
+		$managed_repositories    = array(
 			'owners'       => array( 'workspace' ),
 			'repositories' => array( array( 'target' => 'workspace/example' ) ),
 		);

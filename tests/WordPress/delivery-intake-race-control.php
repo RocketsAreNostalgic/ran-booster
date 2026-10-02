@@ -16,7 +16,7 @@ if ( ! is_string( $mode ) || ! is_string( $run_id ) || preg_match( '/^[a-f0-9]{2
 global $wpdb;
 $booster     = require __DIR__ . '/core-container-fixture.php';
 $repository  = $booster->make( RAN\Deployment\DeploymentAttemptRepository::class );
-$table       = RAN\Storage\Database::attemptTableName();
+$table       = RAN\Storage\Database::attempt_table_name();
 $provider    = 'fixture-provider';
 $delivery_id = 'delivery-intake-race-' . $run_id;
 $zero_id     = $delivery_id . '-zero';
@@ -76,12 +76,12 @@ if ( 'assert' === $mode ) {
 	$target  = array( 'operation' => 'update', 'package_type' => 'plugin', 'provider_repository_id' => 'fixture-repository-' . $run_id, 'requested_ref' => 'commit-' . $run_id, 'package_source' => 'branch', 'package_source_revision' => 1, 'request' => $request );
 	$new_request = new DeploymentRequest( 'group/subgroup/new-' . $run_id, 'race-credential', true, 'main', 'new-' . $run_id, null, DeploymentPolicy::AUTOMATIC, null );
 	$new_target  = array( 'operation' => 'update', 'package_type' => 'plugin', 'provider_repository_id' => 'new-repository-' . $run_id, 'requested_ref' => 'new-commit-' . $run_id, 'package_source' => 'branch', 'package_source_revision' => 1, 'request' => $new_request );
-	$replay      = $repository->admitWebhookBatch( $provider, $delivery_id, $digest, array( $target, $new_target ) );
+	$replay      = $repository->admit_webhook_batch( $provider, $delivery_id, $digest, array( $target, $new_target ) );
 	if ( 1 !== count( $replay ) || $replay[0]->get_id() !== $winner['attempt_id'] || $replay[0]->get_correlation_id() !== $winner['correlation_id'] ) {
 		throw new RuntimeException( 'A fresh provider replay did not preserve the winning target set.' );
 	}
-	$repository->admitWebhookBatch( $provider, $zero_id, $digest, array() );
-	if ( array() !== $repository->admitWebhookBatch( $provider, $zero_id, $digest, array( $new_target ) ) ) {
+	$repository->admit_webhook_batch( $provider, $zero_id, $digest, array() );
+	if ( array() !== $repository->admit_webhook_batch( $provider, $zero_id, $digest, array( $new_target ) ) ) {
 		throw new RuntimeException( 'A zero-target delivery admitted a package added after acknowledgement.' );
 	}
 	$zero_rows = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i WHERE provider = %s AND delivery_id = %s', $table, $provider, $zero_id ), ARRAY_A );
@@ -89,7 +89,7 @@ if ( 'assert' === $mode ) {
 		throw new RuntimeException( 'The zero-target delivery acknowledgement is not durable and immutable.' );
 	}
 	try {
-		$repository->admitWebhookBatch(
+		$repository->admit_webhook_batch(
 			$provider,
 			$delivery_id,
 			hash( 'sha256', 'different-body-' . $run_id ),

@@ -11,7 +11,7 @@ use InvalidArgumentException;
  */
 final class RepositoryLocator {
 
-	public static function requireValid( mixed $locator ): string {
+	public static function require_valid( mixed $locator ): string {
 		if ( ! is_string( $locator )
 			|| '' === trim( $locator )
 			|| strlen( $locator ) > 512

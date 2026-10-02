@@ -14,7 +14,7 @@ use RAN\Admin\Component\AdminActionNormalizer;
 
 final class AdminActionNormalizerTest extends TestCase {
 
-	public function testNormalizesBoundedLinkAndCanonicalPostActions(): void {
+	public function test_normalizes_bounded_link_and_canonical_post_actions(): void {
 		$actions = ( new AdminActionNormalizer() )->normalize(
 			array(
 				'fixture:manage'  => array(
@@ -45,7 +45,7 @@ final class AdminActionNormalizerTest extends TestCase {
 		self::assertSame( '3', $actions['fixture:refresh']['hidden']['revision'] );
 	}
 
-	public function testRejectsUnnamespacedActions(): void {
+	public function test_rejects_unnamespaced_actions(): void {
 		$this->expectException( LogicException::class );
 		$this->expectExceptionMessage( 'namespaced keys' );
 
@@ -60,7 +60,7 @@ final class AdminActionNormalizerTest extends TestCase {
 		);
 	}
 
-	public function testRejectsPostActionsOutsideTheCanonicalHandler(): void {
+	public function test_rejects_post_actions_outside_the_canonical_handler(): void {
 		$this->expectException( LogicException::class );
 		$this->expectExceptionMessage( 'canonical WordPress handler' );
 
@@ -79,7 +79,7 @@ final class AdminActionNormalizerTest extends TestCase {
 		);
 	}
 
-	public function testRejectsPostActionsWithoutANonce(): void {
+	public function test_rejects_post_actions_without_anonce(): void {
 		$this->expectException( LogicException::class );
 		$this->expectExceptionMessage( 'action name and nonce' );
 
@@ -95,7 +95,7 @@ final class AdminActionNormalizerTest extends TestCase {
 		);
 	}
 
-	public function testRejectsHiddenFieldsOnLinks(): void {
+	public function test_rejects_hidden_fields_on_links(): void {
 		$this->expectException( LogicException::class );
 		$this->expectExceptionMessage( 'Link actions must not contain hidden fields' );
 
@@ -112,7 +112,7 @@ final class AdminActionNormalizerTest extends TestCase {
 	}
 
 	/** @return array<string, array{array<string, mixed>, string}> */
-	public static function unsafeActionProvider(): array {
+	public static function unsafe_action_provider(): array {
 		return array(
 			'mismatched embedded key' => array(
 				array(
@@ -144,8 +144,8 @@ final class AdminActionNormalizerTest extends TestCase {
 	}
 
 	/** @param array<string, mixed> $action */
-	#[DataProvider( 'unsafeActionProvider' )]
-	public function testRejectsAmbiguousOrUnsafeActionState( array $action, string $message ): void {
+	#[DataProvider( 'unsafe_action_provider' )]
+	public function test_rejects_ambiguous_or_unsafe_action_state( array $action, string $message ): void {
 		$this->expectException( LogicException::class );
 		$this->expectExceptionMessage( $message );
 

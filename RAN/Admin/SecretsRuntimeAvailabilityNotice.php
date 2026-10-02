@@ -15,18 +15,18 @@ final class SecretsRuntimeAvailabilityNotice {
 
 	public function __construct(
 		private SecretsRuntimeAvailability $availability,
-		private ?string $screenId = null
+		private ?string $screen_id = null
 	) {
 	}
 
-	public function shouldRender(): bool {
+	public function should_render(): bool {
 		return current_user_can( 'manage_options' )
-			&& BoosterNoticeScope::allows( $this->screenId )
+			&& BoosterNoticeScope::allows( $this->screen_id )
 			&& ! $this->availability->is_available();
 	}
 
 	public function render(): void {
-		if ( $this->rendered || ! $this->shouldRender() ) {
+		if ( $this->rendered || ! $this->should_render() ) {
 			return;
 		}
 		$this->rendered = true;

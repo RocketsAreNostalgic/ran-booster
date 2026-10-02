@@ -9,38 +9,26 @@ use RAN\PackageSubdirectory;
 
 final readonly class RepositoryDescriptor {
 	public string $locator;
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-	public string $packageSlug;
+	public string $package_slug;
 
 	public function __construct(
 		public ProviderCode $provider,
 		string $locator,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-		string $packageSlug,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-		public string $providerRepositoryId,
+		string $package_slug,
+		public string $provider_repository_id,
 		public bool $private,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-		public string $defaultBranch,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-		public ?string $credentialId
+		public string $default_branch,
+		public ?string $credential_id
 	) {
-		$this->locator = RepositoryLocator::requireValid( $locator );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-		$this->packageSlug = PackageSubdirectory::normalize_slug( $packageSlug );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-		if ( strlen( $this->packageSlug ) > 191 ) {
+		$this->locator      = RepositoryLocator::require_valid( $locator );
+		$this->package_slug = PackageSubdirectory::normalize_slug( $package_slug );
+		if ( strlen( $this->package_slug ) > 191 ) {
 			throw new InvalidArgumentException( 'The provider package slug is invalid.' );
 		}
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-		$this->assert_provider_repository_id( $providerRepositoryId );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-		$this->require_value( $defaultBranch );
-
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-		if ( null !== $credentialId ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-			$this->require_value( $credentialId );
+		$this->assert_provider_repository_id( $provider_repository_id );
+		$this->require_value( $default_branch );
+		if ( null !== $credential_id ) {
+			$this->require_value( $credential_id );
 		}
 	}
 
@@ -55,20 +43,16 @@ final readonly class RepositoryDescriptor {
 	 *     credential_id: string|null
 	 * }
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
-	public function toArray(): array {
+
+	public function to_array(): array {
 		return array(
 			'provider'               => $this->provider->value,
 			'locator'                => $this->locator,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-			'package_slug'           => $this->packageSlug,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-			'provider_repository_id' => $this->providerRepositoryId,
+			'package_slug'           => $this->package_slug,
+			'provider_repository_id' => $this->provider_repository_id,
 			'private'                => $this->private,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-			'default_branch'         => $this->defaultBranch,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-			'credential_id'          => $this->credentialId,
+			'default_branch'         => $this->default_branch,
+			'credential_id'          => $this->credential_id,
 		);
 	}
 

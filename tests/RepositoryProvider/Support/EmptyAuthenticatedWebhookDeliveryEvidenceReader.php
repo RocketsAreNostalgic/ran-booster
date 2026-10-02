@@ -9,7 +9,7 @@ use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
 
 final class EmptyAuthenticatedWebhookDeliveryEvidenceReader implements AuthenticatedWebhookDeliveryEvidenceReader {
 
-	public function latestAuthenticatedDelivery(): ?AuthenticatedWebhookDeliveryEvidence {
+	public function latest_authenticated_delivery(): ?AuthenticatedWebhookDeliveryEvidence {
 		return null;
 	}
 }

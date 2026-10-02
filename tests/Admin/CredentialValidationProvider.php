@@ -15,7 +15,7 @@ final class CredentialValidationProvider implements RepositoryProvider, Credenti
 	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 	/** @var list<string> */
-	public array $validatedIds = array();
+	public array $validated_ids = array();
 
 	public function __construct( private CredentialValidationResult $result ) {
 	}
@@ -29,8 +29,8 @@ final class CredentialValidationProvider implements RepositoryProvider, Credenti
 		);
 	}
 
-	public function validate_credential( string $credentialId ): CredentialValidationResult {
-		$this->validatedIds[] = $credentialId;
+	public function validate_credential( string $credential_id ): CredentialValidationResult {
+		$this->validated_ids[] = $credential_id;
 
 		return $this->result;
 	}

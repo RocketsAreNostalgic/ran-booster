@@ -29,8 +29,7 @@ class Database {
 	 *
 	 * @throws DatabaseCompatibilityFailure When the server is outside the supported envelope.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function requireSupported(): void {
+	public function require_supported(): void {
 		if ( ! $this->capability_checked ) {
 			try {
 				$this->inspect_capabilities();
@@ -47,10 +46,9 @@ class Database {
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function isSupported(): bool {
+	public function is_supported(): bool {
 		try {
-			$this->requireSupported();
+			$this->require_supported();
 
 			return true;
 		} catch ( DatabaseCompatibilityFailure ) {
@@ -64,9 +62,8 @@ class Database {
 	 * @throws DatabaseCompatibilityFailure When the server is unsupported.
 	 * @throws DatabaseLifecycleFailure When the schema cannot be prepared safely.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function maybeUpgrade(): void {
-		RuntimeSupport::assertManagedOperationsAllowed();
+	public function maybe_upgrade(): void {
+		RuntimeSupport::assert_managed_operations_allowed();
 
 		$this->run_lifecycle( false );
 	}
@@ -78,7 +75,7 @@ class Database {
 	 * @throws DatabaseLifecycleFailure When the schema cannot be prepared safely.
 	 */
 	public function install(): void {
-		RuntimeSupport::assertManagedOperationsAllowed();
+		RuntimeSupport::assert_managed_operations_allowed();
 
 		$this->run_lifecycle( true );
 	}
@@ -117,9 +114,8 @@ class Database {
 	 * @throws DatabaseCompatibilityFailure When the server is unsupported.
 	 * @throws DatabaseLifecycleFailure When the schema cannot be prepared safely.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function requireReady(): void {
-		$this->maybeUpgrade();
+	public function require_ready(): void {
+		$this->maybe_upgrade();
 	}
 
 	/**
@@ -128,13 +124,12 @@ class Database {
 	 * This intentionally does not inspect or mutate tables. Normal lifecycle
 	 * hooks call maybeUpgrade() before this status is presented.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function isReady(): bool {
+	public function is_ready(): bool {
 		if ( $this->lifecycle_checked ) {
 			return null === $this->lifecycle_failure;
 		}
 
-		if ( ! $this->isSupported() ) {
+		if ( ! $this->is_supported() ) {
 			return false;
 		}
 
@@ -146,7 +141,7 @@ class Database {
 	}
 
 	private function prepare_schema( bool $inspect_current_schema ): bool {
-		$this->requireSupported();
+		$this->require_supported();
 		$wpdb = $this->connection();
 
 		$installed_version = $this->installed_version();
@@ -155,7 +150,7 @@ class Database {
 		}
 
 		$package_table   = ran_booster_table_name();
-		$attempt_table   = self::attemptTableName();
+		$attempt_table   = self::attempt_table_name();
 		$charset_collate = $wpdb->get_charset_collate();
 		$tables          = array(
 			$package_table => array(
@@ -204,8 +199,7 @@ class Database {
 		return true;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public static function attemptTableName(): string {
+	public static function attempt_table_name(): string {
 		global $wpdb;
 
 		return $wpdb->prefix . 'ran_booster_deployment_attempts';

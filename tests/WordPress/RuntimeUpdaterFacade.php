@@ -9,12 +9,12 @@ use RAN\RepositoryProvider\RepositoryReleaseNativeTargetStatus;
 
 final class RuntimeUpdaterFacade implements RepositoryReleaseNativeTarget {
 
-	private bool $registered           = false;
-	private bool $diagnosticsFail      = false;
-	private int $refreshes             = 0;
-	private bool $refreshSucceeds      = true;
-	private bool $registrationSucceeds = true;
-	private bool $refreshFails         = false;
+	private bool $registered            = false;
+	private bool $diagnostics_fail      = false;
+	private int $refreshes              = 0;
+	private bool $refresh_succeeds      = true;
+	private bool $registration_succeeds = true;
+	private bool $refresh_fails         = false;
 
 	/** @param array<string, mixed> $target @param array<string, mixed> $diagnostics */
 	public function __construct(
@@ -26,28 +26,28 @@ final class RuntimeUpdaterFacade implements RepositoryReleaseNativeTarget {
 	public function register(): bool {
 		$this->registered = true;
 
-		return $this->registrationSucceeds;
+		return $this->registration_succeeds;
 	}
 
 	public function refresh(): bool {
-		if ( $this->refreshFails ) {
+		if ( $this->refresh_fails ) {
 			throw new \RuntimeException( 'refresh failed' );
 		}
 		++$this->refreshes;
 
-		return $this->refreshSucceeds;
+		return $this->refresh_succeeds;
 	}
 
-	public function failRegistration(): void {
-		$this->registrationSucceeds = false;
+	public function fail_registration(): void {
+		$this->registration_succeeds = false;
 	}
 
-	public function rejectRefresh(): void {
-		$this->refreshSucceeds = false;
+	public function reject_refresh(): void {
+		$this->refresh_succeeds = false;
 	}
 
-	public function failRefresh(): void {
-		$this->refreshFails = true;
+	public function fail_refresh(): void {
+		$this->refresh_fails = true;
 	}
 
 	public function refreshes(): int {
@@ -55,17 +55,17 @@ final class RuntimeUpdaterFacade implements RepositoryReleaseNativeTarget {
 	}
 
 	/** @param array<string, mixed> $diagnostics */
-	public function replaceDiagnostics( array $diagnostics ): void {
+	public function replace_diagnostics( array $diagnostics ): void {
 		$this->diagnostics = $diagnostics;
 	}
 
-	public function failDiagnostics(): void {
-		$this->diagnosticsFail = true;
+	public function fail_diagnostics(): void {
+		$this->diagnostics_fail = true;
 	}
 
 	/** @return array<string, mixed> */
 	public function diagnostics(): array {
-		if ( $this->diagnosticsFail ) {
+		if ( $this->diagnostics_fail ) {
 			throw new \RuntimeException( 'diagnostics failed' );
 		}
 

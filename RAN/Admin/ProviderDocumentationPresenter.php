@@ -28,7 +28,7 @@ final readonly class ProviderDocumentationPresenter {
 	public function build(): array {
 		$documentation = array();
 
-		foreach ( $this->providers->orderedMetadata() as $metadata ) {
+		foreach ( $this->providers->ordered_metadata() as $metadata ) {
 			$setup = null === $metadata->admin ? null : $metadata->admin->setup;
 
 			$documentation[] = array(
@@ -36,14 +36,14 @@ final readonly class ProviderDocumentationPresenter {
 				'label'           => $metadata->label,
 				'setup_available' => null !== $setup,
 				'credentials'     => array(
-					'summary' => null === $setup ? $metadata->label . ' setup guidance is not available yet.' : $setup->credentialSummary,
-					'links'   => null === $setup ? array() : $setup->credentialLinks,
+					'summary' => null === $setup ? $metadata->label . ' setup guidance is not available yet.' : $setup->credential_summary,
+					'links'   => null === $setup ? array() : $setup->credential_links,
 				),
 				'webhook'         => null === $setup ? null : array(
-					'location'                   => $setup->webhookLocation,
-					'event'                      => $setup->webhookEvent,
-					'documentation_url'          => $setup->webhookDocumentationUrl,
-					'delivery_documentation_url' => $setup->deliveryDocumentationUrl,
+					'location'                   => $setup->webhook_location,
+					'event'                      => $setup->webhook_event,
+					'documentation_url'          => $setup->webhook_documentation_url,
+					'delivery_documentation_url' => $setup->delivery_documentation_url,
 				),
 			);
 		}

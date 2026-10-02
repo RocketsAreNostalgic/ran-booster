@@ -18,15 +18,15 @@ final readonly class BoundProviderCredentialStore implements ProviderCredentialS
 	) {
 	}
 
-	public function credentialProfiles(): array {
-		return $this->secrets->credentialProfiles( $this->provider );
+	public function credential_profiles(): array {
+		return $this->secrets->credential_profiles( $this->provider );
 	}
 
-	public function credentialMaterial( ?string $id = null ): ?array {
-		return $this->secrets->credentialMaterial( $this->provider, $id );
+	public function credential_material( ?string $id = null ): ?array {
+		return $this->secrets->credential_material( $this->provider, $id );
 	}
 
-	public function hasWebhookProfile(): bool {
-		return array() !== $this->secrets->webhookProfiles( $this->provider );
+	public function has_webhook_profile(): bool {
+		return array() !== $this->secrets->webhook_profiles( $this->provider );
 	}
 }

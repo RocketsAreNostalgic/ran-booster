@@ -98,7 +98,7 @@ final class PackageMutationGuard {
 	}
 
 	public static function assert_package_mutation_allowed(): void {
-		if ( ! RuntimeSupport::current()->allowsManagedOperations() ) {
+		if ( ! RuntimeSupport::current()->allows_managed_operations() ) {
 			BoosterLogger::log(
 				'mutation guard blocked deployment',
 				array(
@@ -106,9 +106,9 @@ final class PackageMutationGuard {
 					'event' => 'multisite_blocked',
 				)
 			);
-			RuntimeSupport::assertManagedOperationsAllowed();
+			RuntimeSupport::assert_managed_operations_allowed();
 		}
 
-		WpPusherCoexistencePolicy::assertPackageMutationAllowed();
+		WpPusherCoexistencePolicy::assert_package_mutation_allowed();
 	}
 }

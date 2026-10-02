@@ -11,7 +11,7 @@ use RAN\Admin\Component\RepositoryTableRenderer;
 
 final class RepositoryTableRendererTest extends TestCase {
 
-	public function testItOwnsTheCompleteCommonRepositoryMarkup(): void {
+	public function test_it_owns_the_complete_common_repository_markup(): void {
 		$html = $this->render(
 			array(
 				'provider_label'     => 'GitHub',
@@ -94,7 +94,7 @@ final class RepositoryTableRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'ran-booster-repository-record__details', $html );
 	}
 
-	public function testItRendersNormalizedHistoricalLinkEvidenceInline(): void {
+	public function test_it_renders_normalized_historical_link_evidence_inline(): void {
 		$html = $this->render(
 			array(
 				'provider_label' => 'GitHub',

@@ -36,17 +36,17 @@ final class PartialRepositoryReleaseWorkflowProviderDouble implements Repository
 		unset( $request );
 		throw new RuntimeException( 'Archive preparation is outside this fixture.' ); }
 	public function workflow_status( RepositoryReleaseWorkflowTarget $status ): RepositoryReleaseWorkflowStatus {
-		return new RepositoryReleaseWorkflowStatus( 'partial', $status->providerRepositoryId(), false, false ); }
+		return new RepositoryReleaseWorkflowStatus( 'partial', $status->provider_repository_id(), false, false ); }
 	public function workflow_preview( RepositoryReleaseWorkflowTarget $status, string $key ): ?RepositoryReleaseWorkflowPreview {
 		unset( $status, $key );
 		return null; }
-	public function workflow_inspect( RepositoryReleaseWorkflowTarget $status, string $channel, RepositoryReleaseWorkflowPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult {
-		unset( $status, $channel, $preflight, $credentialId );
+	public function workflow_inspect( RepositoryReleaseWorkflowTarget $status, string $channel, RepositoryReleaseWorkflowPreflight $preflight, ?string $credential_id ): RepositoryReleaseWorkflowResult {
+		unset( $status, $channel, $preflight, $credential_id );
 		return new RepositoryReleaseWorkflowResult( 'workflow_partial', false ); }
-	public function workflow_setup( RepositoryReleaseWorkflowTarget $status, string $key, string $confirmation, RepositoryReleaseWorkflowPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult {
-		unset( $status, $key, $confirmation, $preflight, $credentialId );
+	public function workflow_setup( RepositoryReleaseWorkflowTarget $status, string $key, string $confirmation, RepositoryReleaseWorkflowPreflight $preflight, ?string $credential_id ): RepositoryReleaseWorkflowResult {
+		unset( $status, $key, $confirmation, $preflight, $credential_id );
 		return new RepositoryReleaseWorkflowResult( 'workflow_partial', false ); }
-	public function workflow_outcome( RepositoryReleaseWorkflowTarget $status, ?string $credentialId ): RepositoryReleaseWorkflowResult {
-		unset( $status, $credentialId );
+	public function workflow_outcome( RepositoryReleaseWorkflowTarget $status, ?string $credential_id ): RepositoryReleaseWorkflowResult {
+		unset( $status, $credential_id );
 		return new RepositoryReleaseWorkflowResult( 'workflow_partial', false ); }
 }

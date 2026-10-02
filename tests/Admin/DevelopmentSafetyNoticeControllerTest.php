@@ -11,6 +11,7 @@ require_once dirname( __DIR__ ) . '/Support/RepositoryAdminWordPressFunctions.ph
 
 final class DevelopmentSafetyNoticeControllerTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_repository_admin_allowed']               = true;
 		$GLOBALS['ran_booster_repository_admin_nonce_valid']           = true;
@@ -19,6 +20,7 @@ final class DevelopmentSafetyNoticeControllerTest extends TestCase {
 		$GLOBALS['ran_booster_repository_admin_user_meta_write_fails'] = false;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset(
 			$GLOBALS['ran_booster_repository_admin_allowed'],
@@ -29,7 +31,7 @@ final class DevelopmentSafetyNoticeControllerTest extends TestCase {
 		);
 	}
 
-	public function testDismissalIsPersistedForTheCurrentAdministrator(): void {
+	public function test_dismissal_is_persisted_for_the_current_administrator(): void {
 		$result = ( new DevelopmentSafetyNoticeController() )->handle();
 
 		self::assertTrue( $result['success'] );
@@ -40,7 +42,7 @@ final class DevelopmentSafetyNoticeControllerTest extends TestCase {
 		);
 	}
 
-	public function testUnauthorizedRequestCannotPersistDismissal(): void {
+	public function test_unauthorized_request_cannot_persist_dismissal(): void {
 		$GLOBALS['ran_booster_repository_admin_allowed'] = false;
 
 		$result = ( new DevelopmentSafetyNoticeController() )->handle();
@@ -50,7 +52,7 @@ final class DevelopmentSafetyNoticeControllerTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_repository_admin_user_meta'] );
 	}
 
-	public function testInvalidNonceCannotPersistDismissal(): void {
+	public function test_invalid_nonce_cannot_persist_dismissal(): void {
 		$GLOBALS['ran_booster_repository_admin_nonce_valid'] = false;
 
 		$result = ( new DevelopmentSafetyNoticeController() )->handle();
@@ -60,7 +62,7 @@ final class DevelopmentSafetyNoticeControllerTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_repository_admin_user_meta'] );
 	}
 
-	public function testPersistenceFailureIsReported(): void {
+	public function test_persistence_failure_is_reported(): void {
 		$GLOBALS['ran_booster_repository_admin_user_meta_write_fails'] = true;
 
 		$result = ( new DevelopmentSafetyNoticeController() )->handle();

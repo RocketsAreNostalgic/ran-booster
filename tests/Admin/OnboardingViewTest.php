@@ -10,22 +10,23 @@ require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class OnboardingViewTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_admin_test_translations'] = array();
 	}
 
-	public function testTranslatesTheIgnitionEyebrowWithoutChangingTheOnboardingDestinations(): void {
+	public function test_translates_the_ignition_eyebrow_without_changing_the_onboarding_destinations(): void {
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Ignition'] = 'Allumage';
 
-		$html = $this->renderView();
+		$html = $this->render_view();
 
 		self::assertStringContainsString( '<p class="ran-booster-eyebrow">Allumage</p>', $html );
 		self::assertStringContainsString( 'page=ran-booster-plugins-create', $html );
 		self::assertStringContainsString( 'page=ran-booster-themes-create', $html );
 	}
 
-	public function testLeadsWithPublicInstallationBeforeOptionalAccessAndAutomation(): void {
-		$html = $this->renderView();
+	public function test_leads_with_public_installation_before_optional_access_and_automation(): void {
+		$html = $this->render_view();
 
 		self::assertStringContainsString(
 			'<section class="ran-booster-page-shell ran-booster-panel ran-booster-onboarding"',
@@ -51,8 +52,8 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'Packages begin in Manual mode.', $html );
 	}
 
-	public function testRendersProviderPackageAndHelpDestinations(): void {
-		$html = $this->renderView();
+	public function test_renders_provider_package_and_help_destinations(): void {
+		$html = $this->render_view();
 
 		self::assertStringContainsString( '>Add GitHub access</a>', $html );
 		self::assertStringContainsString( '>Add Bitbucket access</a>', $html );
@@ -65,12 +66,12 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( '>Open troubleshooting</a>', $html );
 		self::assertStringContainsString(
 			'page=ran-booster&amp;tab=documentation#ran-booster-credential-storage">Learn how Booster manages credentials and keys</a>',
-			$this->renderStorageStatus( 'storage_healthy', 'automatic' )
+			$this->render_storage_status( 'storage_healthy', 'automatic' )
 		);
 	}
 
-	public function testEscapesProviderLabelsAndEveryUrl(): void {
-		$html = $this->renderView(
+	public function test_escapes_provider_labels_and_every_url(): void {
+		$html = $this->render_view(
 			array(
 				array(
 					'label' => 'GitLab <script>alert(1)</script>',
@@ -84,8 +85,8 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'unsafe=&quot;value&quot;', $html );
 	}
 
-	public function testProvidesAProviderFallbackAndUsesThePluginTextDomain(): void {
-		$html = $this->renderView( array() );
+	public function test_provides_aprovider_fallback_and_uses_the_plugin_text_domain(): void {
+		$html = $this->render_view( array() );
 
 		self::assertStringContainsString( 'Provider settings will appear here when an integration is available.', $html );
 
@@ -101,8 +102,8 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'webhook_profiles', $source );
 	}
 
-	public function testRendersProtectedOneClickSetupAndEscapedManualFallback(): void {
-		$html = $this->renderView(
+	public function test_renders_protected_one_click_setup_and_escaped_manual_fallback(): void {
+		$html = $this->render_view(
 			null,
 			array(
 				'status'              => 'setup_available',
@@ -137,8 +138,8 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringNotContainsString( '<canary>', $html );
 	}
 
-	public function testConfiguredStorageRendersStatusPathAndSourceWithoutSetupControls(): void {
-		$html = $this->renderView(
+	public function test_configured_storage_renders_status_path_and_source_without_setup_controls(): void {
+		$html = $this->render_view(
 			null,
 			array(
 				'status'              => 'path_configured',
@@ -166,9 +167,9 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Manual setup instructions', $html );
 	}
 
-	public function testRendersAPathlessTokenBoundStorageAdoptionForm(): void {
+	public function test_renders_apathless_token_bound_storage_adoption_form(): void {
 		$token = str_repeat( 'b', 64 );
-		$html  = $this->renderView(
+		$html  = $this->render_view(
 			null,
 			array(
 				'status'              => 'storage_needs_attention',
@@ -200,8 +201,8 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'current registered provider credential shape', $html );
 	}
 
-	public function testRendersAnExplicitTypedOrphanedKeyResetWithPermanentLossWarning(): void {
-		$html = $this->renderView(
+	public function test_renders_an_explicit_typed_orphaned_key_reset_with_permanent_loss_warning(): void {
+		$html = $this->render_view(
 			null,
 			array(
 				'status'              => 'storage_needs_attention',
@@ -241,8 +242,8 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'adopt-secure-storage', $html );
 	}
 
-	public function testRendersTheSameRestoreFirstEscapeHatchWhenTheDatabaseKeyIsMissing(): void {
-		$html = $this->renderView(
+	public function test_renders_the_same_restore_first_escape_hatch_when_the_database_key_is_missing(): void {
+		$html = $this->render_view(
 			null,
 			array(
 				'status'              => 'storage_needs_attention',
@@ -274,8 +275,8 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'Reset credential storage', $html );
 	}
 
-	public function testHealthyAndBrokenStorageUseTruthfulStatuses(): void {
-		$healthy = $this->renderStorageStatus(
+	public function test_healthy_and_broken_storage_use_truthful_statuses(): void {
+		$healthy = $this->render_storage_status(
 			'storage_healthy',
 			'manual',
 			'Encrypted secrets storage is configured and authenticated.'
@@ -304,7 +305,7 @@ final class OnboardingViewTest extends TestCase {
 		self::assertLessThan( $storage, $connect );
 		self::assertLessThan( $storage, $move );
 
-		$broken = $this->renderStorageStatus( 'storage_needs_attention', 'manual' );
+		$broken = $this->render_storage_status( 'storage_needs_attention', 'manual' );
 		self::assertStringContainsString( '>Storage needs attention</span>', $broken );
 		self::assertStringContainsString( 'class="ran-booster-onboarding__storage-details" open', $broken );
 		self::assertStringNotContainsString( 'WordPress stores the encryption key separately.', $broken );
@@ -318,8 +319,8 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( '<strong>Diagnostic code:</strong> <code>storage_needs_attention</code>', $broken );
 	}
 
-	public function testManualRequiredStorageOpensItsInstructions(): void {
-		$html = $this->renderView(
+	public function test_manual_required_storage_opens_its_instructions(): void {
+		$html = $this->render_view(
 			null,
 			array(
 				'status'              => 'manual_required',
@@ -345,8 +346,8 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'Manual setup instructions', $html );
 	}
 
-	public function testLocationUnavailableListsEscapedDiscardedCandidatesAndReasons(): void {
-		$html = $this->renderView(
+	public function test_location_unavailable_lists_escaped_discarded_candidates_and_reasons(): void {
+		$html = $this->render_view(
 			null,
 			array(
 				'status'               => 'manual_required',
@@ -379,8 +380,8 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringNotContainsString( '/var/www/<account>', $html );
 	}
 
-	public function testUnsafeConfiguredPathShowsRejectedDirectoryFileAndOverrideInstructions(): void {
-		$html = $this->renderView(
+	public function test_unsafe_configured_path_shows_rejected_directory_file_and_override_instructions(): void {
+		$html = $this->render_view(
 			null,
 			array(
 				'status'              => 'storage_needs_attention',
@@ -407,12 +408,12 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-storage-reason="configured_path_unsafe"', $html );
 	}
 
-	private function renderStorageStatus(
+	private function render_storage_status(
 		string $status,
 		string $source,
 		string $message = 'Pathless storage status.'
 	): string {
-		return $this->renderView(
+		return $this->render_view(
 			null,
 			array(
 				'status'              => $status,
@@ -429,14 +430,14 @@ final class OnboardingViewTest extends TestCase {
 		);
 	}
 
-	public function testStoragePanelHasItsOwnStyles(): void {
+	public function test_storage_panel_has_its_own_styles(): void {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local asset contract inspection.
 		$css = (string) file_get_contents( dirname( __DIR__, 2 ) . '/assets/ran-booster-onboarding.css' );
 
 		self::assertStringContainsString( '.ran-booster-onboarding__storage {', $css );
 	}
 
-	public function testMigrationPromptIsBoundedAndFollowsThePrimarySetup(): void {
+	public function test_migration_prompt_is_bounded_and_follows_the_primary_setup(): void {
 		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_overview_render_migration_prompt'] = array(
 			static function (): void {
 				echo '<section class="fixture-migration">Migration available</section>';
@@ -444,7 +445,7 @@ final class OnboardingViewTest extends TestCase {
 		);
 
 		try {
-			$html = $this->renderView();
+			$html = $this->render_view();
 		} finally {
 			unset( $GLOBALS['ran_booster_admin_view_actions']['ran_booster_overview_render_migration_prompt'] );
 		}
@@ -462,19 +463,19 @@ final class OnboardingViewTest extends TestCase {
 			},
 		);
 		try {
-			self::assertStringNotContainsString( 'overview-secret-canary', $this->renderView() );
+			self::assertStringNotContainsString( 'overview-secret-canary', $this->render_view() );
 		} finally {
 			unset( $GLOBALS['ran_booster_admin_view_actions']['ran_booster_overview_render_migration_prompt'] );
 		}
 	}
 
 	/**
-	 * @param list<array{label: string, url: string}>|null $providerLinks Provider settings links.
-	 * @param array<string, mixed>|null $secretsStorage Protected storage setup payload.
+	 * @param list<array{label: string, url: string}>|null $provider_links Provider settings links.
+	 * @param array<string, mixed>|null $secrets_storage Protected storage setup payload.
 	 */
-	private function renderView( ?array $providerLinks = null, ?array $secretsStorage = null ): string {
+	private function render_view( ?array $provider_links = null, ?array $secrets_storage = null ): string {
 		$onboarding = array(
-			'provider_links'      => $providerLinks ?? array(
+			'provider_links'      => $provider_links ?? array(
 				array(
 					'label' => 'GitHub',
 					'url'   => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh',
@@ -490,8 +491,8 @@ final class OnboardingViewTest extends TestCase {
 			'documentation_url'   => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=documentation',
 			'troubleshooting_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting',
 		);
-		if ( null !== $secretsStorage ) {
-			$onboarding['secrets_storage'] = $secretsStorage;
+		if ( null !== $secrets_storage ) {
+			$onboarding['secrets_storage'] = $secrets_storage;
 		}
 
 		ob_start();

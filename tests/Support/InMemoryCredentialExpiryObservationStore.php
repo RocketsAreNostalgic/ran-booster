@@ -11,8 +11,8 @@ final class InMemoryCredentialExpiryObservationStore extends CredentialExpiryObs
 	/** @var array<string, mixed> */
 	public array $document = array();
 
-	public bool $failWrites   = false;
-	public bool $lastAutoload = true;
+	public bool $fail_writes   = false;
+	public bool $last_autoload = true;
 
 	/** @return array<string, mixed> */
 	protected function read_option(): array {
@@ -21,8 +21,8 @@ final class InMemoryCredentialExpiryObservationStore extends CredentialExpiryObs
 
 	/** @param array<string, mixed> $document */
 	protected function write_option( array $document ): bool {
-		$this->lastAutoload = false;
-		if ( $this->failWrites ) {
+		$this->last_autoload = false;
+		if ( $this->fail_writes ) {
 			return false;
 		}
 

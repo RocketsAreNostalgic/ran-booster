@@ -7,9 +7,9 @@ namespace RAN\Admin\ReleaseManagement;
 /** @internal Fixed Core presentation for optional provider release workflows. */
 final class ReleaseWorkflowDisplay {
 	/** @param array{result_view:?array<string,mixed>,url:string} $projection */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names remain deferred to their connected caller cohort under #167.
-	public function packageAutomation( array $projection ): string {
-		$result = is_array( $projection['result_view'] ?? null ) ? $this->resultNotice( $projection['result_view'] ) : '';
+
+	public function package_automation( array $projection ): string {
+		$result = is_array( $projection['result_view'] ?? null ) ? $this->result_notice( $projection['result_view'] ) : '';
 		$url    = is_string( $projection['url'] ?? null ) ? $projection['url'] : '';
 
 		return $result . ( '' === $url
@@ -18,8 +18,8 @@ final class ReleaseWorkflowDisplay {
 	}
 
 	/** @param array<string,mixed> $projection */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names remain deferred to their connected caller cohort under #167.
-	public function repositorySection( array $projection ): string {
+
+	public function repository_section( array $projection ): string {
 		$settings_url = is_string( $projection['settings_url'] ?? null ) ? $projection['settings_url'] : '';
 		$html         = '<section class="ran-booster-settings-section ran-booster-repository-release-section" aria-labelledby="ran-booster-repository-release-heading">'
 			. '<header class="ran-booster-settings-section__header ran-booster-repository-release-section__header">'
@@ -66,7 +66,7 @@ final class ReleaseWorkflowDisplay {
 			$notice = '';
 			if ( true === ( $projection['automation_notice'] ?? false ) ) {
 				if ( true === ( $projection['automation_unavailable'] ?? false ) ) {
-					$notice = $this->stateNotice( $view );
+					$notice = $this->state_notice( $view );
 				} else {
 					$notice       = '<div class="notice ' . esc_attr( (string) ( $state['notice_tone'] ?? '' ) ) . ' inline"><p>'
 						. esc_html( (string) ( $state['message'] ?? '' ) ) . '</p>';
@@ -78,7 +78,7 @@ final class ReleaseWorkflowDisplay {
 					$notice .= '</div>';
 				}
 			}
-			$result_notice = true === ( $projection['show_result_notice'] ?? false ) ? $this->resultNotice( $view ) : '';
+			$result_notice = true === ( $projection['show_result_notice'] ?? false ) ? $this->result_notice( $view ) : '';
 			$html         .= '<section class="ran-booster-readiness-panel ran-booster-repository-release-automation" aria-labelledby="ran-booster-repository-release-automation-heading">'
 				. '<header class="ran-booster-readiness-panel__top ran-booster-repository-release-automation__header"><div><div class="ran-booster-release-automation-heading">'
 				. '<h4 id="ran-booster-repository-release-automation-heading">' . esc_html__( 'Release workflow', 'ran-booster' ) . '</h4>'
@@ -151,13 +151,12 @@ final class ReleaseWorkflowDisplay {
 		return $html . '</ul></div></section>';
 	}
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function workflow( array $view, bool $includeResultNotice = true ): string {
+
+	public function workflow( array $view, bool $include_result_notice = true ): string {
 		$model = $this->workflow_model( $view );
 		$html  = '<div class="ran-booster-release-workflow">';
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( $includeResultNotice ) {
+		if ( $include_result_notice ) {
 			$html .= '<div class="ran-booster-release-workflow__notices">' . $model['notice'] . '</div>';
 		}
 		$html .= '<div class="ran-booster-release-workflow__body">';
@@ -200,7 +199,7 @@ final class ReleaseWorkflowDisplay {
 		}
 
 		return array(
-			'notice'       => $this->stateNotice( $view ),
+			'notice'       => $this->state_notice( $view ),
 			'inspect_form' => $this->form( is_array( $forms['inspect'] ?? null ) ? $forms['inspect'] : array() ),
 			'detail'       => $detail,
 		);
@@ -212,19 +211,19 @@ final class ReleaseWorkflowDisplay {
 	}
 
 	/** Render the one state-specific notice for the stable workflow shell. */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names remain deferred to their connected caller cohort under #167.
-	public function stateNotice( array $view ): string {
+
+	public function state_notice( array $view ): string {
 		$unavailable = true === ( $view['unavailable'] ?? false );
 		$reason      = is_string( $view['unavailable_reason'] ?? null ) ? $view['unavailable_reason'] : '';
 		if ( $unavailable && '' !== $reason ) {
 			return '<div class="notice notice-warning inline"><p>' . esc_html( $reason ) . '</p></div>';
 		}
 
-		return $this->resultNotice( $view );
+		return $this->result_notice( $view );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names remain deferred to their connected caller cohort under #167.
-	public function resultNotice( array $view ): string {
+
+	public function result_notice( array $view ): string {
 		$code                 = is_string( $view['result_code'] ?? null ) ? $view['result_code'] : '';
 		$successful           = true === ( $view['result_successful'] ?? false );
 		$stage                = is_string( $view['failure_stage'] ?? null ) ? $view['failure_stage'] : '';
@@ -264,8 +263,8 @@ final class ReleaseWorkflowDisplay {
 	}
 
 	/** Mark an already-persisted result so the client can consume its signed PRG query. */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names remain deferred to their connected caller cohort under #167.
-	public function resultMarker( array $view ): string {
+
+	public function result_marker( array $view ): string {
 		$code = is_string( $view['result_code'] ?? null ) ? $view['result_code'] : '';
 
 		return str_starts_with( $code, 'workflow_' )

@@ -19,9 +19,9 @@ interface RepositoryReleaseWorkflowManagementV3 extends ProviderCapability {
 
 	public function workflow_preview( RepositoryReleaseWorkflowTarget $target, string $key ): ?RepositoryReleaseWorkflowPreview;
 
-	public function workflow_inspect( RepositoryReleaseWorkflowTarget $target, string $channel, RepositoryReleaseWorkflowPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult;
+	public function workflow_inspect( RepositoryReleaseWorkflowTarget $target, string $channel, RepositoryReleaseWorkflowPreflight $preflight, ?string $credential_id ): RepositoryReleaseWorkflowResult;
 
-	public function workflow_setup( RepositoryReleaseWorkflowTarget $target, string $key, string $confirmation, RepositoryReleaseWorkflowPreflight $preflight, ?string $credentialId ): RepositoryReleaseWorkflowResult;
+	public function workflow_setup( RepositoryReleaseWorkflowTarget $target, string $key, string $confirmation, RepositoryReleaseWorkflowPreflight $preflight, ?string $credential_id ): RepositoryReleaseWorkflowResult;
 
-	public function workflow_outcome( RepositoryReleaseWorkflowTarget $target, ?string $credentialId ): RepositoryReleaseWorkflowResult;
+	public function workflow_outcome( RepositoryReleaseWorkflowTarget $target, ?string $credential_id ): RepositoryReleaseWorkflowResult;
 }

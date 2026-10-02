@@ -14,12 +14,12 @@ interface ProviderCredentialStore extends ProviderWebhookProfileReader {
 	 *
 	 * @return array<string, array<string, mixed>>
 	 */
-	public function credentialProfiles(): array;
+	public function credential_profiles(): array;
 
 	/**
 	 * Return one secret-bearing credential, or the provider default when ID is null.
 	 *
 	 * @return array<string, mixed>|null
 	 */
-	public function credentialMaterial( ?string $id = null ): ?array;
+	public function credential_material( ?string $id = null ): ?array;
 }

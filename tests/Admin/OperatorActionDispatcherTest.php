@@ -41,8 +41,9 @@ final class OperatorActionDispatcherTest extends TestCase {
 
 	private OperatorDispatcherCoordinator $coordinator;
 	/** @var list<string> */
-	private array $captureDirectories = array();
+	private array $capture_directories = array();
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		require_once dirname( __DIR__ ) . '/Support/ProviderProfileAdminControllerWordPressFunctions.php';
 		$_POST                     = array();
@@ -54,9 +55,10 @@ final class OperatorActionDispatcherTest extends TestCase {
 		$this->coordinator                             = new OperatorDispatcherCoordinator();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_POST = array();
-		foreach ( $this->captureDirectories as $directory ) {
+		foreach ( $this->capture_directories as $directory ) {
 			foreach ( array( $directory . '/ran-booster-debug.php', $directory . '/ran-booster-debug.php.lock' ) as $path ) {
 				if ( is_file( $path ) || is_link( $path ) ) {
 					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable focused fixture cleanup.
@@ -71,20 +73,20 @@ final class OperatorActionDispatcherTest extends TestCase {
 		unset( $_SERVER['REQUEST_METHOD'], $_SERVER['HTTP_HX_REQUEST'], $GLOBALS['ran_booster_test_capability_checks'], $GLOBALS['ran_booster_test_nonce_checks'], $GLOBALS['ran_booster_test_capabilities'], $GLOBALS['ran_booster_test_nonce_valid'] );
 	}
 
-	public function testAdministratorCanStartStopAndDeleteDebugCaptureWithOneProtectedAction(): void {
+	public function test_administrator_can_start_stop_and_delete_debug_capture_with_one_protected_action(): void {
 		$capture = $this->capture();
 
-		$startRedirect = $this->dispatchCaptureOperation( $capture, 'start' );
+		$start_redirect = $this->dispatch_capture_operation( $capture, 'start' );
 		self::assertSame( 'active', $capture->snapshot()['state'] );
-		self::assertStringContainsString( 'panel=debug-capture', $startRedirect );
+		self::assertStringContainsString( 'panel=debug-capture', $start_redirect );
 
-		$stopRedirect = $this->dispatchCaptureOperation( $capture, 'stop' );
+		$stop_redirect = $this->dispatch_capture_operation( $capture, 'stop' );
 		self::assertSame( 'retained', $capture->snapshot()['state'] );
-		self::assertSame( $startRedirect, $stopRedirect );
+		self::assertSame( $start_redirect, $stop_redirect );
 
-		$deleteRedirect = $this->dispatchCaptureOperation( $capture, 'delete' );
+		$delete_redirect = $this->dispatch_capture_operation( $capture, 'delete' );
 		self::assertSame( 'inactive', $capture->snapshot()['state'] );
-		self::assertSame( $startRedirect, $deleteRedirect );
+		self::assertSame( $start_redirect, $delete_redirect );
 		self::assertSame(
 			array_fill( 0, 3, 'manage_options' ),
 			$GLOBALS['ran_booster_test_capability_checks']
@@ -95,7 +97,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		);
 	}
 
-	public function testDebugCaptureRejectsInvalidOperationsAfterCapabilityAndNonceChecks(): void {
+	public function test_debug_capture_rejects_invalid_operations_after_capability_and_nonce_checks(): void {
 		$capture = $this->capture();
 
 		$_POST['ran_booster'] = array(
@@ -110,7 +112,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		self::assertSame( array( 'ran-booster-manage-debug-capture' ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
-	public function testDebugCaptureRequiresPostCapabilityAndNonce(): void {
+	public function test_debug_capture_requires_post_capability_and_nonce(): void {
 		$capture = $this->capture();
 
 		$_POST['ran_booster'] = array(
@@ -142,7 +144,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		}
 	}
 
-	public function testDebugCaptureFilesystemFailureUsesAGenericAdminError(): void {
+	public function test_debug_capture_filesystem_failure_uses_ageneric_admin_error(): void {
 		$capture   = new TemporaryDebugCapture( '/missing/private-canary/secrets.json' );
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
@@ -164,7 +166,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		$this->dispatcher( $dashboard, $capture )->dispatch_post_requests();
 	}
 
-	public function testHtmxDebugCaptureStartReturnsARegionAndSuccessEventWithoutARedirect(): void {
+	public function test_htmx_debug_capture_start_returns_aregion_and_success_event_without_aredirect(): void {
 		$capture   = $this->capture();
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::never() )->method( 'add_failure_message' );
@@ -175,17 +177,17 @@ final class OperatorActionDispatcherTest extends TestCase {
 		);
 
 		try {
-			$this->htmxDispatcher( $dashboard, $capture )->dispatch_post_requests();
+			$this->htmx_dispatcher( $dashboard, $capture )->dispatch_post_requests();
 			self::fail( 'An HTMX capture response must end after rendering its bounded region.' );
 		} catch ( HtmxDebugCaptureResponse $response ) {
 			self::assertSame( 'active', $capture->snapshot()['state'] );
-			self::assertSame( 'Temporary logging capture started.', $response->toastMessage );
+			self::assertSame( 'Temporary logging capture started.', $response->toast_message );
 			self::assertNull( $response->error );
 			self::assertSame( 200, $response->status );
 		}
 	}
 
-	public function testHtmxDebugCaptureStopReturnsARegionAndSuccessEventWithoutARedirect(): void {
+	public function test_htmx_debug_capture_stop_returns_aregion_and_success_event_without_aredirect(): void {
 		$capture = $this->capture();
 		$capture->start();
 
@@ -198,17 +200,17 @@ final class OperatorActionDispatcherTest extends TestCase {
 		);
 
 		try {
-			$this->htmxDispatcher( $dashboard, $capture )->dispatch_post_requests();
+			$this->htmx_dispatcher( $dashboard, $capture )->dispatch_post_requests();
 			self::fail( 'An HTMX capture response must end after rendering its bounded region.' );
 		} catch ( HtmxDebugCaptureResponse $response ) {
 			self::assertSame( 'retained', $capture->snapshot()['state'] );
-			self::assertSame( 'Temporary logging capture stopped.', $response->toastMessage );
+			self::assertSame( 'Temporary logging capture stopped.', $response->toast_message );
 			self::assertNull( $response->error );
 			self::assertSame( 200, $response->status );
 		}
 	}
 
-	public function testHtmxDebugCaptureFailureKeepsARedactedLocalErrorWithoutASuccessEvent(): void {
+	public function test_htmx_debug_capture_failure_keeps_aredacted_local_error_without_asuccess_event(): void {
 		$capture   = new TemporaryDebugCapture( '/missing/private-canary/secrets.json' );
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::never() )->method( 'add_failure_message' );
@@ -219,17 +221,17 @@ final class OperatorActionDispatcherTest extends TestCase {
 		);
 
 		try {
-			$this->htmxDispatcher( $dashboard, $capture )->dispatch_post_requests();
+			$this->htmx_dispatcher( $dashboard, $capture )->dispatch_post_requests();
 			self::fail( 'An HTMX capture failure must end after rendering its bounded region.' );
 		} catch ( HtmxDebugCaptureResponse $response ) {
-			self::assertNull( $response->toastMessage );
+			self::assertNull( $response->toast_message );
 			self::assertSame( 'Booster could not update the temporary logging capture. No deployment was interrupted.', $response->error );
 			self::assertStringNotContainsString( 'private-canary', $response->error );
 			self::assertSame( 500, $response->status );
 		}
 	}
 
-	public function testHtmxDiagnosticsRefreshesItsPanelAndOnlyToastsAnAllPassResult(): void {
+	public function test_htmx_diagnostics_refreshes_its_panel_and_only_toasts_an_all_pass_result(): void {
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
 			->method( 'post_run_troubleshooting' )
@@ -248,14 +250,14 @@ final class OperatorActionDispatcherTest extends TestCase {
 		);
 
 		try {
-			$this->htmxDispatcher( $dashboard, $this->capture() )->dispatch_post_requests();
+			$this->htmx_dispatcher( $dashboard, $this->capture() )->dispatch_post_requests();
 			self::fail( 'An HTMX diagnostics response must end after rendering its bounded region.' );
 		} catch ( HtmxDiagnosticsResponse $response ) {
 			self::assertTrue( $response->succeeded );
 		}
 	}
 
-	public function testHtmxDiagnosticsKeepsAPartialResultPersistentWithoutASuccessEvent(): void {
+	public function test_htmx_diagnostics_keeps_apartial_result_persistent_without_asuccess_event(): void {
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
 			->method( 'post_run_troubleshooting' )
@@ -274,14 +276,14 @@ final class OperatorActionDispatcherTest extends TestCase {
 		);
 
 		try {
-			$this->htmxDispatcher( $dashboard, $this->capture() )->dispatch_post_requests();
+			$this->htmx_dispatcher( $dashboard, $this->capture() )->dispatch_post_requests();
 			self::fail( 'An HTMX diagnostics response must end after rendering its bounded region.' );
 		} catch ( HtmxDiagnosticsResponse $response ) {
 			self::assertFalse( $response->succeeded );
 		}
 	}
 
-	public function testAdministratorCanRequestTheOneShotRunnerWithActionNonce(): void {
+	public function test_administrator_can_request_the_one_shot_runner_with_action_nonce(): void {
 		$_POST['ran_booster'] = array( 'action' => 'request-deployment-runner' );
 		$dashboard            = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )->method( 'add_message' )->with( 'The deployment runner was requested.' );
@@ -293,7 +295,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		self::assertSame( array( 'ran-booster-request-deployment-runner' ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
-	public function testInvalidNonceBlocksRunnerRequest(): void {
+	public function test_invalid_nonce_blocks_runner_request(): void {
 		$_POST['ran_booster']                    = array( 'action' => 'request-deployment-runner' );
 		$GLOBALS['ran_booster_test_nonce_valid'] = false;
 
@@ -305,7 +307,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		}
 	}
 
-	public function testGetCannotRequestRunner(): void {
+	public function test_get_cannot_request_runner(): void {
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$_POST['ran_booster']      = array( 'action' => 'request-deployment-runner' );
 
@@ -315,7 +317,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
-	public function testMissingPackageUpdateCapabilityBlocksRunnerRequest(): void {
+	public function test_missing_package_update_capability_blocks_runner_request(): void {
 		$_POST['ran_booster']                                      = array( 'action' => 'request-deployment-runner' );
 		$GLOBALS['ran_booster_test_capabilities']['update_themes'] = false;
 		$dashboard = $this->createMock( Dashboard::class );
@@ -326,7 +328,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		self::assertSame( 0, $this->coordinator->requests );
 	}
 
-	public function testAdministratorCanResolveTheExactNeedsAttentionAttemptWithTheStoredPackageCapability(): void {
+	public function test_administrator_can_resolve_the_exact_needs_attention_attempt_with_the_stored_package_capability(): void {
 		$database         = new AttemptRepositoryDatabase();
 		$request          = new DeploymentRequest(
 			'owner/example',
@@ -366,7 +368,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 			$database,
 			'wp_ran_booster_deployment_attempts',
 			static fn (): \DateTimeImmutable => new \DateTimeImmutable( '2026-07-26 09:02:00 UTC' ),
-			databaseLifecycle: $this->createStub( Database::class )
+			database_lifecycle: $this->createStub( Database::class )
 		);
 		self::assertTrue( DeploymentAttempt::from_database( $database->rows[0] )->requires_operator_resolution() );
 		$_POST['ran_booster'] = array(
@@ -390,14 +392,14 @@ final class OperatorActionDispatcherTest extends TestCase {
 		self::assertNotNull( $database->rows[0]['resolved_at'] );
 	}
 
-	public function testDispatcherReconcilesOnlyTheConfirmedExactRunningAttemptThroughTheCoordinator(): void {
+	public function test_dispatcher_reconciles_only_the_confirmed_exact_running_attempt_through_the_coordinator(): void {
 		$database       = new AttemptRepositoryDatabase();
-		$database->rows = array( $this->runningAttemptRow( 12, str_repeat( 'b', 32 ) ) );
+		$database->rows = array( $this->running_attempt_row( 12, str_repeat( 'b', 32 ) ) );
 		$attempts       = new DeploymentAttemptRepository(
 			$database,
 			'wp_ran_booster_deployment_attempts',
 			static fn (): \DateTimeImmutable => new \DateTimeImmutable( '2026-07-26 09:05:00 UTC' ),
-			databaseLifecycle: $this->createStub( Database::class )
+			database_lifecycle: $this->createStub( Database::class )
 		);
 		$coordinator    = new DeploymentCoordinator(
 			$attempts,
@@ -419,17 +421,17 @@ final class OperatorActionDispatcherTest extends TestCase {
 
 		$_POST['ran_booster'] = $request;
 		$this->dispatcher( $dashboard, attempts: $attempts, coordinator: $coordinator )->dispatch_post_requests();
-		self::assertSame( 'running', $attempts->findExact( 12 )?->get_state()->value );
+		self::assertSame( 'running', $attempts->find_exact( 12 )?->get_state()->value );
 
 		$_POST['ran_booster']                   = $request + array( 'confirm_stopped' => '1' );
 		$_POST['ran_booster']['correlation_id'] = str_repeat( 'c', 32 );
 		$this->dispatcher( $dashboard, attempts: $attempts, coordinator: $coordinator )->dispatch_post_requests();
-		self::assertSame( 'running', $attempts->findExact( 12 )?->get_state()->value );
+		self::assertSame( 'running', $attempts->find_exact( 12 )?->get_state()->value );
 
 		$_POST['ran_booster'] = $request + array( 'confirm_stopped' => '1' );
 		$this->dispatcher( $dashboard, attempts: $attempts, coordinator: $coordinator )->dispatch_post_requests();
 
-		$fresh = $attempts->findExact( 12 );
+		$fresh = $attempts->find_exact( 12 );
 		self::assertSame( str_repeat( 'b', 32 ), $fresh?->get_correlation_id() );
 		self::assertSame( 'failed', $fresh?->get_state()->value );
 		self::assertSame( DeploymentOutcome::CODE_WORKER_STOPPED, $fresh?->get_outcome()?->get_code() );
@@ -463,17 +465,17 @@ final class OperatorActionDispatcherTest extends TestCase {
 			null,
 			null,
 			$capture,
-			deploymentAttempts: $attempts
+			deployment_attempts: $attempts
 		);
 	}
 
 	/** @return array<string, mixed> */
-	private function runningAttemptRow( int $id, string $correlationId ): array {
+	private function running_attempt_row( int $id, string $correlation_id ): array {
 		$request = new DeploymentRequest( 'owner/example', 'profile_123', true, 'main', 'example', null, DeploymentPolicy::MANUAL, null );
 
 		return array(
 			'id'                      => $id,
-			'correlation_id'          => $correlationId,
+			'correlation_id'          => $correlation_id,
 			'source'                  => 'manual',
 			'operation'               => 'update',
 			'package_type'            => 'plugin',
@@ -495,7 +497,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 		);
 	}
 
-	private function htmxDispatcher( Dashboard $dashboard, TemporaryDebugCapture $capture ): HtmxDebugCaptureTestDispatcher {
+	private function htmx_dispatcher( Dashboard $dashboard, TemporaryDebugCapture $capture ): HtmxDebugCaptureTestDispatcher {
 		$providers = new ProviderRegistry();
 		$plugins   = new class() extends PluginRepository { public function __construct() {} };
 		$themes    = new class() extends ThemeRepository { public function __construct() {} };
@@ -520,12 +522,12 @@ final class OperatorActionDispatcherTest extends TestCase {
 		$directory = sys_get_temp_dir() . '/ran-booster-dispatcher-capture-' . bin2hex( random_bytes( 6 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable focused fixture setup.
 		self::assertTrue( mkdir( $directory, 0700 ) );
-		$this->captureDirectories[] = $directory;
+		$this->capture_directories[] = $directory;
 
 		return new TemporaryDebugCapture( $directory . '/secrets.json' );
 	}
 
-	private function dispatchCaptureOperation( TemporaryDebugCapture $capture, string $operation ): string {
+	private function dispatch_capture_operation( TemporaryDebugCapture $capture, string $operation ): string {
 		$_POST['ran_booster'] = array(
 			'action'    => 'manage-debug-capture',
 			'operation' => $operation,
@@ -556,7 +558,7 @@ class DebugCaptureTestDispatcher extends Dispatcher {
 
 final class HtmxDebugCaptureResponse extends \RuntimeException {
 	public function __construct(
-		public readonly ?string $toastMessage,
+		public readonly ?string $toast_message,
 		public readonly ?string $error,
 		public readonly int $status
 	) {
@@ -585,7 +587,7 @@ final class HtmxDebugCaptureTestDispatcher extends DebugCaptureTestDispatcher {
 final class OperatorDispatcherCoordinator extends DeploymentCoordinator {
 	public int $requests = 0;
 	public function __construct() {}
-	public function requestRunner(): string {
+	public function request_runner(): string {
 		++$this->requests;
 
 		return 'scheduled';

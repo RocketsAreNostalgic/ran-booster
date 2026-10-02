@@ -108,10 +108,10 @@ if ( ! function_exists( 'wp_unslash' ) ) {
 }
 
 if ( ! function_exists( 'wp_strip_all_tags' ) ) {
-	function wp_strip_all_tags( mixed $value, bool $removeBreaks = false ): string {
+	function wp_strip_all_tags( mixed $value, bool $remove_breaks = false ): string {
 		$value = (string) preg_replace( '/<[^>]*>/', '', (string) $value );
 
-		return $removeBreaks ? trim( (string) preg_replace( '/[\r\n\t ]+/', ' ', $value ) ) : $value;
+		return $remove_breaks ? trim( (string) preg_replace( '/[\r\n\t ]+/', ' ', $value ) ) : $value;
 	}
 }
 

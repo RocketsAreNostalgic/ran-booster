@@ -17,7 +17,7 @@ final class InMemorySiteKeyStore extends SiteKeyStore {
 	public function __construct( private string $identity ) {
 	}
 
-	public function load( bool $repairAutoload = true ): ?string {
+	public function load( bool $repair_autoload = true ): ?string {
 		return self::$keys[ $this->identity ] ?? null;
 	}
 

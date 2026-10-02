@@ -34,6 +34,7 @@ use Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 	private HtmxPublicLookupTestController $controller;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$_POST                     = array();
 		$_SERVER['REQUEST_METHOD'] = 'POST';
@@ -43,6 +44,7 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 		$GLOBALS['ran_booster_test_nonce_valid']       = true;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_POST = array();
 		unset(
@@ -55,7 +57,7 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 		);
 	}
 
-	public function testOrdinaryPostKeepsTheExistingDashboardNoticeFlow(): void {
+	public function test_ordinary_post_keeps_the_existing_dashboard_notice_flow(): void {
 		$store     = new InMemoryPublicRepositoryLookupProfileStore();
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
@@ -77,7 +79,7 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 		self::assertSame( array( 'ran-booster-save-public-lookup-profile' ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
-	public function testHtmxPostReturnsTheNamedRegionAndSafeSuccessMessage(): void {
+	public function test_htmx_post_returns_the_named_region_and_safe_success_message(): void {
 		$store     = new InMemoryPublicRepositoryLookupProfileStore();
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::never() )->method( 'add_message' );
@@ -94,13 +96,13 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 			self::fail( 'An HTMX response must end the request after rendering its bounded fragment.' );
 		} catch ( HtmxPublicLookupResponse $response ) {
 			self::assertSame( 'fixture', $response->provider );
-			self::assertSame( 'Public repository lookup will use anonymous access.', $response->toastMessage );
+			self::assertSame( 'Public repository lookup will use anonymous access.', $response->toast_message );
 			self::assertNull( $response->error );
 			self::assertSame( 200, $response->status );
 		}
 	}
 
-	public function testHtmxValidationFailureIsScopedAndDoesNotClaimSuccess(): void {
+	public function test_htmx_validation_failure_is_scoped_and_does_not_claim_success(): void {
 		$store     = new InMemoryPublicRepositoryLookupProfileStore();
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
@@ -129,7 +131,7 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 			self::fail( 'An HTMX validation failure must return the local error fragment.' );
 		} catch ( HtmxPublicLookupResponse $response ) {
 			self::assertSame( 'fixture', $response->provider );
-			self::assertNull( $response->toastMessage );
+			self::assertNull( $response->toast_message );
 			self::assertSame( 'Choose Anonymous or a saved repository credential.', $response->error );
 			self::assertSame( 422, $response->status );
 		}
@@ -162,8 +164,8 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 			new ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
 			new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: $plugins, themes: $themes, providers: $providers ),
 			$lock,
-			publicLookupProfiles: $store,
-			providerProfileInteraction: $this->controller
+			public_lookup_profiles: $store,
+			provider_profile_interaction: $this->controller
 		);
 	}
 
@@ -192,7 +194,7 @@ final class HtmxPublicLookupResponse extends \RuntimeException {
 
 	public function __construct(
 		public readonly string $provider,
-		public readonly ?string $toastMessage,
+		public readonly ?string $toast_message,
 		public readonly ?string $error,
 		public readonly int $status
 	) {

@@ -29,39 +29,39 @@ final readonly class WebhookProcessor {
 
 	/** @param callable(): array{body: string, headers: array<string, string|list<string>>} $request */
 	public function handle( string $provider, callable $request ): WebhookResponse {
-		if ( ! RuntimeSupport::current()->allowsManagedOperations() ) {
+		if ( ! RuntimeSupport::current()->allows_managed_operations() ) {
 			return $this->response( 503, 'Webhook processing is unavailable on WordPress Multisite.' );
 		}
 
 		try {
 			$provider_code = ProviderCode::parse( $provider );
-			$normalizer    = $this->providers->requireCapability( $provider_code, WebhookNormalizer::class );
+			$normalizer    = $this->providers->require_capability( $provider_code, WebhookNormalizer::class );
 			$policy        = $normalizer->get_webhook_policy();
 			$input         = $request();
 			$webhook       = new WebhookRequest( $provider_code, $input['body'], $input['headers'], $policy->get_retained_headers() );
 			$verification  = $this->verifier->verify( $webhook, $policy );
-			$envelope      = $normalizer->normalize_webhook( $webhook->withVerification( $verification ) );
-			if ( count( $envelope->getEvents() ) > 32 ) {
+			$envelope      = $normalizer->normalize_webhook( $webhook->with_verification( $verification ) );
+			if ( count( $envelope->get_events() ) > 32 ) {
 				throw new WebhookRejected( 400, 'Webhook event fan-out is too large.' );
 			}
 
-			if ( $envelope->isProbe() ) {
+			if ( $envelope->is_probe() ) {
 				return $this->response( 200, 'Webhook verified.' );
 			}
 
-			if ( $envelope->isIgnored() ) {
+			if ( $envelope->is_ignored() ) {
 				return $this->response( 202, 'Webhook event ignored.' );
 			}
 
-			foreach ( $envelope->getEvents() as $event ) {
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Shared PushEvent property retains its provider contract until its coordinated #167 cohort.
-				if ( ! $policy->authorize_webhook( $verification, $event->providerRepositoryId, $event->repository ) ) {
+			foreach ( $envelope->get_events() as $event ) {
+
+				if ( ! $policy->authorize_webhook( $verification, $event->provider_repository_id, $event->repository ) ) {
 					throw new WebhookRejected( 401, 'Webhook authentication failed.' );
 				}
 			}
-			$result = $this->coordinator->acceptWebhook(
-				$envelope->getEvents(),
-				hash( 'sha256', $webhook->getBody() )
+			$result = $this->coordinator->accept_webhook(
+				$envelope->get_events(),
+				hash( 'sha256', $webhook->get_body() )
 			);
 
 			if ( 'conflict' === $result['status'] ) {
@@ -70,7 +70,7 @@ final readonly class WebhookProcessor {
 
 			return $this->response( 202, 'Webhook accepted.', $result );
 		} catch ( WebhookRejected $exception ) {
-			$status = $this->rejection_status( $exception->getStatusCode() );
+			$status = $this->rejection_status( $exception->get_status_code() );
 
 			return $this->response(
 				$status,

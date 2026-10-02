@@ -13,11 +13,11 @@ final readonly class BlueprintExportPackageFailure {
 
 	public function __construct(
 		public string $type,
-		public string $displayName,
+		public string $display_name,
 		public string $reason
 	) {
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true )
-			|| '' === $displayName || strlen( $displayName ) > 191 || 1 !== preg_match( '//u', $displayName ) || preg_match( '/[\x00-\x1F\x7F]/', $displayName )
+			|| '' === $display_name || strlen( $display_name ) > 191 || 1 !== preg_match( '//u', $display_name ) || preg_match( '/[\x00-\x1F\x7F]/', $display_name )
 			|| ! in_array( $reason, array( self::PUBLISHED_RELEASES ), true ) ) {
 			throw new InvalidArgumentException( 'The Blueprint export package failure is invalid.' );
 		}

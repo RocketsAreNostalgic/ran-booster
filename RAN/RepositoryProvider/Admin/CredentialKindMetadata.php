@@ -10,9 +10,9 @@ final readonly class CredentialKindMetadata {
 
 	public string $code;
 	public string $label;
-	public string $secretLabel;
-	public string $secretPlaceholder;
-	public string $shortLabel;
+	public string $secret_label;
+	public string $secret_placeholder;
+	public string $short_label;
 
 	/**
 	 * @var list<CredentialFieldMetadata>
@@ -25,36 +25,36 @@ final readonly class CredentialKindMetadata {
 	public function __construct(
 		string $code,
 		string $label,
-		string $secretLabel,
-		string $secretPlaceholder = '',
+		string $secret_label,
+		string $secret_placeholder = '',
 		array $fields = array(),
-		string $shortLabel = ''
+		string $short_label = ''
 	) {
-		$code              = MetadataRules::identifier( $code );
-		$label             = MetadataRules::required_text( $label, MetadataRules::LABEL_LENGTH );
-		$secretLabel       = MetadataRules::required_text( $secretLabel, MetadataRules::LABEL_LENGTH );
-		$secretPlaceholder = MetadataRules::optional_text( $secretPlaceholder, MetadataRules::DETAIL_LENGTH );
-		$shortLabel        = MetadataRules::optional_text( $shortLabel, MetadataRules::LABEL_LENGTH );
+		$code               = MetadataRules::identifier( $code );
+		$label              = MetadataRules::required_text( $label, MetadataRules::LABEL_LENGTH );
+		$secret_label       = MetadataRules::required_text( $secret_label, MetadataRules::LABEL_LENGTH );
+		$secret_placeholder = MetadataRules::optional_text( $secret_placeholder, MetadataRules::DETAIL_LENGTH );
+		$short_label        = MetadataRules::optional_text( $short_label, MetadataRules::LABEL_LENGTH );
 
-		$indexedFields = array();
+		$indexed_fields = array();
 
 		foreach ( $fields as $field ) {
 			if ( ! $field instanceof CredentialFieldMetadata ) {
 				throw new InvalidArgumentException( 'Credential fields must be credential field metadata.' );
 			}
 
-			if ( isset( $indexedFields[ $field->key ] ) ) {
+			if ( isset( $indexed_fields[ $field->key ] ) ) {
 				throw new InvalidArgumentException( 'Credential field keys must be unique within a credential kind.' );
 			}
 
-			$indexedFields[ $field->key ] = $field;
+			$indexed_fields[ $field->key ] = $field;
 		}
 
-		$this->code              = $code;
-		$this->label             = $label;
-		$this->secretLabel       = $secretLabel;
-		$this->secretPlaceholder = $secretPlaceholder;
-		$this->shortLabel        = '' === $shortLabel ? $label : $shortLabel;
-		$this->fields            = array_values( $indexedFields );
+		$this->code               = $code;
+		$this->label              = $label;
+		$this->secret_label       = $secret_label;
+		$this->secret_placeholder = $secret_placeholder;
+		$this->short_label        = '' === $short_label ? $label : $short_label;
+		$this->fields             = array_values( $indexed_fields );
 	}
 }

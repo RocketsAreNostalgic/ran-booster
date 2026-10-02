@@ -34,8 +34,8 @@ use Tests\RepositoryProvider\Support\InertWebhookPolicy;
 
 final class PackageRepositoryRequestResolverTest extends TestCase {
 
-	#[DataProvider( 'invalidCommandProviders' )]
-	public function testInstallCommandsRequireAnExactProviderCode( array $input ): void {
+	#[DataProvider( 'invalid_command_providers' )]
+	public function test_install_commands_require_an_exact_provider_code( array $input ): void {
 		$this->expectException( \InvalidArgumentException::class );
 
 		PackageOperation::from_input(
@@ -52,19 +52,19 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 	}
 
 	/** @return list<array{array<string, mixed>}> */
-	public static function invalidCommandProviders(): array {
+	public static function invalid_command_providers(): array {
 		return array(
 			array( array() ),
 			array( array( 'provider' => 'GitHub!' ) ),
 		);
 	}
 
-	public function testResolvedMetadataOverridesClientValuesAndScopesTheSelectedCredential(): void {
-		$opaqueLocator = 'workspace/%2Frepository<tag>';
-		$provider      = $this->resolvingProvider(
+	public function test_resolved_metadata_overrides_client_values_and_scopes_the_selected_credential(): void {
+		$opaque_locator = 'workspace/%2Frepository<tag>';
+		$provider       = $this->resolving_provider(
 			new RepositoryDescriptor(
 				ProviderCode::parse( 'bb' ),
-				$opaqueLocator,
+				$opaque_locator,
 				'resolved-repository',
 				'provider-id-42',
 				true,
@@ -72,12 +72,12 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 				'bitbucket-deploy'
 			)
 		);
-		$resolver      = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
+		$resolver       = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
 
 		$result = $resolver->resolve(
 			array(
 				'provider'                            => 'bb',
-				'repository'                          => $opaqueLocator,
+				'repository'                          => $opaque_locator,
 				'provider_repository_id'              => 'forged-id',
 				'provider_repository_identity_source' => 'client',
 				'private'                             => '0',
@@ -89,21 +89,21 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		);
 
 		self::assertSame( 'bb', $result['provider'] );
-		self::assertSame( $opaqueLocator, $result['repository'] );
+		self::assertSame( $opaque_locator, $result['repository'] );
 		self::assertSame( 'provider-id-42', $result['provider_repository_id'] );
 		self::assertSame( 'resolved', $result['provider_repository_identity_source'] );
 		self::assertSame( '1', $result['private'] );
 		self::assertSame( 'bitbucket-deploy', $result['credential_id'] );
 		self::assertSame( 'trunk', $result['branch'] );
 		self::assertInstanceOf( RepositoryLookupRequest::class, $provider->request );
-		self::assertSame( $opaqueLocator, $provider->request->locator );
+		self::assertSame( $opaque_locator, $provider->request->locator );
 		self::assertSame( 'resolved-package', $result['package_slug'] );
 		self::assertSame( 'packages/resolved-package', $result['subdirectory'] );
-		self::assertSame( 'bitbucket-deploy', $provider->request->credentialId );
-		self::assertFalse( $provider->request->publicOnly );
+		self::assertSame( 'bitbucket-deploy', $provider->request->credential_id );
+		self::assertFalse( $provider->request->public_only );
 	}
 
-	public function testInstallCommandDerivesItsSlugFromTheConfiguredSubdirectory(): void {
+	public function test_install_command_derives_its_slug_from_the_configured_subdirectory(): void {
 		$operation = PackageOperation::from_input(
 			'install-plugin',
 			array(
@@ -119,8 +119,8 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		self::assertSame( 'example-plugin', $operation->package_slug );
 	}
 
-	public function testMixedCaseRepositoryNameBecomesOneDeployableInstallationSlug(): void {
-		$provider  = $this->resolvingProvider(
+	public function test_mixed_case_repository_name_becomes_one_deployable_installation_slug(): void {
+		$provider  = $this->resolving_provider(
 			new RepositoryDescriptor(
 				ProviderCode::parse( 'gh' ),
 				'RocketsAreNostalgic/tnyGmaps',
@@ -148,8 +148,8 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		self::assertSame( 'tnygmaps', $operation->package_slug );
 	}
 
-	public function testNestedFixtureInstallUsesTheSameDirectoryWithOrWithoutATrailingSlash(): void {
-		$provider = $this->resolvingProvider(
+	public function test_nested_fixture_install_uses_the_same_directory_with_or_without_atrailing_slash(): void {
+		$provider = $this->resolving_provider(
 			new RepositoryDescriptor( ProviderCode::parse( 'gh' ), 'RocketsAreNostalgic/booster-fixture-plugin', 'booster-fixture-plugin', '1315521150', false, 'main', null ),
 			ProviderCode::parse( 'gh' )
 		);
@@ -171,8 +171,8 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		}
 	}
 
-	public function testExplicitBranchIsPreservedOverTheResolvedDefaultBranch(): void {
-		$provider = $this->resolvingProvider(
+	public function test_explicit_branch_is_preserved_over_the_resolved_default_branch(): void {
+		$provider = $this->resolving_provider(
 			new RepositoryDescriptor(
 				ProviderCode::parse( 'gh' ),
 				'owner/repository',
@@ -197,24 +197,24 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		self::assertSame( 'release/candidate', $result['branch'] );
 	}
 
-	public function testEveryProviderHasTheManualDeploymentCapabilities(): void {
+	public function test_every_provider_has_the_manual_deployment_capabilities(): void {
 		self::assertTrue( method_exists( RepositoryProvider::class, 'resolve_repository' ) );
 		self::assertTrue( method_exists( RepositoryProvider::class, 'prepare_archive' ) );
 	}
 
-	public function testPushToDeployRequiresWebhookCapabilityBeforeResolution(): void {
+	public function test_push_to_deploy_requires_webhook_capability_before_resolution(): void {
 		$provider = new class() implements RepositoryProvider {
 
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
-			public int $resolveCalls = 0;
+			public int $resolve_calls = 0;
 
 			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
 			}
 
 			public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
-				++$this->resolveCalls;
+				++$this->resolve_calls;
 
 				throw new RuntimeException( 'Resolution must not be reached.' );
 			}
@@ -235,12 +235,12 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 			);
 			self::fail( 'Expected Push-to-Deploy to require webhook normalization.' );
 		} catch ( UnsupportedProviderCapability ) {
-			self::assertSame( 0, $provider->resolveCalls );
+			self::assertSame( 0, $provider->resolve_calls );
 		}
 	}
 
-	public function testMismatchedProviderResponseIsRejected(): void {
-		$provider = $this->resolvingProvider(
+	public function test_mismatched_provider_response_is_rejected(): void {
+		$provider = $this->resolving_provider(
 			new RepositoryDescriptor(
 				ProviderCode::parse( 'gh' ),
 				'owner/repository',
@@ -265,8 +265,8 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		);
 	}
 
-	public function testPublicLookupProfileVerifiesExactlyThenIsRemovedBeforePersistence(): void {
-		$provider = $this->credentialedResolvingProvider(
+	public function test_public_lookup_profile_verifies_exactly_then_is_removed_before_persistence(): void {
+		$provider = $this->credentialed_resolving_provider(
 			new RepositoryDescriptor(
 				ProviderCode::parse( 'gh' ),
 				'owner/repository',
@@ -287,16 +287,16 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 			)
 		);
 
-		self::assertSame( 'public_lookup', $provider->request->credentialId );
-		self::assertTrue( $provider->request->publicOnly );
+		self::assertSame( 'public_lookup', $provider->request->credential_id );
+		self::assertTrue( $provider->request->public_only );
 		self::assertSame( '', $result['credential_id'] );
 		self::assertSame( '0', $result['private'] );
 		self::assertArrayNotHasKey( 'public_lookup_profile_id', $result );
 		self::assertNull( PackageOperation::from_input( 'install-plugin', $result )->credential_id );
 	}
 
-	public function testTransientLookupIdentityRejectsInvalidShapeAndDurableCredentialConflict(): void {
-		$provider = $this->credentialedResolvingProvider(
+	public function test_transient_lookup_identity_rejects_invalid_shape_and_durable_credential_conflict(): void {
+		$provider = $this->credentialed_resolving_provider(
 			new RepositoryDescriptor(
 				ProviderCode::parse( 'gh' ),
 				'owner/repository',
@@ -336,8 +336,8 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		}
 	}
 
-	public function testPublicLookupRejectsPrivateExactVerification(): void {
-		$provider = $this->credentialedResolvingProvider(
+	public function test_public_lookup_rejects_private_exact_verification(): void {
+		$provider = $this->credentialed_resolving_provider(
 			new RepositoryDescriptor(
 				ProviderCode::parse( 'gh' ),
 				'owner/private-repository',
@@ -363,12 +363,12 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		);
 	}
 
-	private function resolvingProvider(
+	private function resolving_provider(
 		RepositoryDescriptor $descriptor,
-		?ProviderCode $registeredCode = null
+		?ProviderCode $registered_code = null
 	): RepositoryProvider&WebhookNormalizer {
-		$registeredCode ??= ProviderCode::parse( 'bb' );
-		return new class( $descriptor, $registeredCode ) implements RepositoryProvider, WebhookNormalizer {
+		$registered_code ??= ProviderCode::parse( 'bb' );
+		return new class( $descriptor, $registered_code ) implements RepositoryProvider, WebhookNormalizer {
 
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
@@ -376,13 +376,13 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 
 			public function __construct(
 				private RepositoryDescriptor $descriptor,
-				private ProviderCode $registeredCode
+				private ProviderCode $registered_code
 			) {
 				$this->request = null;
 			}
 
 			public function get_metadata(): ProviderMetadata {
-				return new ProviderMetadata( $this->registeredCode, 'Fixture', 'https://example.test/', 'Owner' );
+				return new ProviderMetadata( $this->registered_code, 'Fixture', 'https://example.test/', 'Owner' );
 			}
 
 			public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
@@ -400,7 +400,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 			}
 
 			public function get_webhook_policy(): ProviderWebhookPolicy {
-				return new InertWebhookPolicy( $this->registeredCode );
+				return new InertWebhookPolicy( $this->registered_code );
 			}
 
 			public function diagnose_webhook_readiness(): \RAN\RepositoryProvider\ProviderDiagnosticResult {
@@ -409,7 +409,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		};
 	}
 
-	private function credentialedResolvingProvider(
+	private function credentialed_resolving_provider(
 		RepositoryDescriptor $descriptor
 	): RepositoryProvider&CredentialedPublicRepositoryBrowser {
 		return new class( $descriptor ) implements RepositoryProvider, CredentialedPublicRepositoryBrowser {

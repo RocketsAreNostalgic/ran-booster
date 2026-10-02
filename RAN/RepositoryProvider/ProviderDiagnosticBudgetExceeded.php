@@ -14,7 +14,7 @@ final class ProviderDiagnosticBudgetExceeded extends RuntimeException {
 		parent::__construct( $message );
 	}
 
-	public static function remoteCalls(): self {
+	public static function remote_calls(): self {
 		return new self( 'The provider diagnostic remote-call budget is exhausted.', self::REMOTE_CALLS );
 	}
 
@@ -22,7 +22,7 @@ final class ProviderDiagnosticBudgetExceeded extends RuntimeException {
 		return new self( 'The provider diagnostic deadline is exhausted.', self::DEADLINE );
 	}
 
-	public function getReason(): string {
+	public function get_reason(): string {
 		return $this->reason;
 	}
 }

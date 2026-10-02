@@ -13,150 +13,103 @@ use RAN\RepositoryProvider\ProviderCode;
 final readonly class WebhookCleanupContext {
 
 	/**
-	 * @param list<string> $branchPackageReferences
+	 * @param list<string> $branch_package_references
 	 */
 	public function __construct(
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		private string $packageType,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		private string $packageIdentifier,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		private string $providerCode,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		private string $repositoryId,
+		private string $package_type,
+		private string $package_identifier,
+		private string $provider_code,
+		private string $repository_id,
 		private string $repository,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		private string $localSecretCoverage,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		private bool $evidenceAvailable,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		private bool $branchEvidenceAvailable,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		private array $branchPackageReferences,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		private string $providerWebhooksUrl,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		private string $secretsUrl,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		private string $documentationUrl,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		private string $returnUrl
+		private string $local_secret_coverage,
+		private bool $evidence_available,
+		private bool $branch_evidence_available,
+		private array $branch_package_references,
+		private string $provider_webhooks_url,
+		private string $secrets_url,
+		private string $documentation_url,
+		private string $return_url
 	) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		if ( ! in_array( $this->packageType, array( 'plugin', 'theme' ), true )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-			|| '' === trim( $this->packageIdentifier )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-			|| strlen( $this->packageIdentifier ) > 255
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-			|| '' === trim( $this->repositoryId )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-			|| strlen( $this->repositoryId ) > 191
+		if ( ! in_array( $this->package_type, array( 'plugin', 'theme' ), true )
+			|| '' === trim( $this->package_identifier )
+			|| strlen( $this->package_identifier ) > 255
+			|| '' === trim( $this->repository_id )
+			|| strlen( $this->repository_id ) > 191
 			|| '' === trim( $this->repository )
 			|| strlen( $this->repository ) > 255
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-			|| ! in_array( $this->localSecretCoverage, array( 'repository', 'shared', 'none', 'unknown' ), true )
+			|| ! in_array( $this->local_secret_coverage, array( 'repository', 'shared', 'none', 'unknown' ), true )
 		) {
 			throw new InvalidArgumentException( 'Webhook cleanup contexts require bounded package evidence.' );
 		}
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		ProviderCode::parse( $this->providerCode );
+		ProviderCode::parse( $this->provider_code );
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		foreach ( $this->branchPackageReferences as $reference ) {
+		foreach ( $this->branch_package_references as $reference ) {
 			if ( ! is_string( $reference ) || '' === trim( $reference ) || strlen( $reference ) > 255 ) {
 				throw new InvalidArgumentException( 'Webhook cleanup package references must be bounded.' );
 			}
 		}
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		foreach ( array( $this->providerWebhooksUrl, $this->secretsUrl, $this->documentationUrl, $this->returnUrl ) as $url ) {
+		foreach ( array( $this->provider_webhooks_url, $this->secrets_url, $this->documentation_url, $this->return_url ) as $url ) {
 			if ( '' !== $url && ! $this->safe_url( $url ) ) {
 				throw new InvalidArgumentException( 'Webhook cleanup links must be safe absolute URLs.' );
 			}
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function packageType(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return $this->packageType;
+	public function package_type(): string {
+		return $this->package_type;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function packageIdentifier(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return $this->packageIdentifier;
+	public function package_identifier(): string {
+		return $this->package_identifier;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function providerCode(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return $this->providerCode;
+	public function provider_code(): string {
+		return $this->provider_code;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function repositoryId(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return $this->repositoryId;
+	public function repository_id(): string {
+		return $this->repository_id;
 	}
 
 	public function repository(): string {
 		return $this->repository;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function localSecretCoverage(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return $this->localSecretCoverage;
+	public function local_secret_coverage(): string {
+		return $this->local_secret_coverage;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function evidenceAvailable(): bool {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return $this->evidenceAvailable;
+	public function evidence_available(): bool {
+		return $this->evidence_available;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function branchEvidenceAvailable(): bool {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return $this->branchEvidenceAvailable;
+	public function branch_evidence_available(): bool {
+		return $this->branch_evidence_available;
 	}
 
 	/** @return list<string> */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function branchPackageReferences(): array {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return $this->branchPackageReferences;
+	public function branch_package_references(): array {
+		return $this->branch_package_references;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function cleanupAllowed(): bool {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return $this->branchEvidenceAvailable && array() === $this->branchPackageReferences;
+	public function cleanup_allowed(): bool {
+		return $this->branch_evidence_available && array() === $this->branch_package_references;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function providerWebhooksUrl(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return $this->providerWebhooksUrl;
+	public function provider_webhooks_url(): string {
+		return $this->provider_webhooks_url;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function secretsUrl(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return $this->secretsUrl;
+	public function secrets_url(): string {
+		return $this->secrets_url;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function documentationUrl(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return $this->documentationUrl;
+	public function documentation_url(): string {
+		return $this->documentation_url;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Retain the public/protected caller contract.
-	public function returnUrl(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- retain promoted constructor properties.
-		return $this->returnUrl;
+	public function return_url(): string {
+		return $this->return_url;
 	}
 
 	private function safe_url( string $url ): bool {

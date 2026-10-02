@@ -13,7 +13,7 @@ use RAN\WordPress\ReleaseUpdaterBootstrap;
 final class ReleaseUpdaterBootstrapTest extends TestCase {
 
 	#[RunInSeparateProcess]
-	public function testReturnsThePublicRegistrarWhichSchedulesActivation(): void {
+	public function test_returns_the_public_registrar_which_schedules_activation(): void {
 		global $wp_version;
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated runtime-selection fixture.
 		$wp_version = '6.8.0';

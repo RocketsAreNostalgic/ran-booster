@@ -14,16 +14,18 @@ final class PosixFilesystemProbeTest extends TestCase {
 
 	private string $root;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->root = sys_get_temp_dir() . '/ran-booster-probe-' . bin2hex( random_bytes( 6 ) );
 		mkdir( $this->root, 0700 );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$this->remove( $this->root );
 	}
 
-	public function testProvesRequiredOperationsWithoutCreatingTheSecretsFile(): void {
+	public function test_proves_required_operations_without_creating_the_secrets_file(): void {
 		$candidate = $this->root . '/.ran-booster/0123456789abcdef/secrets.json';
 
 		self::assertTrue( ( new PosixFilesystemProbe() )->probe( $candidate ) );
@@ -33,11 +35,11 @@ final class PosixFilesystemProbeTest extends TestCase {
 		self::assertSame( array(), glob( dirname( $candidate ) . '/.probe-*' ) );
 	}
 
-	public function testRejectsPathsOutsideTheFixedCandidateShape(): void {
+	public function test_rejects_paths_outside_the_fixed_candidate_shape(): void {
 		self::assertFalse( ( new PosixFilesystemProbe() )->probe( $this->root . '/secrets.json' ) );
 	}
 
-	public function testRejectsAnUnsafeExistingPrivateDirectoryWithoutChangingItsContents(): void {
+	public function test_rejects_an_unsafe_existing_private_directory_without_changing_its_contents(): void {
 		$private   = $this->root . '/.ran-booster';
 		$sentinel  = $private . '/operator-owned-canary';
 		$candidate = $private . '/0123456789abcdef/secrets.json';

@@ -31,21 +31,21 @@ use Throwable;
 final class WebhookProcessorTest extends TestCase {
 	public const WEBHOOK_SECRET = 'processor-test-webhook-secret-0001';
 
-	public function testUnknownAndUnsupportedProvidersFailClosed(): void {
-		$requestCalls = 0;
-		$request      = static function () use ( &$requestCalls ): array {
-			++$requestCalls;
+	public function test_unknown_and_unsupported_providers_fail_closed(): void {
+		$request_calls = 0;
+		$request       = static function () use ( &$request_calls ): array {
+			++$request_calls;
 
 			return array(
 				'body'    => '{}',
 				'headers' => array(),
 			);
 		};
-		$processor    = $this->processor( new ProviderRegistry(), new WebhookProcessorCoordinator() );
+		$processor     = $this->processor( new ProviderRegistry(), new WebhookProcessorCoordinator() );
 
 		self::assertSame( 404, $processor->handle( 'bb', $request )->get_status() );
 
-		$metadataOnly = new class() implements RepositoryProvider {
+		$metadata_only = new class() implements RepositoryProvider {
 
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
@@ -53,16 +53,16 @@ final class WebhookProcessorTest extends TestCase {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
 			}
 		};
-		$processor    = $this->processor(
-			new ProviderRegistry( array( $metadataOnly ) ),
+		$processor     = $this->processor(
+			new ProviderRegistry( array( $metadata_only ) ),
 			new WebhookProcessorCoordinator()
 		);
 
 		self::assertSame( 404, $processor->handle( 'gh', $request )->get_status() );
-		self::assertSame( 0, $requestCalls );
+		self::assertSame( 0, $request_calls );
 	}
 
-	public function testProviderExceptionsNeverReachTheResponse(): void {
+	public function test_provider_exceptions_never_reach_the_response(): void {
 		$provider  = new WebhookProcessorProvider(
 			static function (): WebhookEnvelope {
 				throw new \RuntimeException( 'secret-canary body-canary token-canary' );
@@ -73,7 +73,7 @@ final class WebhookProcessorTest extends TestCase {
 			new WebhookProcessorCoordinator()
 		);
 
-		$response = $processor->handle( 'gh', $this->request( 'body-canary', $this->signedHeaders( 'body-canary' ) ) );
+		$response = $processor->handle( 'gh', $this->request( 'body-canary', $this->signed_headers( 'body-canary' ) ) );
 		$data     = implode( ' ', array_map( 'strval', $response->get_data() ) );
 
 		self::assertSame( 500, $response->get_status() );
@@ -82,7 +82,7 @@ final class WebhookProcessorTest extends TestCase {
 		self::assertStringNotContainsString( 'token-canary', $data );
 	}
 
-	public function testProviderRejectionMessagesAreMappedAtTheTrustedEdge(): void {
+	public function test_provider_rejection_messages_are_mapped_at_the_trusted_edge(): void {
 		$provider  = new WebhookProcessorProvider(
 			static function (): WebhookEnvelope {
 				throw new WebhookRejected( 403, 'secret-canary token-canary' );
@@ -93,7 +93,7 @@ final class WebhookProcessorTest extends TestCase {
 			new WebhookProcessorCoordinator()
 		);
 
-		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
+		$response = $processor->handle( 'gh', $this->request( '{}', $this->signed_headers( '{}' ) ) );
 		$data     = implode( ' ', array_map( 'strval', $response->get_data() ) );
 
 		self::assertSame( 401, $response->get_status() );
@@ -102,7 +102,7 @@ final class WebhookProcessorTest extends TestCase {
 		self::assertStringNotContainsString( 'token-canary', $data );
 	}
 
-	public function testProbeAndIgnoredEnvelopesDoNotInvokeTheIntake(): void {
+	public function test_probe_and_ignored_envelopes_do_not_invoke_the_intake(): void {
 		$spy         = new WebhookProcessorCoordinatorSpy();
 		$coordinator = new WebhookProcessorCoordinator( null, $spy );
 
@@ -110,31 +110,31 @@ final class WebhookProcessorTest extends TestCase {
 			new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe() ) ) ),
 			$coordinator
 		);
-		self::assertSame( 200, $probe->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) )->get_status() );
+		self::assertSame( 200, $probe->handle( 'gh', $this->request( '{}', $this->signed_headers( '{}' ) ) )->get_status() );
 
 		$ignored = $this->processor(
 			new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::ignored() ) ) ),
 			$coordinator
 		);
-		self::assertSame( 202, $ignored->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) )->get_status() );
+		self::assertSame( 202, $ignored->handle( 'gh', $this->request( '{}', $this->signed_headers( '{}' ) ) )->get_status() );
 		self::assertSame( 0, $spy->calls );
 	}
 
-	public function testAcceptedAdmissionReturnsOnlyTheSafeReceipt(): void {
-		$correlationId = str_repeat( 'a', 32 );
-		$body          = '{"secret-canary":"raw-body-canary"}';
-		$processor     = $this->eventProcessor(
-			new WebhookProcessorCoordinator( self::admissionResult( 'accepted', $correlationId, 1, 'scheduled' ) )
+	public function test_accepted_admission_returns_only_the_safe_receipt(): void {
+		$correlation_id = str_repeat( 'a', 32 );
+		$body           = '{"secret-canary":"raw-body-canary"}';
+		$processor      = $this->event_processor(
+			new WebhookProcessorCoordinator( self::admission_result( 'accepted', $correlation_id, 1, 'scheduled' ) )
 		);
 
-		$response = $processor->handle( 'gh', $this->request( $body, $this->signedHeaders( $body ) ) );
+		$response = $processor->handle( 'gh', $this->request( $body, $this->signed_headers( $body ) ) );
 
 		self::assertSame( 202, $response->get_status() );
 		self::assertSame(
 			array(
 				'message'          => 'Webhook accepted.',
 				'status'           => 'accepted',
-				'correlation_id'   => $correlationId,
+				'correlation_id'   => $correlation_id,
 				'accepted_targets' => 1,
 				'runner_status'    => 'scheduled',
 			),
@@ -146,57 +146,57 @@ final class WebhookProcessorTest extends TestCase {
 		self::assertStringNotContainsString( self::WEBHOOK_SECRET, $rendered );
 	}
 
-	public function testExactDuplicateAdmissionReturns202WithoutReplayingDeployment(): void {
-		$correlationId = str_repeat( 'b', 32 );
-		$processor     = $this->eventProcessor(
-			new WebhookProcessorCoordinator( self::admissionResult( 'duplicate', $correlationId, 1, 'already_scheduled' ) )
+	public function test_exact_duplicate_admission_returns202_without_replaying_deployment(): void {
+		$correlation_id = str_repeat( 'b', 32 );
+		$processor      = $this->event_processor(
+			new WebhookProcessorCoordinator( self::admission_result( 'duplicate', $correlation_id, 1, 'already_scheduled' ) )
 		);
 
-		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
+		$response = $processor->handle( 'gh', $this->request( '{}', $this->signed_headers( '{}' ) ) );
 
 		self::assertSame( 202, $response->get_status() );
 		self::assertSame( 'duplicate', $response->get_data()['status'] );
-		self::assertSame( $correlationId, $response->get_data()['correlation_id'] );
+		self::assertSame( $correlation_id, $response->get_data()['correlation_id'] );
 		self::assertSame( 'already_scheduled', $response->get_data()['runner_status'] );
 	}
 
-	public function testConflictingDeliveryReturns409(): void {
-		$processor = $this->eventProcessor(
+	public function test_conflicting_delivery_returns409(): void {
+		$processor = $this->event_processor(
 			new WebhookProcessorCoordinator( null, null, DeploymentStorageFailure::delivery_conflict() )
 		);
 
-		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
+		$response = $processor->handle( 'gh', $this->request( '{}', $this->signed_headers( '{}' ) ) );
 
 		self::assertSame( 409, $response->get_status() );
 		self::assertSame( 'Webhook delivery conflict.', $response->get_data()['message'] );
 		self::assertArrayNotHasKey( 'status', $response->get_data() );
 	}
 
-	public function testUnsupportedDatabaseReturnsRetrySafeUnavailableResponse(): void {
-		$processor = $this->eventProcessor(
+	public function test_unsupported_database_returns_retry_safe_unavailable_response(): void {
+		$processor = $this->event_processor(
 			new WebhookProcessorCoordinator( null, null, DeploymentStorageFailure::unsupported_database() )
 		);
 
-		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
+		$response = $processor->handle( 'gh', $this->request( '{}', $this->signed_headers( '{}' ) ) );
 
 		self::assertSame( 503, $response->get_status() );
 		self::assertSame( 'Webhook processing is temporarily unavailable.', $response->get_data()['message'] );
 		self::assertArrayNotHasKey( 'status', $response->get_data() );
 	}
 
-	public function testExhaustedAttemptCapacityReturnsRetrySafeUnavailableResponse(): void {
-		$processor = $this->eventProcessor(
+	public function test_exhausted_attempt_capacity_returns_retry_safe_unavailable_response(): void {
+		$processor = $this->event_processor(
 			new WebhookProcessorCoordinator( null, null, DeploymentStorageFailure::capacity_exhausted() )
 		);
 
-		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
+		$response = $processor->handle( 'gh', $this->request( '{}', $this->signed_headers( '{}' ) ) );
 
 		self::assertSame( 503, $response->get_status() );
 		self::assertSame( 'Webhook processing is temporarily unavailable.', $response->get_data()['message'] );
 		self::assertArrayNotHasKey( 'status', $response->get_data() );
 	}
 
-	public function testProcessorReauthorizesEveryNormalizedEventBeforeIntake(): void {
+	public function test_processor_reauthorizes_every_normalized_event_before_intake(): void {
 		$event     = new PushEvent( ProviderCode::parse( 'gh' ), 'other/repository', 'other-id', 'main', str_repeat( 'a', 40 ), 'delivery-one' );
 		$spy       = new WebhookProcessorCoordinatorSpy();
 		$processor = $this->processor(
@@ -212,57 +212,57 @@ final class WebhookProcessorTest extends TestCase {
 			)
 		);
 
-		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
+		$response = $processor->handle( 'gh', $this->request( '{}', $this->signed_headers( '{}' ) ) );
 
 		self::assertSame( 401, $response->get_status() );
 		self::assertSame( 0, $spy->calls );
 	}
 
-	public function testUnavailableRunnerDoesNotRejectAnAlreadyAcceptedDelivery(): void {
-		$processor = $this->eventProcessor(
-			new WebhookProcessorCoordinator( self::admissionResult( 'accepted', str_repeat( 'd', 32 ), 1, 'unavailable' ) )
+	public function test_unavailable_runner_does_not_reject_an_already_accepted_delivery(): void {
+		$processor = $this->event_processor(
+			new WebhookProcessorCoordinator( self::admission_result( 'accepted', str_repeat( 'd', 32 ), 1, 'unavailable' ) )
 		);
 
-		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
+		$response = $processor->handle( 'gh', $this->request( '{}', $this->signed_headers( '{}' ) ) );
 
 		self::assertSame( 202, $response->get_status() );
 		self::assertSame( 'accepted', $response->get_data()['status'] );
 		self::assertSame( 'unavailable', $response->get_data()['runner_status'] );
 	}
 
-	public function testNoTargetsAreAcceptedWithoutAWorkerWakeup(): void {
-		$processor = $this->eventProcessor(
-			new WebhookProcessorCoordinator( self::admissionResult( 'accepted', str_repeat( 'e', 32 ), 0, 'not_required' ) )
+	public function test_no_targets_are_accepted_without_a_worker_wakeup(): void {
+		$processor = $this->event_processor(
+			new WebhookProcessorCoordinator( self::admission_result( 'accepted', str_repeat( 'e', 32 ), 0, 'not_required' ) )
 		);
 
-		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
+		$response = $processor->handle( 'gh', $this->request( '{}', $this->signed_headers( '{}' ) ) );
 
 		self::assertSame( 202, $response->get_status() );
 		self::assertSame( 0, $response->get_data()['accepted_targets'] );
 		self::assertSame( 'not_required', $response->get_data()['runner_status'] );
 	}
 
-	public function testZeroTargetReplayReturns202WithoutAWorkerWakeup(): void {
-		$correlationId = str_repeat( 'f', 32 );
-		$processor     = $this->eventProcessor(
-			new WebhookProcessorCoordinator( self::admissionResult( 'duplicate', $correlationId, 0, 'not_required' ) )
+	public function test_zero_target_replay_returns202_without_a_worker_wakeup(): void {
+		$correlation_id = str_repeat( 'f', 32 );
+		$processor      = $this->event_processor(
+			new WebhookProcessorCoordinator( self::admission_result( 'duplicate', $correlation_id, 0, 'not_required' ) )
 		);
 
-		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
+		$response = $processor->handle( 'gh', $this->request( '{}', $this->signed_headers( '{}' ) ) );
 
 		self::assertSame( 202, $response->get_status() );
 		self::assertSame( 'duplicate', $response->get_data()['status'] );
-		self::assertSame( $correlationId, $response->get_data()['correlation_id'] );
+		self::assertSame( $correlation_id, $response->get_data()['correlation_id'] );
 		self::assertSame( 0, $response->get_data()['accepted_targets'] );
 		self::assertSame( 'not_required', $response->get_data()['runner_status'] );
 	}
 
-	public function testDatabaseThrowableMapsToGeneric500WithoutLeakingDetails(): void {
-		$processor = $this->eventProcessor(
+	public function test_database_throwable_maps_to_generic500_without_leaking_details(): void {
+		$processor = $this->event_processor(
 			new WebhookProcessorCoordinator( null, null, new RuntimeException( 'db-canary secret-canary raw-body-canary' ) )
 		);
 
-		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
+		$response = $processor->handle( 'gh', $this->request( '{}', $this->signed_headers( '{}' ) ) );
 		$rendered = implode( ' ', array_map( 'strval', $response->get_data() ) );
 
 		self::assertSame( 500, $response->get_status() );
@@ -272,7 +272,7 @@ final class WebhookProcessorTest extends TestCase {
 		self::assertStringNotContainsString( 'raw-body-canary', $rendered );
 	}
 
-	public function testAmbiguousRetainedHeadersAreRejectedSafely(): void {
+	public function test_ambiguous_retained_headers_are_rejected_safely(): void {
 		$processor = $this->processor(
 			new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::ignored() ) ) ),
 			new WebhookProcessorCoordinator()
@@ -286,10 +286,10 @@ final class WebhookProcessorTest extends TestCase {
 		self::assertSame( 400, $response->get_status() );
 	}
 
-	public function testFalseSignatureStopsBeforeNormalizationAndIntake(): void {
-		$normalizerCalls = 0;
-		$spy             = new WebhookProcessorCoordinatorSpy();
-		$materials       = array();
+	public function test_false_signature_stops_before_normalization_and_intake(): void {
+		$normalizer_calls = 0;
+		$spy              = new WebhookProcessorCoordinatorSpy();
+		$materials        = array();
 		foreach ( range( 1, 16 ) as $index ) {
 			$materials[ 'profile-' . $index ] = array(
 				'scope'        => 'owner',
@@ -302,8 +302,8 @@ final class WebhookProcessorTest extends TestCase {
 			new ProviderRegistry(
 				array(
 					new WebhookProcessorProvider(
-						static function () use ( &$normalizerCalls ): WebhookEnvelope {
-							++$normalizerCalls;
+						static function () use ( &$normalizer_calls ): WebhookEnvelope {
+							++$normalizer_calls;
 
 							return WebhookEnvelope::ignored();
 						}
@@ -320,11 +320,11 @@ final class WebhookProcessorTest extends TestCase {
 		);
 
 		self::assertSame( 401, $response->get_status() );
-		self::assertSame( 0, $normalizerCalls );
+		self::assertSame( 0, $normalizer_calls );
 		self::assertSame( 0, $spy->calls );
 	}
 
-	public function testOversizedGitHubRequestDoesNotLoadSecretsOrInvokeIntake(): void {
+	public function test_oversized_git_hub_request_does_not_load_secrets_or_invoke_intake(): void {
 		$secrets     = new class() extends SecretsFile {
 			public int $calls = 0;
 
@@ -332,13 +332,13 @@ final class WebhookProcessorTest extends TestCase {
 				parent::__construct( '/unused/test-secrets.php', array() );
 			}
 
-			public function webhookMaterials( ProviderCode|string $provider ): array {
+			public function webhook_materials( ProviderCode|string $provider ): array {
 				++$this->calls;
 
 				return array();
 			}
 		};
-		$normalizer  = new GitHubWebhookNormalizer( $secrets->credentialsFor( 'gh' ), new EmptyAuthenticatedWebhookDeliveryEvidenceReader() );
+		$normalizer  = new GitHubWebhookNormalizer( $secrets->credentials_for( 'gh' ), new EmptyAuthenticatedWebhookDeliveryEvidenceReader() );
 		$spy         = new WebhookProcessorCoordinatorSpy();
 		$coordinator = new WebhookProcessorCoordinator( null, $spy );
 		$processor   = $this->processor(
@@ -360,7 +360,7 @@ final class WebhookProcessorTest extends TestCase {
 		self::assertSame( 0, $spy->calls );
 	}
 
-	public function testNormalizedEventFanOutIsBoundedBeforeIntake(): void {
+	public function test_normalized_event_fan_out_is_bounded_before_intake(): void {
 		$events = array();
 		foreach ( range( 1, 33 ) as $index ) {
 			$events[] = new PushEvent(
@@ -381,13 +381,13 @@ final class WebhookProcessorTest extends TestCase {
 			$coordinator
 		);
 
-		$response = $processor->handle( 'gh', $this->request( '{}', $this->signedHeaders( '{}' ) ) );
+		$response = $processor->handle( 'gh', $this->request( '{}', $this->signed_headers( '{}' ) ) );
 
 		self::assertSame( 400, $response->get_status() );
 		self::assertSame( 0, $spy->calls );
 	}
 
-	public function testIntakeReceivesOnlyEventsAndBodyDigest(): void {
+	public function test_intake_receives_only_events_and_body_digest(): void {
 		$body        = '{"body-canary":"must-not-cross-intake"}';
 		$secret      = self::WEBHOOK_SECRET;
 		$event       = new PushEvent(
@@ -422,15 +422,15 @@ final class WebhookProcessorTest extends TestCase {
 			$materials
 		);
 
-		$response = $processor->handle( 'gh', $this->request( $body, $this->signedHeaders( $body ) ) );
+		$response = $processor->handle( 'gh', $this->request( $body, $this->signed_headers( $body ) ) );
 
 		self::assertSame( 202, $response->get_status() );
 		self::assertSame( 1, $spy->calls );
-		self::assertSame( hash( 'sha256', $body ), $spy->authenticatedBodyDigest );
+		self::assertSame( hash( 'sha256', $body ), $spy->authenticated_body_digest );
 		self::assertSame( array( $event ), $spy->events );
 		$captured = implode(
 			'|',
-			array_merge( $event->toArray(), array( $spy->authenticatedBodyDigest ) )
+			array_merge( $event->to_array(), array( $spy->authenticated_body_digest ) )
 		);
 		self::assertStringNotContainsString( $body, $captured );
 		self::assertStringNotContainsString( $secret, $captured );
@@ -461,7 +461,7 @@ final class WebhookProcessorTest extends TestCase {
 				);
 			}
 
-			public function webhookMaterials( ProviderCode|string $provider ): array {
+			public function webhook_materials( ProviderCode|string $provider ): array {
 				return $this->materials;
 			}
 		};
@@ -469,7 +469,7 @@ final class WebhookProcessorTest extends TestCase {
 		return new WebhookProcessor( $registry, $coordinator, new SignedWebhookVerifier( $secrets ) );
 	}
 
-	private function eventProcessor( WebhookProcessorCoordinator $coordinator ): WebhookProcessor {
+	private function event_processor( WebhookProcessorCoordinator $coordinator ): WebhookProcessor {
 		$event = new PushEvent(
 			ProviderCode::parse( 'gh' ),
 			'owner/example',
@@ -506,22 +506,22 @@ final class WebhookProcessorTest extends TestCase {
 	 *     runner_status: 'scheduled'|'already_scheduled'|'unavailable'|'not_required'
 	 * }
 	 */
-	public static function admissionResult(
+	public static function admission_result(
 		string $status,
-		string $correlationId,
-		int $acceptedTargets,
-		string $runnerStatus
+		string $correlation_id,
+		int $accepted_targets,
+		string $runner_status
 	): array {
 		return array(
 			'status'           => $status,
-			'correlation_id'   => $correlationId,
-			'accepted_targets' => $acceptedTargets,
-			'runner_status'    => $runnerStatus,
+			'correlation_id'   => $correlation_id,
+			'accepted_targets' => $accepted_targets,
+			'runner_status'    => $runner_status,
 		);
 	}
 
 	/** @return array<string, string> */
-	private function signedHeaders( string $body ): array {
+	private function signed_headers( string $body ): array {
 		return array(
 			'X-Hub-Signature-256' => 'sha256=' . hash_hmac( 'sha256', $body, self::WEBHOOK_SECRET ),
 		);
@@ -572,20 +572,20 @@ final class WebhookProcessorCoordinator extends DeploymentCoordinator {
 	) {
 	}
 
-	public function acceptWebhook(
+	public function accept_webhook(
 		array $events,
-		string $authenticatedBodyDigest
+		string $authenticated_body_digest
 	): array {
 		if ( null !== $this->spy ) {
 			++$this->spy->calls;
-			$this->spy->events                  = $events;
-			$this->spy->authenticatedBodyDigest = $authenticatedBodyDigest;
+			$this->spy->events                    = $events;
+			$this->spy->authenticated_body_digest = $authenticated_body_digest;
 		}
 		if ( null !== $this->failure ) {
 			throw $this->failure;
 		}
 
-		return $this->result ?? WebhookProcessorTest::admissionResult( 'accepted', str_repeat( 'a', 32 ), 1, 'scheduled' );
+		return $this->result ?? WebhookProcessorTest::admission_result( 'accepted', str_repeat( 'a', 32 ), 1, 'scheduled' );
 	}
 }
 
@@ -593,6 +593,6 @@ final class WebhookProcessorCoordinatorSpy {
 
 	public int $calls = 0;
 	/** @var list<PushEvent> */
-	public array $events                   = array();
-	public string $authenticatedBodyDigest = '';
+	public array $events                     = array();
+	public string $authenticated_body_digest = '';
 }

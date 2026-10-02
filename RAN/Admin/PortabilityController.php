@@ -37,13 +37,12 @@ final readonly class PortabilityController {
 		private ManagedPackageBlueprintExporter $exporter,
 		private BlueprintArchive $archive,
 		private PortabilityApplicationService $application,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private ProviderSettingsPresenter $providerSettings
+		private ProviderSettingsPresenter $provider_settings
 	) {
 	}
 
 	public function handle_export(): mixed {
-		RuntimeSupport::assertManagedOperationsAllowed();
+		RuntimeSupport::assert_managed_operations_allowed();
 
 		if ( ! $this->is_allowed( self::EXPORT_NONCE_ACTION ) ) {
 			return $this->export_failure( __( 'Your Transporter export session expired. Reload the page and try again.', 'ran-booster' ), 403 );
@@ -130,7 +129,7 @@ final readonly class PortabilityController {
 	}
 
 	public function handle_preview(): mixed {
-		RuntimeSupport::assertManagedOperationsAllowed();
+		RuntimeSupport::assert_managed_operations_allowed();
 
 		if ( ! $this->is_allowed( self::PREVIEW_NONCE_ACTION ) ) {
 			return wp_send_json_error( array( 'message' => __( 'Your Transporter review session expired. Reload the page and try again.', 'ran-booster' ) ), 403 );
@@ -158,7 +157,7 @@ final readonly class PortabilityController {
 	}
 
 	public function handle_apply(): mixed {
-		RuntimeSupport::assertManagedOperationsAllowed();
+		RuntimeSupport::assert_managed_operations_allowed();
 
 		if ( ! $this->is_allowed( self::APPLY_NONCE_ACTION ) ) {
 			return wp_send_json_error( array( 'message' => __( 'Your Transporter apply session expired. Reload the page and try again.', 'ran-booster' ) ), 403 );
@@ -195,17 +194,16 @@ final readonly class PortabilityController {
 	}
 
 	/**
-	 * @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $credentialDecisions
-	 * @param array<int, string> $targetCredentialIds
+	 * @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $credential_decisions
+	 * @param array<int, string> $target_credential_ids
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function preview_file( string $path, ?string $password = null, array $credentialDecisions = array(), array $targetCredentialIds = array() ): string {
-		RuntimeSupport::assertManagedOperationsAllowed();
+
+	public function preview_file( string $path, ?string $password = null, array $credential_decisions = array(), array $target_credential_ids = array() ): string {
+		RuntimeSupport::assert_managed_operations_allowed();
 
 		$blueprint = $this->archive->read_from( $path, $password );
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		return $this->review_blueprint( $blueprint, $credentialDecisions, $targetCredentialIds );
+		return $this->review_blueprint( $blueprint, $credential_decisions, $target_credential_ids );
 	}
 
 	/**
@@ -297,8 +295,7 @@ final readonly class PortabilityController {
 				return sprintf(
 					$message,
 					'plugin' === $package_failure->type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' ),
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-					$package_failure->displayName
+					$package_failure->display_name
 				);
 			},
 			$failure->failures
@@ -463,7 +460,7 @@ final readonly class PortabilityController {
 	/** @return array<string, mixed> */
 	private function row( BlueprintPlanItem $item, ?int $credential_ordinal = null, ?string $selected_credential_id = null, bool $credential_recovery = false ): array {
 		$row = array(
-			'name'       => $item->package->displayName,
+			'name'       => $item->package->display_name,
 			'identifier' => $item->package->identifier,
 			'type'       => 'plugin' === $item->package->type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' ),
 			'action'     => $item->action->value,
@@ -490,7 +487,7 @@ final readonly class PortabilityController {
 
 	/** @return array{status:string,message:string,category?:string} */
 	private function apply_failure( Throwable $failure ): array {
-		BoosterLogger::logException(
+		BoosterLogger::log_exception(
 			'portability package apply failed',
 			$failure,
 			array(
@@ -518,8 +515,8 @@ final readonly class PortabilityController {
 
 	/** @return list<array{id:string,label:string,source:string}> */
 	private function credential_choices( string $provider ): array {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		foreach ( $this->providerSettings->build_package_list() as $candidate ) {
+
+		foreach ( $this->provider_settings->build_package_list() as $candidate ) {
 			if ( ( $candidate['code'] ?? null ) === $provider && is_array( $candidate['credentials'] ?? null ) ) {
 				return array_values( array_filter( $candidate['credentials'], static fn ( array $credential ): bool => 'file' === ( $credential['source'] ?? null ) ) );
 			}
@@ -533,10 +530,10 @@ final readonly class PortabilityController {
 	 * @param list<array<string, mixed>> $credentials
 	 */
 	private function render_review( array $rows, array $credentials = array() ): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the existing portability view include-scope contract.
-		$portabilityReviewRows = $rows;
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the existing portability view include-scope contract.
-		$portabilityCredentialRows = $credentials;
+
+		$portability_review_rows = $rows;
+
+		$portability_credential_rows = $credentials;
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/portability-review.php';
 
@@ -551,8 +548,8 @@ final readonly class PortabilityController {
 	private function credential_rows( PackageBlueprint $blueprint, array $decisions, array $items ): array {
 		$providers = array();
 		try {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$provider_list = $this->providerSettings->build_package_list();
+
+			$provider_list = $this->provider_settings->build_package_list();
 		} catch ( Throwable ) {
 			$provider_list = array();
 		}
@@ -580,8 +577,8 @@ final readonly class PortabilityController {
 				) ) {
 					$projected  = array(
 						'row'  => $package_row,
-						// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-						'name' => $package->displayName,
+
+						'name' => $package->display_name,
 						'type' => 'plugin' === $package->type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' ),
 					);
 					$packages[] = $projected;

@@ -12,7 +12,7 @@ final readonly class BlueprintPlanItem {
 		public TargetPackageAction $action,
 		public TargetPackageReason $reason
 	) {
-		$validReasons = match ( $action ) {
+		$valid_reasons = match ( $action ) {
 			TargetPackageAction::INSTALL,
 			TargetPackageAction::ADOPT => array( TargetPackageReason::NONE ),
 			TargetPackageAction::MANAGED => array( TargetPackageReason::ALREADY_MANAGED ),
@@ -32,7 +32,7 @@ final readonly class BlueprintPlanItem {
 			),
 		};
 
-		if ( ! in_array( $reason, $validReasons, true ) ) {
+		if ( ! in_array( $reason, $valid_reasons, true ) ) {
 			throw new InvalidArgumentException( 'The portability plan action and reason are incompatible.' );
 		}
 	}

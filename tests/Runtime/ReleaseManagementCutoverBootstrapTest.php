@@ -10,42 +10,42 @@ use PHPUnit\Framework\TestCase;
 use RAN\BoosterGitHubProvider\V1\ReleaseDeployments\WorkflowAssistance\SetupRecordStore;
 
 final class ReleaseManagementCutoverBootstrapTest extends TestCase {
-	public function testReleaseUpdaterIsBoundBeforeEveryBootstrapCapture(): void {
+	public function test_release_updater_is_bound_before_every_bootstrap_capture(): void {
 		$bootstrap = $this->source( 'ran-booster.php' );
 
 		$registration = strpos( $bootstrap, 'ReleaseUpdaterBootstrap::register();' );
-		$coreTarget   = strpos( $bootstrap, 'ManagedReleaseUpdaterRegistrar::class )->plugin(' );
+		$core_target  = strpos( $bootstrap, 'ManagedReleaseUpdaterRegistrar::class )->plugin(' );
 		$target       = strpos( $bootstrap, 'ManagedReleaseTargetRegistrar::class )->register()' );
 
 		self::assertIsInt( $registration );
-		self::assertIsInt( $coreTarget );
+		self::assertIsInt( $core_target );
 		self::assertIsInt( $target );
-		self::assertLessThan( $coreTarget, $registration );
+		self::assertLessThan( $core_target, $registration );
 		self::assertLessThan( $target, $registration );
 		self::assertStringNotContainsString( 'ReleaseUpdaterBootstrap::activate()', $bootstrap );
 	}
 
-	public function testCoreSelfTargetUsesTheSelectedUpdaterWithoutProviderCapability(): void {
+	public function test_core_self_target_uses_the_selected_updater_without_provider_capability(): void {
 		$bootstrap = $this->source( 'ran-booster.php' );
 
-		$seal        = strpos( $bootstrap, '$providerRegistry->seal()' );
-		$policyGuard = strpos( $bootstrap, 'if ( $ran_booster_self_update_policy->allows_native_discovery() )' );
-		$coreUpdater = strpos( $bootstrap, 'ManagedReleaseUpdaterRegistrar::class )->plugin(' );
-		$repository  = strpos( $bootstrap, "'RocketsAreNostalgic/ran-booster'," );
-		$adapter     = strpos( $bootstrap, 'new CoreSelfUpdateNativeTarget( $coreUpdater )' );
-		$statusBind  = strpos( $bootstrap, 'new CoreSelfUpdateStatus( $ran_booster_self_update_policy, $coreReleaseTarget )' );
+		$seal         = strpos( $bootstrap, '$provider_registry->seal()' );
+		$policy_guard = strpos( $bootstrap, 'if ( $ran_booster_self_update_policy->allows_native_discovery() )' );
+		$core_updater = strpos( $bootstrap, 'ManagedReleaseUpdaterRegistrar::class )->plugin(' );
+		$repository   = strpos( $bootstrap, "'RocketsAreNostalgic/ran-booster'," );
+		$adapter      = strpos( $bootstrap, 'new CoreSelfUpdateNativeTarget( $core_updater )' );
+		$status_bind  = strpos( $bootstrap, 'new CoreSelfUpdateStatus( $ran_booster_self_update_policy, $core_release_target )' );
 
 		self::assertIsInt( $seal );
-		self::assertIsInt( $policyGuard );
-		self::assertIsInt( $coreUpdater );
+		self::assertIsInt( $policy_guard );
+		self::assertIsInt( $core_updater );
 		self::assertIsInt( $repository );
 		self::assertIsInt( $adapter );
-		self::assertIsInt( $statusBind );
-		self::assertLessThan( $policyGuard, $seal );
-		self::assertLessThan( $coreUpdater, $policyGuard );
-		self::assertLessThan( $repository, $coreUpdater );
+		self::assertIsInt( $status_bind );
+		self::assertLessThan( $policy_guard, $seal );
+		self::assertLessThan( $core_updater, $policy_guard );
+		self::assertLessThan( $repository, $core_updater );
 		self::assertLessThan( $adapter, $repository );
-		self::assertLessThan( $statusBind, $adapter );
+		self::assertLessThan( $status_bind, $adapter );
 		self::assertStringContainsString( "\t\t\t\t\t\t'github'", $bootstrap );
 		self::assertStringContainsString( "\t\t\t\t\t\t'manual'", $bootstrap );
 		self::assertStringContainsString( 'PackageArtifactLimit::resolve()', $bootstrap );
@@ -55,7 +55,7 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		self::assertStringNotContainsString( 'new GitHubReleaseNativeTarget(', $bootstrap );
 	}
 
-	public function testCurrentOrchestrationDocumentationNamesNoRemovedHandoff(): void {
+	public function test_current_orchestration_documentation_names_no_removed_handoff(): void {
 		$guide     = $this->source( 'docs/package-update-orchestration.md' );
 		$decisions = $this->source( 'docs/package-update-orchestration-decision-register.md' );
 
@@ -65,25 +65,25 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		self::assertStringContainsString( '## 2026-09-01 PU-007 security correction — REMOVE', $decisions );
 	}
 
-	public function testBundledSuccessorRegistersOnceAfterProviderSeal(): void {
+	public function test_bundled_successor_registers_once_after_provider_seal(): void {
 		$bootstrap = $this->source( 'ran-booster.php' );
 
-		$providerRegistration = strpos( $bootstrap, "do_action( 'ran_booster_register_providers'" );
-		$providerSeal         = strpos( $bootstrap, '$providerRegistry->seal()' );
-		$releaseControls      = strpos( $bootstrap, '$ran_booster_container->make( ReleaseManagementControls::class )->register();' );
-		$workflowControls     = strpos( $bootstrap, '$ran_booster_container->make( ReleaseWorkflowControls::class )->register();' );
-		$runtimeInit          = strpos( $bootstrap, '$ran_booster_runtime->init()' );
+		$provider_registration = strpos( $bootstrap, "do_action( 'ran_booster_register_providers'" );
+		$provider_seal         = strpos( $bootstrap, '$provider_registry->seal()' );
+		$release_controls      = strpos( $bootstrap, '$ran_booster_container->make( ReleaseManagementControls::class )->register();' );
+		$workflow_controls     = strpos( $bootstrap, '$ran_booster_container->make( ReleaseWorkflowControls::class )->register();' );
+		$runtime_init          = strpos( $bootstrap, '$ran_booster_runtime->init()' );
 
-		self::assertIsInt( $providerRegistration );
-		self::assertIsInt( $providerSeal );
-		self::assertIsInt( $runtimeInit );
-		self::assertLessThan( $providerSeal, $providerRegistration );
-		self::assertIsInt( $releaseControls );
-		self::assertIsInt( $workflowControls );
-		self::assertLessThan( $releaseControls, $providerSeal );
-		self::assertLessThan( $workflowControls, $providerSeal );
-		self::assertLessThan( $runtimeInit, $releaseControls );
-		self::assertLessThan( $runtimeInit, $workflowControls );
+		self::assertIsInt( $provider_registration );
+		self::assertIsInt( $provider_seal );
+		self::assertIsInt( $runtime_init );
+		self::assertLessThan( $provider_seal, $provider_registration );
+		self::assertIsInt( $release_controls );
+		self::assertIsInt( $workflow_controls );
+		self::assertLessThan( $release_controls, $provider_seal );
+		self::assertLessThan( $workflow_controls, $provider_seal );
+		self::assertLessThan( $runtime_init, $release_controls );
+		self::assertLessThan( $runtime_init, $workflow_controls );
 		self::assertSame(
 			1,
 			preg_match_all( '/\$ran_booster_container->make\( ReleaseManagementControls::class \)->register\(\);/', $bootstrap )
@@ -100,7 +100,7 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		);
 	}
 
-	public function testHardCutRemovesExternalReleasePublicationsAndProspectiveMarker(): void {
+	public function test_hard_cut_removes_external_release_publications_and_prospective_marker(): void {
 		$bootstrap = $this->source( 'ran-booster.php' );
 
 		foreach ( array(
@@ -109,19 +109,19 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 			'RAN_BOOSTER_PROSPECTIVE_RELEASE_API_VERSION',
 			'RAN_BOOSTER_RELEASE_DEPLOYMENTS_RETIREMENT',
 			'RAN_BOOSTER_RELEASE_MANAGEMENT_RETIREMENT',
-		) as $retiredSeam ) {
-			self::assertStringNotContainsString( $retiredSeam, $bootstrap );
+		) as $retired_seam ) {
+			self::assertStringNotContainsString( $retired_seam, $bootstrap );
 		}
 
 		self::assertMatchesRegularExpression(
-			"/define\\(\\s*'RAN_BOOSTER_ADDON_API_VERSION'\\s*,\\s*16\\s*\\)/",
+			"/define\\(\\s*'RAN_BOOSTER_ADDON_API_VERSION'\\s*,\\s*17\\s*\\)/",
 			$bootstrap
 		);
-		self::assertStringContainsString( 'RAN Booster Add-on API 16 conflicts with an existing API version marker.', $bootstrap );
+		self::assertStringContainsString( 'RAN Booster Add-on API 17 conflicts with an existing API version marker.', $bootstrap );
 		self::assertStringNotContainsString( "RAN_BOOSTER_ADDON_API_VERSION', 15", $bootstrap );
 	}
 
-	public function testCutoverIgnoresObsoleteSetupRecordWithoutMigrationOrWrite(): void {
+	public function test_cutover_ignores_obsolete_setup_record_without_migration_or_write(): void {
 		$record  = $this->record();
 		$records = array( '123456789' => $record );
 		$GLOBALS['ran_booster_release_deployments_test_options']        = array(
@@ -142,7 +142,7 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		self::assertStringNotContainsString( 'ran_booster_release_deployments_', $uninstall );
 	}
 
-	public function testInstalledReleaseCapabilityProofIsAutomatedAndDisposable(): void {
+	public function test_installed_release_capability_proof_is_automated_and_disposable(): void {
 		$composer = json_decode( $this->source( 'composer.json' ), true );
 		self::assertIsArray( $composer );
 		self::assertSame(
@@ -164,12 +164,12 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		self::assertStringContainsString( "RAN Booster disposable test site\\n", $proof );
 		self::assertSame( 2, substr_count( $proof, '->require_success()' ) );
 
-		foreach ( array( 'native-lifecycle-installed-seed.php', 'native-lifecycle-installed-smoke.php', 'RAN_BOOSTER_NATIVE_LIFECYCLE_SCALE', 'native-lifecycle-installed-cleanup.php' ) as $nativeContract ) {
-			self::assertStringContainsString( $nativeContract, $runner );
+		foreach ( array( 'native-lifecycle-installed-seed.php', 'native-lifecycle-installed-smoke.php', 'RAN_BOOSTER_NATIVE_LIFECYCLE_SCALE', 'native-lifecycle-installed-cleanup.php' ) as $native_contract ) {
+			self::assertStringContainsString( $native_contract, $runner );
 		}
-		$nativeProof = $this->source( 'tests/WordPress/native-lifecycle-installed-smoke.php' );
-		foreach ( array( 'GitHubProvider', 'GitHubReleaseNativeTarget', 'ManagedReleaseTargetRegistrar', 'after_setup_theme', 'ran_booster_native_update_unsupported_context' ) as $nativeContract ) {
-			self::assertStringContainsString( $nativeContract, $nativeProof );
+		$native_proof = $this->source( 'tests/WordPress/native-lifecycle-installed-smoke.php' );
+		foreach ( array( 'GitHubProvider', 'GitHubReleaseNativeTarget', 'ManagedReleaseTargetRegistrar', 'after_setup_theme', 'ran_booster_native_update_unsupported_context' ) as $native_contract ) {
+			self::assertStringContainsString( $native_contract, $native_proof );
 		}
 	}
 

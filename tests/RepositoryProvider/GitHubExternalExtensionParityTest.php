@@ -51,7 +51,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testV3StatusRejectsHistoricalUpdateEvidenceWithoutRewritingIt(): void {
+	public function test_v3_status_rejects_historical_update_evidence_without_rewriting_it(): void {
 		require dirname( __DIR__ ) . '/Runtime/Support/GitHubWorkflowAssistanceWordPressFunctions.php';
 		$provider = GitHubProvider::create( new Phase5CredentialStore(), new Phase5DeliveryEvidenceReader(), new Phase5BundledReleaseUpdater() );
 		self::assertInstanceOf( RepositoryReleaseWorkflowManagementV3::class, $provider );
@@ -71,7 +71,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		);
 		$option  = 'ran_booster_github_provider_release_workflow_failure_history';
 		$GLOBALS['ran_booster_release_deployments_test_options'] = array( $option => array( $current ) );
-		self::assertCount( 1, $provider->workflow_status( $target )->failureHistory() );
+		self::assertCount( 1, $provider->workflow_status( $target )->failure_history() );
 		$GLOBALS['ran_booster_release_deployments_test_options']['ran_booster_github_provider_release_workflow_setup_records'] = array(
 			'123456789' => array(
 				'schema_version' => 2,
@@ -80,9 +80,9 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		);
 		$before = json_encode( $GLOBALS['ran_booster_release_deployments_test_options'], JSON_THROW_ON_ERROR );
 		$status = $provider->workflow_status( $target );
-		self::assertTrue( $status->recordOccupied() );
-		self::assertFalse( $status->recordExact() );
-		self::assertSame( '', $status->recordOperation() );
+		self::assertTrue( $status->record_occupied() );
+		self::assertFalse( $status->record_exact() );
+		self::assertSame( '', $status->record_operation() );
 		self::assertSame( $before, json_encode( $GLOBALS['ran_booster_release_deployments_test_options'], JSON_THROW_ON_ERROR ) );
 		foreach ( array( 'update_inspect', 'update_setup' ) as $operation ) {
 			$obsolete              = $current;
@@ -90,7 +90,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 			foreach ( array( array( $obsolete ), array( $current, $obsolete ) ) as $history ) {
 				$GLOBALS['ran_booster_release_deployments_test_options'] = array( $option => $history );
 				$before = json_encode( $GLOBALS['ran_booster_release_deployments_test_options'], JSON_THROW_ON_ERROR );
-				self::assertSame( array(), $provider->workflow_status( $target )->failureHistory() );
+				self::assertSame( array(), $provider->workflow_status( $target )->failure_history() );
 				self::assertSame( $before, json_encode( $GLOBALS['ran_booster_release_deployments_test_options'], JSON_THROW_ON_ERROR ) );
 			}
 		}
@@ -98,7 +98,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testActualProviderPreservesCoreOutcomeAdmissionForStaleBootstrapButRejectsRetiredRecords(): void {
+	public function test_actual_provider_preserves_core_outcome_admission_for_stale_bootstrap_but_rejects_retired_records(): void {
 		require_once dirname( __DIR__ ) . '/Runtime/Support/GitHubWorkflowAssistanceWordPressFunctions.php';
 		require_once dirname( __DIR__ ) . '/Admin/ReleaseManagement/Support/ReleaseManagementWordPressFunctions.php';
 		require_once dirname( __DIR__ ) . '/Admin/ReleaseManagement/Support/ReleaseManagementFixtures.php';
@@ -162,8 +162,8 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 			);
 			$before = json_encode( $GLOBALS['ran_booster_release_deployments_test_options'], JSON_THROW_ON_ERROR );
 			$actual = $provider->workflow_status( $target );
-			self::assertTrue( $actual->recordOccupied(), $case );
-			self::assertFalse( $actual->recordExact(), $case );
+			self::assertTrue( $actual->record_occupied(), $case );
+			self::assertFalse( $actual->record_exact(), $case );
 			foreach ( array( $controller, $presenter ) as $consumer ) {
 				$admission = new \ReflectionMethod( $consumer, 'record_matches_package_status' );
 				self::assertSame( 'current_bootstrap' === $case, $admission->invoke( $consumer, $actual, $status ), $case . ': ' . $consumer::class );
@@ -174,15 +174,15 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testReleasedGitHubPackageComposesAsAPhysicallySeparateExternalPlugin(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 13 );
+	public function test_released_git_hub_package_composes_as_aphysically_separate_external_plugin(): void {
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
 		define( 'RAN_BOOSTER_RUNTIME_MODE', 'single_site_supported' );
 		$GLOBALS['ran_booster_external_fixture_actions'] = array();
 
-		$extension = $this->materializeExternalExtension();
+		$extension = $this->materialize_external_extension();
 
 		try {
-			$this->loadGenericFixture();
+			$this->load_generic_fixture();
 			require $extension . '/ran-booster-github-provider-extension.php';
 
 			$registry  = $this->registry( self::ARTIFACT_LIMIT );
@@ -207,7 +207,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 			$metadata = $provider->get_metadata();
 			self::assertSame( 'gh', $metadata->code->value );
 			self::assertSame( 'GitHub', $metadata->label );
-			self::assertSame( 'https://github.com/', $metadata->repositoryUrlBase );
+			self::assertSame( 'https://github.com/', $metadata->repository_url_base );
 
 			foreach (
 				array(
@@ -222,22 +222,22 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 					RepositoryReleaseWorkflowManagementV3::class,
 				) as $capability
 			) {
-				self::assertSame( $provider, $registry->requireCapability( 'gh', $capability ), $capability );
+				self::assertSame( $provider, $registry->require_capability( 'gh', $capability ), $capability );
 			}
 
-			$this->proveAnonymousPublicBrowse( $registry );
-			$this->proveArchiveComposition( $provider );
-			$this->proveExternalReleaseLimit( $provider, $extension );
-			$this->assertNoPrivateBoosterImports( $extension );
-			$this->assertSelfUpdateIsProviderIndependent();
+			$this->prove_anonymous_public_browse( $registry );
+			$this->prove_archive_composition( $provider );
+			$this->prove_external_release_limit( $provider, $extension );
+			$this->assert_no_private_booster_imports( $extension );
+			$this->assert_self_update_is_provider_independent();
 		} finally {
-			$this->removeTree( $extension );
+			$this->remove_tree( $extension );
 		}
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testBundledGitHubPassesTheSameConfiguredLimitToReleaseOperations(): void {
+	public function test_bundled_git_hub_passes_the_same_configured_limit_to_release_operations(): void {
 		define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', self::ARTIFACT_LIMIT );
 
 		$updater   = new Phase5BundledReleaseUpdater();
@@ -261,7 +261,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 			);
 			self::fail( 'The inert recorder must not produce a release listing.' );
 		} catch ( RuntimeException ) {
-			self::assertNotNull( $updater->releaseArguments );
+			self::assertNotNull( $updater->release_arguments );
 		}
 
 		self::assertSame(
@@ -274,11 +274,11 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 				null,
 				self::ARTIFACT_LIMIT,
 			),
-			$updater->releaseArguments
+			$updater->release_arguments
 		);
 	}
 
-	public function testFixtureDeclaresNativeDependencyAndUsesOnlyPublicCompositionSurfaces(): void {
+	public function test_fixture_declares_native_dependency_and_uses_only_public_composition_surfaces(): void {
 		$root       = dirname( __DIR__ ) . '/fixtures/ran-booster-github-provider-extension';
 		$entrypoint = file_get_contents( $root . '/ran-booster-github-provider-extension.php' );
 		$plugin     = file_get_contents( $root . '/src/Plugin.php' );
@@ -288,19 +288,19 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		self::assertStringContainsString( 'Requires Plugins: ran-booster', $entrypoint );
 		self::assertStringContainsString( "require __DIR__ . '/vendor/autoload.php';", $entrypoint );
 		self::assertStringContainsString( 'vendor/ran/wp-release-updater/bootstrap.php', $plugin );
-		self::assertStringContainsString( "registerWithCredentialStore( 'gh', \$factory )", $plugin );
+		self::assertStringContainsString( "register_with_credential_store( 'gh', \$factory )", $plugin );
 		self::assertStringNotContainsString( 'class_exists( ProviderRegistrationContext::class )', $plugin );
-		self::assertStringContainsString( 'ProviderRegistrationContext $registrationContext', $plugin );
+		self::assertStringContainsString( 'ProviderRegistrationContext $registration_context', $plugin );
 		self::assertMatchesRegularExpression(
-			'/\$factory = static function \([\s\S]*?ProviderCredentialStore \$credentials,[\s\S]*?AuthenticatedWebhookDeliveryEvidenceReader \$deliveryEvidence,[\s\S]*?ProviderRegistrationContext \$registrationContext[\s\S]*?\): RepositoryProvider \{[\s\S]*?GitHubProvider::create\([\s\S]*?\$registrar,[\s\S]*?maximumArtifactBytes\(\)[\s\S]*?\);[\s\S]*?\};/',
+			'/\$factory = static function \([\s\S]*?ProviderCredentialStore \$credentials,[\s\S]*?AuthenticatedWebhookDeliveryEvidenceReader \$delivery_evidence,[\s\S]*?ProviderRegistrationContext \$registration_context[\s\S]*?\): RepositoryProvider \{[\s\S]*?GitHubProvider::create\([\s\S]*?\$registrar,[\s\S]*?maximum_artifact_bytes\(\)[\s\S]*?\);[\s\S]*?\};/',
 			$plugin
 		);
 		self::assertStringNotContainsString( 'CoreContainer', $plugin );
 
-		$this->assertNoForbiddenNamespaceText( $root );
+		$this->assert_no_forbidden_namespace_text( $root );
 	}
 
-	private function proveAnonymousPublicBrowse( ProviderRegistry $registry ): void {
+	private function prove_anonymous_public_browse( ProviderRegistry $registry ): void {
 		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
 			array(
 				$this->response(
@@ -322,8 +322,8 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 			)
 		);
 
-		$browser = $registry->requireCapability( 'gh', CredentialedPublicRepositoryBrowser::class );
-		$result  = $browser->browse_repositories( RepositoryBrowseRequest::publicOwner( 'RocketsAreNostalgic' ) );
+		$browser = $registry->require_capability( 'gh', CredentialedPublicRepositoryBrowser::class );
+		$result  = $browser->browse_repositories( RepositoryBrowseRequest::public_owner( 'RocketsAreNostalgic' ) );
 
 		self::assertCount( 1, $result->repositories );
 		self::assertSame( 'RocketsAreNostalgic/ran-booster', $result->repositories[0]->locator );
@@ -332,7 +332,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		}
 	}
 
-	private function proveArchiveComposition( object $provider ): void {
+	private function prove_archive_composition( object $provider ): void {
 		$commit = '0123456789abcdef0123456789abcdef01234567';
 		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
 			array(
@@ -358,20 +358,20 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 			)
 		);
 
-		self::assertSame( $commit, $archive->getResolvedRef() );
+		self::assertSame( $commit, $archive->get_resolved_ref() );
 		self::assertSame(
 			'https://api.github.com/repos/RocketsAreNostalgic/example-plugin/zipball/' . $commit,
-			$archive->getUrl()
+			$archive->get_url()
 		);
 		$archive->cleanup();
 	}
 
-	private function proveExternalReleaseLimit( object $provider, string $extension ): void {
+	private function prove_external_release_limit( object $provider, string $extension ): void {
 		$registrar = ( new \ReflectionProperty( GitHubProvider::class, 'registrar' ) )->getValue( $provider );
 		self::assertInstanceOf( ReleaseUpdaterRegistrar::class, $registrar );
 		self::assertSame(
 			$extension . '/vendor/ran/wp-release-updater/bootstrap.php',
-			str_replace( '\\', '/', $registrar->innerSource() )
+			str_replace( '\\', '/', $registrar->inner_source() )
 		);
 
 		try {
@@ -382,7 +382,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 			);
 			self::fail( 'The copied updater runtime is intentionally inactive in this unit fixture.' );
 		} catch ( RuntimeException ) {
-			self::assertNotNull( $registrar->releaseArguments() );
+			self::assertNotNull( $registrar->release_arguments() );
 		}
 
 		self::assertSame(
@@ -395,16 +395,16 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 				null,
 				self::ARTIFACT_LIMIT,
 			),
-			$registrar->releaseArguments()
+			$registrar->release_arguments()
 		);
 	}
 
-	private function assertNoPrivateBoosterImports( string $extension ): void {
-		$this->assertNoForbiddenNamespaceText( $extension . '/src' );
-		$this->assertNoForbiddenNamespaceText( $extension . '/vendor/ran/booster-github-provider/src' );
+	private function assert_no_private_booster_imports( string $extension ): void {
+		$this->assert_no_forbidden_namespace_text( $extension . '/src' );
+		$this->assert_no_forbidden_namespace_text( $extension . '/vendor/ran/booster-github-provider/src' );
 	}
 
-	private function assertNoForbiddenNamespaceText( string $directory ): void {
+	private function assert_no_forbidden_namespace_text( string $directory ): void {
 		$forbidden = array(
 			'RAN\\Admin\\',
 			'RAN\\Internal\\',
@@ -428,23 +428,23 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		}
 	}
 
-	private function assertSelfUpdateIsProviderIndependent(): void {
+	private function assert_self_update_is_provider_independent(): void {
 		$bootstrap = file_get_contents( dirname( __DIR__, 2 ) . '/ran-booster.php' );
 		self::assertIsString( $bootstrap );
 		$start = strpos( $bootstrap, 'if ( $ran_booster_self_update_policy->allows_native_discovery() )' );
 		$end   = strpos( $bootstrap, '$ran_booster_container->bind(', $start );
 		self::assertIsInt( $start );
 		self::assertIsInt( $end );
-		$selfUpdate = substr( $bootstrap, $start, $end - $start );
+		$self_update = substr( $bootstrap, $start, $end - $start );
 
-		self::assertStringContainsString( 'ManagedReleaseUpdaterRegistrar::class )->plugin(', $selfUpdate );
-		self::assertStringContainsString( 'new CoreSelfUpdateNativeTarget( $coreUpdater )', $selfUpdate );
-		self::assertStringNotContainsString( 'ProviderRegistry', $selfUpdate );
-		self::assertStringNotContainsString( 'GitHubProvider', $selfUpdate );
-		self::assertStringNotContainsString( 'requireCapability', $selfUpdate );
+		self::assertStringContainsString( 'ManagedReleaseUpdaterRegistrar::class )->plugin(', $self_update );
+		self::assertStringContainsString( 'new CoreSelfUpdateNativeTarget( $core_updater )', $self_update );
+		self::assertStringNotContainsString( 'ProviderRegistry', $self_update );
+		self::assertStringNotContainsString( 'GitHubProvider', $self_update );
+		self::assertStringNotContainsString( 'require_capability', $self_update );
 	}
 
-	private function registry( int $artifactLimit ): ProviderRegistry {
+	private function registry( int $artifact_limit ): ProviderRegistry {
 		$credentials = new Phase5CredentialStore();
 		$delivery    = new Phase5DeliveryEvidenceReader();
 
@@ -453,25 +453,25 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 			new ProviderSecretPolicyCatalog(),
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $credentials,
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => $delivery,
-			new ProviderRegistrationContext( static fn (): int => $artifactLimit )
+			new ProviderRegistrationContext( static fn (): int => $artifact_limit )
 		);
 	}
 
-	private function loadGenericFixture(): void {
+	private function load_generic_fixture(): void {
 		require dirname( __DIR__ ) . '/fixtures/ran-booster-fixture-provider/ran-booster-fixture-provider.php';
 	}
 
-	private function materializeExternalExtension(): string {
+	private function materialize_external_extension(): string {
 		$root = sys_get_temp_dir() . '/ran-booster-github-extension-' . bin2hex( random_bytes( 6 ) );
-		$this->copyTree(
+		$this->copy_tree(
 			dirname( __DIR__ ) . '/fixtures/ran-booster-github-provider-extension',
 			$root
 		);
 
-		$repositoryRoot = dirname( __DIR__, 2 );
+		$repository_root = dirname( __DIR__, 2 );
 		foreach ( array( 'booster-github-provider', 'wp-release-updater', 'updater-support' ) as $package ) {
-			$this->copyTree(
-				$repositoryRoot . '/vendor/ran/' . $package,
+			$this->copy_tree(
+				$repository_root . '/vendor/ran/' . $package,
 				$root . '/vendor/ran/' . $package
 			);
 		}
@@ -507,7 +507,7 @@ PHP;
 		return $root;
 	}
 
-	private function copyTree( string $source, string $destination ): void {
+	private function copy_tree( string $source, string $destination ): void {
 		self::assertDirectoryExists( $source );
 		self::assertTrue( is_dir( $destination ) || mkdir( $destination, 0700, true ) );
 
@@ -527,7 +527,7 @@ PHP;
 		}
 	}
 
-	private function removeTree( string $root ): void {
+	private function remove_tree( string $root ): void {
 		if ( ! is_dir( $root ) ) {
 			return;
 		}
@@ -551,33 +551,33 @@ PHP;
 }
 
 final class Phase5CredentialStore implements ProviderCredentialStore {
-	public function credentialProfiles(): array {
+	public function credential_profiles(): array {
 		return array();
 	}
 
-	public function credentialMaterial( ?string $id = null ): ?array {
+	public function credential_material( ?string $id = null ): ?array {
 		unset( $id );
 
 		return null;
 	}
 
-	public function hasWebhookProfile(): bool {
+	public function has_webhook_profile(): bool {
 		return false;
 	}
 }
 
 final class Phase5DeliveryEvidenceReader implements AuthenticatedWebhookDeliveryEvidenceReader {
-	public function latestAuthenticatedDelivery(): ?AuthenticatedWebhookDeliveryEvidence {
+	public function latest_authenticated_delivery(): ?AuthenticatedWebhookDeliveryEvidence {
 		return null;
 	}
 }
 
 final class Phase5BundledReleaseUpdater {
 	/** @var list<mixed>|null */
-	public ?array $releaseArguments = null;
+	public ?array $release_arguments = null;
 
 	public function releases( mixed ...$arguments ): object {
-		$this->releaseArguments = $arguments;
+		$this->release_arguments = $arguments;
 
 		return new class() {
 			/** @return array{ok:false,code:string,value:null,retry_after:null,cleanup_status:string} */
@@ -602,7 +602,7 @@ final class Phase5SecretsFile extends SecretsFile {
 		$this->credentials = new Phase5CredentialStore();
 	}
 
-	public function credentialsFor( ProviderCode|string $provider ): ProviderCredentialStore {
+	public function credentials_for( ProviderCode|string $provider ): ProviderCredentialStore {
 		unset( $provider );
 
 		return $this->credentials;

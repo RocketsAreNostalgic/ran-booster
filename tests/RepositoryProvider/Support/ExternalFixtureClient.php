@@ -11,12 +11,12 @@ final class ExternalFixtureClient {
 
 	private int $requests = 0;
 	/** @var array<string, string> */
-	private array $branchHeads = array();
+	private array $branch_heads = array();
 
 	public function __construct( private readonly ProviderCode $code ) {
 	}
 
-	public function checkPublicAccess(): void {
+	public function check_public_access(): void {
 		++$this->requests;
 	}
 
@@ -35,11 +35,11 @@ final class ExternalFixtureClient {
 		);
 	}
 
-	public function getRequests(): int {
+	public function get_requests(): int {
 		return $this->requests;
 	}
 
-	public function resolveRef( string $locator, string $ref ): string {
+	public function resolve_ref( string $locator, string $ref ): string {
 		++$this->requests;
 
 		return 1 === preg_match( '/^[0-9a-f]{40}$/i', $ref )
@@ -47,13 +47,13 @@ final class ExternalFixtureClient {
 			: sha1( $locator . "\0" . $ref );
 	}
 
-	public function branchHead( string $locator, string $branch ): string {
+	public function branch_head( string $locator, string $branch ): string {
 		++$this->requests;
 
-		return $this->branchHeads[ $branch ] ?? sha1( $locator . "\0" . $branch );
+		return $this->branch_heads[ $branch ] ?? sha1( $locator . "\0" . $branch );
 	}
 
-	public function setBranchHead( string $branch, string $commit ): void {
-		$this->branchHeads[ $branch ] = strtolower( $commit );
+	public function set_branch_head( string $branch, string $commit ): void {
+		$this->branch_heads[ $branch ] = strtolower( $commit );
 	}
 }

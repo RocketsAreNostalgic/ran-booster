@@ -8,7 +8,7 @@ use OutOfBoundsException;
 
 final class UnknownProvider extends OutOfBoundsException {
 
-	public static function forCode(): self {
+	public static function for_code(): self {
 		return new self( 'Repository provider is not registered.' );
 	}
 }

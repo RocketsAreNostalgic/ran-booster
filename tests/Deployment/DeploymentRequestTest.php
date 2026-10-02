@@ -12,7 +12,7 @@ use RAN\Deployment\DeploymentRequest;
 
 final class DeploymentRequestTest extends TestCase {
 
-	public function testCanonicalRequestRoundTripsWithOnlyTheNineAllowedKeys(): void {
+	public function test_canonical_request_round_trips_with_only_the_nine_allowed_keys(): void {
 		$request = $this->request();
 
 		self::assertSame(
@@ -27,7 +27,7 @@ final class DeploymentRequestTest extends TestCase {
 		self::assertLessThanOrEqual( 4096, strlen( $request->to_json() ) );
 	}
 
-	public function testPreReleaseEightKeyRequestShapeIsRejected(): void {
+	public function test_pre_release_eight_key_request_shape_is_rejected(): void {
 		$data = $this->request()->to_array();
 		unset( $data['maximum_artifact_bytes'] );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- The unit test exercises the runtime JSON boundary.
@@ -37,7 +37,7 @@ final class DeploymentRequestTest extends TestCase {
 		DeploymentRequest::from_json( $json );
 	}
 
-	public function testNonCanonicalOrExtendedJsonIsRejected(): void {
+	public function test_non_canonical_or_extended_json_is_rejected(): void {
 		$data          = $this->request()->to_array();
 		$data['token'] = 'must-never-be-stored';
 
@@ -46,14 +46,14 @@ final class DeploymentRequestTest extends TestCase {
 		DeploymentRequest::from_json( json_encode( $data, JSON_THROW_ON_ERROR ) );
 	}
 
-	#[DataProvider( 'unsafeRequestProvider' )]
-	public function testUnsafeControlPathAndSecretMaterialIsRejected( callable $factory ): void {
+	#[DataProvider( 'unsafe_request_provider' )]
+	public function test_unsafe_control_path_and_secret_material_is_rejected( callable $factory ): void {
 		$this->expectException( InvalidArgumentException::class );
 		$factory();
 	}
 
 	/** @return iterable<string, array{callable(): DeploymentRequest}> */
-	public static function unsafeRequestProvider(): iterable {
+	public static function unsafe_request_provider(): iterable {
 		yield 'control' => array( static fn (): DeploymentRequest => self::make( repository: "group/repo\nAuthorization: bearer" ) );
 		yield 'url credential' => array( static fn (): DeploymentRequest => self::make( repository: 'https://user:pass@example.test/repo' ) );
 		yield 'traversal' => array( static fn (): DeploymentRequest => self::make( subdirectory: 'package/../secret' ) );
@@ -62,11 +62,11 @@ final class DeploymentRequestTest extends TestCase {
 		yield 'encoded drive prefix' => array( static fn (): DeploymentRequest => self::make( subdirectory: 'C%3A/packages/example' ) );
 		yield 'decode depth exceeded' => array( static fn (): DeploymentRequest => self::make( subdirectory: 'packages/%' . str_repeat( '25', 8 ) . '41' ) );
 		yield 'blank subdirectory' => array( static fn (): DeploymentRequest => self::make( subdirectory: '   ' ) );
-		yield 'secret assignment' => array( static fn (): DeploymentRequest => self::make( configuredBranch: 'token=abcdef' ) );
+		yield 'secret assignment' => array( static fn (): DeploymentRequest => self::make( configured_branch: 'token=abcdef' ) );
 		yield 'oversized' => array( static fn (): DeploymentRequest => self::make( repository: str_repeat( 'a', 513 ) ) );
 	}
 
-	public function testSharedDecodeBoundaryRemainsDurable(): void {
+	public function test_shared_decode_boundary_remains_durable(): void {
 		$subdirectory = 'packages/%' . str_repeat( '25', 7 ) . '41';
 		$request      = self::make( subdirectory: $subdirectory );
 
@@ -80,14 +80,14 @@ final class DeploymentRequestTest extends TestCase {
 
 	private static function make(
 		string $repository = 'group/subgroup/package',
-		string $configuredBranch = 'main',
+		string $configured_branch = 'main',
 		?string $subdirectory = 'wordpress/plugin'
 	): DeploymentRequest {
 		return new DeploymentRequest(
 			repository: $repository,
 			credential_id: 'profile_1',
 			is_private: true,
-			configured_branch: $configuredBranch,
+			configured_branch: $configured_branch,
 			package_slug: 'example-package',
 			subdirectory: $subdirectory,
 			deployment_policy: DeploymentPolicy::AUTOMATIC,

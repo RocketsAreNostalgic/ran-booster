@@ -9,13 +9,13 @@ use RuntimeException;
 final class WebhookRejected extends RuntimeException {
 
 	public function __construct(
-		private readonly int $statusCode,
-		string $safeMessage
+		private readonly int $status_code,
+		string $safe_message
 	) {
-		parent::__construct( $safeMessage );
+		parent::__construct( $safe_message );
 	}
 
-	public function getStatusCode(): int {
-		return $this->statusCode;
+	public function get_status_code(): int {
+		return $this->status_code;
 	}
 }

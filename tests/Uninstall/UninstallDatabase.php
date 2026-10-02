@@ -15,9 +15,9 @@ final class UninstallDatabase {
 	public array $tables = array();
 
 	/** @var array<string, list<int>> */
-	public array $userMeta = array();
+	public array $user_meta = array();
 
-	public ?string $failureContains = null;
+	public ?string $failure_contains = null;
 
 	public function prepare( string $query, mixed ...$arguments ): string {
 		foreach ( $arguments as $argument ) {
@@ -32,7 +32,7 @@ final class UninstallDatabase {
 	}
 
 	public function query( string $query ): int|false {
-		if ( null !== $this->failureContains && str_contains( $query, $this->failureContains ) ) {
+		if ( null !== $this->failure_contains && str_contains( $query, $this->failure_contains ) ) {
 			return false;
 		}
 		if ( 1 === preg_match( '/^DROP TABLE IF EXISTS `([^`]+)`$/', $query, $matches ) ) {
@@ -40,7 +40,7 @@ final class UninstallDatabase {
 			return 1;
 		}
 		if ( 1 === preg_match( "/^DELETE FROM `wp_usermeta` WHERE meta_key = '([^']+)'$/", $query, $matches ) ) {
-			unset( $this->userMeta[ stripslashes( $matches[1] ) ] );
+			unset( $this->user_meta[ stripslashes( $matches[1] ) ] );
 			return 1;
 		}
 

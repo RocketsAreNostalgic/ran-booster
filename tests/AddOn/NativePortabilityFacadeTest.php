@@ -31,15 +31,21 @@ final class NativePortabilityFacadeTest extends TestCase {
 
 	private ?TemporaryCredentialProvider $provider = null;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override requires this method name.
+
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_package_mutation_guard_multisite'] = false;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override requires this method name.
+
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset( $GLOBALS['ran_booster_package_mutation_guard_multisite'] );
 	}
 
-	public function testCorePublishesTheExactFacadeAfterProviderSealingAndBeforeDashboardBinding(): void {
+	public function test_core_publishes_the_exact_facade_after_provider_sealing_and_before_dashboard_binding(): void {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static local bootstrap contract.
 		$bootstrap = file_get_contents( dirname( __DIR__, 2 ) . '/ran-booster.php' );
 
@@ -50,14 +56,14 @@ final class NativePortabilityFacadeTest extends TestCase {
 			"do_action( 'ran_booster_portability_ready', \$portability )",
 			$bootstrap
 		);
-		$runtimeGate = strpos( $bootstrap, 'if ( ! $ran_booster_runtime_support->allowsManagedOperations() )' );
-		$marker      = strpos( $bootstrap, "if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' )" );
-		self::assertIsInt( $runtimeGate );
+		$runtime_gate = strpos( $bootstrap, 'if ( ! $ran_booster_runtime_support->allows_managed_operations() )' );
+		$marker       = strpos( $bootstrap, "if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' )" );
+		self::assertIsInt( $runtime_gate );
 		self::assertIsInt( $marker );
-		self::assertStringContainsString( 'return;', substr( $bootstrap, $runtimeGate, $marker - $runtimeGate ) );
+		self::assertStringContainsString( 'return;', substr( $bootstrap, $runtime_gate, $marker - $runtime_gate ) );
 		self::assertLessThan(
 			strpos( $bootstrap, "do_action( 'ran_booster_portability_ready'" ),
-			strpos( $bootstrap, '$providerRegistry->seal()' )
+			strpos( $bootstrap, '$provider_registry->seal()' )
 		);
 		self::assertLessThan(
 			strpos( $bootstrap, '$ran_booster_container->bind( Dashboard::class' ),
@@ -65,29 +71,29 @@ final class NativePortabilityFacadeTest extends TestCase {
 		);
 	}
 
-	public function testReviewUsesOneProviderResolutionAndNeverReturnsInstall(): void {
+	public function test_review_uses_one_provider_resolution_and_never_returns_install(): void {
 		$facade = $this->facade( true );
 		$result = $facade->review( $this->candidate(), 'valid-nonce' );
 
 		self::assertSame( PortabilityReviewResult::ADOPT, $result->action );
-		self::assertSame( 1, count( $this->provider?->credentialIds ?? array() ) );
+		self::assertSame( 1, count( $this->provider?->credential_ids ?? array() ) );
 
 		$missing = $this->facade( false )->review( $this->candidate(), 'valid-nonce' );
 		self::assertSame( PortabilityReviewResult::BLOCKED, $missing->action );
 		self::assertSame( 'destination_conflict', $missing->reason );
 	}
 
-	public function testReviewAuthorizationFailsBeforeProviderAccess(): void {
+	public function test_review_authorization_fails_before_provider_access(): void {
 		$facade = $this->facade( true, false, null, false );
 		$result = $facade->review( $this->candidate(), 'valid-nonce' );
 
 		self::assertSame( PortabilityReviewResult::BLOCKED, $result->action );
 		self::assertSame( 'forbidden', $result->reason );
-		self::assertSame( array(), $this->provider?->credentialIds );
+		self::assertSame( array(), $this->provider?->credential_ids );
 	}
 
-	public function testApplyTreatsOnlyAnExactDisabledManagedTargetAsVerified(): void {
-		$exact  = $this->managedPlugin( false );
+	public function test_apply_treats_only_an_exact_disabled_managed_target_as_verified(): void {
+		$exact  = $this->managed_plugin( false );
 		$facade = $this->facade( true, true, $exact );
 		$review = $facade->review( $this->candidate(), 'valid-nonce' );
 		$result = $facade->apply( $this->candidate(), $review->fingerprint, 'valid-nonce' );
@@ -96,13 +102,13 @@ final class NativePortabilityFacadeTest extends TestCase {
 		self::assertSame( PortabilityApplyResult::UNCHANGED, $result->status );
 		self::assertTrue( $result->target_verified );
 
-		$manual = $this->facade( true, true, $this->managedPlugin( false, DeploymentPolicy::MANUAL ) )
+		$manual = $this->facade( true, true, $this->managed_plugin( false, DeploymentPolicy::MANUAL ) )
 			->review( $this->candidate(), 'valid-nonce' );
 		self::assertSame( PortabilityReviewResult::PROTECTED, $manual->action );
 	}
 
-	public function testApplyRecomputesAndRejectsAChangedReview(): void {
-		$facade = $this->facade( true, true, $this->managedPlugin( false ) );
+	public function test_apply_recomputes_and_rejects_a_changed_review(): void {
+		$facade = $this->facade( true, true, $this->managed_plugin( false ) );
 		$review = $facade->review( $this->candidate(), 'valid-nonce' );
 		$result = $facade->apply(
 			$this->candidate( array( 'branch' => 'develop' ) ),
@@ -115,10 +121,10 @@ final class NativePortabilityFacadeTest extends TestCase {
 		self::assertFalse( $result->target_verified );
 	}
 
-	public function testProviderPrivacyDriftCannotClaimManagedVerification(): void {
-		$public  = $this->facade( true, true, $this->managedPlugin( false ) )
+	public function test_provider_privacy_drift_cannot_claim_managed_verification(): void {
+		$public  = $this->facade( true, true, $this->managed_plugin( false ) )
 			->review( $this->candidate(), 'valid-nonce' );
-		$private = $this->facade( true, true, $this->managedPlugin( true ), true, true )
+		$private = $this->facade( true, true, $this->managed_plugin( true ), true, true )
 			->review( $this->candidate( array( 'credential_id' => null ) ), 'valid-nonce' );
 
 		self::assertSame( PortabilityReviewResult::MANAGED, $public->action );
@@ -126,7 +132,7 @@ final class NativePortabilityFacadeTest extends TestCase {
 		self::assertNotSame( $public->fingerprint, $private->fingerprint );
 	}
 
-	public function testFacadeSurfaceContainsNoPersistenceOrSourceCleanupAuthority(): void {
+	public function test_facade_surface_contains_no_persistence_or_source_cleanup_authority(): void {
 		$files  = glob( dirname( __DIR__, 2 ) . '/RAN/AddOn/Portability/*.php' );
 		$source = implode(
 			"\n",
@@ -145,16 +151,16 @@ final class NativePortabilityFacadeTest extends TestCase {
 	private function facade(
 		bool $installed,
 		bool $managed = false,
-		?Plugin $managedPackage = null,
+		?Plugin $managed_package = null,
 		bool $authorized = true,
-		bool $providerPrivate = false
+		bool $provider_private = false
 	): NativePortabilityFacade {
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
 		$plugins->method( 'is_installed' )->willReturn( $installed );
 		$plugins->method( 'has_management_record' )->willReturn( $managed );
-		if ( null !== $managedPackage ) {
-			$plugins->method( 'booster_plugin_from_file' )->willReturn( $managedPackage );
+		if ( null !== $managed_package ) {
+			$plugins->method( 'booster_plugin_from_file' )->willReturn( $managed_package );
 		}
 		$themes->method( 'is_installed' )->willReturn( false );
 		$themes->method( 'has_management_record' )->willReturn( false );
@@ -162,10 +168,10 @@ final class NativePortabilityFacadeTest extends TestCase {
 		$catalog        = new ProviderSecretPolicyCatalog();
 		$secrets        = new SecretsFile( null, array(), $catalog );
 		$this->provider = new TemporaryCredentialProvider(
-			$secrets->credentialsFor( 'gh' ),
+			$secrets->credentials_for( 'gh' ),
 			0,
 			'repository-id',
-			$providerPrivate
+			$provider_private
 		);
 		$registry       = new ProviderRegistry( array( $this->provider ), $catalog );
 		$service        = new PortabilityApplicationService(
@@ -201,7 +207,7 @@ final class NativePortabilityFacadeTest extends TestCase {
 		);
 	}
 
-	private function managedPlugin(
+	private function managed_plugin(
 		bool $private,
 		DeploymentPolicy $policy = DeploymentPolicy::DISABLED
 	): Plugin {

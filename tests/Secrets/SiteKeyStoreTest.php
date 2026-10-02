@@ -21,43 +21,43 @@ final class SiteKeyStoreTest extends TestCase {
 	public const KEY     = '12345678901234567890123456789012';
 	private const WINNER = 'abcdefghijklmnopqrstuvwxyzABCDEF';
 
-	public function testAbsentOptionDoesNotCreateAKey(): void {
+	public function test_absent_option_does_not_create_akey(): void {
 		$store = new TestSiteKeyStore();
 
 		self::assertNull( $store->load() );
-		self::assertSame( 0, $store->addCalls );
-		self::assertSame( 0, $store->repairCalls );
+		self::assertSame( 0, $store->add_calls );
+		self::assertSame( 0, $store->repair_calls );
 	}
 
-	public function testFirstCreationStoresCanonicalNonAutoloadedBase64AndReadsItBack(): void {
-		$store               = new TestSiteKeyStore();
-		$store->generatedKey = self::KEY;
+	public function test_first_creation_stores_canonical_non_autoloaded_base64_and_reads_it_back(): void {
+		$store                = new TestSiteKeyStore();
+		$store->generated_key = self::KEY;
 
 		$result = $store->load_or_create();
 
 		self::assertSame( self::KEY, $result['key'] );
 		self::assertTrue( $result['created'] );
-		self::assertSame( base64_encode( self::KEY ), $store->storedValue );
-		self::assertSame( 44, strlen( (string) $store->storedValue ) );
+		self::assertSame( base64_encode( self::KEY ), $store->stored_value );
+		self::assertSame( 44, strlen( (string) $store->stored_value ) );
 		self::assertSame( 'off', $store->autoload );
-		self::assertSame( 1, $store->addCalls );
+		self::assertSame( 1, $store->add_calls );
 	}
 
-	public function testConcurrentCreationLoserUsesTheWinningValidKey(): void {
-		$store               = new TestSiteKeyStore();
-		$store->generatedKey = self::KEY;
-		$store->raceWinner   = base64_encode( self::WINNER );
+	public function test_concurrent_creation_loser_uses_the_winning_valid_key(): void {
+		$store                = new TestSiteKeyStore();
+		$store->generated_key = self::KEY;
+		$store->race_winner   = base64_encode( self::WINNER );
 
 		$result = $store->load_or_create();
 
 		self::assertSame( self::WINNER, $result['key'] );
 		self::assertFalse( $result['created'] );
-		self::assertSame( base64_encode( self::WINNER ), $store->storedValue );
-		self::assertSame( 1, $store->cacheInvalidations );
-		self::assertFalse( $store->staleNegativeCache );
+		self::assertSame( base64_encode( self::WINNER ), $store->stored_value );
+		self::assertSame( 1, $store->cache_invalidations );
+		self::assertFalse( $store->stale_negative_cache );
 	}
 
-	public function testConcurrentFirstCreatorsElectOneRandomKeyAcrossProcesses(): void {
+	public function test_concurrent_first_creators_elect_one_random_key_across_processes(): void {
 		if ( ! function_exists( 'pcntl_fork' )
 			|| ! function_exists( 'pcntl_waitpid' )
 			|| ! function_exists( 'pcntl_wifexited' )
@@ -66,7 +66,7 @@ final class SiteKeyStoreTest extends TestCase {
 		}
 
 		$directory = sys_get_temp_dir() . '/ran-booster-key-race-' . bin2hex( random_bytes( 8 ) );
-		$keyPath   = $directory . '/option-value';
+		$key_path  = $directory . '/option-value';
 		$barrier   = $directory . '/start';
 		$children  = array();
 		$count     = 6;
@@ -82,7 +82,7 @@ final class SiteKeyStoreTest extends TestCase {
 					}
 
 					try {
-						$result  = ( new AtomicFileSiteKeyStore( $keyPath ) )->load_or_create();
+						$result  = ( new AtomicFileSiteKeyStore( $key_path ) )->load_or_create();
 						$payload = json_encode(
 							array(
 								'key'     => base64_encode( $result['key'] ),
@@ -121,7 +121,7 @@ final class SiteKeyStoreTest extends TestCase {
 
 			self::assertSame( 1, count( array_filter( $results, static fn ( array $result ): bool => true === $result['created'] ) ) );
 			self::assertCount( 1, array_unique( array_column( $results, 'key' ) ) );
-			self::assertSame( $results[0]['key'], file_get_contents( $keyPath ) );
+			self::assertSame( $results[0]['key'], file_get_contents( $key_path ) );
 		} finally {
 			$paths = glob( $directory . '/*' );
 			foreach ( false === $paths ? array() : $paths as $path ) {
@@ -133,21 +133,21 @@ final class SiteKeyStoreTest extends TestCase {
 		}
 	}
 
-	public function testExistingValidKeyIsNeverReplaced(): void {
-		$store              = new TestSiteKeyStore();
-		$store->storedValue = base64_encode( self::WINNER );
+	public function test_existing_valid_key_is_never_replaced(): void {
+		$store               = new TestSiteKeyStore();
+		$store->stored_value = base64_encode( self::WINNER );
 
 		$result = $store->load_or_create();
 
 		self::assertSame( self::WINNER, $result['key'] );
 		self::assertFalse( $result['created'] );
-		self::assertSame( 0, $store->addCalls );
+		self::assertSame( 0, $store->add_calls );
 	}
 
-	#[DataProvider( 'malformedStoredKeyProvider' )]
-	public function testMalformedStoredKeysFailClosedWithoutReplacement( mixed $stored ): void {
-		$store              = new TestSiteKeyStore();
-		$store->storedValue = $stored;
+	#[DataProvider( 'malformed_stored_key_provider' )]
+	public function test_malformed_stored_keys_fail_closed_without_replacement( mixed $stored ): void {
+		$store               = new TestSiteKeyStore();
+		$store->stored_value = $stored;
 
 		try {
 			$store->load_or_create();
@@ -155,15 +155,15 @@ final class SiteKeyStoreTest extends TestCase {
 		} catch ( RuntimeException $exception ) {
 			self::assertStringNotContainsString( is_string( $stored ) ? $stored : 'sentinel', $exception->getMessage() );
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export -- The trace is inspected only to prove key redaction.
-			$traceArguments = var_export( $exception->getTrace()[0]['args'] ?? array(), true );
-			self::assertStringNotContainsString( is_string( $stored ) ? $stored : 'sentinel', $traceArguments );
+			$trace_arguments = var_export( $exception->getTrace()[0]['args'] ?? array(), true );
+			self::assertStringNotContainsString( is_string( $stored ) ? $stored : 'sentinel', $trace_arguments );
 		}
 
-		self::assertSame( 0, $store->addCalls );
+		self::assertSame( 0, $store->add_calls );
 	}
 
 	/** @return array<string, array{mixed}> */
-	public static function malformedStoredKeyProvider(): array {
+	public static function malformed_stored_key_provider(): array {
 		return array(
 			'non-string'           => array( array( 'sentinel' ) ),
 			'boolean false'        => array( false ),
@@ -173,83 +173,83 @@ final class SiteKeyStoreTest extends TestCase {
 		);
 	}
 
-	public function testValidAutoloadedKeyIsRepairedWithoutChangingItsBytes(): void {
-		$store              = new TestSiteKeyStore();
-		$store->storedValue = base64_encode( self::KEY );
-		$store->autoload    = 'on';
-		$before             = $store->storedValue;
+	public function test_valid_autoloaded_key_is_repaired_without_changing_its_bytes(): void {
+		$store               = new TestSiteKeyStore();
+		$store->stored_value = base64_encode( self::KEY );
+		$store->autoload     = 'on';
+		$before              = $store->stored_value;
 
 		self::assertSame( self::KEY, $store->load() );
-		self::assertSame( 1, $store->repairCalls );
+		self::assertSame( 1, $store->repair_calls );
 		self::assertSame( 'off', $store->autoload );
-		self::assertSame( $before, $store->storedValue );
+		self::assertSame( $before, $store->stored_value );
 	}
 
-	public function testReadOnlyLoadRejectsAutoloadedKeyWithoutRepairingIt(): void {
-		$store              = new TestSiteKeyStore();
-		$store->storedValue = base64_encode( self::KEY );
-		$store->autoload    = 'on';
+	public function test_read_only_load_rejects_autoloaded_key_without_repairing_it(): void {
+		$store               = new TestSiteKeyStore();
+		$store->stored_value = base64_encode( self::KEY );
+		$store->autoload     = 'on';
 
 		try {
 			$store->load( false );
 			self::fail( 'A read-only load must reject an autoloaded site key.' );
 		} catch ( RuntimeException ) {
-			self::assertSame( 0, $store->repairCalls );
+			self::assertSame( 0, $store->repair_calls );
 			self::assertSame( 'on', $store->autoload );
 		}
 	}
 
-	public function testUnverifiableAutoloadRepairFailsWithoutChangingTheKey(): void {
-		$store              = new TestSiteKeyStore();
-		$store->storedValue = base64_encode( self::KEY );
-		$store->autoload    = 'on';
-		$store->failRepair  = true;
-		$before             = $store->storedValue;
+	public function test_unverifiable_autoload_repair_fails_without_changing_the_key(): void {
+		$store               = new TestSiteKeyStore();
+		$store->stored_value = base64_encode( self::KEY );
+		$store->autoload     = 'on';
+		$store->fail_repair  = true;
+		$before              = $store->stored_value;
 
 		$this->expectException( RuntimeException::class );
 
 		try {
 			$store->load();
 		} finally {
-			self::assertSame( $before, $store->storedValue );
+			self::assertSame( $before, $store->stored_value );
 		}
 	}
 
-	public function testMissingAutoloadMetadataFailsClosed(): void {
-		$store                = new TestSiteKeyStore();
-		$store->storedValue   = base64_encode( self::KEY );
-		$store->autoloadKnown = false;
+	public function test_missing_autoload_metadata_fails_closed(): void {
+		$store                 = new TestSiteKeyStore();
+		$store->stored_value   = base64_encode( self::KEY );
+		$store->autoload_known = false;
 
 		$this->expectException( RuntimeException::class );
 		$store->load();
 	}
 
-	public function testFailedCreationWithoutAWinnerFailsClosed(): void {
-		$store               = new TestSiteKeyStore();
-		$store->generatedKey = self::KEY;
-		$store->failAdd      = true;
+	public function test_failed_creation_without_awinner_fails_closed(): void {
+		$store                = new TestSiteKeyStore();
+		$store->generated_key = self::KEY;
+		$store->fail_add      = true;
 
 		$this->expectException( RuntimeException::class );
 		$store->load_or_create();
 	}
 
-	public function testExactDeletionCannotRemoveADifferentKey(): void {
-		$store              = new TestSiteKeyStore();
-		$store->storedValue = base64_encode( self::WINNER );
+	public function test_exact_deletion_cannot_remove_adifferent_key(): void {
+		$store               = new TestSiteKeyStore();
+		$store->stored_value = base64_encode( self::WINNER );
 
 		self::assertFalse( $store->delete_exact( self::KEY ) );
-		self::assertSame( base64_encode( self::WINNER ), $store->storedValue );
-		self::assertSame( 0, $store->cacheInvalidations );
+		self::assertSame( base64_encode( self::WINNER ), $store->stored_value );
+		self::assertSame( 0, $store->cache_invalidations );
 
 		self::assertTrue( $store->delete_exact( self::WINNER ) );
 		self::assertNull( $store->load() );
-		self::assertSame( 1, $store->cacheInvalidations );
+		self::assertSame( 1, $store->cache_invalidations );
 	}
 
-	public function testDeletionStorageFailureDoesNotClaimSuccess(): void {
-		$store              = new TestSiteKeyStore();
-		$store->storedValue = base64_encode( self::KEY );
-		$store->failDelete  = true;
+	public function test_deletion_storage_failure_does_not_claim_success(): void {
+		$store               = new TestSiteKeyStore();
+		$store->stored_value = base64_encode( self::KEY );
+		$store->fail_delete  = true;
 
 		$this->expectException( RuntimeException::class );
 		$store->delete_exact( self::KEY );
@@ -258,81 +258,81 @@ final class SiteKeyStoreTest extends TestCase {
 
 final class TestSiteKeyStore extends SiteKeyStore {
 
-	public mixed $storedValue;
-	public string $autoload         = 'off';
-	public bool $autoloadKnown      = true;
-	public string $generatedKey     = SiteKeyStoreTest::KEY;
-	public ?string $raceWinner      = null;
-	public bool $failAdd            = false;
-	public bool $failRepair         = false;
-	public bool $failDelete         = false;
-	public int $addCalls            = 0;
-	public int $repairCalls         = 0;
-	public int $cacheInvalidations  = 0;
-	public bool $staleNegativeCache = false;
+	public mixed $stored_value;
+	public string $autoload           = 'off';
+	public bool $autoload_known       = true;
+	public string $generated_key      = SiteKeyStoreTest::KEY;
+	public ?string $race_winner       = null;
+	public bool $fail_add             = false;
+	public bool $fail_repair          = false;
+	public bool $fail_delete          = false;
+	public int $add_calls             = 0;
+	public int $repair_calls          = 0;
+	public int $cache_invalidations   = 0;
+	public bool $stale_negative_cache = false;
 
 	public function __construct() {
 		parent::__construct();
-		$this->storedValue = $this->missing_stored_value();
+		$this->stored_value = $this->missing_stored_value();
 	}
 
 	protected function read_stored_value(): mixed {
-		if ( $this->staleNegativeCache ) {
+		if ( $this->stale_negative_cache ) {
 			return $this->missing_stored_value();
 		}
 
-		return $this->storedValue;
+		return $this->stored_value;
 	}
 
 	protected function add_stored_value( #[\SensitiveParameter] string $encoded ): bool {
-		++$this->addCalls;
-		if ( null !== $this->raceWinner ) {
-			$this->storedValue        = $this->raceWinner;
-			$this->staleNegativeCache = true;
+		++$this->add_calls;
+		if ( null !== $this->race_winner ) {
+			$this->stored_value         = $this->race_winner;
+			$this->stale_negative_cache = true;
 
 			return false;
 		}
-		if ( $this->failAdd ) {
+		if ( $this->fail_add ) {
 			return false;
 		}
 
-		$this->storedValue = $encoded;
-		$this->autoload    = 'off';
+		$this->stored_value = $encoded;
+		$this->autoload     = 'off';
 
 		return true;
 	}
 
 	protected function read_autoload_value(): ?string {
-		return $this->autoloadKnown ? $this->autoload : null;
+		return $this->autoload_known ? $this->autoload : null;
 	}
 
 	protected function repair_autoload_value(): void {
-		++$this->repairCalls;
-		if ( ! $this->failRepair ) {
+		++$this->repair_calls;
+		if ( ! $this->fail_repair ) {
 			$this->autoload = 'off';
 		}
 	}
 
 	protected function delete_stored_value_exact( #[\SensitiveParameter] string $encoded ): int|false {
-		if ( $this->failDelete ) {
+		if ( $this->fail_delete ) {
 			return false;
 		}
-		if ( $encoded !== $this->storedValue ) {
+		if ( $encoded !== $this->stored_value ) {
 			return 0;
 		}
 
-		$this->storedValue = $this->missing_stored_value();
+		$this->stored_value = $this->missing_stored_value();
 
 		return 1;
 	}
 
 	protected function invalidate_option_cache(): void {
-		++$this->cacheInvalidations;
-		$this->staleNegativeCache = false;
+		++$this->cache_invalidations;
+		$this->stale_negative_cache = false;
 	}
 
 	protected function generate_key(): string {
-		return $this->generatedKey;
+		return $this->generated_key;
 	}
 }
 

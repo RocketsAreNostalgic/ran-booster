@@ -16,7 +16,7 @@ use ReflectionClass;
 
 final class PortabilityContractTest extends TestCase {
 
-	public function testApiThreePreservesApiTwoCandidateReviewAndNonceBytes(): void {
+	public function test_api_three_preserves_api_two_candidate_review_and_nonce_bytes(): void {
 		// Captured from pre-migration Core d5b35ac, not derived from API_VERSION.
 		$candidate = $this->candidate();
 		$review    = $this->review( $candidate );
@@ -41,7 +41,7 @@ final class PortabilityContractTest extends TestCase {
 		);
 	}
 
-	public function testCompletedPhpBoundaryRejectsLegacyNamesAndAcceptsNamedArguments(): void {
+	public function test_completed_php_boundary_rejects_legacy_names_and_accepts_named_arguments(): void {
 		$candidate = new PortabilityCandidate(
 			type: 'plugin',
 			identifier: 'example/example.php',
@@ -85,7 +85,7 @@ final class PortabilityContractTest extends TestCase {
 		}
 	}
 
-	public function testCandidateProjectsOnlyBoundedTargetFields(): void {
+	public function test_candidate_projects_only_bounded_target_fields(): void {
 		$candidate = $this->candidate();
 
 		self::assertSame(
@@ -108,15 +108,15 @@ final class PortabilityContractTest extends TestCase {
 	}
 
 	/** @param array<string, mixed> $overrides */
-	#[DataProvider( 'invalidCandidateProvider' )]
-	public function testCandidateRejectsNonCanonicalOrUnboundedInput( array $overrides ): void {
+	#[DataProvider( 'invalid_candidate_provider' )]
+	public function test_candidate_rejects_non_canonical_or_unbounded_input( array $overrides ): void {
 		$this->expectException( InvalidArgumentException::class );
 
 		$this->candidate( $overrides );
 	}
 
 	/** @return iterable<string, array{array<string, mixed>}> */
-	public static function invalidCandidateProvider(): iterable {
+	public static function invalid_candidate_provider(): iterable {
 		yield 'operation-shaped type' => array( array( 'type' => 'install-plugin' ) );
 		yield 'plugin without basename' => array( array( 'identifier' => 'example' ) );
 		yield 'theme with plugin path' => array(
@@ -137,7 +137,7 @@ final class PortabilityContractTest extends TestCase {
 		yield 'long credential id' => array( array( 'credential_id' => str_repeat( 'a', 65 ) ) );
 	}
 
-	public function testReviewResultIsClosedAndVersionFingerprintBound(): void {
+	public function test_review_result_is_closed_and_version_fingerprint_bound(): void {
 		$result = PortabilityReviewResult::from_resolved(
 			$this->candidate(),
 			PortabilityReviewResult::ADOPT,
@@ -155,8 +155,8 @@ final class PortabilityContractTest extends TestCase {
 		self::assertSame( 'string', (string) $reflection->getMethod( 'from_resolved' )->getParameters()[1]->getType() );
 	}
 
-	#[DataProvider( 'invalidReviewProvider' )]
-	public function testReviewResultRejectsInstallUnsafeMessagesAndMalformedFingerprints(
+	#[DataProvider( 'invalid_review_provider' )]
+	public function test_review_result_rejects_install_unsafe_messages_and_malformed_fingerprints(
 		string $action,
 		string $message,
 		string $fingerprint
@@ -173,7 +173,7 @@ final class PortabilityContractTest extends TestCase {
 	}
 
 	/** @return iterable<string, array{string, string, string}> */
-	public static function invalidReviewProvider(): iterable {
+	public static function invalid_review_provider(): iterable {
 		yield 'install' => array( 'install', 'Ready.', 'v1:' . str_repeat( 'a', 64 ) );
 		yield 'blank message' => array( PortabilityReviewResult::ADOPT, '', 'v1:' . str_repeat( 'a', 64 ) );
 		yield 'control in message' => array( PortabilityReviewResult::ADOPT, "Unsafe\nmessage", 'v1:' . str_repeat( 'a', 64 ) );
@@ -181,7 +181,7 @@ final class PortabilityContractTest extends TestCase {
 		yield 'uppercase fingerprint' => array( PortabilityReviewResult::ADOPT, 'Ready.', 'v1:' . str_repeat( 'A', 64 ) );
 	}
 
-	public function testApplyResultCanVerifyOnlyAdoptedOrExactUnchangedTargets(): void {
+	public function test_apply_result_can_verify_only_adopted_or_exact_unchanged_targets(): void {
 		$adopted = new PortabilityApplyResult(
 			PortabilityApplyResult::ADOPTED,
 			TargetPackageReason::NONE->value,
@@ -215,7 +215,7 @@ final class PortabilityContractTest extends TestCase {
 		}
 	}
 
-	public function testFacadeSurfaceHasNoLifecycleOrGenericPayloadOperations(): void {
+	public function test_facade_surface_has_no_lifecycle_or_generic_payload_operations(): void {
 		$reflection = new ReflectionClass( PortabilityFacade::class );
 		$methods    = array_map(
 			static fn ( \ReflectionMethod $method ): string => $method->name,
@@ -229,7 +229,7 @@ final class PortabilityContractTest extends TestCase {
 		self::assertFalse( $reflection->hasMethod( 'cancel' ) );
 	}
 
-	public function testNonceScopesBindOnlyDigestsAndTheExpectedReview(): void {
+	public function test_nonce_scopes_bind_only_digests_and_the_expected_review(): void {
 		$facade      = $this->facade();
 		$candidate   = $this->candidate();
 		$fingerprint = 'v1:' . str_repeat( 'a', 64 );
@@ -259,7 +259,7 @@ final class PortabilityContractTest extends TestCase {
 		}
 	}
 
-	public function testReviewFingerprintChangesWithEveryAuthorityInput(): void {
+	public function test_review_fingerprint_changes_with_every_authority_input(): void {
 		$base        = $this->candidate();
 		$fingerprint = $this->review( $base )->fingerprint;
 		$changes     = array(

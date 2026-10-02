@@ -29,6 +29,7 @@ use RAN\WordPress\WordPressUpdaterLock;
 final class CredentialValidationHtmxDispatcherTest extends TestCase {
 	private HtmxCredentialValidationTestController $controller;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$_POST                     = array();
 		$_SERVER['REQUEST_METHOD'] = 'POST';
@@ -40,6 +41,7 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 		$GLOBALS['ran_booster_repository_admin_translations'] = array();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_POST = array();
 		unset(
@@ -54,7 +56,7 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 		);
 	}
 
-	public function testOrdinaryPostKeepsTheExistingDashboardNoticeFlow(): void {
+	public function test_ordinary_post_keeps_the_existing_dashboard_notice_flow(): void {
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
 			->method( 'add_message' )
@@ -69,7 +71,7 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 		self::assertSame( array( 'ran-booster-save-secrets' ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
-	public function testHtmxPostReturnsOnlyTheSafeSuccessToastPayload(): void {
+	public function test_htmx_post_returns_only_the_safe_success_toast_payload(): void {
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::never() )->method( 'add_message' );
 		$dispatcher                 = $this->dispatcher( $dashboard, CredentialValidationResult::valid() );
@@ -80,14 +82,14 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 			$dispatcher->dispatch_post_requests();
 			self::fail( 'An HTMX response must end the request after rendering its bounded fragment.' );
 		} catch ( HtmxCredentialValidationResponse $response ) {
-			self::assertSame( 'credential_1', $response->credentialId );
-			self::assertSame( 'Repository credential validated successfully.', $response->toastMessage );
+			self::assertSame( 'credential_1', $response->credential_id );
+			self::assertSame( 'Repository credential validated successfully.', $response->toast_message );
 			self::assertNull( $response->error );
 			self::assertSame( 200, $response->status );
 		}
 	}
 
-	public function testHtmxSuccessToastUsesTheTranslatedCredentialValidationMessage(): void {
+	public function test_htmx_success_toast_uses_the_translated_credential_validation_message(): void {
 		$translations = array(
 			'Repository credential validated successfully.' => 'Translated credential validation success.',
 		);
@@ -104,17 +106,17 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 			$dispatcher->dispatch_post_requests();
 			self::fail( 'An HTMX response must end the request after rendering its bounded fragment.' );
 		} catch ( HtmxCredentialValidationResponse $response ) {
-			self::assertSame( 'credential_1', $response->credentialId );
-			self::assertSame( 'Translated credential validation success.', $response->toastMessage );
+			self::assertSame( 'credential_1', $response->credential_id );
+			self::assertSame( 'Translated credential validation success.', $response->toast_message );
 			self::assertNull( $response->error );
 			self::assertSame( 200, $response->status );
 		}
 	}
 
-	public function testHtmxValidationFailureRemainsLocalAndDoesNotClaimSuccess(): void {
+	public function test_htmx_validation_failure_remains_local_and_does_not_claim_success(): void {
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::never() )->method( 'add_message' );
-		$dispatcher                 = $this->dispatcher( $dashboard, CredentialValidationResult::rateLimited() );
+		$dispatcher                 = $this->dispatcher( $dashboard, CredentialValidationResult::rate_limited() );
 		$_SERVER['HTTP_HX_REQUEST'] = 'TRUE';
 		$_POST['ran_booster']       = $this->request();
 
@@ -122,8 +124,8 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 			$dispatcher->dispatch_post_requests();
 			self::fail( 'An HTMX validation failure must return the local error fragment.' );
 		} catch ( HtmxCredentialValidationResponse $response ) {
-			self::assertSame( 'credential_1', $response->credentialId );
-			self::assertNull( $response->toastMessage );
+			self::assertSame( 'credential_1', $response->credential_id );
+			self::assertNull( $response->toast_message );
 			self::assertSame( 'The repository provider rate-limited credential validation. Try again later.', $response->error );
 			self::assertSame( 422, $response->status );
 		}
@@ -166,7 +168,7 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 			new ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
 			new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: $plugins, themes: $themes, providers: $providers ),
 			$lock,
-			providerProfileInteraction: $this->controller
+			provider_profile_interaction: $this->controller
 		);
 	}
 }
@@ -175,8 +177,8 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 final class HtmxCredentialValidationResponse extends \RuntimeException {
 
 	public function __construct(
-		public readonly string $credentialId,
-		public readonly ?string $toastMessage,
+		public readonly string $credential_id,
+		public readonly ?string $toast_message,
 		public readonly ?string $error,
 		public readonly int $status
 	) {
@@ -189,16 +191,16 @@ final class HtmxCredentialValidationTestController extends ProviderProfileAdminC
 	/** @var array{id:string,message:?string,error:?string,status:int}|null */
 	public ?array $response = null;
 
-	protected function respond_to_htmx_credential_validation( string $credentialId, ?string $message, ?string $error, int $status ): never {
+	protected function respond_to_htmx_credential_validation( string $credential_id, ?string $message, ?string $error, int $status ): never {
 		$this->response = array(
-			'id'      => $credentialId,
+			'id'      => $credential_id,
 			'message' => $message,
 			'error'   => $error,
 			'status'  => $status,
 		);
 
 		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The test spy captures its fixed method arguments without output.
-		throw new HtmxCredentialValidationResponse( $credentialId, $message, $error, $status );
+		throw new HtmxCredentialValidationResponse( $credential_id, $message, $error, $status );
 	}
 }
 // phpcs:enable Generic.Files.OneObjectStructurePerFile

@@ -38,15 +38,15 @@ final readonly class ManagedPackageWebhookAuthorityResolver {
 				continue;
 			}
 
-			$authorityId = $package->get_provider_repository_id();
-			if ( ! is_string( $authorityId ) || '' === trim( $authorityId ) ) {
+			$authority_id = $package->get_provider_repository_id();
+			if ( ! is_string( $authority_id ) || '' === trim( $authority_id ) ) {
 				throw new CredentialRequestException(
 					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception remains a plain administrator message.
 					__( 'This managed package does not have a stable repository identity. Re-save its repository settings before creating a repository-scoped webhook secret.', 'ran-booster' )
 				);
 			}
 
-			$matches[ $authorityId ] = true;
+			$matches[ $authority_id ] = true;
 		}
 
 		if ( 1 !== count( $matches ) ) {
@@ -59,7 +59,7 @@ final readonly class ManagedPackageWebhookAuthorityResolver {
 		return (string) array_key_first( $matches );
 	}
 
-	public function resolveOwner(
+	public function resolve_owner(
 		ProviderCode $provider,
 		string $owner
 	): string {
@@ -85,7 +85,7 @@ final readonly class ManagedPackageWebhookAuthorityResolver {
 	}
 
 	/** @return array{provider_code:string,repository_id:string}|null */
-	public function forPackage( string $type, string $identifier ): ?array {
+	public function for_package( string $type, string $identifier ): ?array {
 		try {
 			$package = 'plugin' === $type
 				? $this->plugins->booster_plugin_from_file( $identifier )
@@ -97,15 +97,15 @@ final readonly class ManagedPackageWebhookAuthorityResolver {
 		if ( ! $package instanceof Package || PackageSource::BRANCH !== $package->get_source() ) {
 			return null;
 		}
-		$providerCode = $package->get_provider_code();
-		$repositoryId = $package->get_provider_repository_id();
-		if ( ! is_string( $providerCode ) || ! is_string( $repositoryId ) || '' === trim( $providerCode ) || '' === trim( $repositoryId ) ) {
+		$provider_code = $package->get_provider_code();
+		$repository_id = $package->get_provider_repository_id();
+		if ( ! is_string( $provider_code ) || ! is_string( $repository_id ) || '' === trim( $provider_code ) || '' === trim( $repository_id ) ) {
 			return null;
 		}
 
 		return array(
-			'provider_code' => $providerCode,
-			'repository_id' => $repositoryId,
+			'provider_code' => $provider_code,
+			'repository_id' => $repository_id,
 		);
 	}
 }

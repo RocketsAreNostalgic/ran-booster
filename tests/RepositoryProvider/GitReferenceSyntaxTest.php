@@ -10,13 +10,13 @@ use RAN\RepositoryProvider\GitReferenceSyntax;
 
 final class GitReferenceSyntaxTest extends TestCase {
 
-	#[DataProvider( 'validNamedReferences' )]
-	public function testAcceptsTheExistingNamedReferenceGrammar( string $reference ): void {
-		self::assertTrue( GitReferenceSyntax::isValidNamedReference( $reference ) );
+	#[DataProvider( 'valid_named_references' )]
+	public function test_accepts_the_existing_named_reference_grammar( string $reference ): void {
+		self::assertTrue( GitReferenceSyntax::is_valid_named_reference( $reference ) );
 	}
 
 	/** @return iterable<string, array{string}> */
-	public static function validNamedReferences(): iterable {
+	public static function valid_named_references(): iterable {
 		yield 'simple branch' => array( 'main' );
 		yield 'slash separated' => array( 'feature/release-candidate' );
 		yield 'allowed punctuation' => array( 'release_1.2+candidate' );
@@ -24,13 +24,13 @@ final class GitReferenceSyntaxTest extends TestCase {
 		yield 'unicode bytes below limit' => array( str_repeat( 'é', 127 ) );
 	}
 
-	#[DataProvider( 'invalidNamedReferences' )]
-	public function testRejectsEveryExistingNamedReferenceEdge( string $reference ): void {
-		self::assertFalse( GitReferenceSyntax::isValidNamedReference( $reference ) );
+	#[DataProvider( 'invalid_named_references' )]
+	public function test_rejects_every_existing_named_reference_edge( string $reference ): void {
+		self::assertFalse( GitReferenceSyntax::is_valid_named_reference( $reference ) );
 	}
 
 	/** @return iterable<string, array{string}> */
-	public static function invalidNamedReferences(): iterable {
+	public static function invalid_named_references(): iterable {
 		yield 'empty' => array( '' );
 		yield 'leading space' => array( ' main' );
 		yield 'trailing space' => array( 'main ' );

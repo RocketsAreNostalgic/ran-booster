@@ -17,14 +17,14 @@ final readonly class ManagedRepository {
 	public function __construct(
 		ProviderCode|string $provider,
 		string $locator,
-		string $providerRepositoryId,
+		string $provider_repository_id,
 		string $branch,
 		bool $private = false,
-		?string $credentialId = null
+		?string $credential_id = null
 	) {
-		$credentialId    = null === $credentialId || '' === trim( $credentialId ) ? null : $credentialId;
+		$credential_id   = null === $credential_id || '' === trim( $credential_id ) ? null : $credential_id;
 		$this->provider  = is_string( $provider ) ? ProviderCode::parse( $provider ) : $provider;
-		$this->reference = new RepositoryReference( $locator, $providerRepositoryId, $private, $credentialId );
+		$this->reference = new RepositoryReference( $locator, $provider_repository_id, $private, $credential_id );
 		$this->branch    = '' === $branch ? 'main' : $branch;
 	}
 

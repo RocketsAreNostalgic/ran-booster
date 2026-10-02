@@ -14,8 +14,8 @@ final readonly class ExternalFixtureDiagnostics implements ProviderDiagnostics {
 	}
 
 	public function diagnose( ProviderDiagnosticRequest $request ): array {
-		$request->claimRemoteCall();
-		$this->client->checkPublicAccess();
+		$request->claim_remote_call();
+		$this->client->check_public_access();
 
 		$results = array(
 			new ProviderDiagnosticResult(
@@ -32,7 +32,7 @@ final readonly class ExternalFixtureDiagnostics implements ProviderDiagnostics {
 			),
 		);
 
-		if ( null === $request->getRepository() ) {
+		if ( null === $request->get_repository() ) {
 			$results[] = new ProviderDiagnosticResult(
 				ProviderDiagnosticResult::NOT_CONFIGURED,
 				'fixture.repository.not_configured',
@@ -43,8 +43,8 @@ final readonly class ExternalFixtureDiagnostics implements ProviderDiagnostics {
 			return $results;
 		}
 
-		$request->claimRemoteCall();
-		$this->client->repository( $request->getRepository() );
+		$request->claim_remote_call();
+		$this->client->repository( $request->get_repository() );
 		$results[] = new ProviderDiagnosticResult(
 			ProviderDiagnosticResult::PASSED,
 			'fixture.repository.reachable',

@@ -15,11 +15,9 @@ final readonly class BlueprintPackage {
 	public function __construct(
 		public string $type,
 		public string $identifier,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted fields retain the existing caller contract.
-		public string $displayName,
+		public string $display_name,
 		public string $provider,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted fields retain the existing caller contract.
-		public string $providerRepositoryId,
+		public string $provider_repository_id,
 		public string $repository,
 		public string $branch,
 		public ?string $subdirectory
@@ -30,10 +28,8 @@ final readonly class BlueprintPackage {
 		$normalized_subdirectory = PackageSubdirectory::normalize( $subdirectory );
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true )
 			|| ! self::safe_package_identifier( $identifier, $type )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted fields retain the existing caller contract.
-			|| '' === $displayName || trim( $displayName ) !== $displayName || strlen( $displayName ) > 191 || 1 !== preg_match( '//u', $displayName ) || preg_match( '/[\x00-\x1F\x7F]/', $displayName )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and promoted fields retain the existing caller contract.
-			|| '' === $providerRepositoryId || strlen( $providerRepositoryId ) > 191 || 1 !== preg_match( '//u', $providerRepositoryId ) || preg_match( '/[\x00-\x1F\x7F]/', $providerRepositoryId )
+			|| '' === $display_name || trim( $display_name ) !== $display_name || strlen( $display_name ) > 191 || 1 !== preg_match( '//u', $display_name ) || preg_match( '/[\x00-\x1F\x7F]/', $display_name )
+			|| '' === $provider_repository_id || strlen( $provider_repository_id ) > 191 || 1 !== preg_match( '//u', $provider_repository_id ) || preg_match( '/[\x00-\x1F\x7F]/', $provider_repository_id )
 			|| '' === $branch || strlen( $branch ) > 255 || 1 !== preg_match( '//u', $branch ) || preg_match( '/[\x00-\x1F\x7F]/', $branch )
 			|| $subdirectory !== $normalized_subdirectory ) {
 			throw new InvalidArgumentException( 'The portability package record is invalid.' );
@@ -80,11 +76,9 @@ final readonly class BlueprintPackage {
 		return array(
 			'type'                   => $this->type,
 			'identifier'             => $this->identifier,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public named parameters and promoted fields retain the existing caller contract.
-			'display_name'           => $this->displayName,
+			'display_name'           => $this->display_name,
 			'provider'               => $this->provider,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Public named parameters and promoted fields retain the existing caller contract.
-			'provider_repository_id' => $this->providerRepositoryId,
+			'provider_repository_id' => $this->provider_repository_id,
 			'repository'             => $this->repository,
 			'branch'                 => $this->branch,
 			'subdirectory'           => $this->subdirectory,
@@ -117,7 +111,7 @@ final readonly class BlueprintPackage {
 	}
 
 	private static function safe_repository_locator( string $repository ): void {
-		RepositoryLocator::requireValid( $repository );
+		RepositoryLocator::require_valid( $repository );
 
 		if ( ! str_contains( $repository, '://' ) ) {
 			return;

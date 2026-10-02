@@ -12,22 +12,22 @@ use LogicException;
 final readonly class AdminAddOnContext {
 
 	private function __construct(
-		private string $tabKey,
-		private string $boosterUrl,
+		private string $tab_key,
+		private string $booster_url,
 		private string $scope,
-		private int $coreApiVersion,
-		private int $addOnApiVersion,
+		private int $core_api_version,
+		private int $add_on_api_version,
 		/** @var array<string, object> */
 		private array $facades
 	) {
 	}
 
-	public static function forCurrentAdministrator(
-		string $tabKey,
-		string $boosterUrl,
+	public static function for_current_administrator(
+		string $tab_key,
+		string $booster_url,
 		string $scope,
-		int $coreApiVersion,
-		int $addOnApiVersion,
+		int $core_api_version,
+		int $add_on_api_version,
 		array $facades = array()
 	): self {
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -35,11 +35,11 @@ final readonly class AdminAddOnContext {
 		}
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- No WordPress bootstrap is available for this small API value object.
-		$urlParts = parse_url( $boosterUrl );
-		if ( ! is_array( $urlParts )
-			|| ! isset( $urlParts['scheme'], $urlParts['host'] )
-			|| ! in_array( strtolower( $urlParts['scheme'] ), array( 'http', 'https' ), true )
-			|| isset( $urlParts['user'], $urlParts['pass'], $urlParts['fragment'] ) ) {
+		$url_parts = parse_url( $booster_url );
+		if ( ! is_array( $url_parts )
+			|| ! isset( $url_parts['scheme'], $url_parts['host'] )
+			|| ! in_array( strtolower( $url_parts['scheme'] ), array( 'http', 'https' ), true )
+			|| isset( $url_parts['user'], $url_parts['pass'], $url_parts['fragment'] ) ) {
 			throw new LogicException( 'Add-on tabs require a canonical Booster URL.' );
 		}
 
@@ -47,38 +47,38 @@ final readonly class AdminAddOnContext {
 			throw new LogicException( 'Add-on tabs require a known administration scope.' );
 		}
 
-		if ( $coreApiVersion < 1 || $addOnApiVersion < 1 ) {
+		if ( $core_api_version < 1 || $add_on_api_version < 1 ) {
 			throw new LogicException( 'Add-on API versions must be positive integers.' );
 		}
 
 		return new self(
-			$tabKey,
-			$boosterUrl,
+			$tab_key,
+			$booster_url,
 			$scope,
-			$coreApiVersion,
-			$addOnApiVersion,
+			$core_api_version,
+			$add_on_api_version,
 			$facades
 		);
 	}
 
-	public function tabKey(): string {
-		return $this->tabKey;
+	public function tab_key(): string {
+		return $this->tab_key;
 	}
 
-	public function boosterUrl(): string {
-		return $this->boosterUrl;
+	public function booster_url(): string {
+		return $this->booster_url;
 	}
 
 	public function scope(): string {
 		return $this->scope;
 	}
 
-	public function coreApiVersion(): int {
-		return $this->coreApiVersion;
+	public function core_api_version(): int {
+		return $this->core_api_version;
 	}
 
-	public function addOnApiVersion(): int {
-		return $this->addOnApiVersion;
+	public function add_on_api_version(): int {
+		return $this->add_on_api_version;
 	}
 
 	public function facade( string $name ): ?object {
@@ -90,7 +90,7 @@ final readonly class AdminAddOnContext {
 	 *
 	 * @param list<array<string, mixed>> $rows Display-safe repository rows.
 	 */
-	public function renderRepositoryTable( string $labelledBy, array $rows ): void {
-		( new Component\RepositoryTableRenderer() )->render( $labelledBy, $rows );
+	public function render_repository_table( string $labelled_by, array $rows ): void {
+		( new Component\RepositoryTableRenderer() )->render( $labelled_by, $rows );
 	}
 }

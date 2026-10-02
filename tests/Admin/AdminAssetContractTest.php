@@ -9,7 +9,7 @@ use RAN\Booster;
 
 final class AdminAssetContractTest extends TestCase {
 
-	public function testCommonSelectorsAreRootedWhileBodyAppendedPickerSelectorsRemainAvailable(): void {
+	public function test_common_selectors_are_rooted_while_body_appended_picker_selectors_remain_available(): void {
 		$css = $this->asset( 'ran-booster.css' );
 
 		self::assertStringContainsString( '.wp-core-ui .ran-booster-admin .button-delete', $css );
@@ -92,7 +92,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'overflow: hidden;', $css );
 	}
 
-	public function testAdminStylesheetComponentsKeepCascadeOrderAndNativeButtonScope(): void {
+	public function test_admin_stylesheet_components_keep_cascade_order_and_native_button_scope(): void {
 		self::assertSame(
 			array(
 				'00-foundations.css',
@@ -110,7 +110,7 @@ final class AdminAssetContractTest extends TestCase {
 				'70-credential-dialog.css',
 				'80-responsive.css',
 			),
-			$this->styleComponents()
+			$this->style_components()
 		);
 
 		$buttons = $this->asset( 'ran-booster/10-buttons.css' );
@@ -120,7 +120,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( "\n.wp-core-ui .button-delete", $buttons );
 	}
 
-	public function testExtensionsStylesDoNotReimplementTheWordPressPluginCardLayout(): void {
+	public function test_extensions_styles_do_not_reimplement_the_word_press_plugin_card_layout(): void {
 		$extensions = $this->asset( 'ran-booster/55-extensions.css' );
 
 		self::assertStringContainsString( '.ran-booster-extension-card__badge {', $extensions );
@@ -137,7 +137,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-card-bottom', $extensions );
 	}
 
-	public function testStatusUtilitiesOwnSharedPillAndTileContracts(): void {
+	public function test_status_utilities_own_shared_pill_and_tile_contracts(): void {
 		$utilities  = $this->asset( 'ran-booster/35-status-utilities.css' );
 		$debug      = $this->view( 'debug-capture.php' );
 		$packages   = $this->view( 'packages/index.php' );
@@ -150,14 +150,14 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-tile {', $utilities );
 		self::assertStringContainsString( '.ran-booster-badge--pending', $utilities );
 		self::assertStringContainsString( 'notice notice-warning inline ran-booster-debug-capture__scope', $debug );
-		self::assertStringContainsString( 'ran-booster-badge ran-booster-badge--<?php echo esc_attr( $activityBadgeVariants[ $latestActivity[\'state\'] ] ?? \'neutral\' ); ?>', $packages );
+		self::assertStringContainsString( 'ran-booster-badge ran-booster-badge--<?php echo esc_attr( $activity_badge_variants[ $latest_activity[\'state\'] ] ?? \'neutral\' ); ?>', $packages );
 		self::assertStringContainsString( 'Stored · Validity checked on use', $projection );
 		self::assertStringContainsString( 'ran-booster-pill--label ran-booster-pill--info ran-booster-delete-credential-package-pill', $provider );
 		self::assertStringNotContainsString( '.ran-booster-admin .ran-booster-badge {', $component );
 		self::assertStringNotContainsString( '.ran-booster-admin .ran-booster-deployment-state {', $activity );
 	}
 
-	public function testCalloutTonesUseSemanticBackgrounds(): void {
+	public function test_callout_tones_use_semantic_backgrounds(): void {
 		$onboarding      = $this->asset( 'ran-booster-onboarding.css' );
 		$troubleshooting = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
 
@@ -167,7 +167,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'background: var(--ran-booster-surface-info);', $troubleshooting );
 	}
 
-	public function testAdminPrimitivesOwnSharedEyebrowPanelAndActionRowContracts(): void {
+	public function test_admin_primitives_own_shared_eyebrow_panel_and_action_row_contracts(): void {
 		$primitives  = $this->asset( 'ran-booster/25-admin-primitives.css' );
 		$provider    = $this->view( 'provider.php' );
 		$portability = $this->view( 'portability.php' );
@@ -185,7 +185,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( '.ran-booster-package-summary__eyebrow {', $settings );
 	}
 
-	public function testPackageSummaryContainsLongCopyAndTruncatesOnlyTheRepositoryLink(): void {
+	public function test_package_summary_contains_long_copy_and_truncates_only_the_repository_link(): void {
 		$settings = $this->asset( 'ran-booster/65-package-settings.css' );
 
 		self::assertStringContainsString( ".ran-booster-package-summary {\n\tposition: sticky;\n\tinset-block-start: 54px;\n\tmin-inline-size: 0;", $settings );
@@ -197,7 +197,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'white-space: nowrap;', $settings );
 	}
 
-	public function testPackageSourceNavigationPushesCurrentSourceStatusBadgeInlineAndRightAligned(): void {
+	public function test_package_source_navigation_pushes_current_source_status_badge_inline_and_right_aligned(): void {
 		$settings = $this->asset( 'ran-booster/65-package-settings.css' );
 
 		self::assertStringContainsString( '.ran-booster-source-choice--navigation {', $settings );
@@ -210,7 +210,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( "\tbackground: var(--ran-booster-status-ok-background);\n\tcolor: var(--ran-booster-status-ok);", $settings );
 	}
 
-	public function testRepositoryBranchCheckNoticeSitsFlushBesideTheAction(): void {
+	public function test_repository_branch_check_notice_sits_flush_beside_the_action(): void {
 		$settings = $this->asset( 'ran-booster/65-package-settings.css' );
 
 		self::assertStringContainsString(
@@ -219,110 +219,110 @@ final class AdminAssetContractTest extends TestCase {
 		);
 	}
 
-	public function testRepositoryStatusMarkersKeepTheSharedChecklistFootprint(): void {
-		$foundations       = $this->asset( 'ran-booster/00-foundations.css' );
-		$packageSettings   = $this->asset( 'ran-booster/65-package-settings.css' );
-		$webhookManagement = $this->asset( 'ran-booster-repository-webhook-management.css' );
+	public function test_repository_status_markers_keep_the_shared_checklist_footprint(): void {
+		$foundations        = $this->asset( 'ran-booster/00-foundations.css' );
+		$package_settings   = $this->asset( 'ran-booster/65-package-settings.css' );
+		$webhook_management = $this->asset( 'ran-booster-repository-webhook-management.css' );
 
 		self::assertStringContainsString( '--ran-booster-status-marker-size: 18px;', $foundations );
 		self::assertStringContainsString( '--ran-booster-status-marker-border-width: 2px;', $foundations );
 		self::assertStringContainsString( '--ran-booster-status-marker-font-size: 12px;', $foundations );
 		self::assertStringContainsString(
 			".ran-booster-admin .ran-booster-readiness-icon {\n\tdisplay: grid;\n\tbox-sizing: content-box;\n\tinline-size: var(--ran-booster-status-marker-size);",
-			$packageSettings
+			$package_settings
 		);
-		self::assertStringContainsString( 'min-inline-size: var(--ran-booster-status-marker-size);', $packageSettings );
-		self::assertStringContainsString( 'aspect-ratio: 1;', $packageSettings );
-		self::assertStringContainsString( 'font-variant-numeric: tabular-nums;', $packageSettings );
+		self::assertStringContainsString( 'min-inline-size: var(--ran-booster-status-marker-size);', $package_settings );
+		self::assertStringContainsString( 'aspect-ratio: 1;', $package_settings );
+		self::assertStringContainsString( 'font-variant-numeric: tabular-nums;', $package_settings );
 		self::assertSame(
 			2,
-			substr_count( $packageSettings, 'var(--ran-booster-status-marker-size) +' )
+			substr_count( $package_settings, 'var(--ran-booster-status-marker-size) +' )
 		);
-		self::assertStringNotContainsString( 'grid-template-columns: 20px', $packageSettings );
+		self::assertStringNotContainsString( 'grid-template-columns: 20px', $package_settings );
 		self::assertStringContainsString(
 			".ran-booster-repository-webhook-readiness\n\t.ran-booster-readiness-icon,",
-			$webhookManagement
+			$webhook_management
 		);
 		self::assertStringContainsString(
 			".ran-booster-repository-release-readiness\n\t.ran-booster-readiness-icon {\n\tbox-sizing: content-box;",
-			$webhookManagement
+			$webhook_management
 		);
 		self::assertStringContainsString(
 			".ran-booster-admin .ran-booster-webhook-steps {\n\tdisplay: grid;\n\tgrid-template-columns: repeat(4, minmax(0, 1fr));",
-			$webhookManagement
+			$webhook_management
 		);
 		self::assertStringContainsString(
 			".ran-booster-admin .ran-booster-repository-release-lifecycle {\n\tgrid-template-columns: repeat(3, minmax(0, 1fr));",
-			$webhookManagement
+			$webhook_management
 		);
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-webhook-step.is-ok > span {', $webhookManagement );
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-webhook-step.is-warning > span {', $webhookManagement );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-webhook-step.is-ok > span {', $webhook_management );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-webhook-step.is-warning > span {', $webhook_management );
 		self::assertStringContainsString(
 			".ran-booster-admin .ran-booster-webhook-step {\n\tdisplay: grid;\n\tgrid-template-columns:",
-			$webhookManagement
+			$webhook_management
 		);
 		self::assertStringContainsString(
 			'var(--ran-booster-status-marker-size)',
-			$webhookManagement
+			$webhook_management
 		);
 		self::assertStringContainsString(
 			".ran-booster-admin .ran-booster-webhook-step > span {\n\tdisplay: grid;\n\tgrid-row: span 2;\n\tbox-sizing: content-box;\n\tinline-size: var(--ran-booster-status-marker-size);",
-			$webhookManagement
+			$webhook_management
 		);
-		self::assertStringContainsString( 'max-block-size: var(--ran-booster-status-marker-size);', $webhookManagement );
-		self::assertStringContainsString( 'line-height: 1;', $webhookManagement );
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-repository-release-automation {', $webhookManagement );
+		self::assertStringContainsString( 'max-block-size: var(--ran-booster-status-marker-size);', $webhook_management );
+		self::assertStringContainsString( 'line-height: 1;', $webhook_management );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-repository-release-automation {', $webhook_management );
 		self::assertStringContainsString(
 			".ran-booster-admin .ran-booster-release-automation-heading {\n\tdisplay: flex;\n\tflex-wrap: wrap;\n\talign-items: center;\n\tgap: var(--ran-booster-space-8);",
-			$webhookManagement
+			$webhook_management
 		);
 		self::assertStringContainsString(
 			".ran-booster-admin .ran-booster-repository-release-package {\n\tborder: 0;\n\tbackground: transparent;",
-			$webhookManagement
+			$webhook_management
 		);
 		self::assertStringContainsString(
 			".ran-booster-admin .ran-booster-repository-release-package__body {\n\tpadding: var(--ran-booster-space-16) var(--ran-booster-space-18);",
-			$webhookManagement
+			$webhook_management
 		);
 	}
 
-	public function testRepositoryWebhookSetupKeepsItsFormFullWidth(): void {
-		$webhookManagement = $this->asset( 'ran-booster-repository-webhook-management.css' );
-		$controls          = $this->source( 'RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php' );
+	public function test_repository_webhook_setup_keeps_its_form_full_width(): void {
+		$webhook_management = $this->asset( 'ran-booster-repository-webhook-management.css' );
+		$controls           = $this->source( 'RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php' );
 
 		self::assertStringContainsString( 'class="ran-booster-readiness-panel ran-booster-repository-webhook-setup', $controls );
 		self::assertStringContainsString( 'class="ran-booster-readiness-panel__top"><div><h4 id="ran-booster-repository-webhook-setup-heading"', $controls );
 		self::assertStringContainsString( 'class="ran-booster-repository-webhook-setup__body"', $controls );
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-repository-webhook-setup__body {', $webhookManagement );
-		self::assertStringContainsString( 'padding: var(--ran-booster-space-20);', $webhookManagement );
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-repository-webhook-management__manage-link {', $webhookManagement );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-repository-webhook-setup__body {', $webhook_management );
+		self::assertStringContainsString( 'padding: var(--ran-booster-space-20);', $webhook_management );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-repository-webhook-management__manage-link {', $webhook_management );
 
 		self::assertStringContainsString(
 			".ran-booster-repository-webhook-setup\n\t.ran-booster-repository-webhook-management__layout {\n\tdisplay: grid;\n\tgrid-template-columns: minmax(0, 1fr);",
-			$webhookManagement
+			$webhook_management
 		);
 		self::assertStringContainsString(
 			".ran-booster-repository-webhook-setup\n\t.ran-booster-repository-webhook-management__form {\n\tpadding: 0;",
-			$webhookManagement
+			$webhook_management
 		);
-		self::assertStringNotContainsString( 'ran-booster-public-lookup-profile__guidance', $webhookManagement );
+		self::assertStringNotContainsString( 'ran-booster-public-lookup-profile__guidance', $webhook_management );
 		self::assertStringNotContainsString(
 			'.ran-booster-public-lookup-profile__layout {\n\tgrid-template-columns: minmax(0, 1fr);',
-			$webhookManagement
+			$webhook_management
 		);
 	}
 
-	public function testAdminPrimitivesOwnSharedHeadingsAndCredentialDialogChrome(): void {
-		$primitives       = $this->asset( 'ran-booster/25-admin-primitives.css' );
-		$onboarding       = $this->view( 'onboarding.php' );
-		$provider         = $this->view( 'provider.php' );
-		$portability      = $this->view( 'portability.php' );
-		$documentation    = $this->view( 'documentation.php' );
-		$troubleshooting  = $this->view( 'troubleshooting.php' );
-		$modals           = $this->view( 'provider/modals.php' );
-		$credentialStyles = $this->asset( 'ran-booster/70-credential-dialog.css' );
-		$pickerScript     = $this->asset( 'ran-booster-repository-picker.js' );
-		$pickerStyles     = $this->asset( 'ran-booster/20-repository-picker.css' );
+	public function test_admin_primitives_own_shared_headings_and_credential_dialog_chrome(): void {
+		$primitives        = $this->asset( 'ran-booster/25-admin-primitives.css' );
+		$onboarding        = $this->view( 'onboarding.php' );
+		$provider          = $this->view( 'provider.php' );
+		$portability       = $this->view( 'portability.php' );
+		$documentation     = $this->view( 'documentation.php' );
+		$troubleshooting   = $this->view( 'troubleshooting.php' );
+		$modals            = $this->view( 'provider/modals.php' );
+		$credential_styles = $this->asset( 'ran-booster/70-credential-dialog.css' );
+		$picker_script     = $this->asset( 'ran-booster-repository-picker.js' );
+		$picker_styles     = $this->asset( 'ran-booster/20-repository-picker.css' );
 
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-page-heading__title {', $primitives );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-page-shell {', $primitives );
@@ -344,21 +344,21 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-credential-modal ran-booster-dialog', $modals );
 		self::assertStringContainsString( 'ran-booster-credential-modal__dialog ran-booster-dialog__surface', $modals );
 		self::assertStringContainsString( 'ran-booster-dialog__header', $modals );
-		self::assertStringNotContainsString( '.ran-booster-credential-modal {', $credentialStyles );
-		self::assertStringNotContainsString( 'box-shadow: var(--ran-booster-shadow-modal);', $credentialStyles );
-		self::assertStringContainsString( 'ran-booster-repository-picker ran-booster-dialog', $pickerScript );
-		self::assertStringContainsString( 'ran-booster-repository-picker__dialog ran-booster-dialog__surface', $pickerScript );
-		self::assertStringContainsString( "'%s to add a search credential for more reliable repository lookup.'", $pickerScript );
-		self::assertStringContainsString( 'credentialsLink.replaceWith(', $pickerScript );
-		self::assertStringNotContainsString( "'to add a search credential for more reliable repository lookup.'", $pickerScript );
-		self::assertStringNotContainsString( '.ran-booster-repository-picker {', $pickerStyles );
+		self::assertStringNotContainsString( '.ran-booster-credential-modal {', $credential_styles );
+		self::assertStringNotContainsString( 'box-shadow: var(--ran-booster-shadow-modal);', $credential_styles );
+		self::assertStringContainsString( 'ran-booster-repository-picker ran-booster-dialog', $picker_script );
+		self::assertStringContainsString( 'ran-booster-repository-picker__dialog ran-booster-dialog__surface', $picker_script );
+		self::assertStringContainsString( "'%s to add a search credential for more reliable repository lookup.'", $picker_script );
+		self::assertStringContainsString( 'credentialsLink.replaceWith(', $picker_script );
+		self::assertStringNotContainsString( "'to add a search credential for more reliable repository lookup.'", $picker_script );
+		self::assertStringNotContainsString( '.ran-booster-repository-picker {', $picker_styles );
 	}
 
-	public function testAdminStyleFoundationsAreRootScopedAndConstrainSharedLiterals(): void {
-		$css          = $this->asset( 'ran-booster.css' );
-		$componentCss = preg_replace( '/\\A[\\s\\S]*?:root \\{[\\s\\S]*?\\n\\}\\n/', '', $css );
+	public function test_admin_style_foundations_are_root_scoped_and_constrain_shared_literals(): void {
+		$css           = $this->asset( 'ran-booster.css' );
+		$component_css = preg_replace( '/\\A[\\s\\S]*?:root \\{[\\s\\S]*?\\n\\}\\n/', '', $css );
 
-		self::assertIsString( $componentCss );
+		self::assertIsString( $component_css );
 
 		self::assertStringContainsString( ':root {', $css );
 		self::assertStringContainsString( '--ran-booster-layer-modal: 100000;', $css );
@@ -373,13 +373,13 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( '--ran-booster-danger-border:', $css );
 		self::assertStringNotContainsString( '--ran-booster-danger-hover:', $css );
 		self::assertSame( 1, substr_count( $css, '#fff' ) );
-		self::assertSame( 0, preg_match_all( '/(?:#[0-9a-f]{3,8}|rgb\\()/i', $componentCss ) );
+		self::assertSame( 0, preg_match_all( '/(?:#[0-9a-f]{3,8}|rgb\\()/i', $component_css ) );
 		self::assertStringContainsString( '@media screen and (max-width: 480px)', $css );
 		self::assertStringContainsString( '@media screen and (max-width: 782px)', $css );
 		self::assertStringContainsString( '@media screen and (max-width: 1100px)', $css );
 	}
 
-	public function testSatelliteStylesUseSharedFoundationsAndLogicalProperties(): void {
+	public function test_satellite_styles_use_shared_foundations_and_logical_properties(): void {
 		$onboarding    = $this->asset( 'ran-booster-onboarding.css' );
 		$documentation = $this->asset( 'ran-booster-documentation.css' );
 		$primitives    = $this->asset( 'ran-booster/25-admin-primitives.css' );
@@ -401,7 +401,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( 'style="text-align: center;', $base );
 	}
 
-	public function testDocumentationPrintContractPreservesGuidanceAndRemovesAdminChrome(): void {
+	public function test_documentation_print_contract_preserves_guidance_and_removes_admin_chrome(): void {
 		$documentation = $this->asset( 'ran-booster-documentation.css' );
 		$view          = $this->view( 'documentation.php' );
 
@@ -432,37 +432,37 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-documentation__content', $view );
 	}
 
-	public function testPickerAndCredentialDialogsRetainKeyboardFocusAndBodyLockContracts(): void {
-		$credentialScript = $this->asset( 'ran-booster-secure-inputs.js' );
-		$pickerScript     = $this->asset( 'ran-booster-repository-picker.js' );
+	public function test_picker_and_credential_dialogs_retain_keyboard_focus_and_body_lock_contracts(): void {
+		$credential_script = $this->asset( 'ran-booster-secure-inputs.js' );
+		$picker_script     = $this->asset( 'ran-booster-repository-picker.js' );
 
-		self::assertStringContainsString( 'document.body.appendChild(modal);', $pickerScript );
-		self::assertGreaterThanOrEqual( 1, substr_count( $pickerScript, "event.key === 'Escape'" ) );
-		self::assertStringContainsString( 'activeButton.focus();', $pickerScript );
-		self::assertGreaterThanOrEqual( 2, substr_count( $pickerScript, 'trapFocus(' ) );
+		self::assertStringContainsString( 'document.body.appendChild(modal);', $picker_script );
+		self::assertGreaterThanOrEqual( 1, substr_count( $picker_script, "event.key === 'Escape'" ) );
+		self::assertStringContainsString( 'activeButton.focus();', $picker_script );
+		self::assertGreaterThanOrEqual( 2, substr_count( $picker_script, 'trapFocus(' ) );
 		self::assertMatchesRegularExpression(
 			"/document\\.body\\.classList\\.add\\(\\s*'ran-booster-repository-picker-open'\\s*\\);/",
-			$pickerScript
+			$picker_script
 		);
-		self::assertStringContainsString( 'activeCredentialButton.focus();', $credentialScript );
-		self::assertGreaterThanOrEqual( 1, substr_count( $credentialScript, 'trapFocus(' ) );
-		self::assertGreaterThanOrEqual( 2, substr_count( $credentialScript, "'ran-booster-repository-picker-open'" ) );
-		self::assertStringContainsString( '.ran-booster-open-delete-credential-modal', $credentialScript );
-		self::assertStringContainsString( 'populateDeleteCredentialModal(modal, button);', $credentialScript );
-		self::assertStringContainsString( "modal.querySelector('[data-delete-credential-cancel]').focus();", $credentialScript );
-		self::assertStringContainsString( 'confirmButton.disabled = !usageKnown || inUse;', $credentialScript );
-		self::assertStringContainsString( "get('replace_credential')", $credentialScript );
+		self::assertStringContainsString( 'activeCredentialButton.focus();', $credential_script );
+		self::assertGreaterThanOrEqual( 1, substr_count( $credential_script, 'trapFocus(' ) );
+		self::assertGreaterThanOrEqual( 2, substr_count( $credential_script, "'ran-booster-repository-picker-open'" ) );
+		self::assertStringContainsString( '.ran-booster-open-delete-credential-modal', $credential_script );
+		self::assertStringContainsString( 'populateDeleteCredentialModal(modal, button);', $credential_script );
+		self::assertStringContainsString( "modal.querySelector('[data-delete-credential-cancel]').focus();", $credential_script );
+		self::assertStringContainsString( 'confirmButton.disabled = !usageKnown || inUse;', $credential_script );
+		self::assertStringContainsString( "get('replace_credential')", $credential_script );
 		self::assertMatchesRegularExpression(
 			"/button\\.getAttribute\\('data-id'\\)\\s*===\\s*requestedReplacement/",
-			$credentialScript
+			$credential_script
 		);
-		self::assertStringContainsString( "querySelector('.ran-booster-secret-input')", $credentialScript );
-		self::assertStringContainsString( "'ran-booster:provider-tasks-ready'", $credentialScript );
-		self::assertStringContainsString( 'initWebhookUrlCopy(root);', $credentialScript );
-		self::assertStringContainsString( 'initCredentialSettings();', $credentialScript );
+		self::assertStringContainsString( "querySelector('.ran-booster-secret-input')", $credential_script );
+		self::assertStringContainsString( "'ran-booster:provider-tasks-ready'", $credential_script );
+		self::assertStringContainsString( 'initWebhookUrlCopy(root);', $credential_script );
+		self::assertStringContainsString( 'initCredentialSettings();', $credential_script );
 	}
 
-	public function testCredentialSecretFieldKeepsSavedStateSeparateFromTheEmptyNativeInput(): void {
+	public function test_credential_secret_field_keeps_saved_state_separate_from_the_empty_native_input(): void {
 		$modals = $this->view( 'provider/modals.php' );
 		$script = $this->asset( 'ran-booster-secure-inputs.js' );
 		$styles = $this->asset( 'ran-booster-onboarding.css' );
@@ -504,7 +504,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( "\$kind['short_label'] ?? \$kind['label']", $modals );
 	}
 
-	public function testWebhookSecretFieldKeepsManagedSuggestionsAndSavedStateSeparateFromBrowserAutofill(): void {
+	public function test_webhook_secret_field_keeps_managed_suggestions_and_saved_state_separate_from_browser_autofill(): void {
 		$modals = $this->view( 'provider/modals.php' );
 		$script = $this->asset( 'ran-booster-secure-inputs.js' );
 
@@ -528,7 +528,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( "visibility.hidden = secret.value === '';", $script );
 	}
 
-	public function testPortabilityApplyResultsUseWordPressNoticeStates(): void {
+	public function test_portability_apply_results_use_word_press_notice_states(): void {
 		$script = $this->asset( 'ran-booster-portability.js' );
 
 		self::assertStringContainsString( "'notice inline notice-'", $script );
@@ -543,7 +543,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'selectMode(requestedMode);', $script );
 	}
 
-	public function testCredentialTableShapesOwnTheirDesktopColumnWidths(): void {
+	public function test_credential_table_shapes_own_their_desktop_column_widths(): void {
 		$css        = $this->asset( 'ran-booster.css' );
 		$view       = $this->view( 'provider.php' );
 		$modals     = $this->view( 'provider/modals.php' );
@@ -643,7 +643,7 @@ final class AdminAssetContractTest extends TestCase {
 		);
 	}
 
-	public function testProviderSettingsUseTheSharedShellAndProgressiveDisclosure(): void {
+	public function test_provider_settings_use_the_shared_shell_and_progressive_disclosure(): void {
 		$css        = $this->asset( 'ran-booster.css' );
 		$onboarding = $this->asset( 'ran-booster-onboarding.css' );
 		$primitives = $this->asset( 'ran-booster/25-admin-primitives.css' );
@@ -680,8 +680,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-repository-record__action-group', $renderer );
 		self::assertStringContainsString( 'ran-booster-repository-record__actions', $renderer );
 		self::assertStringContainsString( 'AdminStatusSummaryRenderer', $dashboard );
-		self::assertStringContainsString( '$statusSummaryRenderer->render(', $view );
-		self::assertSame( 2, substr_count( $view, '$statusSummaryRenderer->render(' ) );
+		self::assertStringContainsString( '$status_summary_renderer->render(', $view );
+		self::assertSame( 2, substr_count( $view, '$status_summary_renderer->render(' ) );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-status-summary {', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-status-dot.is-neutral {', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-status-dot.is-pending {', $css );
@@ -712,19 +712,19 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'grid-template-columns: minmax(0, 1fr);', $css );
 	}
 
-	public function testManagedPackageTableControlsDesktopWidthsAndAllowsPackageIdentityToWrap(): void {
-		$css        = $this->asset( 'ran-booster.css' );
-		$packageCss = $this->asset( 'ran-booster/60-packages.css' );
-		$script     = $this->asset( 'ran-booster-packages.js' );
-		$base       = $this->view( 'base.php' );
-		$view       = $this->view( 'packages/index.php' );
+	public function test_managed_package_table_controls_desktop_widths_and_allows_package_identity_to_wrap(): void {
+		$css         = $this->asset( 'ran-booster.css' );
+		$package_css = $this->asset( 'ran-booster/60-packages.css' );
+		$script      = $this->asset( 'ran-booster-packages.js' );
+		$base        = $this->view( 'base.php' );
+		$view        = $this->view( 'packages/index.php' );
 
 		self::assertStringContainsString( "'extensions'      => ' ran-booster-admin--extensions'", $base );
 		self::assertStringContainsString( "'packages/index',", $base );
 		self::assertStringContainsString( "'packages/create',", $base );
 		self::assertStringContainsString( "'packages/edit'   => ' ran-booster-admin--packages'", $base );
 		self::assertStringNotContainsString( "! str_starts_with( \$view, 'packages/' )", $base );
-		self::assertStringContainsString( "'current' => ! empty( \$adminTab['active'] )", $base );
+		self::assertStringContainsString( "'current' => ! empty( \$admin_tab['active'] )", $base );
 		self::assertStringContainsString( 'ran-booster-package-table', $view );
 		self::assertStringContainsString( 'ran-booster-package-row__name', $view );
 		self::assertStringContainsString( 'ran-booster-package-row__repo', $view );
@@ -741,8 +741,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'class="displaying-num"', $view );
 		self::assertStringNotContainsString( 'ran-booster-package-row__facts', $view );
 		self::assertStringNotContainsString( 'style="width: 100%;"', $view );
-		self::assertStringContainsString( '.ran-booster-admin--packages {', $packageCss );
-		self::assertStringContainsString( 'max-inline-size: 1400px;', $packageCss );
+		self::assertStringContainsString( '.ran-booster-admin--packages {', $package_css );
+		self::assertStringContainsString( 'max-inline-size: 1400px;', $package_css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-package-table {', $css );
 		self::assertStringContainsString( 'table-layout: fixed;', $css );
 		self::assertStringContainsString(
@@ -752,18 +752,18 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'overflow-wrap: anywhere;', $css );
 		self::assertStringContainsString( "ran-booster-package-row__repo {\n\tdisplay: block;", $css );
 		self::assertStringContainsString( 'ran-booster-package-row__details-grid--branch', $view );
-		self::assertStringContainsString( 'minmax(90px, 0.65fr)', $packageCss );
-		self::assertStringContainsString( 'minmax(230px, 1.6fr)', $packageCss );
+		self::assertStringContainsString( 'minmax(90px, 0.65fr)', $package_css );
+		self::assertStringContainsString( 'minmax(230px, 1.6fr)', $package_css );
 		self::assertStringContainsString( 'ran-booster-package-row__activity-summary', $view );
-		self::assertStringContainsString( 'flex-wrap: nowrap;', $packageCss );
+		self::assertStringContainsString( 'flex-wrap: nowrap;', $package_css );
 		self::assertStringNotContainsString( 'Last successful revision', $view );
 		self::assertStringContainsString( 'rowspan="2"', $view );
 		self::assertStringContainsString(
-			'class="ran-booster-package-row ran-booster-package-row--primary<?php echo $wordPressPluginActive ? \' ran-booster-package-row--wordpress-active\' : \'\'; ?>"',
+			'class="ran-booster-package-row ran-booster-package-row--primary<?php echo $word_press_plugin_active ? \' ran-booster-package-row--wordpress-active\' : \'\'; ?>"',
 			$view
 		);
 		self::assertStringContainsString(
-			'class="ran-booster-package-row ran-booster-package-row--details<?php echo $wordPressPluginActive ? \' ran-booster-package-row--wordpress-active\' : \'\'; ?>"',
+			'class="ran-booster-package-row ran-booster-package-row--details<?php echo $word_press_plugin_active ? \' ran-booster-package-row--wordpress-active\' : \'\'; ?>"',
 			$view
 		);
 		self::assertStringContainsString( '<td colspan="3" class="ran-booster-package-row__details">', $view );
@@ -774,7 +774,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'class="ran-booster-package-row__actions"', $view );
 		self::assertStringContainsString( 'class="ran-booster-package-row__action-group"', $view );
 		self::assertStringContainsString( 'class="button"><?php esc_html_e( \'Edit settings\'', $view );
-		self::assertStringNotContainsString( "\$policyDisabled ? ' button-primary' : ''", $view );
+		self::assertStringNotContainsString( "\$policy_disabled ? ' button-primary' : ''", $view );
 		self::assertStringNotContainsString( 'class="ran-booster-meta__tiles"', $view );
 		self::assertStringNotContainsString( 'class="ran-booster-meta__badges"', $view );
 		self::assertMatchesRegularExpression(
@@ -789,45 +789,45 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '@media screen and (max-width: 480px)', $css );
 		self::assertMatchesRegularExpression(
 			'/\.ran-booster-package-list-search input\[type="search"\],\s+\.ran-booster-admin \.ran-booster-package-list-search \.button \{\s+min-block-size: 40px;\s+\}/',
-			$packageCss
+			$package_css
 		);
-		self::assertStringContainsString( 'line-height: 38px;', $packageCss );
+		self::assertStringContainsString( 'line-height: 38px;', $package_css );
 		self::assertMatchesRegularExpression(
 			'/@media screen and \(max-width: 1100px\) \{\s+\.ran-booster-admin \.ran-booster-package-list-controls \{\s+align-items: stretch;\s+flex-direction: column;/',
-			$packageCss
+			$package_css
 		);
 		self::assertMatchesRegularExpression(
 			'/@media screen and \(min-width: 783px\) and \(max-width: 1200px\) \{[\s\S]+\.ran-booster-package-table__actions-header \{\s+inline-size: 180px;[\s\S]+\.ran-booster-package-row__action-group \{\s+align-items: stretch;\s+flex-direction: column;[\s\S]+\.ran-booster-package-row__action-group > \*,[\s\S]+inline-size: 100%;/',
-			$packageCss
+			$package_css
 		);
-		self::assertStringNotContainsString( '@media screen and (max-width: 1250px)', $packageCss );
+		self::assertStringNotContainsString( '@media screen and (max-width: 1250px)', $package_css );
 		self::assertMatchesRegularExpression(
 			'/\\.ran-booster-package-toolbar\\.tablenav\\.top \\.actions \\{\\s+display: flex;/',
-			$packageCss
+			$package_css
 		);
 		self::assertMatchesRegularExpression(
 			'/\\.ran-booster-package-toolbar\\.tablenav\\.top\\s+\\.displaying-num \\{\\s+display: inline-block;/',
-			$packageCss
+			$package_css
 		);
 		self::assertStringContainsString( '.ran-booster-package-row__action-group {', $css );
 		self::assertStringContainsString( 'ran-booster-package-row__state ran-booster-package-row__wordpress-state', $view );
 		self::assertStringContainsString( 'ran-booster-package-row__state ran-booster-package-row__update-state', $view );
-		self::assertStringContainsString( 'is-<?php echo esc_attr( $deploymentPolicy->value ); ?>', $view );
-		self::assertStringContainsString( '.ran-booster-package-row__state-value::before {', $packageCss );
-		self::assertStringContainsString( '.ran-booster-package-row__update-state.is-automatic {', $packageCss );
-		self::assertStringContainsString( '.ran-booster-package-row__update-state.is-manual {', $packageCss );
-		self::assertStringContainsString( 'rgba(var(--wp-admin-theme-color--rgb), 0.08);', $packageCss );
-		self::assertStringContainsString( ".ran-booster-package-row--wordpress-active\n\t> .check-column,", $packageCss );
-		self::assertStringContainsString( 'border-inline-start: 4px solid var(--wp-admin-theme-color);', $packageCss );
-		self::assertStringContainsString( 'rgba(var(--wp-admin-theme-color--rgb), 0.12);', $packageCss );
+		self::assertStringContainsString( 'is-<?php echo esc_attr( $deployment_policy->value ); ?>', $view );
+		self::assertStringContainsString( '.ran-booster-package-row__state-value::before {', $package_css );
+		self::assertStringContainsString( '.ran-booster-package-row__update-state.is-automatic {', $package_css );
+		self::assertStringContainsString( '.ran-booster-package-row__update-state.is-manual {', $package_css );
+		self::assertStringContainsString( 'rgba(var(--wp-admin-theme-color--rgb), 0.08);', $package_css );
+		self::assertStringContainsString( ".ran-booster-package-row--wordpress-active\n\t> .check-column,", $package_css );
+		self::assertStringContainsString( 'border-inline-start: 4px solid var(--wp-admin-theme-color);', $package_css );
+		self::assertStringContainsString( 'rgba(var(--wp-admin-theme-color--rgb), 0.12);', $package_css );
 		self::assertStringContainsString( 'justify-content: flex-end;', $css );
 		self::assertMatchesRegularExpression(
 			'/\\.ran-booster-package-row__action-group \\{[\\s\\S]+?flex-wrap: nowrap;/',
-			$packageCss
+			$package_css
 		);
 		self::assertMatchesRegularExpression(
 			'/\\.ran-booster-package-row__action-group\\s+\\.button-update-package \\{\\s+box-sizing: border-box;\\s+inline-size: 136px;/',
-			$packageCss
+			$package_css
 		);
 		self::assertStringContainsString( 'box-sizing: border-box;', $css );
 		self::assertStringContainsString(
@@ -863,17 +863,17 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( "esc_html_e( 'Reinstall selected branches', 'ran-booster' )", $view );
 		self::assertStringContainsString( "esc_html_e( 'Set updates: Automatic', 'ran-booster' )", $view );
 		self::assertStringNotContainsString( 'Set policy:', $view );
-		self::assertStringNotContainsString( "\$policyDisabled ? 'inactive' : 'active'", $view );
+		self::assertStringNotContainsString( "\$policy_disabled ? 'inactive' : 'active'", $view );
 	}
 
-	public function testManagedPackageBulkControlsUseAnExternalFormAndAccessibleSelectionContract(): void {
+	public function test_managed_package_bulk_controls_use_an_external_form_and_accessible_selection_contract(): void {
 		$css    = $this->asset( 'ran-booster.css' );
 		$script = $this->asset( 'ran-booster-packages.js' );
 		$view   = $this->view( 'packages/index.php' );
 
 		self::assertStringContainsString( 'data-ran-booster-bulk-form', $view );
 		self::assertStringContainsString( 'name="ran_booster[identifiers][]"', $view );
-		self::assertStringContainsString( 'form="<?php echo esc_attr( $bulkFormId ); ?>"', $view );
+		self::assertStringContainsString( 'form="<?php echo esc_attr( $bulk_form_id ); ?>"', $view );
 		self::assertStringContainsString( 'data-ran-booster-select-all', $view );
 		self::assertStringContainsString( 'data-ran-booster-selection-status', $view );
 		self::assertStringContainsString( 'aria-live="polite"', $view );
@@ -882,7 +882,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( '$bulkEligible =', $view );
 		self::assertStringContainsString( '> .check-column,', $css );
 		self::assertStringContainsString( 'inline-size: 40px;', $css );
-		self::assertStringNotContainsString( '$policyDisabled ? \'inactive\' : \'active\'', $view );
+		self::assertStringNotContainsString( '$policy_disabled ? \'inactive\' : \'active\'', $view );
 		self::assertStringNotContainsString( '.ran-booster-package-row:nth-child(odd)', $css );
 		self::assertStringContainsString( 'initBulkPackageControls();', $script );
 		self::assertStringContainsString( 'initPackageUpdateProgress();', $script );
@@ -914,11 +914,11 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( "form.setAttribute('aria-busy', 'true');", $script );
 	}
 
-	public function testPackageRemovalControlsRequireExplicitCheckboxConfirmation(): void {
-		$css        = $this->asset( 'ran-booster.css' );
-		$script     = $this->asset( 'ran-booster-packages.js' );
-		$dangerZone = $this->view( 'packages/danger-zone.php' );
-		$index      = $this->view( 'packages/index.php' );
+	public function test_package_removal_controls_require_explicit_checkbox_confirmation(): void {
+		$css         = $this->asset( 'ran-booster.css' );
+		$script      = $this->asset( 'ran-booster-packages.js' );
+		$danger_zone = $this->view( 'packages/danger-zone.php' );
+		$index       = $this->view( 'packages/index.php' );
 
 		self::assertStringContainsString( 'initConfirmedPackageRemovals();', $script );
 		self::assertStringContainsString( 'function initConfirmedPackageRemovals()', $script );
@@ -928,17 +928,17 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'submit.disabled = !confirmation.checked;', $script );
 		self::assertStringNotContainsString( "form.setAttribute('aria-busy', 'true');", $script );
 
-		self::assertSame( 2, substr_count( $dangerZone, 'data-ran-booster-confirmed-package-removal' ) );
-		self::assertStringContainsString( 'class="ran-booster-settings-disclosure ran-booster-package-danger-zone"', $dangerZone );
-		self::assertStringContainsString( 'data-ran-booster-package-disclosure', $dangerZone );
-		self::assertSame( 2, substr_count( $dangerZone, 'data-ran-booster-package-mutation' ) );
-		self::assertSame( 2, substr_count( $dangerZone, 'data-ran-booster-native-submit' ) );
-		self::assertSame( 0, substr_count( $dangerZone, 'hx-target="#wpbody-content"' ) );
-		self::assertSame( 2, substr_count( $dangerZone, 'name="ran_booster[confirm_package_removal]" value="1" required' ) );
-		self::assertSame( 2, substr_count( $dangerZone, 'name="ran_booster[expected_source_revision]"' ) );
-		self::assertStringContainsString( "\$packageView->get_action( 'unlink' )", $dangerZone );
-		self::assertStringContainsString( "\$packageView->get_action( 'unlink-delete' )", $dangerZone );
-		self::assertStringContainsString( 'disabled data-ran-booster-package-removal-submit', $dangerZone );
+		self::assertSame( 2, substr_count( $danger_zone, 'data-ran-booster-confirmed-package-removal' ) );
+		self::assertStringContainsString( 'class="ran-booster-settings-disclosure ran-booster-package-danger-zone"', $danger_zone );
+		self::assertStringContainsString( 'data-ran-booster-package-disclosure', $danger_zone );
+		self::assertSame( 2, substr_count( $danger_zone, 'data-ran-booster-package-mutation' ) );
+		self::assertSame( 2, substr_count( $danger_zone, 'data-ran-booster-native-submit' ) );
+		self::assertSame( 0, substr_count( $danger_zone, 'hx-target="#wpbody-content"' ) );
+		self::assertSame( 2, substr_count( $danger_zone, 'name="ran_booster[confirm_package_removal]" value="1" required' ) );
+		self::assertSame( 2, substr_count( $danger_zone, 'name="ran_booster[expected_source_revision]"' ) );
+		self::assertStringContainsString( "\$package_view->get_action( 'unlink' )", $danger_zone );
+		self::assertStringContainsString( "\$package_view->get_action( 'unlink-delete' )", $danger_zone );
+		self::assertStringContainsString( 'disabled data-ran-booster-package-removal-submit', $danger_zone );
 
 		self::assertStringContainsString( '.ran-booster-package-danger-zone > summary {', $css );
 		self::assertStringContainsString( 'grid-template-columns: 10px auto minmax(0, 1fr);', $css );
@@ -948,20 +948,20 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '.ran-booster-package-danger-zone__actions .button {', $css );
 		self::assertStringContainsString( 'inline-size: 100%;', $css );
 
-		self::assertStringNotContainsString( "\$packageView->get_action( 'unlink' )", $index );
+		self::assertStringNotContainsString( "\$package_view->get_action( 'unlink' )", $index );
 		self::assertStringNotContainsString( '$unlinkLabel', $index );
 	}
 
-	public function testPackageMutationsShareTheCoreHtmxFeedbackContract(): void {
-		$index      = $this->view( 'packages/index.php' );
-		$reinstall  = $this->view( 'packages/reinstall.php' );
-		$dangerZone = $this->view( 'packages/danger-zone.php' );
-		$notices    = $this->view( 'notices.php' );
-		$renderer   = $this->source( 'RAN/Admin/Component/AdminActionRenderer.php' );
-		$feedback   = $this->asset( 'ran-booster-enhanced-mutations.js' );
-		$packages   = $this->asset( 'ran-booster-packages.js' );
+	public function test_package_mutations_share_the_core_htmx_feedback_contract(): void {
+		$index       = $this->view( 'packages/index.php' );
+		$reinstall   = $this->view( 'packages/reinstall.php' );
+		$danger_zone = $this->view( 'packages/danger-zone.php' );
+		$notices     = $this->view( 'notices.php' );
+		$renderer    = $this->source( 'RAN/Admin/Component/AdminActionRenderer.php' );
+		$feedback    = $this->asset( 'ran-booster-enhanced-mutations.js' );
+		$packages    = $this->asset( 'ran-booster-packages.js' );
 
-		foreach ( array( $index, $reinstall, $dangerZone, $renderer ) as $markup ) {
+		foreach ( array( $index, $reinstall, $danger_zone, $renderer ) as $markup ) {
 			self::assertStringContainsString( 'data-ran-booster-package-mutation', $markup );
 		}
 		self::assertStringContainsString( 'data-ran-booster-enhanced-mutation', $renderer );
@@ -989,7 +989,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( "event.detail?.target?.id === 'wpbody-content'", $packages );
 	}
 
-	public function testDeploymentActivityUsesCoLocatedAttemptRowDisclosures(): void {
+	public function test_deployment_activity_uses_co_located_attempt_row_disclosures(): void {
 		$css    = $this->asset( 'ran-booster.css' );
 		$view   = $this->view( 'attempts/index.php' );
 		$detail = $this->view( 'attempts/detail.php' );
@@ -1020,19 +1020,19 @@ final class AdminAssetContractTest extends TestCase {
 
 	private function asset( string $file ): string {
 		if ( 'ran-booster.css' !== $file ) {
-			return $this->rawAsset( $file );
+			return $this->raw_asset( $file );
 		}
 
 		return implode(
 			"\n",
 			array_map(
-				fn ( string $component ): string => $this->rawAsset( 'ran-booster/' . $component ),
-				$this->styleComponents()
+				fn ( string $component ): string => $this->raw_asset( 'ran-booster/' . $component ),
+				$this->style_components()
 			)
 		);
 	}
 
-	private function rawAsset( string $file ): string {
+	private function raw_asset( string $file ): string {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Tests inspect local source assets without HTTP.
 		$contents = file_get_contents( dirname( __DIR__, 2 ) . '/assets/' . $file );
 
@@ -1042,12 +1042,12 @@ final class AdminAssetContractTest extends TestCase {
 	}
 
 	/** @return list<string> */
-	private function styleComponents(): array {
-		$componentList = ( new \ReflectionClass( Booster::class ) )->getReflectionConstant( 'ADMIN_STYLE_COMPONENTS' )?->getValue();
+	private function style_components(): array {
+		$component_list = ( new \ReflectionClass( Booster::class ) )->getReflectionConstant( 'ADMIN_STYLE_COMPONENTS' )?->getValue();
 
-		self::assertIsArray( $componentList );
+		self::assertIsArray( $component_list );
 
-		return $componentList;
+		return $component_list;
 	}
 
 	private function view( string $file ): string {

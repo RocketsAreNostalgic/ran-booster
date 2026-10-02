@@ -33,12 +33,14 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 	private string $directory;
 	private string $path;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->directory = sys_get_temp_dir() . '/ran-booster-portability-' . bin2hex( random_bytes( 8 ) );
 		$this->path      = $this->directory . '/secrets.json';
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		foreach ( array( $this->path, $this->path . '.lock' ) as $path ) {
 			if ( is_file( $path ) ) {
@@ -50,52 +52,52 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		}
 	}
 
-	public function testItRetriesOnlyAnAccessFailureWithATemporaryCredential(): void {
+	public function test_it_retries_only_an_access_failure_with_atemporary_credential(): void {
 		[$verifier, $provider, $secrets] = $this->verifier( 404, 'repository-id' );
 
-		$result = $verifier->verify( $this->installItem(), $this->credential(), BlueprintCredentialAction::IMPORT );
+		$result = $verifier->verify( $this->install_item(), $this->credential(), BlueprintCredentialAction::IMPORT );
 
 		self::assertSame( TargetPackageAction::INSTALL, $result->action );
 		self::assertSame( TargetPackageReason::NONE, $result->reason );
-		self::assertSame( array( $provider->temporaryCredentialId ), $provider->credentialIds );
-		self::assertNotNull( $provider->temporaryCredentialId );
-		self::assertNull( $secrets->credentialMaterial( 'gh', $provider->temporaryCredentialId ) );
-		self::assertSame( array(), $secrets->credentialProfiles( 'gh' ) );
+		self::assertSame( array( $provider->temporary_credential_id ), $provider->credential_ids );
+		self::assertNotNull( $provider->temporary_credential_id );
+		self::assertNull( $secrets->credential_material( 'gh', $provider->temporary_credential_id ) );
+		self::assertSame( array(), $secrets->credential_profiles( 'gh' ) );
 		self::assertFileDoesNotExist( $this->path );
 	}
 
-	#[DataProvider( 'transferredProviderCredentialProvider' )]
-	public function testTransferredCredentialVerificationIsProviderNeutral(
-		string $providerCode,
+	#[DataProvider( 'transferred_provider_credential_provider' )]
+	public function test_transferred_credential_verification_is_provider_neutral(
+		string $provider_code,
 		string $kind,
 		array $configuration,
 		string $secret
 	): void {
-		[$verifier, $provider, $secrets] = $this->verifier( 404, 'repository-id', false, $providerCode, $secret );
+		[$verifier, $provider, $secrets] = $this->verifier( 404, 'repository-id', false, $provider_code, $secret );
 
 		$result = $verifier->verify(
-			$this->installItem( $providerCode ),
-			$this->credential( provider: $providerCode, kind: $kind, configuration: $configuration, secret: $secret ),
+			$this->install_item( $provider_code ),
+			$this->credential( provider: $provider_code, kind: $kind, configuration: $configuration, secret: $secret ),
 			BlueprintCredentialAction::IMPORT
 		);
 
 		self::assertSame( TargetPackageAction::INSTALL, $result->action );
-		self::assertCount( 1, $provider->credentialIds );
-		self::assertNotNull( $provider->temporaryCredentialId );
-		self::assertNull( $secrets->credentialMaterial( $providerCode, $provider->temporaryCredentialId ) );
-		self::assertSame( array(), $secrets->credentialProfiles( $providerCode ) );
+		self::assertCount( 1, $provider->credential_ids );
+		self::assertNotNull( $provider->temporary_credential_id );
+		self::assertNull( $secrets->credential_material( $provider_code, $provider->temporary_credential_id ) );
+		self::assertSame( array(), $secrets->credential_profiles( $provider_code ) );
 	}
 
 	/** @return iterable<string, array{string,string,array<string,string>,string}> */
-	public static function transferredProviderCredentialProvider(): iterable {
+	public static function transferred_provider_credential_provider(): iterable {
 		yield 'GitHub classic' => array( 'gh', 'classic', array( 'owner' => '' ), self::CLASSIC_TOKEN );
 		yield 'GitHub fine-grained' => array( 'gh', 'fine-grained', array( 'owner' => 'RocketsAreNostalgic' ), self::FINE_GRAINED_TOKEN );
 		yield 'Bitbucket API token' => array( 'bb', 'api-token', array( 'account_email' => 'canary@example.test' ), 'sentinel-bitbucket-portability-token' );
 	}
 
-	public function testTransferredMaterialIsAttemptedBeforeAnExplicitTargetCredentialWithoutPreviewPersistence(): void {
+	public function test_transferred_material_is_attempted_before_an_explicit_target_credential_without_preview_persistence(): void {
 		[$verifier, $provider, $secrets] = $this->verifier( 404, 'repository-id' );
-		$secrets->saveCredential(
+		$secrets->save_credential(
 			'gh',
 			'target-pat',
 			array(
@@ -107,83 +109,83 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		);
 		$before = (string) file_get_contents( $this->path );
 
-		$result = $verifier->verify( $this->installItem(), $this->credential(), BlueprintCredentialAction::IMPORT, 'target-pat' );
+		$result = $verifier->verify( $this->install_item(), $this->credential(), BlueprintCredentialAction::IMPORT, 'target-pat' );
 
 		self::assertSame( TargetPackageAction::INSTALL, $result->action );
 		self::assertSame( TargetPackageReason::NONE, $result->reason );
-		self::assertNotNull( $provider->temporaryCredentialId );
-		self::assertSame( array( $provider->temporaryCredentialId ), $provider->credentialIds );
-		self::assertNotSame( 'target-pat', $provider->temporaryCredentialId );
-		self::assertNull( $secrets->credentialMaterial( 'gh', $provider->temporaryCredentialId ) );
-		self::assertSame( array( 'target-pat' ), array_keys( $secrets->credentialProfiles( 'gh' ) ) );
+		self::assertNotNull( $provider->temporary_credential_id );
+		self::assertSame( array( $provider->temporary_credential_id ), $provider->credential_ids );
+		self::assertNotSame( 'target-pat', $provider->temporary_credential_id );
+		self::assertNull( $secrets->credential_material( 'gh', $provider->temporary_credential_id ) );
+		self::assertSame( array( 'target-pat' ), array_keys( $secrets->credential_profiles( 'gh' ) ) );
 		self::assertSame( $before, (string) file_get_contents( $this->path ) );
 	}
 
-	#[DataProvider( 'repositoryPrivacyProvider' )]
-	public function testItPreservesAnAssociatedCredentialForPublicAndPrivateRepositories( bool $private ): void {
+	#[DataProvider( 'repository_privacy_provider' )]
+	public function test_it_preserves_an_associated_credential_for_public_and_private_repositories( bool $private ): void {
 		[$verifier, $provider] = $this->verifier( 0, 'repository-id', $private );
 
-		$repositoryPrivate = null;
-		$result            = $verifier->verify( $this->installItem(), $this->credential(), BlueprintCredentialAction::IMPORT, null, $repositoryPrivate );
+		$repository_private = null;
+		$result             = $verifier->verify( $this->install_item(), $this->credential(), BlueprintCredentialAction::IMPORT, null, $repository_private );
 
 		self::assertSame( TargetPackageAction::INSTALL, $result->action );
-		self::assertSame( array( $provider->temporaryCredentialId ), $provider->credentialIds );
-		self::assertNotNull( $provider->temporaryCredentialId );
-		self::assertSame( $private, $repositoryPrivate );
+		self::assertSame( array( $provider->temporary_credential_id ), $provider->credential_ids );
+		self::assertNotNull( $provider->temporary_credential_id );
+		self::assertSame( $private, $repository_private );
 	}
 
 	/** @return iterable<string, array{bool}> */
-	public static function repositoryPrivacyProvider(): iterable {
+	public static function repository_privacy_provider(): iterable {
 		yield 'public' => array( false );
 		yield 'private' => array( true );
 	}
 
-	public function testItLeavesAPackageOnlyPublicRepositoryAnonymous(): void {
+	public function test_it_leaves_apackage_only_public_repository_anonymous(): void {
 		[$verifier, $provider] = $this->verifier( 0, 'repository-id' );
 
-		$repositoryPrivate = null;
-		$result            = $verifier->verify( $this->installItem(), null, null, null, $repositoryPrivate );
+		$repository_private = null;
+		$result             = $verifier->verify( $this->install_item(), null, null, null, $repository_private );
 
 		self::assertSame( TargetPackageAction::INSTALL, $result->action );
-		self::assertSame( array( null ), $provider->credentialIds );
-		self::assertFalse( $repositoryPrivate );
+		self::assertSame( array( null ), $provider->credential_ids );
+		self::assertFalse( $repository_private );
 	}
 
-	public function testItDoesNotSilentlyDropAnInvalidTransferredCredential(): void {
+	public function test_it_does_not_silently_drop_an_invalid_transferred_credential(): void {
 		[$verifier, $provider] = $this->verifier( 0, 'repository-id' );
 
-		$result = $verifier->verify( $this->installItem(), $this->credential( 'example/example.php', 'expired-token' ), BlueprintCredentialAction::IMPORT );
+		$result = $verifier->verify( $this->install_item(), $this->credential( 'example/example.php', 'expired-token' ), BlueprintCredentialAction::IMPORT );
 
 		self::assertSame( TargetPackageAction::BLOCKED, $result->action );
 		self::assertSame( TargetPackageReason::CREDENTIAL_REQUIRED, $result->reason );
-		self::assertSame( array(), $provider->credentialIds );
+		self::assertSame( array(), $provider->credential_ids );
 	}
 
-	public function testItDoesNotResolveManagedOrProtectedRows(): void {
+	public function test_it_does_not_resolve_managed_or_protected_rows(): void {
 		[$verifier, $provider] = $this->verifier( 502, 'repository-id' );
 		$managed               = new BlueprintPlanItem( $this->package(), TargetPackageAction::MANAGED, TargetPackageReason::ALREADY_MANAGED );
 
 		self::assertSame( $managed, $verifier->verify( $managed, $this->credential() ) );
 		self::assertSame( $managed, $verifier->verify( $managed, $this->credential(), BlueprintCredentialAction::LEAVE ) );
 		self::assertSame( $managed, $verifier->verify( $managed, $this->credential(), BlueprintCredentialAction::TARGET, 'target-pat' ) );
-		self::assertSame( array(), $provider->credentialIds );
+		self::assertSame( array(), $provider->credential_ids );
 	}
 
-	public function testItVerifiesOnlyAnExplicitManagedRowImport(): void {
+	public function test_it_verifies_only_an_explicit_managed_row_import(): void {
 		[$verifier, $provider, $secrets] = $this->verifier( 404, 'repository-id' );
 		$managed                         = new BlueprintPlanItem( $this->package(), TargetPackageAction::MANAGED, TargetPackageReason::ALREADY_MANAGED );
 
-		$repositoryPrivate = null;
-		$result            = $verifier->verify( $managed, $this->credential(), BlueprintCredentialAction::IMPORT, null, $repositoryPrivate );
+		$repository_private = null;
+		$result             = $verifier->verify( $managed, $this->credential(), BlueprintCredentialAction::IMPORT, null, $repository_private );
 
 		self::assertSame( $managed, $result );
-		self::assertFalse( $repositoryPrivate );
-		self::assertSame( array( $provider->temporaryCredentialId ), $provider->credentialIds );
-		self::assertSame( array(), $secrets->credentialProfiles( 'gh' ) );
+		self::assertFalse( $repository_private );
+		self::assertSame( array( $provider->temporary_credential_id ), $provider->credential_ids );
+		self::assertSame( array(), $secrets->credential_profiles( 'gh' ) );
 		self::assertFileDoesNotExist( $this->path );
 	}
 
-	public function testItBlocksManagedRowImportBoundToAnotherPackage(): void {
+	public function test_it_blocks_managed_row_import_bound_to_another_package(): void {
 		[$verifier, $provider] = $this->verifier( 404, 'repository-id' );
 		$managed               = new BlueprintPlanItem( $this->package(), TargetPackageAction::MANAGED, TargetPackageReason::ALREADY_MANAGED );
 
@@ -191,31 +193,31 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 
 		self::assertSame( TargetPackageAction::BLOCKED, $result->action );
 		self::assertSame( TargetPackageReason::CREDENTIAL_REQUIRED, $result->reason );
-		self::assertSame( array(), $provider->credentialIds );
+		self::assertSame( array(), $provider->credential_ids );
 	}
 
-	public function testItBlocksAnAccessFailureWithoutTransferredCredentials(): void {
+	public function test_it_blocks_an_access_failure_without_transferred_credentials(): void {
 		[$verifier] = $this->verifier( 404, 'repository-id' );
 
-		$result = $verifier->verify( $this->installItem() );
+		$result = $verifier->verify( $this->install_item() );
 
 		self::assertSame( TargetPackageAction::BLOCKED, $result->action );
 		self::assertSame( TargetPackageReason::CREDENTIAL_REQUIRED, $result->reason );
 	}
 
-	public function testItDoesNotUseACredentialBoundToAnotherPackage(): void {
+	public function test_it_does_not_use_acredential_bound_to_another_package(): void {
 		[$verifier, $provider] = $this->verifier( 404, 'repository-id' );
 
-		$result = $verifier->verify( $this->installItem(), $this->credential( 'other/other.php' ), BlueprintCredentialAction::IMPORT );
+		$result = $verifier->verify( $this->install_item(), $this->credential( 'other/other.php' ), BlueprintCredentialAction::IMPORT );
 
 		self::assertSame( TargetPackageAction::BLOCKED, $result->action );
 		self::assertSame( TargetPackageReason::CREDENTIAL_REQUIRED, $result->reason );
-		self::assertSame( array(), $provider->credentialIds );
+		self::assertSame( array(), $provider->credential_ids );
 	}
 
-	public function testItUsesAnExplicitExistingTargetCredentialAfterAnonymousAccessFails(): void {
+	public function test_it_uses_an_explicit_existing_target_credential_after_anonymous_access_fails(): void {
 		[$verifier, $provider, $secrets] = $this->verifier( 404, 'repository-id' );
-		$secrets->saveCredential(
+		$secrets->save_credential(
 			'gh',
 			'target-pat',
 			array(
@@ -226,15 +228,15 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 			self::CLASSIC_TOKEN
 		);
 
-		$result = $verifier->verify( $this->installItem(), null, null, 'target-pat' );
+		$result = $verifier->verify( $this->install_item(), null, null, 'target-pat' );
 
 		self::assertSame( TargetPackageAction::INSTALL, $result->action );
-		self::assertSame( array( 'target-pat' ), $provider->credentialIds );
+		self::assertSame( array( 'target-pat' ), $provider->credential_ids );
 	}
 
-	public function testCarriedCredentialTargetChoiceUsesOnlyTheSubmittedTargetProfile(): void {
+	public function test_carried_credential_target_choice_uses_only_the_submitted_target_profile(): void {
 		[$verifier, $provider, $secrets] = $this->verifier( 404, 'repository-id' );
-		$secrets->saveCredential(
+		$secrets->save_credential(
 			'gh',
 			'target-pat',
 			array(
@@ -245,20 +247,20 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 			self::CLASSIC_TOKEN
 		);
 
-		$result = $verifier->verify( $this->installItem(), $this->credential(), BlueprintCredentialAction::TARGET, 'target-pat' );
+		$result = $verifier->verify( $this->install_item(), $this->credential(), BlueprintCredentialAction::TARGET, 'target-pat' );
 
 		self::assertSame( TargetPackageAction::INSTALL, $result->action );
-		self::assertSame( array( 'target-pat' ), $provider->credentialIds );
-		self::assertSame( 'target-pat', $provider->temporaryCredentialId );
+		self::assertSame( array( 'target-pat' ), $provider->credential_ids );
+		self::assertSame( 'target-pat', $provider->temporary_credential_id );
 	}
 
-	public function testWrongProviderTargetChoiceBlocksWithoutAnyFallback(): void {
+	public function test_wrong_provider_target_choice_blocks_without_any_fallback(): void {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$secrets  = SecretsFileTestFactory::create( $this->path, array(), $catalog );
-		$provider = new TemporaryCredentialProvider( $secrets->credentialsFor( 'gh' ), 404, 'repository-id' );
+		$provider = new TemporaryCredentialProvider( $secrets->credentials_for( 'gh' ), 404, 'repository-id' );
 		$registry = new ProviderRegistry( array( $provider ), $catalog );
 		$catalog->register( ProviderCode::parse( 'bb' ), new TemporaryProviderCredentialPolicy( ProviderCode::parse( 'bb' ) ), null );
-		$secrets->saveCredential(
+		$secrets->save_credential(
 			'bb',
 			'wrong-provider-profile',
 			array(
@@ -270,7 +272,7 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		);
 
 		$result = ( new BlueprintRepositoryVerifier( $registry, $secrets ) )->verify(
-			$this->installItem(),
+			$this->install_item(),
 			$this->credential(),
 			BlueprintCredentialAction::TARGET,
 			'wrong-provider-profile'
@@ -278,35 +280,35 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 
 		self::assertSame( TargetPackageAction::BLOCKED, $result->action );
 		self::assertSame( TargetPackageReason::CREDENTIAL_REQUIRED, $result->reason );
-		self::assertSame( array(), $provider->credentialIds );
+		self::assertSame( array(), $provider->credential_ids );
 	}
 
-	public function testInactiveProviderBlocksTransferredMaterialAndCleansTheTemporaryProfile(): void {
+	public function test_inactive_provider_blocks_transferred_material_and_cleans_the_temporary_profile(): void {
 		$catalog = new ProviderSecretPolicyCatalog();
 		$catalog->register( ProviderCode::parse( 'gh' ), new GitHubCredentialPolicy(), null );
 		$secrets  = SecretsFileTestFactory::create( $this->path, array(), $catalog );
 		$verifier = new BlueprintRepositoryVerifier( new ProviderRegistry(), $secrets );
 
-		$result = $verifier->verify( $this->installItem(), $this->credential(), BlueprintCredentialAction::IMPORT );
+		$result = $verifier->verify( $this->install_item(), $this->credential(), BlueprintCredentialAction::IMPORT );
 
 		self::assertSame( TargetPackageAction::BLOCKED, $result->action );
 		self::assertSame( TargetPackageReason::PROVIDER_UNAVAILABLE, $result->reason );
-		self::assertSame( array(), $secrets->credentialProfiles( 'gh' ) );
+		self::assertSame( array(), $secrets->credential_profiles( 'gh' ) );
 		self::assertFileDoesNotExist( $this->path );
 	}
 
-	public function testItRetriesAnAnonymousRateLimitWithATransferredCredential(): void {
+	public function test_it_retries_an_anonymous_rate_limit_with_atransferred_credential(): void {
 		[$verifier, $provider] = $this->verifier( 429, 'repository-id' );
 
-		$result = $verifier->verify( $this->installItem(), $this->credential(), BlueprintCredentialAction::IMPORT );
+		$result = $verifier->verify( $this->install_item(), $this->credential(), BlueprintCredentialAction::IMPORT );
 
 		self::assertSame( TargetPackageAction::INSTALL, $result->action );
-		self::assertSame( array( $provider->temporaryCredentialId ), $provider->credentialIds );
+		self::assertSame( array( $provider->temporary_credential_id ), $provider->credential_ids );
 	}
 
-	public function testItOffersSavedTargetCredentialsWhenAnonymousQuotaIsExhausted(): void {
+	public function test_it_offers_saved_target_credentials_when_anonymous_quota_is_exhausted(): void {
 		[$verifier, $provider, $secrets] = $this->verifier( 429, 'repository-id' );
-		$secrets->saveCredential(
+		$secrets->save_credential(
 			'gh',
 			'target-pat',
 			array(
@@ -317,71 +319,71 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 			self::CLASSIC_TOKEN
 		);
 
-		$result = $verifier->verify( $this->installItem() );
+		$result = $verifier->verify( $this->install_item() );
 
 		self::assertSame( TargetPackageAction::BLOCKED, $result->action );
 		self::assertSame( TargetPackageReason::CREDENTIAL_REQUIRED, $result->reason );
-		self::assertSame( array( null ), $provider->credentialIds );
+		self::assertSame( array( null ), $provider->credential_ids );
 	}
 
-	public function testItKeepsAnAnonymousRateLimitBlockedWithoutCredentials(): void {
+	public function test_it_keeps_an_anonymous_rate_limit_blocked_without_credentials(): void {
 		[$verifier, $provider] = $this->verifier( 429, 'repository-id' );
 
-		$result = $verifier->verify( $this->installItem() );
+		$result = $verifier->verify( $this->install_item() );
 
 		self::assertSame( TargetPackageAction::BLOCKED, $result->action );
 		self::assertSame( TargetPackageReason::PROVIDER_TEMPORARILY_UNAVAILABLE, $result->reason );
-		self::assertSame( array( null ), $provider->credentialIds );
+		self::assertSame( array( null ), $provider->credential_ids );
 	}
 
-	public function testItBlocksTemporaryProviderFailuresWithoutCredentialIntent(): void {
+	public function test_it_blocks_temporary_provider_failures_without_credential_intent(): void {
 		[$verifier, $provider] = $this->verifier( 502, 'repository-id' );
 
-		$result = $verifier->verify( $this->installItem() );
+		$result = $verifier->verify( $this->install_item() );
 
 		self::assertSame( TargetPackageAction::BLOCKED, $result->action );
 		self::assertSame( TargetPackageReason::PROVIDER_TEMPORARILY_UNAVAILABLE, $result->reason );
-		self::assertSame( array( null ), $provider->credentialIds );
+		self::assertSame( array( null ), $provider->credential_ids );
 	}
 
-	public function testItBlocksAStableRepositoryIdentityMismatch(): void {
+	public function test_it_blocks_astable_repository_identity_mismatch(): void {
 		[$verifier] = $this->verifier( 0, 'different-repository-id' );
 
-		$result = $verifier->verify( $this->installItem(), $this->credential(), BlueprintCredentialAction::IMPORT );
+		$result = $verifier->verify( $this->install_item(), $this->credential(), BlueprintCredentialAction::IMPORT );
 
 		self::assertSame( TargetPackageAction::BLOCKED, $result->action );
 		self::assertSame( TargetPackageReason::REPOSITORY_IDENTITY_MISMATCH, $result->reason );
 	}
 
-	public function testCredentialBearingRowsRequireAnExplicitDecisionWithoutAnyProviderAttempt(): void {
+	public function test_credential_bearing_rows_require_an_explicit_decision_without_any_provider_attempt(): void {
 		[$verifier, $provider] = $this->verifier( 0, 'repository-id' );
 
-		$unresolved = $verifier->verify( $this->installItem(), $this->credential() );
-		$leave      = $verifier->verify( $this->installItem(), $this->credential(), BlueprintCredentialAction::LEAVE );
+		$unresolved = $verifier->verify( $this->install_item(), $this->credential() );
+		$leave      = $verifier->verify( $this->install_item(), $this->credential(), BlueprintCredentialAction::LEAVE );
 
 		self::assertSame( TargetPackageAction::BLOCKED, $unresolved->action );
 		self::assertSame( TargetPackageAction::BLOCKED, $leave->action );
-		self::assertSame( array(), $provider->credentialIds );
+		self::assertSame( array(), $provider->credential_ids );
 	}
 
 	/** @return array{BlueprintRepositoryVerifier, TemporaryCredentialProvider, SecretsFile} */
 	private function verifier(
-		int $anonymousFailure,
-		string $providerRepositoryId,
+		int $anonymous_failure,
+		string $provider_repository_id,
 		bool $private = false,
-		string $providerCode = 'gh',
-		string $acceptedSecret = self::CLASSIC_TOKEN
+		string $provider_code = 'gh',
+		string $accepted_secret = self::CLASSIC_TOKEN
 	): array {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$secrets  = SecretsFileTestFactory::create( $this->path, array(), $catalog );
 		$provider = new TemporaryCredentialProvider(
-			$secrets->credentialsFor( $providerCode ),
-			$anonymousFailure,
-			$providerRepositoryId,
+			$secrets->credentials_for( $provider_code ),
+			$anonymous_failure,
+			$provider_repository_id,
 			$private,
-			$providerCode,
-			'gh' === $providerCode ? 'GitHub' : 'Bitbucket',
-			$acceptedSecret
+			$provider_code,
+			'gh' === $provider_code ? 'GitHub' : 'Bitbucket',
+			$accepted_secret
 		);
 		$registry = new ProviderRegistry( array( $provider ), $catalog );
 
@@ -392,7 +394,7 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		return new BlueprintPackage( 'plugin', 'example/example.php', 'Example', $provider, 'repository-id', 'owner/repository', 'main', null );
 	}
 
-	private function installItem( string $provider = 'gh' ): BlueprintPlanItem {
+	private function install_item( string $provider = 'gh' ): BlueprintPlanItem {
 		return new BlueprintPlanItem( $this->package( $provider ), TargetPackageAction::INSTALL, TargetPackageReason::NONE );
 	}
 

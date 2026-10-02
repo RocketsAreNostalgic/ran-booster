@@ -25,12 +25,12 @@ use Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
 
 final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 
-	public function testSelfDestructCredentialIsWithheldAndPhysicallyPurgedAfterDeadline(): void {
+	public function test_self_destruct_credential_is_withheld_and_physically_purged_after_deadline(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-self-destruct-' . bin2hex( random_bytes( 8 ) );
 		$path      = $directory . '/secrets.php';
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		$secrets = SecretsFileTestFactory::create( $path, array(), ShippedSecretPolicyCatalog::create() );
-		$secrets->saveCredential(
+		$secrets->save_credential(
 			'gh',
 			'expired_profile',
 			array(
@@ -43,10 +43,10 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			'self-destruct-secret-canary'
 		);
 
-		self::assertArrayNotHasKey( 'expired_profile', $secrets->credentialProfiles( 'gh' ) );
-		self::assertNull( $secrets->credentialMaterial( 'gh', 'expired_profile' ) );
-		self::assertSame( array( 'gh' => array( 'expired_profile' ) ), $secrets->purgeExpiredCredentials() );
-		self::assertSame( array(), $secrets->credentialProfiles( 'gh' ) );
+		self::assertArrayNotHasKey( 'expired_profile', $secrets->credential_profiles( 'gh' ) );
+		self::assertNull( $secrets->credential_material( 'gh', 'expired_profile' ) );
+		self::assertSame( array( 'gh' => array( 'expired_profile' ) ), $secrets->purge_expired_credentials() );
+		self::assertSame( array(), $secrets->credential_profiles( 'gh' ) );
 
 		InMemorySiteKeyStore::reset( $path );
 		foreach ( array( $path, $path . '.lock' ) as $file ) {
@@ -57,12 +57,12 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		rmdir( $directory );
 	}
 
-	public function testProviderExpiryCanOnlyShortenSelfDestructRetention(): void {
+	public function test_provider_expiry_can_only_shorten_self_destruct_retention(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-self-destruct-provider-' . bin2hex( random_bytes( 8 ) );
 		$path      = $directory . '/secrets.php';
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		$secrets = SecretsFileTestFactory::create( $path, array(), ShippedSecretPolicyCatalog::create() );
-		$secrets->saveCredential(
+		$secrets->save_credential(
 			'gh',
 			'provider_expiry',
 			array(
@@ -74,10 +74,10 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			),
 			'self-destruct-provider-secret-canary'
 		);
-		$secrets->recordCredentialProviderExpiry( 'gh', 'provider_expiry', '2020-01-01' );
+		$secrets->record_credential_provider_expiry( 'gh', 'provider_expiry', '2020-01-01' );
 
-		self::assertNull( $secrets->credentialMaterial( 'gh', 'provider_expiry' ) );
-		self::assertSame( array( 'gh' => array( 'provider_expiry' ) ), $secrets->purgeExpiredCredentials() );
+		self::assertNull( $secrets->credential_material( 'gh', 'provider_expiry' ) );
+		self::assertSame( array( 'gh' => array( 'provider_expiry' ) ), $secrets->purge_expired_credentials() );
 
 		InMemorySiteKeyStore::reset( $path );
 		foreach ( array( $path, $path . '.lock' ) as $file ) {
@@ -89,28 +89,28 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 	}
 
 	/** @return list<array{bool, bool}> */
-	public static function unavailableRuntimeProvider(): array {
+	public static function unavailable_runtime_provider(): array {
 		return array(
 			array( false, false ),
 			array( true, true ),
 		);
 	}
 
-	#[DataProvider( 'unavailableRuntimeProvider' )]
-	public function testUnavailableRuntimeKeepsDisplayAndPackageOnlyPathsBootstrapSafe( bool $sodium, bool $multisite ): void {
+	#[DataProvider( 'unavailable_runtime_provider' )]
+	public function test_unavailable_runtime_keeps_display_and_package_only_paths_bootstrap_safe( bool $sodium, bool $multisite ): void {
 		$secrets = $this->secrets( $sodium, $multisite );
 
-		self::assertSame( array(), $secrets->credentialProfiles( 'gh' ) );
-		self::assertSame( array(), $secrets->webhookProfiles( 'gh' ) );
-		self::assertFalse( $secrets->verifyAndSecure() );
+		self::assertSame( array(), $secrets->credential_profiles( 'gh' ) );
+		self::assertSame( array(), $secrets->webhook_profiles( 'gh' ) );
+		self::assertFalse( $secrets->verify_and_secure() );
 		self::assertSame(
 			array(),
-			$secrets->importCredentialsIfAbsent( new PackageBlueprint( array() ) )
+			$secrets->import_credentials_if_absent( new PackageBlueprint( array() ) )
 		);
 	}
 
 	/** @return list<array{string}> */
-	public static function managedOperationProvider(): array {
+	public static function managed_operation_provider(): array {
 		return array(
 			array( 'credential_material' ),
 			array( 'credential_write' ),
@@ -128,30 +128,30 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'managedOperationProvider' )]
-	public function testUnavailableRuntimeBlocksManagedCredentialAndWebhookUseWithSafeErrors( string $operation ): void {
+	#[DataProvider( 'managed_operation_provider' )]
+	public function test_unavailable_runtime_blocks_managed_credential_and_webhook_use_with_safe_errors( string $operation ): void {
 		$secrets = $this->secrets( false, false );
 
 		try {
 			match ( $operation ) {
-				'credential_material' => $secrets->credentialMaterial( 'gh', 'managed-id' ),
-				'credential_write'    => $secrets->saveCredential( 'gh', null, array(), 'secret-canary' ),
-				'credential_delete'   => $secrets->deleteCredential( 'gh', 'managed-id' ),
-				'webhook_material'    => $secrets->webhookMaterials( 'gh' ),
-				'webhook_write'       => $secrets->saveWebhook( 'gh', null, array(), 'secret-canary' ),
-				'webhook_delete'      => $secrets->deleteWebhook( 'gh', 'managed-id' ),
-				'credential_material_invalid_provider' => $secrets->credentialMaterial( 'invalid-provider' ),
-				'credential_write_invalid_provider' => $secrets->saveCredential( 'invalid-provider', null, array(), 'secret-canary' ),
-				'credential_delete_invalid_id' => $secrets->deleteCredential( 'gh', '' ),
-				'webhook_write_invalid_provider' => $secrets->saveWebhook( 'invalid-provider', null, array(), 'secret-canary' ),
-				'webhook_delete_invalid_id' => $secrets->deleteWebhook( 'gh', '' ),
-				'temporary_credential' => $secrets->withTemporaryCredential(
+				'credential_material' => $secrets->credential_material( 'gh', 'managed-id' ),
+				'credential_write'    => $secrets->save_credential( 'gh', null, array(), 'secret-canary' ),
+				'credential_delete'   => $secrets->delete_credential( 'gh', 'managed-id' ),
+				'webhook_material'    => $secrets->webhook_materials( 'gh' ),
+				'webhook_write'       => $secrets->save_webhook( 'gh', null, array(), 'secret-canary' ),
+				'webhook_delete'      => $secrets->delete_webhook( 'gh', 'managed-id' ),
+				'credential_material_invalid_provider' => $secrets->credential_material( 'invalid-provider' ),
+				'credential_write_invalid_provider' => $secrets->save_credential( 'invalid-provider', null, array(), 'secret-canary' ),
+				'credential_delete_invalid_id' => $secrets->delete_credential( 'gh', '' ),
+				'webhook_write_invalid_provider' => $secrets->save_webhook( 'invalid-provider', null, array(), 'secret-canary' ),
+				'webhook_delete_invalid_id' => $secrets->delete_webhook( 'gh', '' ),
+				'temporary_credential' => $secrets->with_temporary_credential(
 					'gh',
 					array(),
 					'secret-canary',
 					static fn (): null => null
 				),
-				'storage_ready'       => $secrets->assertManagedStorageReady(),
+				'storage_ready'       => $secrets->assert_managed_storage_ready(),
 			};
 			self::fail( 'Managed secret use must fail closed when the runtime is unsupported.' );
 		} catch ( SecretsStorageUnavailable $failure ) {
@@ -163,7 +163,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		}
 	}
 
-	public function testUnavailableRuntimeRedactsImportedCredentialArgumentsFromTheWholeTrace(): void {
+	public function test_unavailable_runtime_redacts_imported_credential_arguments_from_the_whole_trace(): void {
 		$canary     = 'import-trace-secret-canary';
 		$identity   = array(
 			'type'       => 'plugin',
@@ -190,29 +190,29 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		$blueprint  = new PackageBlueprint( array( $package ), array( $credential ) );
 
 		try {
-			$this->secrets( false, false )->importCredentialsIfAbsent( $blueprint, $credential );
+			$this->secrets( false, false )->import_credentials_if_absent( $blueprint, $credential );
 			self::fail( 'Credential import must fail closed when the runtime is unavailable.' );
 		} catch ( SecretsStorageUnavailable $failure ) {
 			self::assertStringNotContainsString( $canary, var_export( $failure->getTrace(), true ) );
 		}
 	}
 
-	public function testExplicitConstantCredentialBypassesUnavailableRuntime(): void {
+	public function test_explicit_constant_credential_bypasses_unavailable_runtime(): void {
 		$secrets = new SecretsFile(
 			constants: array( 'RAN_BOOSTER_GITHUB_TOKEN' => 'constant-secret-canary' ),
-			providerPolicies: ShippedSecretPolicyCatalog::create(),
+			provider_policies: ShippedSecretPolicyCatalog::create(),
 			availability: new SecretsRuntimeAvailability( false, false )
 		);
 
 		self::assertSame(
 			'constant-secret-canary',
-			$secrets->credentialMaterial( 'gh', SecretsFile::CONSTANT_PROFILE )['secret']
+			$secrets->credential_material( 'gh', SecretsFile::CONSTANT_PROFILE )['secret']
 		);
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testConfirmedUninstallGetsADeletionOnlySingleSiteAvailabilityContext(): void {
+	public function test_confirmed_uninstall_gets_adeletion_only_single_site_availability_context(): void {
 		define( 'WP_UNINSTALL_PLUGIN', 'renamed-booster/ran-booster.php' );
 
 		$availability = SecretsRuntimeAvailability::for_confirmed_uninstall(
@@ -225,7 +225,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testConfirmedUninstallRejectsAnUnrelatedSameBasenamePlugin(): void {
+	public function test_confirmed_uninstall_rejects_an_unrelated_same_basename_plugin(): void {
 		define( 'WP_UNINSTALL_PLUGIN', 'other-plugin/ran-booster.php' );
 
 		$this->expectException( \LogicException::class );
@@ -237,7 +237,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testConfirmedUninstallRejectsAMissingWordPressIdentity(): void {
+	public function test_confirmed_uninstall_rejects_amissing_word_press_identity(): void {
 		$this->expectException( \LogicException::class );
 		$this->expectExceptionMessage( 'cleanup context is unavailable' );
 		SecretsRuntimeAvailability::for_confirmed_uninstall(
@@ -247,12 +247,12 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testConfirmedConvertedUninstallAuthenticatesAndDeletesARealSidecarAndKey(): void {
-		[$root, $path] = $this->sidecarFixture();
-		$keyStore      = new InMemorySiteKeyStore( $path );
+	public function test_confirmed_converted_uninstall_authenticates_and_deletes_areal_sidecar_and_key(): void {
+		[$root, $path] = $this->sidecar_fixture();
+		$key_store     = new InMemorySiteKeyStore( $path );
 		$codec         = new EncryptedSecretsEnvelopeCodec();
-		$secrets       = $this->realSecrets( $path, $keyStore, $codec, new SecretsRuntimeAvailability( true, false ) );
-		$secrets->saveCredential(
+		$secrets       = $this->real_secrets( $path, $key_store, $codec, new SecretsRuntimeAvailability( true, false ) );
+		$secrets->save_credential(
 			'gh',
 			'pre_conversion',
 			array(
@@ -264,12 +264,12 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		);
 		self::assertFileExists( $path );
 		self::assertFileExists( $path . '.lock' );
-		self::assertNotNull( $keyStore->load( false ) );
+		self::assertNotNull( $key_store->load( false ) );
 
 		define( 'WP_UNINSTALL_PLUGIN', 'renamed-booster/ran-booster.php' );
-		$confirmed = $this->realSecrets(
+		$confirmed = $this->real_secrets(
 			$path,
-			$keyStore,
+			$key_store,
 			$codec,
 			SecretsRuntimeAvailability::for_confirmed_uninstall(
 				'/srv/wp-content/plugins/renamed-booster/ran-booster.php'
@@ -278,23 +278,23 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		$confirmed->assert_managed_storage_deletable();
 		self::assertFileExists( $path );
 		self::assertFileExists( $path . '.lock' );
-		self::assertNotNull( $keyStore->load( false ) );
+		self::assertNotNull( $key_store->load( false ) );
 		$confirmed->delete_managed_storage();
 
 		self::assertFileDoesNotExist( $path );
 		self::assertFileDoesNotExist( $path . '.lock' );
-		self::assertNull( $keyStore->load( false ) );
+		self::assertNull( $key_store->load( false ) );
 		rmdir( $root );
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testConfirmedConvertedUninstallPreservesIncompleteSidecarMaterial(): void {
-		[$root, $path] = $this->sidecarFixture();
-		$keyStore      = new InMemorySiteKeyStore( $path );
+	public function test_confirmed_converted_uninstall_preserves_incomplete_sidecar_material(): void {
+		[$root, $path] = $this->sidecar_fixture();
+		$key_store     = new InMemorySiteKeyStore( $path );
 		$codec         = new EncryptedSecretsEnvelopeCodec();
-		$secrets       = $this->realSecrets( $path, $keyStore, $codec, new SecretsRuntimeAvailability( true, false ) );
-		$secrets->saveCredential(
+		$secrets       = $this->real_secrets( $path, $key_store, $codec, new SecretsRuntimeAvailability( true, false ) );
+		$secrets->save_credential(
 			'gh',
 			'pre_conversion',
 			array(
@@ -304,15 +304,15 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			),
 			'pre-conversion-secret-canary'
 		);
-		$key = $keyStore->load( false );
+		$key = $key_store->load( false );
 		self::assertNotNull( $key );
-		self::assertTrue( $keyStore->delete_exact( $key ) );
+		self::assertTrue( $key_store->delete_exact( $key ) );
 		define( 'WP_UNINSTALL_PLUGIN', 'ran-booster/ran-booster.php' );
 
 		try {
-			$this->realSecrets(
+			$this->real_secrets(
 				$path,
-				$keyStore,
+				$key_store,
 				$codec,
 				SecretsRuntimeAvailability::for_confirmed_uninstall(
 					'/srv/wp-content/plugins/ran-booster/ran-booster.php'
@@ -332,45 +332,45 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		rmdir( $root );
 	}
 
-	public function testDeletionPreflightRejectsRecoverablePartialStoresButDeletesSafeLockOnlyResidue(): void {
-		[$keyRoot, $keyPath] = $this->sidecarFixture();
-		$keyStore            = new InMemorySiteKeyStore( $keyPath );
-		$key                 = $keyStore->load_or_create()['key'];
-		$keyOnly             = $this->realSecrets(
-			$keyPath,
-			$keyStore,
+	public function test_deletion_preflight_rejects_recoverable_partial_stores_but_deletes_safe_lock_only_residue(): void {
+		[$key_root, $key_path] = $this->sidecar_fixture();
+		$key_store             = new InMemorySiteKeyStore( $key_path );
+		$key                   = $key_store->load_or_create()['key'];
+		$key_only              = $this->real_secrets(
+			$key_path,
+			$key_store,
 			new EncryptedSecretsEnvelopeCodec(),
 			new SecretsRuntimeAvailability( true, false )
 		);
-		$this->assertStoragePreflightRefused( $keyOnly, 'storage_lock_missing' );
-		self::assertSame( $key, $keyStore->load( false ) );
-		self::assertTrue( $keyStore->delete_exact( $key ) );
-		rmdir( $keyRoot );
+		$this->assert_storage_preflight_refused( $key_only, 'storage_lock_missing' );
+		self::assertSame( $key, $key_store->load( false ) );
+		self::assertTrue( $key_store->delete_exact( $key ) );
+		rmdir( $key_root );
 
-		[$lockRoot, $lockPath] = $this->sidecarFixture();
-		self::assertNotFalse( file_put_contents( $lockPath . '.lock', '' ) );
-		self::assertTrue( chmod( $lockPath . '.lock', 0600 ) );
-		$lockOnly = $this->realSecrets(
-			$lockPath,
-			new InMemorySiteKeyStore( $lockPath ),
+		[$lock_root, $lock_path] = $this->sidecar_fixture();
+		self::assertNotFalse( file_put_contents( $lock_path . '.lock', '' ) );
+		self::assertTrue( chmod( $lock_path . '.lock', 0600 ) );
+		$lock_only = $this->real_secrets(
+			$lock_path,
+			new InMemorySiteKeyStore( $lock_path ),
 			new EncryptedSecretsEnvelopeCodec(),
 			new SecretsRuntimeAvailability( true, false )
 		);
-		self::assertFalse( $lockOnly->hasHealthyManagedStorage() );
-		$lockOnly->assert_managed_storage_deletable();
-		$lockOnly->delete_managed_storage();
-		self::assertFileDoesNotExist( $lockPath . '.lock' );
-		rmdir( $lockRoot );
+		self::assertFalse( $lock_only->has_healthy_managed_storage() );
+		$lock_only->assert_managed_storage_deletable();
+		$lock_only->delete_managed_storage();
+		self::assertFileDoesNotExist( $lock_path . '.lock' );
+		rmdir( $lock_root );
 
-		[$missingRoot, $missingPath] = $this->sidecarFixture();
-		$missingKeyStore             = new InMemorySiteKeyStore( $missingPath );
-		$missingLock                 = $this->realSecrets(
-			$missingPath,
-			$missingKeyStore,
+		[$missing_root, $missing_path] = $this->sidecar_fixture();
+		$missing_key_store             = new InMemorySiteKeyStore( $missing_path );
+		$missing_lock                  = $this->real_secrets(
+			$missing_path,
+			$missing_key_store,
 			new EncryptedSecretsEnvelopeCodec(),
 			new SecretsRuntimeAvailability( true, false )
 		);
-		$missingLock->saveCredential(
+		$missing_lock->save_credential(
 			'gh',
 			'pre_conversion',
 			array(
@@ -380,29 +380,29 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			),
 			'pre-conversion-secret-canary'
 		);
-		self::assertTrue( unlink( $missingPath . '.lock' ) );
-		$this->assertStoragePreflightRefused( $missingLock, 'storage_lock_missing' );
-		self::assertFileExists( $missingPath );
-		self::assertNotNull( $missingKeyStore->load( false ) );
-		unlink( $missingPath );
-		$missingKey = $missingKeyStore->load( false );
-		self::assertNotNull( $missingKey );
-		self::assertTrue( $missingKeyStore->delete_exact( $missingKey ) );
-		rmdir( $missingRoot );
+		self::assertTrue( unlink( $missing_path . '.lock' ) );
+		$this->assert_storage_preflight_refused( $missing_lock, 'storage_lock_missing' );
+		self::assertFileExists( $missing_path );
+		self::assertNotNull( $missing_key_store->load( false ) );
+		unlink( $missing_path );
+		$missing_key = $missing_key_store->load( false );
+		self::assertNotNull( $missing_key );
+		self::assertTrue( $missing_key_store->delete_exact( $missing_key ) );
+		rmdir( $missing_root );
 	}
 
-	public function testExplicitOrphanedKeyResetRechecksStateAndLeavesTheManagedLockForFreshInitialization(): void {
-		foreach ( array( false, true ) as $existingLock ) {
-			[$root, $path] = $this->sidecarFixture();
-			$keyStore      = new InMemorySiteKeyStore( $path );
-			$oldKey        = $keyStore->load_or_create()['key'];
-			$secrets       = $this->realSecrets(
+	public function test_explicit_orphaned_key_reset_rechecks_state_and_leaves_the_managed_lock_for_fresh_initialization(): void {
+		foreach ( array( false, true ) as $existing_lock ) {
+			[$root, $path] = $this->sidecar_fixture();
+			$key_store     = new InMemorySiteKeyStore( $path );
+			$old_key       = $key_store->load_or_create()['key'];
+			$secrets       = $this->real_secrets(
 				$path,
-				$keyStore,
+				$key_store,
 				new EncryptedSecretsEnvelopeCodec(),
 				new SecretsRuntimeAvailability( true, false )
 			);
-			if ( $existingLock ) {
+			if ( $existing_lock ) {
 				self::assertNotFalse( file_put_contents( $path . '.lock', '' ) );
 				self::assertTrue( chmod( $path . '.lock', 0600 ) );
 			}
@@ -410,14 +410,14 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			self::assertTrue( $secrets->can_reset_orphaned_key_at( $path ) );
 			$secrets->reset_orphaned_key_at( $path );
 
-			self::assertNull( $keyStore->load( false ) );
+			self::assertNull( $key_store->load( false ) );
 			self::assertFileDoesNotExist( $path );
 			self::assertFileExists( $path . '.lock' );
 			clearstatcache( true, $path . '.lock' );
 			self::assertSame( 0600, fileperms( $path . '.lock' ) & 0777 );
 			self::assertFalse( $secrets->can_reset_orphaned_key_at( $path ) );
 
-			$secrets->saveCredential(
+			$secrets->save_credential(
 				'gh',
 				'fresh-profile',
 				array(
@@ -428,9 +428,9 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 				'fresh-secret-canary'
 			);
 			self::assertFileExists( $path );
-			self::assertNotNull( $keyStore->load( false ) );
-			self::assertNotSame( $oldKey, $keyStore->load( false ) );
-			self::assertTrue( $secrets->hasHealthyManagedStorage() );
+			self::assertNotNull( $key_store->load( false ) );
+			self::assertNotSame( $old_key, $key_store->load( false ) );
+			self::assertTrue( $secrets->has_healthy_managed_storage() );
 
 			InMemorySiteKeyStore::reset( $path );
 			unlink( $path );
@@ -439,16 +439,16 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		}
 	}
 
-	public function testExplicitOrphanedCiphertextResetRechecksStateAndLeavesTheManagedLockForFreshInitialization(): void {
-		[$root, $path] = $this->sidecarFixture();
-		$keyStore      = new InMemorySiteKeyStore( $path );
-		$secrets       = $this->realSecrets(
+	public function test_explicit_orphaned_ciphertext_reset_rechecks_state_and_leaves_the_managed_lock_for_fresh_initialization(): void {
+		[$root, $path] = $this->sidecar_fixture();
+		$key_store     = new InMemorySiteKeyStore( $path );
+		$secrets       = $this->real_secrets(
 			$path,
-			$keyStore,
+			$key_store,
 			new EncryptedSecretsEnvelopeCodec(),
 			new SecretsRuntimeAvailability( true, false )
 		);
-		$secrets->saveCredential(
+		$secrets->save_credential(
 			'gh',
 			'orphaned-ciphertext',
 			array(
@@ -458,19 +458,19 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			),
 			'orphaned-ciphertext-secret-canary'
 		);
-		$oldKey = $keyStore->load( false );
-		self::assertNotNull( $oldKey );
-		self::assertTrue( $keyStore->delete_exact( $oldKey ) );
+		$old_key = $key_store->load( false );
+		self::assertNotNull( $old_key );
+		self::assertTrue( $key_store->delete_exact( $old_key ) );
 
 		self::assertTrue( $secrets->can_reset_orphaned_ciphertext_at( $path ) );
 		$secrets->reset_orphaned_ciphertext_at( $path );
 
 		self::assertFileDoesNotExist( $path );
 		self::assertFileExists( $path . '.lock' );
-		self::assertNull( $keyStore->load( false ) );
+		self::assertNull( $key_store->load( false ) );
 		self::assertFalse( $secrets->can_reset_orphaned_ciphertext_at( $path ) );
 
-		$secrets->saveCredential(
+		$secrets->save_credential(
 			'gh',
 			'fresh-after-ciphertext-reset',
 			array(
@@ -481,8 +481,8 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			'fresh-after-ciphertext-reset-secret-canary'
 		);
 		self::assertFileExists( $path );
-		self::assertNotNull( $keyStore->load( false ) );
-		self::assertTrue( $secrets->hasHealthyManagedStorage() );
+		self::assertNotNull( $key_store->load( false ) );
+		self::assertTrue( $secrets->has_healthy_managed_storage() );
 
 		InMemorySiteKeyStore::reset( $path );
 		unlink( $path );
@@ -490,16 +490,16 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		rmdir( $root );
 	}
 
-	public function testOrphanedCiphertextResetRefusesAReappearedDatabaseKeyOrUntrustedFile(): void {
-		[$root, $path] = $this->sidecarFixture();
-		$keyStore      = new InMemorySiteKeyStore( $path );
-		$secrets       = $this->realSecrets(
+	public function test_orphaned_ciphertext_reset_refuses_areappeared_database_key_or_untrusted_file(): void {
+		[$root, $path] = $this->sidecar_fixture();
+		$key_store     = new InMemorySiteKeyStore( $path );
+		$secrets       = $this->real_secrets(
 			$path,
-			$keyStore,
+			$key_store,
 			new EncryptedSecretsEnvelopeCodec(),
 			new SecretsRuntimeAvailability( true, false )
 		);
-		$secrets->saveCredential(
+		$secrets->save_credential(
 			'gh',
 			'restored-key',
 			array(
@@ -509,12 +509,12 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			),
 			'restored-key-secret-canary'
 		);
-		$key = $keyStore->load( false );
+		$key = $key_store->load( false );
 		self::assertNotNull( $key );
-		self::assertTrue( $keyStore->delete_exact( $key ) );
+		self::assertTrue( $key_store->delete_exact( $key ) );
 		self::assertTrue( $secrets->can_reset_orphaned_ciphertext_at( $path ) );
 
-		$keyStore->load_or_create();
+		$key_store->load_or_create();
 		self::assertFalse( $secrets->can_reset_orphaned_ciphertext_at( $path ) );
 		try {
 			$secrets->reset_orphaned_ciphertext_at( $path );
@@ -524,9 +524,9 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		}
 		self::assertFileExists( $path );
 
-		$restored = $keyStore->load( false );
+		$restored = $key_store->load( false );
 		self::assertNotNull( $restored );
-		self::assertTrue( $keyStore->delete_exact( $restored ) );
+		self::assertTrue( $key_store->delete_exact( $restored ) );
 		self::assertTrue( chmod( $path, 0660 ) );
 		try {
 			$secrets->reset_orphaned_ciphertext_at( $path );
@@ -542,13 +542,13 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		rmdir( $root );
 	}
 
-	public function testOrphanedKeyResetRefusesAChangedPathOrRestoredCiphertext(): void {
-		[$root, $path] = $this->sidecarFixture();
-		$keyStore      = new InMemorySiteKeyStore( $path );
-		$key           = $keyStore->load_or_create()['key'];
-		$secrets       = $this->realSecrets(
+	public function test_orphaned_key_reset_refuses_achanged_path_or_restored_ciphertext(): void {
+		[$root, $path] = $this->sidecar_fixture();
+		$key_store     = new InMemorySiteKeyStore( $path );
+		$key           = $key_store->load_or_create()['key'];
+		$secrets       = $this->real_secrets(
 			$path,
-			$keyStore,
+			$key_store,
 			new EncryptedSecretsEnvelopeCodec(),
 			new SecretsRuntimeAvailability( true, false )
 		);
@@ -563,7 +563,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		} catch ( SecretsStorageUnavailable $failure ) {
 			self::assertStringContainsString( 'changed', $failure->getMessage() );
 		}
-		self::assertSame( $key, $keyStore->load( false ) );
+		self::assertSame( $key, $key_store->load( false ) );
 
 		InMemorySiteKeyStore::reset( $path );
 		unlink( $path );
@@ -571,13 +571,13 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		rmdir( $root );
 	}
 
-	public function testOrphanedKeyResetDoesNotRepairAnUntrustedExistingLock(): void {
-		[$root, $path] = $this->sidecarFixture();
-		$keyStore      = new InMemorySiteKeyStore( $path );
-		$key           = $keyStore->load_or_create()['key'];
-		$secrets       = $this->realSecrets(
+	public function test_orphaned_key_reset_does_not_repair_an_untrusted_existing_lock(): void {
+		[$root, $path] = $this->sidecar_fixture();
+		$key_store     = new InMemorySiteKeyStore( $path );
+		$key           = $key_store->load_or_create()['key'];
+		$secrets       = $this->real_secrets(
 			$path,
-			$keyStore,
+			$key_store,
 			new EncryptedSecretsEnvelopeCodec(),
 			new SecretsRuntimeAvailability( true, false )
 		);
@@ -591,23 +591,23 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			self::assertStringContainsString( 'secure', $failure->getMessage() );
 		}
 		self::assertSame( 0660, fileperms( $path . '.lock' ) & 0777 );
-		self::assertSame( $key, $keyStore->load( false ) );
+		self::assertSame( $key, $key_store->load( false ) );
 
 		InMemorySiteKeyStore::reset( $path );
 		unlink( $path . '.lock' );
 		rmdir( $root );
 	}
 
-	public function testOrphanedKeyResetPreservesAKeyThatChangesBeforeExactDeletion(): void {
-		[$root, $path] = $this->sidecarFixture();
-		$keyStore      = new class() extends SiteKeyStore {
+	public function test_orphaned_key_reset_preserves_akey_that_changes_before_exact_deletion(): void {
+		[$root, $path] = $this->sidecar_fixture();
+		$key_store     = new class() extends SiteKeyStore {
 			public string $key;
 
 			public function __construct() {
 				$this->key = random_bytes( 32 );
 			}
 
-			public function load( bool $repairAutoload = true ): ?string {
+			public function load( bool $repair_autoload = true ): ?string {
 				return $this->key;
 			}
 
@@ -624,10 +624,10 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 				return false;
 			}
 		};
-		$oldKey        = $keyStore->key;
-		$secrets       = $this->realSecrets(
+		$old_key       = $key_store->key;
+		$secrets       = $this->real_secrets(
 			$path,
-			$keyStore,
+			$key_store,
 			new EncryptedSecretsEnvelopeCodec(),
 			new SecretsRuntimeAvailability( true, false )
 		);
@@ -638,7 +638,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		} catch ( SecretsStorageUnavailable $failure ) {
 			self::assertStringContainsString( 'could not be removed safely', $failure->getMessage() );
 		}
-		self::assertNotSame( $oldKey, $keyStore->key );
+		self::assertNotSame( $old_key, $key_store->key );
 		self::assertFileDoesNotExist( $path );
 		self::assertFileExists( $path . '.lock' );
 
@@ -649,22 +649,22 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 	private function secrets( bool $sodium, bool $multisite ): SecretsFile {
 		return new SecretsFile(
 			constants: array(),
-			providerPolicies: new ProviderSecretPolicyCatalog(),
+			provider_policies: new ProviderSecretPolicyCatalog(),
 			availability: new SecretsRuntimeAvailability( $sodium, $multisite )
 		);
 	}
 
 	/** @return array{string, string} */
-	private function sidecarFixture(): array {
+	private function sidecar_fixture(): array {
 		$root = sys_get_temp_dir() . '/ran-booster-converted-uninstall-' . bin2hex( random_bytes( 6 ) );
 		self::assertTrue( mkdir( $root, 0700 ) );
 
 		return array( $root, $root . '/secrets.json' );
 	}
 
-	private function realSecrets(
+	private function real_secrets(
 		string $path,
-		SiteKeyStore $keyStore,
+		SiteKeyStore $key_store,
 		EncryptedSecretsEnvelopeCodec $codec,
 		SecretsRuntimeAvailability $availability
 	): SecretsFile {
@@ -672,19 +672,19 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			$path,
 			array(),
 			ShippedSecretPolicyCatalog::create(),
-			$keyStore,
+			$key_store,
 			$codec,
 			availability: $availability
 		);
 	}
 
-	private function assertStoragePreflightRefused( SecretsFile $secrets, string $expectedReason ): void {
+	private function assert_storage_preflight_refused( SecretsFile $secrets, string $expected_reason ): void {
 		try {
 			$secrets->assert_managed_storage_deletable();
 			self::fail( 'Incomplete managed storage must fail the deletion preflight.' );
 		} catch ( SecretsStorageUnavailable $failure ) {
 			self::assertStringContainsString( 'incomplete', $failure->getMessage() );
-			self::assertSame( $expectedReason, $failure->reason() );
+			self::assertSame( $expected_reason, $failure->reason() );
 		}
 	}
 }

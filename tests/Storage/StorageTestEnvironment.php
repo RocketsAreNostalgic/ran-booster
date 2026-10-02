@@ -66,8 +66,8 @@ namespace {
 			global $wpdb;
 
 			$wpdb->schemas[] = (string) $sql;
-			if ( method_exists( $wpdb, 'installSchema' ) ) {
-				$wpdb->installSchema( (string) $sql );
+			if ( method_exists( $wpdb, 'install_schema' ) ) {
+				$wpdb->install_schema( (string) $sql );
 			}
 
 			return array();
@@ -94,18 +94,18 @@ namespace Tests\Storage {
 		 *     indexes: array<string, array{unique: bool, columns: list<string>, prefixes: list<?int>}>
 		 * }>
 		 */
-		public array $schemaTables = array();
-		public string $schemaEngine = 'InnoDB';
-		public string $optionsEngine = 'InnoDB';
-		public string $serverInfo = '8.4.6';
-		public string $innodbSupport = 'DEFAULT';
-		public int $capabilityReads = 0;
+		public array $schema_tables = array();
+		public string $schema_engine = 'InnoDB';
+		public string $options_engine = 'InnoDB';
+		public string $server_info = '8.4.6';
+		public string $innodb_support = 'DEFAULT';
+		public int $capability_reads = 0;
 
 		/** @var list<string> */
 		public array $queries = array();
-		public ?string $queryFailureContains = null;
-		public bool $keepDroppedTables = false;
-		public ?int $successfulTableReadsBeforeFailure = null;
+		public ?string $query_failure_contains = null;
+		public bool $keep_dropped_tables = false;
+		public ?int $successful_table_reads_before_failure = null;
 
 		/** @var list<array<string, mixed>> */
 		public array $rows = array();
@@ -120,28 +120,28 @@ namespace Tests\Storage {
 		public array $deletes = array();
 
 		public ?object $row = null;
-		public int|false|null $insertResult = null;
+		public int|false|null $insert_result = null;
 		/** @var array<string, mixed>|null */
-		public ?array $insertRaceRow = null;
-		public int|false|null $updateResult = null;
-		public ?int $failUpdateNumber = null;
-		public int|false|null $deleteResult = null;
-		public bool $readFailure = false;
-		public ?int $successfulReadsBeforeFailure = null;
-		public bool $applyWrites = true;
-		public bool $coercePrivateAsMysqlTinyint = false;
+		public ?array $insert_race_row = null;
+		public int|false|null $update_result = null;
+		public ?int $fail_update_number = null;
+		public int|false|null $delete_result = null;
+		public bool $read_failure = false;
+		public ?int $successful_reads_before_failure = null;
+		public bool $apply_writes = true;
+		public bool $coerce_private_as_mysql_tinyint = false;
 		/** @var list<array<string, mixed>>|null */
-		private ?array $transactionRows = null;
-		private int $updateCalls = 0;
+		private ?array $transaction_rows = null;
+		private int $update_calls = 0;
 		/** @var list<mixed>|null */
-		public ?array $forcedResults = null;
+		public ?array $forced_results = null;
 
 		public function get_charset_collate(): string {
 			return 'DEFAULT CHARACTER SET utf8mb4';
 		}
 
 		public function db_server_info(): string {
-			return $this->serverInfo;
+			return $this->server_info;
 		}
 
 		public function prepare( string $query, mixed ...$arguments ): string {
@@ -173,28 +173,28 @@ namespace Tests\Storage {
 
 		public function query( string $query ): int|false {
 			$this->queries[] = $query;
-			if ( null !== $this->queryFailureContains && str_contains( $query, $this->queryFailureContains ) ) {
+			if ( null !== $this->query_failure_contains && str_contains( $query, $this->query_failure_contains ) ) {
 				return false;
 			}
 			if ( 1 === preg_match( '/^DROP TABLE IF EXISTS `([^`]+)`$/', $query, $matches ) ) {
-				if ( ! $this->keepDroppedTables ) {
-					unset( $this->schemaTables[ $matches[1] ] );
+				if ( ! $this->keep_dropped_tables ) {
+					unset( $this->schema_tables[ $matches[1] ] );
 				}
 
 				return 1;
 			}
 			if ( 1 === preg_match( '/^ALTER TABLE `([^`]+)`\s+(.+)$/s', $query, $matches )
-				&& isset( $this->schemaTables[ $matches[1] ] )
+				&& isset( $this->schema_tables[ $matches[1] ] )
 			) {
-				preg_match_all( '/DROP INDEX ([a-z][a-z0-9_]*)/i', $matches[2], $indexMatches );
-				foreach ( $indexMatches[1] as $index ) {
-					unset( $this->schemaTables[ $matches[1] ]['indexes'][ $index ] );
+				preg_match_all( '/DROP INDEX ([a-z][a-z0-9_]*)/i', $matches[2], $index_matches );
+				foreach ( $index_matches[1] as $index ) {
+					unset( $this->schema_tables[ $matches[1] ]['indexes'][ $index ] );
 				}
-				preg_match_all( '/DROP COLUMN ([a-z][a-z0-9_]*)/i', $matches[2], $columnMatches );
-				foreach ( $columnMatches[1] as $column ) {
+				preg_match_all( '/DROP COLUMN ([a-z][a-z0-9_]*)/i', $matches[2], $column_matches );
+				foreach ( $column_matches[1] as $column ) {
 					unset(
-						$this->schemaTables[ $matches[1] ]['columns'][ $column ],
-						$this->schemaTables[ $matches[1] ]['columnMetadata'][ $column ]
+						$this->schema_tables[ $matches[1] ]['columns'][ $column ],
+						$this->schema_tables[ $matches[1] ]['columnMetadata'][ $column ]
 					);
 				}
 
@@ -204,20 +204,20 @@ namespace Tests\Storage {
 				return 1;
 			}
 			if ( 'START TRANSACTION' === $query ) {
-				$this->transactionRows = $this->rows;
+				$this->transaction_rows = $this->rows;
 
 				return 1;
 			}
 			if ( 'COMMIT' === $query ) {
-				$this->transactionRows = null;
+				$this->transaction_rows = null;
 
 				return 1;
 			}
 			if ( 'ROLLBACK' === $query ) {
-				if ( null !== $this->transactionRows ) {
-					$this->rows = $this->transactionRows;
+				if ( null !== $this->transaction_rows ) {
+					$this->rows = $this->transaction_rows;
 				}
-				$this->transactionRows = null;
+				$this->transaction_rows = null;
 
 				return 1;
 			}
@@ -225,22 +225,22 @@ namespace Tests\Storage {
 		}
 
 		public function get_var( string $query ): int|false|string|null {
-			if ( $this->readFailure ) {
+			if ( $this->read_failure ) {
 				$this->last_error = 'database details must not escape';
 				return null;
 			}
 
 			if ( 1 === preg_match( "/^SHOW TABLES LIKE '(.+)'$/", $query, $matches ) ) {
-				if ( 0 === $this->successfulTableReadsBeforeFailure ) {
+				if ( 0 === $this->successful_table_reads_before_failure ) {
 					$this->last_error = 'database details must not escape';
 					return null;
 				}
-				if ( null !== $this->successfulTableReadsBeforeFailure ) {
-					--$this->successfulTableReadsBeforeFailure;
+				if ( null !== $this->successful_table_reads_before_failure ) {
+					--$this->successful_table_reads_before_failure;
 				}
 				$table = stripslashes( str_replace( array( '\\_', '\\%' ), array( '_', '%' ), $matches[1] ) );
 
-				return isset( $this->schemaTables[ $table ] ) ? $table : null;
+				return isset( $this->schema_tables[ $table ] ) ? $table : null;
 			}
 
 			if ( preg_match( "/type = (\\d+) AND package = '([^']+)'/", $query, $matches ) !== 1 ) {
@@ -259,23 +259,23 @@ namespace Tests\Storage {
 		/** @param array<string, mixed> $data */
 		public function insert( string $table, array $data ): int|false {
 			$this->inserts[] = array( $table, $data );
-			if ( null !== $this->insertRaceRow ) {
-				$this->rows[]          = $this->insertRaceRow;
-				$this->insertRaceRow   = null;
+			if ( null !== $this->insert_race_row ) {
+				$this->rows[]          = $this->insert_race_row;
+				$this->insert_race_row   = null;
 			}
 
-			if ( ! $this->applyWrites || ( null !== $this->insertResult && $this->insertResult <= 0 ) ) {
-				return $this->insertResult ?? 0;
+			if ( ! $this->apply_writes || ( null !== $this->insert_result && $this->insert_result <= 0 ) ) {
+				return $this->insert_result ?? 0;
 			}
 
-			$storedData = $data;
-			if ( $this->coercePrivateAsMysqlTinyint && array_key_exists( 'private', $storedData ) ) {
-				$storedData['private'] = (string) (int) $storedData['private'];
+			$stored_data = $data;
+			if ( $this->coerce_private_as_mysql_tinyint && array_key_exists( 'private', $stored_data ) ) {
+				$stored_data['private'] = (string) (int) $stored_data['private'];
 			}
-			$storedData['id'] = count( $this->rows ) + 1;
-			$this->rows[]     = $storedData;
+			$stored_data['id'] = count( $this->rows ) + 1;
+			$this->rows[]     = $stored_data;
 
-			return $this->insertResult ?? 1;
+			return $this->insert_result ?? 1;
 		}
 
 		/**
@@ -283,42 +283,42 @@ namespace Tests\Storage {
 		 * @param array<string, mixed> $where
 		 */
 		public function update( string $table, array $data, array $where ): int|false {
-			++$this->updateCalls;
+			++$this->update_calls;
 			$this->updates[] = array( $table, $data, $where );
 
-			if ( $this->updateCalls === $this->failUpdateNumber
-				|| ! $this->applyWrites
-				|| ( null !== $this->updateResult && $this->updateResult <= 0 ) ) {
-				return $this->updateResult ?? 0;
+			if ( $this->update_calls === $this->fail_update_number
+				|| ! $this->apply_writes
+				|| ( null !== $this->update_result && $this->update_result <= 0 ) ) {
+				return $this->update_result ?? 0;
 			}
 
 			$updated    = 0;
-			$storedData = $data;
-			if ( $this->coercePrivateAsMysqlTinyint && array_key_exists( 'private', $storedData ) ) {
-				$storedData['private'] = (string) (int) $storedData['private'];
+			$stored_data = $data;
+			if ( $this->coerce_private_as_mysql_tinyint && array_key_exists( 'private', $stored_data ) ) {
+				$stored_data['private'] = (string) (int) $stored_data['private'];
 			}
 
 			foreach ( $this->rows as &$row ) {
 				if ( $this->matches( $row, $where ) ) {
-					$row = array_merge( $row, $storedData );
+					$row = array_merge( $row, $stored_data );
 					++$updated;
 				}
 			}
 
 			unset( $row );
 
-			return $this->updateResult ?? $updated;
+			return $this->update_result ?? $updated;
 		}
 
 		public function get_row( string $query ): ?object {
 			if ( 1 === preg_match( "/^SHOW TABLE STATUS WHERE Name = '([^']+)'$/", $query, $matches ) ) {
 				$table = stripslashes( $matches[1] );
 				if ( $this->options === $table ) {
-					return (object) array( 'Engine' => $this->optionsEngine );
+					return (object) array( 'Engine' => $this->options_engine );
 				}
 
-				return isset( $this->schemaTables[ $table ] )
-					? (object) array( 'Engine' => $this->schemaTables[ $table ]['engine'] )
+				return isset( $this->schema_tables[ $table ] )
+					? (object) array( 'Engine' => $this->schema_tables[ $table ]['engine'] )
 					: null;
 			}
 
@@ -328,37 +328,37 @@ namespace Tests\Storage {
 		/** @return list<object>|null */
 		public function get_results( string $query ): ?array {
 			if ( 'SHOW ENGINES' === $query ) {
-				++$this->capabilityReads;
+				++$this->capability_reads;
 
 				return array(
 					(object) array(
 						'Engine'  => 'InnoDB',
-						'Support' => $this->innodbSupport,
+						'Support' => $this->innodb_support,
 					),
 				);
 			}
 
-			if ( $this->readFailure || 0 === $this->successfulReadsBeforeFailure ) {
+			if ( $this->read_failure || 0 === $this->successful_reads_before_failure ) {
 				$this->last_error = 'database details must not escape';
 				return null;
 			}
 
-			if ( null !== $this->successfulReadsBeforeFailure ) {
-				--$this->successfulReadsBeforeFailure;
+			if ( null !== $this->successful_reads_before_failure ) {
+				--$this->successful_reads_before_failure;
 			}
 
-			if ( null !== $this->forcedResults ) {
-				return $this->forcedResults;
+			if ( null !== $this->forced_results ) {
+				return $this->forced_results;
 			}
 
 			if ( 1 === preg_match( '/^SHOW COLUMNS FROM `([^`]+)`$/', $query, $matches ) ) {
-				if ( ! isset( $this->schemaTables[ $matches[1] ] ) ) {
+				if ( ! isset( $this->schema_tables[ $matches[1] ] ) ) {
 					return null;
 				}
 
 				$rows = array();
-				foreach ( $this->schemaTables[ $matches[1] ]['columns'] as $column => $type ) {
-					$metadata = $this->schemaTables[ $matches[1] ]['columnMetadata'][ $column ];
+				foreach ( $this->schema_tables[ $matches[1] ]['columns'] as $column => $type ) {
+					$metadata = $this->schema_tables[ $matches[1] ]['columnMetadata'][ $column ];
 					$rows[]   = (object) array(
 						'Field'   => $column,
 						'Type'    => $type,
@@ -372,12 +372,12 @@ namespace Tests\Storage {
 			}
 
 			if ( 1 === preg_match( '/^SHOW INDEX FROM `([^`]+)`$/', $query, $matches ) ) {
-				if ( ! isset( $this->schemaTables[ $matches[1] ] ) ) {
+				if ( ! isset( $this->schema_tables[ $matches[1] ] ) ) {
 					return null;
 				}
 
 				$rows = array();
-				foreach ( $this->schemaTables[ $matches[1] ]['indexes'] as $name => $index ) {
+				foreach ( $this->schema_tables[ $matches[1] ]['indexes'] as $name => $index ) {
 					foreach ( $index['columns'] as $offset => $column ) {
 						$rows[] = (object) array(
 							'Key_name'     => $name,
@@ -399,38 +399,38 @@ namespace Tests\Storage {
 			$rows = array_filter(
 				$this->rows,
 				function ( array $row ) use ( $query ): bool {
-					if ( preg_match( "/provider = '([^']+)'/", $query, $providerMatches ) === 1
-						&& (string) ( $row['provider'] ?? '' ) !== stripslashes( $providerMatches[1] )
+					if ( preg_match( "/provider = '([^']+)'/", $query, $provider_matches ) === 1
+						&& (string) ( $row['provider'] ?? '' ) !== stripslashes( $provider_matches[1] )
 					) {
 						return false;
 					}
 
-					if ( preg_match( "/BINARY provider_repository_id = BINARY '([^']+)'/", $query, $repositoryIdMatches ) === 1
-						&& (string) ( $row['provider_repository_id'] ?? '' ) !== stripslashes( $repositoryIdMatches[1] )
+					if ( preg_match( "/BINARY provider_repository_id = BINARY '([^']+)'/", $query, $repository_id_matches ) === 1
+						&& (string) ( $row['provider_repository_id'] ?? '' ) !== stripslashes( $repository_id_matches[1] )
 					) {
 						return false;
 					}
 
-					if ( preg_match( '/type = (\d+)/', $query, $typeMatches ) === 1
-						&& (int) ( $row['type'] ?? 0 ) !== (int) $typeMatches[1]
+					if ( preg_match( '/type = (\d+)/', $query, $type_matches ) === 1
+						&& (int) ( $row['type'] ?? 0 ) !== (int) $type_matches[1]
 					) {
 						return false;
 					}
 
-					if ( preg_match( "/package = '([^']+)'/", $query, $packageMatches ) === 1
-						&& (string) ( $row['package'] ?? '' ) !== stripslashes( $packageMatches[1] )
+					if ( preg_match( "/package = '([^']+)'/", $query, $package_matches ) === 1
+						&& (string) ( $row['package'] ?? '' ) !== stripslashes( $package_matches[1] )
 					) {
 						return false;
 					}
 
-					if ( preg_match( "/source = '([^']+)'/", $query, $sourceMatches ) === 1
-						&& (string) ( $row['source'] ?? '' ) !== stripslashes( $sourceMatches[1] )
+					if ( preg_match( "/source = '([^']+)'/", $query, $source_matches ) === 1
+						&& (string) ( $row['source'] ?? '' ) !== stripslashes( $source_matches[1] )
 					) {
 						return false;
 					}
 
-					if ( preg_match( "/id = '([^']+)'/", $query, $idMatches ) === 1
-						&& (string) ( $row['id'] ?? '' ) !== stripslashes( $idMatches[1] )
+					if ( preg_match( "/id = '([^']+)'/", $query, $id_matches ) === 1
+						&& (string) ( $row['id'] ?? '' ) !== stripslashes( $id_matches[1] )
 					) {
 						return false;
 					}
@@ -442,24 +442,24 @@ namespace Tests\Storage {
 			return array_values( array_map( static fn ( array $row ): object => (object) $row, $rows ) );
 		}
 
-		public function installSchema( string $sql ): void {
+		public function install_schema( string $sql ): void {
 			if ( 1 !== preg_match( '/CREATE TABLE ([^\s(]+)\s*\((.*)\) ENGINE=/s', $sql, $matches ) ) {
 				return;
 			}
 
 			$table          = trim( $matches[1], '`' );
 			$columns        = array();
-			$columnMetadata = array();
+			$column_metadata = array();
 			$indexes        = array();
 			foreach ( preg_split( '/\R/', $matches[2] ) ?: array() as $line ) {
 				$line = trim( $line, " \t\n\r\0\x0B," );
 				if ( 1 === preg_match( '/^([a-z][a-z0-9_]*)\s+([a-z]+(?:\([^)]+\))?(?:\s+unsigned)?)(.*)$/', $line, $column ) ) {
 					$columns[ $column[1] ] = strtolower( $column[2] );
 					$default              = null;
-					if ( 1 === preg_match( "/\\bDEFAULT\\s+'([^']*)'/i", $column[3], $defaultMatch ) ) {
-						$default = $defaultMatch[1];
+					if ( 1 === preg_match( "/\\bDEFAULT\\s+'([^']*)'/i", $column[3], $default_match ) ) {
+						$default = $default_match[1];
 					}
-					$columnMetadata[ $column[1] ] = array(
+					$column_metadata[ $column[1] ] = array(
 						'nullable' => 1 !== preg_match( '/\bNOT NULL\b/i', $column[3] ),
 						'default'  => $default,
 						'extra'    => 1 === preg_match( '/\bAUTO_INCREMENT\b/i', $column[3] ) ? 'auto_increment' : '',
@@ -468,52 +468,52 @@ namespace Tests\Storage {
 				}
 
 				if ( str_starts_with( $line, 'PRIMARY KEY' ) ) {
-					preg_match( '/\(([^)]+)\)/', $line, $columnsMatch );
+					preg_match( '/\(([^)]+)\)/', $line, $columns_match );
 					$indexes['PRIMARY'] = array(
 						'unique'  => true,
-						'columns' => $this->indexColumns( $columnsMatch[1] ?? '' ),
-						'prefixes' => array_fill( 0, count( $this->indexColumns( $columnsMatch[1] ?? '' ) ), null ),
+						'columns' => $this->index_columns( $columns_match[1] ?? '' ),
+						'prefixes' => array_fill( 0, count( $this->index_columns( $columns_match[1] ?? '' ) ), null ),
 					);
 					continue;
 				}
 
 				if ( 1 === preg_match( '/^(UNIQUE )?KEY\s+([a-z][a-z0-9_]*)\s+\(([^)]+)\)/i', $line, $index ) ) {
-					$indexColumns = $this->indexColumns( $index[3] );
+					$index_columns = $this->index_columns( $index[3] );
 					$indexes[ $index[2] ] = array(
 						'unique'  => '' !== $index[1],
-						'columns' => $indexColumns,
-						'prefixes' => array_fill( 0, count( $indexColumns ), null ),
+						'columns' => $index_columns,
+						'prefixes' => array_fill( 0, count( $index_columns ), null ),
 					);
 				}
 			}
 
-			$existing   = $this->schemaTables[ $table ] ?? array(
-				'engine'         => $this->schemaEngine,
+			$existing   = $this->schema_tables[ $table ] ?? array(
+				'engine'         => $this->schema_engine,
 				'columns'        => array(),
 				'columnMetadata' => array(),
 				'indexes'        => array(),
 			);
-			$newColumns = array_diff_key( $columns, $existing['columns'] );
-			if ( 'wp_ran_booster_packages' === $table && array() !== $newColumns ) {
+			$new_columns = array_diff_key( $columns, $existing['columns'] );
+			if ( 'wp_ran_booster_packages' === $table && array() !== $new_columns ) {
 				foreach ( $this->rows as &$row ) {
-					foreach ( array_keys( $newColumns ) as $name ) {
+					foreach ( array_keys( $new_columns ) as $name ) {
 						if ( ! array_key_exists( $name, $row ) ) {
-							$row[ $name ] = $columnMetadata[ $name ]['default'];
+							$row[ $name ] = $column_metadata[ $name ]['default'];
 						}
 					}
 				}
 				unset( $row );
 			}
-			$this->schemaTables[ $table ] = array(
+			$this->schema_tables[ $table ] = array(
 				'engine'         => $existing['engine'],
 				'columns'        => $existing['columns'] + $columns,
-				'columnMetadata' => $existing['columnMetadata'] + $columnMetadata,
+				'columnMetadata' => $existing['columnMetadata'] + $column_metadata,
 				'indexes'        => $existing['indexes'] + $indexes,
 			);
 		}
 
 		/** @return list<string> */
-		private function indexColumns( string $columns ): array {
+		private function index_columns( string $columns ): array {
 			return array_values(
 				array_map(
 					static fn ( string $column ): string => trim( $column, " `\t\n\r\0\x0B" ),
@@ -526,8 +526,8 @@ namespace Tests\Storage {
 		public function delete( string $table, array $where ): int|false {
 			$this->deletes[] = array( $table, $where );
 
-			if ( ! $this->applyWrites || ( null !== $this->deleteResult && $this->deleteResult <= 0 ) ) {
-				return $this->deleteResult ?? 0;
+			if ( ! $this->apply_writes || ( null !== $this->delete_result && $this->delete_result <= 0 ) ) {
+				return $this->delete_result ?? 0;
 			}
 
 			$before     = count( $this->rows );
@@ -536,7 +536,7 @@ namespace Tests\Storage {
 			);
 			$deleted    = $before - count( $this->rows );
 
-			return $this->deleteResult ?? $deleted;
+			return $this->delete_result ?? $deleted;
 		}
 
 		/** @param array<string, mixed> $where */

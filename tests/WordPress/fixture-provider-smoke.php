@@ -3,8 +3,8 @@
 // Executed by WP-CLI inside a disposable WordPress installation.
 // phpcs:disable
 
-if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 13 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
-	throw new RuntimeException( 'Provider API 13 is unavailable.' );
+if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 14 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+	throw new RuntimeException( 'Provider API 14 is unavailable.' );
 }
 
 if ( defined( 'RAN_BOOSTER_LOGGING_API_VERSION' ) ) {
@@ -24,11 +24,11 @@ if ( function_exists( 'ran_booster' )
 $container = require __DIR__ . '/core-container-fixture.php';
 $registry  = $container->make( RAN\RepositoryProvider\ProviderRegistry::class );
 $provider = $registry->get( 'fixture-provider' );
-if ( 0 !== $provider->getClient()->getRequestCount() ) {
+if ( 0 !== $provider->get_client()->get_request_count() ) {
 	throw new RuntimeException( 'Provider registration must not contact the provider client.' );
 }
 
-if ( ! $registry->isSealed()
+if ( ! $registry->is_sealed()
 	|| ! $provider instanceof RANBoosterFixtureProvider\Provider
 	|| $provider instanceof RAN\RepositoryProvider\RepositoryBrowser
 	|| ! $provider instanceof RAN\RepositoryProvider\WebhookNormalizer
@@ -55,8 +55,8 @@ $descriptor = $provider->resolve_repository(
 );
 
 if ( 'group/subgroup/package' !== $descriptor->locator
-	|| 'package' !== $descriptor->packageSlug
-	|| '' === $descriptor->providerRepositoryId
+	|| 'package' !== $descriptor->package_slug
+	|| '' === $descriptor->provider_repository_id
 ) {
 	throw new RuntimeException( 'The external fixture repository identity is invalid.' );
 }
@@ -66,9 +66,9 @@ $archive      = $provider->prepare_archive(
 	new RAN\RepositoryProvider\ArchiveRequest(
 		new RAN\RepositoryProvider\RepositoryReference(
 			$descriptor->locator,
-			$descriptor->providerRepositoryId,
+			$descriptor->provider_repository_id,
 			$descriptor->private,
-			$descriptor->credentialId
+			$descriptor->credential_id
 		),
 		$resolved_ref,
 		'main'
@@ -76,10 +76,10 @@ $archive      = $provider->prepare_archive(
 );
 
 try {
-	if ( $resolved_ref !== $archive->getResolvedRef() ) {
+	if ( $resolved_ref !== $archive->get_resolved_ref() ) {
 		throw new RuntimeException( 'The external fixture archive ref is not immutable.' );
 	}
-	$archive->verifyCurrentHead();
+	$archive->verify_current_head();
 } finally {
 	$archive->cleanup();
 }
@@ -88,13 +88,13 @@ $diagnostic_request = new RAN\RepositoryProvider\ProviderDiagnosticRequest( null
 $diagnostic_results = $provider->get_provider_diagnostics()->diagnose( $diagnostic_request );
 
 if ( 3 !== count( $diagnostic_results )
-	|| 2 !== $diagnostic_request->getRemoteCalls()
-	|| 2 !== count( $provider->getClient()->getDiagnosticTimeouts() )
+	|| 2 !== $diagnostic_request->get_remote_calls()
+	|| 2 !== count( $provider->get_client()->get_diagnostic_timeouts() )
 ) {
 	throw new RuntimeException( 'The external fixture diagnostics contract is invalid.' );
 }
 
-foreach ( $provider->getClient()->getDiagnosticTimeouts() as $timeout ) {
+foreach ( $provider->get_client()->get_diagnostic_timeouts() as $timeout ) {
 	if ( $timeout <= 0.0 || $timeout > RAN\RepositoryProvider\ProviderDiagnosticRequest::MAX_SECONDS ) {
 		throw new RuntimeException( 'The external fixture diagnostic timeout is invalid.' );
 	}
@@ -116,7 +116,7 @@ if ( in_array( $troubleshooting['partial_reason'] ?? null, array( 'provider_resu
 
 foreach ( array( RAN\RepositoryProvider\RepositoryBrowser::class, RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser::class, RAN\RepositoryProvider\RepositoryReleaseCandidateListing::class ) as $capability ) {
 	try {
-		$registry->requireCapability( 'fixture-provider', $capability );
+		$registry->require_capability( 'fixture-provider', $capability );
 		throw new RuntimeException( 'The external fixture exposed an unsupported capability.' );
 	} catch ( RAN\RepositoryProvider\UnsupportedProviderCapability ) {
 		// Expected: public browsing, authenticated public browsing and webhooks are independently optional.

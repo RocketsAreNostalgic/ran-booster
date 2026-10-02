@@ -14,7 +14,7 @@ use RAN\Secrets\SecretsRuntimeAvailability;
 
 final class GitHubAnonymousBrowserHostIntegrationTest extends TestCase {
 
-	public function testAnonymousPublicLookupRemainsAvailableWhenEncryptedSecretsRuntimeIsUnavailable(): void {
+	public function test_anonymous_public_lookup_remains_available_when_encrypted_secrets_runtime_is_unavailable(): void {
 		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_reset(
 			array(
 				'response' => array( 'code' => 200 ),
@@ -23,14 +23,14 @@ final class GitHubAnonymousBrowserHostIntegrationTest extends TestCase {
 		);
 		$secrets = new SecretsFile(
 			constants: array(),
-			providerPolicies: new ProviderSecretPolicyCatalog(),
+			provider_policies: new ProviderSecretPolicyCatalog(),
 			availability: new SecretsRuntimeAvailability( false, false )
 		);
 
-		$repository = ( new RepositoryBrowser( $secrets->credentialsFor( 'gh' ) ) )->repository( 'rocketsarenostalgic/ran-booster' );
+		$repository = ( new RepositoryBrowser( $secrets->credentials_for( 'gh' ) ) )->repository( 'rocketsarenostalgic/ran-booster' );
 
 		self::assertFalse( $repository->private );
-		self::assertNull( $repository->credentialId );
+		self::assertNull( $repository->credential_id );
 		$request = \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests()[0];
 		self::assertArrayNotHasKey( 'Authorization', $request['arguments']['headers'] );
 	}

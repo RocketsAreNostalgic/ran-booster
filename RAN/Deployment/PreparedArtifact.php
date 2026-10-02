@@ -17,62 +17,45 @@ final class PreparedArtifact implements RepositoryReleaseArtifactCustody {
 
 	public function __construct(
 		private readonly string $path,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private readonly string $resolvedRef,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private readonly string $expectedVersion,
+		private readonly string $resolved_ref,
+		private readonly string $expected_version,
 		private readonly string $digest,
 		private readonly int $device,
 		private readonly int $inode,
 		private readonly int $size,
 		private readonly int $permissions,
 		private readonly int $links,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private readonly ?string $ownedDirectory = null
+		private readonly ?string $owned_directory = null
 	) {
 		if ( '' === $path
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			|| '' === $resolvedRef
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			|| strlen( $resolvedRef ) > 191
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			|| preg_match( '/[[:cntrl:]]/', $resolvedRef ) === 1
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			|| strlen( $expectedVersion ) > 64
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			|| preg_match( '/^[A-Za-z0-9][A-Za-z0-9._+-]*$/D', $expectedVersion ) !== 1
+			|| '' === $resolved_ref
+			|| strlen( $resolved_ref ) > 191
+			|| preg_match( '/[[:cntrl:]]/', $resolved_ref ) === 1
+			|| strlen( $expected_version ) > 64
+			|| preg_match( '/^[A-Za-z0-9][A-Za-z0-9._+-]*$/D', $expected_version ) !== 1
 			|| preg_match( '/^[a-f0-9]{64}$/D', $digest ) !== 1
 			|| $device < 0
 			|| $inode <= 0
 			|| $size < 0
 			|| 0600 !== $permissions
 			|| 1 !== $links
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			|| ( null !== $ownedDirectory && ! self::private_directory_for_path( $ownedDirectory, $path ) ) ) {
+			|| ( null !== $owned_directory && ! self::private_directory_for_path( $owned_directory, $path ) ) ) {
 			throw new RuntimeException( 'The prepared deployment artifact identity is invalid.' );
 		}
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function getPath(): string {
+	public function get_path(): string {
 		return $this->path;
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function getResolvedRef(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		return $this->resolvedRef;
+	public function get_resolved_ref(): string {
+		return $this->resolved_ref;
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function getExpectedVersion(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		return $this->expectedVersion;
+	public function get_expected_version(): string {
+		return $this->expected_version;
 	}
 
 	/** @param callable(string): mixed $inspection */
 	public function inspect( callable $inspection ): mixed {
-		$this->assertUnchanged();
+		$this->assert_unchanged();
 
 		return $inspection( $this->path );
 	}
@@ -82,16 +65,12 @@ final class PreparedArtifact implements RepositoryReleaseArtifactCustody {
 
 		return true;
 	}
-
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
 	public function resolved_ref(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		return $this->resolvedRef;
+		return $this->resolved_ref;
 	}
 
 	public function version(): string {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		return $this->expectedVersion;
+		return $this->expected_version;
 	}
 
 	public function size(): int {
@@ -105,8 +84,7 @@ final class PreparedArtifact implements RepositoryReleaseArtifactCustody {
 	/**
 	 * Prove that the caller is about to use the exact downloaded bytes.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function assertUnchanged(): void {
+	public function assert_unchanged(): void {
 		if ( $this->cleaned ) {
 			throw new RuntimeException( 'The prepared deployment artifact has already been cleaned up.' );
 		}
@@ -115,8 +93,7 @@ final class PreparedArtifact implements RepositoryReleaseArtifactCustody {
 				'artifact integrity check failed before use',
 				array(
 					'step'         => 'artifact_identity_changed',
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-					'resolved_ref' => $this->resolvedRef,
+					'resolved_ref' => $this->resolved_ref,
 				)
 			);
 			throw new RuntimeException( 'The prepared deployment artifact changed before use.' );
@@ -129,8 +106,7 @@ final class PreparedArtifact implements RepositoryReleaseArtifactCustody {
 				'artifact integrity digest check failed before use',
 				array(
 					'step'         => 'artifact_digest_changed',
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-					'resolved_ref' => $this->resolvedRef,
+					'resolved_ref' => $this->resolved_ref,
 				)
 			);
 			throw new RuntimeException( 'The prepared deployment artifact changed before use.' );
@@ -144,7 +120,7 @@ final class PreparedArtifact implements RepositoryReleaseArtifactCustody {
 		if ( $this->cleaned ) {
 			return;
 		}
-		$this->assertUnchanged();
+		$this->assert_unchanged();
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- This removes one identity-checked private temporary file.
 		if ( ! unlink( $this->path ) ) {
@@ -154,8 +130,8 @@ final class PreparedArtifact implements RepositoryReleaseArtifactCustody {
 		if ( file_exists( $this->path ) || is_link( $this->path ) ) {
 			throw new RuntimeException( 'The prepared deployment artifact could not be removed safely.' );
 		}
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir,WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- This removes the exact empty Core-owned temporary directory. Retain the promoted constructor or external DTO property contract.
-		if ( null !== $this->ownedDirectory && ! rmdir( $this->ownedDirectory ) ) {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- This removes the exact empty Core-owned temporary directory. Retain the promoted constructor or external DTO property contract.
+		if ( null !== $this->owned_directory && ! rmdir( $this->owned_directory ) ) {
 			throw new RuntimeException( 'The prepared deployment artifact could not be removed safely.' );
 		}
 
@@ -163,7 +139,7 @@ final class PreparedArtifact implements RepositoryReleaseArtifactCustody {
 	}
 
 	private function has_original_identity(): bool {
-		$identity = self::regularFileIdentity( $this->path );
+		$identity = self::regular_file_identity( $this->path );
 
 		return null !== $identity
 			&& $identity['device'] === $this->device
@@ -190,8 +166,7 @@ final class PreparedArtifact implements RepositoryReleaseArtifactCustody {
 	/**
 	 * @return array{device: int, inode: int, size: int, permissions: int, links: int}|null
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public static function regularFileIdentity( string $path ): ?array {
+	public static function regular_file_identity( string $path ): ?array {
 		clearstatcache( true, $path );
 		if ( ! file_exists( $path ) && ! is_link( $path ) ) {
 			return null;

@@ -43,7 +43,7 @@ use Tests\Secrets\SecretsFileTestFactory;
 
 final class ProviderSecretPolicyContractTest extends TestCase {
 
-	public function testPolicyFailureLeavesBothRegistryAndCatalogUnchanged(): void {
+	public function test_policy_failure_leaves_both_registry_and_catalog_unchanged(): void {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$registry = new ProviderRegistry( array(), $catalog );
 		$code     = ProviderCode::parse( 'atomic-fixture' );
@@ -60,12 +60,12 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			self::assertSame( array(), $registry->all() );
 		}
 
-		$this->assertCredentialPolicyUnavailable( $catalog, $code );
-		$this->assertWebhookPolicyUnavailable( $catalog, $code );
-		$this->assertValidSameCodeRetry( $registry, $catalog, $code );
+		$this->assert_credential_policy_unavailable( $catalog, $code );
+		$this->assert_webhook_policy_unavailable( $catalog, $code );
+		$this->assert_valid_same_code_retry( $registry, $catalog, $code );
 	}
 
-	public function testCredentialPolicyIdentityFailureIsRedactedAndAtomic(): void {
+	public function test_credential_policy_identity_failure_is_redacted_and_atomic(): void {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$registry = new ProviderRegistry( array(), $catalog );
 		$code     = ProviderCode::parse( 'atomic-fixture' );
@@ -85,12 +85,12 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			self::assertSame( array(), $registry->all() );
 		}
 
-		$this->assertCredentialPolicyUnavailable( $catalog, $code );
-		$this->assertWebhookPolicyUnavailable( $catalog, $code );
-		$this->assertValidSameCodeRetry( $registry, $catalog, $code );
+		$this->assert_credential_policy_unavailable( $catalog, $code );
+		$this->assert_webhook_policy_unavailable( $catalog, $code );
+		$this->assert_valid_same_code_retry( $registry, $catalog, $code );
 	}
 
-	public function testWebhookPolicyIdentityFailureIsRedactedAndAtomic(): void {
+	public function test_webhook_policy_identity_failure_is_redacted_and_atomic(): void {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$registry = new ProviderRegistry( array(), $catalog );
 		$code     = ProviderCode::parse( 'atomic-fixture' );
@@ -110,12 +110,12 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			self::assertSame( array(), $registry->all() );
 		}
 
-		$this->assertCredentialPolicyUnavailable( $catalog, $code );
-		$this->assertWebhookPolicyUnavailable( $catalog, $code );
-		$this->assertValidSameCodeRetry( $registry, $catalog, $code );
+		$this->assert_credential_policy_unavailable( $catalog, $code );
+		$this->assert_webhook_policy_unavailable( $catalog, $code );
+		$this->assert_valid_same_code_retry( $registry, $catalog, $code );
 	}
 
-	public function testWebhookMetadataWithoutTheOptionalCapabilityIsRejected(): void {
+	public function test_webhook_metadata_without_the_optional_capability_is_rejected(): void {
 		$provider = new class() implements RepositoryProvider {
 			use \Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
 
@@ -147,11 +147,11 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			self::assertSame( array(), $registry->all() );
 		}
 
-		$this->assertWebhookPolicyUnavailable( $catalog, ProviderCode::parse( 'missing-webhook' ) );
-		$this->assertValidSameCodeRetry( $registry, $catalog, ProviderCode::parse( 'missing-webhook' ) );
+		$this->assert_webhook_policy_unavailable( $catalog, ProviderCode::parse( 'missing-webhook' ) );
+		$this->assert_valid_same_code_retry( $registry, $catalog, ProviderCode::parse( 'missing-webhook' ) );
 	}
 
-	public function testCredentialMetadataWithoutTheOptionalPolicyIsRejectedAtomically(): void {
+	public function test_credential_metadata_without_the_optional_policy_is_rejected_atomically(): void {
 		$provider = new class() implements RepositoryProvider {
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
@@ -178,26 +178,26 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			self::assertSame( array(), $registry->all() );
 		}
 
-		$this->assertCredentialPolicyUnavailable( $catalog, ProviderCode::parse( 'missing-credential' ) );
-		$this->assertValidSameCodeRetry( $registry, $catalog, ProviderCode::parse( 'missing-credential' ) );
+		$this->assert_credential_policy_unavailable( $catalog, ProviderCode::parse( 'missing-credential' ) );
+		$this->assert_valid_same_code_retry( $registry, $catalog, ProviderCode::parse( 'missing-credential' ) );
 	}
 
-	public function testExternalProviderWithoutWebhooksBuildsSettingsAndManualDeploymentState(): void {
+	public function test_external_provider_without_webhooks_builds_settings_and_manual_deployment_state(): void {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$secrets  = new SecretsFile( '/path/that/does/not/exist.php', array(), $catalog );
 		$provider = null;
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentials_for( $code ),
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
-		$registry->registerWithCredentialStore(
+		$registry->register_with_credential_store(
 			'fixture',
 			static function (
 				ProviderCredentialStore $credentials,
-				AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-				ProviderRegistrationContext $registrationContext
+				AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
+				ProviderRegistrationContext $registration_context
 			) use ( &$provider ): ExternalFixtureProvider {
 				$provider = new ExternalFixtureProvider( 'fixture', $credentials );
 
@@ -212,7 +212,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		self::assertNotInstanceOf( WebhookNormalizer::class, $provider );
 	}
 
-	public function testCredentialStoreFactoryFailuresAreRedactedAndLeaveRegistrationUnchanged(): void {
+	public function test_credential_store_factory_failures_are_redacted_and_leave_registration_unchanged(): void {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$registry = new ProviderRegistry(
 			array(),
@@ -224,12 +224,12 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		);
 
 		try {
-			$registry->registerWithCredentialStore(
+			$registry->register_with_credential_store(
 				'fixture',
 				static fn (
 					ProviderCredentialStore $credentials,
-					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-					ProviderRegistrationContext $registrationContext
+					AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
+					ProviderRegistrationContext $registration_context
 				): ExternalFixtureProvider => new ExternalFixtureProvider( 'fixture', $credentials )
 			);
 			self::fail( 'A failing internal store factory must reject registration.' );
@@ -239,26 +239,26 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			self::assertSame( array(), $registry->all() );
 		}
 
-		$this->assertValidSameCodeRetry( $registry, $catalog, ProviderCode::parse( 'fixture' ) );
+		$this->assert_valid_same_code_retry( $registry, $catalog, ProviderCode::parse( 'fixture' ) );
 	}
 
-	public function testExternalProviderFactoryFailuresAreRedactedAndLeaveRegistrationUnchanged(): void {
+	public function test_external_provider_factory_failures_are_redacted_and_leave_registration_unchanged(): void {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$secrets  = new SecretsFile( '/path/that/does/not/exist.php', array(), $catalog );
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentials_for( $code ),
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		try {
-			$registry->registerWithCredentialStore(
+			$registry->register_with_credential_store(
 				'fixture',
 				static function (
 					ProviderCredentialStore $credentials,
-					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-					ProviderRegistrationContext $registrationContext
+					AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
+					ProviderRegistrationContext $registration_context
 				): RepositoryProvider {
 					throw new RuntimeException( 'provider-factory-path-canary' );
 				}
@@ -270,17 +270,17 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			self::assertSame( array(), $registry->all() );
 		}
 
-		$this->assertCredentialPolicyUnavailable( $catalog, ProviderCode::parse( 'fixture' ) );
-		$this->assertValidSameCodeRetry( $registry, $catalog, ProviderCode::parse( 'fixture' ) );
+		$this->assert_credential_policy_unavailable( $catalog, ProviderCode::parse( 'fixture' ) );
+		$this->assert_valid_same_code_retry( $registry, $catalog, ProviderCode::parse( 'fixture' ) );
 	}
 
-	public function testProviderMetadataFailureLeavesCatalogAndRegistryRetryable(): void {
+	public function test_provider_metadata_failure_leaves_catalog_and_registry_retryable(): void {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$secrets  = new SecretsFile( '/path/that/does/not/exist.php', array(), $catalog );
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentials_for( $code ),
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 		$provider = new class() implements RepositoryProvider {
@@ -292,12 +292,12 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		};
 
 		try {
-			$registry->registerWithCredentialStore(
+			$registry->register_with_credential_store(
 				'fixture',
 				static fn (
 					ProviderCredentialStore $credentials,
-					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-					ProviderRegistrationContext $registrationContext
+					AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
+					ProviderRegistrationContext $registration_context
 				): RepositoryProvider => $provider
 			);
 			self::fail( 'A provider with unavailable metadata must be rejected.' );
@@ -307,11 +307,11 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			self::assertSame( array(), $registry->all() );
 		}
 
-		$this->assertCredentialPolicyUnavailable( $catalog, ProviderCode::parse( 'fixture' ) );
-		$this->assertValidSameCodeRetry( $registry, $catalog, ProviderCode::parse( 'fixture' ) );
+		$this->assert_credential_policy_unavailable( $catalog, ProviderCode::parse( 'fixture' ) );
+		$this->assert_valid_same_code_retry( $registry, $catalog, ProviderCode::parse( 'fixture' ) );
 	}
 
-	public function testDirectRegistrationMetadataFailureIsRedactedAndRetryable(): void {
+	public function test_direct_registration_metadata_failure_is_redacted_and_retryable(): void {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$registry = new ProviderRegistry( array(), $catalog );
 		$provider = new class() implements RepositoryProvider {
@@ -332,30 +332,30 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			self::assertSame( array(), $registry->all() );
 		}
 
-		$this->assertCredentialPolicyUnavailable( $catalog, ProviderCode::parse( 'fixture' ) );
-		$this->assertWebhookPolicyUnavailable( $catalog, ProviderCode::parse( 'fixture' ) );
-		$this->assertValidSameCodeRetry( $registry, $catalog, ProviderCode::parse( 'fixture' ) );
+		$this->assert_credential_policy_unavailable( $catalog, ProviderCode::parse( 'fixture' ) );
+		$this->assert_webhook_policy_unavailable( $catalog, ProviderCode::parse( 'fixture' ) );
+		$this->assert_valid_same_code_retry( $registry, $catalog, ProviderCode::parse( 'fixture' ) );
 	}
 
-	public function testProviderFactoryCannotReadCredentialsBeforePolicyRegistration(): void {
+	public function test_provider_factory_cannot_read_credentials_before_policy_registration(): void {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$secrets  = new SecretsFile( '/path/that/does/not/exist.php', array(), $catalog );
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentials_for( $code ),
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		try {
-			$registry->registerWithCredentialStore(
+			$registry->register_with_credential_store(
 				'fixture',
 				static function (
 					ProviderCredentialStore $credentials,
-					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-					ProviderRegistrationContext $registrationContext
+					AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
+					ProviderRegistrationContext $registration_context
 				): ExternalFixtureProvider {
-					$credentials->credentialMaterial();
+					$credentials->credential_material();
 
 					return new ExternalFixtureProvider( 'fixture', $credentials );
 				}
@@ -367,11 +367,11 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			self::assertSame( array(), $registry->all() );
 		}
 
-		$this->assertCredentialPolicyUnavailable( $catalog, ProviderCode::parse( 'fixture' ) );
-		$this->assertValidSameCodeRetry( $registry, $catalog, ProviderCode::parse( 'fixture' ) );
+		$this->assert_credential_policy_unavailable( $catalog, ProviderCode::parse( 'fixture' ) );
+		$this->assert_valid_same_code_retry( $registry, $catalog, ProviderCode::parse( 'fixture' ) );
 	}
 
-	public function testRequestedProviderCodeIsCheckedBeforeIssuingCredentials(): void {
+	public function test_requested_provider_code_is_checked_before_issuing_credentials(): void {
 		$issued   = 0;
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$secrets  = new SecretsFile( '/path/that/does/not/exist.php', array(), $catalog );
@@ -381,18 +381,18 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			static function ( ProviderCode $code ) use ( $secrets, &$issued ): ProviderCredentialStore {
 				++$issued;
 
-				return $secrets->credentialsFor( $code );
+				return $secrets->credentials_for( $code );
 			},
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		try {
-			$registry->registerWithCredentialStore(
+			$registry->register_with_credential_store(
 				'fixture',
 				static fn (
 					ProviderCredentialStore $credentials,
-					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-					ProviderRegistrationContext $registrationContext
+					AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
+					ProviderRegistrationContext $registration_context
 				): ExternalFixtureProvider => new ExternalFixtureProvider( 'fixture', $credentials )
 			);
 			self::fail( 'A duplicate code must fail before credentials are issued.' );
@@ -403,15 +403,15 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		}
 	}
 
-	public function testSealedCredentialRegistrationRejectsBeforeEitherFactoryRuns(): void {
-		$credentialStoreCalls = 0;
-		$providerCalls        = 0;
-		$catalog              = new ProviderSecretPolicyCatalog();
-		$registry             = new ProviderRegistry(
+	public function test_sealed_credential_registration_rejects_before_either_factory_runs(): void {
+		$credential_store_calls = 0;
+		$provider_calls         = 0;
+		$catalog                = new ProviderSecretPolicyCatalog();
+		$registry               = new ProviderRegistry(
 			array(),
 			$catalog,
-			static function ( ProviderCode $code ) use ( &$credentialStoreCalls ): ProviderCredentialStore {
-				++$credentialStoreCalls;
+			static function ( ProviderCode $code ) use ( &$credential_store_calls ): ProviderCredentialStore {
+				++$credential_store_calls;
 
 				throw new RuntimeException( 'The credential-store factory must not run after sealing.' );
 			},
@@ -420,14 +420,14 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$registry->seal();
 
 		try {
-			$registry->registerWithCredentialStore(
+			$registry->register_with_credential_store(
 				'fixture',
 				static function (
 					ProviderCredentialStore $credentials,
-					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-					ProviderRegistrationContext $registrationContext
-				) use ( &$providerCalls ): RepositoryProvider {
-					++$providerCalls;
+					AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
+					ProviderRegistrationContext $registration_context
+				) use ( &$provider_calls ): RepositoryProvider {
+					++$provider_calls;
 
 					return new ExternalFixtureProvider( 'fixture', $credentials );
 				}
@@ -435,32 +435,32 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			self::fail( 'A sealed registry must reject credential registration.' );
 		} catch ( \LogicException $exception ) {
 			self::assertSame( 'Repository provider registration is closed.', $exception->getMessage() );
-			self::assertSame( 0, $credentialStoreCalls );
-			self::assertSame( 0, $providerCalls );
+			self::assertSame( 0, $credential_store_calls );
+			self::assertSame( 0, $provider_calls );
 			self::assertSame( array(), $registry->all() );
 		}
 
-		$this->assertCredentialPolicyUnavailable( $catalog, ProviderCode::parse( 'fixture' ) );
-		$this->assertWebhookPolicyUnavailable( $catalog, ProviderCode::parse( 'fixture' ) );
+		$this->assert_credential_policy_unavailable( $catalog, ProviderCode::parse( 'fixture' ) );
+		$this->assert_webhook_policy_unavailable( $catalog, ProviderCode::parse( 'fixture' ) );
 	}
 
-	public function testProviderFactoryIdentityMismatchLeavesCatalogAndRegistryUnchanged(): void {
+	public function test_provider_factory_identity_mismatch_leaves_catalog_and_registry_unchanged(): void {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$secrets  = new SecretsFile( '/path/that/does/not/exist.php', array(), $catalog );
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentials_for( $code ),
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		try {
-			$registry->registerWithCredentialStore(
+			$registry->register_with_credential_store(
 				'fixture',
 				static fn (
 					ProviderCredentialStore $credentials,
-					AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-					ProviderRegistrationContext $registrationContext
+					AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
+					ProviderRegistrationContext $registration_context
 				): ExternalFixtureProvider => new ExternalFixtureProvider( 'other-fixture', $credentials )
 			);
 			self::fail( 'A mismatched provider factory must reject registration.' );
@@ -468,41 +468,41 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			self::assertSame( array(), $registry->all() );
 		}
 
-		$this->assertCredentialPolicyUnavailable( $catalog, ProviderCode::parse( 'fixture' ) );
-		$this->assertCredentialPolicyUnavailable( $catalog, ProviderCode::parse( 'other-fixture' ) );
-		$this->assertValidSameCodeRetry( $registry, $catalog, ProviderCode::parse( 'fixture' ) );
+		$this->assert_credential_policy_unavailable( $catalog, ProviderCode::parse( 'fixture' ) );
+		$this->assert_credential_policy_unavailable( $catalog, ProviderCode::parse( 'other-fixture' ) );
+		$this->assert_valid_same_code_retry( $registry, $catalog, ProviderCode::parse( 'fixture' ) );
 	}
 
-	public function testProviderMetadataIsCapturedOnceBeforeAtomicRegistration(): void {
+	public function test_provider_metadata_is_captured_once_before_atomic_registration(): void {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$secrets  = new SecretsFile( '/path/that/does/not/exist.php', array(), $catalog );
 		$provider = new AlternatingMetadataProvider();
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentialsFor( $code ),
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentials_for( $code ),
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
-		$registry->registerWithCredentialStore(
+		$registry->register_with_credential_store(
 			'fixture',
 			static fn (
 				ProviderCredentialStore $credentials,
-				AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-				ProviderRegistrationContext $registrationContext
+				AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
+				ProviderRegistrationContext $registration_context
 			): RepositoryProvider => $provider
 		);
 
-		self::assertSame( 1, $provider->metadataCalls );
+		self::assertSame( 1, $provider->metadata_calls );
 		self::assertSame( $provider, $registry->get( 'fixture' ) );
 		self::assertArrayNotHasKey( 'other-fixture', $registry->all() );
 		self::assertSame( 'fixture', $registry->metadata()['fixture']->code->value );
-		self::assertSame( 1, $provider->metadataCalls );
-		self::assertSame( 'fixture', $catalog->credentialPolicy( 'fixture' )->get_provider()->value );
-		$this->assertCredentialPolicyUnavailable( $catalog, ProviderCode::parse( 'other-fixture' ) );
+		self::assertSame( 1, $provider->metadata_calls );
+		self::assertSame( 'fixture', $catalog->credential_policy( 'fixture' )->get_provider()->value );
+		$this->assert_credential_policy_unavailable( $catalog, ProviderCode::parse( 'other-fixture' ) );
 	}
 
-	public function testCredentialPolicyIdentityIsFrozenAtRegistration(): void {
+	public function test_credential_policy_identity_is_frozen_at_registration(): void {
 		$path     = sys_get_temp_dir() . '/ran-booster-policy-drift-' . bin2hex( random_bytes( 8 ) ) . '.php';
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$policy   = new AlternatingCredentialPolicy();
@@ -510,7 +510,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$registry = new ProviderRegistry( array( $provider ), $catalog );
 		$secrets  = SecretsFileTestFactory::create( $path, array(), $catalog );
 
-		$secrets->saveCredential(
+		$secrets->save_credential(
 			'fixture',
 			'fixture_primary',
 			array(
@@ -521,9 +521,9 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			'fixture-secret-canary'
 		);
 
-		self::assertSame( 1, $policy->providerCalls );
-		self::assertArrayHasKey( 'fixture_primary', $secrets->credentialProfiles( 'fixture' ) );
-		$this->assertCredentialPolicyUnavailable( $catalog, ProviderCode::parse( 'other-fixture' ) );
+		self::assertSame( 1, $policy->provider_calls );
+		self::assertArrayHasKey( 'fixture_primary', $secrets->credential_profiles( 'fixture' ) );
+		$this->assert_credential_policy_unavailable( $catalog, ProviderCode::parse( 'other-fixture' ) );
 		self::assertSame( $provider, $registry->get( 'fixture' ) );
 
 		unlink( $path );
@@ -532,14 +532,14 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		}
 	}
 
-	public function testUnknownProviderAccessFailsBeforeSidecarInclusion(): void {
+	public function test_unknown_provider_access_fails_before_sidecar_inclusion(): void {
 		$path = sys_get_temp_dir() . '/ran-booster-explosive-' . bin2hex( random_bytes( 8 ) ) . '.php';
 		file_put_contents( $path, "<?php throw new \\RuntimeException('explosive-sidecar-include');" );
 		chmod( $path, 0600 );
 
 		try {
 			$secrets = new SecretsFile( $path, array(), ShippedSecretPolicyCatalog::create() );
-			$secrets->credentialProfiles( 'fixture' );
+			$secrets->credential_profiles( 'fixture' );
 			self::fail( 'An unsupported provider must fail before the sidecar is included.' );
 		} catch ( RuntimeException $exception ) {
 			self::assertSame( 'Credential provider is not supported.', $exception->getMessage() );
@@ -548,26 +548,26 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		}
 	}
 
-	public function testDeactivatedProviderRecordsRemainOpaqueWhileShippedRecordsStayUsable(): void {
-		$path          = sys_get_temp_dir() . '/ran-booster-deactivated-' . bin2hex( random_bytes( 8 ) ) . '.php';
-		$activeCatalog = ShippedSecretPolicyCatalog::create();
-		$activeSecrets = SecretsFileTestFactory::create( $path, array(), $activeCatalog );
-		$registry      = new ProviderRegistry(
+	public function test_deactivated_provider_records_remain_opaque_while_shipped_records_stay_usable(): void {
+		$path           = sys_get_temp_dir() . '/ran-booster-deactivated-' . bin2hex( random_bytes( 8 ) ) . '.php';
+		$active_catalog = ShippedSecretPolicyCatalog::create();
+		$active_secrets = SecretsFileTestFactory::create( $path, array(), $active_catalog );
+		$registry       = new ProviderRegistry(
 			array(),
-			$activeCatalog,
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $activeSecrets->credentialsFor( $code ),
+			$active_catalog,
+			static fn ( ProviderCode $code ): ProviderCredentialStore => $active_secrets->credentials_for( $code ),
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
-		$registry->registerWithCredentialStore(
+		$registry->register_with_credential_store(
 			'fixture',
 			static fn (
 				ProviderCredentialStore $credentials,
-				AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-				ProviderRegistrationContext $registrationContext
+				AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
+				ProviderRegistrationContext $registration_context
 			): ExternalFixtureProvider => new ExternalFixtureProvider( 'fixture', $credentials )
 		);
 
-		$activeSecrets->saveCredential(
+		$active_secrets->save_credential(
 			'fixture',
 			'fixture_primary',
 			array(
@@ -577,7 +577,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			),
 			'fixture-secret-canary'
 		);
-		$activeSecrets->saveCredential(
+		$active_secrets->save_credential(
 			'gh',
 			'github_primary',
 			array(
@@ -587,11 +587,11 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			),
 			'github-secret-canary'
 		);
-		$before = $activeSecrets->credentialMaterial( 'fixture', 'fixture_primary' );
+		$before = $active_secrets->credential_material( 'fixture', 'fixture_primary' );
 
 		$deactivated = SecretsFileTestFactory::create( $path, array(), ShippedSecretPolicyCatalog::create() );
-		self::assertSame( 'github-secret-canary', $deactivated->credentialMaterial( 'gh', 'github_primary' )['secret'] );
-		$deactivated->saveCredential(
+		self::assertSame( 'github-secret-canary', $deactivated->credential_material( 'gh', 'github_primary' )['secret'] );
+		$deactivated->save_credential(
 			'gh',
 			'github_primary',
 			array(
@@ -601,11 +601,11 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			),
 			null
 		);
-		$reactivated = SecretsFileTestFactory::create( $path, array(), $activeCatalog );
-		$after       = $reactivated->credentialMaterial( 'fixture', 'fixture_primary' );
+		$reactivated = SecretsFileTestFactory::create( $path, array(), $active_catalog );
+		$after       = $reactivated->credential_material( 'fixture', 'fixture_primary' );
 
 		self::assertSame( $before, $after );
-		self::assertSame( 'GitHub renamed', $deactivated->credentialProfiles( 'gh' )['github_primary']['label'] );
+		self::assertSame( 'GitHub renamed', $deactivated->credential_profiles( 'gh' )['github_primary']['label'] );
 
 		unlink( $path );
 		if ( is_file( $path . '.lock' ) ) {
@@ -613,7 +613,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		}
 	}
 
-	public function testWebhookRequestRetainsOnlyProviderDeclaredHeadersAndBoundsPolicySize(): void {
+	public function test_webhook_request_retains_only_provider_declared_headers_and_bounds_policy_size(): void {
 		$request = new WebhookRequest(
 			ProviderCode::parse( 'gh' ),
 			'{}',
@@ -625,9 +625,9 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			array( 'x-github-event' )
 		);
 
-		self::assertSame( 'push', $request->getHeader( 'x-github-event' ) );
-		self::assertNull( $request->getHeader( 'x-event-key' ) );
-		self::assertNull( $request->getHeader( 'authorization' ) );
+		self::assertSame( 'push', $request->get_header( 'x-github-event' ) );
+		self::assertNull( $request->get_header( 'x-event-key' ) );
+		self::assertNull( $request->get_header( 'authorization' ) );
 
 		$this->expectException( \InvalidArgumentException::class );
 
@@ -639,7 +639,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		);
 	}
 
-	public function testWebhookPolicyCannotRetainUniversalSensitiveHeaders(): void {
+	public function test_webhook_policy_cannot_retain_universal_sensitive_headers(): void {
 		$this->expectException( \InvalidArgumentException::class );
 
 		new WebhookRequest(
@@ -650,25 +650,25 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		);
 	}
 
-	private function assertCredentialPolicyUnavailable( ProviderSecretPolicyCatalog $catalog, ProviderCode $code ): void {
+	private function assert_credential_policy_unavailable( ProviderSecretPolicyCatalog $catalog, ProviderCode $code ): void {
 		try {
-			$catalog->credentialPolicy( $code );
+			$catalog->credential_policy( $code );
 			self::fail( 'Credential policy catalog must remain unchanged.' );
 		} catch ( RuntimeException $exception ) {
 			self::assertSame( 'Credential provider is not supported.', $exception->getMessage() );
 		}
 	}
 
-	private function assertWebhookPolicyUnavailable( ProviderSecretPolicyCatalog $catalog, ProviderCode $code ): void {
+	private function assert_webhook_policy_unavailable( ProviderSecretPolicyCatalog $catalog, ProviderCode $code ): void {
 		try {
-			$catalog->webhookPolicy( $code );
+			$catalog->webhook_policy( $code );
 			self::fail( 'Webhook policy catalog must remain unchanged.' );
 		} catch ( RuntimeException $exception ) {
 			self::assertSame( 'Webhook provider is not supported.', $exception->getMessage() );
 		}
 	}
 
-	private function assertValidSameCodeRetry(
+	private function assert_valid_same_code_retry(
 		ProviderRegistry $registry,
 		ProviderSecretPolicyCatalog $catalog,
 		ProviderCode $code
@@ -677,7 +677,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$registry->register( $provider );
 
 		self::assertSame( $provider, $registry->get( $code ) );
-		self::assertSame( $code->value, $catalog->credentialPolicy( $code )->get_provider()->value );
+		self::assertSame( $code->value, $catalog->credential_policy( $code )->get_provider()->value );
 	}
 }
 
@@ -686,8 +686,8 @@ final readonly class AtomicPolicyProvider implements RepositoryProvider, Provide
 
 	public function __construct(
 		private ProviderCode $code,
-		private ProviderCredentialPolicy $credentialPolicy,
-		private ProviderWebhookPolicy $webhookPolicy
+		private ProviderCredentialPolicy $credential_policy,
+		private ProviderWebhookPolicy $webhook_policy
 	) {
 	}
 
@@ -700,11 +700,11 @@ final readonly class AtomicPolicyProvider implements RepositoryProvider, Provide
 	}
 
 	public function get_credential_policy(): ProviderCredentialPolicy {
-		return $this->credentialPolicy;
+		return $this->credential_policy;
 	}
 
 	public function get_webhook_policy(): ProviderWebhookPolicy {
-		return $this->webhookPolicy;
+		return $this->webhook_policy;
 	}
 
 	public function diagnose_webhook_readiness(): ProviderDiagnosticResult {
@@ -731,11 +731,11 @@ final readonly class EmptyProviderDiagnostics implements ProviderDiagnostics {
 final class AlternatingMetadataProvider implements RepositoryProvider, ProviderCredentialPolicySupplier {
 	use \Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
 
-	public int $metadataCalls = 0;
+	public int $metadata_calls = 0;
 
 	public function get_metadata(): ProviderMetadata {
-		++$this->metadataCalls;
-		$code = 1 === $this->metadataCalls ? 'fixture' : 'other-fixture';
+		++$this->metadata_calls;
+		$code = 1 === $this->metadata_calls ? 'fixture' : 'other-fixture';
 
 		return new ProviderMetadata(
 			ProviderCode::parse( $code ),
@@ -768,12 +768,12 @@ final class AlternatingMetadataProvider implements RepositoryProvider, ProviderC
 
 final class AlternatingCredentialPolicy implements ProviderCredentialPolicy {
 
-	public int $providerCalls = 0;
+	public int $provider_calls = 0;
 
 	public function get_provider(): ProviderCode {
-		++$this->providerCalls;
+		++$this->provider_calls;
 
-		return ProviderCode::parse( 1 === $this->providerCalls ? 'fixture' : 'other-fixture' );
+		return ProviderCode::parse( 1 === $this->provider_calls ? 'fixture' : 'other-fixture' );
 	}
 
 	public function normalize_credential( array $metadata, mixed $secret ): array {
@@ -875,11 +875,11 @@ final readonly class ExplodingWebhookPolicy implements ProviderWebhookPolicy {
 		return null;
 	}
 
-	public function authorize_webhook( \RAN\RepositoryProvider\SignedWebhookVerification $verification, string $repositoryAuthorityId, string $repository ): bool {
+	public function authorize_webhook( \RAN\RepositoryProvider\SignedWebhookVerification $verification, string $repository_authority_id, string $repository ): bool {
 		return false;
 	}
 
-	public function repository_target_matches( string $target, string $repositoryLocator ): bool {
+	public function repository_target_matches( string $target, string $repository_locator ): bool {
 		return false;
 	}
 }

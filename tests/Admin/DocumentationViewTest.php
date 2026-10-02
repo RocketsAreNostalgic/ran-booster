@@ -12,6 +12,7 @@ require_once dirname( __DIR__, 2 ) . '/RAN/Admin/DocumentationHookRenderer.php';
 
 final class DocumentationViewTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_documentation_test_actions'] = array();
 		$GLOBALS['ran_booster_documentation_test_filters'] = array();
@@ -19,22 +20,23 @@ final class DocumentationViewTest extends TestCase {
 		$GLOBALS['ran_booster_admin_test_translations']    = array();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset( $GLOBALS['ran_booster_documentation_test_actions'], $GLOBALS['ran_booster_documentation_test_filters'], $GLOBALS['ran_booster_admin_view_filters'] );
 	}
 
-	public function testTranslatesTheGuidanceEyebrowWithoutChangingDocumentationNavigation(): void {
+	public function test_translates_the_guidance_eyebrow_without_changing_documentation_navigation(): void {
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Guidance'] = 'Conseils';
 
-		$html = $this->renderView( $this->providerDocumentation() );
+		$html = $this->render_view( $this->provider_documentation() );
 
 		self::assertStringContainsString( '<p class="ran-booster-eyebrow">Conseils</p>', $html );
 		self::assertStringContainsString( 'class="ran-booster-documentation__index-link"', $html );
 		self::assertStringContainsString( 'id="ran-booster-documentation-heading"', $html );
 	}
 
-	public function testRendersTenNativeDisclosureSectionsWithOnlyQuickStartOpen(): void {
-		$html = $this->renderView( $this->providerDocumentation() );
+	public function test_renders_ten_native_disclosure_sections_with_only_quick_start_open(): void {
+		$html = $this->render_view( $this->provider_documentation() );
 
 		self::assertStringContainsString( 'class="ran-booster-documentation ran-booster-documentation__layout"', $html );
 		self::assertStringContainsString( 'class="ran-booster-page-shell ran-booster-panel ran-booster-documentation__main"', $html );
@@ -82,10 +84,10 @@ final class DocumentationViewTest extends TestCase {
 		self::assertLessThan( strpos( $html, 'GitHub credentials and access' ), strpos( $html, 'Move packages between sites' ) );
 	}
 
-	public function testRendersSanitizedProviderAndGlobalDocumentationSectionsInPlace(): void {
-		$providerFilter =
-			static function ( array $sections, string $documentationUrl, string $scope ): array {
-				self::assertStringContainsString( 'tab=documentation', $documentationUrl );
+	public function test_renders_sanitized_provider_and_global_documentation_sections_in_place(): void {
+		$provider_filter =
+			static function ( array $sections, string $documentation_url, string $scope ): array {
+				self::assertStringContainsString( 'tab=documentation', $documentation_url );
 				self::assertSame( 'site', $scope );
 				$sections[] = array(
 					'id'      => 'fixture-gh-guide',
@@ -95,9 +97,9 @@ final class DocumentationViewTest extends TestCase {
 
 				return $sections;
 			};
-		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_after_provider_gh'][] = $providerFilter;
-		$GLOBALS['ran_booster_admin_view_filters']['ran_booster_documentation_sections_after_provider_gh'][]         = $providerFilter;
-		$globalFilter =
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_after_provider_gh'][] = $provider_filter;
+		$GLOBALS['ran_booster_admin_view_filters']['ran_booster_documentation_sections_after_provider_gh'][]         = $provider_filter;
+		$global_filter =
 			static function ( array $sections ): array {
 				$sections[] = array(
 					'id'      => 'fixture-global-guide',
@@ -107,9 +109,9 @@ final class DocumentationViewTest extends TestCase {
 
 				return $sections;
 			};
-		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_before_about'][] = $globalFilter;
-		$GLOBALS['ran_booster_admin_view_filters']['ran_booster_documentation_sections_before_about'][]         = $globalFilter;
-		$html = $this->renderView( $this->providerDocumentation() );
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_before_about'][] = $global_filter;
+		$GLOBALS['ran_booster_admin_view_filters']['ran_booster_documentation_sections_before_about'][]         = $global_filter;
+		$html = $this->render_view( $this->provider_documentation() );
 
 		self::assertSame( 12, preg_match_all( '/<details\b/', $html ) );
 		self::assertStringContainsString( 'id="fixture-gh-guide"', $html );
@@ -120,15 +122,15 @@ final class DocumentationViewTest extends TestCase {
 		self::assertLessThan( strpos( $html, 'Bitbucket credentials and access' ), strpos( $html, 'GitHub fixture guide' ) );
 	}
 
-	public function testRendersOneOrderedPageWideIndexForTopLevelDocumentationSections(): void {
-		$callableCalls = 0;
+	public function test_renders_one_ordered_page_wide_index_for_top_level_documentation_sections(): void {
+		$callable_calls = 0;
 		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_after_provider_gh'][] =
-			static function ( array $sections ) use ( &$callableCalls ): array {
+			static function ( array $sections ) use ( &$callable_calls ): array {
 				$sections[] = array(
 					'id'      => 'addon-guide',
 					'summary' => 'Add-on <guide>',
-					'content' => static function () use ( &$callableCalls ): void {
-						++$callableCalls;
+					'content' => static function () use ( &$callable_calls ): void {
+						++$callable_calls;
 						echo '<p>Add-on content.</p>';
 					},
 				);
@@ -176,9 +178,9 @@ final class DocumentationViewTest extends TestCase {
 				return $sections;
 			};
 
-		$html = $this->renderView( $this->providerDocumentation() );
+		$html = $this->render_view( $this->provider_documentation() );
 
-		self::assertSame( 1, $callableCalls );
+		self::assertSame( 1, $callable_calls );
 		self::assertStringContainsString( '<aside class="ran-booster-documentation__index ran-booster-panel" data-ran-booster-documentation-index>', $html );
 		self::assertStringContainsString( '<h2 id="ran-booster-documentation-index-heading" class="ran-booster-documentation__index-heading">On this page</h2>', $html );
 		self::assertStringContainsString( '<p class="ran-booster-tile ran-booster-documentation__search-hint"><span class="ran-booster-tile__label">Search this page with</span> <kbd>⌘F</kbd> <span>or</span> <kbd>Ctrl+F</kbd></p>', $html );
@@ -202,8 +204,8 @@ final class DocumentationViewTest extends TestCase {
 		self::assertLessThan( strpos( $html, 'ran-booster-page-shell ran-booster-panel ran-booster-documentation' ), strpos( $html, 'data-ran-booster-documentation-index' ) );
 	}
 
-	public function testStatesTheCurrentSingleSiteSupportBoundaryWithoutBetaOrVersionJargon(): void {
-		$html = $this->renderView( $this->providerDocumentation() );
+	public function test_states_the_current_single_site_support_boundary_without_beta_or_version_jargon(): void {
+		$html = $this->render_view( $this->provider_documentation() );
 
 		self::assertStringContainsString( '<strong>Current limitation:</strong>', $html );
 		self::assertStringContainsString( 'This plugin currently supports single-site WordPress installations only', $html );
@@ -214,8 +216,8 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringNotContainsString( 'V1', $html );
 	}
 
-	public function testRendersActionableInternalAndProviderOwnedOfficialLinksSafely(): void {
-		$html = $this->renderView( $this->providerDocumentation() );
+	public function test_renders_actionable_internal_and_provider_owned_official_links_safely(): void {
+		$html = $this->render_view( $this->provider_documentation() );
 
 		self::assertStringContainsString( 'page=ran-booster-plugins-create', $html );
 		self::assertStringContainsString( 'page=ran-booster-themes-create', $html );
@@ -227,25 +229,25 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringNotContainsString( 'canary-secret', $html );
 	}
 
-	public function testQuickStartProviderLinksHaveEqualButtonWeight(): void {
-		$html = $this->renderView( $this->providerDocumentation() );
+	public function test_quick_start_provider_links_have_equal_button_weight(): void {
+		$html = $this->render_view( $this->provider_documentation() );
 
 		self::assertSame(
 			1,
 			preg_match(
 				'/<ul class="ran-booster-documentation__inline-links">.*?<a class="button" href="[^"]+tab=gh">GitHub<\/a>.*?<a class="button" href="[^"]+tab=bb">Bitbucket<\/a>.*?<\/ul>/s',
 				$html,
-				$quickStartLinks
+				$quick_start_links
 			)
 		);
-		self::assertSame( 2, substr_count( $quickStartLinks[0], 'class="button"' ) );
-		self::assertStringNotContainsString( 'button-primary', $quickStartLinks[0] );
+		self::assertSame( 2, substr_count( $quick_start_links[0], 'class="button"' ) );
+		self::assertStringNotContainsString( 'button-primary', $quick_start_links[0] );
 		self::assertLessThan( strpos( $html, 'Add private access only if needed.' ), strpos( $html, 'Install a package.' ) );
 		self::assertStringContainsString( 'No credential is required.', $html );
 	}
 
-	public function testDocumentsProjectLineageWithoutOverstatingTheFork(): void {
-		$html = $this->renderView( $this->providerDocumentation() );
+	public function test_documents_project_lineage_without_overstating_the_fork(): void {
+		$html = $this->render_view( $this->provider_documentation() );
 
 		self::assertStringContainsString( '<summary>About RAN Booster</summary>', $html );
 		self::assertStringContainsString( '<h3>Where this came from</h3>', $html );
@@ -275,8 +277,8 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringNotContainsString( 'insecure', $html );
 	}
 
-	public function testEscapesProviderTextAndProvidesMissingSetupFallback(): void {
-		$documentation   = $this->providerDocumentation();
+	public function test_escapes_provider_text_and_provides_missing_setup_fallback(): void {
+		$documentation   = $this->provider_documentation();
 		$documentation[] = array(
 			'code'            => 'gl',
 			'label'           => 'GitLab <script>alert(1)</script>',
@@ -288,7 +290,7 @@ final class DocumentationViewTest extends TestCase {
 			'webhook'         => null,
 		);
 
-		$html = $this->renderView( $documentation );
+		$html = $this->render_view( $documentation );
 
 		self::assertStringNotContainsString( '<script>', $html );
 		self::assertStringNotContainsString( '<strong>pending</strong>', $html );
@@ -297,8 +299,8 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( 'enter repository details manually', $html );
 	}
 
-	public function testStatesTheCredentialFileLocationRetentionAndRemovalContractAccurately(): void {
-		$html = $this->renderView( $this->providerDocumentation() );
+	public function test_states_the_credential_file_location_retention_and_removal_contract_accurately(): void {
+		$html = $this->render_view( $this->provider_documentation() );
 
 		self::assertStringContainsString( '<code>RAN_BOOSTER_ENCRYPTED_SECRETS_DIR</code>', $html );
 		self::assertStringNotContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', $html );
@@ -332,8 +334,8 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringNotContainsString( 'not encryption', $html );
 	}
 
-	public function testLeadsWithThePortabilityHappyPathAndDevelopmentSafety(): void {
-		$html = $this->renderView( $this->providerDocumentation() );
+	public function test_leads_with_the_portability_happy_path_and_development_safety(): void {
+		$html = $this->render_view( $this->provider_documentation() );
 
 		self::assertStringContainsString( 'id="ran-booster-portability-guidance"', $html );
 		self::assertStringContainsString( 'Minimum credential permissions', $html );
@@ -403,8 +405,8 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringNotContainsString( 'eligible', $html );
 	}
 
-	public function testDescribesTheLivePortabilityWorkflow(): void {
-		$html = $this->renderView( $this->providerDocumentation() );
+	public function test_describes_the_live_portability_workflow(): void {
+		$html = $this->render_view( $this->provider_documentation() );
 
 		self::assertStringContainsString( '<strong>Transporter workflow:</strong>', $html );
 		self::assertStringContainsString( 'Reviewing a Transporter Blueprint never installs anything, changes package settings, or stores the uploaded file', $html );
@@ -412,8 +414,8 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Transporter preview:', $html );
 	}
 
-	public function testDocumentsTheEffectiveRepositoryArchivePolicyAndOverride(): void {
-		$html = $this->renderView( $this->providerDocumentation() );
+	public function test_documents_the_effective_repository_archive_policy_and_override(): void {
+		$html = $this->render_view( $this->provider_documentation() );
 
 		self::assertStringContainsString( '<h3>Large repository archives</h3>', $html );
 		self::assertStringContainsString( 'ZIP of the whole repository', $html );
@@ -424,7 +426,7 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( 'adopting an already-installed package do not download a repository archive', $html );
 	}
 
-	public function testStaticCopyUsesThePluginTextDomain(): void {
+	public function test_static_copy_uses_the_plugin_text_domain(): void {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local fixture source is inspected without a WordPress runtime.
 		$source = (string) file_get_contents( dirname( __DIR__, 2 ) . '/views/documentation.php' );
 
@@ -438,10 +440,10 @@ final class DocumentationViewTest extends TestCase {
 	}
 
 	/**
-	 * @param list<array<string, mixed>> $providerDocumentation Display-safe provider guidance.
+	 * @param list<array<string, mixed>> $provider_documentation Display-safe provider guidance.
 	 */
-	private function renderView( array $providerDocumentation ): string {
-		$tabs               = array(
+	private function render_view( array $provider_documentation ): string {
+		$tabs                = array(
 			array(
 				'key'   => 'gh',
 				'label' => 'GitHub',
@@ -463,8 +465,8 @@ final class DocumentationViewTest extends TestCase {
 				'url'   => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting',
 			),
 		);
-		$documentationUrl   = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=documentation';
-		$documentationScope = 'site';
+		$documentation_url   = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=documentation';
+		$documentation_scope = 'site';
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/documentation.php';
@@ -473,7 +475,7 @@ final class DocumentationViewTest extends TestCase {
 	}
 
 	/** @return list<array<string, mixed>> */
-	private function providerDocumentation(): array {
+	private function provider_documentation(): array {
 		return array(
 			array(
 				'code'            => 'gh',

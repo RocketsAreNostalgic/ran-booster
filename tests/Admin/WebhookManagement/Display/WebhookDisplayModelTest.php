@@ -11,15 +11,20 @@ use ReflectionClass;
 require_once __DIR__ . '/WebhookDisplayModelWordPressFunctions.php';
 
 final class WebhookDisplayModelTest extends TestCase {
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override requires this method name.
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_webhook_display_test_translations'] = array();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override requires this method name.
+
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset( $GLOBALS['ran_booster_webhook_display_test_translations'] );
 	}
 
-	public function testItTranslatesKnownFixedCoreNoticeCopy(): void {
+	public function test_it_translates_known_fixed_core_notice_copy(): void {
 		$GLOBALS['ran_booster_webhook_display_test_translations']['ran-booster'] = array(
 			'The provider rejected the webhook setup request. No remote hook was established.' => 'Le fournisseur a refuse la configuration du webhook. Aucun webhook distant n a ete etabli.',
 		);
@@ -30,7 +35,7 @@ final class WebhookDisplayModelTest extends TestCase {
 		);
 	}
 
-	public function testItTranslatesFormattedRecoveryCopyWithoutChangingReferenceIds(): void {
+	public function test_it_translates_formatted_recovery_copy_without_changing_reference_ids(): void {
 		$GLOBALS['ran_booster_webhook_display_test_translations']['ran-booster'] = array(
 			'Provider state may have changed, but the current webhook-management record was not overwritten. Inspect provider hook reference %1$s and Core signing profile %2$s before retrying.' => 'Profil Core %2$s et reference de webhook %1$s a inspecter.',
 		);
@@ -47,7 +52,7 @@ final class WebhookDisplayModelTest extends TestCase {
 		);
 	}
 
-	public function testItTranslatesDefaultCoreCopyWithoutChangingProviderRemediation(): void {
+	public function test_it_translates_default_core_copy_without_changing_provider_remediation(): void {
 		$default     = 'Webhook management could not confirm that the remote webhook operation succeeded. Review the recorded status before retrying.';
 		$remediation = 'Provider remediation: retain result_code=opaque and https://provider.example/hooks/123 exactly.';
 		$GLOBALS['ran_booster_webhook_display_test_translations']['ran-booster'] = array(

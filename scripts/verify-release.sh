@@ -110,9 +110,9 @@ done
 
 bootstrap_source=$(git show "$commit:ran-booster.php")
 for required_api_marker in \
-	"define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 13 );" \
-	"define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );" \
-	"define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );" \
+	"define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );" \
+	"define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );" \
+	"define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 3 );" \
 	"define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', PortabilityFacade::API_VERSION );"; do
 	grep -Fq "$required_api_marker" <<< "$bootstrap_source" \
 		|| fail "release ref is missing the coordinated API marker: $required_api_marker"

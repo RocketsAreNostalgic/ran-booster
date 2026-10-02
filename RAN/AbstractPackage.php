@@ -10,12 +10,12 @@ use RAN\Deployment\DeploymentPolicy;
 abstract class AbstractPackage implements Package {
 
 	protected $repository;
-	protected DeploymentPolicy $deploymentPolicy = DeploymentPolicy::MANUAL;
-	protected PackageSource $source              = PackageSource::BRANCH;
-	protected int $sourceRevision                = 1;
+	protected DeploymentPolicy $deployment_policy = DeploymentPolicy::MANUAL;
+	protected PackageSource $source               = PackageSource::BRANCH;
+	protected int $source_revision                = 1;
 	protected $subdirectory;
-	protected ?string $deploymentRef    = null;
-	protected ?string $installationSlug = null;
+	protected ?string $deployment_ref    = null;
+	protected ?string $installation_slug = null;
 
 	public function get_version(): string {
 		return (string) ( $this->version ?? '' );
@@ -33,13 +33,13 @@ abstract class AbstractPackage implements Package {
 		}
 
 		return PackageSubdirectory::installation_slug(
-			$this->installationSlug ?? $this->runtime_slug(),
+			$this->installation_slug ?? $this->runtime_slug(),
 			null
 		);
 	}
 
 	public function set_installation_slug( ?string $slug ): void {
-		$this->installationSlug = null === $slug ? null : PackageSubdirectory::normalize_slug( $slug );
+		$this->installation_slug = null === $slug ? null : PackageSubdirectory::normalize_slug( $slug );
 	}
 
 	public function get_subdirectory(): mixed {
@@ -55,11 +55,11 @@ abstract class AbstractPackage implements Package {
 	}
 
 	public function get_deployment_policy(): DeploymentPolicy {
-		return $this->deploymentPolicy;
+		return $this->deployment_policy;
 	}
 
-	public function set_deployment_policy( DeploymentPolicy $deploymentPolicy ): void {
-		$this->deploymentPolicy = $deploymentPolicy;
+	public function set_deployment_policy( DeploymentPolicy $deployment_policy ): void {
+		$this->deployment_policy = $deployment_policy;
 	}
 
 	public function get_source(): PackageSource {
@@ -67,7 +67,7 @@ abstract class AbstractPackage implements Package {
 	}
 
 	public function get_source_revision(): int {
-		return $this->sourceRevision;
+		return $this->source_revision;
 	}
 
 	public function set_source( PackageSource $source, int $revision ): void {
@@ -75,8 +75,8 @@ abstract class AbstractPackage implements Package {
 			throw new \InvalidArgumentException( 'The managed package source revision is invalid.' );
 		}
 
-		$this->source         = $source;
-		$this->sourceRevision = $revision;
+		$this->source          = $source;
+		$this->source_revision = $revision;
 	}
 
 
@@ -93,15 +93,15 @@ abstract class AbstractPackage implements Package {
 	}
 
 	public function get_deployment_ref(): ?string {
-		return $this->deploymentRef;
+		return $this->deployment_ref;
 	}
 
-	public function set_deployment_ref( ?string $deploymentRef ): void {
-		$this->deploymentRef = $deploymentRef;
+	public function set_deployment_ref( ?string $deployment_ref ): void {
+		$this->deployment_ref = $deployment_ref;
 	}
 
 	public function get_credential_id(): string {
-		return $this->repository->reference->credentialId ?? '';
+		return $this->repository->reference->credential_id ?? '';
 	}
 
 	public function get_provider_code(): ?string {
@@ -109,7 +109,7 @@ abstract class AbstractPackage implements Package {
 	}
 
 	public function get_provider_repository_id(): ?string {
-		return $this->repository->reference->providerRepositoryId;
+		return $this->repository->reference->provider_repository_id;
 	}
 
 	public function is_private(): mixed {

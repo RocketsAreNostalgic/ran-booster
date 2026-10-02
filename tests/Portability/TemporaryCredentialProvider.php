@@ -22,52 +22,52 @@ final class TemporaryCredentialProvider implements RepositoryProvider, ProviderC
 	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 	/** @var list<string|null> */
-	public array $credentialIds           = array();
-	public ?string $temporaryCredentialId = null;
+	public array $credential_ids            = array();
+	public ?string $temporary_credential_id = null;
 
 	public function __construct(
 		private ProviderCredentialStore $credentials,
-		private int $anonymousFailure,
-		private string $providerRepositoryId,
+		private int $anonymous_failure,
+		private string $provider_repository_id,
 		private bool $private = false,
-		private string $providerCode = 'gh',
-		private string $providerLabel = 'GitHub',
-		private string $acceptedSecret = 'sentinel-portability-token'
+		private string $provider_code = 'gh',
+		private string $provider_label = 'GitHub',
+		private string $accepted_secret = 'sentinel-portability-token'
 	) {
 	}
 
 	public function get_metadata(): ProviderMetadata {
-		return new ProviderMetadata( ProviderCode::parse( $this->providerCode ), $this->providerLabel, 'https://provider.example.test/', 'Owner' );
+		return new ProviderMetadata( ProviderCode::parse( $this->provider_code ), $this->provider_label, 'https://provider.example.test/', 'Owner' );
 	}
 
 	public function get_credential_policy(): ProviderCredentialPolicy {
-		return 'gh' === $this->providerCode
+		return 'gh' === $this->provider_code
 			? new GitHubCredentialPolicy()
-			: new TemporaryProviderCredentialPolicy( ProviderCode::parse( $this->providerCode ) );
+			: new TemporaryProviderCredentialPolicy( ProviderCode::parse( $this->provider_code ) );
 	}
 
 	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
-		$this->credentialIds[] = $request->credentialId;
-		if ( null === $request->credentialId && 0 !== $this->anonymousFailure ) {
+		$this->credential_ids[] = $request->credential_id;
+		if ( null === $request->credential_id && 0 !== $this->anonymous_failure ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test-only provider error has fixed public text.
-			throw new RuntimeException( 'Repository access failed.', $this->anonymousFailure );
+			throw new RuntimeException( 'Repository access failed.', $this->anonymous_failure );
 		}
-		if ( null !== $request->credentialId ) {
-			$material = $this->credentials->credentialMaterial( $request->credentialId );
-			if ( ! is_array( $material ) || $this->acceptedSecret !== ( $material['secret'] ?? null ) ) {
+		if ( null !== $request->credential_id ) {
+			$material = $this->credentials->credential_material( $request->credential_id );
+			if ( ! is_array( $material ) || $this->accepted_secret !== ( $material['secret'] ?? null ) ) {
 				throw new RuntimeException( 'Repository access failed.', 401 );
 			}
-			$this->temporaryCredentialId = $request->credentialId;
+			$this->temporary_credential_id = $request->credential_id;
 		}
 
 		return new RepositoryDescriptor(
-			ProviderCode::parse( $this->providerCode ),
+			ProviderCode::parse( $this->provider_code ),
 			'owner/repository',
 			'example',
-			$this->providerRepositoryId,
+			$this->provider_repository_id,
 			$this->private,
 			'main',
-			$request->credentialId
+			$request->credential_id
 		);
 	}
 

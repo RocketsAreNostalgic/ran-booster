@@ -19,10 +19,10 @@ use RAN\RepositoryProvider\UnsupportedProviderCapability;
 
 final class PackageDeploymentPolicyRequestResolverTest extends TestCase {
 
-	public function testAutomaticPolicyRequiresWebhookCapabilityBeforeRepositoryResolution(): void {
+	public function test_automatic_policy_requires_webhook_capability_before_repository_resolution(): void {
 		$provider = new class() implements RepositoryProvider {
 
-			public int $resolveCalls = 0;
+			public int $resolve_calls = 0;
 
 			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'Fixture', 'https://example.test/', 'Owner' );
@@ -37,7 +37,7 @@ final class PackageDeploymentPolicyRequestResolverTest extends TestCase {
 			}
 
 			public function resolve_repository( \RAN\RepositoryProvider\RepositoryLookupRequest $request ): \RAN\RepositoryProvider\RepositoryDescriptor {
-				++$this->resolveCalls;
+				++$this->resolve_calls;
 
 				return new \RAN\RepositoryProvider\RepositoryDescriptor(
 					ProviderCode::parse( 'gh' ),
@@ -66,11 +66,11 @@ final class PackageDeploymentPolicyRequestResolverTest extends TestCase {
 				)
 			);
 		} finally {
-			self::assertSame( 0, $provider->resolveCalls );
+			self::assertSame( 0, $provider->resolve_calls );
 		}
 	}
 
-	public function testResolverDefaultsMissingPolicyToManual(): void {
+	public function test_resolver_defaults_missing_policy_to_manual(): void {
 		$provider = new class() implements RepositoryProvider {
 
 			public function get_metadata(): ProviderMetadata {
@@ -93,7 +93,7 @@ final class PackageDeploymentPolicyRequestResolverTest extends TestCase {
 					'repository-id',
 					false,
 					'main',
-					$request->credentialId
+					$request->credential_id
 				);
 			}
 

@@ -76,27 +76,27 @@ final readonly class AdminTab {
 		return new self( $key, $label, $view, AdminTabKind::PAGE );
 	}
 
-	public function getKey(): string {
+	public function get_key(): string {
 		return $this->key;
 	}
 
-	public function getLabel(): string {
+	public function get_label(): string {
 		return $this->label;
 	}
 
-	public function getView(): string {
+	public function get_view(): string {
 		return $this->view;
 	}
 
-	public function getKind(): AdminTabKind {
+	public function get_kind(): AdminTabKind {
 		return $this->kind;
 	}
 
-	public function getProvider(): ?ProviderCode {
+	public function get_provider(): ?ProviderCode {
 		return $this->provider;
 	}
 
-	public function isProvider(): bool {
+	public function is_provider(): bool {
 		return AdminTabKind::PROVIDER === $this->kind;
 	}
 }

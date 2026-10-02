@@ -24,7 +24,7 @@ final class AdminStatusSummaryRendererTest extends TestCase {
 	}
 
 	#[DataProvider( 'states' )]
-	public function testItRendersTheSharedStructureForEverySupportedState( string $state ): void {
+	public function test_it_renders_the_shared_structure_for_every_supported_state( string $state ): void {
 		ob_start();
 		( new AdminStatusSummaryRenderer() )->render(
 			state: $state,
@@ -44,7 +44,7 @@ final class AdminStatusSummaryRendererTest extends TestCase {
 		self::assertStringContainsString( '<button type="button" class="button">Act</button>', $html );
 	}
 
-	public function testItRejectsUnsupportedStates(): void {
+	public function test_it_rejects_unsupported_states(): void {
 		$this->expectException( InvalidArgumentException::class );
 
 		( new AdminStatusSummaryRenderer() )->render(

@@ -35,6 +35,7 @@ final class LocalDataRemoverTest extends TestCase {
 
 	private UninstallDatabase $database;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->database = new UninstallDatabase();
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Focused database double.
@@ -62,7 +63,7 @@ final class LocalDataRemoverTest extends TestCase {
 			PublicRepositoryLookupProfileStore::OPTION_NAME => array( 'profiles' => array() ),
 			'ran_booster_release_deployments_assessment_observations' => array( array( 'kind' => 'existing_automation_detected' ) ),
 			'ran_booster_release_deployments_failure_history' => array( array( 'correlation_reference' => str_repeat( 'a', 32 ) ) ),
-			$this->updaterAuthorityOption()               => 'owned-updater-state',
+			$this->updater_authority_option()             => 'owned-updater-state',
 			SiteKeyStore::OPTION_NAME                     => 'encoded-key',
 			WordPressInstallationStore::OPTION_NAME       => array( 'current-webhook-record' ),
 			'unrelated_option'                            => 'preserved',
@@ -72,19 +73,19 @@ final class LocalDataRemoverTest extends TestCase {
 				WorkflowAssistanceState::SETUP_OPTION,
 				WorkflowAssistanceState::ASSESSMENT_OPTION,
 				WorkflowAssistanceState::FAILURE_OPTION,
-			) as $providerOption
+			) as $provider_option
 		) {
-			$GLOBALS['ran_booster_uninstall_options'][ $providerOption ] = array( 'current-provider-state' );
+			$GLOBALS['ran_booster_uninstall_options'][ $provider_option ] = array( 'current-provider-state' );
 		}
 		$GLOBALS['ran_booster_uninstall_options']['ran_booster_release_deployments_setup_records'] = array( 'obsolete-provider-state' );
-		$this->database->tables   = array(
+		$this->database->tables    = array(
 			'wp_ran_booster_packages',
 			'wp_ran_booster_deployment_attempts',
 			'wp_ran_booster_rejected_admission_audit',
 			'wp_ran_booster_native_update_activity',
 			'wp_unrelated',
 		);
-		$this->database->userMeta = array(
+		$this->database->user_meta = array(
 			DevelopmentSafetyNoticeController::USER_META_KEY => array( 1 ),
 			CredentialExpiryNotice::USER_META_KEY   => array( 2 ),
 			DeploymentAdminPresenter::USER_META_KEY => array( 3 ),
@@ -94,7 +95,7 @@ final class LocalDataRemoverTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testRemoveDeletesTheExactCoreInventoryAndCanBeRepeated(): void {
+	public function test_remove_deletes_the_exact_core_inventory_and_can_be_repeated(): void {
 		$this->setUp();
 		$GLOBALS['ran_booster_uninstall_multisite'] = true;
 
@@ -122,7 +123,7 @@ final class LocalDataRemoverTest extends TestCase {
 			),
 			$this->database->tables
 		);
-		self::assertSame( array( 'unrelated_meta' => array( 4 ) ), $this->database->userMeta );
+		self::assertSame( array( 'unrelated_meta' => array( 4 ) ), $this->database->user_meta );
 		self::assertSame(
 			array(
 				'ran_booster_release_deployments_assessment_observations' => array(
@@ -157,7 +158,7 @@ final class LocalDataRemoverTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testProviderCleanupFailureStopsBeforeCoreDatabaseCleanup(): void {
+	public function test_provider_cleanup_failure_stops_before_core_database_cleanup(): void {
 		$this->setUp();
 		$GLOBALS['ran_booster_uninstall_undeletable_option'] = WorkflowAssistanceState::SETUP_OPTION;
 
@@ -173,13 +174,13 @@ final class LocalDataRemoverTest extends TestCase {
 
 		self::assertArrayHasKey( Database::VERSION_OPTION, $GLOBALS['ran_booster_uninstall_options'] );
 		self::assertArrayHasKey( WordPressInstallationStore::OPTION_NAME, $GLOBALS['ran_booster_uninstall_options'] );
-		self::assertArrayHasKey( DevelopmentSafetyNoticeController::USER_META_KEY, $this->database->userMeta );
+		self::assertArrayHasKey( DevelopmentSafetyNoticeController::USER_META_KEY, $this->database->user_meta );
 		self::assertContains( 'wp_ran_booster_packages', $this->database->tables );
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testConvertedUninstallStopsBeforeSecretsOrDatabaseOnANonMainSite(): void {
+	public function test_converted_uninstall_stops_before_secrets_or_database_on_a_non_main_site(): void {
 		$this->setUp();
 		$GLOBALS['ran_booster_uninstall_multisite']       = true;
 		$GLOBALS['ran_booster_uninstall_current_blog_id'] = 2;
@@ -194,7 +195,7 @@ final class LocalDataRemoverTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testConvertedUninstallStopsBeforeSecretsWhenTheOptionsTableIsNotTheBaseTable(): void {
+	public function test_converted_uninstall_stops_before_secrets_when_the_options_table_is_not_the_base_table(): void {
 		$this->setUp();
 		$GLOBALS['ran_booster_uninstall_multisite'] = true;
 		$this->database->options                    = 'wp_2_options';
@@ -210,7 +211,7 @@ final class LocalDataRemoverTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testUnsafeSecretsAbortBeforeDatabaseCleanupAndPreserveTheKey(): void {
+	public function test_unsafe_secrets_abort_before_database_cleanup_and_preserve_the_key(): void {
 		$this->setUp();
 		$secrets = $this->createMock( SecretsFile::class );
 		$secrets->method( 'path' )->willReturn( '/private/secrets.json' );
@@ -240,7 +241,7 @@ final class LocalDataRemoverTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testAmbiguousConfigOwnershipAbortsBeforeAnyManagedStorageOrDatabaseCleanup(): void {
+	public function test_ambiguous_config_ownership_aborts_before_any_managed_storage_or_database_cleanup(): void {
 		$this->setUp();
 		$sidecar = '/private/secrets.json';
 		$config  = '/site/wp-config.php';
@@ -269,10 +270,10 @@ final class LocalDataRemoverTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testDatabaseFailureLeavesARepeatablePartialCleanup(): void {
+	public function test_database_failure_leaves_a_repeatable_partial_cleanup(): void {
 		$this->setUp();
-		$this->database->failureContains = 'wp_ran_booster_deployment_attempts';
-		$secrets                         = $this->secrets( null );
+		$this->database->failure_contains = 'wp_ran_booster_deployment_attempts';
+		$secrets                          = $this->secrets( null );
 		$secrets->method( 'delete_managed_storage' )
 			->willReturnCallback(
 				static function (): void {
@@ -293,7 +294,7 @@ final class LocalDataRemoverTest extends TestCase {
 		self::assertNotContains( 'wp_ran_booster_packages', $this->database->tables );
 		self::assertContains( 'wp_ran_booster_deployment_attempts', $this->database->tables );
 
-		$this->database->failureContains = null;
+		$this->database->failure_contains = null;
 		$remover->remove();
 		self::assertSame(
 			array(
@@ -308,7 +309,7 @@ final class LocalDataRemoverTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testConfiguredPathIsPassedOnlyToTheNarrowConfigInverse(): void {
+	public function test_configured_path_is_passed_only_to_the_narrow_config_inverse(): void {
 		$this->setUp();
 		$sidecar = '/private/secrets.json';
 		$config  = '/site/wp-config.php';
@@ -334,7 +335,7 @@ final class LocalDataRemoverTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testWpCliUsesTheOnlyCanonicalSupportedConfigWhenIncludesAreHidden(): void {
+	public function test_wp_cli_uses_the_only_canonical_supported_config_when_includes_are_hidden(): void {
 		$this->setUp();
 		$root   = (string) realpath( sys_get_temp_dir() )
 			. '/ran-booster-uninstall-config-'
@@ -360,13 +361,13 @@ final class LocalDataRemoverTest extends TestCase {
 				parent::__construct( $secrets, $capture, $writer, database: $database );
 			}
 
-			public function discoveredConfigPath(): string {
+			public function discovered_config_path(): string {
 				return $this->loaded_wp_config_path();
 			}
 		};
 
 		try {
-			self::assertSame( $config, $remover->discoveredConfigPath() );
+			self::assertSame( $config, $remover->discovered_config_path() );
 		} finally {
 			unlink( $config );
 			rmdir( $root );
@@ -375,21 +376,21 @@ final class LocalDataRemoverTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testRemoveDeletesTheExactConfigLockAndEmptyAutomaticDirectories(): void {
+	public function test_remove_deletes_the_exact_config_lock_and_empty_automatic_directories(): void {
 		$this->setUp();
-		$root       = (string) realpath( sys_get_temp_dir() )
+		$root        = (string) realpath( sys_get_temp_dir() )
 			. '/ran-booster-uninstall-directories-'
 			. bin2hex( random_bytes( 6 ) );
-		$base       = $root . '/.ran-booster';
-		$site       = $base . '/site-fingerprint';
-		$sidecar    = $site . '/secrets.json';
-		$config     = $root . '/wp-config.php';
-		$configLock = $config . '.ran-booster.lock';
+		$base        = $root . '/.ran-booster';
+		$site        = $base . '/site-fingerprint';
+		$sidecar     = $site . '/secrets.json';
+		$config      = $root . '/wp-config.php';
+		$config_lock = $config . '.ran-booster.lock';
 		self::assertTrue( mkdir( $site, 0700, true ) );
 		self::assertNotFalse( file_put_contents( $config, "<?php\n" ) );
-		self::assertNotFalse( file_put_contents( $configLock, '' ) );
+		self::assertNotFalse( file_put_contents( $config_lock, '' ) );
 		self::assertTrue( chmod( $base, 0700 ) );
-		self::assertTrue( chmod( $configLock, 0600 ) );
+		self::assertTrue( chmod( $config_lock, 0600 ) );
 
 		$secrets = $this->secrets( $sidecar );
 		$remover = new class(
@@ -405,30 +406,30 @@ final class LocalDataRemoverTest extends TestCase {
 				TemporaryDebugCapture $capture,
 				WpConfigSecretsPathWriter $writer,
 				object $database,
-				private readonly string $configPath,
-				private readonly string $automaticPath
+				private readonly string $config_path,
+				private readonly string $automatic_path
 			) {
 				parent::__construct( $secrets, $capture, $writer, database: $database );
 			}
 
 			protected function loaded_wp_config_path(): string {
-				return $this->configPath;
+				return $this->config_path;
 			}
 
 			protected function automatic_sidecar_path(): ?string {
-				return $this->automaticPath;
+				return $this->automatic_path;
 			}
 		};
 
 		try {
 			$remover->remove();
 			$remover->remove();
-			self::assertFileDoesNotExist( $configLock );
+			self::assertFileDoesNotExist( $config_lock );
 			self::assertDirectoryDoesNotExist( $site );
 			self::assertDirectoryDoesNotExist( $base );
 		} finally {
-			if ( is_file( $configLock ) ) {
-				unlink( $configLock );
+			if ( is_file( $config_lock ) ) {
+				unlink( $config_lock );
 			}
 			unlink( $config );
 			if ( is_dir( $site ) ) {
@@ -451,18 +452,18 @@ final class LocalDataRemoverTest extends TestCase {
 	private function remover(
 		SecretsFile $secrets,
 		WpConfigSecretsPathWriter $writer,
-		?string $configPath = null
+		?string $config_path = null
 	): LocalDataRemover {
 		return new TestableLocalDataRemover(
 			$secrets,
 			new TemporaryDebugCapture( null ),
 			$writer,
 			$this->database,
-			$configPath
+			$config_path
 		);
 	}
 
-	private function updaterAuthorityOption(): string {
+	private function updater_authority_option(): string {
 		$target = implode( "\0", array( 'plugin', 'ran-booster', 'ran-booster.php' ) );
 		return 'ran_wp_gh_op_v1_' . substr( hash( 'sha256', $target ), 0, 32 );
 	}

@@ -51,14 +51,14 @@ final readonly class WebhookPolicy implements ProviderWebhookPolicy {
 		return null;
 	}
 
-	public function authorize_webhook( SignedWebhookVerification $verification, string $repositoryAuthorityId, string $repository ): bool {
-		if ( ! $verification->getProvider()->equals( $this->get_provider() ) || '' === $repositoryAuthorityId ) {
+	public function authorize_webhook( SignedWebhookVerification $verification, string $repository_authority_id, string $repository ): bool {
+		if ( ! $verification->get_provider()->equals( $this->get_provider() ) || '' === $repository_authority_id ) {
 			return false;
 		}
 
-		foreach ( $verification->getProfiles() as $profile ) {
+		foreach ( $verification->get_profiles() as $profile ) {
 			if ( 'repository' === $profile['scope']
-				&& hash_equals( $profile['authority_id'], $repositoryAuthorityId )
+				&& hash_equals( $profile['authority_id'], $repository_authority_id )
 				&& $this->repository_target_matches( $profile['target'], $repository )
 			) {
 				return true;
@@ -68,7 +68,7 @@ final readonly class WebhookPolicy implements ProviderWebhookPolicy {
 		return false;
 	}
 
-	public function repository_target_matches( string $target, string $repositoryLocator ): bool {
-		return 0 === strcasecmp( trim( $target, '/' ), trim( $repositoryLocator, '/' ) );
+	public function repository_target_matches( string $target, string $repository_locator ): bool {
+		return 0 === strcasecmp( trim( $target, '/' ), trim( $repository_locator, '/' ) );
 	}
 }

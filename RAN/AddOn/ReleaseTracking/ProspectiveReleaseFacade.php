@@ -9,9 +9,9 @@ namespace RAN\AddOn\ReleaseTracking;
  */
 interface ProspectiveReleaseFacade {
 
-	public const API_VERSION = 7;
+	public const API_VERSION = 8;
 
-	public function nonceAction( string $operation, string $type ): string;
+	public function nonce_action( string $operation, string $type ): string;
 
 	/**
 	 * Return the bounded provider codes supporting the complete prospective workflow.
@@ -22,15 +22,15 @@ interface ProspectiveReleaseFacade {
 	 *
 	 * @return list<string>
 	 */
-	public function supportedProviderCodes( string $type ): array;
+	public function supported_provider_codes( string $type ): array;
 
 	/**
 	 * @param array<string, mixed>  $repositoryRequest
 	 * @param 'stable'|'prerelease' $channel
 	 */
-	public function listCandidates(
+	public function list_candidates(
 		string $type,
-		array $repositoryRequest,
+		array $repository_request,
 		string $channel,
 		string $nonce
 	): ProspectiveReleaseResult;
@@ -41,8 +41,8 @@ interface ProspectiveReleaseFacade {
 	 */
 	public function inspect(
 		string $type,
-		array $repositoryRequest,
-		string $releaseId,
+		array $repository_request,
+		string $release_id,
 		string $tag,
 		string $channel,
 		string $nonce
@@ -54,10 +54,10 @@ interface ProspectiveReleaseFacade {
 	 */
 	public function install(
 		string $type,
-		array $repositoryRequest,
-		string $releaseId,
+		array $repository_request,
+		string $release_id,
 		string $tag,
-		string $expectedFingerprint,
+		string $expected_fingerprint,
 		string $channel,
 		string $nonce
 	): ProspectiveReleaseResult;

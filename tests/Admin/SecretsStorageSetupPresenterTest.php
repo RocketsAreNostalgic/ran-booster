@@ -15,6 +15,7 @@ use RAN\Secrets\SecretsStorageProvisioner;
 
 final class SecretsStorageSetupPresenterTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		parent::setUp();
 		$GLOBALS['ran_booster_admin_test_translations']       = array();
@@ -22,13 +23,14 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		$GLOBALS['ran_booster_secrets_test_translations']     = array();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset( $GLOBALS['ran_booster_admin_test_translations'], $GLOBALS['ran_booster_repository_admin_translations'], $GLOBALS['ran_booster_secrets_test_translations'] );
 
 		parent::tearDown();
 	}
 
-	public function testBuildsExactOwnerOnlyManualFallbackForTheProtectedOverview(): void {
+	public function test_builds_exact_owner_only_manual_fallback_for_the_protected_overview(): void {
 		$candidate = "/srv/private site/.ran-booster/0123456789abcdef/secrets'file.json";
 		$root      = (string) realpath( dirname( __DIR__, 2 ) );
 		$payload   = ( new SecretsStorageSetupPresenter() )->build(
@@ -57,7 +59,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		self::assertStringContainsString( 'not a symbolic link', (string) $payload['manual_preflight'] );
 	}
 
-	public function testBuildsTranslatedManualPreflightWithoutChangingCommandsOrPaths(): void {
+	public function test_builds_translated_manual_preflight_without_changing_commands_or_paths(): void {
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']       = array(
 			'Before running these commands, verify every existing path component is a real directory owned by the WordPress account and is not a symbolic link.' => 'Translated preflight guidance.',
 		);
@@ -73,7 +75,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		self::assertSame( 1, count( $payload['directory_commands'] ) );
 	}
 
-	public function testUnsupportedStatusContainsNoPathOrManualCommand(): void {
+	public function test_unsupported_status_contains_no_path_or_manual_command(): void {
 		$payload = ( new SecretsStorageSetupPresenter() )->build(
 			SecretsStorageProvisioningResult::unsupported(
 				'sodium_unavailable',
@@ -91,7 +93,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		self::assertNull( $payload['config_alternatives'] );
 	}
 
-	public function testPresentsTranslatedStorageResultWithoutChangingItsProtectedCodeOrPath(): void {
+	public function test_presents_translated_storage_result_without_changing_its_protected_code_or_path(): void {
 		$GLOBALS['ran_booster_secrets_test_translations']['ran-booster'] = array(
 			'Booster can create secure encrypted secrets storage.' => 'Stockage sécurisé disponible.',
 		);
@@ -106,7 +108,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		self::assertSame( $candidate, $payload['candidate_path'] );
 	}
 
-	public function testConfiguredStatusesKeepTheProtectedPathWithoutOfferingSetupCommands(): void {
+	public function test_configured_statuses_keep_the_protected_path_without_offering_setup_commands(): void {
 		$results = array(
 			SecretsStorageProvisioningResult::path_configured(
 				candidate_path: '/private/canary/secrets.json',
@@ -138,7 +140,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		}
 	}
 
-	public function testSensitiveSetupDetailsAreRedactedForAUserWithoutBothCapabilities(): void {
+	public function test_sensitive_setup_details_are_redacted_for_auser_without_both_capabilities(): void {
 		$payload = ( new SecretsStorageSetupPresenter() )->build(
 			SecretsStorageProvisioningResult::manual_required(
 				'location_unavailable',
@@ -170,15 +172,15 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		self::assertNull( $payload['recovery'] );
 	}
 
-	#[DataProvider( 'discardedCandidateReasonCases' )]
-	public function testPrivilegedOverviewLocalizesKnownDiscardedCandidateReasonsWithoutChangingDiagnostics(
+	#[DataProvider( 'discarded_candidate_reason_cases' )]
+	public function test_privileged_overview_localizes_known_discarded_candidate_reasons_without_changing_diagnostics(
 		string $code,
-		?string $sourceMessage,
-		string $expectedReason
+		?string $source_message,
+		string $expected_reason
 	): void {
-		if ( null !== $sourceMessage ) {
-			$GLOBALS['ran_booster_admin_test_translations']['ran-booster'][ $sourceMessage ]       = $expectedReason;
-			$GLOBALS['ran_booster_repository_admin_translations']['ran-booster'][ $sourceMessage ] = $expectedReason;
+		if ( null !== $source_message ) {
+			$GLOBALS['ran_booster_admin_test_translations']['ran-booster'][ $source_message ]       = $expected_reason;
+			$GLOBALS['ran_booster_repository_admin_translations']['ran-booster'][ $source_message ] = $expected_reason;
 		}
 		$discarded = array(
 			array(
@@ -203,7 +205,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 				array(
 					'directory' => '/var/www/account/.ran-booster/0123456789abcdef',
 					'code'      => $code,
-					'reason'    => $expectedReason,
+					'reason'    => $expected_reason,
 					'component' => '/var/www',
 				),
 			),
@@ -212,7 +214,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 	}
 
 	/** @return iterable<string, array{string, string|null, string}> */
-	public static function discardedCandidateReasonCases(): iterable {
+	public static function discarded_candidate_reason_cases(): iterable {
 		$reasons = array(
 			'invalid_candidate_path'                 => 'The candidate is not a valid absolute secrets.json path.',
 			'temporary_storage'                      => 'The candidate is inside the operating system temporary directory.',
@@ -233,9 +235,9 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		yield 'unknown code' => array( 'future_reason', null, 'Original resolver reason.' );
 	}
 
-	public function testBuildsAnAdoptionOfferOnlyForAnAvailableRecoveryState(): void {
-		$recoveryPath = '/private/.ran-booster/abcdef0123456789/secrets.json';
-		$payload      = ( new SecretsStorageSetupPresenter() )->build(
+	public function test_builds_an_adoption_offer_only_for_an_available_recovery_state(): void {
+		$recovery_path = '/private/.ran-booster/abcdef0123456789/secrets.json';
+		$payload       = ( new SecretsStorageSetupPresenter() )->build(
 			SecretsStorageProvisioningResult::storage_needs_attention(
 				'/private/.ran-booster/0123456789abcdef/secrets.json',
 				SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC
@@ -246,15 +248,15 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 			array(
 				'state'          => 'available',
 				'message'        => 'Authenticated prior storage found.',
-				'candidate_path' => $recoveryPath,
+				'candidate_path' => $recovery_path,
 				'token'          => str_repeat( 'a', 64 ),
 			)
 		);
 
 		self::assertTrue( $payload['recovery']['can_adopt'] );
 		self::assertFalse( $payload['recovery']['can_reset'] );
-		self::assertSame( $recoveryPath, $payload['recovery']['candidate_path'] );
-		self::assertSame( dirname( $recoveryPath ), $payload['recovery']['candidate_directory'] );
+		self::assertSame( $recovery_path, $payload['recovery']['candidate_path'] );
+		self::assertSame( dirname( $recovery_path ), $payload['recovery']['candidate_directory'] );
 
 		$blocked = ( new SecretsStorageSetupPresenter() )->build(
 			SecretsStorageProvisioningResult::storage_needs_attention(
@@ -276,7 +278,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 		self::assertNull( $blocked['recovery']['candidate_path'] );
 	}
 
-	public function testBuildsTheSameExplicitResetOfferForEitherIncompleteStorageHalf(): void {
+	public function test_builds_the_same_explicit_reset_offer_for_either_incomplete_storage_half(): void {
 		foreach ( array( 'storage_file_missing', 'storage_key_missing' ) as $reason ) {
 			$payload = ( new SecretsStorageSetupPresenter() )->build(
 				SecretsStorageProvisioningResult::storage_needs_attention(

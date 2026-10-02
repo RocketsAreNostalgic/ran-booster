@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Tests\Support;
 
 final class CredentialUsageDatabase {
-	public string $last_error    = '';
-	public mixed $count          = '0';
-	public string $serverInfo    = '8.4.6';
-	public string $innodbSupport = 'DEFAULT';
+	public string $last_error     = '';
+	public mixed $count           = '0';
+	public string $server_info    = '8.4.6';
+	public string $innodb_support = 'DEFAULT';
 
 	/** @var list<object> */
 	public array $rows = array();
@@ -26,7 +26,7 @@ final class CredentialUsageDatabase {
 	}
 
 	public function db_server_info(): string {
-		return $this->serverInfo;
+		return $this->server_info;
 	}
 
 	public function get_var( string $query ): mixed {
@@ -41,7 +41,7 @@ final class CredentialUsageDatabase {
 			return array(
 				(object) array(
 					'Engine'  => 'InnoDB',
-					'Support' => $this->innodbSupport,
+					'Support' => $this->innodb_support,
 				),
 			);
 		}

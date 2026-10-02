@@ -28,16 +28,16 @@ final class ProspectiveReleaseCandidateReader {
 	}
 
 	/** @param array<string, mixed> $repositoryRequest */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function read( string $type, array $repositoryRequest, string $channel ): ProspectiveReleaseResult {
-		if ( ! RuntimeSupport::current()->allowsManagedOperations() ) {
+
+	public function read( string $type, array $repository_request, string $channel ): ProspectiveReleaseResult {
+		if ( ! RuntimeSupport::current()->allows_managed_operations() ) {
 			return ProspectiveReleaseResult::failure( UnsupportedRuntimeException::ERROR_CODE );
 		}
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) || ! in_array( $channel, array( 'stable', 'prerelease' ), true ) ) {
 			return ProspectiveReleaseResult::failure( 'forbidden' );
 		}
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$provider = $repositoryRequest['provider'] ?? null;
+
+		$provider = $repository_request['provider'] ?? null;
 		if ( ! is_string( $provider ) ) {
 			return ProspectiveReleaseResult::failure( 'unsupported_provider' );
 		}
@@ -48,12 +48,12 @@ final class ProspectiveReleaseCandidateReader {
 		$listing = $capabilities['listing'];
 
 		try {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$repositoryRequest['deployment_policy'] = DeploymentPolicy::MANUAL->value;
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$repositoryRequest['subdirectory'] = '';
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$repository = $this->repositories->resolve( $repositoryRequest );
+
+			$repository_request['deployment_policy'] = DeploymentPolicy::MANUAL->value;
+
+			$repository_request['subdirectory'] = '';
+
+			$repository = $this->repositories->resolve( $repository_request );
 			$reference  = new RepositoryReference(
 				(string) ( $repository['repository'] ?? '' ),
 				is_string( $repository['provider_repository_id'] ?? null ) && '' !== $repository['provider_repository_id'] ? $repository['provider_repository_id'] : null,
@@ -70,8 +70,8 @@ final class ProspectiveReleaseCandidateReader {
 				if ( 'stable' === $channel && $candidate->prerelease ) {
 					throw new InvalidArgumentException( 'The release candidate conflicts with the requested channel.' );
 				}
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				$release_id = $candidate->providerReleaseId;
+
+				$release_id = $candidate->provider_release_id;
 				if ( 1 !== preg_match( '/\A[^\x00-\x1F\x7F]{1,191}\z/D', $release_id ) ) {
 					throw new InvalidArgumentException( 'The release candidate identity is incompatible.' );
 				}
@@ -80,10 +80,10 @@ final class ProspectiveReleaseCandidateReader {
 					'tag'                  => $candidate->tag,
 					'version'              => $candidate->version,
 					'prerelease'           => $candidate->prerelease,
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-					'published_at'         => $candidate->publishedAt,
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-					'expected_asset_names' => $candidate->expectedAssetNames,
+
+					'published_at'         => $candidate->published_at,
+
+					'expected_asset_names' => $candidate->expected_asset_names,
 				);
 			}
 
@@ -99,8 +99,8 @@ final class ProspectiveReleaseCandidateReader {
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function supportsProviderCode( string $provider ): bool {
+
+	public function supports_provider_code( string $provider ): bool {
 		return null !== $this->release_capabilities( $provider );
 	}
 
@@ -112,11 +112,11 @@ final class ProspectiveReleaseCandidateReader {
 	 */
 	private function release_capabilities( string $provider ): ?array {
 		try {
-			$listing        = $this->providers->requireCapability( $provider, RepositoryReleaseCandidateListing::class );
-			$inspector      = $this->providers->requireCapability( $provider, RepositoryReleaseInspector::class );
-			$acquirer       = $this->providers->requireCapability( $provider, RepositoryReleaseAcquirer::class );
-			$metadata       = $this->providers->requireCapability( $provider, RepositoryReleaseMetadata::class );
-			$native_targets = $this->providers->requireCapability( $provider, RepositoryReleaseNativeTargets::class );
+			$listing        = $this->providers->require_capability( $provider, RepositoryReleaseCandidateListing::class );
+			$inspector      = $this->providers->require_capability( $provider, RepositoryReleaseInspector::class );
+			$acquirer       = $this->providers->require_capability( $provider, RepositoryReleaseAcquirer::class );
+			$metadata       = $this->providers->require_capability( $provider, RepositoryReleaseMetadata::class );
+			$native_targets = $this->providers->require_capability( $provider, RepositoryReleaseNativeTargets::class );
 		} catch ( Throwable ) {
 			return null;
 		}

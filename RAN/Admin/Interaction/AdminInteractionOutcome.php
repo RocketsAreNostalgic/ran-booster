@@ -43,11 +43,11 @@ final readonly class AdminInteractionOutcome {
 		return new self( $request, self::ACCEPTED, $message );
 	}
 
-	public static function validationFailure( AdminInteractionRequest $request, string $message ): self {
+	public static function validation_failure( AdminInteractionRequest $request, string $message ): self {
 		return new self( $request, self::VALIDATION_FAILURE, $message );
 	}
 
-	public static function unexpectedFailure( AdminInteractionRequest $request ): self {
+	public static function unexpected_failure( AdminInteractionRequest $request ): self {
 		return new self( $request, self::UNEXPECTED_FAILURE, __( 'We could not complete that request. Please try again.', 'ran-booster' ) );
 	}
 
@@ -72,7 +72,7 @@ final readonly class AdminInteractionOutcome {
 		};
 	}
 
-	public function hasSuccessFeedback(): bool {
+	public function has_success_feedback(): bool {
 		return in_array( $this->kind, array( self::SUCCESS, self::ACCEPTED ), true );
 	}
 }

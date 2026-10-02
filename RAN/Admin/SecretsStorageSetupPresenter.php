@@ -40,16 +40,13 @@ final readonly class SecretsStorageSetupPresenter {
 	 */
 	public function build(
 		SecretsStorageProvisioningResult $result,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-		string $actionUrl,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-		string $wordpressRoot = '',
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-		bool $includeSensitiveDetails = true,
+		string $action_url,
+		string $wordpress_root = '',
+		bool $include_sensitive_details = true,
 		?array $recovery = null
 	): array {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-		$candidate           = $includeSensitiveDetails ? $result->candidate_path() : null;
+
+		$candidate           = $include_sensitive_details ? $result->candidate_path() : null;
 		$directory_commands  = array();
 		$config_alternatives = null;
 		$manual_preflight    = null;
@@ -61,8 +58,8 @@ final readonly class SecretsStorageSetupPresenter {
 			$parent    = dirname( $directory );
 			$quoted    = escapeshellarg( $directory );
 			$php_path  = str_replace( array( '\\', "'" ), array( '\\\\', "\\'" ), $directory );
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-			$root = realpath( $wordpressRoot );
+
+			$root = realpath( $wordpress_root );
 
 			$manual_preflight    = __( 'Before running these commands, verify every existing path component is a real directory owned by the WordPress account and is not a symbolic link.', 'ran-booster' );
 			$directory_commands  = array(
@@ -80,8 +77,8 @@ final readonly class SecretsStorageSetupPresenter {
 		}
 
 		$recovery_payload = null;
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-		if ( $includeSensitiveDetails && null !== $recovery ) {
+
+		if ( $include_sensitive_details && null !== $recovery ) {
 			$recovery_candidate = is_string( $recovery['candidate_path'] ?? null )
 				? $recovery['candidate_path']
 				: null;
@@ -108,8 +105,8 @@ final readonly class SecretsStorageSetupPresenter {
 				'reset_confirmation'  => $reset_confirmation,
 			);
 		}
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-		$discarded_candidates = $includeSensitiveDetails
+
+		$discarded_candidates = $include_sensitive_details
 			? $this->localized_discarded_candidates( $result->discarded_candidates() )
 			: array();
 
@@ -119,13 +116,13 @@ final readonly class SecretsStorageSetupPresenter {
 			'message'              => $result->message(),
 			'candidate_path'       => $candidate,
 			'candidate_directory'  => null === $candidate ? null : dirname( $candidate ),
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-			'path_source'          => $includeSensitiveDetails ? $result->path_source() : null,
+
+			'path_source'          => $include_sensitive_details ? $result->path_source() : null,
 			'discarded_candidates' => $discarded_candidates,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-			'can_provision'        => $includeSensitiveDetails && $result->can_provision_automatically(),
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-			'action_url'           => $actionUrl,
+
+			'can_provision'        => $include_sensitive_details && $result->can_provision_automatically(),
+
+			'action_url'           => $action_url,
 			'recovery'             => $recovery_payload,
 			'manual_preflight'     => $manual_preflight,
 			'directory_commands'   => $directory_commands,

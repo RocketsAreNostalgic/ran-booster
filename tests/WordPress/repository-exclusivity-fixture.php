@@ -90,7 +90,7 @@ $adoption = $plugin_repository->adopt_release( $root, new ManagedReleaseConfigur
 $assert( $adoption->is_successful(), 'root Release adoption succeeds: ' . $adoption->get_diagnostic_id() );
 
 global $wpdb;
-$attempt_table   = Database::attemptTableName();
+$attempt_table   = Database::attempt_table_name();
 $before_attempts = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE provider_repository_id = %s', $attempt_table, '1315521150' ) );
 $operation       = PackageOperation::from_input(
 	'install-plugin',
@@ -105,7 +105,7 @@ $operation       = PackageOperation::from_input(
 );
 $blocked         = false;
 try {
-	$result  = $deploy->executeManual( $operation );
+	$result  = $deploy->execute_manual( $operation );
 	$blocked = 'failed' === ( $result['status'] ?? null );
 } catch ( RuntimeException ) {
 	$blocked = true; }

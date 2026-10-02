@@ -93,11 +93,9 @@ class PluginRepository extends AbstractPackageRepository {
 	public function adopt_release(
 		Plugin $plugin,
 		ManagedReleaseConfiguration $configuration,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-		int $userId
+		int $user_id
 	): PackageMutationResult {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-		return $this->adopt_release_package( $plugin, $configuration, $userId );
+		return $this->adopt_release_package( $plugin, $configuration, $user_id );
 	}
 
 	public function is_installed( string $identifier ): bool {

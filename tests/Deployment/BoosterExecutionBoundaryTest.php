@@ -16,7 +16,7 @@ use RAN\Webhook\WebhookController;
 
 final class BoosterExecutionBoundaryTest extends TestCase {
 
-	public function testCronCallbackUpgradesSchemaBeforeRunningWorker(): void {
+	public function test_cron_callback_upgrades_schema_before_running_worker(): void {
 		$calls     = array();
 		$container = new CoreContainer();
 		$booster   = new Booster( $container );
@@ -28,7 +28,7 @@ final class BoosterExecutionBoundaryTest extends TestCase {
 		self::assertSame( array( 'schema', 'worker' ), $calls );
 	}
 
-	public function testRestCallbackRegistersRoutesWithoutTouchingSchema(): void {
+	public function test_rest_callback_registers_routes_without_touching_schema(): void {
 		$calls     = array();
 		$container = new CoreContainer();
 		$booster   = new Booster( $container );
@@ -40,15 +40,15 @@ final class BoosterExecutionBoundaryTest extends TestCase {
 	}
 
 	/** @return array<string, array{DatabaseCompatibilityFailure|DatabaseLifecycleFailure}> */
-	public static function databaseSafeStateProvider(): array {
+	public static function database_safe_state_provider(): array {
 		return array(
 			'unsupported server' => array( new DatabaseCompatibilityFailure( 'unsupported_version' ) ),
 			'blocked lifecycle'  => array( new DatabaseLifecycleFailure( 'schema_operation_failed' ) ),
 		);
 	}
 
-	#[DataProvider( 'databaseSafeStateProvider' )]
-	public function testDatabaseSafeStateStopsWorkerWithoutLeakingTheFailure(
+	#[DataProvider( 'database_safe_state_provider' )]
+	public function test_database_safe_state_stops_worker_without_leaking_the_failure(
 		DatabaseCompatibilityFailure|DatabaseLifecycleFailure $failure
 	): void {
 		$calls     = array();
@@ -67,7 +67,7 @@ final class BoosterExecutionBoundaryTest extends TestCase {
 final class ExecutionBoundaryDatabase extends Database {
 	/** @param list<string> $calls */
 	public function __construct( private array &$calls ) {}
-	public function maybeUpgrade(): void {
+	public function maybe_upgrade(): void {
 		$this->calls[] = 'schema'; }
 }
 
@@ -79,12 +79,12 @@ final class BlockedExecutionBoundaryDatabase extends Database {
 	) {
 	}
 
-	public function maybeUpgrade(): void {
+	public function maybe_upgrade(): void {
 		$this->calls[] = 'schema';
 		throw $this->failure;
 	}
 
-	public function requireReady(): void {
+	public function require_ready(): void {
 		throw $this->failure;
 	}
 }

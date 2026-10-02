@@ -35,9 +35,9 @@ final class BackgroundDeploymentFailureMonitor {
 		}
 
 		try {
-			$attempts = $this->attempts->recentHistory( self::MAX_ATTEMPTS );
+			$attempts = $this->attempts->recent_history( self::MAX_ATTEMPTS );
 		} catch ( Throwable $failure ) {
-			BoosterLogger::logException(
+			BoosterLogger::log_exception(
 				'background deployment failure status unavailable',
 				$failure,
 				array(

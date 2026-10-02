@@ -11,12 +11,12 @@ final class Client {
 
 	private int $requests = 0;
 	/** @var array<string, string> */
-	private array $branchHeads = array();
+	private array $branch_heads = array();
 	/** @var list<float> */
-	private array $diagnosticTimeouts = array();
+	private array $diagnostic_timeouts = array();
 
-	public function checkPublicAccess( float $timeout ): void {
-		$this->recordDiagnosticTimeout( $timeout );
+	public function check_public_access( float $timeout ): void {
+		$this->record_diagnostic_timeout( $timeout );
 		++$this->requests;
 	}
 
@@ -25,7 +25,7 @@ final class Client {
 	 */
 	public function repository( string $locator, ?float $timeout = null ): array {
 		if ( null !== $timeout ) {
-			$this->recordDiagnosticTimeout( $timeout );
+			$this->record_diagnostic_timeout( $timeout );
 		}
 		++$this->requests;
 		$segments = explode( '/', $locator );
@@ -40,9 +40,9 @@ final class Client {
 	}
 
 	/** @param array<string, mixed>|null $material */
-	public function validateCredential( ?array $material, ?float $timeout = null ): bool {
+	public function validate_credential( ?array $material, ?float $timeout = null ): bool {
 		if ( null !== $timeout ) {
-			$this->recordDiagnosticTimeout( $timeout );
+			$this->record_diagnostic_timeout( $timeout );
 		}
 		++$this->requests;
 
@@ -52,11 +52,11 @@ final class Client {
 			&& '' !== trim( $material['secret'] );
 	}
 
-	public function getRequestCount(): int {
+	public function get_request_count(): int {
 		return $this->requests;
 	}
 
-	public function resolveRef( string $locator, string $ref ): string {
+	public function resolve_ref( string $locator, string $ref ): string {
 		++$this->requests;
 		if ( 1 === preg_match( '/^[0-9a-f]{40}$/i', $ref ) ) {
 			return strtolower( $ref );
@@ -65,26 +65,26 @@ final class Client {
 		return sha1( $locator . "\0" . $ref );
 	}
 
-	public function branchHead( string $locator, string $branch ): string {
+	public function branch_head( string $locator, string $branch ): string {
 		++$this->requests;
 
-		return $this->branchHeads[ $branch ] ?? sha1( $locator . "\0" . $branch );
+		return $this->branch_heads[ $branch ] ?? sha1( $locator . "\0" . $branch );
 	}
 
-	public function setBranchHead( string $branch, string $commit ): void {
-		$this->branchHeads[ $branch ] = strtolower( $commit );
+	public function set_branch_head( string $branch, string $commit ): void {
+		$this->branch_heads[ $branch ] = strtolower( $commit );
 	}
 
 	/** @return list<float> */
-	public function getDiagnosticTimeouts(): array {
-		return $this->diagnosticTimeouts;
+	public function get_diagnostic_timeouts(): array {
+		return $this->diagnostic_timeouts;
 	}
 
-	private function recordDiagnosticTimeout( float $timeout ): void {
+	private function record_diagnostic_timeout( float $timeout ): void {
 		if ( $timeout <= 0.0 || $timeout > ProviderDiagnosticRequest::MAX_SECONDS ) {
 			throw new InvalidArgumentException( 'The fixture diagnostic timeout is outside the provider contract.' );
 		}
 
-		$this->diagnosticTimeouts[] = $timeout;
+		$this->diagnostic_timeouts[] = $timeout;
 	}
 }

@@ -12,7 +12,7 @@ use Tests\Support\CredentialUsageDatabase;
 
 final class CredentialUsageReaderTest extends TestCase {
 
-	public function testReturnsExactTotalAndBoundedDisplaySafePluginAndThemeRowsIncludingMissingPackages(): void {
+	public function test_returns_exact_total_and_bounded_display_safe_plugin_and_theme_rows_including_missing_packages(): void {
 		$database        = new CredentialUsageDatabase();
 		$database->count = '23';
 		for ( $index = 0; $index < 20; ++$index ) {
@@ -33,7 +33,7 @@ final class CredentialUsageReaderTest extends TestCase {
 		self::assertSame( array( 'wp_ran_booster_packages', 'gh', 'profile_one', 20 ), $database->prepared[1]['arguments'] );
 	}
 
-	public function testSuccessfulEmptyReadUsesOneExactCountQuery(): void {
+	public function test_successful_empty_read_uses_one_exact_count_query(): void {
 		$database = new CredentialUsageDatabase();
 		$usage    = ( new CredentialUsageReader( $database, 'wp_ran_booster_packages' ) )->read( 'bb', 'profile_two' );
 
@@ -48,7 +48,7 @@ final class CredentialUsageReaderTest extends TestCase {
 	}
 
 	/** @return array<string, array{mixed, list<object>}> */
-	public static function malformedResults(): array {
+	public static function malformed_results(): array {
 		return array(
 			'null count'         => array( null, array() ),
 			'boolean count'      => array( false, array() ),
@@ -83,8 +83,8 @@ final class CredentialUsageReaderTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'malformedResults' )]
-	public function testMalformedDatabaseResultsFailClosedWithoutLeakingValues( mixed $count, array $rows ): void {
+	#[DataProvider( 'malformed_results' )]
+	public function test_malformed_database_results_fail_closed_without_leaking_values( mixed $count, array $rows ): void {
 		$database        = new CredentialUsageDatabase();
 		$database->count = $count;
 		$database->rows  = $rows;
@@ -98,7 +98,7 @@ final class CredentialUsageReaderTest extends TestCase {
 		}
 	}
 
-	public function testDatabaseFailureFailsClosedWithoutLeakingTheDatabaseError(): void {
+	public function test_database_failure_fails_closed_without_leaking_the_database_error(): void {
 		$database             = new CredentialUsageDatabase();
 		$database->last_error = 'secret-canary-database-error';
 
@@ -107,7 +107,7 @@ final class CredentialUsageReaderTest extends TestCase {
 		( new CredentialUsageReader( $database, 'wp_ran_booster_packages' ) )->read( 'gh', 'profile_one' );
 	}
 
-	public function testUnsafePackagePathsRemainCountedButNeverBecomeInstalledLinks(): void {
+	public function test_unsafe_package_paths_remain_counted_but_never_become_installed_links(): void {
 		$database        = new CredentialUsageDatabase();
 		$database->count = '4';
 		$database->rows  = array(

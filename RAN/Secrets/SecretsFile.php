@@ -51,38 +51,31 @@ class SecretsFile {
 	/**
 	 * @param string|null                     $path             Absolute encrypted sidecar path. Null reads the encrypted-path constant.
 	 * @param array<string, mixed>|null        $constants        Test-only constant values. Null reads PHP constants.
-	 * @param ProviderSecretPolicyCatalog|null $providerPolicies Registered provider-owned secret policies.
+	 * @param ProviderSecretPolicyCatalog|null $provider_policies Registered provider-owned secret policies.
 	 */
 	public function __construct(
 		?string $path = null,
 		?array $constants = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-		?ProviderSecretPolicyCatalog $providerPolicies = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-		?SiteKeyStore $keyStore = null,
+		?ProviderSecretPolicyCatalog $provider_policies = null,
+		?SiteKeyStore $key_store = null,
 		?EncryptedSecretsEnvelopeCodec $codec = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-		?PrivateLocationCandidateResolver $locationResolver = null,
+		?PrivateLocationCandidateResolver $location_resolver = null,
 		?SecretsRuntimeAvailability $availability = null
 	) {
 		$this->validate_configured_path = null === $path;
 		$this->path                     = null === $path ? $this->default_path() : $path;
 		$this->constants                = $constants;
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-		$this->provider_policies = $providerPolicies ?? new ProviderSecretPolicyCatalog();
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-		$this->key_store = $keyStore ?? new SiteKeyStore();
-		$this->codec     = $codec ?? new EncryptedSecretsEnvelopeCodec();
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-		$this->location_resolver = $locationResolver ?? new PrivateLocationCandidateResolver();
-		$this->availability      = $availability ?? new SecretsRuntimeAvailability();
+		$this->provider_policies        = $provider_policies ?? new ProviderSecretPolicyCatalog();
+		$this->key_store                = $key_store ?? new SiteKeyStore();
+		$this->codec                    = $codec ?? new EncryptedSecretsEnvelopeCodec();
+		$this->location_resolver        = $location_resolver ?? new PrivateLocationCandidateResolver();
+		$this->availability             = $availability ?? new SecretsRuntimeAvailability();
 	}
 
 	/**
 	 * Issue a read-only credential view restricted to one registered provider.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function credentialsFor( ProviderCode|string $provider ): ProviderCredentialStore {
+	public function credentials_for( ProviderCode|string $provider ): ProviderCredentialStore {
 		$provider = $provider instanceof ProviderCode ? $provider : ProviderCode::parse( $provider );
 
 		return new BoundProviderCredentialStore( $this, $provider );
@@ -93,8 +86,7 @@ class SecretsFile {
 	 *
 	 * @return bool True when insecure permissions were repaired.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function verifyAndSecure(): bool {
+	public function verify_and_secure(): bool {
 		if ( ! $this->availability->is_available() || ! $this->has_managed_material() ) {
 			return false;
 		}
@@ -125,8 +117,7 @@ class SecretsFile {
 	 * Prove that managed credentials can be read or initialized without mutating
 	 * the key, ciphertext or final lock.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function assertManagedStorageReady(): void {
+	public function assert_managed_storage_ready(): void {
 		$this->assert_available();
 		$this->assert_configured_location();
 		$this->file_document();
@@ -165,10 +156,8 @@ class SecretsFile {
 	 * The check is read-only. A later reset must repeat it while holding the
 	 * managed exclusive lock.
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-	public function can_reset_orphaned_key_at( string $expectedPath ): bool {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-		if ( ! $this->can_recover_from_missing_ciphertext_at( $expectedPath ) ) {
+	public function can_reset_orphaned_key_at( string $expected_path ): bool {
+		if ( ! $this->can_recover_from_missing_ciphertext_at( $expected_path ) ) {
 			return false;
 		}
 
@@ -178,11 +167,9 @@ class SecretsFile {
 	/**
 	 * Verify that missing ciphertext is paired with no lock or a secure managed lock.
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-	public function can_recover_from_missing_ciphertext_at( string $expectedPath ): bool {
+	public function can_recover_from_missing_ciphertext_at( string $expected_path ): bool {
 		$this->assert_available();
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-		if ( ! is_string( $this->path ) || ! hash_equals( $this->path, $expectedPath ) ) {
+		if ( ! is_string( $this->path ) || ! hash_equals( $this->path, $expected_path ) ) {
 			return false;
 		}
 
@@ -209,11 +196,9 @@ class SecretsFile {
 	 * The secure lock remains so the next normal credential write can initialize
 	 * a fresh key and authenticated sidecar through the existing first-write path.
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-	public function reset_orphaned_key_at( string $expectedPath ): void {
+	public function reset_orphaned_key_at( string $expected_path ): void {
 		$this->assert_available();
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-		if ( ! is_string( $this->path ) || ! hash_equals( $this->path, $expectedPath ) ) {
+		if ( ! is_string( $this->path ) || ! hash_equals( $this->path, $expected_path ) ) {
 			throw $this->unavailable( 'The encrypted Booster secrets path changed before reset.' );
 		}
 
@@ -240,11 +225,9 @@ class SecretsFile {
 	 * verifies only the exact managed path, ownership, inode and permission
 	 * boundaries. A later reset repeats every check under the exclusive lock.
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-	public function can_reset_orphaned_ciphertext_at( string $expectedPath ): bool {
+	public function can_reset_orphaned_ciphertext_at( string $expected_path ): bool {
 		$this->assert_available();
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-		if ( ! is_string( $this->path ) || ! hash_equals( $this->path, $expectedPath ) ) {
+		if ( ! is_string( $this->path ) || ! hash_equals( $this->path, $expected_path ) ) {
 			return false;
 		}
 
@@ -274,11 +257,9 @@ class SecretsFile {
 	 * The secure lock remains so the next normal credential write can create a
 	 * fresh database key and authenticated sidecar through the first-write path.
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-	public function reset_orphaned_ciphertext_at( string $expectedPath ): void {
+	public function reset_orphaned_ciphertext_at( string $expected_path ): void {
 		$this->assert_available();
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-		if ( ! is_string( $this->path ) || ! hash_equals( $this->path, $expectedPath ) ) {
+		if ( ! is_string( $this->path ) || ! hash_equals( $this->path, $expected_path ) ) {
 			throw $this->unavailable( 'The encrypted Booster secrets path changed before reset.' );
 		}
 
@@ -309,8 +290,7 @@ class SecretsFile {
 	 * A configured but pristine location returns false. Incomplete, unsafe or
 	 * unauthenticated material throws the existing typed storage exception.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function hasHealthyManagedStorage(): bool {
+	public function has_healthy_managed_storage(): bool {
 		$this->assert_available();
 		$this->assert_configured_location();
 
@@ -344,8 +324,7 @@ class SecretsFile {
 	 *
 	 * @return array<string, array<string, mixed>>
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function credentialProfiles( ProviderCode|string $provider ): array {
+	public function credential_profiles( ProviderCode|string $provider ): array {
 		if ( ! $this->availability->is_available() ) {
 			return array();
 		}
@@ -355,7 +334,7 @@ class SecretsFile {
 		$records       = array();
 		$constant      = $this->constant_credential(
 			$provider_code,
-			$this->provider_policies->credentialPolicy( $provider )
+			$this->provider_policies->credential_policy( $provider )
 		);
 		if ( null !== $constant ) {
 			$records[ self::CONSTANT_PROFILE ] = $constant;
@@ -392,8 +371,7 @@ class SecretsFile {
 	 *
 	 * @return array<string, mixed>|null
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function credentialMaterial( ProviderCode|string $provider, ?string $id = null ): ?array {
+	public function credential_material( ProviderCode|string $provider, ?string $id = null ): ?array {
 		if ( ! $this->availability->is_available() && self::CONSTANT_PROFILE !== $id ) {
 			$this->assert_available();
 		}
@@ -404,7 +382,7 @@ class SecretsFile {
 			if ( self::CONSTANT_PROFILE === $id ) {
 				$constant = $this->constant_credential(
 					$provider_code,
-					$this->provider_policies->credentialPolicy( $provider )
+					$this->provider_policies->credential_policy( $provider )
 				);
 
 				return null === $constant
@@ -437,7 +415,7 @@ class SecretsFile {
 
 		$constant = $this->constant_credential(
 			$provider_code,
-			$this->provider_policies->credentialPolicy( $provider )
+			$this->provider_policies->credential_policy( $provider )
 		);
 		if ( null !== $constant ) {
 			return $constant;
@@ -483,8 +461,7 @@ class SecretsFile {
 	 * @param callable(string): TResult $operation
 	 * @return TResult
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function withTemporaryCredential(
+	public function with_temporary_credential(
 		ProviderCode|string $provider,
 		array $metadata,
 		#[\SensitiveParameter] string $secret,
@@ -526,8 +503,7 @@ class SecretsFile {
 	 *
 	 * @return list<string>
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function importCredentialsIfAbsent(
+	public function import_credentials_if_absent(
 		#[\SensitiveParameter] PackageBlueprint $blueprint,
 		#[\SensitiveParameter] BlueprintCredential ...$credentials
 	): array {
@@ -566,8 +542,7 @@ class SecretsFile {
 	 * @param array<string, mixed> $metadata Non-secret label, kind and configuration.
 	 * @param bool                 $submitted Apply provider checks for a newly submitted admin secret.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function saveCredential(
+	public function save_credential(
 		ProviderCode|string $provider,
 		?string $id,
 		array $metadata,
@@ -603,8 +578,7 @@ class SecretsFile {
 		);
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function deleteCredential( ProviderCode|string $provider, string $id ): bool {
+	public function delete_credential( ProviderCode|string $provider, string $id ): bool {
 		$this->assert_available();
 		$provider_code = $this->provider_value( $provider );
 		$this->assert_writable_id( $id );
@@ -630,23 +604,19 @@ class SecretsFile {
 	 * It remains encrypted with the credential and can only shorten its local
 	 * retention window.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function recordCredentialProviderExpiry( ProviderCode|string $provider, string $id, string $expiresOn ): void {
+	public function record_credential_provider_expiry( ProviderCode|string $provider, string $id, string $expires_on ): void {
 		$this->assert_available();
 		$provider_code = $this->provider_value( $provider );
 		$this->assert_writable_id( $id );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-		$this->require_date( $expiresOn, 'Credential provider expiry' );
+		$this->require_date( $expires_on, 'Credential provider expiry' );
 
 		$this->mutate(
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-			function ( #[\SensitiveParameter] array $document ) use ( $provider_code, $id, $expiresOn ): array {
+			function ( #[\SensitiveParameter] array $document ) use ( $provider_code, $id, $expires_on ): array {
 				$record = $document[ self::CREDENTIALS ][ $provider_code ][ $id ] ?? null;
 				if ( ! is_array( $record ) || empty( $record['self_destruct'] ) ) {
 					return array( $document, null, false );
 				}
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-				$record['provider_destroy_on']                          = $expiresOn;
+				$record['provider_destroy_on']                          = $expires_on;
 				$document[ self::CREDENTIALS ][ $provider_code ][ $id ] = $record;
 
 				return array( $document, null );
@@ -659,8 +629,7 @@ class SecretsFile {
 	 *
 	 * @return array<string, list<string>> Provider-scoped removed IDs.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function purgeExpiredCredentials(): array {
+	public function purge_expired_credentials(): array {
 		$this->assert_available();
 
 		return $this->mutate(
@@ -687,8 +656,7 @@ class SecretsFile {
 	 *
 	 * @return array<string, array<string, mixed>>
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function webhookProfiles( ProviderCode|string $provider ): array {
+	public function webhook_profiles( ProviderCode|string $provider ): array {
 		if ( ! $this->availability->is_available() ) {
 			return array();
 		}
@@ -698,7 +666,7 @@ class SecretsFile {
 		$records       = array();
 		$constant      = $this->constant_webhook(
 			$provider_code,
-			$this->provider_policies->webhookPolicy( $provider )
+			$this->provider_policies->webhook_policy( $provider )
 		);
 		if ( null !== $constant ) {
 			$records[ self::CONSTANT_PROFILE ] = $constant + array(
@@ -743,10 +711,9 @@ class SecretsFile {
 	 *
 	 * @return array<string, array<string, mixed>>
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function webhookMaterials( ProviderCode|string $provider ): array {
+	public function webhook_materials( ProviderCode|string $provider ): array {
 		$this->assert_available();
-		$policy        = $this->provider_policies->webhookPolicy( $provider );
+		$policy        = $this->provider_policies->webhook_policy( $provider );
 		$provider_code = $this->provider_value( $provider );
 		$records       = array();
 		$constant      = $this->constant_webhook( $provider_code, $policy );
@@ -795,8 +762,7 @@ class SecretsFile {
 	 *
 	 * @param array<string, mixed> $metadata Non-secret label, scope and target.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function saveWebhook(
+	public function save_webhook(
 		ProviderCode|string $provider,
 		?string $id,
 		array $metadata,
@@ -838,8 +804,7 @@ class SecretsFile {
 		);
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function deleteWebhook( ProviderCode|string $provider, string $id ): bool {
+	public function delete_webhook( ProviderCode|string $provider, string $id ): bool {
 		$this->assert_available();
 		$provider_code = $this->provider_value( $provider );
 		$this->assert_writable_id( $id );
@@ -863,22 +828,18 @@ class SecretsFile {
 	 *
 	 * @internal Core operation recovery only.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain caller and override contracts.
-	public function deleteWebhookIfRevision( ProviderCode|string $provider, string $id, int $expectedRevision ): bool {
+	public function delete_webhook_if_revision( ProviderCode|string $provider, string $id, int $expected_revision ): bool {
 		$this->assert_available();
 		$provider_code = $this->provider_value( $provider );
 		$this->assert_writable_id( $id );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-		if ( $expectedRevision < 1 ) {
+		if ( $expected_revision < 1 ) {
 			throw new RuntimeException( 'Webhook secret revision must be positive.' );
 		}
 
 		return $this->mutate(
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-			function ( #[\SensitiveParameter] array $document ) use ( $provider_code, $id, $expectedRevision ): array {
+			function ( #[\SensitiveParameter] array $document ) use ( $provider_code, $id, $expected_revision ): array {
 				$record = $document[ self::WEBHOOKS ][ $provider_code ][ $id ] ?? null;
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public parameter names retain named-argument and constructor contracts.
-				if ( ! is_array( $record ) || (int) ( $record['revision'] ?? 0 ) !== $expectedRevision ) {
+				if ( ! is_array( $record ) || (int) ( $record['revision'] ?? 0 ) !== $expected_revision ) {
 					return array( $document, false, false );
 				}
 
@@ -1165,7 +1126,7 @@ class SecretsFile {
 			$provider_destroy_on = null;
 		}
 
-		$policy = $this->provider_policies->findCredentialPolicy( $provider );
+		$policy = $this->provider_policies->find_credential_policy( $provider );
 		try {
 			$record = null !== $policy
 				? $policy->normalize_credential( $metadata, $secret )
@@ -1296,7 +1257,7 @@ class SecretsFile {
 		#[\SensitiveParameter] mixed $secret,
 		bool $submitted = false
 	): array {
-		$policy      = $this->provider_policies->findWebhookPolicy( $provider );
+		$policy      = $this->provider_policies->find_webhook_policy( $provider );
 		$policy_data = array_intersect_key(
 			$metadata,
 			array_flip( array( 'label', 'scope', 'target', 'authority_id' ) )
@@ -1731,7 +1692,7 @@ class SecretsFile {
 	/** @param array<string, mixed> $document */
 	private function assert_recovery_credential_fitness( #[\SensitiveParameter] array $document ): void {
 		foreach ( $document[ self::CREDENTIALS ] as $provider => $records ) {
-			$policy = $this->provider_policies->findCredentialPolicy( $provider );
+			$policy = $this->provider_policies->find_credential_policy( $provider );
 			if ( null === $policy ) {
 				throw new RuntimeException( 'Stored credential fitness could not be verified for an unavailable provider.' );
 			}

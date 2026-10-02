@@ -23,35 +23,35 @@ final readonly class OnboardingPresenter {
 	 *     troubleshooting_url: string
 	 * }
 	 */
-	public function build( array $tabs, string $installPluginUrl, string $installThemeUrl ): array {
-		$providerLinks = array();
-		$pageLinks     = array();
+	public function build( array $tabs, string $install_plugin_url, string $install_theme_url ): array {
+		$provider_links = array();
+		$page_links     = array();
 
 		foreach ( $tabs as $tab ) {
 			if ( $tab['provider'] ) {
-				$providerLinks[] = array(
+				$provider_links[] = array(
 					'label' => $tab['label'],
 					'url'   => $tab['url'],
 				);
 				continue;
 			}
 
-			$pageLinks[ $tab['key'] ] = $tab['url'];
+			$page_links[ $tab['key'] ] = $tab['url'];
 		}
 
-		foreach ( array( 'portability', 'documentation', 'troubleshooting' ) as $requiredPage ) {
-			if ( ! isset( $pageLinks[ $requiredPage ] ) ) {
+		foreach ( array( 'portability', 'documentation', 'troubleshooting' ) as $required_page ) {
+			if ( ! isset( $page_links[ $required_page ] ) ) {
 				throw new LogicException( 'The onboarding panel requires every fixed admin destination.' );
 			}
 		}
 
 		return array(
-			'provider_links'      => $providerLinks,
-			'install_plugin_url'  => $installPluginUrl,
-			'install_theme_url'   => $installThemeUrl,
-			'portability_url'     => $pageLinks['portability'],
-			'documentation_url'   => $pageLinks['documentation'],
-			'troubleshooting_url' => $pageLinks['troubleshooting'],
+			'provider_links'      => $provider_links,
+			'install_plugin_url'  => $install_plugin_url,
+			'install_theme_url'   => $install_theme_url,
+			'portability_url'     => $page_links['portability'],
+			'documentation_url'   => $page_links['documentation'],
+			'troubleshooting_url' => $page_links['troubleshooting'],
 		);
 	}
 }

@@ -42,7 +42,50 @@ actual fallback/guard. Generated Admin Shell bytes are verified through
 not complete #167's naming, condition, exception or connected-contract work,
 and does not raise the analysis level or certify new dependency/host versions.
 
-## Audited PHP naming scope
+## Current PHP naming contract
+
+All owned PHP methods, properties, parameters and variables use ASCII snake_case,
+including public contracts, interface implementations, inherited owned overrides,
+view bindings, scripts and test helpers. `.phpcs.xml` applies `RANOwnedMethods`
+and WordPress variable naming to the complete owned PHP tree rather than a list
+of completed cohorts. Native PHP magic methods keep their required names. Any
+other framework-owned declaration or property must have an exact-line exception
+that identifies its actual owner; pre-release compatibility is not a deferral.
+
+The connected beta.31 candidate targets Provider API **14**, Add-on API **17**,
+Admin Interaction API **3** and Prospective Release API **8**. Portability API
+**3**, canonical nonce/review-fingerprint generation **2**, and Release Workflow
+API **3** remain unchanged. Admission guards and consumer implementations must
+match the exact boundary they consume. Published preparation branches and earlier
+test reports do not qualify a reconstructed composition. Run fresh `composer
+check`, `pnpm check` and the applicable installed/archive proofs against its exact
+head and matching consumer dependencies before claiming qualification.
+
+Owned callers, callback descriptors, named arguments, fixture overrides, mocks
+and reflection references follow the renamed symbols. There are no old-name
+aliases. Persisted and wire keys, WordPress hooks, request/response schemas,
+headers, nonce payloads, permissions, state transitions and failure ordering keep
+their existing behavior. Foreign receivers retain their actual owner’s names.
+
+Magic package reads preserve getter-first lookup for the existing 15 getter
+keys, including their case variants. Renamed protected backing fields have new
+exact fallback spellings: `deployment_policy`, `source_revision`,
+`deployment_ref`, `installation_slug`, `plugin_uri`, `theme_uri`, `author_uri`,
+`text_domain`, `domain_path` and `author_name`. Old fallback-only spellings are
+removed. Unknown keys and unrelated subclass getters retain their behavior;
+underscore-prefixed getter aliases are not introduced. WordPress header keys
+such as `PluginURI`, `ThemeURI`, `AuthorURI`, `TextDomain` and `DomainPath` stay
+unchanged. Paired magic-read tests must distinguish getter keys from backing-field
+fallbacks.
+
+### Historical naming cohort record
+
+The following cohort notes record incremental migrations before the complete
+beta.31 naming composition. Their scope counts, deferred symbols, retained
+parameter/property names and package versions describe those earlier checkpoints,
+not the current naming contract above. Preserve historical behavior evidence;
+do not restore those temporary compatibility exceptions or use historical test
+results to qualify the current tree.
 
 The connected Branch and GitHub Provider helper tranche updates eight Core
 consumer/test files under #167. Branch-owned calls and implementations use the
@@ -687,7 +730,7 @@ enforces owned snake_case helper, variable and parameter names. Public normalize
 and render method names, structured array keys, URL validation and limits, HTML,
 escaping, ARIA attributes and callback invocation behavior are unchanged.
 
-## Provider API13 methods-only tranche
+### Historical Provider API13 methods-only tranche
 
 Core #167 coordinates 47 interface declarations across 20 interfaces with 50
 GitHub Provider implementations. Only resolved contract methods and their
@@ -698,14 +741,14 @@ implementations from loading; workflow V3 and Add-on API16 remain unchanged.
 Source overlays are preparation only until a matching immutable Provider
 release is adopted and the complete installed composition is qualified.
 
-### Portability API 3 connected naming
+### Current Portability API 3 connected naming
 
 The five Portability facade/DTO classes and their receiver-resolved consumers use
 snake_case methods, owned parameters and promoted properties. Portability API 3
-is a breaking PHP contract; AdminInteraction API 2 is unchanged. Canonical nonce
+is a breaking PHP contract; the connected Admin Interaction boundary is API 3. Canonical nonce
 and review-fingerprint payload generation remains 2, preserving existing bytes,
 stored/wire keys, validation and adoption behavior. No old-name aliases are added.
 PortabilityCandidate and PortabilityApplyResult join both audited naming scopes.
-Foreign Provider/Blueprint DTO members retain their own contracts. The extension
-catalogue continues to describe the published API2 Migrator until its matching
-API3 package is actually released; candidate-source checks are not certification.
+Provider and Blueprint DTO consumers use their current snake_case contracts.
+The extension catalogue must describe the published Migrator accurately; recovery
+branches and candidate-source checks are not released-package certification.

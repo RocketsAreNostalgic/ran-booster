@@ -41,10 +41,10 @@ function wp_remote_request( string $url, array $arguments = array() ): array {
 /**
  * Dispatch one recorded REST route using WordPress's namespace-plus-route shape.
  */
-function ran_booster_test_dispatch_rest_route( string $requestRoute, mixed $request ): bool {
+function ran_booster_test_dispatch_rest_route( string $request_route, mixed $request ): bool {
 	foreach ( $GLOBALS['ran_booster_webhook_v1_routes'] as $definition ) {
 		$pattern = '#^/' . preg_quote( $definition['namespace'], '#' ) . $definition['route'] . '$#D';
-		if ( 1 !== preg_match( $pattern, $requestRoute ) ) {
+		if ( 1 !== preg_match( $pattern, $request_route ) ) {
 			continue;
 		}
 

@@ -31,37 +31,27 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 	/** @var array<string,true> */
 	private array $held_locks = array();
 
-	/** @param callable(): bool|null $canManage @param callable(string): string|null $endpoint @param callable(string,string): bool|null $verifyNonce @param callable(string): bool|null $acquireLock @param callable(string): bool|null $releaseLock */
+	/** @param callable(): bool|null $can_manage @param callable(string): string|null $endpoint @param callable(string,string): bool|null $verify_nonce @param callable(string): bool|null $acquire_lock @param callable(string): bool|null $release_lock */
 	public function __construct(
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private WebhookAssistanceReadinessEvaluator $readinessEvaluator,
+		private WebhookAssistanceReadinessEvaluator $readiness_evaluator,
 		private SecretsFile $secrets,
 		private ProviderRegistry $providers,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?callable $canManage = null,
+		?callable $can_manage = null,
 		?callable $endpoint = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?callable $verifyNonce = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?callable $acquireLock = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?callable $releaseLock = null
+		?callable $verify_nonce = null,
+		?callable $acquire_lock = null,
+		?callable $release_lock = null
 	) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->can_manage = null === $canManage
+		$this->can_manage   = null === $can_manage
 			? static fn (): bool => current_user_can( 'manage_options' )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			: \Closure::fromCallable( $canManage );
-		$this->endpoint   = null === $endpoint
+			: \Closure::fromCallable( $can_manage );
+		$this->endpoint     = null === $endpoint
 			? static fn ( string $provider_code ): string => rest_url( 'ran-booster/v1/webhooks/' . rawurlencode( $provider_code ) )
 			: \Closure::fromCallable( $endpoint );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->verify_nonce = null === $verifyNonce
+		$this->verify_nonce = null === $verify_nonce
 			? static fn ( string $nonce, string $action ): bool => 1 === wp_verify_nonce( $nonce, $action )
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			: \Closure::fromCallable( $verifyNonce );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->acquire_lock = null === $acquireLock
+			: \Closure::fromCallable( $verify_nonce );
+		$this->acquire_lock = null === $acquire_lock
 			? static function ( string $name ): bool {
 				global $wpdb;
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- MySQL advisory locks are connection-local and have no persistent cacheable state.
@@ -69,10 +59,8 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 
 				return '' === trim( (string) ( $wpdb->last_error ?? '' ) ) && '1' === (string) $result;
 			}
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			: \Closure::fromCallable( $acquireLock );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->release_lock = null === $releaseLock
+			: \Closure::fromCallable( $acquire_lock );
+		$this->release_lock = null === $release_lock
 			? static function ( string $name ): bool {
 				global $wpdb;
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- MySQL advisory locks are connection-local and have no persistent cacheable state.
@@ -80,36 +68,27 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 
 				return '' === trim( (string) ( $wpdb->last_error ?? '' ) ) && '1' === (string) $result;
 			}
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			: \Closure::fromCallable( $releaseLock );
+			: \Closure::fromCallable( $release_lock );
 	}
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function readiness( string $providerCode ): AssistanceReadiness {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$providerCode = $this->provider_code( $providerCode );
+	public function readiness( string $provider_code ): AssistanceReadiness {
+		$provider_code = $this->provider_code( $provider_code );
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the promoted constructor or external DTO property contract. Retain the public named-parameter contract.
-		return $this->readinessEvaluator->evaluate( $providerCode, ( $this->endpoint )( $providerCode ) );
+		return $this->readiness_evaluator->evaluate( $provider_code, ( $this->endpoint )( $provider_code ) );
 	}
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function target( string $providerCode, string $repositoryId ): ?AssistanceTarget {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		return $this->projected_target( $this->provider_code( $providerCode ), $repositoryId, true );
+	public function target( string $provider_code, string $repository_id ): ?AssistanceTarget {
+		return $this->projected_target( $this->provider_code( $provider_code ), $repository_id, true );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function credentialChoices( string $providerCode ): array {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$providerCode = $this->provider_code( $providerCode );
+	public function credential_choices( string $provider_code ): array {
+		$provider_code = $this->provider_code( $provider_code );
 		if ( ! ( $this->can_manage )() || ! $this->storage_available() ) {
 			return array();
 		}
 		try {
 			$choices = array();
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			foreach ( $this->secrets->credentialProfiles( $providerCode ) as $profile ) {
+			foreach ( $this->secrets->credential_profiles( $provider_code ) as $profile ) {
 				if ( 'file' !== ( $profile['source'] ?? null ) || ! empty( $profile['immutable'] ) || ! is_string( $profile['id'] ?? null ) || ! is_string( $profile['label'] ?? null ) || ! is_string( $profile['kind'] ?? null ) ) {
 					continue;
 				}
@@ -128,20 +107,15 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 	}
 
 	/** @return list<array{id:string,label:string,scope:string}> */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function webhookProfileChoices( string $providerCode, string $repositoryId ): array {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$providerCode = $this->provider_code( $providerCode );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( ! ( $this->can_manage )() || ! $this->storage_available() || ! $this->valid_repository_id( $repositoryId ) ) {
+	public function webhook_profile_choices( string $provider_code, string $repository_id ): array {
+		$provider_code = $this->provider_code( $provider_code );
+		if ( ! ( $this->can_manage )() || ! $this->storage_available() || ! $this->valid_repository_id( $repository_id ) ) {
 			return array();
 		}
 		try {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$target  = $this->current_target( $providerCode, $repositoryId, true );
+			$target  = $this->current_target( $provider_code, $repository_id, true );
 			$choices = array();
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			foreach ( null === $target ? array() : $this->secrets->webhookProfiles( $providerCode ) as $profile_id => $profile ) {
+			foreach ( null === $target ? array() : $this->secrets->webhook_profiles( $provider_code ) as $profile_id => $profile ) {
 				if ( ! is_string( $profile_id ) || ! $this->valid_webhook_profile_id( $profile_id ) || ! is_array( $profile ) || 'file' !== ( $profile['source'] ?? null ) || ! empty( $profile['immutable'] ) || ! $this->applies_to( $target, $profile ) || ! is_string( $profile['label'] ?? null ) ) {
 					continue;
 				}
@@ -158,196 +132,152 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		}
 	}
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function profile( string $providerCode, string $repositoryId, string $profileId ): ?WebhookProfileMetadata {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$providerCode = $this->provider_code( $providerCode );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( ! ( $this->can_manage )() || ! $this->storage_available() || ! $this->valid_repository_id( $repositoryId ) || ! $this->valid_webhook_profile_id( $profileId ) ) {
+	public function profile( string $provider_code, string $repository_id, string $profile_id ): ?WebhookProfileMetadata {
+		$provider_code = $this->provider_code( $provider_code );
+		if ( ! ( $this->can_manage )() || ! $this->storage_available() || ! $this->valid_repository_id( $repository_id ) || ! $this->valid_webhook_profile_id( $profile_id ) ) {
 			return null;
 		}
 		try {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$target = $this->current_target( $providerCode, $repositoryId, true );
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			$profile = null === $target ? null : ( $this->secrets->webhookProfiles( $providerCode )[ $profileId ] ?? null );
+			$target  = $this->current_target( $provider_code, $repository_id, true );
+			$profile = null === $target ? null : ( $this->secrets->webhook_profiles( $provider_code )[ $profile_id ] ?? null );
 
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			return is_array( $profile ) && $this->applies_to( $target, $profile ) ? $this->metadata( $providerCode, $profileId, $profile ) : null;
+			return is_array( $profile ) && $this->applies_to( $target, $profile ) ? $this->metadata( $provider_code, $profile_id, $profile ) : null;
 		} catch ( \Throwable ) {
 			return null;
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function assessSetup( AssistanceTarget $target, ?string $credentialProfileId, string $nonce ): RepositoryWebhookFitnessResult {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		return $this->assess( 'setup', $target, $credentialProfileId, null, null, null, $nonce, false );
+	public function assess_setup( AssistanceTarget $target, ?string $credential_profile_id, string $nonce ): RepositoryWebhookFitnessResult {
+		return $this->assess( 'setup', $target, $credential_profile_id, null, null, null, $nonce, false );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function assessCheck( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookFitnessResult {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		return $this->assess( 'check', $target, $credentialProfileId, $hookId, $profileId, $profileRevision, $nonce, false );
+	public function assess_check( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookFitnessResult {
+		return $this->assess( 'check', $target, $credential_profile_id, $hook_id, $profile_id, $profile_revision, $nonce, false );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function assessReconfigure( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookFitnessResult {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		return $this->assess( 'reconfigure', $target, $credentialProfileId, $hookId, $profileId, $profileRevision, $nonce, false );
+	public function assess_reconfigure( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookFitnessResult {
+		return $this->assess( 'reconfigure', $target, $credential_profile_id, $hook_id, $profile_id, $profile_revision, $nonce, false );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function assessRemove( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookFitnessResult {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		return $this->assess( 'remove', $target, $credentialProfileId, $hookId, $profileId, $profileRevision, $nonce, true );
+	public function assess_remove( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookFitnessResult {
+		return $this->assess( 'remove', $target, $credential_profile_id, $hook_id, $profile_id, $profile_revision, $nonce, true );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function assessTest( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookFitnessResult {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		return $this->assess( 'test', $target, $credentialProfileId, $hookId, $profileId, $profileRevision, $nonce, false );
+	public function assess_test( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookFitnessResult {
+		return $this->assess( 'test', $target, $credential_profile_id, $hook_id, $profile_id, $profile_revision, $nonce, false );
 	}
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function setup( AssistanceTarget $target, ?string $credentialProfileId, string $nonce, ?string $webhookProfileId = null ): RepositoryWebhookOperationResult {
+	public function setup( AssistanceTarget $target, ?string $credential_profile_id, string $nonce, ?string $webhook_profile_id = null ): RepositoryWebhookOperationResult {
 		return $this->with_target_lock(
 			$target,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			fn (): RepositoryWebhookOperationResult => $this->setup_locked( $target, $credentialProfileId, $webhookProfileId, $nonce )
+			fn (): RepositoryWebhookOperationResult => $this->setup_locked( $target, $credential_profile_id, $webhook_profile_id, $nonce )
 		);
 	}
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function check( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookOperationResult {
+	public function check( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookOperationResult {
 		return $this->with_target_lock(
 			$target,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			function () use ( $target, $credentialProfileId, $hookId, $profileId, $profileRevision, $nonce ): RepositoryWebhookOperationResult {
+			function () use ( $target, $credential_profile_id, $hook_id, $profile_id, $profile_revision, $nonce ): RepositoryWebhookOperationResult {
 				$current = $this->authorize( 'check', $target, $nonce );
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				$profile = null === $current ? null : $this->exact_profile( $current, $profileId, $profileRevision );
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				if ( null === $current || null === $profile || ! $this->credential_profile_available( $current->providerCode(), (string) $credentialProfileId ) ) {
+				$profile = null === $current ? null : $this->exact_profile( $current, $profile_id, $profile_revision );
+				if ( null === $current || null === $profile || ! $this->credential_profile_available( $current->provider_code(), (string) $credential_profile_id ) ) {
 					return $this->failed( 'operation_unauthorized' );
 				}
 				try {
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-					if ( ! $this->identity_confirmed( 'check', $current, $credentialProfileId, $hookId ) ) {
-						return $this->failed( 'repository_identity_unconfirmed' )->withProfile( $profile );
+					if ( ! $this->identity_confirmed( 'check', $current, $credential_profile_id, $hook_id ) ) {
+						return $this->failed( 'repository_identity_unconfirmed' )->with_profile( $profile );
 					}
-					$provider = $this->complete_webhook_provider( $current->providerCode() );
+					$provider = $this->complete_webhook_provider( $current->provider_code() );
 
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-					return $provider->check( $current->repositoryId(), $current->repository(), $hookId, $current->endpoint(), $credentialProfileId )->withProfile( $profile );
+					return $provider->check( $current->repository_id(), $current->repository(), $hook_id, $current->endpoint(), $credential_profile_id )->with_profile( $profile );
 				} catch ( \Throwable ) {
-					return $this->failed( 'operation_failed' )->withProfile( $profile );
+					return $this->failed( 'operation_failed' )->with_profile( $profile );
 				}
 			}
 		);
 	}
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function reconfigure( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookOperationResult {
+	public function reconfigure( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookOperationResult {
 		return $this->with_target_lock(
 			$target,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			function () use ( $target, $credentialProfileId, $hookId, $profileId, $profileRevision, $nonce ): RepositoryWebhookOperationResult {
+			function () use ( $target, $credential_profile_id, $hook_id, $profile_id, $profile_revision, $nonce ): RepositoryWebhookOperationResult {
 				$current = $this->authorize( 'reconfigure', $target, $nonce );
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				$record = null === $current ? null : $this->profile_record( $current->providerCode(), $profileId );
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				if ( null === $current || null === $record || $profileRevision !== $record[0]->revision() || ! $this->applies_metadata( $current, $record[0] ) || ! $this->credential_profile_available( $current->providerCode(), (string) $credentialProfileId ) ) {
+				$record  = null === $current ? null : $this->profile_record( $current->provider_code(), $profile_id );
+				if ( null === $current || null === $record || $profile_revision !== $record[0]->revision() || ! $this->applies_metadata( $current, $record[0] ) || ! $this->credential_profile_available( $current->provider_code(), (string) $credential_profile_id ) ) {
 					return $this->failed( 'operation_unauthorized' );
 				}
 				$provider_started = false;
 				try {
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-					if ( ! $this->identity_confirmed( 'reconfigure', $current, $credentialProfileId, $hookId ) ) {
-						return $this->failed( 'repository_identity_unconfirmed' )->withProfile( $record[0] );
+					if ( ! $this->identity_confirmed( 'reconfigure', $current, $credential_profile_id, $hook_id ) ) {
+						return $this->failed( 'repository_identity_unconfirmed' )->with_profile( $record[0] );
 					}
-					$provider         = $this->complete_webhook_provider( $current->providerCode() );
+					$provider         = $this->complete_webhook_provider( $current->provider_code() );
 					$provider_started = true;
 
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-					return $provider->reconfigure( $current->repositoryId(), $current->repository(), $hookId, $current->endpoint(), $credentialProfileId, $record[1] )->withProfile( $record[0] );
+					return $provider->reconfigure( $current->repository_id(), $current->repository(), $hook_id, $current->endpoint(), $credential_profile_id, $record[1] )->with_profile( $record[0] );
 				} catch ( \Throwable ) {
 					if ( $provider_started ) {
-						// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-						return $this->mutation_outcome_unknown( 'reconfigure_outcome_unknown', $hookId )->withProfile( $record[0] );
+						return $this->mutation_outcome_unknown( 'reconfigure_outcome_unknown', $hook_id )->with_profile( $record[0] );
 					}
 
-					return $this->failed( 'operation_failed' )->withProfile( $record[0] );
+					return $this->failed( 'operation_failed' )->with_profile( $record[0] );
 				}
 			}
 		);
 	}
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function remove( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookOperationResult {
+	public function remove( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookOperationResult {
 		return $this->with_target_lock(
 			$target,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			function () use ( $target, $credentialProfileId, $hookId, $profileId, $profileRevision, $nonce ): RepositoryWebhookOperationResult {
+			function () use ( $target, $credential_profile_id, $hook_id, $profile_id, $profile_revision, $nonce ): RepositoryWebhookOperationResult {
 				$current = $this->authorize( 'remove', $target, $nonce, true );
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				$record = null === $current ? null : $this->profile_record( $current->providerCode(), $profileId );
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				if ( null === $current || null === $record || $profileRevision !== $record[0]->revision() || ! $this->applies_metadata( $current, $record[0] ) || ! $this->credential_profile_available( $current->providerCode(), (string) $credentialProfileId ) ) {
+				$record  = null === $current ? null : $this->profile_record( $current->provider_code(), $profile_id );
+				if ( null === $current || null === $record || $profile_revision !== $record[0]->revision() || ! $this->applies_metadata( $current, $record[0] ) || ! $this->credential_profile_available( $current->provider_code(), (string) $credential_profile_id ) ) {
 					return $this->failed( 'operation_unauthorized' );
 				}
 				$profile          = $record[0];
 				$provider_started = false;
 				try {
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-					if ( ! $this->identity_confirmed( 'remove', $current, $credentialProfileId, $hookId ) ) {
-						return $this->failed( 'repository_identity_unconfirmed' )->withProfile( $profile );
+					if ( ! $this->identity_confirmed( 'remove', $current, $credential_profile_id, $hook_id ) ) {
+						return $this->failed( 'repository_identity_unconfirmed' )->with_profile( $profile );
 					}
-					$provider         = $this->complete_webhook_provider( $current->providerCode() );
+					$provider         = $this->complete_webhook_provider( $current->provider_code() );
 					$provider_started = true;
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-					$result = $provider->remove( $current->repositoryId(), $current->repository(), $hookId, $current->endpoint(), $credentialProfileId )->withProfile( $profile );
-					if ( $result->confirmsAbsence() && 'created' === $profile->disposition() && ! $this->delete_profile_if_revision( $current->providerCode(), $profile->id(), $profile->revision() ) ) {
-						return $result->asPartial( 'local_profile_release_failed', 'The remote hook is absent; remove the retained local profile before replacing it.' );
+					$result           = $provider->remove( $current->repository_id(), $current->repository(), $hook_id, $current->endpoint(), $credential_profile_id )->with_profile( $profile );
+					if ( $result->confirms_absence() && 'created' === $profile->disposition() && ! $this->delete_profile_if_revision( $current->provider_code(), $profile->id(), $profile->revision() ) ) {
+						return $result->as_partial( 'local_profile_release_failed', 'The remote hook is absent; remove the retained local profile before replacing it.' );
 					}
 
 					return $result;
 				} catch ( \Throwable ) {
 					if ( $provider_started ) {
-						// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-						return $this->mutation_outcome_unknown( 'remove_outcome_unknown', $hookId )->withProfile( $profile );
+						return $this->mutation_outcome_unknown( 'remove_outcome_unknown', $hook_id )->with_profile( $profile );
 					}
 
-					return $this->failed( 'operation_failed' )->withProfile( $profile );
+					return $this->failed( 'operation_failed' )->with_profile( $profile );
 				}
 			}
 		);
 	}
 
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-	public function test( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookOperationResult {
+	public function test( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookOperationResult {
 		return $this->with_target_lock(
 			$target,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			function () use ( $target, $credentialProfileId, $hookId, $profileId, $profileRevision, $nonce ): RepositoryWebhookOperationResult {
+			function () use ( $target, $credential_profile_id, $hook_id, $profile_id, $profile_revision, $nonce ): RepositoryWebhookOperationResult {
 				$current = $this->authorize( 'test', $target, $nonce );
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				$profile = null === $current ? null : $this->exact_profile( $current, $profileId, $profileRevision );
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				if ( null === $current || null === $profile || ! $this->credential_profile_available( $current->providerCode(), (string) $credentialProfileId ) ) {
+				$profile = null === $current ? null : $this->exact_profile( $current, $profile_id, $profile_revision );
+				if ( null === $current || null === $profile || ! $this->credential_profile_available( $current->provider_code(), (string) $credential_profile_id ) ) {
 					return $this->failed( 'operation_unauthorized' );
 				}
 				try {
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-					if ( ! $this->identity_confirmed( 'test', $current, $credentialProfileId, $hookId ) ) {
-						return $this->failed( 'repository_identity_unconfirmed' )->withProfile( $profile );
+					if ( ! $this->identity_confirmed( 'test', $current, $credential_profile_id, $hook_id ) ) {
+						return $this->failed( 'repository_identity_unconfirmed' )->with_profile( $profile );
 					}
-					$provider = $this->complete_webhook_provider( $current->providerCode() );
+					$provider = $this->complete_webhook_provider( $current->provider_code() );
 
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-					return $provider->test( $current->repositoryId(), $current->repository(), $hookId, $current->endpoint(), $credentialProfileId )->withProfile( $profile );
+					return $provider->test( $current->repository_id(), $current->repository(), $hook_id, $current->endpoint(), $credential_profile_id )->with_profile( $profile );
 				} catch ( \Throwable ) {
-					return $this->failed( 'operation_failed' )->withProfile( $profile );
+					return $this->failed( 'operation_failed' )->with_profile( $profile );
 				}
 			}
 		);
@@ -355,7 +285,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 
 	private function assess( string $action, AssistanceTarget $target, ?string $credential_id, ?string $hook_id, ?string $profile_id, ?int $profile_revision, string $nonce, bool $allow_cleanup ): RepositoryWebhookFitnessResult {
 		$current = $this->authorize( $action, $target, $nonce, $allow_cleanup );
-		if ( null === $current || ! $this->credential_profile_available( $current->providerCode(), (string) $credential_id ) || ( null !== $profile_id && null === $this->exact_profile( $current, $profile_id, (int) $profile_revision ) ) ) {
+		if ( null === $current || ! $this->credential_profile_available( $current->provider_code(), (string) $credential_id ) || ( null !== $profile_id && null === $this->exact_profile( $current, $profile_id, (int) $profile_revision ) ) ) {
 			return $this->fitness_unavailable( 'assessment_unauthorized' );
 		}
 		try {
@@ -367,7 +297,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 
 	private function setup_locked( AssistanceTarget $target, ?string $credential_id, ?string $selected_profile_id, string $nonce ): RepositoryWebhookOperationResult {
 		$current = $this->authorize( 'setup', $target, $nonce );
-		if ( null === $current || ! $this->credential_profile_available( $current->providerCode(), (string) $credential_id ) ) {
+		if ( null === $current || ! $this->credential_profile_available( $current->provider_code(), (string) $credential_id ) ) {
 			return $this->failed( 'operation_unauthorized' );
 		}
 		$created          = false;
@@ -383,41 +313,41 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 			if ( ! $this->identity_confirmed( 'setup', $current, $credential_id ) ) {
 				return $this->failed( 'repository_identity_unconfirmed' );
 			}
-			$provider = $this->complete_webhook_provider( $current->providerCode() );
+			$provider = $this->complete_webhook_provider( $current->provider_code() );
 			if ( null === $selection && null === $selected_profile_id ) {
-				$profile_id       = $this->secrets->saveWebhook(
-					$current->providerCode(),
+				$profile_id       = $this->secrets->save_webhook(
+					$current->provider_code(),
 					null,
 					array(
 						'label'        => 'Assisted hook for ' . $current->repository(),
 						'scope'        => 'repository',
 						'target'       => $current->repository(),
-						'authority_id' => $current->repositoryId(),
+						'authority_id' => $current->repository_id(),
 						'origin'       => 'assisted',
 					),
 					bin2hex( random_bytes( 32 ) )
 				);
 				$created          = true;
 				$created_revision = 1;
-				$selection        = $this->profile_record( $current->providerCode(), $profile_id );
+				$selection        = $this->profile_record( $current->provider_code(), $profile_id );
 			}
 			if ( null === $selection ) {
 				throw new \RuntimeException( 'The webhook profile snapshot is unavailable.' );
 			}
 			list($metadata, $secret) = $selection;
 			$provider_started        = true;
-			$result                  = $provider->setup( $current->repositoryId(), $current->repository(), $current->endpoint(), $credential_id, $secret );
+			$result                  = $provider->setup( $current->repository_id(), $current->repository(), $current->endpoint(), $credential_id, $secret );
 			if ( $created && 'failed' === $result->state() ) {
-				return $this->cleanup_created_profile( $current->providerCode(), $metadata->id(), $metadata->revision(), $result, $metadata, 'Retain the local profile and inspect both local and remote state.' );
+				return $this->cleanup_created_profile( $current->provider_code(), $metadata->id(), $metadata->revision(), $result, $metadata, 'Retain the local profile and inspect both local and remote state.' );
 			}
 
-			return $result->withProfile( $metadata );
+			return $result->with_profile( $metadata );
 		} catch ( \Throwable ) {
 			if ( $provider_started && null !== $metadata ) {
-				return $this->failed( 'setup_outcome_unknown' )->asPartial( 'setup_outcome_unknown', 'Retain the local signing profile and inspect the provider before retrying.' )->withProfile( $metadata );
+				return $this->failed( 'setup_outcome_unknown' )->as_partial( 'setup_outcome_unknown', 'Retain the local signing profile and inspect the provider before retrying.' )->with_profile( $metadata );
 			}
 			if ( $created && null !== $profile_id && null !== $created_revision ) {
-				return $this->cleanup_created_profile( $current->providerCode(), $profile_id, $created_revision, $this->failed( 'operation_failed' ), $metadata, 'Retain the local profile and inspect local state before retrying.' );
+				return $this->cleanup_created_profile( $current->provider_code(), $profile_id, $created_revision, $this->failed( 'operation_failed' ), $metadata, 'Retain the local profile and inspect local state before retrying.' );
 			}
 
 			return $this->failed( 'operation_failed' );
@@ -425,7 +355,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 	}
 
 	private function identity_confirmed( string $action, AssistanceTarget $target, ?string $credential_id, ?string $hook_id = null ): bool {
-		$fitness = $this->provider_assessment( $action, $target, $credential_id, $hook_id )->toArray();
+		$fitness = $this->provider_assessment( $action, $target, $credential_id, $hook_id )->to_array();
 
 		return 'supported' === $fitness['support']
 			&& in_array( $fitness['suitability'], array( 'suitable', 'unknown' ), true )
@@ -433,21 +363,21 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 	}
 
 	private function provider_assessment( string $action, AssistanceTarget $target, ?string $credential_id, ?string $hook_id ): RepositoryWebhookFitnessResult {
-		$provider = $this->complete_webhook_provider( $target->providerCode() );
+		$provider = $this->complete_webhook_provider( $target->provider_code() );
 
 		return match ( $action ) {
-			'setup'       => $provider->assess_setup( $target->repositoryId(), $target->repository(), $credential_id ),
-			'check'       => $provider->assess_check( $target->repositoryId(), $target->repository(), $credential_id, (string) $hook_id ),
-			'reconfigure' => $provider->assess_reconfigure( $target->repositoryId(), $target->repository(), $credential_id, (string) $hook_id ),
-			'remove'      => $provider->assess_remove( $target->repositoryId(), $target->repository(), $credential_id, (string) $hook_id ),
-			'test'        => $provider->assess_test( $target->repositoryId(), $target->repository(), $credential_id, (string) $hook_id ),
+			'setup'       => $provider->assess_setup( $target->repository_id(), $target->repository(), $credential_id ),
+			'check'       => $provider->assess_check( $target->repository_id(), $target->repository(), $credential_id, (string) $hook_id ),
+			'reconfigure' => $provider->assess_reconfigure( $target->repository_id(), $target->repository(), $credential_id, (string) $hook_id ),
+			'remove'      => $provider->assess_remove( $target->repository_id(), $target->repository(), $credential_id, (string) $hook_id ),
+			'test'        => $provider->assess_test( $target->repository_id(), $target->repository(), $credential_id, (string) $hook_id ),
 		};
 	}
 
 	private function complete_webhook_provider( string $provider_code ): RepositoryWebhookManagement {
-		$fitness    = $this->providers->requireCapability( $provider_code, RepositoryWebhookFitness::class );
-		$management = $this->providers->requireCapability( $provider_code, RepositoryWebhookManagement::class );
-		$normalizer = $this->providers->requireCapability( $provider_code, WebhookNormalizer::class );
+		$fitness    = $this->providers->require_capability( $provider_code, RepositoryWebhookFitness::class );
+		$management = $this->providers->require_capability( $provider_code, RepositoryWebhookManagement::class );
+		$normalizer = $this->providers->require_capability( $provider_code, WebhookNormalizer::class );
 		if ( $fitness !== $management || $management !== $normalizer ) {
 			throw new \RuntimeException( 'The provider webhook management capability is incomplete.' );
 		}
@@ -457,7 +387,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 
 	/** @param callable(): RepositoryWebhookOperationResult $operation */
 	private function with_target_lock( AssistanceTarget $target, callable $operation ): RepositoryWebhookOperationResult {
-		$name = 'ran_booster:webhook:' . substr( hash( 'sha256', $target->providerCode() . "\0" . $target->repositoryId() ), 0, 40 );
+		$name = 'ran_booster:webhook:' . substr( hash( 'sha256', $target->provider_code() . "\0" . $target->repository_id() ), 0, 40 );
 		try {
 			if ( isset( $this->held_locks[ $name ] ) || ! ( $this->acquire_lock )( $name ) ) {
 				return $this->failed( 'operation_busy' );
@@ -482,31 +412,30 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 			return $result;
 		}
 
-		if ( 'succeeded' !== $result->state() || $result->confirmsAbsence() ) {
+		if ( 'succeeded' !== $result->state() || $result->confirms_absence() ) {
 			return $result;
 		}
 
-		return $result->asPartial( 'operation_lock_release_failed', 'The operation completed, but do not retry until the current database request has ended.' );
+		return $result->as_partial( 'operation_lock_release_failed', 'The operation completed, but do not retry until the current database request has ended.' );
 	}
 
 	private function authorize( string $action, AssistanceTarget $submitted, string $nonce, bool $allow_cleanup = false ): ?AssistanceTarget {
 		if ( ! ( $this->can_manage )() || ! ( $this->verify_nonce )( $nonce, $this->nonce_action( $action, $submitted ) ) ) {
 			return null;
 		}
-		$current = $this->current_target( $submitted->providerCode(), $submitted->repositoryId(), $allow_cleanup );
+		$current = $this->current_target( $submitted->provider_code(), $submitted->repository_id(), $allow_cleanup );
 
-		return null !== $current && $current->toArray() === $submitted->toArray() ? $current : null;
+		return null !== $current && $current->to_array() === $submitted->to_array() ? $current : null;
 	}
 
 	private function nonce_action( string $action, AssistanceTarget $target ): string {
-		return 'ran_booster_repository_webhook_' . $action . '_' . $target->providerCode() . '_' . $target->repositoryId();
+		return 'ran_booster_repository_webhook_' . $action . '_' . $target->provider_code() . '_' . $target->repository_id();
 	}
 
 	private function current_target( string $provider_code, string $repository_id, bool $allow_cleanup ): ?AssistanceTarget {
 		$current = $this->projected_target( $provider_code, $repository_id, true );
 		if ( null === $current && $allow_cleanup ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-			$current = $this->readinessEvaluator->cleanupTarget( $provider_code, $repository_id, ( $this->endpoint )( $provider_code ) );
+			$current = $this->readiness_evaluator->cleanup_target( $provider_code, $repository_id, ( $this->endpoint )( $provider_code ) );
 		}
 
 		return $current;
@@ -516,7 +445,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		if ( ! $this->valid_repository_id( $repository_id ) ) {
 			return null;
 		}
-		$readiness = $this->readiness( $provider_code )->toArray();
+		$readiness = $this->readiness( $provider_code )->to_array();
 		if ( $require_ready_site && AssistanceReadiness::READY !== $readiness['site']['status'] ) {
 			return null;
 		}
@@ -534,7 +463,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 			return false;
 		}
 		try {
-			$profile = $this->secrets->credentialProfiles( $provider_code )[ $credential_id ] ?? null;
+			$profile = $this->secrets->credential_profiles( $provider_code )[ $credential_id ] ?? null;
 
 			return is_array( $profile ) && 'file' === ( $profile['source'] ?? null ) && empty( $profile['immutable'] );
 		} catch ( \Throwable ) {
@@ -543,19 +472,19 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 	}
 
 	private function exact_profile( AssistanceTarget $target, string $profile_id, int $revision ): ?WebhookProfileMetadata {
-		$profile = $this->secrets->webhookProfiles( $target->providerCode() )[ $profile_id ] ?? null;
+		$profile = $this->secrets->webhook_profiles( $target->provider_code() )[ $profile_id ] ?? null;
 		if ( ! is_array( $profile ) || (int) ( $profile['revision'] ?? 0 ) !== $revision || ! $this->applies_to( $target, $profile ) ) {
 			return null;
 		}
 
-		return $this->metadata( $target->providerCode(), $profile_id, $profile );
+		return $this->metadata( $target->provider_code(), $profile_id, $profile );
 	}
 
 	/** @return array{WebhookProfileMetadata,string}|null */
 	private function select_profile( AssistanceTarget $target, string $profile_id ): ?array {
-		$materials = $this->secrets->webhookMaterials( $target->providerCode() );
+		$materials = $this->secrets->webhook_materials( $target->provider_code() );
 		if ( isset( $materials[ $profile_id ] ) && 'file' === ( $materials[ $profile_id ]['source'] ?? null ) && empty( $materials[ $profile_id ]['immutable'] ) && $this->applies_to( $target, $materials[ $profile_id ] ) ) {
-			return $this->profile_record_from_material( $target->providerCode(), $profile_id, $materials[ $profile_id ] );
+			return $this->profile_record_from_material( $target->provider_code(), $profile_id, $materials[ $profile_id ] );
 		}
 
 		return null;
@@ -563,7 +492,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 
 	/** @return array{WebhookProfileMetadata,string}|null */
 	private function profile_record( string $provider_code, string $profile_id ): ?array {
-		$material = $this->secrets->webhookMaterials( $provider_code )[ $profile_id ] ?? null;
+		$material = $this->secrets->webhook_materials( $provider_code )[ $profile_id ] ?? null;
 
 		return is_array( $material ) ? $this->profile_record_from_material( $provider_code, $profile_id, $material ) : null;
 	}
@@ -583,15 +512,15 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 			return false;
 		}
 		if ( 'repository' === ( $profile['scope'] ?? null ) ) {
-			return is_string( $profile['authority_id'] ?? null ) && hash_equals( $target->repositoryId(), $profile['authority_id'] );
+			return is_string( $profile['authority_id'] ?? null ) && hash_equals( $target->repository_id(), $profile['authority_id'] );
 		}
 
 		return 'owner' === ( $profile['scope'] ?? null ) && is_string( $profile['target'] ?? null ) && 0 === strcasecmp( explode( '/', trim( $target->repository(), '/' ), 2 )[0], trim( $profile['target'], '/' ) );
 	}
 
 	private function applies_metadata( AssistanceTarget $target, WebhookProfileMetadata $profile ): bool {
-		return $profile->providerCode() === $target->providerCode()
-			&& ( ( 'repository' === $profile->scope() && hash_equals( $target->repositoryId(), $profile->authorityId() ) )
+		return $profile->provider_code() === $target->provider_code()
+			&& ( ( 'repository' === $profile->scope() && hash_equals( $target->repository_id(), $profile->authority_id() ) )
 				|| ( 'owner' === $profile->scope() && 0 === strcasecmp( explode( '/', $target->repository(), 2 )[0], $profile->target() ) ) );
 	}
 
@@ -613,14 +542,14 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 			$current = null;
 			$read    = false;
 		}
-		$partial = $result->asPartial( 'profile_cleanup_failed', $remediation );
+		$partial = $result->as_partial( 'profile_cleanup_failed', $remediation );
 
-		return null === $current && ( $read || null === $fallback ) ? $partial : $partial->withProfile( $current ?? $fallback );
+		return null === $current && ( $read || null === $fallback ) ? $partial : $partial->with_profile( $current ?? $fallback );
 	}
 
 	private function delete_profile_if_revision( string $provider_code, string $profile_id, int $revision ): bool {
 		try {
-			return $this->secrets->deleteWebhookIfRevision( $provider_code, $profile_id, $revision );
+			return $this->secrets->delete_webhook_if_revision( $provider_code, $profile_id, $revision );
 		} catch ( \Throwable ) {
 			return false;
 		}
@@ -656,8 +585,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 	}
 
 	private function storage_available(): bool {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		return $this->readinessEvaluator->managedStorageAvailable();
+		return $this->readiness_evaluator->managed_storage_available();
 	}
 
 	private function valid_repository_id( string $repository_id ): bool {

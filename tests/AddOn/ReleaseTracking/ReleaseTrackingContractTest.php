@@ -11,7 +11,7 @@ use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 
 final class ReleaseTrackingContractTest extends TestCase {
 
-	public function testStatusExposesOnlyBoundedDisplayValues(): void {
+	public function test_status_exposes_only_bounded_display_values(): void {
 		$status = new ReleaseTrackingStatus(
 			'plugin',
 			'example/example.php',
@@ -33,15 +33,15 @@ final class ReleaseTrackingContractTest extends TestCase {
 
 		self::assertSame( 'example/example.php', $status->identifier() );
 		self::assertSame( 'release_asset', $status->source() );
-		self::assertSame( 4, $status->sourceRevision() );
-		self::assertSame( '123456789', $status->providerRepositoryId() );
+		self::assertSame( 4, $status->source_revision() );
+		self::assertSame( '123456789', $status->provider_repository_id() );
 		self::assertSame( 'prerelease', $status->channel() );
-		self::assertSame( 'example', $status->packageRoot() );
+		self::assertSame( 'example', $status->package_root() );
 		self::assertTrue( $status->eligible() );
-		self::assertTrue( $status->updateAvailable() );
+		self::assertTrue( $status->update_available() );
 	}
 
-	public function testStatusDoesNotApplyWorkflowUpdateUriValidation(): void {
+	public function test_status_does_not_apply_workflow_update_uri_validation(): void {
 		$status = new ReleaseTrackingStatus(
 			'plugin',
 			'example/example.php',
@@ -55,10 +55,10 @@ final class ReleaseTrackingContractTest extends TestCase {
 			)
 		);
 
-		self::assertSame( 'http://git.example.test/owner/example', $status->eligibility()->expectedUpdateUri() );
+		self::assertSame( 'http://git.example.test/owner/example', $status->eligibility()->expected_update_uri() );
 	}
 
-	public function testStatusRejectsUnboundedProviderRepositoryIdentity(): void {
+	public function test_status_rejects_unbounded_provider_repository_identity(): void {
 		$this->expectException( \InvalidArgumentException::class );
 
 		new ReleaseTrackingStatus(
@@ -72,7 +72,7 @@ final class ReleaseTrackingContractTest extends TestCase {
 		);
 	}
 
-	public function testResultProvidesStableSuccessAndFailureNotices(): void {
+	public function test_result_provides_stable_success_and_failure_notices(): void {
 		$success = ReleaseTrackingResult::succeeded( 'release_enabled', 'Release tracking enabled' );
 		$failure = ReleaseTrackingResult::failed( 'source_changed', 'Package settings changed after this browser page was opened. Refresh this browser page, review the current settings, then try again.' );
 

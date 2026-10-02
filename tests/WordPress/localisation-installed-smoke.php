@@ -10,45 +10,45 @@ if ( ! function_exists( 'is_plugin_active' ) ) {
 	require_once ABSPATH . 'wp-admin/includes/plugin.php';
 }
 
-$expectedRoot           = getenv( 'RAN_BOOSTER_WORDPRESS_PATH' );
-$expectedUrl            = getenv( 'RAN_BOOSTER_LOCALISATION_TEST_URL' );
-$wordpressRoot          = realpath( ABSPATH );
-$contentRoot            = realpath( WP_CONTENT_DIR );
-$pluginRoot             = realpath( WP_PLUGIN_DIR );
-$pluginFile             = WP_PLUGIN_DIR . '/ran-booster/ran-booster.php';
-$pluginLanguages        = WP_PLUGIN_DIR . '/ran-booster/languages';
-$disposableMark         = ABSPATH . '.ran-booster-disposable-test-site';
-$expectedPhpTranslation = 'En attente';
+$expected_root            = getenv( 'RAN_BOOSTER_WORDPRESS_PATH' );
+$expected_url             = getenv( 'RAN_BOOSTER_LOCALISATION_TEST_URL' );
+$wordpress_root           = realpath( ABSPATH );
+$content_root             = realpath( WP_CONTENT_DIR );
+$plugin_root              = realpath( WP_PLUGIN_DIR );
+$plugin_file              = WP_PLUGIN_DIR . '/ran-booster/ran-booster.php';
+$plugin_languages         = WP_PLUGIN_DIR . '/ran-booster/languages';
+$disposable_mark          = ABSPATH . '.ran-booster-disposable-test-site';
+$expected_php_translation = 'En attente';
 
 // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Exact disposable marker content.
-$markerContents = file_get_contents( $disposableMark );
-if ( ! is_string( $expectedRoot ) || false === $wordpressRoot || $wordpressRoot !== realpath( $expectedRoot )
-	|| false === $contentRoot || $contentRoot !== $wordpressRoot . '/wp-content'
-	|| false === $pluginRoot || $pluginRoot !== $contentRoot . '/plugins'
-	|| 'http://localhost' !== $expectedUrl || $expectedUrl !== get_option( 'siteurl' )
+$marker_contents = file_get_contents( $disposable_mark );
+if ( ! is_string( $expected_root ) || false === $wordpress_root || $wordpress_root !== realpath( $expected_root )
+	|| false === $content_root || $content_root !== $wordpress_root . '/wp-content'
+	|| false === $plugin_root || $plugin_root !== $content_root . '/plugins'
+	|| 'http://localhost' !== $expected_url || $expected_url !== get_option( 'siteurl' )
 	|| 'fr_FR' !== get_option( 'WPLANG', '' ) || 'fr_FR' !== determine_locale()
-	|| is_link( $disposableMark ) || ! is_file( $disposableMark )
-	|| "RAN Booster disposable test site\n" !== $markerContents
-	|| is_link( WP_PLUGIN_DIR . '/ran-booster' ) || ! is_file( $pluginFile )
-	|| is_link( $pluginLanguages ) || ! is_file( $pluginLanguages . '/ran-booster.pot' )
-	|| ! is_plugin_active( plugin_basename( $pluginFile ) ) ) {
+	|| is_link( $disposable_mark ) || ! is_file( $disposable_mark )
+	|| "RAN Booster disposable test site\n" !== $marker_contents
+	|| is_link( WP_PLUGIN_DIR . '/ran-booster' ) || ! is_file( $plugin_file )
+	|| is_link( $plugin_languages ) || ! is_file( $plugin_languages . '/ran-booster.pot' )
+	|| ! is_plugin_active( plugin_basename( $plugin_file ) ) ) {
 	throw new RuntimeException( 'The installed localisation smoke requires the exact disposable installed archive.' );
 }
 foreach (
 	array(
-		'RAN_BOOSTER_PROVIDER_API_VERSION'          => 13,
-		'RAN_BOOSTER_ADDON_API_VERSION'             => 16,
-		'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION' => 2,
+		'RAN_BOOSTER_PROVIDER_API_VERSION'          => 14,
+		'RAN_BOOSTER_ADDON_API_VERSION'             => 17,
+		'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION' => 3,
 		'RAN_BOOSTER_PORTABILITY_API_VERSION'       => 3,
-	) as $constant => $expectedVersion
+	) as $constant => $expected_version
 ) {
-	if ( ! defined( $constant ) || $expectedVersion !== constant( $constant ) ) {
+	if ( ! defined( $constant ) || $expected_version !== constant( $constant ) ) {
 		throw new RuntimeException( 'The installed localisation smoke found an unexpected public API version.' );
 	}
 }
 
-$phpTranslation = __( 'Queued', 'ran-booster' );
-if ( ! is_textdomain_loaded( 'ran-booster' ) || $expectedPhpTranslation !== $phpTranslation ) {
+$php_translation = __( 'Queued', 'ran-booster' );
+if ( ! is_textdomain_loaded( 'ran-booster' ) || $expected_php_translation !== $php_translation ) {
 	throw new RuntimeException( 'The installed plugin init path did not load the expected PHP translation.' );
 }
 
@@ -72,19 +72,19 @@ foreach (
 		'ran-booster-release-management' => array( 'ran-booster-release-management.js', 'Installer %s maintenant' ),
 		'ran-booster-repository-picker'  => array( 'ran-booster-repository-picker.js', 'Fermer le sélecteur de dépôt' ),
 		'ran-booster-secure-inputs'      => array( 'ran-booster-secure-inputs.js', 'Ajouter %s' ),
-	) as $handle => [ $sourceFile, $expectedTranslation ]
+	) as $handle => [ $source_file, $expected_translation ]
 ) {
-	$registered     = $scripts->registered[ $handle ] ?? null;
-	$expectedSource = plugins_url( 'assets/' . $sourceFile, $pluginFile );
-	$translations   = $scripts->print_translations( $handle, false );
+	$registered      = $scripts->registered[ $handle ] ?? null;
+	$expected_source = plugins_url( 'assets/' . $source_file, $plugin_file );
+	$translations    = $scripts->print_translations( $handle, false );
 
 	if ( ! $registered instanceof _WP_Dependency
-		|| $expectedSource !== $registered->src
+		|| $expected_source !== $registered->src
 		|| ! in_array( 'wp-i18n', $registered->deps, true )
 		|| 'ran-booster' !== $registered->textdomain
-		|| $pluginLanguages !== $registered->translations_path
+		|| $plugin_languages !== $registered->translations_path
 		|| ! is_string( $translations )
-		|| ! str_contains( $translations, wp_json_encode( $expectedTranslation ) ) ) {
+		|| ! str_contains( $translations, wp_json_encode( $expected_translation ) ) ) {
 		throw new RuntimeException( sprintf( 'The %s script does not expose its expected installed Jed translation API.', esc_html( $handle ) ) );
 	}
 }

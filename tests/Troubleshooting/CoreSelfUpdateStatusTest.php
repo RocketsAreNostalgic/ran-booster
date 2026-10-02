@@ -14,7 +14,7 @@ use RAN\WordPress\CoreSelfUpdatePolicy;
 #[CoversClass( CoreSelfUpdateStatus::class )]
 final class CoreSelfUpdateStatusTest extends TestCase {
 
-	public function testReturnsOnlyBoundedPassiveTargetState(): void {
+	public function test_returns_only_bounded_passive_target_state(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-self-update-status-' . bin2hex( random_bytes( 6 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable focused fixture setup.
 		self::assertTrue( mkdir( $directory, 0700 ) );
@@ -27,11 +27,11 @@ final class CoreSelfUpdateStatusTest extends TestCase {
 			public function status(): RepositoryReleaseNativeTargetStatus {
 				return new RepositoryReleaseNativeTargetStatus(
 					active: true,
-					offeredVersion: '1.2.4',
-					versionRelationship: 'newer',
-					lastCheck: 1_700_000_000,
-					nextCheck: 1_700_000_900,
-					failureCode: 'neutral_target_unavailable'
+					offered_version: '1.2.4',
+					version_relationship: 'newer',
+					last_check: 1_700_000_000,
+					next_check: 1_700_000_900,
+					failure_code: 'neutral_target_unavailable'
 				);
 			}
 
@@ -53,7 +53,7 @@ final class CoreSelfUpdateStatusTest extends TestCase {
 		rmdir( $directory );
 	}
 
-	public function testUpdaterDiagnosticsFailureIsContained(): void {
+	public function test_updater_diagnostics_failure_is_contained(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-self-update-status-' . bin2hex( random_bytes( 6 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable focused fixture setup.
 		self::assertTrue( mkdir( $directory, 0700 ) );
@@ -81,7 +81,7 @@ final class CoreSelfUpdateStatusTest extends TestCase {
 		rmdir( $directory );
 	}
 
-	public function testDisabledPolicyWithoutTargetReportsNativeDiscoveryDisabled(): void {
+	public function test_disabled_policy_without_target_reports_native_discovery_disabled(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-self-update-status-' . bin2hex( random_bytes( 6 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable focused fixture setup.
 		self::assertTrue( mkdir( $directory, 0700 ) );
@@ -97,7 +97,7 @@ final class CoreSelfUpdateStatusTest extends TestCase {
 		rmdir( $directory );
 	}
 
-	public function testNormalizesTheNeutralNativeTargetStatus(): void {
+	public function test_normalizes_the_neutral_native_target_status(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-self-update-status-' . bin2hex( random_bytes( 6 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable focused fixture setup.
 		self::assertTrue( mkdir( $directory, 0700 ) );

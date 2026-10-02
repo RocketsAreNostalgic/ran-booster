@@ -1,9 +1,9 @@
 # Custom git vendor setup
 
-> API13 dependency-adoption candidate: the lock selects the immutable Provider
-> beta.11 release. Final archive/installed qualification must use this exact
-> composition; earlier source overlays are not adoption proof. Core beta.31
-> remains held for the coordinated work and its separate release decision.
+> Provider API14 naming candidate: consumers must use matching API14 source.
+> The inherited Provider beta.11 dependency lock is not the new candidate's
+> adoption proof. Fresh combined, archive and installed qualification and a
+> separate release decision are required before Core beta.31 can ship.
 
 
 RAN Booster exposes a single runtime extension seam for custom git vendors:
@@ -33,7 +33,7 @@ had a chance to run.
 ## Registration pattern
 
 A provider attaches its callback on `plugins_loaded` before Booster seals the
-registry. Provider API 13 uses one required three-argument credential-bearing
+registry. Provider API 14 uses one required three-argument credential-bearing
 factory contract:
 
 ```php
@@ -41,21 +41,21 @@ add_action(
   'ran_booster_register_providers',
   static function ( \RAN\RepositoryProvider\ProviderRegistry $registry ): void {
     if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-      || 13 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+      || 14 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
       return;
     }
 
-    $registry->registerWithCredentialStore(
+    $registry->register_with_credential_store(
       'example-vendor',
       static function (
         \RAN\RepositoryProvider\ProviderCredentialStore $credentials,
-        \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $deliveryEvidence,
-        \RAN\RepositoryProvider\ProviderRegistrationContext $registrationContext
+        \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
+        \RAN\RepositoryProvider\ProviderRegistrationContext $registration_context
       ): \RAN\RepositoryProvider\RepositoryProvider {
         return new ExampleVendorProvider(
           $credentials,
-          $deliveryEvidence,
-          static fn (): int => $registrationContext->maximumArtifactBytes()
+          $delivery_evidence,
+          static fn (): int => $registration_context->maximum_artifact_bytes()
         );
       }
     );
@@ -63,17 +63,17 @@ add_action(
 );
 ```
 
-Use `registerWithCredentialStore()` when the provider reads stored credentials.
+Use `register_with_credential_store()` when the provider reads stored credentials.
 Every API-13 factory receives the two provider-bound read-only values plus the
 bounded `ProviderRegistrationContext`. The third parameter must be
 non-variadic, by-value and typed exactly to that class; two-argument, variadic
 or by-reference context signatures are rejected before provider construction.
 
 `ProviderCredentialStore` exposes display-safe profiles, one selected or
-default credential and the boolean `hasWebhookProfile()` diagnostic readiness
+default credential and the boolean `has_webhook_profile()` diagnostic readiness
 check. `AuthenticatedWebhookDeliveryEvidenceReader` exposes only
-`latestAuthenticatedDelivery()` for that provider. The registration context
-currently exposes only `maximumArtifactBytes()`. That method lazily resolves
+`latest_authenticated_delivery()` for that provider. The registration context
+currently exposes only `maximum_artifact_bytes()`. That method lazily resolves
 Core's provider-neutral archive ceiling so invalid site configuration still
 fails at the operation/admission boundary rather than during plugin bootstrap.
 A provider that retains the policy should therefore retain the bounded supplier
@@ -81,9 +81,9 @@ and call it only when the operation actually needs the archive ceiling, not
 while its registration factory is constructing the provider aggregate.
 
 The context is not a service locator and exposes no container, logger, database,
-sidecar, credential writer or other Core implementation service. Provider API 13
+sidecar, credential writer or other Core implementation service. Provider API 14
 guarantees this context as part of credential-bearing registration; providers
-targeting API 13 must not feature-detect or fall back to the retired
+targeting API 14 must not feature-detect or fall back to the retired
 two-argument factory shape.
 
 Neither provider-bound value accepts a provider argument, selects another
@@ -94,7 +94,7 @@ Activating a credential-bearing provider therefore trusts it with credentials
 saved under its code; registration order is not publisher authentication, and
 Core cannot control the provider's private code after authorized disclosure.
 
-Provider API 13 supplies no logger, service container or generic service
+Provider API 14 supplies no logger, service container or generic service
 resolver. The additive registration context does not change that marker or turn
 registration into generic dependency injection. An unexpected caught diagnostic
 failure may be attached only to a bounded request-local
@@ -162,14 +162,14 @@ The request enforces:
 - optional credential and repository context.
 
 Diagnostics should stay bounded, local where possible, and redacted. Use the
-request's `claimRemoteCall()` method before each outbound call so your code
+request's `claim_remote_call()` method before each outbound call so your code
 respects the remaining time budget.
 
 For an unexpected exception that the provider must catch to return a bounded
 result, pass the original `Throwable` only through the optional request-local
 failure field. Core first validates the result's status, code and safe display
 text, then logs the failure at its troubleshooting boundary.
-`ProviderDiagnosticResult::toArray()` omits it. Expected provider outcomes use
+`ProviderDiagnosticResult::to_array()` omits it. Expected provider outcomes use
 ordinary typed results without a failure; there is no Provider API logger.
 
 ### Repository resolution and archive preparation
@@ -185,7 +185,7 @@ branch, credential selection, and package slug.
 a host, and must not contain user info or fragments. Providers must not place
 reusable secrets in archive URLs.
 
-Provider API 13 supplies `GitReferenceSyntax::isValidNamedReference()` for the
+Provider API 14 supplies `GitReferenceSyntax::is_valid_named_reference()` for the
 generic bounded branch/ref syntax check and `AuthenticatedPreparedArchive` for
 the one-request archive authentication, redirect scrubbing, head verification
 and cleanup lifecycle. A vendor may impose stricter syntax or origin rules, but
@@ -264,9 +264,9 @@ them:
   operations. See the
   [workflow capability contract](provider-extension-contract.md#optional-release-workflow-management).
 
-Provider API 13 hosts publish
+Provider API 14 hosts publish
 `RepositoryReleaseWorkflowManagementV3` as the current optional workflow
-management facet. Providers targeting API 13 may implement that interface
+management facet. Providers targeting API 14 may implement that interface
 directly; providers that do not adopt workflow API 3 need no additional feature
 check. See the
 [dedicated workflow API contract](provider-release-workflow-api.md).
@@ -331,7 +331,7 @@ shape check.
    single-use `RepositoryReleaseArtifact`. Do not return a path, URL, archive
    bytes, provider result payload or reusable claim. Report a bounded cleanup
    failure when provider-owned bytes cannot be discarded before handoff.
-1. When targeting Provider API 13, `RepositoryReleaseWorkflowManagementV3` is
+1. When targeting Provider API 14, `RepositoryReleaseWorkflowManagementV3` is
    available as the current optional workflow facet; older Booster releases that
    advertise Provider API 10 remain outside this API-13 contract.
 1. Test registration from the main plugin file with the version guard in place.
@@ -406,7 +406,7 @@ as the Composer package `ran/booster-github-provider`, while Booster pins and
 bundles an immutable released version as part of its distribution. Bundled
 status is a distribution choice, not a privileged provider architecture: the
 `gh` aggregate is registered through the same `ProviderRegistry` /
-`registerWithCredentialStore()` boundary and implements the same public
+`register_with_credential_store()` boundary and implements the same public
 capability contracts available to an external provider.
 
 Booster retains provider-neutral host responsibilities such as registry

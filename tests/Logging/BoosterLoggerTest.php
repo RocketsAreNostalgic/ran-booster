@@ -23,6 +23,7 @@ final class BoosterLoggerTest extends TestCase {
 	private string $directory;
 	private TemporaryDebugCapture $capture;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->directory = sys_get_temp_dir() . '/ran-booster-logger-' . bin2hex( random_bytes( 8 ) );
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
@@ -32,11 +33,12 @@ final class BoosterLoggerTest extends TestCase {
 			static fn(): int => strtotime( '2026-07-23T12:00:00Z' )
 		);
 		$this->capture->start();
-		BoosterLogger::configureCapture( $this->capture );
+		BoosterLogger::configure_capture( $this->capture );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
-		BoosterLogger::configureCapture( null );
+		BoosterLogger::configure_capture( null );
 
 		foreach (
 			array(
@@ -54,7 +56,7 @@ final class BoosterLoggerTest extends TestCase {
 		}
 	}
 
-	public function testCaptureWorksWithoutWordPressDebugLoggingAndUsesOnlySafeOneLineContext(): void {
+	public function test_capture_works_without_word_press_debug_logging_and_uses_only_safe_one_line_context(): void {
 		self::assertFalse( defined( 'WP_DEBUG_LOG' ) );
 
 		$logged = BoosterLogger::log(
@@ -79,10 +81,10 @@ final class BoosterLoggerTest extends TestCase {
 		self::assertStringNotContainsString( "\n", $entries[0]['line'] );
 	}
 
-	public function testExceptionMessagesAndTracesNeverEnterTheCapture(): void {
+	public function test_exception_messages_and_traces_never_enter_the_capture(): void {
 		$exception = new RuntimeException( 'sentinel-raw-exception-secret', 73 );
 
-		BoosterLogger::logException(
+		BoosterLogger::log_exception(
 			'deployment failed',
 			$exception,
 			array(
@@ -104,7 +106,7 @@ final class BoosterLoggerTest extends TestCase {
 		self::assertStringNotContainsString( __FILE__, $line );
 	}
 
-	public function testInactiveOrBrokenCaptureDoesNotAffectLoggingCallers(): void {
+	public function test_inactive_or_broken_capture_does_not_affect_logging_callers(): void {
 		$this->capture->stop();
 		self::assertFalse( BoosterLogger::log( 'after stop', array( 'step' => 'ignored' ) ) );
 		self::assertSame( array(), $this->capture->snapshot()['entries'] );
@@ -116,16 +118,16 @@ final class BoosterLoggerTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testWordPressDebugLoggingRemainsEnabledAlongsideCapture(): void {
-		$wordpressLog = $this->directory . '/wordpress-debug.log';
+	public function test_word_press_debug_logging_remains_enabled_alongside_capture(): void {
+		$wordpress_log = $this->directory . '/wordpress-debug.log';
 		define( 'WP_DEBUG_LOG', true );
 		// phpcs:ignore WordPress.PHP.IniSet.Risky -- Separate-process test redirects PHP's normal error-log destination to a disposable fixture.
-		self::assertNotFalse( ini_set( 'error_log', $wordpressLog ) );
+		self::assertNotFalse( ini_set( 'error_log', $wordpress_log ) );
 
 		self::assertTrue( BoosterLogger::log( 'dual destination', array( 'step' => 'logging' ) ) );
 
 		$expected = '[ran-booster] dual destination {"step":"logging"}';
-		self::assertStringContainsString( $expected, (string) file_get_contents( $wordpressLog ) );
+		self::assertStringContainsString( $expected, (string) file_get_contents( $wordpress_log ) );
 		self::assertSame( $expected, $this->capture->snapshot()['entries'][0]['line'] );
 	}
 }

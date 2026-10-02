@@ -18,10 +18,12 @@ final class BlueprintArchiveTest extends TestCase {
 
 	private string $file;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->file = sys_get_temp_dir() . '/ran-booster-' . bin2hex( random_bytes( 8 ) ) . '.zip';
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		if ( is_file( $this->file ) ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test-only temporary archive cleanup.
@@ -29,13 +31,14 @@ final class BlueprintArchiveTest extends TestCase {
 		}
 	}
 
-	public function testPackageOnlyArchiveHasOnePlainEntryAndRoundTrips(): void {
+	public function test_package_only_archive_has_one_plain_entry_and_round_trips(): void {
 		$blueprint = new PackageBlueprint( array( $this->package() ) );
 		$archive   = new BlueprintArchive();
 
 		$archive->write_to( $this->file, $blueprint, null );
 
 		$zip = $this->open();
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- ZipArchive exposes the native numFiles property.
 		self::assertSame( 1, $zip->numFiles );
 		self::assertSame( BlueprintArchive::ENTRY, $zip->getNameIndex( 0 ) );
 		self::assertSame( ZipArchive::EM_NONE, $zip->statIndex( 0 )['encryption_method'] );
@@ -43,9 +46,9 @@ final class BlueprintArchiveTest extends TestCase {
 		self::assertSame( $blueprint->canonical_json(), $archive->read_from( $this->file, '' )->canonical_json() );
 	}
 
-	public function testCredentialArchiveUsesAes256AndRoundTrips(): void {
-		$this->requireAes();
-		$blueprint = $this->credentialBlueprint();
+	public function test_credential_archive_uses_aes256_and_round_trips(): void {
+		$this->require_aes();
+		$blueprint = $this->credential_blueprint();
 		$password  = 'correct-horse-battery-staple';
 		$archive   = new BlueprintArchive();
 
@@ -56,13 +59,13 @@ final class BlueprintArchiveTest extends TestCase {
 		self::assertSame( $blueprint->canonical_json(), $archive->read_from( $this->file, $password )->canonical_json() );
 	}
 
-	public function testWriteRejectsPasswordAndCredentialMismatch(): void {
+	public function test_write_rejects_password_and_credential_mismatch(): void {
 		$archive = new BlueprintArchive();
 		foreach ( array(
 			array( new PackageBlueprint( array( $this->package() ) ), 'unneeded-password-value' ),
-			array( $this->credentialBlueprint(), null ),
-			array( $this->credentialBlueprint(), 'too-short' ),
-			array( $this->credentialBlueprint(), "valid-length-password\n" ),
+			array( $this->credential_blueprint(), null ),
+			array( $this->credential_blueprint(), 'too-short' ),
+			array( $this->credential_blueprint(), "valid-length-password\n" ),
 		) as [ $blueprint, $password ] ) {
 			try {
 				$archive->write_to( $this->file, $blueprint, $password );
@@ -73,9 +76,9 @@ final class BlueprintArchiveTest extends TestCase {
 		}
 	}
 
-	public function testCredentialBearingBlueprintIsRedactedFromWriteTrace(): void {
+	public function test_credential_bearing_blueprint_is_redacted_from_write_trace(): void {
 		try {
-			( new BlueprintArchive() )->write_to( $this->file, $this->credentialBlueprint(), null );
+			( new BlueprintArchive() )->write_to( $this->file, $this->credential_blueprint(), null );
 			self::fail( 'Expected archive write failure.' );
 		} catch ( InvalidArgumentException $exception ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export -- Test-only inspection of redacted exception arguments.
@@ -83,10 +86,10 @@ final class BlueprintArchiveTest extends TestCase {
 		}
 	}
 
-	public function testReadRejectsMissingAndWrongPasswordsWithoutLeakingDetails(): void {
-		$this->requireAes();
+	public function test_read_rejects_missing_and_wrong_passwords_without_leaking_details(): void {
+		$this->require_aes();
 		$archive = new BlueprintArchive();
-		$archive->write_to( $this->file, $this->credentialBlueprint(), 'correct-horse-battery-staple' );
+		$archive->write_to( $this->file, $this->credential_blueprint(), 'correct-horse-battery-staple' );
 
 		foreach ( array( null, 'wrong-password-value-long-enough' ) as $password ) {
 			try {
@@ -99,56 +102,56 @@ final class BlueprintArchiveTest extends TestCase {
 		}
 	}
 
-	public function testRejectsPlainCredentialsAndEncryptedEmptyPayload(): void {
-		$this->requireAes();
+	public function test_rejects_plain_credentials_and_encrypted_empty_payload(): void {
+		$this->require_aes();
 		$archive = new BlueprintArchive();
-		$this->writeRaw( $this->credentialBlueprint()->canonical_json(), ZipArchive::EM_NONE, null );
-		$this->assertInvalid( fn() => $archive->read_from( $this->file, null ) );
+		$this->write_raw( $this->credential_blueprint()->canonical_json(), ZipArchive::EM_NONE, null );
+		$this->assert_invalid( fn() => $archive->read_from( $this->file, null ) );
 
-		$this->writeRaw( ( new PackageBlueprint( array( $this->package() ) ) )->canonical_json(), ZipArchive::EM_AES_256, 'correct-horse-battery-staple' );
-		$this->assertInvalid( fn() => $archive->read_from( $this->file, 'correct-horse-battery-staple' ) );
+		$this->write_raw( ( new PackageBlueprint( array( $this->package() ) ) )->canonical_json(), ZipArchive::EM_AES_256, 'correct-horse-battery-staple' );
+		$this->assert_invalid( fn() => $archive->read_from( $this->file, 'correct-horse-battery-staple' ) );
 	}
 
-	public function testRejectsUnsupportedLayoutsEncryptionAndContent(): void {
+	public function test_rejects_unsupported_layouts_encryption_and_content(): void {
 		$archive = new BlueprintArchive();
-		$this->writeRaw( '{}', ZipArchive::EM_NONE, null, 'other.json' );
-		$this->assertInvalid( fn() => $archive->read_from( $this->file, null ) );
-		$this->writeRaw( '{}', ZipArchive::EM_NONE, null );
-		$this->assertInvalid( fn() => $archive->read_from( $this->file, null ) );
-		$this->writeRaw( '{}', ZipArchive::EM_NONE, null, BlueprintArchive::ENTRY . '/' );
-		$this->assertInvalid( fn() => $archive->read_from( $this->file, null ) );
+		$this->write_raw( '{}', ZipArchive::EM_NONE, null, 'other.json' );
+		$this->assert_invalid( fn() => $archive->read_from( $this->file, null ) );
+		$this->write_raw( '{}', ZipArchive::EM_NONE, null );
+		$this->assert_invalid( fn() => $archive->read_from( $this->file, null ) );
+		$this->write_raw( '{}', ZipArchive::EM_NONE, null, BlueprintArchive::ENTRY . '/' );
+		$this->assert_invalid( fn() => $archive->read_from( $this->file, null ) );
 
-		$this->writeRaw( ( new PackageBlueprint( array() ) )->canonical_json(), ZipArchive::EM_TRAD_PKWARE, 'correct-horse-battery-staple' );
-		$this->assertInvalid( fn() => $archive->read_from( $this->file, 'correct-horse-battery-staple' ) );
+		$this->write_raw( ( new PackageBlueprint( array() ) )->canonical_json(), ZipArchive::EM_TRAD_PKWARE, 'correct-horse-battery-staple' );
+		$this->assert_invalid( fn() => $archive->read_from( $this->file, 'correct-horse-battery-staple' ) );
 
 		$zip = new ZipArchive();
 		self::assertTrue( $zip->open( $this->file, ZipArchive::CREATE | ZipArchive::OVERWRITE ) );
 		self::assertTrue( $zip->addFromString( BlueprintArchive::ENTRY, ( new PackageBlueprint( array() ) )->canonical_json() ) );
 		self::assertTrue( $zip->addFromString( 'extra.json', '{}' ) );
 		self::assertTrue( $zip->close() );
-		$this->assertInvalid( fn() => $archive->read_from( $this->file, null ) );
+		$this->assert_invalid( fn() => $archive->read_from( $this->file, null ) );
 	}
 
-	public function testUnknownBlueprintVersionFailsWithoutRewritingTheArchive(): void {
+	public function test_unknown_blueprint_version_fails_without_rewriting_the_archive(): void {
 		$json = str_replace(
 			'"version":1',
 			'"version":2',
 			( new PackageBlueprint( array( $this->package() ) ) )->canonical_json()
 		);
-		$this->writeRaw( $json, ZipArchive::EM_NONE, null );
+		$this->write_raw( $json, ZipArchive::EM_NONE, null );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Test-only immutable archive evidence.
 		$before = file_get_contents( $this->file );
 
-		$this->assertInvalid( fn() => ( new BlueprintArchive() )->read_from( $this->file, null ) );
+		$this->assert_invalid( fn() => ( new BlueprintArchive() )->read_from( $this->file, null ) );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Test-only immutable archive evidence.
 		self::assertSame( $before, file_get_contents( $this->file ) );
 	}
 
-	public function testRejectsOversizedAndTamperedArchives(): void {
+	public function test_rejects_oversized_and_tampered_archives(): void {
 		$archive = new BlueprintArchive();
-		$this->writeRaw( str_repeat( 'x', BlueprintArchive::MAX_BYTES + 1 ), ZipArchive::EM_NONE, null );
-		$this->assertInvalid( fn() => $archive->read_from( $this->file, null ) );
+		$this->write_raw( str_repeat( 'x', BlueprintArchive::MAX_BYTES + 1 ), ZipArchive::EM_NONE, null );
+		$this->assert_invalid( fn() => $archive->read_from( $this->file, null ) );
 
 		$archive->write_to( $this->file, new PackageBlueprint( array( $this->package() ) ), null );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Test-only archive corruption.
@@ -157,10 +160,10 @@ final class BlueprintArchiveTest extends TestCase {
 		$bytes[30] = chr( ord( $bytes[30] ) ^ 1 );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test-only archive corruption.
 		self::assertNotFalse( file_put_contents( $this->file, $bytes ) );
-		$this->assertInvalid( fn() => $archive->read_from( $this->file, null ) );
+		$this->assert_invalid( fn() => $archive->read_from( $this->file, null ) );
 	}
 
-	public function testWriteNormalizesLibzipWarnings(): void {
+	public function test_write_normalizes_libzip_warnings(): void {
 		$warnings = array();
 		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Test assertion captures warnings that the codec must contain.
 		set_error_handler(
@@ -178,7 +181,7 @@ final class BlueprintArchiveTest extends TestCase {
 		}
 	}
 
-	private function writeRaw( string $json, int $encryption, ?string $password, string $name = BlueprintArchive::ENTRY ): void {
+	private function write_raw( string $json, int $encryption, ?string $password, string $name = BlueprintArchive::ENTRY ): void {
 		$zip = new ZipArchive();
 		self::assertTrue( $zip->open( $this->file, ZipArchive::CREATE | ZipArchive::OVERWRITE ) );
 		self::assertTrue( $zip->addFromString( $name, $json ) );
@@ -196,7 +199,7 @@ final class BlueprintArchiveTest extends TestCase {
 		return $zip;
 	}
 
-	private function assertInvalid( callable $read ): void {
+	private function assert_invalid( callable $read ): void {
 		try {
 			$read();
 			self::fail( 'Expected archive rejection.' );
@@ -205,13 +208,13 @@ final class BlueprintArchiveTest extends TestCase {
 		}
 	}
 
-	private function requireAes(): void {
+	private function require_aes(): void {
 		if ( ! ZipArchive::isEncryptionMethodSupported( ZipArchive::EM_AES_256, true ) || ! ZipArchive::isEncryptionMethodSupported( ZipArchive::EM_AES_256, false ) ) {
 			self::markTestSkipped( 'The current PHP/libzip runtime does not support ZIP AES-256.' );
 		}
 	}
 
-	private function credentialBlueprint(): PackageBlueprint {
+	private function credential_blueprint(): PackageBlueprint {
 		return new PackageBlueprint(
 			array( $this->package() ),
 			array( new BlueprintCredential( 'gh', 'Team token', 'classic', array( 'owner' => '' ), 'token-canary-value', array( $this->identity() ) ) )

@@ -63,18 +63,17 @@ final class DeploymentAdminPresenter {
 	}
 
 	/** @return array{message: array<string, string>, context: array<string, string>}|null */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain public named-parameter names.
-	public function deployment_failure( mixed $outcomeCode, mixed $reference, string $operation ): ?array {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		if ( ! is_string( $outcomeCode ) || ! is_string( $reference ) || 1 !== preg_match( '/^[a-f0-9]{32}$/D', $reference ) ) {
+
+	public function deployment_failure( mixed $outcome_code, mixed $reference, string $operation ): ?array {
+
+		if ( ! is_string( $outcome_code ) || ! is_string( $reference ) || 1 !== preg_match( '/^[a-f0-9]{32}$/D', $reference ) ) {
 			return null;
 		}
 		status_header( 400 );
 		/* translators: 1: safe deployment result, 2: random support reference, 3: activity page URL. */
-		$message = sprintf( __( '%1$s Reference: <code>%2$s</code>. <a href="%3$s">View deployment activity</a>.', 'ran-booster' ), DeploymentOutcomeMessage::for_code( $outcomeCode ), $reference, admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ) ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
+		$message = sprintf( __( '%1$s Reference: <code>%2$s</code>. <a href="%3$s">View deployment activity</a>.', 'ran-booster' ), DeploymentOutcomeMessage::for_code( $outcome_code ), $reference, admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ) );
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- retain public named-parameter names.
-		return $this->outcome( 'error', 'ran_booster_deployment_failed', $message, $reference, $operation, $outcomeCode );
+		return $this->outcome( 'error', 'ran_booster_deployment_failed', $message, $reference, $operation, $outcome_code );
 	}
 
 	/** @return array{message: array<string, string>, context: array<string, string>}|null */
@@ -127,11 +126,11 @@ final class DeploymentAdminPresenter {
 				return $base;
 			}
 			try {
-				$detail         = $this->attempts->findExact( $attempt_id );
+				$detail         = $this->attempts->find_exact( $attempt_id );
 				$base['detail'] = null !== $detail && hash_equals( $detail->get_correlation_id(), $reference ) ? $detail : null;
 				if ( null !== $base['detail'] && 'restoration_uncertain' === $base['detail']->get_outcome()?->get_code() ) {
 					$data    = $base['detail']->safe_data();
-					$summary = $this->attempts->packageActivitySummary( (string) $data['package_type'], (string) $data['package_slug'] );
+					$summary = $this->attempts->package_activity_summary( (string) $data['package_type'], (string) $data['package_slug'] );
 					if ( null !== $summary['last_successful'] && $summary['last_successful']->get_id() > $base['detail']->get_id() ) {
 						$base['later_verified_attempt'] = $summary['last_successful'];
 					}
@@ -155,7 +154,7 @@ final class DeploymentAdminPresenter {
 				$base['unavailable'] = true;
 				return $base;
 			}
-			$items               = $this->attempts->recentHistory( self::PAGE_SIZE + 1, $before_id );
+			$items               = $this->attempts->recent_history( self::PAGE_SIZE + 1, $before_id );
 			$has_more            = count( $items ) > self::PAGE_SIZE;
 			$items               = $has_more ? array_slice( $items, 0, self::PAGE_SIZE ) : $items;
 			$last                = end( $items );
@@ -184,7 +183,7 @@ final class DeploymentAdminPresenter {
 				continue;
 			}
 			try {
-				$items[ $package->get_identifier() ] = $this->attempts->packageActivitySummary( $type, (string) $package->get_slug() );
+				$items[ $package->get_identifier() ] = $this->attempts->package_activity_summary( $type, (string) $package->get_slug() );
 			} catch ( Throwable $failure ) {
 				$this->log_read_failure( 'package deployment activity unavailable', $failure, 'package_activity_summary', 'read-' . $type . '-package-activity' );
 				return $this->package_activity_result();
@@ -286,6 +285,6 @@ final class DeploymentAdminPresenter {
 		$source     = 'admin';
 		$attempt_id = $attempt_id_input;
 		$context    = array_filter( compact( 'source', 'step', 'operation', 'attempt_id' ), static fn ( mixed $value ): bool => null !== $value );
-		BoosterLogger::logException( $message, $failure, $context );
+		BoosterLogger::log_exception( $message, $failure, $context );
 	}
 }

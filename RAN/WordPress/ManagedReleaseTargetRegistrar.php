@@ -47,16 +47,12 @@ final class ManagedReleaseTargetRegistrar {
 		private PluginRepository $plugins,
 		private ThemeRepository $themes,
 		private ManagedReleaseStore $store,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private WordPressUpdaterLock $updaterLock,
+		private WordPressUpdaterLock $updater_lock,
 		private ProviderRegistry $providers,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?RepositorySourceGuard $sourceGuard = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		private readonly ?string $bulkForbiddenPluginIdentifier = null
+		?RepositorySourceGuard $source_guard = null,
+		private readonly ?string $bulk_forbidden_plugin_identifier = null
 	) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->source_guard = $sourceGuard ?? new RepositorySourceGuard();
+		$this->source_guard = $source_guard ?? new RepositorySourceGuard();
 	}
 
 	public function register(): void {
@@ -64,22 +60,22 @@ final class ManagedReleaseTargetRegistrar {
 			return;
 		}
 		$this->registered = true;
-		if ( ! RuntimeSupport::current()->allowsManagedOperations() ) {
+		if ( ! RuntimeSupport::current()->allows_managed_operations() ) {
 			return;
 		}
 		if ( function_exists( 'add_filter' ) ) {
-			add_filter( 'upgrader_pre_download', array( $this, 'authorizeNativeDownload' ), PHP_INT_MIN, 4 );
-			add_filter( 'upgrader_pre_install', array( $this, 'fenceNativeMutation' ), 1, 2 );
-			add_filter( 'site_transient_update_plugins', array( $this, 'suppressUnauthorizedPluginOffers' ), PHP_INT_MAX );
-			add_filter( 'site_transient_update_themes', array( $this, 'suppressUnauthorizedThemeOffers' ), PHP_INT_MAX );
-			add_action( 'upgrader_process_complete', array( $this, 'completeNativeMutation' ), PHP_INT_MAX, 2 );
+			add_filter( 'upgrader_pre_download', array( $this, 'authorize_native_download' ), PHP_INT_MIN, 4 );
+			add_filter( 'upgrader_pre_install', array( $this, 'fence_native_mutation' ), 1, 2 );
+			add_filter( 'site_transient_update_plugins', array( $this, 'suppress_unauthorized_plugin_offers' ), PHP_INT_MAX );
+			add_filter( 'site_transient_update_themes', array( $this, 'suppress_unauthorized_theme_offers' ), PHP_INT_MAX );
+			add_action( 'upgrader_process_complete', array( $this, 'complete_native_mutation' ), PHP_INT_MAX, 2 );
 		}
 
 		try {
 			$plugins = $this->plugins->all_deployment_plugins( PackageSource::RELEASE_ASSET );
 		} catch ( Throwable $exception ) {
 			$this->failures[ self::key( 'plugin', '*' ) ] = 'repository_read_failed';
-			BoosterLogger::logException(
+			BoosterLogger::log_exception(
 				'managed release repository read unavailable',
 				$exception,
 				array(
@@ -93,7 +89,7 @@ final class ManagedReleaseTargetRegistrar {
 			$themes = $this->themes->all_deployment_themes( PackageSource::RELEASE_ASSET );
 		} catch ( Throwable $exception ) {
 			$this->failures[ self::key( 'theme', '*' ) ] = 'repository_read_failed';
-			BoosterLogger::logException(
+			BoosterLogger::log_exception(
 				'managed release repository read unavailable',
 				$exception,
 				array(
@@ -108,56 +104,45 @@ final class ManagedReleaseTargetRegistrar {
 		$this->register_packages( 'theme', $themes, $conflicts );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function reserveCoreSelfUpdateTarget( string $installedIdentifier ): void {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$identity = self::plugin_target_identity( $installedIdentifier );
+	public function reserve_core_self_update_target( string $installed_identifier ): void {
+		$identity = self::plugin_target_identity( $installed_identifier );
 		if ( '' !== $identity ) {
 			$this->core_self_update_plugin_identifier = $identity;
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function hasReservedCoreSelfUpdateTarget( string $packageType, string $installedIdentifier ): bool {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		return 'plugin' === $packageType
+	public function has_reserved_core_self_update_target( string $package_type, string $installed_identifier ): bool {
+		return 'plugin' === $package_type
 			&& null !== $this->core_self_update_plugin_identifier
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			&& hash_equals( $this->core_self_update_plugin_identifier, self::plugin_target_identity( $installedIdentifier ) );
+			&& hash_equals( $this->core_self_update_plugin_identifier, self::plugin_target_identity( $installed_identifier ) );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function suppressUnauthorizedPluginOffers( mixed $transient ): mixed {
+	public function suppress_unauthorized_plugin_offers( mixed $transient ): mixed {
 		return $this->suppress_unauthorized_offers( 'plugin', $transient );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function suppressUnauthorizedThemeOffers( mixed $transient ): mixed {
+	public function suppress_unauthorized_theme_offers( mixed $transient ): mixed {
 		return $this->suppress_unauthorized_offers( 'theme', $transient );
 	}
 
 	/**
 	 * Snapshot live Core authority before the updater performs remote work.
 	 *
-	 * @param array<string, mixed> $hookExtra
+	 * @param array<string, mixed> $hook_extra
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function authorizeNativeDownload(
+	public function authorize_native_download(
 		mixed $reply,
 		string $package,
 		object $upgrader,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		array $hookExtra
+		array $hook_extra
 	): mixed {
 		unset( $package );
 		$bulk               = true === ( $upgrader->bulk ?? false );
 		$single_target_bulk = $bulk
 			&& 1 === ( $upgrader->update_count ?? null )
 			&& 1 === ( $upgrader->update_current ?? null );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$target = $this->native_target( $hookExtra, $bulk );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		if ( $bulk && null !== $target && 'plugin' === $target['type'] && $this->bulkForbiddenPluginIdentifier === $target['identifier'] ) {
+		$target             = $this->native_target( $hook_extra, $bulk );
+		if ( $bulk && null !== $target && 'plugin' === $target['type'] && $this->bulk_forbidden_plugin_identifier === $target['identifier'] ) {
 			return $this->native_update_error( 'unsupported_context' );
 		}
 		if ( null === $target ) {
@@ -206,8 +191,7 @@ final class ManagedReleaseTargetRegistrar {
 		$outer_lock = null;
 		if ( $automatic ) {
 			try {
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				$outer_lock = $this->updaterLock->currentToken();
+				$outer_lock = $this->updater_lock->current_token();
 			} catch ( Throwable ) {
 				$outer_lock = null;
 			}
@@ -219,8 +203,7 @@ final class ManagedReleaseTargetRegistrar {
 			'authority' => $authority,
 			'automatic' => $automatic,
 			'lock'      => $outer_lock,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'restore'   => ! empty( $hookExtra['temp_backup'] ),
+			'restore'   => ! empty( $hook_extra['temp_backup'] ),
 		);
 
 		return $reply;
@@ -229,19 +212,16 @@ final class ManagedReleaseTargetRegistrar {
 	/**
 	 * Fence the exact single target before WordPress mutates its installation.
 	 *
-	 * @param array<string, mixed> $hookExtra
+	 * @param array<string, mixed> $hook_extra
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function fenceNativeMutation( mixed $reply, array $hookExtra ): mixed {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$target = $this->native_target( $hookExtra, true );
+	public function fence_native_mutation( mixed $reply, array $hook_extra ): mixed {
+		$target = $this->native_target( $hook_extra, true );
 		if ( null === $target ) {
 			return $reply;
 		}
-		$key     = self::key( $target['type'], $target['identifier'] );
-		$pending = $this->native_updates[ $key ] ?? null;
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-		$lock       = $this->updaterLock;
+		$key        = self::key( $target['type'], $target['identifier'] );
+		$pending    = $this->native_updates[ $key ] ?? null;
+		$lock       = $this->updater_lock;
 		$lock_token = null;
 		if ( $reply instanceof \WP_Error ) {
 			unset( $this->native_updates[ $key ] );
@@ -270,7 +250,7 @@ final class ManagedReleaseTargetRegistrar {
 				if ( ! function_exists( 'doing_action' )
 					|| ! doing_action( 'wp_maybe_auto_update' )
 					|| null === $pending['lock']
-					|| ! hash_equals( $pending['lock'], (string) $lock->currentToken() ) ) {
+					|| ! hash_equals( $pending['lock'], (string) $lock->current_token() ) ) {
 					throw new \RuntimeException( 'The WordPress automatic updater lock is unavailable.' );
 				}
 			} else {
@@ -304,11 +284,9 @@ final class ManagedReleaseTargetRegistrar {
 		}
 	}
 
-	/** @param array<string, mixed> $hookExtra */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public and protected methods retain the existing caller and override contracts. Retain the public named-parameter contract.
-	public function completeNativeMutation( object $upgrader, array $hookExtra ): void {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$target = $this->native_target( $hookExtra, ( true === ( $hookExtra['bulk'] ?? false ) ) );
+	/** @param array<string, mixed> $hook_extra */
+	public function complete_native_mutation( object $upgrader, array $hook_extra ): void {
+		$target = $this->native_target( $hook_extra, ( true === ( $hook_extra['bulk'] ?? false ) ) );
 		if ( null === $target ) {
 			return;
 		}
@@ -323,12 +301,11 @@ final class ManagedReleaseTargetRegistrar {
 
 		$release = function () use ( $pending ): void {
 			try {
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Retain the promoted constructor or external DTO property contract.
-				if ( ! $this->updaterLock->release( $pending['lock'] ) ) {
+				if ( ! $this->updater_lock->release( $pending['lock'] ) ) {
 					throw new \RuntimeException( 'The native update lock was replaced.' );
 				}
 			} catch ( Throwable $failure ) {
-				BoosterLogger::logException(
+				BoosterLogger::log_exception(
 					'native update lock release failed',
 					$failure,
 					array( 'step' => 'native_update_lock_release' )
@@ -361,8 +338,7 @@ final class ManagedReleaseTargetRegistrar {
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function failureCode( string $type, string $identifier ): string {
+	public function failure_code( string $type, string $identifier ): string {
 		return $this->failures[ self::key( $type, $identifier ) ]
 			?? $this->failures[ self::key( $type, '*' ) ]
 			?? '';
@@ -440,7 +416,7 @@ final class ManagedReleaseTargetRegistrar {
 				);
 			} catch ( Throwable $exception ) {
 				$conflicts[ $key ] = 'repository_source_unavailable';
-				BoosterLogger::logException(
+				BoosterLogger::log_exception(
 					'managed release repository source unavailable',
 					$exception,
 					array(
@@ -465,17 +441,17 @@ final class ManagedReleaseTargetRegistrar {
 		$provider_code = $package->get_provider_code();
 		if ( null === $configuration
 			|| null === $provider_code
-			|| ! $this->providers->isSealed()
+			|| ! $this->providers->is_sealed()
 			|| ! $this->configuration_matches_package( $type, $identifier, $configuration ) ) {
 			throw new \RuntimeException( 'The managed release target is ineligible.' );
 		}
-		$native_targets = $this->providers->requireCapability( $provider_code, RepositoryReleaseNativeTargets::class );
+		$native_targets = $this->providers->require_capability( $provider_code, RepositoryReleaseNativeTargets::class );
 		$metadata_file  = $this->metadata_path( $type, $configuration, $identifier );
 		$target         = $native_targets->create_native_target(
 			$type,
 			$package->get_repository()->reference,
 			$metadata_file,
-			$configuration->packageRoot(),
+			$configuration->package_root(),
 			$identifier,
 			$configuration->channel(),
 			$package->get_deployment_policy()->value
@@ -582,7 +558,7 @@ final class ManagedReleaseTargetRegistrar {
 			);
 		}
 		try {
-			$this->providers->requireCapability( $provider_code, RepositoryReleaseNativeTargets::class );
+			$this->providers->require_capability( $provider_code, RepositoryReleaseNativeTargets::class );
 		} catch ( Throwable ) {
 			return array(
 				'release'   => true,
@@ -671,7 +647,7 @@ final class ManagedReleaseTargetRegistrar {
 			'repository'             => (string) $package->get_repository(),
 			'credential_id'          => $package->get_credential_id(),
 			'private'                => $package->get_private() ? 1 : 0,
-			'configuration'          => $configuration->toJson(),
+			'configuration'          => $configuration->to_json(),
 			'deployment_policy'      => $package->get_deployment_policy()->value,
 		);
 	}
@@ -689,10 +665,10 @@ final class ManagedReleaseTargetRegistrar {
 		ManagedReleaseConfiguration $configuration
 	): bool {
 		if ( 'theme' === $type ) {
-			return 'style.css' === strtolower( $configuration->metadataFile() );
+			return 'style.css' === strtolower( $configuration->metadata_file() );
 		}
 
-		return basename( $identifier ) === $configuration->metadataFile();
+		return basename( $identifier ) === $configuration->metadata_file();
 	}
 
 	private function metadata_path(
@@ -709,7 +685,7 @@ final class ManagedReleaseTargetRegistrar {
 
 		return 'plugin' === $type
 			? rtrim( $root, '/\\' ) . '/' . $installed_identity
-			: rtrim( $root, '/\\' ) . '/' . $installed_identity . '/' . $configuration->metadataFile();
+			: rtrim( $root, '/\\' ) . '/' . $installed_identity . '/' . $configuration->metadata_file();
 	}
 
 	private static function plugin_target_identity( string $identifier ): string {

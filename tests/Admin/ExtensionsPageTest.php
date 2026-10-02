@@ -19,6 +19,7 @@ require_once __DIR__ . '/ExtensionsPageWordPressFunctions.php';
 
 final class ExtensionsPageTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_dashboard_test_multisite']          = false;
 		$GLOBALS['ran_booster_dashboard_test_actions']            = array();
@@ -33,6 +34,7 @@ final class ExtensionsPageTest extends TestCase {
 		$GLOBALS['ran_booster_admin_test_translations']           = array();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset(
 			$GLOBALS['ran_booster_dashboard_test_multisite'],
@@ -49,7 +51,7 @@ final class ExtensionsPageTest extends TestCase {
 		);
 	}
 
-	public function testRegistersTheOverviewAndTransporterRoutesBeforeExtensions(): void {
+	public function test_registers_the_overview_and_transporter_routes_before_extensions(): void {
 		$booster = $this->booster();
 		$booster->admin_menu();
 
@@ -101,7 +103,7 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertSame( array( $booster, 'render_extensions_page' ), $GLOBALS['ran_booster_extensions_page_submenus'][6]['callback'] );
 	}
 
-	public function testRegistersTranslatedMenuCopyWithoutChangingItsWordPressRouteContract(): void {
+	public function test_registers_translated_menu_copy_without_changing_its_word_press_route_contract(): void {
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster'] = array(
 			'Overview'        => 'Vue d’ensemble',
 			'Install Plugin'  => 'Installer une extension',
@@ -146,7 +148,7 @@ final class ExtensionsPageTest extends TestCase {
 		);
 	}
 
-	public function testDashboardRoutesExtensionsThroughTheSharedPageFrame(): void {
+	public function test_dashboard_routes_extensions_through_the_shared_page_frame(): void {
 		$dashboard = new class() extends Dashboard {
 			/** @var array<string, mixed> */
 			public array $captured = array();
@@ -166,13 +168,13 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertTrue( $dashboard->get_extensions( array( array( 'id' => 'example' ) ), '/plugins.php' ) );
 		self::assertSame( 'extensions', $dashboard->captured['view'] );
 		self::assertArrayNotHasKey( 'tabs', $dashboard->captured['data'] );
-		self::assertSame( '/plugins.php', $dashboard->captured['data']['pluginsUrl'] );
+		self::assertSame( '/plugins.php', $dashboard->captured['data']['plugins_url'] );
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testRendersTwoOfflineCardsWithTruthfulUnavailableControls(): void {
-		$this->defineApisCompatibleWithExistingExtensionCatalogue();
+	public function test_renders_two_offline_cards_with_truthful_unavailable_controls(): void {
+		$this->define_apis_compatible_with_existing_extension_catalogue();
 
 		$output = $this->render();
 
@@ -226,7 +228,7 @@ final class ExtensionsPageTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testRendersTranslatedCatalogueCopyAndNotInstalledStateWithoutChangingProductData(): void {
+	public function test_renders_translated_catalogue_copy_and_not_installed_state_without_changing_product_data(): void {
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Connect Booster to Bitbucket Cloud repositories for managed deployments.'] = 'Connectez Booster aux dépôts Bitbucket Cloud pour des déploiements gérés.';
 
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Add Bitbucket Cloud as a first-party repository provider while Booster continues to own credentials, webhook verification, and deployment policy.'] = 'Ajoutez Bitbucket Cloud comme fournisseur de dépôts intégré.';
@@ -255,8 +257,8 @@ final class ExtensionsPageTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testInstalledStateComesOnlyFromLocalWordPressPluginState(): void {
-		$this->defineApisCompatibleWithExistingExtensionCatalogue();
+	public function test_installed_state_comes_only_from_local_word_press_plugin_state(): void {
+		$this->define_apis_compatible_with_existing_extension_catalogue();
 		$GLOBALS['ran_booster_extensions_plugins']                = array(
 			'ran-booster-bitbucket/ran-booster-bitbucket.php' => array( 'Name' => 'Bitbucket' ),
 			'ran-booster-release-deployments/ran-booster-release-deployments.php' => array( 'Name' => 'Releases' ),
@@ -275,8 +277,8 @@ final class ExtensionsPageTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testRendersTranslatedActiveAndInstalledInactiveStateLabelsWithoutChangingStateControls(): void {
-		$this->defineApisCompatibleWithExistingExtensionCatalogue();
+	public function test_renders_translated_active_and_installed_inactive_state_labels_without_changing_state_controls(): void {
+		$this->define_apis_compatible_with_existing_extension_catalogue();
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster'] = array(
 			'Active'              => 'Actif',
 			'Installed, inactive' => 'Installé, inactif',
@@ -299,7 +301,7 @@ final class ExtensionsPageTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testMismatchedRequiredApiMarksTheCardIncompatible(): void {
+	public function test_mismatched_required_api_marks_the_card_incompatible(): void {
 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 10 );
 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
 		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
@@ -317,7 +319,7 @@ final class ExtensionsPageTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testRendersTranslatedIncompatibleStateLabelWhileKeepingItsErrorState(): void {
+	public function test_renders_translated_incompatible_state_label_while_keeping_its_error_state(): void {
 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 10 );
 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
 		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
@@ -335,11 +337,11 @@ final class ExtensionsPageTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testApiThirteenHostDoesNotClaimCompatibilityWithApiTwelveBitbucket(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 13 );
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
-		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
-		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );
+	public function test_api_twelve_host_does_not_claim_compatibility_with_api_fourteen_bitbucket(): void {
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
+		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 3 );
+		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 3 );
 		$GLOBALS['ran_booster_extensions_plugins']['ran-booster-bitbucket/ran-booster-bitbucket.php'] = array( 'Name' => 'Bitbucket' );
 		$GLOBALS['ran_booster_extensions_active_plugins'] = array( 'ran-booster-bitbucket/ran-booster-bitbucket.php' );
 
@@ -352,11 +354,11 @@ final class ExtensionsPageTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testApiThreeHostDoesNotClaimCompatibilityWithApiTwoMigrator(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
-		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 3 );
-		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );
+	public function test_api_two_host_does_not_claim_compatibility_with_api_three_migrator(): void {
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
+		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
+		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 3 );
 		$GLOBALS['ran_booster_extensions_plugins']['ran-booster-wp-pusher-migrator/ran-booster-wp-pusher-migrator.php'] = array( 'Name' => 'Migrator' );
 		$GLOBALS['ran_booster_extensions_active_plugins'] = array( 'ran-booster-wp-pusher-migrator/ran-booster-wp-pusher-migrator.php' );
 
@@ -367,14 +369,14 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringNotContainsString( '>Active<', $output );
 	}
 
-	public function testDeniedRequestRendersNothing(): void {
+	public function test_denied_request_renders_nothing(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = false;
 
 		self::assertSame( '', $this->render() );
 		self::assertSame( array( 'manage_options' ), $GLOBALS['ran_booster_test_capability_checks'] );
 	}
 
-	public function testPluginInventoryFailureRendersOnlyTheSafeShell(): void {
+	public function test_plugin_inventory_failure_renders_only_the_safe_shell(): void {
 		$GLOBALS['ran_booster_extensions_plugins_failure'] = new \RuntimeException( 'private path' );
 
 		$output = $this->render();
@@ -384,11 +386,11 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringNotContainsString( 'plugin-card', $output );
 	}
 
-	private function defineApisCompatibleWithExistingExtensionCatalogue(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
-		define( 'RAN_BOOSTER_ADDON_API_VERSION', 16 );
-		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
-		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 2 );
+	private function define_apis_compatible_with_existing_extension_catalogue(): void {
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
+		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 3 );
+		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 3 );
 	}
 
 	private function render(): string {
@@ -410,14 +412,14 @@ final class ExtensionsPageTest extends TestCase {
 				public function get_themes_create(): void {}
 				public function get_themes(): void {}
 				/** @param list<array<string, mixed>> $extensions */
-				public function get_extensions( array $extensions, string $pluginsUrl ): void {
+				public function get_extensions( array $extensions, string $plugins_url ): void {
 					require dirname( __DIR__, 2 ) . '/views/extensions.php';
 				}
 			}
 		);
-		$booster              = new Booster( $container );
-		$booster->boosterPath = dirname( __DIR__, 2 );
-		$booster->boosterUrl  = 'https://example.test/wp-content/plugins/ran-booster';
+		$booster               = new Booster( $container );
+		$booster->booster_path = dirname( __DIR__, 2 );
+		$booster->booster_url  = 'https://example.test/wp-content/plugins/ran-booster';
 
 		return $booster;
 	}

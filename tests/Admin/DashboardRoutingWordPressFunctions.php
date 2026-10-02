@@ -8,8 +8,8 @@ function is_wp_error( mixed $value ): bool {
 	return $value instanceof \WP_Error;
 }
 
-function wp_strip_all_tags( mixed $value, bool $removeBreaks = false ): string {
-	unset( $removeBreaks );
+function wp_strip_all_tags( mixed $value, bool $remove_breaks = false ): string {
+	unset( $remove_breaks );
 
 	return (string) $value;
 }
@@ -26,12 +26,12 @@ function network_admin_url( string $path = '' ): string {
 	return 'https://example.test/wp-admin/network/' . ltrim( $path, '/' );
 }
 
-function add_query_arg( array|string $arguments, string $valueOrUrl, ?string $url = null ): string {
+function add_query_arg( array|string $arguments, string $value_or_url, ?string $url = null ): string {
 	if ( is_string( $arguments ) ) {
-		$arguments = array( $arguments => $valueOrUrl );
+		$arguments = array( $arguments => $value_or_url );
 		$url       = (string) $url;
 	} else {
-		$url = $valueOrUrl;
+		$url = $value_or_url;
 	}
 
 	return $url . ( str_contains( $url, '?' ) ? '&' : '?' ) . http_build_query( $arguments );
@@ -80,10 +80,10 @@ function set_transient( string $key, mixed $value, int $expiration ): bool {
 	return true;
 }
 
-function get_user_meta( int $userId, string $key, bool $single ): mixed {
+function get_user_meta( int $user_id, string $key, bool $single ): mixed {
 	unset( $single );
 
-	return $GLOBALS['ran_booster_dashboard_test_user_meta'][ $userId ][ $key ] ?? '';
+	return $GLOBALS['ran_booster_dashboard_test_user_meta'][ $user_id ][ $key ] ?? '';
 }
 
 if ( ! function_exists( __NAMESPACE__ . '\\wp_create_nonce' ) ) {

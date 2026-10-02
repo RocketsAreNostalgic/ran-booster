@@ -18,29 +18,24 @@ final class CredentialUsageReader {
 
 	public function __construct(
 		private ?object $database = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public named-argument contract and its promoted property.
-		private ?string $tableName = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public named-argument contract.
-		?Database $databaseLifecycle = null
+		private ?string $table_name = null,
+		?Database $database_lifecycle = null
 	) {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public named-argument contract.
-		$this->database_lifecycle = $databaseLifecycle ?? new Database( $database );
+		$this->database_lifecycle = $database_lifecycle ?? new Database( $database );
 	}
 
 	/**
 	 * @return array{total: int, packages: list<array{type: string, identifier: string, installed: bool}>}
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public named-argument contract.
-	public function read( ProviderCode|string $provider, string $credentialId ): array {
+	public function read( ProviderCode|string $provider, string $credential_id ): array {
 		try {
-			$this->database_lifecycle->requireReady();
+			$this->database_lifecycle->require_ready();
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
 			throw new RuntimeException( 'Booster could not verify repository credential usage because database storage is unavailable.' );
 		}
 
 		$provider_code = $provider instanceof ProviderCode ? $provider : ProviderCode::parse( $provider );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public named-argument contract.
-		if ( 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/D', $credentialId ) ) {
+		if ( 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/D', $credential_id ) ) {
 			throw new RuntimeException( 'The repository credential identity is invalid.' );
 		}
 
@@ -52,11 +47,9 @@ final class CredentialUsageReader {
 		if ( ! is_object( $database ) ) {
 			throw new RuntimeException( 'Booster could not verify repository credential usage.' );
 		}
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve the public named-argument contract and its promoted property.
-		$table = $this->tableName ?? ran_booster_table_name();
-		$where = ' WHERE provider = %s AND credential_id = %s';
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public named-argument contract.
-		$count_query = $database->prepare( 'SELECT COUNT(*) FROM %i' . $where, $table, $provider_code->value, $credentialId );
+		$table       = $this->table_name ?? ran_booster_table_name();
+		$where       = ' WHERE provider = %s AND credential_id = %s';
+		$count_query = $database->prepare( 'SELECT COUNT(*) FROM %i' . $where, $table, $provider_code->value, $credential_id );
 		if ( ! is_string( $count_query ) ) {
 			throw new RuntimeException( 'Booster could not verify repository credential usage.' );
 		}
@@ -83,8 +76,7 @@ final class CredentialUsageReader {
 			'SELECT type, package FROM %i' . $where . ' ORDER BY type ASC, package ASC, id ASC LIMIT %d',
 			$table,
 			$provider_code->value,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public named-argument contract.
-			$credentialId,
+			$credential_id,
 			self::DISPLAY_LIMIT
 		);
 		if ( ! is_string( $detail_query ) ) {

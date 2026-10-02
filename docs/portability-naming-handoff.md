@@ -1,5 +1,10 @@
 # Portability facade/DTO naming handoff
 
+> Historical tranche evidence: the package identities, boundaries and retained
+> symbols below describe this earlier handoff. The current beta.31 naming
+> contract is documented in [CONTRIBUTING](../CONTRIBUTING.md#current-php-naming-contract).
+> These earlier checks do not qualify the recovered combined candidate.
+
 ## Recovered source contract
 
 The coordinator recovered Core #221 (`4ff1077a3367920a89ec3e574d81d446f293625e`)

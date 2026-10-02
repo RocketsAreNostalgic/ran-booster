@@ -13,7 +13,7 @@ if ( ! in_array( $phase, array( 'pre', 'post', 'foreign' ), true )
 
 $booster  = require __DIR__ . '/core-container-fixture.php';
 $attempts = $booster->make( RAN\Deployment\DeploymentAttemptRepository::class );
-$attempt  = $attempts->claimNext();
+$attempt  = $attempts->claim_next();
 if ( null === $attempt ) {
 	throw new RuntimeException( 'The contender could not claim the second attempt.' );
 }

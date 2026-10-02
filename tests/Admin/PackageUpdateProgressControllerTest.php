@@ -22,6 +22,7 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 	private AttemptRepositoryDatabase $database;
 	private DeploymentAttemptRepository $repository;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$_POST = array();
 		$GLOBALS['ran_booster_repository_admin_allowed']      = true;
@@ -36,6 +37,7 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 		);
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_POST = array();
 		unset(
@@ -45,9 +47,9 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 		);
 	}
 
-	public function testReturnsOnlyTheMatchedAttemptState(): void {
-		$attempt                 = $this->queuedAttempt();
-		$_POST                   = $this->requestFor( $attempt );
+	public function test_returns_only_the_matched_attempt_state(): void {
+		$attempt                 = $this->queued_attempt();
+		$_POST                   = $this->request_for( $attempt );
 		$this->database->queries = array();
 
 		$result = ( new PackageUpdateProgressController( $this->repository ) )->handle();
@@ -66,9 +68,9 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 		self::assertCount( 1, $this->database->queries );
 	}
 
-	public function testMismatchedReferenceDoesNotDiscloseTheAttempt(): void {
-		$attempt                                 = $this->queuedAttempt();
-		$_POST                                   = $this->requestFor( $attempt );
+	public function test_mismatched_reference_does_not_disclose_the_attempt(): void {
+		$attempt                                 = $this->queued_attempt();
+		$_POST                                   = $this->request_for( $attempt );
 		$_POST['attempts'][ $attempt->get_id() ] = str_repeat( 'f', 32 );
 
 		$result = ( new PackageUpdateProgressController( $this->repository ) )->handle();
@@ -77,9 +79,9 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 		self::assertSame( array(), $result['data']['items'] );
 	}
 
-	public function testAuthorizationAndNonceFailuresPerformNoReads(): void {
-		$attempt = $this->queuedAttempt();
-		$_POST   = $this->requestFor( $attempt );
+	public function test_authorization_and_nonce_failures_perform_no_reads(): void {
+		$attempt = $this->queued_attempt();
+		$_POST   = $this->request_for( $attempt );
 
 		foreach ( array( 'authorization', 'nonce', 'capability' ) as $failure ) {
 			$this->database->queries                              = array();
@@ -98,7 +100,7 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 		}
 	}
 
-	public function testMalformedAndOversizedRequestsFailBeforeStorage(): void {
+	public function test_malformed_and_oversized_requests_fail_before_storage(): void {
 		foreach ( array(
 			array(),
 			array( 'not-an-id' => str_repeat( 'a', 32 ) ),
@@ -118,10 +120,10 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 		}
 	}
 
-	public function testStorageFailureReturnsOneSafeError(): void {
-		$attempt                   = $this->queuedAttempt();
-		$_POST                     = $this->requestFor( $attempt );
-		$this->database->failReads = true;
+	public function test_storage_failure_returns_one_safe_error(): void {
+		$attempt                    = $this->queued_attempt();
+		$_POST                      = $this->request_for( $attempt );
+		$this->database->fail_reads = true;
 
 		$result = ( new PackageUpdateProgressController( $this->repository ) )->handle();
 
@@ -131,7 +133,7 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 		self::assertStringNotContainsString( 'database', strtolower( $result['data']['message'] ) );
 	}
 
-	private function queuedAttempt(): DeploymentAttempt {
+	private function queued_attempt(): DeploymentAttempt {
 		$request = new DeploymentRequest(
 			'owner/example',
 			null,
@@ -143,7 +145,7 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 			7
 		);
 
-		return $this->repository->admitManualBatch(
+		return $this->repository->admit_manual_batch(
 			array(
 				array(
 					'package_type'            => 'plugin',
@@ -159,7 +161,7 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 	}
 
 	/** @return array{package_type: string, attempts: array<int, string>} */
-	private function requestFor( DeploymentAttempt $attempt ): array {
+	private function request_for( DeploymentAttempt $attempt ): array {
 		return array(
 			'package_type' => 'plugin',
 			'attempts'     => array( $attempt->get_id() => $attempt->get_correlation_id() ),

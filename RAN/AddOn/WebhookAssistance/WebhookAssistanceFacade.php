@@ -10,30 +10,30 @@ use RAN\RepositoryProvider\RepositoryWebhookOperationResult;
 /** Fixed ordinary-add-on surface for repository-webhook-management/3. */
 interface WebhookAssistanceFacade {
 
-	public function readiness( string $providerCode ): AssistanceReadiness;
-	public function target( string $providerCode, string $repositoryId ): ?AssistanceTarget;
+	public function readiness( string $provider_code ): AssistanceReadiness;
+	public function target( string $provider_code, string $repository_id ): ?AssistanceTarget;
 	/** @return list<array{id:string,label:string,kind:string,destroy_on:?string}> */
-	public function credentialChoices( string $providerCode ): array;
+	public function credential_choices( string $provider_code ): array;
 	/** @return list<array{id:string,label:string,scope:string}> */
-	public function webhookProfileChoices( string $providerCode, string $repositoryId ): array;
-	public function profile( string $providerCode, string $repositoryId, string $profileId ): ?WebhookProfileMetadata;
-	public function assessSetup( AssistanceTarget $target, ?string $credentialProfileId, string $nonce ): RepositoryWebhookFitnessResult;
+	public function webhook_profile_choices( string $provider_code, string $repository_id ): array;
+	public function profile( string $provider_code, string $repository_id, string $profile_id ): ?WebhookProfileMetadata;
+	public function assess_setup( AssistanceTarget $target, ?string $credential_profile_id, string $nonce ): RepositoryWebhookFitnessResult;
 
-	public function assessCheck( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookFitnessResult;
+	public function assess_check( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookFitnessResult;
 
-	public function assessReconfigure( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookFitnessResult;
+	public function assess_reconfigure( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookFitnessResult;
 
-	public function assessRemove( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookFitnessResult;
+	public function assess_remove( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookFitnessResult;
 
-	public function assessTest( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookFitnessResult;
+	public function assess_test( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookFitnessResult;
 
-	public function setup( AssistanceTarget $target, ?string $credentialProfileId, string $nonce, ?string $webhookProfileId = null ): RepositoryWebhookOperationResult;
+	public function setup( AssistanceTarget $target, ?string $credential_profile_id, string $nonce, ?string $webhook_profile_id = null ): RepositoryWebhookOperationResult;
 
-	public function check( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookOperationResult;
+	public function check( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookOperationResult;
 
-	public function reconfigure( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookOperationResult;
+	public function reconfigure( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookOperationResult;
 
-	public function remove( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookOperationResult;
+	public function remove( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookOperationResult;
 
-	public function test( AssistanceTarget $target, ?string $credentialProfileId, string $hookId, string $profileId, int $profileRevision, string $nonce ): RepositoryWebhookOperationResult;
+	public function test( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookOperationResult;
 }

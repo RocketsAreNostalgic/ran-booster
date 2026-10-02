@@ -37,7 +37,7 @@ final class NativePortabilityFacade extends PortabilityFacade {
 	}
 
 	public function review( PortabilityCandidate $candidate, string $nonce ): PortabilityReviewResult {
-		if ( ! RuntimeSupport::current()->allowsManagedOperations() ) {
+		if ( ! RuntimeSupport::current()->allows_managed_operations() ) {
 			return $this->blocked_review(
 				$candidate,
 				'unsupported_runtime',
@@ -53,7 +53,7 @@ final class NativePortabilityFacade extends PortabilityFacade {
 		}
 
 		try {
-			return $this->application->reviewCandidate( $candidate );
+			return $this->application->review_candidate( $candidate );
 		} catch ( Throwable $failure ) {
 			$this->log_failure( 'review', $failure );
 
@@ -70,7 +70,7 @@ final class NativePortabilityFacade extends PortabilityFacade {
 		string $expected_fingerprint,
 		string $nonce
 	): PortabilityApplyResult {
-		if ( ! RuntimeSupport::current()->allowsManagedOperations() ) {
+		if ( ! RuntimeSupport::current()->allows_managed_operations() ) {
 			return new PortabilityApplyResult(
 				PortabilityApplyResult::FAILED,
 				'unsupported_runtime',
@@ -88,7 +88,7 @@ final class NativePortabilityFacade extends PortabilityFacade {
 		}
 
 		try {
-			return $this->application->applyCandidate( $candidate, $expected_fingerprint );
+			return $this->application->apply_candidate( $candidate, $expected_fingerprint );
 		} catch ( Throwable $failure ) {
 			$this->log_failure( 'apply', $failure );
 
@@ -135,7 +135,7 @@ final class NativePortabilityFacade extends PortabilityFacade {
 	}
 
 	private function log_failure( string $operation, Throwable $failure ): void {
-		BoosterLogger::logException(
+		BoosterLogger::log_exception(
 			'portability facade failed',
 			$failure,
 			array(

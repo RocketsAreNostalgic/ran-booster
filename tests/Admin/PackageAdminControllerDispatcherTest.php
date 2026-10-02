@@ -42,6 +42,7 @@ use WP_Error;
 
 final class PackageAdminControllerDispatcherTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$_POST                     = array();
 		$_SERVER['REQUEST_METHOD'] = 'POST';
@@ -52,6 +53,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		$GLOBALS['ran_booster_test_nonce_valid']                 = true;
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_POST = array();
 		unset( $_SERVER['REQUEST_METHOD'] );
@@ -67,7 +69,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 	/**
 	 * @return array<string, array{string, array<string, string>}>
 	 */
-	public static function unavailableProviderEdits(): array {
+	public static function unavailable_provider_edits(): array {
 		return array(
 			'plugin' => array(
 				'edit-plugin',
@@ -89,8 +91,8 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 	}
 
 	/** @param array<string, string> $request */
-	#[DataProvider( 'unavailableProviderEdits' )]
-	public function testUnavailableStoredProviderRejectsEditBeforeResolvingTheSubmittedProvider(
+	#[DataProvider( 'unavailable_provider_edits' )]
+	public function test_unavailable_stored_provider_rejects_edit_before_resolving_the_submitted_provider(
 		string $action,
 		array $request
 	): void {
@@ -114,52 +116,52 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 
 		$this->dispatcher( $dashboard, $providers, $plugins, $themes )->dispatch_post_requests();
 
-		self::assertSame( 0, $submitted->getClient()->getRequests() );
+		self::assertSame( 0, $submitted->get_client()->get_requests() );
 		self::assertSame( 1, $plugins->lookups + $themes->lookups );
 	}
 
-	public function testUnlinkRemainsAvailableWhenTheStoredProviderIsUnavailable(): void {
+	public function test_unlink_remains_available_when_the_stored_provider_is_unavailable(): void {
 		$package              = EditBoundaryPackage::make( 'fixture/fixture.php', 'temporarily-offline' );
 		$plugins              = new EditBoundaryPluginRepository( $package );
 		$themes               = new EditBoundaryThemeRepository( $package );
 		$providers            = new ProviderRegistry();
-		$unlinkInput          = array(
+		$unlink_input         = array(
 			'action' => 'unlink-plugin',
 			'file'   => 'fixture/fixture.php',
 		);
-		$_POST['ran_booster'] = $unlinkInput;
+		$_POST['ran_booster'] = $unlink_input;
 
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::never() )->method( 'add_message' );
-		$dashboard->expects( self::once() )->method( 'post_package_operation' )->with( 'unlink-plugin', $unlinkInput );
+		$dashboard->expects( self::once() )->method( 'post_package_operation' )->with( 'unlink-plugin', $unlink_input );
 
 		$this->dispatcher( $dashboard, $providers, $plugins, $themes )->dispatch_post_requests();
 
 		self::assertSame( 0, $plugins->lookups );
 	}
 
-	public function testThemeUnlinkRemainsAvailableWhenTheStoredProviderIsUnavailable(): void {
+	public function test_theme_unlink_remains_available_when_the_stored_provider_is_unavailable(): void {
 		$package              = EditBoundaryPackage::make( 'fixture-theme', 'temporarily-offline' );
 		$plugins              = new EditBoundaryPluginRepository( $package );
 		$themes               = new EditBoundaryThemeRepository( $package );
 		$providers            = new ProviderRegistry();
-		$unlinkInput          = array(
+		$unlink_input         = array(
 			'action'     => 'unlink-theme',
 			'stylesheet' => 'fixture-theme',
 		);
-		$_POST['ran_booster'] = $unlinkInput;
+		$_POST['ran_booster'] = $unlink_input;
 
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::never() )->method( 'add_message' );
-		$dashboard->expects( self::once() )->method( 'post_package_operation' )->with( 'unlink-theme', $unlinkInput );
+		$dashboard->expects( self::once() )->method( 'post_package_operation' )->with( 'unlink-theme', $unlink_input );
 
 		$this->dispatcher( $dashboard, $providers, $plugins, $themes )->dispatch_post_requests();
 
 		self::assertSame( 0, $themes->lookups );
 	}
 
-	#[DataProvider( 'trustedPublicLookupPackages' )]
-	public function testEditSaveAndBranchCheckUsesTrustedPublicLookupOnlyForStoredPublicPackage( bool $private, ?string $expectedLookupCredential, bool $expectedPublicOnly ): void {
+	#[DataProvider( 'trusted_public_lookup_packages' )]
+	public function test_edit_save_and_branch_check_uses_trusted_public_lookup_only_for_stored_public_package( bool $private, ?string $expected_lookup_credential, bool $expected_public_only ): void {
 		$package          = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh', $private, 'deployment-profile' );
 		$plugins          = new EditBoundaryPluginRepository( $package );
 		$themes           = new EditBoundaryThemeRepository( $package );
@@ -194,16 +196,16 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			plugins: $plugins,
 			themes: $themes,
 			providers: $providers,
-			publicLookupProfiles: $lookup
+			public_lookup_profiles: $lookup
 		) )->manage( $dashboard, 'edit-plugin', $request, true );
 
 		self::assertSame( 'https://example.test/redirect', $result );
 		self::assertCount( 1, $provider->requests );
-		self::assertSame( $expectedLookupCredential, $provider->requests[0]->credentialId );
-		self::assertSame( $expectedPublicOnly, $provider->requests[0]->publicOnly );
+		self::assertSame( $expected_lookup_credential, $provider->requests[0]->credential_id );
+		self::assertSame( $expected_public_only, $provider->requests[0]->public_only );
 	}
 
-	public function testEditSaveAndBranchCheckKeepsAnonymousPublicLookupDistinctFromSubmittedPackageAccess(): void {
+	public function test_edit_save_and_branch_check_keeps_anonymous_public_lookup_distinct_from_submitted_package_access(): void {
 		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh', false, 'deployment-profile' );
 		$plugins   = new EditBoundaryPluginRepository( $package );
 		$themes    = new EditBoundaryThemeRepository( $package );
@@ -236,16 +238,16 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			plugins: $plugins,
 			themes: $themes,
 			providers: $providers,
-			publicLookupProfiles: new InMemoryPublicRepositoryLookupProfileStore()
+			public_lookup_profiles: new InMemoryPublicRepositoryLookupProfileStore()
 		) )->manage( $dashboard, 'edit-plugin', $request, true );
 
 		self::assertSame( 'https://example.test/redirect', $result );
 		self::assertCount( 1, $provider->requests );
-		self::assertNull( $provider->requests[0]->credentialId );
-		self::assertTrue( $provider->requests[0]->publicOnly );
+		self::assertNull( $provider->requests[0]->credential_id );
+		self::assertTrue( $provider->requests[0]->public_only );
 	}
 
-	public function testInvalidSubdirectoryNamesTheFieldBeforeProviderResolution(): void {
+	public function test_invalid_subdirectory_names_the_field_before_provider_resolution(): void {
 		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh' );
 		$plugins   = new EditBoundaryPluginRepository( $package );
 		$themes    = new EditBoundaryThemeRepository( $package );
@@ -284,7 +286,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		self::assertCount( 0, $provider->requests );
 	}
 
-	public function testEditSaveAndBranchCheckRefusesPublicPackageWhenProviderCannotMakeTrustedPublicLookup(): void {
+	public function test_edit_save_and_branch_check_refuses_public_package_when_provider_cannot_make_trusted_public_lookup(): void {
 		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh', false, 'deployment-profile' );
 		$plugins   = new EditBoundaryPluginRepository( $package );
 		$themes    = new EditBoundaryThemeRepository( $package );
@@ -309,14 +311,14 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			plugins: $plugins,
 			themes: $themes,
 			providers: $providers,
-			publicLookupProfiles: new InMemoryPublicRepositoryLookupProfileStore()
+			public_lookup_profiles: new InMemoryPublicRepositoryLookupProfileStore()
 		) )->manage( $dashboard, 'edit-plugin', $request, true );
 
 		self::assertFalse( $result );
 		self::assertSame( array(), $provider->requests );
 	}
 
-	public function testEditSaveAndBranchCheckRefusesPublicPackageWhenProviderDisallowsDefaultPublicProfile(): void {
+	public function test_edit_save_and_branch_check_refuses_public_package_when_provider_disallows_default_public_profile(): void {
 		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh', false, 'deployment-profile' );
 		$plugins   = new EditBoundaryPluginRepository( $package );
 		$themes    = new EditBoundaryThemeRepository( $package );
@@ -341,7 +343,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			plugins: $plugins,
 			themes: $themes,
 			providers: $providers,
-			publicLookupProfiles: new InMemoryPublicRepositoryLookupProfileStore()
+			public_lookup_profiles: new InMemoryPublicRepositoryLookupProfileStore()
 		) )->manage( $dashboard, 'edit-plugin', $request, true );
 
 		self::assertFalse( $result );
@@ -349,7 +351,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 	}
 
 	/** @return array<string, array{bool, string|null, bool}> */
-	public static function trustedPublicLookupPackages(): array {
+	public static function trusted_public_lookup_packages(): array {
 		return array(
 			'public branch package' => array( false, 'public-profile', true ),
 			'private package'       => array( true, 'deployment-profile', false ),
@@ -379,9 +381,9 @@ final class EditBoundaryPackage extends AbstractPackage {
 	private function __construct( private readonly string $identifier ) {
 	}
 
-	public static function make( string $identifier, string $provider, bool $private = false, ?string $credentialId = null ): self {
+	public static function make( string $identifier, string $provider, bool $private = false, ?string $credential_id = null ): self {
 		$package = new self( $identifier );
-		$package->set_repository( new ManagedRepository( $provider, 'owner/original', 'repository-id', 'main', $private, $credentialId ) );
+		$package->set_repository( new ManagedRepository( $provider, 'owner/original', 'repository-id', 'main', $private, $credential_id ) );
 
 		return $package;
 	}
@@ -426,7 +428,7 @@ final class CapturingPublicLookupProvider implements RepositoryProvider, Credent
 	/** @var list<RepositoryLookupRequest> */
 	public array $requests = array();
 
-	public function __construct( private readonly bool $supportsDefaultPublicProfile = true ) {
+	public function __construct( private readonly bool $supports_default_public_profile = true ) {
 	}
 
 	public function get_metadata(): ProviderMetadata {
@@ -434,7 +436,7 @@ final class CapturingPublicLookupProvider implements RepositoryProvider, Credent
 	}
 
 	public function get_public_repository_browse_metadata(): PublicRepositoryBrowseMetadata {
-		return new PublicRepositoryBrowseMetadata( $this->supportsDefaultPublicProfile );
+		return new PublicRepositoryBrowseMetadata( $this->supports_default_public_profile );
 	}
 
 	public function browse_repositories( RepositoryBrowseRequest $request ): RepositoryBrowseResult {
@@ -452,7 +454,7 @@ final class CapturingPublicLookupProvider implements RepositoryProvider, Credent
 			'repository-id',
 			false,
 			'main',
-			$request->credentialId
+			$request->credential_id
 		);
 	}
 
@@ -483,7 +485,7 @@ final class CapturingRepositoryProvider implements RepositoryProvider {
 			'repository-id',
 			true,
 			'main',
-			$request->credentialId
+			$request->credential_id
 		);
 	}
 

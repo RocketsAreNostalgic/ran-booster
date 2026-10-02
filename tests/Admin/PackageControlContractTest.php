@@ -11,14 +11,14 @@ use PHPUnit\Framework\TestCase;
 final class PackageControlContractTest extends TestCase {
 
 	/** @return iterable<string, array{string, string, string, string, string, string}> */
-	public static function controlProvider(): iterable {
+	public static function control_provider(): iterable {
 		foreach ( self::controls() as $name => $control ) {
 			yield $name => $control;
 		}
 	}
 
-	#[DataProvider( 'controlProvider' )]
-	public function testEveryControlHasAnExplicitInteractionContract(
+	#[DataProvider( 'control_provider' )]
+	public function test_every_control_has_an_explicit_interaction_contract(
 		string $surface,
 		string $transport,
 		string $authority,
@@ -34,7 +34,7 @@ final class PackageControlContractTest extends TestCase {
 		self::assertNotSame( '', $destination );
 	}
 
-	public function testCurrentTemplatesExposeEveryInventoriedTransport(): void {
+	public function test_current_templates_expose_every_inventoried_transport(): void {
 		$create    = $this->view( 'create.php' );
 		$edit      = $this->view( 'edit.php' );
 		$index     = $this->view( 'index.php' );
@@ -50,10 +50,10 @@ final class PackageControlContractTest extends TestCase {
 		self::assertSame( 2, substr_count( $danger, 'data-ran-booster-package-mutation' ) );
 		self::assertSame( 2, substr_count( $danger, 'data-ran-booster-native-submit' ) );
 		self::assertStringContainsString( 'data-ran-booster-package-mutation', $reinstall );
-		$associatedSettingsInclude = 'hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]"';
-		self::assertStringContainsString( $associatedSettingsInclude, $edit );
-		self::assertStringContainsString( $associatedSettingsInclude, $reinstall );
-		self::assertStringContainsString( $associatedSettingsInclude, $readiness );
+		$associated_settings_include = 'hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]"';
+		self::assertStringContainsString( $associated_settings_include, $edit );
+		self::assertStringContainsString( $associated_settings_include, $reinstall );
+		self::assertStringContainsString( $associated_settings_include, $readiness );
 		self::assertStringContainsString( 'hx-get=', $source );
 		self::assertStringContainsString( 'data-ran-booster-enhanced-mutation', $source );
 		self::assertStringContainsString( 'data-ran-booster-error-target="#ran-booster-package-mutation-error"', $source );
@@ -69,10 +69,10 @@ final class PackageControlContractTest extends TestCase {
 		self::assertStringContainsString( 'name="ran_booster[check_repository_branch_after_save]"', $readiness );
 	}
 
-	public function testPluginAndThemeUseOneSharedTemplateSet(): void {
+	public function test_plugin_and_theme_use_one_shared_template_set(): void {
 		foreach ( array( 'create.php', 'edit.php', 'index.php', 'danger-zone.php', 'source-choices.php' ) as $view ) {
 			$source = $this->view( $view );
-			self::assertStringContainsString( '$packageView', $source, $view );
+			self::assertStringContainsString( '$package_view', $source, $view );
 			self::assertStringNotContainsString( 'PackagePagePresenter::plugin()', $source, $view );
 			self::assertStringNotContainsString( 'PackagePagePresenter::theme()', $source, $view );
 		}

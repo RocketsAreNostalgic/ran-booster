@@ -36,8 +36,7 @@ final class TroubleshootingService {
 		private readonly ProviderRegistry $providers,
 		private readonly ?Closure $clock = null,
 		private readonly ?SecretsFile $secrets = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-		private readonly ?CoreSelfUpdateStatus $coreSelfUpdate = null
+		private readonly ?CoreSelfUpdateStatus $core_self_update = null
 	) {
 	}
 
@@ -46,8 +45,8 @@ final class TroubleshootingService {
 	 *
 	 * @return array<string, mixed>
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function formPayload(): array {
+
+	public function form_payload(): array {
 		$options = $this->provider_options();
 
 		return $this->payload(
@@ -66,13 +65,12 @@ final class TroubleshootingService {
 	 *
 	 * @return array<string, mixed>
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-	public function diagnose( string $provider, ?string $credentialId, ?string $repository ): array {
+
+	public function diagnose( string $provider, ?string $credential_id, ?string $repository ): array {
 		$input_invalid = false;
 		try {
 			$request = new ProviderDiagnosticRequest(
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-				$credentialId,
+				$credential_id,
 				$repository,
 				ProviderDiagnosticRequest::MAX_REMOTE_CALLS,
 				ProviderDiagnosticRequest::MAX_SECONDS,
@@ -80,8 +78,8 @@ final class TroubleshootingService {
 			);
 		} catch ( \Throwable ) {
 			$request = new ProviderDiagnosticRequest( null, null, ProviderDiagnosticRequest::MAX_REMOTE_CALLS, ProviderDiagnosticRequest::MAX_SECONDS, $this->clock );
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-			$credentialId  = null;
+
+			$credential_id = null;
 			$repository    = null;
 			$input_invalid = true;
 		}
@@ -101,15 +99,13 @@ final class TroubleshootingService {
 		if ( null !== $partial || count( $results ) >= self::MAX_RESULTS ) {
 			$safe_provider = isset( $options[ $provider ] ) ? $provider : '';
 
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-			return $this->payload( $safe_provider, $credentialId, $repository, $results, $partial ?? 'local_incomplete', true, $options );
+			return $this->payload( $safe_provider, $credential_id, $repository, $results, $partial ?? 'local_incomplete', true, $options );
 		}
 
-		if ( $request->remainingSeconds() <= 0.0 ) {
+		if ( $request->remaining_seconds() <= 0.0 ) {
 			$safe_provider = isset( $options[ $provider ] ) ? $provider : '';
 
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-			return $this->payload( $safe_provider, $credentialId, $repository, $results, 'deadline_exhausted', true, $options );
+			return $this->payload( $safe_provider, $credential_id, $repository, $results, 'deadline_exhausted', true, $options );
 		}
 
 		if ( $input_invalid ) {
@@ -122,21 +118,20 @@ final class TroubleshootingService {
 			$provider_code = ProviderCode::parse( $provider );
 			$aggregate     = $this->providers->get( $provider_code );
 		} catch ( \Throwable ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-			return $this->payload( '', $credentialId, $repository, $results, 'provider_unavailable', true, $options );
+
+			return $this->payload( '', $credential_id, $repository, $results, 'provider_unavailable', true, $options );
 		}
 
 		try {
 			$provider_results = $aggregate->get_provider_diagnostics()->diagnose( $request );
 		} catch ( ProviderDiagnosticBudgetExceeded $exception ) {
-			$reason = ProviderDiagnosticBudgetExceeded::DEADLINE === $exception->getReason()
+			$reason = ProviderDiagnosticBudgetExceeded::DEADLINE === $exception->get_reason()
 				? 'deadline_exhausted'
 				: 'remote_calls_exhausted';
 
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-			return $this->payload( $provider_code->value, $credentialId, $repository, $results, $reason, true, $options );
+			return $this->payload( $provider_code->value, $credential_id, $repository, $results, $reason, true, $options );
 		} catch ( \Throwable $exception ) {
-			BoosterLogger::logException(
+			BoosterLogger::log_exception(
 				'provider diagnostic operation failed',
 				$exception,
 				array(
@@ -146,13 +141,12 @@ final class TroubleshootingService {
 			);
 			$reason = $this->budget_partial_reason( $request ) ?? 'provider_unavailable';
 
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-			return $this->payload( $provider_code->value, $credentialId, $repository, $results, $reason, true, $options );
+			return $this->payload( $provider_code->value, $credential_id, $repository, $results, $reason, true, $options );
 		}
 
-		if ( $request->remainingSeconds() <= 0.0 ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-			return $this->payload( $provider_code->value, $credentialId, $repository, $results, 'deadline_exhausted', true, $options );
+		if ( $request->remaining_seconds() <= 0.0 ) {
+
+			return $this->payload( $provider_code->value, $credential_id, $repository, $results, 'deadline_exhausted', true, $options );
 		}
 
 		$budget_partial = $this->budget_partial_reason( $request );
@@ -188,7 +182,7 @@ final class TroubleshootingService {
 			&& $aggregate instanceof WebhookNormalizer
 			&& ! in_array( $partial, array( 'provider_unavailable', 'provider_results_invalid' ), true )
 		) {
-			if ( $request->remainingSeconds() <= 0.0 ) {
+			if ( $request->remaining_seconds() <= 0.0 ) {
 				$partial = $this->higher_priority( $partial, 'deadline_exhausted' );
 			} else {
 				try {
@@ -200,7 +194,7 @@ final class TroubleshootingService {
 						$partial = $this->higher_priority( $partial, 'provider_results_invalid' );
 					}
 				} catch ( \Throwable $exception ) {
-					BoosterLogger::logException(
+					BoosterLogger::log_exception(
 						'provider diagnostic operation failed',
 						$exception,
 						array(
@@ -213,14 +207,13 @@ final class TroubleshootingService {
 			}
 		}
 
-		if ( $request->remainingSeconds() <= 0.0 ) {
+		if ( $request->remaining_seconds() <= 0.0 ) {
 			$partial = $this->higher_priority( $partial, 'deadline_exhausted' );
 		}
 
 		return $this->payload(
 			$provider_code->value,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-			$credentialId,
+			$credential_id,
 			$repository,
 			$results,
 			$partial,
@@ -234,7 +227,7 @@ final class TroubleshootingService {
 			return;
 		}
 
-		BoosterLogger::logException(
+		BoosterLogger::log_exception(
 			'provider diagnostic operation failed',
 			$result->failure,
 			array(
@@ -248,7 +241,7 @@ final class TroubleshootingService {
 	private function provider_options(): array {
 		$options = array();
 
-		foreach ( $this->providers->orderedMetadata() as $metadata ) {
+		foreach ( $this->providers->ordered_metadata() as $metadata ) {
 			$options[ $metadata->code->value ] = $metadata->label;
 		}
 
@@ -258,8 +251,8 @@ final class TroubleshootingService {
 	/** @return array<string, string> */
 	private function provider_locator_hints(): array {
 		$hints = array();
-		foreach ( $this->providers->orderedMetadata() as $metadata ) {
-			$hints[ $metadata->code->value ] = $metadata->admin?->repositoryLocatorHint ?? '';
+		foreach ( $this->providers->ordered_metadata() as $metadata ) {
+			$hints[ $metadata->code->value ] = $metadata->admin?->repository_locator_hint ?? '';
 		}
 
 		return $hints;
@@ -285,7 +278,7 @@ final class TroubleshootingService {
 			}
 
 			try {
-				$profiles = $this->secrets->credentialProfiles( $provider );
+				$profiles = $this->secrets->credential_profiles( $provider );
 			} catch ( \Throwable ) {
 				continue;
 			}
@@ -352,7 +345,7 @@ final class TroubleshootingService {
 	}
 
 	private function budget_partial_reason( ProviderDiagnosticRequest $request ): ?string {
-		return match ( $request->getExhaustionReason() ) {
+		return match ( $request->get_exhaustion_reason() ) {
 			ProviderDiagnosticBudgetExceeded::DEADLINE     => 'deadline_exhausted',
 			ProviderDiagnosticBudgetExceeded::REMOTE_CALLS => 'remote_calls_exhausted',
 			default                                        => null,
@@ -374,7 +367,7 @@ final class TroubleshootingService {
 		array $providers
 	): array {
 		$display_results = array_map(
-			static fn( ProviderDiagnosticResult $result ): array => $result->toArray(),
+			static fn( ProviderDiagnosticResult $result ): array => $result->to_array(),
 			$results
 		);
 		$partial         = null !== $partial_reason;
@@ -391,11 +384,11 @@ final class TroubleshootingService {
 			'partial'                => $partial,
 			'partial_reason'         => $partial_reason,
 			'report'                 => $ran ? $this->report( $display_results, $partial, $partial_reason ) : '',
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-			'core_self_update'       => null === $this->coreSelfUpdate
+
+			'core_self_update'       => null === $this->core_self_update
 				? array()
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Preserve existing public, protected, promoted parameter and foreign object contracts.
-				: $this->coreSelfUpdate->diagnostics(),
+
+				: $this->core_self_update->diagnostics(),
 		);
 	}
 

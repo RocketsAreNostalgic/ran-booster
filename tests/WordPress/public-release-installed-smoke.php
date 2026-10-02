@@ -11,7 +11,7 @@ $assert = static function ( bool $condition, string $message ): void {
 	if ( ! $condition ) { throw new RuntimeException( $message ); }
 };
 $site = realpath( (string) getenv( 'RAN_BOOSTER_WORDPRESS_PATH' ) );
-$archiveRoot = realpath( (string) getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_ARCHIVE_ROOT' ) );
+$archive_root = realpath( (string) getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_ARCHIVE_ROOT' ) );
 $assert( defined( 'WP_CLI' ) && WP_CLI && current_user_can( 'manage_options' )
 	&& '1' === getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_TEST_DISPOSABLE' )
 	&& false !== $site && rtrim( ABSPATH, '/' ) === $site
@@ -19,8 +19,8 @@ $assert( defined( 'WP_CLI' ) && WP_CLI && current_user_can( 'manage_options' )
 	&& get_theme_root() === $site . '/wp-content/themes' && 'http://localhost' === get_option( 'siteurl' )
 	&& is_file( $site . '/.ran-booster-disposable-test-site' ) && ! is_link( $site . '/.ran-booster-disposable-test-site' )
 	&& 'RAN Booster disposable test site' === trim( file_get_contents( $site . '/.ran-booster-disposable-test-site' ) )
-	&& false !== $archiveRoot, 'Public release proof requires the exact marked CI site.' );
-foreach ( array( $site, WP_CONTENT_DIR, WP_PLUGIN_DIR, get_theme_root(), WP_PLUGIN_DIR . '/ran-booster', $archiveRoot ) as $root ) {
+	&& false !== $archive_root, 'Public release proof requires the exact marked CI site.' );
+foreach ( array( $site, WP_CONTENT_DIR, WP_PLUGIN_DIR, get_theme_root(), WP_PLUGIN_DIR . '/ran-booster', $archive_root ) as $root ) {
 	$assert( ! is_link( $root ) && realpath( $root ) === $root, 'Public release proof refuses shared roots.' );
 }
 require_once ABSPATH . 'wp-admin/includes/plugin.php';
@@ -36,7 +36,7 @@ $counts = array( 'http' => 0, 'http_bytes' => 0, 'zip' => 0, 'zip_bytes' => 0 );
 $streams = array();
 $fixtures = array();
 $measurements = array();
-$selectedTheme = get_stylesheet();
+$selected_theme = get_stylesheet();
 foreach ( array( 'plugin', 'theme' ) as $type ) {
 	$slug = 'ran-booster-c4-prospective-' . $type;
 	$directory = ( 'plugin' === $type ? WP_PLUGIN_DIR : get_theme_root() ) . '/' . $slug;
@@ -46,7 +46,7 @@ foreach ( array( 'plugin', 'theme' ) as $type ) {
 	$contents = 'plugin' === $type
 		? "<?php\n/*\nPlugin Name: C4 prospective plugin\nVersion: 2.0.0\nRequires at least: 7.0\nRequires PHP: 8.2\nUpdate URI: https://github.com/$repository\n*/\n"
 		: "/*\nTheme Name: C4 prospective theme\nVersion: 2.0.0\nRequires at least: 7.0\nRequires PHP: 8.2\nUpdate URI: https://github.com/$repository\n*/\n";
-	$archive = $archiveRoot . '/' . $slug . '.zip';
+	$archive = $archive_root . '/' . $slug . '.zip';
 	$assert( ! file_exists( $archive ) && ! is_link( $archive ), 'Prospective archive already exists.' );
 	$zip = new ZipArchive();
 	$assert( true === $zip->open( $archive, ZipArchive::CREATE ), 'Cannot create prospective ZIP.' );
@@ -83,7 +83,7 @@ $http = static function ( mixed $pre, array $args, string $url ) use ( &$counts,
 	return new WP_Error( 'c4_repository_invalid' );
 };
 add_filter( 'pre_http_request', $http, PHP_INT_MIN, 3 );
-$cleanStreams = static function () use ( &$streams, $assert ): void {
+$clean_streams = static function () use ( &$streams, $assert ): void {
 	foreach ( $streams as $path ) { $assert( ! file_exists( $path ) && ! is_link( $path ), 'Public updater retained an acquired ZIP.' ); }
 };
 $successful = static function ( object $result, string $code ) use ( $assert ): void {
@@ -92,9 +92,9 @@ $successful = static function ( object $result, string $code ) use ( $assert ): 
 try {
 	foreach ( $fixtures as $type => $fixture ) {
 		$request = array( 'provider' => 'gh', 'repository' => $fixture['repository'], 'credential_id' => '', 'branch' => 'main' );
-		$nonce = static fn ( string $operation ): string => wp_create_nonce( $facade->nonceAction( $operation, $type ) );
+		$nonce = static fn ( string $operation ): string => wp_create_nonce( $facade->nonce_action( $operation, $type ) );
 		$before = $counts;
-		$list = $facade->listCandidates( $type, $request, 'stable', $nonce( 'list_candidates' ) );
+		$list = $facade->list_candidates( $type, $request, 'stable', $nonce( 'list_candidates' ) );
 		$successful( $list, 'release_candidates_available' );
 		$assert( $wp_filesystem instanceof WP_Filesystem_Direct, 'Core did not establish the direct WordPress filesystem for release operations.' );
 		$assert( '42' === ( $list->data()['candidates'][0]['release_id'] ?? null ) && $counts['zip'] === $before['zip'], 'Listing lost exact identity or downloaded a ZIP.' );
@@ -102,7 +102,7 @@ try {
 		$successful( $inspection, 'release_ready' );
 		$fingerprint = $inspection->data()['fingerprint'] ?? '';
 		$assert( 1 === preg_match( '/\Av2:[a-f0-9]{64}\z/D', $fingerprint ) && $counts['zip'] === $before['zip'] + 1, 'Inspection did not verify exactly one ZIP.' );
-		$cleanStreams();
+		$clean_streams();
 		$identifier = 'plugin' === $type ? $fixture['slug'] . '/' . $fixture['metadata'] : $fixture['slug'];
 		$veto = static fn (): WP_Error => new WP_Error( 'c4_post_acquisition_veto' );
 		add_filter( 'upgrader_pre_install', $veto, PHP_INT_MIN, 2 );
@@ -111,16 +111,16 @@ try {
 		$assert( ! $failed->successful() && $counts['zip'] === $before['zip'] + 2 && ! file_exists( $fixture['directory'] ) && ! is_link( $fixture['directory'] ), 'Post-acquisition failure mutated or reused inspection bytes.' );
 		global $wpdb;
 		$assert( '0' === (string) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . ran_booster_table_name() . ' WHERE package = %s AND type = %d', $identifier, 'plugin' === $type ? 1 : 2 ) ), 'Failed first install adopted a package record.' );
-		$assert( $selectedTheme === get_stylesheet() && ! ( 'plugin' === $type && is_plugin_active( $identifier ) ), 'Failed first install changed activation.' );
-		$cleanStreams();
+		$assert( $selected_theme === get_stylesheet() && ! ( 'plugin' === $type && is_plugin_active( $identifier ) ), 'Failed first install changed activation.' );
+		$clean_streams();
 		$result = $facade->install( $type, $request, '42', 'v2.0.0', $fingerprint, 'stable', $nonce( 'install' ) );
 		$successful( $result, 'installed' );
 		$assert( $counts['zip'] === $before['zip'] + 3, 'Installation must acquire exactly one fresh ZIP without pre-inspection.' );
 		$assert( hash_equals( hash( 'sha256', $fixture['contents'] ), (string) hash_file( 'sha256', $fixture['directory'] . '/' . $fixture['metadata'] ) ), 'Installed prospective bytes differ from the verified ZIP.' );
-		$assert( $selectedTheme === get_stylesheet() && ! ( 'plugin' === $type && is_plugin_active( $identifier ) ), 'New prospective target became active.' );
+		$assert( $selected_theme === get_stylesheet() && ! ( 'plugin' === $type && is_plugin_active( $identifier ) ), 'New prospective target became active.' );
 		$package = 'plugin' === $type ? $plugins->booster_plugin_from_file( $identifier ) : $themes->booster_theme_from_stylesheet( $identifier );
 		$assert( '2.0.0' === $package->get_version() && RAN\PackageSource::RELEASE_ASSET === $package->get_source(), 'Successful prospective install was not adopted exactly.' );
-		$cleanStreams();
+		$clean_streams();
 		$measurements[$type] = array_map( static fn ( string $key ): int => $counts[$key] - $before[$key], array_keys( $counts ) );
 	}
 } finally {

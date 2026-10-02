@@ -15,12 +15,12 @@ if ( ! is_string( $scale ) || ! in_array( $scale, array( '1', '5', '10', '20' ),
 require_once ABSPATH . 'wp-admin/includes/plugin.php';
 require_once ABSPATH . 'wp-admin/includes/theme.php';
 
-$wordpressRoot = realpath( ABSPATH );
-$contentRoot   = realpath( WP_CONTENT_DIR );
-$pluginRoot    = realpath( WP_PLUGIN_DIR );
-$themeRoot     = realpath( get_theme_root() );
-if ( false === $wordpressRoot || false === $contentRoot || false === $pluginRoot || false === $themeRoot
-	|| $contentRoot !== $wordpressRoot . '/wp-content' || $pluginRoot !== $contentRoot . '/plugins' || $themeRoot !== $contentRoot . '/themes'
+$wordpress_root = realpath( ABSPATH );
+$content_root   = realpath( WP_CONTENT_DIR );
+$plugin_root    = realpath( WP_PLUGIN_DIR );
+$theme_root     = realpath( get_theme_root() );
+if ( false === $wordpress_root || false === $content_root || false === $plugin_root || false === $theme_root
+	|| $content_root !== $wordpress_root . '/wp-content' || $plugin_root !== $content_root . '/plugins' || $theme_root !== $content_root . '/themes'
 	|| 'http://localhost' !== get_option( 'siteurl' ) || is_link( WP_PLUGIN_DIR . '/ran-booster' ) || ! is_file( WP_PLUGIN_DIR . '/ran-booster/ran-booster.php' ) ) {
 	throw new RuntimeException( 'The native lifecycle seed refuses an unverified installed Core site.' );
 }
@@ -64,8 +64,8 @@ for ( $number = 1; $number <= (int) $scale; ++$number ) {
 	if ( ! is_string( $archive ) || true !== $zip->open( $archive, ZipArchive::CREATE | ZipArchive::OVERWRITE ) ) {
 		throw new RuntimeException( 'The native lifecycle archive fixture is unavailable.' );
 	}
-	$updatedContents = str_replace( '1.0.0', '2.0.0', $contents );
-	$zip->addFromString( $root . '/' . $metadata, $updatedContents );
+	$updated_contents = str_replace( '1.0.0', '2.0.0', $contents );
+	$zip->addFromString( $root . '/' . $metadata, $updated_contents );
 	if ( 'theme' === $type ) {
 		$zip->addFromString( $root . '/index.php', '<?php' );
 		$zip->addFromString( $root . '/functions.php', "<?php\nthrow new RuntimeException( 'Inactive C4 theme executed.' );\n" );
@@ -91,7 +91,7 @@ for ( $number = 1; $number <= (int) $scale; ++$number ) {
 	if ( 1 !== $inserted ) {
 		throw new RuntimeException( 'The native lifecycle fixture row was not persisted.' );
 	}
-	$items[ count( $items ) - 1 ] += array( 'repository' => $repository, 'repository_id' => (string) ( 940000 + $number ), 'expected_digest' => hash( 'sha256', $updatedContents ) );
+	$items[ count( $items ) - 1 ] += array( 'repository' => $repository, 'repository_id' => (string) ( 940000 + $number ), 'expected_digest' => hash( 'sha256', $updated_contents ) );
 	update_option( 'ran_booster_c4_native_items', $items, false );
 	$archives[ $repository ] = $archive;
 }

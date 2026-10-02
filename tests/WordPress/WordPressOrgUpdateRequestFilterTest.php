@@ -18,16 +18,16 @@ require_once __DIR__ . '/WordPressOrgUpdateRequestFilterWordPressFunctions.php';
 #[CoversClass( WordPressOrgUpdateRequestFilter::class )]
 final class WordPressOrgUpdateRequestFilterTest extends TestCase {
 
-	public function testFiltersManagedPluginsAndThemesFromValidRequests(): void {
+	public function test_filters_managed_plugins_and_themes_from_valid_requests(): void {
 		$database = $this->createStub( Database::class );
-		$database->method( 'isSupported' )->willReturn( true );
+		$database->method( 'is_supported' )->willReturn( true );
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'all_booster_plugins' )->willReturn( array( 'managed/plugin.php' => new \stdClass() ) );
 		$themes = $this->createStub( ThemeRepository::class );
 		$themes->method( 'all_booster_themes' )->willReturn( array( 'managed-theme' => new \stdClass() ) );
 		$filter = new WordPressOrgUpdateRequestFilter( $database, $plugins, $themes, 'ran-booster/ran-booster.php' );
 
-		$pluginArgs    = $filter->plugins(
+		$plugin_args    = $filter->plugins(
 			array(
 				'body' => array(
 					'plugins' => \RAN\WordPress\wp_json_encode(
@@ -44,12 +44,12 @@ final class WordPressOrgUpdateRequestFilterTest extends TestCase {
 			),
 			'https://api.wordpress.org/plugins/update-check/1.1/'
 		);
-		$pluginPayload = json_decode( $pluginArgs['body']['plugins'], true );
-		self::assertSame( array( 'other/plugin.php' ), array_keys( $pluginPayload['plugins'] ) );
-		self::assertSame( array( 'other/plugin.php' ), $pluginPayload['active'] );
-		self::assertSame( '{"plugins":{"other\/plugin.php":[]},"active":["other\/plugin.php"]}', $pluginArgs['body']['plugins'] );
+		$plugin_payload = json_decode( $plugin_args['body']['plugins'], true );
+		self::assertSame( array( 'other/plugin.php' ), array_keys( $plugin_payload['plugins'] ) );
+		self::assertSame( array( 'other/plugin.php' ), $plugin_payload['active'] );
+		self::assertSame( '{"plugins":{"other\/plugin.php":[]},"active":["other\/plugin.php"]}', $plugin_args['body']['plugins'] );
 
-		$themeArgs    = $filter->themes(
+		$theme_args    = $filter->themes(
 			array(
 				'body' => array(
 					'themes' => \RAN\WordPress\wp_json_encode(
@@ -65,15 +65,15 @@ final class WordPressOrgUpdateRequestFilterTest extends TestCase {
 			),
 			'https://api.wordpress.org/themes/update-check/1.1/'
 		);
-		$themePayload = json_decode( $themeArgs['body']['themes'], true );
-		self::assertSame( array( 'other-theme' ), array_keys( $themePayload['themes'] ) );
-		self::assertArrayNotHasKey( 'active', $themePayload );
+		$theme_payload = json_decode( $theme_args['body']['themes'], true );
+		self::assertSame( array( 'other-theme' ), array_keys( $theme_payload['themes'] ) );
+		self::assertArrayNotHasKey( 'active', $theme_payload );
 	}
 
-	#[DataProvider( 'exactUpdateEndpoints' )]
-	public function testFiltersOnlyExactWordPressOrgUpdateEndpoints( string $method, string $url ): void {
+	#[DataProvider( 'exact_update_endpoints' )]
+	public function test_filters_only_exact_word_press_org_update_endpoints( string $method, string $url ): void {
 		$database = $this->createStub( Database::class );
-		$database->method( 'isSupported' )->willReturn( true );
+		$database->method( 'is_supported' )->willReturn( true );
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'all_booster_plugins' )->willReturn( array( 'managed/plugin.php' => new \stdClass() ) );
 		$themes = $this->createStub( ThemeRepository::class );
@@ -87,7 +87,7 @@ final class WordPressOrgUpdateRequestFilterTest extends TestCase {
 		self::assertNotSame( $args, $result );
 	}
 
-	public static function exactUpdateEndpoints(): array {
+	public static function exact_update_endpoints(): array {
 		return array(
 			'plugin HTTPS'           => array( 'plugins', 'https://api.wordpress.org/plugins/update-check/1.1/' ),
 			'plugin HTTP'            => array( 'plugins', 'http://api.wordpress.org/plugins/update-check/1.1/' ),
@@ -95,16 +95,16 @@ final class WordPressOrgUpdateRequestFilterTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'nonExactUpdateEndpoints' )]
-	public function testLeavesNonExactWordPressOrgUpdateUrlsUnchanged( string $method, string $url ): void {
+	#[DataProvider( 'non_exact_update_endpoints' )]
+	public function test_leaves_non_exact_word_press_org_update_urls_unchanged( string $method, string $url ): void {
 		$args = 'plugins' === $method
 			? array( 'body' => array( 'plugins' => '{"plugins":{"managed/plugin.php":{},"ran-booster/ran-booster.php":{}},"active":["managed/plugin.php","ran-booster/ran-booster.php"]}' ) )
 			: array( 'body' => array( 'themes' => '{"themes":{"managed-theme":{}},"active":"managed-theme"}' ) );
 
-		self::assertSame( $args, $this->filterWithManagedRecords()->{$method}( $args, $url ) );
+		self::assertSame( $args, $this->filter_with_managed_records()->{$method}( $args, $url ) );
 	}
 
-	public static function nonExactUpdateEndpoints(): array {
+	public static function non_exact_update_endpoints(): array {
 		return array(
 			'endpoint prefix' => array( 'plugins', 'https://api.wordpress.org/plugins/update-check/1.1/extra' ),
 			'user info'       => array( 'plugins', 'https://user@api.wordpress.org/plugins/update-check/1.1/' ),
@@ -122,7 +122,7 @@ final class WordPressOrgUpdateRequestFilterTest extends TestCase {
 		);
 	}
 
-	public function testMalformedRequestsReturnTheIncomingValueUnchanged(): void {
+	public function test_malformed_requests_return_the_incoming_value_unchanged(): void {
 		$filter = $this->filter();
 		$cases  = array(
 			null,
@@ -141,9 +141,9 @@ final class WordPressOrgUpdateRequestFilterTest extends TestCase {
 		}
 	}
 
-	public function testStorageFailureReturnsTheIncomingArgumentsUnchanged(): void {
+	public function test_storage_failure_returns_the_incoming_arguments_unchanged(): void {
 		$database = $this->createStub( Database::class );
-		$database->method( 'isSupported' )->willReturn( true );
+		$database->method( 'is_supported' )->willReturn( true );
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'all_booster_plugins' )->willThrowException( new RuntimeException( 'database details' ) );
 		$args = array(
@@ -161,7 +161,7 @@ final class WordPressOrgUpdateRequestFilterTest extends TestCase {
 
 	private function filter(): WordPressOrgUpdateRequestFilter {
 		$database = $this->createStub( Database::class );
-		$database->method( 'isSupported' )->willReturn( true );
+		$database->method( 'is_supported' )->willReturn( true );
 
 		return new WordPressOrgUpdateRequestFilter(
 			$database,
@@ -171,9 +171,9 @@ final class WordPressOrgUpdateRequestFilterTest extends TestCase {
 		);
 	}
 
-	private function filterWithManagedRecords(): WordPressOrgUpdateRequestFilter {
+	private function filter_with_managed_records(): WordPressOrgUpdateRequestFilter {
 		$database = $this->createStub( Database::class );
-		$database->method( 'isSupported' )->willReturn( true );
+		$database->method( 'is_supported' )->willReturn( true );
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'all_booster_plugins' )->willReturn( array( 'managed/plugin.php' => new \stdClass() ) );
 		$themes = $this->createStub( ThemeRepository::class );

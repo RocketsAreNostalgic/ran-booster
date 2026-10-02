@@ -9,25 +9,25 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /** @param callable|null $callback */
-function add_menu_page( string $pageTitle, string $menuTitle, string $capability, string $menuSlug, ?callable $callback = null, string $iconUrl = '' ): void {
+function add_menu_page( string $page_title, string $menu_title, string $capability, string $menu_slug, ?callable $callback = null, string $icon_url = '' ): void {
 	$GLOBALS['ran_booster_extensions_page_menus'][] = array(
-		'page_title' => $pageTitle,
-		'menu_title' => $menuTitle,
+		'page_title' => $page_title,
+		'menu_title' => $menu_title,
 		'capability' => $capability,
-		'menu_slug'  => $menuSlug,
+		'menu_slug'  => $menu_slug,
 		'callback'   => $callback,
-		'icon_url'   => $iconUrl,
+		'icon_url'   => $icon_url,
 	);
 }
 
 /** @param callable|null $callback */
-function add_submenu_page( string $parentSlug, string $pageTitle, string $menuTitle, string $capability, string $menuSlug, ?callable $callback = null ): void {
+function add_submenu_page( string $parent_slug, string $page_title, string $menu_title, string $capability, string $menu_slug, ?callable $callback = null ): void {
 	$GLOBALS['ran_booster_extensions_page_submenus'][] = array(
-		'parent_slug' => $parentSlug,
-		'page_title'  => $pageTitle,
-		'menu_title'  => $menuTitle,
+		'parent_slug' => $parent_slug,
+		'page_title'  => $page_title,
+		'menu_title'  => $menu_title,
 		'capability'  => $capability,
-		'menu_slug'   => $menuSlug,
+		'menu_slug'   => $menu_slug,
 		'callback'    => $callback,
 	);
 }

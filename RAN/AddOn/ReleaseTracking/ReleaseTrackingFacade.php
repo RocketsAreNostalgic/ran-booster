@@ -23,11 +23,11 @@ interface ReleaseTrackingFacade {
 	 * This derives an action string only. It neither creates nor authorizes a
 	 * WordPress nonce.
 	 */
-	public function nonceAction(
+	public function nonce_action(
 		string $operation,
 		string $type,
 		string $identifier,
-		int $sourceRevision,
+		int $source_revision,
 		string $channel = ''
 	): string;
 
@@ -35,16 +35,16 @@ interface ReleaseTrackingFacade {
 	public function preflight(
 		string $type,
 		string $identifier,
-		int $expectedSourceRevision,
+		int $expected_source_revision,
 		string $channel,
 		string $nonce
 	): ?ReleaseTrackingPreflight;
 
 	/** Assess an eligible Branch or release-asset package without changing package or updater state. */
-	public function assessmentPreflight(
+	public function assessment_preflight(
 		string $type,
 		string $identifier,
-		int $expectedSourceRevision,
+		int $expected_source_revision,
 		string $channel,
 		string $nonce
 	): ?ReleaseTrackingPreflight;
@@ -52,15 +52,15 @@ interface ReleaseTrackingFacade {
 	public function enable(
 		string $type,
 		string $identifier,
-		int $expectedSourceRevision,
+		int $expected_source_revision,
 		string $channel,
 		string $nonce
 	): ReleaseTrackingResult;
 
-	public function changeChannel(
+	public function change_channel(
 		string $type,
 		string $identifier,
-		int $expectedSourceRevision,
+		int $expected_source_revision,
 		string $channel,
 		string $nonce
 	): ReleaseTrackingResult;
@@ -68,14 +68,14 @@ interface ReleaseTrackingFacade {
 	public function refresh(
 		string $type,
 		string $identifier,
-		int $expectedSourceRevision,
+		int $expected_source_revision,
 		string $nonce
 	): ReleaseTrackingResult;
 
-	public function returnToBranch(
+	public function return_to_branch(
 		string $type,
 		string $identifier,
-		int $expectedSourceRevision,
+		int $expected_source_revision,
 		string $nonce
 	): ReleaseTrackingResult;
 }

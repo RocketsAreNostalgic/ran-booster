@@ -45,18 +45,19 @@ use RAN\WordPress\WordPressUpdaterLock;
 #[PreserveGlobalState( false )]
 final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		require_once dirname( __DIR__ ) . '/Support/BootstrapRuntimeWordPressFunctions.php';
 	}
 
-	public function testRuntimeSupportSelectsTheUnsupportedMode(): void {
+	public function test_runtime_support_selects_the_unsupported_mode(): void {
 		self::assertSame( RuntimeSupport::MULTISITE_UNSUPPORTED, RuntimeSupport::current() );
-		self::assertFalse( RuntimeSupport::current()->allowsManagedOperations() );
+		self::assertFalse( RuntimeSupport::current()->allows_managed_operations() );
 		$this->expectException( UnsupportedRuntimeException::class );
-		RuntimeSupport::assertManagedOperationsAllowed();
+		RuntimeSupport::assert_managed_operations_allowed();
 	}
 
-	public function testManagedReleaseRegistrationReadsNoPackagesOrCredentials(): void {
+	public function test_managed_release_registration_reads_no_packages_or_credentials(): void {
 		$registrar = new ManagedReleaseTargetRegistrar(
 			$this->blank( PluginRepository::class ),
 			$this->blank( ThemeRepository::class ),
@@ -68,33 +69,33 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		$registrar->register();
 
 		self::assertNull( $registrar->target( 'plugin', 'example/example.php' ) );
-		self::assertSame( '', $registrar->failureCode( 'plugin', 'example/example.php' ) );
+		self::assertSame( '', $registrar->failure_code( 'plugin', 'example/example.php' ) );
 	}
 
-	public function testCoreExecutorRejectsBeforeArtifactOrWordPressAccess(): void {
-		$coreCalls = 0;
-		$executor  = new CorePackageExecutor(
-			static function () use ( &$coreCalls ): never {
-				++$coreCalls;
+	public function test_core_executor_rejects_before_artifact_or_word_press_access(): void {
+		$core_calls = 0;
+		$executor   = new CorePackageExecutor(
+			static function () use ( &$core_calls ): never {
+				++$core_calls;
 				throw new \RuntimeException( 'WordPress Core must stay inert.' );
 			}
 		);
-		$artifact  = $this->blank( PreparedArtifact::class );
-		$results   = array(
-			$executor->installPlugin( $artifact, 'example', null ),
-			$executor->installTheme( $artifact, 'example', null ),
-			$executor->updatePlugin( $artifact, 'example', null, 'example/example.php' ),
-			$executor->updateTheme( $artifact, 'example', null, 'example' ),
+		$artifact   = $this->blank( PreparedArtifact::class );
+		$results    = array(
+			$executor->install_plugin( $artifact, 'example', null ),
+			$executor->install_theme( $artifact, 'example', null ),
+			$executor->update_plugin( $artifact, 'example', null, 'example/example.php' ),
+			$executor->update_theme( $artifact, 'example', null, 'example' ),
 		);
 
 		foreach ( $results as $result ) {
 			self::assertFalse( $result->is_successful() );
 			self::assertSame( CorePackageExecutionFailure::RUNTIME_UNSUPPORTED, $result->get_failure() );
 		}
-		self::assertSame( 0, $coreCalls );
+		self::assertSame( 0, $core_calls );
 	}
 
-	public function testProspectiveFacadeRejectsListingInspectionAndInstallationBeforeAuthorization(): void {
+	public function test_prospective_facade_rejects_listing_inspection_and_installation_before_authorization(): void {
 		$facade  = new NativeProspectiveReleaseFacade(
 			$this->blank( PackageRepositoryRequestResolver::class ),
 			$this->blank( CorePackageExecutor::class ),
@@ -106,7 +107,7 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 			static fn (): never => throw new \RuntimeException( 'Nonces must not be checked.' )
 		);
 		$results = array(
-			$facade->listCandidates( 'plugin', array(), 'stable', 'nonce' ),
+			$facade->list_candidates( 'plugin', array(), 'stable', 'nonce' ),
 			$facade->inspect( 'plugin', array(), '1', 'v1.0.0', 'stable', 'nonce' ),
 			$facade->install( 'plugin', array(), '1', 'v1.0.0', str_repeat( 'a', 64 ), 'stable', 'nonce' ),
 		);
@@ -119,14 +120,14 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		}
 	}
 
-	public function testReleaseTrackingMutationsRejectBeforeAuthorizationOrStorage(): void {
-		$facade = $this->releaseTrackingFacade();
+	public function test_release_tracking_mutations_reject_before_authorization_or_storage(): void {
+		$facade = $this->release_tracking_facade();
 		self::assertNull( $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', 'nonce' ) );
 		$results = array(
 			$facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'nonce' ),
-			$facade->changeChannel( 'plugin', 'example/example.php', 1, 'prerelease', 'nonce' ),
+			$facade->change_channel( 'plugin', 'example/example.php', 1, 'prerelease', 'nonce' ),
 			$facade->refresh( 'plugin', 'example/example.php', 1, 'nonce' ),
-			$facade->returnToBranch( 'plugin', 'example/example.php', 1, 'nonce' ),
+			$facade->return_to_branch( 'plugin', 'example/example.php', 1, 'nonce' ),
 		);
 
 		foreach ( $results as $result ) {
@@ -136,8 +137,8 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		}
 	}
 
-	public function testReleaseTrackingStatusReadsAreUnavailableBeforeStorage(): void {
-		$facade = $this->releaseTrackingFacade();
+	public function test_release_tracking_status_reads_are_unavailable_before_storage(): void {
+		$facade = $this->release_tracking_facade();
 
 		try {
 			$facade->status( 'plugin', 'example/example.php' );
@@ -150,7 +151,7 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		$facade->statuses( 'plugin', array( 'example/example.php' ) );
 	}
 
-	public function testPackageOperationsAndQueuedWorkRejectBeforeRepositoriesOrAttempts(): void {
+	public function test_package_operations_and_queued_work_reject_before_repositories_or_attempts(): void {
 		$service = new PackageOperationService(
 			$this->blank( PluginRepository::class ),
 			$this->blank( ThemeRepository::class ),
@@ -166,19 +167,19 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 			self::assertTrue( true );
 		}
 
-		$coordinator = $this->deploymentCoordinator();
+		$coordinator = $this->deployment_coordinator();
 		try {
-			$coordinator->queueManualUpdates( array() );
+			$coordinator->queue_manual_updates( array() );
 			self::fail( 'Queued mutations must be unavailable.' );
 		} catch ( UnsupportedRuntimeException ) {
 			self::assertTrue( true );
 		}
 
 		$this->expectException( UnsupportedRuntimeException::class );
-		$coordinator->executeClaimed( $this->blank( DeploymentAttempt::class ) );
+		$coordinator->execute_claimed( $this->blank( DeploymentAttempt::class ) );
 	}
 
-	public function testRemovalAndManagedReleasePersistenceRejectBeforeStorage(): void {
+	public function test_removal_and_managed_release_persistence_reject_before_storage(): void {
 		$removal = new PackageRemovalService(
 			$this->blank( PluginRepository::class ),
 			$this->blank( ThemeRepository::class ),
@@ -206,7 +207,7 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		);
 	}
 
-	public function testTransporterEntryPointsRejectBeforeAuthorizationArchivesOrStorage(): void {
+	public function test_transporter_entry_points_reject_before_authorization_archives_or_storage(): void {
 		$controller = new PortabilityController(
 			$this->blank( ManagedPackageBlueprintExporter::class ),
 			$this->blank( BlueprintArchive::class ),
@@ -220,10 +221,10 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 				static fn (): mixed => $controller->handle_preview(),
 				static fn (): mixed => $controller->handle_apply(),
 				static fn (): mixed => $controller->preview_file( '/not-readable' ),
-			) as $entryPoint
+			) as $entry_point
 		) {
 			try {
-				$entryPoint();
+				$entry_point();
 				self::fail( 'Transporter must be unavailable.' );
 			} catch ( UnsupportedRuntimeException ) {
 				self::assertTrue( true );
@@ -231,16 +232,16 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		}
 	}
 
-	public function testLowestStorageAndAttemptMutationSeamsRejectDirectCalls(): void {
-		$entryPoints = array(
+	public function test_lowest_storage_and_attempt_mutation_seams_reject_direct_calls(): void {
+		$entry_points = array(
 			static fn (): mixed => ( new PluginRepository() )->unlink( 'example/example.php' ),
-			fn (): mixed => $this->blank( DeploymentAttemptRepository::class )->claimNext(),
-			fn (): mixed => $this->blank( Database::class )->maybeUpgrade(),
+			fn (): mixed => $this->blank( DeploymentAttemptRepository::class )->claim_next(),
+			fn (): mixed => $this->blank( Database::class )->maybe_upgrade(),
 		);
 
-		foreach ( $entryPoints as $entryPoint ) {
+		foreach ( $entry_points as $entry_point ) {
 			try {
-				$entryPoint();
+				$entry_point();
 				self::fail( 'The lowest mutation seam must be unavailable.' );
 			} catch ( UnsupportedRuntimeException ) {
 				self::assertTrue( true );
@@ -248,7 +249,7 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		}
 	}
 
-	public function testStaleWorkerCannotClaimOrTransitionAnAttempt(): void {
+	public function test_stale_worker_cannot_claim_or_transition_an_attempt(): void {
 		$worker = new DeploymentWorker(
 			$this->blank( DeploymentAttemptRepository::class ),
 			$this->blank( DeploymentCoordinator::class ),
@@ -264,7 +265,7 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		);
 	}
 
-	public function testWebhookProcessingStaysUnavailableWhenAnInertRouteIsRegisteredDirectly(): void {
+	public function test_webhook_processing_stays_unavailable_when_an_inert_route_is_registered_directly(): void {
 		$processor = new WebhookProcessor(
 			$this->blank( \RAN\RepositoryProvider\ProviderRegistry::class ),
 			$this->blank( DeploymentCoordinator::class ),
@@ -289,7 +290,7 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		self::assertSame( 'ran-booster/v1', $GLOBALS['ran_booster_rest_routes'][0]['namespace'] );
 	}
 
-	private function releaseTrackingFacade(): NativeReleaseTrackingFacade {
+	private function release_tracking_facade(): NativeReleaseTrackingFacade {
 		return new NativeReleaseTrackingFacade(
 			$this->blank( PluginRepository::class ),
 			$this->blank( ThemeRepository::class ),
@@ -302,7 +303,7 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		);
 	}
 
-	private function deploymentCoordinator(): DeploymentCoordinator {
+	private function deployment_coordinator(): DeploymentCoordinator {
 		return new DeploymentCoordinator(
 			$this->blank( DeploymentAttemptRepository::class ),
 			$this->blank( PluginRepository::class ),

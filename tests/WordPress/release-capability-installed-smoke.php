@@ -17,39 +17,39 @@ require_once ABSPATH . 'wp-admin/includes/plugin.php';
 require_once ABSPATH . 'wp-admin/includes/theme.php';
 require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
 
-$expectedRoot    = getenv( 'RAN_BOOSTER_WORDPRESS_PATH' );
-$expectedUrl     = getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_TEST_URL' );
-$archiveRoot     = getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_ARCHIVE_ROOT' );
-$wordpressRoot   = realpath( ABSPATH );
-$contentRoot     = realpath( WP_CONTENT_DIR );
-$pluginRoot      = realpath( WP_PLUGIN_DIR );
-$themeRoot       = realpath( get_theme_root() );
-$fixturePlugin   = WP_PLUGIN_DIR . '/ran-booster-release-capability-provider/ran-booster-release-capability-provider.php';
-$disposableMark  = ABSPATH . '.ran-booster-disposable-test-site';
-$expectedTargets = array(
+$expected_root    = getenv( 'RAN_BOOSTER_WORDPRESS_PATH' );
+$expected_url     = getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_TEST_URL' );
+$archive_root     = getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_ARCHIVE_ROOT' );
+$wordpress_root   = realpath( ABSPATH );
+$content_root     = realpath( WP_CONTENT_DIR );
+$plugin_root      = realpath( WP_PLUGIN_DIR );
+$theme_root       = realpath( get_theme_root() );
+$fixture_plugin   = WP_PLUGIN_DIR . '/ran-booster-release-capability-provider/ran-booster-release-capability-provider.php';
+$disposable_mark  = ABSPATH . '.ran-booster-disposable-test-site';
+$expected_targets = array(
 	WP_PLUGIN_DIR . '/ran-booster-p2-fixture-plugin',
 	get_theme_root() . '/ran-booster-p2-fixture-theme',
 );
-if ( ! is_string( $expectedRoot ) || false === $wordpressRoot || $wordpressRoot !== realpath( $expectedRoot )
-	|| false === $contentRoot || $contentRoot !== $wordpressRoot . '/wp-content'
-	|| false === $pluginRoot || $pluginRoot !== $contentRoot . '/plugins'
-	|| false === $themeRoot || $themeRoot !== $contentRoot . '/themes'
-	|| 'http://localhost' !== $expectedUrl || $expectedUrl !== get_option( 'siteurl' )
-	|| is_link( $disposableMark ) || ! is_file( $disposableMark )
-	|| "RAN Booster disposable test site\n" !== file_get_contents( $disposableMark )
+if ( ! is_string( $expected_root ) || false === $wordpress_root || $wordpress_root !== realpath( $expected_root )
+	|| false === $content_root || $content_root !== $wordpress_root . '/wp-content'
+	|| false === $plugin_root || $plugin_root !== $content_root . '/plugins'
+	|| false === $theme_root || $theme_root !== $content_root . '/themes'
+	|| 'http://localhost' !== $expected_url || $expected_url !== get_option( 'siteurl' )
+	|| is_link( $disposable_mark ) || ! is_file( $disposable_mark )
+	|| "RAN Booster disposable test site\n" !== file_get_contents( $disposable_mark )
 	|| is_link( WP_PLUGIN_DIR . '/ran-booster' ) || ! is_file( WP_PLUGIN_DIR . '/ran-booster/ran-booster.php' )
-	|| is_link( dirname( $fixturePlugin ) ) || ! is_file( $fixturePlugin ) || ! is_plugin_active( plugin_basename( $fixturePlugin ) )
-	|| ! is_string( $archiveRoot ) || false === realpath( $archiveRoot ) ) {
+	|| is_link( dirname( $fixture_plugin ) ) || ! is_file( $fixture_plugin ) || ! is_plugin_active( plugin_basename( $fixture_plugin ) )
+	|| ! is_string( $archive_root ) || false === realpath( $archive_root ) ) {
 	throw new RuntimeException( 'The installed release-capability smoke requires the exact disposable site and fixture.' );
 }
-foreach ( $expectedTargets as $target ) {
+foreach ( $expected_targets as $target ) {
 	if ( is_link( $target ) || file_exists( $target ) ) {
 		throw new RuntimeException( 'A disposable release-capability target already exists.' );
 	}
 }
-foreach ( array( 'plugin', 'theme' ) as $archiveType ) {
-	$archive = get_option( 'ran_booster_p2_' . $archiveType . '_archive', '' );
-	if ( ! is_string( $archive ) || false === realpath( $archive ) || realpath( dirname( $archive ) ) !== realpath( $archiveRoot )
+foreach ( array( 'plugin', 'theme' ) as $archive_type ) {
+	$archive = get_option( 'ran_booster_p2_' . $archive_type . '_archive', '' );
+	if ( ! is_string( $archive ) || false === realpath( $archive ) || realpath( dirname( $archive ) ) !== realpath( $archive_root )
 		|| is_link( $archive ) || ! is_file( $archive ) || 'zip' !== pathinfo( $archive, PATHINFO_EXTENSION ) ) {
 		throw new RuntimeException( 'A disposable release-capability archive is outside the exact archive root.' );
 	}
@@ -61,7 +61,7 @@ $plugins   = $container->make( PluginRepository::class );
 $themes    = $container->make( ThemeRepository::class );
 $installed = array();
 
-$assertResult = static function ( object $result, string $code ): void {
+$assert_result = static function ( object $result, string $code ): void {
 	if ( ! $result->successful() || $code !== $result->code() ) {
 		throw new RuntimeException( 'Unexpected prospective release result: ' . $result->code() );
 	}
@@ -75,13 +75,13 @@ try {
 			'credential_id' => '',
 			'branch'        => 'main',
 		);
-		$list = $facade->listCandidates(
+		$list = $facade->list_candidates(
 			$type,
 			$request,
 			'stable',
-			wp_create_nonce( $facade->nonceAction( 'list_candidates', $type ) )
+			wp_create_nonce( $facade->nonce_action( 'list_candidates', $type ) )
 		);
-		$assertResult( $list, 'release_candidates_available' );
+		$assert_result( $list, 'release_candidates_available' );
 		$candidate = $list->data()['candidates'][0] ?? null;
 		if ( ! is_array( $candidate )
 			|| '42' !== ( $candidate['release_id'] ?? null )
@@ -98,9 +98,9 @@ try {
 			'42',
 			'v2.0.0',
 			'stable',
-			wp_create_nonce( $facade->nonceAction( 'inspect', $type ) )
+			wp_create_nonce( $facade->nonce_action( 'inspect', $type ) )
 		);
-		$assertResult( $inspection, 'release_ready' );
+		$assert_result( $inspection, 'release_ready' );
 		$evidence = $inspection->data();
 		if ( 'v2:' . str_repeat( 'b', 64 ) !== ( $evidence['fingerprint'] ?? null ) ) {
 			throw new RuntimeException( 'The installed release fingerprint is invalid.' );
@@ -113,9 +113,9 @@ try {
 			'v2.0.0',
 			$evidence['fingerprint'],
 			'stable',
-			wp_create_nonce( $facade->nonceAction( 'install', $type ) )
+			wp_create_nonce( $facade->nonce_action( 'install', $type ) )
 		);
-		$assertResult( $result, 'installed' );
+		$assert_result( $result, 'installed' );
 
 		$identifier = 'plugin' === $type
 			? 'ran-booster-p2-fixture-plugin/ran-booster-p2-fixture-plugin.php'

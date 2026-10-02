@@ -15,44 +15,38 @@ final class DocumentationHookRenderer {
 	/**
 	 * Render structured add-on documentation sections.
 	 *
-	 * @param non-empty-string $filterHook
+	 * @param non-empty-string $filter_hook
 	 */
 	public function render_sections(
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-		string $filterHook,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-		string $documentationUrl,
+		string $filter_hook,
+		string $documentation_url,
 		string $scope,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-		?string $providerCode = null
+		?string $provider_code = null
 	): void {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-		$this->render_prepared_sections( $this->prepare_sections( $filterHook, $documentationUrl, $scope, $providerCode ) );
+
+		$this->render_prepared_sections( $this->prepare_sections( $filter_hook, $documentation_url, $scope, $provider_code ) );
 	}
 
 	/**
 	 * Resolve structured add-on documentation sections once, before output.
 	 *
-	 * @param non-empty-string $filterHook
+	 * @param non-empty-string $filter_hook
 	 * @return list<array{id: string, summary: string, content: string, open: bool}>
 	 */
 	public function prepare_sections(
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-		string $filterHook,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-		string $documentationUrl,
+		string $filter_hook,
+		string $documentation_url,
 		string $scope,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-		?string $providerCode = null
+		?string $provider_code = null
 	): array {
-		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound, WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Filter is a validated Core-owned documentation extension point. Public named parameters are retained.
-		$sections = apply_filters( $filterHook, array(), $documentationUrl, $scope );
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- Filter is a validated Core-owned documentation extension point. Public named parameters are retained.
+		$sections = apply_filters( $filter_hook, array(), $documentation_url, $scope );
 		$prepared = array();
 
 		if ( is_array( $sections ) ) {
 			foreach ( $sections as $section ) {
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the published public method and named-parameter contract.
-				$normalized = $this->normalize_section( $section, $providerCode );
+
+				$normalized = $this->normalize_section( $section, $provider_code );
 				if ( null !== $normalized ) {
 					$prepared[] = $normalized;
 				}
@@ -110,7 +104,7 @@ final class DocumentationHookRenderer {
 				ob_end_clean();
 			}
 
-			BoosterLogger::logException(
+			BoosterLogger::log_exception(
 				'documentation section rendering failed',
 				$failure,
 				array(

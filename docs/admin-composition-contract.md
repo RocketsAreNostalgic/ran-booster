@@ -34,15 +34,15 @@ attaching its callbacks:
 
 ```php
 if ( ! defined( 'RAN_BOOSTER_ADDON_API_VERSION' )
-	|| 16 !== RAN_BOOSTER_ADDON_API_VERSION ) {
+	|| 17 !== RAN_BOOSTER_ADDON_API_VERSION ) {
 	return;
 }
 ```
 
-Add-on API 16 publishes only the named service documented for its surviving
+Add-on API 17 publishes only the named service documented for its surviving
 ready action. Core does not deliver an add-on logging facade, generic resolver
 or container.
-Provider API 13 remains a separate contract. Provider add-ons must continue to
+Provider API 14 remains a separate contract. Provider add-ons must continue to
 perform the exact checks described in the
 [Provider extension contract](provider-extension-contract.md).
 
@@ -65,7 +65,7 @@ and perform no remote work in the ready callback. A late listener is not
 replayed. Core catches a failed ready listener and continues without exposing
 its exception to the administrator.
 
-Release administration is bundled in Core. Add-on API 16 does not publish a
+Release administration is bundled in Core. Add-on API 17 does not publish a
 release-tracking ready action, a prospective-release ready action, or a
 prospective-release version marker. Core's fixed release controls call its
 internal typed coordinators after resolving the selected provider's exact
@@ -74,7 +74,7 @@ service-delivery API.
 
 Portability API 3 is an independently versioned adoption-only contract for a
 trusted source bridge. Its consumer checks exact Portability API 3, not Add-on
-API 16. The separate
+API 17. The separate
 [Portability API contract](portability-api.md) documents its candidate, nonce,
 review, Apply, source-ownership, recovery, and cleanup boundaries.
 
@@ -107,33 +107,33 @@ nonce authorizes nothing.
 Release tracking uses explicit channels:
 
 ```php
-$preflightNonce = wp_create_nonce(
-	$releaseTracking->nonceAction(
+$preflight_nonce = wp_create_nonce(
+	$release_tracking->nonce_action(
 		'preflight',
 		$type,
 		$identifier,
-		$expectedSourceRevision,
+		$expected_source_revision,
 		$channel
 	)
 );
-$preflight = $releaseTracking->preflight(
+$preflight = $release_tracking->preflight(
 	$type,
 	$identifier,
-	$expectedSourceRevision,
+	$expected_source_revision,
 	$channel,
-	$preflightNonce
+	$preflight_nonce
 );
-$releaseTracking->enable(
+$release_tracking->enable(
 	$type,
 	$identifier,
-	$expectedSourceRevision,
+	$expected_source_revision,
 	$channel,
 	$nonce
 );
-$releaseTracking->changeChannel(
+$release_tracking->change_channel(
 	$type,
 	$identifier,
-	$expectedSourceRevision,
+	$expected_source_revision,
 	$channel,
 	$nonce
 );
@@ -156,16 +156,16 @@ value object. Its stable result codes are `ready`, `release_unavailable`,
 `invalid_release_assets`, `preflight_unavailable`,
 `release_version_mismatch`, `release_header_missing`,
 `release_header_invalid` and `release_archive_unreadable`. Consumers read only
-`code()`, `ready()`, `packageRoot()`, `latestVersion()`, `releaseUrl()`,
-`releaseTag()`, `packageHeaderVersion()` and `reasonCode()`. The stable `code()`
-remains the workflow category; `reasonCode()` is an optional, allowlisted,
+`code()`, `ready()`, `package_root()`, `latest_version()`, `release_url()`,
+`release_tag()`, `package_header_version()` and `reason_code()`. The stable `code()`
+remains the workflow category; `reason_code()` is an optional, allowlisted,
 display-safe cause for actionable diagnostics and never contains provider
 response bodies, URLs, paths, tokens or exception messages. Unknown or unprovable
 authorization, package, revision, channel or result binding fails closed as
 `null`; it must not be interpreted as a new result code or as permission to
 enable release tracking.
 
-`changeChannel()` changes future eligibility only. It increments the source
+`change_channel()` changes future eligibility only. It increments the source
 revision, resets Automatic to Manual and invalidates native update state; it
 does not install, downgrade or alter package files. `ReleaseTrackingStatus`
 exposes the canonical `stable` or `prerelease` channel.
@@ -175,24 +175,27 @@ one registered provider aggregate supplies the complete release capability set
 required by the operation. It does not publish a prospective-release marker or
 deliver the internal facade to another plugin.
 
+The internal `ProspectiveReleaseFacade::API_VERSION` is **8** for this naming
+composition; this is not a public plugin-delivery marker.
+
 The facade accepts exactly:
 
 ```php
-$providerCodes = $prospective->supportedProviderCodes( $type );
-$prospective->listCandidates( $type, $repository, $channel, $nonce );
-$prospective->inspect( $type, $repository, $releaseId, $tag, $channel, $nonce );
+$provider_codes = $prospective->supported_provider_codes( $type );
+$prospective->list_candidates( $type, $repository, $channel, $nonce );
+$prospective->inspect( $type, $repository, $release_id, $tag, $channel, $nonce );
 $prospective->install(
 	$type,
 	$repository,
-	$releaseId,
+	$release_id,
 	$tag,
-	$expectedFingerprint,
+	$expected_fingerprint,
 	$channel,
 	$nonce
 );
 ```
 
-`supportedProviderCodes()` returns the bounded complete-product provider list
+`supported_provider_codes()` returns the bounded complete-product provider list
 for `plugin` or `theme` using request-local configuration only. It performs no
 repository resolution, credential access, remote request, discovery or
 mutation. Core keeps the prospective source unavailable when the selected
@@ -211,7 +214,7 @@ prereleases and a later stable promotion. Stable remains the default for
 existing saved configuration.
 
 All three operations recheck `manage_options`, the applicable WordPress install
-capability and the operation/type nonce derived from `nonceAction()`.
+capability and the operation/type nonce derived from `nonce_action()`.
 Candidate listing returns at most eight display-safe summaries without
 downloading a ZIP. Inspection downloads, validates and discards the exact ZIP,
 then returns bounded metadata and an opaque `v2:` continuity fingerprint.
@@ -307,9 +310,9 @@ extend those normalized rows through one structured filter:
 $rows = apply_filters(
 	'ran_booster_provider_repository_rows',
 	$rows,
-	$providerCode,
-	$branchProjections,
-	$returnUrl
+	$provider_code,
+	$branch_projections,
+	$return_url
 );
 ```
 
@@ -319,7 +322,7 @@ structured `actions`; it must preserve the existing detail prefix and every
 Core action. Only `core:webhook-management` may change its `url`, `disabled`
 and `described_by` state. The branch projection map is keyed like the current
 rows and contains only bounded local repository, package-policy, endpoint,
-eligibility, reason-code and secret-coverage facts. `$returnUrl` is the
+eligibility, reason-code and secret-coverage facts. `$return_url` is the
 canonical selected-repository or repository-list destination.
 
 New rows are review-only history. Their key must be namespaced, `historical`
@@ -376,13 +379,13 @@ Core exposes display-safe package data through
 ```php
 $package->type();             // "plugin" or "theme".
 $package->identifier();
-$package->displayName();
-$package->providerCode();
+$package->display_name();
+$package->provider_code();
 $package->source();           // "branch" or "release_asset".
-$package->sourceRevision();
+$package->source_revision();
 $package->subdirectory();     // Repository subdirectory, or "" for the root; at most 255 characters.
-$package->deploymentPolicy(); // "disabled", "manual" or "automatic".
-$package->settingsUrl();
+$package->deployment_policy(); // "disabled", "manual" or "automatic".
+$package->settings_url();
 ```
 
 An add-on may add bounded badges and status text to the managed Plugins or
@@ -393,11 +396,11 @@ $rows = apply_filters(
 	'ran_booster_admin_package_management_rows',
 	$rows,
 	$surface,
-	$packageProjections
+	$package_projections
 );
 ```
 
-`$surface` is `plugin` or `theme`, and `$packageProjections` is keyed by package
+`$surface` is `plugin` or `theme`, and `$package_projections` is keyed by package
 identifier. Returned rows may address only those identifiers. Each row accepts
 a bounded `status` string and a `badges` list whose tones are `neutral`, `ok`,
 `pending`, `warning` or `error`.
@@ -426,11 +429,11 @@ package:
 do_action(
 	'ran_booster_admin_package_settings_sections',
 	$package,
-	$settingsUrl
+	$settings_url
 );
 ```
 
-`$package` is an `\RAN\Admin\AdminPackageProjection` and `$settingsUrl` is its
+`$package` is an `\RAN\Admin\AdminPackageProjection` and `$settings_url` is its
 canonical settings URL. Core output-buffers this action and contains failure at
 the section. The add-on owns escaping inside its markup and mutations belong in
 its own `admin_post_*` handlers.
@@ -445,16 +448,16 @@ apply_filters(
 	$mode,
 	$type,
 	$package,
-	$pageUrl
+	$page_url
 );
 
 do_action(
 	'ran_booster_admin_package_advanced_source_sections',
 	$mode,
 	$type,
-	$selectedSource,
+	$selected_source,
 	$package,
-	$pageUrl
+	$page_url
 );
 ```
 
@@ -478,7 +481,7 @@ apply_filters(
 	),
 	$mode,
 	$type,
-	$selectedSource,
+	$selected_source,
 	$projection // ?\RAN\Admin\AdminPackageProjection
 );
 ```
@@ -508,7 +511,7 @@ installation and update-policy controls. Repository history uses normalized
 `webhook` and `release_workflow` categories, not provider key prefixes or English
 headings; only exact current summary projections contribute to review counts.
 See the [workflow capability contract](provider-extension-contract.md#optional-release-workflow-management)
-and the [initial-only V3 and API13 candidate contract](provider-release-workflow-api.md).
+and the [initial-only V3 and current Provider API contract](provider-release-workflow-api.md).
 
 ## Structured administration actions
 
@@ -523,12 +526,12 @@ array(
 		'hidden'        => array(
 			'action'   => 'example_addon_refresh',
 			'_wpnonce' => $nonce,
-			'package'  => $packageIdentifier,
+			'package'  => $package_identifier,
 		),
 		'disabled'      => false,
 		'external'      => false,
 		'described_by'  => '',
-		'screen_reader' => $packageIdentifier,
+		'screen_reader' => $package_identifier,
 	),
 );
 ```
@@ -558,23 +561,23 @@ Documentation uses append-only structured WordPress filters:
 
 ```php
 $sections = apply_filters(
-	'ran_booster_documentation_sections_after_provider_' . $providerCode,
+	'ran_booster_documentation_sections_after_provider_' . $provider_code,
 	array(),
-	$documentationUrl,
+	$documentation_url,
 	$scope
 );
 
 $sections = apply_filters(
 	'ran_booster_documentation_sections_before_about',
 	array(),
-	$documentationUrl,
+	$documentation_url,
 	$scope
 );
 ```
 
 The dynamic provider filter runs immediately after the matching registered
 provider's Core guide. The general filter runs before Core's About section.
-`$documentationUrl` is the canonical Booster Documentation URL and `$scope` is
+`$documentation_url` is the canonical Booster Documentation URL and `$scope` is
 `site` or `network`. Each callback accepts and returns the section list;
 WordPress callback priority supplies ordering when more than one plugin uses a
 hook.

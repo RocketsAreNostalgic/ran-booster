@@ -27,14 +27,14 @@ final class WP_Filesystem_ran_booster_test extends WP_Filesystem_Direct {
 			);
 
 			if ( hash_equals( $backup, $source ) && hash_equals( $installed, $destination ) ) {
-				$this->stopAtBarrier();
+				$this->stop_at_barrier();
 			}
 		}
 
 		return parent::move( $source, $destination, $overwrite );
 	}
 
-	private function stopAtBarrier(): void {
+	private function stop_at_barrier(): void {
 		$barrier   = RAN_BOOSTER_HARD_STOP_BARRIER;
 		$temp_root = realpath( sys_get_temp_dir() );
 		$parent    = is_string( $barrier ) ? realpath( dirname( $barrier ) ) : false;

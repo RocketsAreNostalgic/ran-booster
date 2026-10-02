@@ -35,7 +35,7 @@ use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
 
 final class ProviderContractsTest extends TestCase {
-	public function testReleaseNativeTargetsAreOneExactTypedCapability(): void {
+	public function test_release_native_targets_are_one_exact_typed_capability(): void {
 		self::assertTrue( is_subclass_of( RepositoryReleaseNativeTargets::class, \RAN\Provider\ProviderCapability::class ) );
 		self::assertSame(
 			array( 'has_registered_native_target', 'create_native_target' ),
@@ -44,7 +44,7 @@ final class ProviderContractsTest extends TestCase {
 		$factory = new \ReflectionMethod( RepositoryReleaseNativeTargets::class, 'create_native_target' );
 		self::assertSame( RepositoryReleaseNativeTarget::class, (string) $factory->getReturnType() );
 		self::assertSame(
-			array( 'packageType', 'repository', 'metadataFile', 'packageRoot', 'installedIdentifier', 'channel', 'deploymentPolicy' ),
+			array( 'package_type', 'repository', 'metadata_file', 'package_root', 'installed_identifier', 'channel', 'deployment_policy' ),
 			array_map( static fn ( \ReflectionParameter $parameter ): string => $parameter->name, $factory->getParameters() )
 		);
 		self::assertSame( RepositoryReference::class, (string) $factory->getParameters()[1]->getType() );
@@ -54,7 +54,7 @@ final class ProviderContractsTest extends TestCase {
 		);
 	}
 
-	public function testReleaseNativeTargetStatusIsBoundedAndContainsNoGenericPayload(): void {
+	public function test_release_native_target_status_is_bounded_and_contains_no_generic_payload(): void {
 		$status = new RepositoryReleaseNativeTargetStatus(
 			true,
 			'2.0.0',
@@ -70,7 +70,7 @@ final class ProviderContractsTest extends TestCase {
 		);
 		self::assertTrue( $status->active );
 		self::assertSame(
-			array( 'active', 'offeredVersion', 'versionRelationship', 'lastCheck', 'nextCheck', 'failureCode', 'candidateCode', 'candidateReleaseTag', 'candidateReleaseVersion', 'candidatePackageHeaderVersion', 'candidateProviderReleaseId' ),
+			array( 'active', 'offered_version', 'version_relationship', 'last_check', 'next_check', 'failure_code', 'candidate_code', 'candidate_release_tag', 'candidate_release_version', 'candidate_package_header_version', 'candidate_provider_release_id' ),
 			array_map(
 				static fn ( \ReflectionProperty $property ): string => $property->name,
 				( new \ReflectionClass( RepositoryReleaseNativeTargetStatus::class ) )->getProperties( \ReflectionProperty::IS_PUBLIC )
@@ -80,12 +80,12 @@ final class ProviderContractsTest extends TestCase {
 		new RepositoryReleaseNativeTargetStatus( false, str_repeat( '1', 65 ) );
 	}
 
-	#[DataProvider( 'invalidNativeTargetProviderReleaseIdentity' )]
-	public function testReleaseNativeTargetStatusRejectsUnverifiedProviderReleaseIdentity(
-		string $candidateCode,
-		string $candidateReleaseTag,
-		string $candidateReleaseVersion,
-		string $candidatePackageHeaderVersion
+	#[DataProvider( 'invalid_native_target_provider_release_identity' )]
+	public function test_release_native_target_status_rejects_unverified_provider_release_identity(
+		string $candidate_code,
+		string $candidate_release_tag,
+		string $candidate_release_version,
+		string $candidate_package_header_version
 	): void {
 		$this->expectException( \InvalidArgumentException::class );
 		new RepositoryReleaseNativeTargetStatus(
@@ -95,16 +95,16 @@ final class ProviderContractsTest extends TestCase {
 			1_700_000_000,
 			1_700_003_600,
 			'',
-			$candidateCode,
-			$candidateReleaseTag,
-			$candidateReleaseVersion,
-			$candidatePackageHeaderVersion,
+			$candidate_code,
+			$candidate_release_tag,
+			$candidate_release_version,
+			$candidate_package_header_version,
 			'42'
 		);
 	}
 
 	/** @return array<string, array{string, string, string, string}> */
-	public static function invalidNativeTargetProviderReleaseIdentity(): array {
+	public static function invalid_native_target_provider_release_identity(): array {
 		return array(
 			'missing candidate evidence'     => array( '', '', '', '' ),
 			'unverified candidate code'      => array( 'release_version_mismatch', 'v2.0.0', '2.0.0', '2.0.0' ),
@@ -112,7 +112,7 @@ final class ProviderContractsTest extends TestCase {
 		);
 	}
 
-	public function testReleaseCandidateListingIsOneExactTypedCapability(): void {
+	public function test_release_candidate_listing_is_one_exact_typed_capability(): void {
 		self::assertTrue( is_subclass_of( RepositoryReleaseCandidateListing::class, \RAN\Provider\ProviderCapability::class ) );
 
 		$methods = get_class_methods( RepositoryReleaseCandidateListing::class );
@@ -121,30 +121,30 @@ final class ProviderContractsTest extends TestCase {
 		$method = new \ReflectionMethod( RepositoryReleaseCandidateListing::class, 'list_release_candidates' );
 		self::assertSame( RepositoryReleaseCandidateList::class, (string) $method->getReturnType() );
 		self::assertSame(
-			array( 'packageType', 'repository', 'channel' ),
+			array( 'package_type', 'repository', 'channel' ),
 			array_map( static fn ( \ReflectionParameter $parameter ): string => $parameter->name, $method->getParameters() )
 		);
 		self::assertSame( RepositoryReference::class, (string) $method->getParameters()[1]->getType() );
 	}
 
-	public function testReleaseCandidateValuesAreBoundedAndTyped(): void {
-		$longAssetName = str_repeat( 'a', 216 ) . '.zip';
-		$candidate     = new RepositoryReleaseCandidate(
+	public function test_release_candidate_values_are_bounded_and_typed(): void {
+		$long_asset_name = str_repeat( 'a', 216 ) . '.zip';
+		$candidate       = new RepositoryReleaseCandidate(
 			'42',
 			'v1.2.3',
 			'1.2.3',
 			false,
 			'2026-08-17T12:00:00Z',
-			array( 'example-1.2.3+build.zip', $longAssetName )
+			array( 'example-1.2.3+build.zip', $long_asset_name )
 		);
-		$list          = new RepositoryReleaseCandidateList( array( $candidate ) );
+		$list            = new RepositoryReleaseCandidateList( array( $candidate ) );
 
 		self::assertSame( array( $candidate ), $list->candidates );
-		self::assertSame( '42', $candidate->providerReleaseId );
-		self::assertSame( array( 'example-1.2.3+build.zip', $longAssetName ), $candidate->expectedAssetNames );
+		self::assertSame( '42', $candidate->provider_release_id );
+		self::assertSame( array( 'example-1.2.3+build.zip', $long_asset_name ), $candidate->expected_asset_names );
 	}
 
-	public function testReleaseCandidateListRejectsUnboundedLists(): void {
+	public function test_release_candidate_list_rejects_unbounded_lists(): void {
 		$candidate = new RepositoryReleaseCandidate(
 			'42',
 			'v1.2.3',
@@ -158,7 +158,7 @@ final class ProviderContractsTest extends TestCase {
 		new RepositoryReleaseCandidateList( array_fill( 0, 9, $candidate ) );
 	}
 
-	public function testReleaseCandidateListRejectsDuplicateIdentities(): void {
+	public function test_release_candidate_list_rejects_duplicate_identities(): void {
 		$candidate = new RepositoryReleaseCandidate(
 			'42',
 			'v1.2.3',
@@ -184,7 +184,7 @@ final class ProviderContractsTest extends TestCase {
 		);
 	}
 
-	public function testReleaseCandidateRejectsUnboundedProviderValues(): void {
+	public function test_release_candidate_rejects_unbounded_provider_values(): void {
 		$this->expectException( \InvalidArgumentException::class );
 		new RepositoryReleaseCandidate(
 			'42',
@@ -196,7 +196,7 @@ final class ProviderContractsTest extends TestCase {
 		);
 	}
 
-	public function testReleaseCandidateRejectsInvalidUtcPublicationTime(): void {
+	public function test_release_candidate_rejects_invalid_utc_publication_time(): void {
 		$this->expectException( \InvalidArgumentException::class );
 		new RepositoryReleaseCandidate(
 			'42',
@@ -208,7 +208,7 @@ final class ProviderContractsTest extends TestCase {
 		);
 	}
 
-	public function testReleaseInspectionIsOneExactTypedCapability(): void {
+	public function test_release_inspection_is_one_exact_typed_capability(): void {
 		self::assertTrue( is_subclass_of( RepositoryReleaseInspector::class, \RAN\Provider\ProviderCapability::class ) );
 		self::assertSame( array( 'inspect_release' ), get_class_methods( RepositoryReleaseInspector::class ) );
 
@@ -216,7 +216,7 @@ final class ProviderContractsTest extends TestCase {
 		$parameters = $method->getParameters();
 		self::assertSame( RepositoryReleaseInspection::class, (string) $method->getReturnType() );
 		self::assertSame(
-			array( 'packageType', 'repository', 'providerReleaseId', 'tag', 'channel' ),
+			array( 'package_type', 'repository', 'provider_release_id', 'tag', 'channel' ),
 			array_map( static fn ( \ReflectionParameter $parameter ): string => $parameter->name, $parameters )
 		);
 		self::assertSame( 'string', (string) $parameters[0]->getType() );
@@ -226,7 +226,7 @@ final class ProviderContractsTest extends TestCase {
 		self::assertSame( 'string', (string) $parameters[4]->getType() );
 	}
 
-	public function testReleaseAcquisitionIsOneExactTypedCapability(): void {
+	public function test_release_acquisition_is_one_exact_typed_capability(): void {
 		self::assertTrue( is_subclass_of( RepositoryReleaseAcquirer::class, \RAN\Provider\ProviderCapability::class ) );
 		self::assertSame( array( 'acquire_release' ), get_class_methods( RepositoryReleaseAcquirer::class ) );
 
@@ -234,7 +234,7 @@ final class ProviderContractsTest extends TestCase {
 		$parameters = $method->getParameters();
 		self::assertSame( RepositoryReleaseArtifact::class, (string) $method->getReturnType() );
 		self::assertSame(
-			array( 'packageType', 'repository', 'providerReleaseId', 'tag', 'expectedFingerprint', 'channel' ),
+			array( 'package_type', 'repository', 'provider_release_id', 'tag', 'expected_fingerprint', 'channel' ),
 			array_map( static fn ( \ReflectionParameter $parameter ): string => $parameter->name, $parameters )
 		);
 		self::assertSame( RepositoryReference::class, (string) $parameters[1]->getType() );
@@ -243,7 +243,7 @@ final class ProviderContractsTest extends TestCase {
 		}
 	}
 
-	public function testReleaseArtifactIsOneShotAndPathFree(): void {
+	public function test_release_artifact_is_one_shot_and_path_free(): void {
 		self::assertTrue( interface_exists( RepositoryReleaseArtifact::class ) );
 		$methods = get_class_methods( RepositoryReleaseArtifact::class );
 		sort( $methods );
@@ -257,13 +257,13 @@ final class ProviderContractsTest extends TestCase {
 		);
 	}
 
-	public function testReleaseAcquisitionRejectionIsBounded(): void {
-		$rejection = RepositoryReleaseAcquisitionRejected::invalidRelease();
+	public function test_release_acquisition_rejection_is_bounded(): void {
+		$rejection = RepositoryReleaseAcquisitionRejected::invalid_release();
 
 		self::assertSame( RepositoryReleaseAcquisitionRejected::INVALID_RELEASE, $rejection->reason );
 		self::assertSame(
 			RepositoryReleaseAcquisitionRejected::CLEANUP_FAILED,
-			RepositoryReleaseAcquisitionRejected::cleanupFailed()->reason
+			RepositoryReleaseAcquisitionRejected::cleanup_failed()->reason
 		);
 		self::assertSame(
 			array(
@@ -277,7 +277,7 @@ final class ProviderContractsTest extends TestCase {
 		);
 	}
 
-	public function testReleaseInspectionEvidenceIsBoundedTypedAndPathFree(): void {
+	public function test_release_inspection_evidence_is_bounded_typed_and_path_free(): void {
 		$inspection = new RepositoryReleaseInspection(
 			'release:42',
 			'release/v1.2.3',
@@ -288,11 +288,11 @@ final class ProviderContractsTest extends TestCase {
 			'provider:v2:0123456789abcdef'
 		);
 
-		self::assertSame( 'release:42', $inspection->providerReleaseId );
-		self::assertSame( 'commit:0123456789abcdef', $inspection->providerCommitId );
+		self::assertSame( 'release:42', $inspection->provider_release_id );
+		self::assertSame( 'commit:0123456789abcdef', $inspection->provider_commit_id );
 		self::assertSame( 'provider:v2:0123456789abcdef', $inspection->fingerprint );
 		self::assertSame(
-			array( 'providerReleaseId', 'tag', 'version', 'providerCommitId', 'packageRoot', 'mainFile', 'fingerprint' ),
+			array( 'provider_release_id', 'tag', 'version', 'provider_commit_id', 'package_root', 'main_file', 'fingerprint' ),
 			array_map(
 				static fn ( \ReflectionProperty $property ): string => $property->name,
 				( new \ReflectionClass( RepositoryReleaseInspection::class ) )->getProperties( \ReflectionProperty::IS_PUBLIC )
@@ -300,8 +300,8 @@ final class ProviderContractsTest extends TestCase {
 		);
 	}
 
-	public function testReleaseInspectionRejectsUnsafeOrUnboundedEvidence(): void {
-		$valid         = array(
+	public function test_release_inspection_rejects_unsafe_or_unbounded_evidence(): void {
+		$valid          = array(
 			'42',
 			'v1.2.3',
 			'1.2.3',
@@ -310,7 +310,7 @@ final class ProviderContractsTest extends TestCase {
 			'example.php',
 			'v1:' . str_repeat( 'b', 64 ),
 		);
-		$invalidValues = array(
+		$invalid_values = array(
 			0 => '',
 			1 => "invalid\ntag",
 			2 => '-1.2.3',
@@ -320,7 +320,7 @@ final class ProviderContractsTest extends TestCase {
 			6 => str_repeat( 'f', 192 ),
 		);
 
-		foreach ( $invalidValues as $index => $invalid ) {
+		foreach ( $invalid_values as $index => $invalid ) {
 			$values           = $valid;
 			$values[ $index ] = $invalid;
 			try {
@@ -337,22 +337,22 @@ final class ProviderContractsTest extends TestCase {
 		new RepositoryReleaseInspection( ...$values );
 	}
 
-	public function testReleaseInspectionRejectionHasOnlyTheBoundedDomainReasons(): void {
-		$noReleases   = RepositoryReleaseInspectionRejected::noReleases();
-		$invalid      = RepositoryReleaseInspectionRejected::invalidRelease();
+	public function test_release_inspection_rejection_has_only_the_bounded_domain_reasons(): void {
+		$no_releases  = RepositoryReleaseInspectionRejected::no_releases();
+		$invalid      = RepositoryReleaseInspectionRejected::invalid_release();
 		$incompatible = RepositoryReleaseInspectionRejected::incompatible();
 
-		self::assertSame( RepositoryReleaseInspectionRejected::NO_RELEASES, $noReleases->reason );
+		self::assertSame( RepositoryReleaseInspectionRejected::NO_RELEASES, $no_releases->reason );
 		self::assertSame( RepositoryReleaseInspectionRejected::INVALID_RELEASE, $invalid->reason );
 		self::assertSame( RepositoryReleaseInspectionRejected::INCOMPATIBLE, $incompatible->reason );
-		self::assertSame( $noReleases->getMessage(), $invalid->getMessage() );
-		self::assertSame( $noReleases->getMessage(), $incompatible->getMessage() );
+		self::assertSame( $no_releases->getMessage(), $invalid->getMessage() );
+		self::assertSame( $no_releases->getMessage(), $incompatible->getMessage() );
 		self::assertTrue(
 			( new \ReflectionClass( RepositoryReleaseInspectionRejected::class ) )->getConstructor()?->isPrivate()
 		);
 	}
 
-	public function testReleaseMetadataIsAnExactOptionalCapability(): void {
+	public function test_release_metadata_is_an_exact_optional_capability(): void {
 		self::assertTrue( is_subclass_of( RepositoryReleaseMetadata::class, \RAN\Provider\ProviderCapability::class ) );
 
 		$methods = get_class_methods( RepositoryReleaseMetadata::class );
@@ -375,7 +375,7 @@ final class ProviderContractsTest extends TestCase {
 		);
 	}
 
-	public function testRepositoryProviderHasTheExactMandatoryApiFourSurface(): void {
+	public function test_repository_provider_has_the_exact_mandatory_api_four_surface(): void {
 		$methods = get_class_methods( RepositoryProvider::class );
 		sort( $methods );
 
@@ -385,7 +385,7 @@ final class ProviderContractsTest extends TestCase {
 		);
 	}
 
-	public function testCredentialedPublicBrowsingIsAnAdditiveOptionalCapability(): void {
+	public function test_credentialed_public_browsing_is_an_additive_optional_capability(): void {
 		self::assertTrue( is_subclass_of( CredentialedPublicRepositoryBrowser::class, RepositoryBrowser::class ) );
 
 		$methods = get_class_methods( CredentialedPublicRepositoryBrowser::class );
@@ -395,28 +395,28 @@ final class ProviderContractsTest extends TestCase {
 			array( 'browse_repositories', 'get_public_repository_browse_metadata' ),
 			$methods
 		);
-		self::assertTrue( ( new PublicRepositoryBrowseMetadata( true ) )->supportsProviderDefaultProfile );
-		self::assertFalse( ( new PublicRepositoryBrowseMetadata( false ) )->supportsProviderDefaultProfile );
+		self::assertTrue( ( new PublicRepositoryBrowseMetadata( true ) )->supports_provider_default_profile );
+		self::assertFalse( ( new PublicRepositoryBrowseMetadata( false ) )->supports_provider_default_profile );
 	}
 
-	public function testRepositoryWebhookOperationHasOnlyTheFiveFixedActions(): void {
-		$fitnessMethods    = get_class_methods( RepositoryWebhookFitness::class );
-		$managementMethods = get_class_methods( RepositoryWebhookManagement::class );
-		sort( $fitnessMethods );
-		sort( $managementMethods );
+	public function test_repository_webhook_operation_has_only_the_five_fixed_actions(): void {
+		$fitness_methods    = get_class_methods( RepositoryWebhookFitness::class );
+		$management_methods = get_class_methods( RepositoryWebhookManagement::class );
+		sort( $fitness_methods );
+		sort( $management_methods );
 
-		self::assertSame( array( 'assess_check', 'assess_reconfigure', 'assess_remove', 'assess_setup', 'assess_test' ), $fitnessMethods );
-		self::assertSame( array( 'check', 'reconfigure', 'remove', 'setup', 'test' ), $managementMethods );
+		self::assertSame( array( 'assess_check', 'assess_reconfigure', 'assess_remove', 'assess_setup', 'assess_test' ), $fitness_methods );
+		self::assertSame( array( 'check', 'reconfigure', 'remove', 'setup', 'test' ), $management_methods );
 		self::assertSame( 'repository-webhook-management', RepositoryWebhookFitness::OPERATION );
 		self::assertSame( 3, RepositoryWebhookFitness::VERSION );
 		self::assertSame( RepositoryWebhookFitness::OPERATION, RepositoryWebhookManagement::OPERATION );
 		self::assertSame( RepositoryWebhookFitness::VERSION, RepositoryWebhookManagement::VERSION );
 		self::assertSame(
-			array( 'repositoryId', 'repository', 'credentialProfileId' ),
+			array( 'repository_id', 'repository', 'credential_profile_id' ),
 			array_map( static fn ( \ReflectionParameter $parameter ): string => $parameter->name, ( new \ReflectionMethod( RepositoryWebhookFitness::class, 'assess_setup' ) )->getParameters() )
 		);
 		self::assertSame(
-			array( 'repositoryId', 'repository', 'credentialProfileId', 'hookId' ),
+			array( 'repository_id', 'repository', 'credential_profile_id', 'hook_id' ),
 			array_map( static fn ( \ReflectionParameter $parameter ): string => $parameter->name, ( new \ReflectionMethod( RepositoryWebhookFitness::class, 'assess_remove' ) )->getParameters() )
 		);
 
@@ -426,14 +426,14 @@ final class ProviderContractsTest extends TestCase {
 				( new \ReflectionMethod( RepositoryWebhookManagement::class, $method ) )->getParameters()
 			);
 			self::assertSame(
-				array( 'repositoryId', 'repository', 'hookId', 'callbackUrl', 'credentialProfileId' ),
+				array( 'repository_id', 'repository', 'hook_id', 'callback_url', 'credential_profile_id' ),
 				$names,
 				'Exact endpoint ownership requires the Core-derived callback URL.'
 			);
 		}
 	}
 
-	public function testManualCapabilityFixtureResolvesReadonlyLookupValues(): void {
+	public function test_manual_capability_fixture_resolves_readonly_lookup_values(): void {
 		$provider = new class() implements RepositoryProvider {
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
@@ -447,30 +447,30 @@ final class ProviderContractsTest extends TestCase {
 
 		self::assertTrue( $provider->get_metadata()->code->equals( $repository->provider ) );
 		self::assertSame( $request->locator, $repository->locator );
-		self::assertSame( 'package', $repository->packageSlug );
-		self::assertSame( 'test:' . hash( 'sha256', $request->locator ), $repository->providerRepositoryId );
+		self::assertSame( 'package', $repository->package_slug );
+		self::assertSame( 'test:' . hash( 'sha256', $request->locator ), $repository->provider_repository_id );
 		self::assertFalse( $repository->private );
-		self::assertSame( 'main', $repository->defaultBranch );
-		self::assertSame( $request->credentialId, $repository->credentialId );
-		self::assertTrue( $request->publicOnly );
+		self::assertSame( 'main', $repository->default_branch );
+		self::assertSame( $request->credential_id, $repository->credential_id );
+		self::assertTrue( $request->public_only );
 	}
 
-	public function testPreparedArchiveCleanupCanBeImplementedIdempotently(): void {
+	public function test_prepared_archive_cleanup_can_be_implemented_idempotently(): void {
 		$archive = new class() implements PreparedArchive {
 
-			public int $cleanupCount = 0;
+			public int $cleanup_count = 0;
 
 			private bool $cleaned = false;
 
-			public function getUrl(): string {
+			public function get_url(): string {
 				return 'https://example.test/archive.zip';
 			}
 
-			public function getResolvedRef(): string {
+			public function get_resolved_ref(): string {
 				return '0123456789abcdef0123456789abcdef01234567';
 			}
 
-			public function verifyCurrentHead(): void {
+			public function verify_current_head(): void {
 			}
 
 			public function cleanup(): void {
@@ -479,28 +479,28 @@ final class ProviderContractsTest extends TestCase {
 				}
 
 				$this->cleaned = true;
-				++$this->cleanupCount;
+				++$this->cleanup_count;
 			}
 		};
 
 		$archive->cleanup();
 		$archive->cleanup();
 
-		self::assertSame( 1, $archive->cleanupCount );
+		self::assertSame( 1, $archive->cleanup_count );
 	}
 
-	public function testArchiveCapabilityUsesNormalizedRequestsAndPreparedArchives(): void {
+	public function test_archive_capability_uses_normalized_requests_and_prepared_archives(): void {
 		$archive  = new class() implements PreparedArchive {
 
-			public function getUrl(): string {
+			public function get_url(): string {
 				return 'https://example.test/archive.zip';
 			}
 
-			public function getResolvedRef(): string {
+			public function get_resolved_ref(): string {
 				return '0123456789abcdef0123456789abcdef01234567';
 			}
 
-			public function verifyCurrentHead(): void {
+			public function verify_current_head(): void {
 			}
 
 			public function cleanup(): void {

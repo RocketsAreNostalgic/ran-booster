@@ -3,8 +3,8 @@
 /**
  * Modal inputs inherited from the Dashboard provider page projection.
  *
- * @var bool $hasCredentialSettings
- * @var bool $hasWebhookSettings
+ * @var bool $has_credential_settings
+ * @var bool $has_webhook_settings
  * @var array<string, mixed> $provider
  * @var list<array<string, mixed>> $webhook_profiles
  */
@@ -14,7 +14,7 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$providerProfileInteractionValues = static function ( string $action ): string {
+$provider_profile_interaction_values = static function ( string $action ): string {
 	$values = wp_json_encode(
 		array(
 			'ran_booster_interaction[operation]' => 'core:' . $action,
@@ -25,14 +25,14 @@ $providerProfileInteractionValues = static function ( string $action ): string {
 	return is_string( $values ) ? $values : '{}';
 };
 
-if ( $hasCredentialSettings ) {
-	$credentialAuthorisationDescription = sprintf(
+if ( $has_credential_settings ) {
+	$credential_authorisation_description = sprintf(
 		/* translators: 1: provider label, 2: provider code. */
 		__( 'Saving this credential authorizes the active %1$s provider to read every credential saved under provider code %2$s. Booster does not authenticate a third-party publisher.', 'ran-booster' ),
 		$provider['label'],
 		$provider['code']
 	);
-	$deleteCredentialDescription =
+	$delete_credential_description =
 		/* translators: 1: credential label. */
 		__(
 			'You are about to delete %1$s from this site. This removes its saved secret and cannot be undone.',
@@ -45,12 +45,12 @@ if ( $hasCredentialSettings ) {
 				<h2 id="ran-booster-access-modal-title" class="ran-booster-dialog__title"><?php esc_html_e( 'Add repository credential', 'ran-booster' ); ?></h2>
 				<button type="button" class="ran-booster-dialog__close ran-booster-close-credential-modal" aria-label="<?php esc_attr_e( 'Close', 'ran-booster' ); ?>"><span aria-hidden="true">&times;</span></button>
 			</div>
-			<form method="post" action="" class="ran-booster-credential-modal__form" autocomplete="off" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-access-profile-error" data-ran-booster-interaction-operation="core:save-access-profile" hx-post="" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop" hx-vals="<?php echo esc_attr( $providerProfileInteractionValues( 'save-access-profile' ) ); ?>">
+			<form method="post" action="" class="ran-booster-credential-modal__form" autocomplete="off" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-access-profile-error" data-ran-booster-interaction-operation="core:save-access-profile" hx-post="" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop" hx-vals="<?php echo esc_attr( $provider_profile_interaction_values( 'save-access-profile' ) ); ?>">
 				<?php wp_nonce_field( 'ran-booster-save-secrets' ); ?>
 					<input type="hidden" name="ran_booster[action]" value="save-access-profile">
 					<input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider['code'] ); ?>">
 					<input type="hidden" name="ran_booster[id]" value="">
-					<p class="description"><?php echo esc_html( $credentialAuthorisationDescription ); ?></p>
+					<p class="description"><?php echo esc_html( $credential_authorisation_description ); ?></p>
 					<p><label><?php esc_html_e( 'Label', 'ran-booster' ); ?> <input type="text" name="ran_booster[label]" class="regular-text" required placeholder="<?php esc_attr_e( 'e.g. Deployment access', 'ran-booster' ); ?>"></label></p>
 				<div class="ran-booster-credential-modal__field-row">
 					<p><label><?php esc_html_e( 'Credential type', 'ran-booster' ); ?> <select name="ran_booster[kind]" class="ran-booster-credential-kind">
@@ -63,16 +63,16 @@ if ( $hasCredentialSettings ) {
 					</p>
 				</div>
 				<?php
-				$fieldKinds = array();
-				$fieldData  = array();
+				$field_kinds = array();
+				$field_data  = array();
 				foreach ( $provider['credential_kinds'] as $kind ) {
 					foreach ( $kind['fields'] as $field ) {
-						$fieldKinds[ $field['key'] ][] = $kind['code'];
-						$fieldData[ $field['key'] ]    = $field;
+						$field_kinds[ $field['key'] ][] = $kind['code'];
+						$field_data[ $field['key'] ]    = $field;
 					}
 				}
-				foreach ( $fieldData as $field ) {
-					$kinds = implode( ',', $fieldKinds[ $field['key'] ] );
+				foreach ( $field_data as $field ) {
+					$kinds = implode( ',', $field_kinds[ $field['key'] ] );
 					?>
 					<p class="ran-booster-credential-config-field" data-kinds="<?php echo esc_attr( $kinds ); ?>" data-required="<?php echo $field['required'] ? '1' : '0'; ?>" hidden>
 						<label><?php echo esc_html( $field['label'] ); ?> <input type="<?php echo esc_attr( $field['type'] ); ?>" name="ran_booster[configuration][<?php echo esc_attr( $field['key'] ); ?>]" class="regular-text" autocapitalize="none" spellcheck="false" placeholder="<?php echo esc_attr( $field['placeholder'] ); ?>" disabled></label>
@@ -105,12 +105,12 @@ if ( $hasCredentialSettings ) {
 				<h2 id="ran-booster-delete-access-modal-title" class="ran-booster-dialog__title"><?php esc_html_e( 'Delete repository credential?', 'ran-booster' ); ?></h2>
 				<button type="button" class="ran-booster-dialog__close ran-booster-close-credential-modal" aria-label="<?php esc_attr_e( 'Close', 'ran-booster' ); ?>"><span aria-hidden="true">&times;</span></button>
 			</div>
-			<form method="post" action="" class="ran-booster-credential-modal__form" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-delete-access-profile-error" data-ran-booster-interaction-operation="core:delete-access-profile" hx-post="" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop" hx-vals="<?php echo esc_attr( $providerProfileInteractionValues( 'delete-access-profile' ) ); ?>">
+			<form method="post" action="" class="ran-booster-credential-modal__form" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-delete-access-profile-error" data-ran-booster-interaction-operation="core:delete-access-profile" hx-post="" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop" hx-vals="<?php echo esc_attr( $provider_profile_interaction_values( 'delete-access-profile' ) ); ?>">
 				<?php wp_nonce_field( 'ran-booster-save-secrets' ); ?>
 				<input type="hidden" name="ran_booster[action]" value="delete-access-profile">
 				<input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider['code'] ); ?>">
 				<input type="hidden" name="ran_booster[id]" value="">
-				<p id="ran-booster-delete-access-modal-description"><?php printf( esc_html( $deleteCredentialDescription ), '<strong data-delete-credential-label></strong>' ); ?></p>
+				<p id="ran-booster-delete-access-modal-description"><?php printf( esc_html( $delete_credential_description ), '<strong data-delete-credential-label></strong>' ); ?></p>
 				<p data-delete-credential-unused><?php esc_html_e( 'Booster has verified that no managed package currently uses this credential.', 'ran-booster' ); ?></p>
 				<p data-delete-credential-in-use hidden></p>
 				<div class="ran-booster-delete-credential-packages" data-delete-credential-packages aria-labelledby="ran-booster-delete-credential-packages-title" hidden>
@@ -129,16 +129,16 @@ if ( $hasCredentialSettings ) {
 	<?php
 }
 
-if ( $hasWebhookSettings ) {
-	$configuredWebhookTargets = array();
-	foreach ( $webhook_profiles as $webhookProfile ) {
-		$scope     = is_string( $webhookProfile['scope'] ?? null ) ? $webhookProfile['scope'] : '';
-		$target    = is_string( $webhookProfile['target'] ?? null )
-			? strtolower( trim( $webhookProfile['target'], " \t\n\r\0\x0B/" ) )
+if ( $has_webhook_settings ) {
+	$configured_webhook_targets = array();
+	foreach ( $webhook_profiles as $webhook_profile ) {
+		$scope      = is_string( $webhook_profile['scope'] ?? null ) ? $webhook_profile['scope'] : '';
+		$target     = is_string( $webhook_profile['target'] ?? null )
+			? strtolower( trim( $webhook_profile['target'], " \t\n\r\0\x0B/" ) )
 			: '';
-		$profileId = is_string( $webhookProfile['id'] ?? null ) ? $webhookProfile['id'] : '';
-		if ( in_array( $scope, array( 'owner', 'repository' ), true ) && '' !== $target && '' !== $profileId ) {
-			$configuredWebhookTargets[ $scope . ':' . $target ] = $profileId;
+		$profile_id = is_string( $webhook_profile['id'] ?? null ) ? $webhook_profile['id'] : '';
+		if ( in_array( $scope, array( 'owner', 'repository' ), true ) && '' !== $target && '' !== $profile_id ) {
+			$configured_webhook_targets[ $scope . ':' . $target ] = $profile_id;
 		}
 	}
 	?>
@@ -148,7 +148,7 @@ if ( $hasWebhookSettings ) {
 				<h2 id="ran-booster-webhook-modal-title" class="ran-booster-dialog__title"><?php esc_html_e( 'Add Push-to-Deploy secret', 'ran-booster' ); ?></h2>
 				<button type="button" class="ran-booster-dialog__close ran-booster-close-credential-modal" aria-label="<?php esc_attr_e( 'Close', 'ran-booster' ); ?>"><span aria-hidden="true">&times;</span></button>
 			</div>
-			<form method="post" action="" class="ran-booster-credential-modal__form" autocomplete="off" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-webhook-profile-error" data-ran-booster-interaction-operation="core:save-webhook-profile" hx-post="" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop" hx-vals="<?php echo esc_attr( $providerProfileInteractionValues( 'save-webhook-profile' ) ); ?>">
+			<form method="post" action="" class="ran-booster-credential-modal__form" autocomplete="off" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-webhook-profile-error" data-ran-booster-interaction-operation="core:save-webhook-profile" hx-post="" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop" hx-vals="<?php echo esc_attr( $provider_profile_interaction_values( 'save-webhook-profile' ) ); ?>">
 				<?php wp_nonce_field( 'ran-booster-save-secrets' ); ?>
 				<input type="hidden" name="ran_booster[action]" value="save-webhook-profile">
 				<input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider['code'] ); ?>">
@@ -163,22 +163,22 @@ if ( $hasWebhookSettings ) {
 					<label><span class="ran-booster-webhook-target-label"><?php esc_html_e( 'Target', 'ran-booster' ); ?></span>
 						<select name="ran_booster[target]" class="regular-text" data-webhook-target>
 							<optgroup label="<?php esc_attr_e( 'Managed owners', 'ran-booster' ); ?>" data-webhook-target-options="owner">
-								<option value="" disabled><?php echo esc_html( empty( $managedRepositories['owners'] ) ? __( 'No managed owners available', 'ran-booster' ) : __( 'Choose a managed owner', 'ran-booster' ) ); ?></option>
+								<option value="" disabled><?php echo esc_html( empty( $managed_repositories['owners'] ) ? __( 'No managed owners available', 'ran-booster' ) : __( 'Choose a managed owner', 'ran-booster' ) ); ?></option>
 								<?php
-								foreach ( $managedRepositories['owners'] ?? array() as $owner ) {
-									$configuredId = $configuredWebhookTargets[ 'owner:' . strtolower( trim( $owner, " \t\n\r\0\x0B/" ) ) ] ?? '';
+								foreach ( $managed_repositories['owners'] ?? array() as $owner ) {
+									$configured_id = $configured_webhook_targets[ 'owner:' . strtolower( trim( $owner, " \t\n\r\0\x0B/" ) ) ] ?? '';
 									?>
-									<option value="<?php echo esc_attr( $owner ); ?>"<?php echo '' !== $configuredId ? ' data-webhook-profile-id="' . esc_attr( $configuredId ) . '" disabled' : ''; ?>><?php echo esc_html( '' !== $configuredId ? sprintf( /* translators: 1: configured webhook target. */ __( '%1$s — already configured', 'ran-booster' ), $owner ) : $owner ); ?></option>
+									<option value="<?php echo esc_attr( $owner ); ?>"<?php echo '' !== $configured_id ? ' data-webhook-profile-id="' . esc_attr( $configured_id ) . '" disabled' : ''; ?>><?php echo esc_html( '' !== $configured_id ? sprintf( /* translators: 1: configured webhook target. */ __( '%1$s — already configured', 'ran-booster' ), $owner ) : $owner ); ?></option>
 								<?php } ?>
 							</optgroup>
 							<optgroup label="<?php esc_attr_e( 'Managed repositories', 'ran-booster' ); ?>" data-webhook-target-options="repository">
-								<option value="" disabled><?php echo esc_html( empty( $managedRepositories['repositories'] ) ? __( 'No managed repositories available', 'ran-booster' ) : __( 'Choose a managed repository', 'ran-booster' ) ); ?></option>
+								<option value="" disabled><?php echo esc_html( empty( $managed_repositories['repositories'] ) ? __( 'No managed repositories available', 'ran-booster' ) : __( 'Choose a managed repository', 'ran-booster' ) ); ?></option>
 								<?php
-								foreach ( $managedRepositories['repositories'] ?? array() as $repository ) {
-									$repositoryTarget = is_string( $repository['target'] ?? null ) ? $repository['target'] : '';
-									$configuredId     = $configuredWebhookTargets[ 'repository:' . strtolower( trim( $repositoryTarget, " \t\n\r\0\x0B/" ) ) ] ?? '';
+								foreach ( $managed_repositories['repositories'] ?? array() as $repository ) {
+									$repository_target = is_string( $repository['target'] ?? null ) ? $repository['target'] : '';
+									$configured_id     = $configured_webhook_targets[ 'repository:' . strtolower( trim( $repository_target, " \t\n\r\0\x0B/" ) ) ] ?? '';
 									?>
-									<option value="<?php echo esc_attr( $repositoryTarget ); ?>"<?php echo '' !== $configuredId ? ' data-webhook-profile-id="' . esc_attr( $configuredId ) . '" disabled' : ''; ?>><?php echo esc_html( '' !== $configuredId ? sprintf( /* translators: 1: configured webhook target. */ __( '%1$s — already configured', 'ran-booster' ), $repositoryTarget ) : $repositoryTarget ); ?></option>
+									<option value="<?php echo esc_attr( $repository_target ); ?>"<?php echo '' !== $configured_id ? ' data-webhook-profile-id="' . esc_attr( $configured_id ) . '" disabled' : ''; ?>><?php echo esc_html( '' !== $configured_id ? sprintf( /* translators: 1: configured webhook target. */ __( '%1$s — already configured', 'ran-booster' ), $repository_target ) : $repository_target ); ?></option>
 								<?php } ?>
 							</optgroup>
 						</select>

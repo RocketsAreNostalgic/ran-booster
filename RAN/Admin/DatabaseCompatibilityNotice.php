@@ -17,18 +17,18 @@ final class DatabaseCompatibilityNotice {
 
 	public function __construct(
 		private Database $database,
-		private ?string $screenId = null
+		private ?string $screen_id = null
 	) {
 	}
 
-	public function shouldRender(): bool {
+	public function should_render(): bool {
 		return current_user_can( 'manage_options' )
-			&& BoosterNoticeScope::allows( $this->screenId )
+			&& BoosterNoticeScope::allows( $this->screen_id )
 			&& null !== $this->message();
 	}
 
 	public function render(): void {
-		if ( $this->rendered || ! $this->shouldRender() ) {
+		if ( $this->rendered || ! $this->should_render() ) {
 			return;
 		}
 		$this->rendered = true;
@@ -44,10 +44,10 @@ final class DatabaseCompatibilityNotice {
 	}
 
 	private function message(): ?string {
-		if ( ! $this->database->isSupported() ) {
+		if ( ! $this->database->is_supported() ) {
 			return DatabaseCompatibilityFailure::REQUIREMENT;
 		}
 
-		return $this->database->isReady() ? null : DatabaseLifecycleFailure::REQUIREMENT;
+		return $this->database->is_ready() ? null : DatabaseLifecycleFailure::REQUIREMENT;
 	}
 }

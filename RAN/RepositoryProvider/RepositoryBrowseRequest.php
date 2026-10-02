@@ -26,12 +26,10 @@ final class RepositoryBrowseRequest {
 	public function __construct(
 		RepositoryBrowseMode $mode,
 		?string $owner = null,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-		?string $credentialId = null
+		?string $credential_id = null
 	) {
 		$this->reject_empty_value( $owner );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-		$this->reject_empty_value( $credentialId );
+		$this->reject_empty_value( $credential_id );
 
 		if ( RepositoryBrowseMode::PUBLIC_OWNER === $mode && null === $owner ) {
 			throw new InvalidArgumentException( 'Public-owner repository browsing requires an owner.' );
@@ -40,54 +38,48 @@ final class RepositoryBrowseRequest {
 		if ( RepositoryBrowseMode::ACCESSIBLE === $mode && null !== $owner ) {
 			throw new InvalidArgumentException( 'Accessible repository browsing does not accept an owner.' );
 		}
-
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-		if ( RepositoryBrowseMode::ACCESSIBLE === $mode && null === $credentialId ) {
+		if ( RepositoryBrowseMode::ACCESSIBLE === $mode && null === $credential_id ) {
 			throw new InvalidArgumentException( 'Accessible repository browsing requires a credential.' );
 		}
 
-		$this->mode  = $mode;
-		$this->owner = $owner;
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-		$this->credential_id = $credentialId;
+		$this->mode          = $mode;
+		$this->owner         = $owner;
+		$this->credential_id = $credential_id;
 		$this->started_at    = hrtime( true );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public methods and named parameters retain the existing caller contract.
-	public static function publicOwner( string $owner, ?string $credentialId = null ): self {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-		return new self( RepositoryBrowseMode::PUBLIC_OWNER, $owner, $credentialId );
+
+	public static function public_owner( string $owner, ?string $credential_id = null ): self {
+		return new self( RepositoryBrowseMode::PUBLIC_OWNER, $owner, $credential_id );
 	}
 
 	/**
 	 * Browse repositories available through one selected access profile.
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-	public static function accessible( string $credentialId ): self {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and DTO fields retain the existing caller contract.
-		return new self( RepositoryBrowseMode::ACCESSIBLE, null, $credentialId );
+	public static function accessible( string $credential_id ): self {
+		return new self( RepositoryBrowseMode::ACCESSIBLE, null, $credential_id );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
-	public function getMode(): RepositoryBrowseMode {
+
+	public function get_mode(): RepositoryBrowseMode {
 		return $this->mode;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
-	public function getOwner(): ?string {
+
+	public function get_owner(): ?string {
 		return $this->owner;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
-	public function getCredentialId(): ?string {
+
+	public function get_credential_id(): ?string {
 		return $this->credential_id;
 	}
 
 	/**
 	 * Claim one outbound request and receive its bounded timeout.
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
-	public function claimRemoteCall(): float {
+
+	public function claim_remote_call(): float {
 		$remaining = $this->remaining_seconds();
 		if ( self::MAX_REMOTE_CALLS <= $this->remote_calls || $remaining <= 0.0 ) {
 			throw new RuntimeException( 'Repository browsing reached its request limit.', 503 );
@@ -98,13 +90,13 @@ final class RepositoryBrowseRequest {
 		return min( self::REQUEST_TIMEOUT, $remaining );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
-	public function getResponseSizeLimit(): int {
+
+	public function get_response_size_limit(): int {
 		return self::PER_RESPONSE_BYTES + 1;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
-	public function acceptResponseBody( string $body ): void {
+
+	public function accept_response_body( string $body ): void {
 		$bytes = strlen( $body );
 		if ( self::PER_RESPONSE_BYTES < $bytes || self::AGGREGATE_BYTES < $this->response_bytes + $bytes ) {
 			throw new RuntimeException( 'Repository provider response exceeded the safe size limit.', 413 );
@@ -113,8 +105,8 @@ final class RepositoryBrowseRequest {
 		$this->response_bytes += $bytes;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public methods retain the existing connected caller contract.
-	public function hasCapacity(): bool {
+
+	public function has_capacity(): bool {
 		return $this->remote_calls < self::MAX_REMOTE_CALLS && $this->remaining_seconds() > 0.0;
 	}
 

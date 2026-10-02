@@ -17,7 +17,7 @@ final readonly class RepositoryBrowseResult {
 	 */
 	public function __construct(
 		public array $repositories,
-		public ?string $partialReason = null
+		public ?string $partial_reason = null
 	) {
 		if ( ! array_is_list( $repositories ) || RepositoryBrowseRequest::MAX_RESULTS < count( $repositories ) ) {
 			throw new RuntimeException( 'Repository browse results must be a bounded list.', 502 );
@@ -28,12 +28,12 @@ final readonly class RepositoryBrowseResult {
 			}
 		}
 
-		if ( null !== $partialReason && ! in_array( $partialReason, array( self::LIMIT, self::RATE_LIMIT, self::AUTHORIZATION, self::PROVIDER ), true ) ) {
+		if ( null !== $partial_reason && ! in_array( $partial_reason, array( self::LIMIT, self::RATE_LIMIT, self::AUTHORIZATION, self::PROVIDER ), true ) ) {
 			throw new RuntimeException( 'Unknown repository browse result reason.', 502 );
 		}
 	}
 
-	public function isPartial(): bool {
-		return null !== $this->partialReason;
+	public function is_partial(): bool {
+		return null !== $this->partial_reason;
 	}
 }

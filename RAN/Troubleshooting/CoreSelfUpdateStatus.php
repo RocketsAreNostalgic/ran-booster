@@ -62,14 +62,14 @@ final class CoreSelfUpdateStatus {
 
 		return array(
 			'state'           => $status->active ? 'active' : 'inactive',
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Connected native-target status contract retains its property names.
-			'code'            => $status->failureCode,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Connected native-target status contract retains its property names.
-			'offered_version' => $status->offeredVersion,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Connected native-target status contract retains its property names.
-			'last_check'      => $status->lastCheck,
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Connected native-target status contract retains its property names.
-			'next_check'      => $status->nextCheck,
+
+			'code'            => $status->failure_code,
+
+			'offered_version' => $status->offered_version,
+
+			'last_check'      => $status->last_check,
+
+			'next_check'      => $status->next_check,
 		);
 	}
 

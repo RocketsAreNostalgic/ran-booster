@@ -13,7 +13,7 @@ use RAN\Deployment\DeploymentStorageFailure;
 
 final class DeploymentAttemptTest extends TestCase {
 
-	public function testHydratesTheExactSafeProjectionWithoutDigestOrRequestJson(): void {
+	public function test_hydrates_the_exact_safe_projection_without_digest_or_request_json(): void {
 		$attempt = DeploymentAttempt::from_database( record: $this->row() );
 
 		self::assertSame( DeploymentState::QUEUED, $attempt->get_state() );
@@ -24,7 +24,7 @@ final class DeploymentAttemptTest extends TestCase {
 		self::assertNull( $attempt->safe_data()['resolved_by'] );
 	}
 
-	public function testRejectsTerminalStateWithoutMatchingFixedOutcome(): void {
+	public function test_rejects_terminal_state_without_matching_fixed_outcome(): void {
 		$row                 = $this->row();
 		$row['state']        = 'succeeded';
 		$row['finished_at']  = '2026-07-19 00:01:00';
@@ -34,7 +34,7 @@ final class DeploymentAttemptTest extends TestCase {
 		DeploymentAttempt::from_database( $row );
 	}
 
-	public function testResolvedNeedsAttentionRemainsHistoricalWithoutBlockingAdmission(): void {
+	public function test_resolved_needs_attention_remains_historical_without_blocking_admission(): void {
 		$row                        = $this->row();
 		$row['state']               = 'needs_attention';
 		$row['mutation_started_at'] = '2026-07-19 00:00:30';
@@ -50,7 +50,7 @@ final class DeploymentAttemptTest extends TestCase {
 		self::assertFalse( $attempt->requires_operator_resolution() );
 	}
 
-	public function testRejectsIncompleteOperatorResolutionMetadata(): void {
+	public function test_rejects_incomplete_operator_resolution_metadata(): void {
 		$row                 = $this->row();
 		$row['state']        = 'needs_attention';
 		$row['outcome_code'] = 'interrupted';

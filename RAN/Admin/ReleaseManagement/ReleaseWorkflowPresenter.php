@@ -28,27 +28,25 @@ final class ReleaseWorkflowPresenter {
 		private readonly ThemeRepository $themes,
 		private readonly ProviderRegistry $providers,
 		private readonly ReleaseWorkflowRequestController $requests,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?RepositorySourceGuard $sourceGuard = null
+		?RepositorySourceGuard $source_guard = null
 	) {
 		$this->tracking = new ReleaseTrackingOperations( $releases );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->source_guard = $sourceGuard ?? new RepositorySourceGuard();
+
+		$this->source_guard = $source_guard ?? new RepositorySourceGuard();
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names remain deferred to their connected caller cohort under #167.
-	public function keepReleaseSettingsDiscoverable(
+
+	public function keep_release_settings_discoverable(
 		array $choices,
 		string $mode,
 		string $type,
 		?object $package,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		string $pageUrl
+		string $page_url
 	): array {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		unset( $type, $pageUrl );
+
+		unset( $type, $page_url );
 		if ( 'edit' !== $mode || null === $package || ! isset( $choices['release_asset'] )
-			|| ! is_callable( array( $package, 'providerCode' ) ) || ! $this->release_provider_supported( (string) $package->providerCode() ) ) {
+			|| ! is_callable( array( $package, 'provider_code' ) ) || ! $this->release_provider_supported( (string) $package->provider_code() ) ) {
 			return $choices;
 		}
 
@@ -63,12 +61,12 @@ final class ReleaseWorkflowPresenter {
 	 * @param array<string, array<string, mixed>> $repositoryProjections
 	 * @return array<string, array<string, mixed>>
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase, WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain public method and named-parameter contracts for their connected caller cohort under #167.
-	public function enrichRepositoryRows( array $rows, string $providerCode, array $repositoryProjections, string $returnUrl ): array {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		unset( $repositoryProjections, $returnUrl );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		if ( null === $this->workflow_provider( $providerCode ) ) {
+
+	public function enrich_repository_rows( array $rows, string $provider_code, array $repository_projections, string $return_url ): array {
+
+		unset( $repository_projections, $return_url );
+
+		if ( null === $this->workflow_provider( $provider_code ) ) {
 			return $rows;
 		}
 
@@ -112,24 +110,24 @@ final class ReleaseWorkflowPresenter {
 	}
 
 	private function published_releases_working( ReleaseTrackingStatus $status ): bool {
-		return $status->eligible() && 'release_asset' === $status->source() && '' === $status->failureCode();
+		return $status->eligible() && 'release_asset' === $status->source() && '' === $status->failure_code();
 	}
 
 	private function status_matches_summary( ReleaseTrackingStatus $status, string $type, string $identifier, string $source, int $revision, string $repository_id ): bool {
 		return hash_equals( $type, $status->type() )
 			&& hash_equals( $identifier, $status->identifier() )
 			&& hash_equals( $source, $status->source() )
-			&& $revision === $status->sourceRevision()
-			&& hash_equals( $repository_id, $status->providerRepositoryId() );
+			&& $revision === $status->source_revision()
+			&& hash_equals( $repository_id, $status->provider_repository_id() );
 	}
 
 	/** @param array<string,mixed>|null $result @return array{result_view:?array<string,mixed>,url:string} */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public API names remain deferred to their connected caller cohort under #167.
-	public function packageProjection( object $package, ReleaseTrackingStatus $status, ?array $result ): array {
-		if ( ! is_callable( array( $package, 'providerCode' ) )
+
+	public function package_projection( object $package, ReleaseTrackingStatus $status, ?array $result ): array {
+		if ( ! is_callable( array( $package, 'provider_code' ) )
 			|| ! is_callable( array( $package, 'type' ) )
 			|| ! is_callable( array( $package, 'identifier' ) )
-			|| ! is_callable( array( $package, 'sourceRevision' ) ) ) {
+			|| ! is_callable( array( $package, 'source_revision' ) ) ) {
 			return array(
 				'result_view' => null,
 				'url'         => '',
@@ -149,13 +147,13 @@ final class ReleaseWorkflowPresenter {
 				'result_message'        => $result['message'],
 				'result_remediation'    => $result['remediation'],
 			) : null;
-		$provider_code = (string) $package->providerCode();
+		$provider_code = (string) $package->provider_code();
 		$url           = null !== $this->workflow_provider( $provider_code )
 			&& hash_equals( $provider_code, $this->workflow_provider_code( $status ) )
 			&& hash_equals( $status->type(), (string) $package->type() )
 			&& hash_equals( $status->identifier(), (string) $package->identifier() )
-			&& $status->sourceRevision() === (int) $package->sourceRevision()
-			? $this->repository_release_url( $status->providerRepositoryId(), $provider_code ) : '';
+			&& $status->source_revision() === (int) $package->source_revision()
+			? $this->repository_release_url( $status->provider_repository_id(), $provider_code ) : '';
 
 		return array(
 			'result_view' => $result_view,
@@ -164,8 +162,8 @@ final class ReleaseWorkflowPresenter {
 	}
 
 	/** @param array<string,mixed> $row @param array<string,mixed>|null $result @return array<string,mixed>|null */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase, WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain public method and named-parameter contracts for their connected caller cohort under #167.
-	public function repositorySectionProjection( array $row, string $returnUrl, string $previewKey, ?array $result ): ?array {
+
+	public function repository_section_projection( array $row, string $return_url, string $preview_key, ?array $result ): ?array {
 		$provider_code = is_string( $row['provider_code'] ?? null ) ? $row['provider_code'] : '';
 		if ( '' === $provider_code || true === ( $row['historical'] ?? false ) ) {
 			return null;
@@ -204,8 +202,7 @@ final class ReleaseWorkflowPresenter {
 					$revision,
 					(string) ( $matching_result['code'] ?? '' ),
 					true === ( $matching_result['successful'] ?? false ),
-					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-					$previewKey,
+					$preview_key,
 					(string) ( $matching_result['channel'] ?? '' ),
 					(string) ( $matching_result['failure_stage'] ?? '' ),
 					(string) ( $matching_result['diagnostic_code'] ?? '' ),
@@ -232,7 +229,7 @@ final class ReleaseWorkflowPresenter {
 			$exact && $this->record_matches_package_status( $workflow_status, $status ) ? $identifier : '',
 			$workflow_available && $exact && $status->eligible() && 'branch' === $status->source(),
 			$exact && $this->published_releases_working( $status ),
-			$workflow_status?->recordOccupied() ?? false,
+			$workflow_status?->record_occupied() ?? false,
 			$observation_kind,
 			$shared || ! $workflow_available
 		);
@@ -244,8 +241,8 @@ final class ReleaseWorkflowPresenter {
 			'shared'                 => $shared,
 			'conflicted'             => $conflicted,
 			'relationship_count'     => $guard['relationship_count'],
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-			'return_url'             => $returnUrl,
+
+			'return_url'             => $return_url,
 			'conflict_packages'      => $summaries,
 			'ineligible_message'     => $exact && ! $status->eligible() ? $this->repository_package_readiness_message( $status ) : '',
 			'lifecycle'              => $this->repository_lifecycle_projection(
@@ -267,7 +264,7 @@ final class ReleaseWorkflowPresenter {
 			'automation'             => $automation,
 			'automation_unavailable' => ! $shared && ! $conflicted && true === ( $view['unavailable'] ?? false ),
 			'automation_notice'      => ! $shared && ! $conflicted,
-			'provider_workflow_url'  => 'existing_automation_detected' === $observation_kind ? ( $workflow_status?->providerWorkflowUrl() ?? '' ) : '',
+			'provider_workflow_url'  => 'existing_automation_detected' === $observation_kind ? ( $workflow_status?->provider_workflow_url() ?? '' ) : '',
 			'show_result_notice'     => null !== $result_observation && ( '' === $result_observation || ! hash_equals( $result_observation, $observation_kind ) ),
 			'workflow_view'          => $view,
 		);
@@ -423,8 +420,8 @@ final class ReleaseWorkflowPresenter {
 			? $package : null;
 	}
 	private function package_matches_status( object $package, ReleaseTrackingStatus $status ): bool {
-		return $status->providerRepositoryId() === $package->get_provider_repository_id()
-			&& $status->sourceRevision() === $package->get_source_revision();
+		return $status->provider_repository_id() === $package->get_provider_repository_id()
+			&& $status->source_revision() === $package->get_source_revision();
 	}
 	private function anonymous_workflow_inspection_allowed( object $package ): bool {
 		return is_callable( array( $package, 'is_private' ) )
@@ -468,10 +465,10 @@ final class ReleaseWorkflowPresenter {
 				null
 			);
 			$exact  = $status instanceof ReleaseTrackingStatus
-				&& hash_equals( $repository, $status->providerRepositoryId() )
+				&& hash_equals( $repository, $status->provider_repository_id() )
 				&& hash_equals( $type, $status->type() )
 				&& hash_equals( $reference, $status->identifier() )
-				&& $summary_revision === $status->sourceRevision()
+				&& $summary_revision === $status->source_revision()
 				&& hash_equals( $summary_source, $status->source() );
 		}
 
@@ -479,7 +476,7 @@ final class ReleaseWorkflowPresenter {
 		$tone  = 'warning';
 		if ( $exact && $status instanceof ReleaseTrackingStatus ) {
 			$workflow_status  = $this->workflow_provider_status( $status );
-			$observation_kind = $workflow_status?->observationKind() ?? '';
+			$observation_kind = $workflow_status?->observation_kind() ?? '';
 			if ( $this->record_matches_status( $workflow_status, $status ) ) {
 				$value = __( 'Setup recorded', 'ran-booster' );
 				$tone  = 'pending';
@@ -492,10 +489,10 @@ final class ReleaseWorkflowPresenter {
 			} elseif ( $this->published_releases_working( $status ) ) {
 				$value = __( 'Published releases working', 'ran-booster' );
 				$tone  = 'ok';
-			} elseif ( in_array( $status->failureCode(), array( 'release_repository_conflict', 'repository_release_owner_exists' ), true ) ) {
+			} elseif ( in_array( $status->failure_code(), array( 'release_repository_conflict', 'repository_release_owner_exists' ), true ) ) {
 				$value = __( 'Blocked', 'ran-booster' );
 				$tone  = 'warning';
-			} elseif ( ! ( $workflow_status?->recordOccupied() ?? true ) && $status->eligible() && '' === $status->failureCode() ) {
+			} elseif ( ! ( $workflow_status?->record_occupied() ?? true ) && $status->eligible() && '' === $status->failure_code() ) {
 				$value = 'branch' === $status->source()
 					? __( 'Ready to assess', 'ran-booster' )
 					: __( 'Published releases selected', 'ran-booster' );
@@ -554,21 +551,21 @@ final class ReleaseWorkflowPresenter {
 
 	private function record_matches_status( ?\RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus $record, ReleaseTrackingStatus $status ): bool {
 		return $record instanceof \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus
-			&& $record->recordExact()
-			&& hash_equals( $status->providerRepositoryId(), $record->repositoryId() )
-			&& hash_equals( $status->type(), $record->packageType() )
-			&& hash_equals( $status->identifier(), $record->packageIdentifier() )
-			&& $status->sourceRevision() === $record->sourceRevision();
+			&& $record->record_exact()
+			&& hash_equals( $status->provider_repository_id(), $record->repository_id() )
+			&& hash_equals( $status->type(), $record->package_type() )
+			&& hash_equals( $status->identifier(), $record->package_identifier() )
+			&& $status->source_revision() === $record->source_revision();
 	}
 
 	private function record_matches_package_status( ?\RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus $record, ReleaseTrackingStatus $status ): bool {
 		return $record instanceof \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus
-			&& $record->recordOccupied()
-			&& 'bootstrap' === $record->recordOperation()
-			&& hash_equals( $this->workflow_provider_code( $status ), $record->providerCode() )
-			&& hash_equals( $status->providerRepositoryId(), $record->repositoryId() )
-			&& hash_equals( $status->type(), $record->packageType() )
-			&& hash_equals( $status->identifier(), $record->packageIdentifier() );
+			&& $record->record_occupied()
+			&& 'bootstrap' === $record->record_operation()
+			&& hash_equals( $this->workflow_provider_code( $status ), $record->provider_code() )
+			&& hash_equals( $status->provider_repository_id(), $record->repository_id() )
+			&& hash_equals( $status->type(), $record->package_type() )
+			&& hash_equals( $status->identifier(), $record->package_identifier() );
 	}
 
 	private function bounded_reference( string $reference, int $maximum ): string {
@@ -593,14 +590,14 @@ final class ReleaseWorkflowPresenter {
 		$anonymous      = $this->anonymous_workflow_inspection_allowed( $package );
 		$source_guard   = $this->workflow_source_guard( $type, $identifier, $package );
 		$metadata       = $this->providers->metadata()[ $provider_code ] ?? null;
-		$write_guidance = $state?->writeGuidance() ?? '';
+		$write_guidance = $state?->write_guidance() ?? '';
 		if ( '' === trim( $write_guidance ) ) {
 			$write_guidance = __( 'Choose a saved credential that can manage release workflows and open pull requests. Its secret is never stored with this setup.', 'ran-booster' );
 		}
 		$extra  = array(
 			'provider_label'        => $metadata?->label ?? $provider_code,
-			'documentation_links'   => $state?->documentationLinks() ?? array(),
-			'provider_workflow_url' => $state?->providerWorkflowUrl() ?? '',
+			'documentation_links'   => $state?->documentation_links() ?? array(),
+			'provider_workflow_url' => $state?->provider_workflow_url() ?? '',
 			'write_guidance'        => $write_guidance,
 		);
 		$reason = null === $provider
@@ -614,15 +611,15 @@ final class ReleaseWorkflowPresenter {
 				? __( 'Booster could not safely read this package\'s repository source relationship. Check package storage and retry.', 'ran-booster' )
 				: __( 'Releases require a repository used by only one managed package. Review the repository package list.', 'ran-booster' );
 		}
-		if ( '' === $reason && $state->recordOccupied() && ! $this->record_matches_package_status( $state, $status ) ) {
+		if ( '' === $reason && $state->record_occupied() && ! $this->record_matches_package_status( $state, $status ) ) {
 			$reason = __( 'A workflow record belongs to a different package. Review the recorded repository state before setup.', 'ran-booster' );
 		}
-		$credentials = $state?->credentialChoices() ?? array();
+		$credentials = $state?->credential_choices() ?? array();
 		$channel     = 'stable';
 		$preview     = null;
 		if ( '' === $reason && '' !== $preview_key ) {
 			$preview = $this->request_boundary( fn () => $provider->workflow_preview( ReleaseWorkflowProviderProjection::target( $status ), $preview_key ), null );
-			if ( null !== $preview && ( $preview->key() !== $preview_key || $preview->providerCode() !== $provider_code || $preview->repositoryId() !== $status->providerRepositoryId() ) ) {
+			if ( null !== $preview && ( $preview->key() !== $preview_key || $preview->provider_code() !== $provider_code || $preview->repository_id() !== $status->provider_repository_id() ) ) {
 				$preview = null;
 			}
 		}
@@ -665,14 +662,14 @@ final class ReleaseWorkflowPresenter {
 			'unavailable_reason'     => $reason,
 			'preview'                => null === $preview ? null : $preview->summary() + array(
 				'kind'    => $preview->kind(),
-				'changes' => $preview->changedPaths(),
+				'changes' => $preview->changed_paths(),
 			),
-			'record'                 => $this->record_matches_package_status( $state, $status ) ? array( 'pull_request_url' => $state->pullRequestUrl() ) : null,
-			'legacy'                 => true === $state?->recordOccupied() && ! $this->record_matches_package_status( $state, $status ) ? array( 'unsupported' => true ) : null,
-			'failure_history'        => $state?->failureHistory() ?? array(),
-			'assessment_observation' => null !== $state && '' !== $state->observationKind() ? array(
-				'kind'        => $state->observationKind(),
-				'recorded_at' => $state->observedAt(),
+			'record'                 => $this->record_matches_package_status( $state, $status ) ? array( 'pull_request_url' => $state->pull_request_url() ) : null,
+			'legacy'                 => true === $state?->record_occupied() && ! $this->record_matches_package_status( $state, $status ) ? array( 'unsupported' => true ) : null,
+			'failure_history'        => $state?->failure_history() ?? array(),
+			'assessment_observation' => null !== $state && '' !== $state->observation_kind() ? array(
+				'kind'        => $state->observation_kind(),
+				'recorded_at' => $state->observed_at(),
 			) : null,
 			'automation_state'       => '' !== $reason ? 'blocked' : ( $this->record_matches_package_status( $state, $status ) ? 'setup_recorded' : ( null !== $preview ? 'preview' : 'ready' ) ),
 			'forms'                  => array_filter( $forms, 'is_array' ),
@@ -705,7 +702,7 @@ final class ReleaseWorkflowPresenter {
 	/** Render-only identity check. POST requests continue through workflow_status(). */
 	private function workflow_display_status( string $type, string $identifier, int $revision ): ?ReleaseTrackingStatus {
 		$status = $this->releases?->status( $type, $identifier );
-		if ( ! $status instanceof ReleaseTrackingStatus || $revision !== $status->sourceRevision()
+		if ( ! $status instanceof ReleaseTrackingStatus || $revision !== $status->source_revision()
 			|| ! hash_equals( $type, $status->type() ) || ! hash_equals( $identifier, $status->identifier() ) ) {
 			return null;
 		}
@@ -741,7 +738,7 @@ final class ReleaseWorkflowPresenter {
 			if ( null === $this->releases || 'stable' !== $channel ) {
 				return null;
 			}
-			$action = $this->releases->nonceAction( 'assessment_preflight', $status->type(), $status->identifier(), $status->sourceRevision(), $channel );
+			$action = $this->releases->nonce_action( 'assessment_preflight', $status->type(), $status->identifier(), $status->source_revision(), $channel );
 			if ( '' === $action ) {
 				return null;
 			}
@@ -751,11 +748,11 @@ final class ReleaseWorkflowPresenter {
 			'action'                   => 'ran_booster_release_workflow',
 			'workflow_operation'       => $operation,
 			'expected_provider'        => $this->workflow_provider_code( $status ),
-			'expected_repository_id'   => $status->providerRepositoryId(),
-			'_wpnonce'                 => wp_create_nonce( $this->requests->workflowNonceAction( $operation, $status, $preview ) ),
+			'expected_repository_id'   => $status->provider_repository_id(),
+			'_wpnonce'                 => wp_create_nonce( $this->requests->workflow_nonce_action( $operation, $status, $preview ) ),
 			'expected_type'            => $status->type(),
 			'expected_identifier'      => $status->identifier(),
-			'expected_source_revision' => (string) $status->sourceRevision(),
+			'expected_source_revision' => (string) $status->source_revision(),
 		);
 		if ( '' !== $preview ) {
 			$fields['preview_key'] = $preview;
@@ -788,7 +785,7 @@ final class ReleaseWorkflowPresenter {
 	/** @return list<array{id:string,label:string}> */
 	private function workflow_capability( string $provider_code ): ?RepositoryReleaseWorkflowManagementV3 {
 		try {
-			return $this->providers->requireCapability( $provider_code, RepositoryReleaseWorkflowManagementV3::class );
+			return $this->providers->require_capability( $provider_code, RepositoryReleaseWorkflowManagementV3::class );
 		} catch ( Throwable ) {
 			return null;
 		}
@@ -818,12 +815,12 @@ final class ReleaseWorkflowPresenter {
 		if ( null === $provider ) {
 			return null;
 		}
-		$key = hash( 'sha256', (string) wp_json_encode( array( $provider_code, $status->providerRepositoryId(), $status->type(), $status->identifier(), $status->sourceRevision() ) ) );
+		$key = hash( 'sha256', (string) wp_json_encode( array( $provider_code, $status->provider_repository_id(), $status->type(), $status->identifier(), $status->source_revision() ) ) );
 		if ( ! array_key_exists( $key, $this->workflow_statuses ) ) {
 			$value = $this->request_boundary( fn () => $provider->workflow_status( ReleaseWorkflowProviderProjection::target( $status ) ), null );
-			if ( null !== $value && ( $value->providerCode() !== $provider_code
-				|| $value->repositoryId() !== $status->providerRepositoryId()
-				|| ( $value->recordExact() && ( $value->packageType() !== $status->type() || $value->packageIdentifier() !== $status->identifier() || $value->sourceRevision() !== $status->sourceRevision() ) ) ) ) {
+			if ( null !== $value && ( $value->provider_code() !== $provider_code
+				|| $value->repository_id() !== $status->provider_repository_id()
+				|| ( $value->record_exact() && ( $value->package_type() !== $status->type() || $value->package_identifier() !== $status->identifier() || $value->source_revision() !== $status->source_revision() ) ) ) ) {
 				$value = null;
 			}
 			$this->workflow_statuses[ $key ] = $value;
@@ -832,7 +829,7 @@ final class ReleaseWorkflowPresenter {
 	}
 
 	private function workflow_provider_code( ReleaseTrackingStatus $status ): string {
-		$package = $this->workflow_package( $status->type(), $status->identifier(), $status->sourceRevision() );
+		$package = $this->workflow_package( $status->type(), $status->identifier(), $status->source_revision() );
 		return null !== $package && $this->package_matches_status( $package, $status ) ? (string) $package->get_provider_code() : '';
 	}
 	/** @param array<string,string> $exception_context */
@@ -848,7 +845,7 @@ final class ReleaseWorkflowPresenter {
 				ob_end_clean();
 			}
 			if ( array() !== $exception_context ) {
-				BoosterLogger::logException( 'Provider release workflow request failed', $exception, $exception_context );
+				BoosterLogger::log_exception( 'Provider release workflow request failed', $exception, $exception_context );
 			}
 			return $failure;
 		}

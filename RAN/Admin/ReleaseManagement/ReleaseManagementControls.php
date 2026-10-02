@@ -33,44 +33,41 @@ final class ReleaseManagementControls {
 	public function __construct(
 		ReleaseTrackingFacade $releases,
 		ProspectiveReleaseFacade $prospective,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		callable $readCandidates,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		ManagedReleaseBrowser $managedBrowser,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		?RepositorySourceGuard $sourceGuard = null
+		callable $read_candidates,
+		ManagedReleaseBrowser $managed_browser,
+		?RepositorySourceGuard $source_guard = null
 	) {
 		$this->display  = new ReleaseManagementDisplay();
 		$this->releases = $releases;
 		$this->tracking = new ReleaseTrackingOperations( $releases );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->managed_browser = new ManagedReleaseBrowserOperations( $managedBrowser, $releases );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->prospective_operations = new ProspectiveReleaseOperations( $prospective, $readCandidates );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->source_guard = $sourceGuard ?? new RepositorySourceGuard();
+
+		$this->managed_browser = new ManagedReleaseBrowserOperations( $managed_browser, $releases );
+
+		$this->prospective_operations = new ProspectiveReleaseOperations( $prospective, $read_candidates );
+
+		$this->source_guard = $source_guard ?? new RepositorySourceGuard();
 	}
 
 	public function register(): void {
-		add_filter( 'ran_booster_admin_package_management_rows', array( $this, 'filterManagementRows' ), 10, 3 );
-		add_filter( 'ran_booster_admin_package_management_actions', array( $this, 'filterManagementActions' ), 10, 3 );
-		add_filter( 'ran_booster_admin_package_source_choices', array( $this, 'filterSourceChoices' ), 10, 5 );
-		add_filter( 'ran_booster_admin_package_advanced_source_summary', array( $this, 'filterAdvancedSourceSummary' ), 10, 5 );
-		add_filter( 'ran_booster_admin_package_advanced_source_summary_projection', array( $this, 'filterAdvancedSourceSummaryProjection' ), 10, 5 );
-		add_filter( 'ran_booster_documentation_sections_before_about', array( $this, 'filterDocumentationSections' ), 10, 3 );
-		add_action( 'ran_booster_admin_package_advanced_source_sections', array( $this, 'renderAdvancedSourceSection' ), 10, 5 );
-		add_action( 'admin_notices', array( $this, 'renderOperationNotice' ) );
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueueProspectiveAssets' ) );
+		add_filter( 'ran_booster_admin_package_management_rows', array( $this, 'filter_management_rows' ), 10, 3 );
+		add_filter( 'ran_booster_admin_package_management_actions', array( $this, 'filter_management_actions' ), 10, 3 );
+		add_filter( 'ran_booster_admin_package_source_choices', array( $this, 'filter_source_choices' ), 10, 5 );
+		add_filter( 'ran_booster_admin_package_advanced_source_summary', array( $this, 'filter_advanced_source_summary' ), 10, 5 );
+		add_filter( 'ran_booster_admin_package_advanced_source_summary_projection', array( $this, 'filter_advanced_source_summary_projection' ), 10, 5 );
+		add_filter( 'ran_booster_documentation_sections_before_about', array( $this, 'filter_documentation_sections' ), 10, 3 );
+		add_action( 'ran_booster_admin_package_advanced_source_sections', array( $this, 'render_advanced_source_section' ), 10, 5 );
+		add_action( 'admin_notices', array( $this, 'render_operation_notice' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_prospective_assets' ) );
 
-		add_action( 'admin_post_ran_booster_release_enable', array( $this, 'handleEnable' ) );
-		add_action( 'admin_post_ran_booster_release_refresh', array( $this, 'handleRefresh' ) );
-		add_action( 'admin_post_ran_booster_release_return_to_branch', array( $this, 'handleReturnToBranch' ) );
-		add_action( 'admin_post_ran_booster_release_change_channel', array( $this, 'handleChangeChannel' ) );
-		add_action( 'admin_post_ran_booster_release_install', array( $this, 'handleProspectiveInstall' ) );
-		add_action( 'wp_ajax_ran_booster_release_list_candidates', array( $this, 'handleProspectiveListCandidates' ) );
-		add_action( 'wp_ajax_ran_booster_release_inspect', array( $this, 'handleProspectiveInspect' ) );
-		add_action( 'wp_ajax_ran_booster_managed_release_list_candidates', array( $this, 'handleManagedListCandidates' ) );
-		add_action( 'wp_ajax_ran_booster_managed_release_inspect', array( $this, 'handleManagedInspect' ) );
+		add_action( 'admin_post_ran_booster_release_enable', array( $this, 'handle_enable' ) );
+		add_action( 'admin_post_ran_booster_release_refresh', array( $this, 'handle_refresh' ) );
+		add_action( 'admin_post_ran_booster_release_return_to_branch', array( $this, 'handle_return_to_branch' ) );
+		add_action( 'admin_post_ran_booster_release_change_channel', array( $this, 'handle_change_channel' ) );
+		add_action( 'admin_post_ran_booster_release_install', array( $this, 'handle_prospective_install' ) );
+		add_action( 'wp_ajax_ran_booster_release_list_candidates', array( $this, 'handle_prospective_list_candidates' ) );
+		add_action( 'wp_ajax_ran_booster_release_inspect', array( $this, 'handle_prospective_inspect' ) );
+		add_action( 'wp_ajax_ran_booster_managed_release_list_candidates', array( $this, 'handle_managed_list_candidates' ) );
+		add_action( 'wp_ajax_ran_booster_managed_release_inspect', array( $this, 'handle_managed_inspect' ) );
 	}
 
 	/**
@@ -78,8 +75,8 @@ final class ReleaseManagementControls {
 	 * @param list<object>                        $packages
 	 * @return array<string, array<string, mixed>>
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function filterManagementRows( array $rows, string $surface, array $packages ): array {
+
+	public function filter_management_rows( array $rows, string $surface, array $packages ): array {
 		if ( null === $this->tracking ) {
 			return $rows;
 		}
@@ -92,15 +89,15 @@ final class ReleaseManagementControls {
 			return $rows;
 		}
 
-		return $this->request_boundary( fn (): array => $this->display->presentManagement( $rows, $surface, $packages, $statuses ), $rows );
+		return $this->request_boundary( fn (): array => $this->display->present_management( $rows, $surface, $packages, $statuses ), $rows );
 	}
 
 	/**
 	 * @param array<string, array<string, mixed>> $actions
 	 * @return array<string, array<string, mixed>>
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function filterManagementActions( array $actions, string $surface, object $package ): array {
+
+	public function filter_management_actions( array $actions, string $surface, object $package ): array {
 		if ( null === $this->tracking ) {
 			return $actions;
 		}
@@ -108,7 +105,7 @@ final class ReleaseManagementControls {
 		$action = null !== $status ? $this->package_nonce_action( 'refresh', $package ) : null;
 		$nonce  = null === $action ? null : wp_create_nonce( $action );
 
-		return $this->request_boundary( fn (): array => $this->display->presentManagementActions( $actions, $surface, $package, $status, $nonce ), $actions );
+		return $this->request_boundary( fn (): array => $this->display->present_management_actions( $actions, $surface, $package, $status, $nonce ), $actions );
 	}
 
 	/**
@@ -117,14 +114,13 @@ final class ReleaseManagementControls {
 	 * @param array<string, array<string, mixed>> $choices
 	 * @return array<string, array<string, mixed>>
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function filterSourceChoices(
+
+	public function filter_source_choices(
 		array $choices,
 		string $mode,
 		string $type,
 		?object $package,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		string $pageUrl
+		string $page_url
 	): array {
 		unset( $type );
 		if ( null === $this->tracking || ! isset( $choices['release_asset'] ) ) {
@@ -144,8 +140,8 @@ final class ReleaseManagementControls {
 				'meta'              => 'create' === $mode
 					? __( 'Choose repository first', 'ran-booster' )
 					: __( 'Releases', 'ran-booster' ),
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-				'url'               => 'edit' === $mode ? add_query_arg( 'source_view', 'release_asset', $pageUrl ) : '',
+
+				'url'               => 'edit' === $mode ? add_query_arg( 'source_view', 'release_asset', $page_url ) : '',
 				'disabled'          => 'create' === $mode,
 				'hydrated'          => true,
 				'client_hydratable' => 'create' === $mode,
@@ -153,7 +149,7 @@ final class ReleaseManagementControls {
 		);
 		if ( 'edit' === $mode && null !== $package ) {
 			$status                           = $this->package_status( $package );
-			$choices['release_asset']['meta'] = $this->request_boundary( fn (): string => $this->display->releaseTrackMeta( $choices['release_asset']['meta'], $package, $status ), $choices['release_asset']['meta'] );
+			$choices['release_asset']['meta'] = $this->request_boundary( fn (): string => $this->display->release_track_meta( $choices['release_asset']['meta'], $package, $status ), $choices['release_asset']['meta'] );
 			$release_source_is_current        = is_callable( array( $package, 'source' ) )
 				&& 'release_asset' === $package->source();
 			if ( ! $release_source_is_current
@@ -162,7 +158,7 @@ final class ReleaseManagementControls {
 				$choices['release_asset']['meta']        = __( 'Repository subdirectory not supported', 'ran-booster' );
 				$choices['release_asset']['disabled']    = true;
 			} elseif ( ! $release_source_is_current
-				&& false === $this->display->releaseProviderSupported( $package, $status ) ) {
+				&& false === $this->display->release_provider_supported( $package, $status ) ) {
 				$choices['release_asset']['description'] = __( 'Published releases are not available for this repository provider.', 'ran-booster' );
 				$choices['release_asset']['meta']        = __( 'Provider capability unavailable', 'ran-booster' );
 				$choices['release_asset']['disabled']    = true;
@@ -172,15 +168,13 @@ final class ReleaseManagementControls {
 		return $choices;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function renderAdvancedSourceSection(
+
+	public function render_advanced_source_section(
 		string $mode,
 		string $type,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		string $selectedSource,
+		string $selected_source,
 		?object $package,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		string $pageUrl
+		string $page_url
 	): void {
 		if ( 'create' === $mode && null === $this->prospective_operations ) {
 			return;
@@ -193,8 +187,8 @@ final class ReleaseManagementControls {
 			$result = null;
 		}
 		$code = $result['code'] ?? '';
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$release_pane = 'edit' === $mode && 'release_asset' === $selectedSource && null !== $package;
+
+		$release_pane = 'edit' === $mode && 'release_asset' === $selected_source && null !== $package;
 		if ( $release_pane ) {
 			?>
 			<div
@@ -212,19 +206,19 @@ final class ReleaseManagementControls {
 		$nonces                = null === $package ? array() : $this->package_nonce_actions( $package, $status );
 		$operation_notice_html = '';
 		$duplicate_conflict    = in_array( $code, array( 'release_repository_conflict', 'repository_release_owner_exists' ), true )
-			&& null !== $status && in_array( $status->failureCode(), array( 'release_repository_conflict', 'repository_release_owner_exists' ), true )
+			&& null !== $status && in_array( $status->failure_code(), array( 'release_repository_conflict', 'repository_release_owner_exists' ), true )
 			&& $release_pane;
 		if ( 'edit' === $mode && '' !== $code && ! $duplicate_conflict ) {
 			ob_start();
-			$this->request_boundary( fn () => $this->display->renderOperationNotice( $code, $result['successful'], $result['type'], $result['identifier'], $result['channel'], $status ), null );
+			$this->request_boundary( fn () => $this->display->render_operation_notice( $code, $result['successful'], $result['type'], $result['identifier'], $result['channel'], $status ), null );
 			$operation_notice_html = (string) ob_get_clean();
 		}
 		$prospective = $this->prospective_projection( $type );
 		$recheck     = isset( $_GET['ran_booster_release_recheck'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only UI marker.
 			&& is_scalar( $_GET['ran_booster_release_recheck'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			&& '1' === (string) $_GET['ran_booster_release_recheck']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		$this->request_boundary( fn () => $this->display->renderAdvancedSourceSection( $mode, $type, $selectedSource, $package, $status, $pageUrl, $result['channel'] ?? '', $nonces, $prospective, $recheck, $operation_notice_html, $repository_conflict ), null );
+
+		$this->request_boundary( fn () => $this->display->render_advanced_source_section( $mode, $type, $selected_source, $package, $status, $page_url, $result['channel'] ?? '', $nonces, $prospective, $recheck, $operation_notice_html, $repository_conflict ), null );
 		if ( $release_pane ) {
 			?>
 			</div>
@@ -232,13 +226,12 @@ final class ReleaseManagementControls {
 		}
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function filterAdvancedSourceSummary(
+
+	public function filter_advanced_source_summary(
 		string $summary,
 		string $mode,
 		string $type,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		string $selectedSource,
+		string $selected_source,
 		?object $package
 	): string {
 		unset( $type );
@@ -246,30 +239,28 @@ final class ReleaseManagementControls {
 			return $summary;
 		}
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		return $this->request_boundary( fn (): string => $this->display->advancedSourceSummary( $summary, $mode, $selectedSource, $package, null === $package ? null : $this->package_status( $package ) ), $summary );
+		return $this->request_boundary( fn (): string => $this->display->advanced_source_summary( $summary, $mode, $selected_source, $package, null === $package ? null : $this->package_status( $package ) ), $summary );
 	}
 
 	/**
 	 * @return array{heading:string,badges:list<array{label:string}>,status:string}
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function filterAdvancedSourceSummaryProjection(
+
+	public function filter_advanced_source_summary_projection(
 		array $projection,
 		string $mode,
 		string $type,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		string $selectedSource,
+		string $selected_source,
 		?object $package
 	): array {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		unset( $type, $selectedSource );
+
+		unset( $type, $selected_source );
 		if ( null === $this->tracking ) {
 			return $projection;
 		}
 
 		return $this->request_boundary(
-			fn (): array => $this->display->advancedSourceSummaryProjection(
+			fn (): array => $this->display->advanced_source_summary_projection(
 				$projection,
 				$mode,
 				$package,
@@ -279,34 +270,34 @@ final class ReleaseManagementControls {
 		);
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function renderOperationNotice(): void {
+
+	public function render_operation_notice(): void {
 		$result = $this->requested_result();
 		$code   = $result['code'] ?? '';
 		if ( '' === $code || null === $this->tracking || ! $this->result_matches_current_screen( $result ) || $this->is_package_settings_request() ) {
 			return;
 		}
 
-		$status = $this->request_boundary( fn (): ?ReleaseTrackingStatus => $this->tracking->freshStatus( $result['type'], $result['identifier'] ), null );
-		$this->request_boundary( fn () => $this->display->renderOperationNotice( $code, $result['successful'], $result['type'], $result['identifier'], $result['channel'], $status ), null );
+		$status = $this->request_boundary( fn (): ?ReleaseTrackingStatus => $this->tracking->fresh_status( $result['type'], $result['identifier'] ), null );
+		$this->request_boundary( fn () => $this->display->render_operation_notice( $code, $result['successful'], $result['type'], $result['identifier'], $result['channel'], $status ), null );
 	}
 
 	/** @param list<array<string, mixed>> $sections @return list<array<string, mixed>> */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase,WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract. Public and protected methods retain the existing caller and override contracts.
-	public function filterDocumentationSections( array $sections, string $documentationUrl, string $scope ): array {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Retain the public named-parameter contract.
-		unset( $documentationUrl, $scope );
+
+	public function filter_documentation_sections( array $sections, string $documentation_url, string $scope ): array {
+
+		unset( $documentation_url, $scope );
 		$sections[] = array(
 			'id'      => 'ran-booster-documentation-published-releases',
 			'summary' => __( 'Releases', 'ran-booster' ),
-			'content' => array( $this, 'renderDocumentationContent' ),
+			'content' => array( $this, 'render_documentation_content' ),
 		);
 
 		return $sections;
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function renderDocumentationContent(): void {
+
+	public function render_documentation_content(): void {
 		?>
 				<p><?php esc_html_e( 'Published release management lets an eligible Booster-managed plugin or theme follow exact uploaded release ZIPs instead of a repository branch.', 'ran-booster' ); ?></p>
 				<h3><?php esc_html_e( 'Prepare an eligible release', 'ran-booster' ); ?></h3>
@@ -330,52 +321,52 @@ final class ReleaseManagementControls {
 		<?php
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function handleEnable(): void {
+
+	public function handle_enable(): void {
 		$this->handle_admin_post( 'enable' );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function handleRefresh(): void {
+
+	public function handle_refresh(): void {
 		$this->handle_admin_post( 'refresh' );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function handleReturnToBranch(): void {
+
+	public function handle_return_to_branch(): void {
 		$this->handle_admin_post( 'return_to_branch' );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function handleChangeChannel(): void {
+
+	public function handle_change_channel(): void {
 		$this->handle_admin_post( 'change_channel' );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function handleProspectiveListCandidates(): void {
+
+	public function handle_prospective_list_candidates(): void {
 		$this->handle_prospective_ajax( 'list_candidates' );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function handleProspectiveInspect(): void {
+
+	public function handle_prospective_inspect(): void {
 		$this->handle_prospective_ajax( 'inspect' );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function handleManagedListCandidates(): void {
+
+	public function handle_managed_list_candidates(): void {
 		$this->handle_managed_browser_ajax( 'list_candidates' );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function handleManagedInspect(): void {
+
+	public function handle_managed_inspect(): void {
 		$this->handle_managed_browser_ajax( 'inspect_candidate' );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function handleProspectiveInstall(): never {
+
+	public function handle_prospective_install(): never {
 		// This controller selects and validates the exact purpose nonce before reading prospective domain values.
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$request = is_array( $_POST ) ? $_POST : array();
-		$outcome = $this->processProspectiveRequest( 'install', $request );
+		$outcome = $this->process_prospective_request( 'install', $request );
 		$url     = 'installed' === $outcome['code'] && $outcome['successful']
 			? $this->return_url( $outcome['type'], $outcome['identifier'], true )
 			: admin_url( 'admin.php?page=ran-booster-' . ( 'plugin' === $outcome['type'] ? 'plugins' : 'themes' ) . '-create' );
@@ -384,8 +375,8 @@ final class ReleaseManagementControls {
 		$this->redirect_to( $url );
 	}
 
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function enqueueProspectiveAssets(): void {
+
+	public function enqueue_prospective_assets(): void {
 		$page = isset( $_GET['page'] ) && is_string( $_GET['page'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only screen routing.
 			? sanitize_key( wp_unslash( $_GET['page'] ) ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only screen routing.
 			: '';
@@ -414,11 +405,11 @@ final class ReleaseManagementControls {
 		}
 		$projection = $this->request_boundary(
 			fn (): array => array(
-				'providers' => $this->prospective_operations->supportedProviderCodes( $type ),
+				'providers' => $this->prospective_operations->supported_provider_codes( $type ),
 				'nonces'    => array(
-					'listCandidates' => $this->prospective_operations->nonceAction( 'list_candidates', $type ),
-					'inspect'        => $this->prospective_operations->nonceAction( 'inspect', $type ),
-					'install'        => $this->prospective_operations->nonceAction( 'install', $type ),
+					'listCandidates' => $this->prospective_operations->nonce_action( 'list_candidates', $type ),
+					'inspect'        => $this->prospective_operations->nonce_action( 'inspect', $type ),
+					'install'        => $this->prospective_operations->nonce_action( 'install', $type ),
 				),
 			),
 			null
@@ -461,7 +452,7 @@ final class ReleaseManagementControls {
 		// This controller validates local authority and the operation-specific nonce before optional values.
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$request = is_array( $_POST ) ? $_POST : array();
-		$url     = $this->processAdminPostRequest( $operation, $request );
+		$url     = $this->process_admin_post_request( $operation, $request );
 
 		$this->redirect_to( $url );
 	}
@@ -492,8 +483,8 @@ final class ReleaseManagementControls {
 	 *
 	 * @param array<string, mixed> $request
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function processAdminPostRequest( string $operation, array $request ): string {
+
+	public function process_admin_post_request( string $operation, array $request ): string {
 		$type       = $this->strict_requested_type( $request );
 		$identifier = $this->requested_identifier( $request );
 		$revision   = $this->requested_revision( $request );
@@ -507,7 +498,7 @@ final class ReleaseManagementControls {
 			if ( ! current_user_can( 'manage_options' ) || ! current_user_can( 'plugin' === $type ? 'update_plugins' : 'update_themes' ) ) {
 				$outcome = $this->package_outcome( $type, $identifier, 'forbidden', false );
 			} else {
-				$nonce_action = $this->request_boundary( fn (): string => $this->tracking->nonceAction( $operation, $type, $identifier, $revision ), '' );
+				$nonce_action = $this->request_boundary( fn (): string => $this->tracking->nonce_action( $operation, $type, $identifier, $revision ), '' );
 				if ( '' === $nonce_action ) {
 					$outcome = $this->package_outcome( $type, $identifier, 'service_unavailable', false );
 				} elseif ( '' !== $nonce && 1 === wp_verify_nonce( $nonce, $nonce_action ) ) {
@@ -551,7 +542,7 @@ final class ReleaseManagementControls {
 		// This controller selects and validates the exact purpose nonce before reading prospective domain values.
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$request = is_array( $_POST ) ? $_POST : array();
-		$outcome = $this->processProspectiveRequest( $operation, $request );
+		$outcome = $this->process_prospective_request( $operation, $request );
 
 		wp_send_json(
 			array(
@@ -566,7 +557,7 @@ final class ReleaseManagementControls {
 		// This route reads only identity/revision values until the purpose nonce is proven.
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$request = is_array( $_POST ) ? $_POST : array();
-		$outcome = $this->processManagedBrowserRequest( $operation, $request );
+		$outcome = $this->process_managed_browser_request( $operation, $request );
 
 		wp_send_json(
 			array(
@@ -578,8 +569,8 @@ final class ReleaseManagementControls {
 	}
 
 	/** @param array<string,mixed> $request @return array{code:string,successful:bool,data:array<mixed>} */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function processManagedBrowserRequest( string $operation, array $request ): array {
+
+	public function process_managed_browser_request( string $operation, array $request ): array {
 		$type       = $this->strict_requested_type( $request );
 		$identifier = $this->requested_identifier( $request );
 		$revision   = $this->requested_revision( $request );
@@ -601,7 +592,7 @@ final class ReleaseManagementControls {
 				'data'       => array(),
 			);
 		}
-		$action = $this->request_boundary( fn (): string => $this->tracking->nonceAction( $operation, $type, $identifier, $revision, $channel ), '' );
+		$action = $this->request_boundary( fn (): string => $this->tracking->nonce_action( $operation, $type, $identifier, $revision, $channel ), '' );
 		if ( '' === $action || '' === $nonce || 1 !== wp_verify_nonce( $nonce, $action ) ) {
 			return $fallback;
 		}
@@ -610,7 +601,7 @@ final class ReleaseManagementControls {
 
 		return $this->request_boundary(
 			fn (): array => 'list_candidates' === $operation
-				? $this->managed_browser->listCandidates( $type, $identifier, $revision, $channel, $nonce )
+				? $this->managed_browser->list_candidates( $type, $identifier, $revision, $channel, $nonce )
 				: $this->managed_browser->inspect( $type, $identifier, $revision, $release_id, $tag, $channel, $nonce ),
 			array(
 				'code'       => 'unable_to_check',
@@ -624,8 +615,8 @@ final class ReleaseManagementControls {
 	 * @param array<string,mixed> $request
 	 * @return array{type:string,identifier:string,code:string,successful:bool,data:array<mixed>}
 	 */
-	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Public and protected methods retain the existing caller and override contracts.
-	public function processProspectiveRequest( string $operation, array $request ): array {
+
+	public function process_prospective_request( string $operation, array $request ): array {
 		$type        = $this->strict_requested_type( $request );
 		$nonce_field = 'install' === $operation ? 'ran_booster_release_install_nonce' : '_wpnonce';
 		$nonce       = is_string( $request[ $nonce_field ] ?? null ) ? sanitize_text_field( wp_unslash( $request[ $nonce_field ] ) ) : '';
@@ -639,7 +630,7 @@ final class ReleaseManagementControls {
 		if ( null === $this->prospective_operations ) {
 			return $this->prospective_outcome( $type, 'service_unavailable' );
 		}
-		$nonce_action = $this->request_boundary( fn (): string => $this->prospective_operations->nonceAction( $operation, $type ), null );
+		$nonce_action = $this->request_boundary( fn (): string => $this->prospective_operations->nonce_action( $operation, $type ), null );
 		if ( null === $nonce_action || '' === $nonce_action ) {
 			return $this->prospective_outcome( $type, 'service_unavailable' );
 		}
@@ -656,7 +647,7 @@ final class ReleaseManagementControls {
 		$channel     = array_key_exists( 'release_channel', $request ) ? $this->release_channel_from( $request ) : 'stable';
 
 		return $this->request_boundary(
-			fn (): array => 'list_candidates' === $operation ? $this->prospective_operations->listCandidates( $type, $repository, $channel ) : $this->prospective_operations->execute( $operation, $type, $repository, $release_id, $tag, $fingerprint, $channel, $nonce ),
+			fn (): array => 'list_candidates' === $operation ? $this->prospective_operations->list_candidates( $type, $repository, $channel ) : $this->prospective_operations->execute( $operation, $type, $repository, $release_id, $tag, $fingerprint, $channel, $nonce ),
 			$this->prospective_outcome( $type, 'service_unavailable' )
 		);
 	}
@@ -700,12 +691,12 @@ final class ReleaseManagementControls {
 		return $this->request_boundary(
 			function () use ( $package ): ?ReleaseTrackingStatus {
 				if ( null === $this->tracking || ! is_callable( array( $package, 'type' ) )
-					|| ! is_callable( array( $package, 'identifier' ) ) || ! is_callable( array( $package, 'sourceRevision' ) ) ) {
+					|| ! is_callable( array( $package, 'identifier' ) ) || ! is_callable( array( $package, 'source_revision' ) ) ) {
 					return null;
 				}
 				$type       = $package->type();
 				$identifier = $package->identifier();
-				$revision   = $package->sourceRevision();
+				$revision   = $package->source_revision();
 				if ( ! is_string( $type ) || ! is_string( $identifier ) || ! is_int( $revision ) ) {
 					return null;
 				}
@@ -718,17 +709,17 @@ final class ReleaseManagementControls {
 
 	/** @return list<array{name:string,url:string,type:string}> */
 	private function repository_conflict_packages( object $package, ?ReleaseTrackingStatus $status ): array {
-		if ( null === $status || ! in_array( $status->failureCode(), array( 'release_repository_conflict', 'repository_release_owner_exists' ), true )
-			|| ! is_callable( array( $package, 'providerCode' ) ) ) {
+		if ( null === $status || ! in_array( $status->failure_code(), array( 'release_repository_conflict', 'repository_release_owner_exists' ), true )
+			|| ! is_callable( array( $package, 'provider_code' ) ) ) {
 			return array();
 		}
-		$provider = $package->providerCode();
+		$provider = $package->provider_code();
 		$type_id  = 'plugin' === $status->type() ? 1 : ( 'theme' === $status->type() ? 2 : 0 );
 		if ( ! is_string( $provider ) || '' === $provider || 0 === $type_id ) {
 			return array();
 		}
 		$result = $this->request_boundary(
-			fn (): array => $this->source_guard->assess( $provider, $status->providerRepositoryId(), $type_id, $status->identifier(), PackageSource::RELEASE_ASSET ),
+			fn (): array => $this->source_guard->assess( $provider, $status->provider_repository_id(), $type_id, $status->identifier(), PackageSource::RELEASE_ASSET ),
 			array()
 		);
 		if ( ! in_array( $result['code'] ?? null, array( 'repository_source_conflict', 'repository_release_owner_exists' ), true ) || ! is_array( $result['other_packages'] ?? null ) ) {
@@ -751,7 +742,7 @@ final class ReleaseManagementControls {
 						'page'            => 'ran-booster',
 						'tab'             => $provider,
 						'panel'           => 'repositories',
-						'repository'      => $status->providerRepositoryId(),
+						'repository'      => $status->provider_repository_id(),
 						'repository_view' => 'status',
 					),
 					admin_url( 'admin.php' )
@@ -787,17 +778,17 @@ final class ReleaseManagementControls {
 		$action = $this->request_boundary(
 			function () use ( $operation, $package, $channel ): string {
 				if ( null === $this->tracking || ! is_callable( array( $package, 'type' ) )
-					|| ! is_callable( array( $package, 'identifier' ) ) || ! is_callable( array( $package, 'sourceRevision' ) ) ) {
+					|| ! is_callable( array( $package, 'identifier' ) ) || ! is_callable( array( $package, 'source_revision' ) ) ) {
 					return '';
 				}
 				$type       = $package->type();
 				$identifier = $package->identifier();
-				$revision   = $package->sourceRevision();
+				$revision   = $package->source_revision();
 				if ( ! is_string( $type ) || ! is_string( $identifier ) || ! is_int( $revision ) || $revision < 1 ) {
 					return '';
 				}
 
-				return $this->tracking->nonceAction( $operation, $type, $identifier, $revision, $channel );
+				return $this->tracking->nonce_action( $operation, $type, $identifier, $revision, $channel );
 			},
 			''
 		);
@@ -815,13 +806,13 @@ final class ReleaseManagementControls {
 		$revisions   = array();
 		foreach ( $packages as $package ) {
 			if ( ! is_object( $package ) || ! is_callable( array( $package, 'type' ) ) || ! is_callable( array( $package, 'source' ) )
-				|| ! is_callable( array( $package, 'identifier' ) ) || ! is_callable( array( $package, 'sourceRevision' ) ) ) {
+				|| ! is_callable( array( $package, 'identifier' ) ) || ! is_callable( array( $package, 'source_revision' ) ) ) {
 				continue;
 			}
 			$type       = $package->type();
 			$source     = $package->source();
 			$identifier = $package->identifier();
-			$revision   = $package->sourceRevision();
+			$revision   = $package->source_revision();
 			if ( $surface === $type && 'release_asset' === $source && is_string( $identifier )
 				&& is_int( $revision ) && isset( $rows[ $identifier ] ) ) {
 				$identifiers[]            = $identifier;
@@ -864,10 +855,10 @@ final class ReleaseManagementControls {
 
 		return $this->request_boundary(
 			fn (): array => array(
-				'providers'       => $this->prospective_operations?->supportedProviderCodes( $type ) ?? array(),
-				'list_candidates' => wp_create_nonce( $this->prospective_operations?->nonceAction( 'list_candidates', $type ) ?? '' ),
-				'inspect'         => wp_create_nonce( $this->prospective_operations?->nonceAction( 'inspect', $type ) ?? '' ),
-				'install'         => wp_create_nonce( $this->prospective_operations?->nonceAction( 'install', $type ) ?? '' ),
+				'providers'       => $this->prospective_operations?->supported_provider_codes( $type ) ?? array(),
+				'list_candidates' => wp_create_nonce( $this->prospective_operations?->nonce_action( 'list_candidates', $type ) ?? '' ),
+				'inspect'         => wp_create_nonce( $this->prospective_operations?->nonce_action( 'inspect', $type ) ?? '' ),
+				'install'         => wp_create_nonce( $this->prospective_operations?->nonce_action( 'install', $type ) ?? '' ),
 			),
 			array()
 		);

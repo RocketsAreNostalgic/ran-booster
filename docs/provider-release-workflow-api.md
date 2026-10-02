@@ -1,12 +1,13 @@
 # Provider release-workflow capability
 
-> API13 dependency-adoption candidate: the lock selects the immutable Provider
-> beta.11 release. Final archive/installed qualification must use this exact
-> composition; earlier source overlays are not adoption proof. Core beta.31
-> remains held for the coordinated work and its separate release decision.
+> Provider API14 naming candidate: Core now pins immutable GitHub Provider
+> `v1.0.0-beta.12` at `c90777b7a23b7e07244a94c7ccbf3c4faf4fdc2c` in its
+> package constraint and dependency lock. The earlier beta.11/API13 tuple is
+> historical. Final native and installed qualification on the corrected Core
+> candidate and a separate release decision remain required before beta.31 ships.
+> See the [current recovery and landing record](beta31-naming-recovery.md#remaining-gates-and-landing-order).
 
-
-Provider API 13 keeps release-workflow setup as an optional, separately versioned
+Provider API 14 keeps release-workflow setup as an optional, separately versioned
 provider facet. The base provider registration seam does not change when this
 facet evolves.
 
@@ -51,15 +52,15 @@ tags. The five methods are `workflow_status`, `workflow_preview`,
 are rejected before provider, credential or preflight access.
 
 The helper resolves `RepositoryReleaseWorkflowManagementV3` directly.
-The production lock selects immutable GitHub Provider `v1.0.0-beta.11`
-(`c88045d0b6d6048599454b9549e59ddf176d56f0`), which implements V3 and preserves
+The production lock selects immutable GitHub Provider `v1.0.0-beta.12`
+(`c90777b7a23b7e07244a94c7ccbf3c4faf4fdc2c`), which implements V3 and preserves
 a valid bootstrap record's operation across source revisions. Core requires a
 `bootstrap` operation before exposing or invoking outcomes. The historical
 beta.8 composition (`556f19923f6564f1bbd5cecee089d6b136afc5cd`) passed repository
 quality, archive verification and the four supported WordPress/database jobs
 on merged Core #177. Those results do not qualify this new lock; see the
-[connected naming adoption record](connected-naming-adoption.md).
-Installed candidate proof does not establish an immutable API-13 Core release.
+[current recovery and landing record](beta31-naming-recovery.md#remaining-gates-and-landing-order).
+Installed candidate proof does not establish an immutable API14 Core release.
 
 The API 3 facet still requires the same five release-consumption capabilities on
 the registered provider aggregate: `RepositoryReleaseMetadata`,
@@ -69,20 +70,24 @@ workflow-helper controls and calls also require that aggregate's
 `ProviderMetadata` to expose non-null `ProviderAdminMetadata`. Admin metadata
 remains optional for ordinary provider registration and other capabilities.
 
-## Provider API 13 compatibility boundary
+## Provider API 14 compatibility boundary
 
-Provider API 13 identifies the snake_case provider capability contracts while retaining initial-only workflow V3. API 11
-promised V2 and is no longer advertised by Core. External providers
-must check the exact outer API marker before loading their implementation:
-old API-11 and API-12 providers remain unregistered on API 13, and API-13 providers remain
-unregistered on older or unknown future hosts. Tests cover both plugin load
-orders. No V2 shim, range negotiation or registration redesign is introduced.
+Provider API 14 completes snake_case naming of owned methods, parameters,
+properties and DTO accessors while retaining initial-only workflow V3. API 11
+promised V2 and is no longer advertised by Core. External providers must check
+the exact outer API marker before loading their implementation. API11, API12
+and API13 providers remain unregistered on API14; API14 providers remain
+unregistered on older or unknown future hosts. Both plugin load orders must
+be covered. No V2 shim, range negotiation or registration redesign is introduced.
 
-The earlier API12 initial-only V3 change was approved under organisation #81.
-The methods-only API13 migration is coordinated under Core #167. The registration factory signature and Add-on API 16
-remain unchanged. GitHub Provider host qualification and Bitbucket registration
-must move together with Core; Branch Updater and Release Updater protocols do
-not change as part of this work.
+The earlier API12 initial-only V3 change was approved under organisation #81;
+API13 then migrated capability methods. Core #167 coordinates landing and
+qualification of the completed API14 naming and matching consumers. The credential-bearing registration factory
+still takes three arguments, but its owned PHP members use snake_case. Add-on
+API17 and Admin Interaction API3 are separately versioned connected changes.
+GitHub Provider host qualification and Bitbucket registration must move together
+with Core; Branch Updater and Release Updater protocols do not change as part of
+this work.
 
 ## Persisted history
 
@@ -102,9 +107,11 @@ WordPress/database installation jobs, including bundled Provider API-12/V3
 readback without the development Composer autoloader.
 
 UI/presentation implementation and owner interactive/end-to-end acceptance
-remain deferred under #81/#85. Automated checks must identify exact sources and
+remain deferred under #81/#85. This separate feature-acceptance boundary is not
+closed by released-dependency adoption or source/API qualification. Automated
+checks must identify exact sources and
 distinguish source candidates, installed candidate archives and certified
-releases. An immutable API-13 Core release and Bitbucket qualification against
-that actual release remain pending. Keep certification pins tied to the actual
+releases. Immutable API14 Core beta.31 publication and Bitbucket/Migrator
+release-backed qualification against that actual release remain pending. Keep certification pins tied to the actual
 certified release; do not publish a bridge-only release or claim full G1/G2
 acceptance from this candidate proof.

@@ -17,10 +17,12 @@ use RuntimeException;
 #[PreserveGlobalState( false )]
 final class WordPressPackageRemovalGatewayTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_package_removal_gateway_events'] = array();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset(
 			$GLOBALS['ran_booster_package_removal_gateway_events'],
@@ -28,8 +30,8 @@ final class WordPressPackageRemovalGatewayTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'deleteResults' )]
-	public function testPluginInventoryIsRefreshedAfterEveryCompletedDeleteAttempt( mixed $result, bool $deleted ): void {
+	#[DataProvider( 'delete_results' )]
+	public function test_plugin_inventory_is_refreshed_after_every_completed_delete_attempt( mixed $result, bool $deleted ): void {
 		$GLOBALS['ran_booster_package_removal_gateway_result'] = $result;
 
 		self::assertSame(
@@ -46,14 +48,14 @@ final class WordPressPackageRemovalGatewayTest extends TestCase {
 	}
 
 	/** @return list<array{mixed, bool}> */
-	public static function deleteResults(): array {
+	public static function delete_results(): array {
 		return array(
 			array( true, true ),
 			array( false, false ),
 		);
 	}
 
-	public function testPluginInventoryIsRefreshedWhenWordPressDeletionThrows(): void {
+	public function test_plugin_inventory_is_refreshed_when_word_press_deletion_throws(): void {
 		$GLOBALS['ran_booster_package_removal_gateway_result'] = new RuntimeException( 'Fixture deletion failed.' );
 
 		try {

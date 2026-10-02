@@ -10,15 +10,15 @@ use RAN\Admin\AdminPackageProjection;
 
 final class AdminPackageProjectionTest extends TestCase {
 
-	public function testSubdirectoryNormalizesWhitespaceOnlyRoot(): void {
+	public function test_subdirectory_normalizes_whitespace_only_root(): void {
 		self::assertSame( '', $this->projection( " \t\n " )->subdirectory() );
 	}
 
-	public function testSubdirectoryNormalizesAConfiguredPath(): void {
+	public function test_subdirectory_normalizes_aconfigured_path(): void {
 		self::assertSame( 'plugins/example', $this->projection( '  plugins/example  ' )->subdirectory() );
 	}
 
-	public function testSubdirectoryAcceptsA255CharacterPathAndRejectsAnOverflow(): void {
+	public function test_subdirectory_accepts_a255_character_path_and_rejects_an_overflow(): void {
 		self::assertSame( str_repeat( 'a', 255 ), $this->projection( str_repeat( 'a', 255 ) )->subdirectory() );
 
 		$this->expectException( InvalidArgumentException::class );

@@ -15,8 +15,7 @@ final class WordPressOrgUpdateRequestFilter {
 		private Database $database,
 		private PluginRepository $plugins,
 		private ThemeRepository $themes,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Preserve the public constructor named-argument contract.
-		private string $boosterPlugin
+		private string $booster_plugin
 	) {
 	}
 
@@ -47,7 +46,7 @@ final class WordPressOrgUpdateRequestFilter {
 		}
 
 		try {
-			if ( ! $this->database->isSupported() ) {
+			if ( ! $this->database->is_supported() ) {
 				return $args;
 			}
 			$managed = array_keys(
@@ -60,8 +59,7 @@ final class WordPressOrgUpdateRequestFilter {
 		}
 
 		if ( 'plugin' === $type ) {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- The promoted constructor property retains its public argument name.
-			$managed[] = $this->boosterPlugin;
+			$managed[] = $this->booster_plugin;
 			$removed   = false;
 			foreach ( $managed as $package ) {
 				$removed = $removed || isset( $payload['plugins'][ $package ] );

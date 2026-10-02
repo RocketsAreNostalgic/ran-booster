@@ -15,12 +15,12 @@ final readonly class AdminPackageProjection {
 	public function __construct(
 		private string $type,
 		private string $identifier,
-		private string $displayName,
-		private string $providerCode,
+		private string $display_name,
+		private string $provider_code,
 		private string $source,
-		private int $sourceRevision,
-		private string $deploymentPolicy,
-		private string $settingsUrl,
+		private int $source_revision,
+		private string $deployment_policy,
+		private string $settings_url,
 		string $subdirectory = ''
 	) {
 		if ( ! in_array( $this->type, array( 'plugin', 'theme' ), true ) ) {
@@ -31,15 +31,15 @@ final readonly class AdminPackageProjection {
 			throw new InvalidArgumentException( 'Package projections require a bounded identifier.' );
 		}
 
-		if ( '' === trim( $this->displayName ) || strlen( $this->displayName ) > 255 ) {
+		if ( '' === trim( $this->display_name ) || strlen( $this->display_name ) > 255 ) {
 			throw new InvalidArgumentException( 'Package projections require a bounded display name.' );
 		}
 
-		if ( '' !== $this->providerCode && 1 !== preg_match( '/^[a-z][a-z0-9_-]{0,31}$/', $this->providerCode ) ) {
+		if ( '' !== $this->provider_code && 1 !== preg_match( '/^[a-z][a-z0-9_-]{0,31}$/', $this->provider_code ) ) {
 			throw new InvalidArgumentException( 'Package projections require a provider code.' );
 		}
 
-		if ( ! in_array( $this->source, array( 'branch', 'release_asset' ), true ) || $this->sourceRevision < 1 ) {
+		if ( ! in_array( $this->source, array( 'branch', 'release_asset' ), true ) || $this->source_revision < 1 ) {
 			throw new InvalidArgumentException( 'Package projections require a valid source identity.' );
 		}
 
@@ -48,18 +48,18 @@ final readonly class AdminPackageProjection {
 			throw new InvalidArgumentException( 'Package projections require a bounded repository subdirectory.' );
 		}
 
-		if ( ! in_array( $this->deploymentPolicy, array( 'disabled', 'manual', 'automatic' ), true ) ) {
+		if ( ! in_array( $this->deployment_policy, array( 'disabled', 'manual', 'automatic' ), true ) ) {
 			throw new InvalidArgumentException( 'Package projections require a known deployment policy.' );
 		}
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- This value object can load before WordPress URL helpers.
-		$urlParts = parse_url( $this->settingsUrl );
-		if ( ! is_array( $urlParts )
-			|| ! isset( $urlParts['scheme'], $urlParts['host'] )
-			|| ! in_array( strtolower( $urlParts['scheme'] ), array( 'http', 'https' ), true )
-			|| isset( $urlParts['user'] )
-			|| isset( $urlParts['pass'] )
-			|| isset( $urlParts['fragment'] ) ) {
+		$url_parts = parse_url( $this->settings_url );
+		if ( ! is_array( $url_parts )
+			|| ! isset( $url_parts['scheme'], $url_parts['host'] )
+			|| ! in_array( strtolower( $url_parts['scheme'] ), array( 'http', 'https' ), true )
+			|| isset( $url_parts['user'] )
+			|| isset( $url_parts['pass'] )
+			|| isset( $url_parts['fragment'] ) ) {
 			throw new InvalidArgumentException( 'Package projections require a canonical settings URL.' );
 		}
 	}
@@ -72,31 +72,31 @@ final readonly class AdminPackageProjection {
 		return $this->identifier;
 	}
 
-	public function displayName(): string {
-		return $this->displayName;
+	public function display_name(): string {
+		return $this->display_name;
 	}
 
-	public function providerCode(): string {
-		return $this->providerCode;
+	public function provider_code(): string {
+		return $this->provider_code;
 	}
 
 	public function source(): string {
 		return $this->source;
 	}
 
-	public function sourceRevision(): int {
-		return $this->sourceRevision;
+	public function source_revision(): int {
+		return $this->source_revision;
 	}
 
 	public function subdirectory(): string {
 		return $this->subdirectory;
 	}
 
-	public function deploymentPolicy(): string {
-		return $this->deploymentPolicy;
+	public function deployment_policy(): string {
+		return $this->deployment_policy;
 	}
 
-	public function settingsUrl(): string {
-		return $this->settingsUrl;
+	public function settings_url(): string {
+		return $this->settings_url;
 	}
 }

@@ -34,8 +34,9 @@ use Tests\RepositoryProvider\Support\ExternalFixtureProvider;
 
 final class BulkPackageActionServiceTest extends TestCase {
 
-	private WordPressUpdaterLock $updaterLock;
+	private WordPressUpdaterLock $updater_lock;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_package_mutation_guard_multisite']         = false;
 		$GLOBALS['ran_booster_bulk_active_plugins']                      = array();
@@ -46,11 +47,12 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$GLOBALS['ran_booster_bulk_dependency_initializations']          = 0;
 		$GLOBALS['ran_booster_bulk_plugins_with_active_dependents']      = array();
 		$GLOBALS['ran_booster_repository_admin_capabilities']            = array();
-		$this->updaterLock = $this->createStub( WordPressUpdaterLock::class );
-		$this->updaterLock->method( 'acquire' )->willReturn( 'bulk-fixture-lock' );
-		$this->updaterLock->method( 'release' )->willReturn( true );
+		$this->updater_lock = $this->createStub( WordPressUpdaterLock::class );
+		$this->updater_lock->method( 'acquire' )->willReturn( 'bulk-fixture-lock' );
+		$this->updater_lock->method( 'release' )->willReturn( true );
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset(
 			$GLOBALS['ran_booster_package_mutation_guard_multisite'],
@@ -65,9 +67,9 @@ final class BulkPackageActionServiceTest extends TestCase {
 		);
 	}
 
-	public function testPluginActivationActionsAreRejectedForThemes(): void {
+	public function test_plugin_activation_actions_are_rejected_for_themes(): void {
 		foreach ( BulkPackageAction::plugin_activation_operations() as $operation ) {
-			$this->expectInvalidBulkAction(
+			$this->expect_invalid_bulk_action(
 				'theme',
 				array(
 					'bulk_action' => $operation,
@@ -77,7 +79,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		}
 	}
 
-	public function testActivationChangesEligiblePluginsAndReportsSafePartialResults(): void {
+	public function test_activation_changes_eligible_plugins_and_reports_safe_partial_results(): void {
 		$plugins                                    = new BulkActionPluginRepository(
 			array(
 				'already/already.php' => BulkActionPackage::make( 'already/already.php', 'fixture' ),
@@ -128,7 +130,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		self::assertSame( DeploymentPolicy::MANUAL, $plugins->packages['enable/enable.php']->get_deployment_policy() );
 	}
 
-	public function testActivationSkipsAPluginWithoutItsExactMetaCapability(): void {
+	public function test_activation_skips_aplugin_without_its_exact_meta_capability(): void {
 		$plugins = new BulkActionPluginRepository(
 			array( 'denied/denied.php' => BulkActionPackage::make( 'denied/denied.php', 'fixture' ) )
 		);
@@ -149,7 +151,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		self::assertNotContains( 'denied/denied.php', $GLOBALS['ran_booster_bulk_active_plugins'] );
 	}
 
-	public function testActivationUsesLiveStateWhenCoreReturnsAnErrorAfterActivating(): void {
+	public function test_activation_uses_live_state_when_core_returns_an_error_after_activating(): void {
 		$plugins = new BulkActionPluginRepository(
 			array( 'noisy/noisy.php' => BulkActionPackage::make( 'noisy/noisy.php', 'fixture' ) )
 		);
@@ -174,7 +176,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		self::assertContains( 'noisy/noisy.php', $GLOBALS['ran_booster_bulk_active_plugins'] );
 	}
 
-	public function testDeactivationSkipsAPluginWithoutItsExactMetaCapability(): void {
+	public function test_deactivation_skips_aplugin_without_its_exact_meta_capability(): void {
 		$plugins                                    = new BulkActionPluginRepository(
 			array( 'denied/denied.php' => BulkActionPackage::make( 'denied/denied.php', 'fixture' ) )
 		);
@@ -196,7 +198,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		self::assertContains( 'denied/denied.php', $GLOBALS['ran_booster_bulk_active_plugins'] );
 	}
 
-	public function testDeactivationProtectsBoosterDependentsAndVerifiesTheWordPressPostcondition(): void {
+	public function test_deactivation_protects_booster_dependents_and_verifies_the_word_press_postcondition(): void {
 		$plugins                                    = new BulkActionPluginRepository(
 			array(
 				'active/active.php'       => BulkActionPackage::make( 'active/active.php', 'fixture' ),
@@ -246,7 +248,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		self::assertSame( 1, $GLOBALS['ran_booster_bulk_dependency_initializations'] );
 	}
 
-	public function testDisabledPolicyWorksWithAnUnavailableProviderAndChangesOnlyPolicySnapshots(): void {
+	public function test_disabled_policy_works_with_an_unavailable_provider_and_changes_only_policy_snapshots(): void {
 		$plugin  = BulkActionPackage::make( 'example/example.php', 'missing-provider' );
 		$plugins = new BulkActionPluginRepository( array( 'example/example.php' => $plugin ) );
 
@@ -266,7 +268,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		self::assertSame( array( 'package', 'repository', 'branch', 'deployment_policy', 'provider', 'provider_repository_id', 'private', 'credential_id', 'subdirectory', 'source', 'source_revision' ), array_keys( $plugins->snapshots[0] ) );
 	}
 
-	public function testManualAndAutomaticPolicyFailAtomicallyWhenReadinessIsUnavailable(): void {
+	public function test_manual_and_automatic_policy_fail_atomically_when_readiness_is_unavailable(): void {
 		$plugin  = BulkActionPackage::make( 'example/example.php', 'fixture', true, 'missing-profile' );
 		$plugins = new BulkActionPluginRepository( array( 'example/example.php' => $plugin ) );
 
@@ -304,7 +306,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		}
 	}
 
-	public function testReleaseAutomaticPolicyUsesNativeUpdatesWithoutWebhookCapability(): void {
+	public function test_release_automatic_policy_uses_native_updates_without_webhook_capability(): void {
 		$release = BulkActionPackage::make( 'release/release.php', 'fixture' );
 		$release->set_source( PackageSource::RELEASE_ASSET, 2 );
 		$plugins = new BulkActionPluginRepository( array( 'release/release.php' => $release ) );
@@ -324,7 +326,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		self::assertSame( PackageSource::RELEASE_ASSET->value, $plugins->snapshots[0]['source'] );
 	}
 
-	public function testQueueUpdatesAdmitsEligiblePackagesAndReportsSkipsAndBusyRows(): void {
+	public function test_queue_updates_admits_eligible_packages_and_reports_skips_and_busy_rows(): void {
 		$eligible = BulkActionPackage::make( 'eligible/eligible.php', 'fixture' );
 		$disabled = BulkActionPackage::make( 'disabled/disabled.php', 'fixture' );
 		$disabled->set_deployment_policy( DeploymentPolicy::DISABLED );
@@ -371,7 +373,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		self::assertSame( 'manual', $coordinator->targets[0]['request']->deployment_policy->value );
 	}
 
-	public function testQueueUpdatesDoesNotAdmitAnythingWhenEverySelectionIsIneligible(): void {
+	public function test_queue_updates_does_not_admit_anything_when_every_selection_is_ineligible(): void {
 		$disabled = BulkActionPackage::make( 'disabled/disabled.php', 'fixture' );
 		$disabled->set_deployment_policy( DeploymentPolicy::DISABLED );
 		$missing     = BulkActionPackage::make( 'missing/missing.php', 'missing-provider' );
@@ -408,7 +410,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		self::assertSame( array(), $coordinator->targets );
 	}
 
-	public function testQueueUpdateSkipsReleaseManagedPackagesWithoutProviderOrCredentialWork(): void {
+	public function test_queue_update_skips_release_managed_packages_without_provider_or_credential_work(): void {
 		$release = BulkActionPackage::make( 'release/release.php', 'missing-provider', true, 'missing-profile' );
 		$release->set_source( PackageSource::RELEASE_ASSET, 2 );
 		$plugins     = new BulkActionPluginRepository( array( 'release/release.php' => $release ) );
@@ -428,7 +430,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		self::assertSame( array(), $coordinator->targets );
 	}
 
-	public function testDeploymentRequestsRejectDuplicateIdentifiers(): void {
+	public function test_deployment_requests_reject_duplicate_identifiers(): void {
 		$identifiers = array( 'example/example.php', 'example/example.php' );
 		try {
 			BulkPackageAction::from_input(
@@ -444,7 +446,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		}
 	}
 
-	public function testQueueAndPolicyRequestsAcceptTwentyAndRejectTwentyOneIdentifiers(): void {
+	public function test_queue_and_policy_requests_accept_twenty_and_reject_twenty_one_identifiers(): void {
 		$accepted = array_map( static fn ( int $index ): string => "package-$index/package-$index.php", range( 1, 20 ) );
 		$rejected = array_map( static fn ( int $index ): string => "package-$index/package-$index.php", range( 1, 21 ) );
 		foreach ( array( BulkPackageAction::QUEUE_UPDATE, BulkPackageAction::POLICY_DISABLED ) as $operation ) {
@@ -472,7 +474,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		}
 	}
 
-	public function testActivationRequestsAcceptTwoHundredAndRejectTwoHundredAndOneIdentifiers(): void {
+	public function test_activation_requests_accept_two_hundred_and_reject_two_hundred_and_one_identifiers(): void {
 		$accepted = array_map( static fn ( int $index ): string => "package-$index/package-$index.php", range( 1, 200 ) );
 		$rejected = array_map( static fn ( int $index ): string => "package-$index/package-$index.php", range( 1, 201 ) );
 		foreach ( BulkPackageAction::plugin_activation_operations() as $operation ) {
@@ -500,7 +502,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		}
 	}
 
-	public function testRequestRejectsMalformedAndWrongTypeIdentifiers(): void {
+	public function test_request_rejects_malformed_and_wrong_type_identifiers(): void {
 		foreach (
 			array(
 				array( 'plugin', ' example/example.php' ),
@@ -509,11 +511,11 @@ final class BulkPackageActionServiceTest extends TestCase {
 				array( 'plugin', 'example/example.zip' ),
 				array( 'theme', 'example/theme' ),
 				array( 'package', 'example' ),
-			) as [$packageType, $identifier]
+			) as [$package_type, $identifier]
 		) {
 			try {
 				BulkPackageAction::from_input(
-					$packageType,
+					$package_type,
 					array(
 						'bulk_action' => 'queue-update',
 						'identifiers' => array( $identifier ),
@@ -527,16 +529,16 @@ final class BulkPackageActionServiceTest extends TestCase {
 	}
 
 	/** @param array<string, mixed> $input */
-	private function expectInvalidBulkAction( string $packageType, array $input ): void {
+	private function expect_invalid_bulk_action( string $package_type, array $input ): void {
 		try {
-			BulkPackageAction::from_input( $packageType, $input );
+			BulkPackageAction::from_input( $package_type, $input );
 			self::fail( 'The invalid bulk action should have been rejected.' );
 		} catch ( \InvalidArgumentException ) {
 			self::assertTrue( true );
 		}
 	}
 
-	public function testQueueUpdateSkipsBoosterSelfSelectionWithoutBlockingEligiblePackages(): void {
+	public function test_queue_update_skips_booster_self_selection_without_blocking_eligible_packages(): void {
 		$eligible    = BulkActionPackage::make( 'eligible/eligible.php', 'fixture' );
 		$plugins     = new BulkActionPluginRepository( array( 'eligible/eligible.php' => $eligible ) );
 		$coordinator = new BulkActionCoordinator();
@@ -559,23 +561,23 @@ final class BulkPackageActionServiceTest extends TestCase {
 		self::assertCount( 1, $coordinator->targets );
 	}
 
-	public function testMutatingActionsUseTheUpdaterLockWhileQueuedUpdatesDoNot(): void {
-		$policyPackage = BulkActionPackage::make( 'policy/policy.php', 'fixture' );
-		$activePackage = BulkActionPackage::make( 'active/active.php', 'fixture' );
-		$queuePackage  = BulkActionPackage::make( 'queue/queue.php', 'fixture' );
-		$plugins       = new BulkActionPluginRepository(
+	public function test_mutating_actions_use_the_updater_lock_while_queued_updates_do_not(): void {
+		$policy_package = BulkActionPackage::make( 'policy/policy.php', 'fixture' );
+		$active_package = BulkActionPackage::make( 'active/active.php', 'fixture' );
+		$queue_package  = BulkActionPackage::make( 'queue/queue.php', 'fixture' );
+		$plugins        = new BulkActionPluginRepository(
 			array(
-				'policy/policy.php' => $policyPackage,
-				'active/active.php' => $activePackage,
-				'queue/queue.php'   => $queuePackage,
+				'policy/policy.php' => $policy_package,
+				'active/active.php' => $active_package,
+				'queue/queue.php'   => $queue_package,
 			)
 		);
-		$coordinator   = new BulkActionCoordinator();
-		$lock          = $this->createMock( WordPressUpdaterLock::class );
+		$coordinator    = new BulkActionCoordinator();
+		$lock           = $this->createMock( WordPressUpdaterLock::class );
 		$lock->expects( self::exactly( 2 ) )->method( 'acquire' )->willReturn( 'bulk-lock' );
 		$lock->expects( self::exactly( 2 ) )->method( 'release' )->with( 'bulk-lock' )->willReturn( true );
-		$this->updaterLock = $lock;
-		$service           = $this->service( $plugins, true, $coordinator );
+		$this->updater_lock = $lock;
+		$service            = $this->service( $plugins, true, $coordinator );
 
 		$policy     = $service->execute(
 			BulkPackageAction::from_input(
@@ -611,7 +613,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		self::assertCount( 1, $coordinator->targets );
 	}
 
-	public function testUpdaterLockContentionFailsClosedBeforeBulkPolicyMutation(): void {
+	public function test_updater_lock_contention_fails_closed_before_bulk_policy_mutation(): void {
 		$plugins = new BulkActionPluginRepository(
 			array( 'policy/policy.php' => BulkActionPackage::make( 'policy/policy.php', 'fixture' ) )
 		);
@@ -620,7 +622,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 			->method( 'acquire' )
 			->willThrowException( new \RuntimeException( 'busy' ) );
 		$lock->expects( self::never() )->method( 'release' );
-		$this->updaterLock = $lock;
+		$this->updater_lock = $lock;
 
 		$result = $this->service( $plugins )->execute(
 			BulkPackageAction::from_input(
@@ -636,14 +638,14 @@ final class BulkPackageActionServiceTest extends TestCase {
 		self::assertSame( array(), $plugins->snapshots );
 	}
 
-	public function testUpdaterLockReleaseFailureDoesNotReportBulkMutationSuccess(): void {
+	public function test_updater_lock_release_failure_does_not_report_bulk_mutation_success(): void {
 		$plugins = new BulkActionPluginRepository(
 			array( 'policy/policy.php' => BulkActionPackage::make( 'policy/policy.php', 'fixture' ) )
 		);
 		$lock    = $this->createMock( WordPressUpdaterLock::class );
 		$lock->expects( self::once() )->method( 'acquire' )->willReturn( 'bulk-lock' );
 		$lock->expects( self::once() )->method( 'release' )->with( 'bulk-lock' )->willReturn( false );
-		$this->updaterLock = $lock;
+		$this->updater_lock = $lock;
 
 		$result = $this->service( $plugins )->execute(
 			BulkPackageAction::from_input(
@@ -661,13 +663,13 @@ final class BulkPackageActionServiceTest extends TestCase {
 
 	private function service(
 		?BulkActionPluginRepository $plugins = null,
-		bool $registerProvider = false,
+		bool $register_provider = false,
 		?BulkActionCoordinator $coordinator = null
 	): BulkPackageActionService {
 		$policies = new ProviderSecretPolicyCatalog();
 		$secrets  = new SecretsFile( null, array(), $policies );
 		$registry = new ProviderRegistry( array(), $policies );
-		if ( $registerProvider ) {
+		if ( $register_provider ) {
 			$registry->register( new ExternalFixtureProvider( 'fixture' ) );
 		}
 		return new BulkPackageActionService(
@@ -676,7 +678,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 			$registry,
 			$secrets,
 			$coordinator ?? new BulkActionCoordinator(),
-			updater_lock: $this->updaterLock
+			updater_lock: $this->updater_lock
 		);
 	}
 }
@@ -690,7 +692,7 @@ final class BulkActionPackage extends AbstractPackage {
 		string $identifier,
 		string $provider,
 		bool $private = false,
-		?string $credentialId = null
+		?string $credential_id = null
 	): self {
 		$package = new self( $identifier );
 		$package->set_installation_slug( dirname( $identifier ) );
@@ -701,7 +703,7 @@ final class BulkActionPackage extends AbstractPackage {
 				'R_' . dirname( $identifier ),
 				'main',
 				$private,
-				$credentialId
+				$credential_id
 			)
 		);
 
@@ -767,7 +769,7 @@ final class BulkActionCoordinator extends DeploymentCoordinator {
 	public function __construct() {
 	}
 
-	public function queueManualUpdates( array $targets ): array {
+	public function queue_manual_updates( array $targets ): array {
 		$this->targets = $targets;
 
 		return $this->result;

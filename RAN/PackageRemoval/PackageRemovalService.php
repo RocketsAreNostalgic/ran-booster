@@ -26,15 +26,13 @@ final readonly class PackageRemovalService {
 		private ThemeRepository $themes,
 		private PackageRemovalGateway $wordpress,
 		private ?DeploymentAttemptRepository $attempts,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		private WordPressUpdaterLock $updaterLock,
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- Public named parameters and their uses retain the existing caller contract.
-		private ?RepositoryBranchCheckEvidenceStore $branchCheckEvidence = null
+		private WordPressUpdaterLock $updater_lock,
+		private ?RepositoryBranchCheckEvidenceStore $branch_check_evidence = null
 	) {
 	}
 
 	public function execute( PackageOperation $operation ): PackageRemovalResult {
-		RuntimeSupport::assertManagedOperationsAllowed();
+		RuntimeSupport::assert_managed_operations_allowed();
 
 		if ( ! in_array( $operation->operation, array( 'unlink', 'unlink-and-delete' ), true ) ) {
 			throw new \LogicException( 'The package removal operation is invalid.' );
@@ -45,8 +43,8 @@ final readonly class PackageRemovalService {
 			PackageMutationGuard::assert_filesystem_mutation_allowed();
 		}
 		try {
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor properties retain the existing public named-parameter contract.
-			$lock_token = $this->updaterLock->acquire();
+
+			$lock_token = $this->updater_lock->acquire();
 		} catch ( Throwable $failure ) {
 			$this->log_failure( $failure, 'package_removal_lock_acquire' );
 			return PackageRemovalResult::failed( 'operation_in_progress' );
@@ -61,7 +59,7 @@ final readonly class PackageRemovalService {
 				$this->unlink( $operation->package_type, $identifier, $package );
 				$result = PackageRemovalResult::unlinked();
 			} elseif ( null !== $this->attempts
-				&& $this->attempts->hasUnresolvedPackageAttempt(
+				&& $this->attempts->has_unresolved_package_attempt(
 					$operation->package_type,
 					(string) $package->get_slug()
 				) ) {
@@ -84,8 +82,8 @@ final readonly class PackageRemovalService {
 			$this->log_failure( $failure, 'package_removal_state' );
 		} finally {
 			try {
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor properties retain the existing public named-parameter contract.
-				if ( ! $this->updaterLock->release( $lock_token ) ) {
+
+				if ( ! $this->updater_lock->release( $lock_token ) ) {
 					$result = PackageRemovalResult::failed( 'operation_lock_failed' );
 				}
 			} catch ( Throwable $failure ) {
@@ -188,8 +186,8 @@ final readonly class PackageRemovalService {
 	}
 
 	private function unlink( string $type, string $identifier, Package $package ): void {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Promoted constructor properties retain the existing public named-parameter contract.
-		$this->branchCheckEvidence?->clear( $type, $package );
+
+		$this->branch_check_evidence?->clear( $type, $package );
 		$result = 'plugin' === $type
 			? $this->plugins->unlink( $identifier )
 			: $this->themes->unlink( $identifier );
@@ -203,7 +201,7 @@ final readonly class PackageRemovalService {
 	}
 
 	private function log_failure( Throwable $failure, string $step ): void {
-		BoosterLogger::logException(
+		BoosterLogger::log_exception(
 			'package removal failed',
 			$failure,
 			array(

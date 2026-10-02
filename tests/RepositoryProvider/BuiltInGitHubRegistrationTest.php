@@ -46,7 +46,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class BuiltInGitHubRegistrationTest extends TestCase {
 
-	public function testCoreRegistersTheBundledGitHubAggregateWithoutReadingCredentials(): void {
+	public function test_core_registers_the_bundled_git_hub_aggregate_without_reading_credentials(): void {
 		$secrets   = null;
 		$container = new CoreContainer();
 		$runtime   = new Booster( $container );
@@ -85,26 +85,26 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		self::assertInstanceOf( GitHubWebhookPolicy::class, $provider->get_webhook_policy() );
 		self::assertSame( 'gh', $metadata->code->value );
 		self::assertSame( 'GitHub', $metadata->label );
-		self::assertSame( 'https://github.com/', $metadata->repositoryUrlBase );
+		self::assertSame( 'https://github.com/', $metadata->repository_url_base );
 		self::assertSame( ProviderNavigationPlacement::GIT_HOST, $metadata->admin?->navigation?->group );
 		self::assertSame( 100, $metadata->admin?->navigation?->slot );
-		self::assertSame( 1, $secrets->credentialStoresIssued );
-		self::assertSame( 0, $secrets->credentialStore->reads );
+		self::assertSame( 1, $secrets->credential_stores_issued );
+		self::assertSame( 0, $secrets->credential_store->reads );
 
-		$artifactLimitSupplier = ( new \ReflectionProperty( GitHubProvider::class, 'maximum_artifact_bytes' ) )->getValue( $provider );
-		self::assertInstanceOf( \Closure::class, $artifactLimitSupplier );
-		self::assertSame( PackageArtifactLimit::resolve(), $artifactLimitSupplier() );
+		$artifact_limit_supplier = ( new \ReflectionProperty( GitHubProvider::class, 'maximum_artifact_bytes' ) )->getValue( $provider );
+		self::assertInstanceOf( \Closure::class, $artifact_limit_supplier );
+		self::assertSame( PackageArtifactLimit::resolve(), $artifact_limit_supplier() );
 
-		$firstControls  = $container->make( RepositoryWebhookManagementControls::class );
-		$secondControls = $container->make( RepositoryWebhookManagementControls::class );
-		self::assertSame( $firstControls, $secondControls );
+		$first_controls  = $container->make( RepositoryWebhookManagementControls::class );
+		$second_controls = $container->make( RepositoryWebhookManagementControls::class );
+		self::assertSame( $first_controls, $second_controls );
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testCoreSuppliesConfiguredArtifactLimitToBundledGitHub(): void {
-		$configuredLimit = 67_108_864;
-		define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', $configuredLimit );
+	public function test_core_supplies_configured_artifact_limit_to_bundled_git_hub(): void {
+		$configured_limit = 67_108_864;
+		define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', $configured_limit );
 
 		$container = new CoreContainer();
 		$runtime   = new Booster( $container );
@@ -115,16 +115,16 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 
 		( new BoosterServiceProvider() )->register( $container, $runtime, new \stdClass(), 'ran-booster.php' );
 
-		$provider              = $container->make( ProviderRegistry::class )->get( 'gh' );
-		$artifactLimitSupplier = ( new \ReflectionProperty( GitHubProvider::class, 'maximum_artifact_bytes' ) )->getValue( $provider );
+		$provider                = $container->make( ProviderRegistry::class )->get( 'gh' );
+		$artifact_limit_supplier = ( new \ReflectionProperty( GitHubProvider::class, 'maximum_artifact_bytes' ) )->getValue( $provider );
 
-		self::assertInstanceOf( \Closure::class, $artifactLimitSupplier );
-		self::assertSame( $configuredLimit, $artifactLimitSupplier() );
+		self::assertInstanceOf( \Closure::class, $artifact_limit_supplier );
+		self::assertSame( $configured_limit, $artifact_limit_supplier() );
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function testInvalidConfiguredArtifactLimitDoesNotAbortCoreRegistration(): void {
+	public function test_invalid_configured_artifact_limit_does_not_abort_core_registration(): void {
 		define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', 512 );
 
 		$container = new CoreContainer();
@@ -136,49 +136,49 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 
 		( new BoosterServiceProvider() )->register( $container, $runtime, new \stdClass(), 'ran-booster.php' );
 
-		$provider              = $container->make( ProviderRegistry::class )->get( 'gh' );
-		$artifactLimitSupplier = ( new \ReflectionProperty( GitHubProvider::class, 'maximum_artifact_bytes' ) )->getValue( $provider );
+		$provider                = $container->make( ProviderRegistry::class )->get( 'gh' );
+		$artifact_limit_supplier = ( new \ReflectionProperty( GitHubProvider::class, 'maximum_artifact_bytes' ) )->getValue( $provider );
 
 		self::assertInstanceOf( GitHubProvider::class, $provider );
-		self::assertInstanceOf( \Closure::class, $artifactLimitSupplier );
+		self::assertInstanceOf( \Closure::class, $artifact_limit_supplier );
 
 		$this->expectException( \InvalidArgumentException::class );
-		$artifactLimitSupplier();
+		$artifact_limit_supplier();
 	}
 }
 
 final class RegistrationTrackingSecretsFile extends SecretsFile {
-	public int $credentialStoresIssued = 0;
-	public RegistrationTrackingCredentialStore $credentialStore;
+	public int $credential_stores_issued = 0;
+	public RegistrationTrackingCredentialStore $credential_store;
 
 	public function __construct( ProviderSecretPolicyCatalog $policies ) {
 		parent::__construct( '/unused/github-registration-secrets.php', array(), $policies );
-		$this->credentialStore = new RegistrationTrackingCredentialStore();
+		$this->credential_store = new RegistrationTrackingCredentialStore();
 	}
 
-	public function credentialsFor( ProviderCode|string $provider ): ProviderCredentialStore {
+	public function credentials_for( ProviderCode|string $provider ): ProviderCredentialStore {
 		unset( $provider );
-		++$this->credentialStoresIssued;
+		++$this->credential_stores_issued;
 
-		return $this->credentialStore;
+		return $this->credential_store;
 	}
 }
 
 final class RegistrationTrackingCredentialStore implements ProviderCredentialStore {
 	public int $reads = 0;
 
-	public function credentialProfiles(): array {
+	public function credential_profiles(): array {
 		++$this->reads;
 		return array();
 	}
 
-	public function credentialMaterial( ?string $id = null ): ?array {
+	public function credential_material( ?string $id = null ): ?array {
 		unset( $id );
 		++$this->reads;
 		return null;
 	}
 
-	public function hasWebhookProfile(): bool {
+	public function has_webhook_profile(): bool {
 		++$this->reads;
 		return false;
 	}

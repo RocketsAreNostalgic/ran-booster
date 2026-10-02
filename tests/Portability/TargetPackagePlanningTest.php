@@ -17,7 +17,7 @@ use RAN\Portability\TargetPackageReason;
 #[CoversClass( TargetPackageAction::class )]
 #[CoversClass( TargetPackageReason::class )]
 final class TargetPackagePlanningTest extends TestCase {
-	public function testContractUsesOnlyTheFiveActionsAndTwelveReasons(): void {
+	public function test_contract_uses_only_the_five_actions_and_twelve_reasons(): void {
 		self::assertSame(
 			array( 'install', 'adopt', 'managed', 'protected', 'blocked' ),
 			array_column( TargetPackageAction::cases(), 'value' )
@@ -42,8 +42,8 @@ final class TargetPackagePlanningTest extends TestCase {
 		self::assertSame( 'Managed by Booster', TargetPackageReason::ALREADY_MANAGED->message() );
 	}
 
-	#[DataProvider( 'validPairs' )]
-	public function testPlanItemAcceptsValidActionReasonPairs( TargetPackageAction $action, TargetPackageReason $reason ): void {
+	#[DataProvider( 'valid_pairs' )]
+	public function test_plan_item_accepts_valid_action_reason_pairs( TargetPackageAction $action, TargetPackageReason $reason ): void {
 		$item = new BlueprintPlanItem( $this->package(), $action, $reason );
 
 		self::assertSame( $action, $item->action );
@@ -51,7 +51,7 @@ final class TargetPackagePlanningTest extends TestCase {
 	}
 
 	/** @return iterable<string, array{TargetPackageAction, TargetPackageReason}> */
-	public static function validPairs(): iterable {
+	public static function valid_pairs(): iterable {
 		yield 'install' => array( TargetPackageAction::INSTALL, TargetPackageReason::NONE );
 		yield 'adopt' => array( TargetPackageAction::ADOPT, TargetPackageReason::NONE );
 		yield 'managed' => array( TargetPackageAction::MANAGED, TargetPackageReason::ALREADY_MANAGED );
@@ -65,15 +65,15 @@ final class TargetPackagePlanningTest extends TestCase {
 		}
 	}
 
-	#[DataProvider( 'invalidPairs' )]
-	public function testPlanItemRejectsInvalidActionReasonPairs( TargetPackageAction $action, TargetPackageReason $reason ): void {
+	#[DataProvider( 'invalid_pairs' )]
+	public function test_plan_item_rejects_invalid_action_reason_pairs( TargetPackageAction $action, TargetPackageReason $reason ): void {
 		$this->expectException( InvalidArgumentException::class );
 
 		new BlueprintPlanItem( $this->package(), $action, $reason );
 	}
 
 	/** @return iterable<string, array{TargetPackageAction, TargetPackageReason}> */
-	public static function invalidPairs(): iterable {
+	public static function invalid_pairs(): iterable {
 		yield 'install with block' => array( TargetPackageAction::INSTALL, TargetPackageReason::CREDENTIAL_REQUIRED );
 		yield 'adopt with management' => array( TargetPackageAction::ADOPT, TargetPackageReason::ALREADY_MANAGED );
 		yield 'managed without reason' => array( TargetPackageAction::MANAGED, TargetPackageReason::NONE );

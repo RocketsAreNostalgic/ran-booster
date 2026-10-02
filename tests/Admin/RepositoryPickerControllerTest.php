@@ -25,16 +25,18 @@ use Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 
 final class RepositoryPickerControllerTest extends TestCase {
 
-	private InMemoryPublicRepositoryLookupProfileStore $publicLookupProfiles;
+	private InMemoryPublicRepositoryLookupProfileStore $public_lookup_profiles;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		parent::setUp();
 
-		$_POST                      = array();
-		$this->publicLookupProfiles = new InMemoryPublicRepositoryLookupProfileStore();
+		$_POST                        = array();
+		$this->public_lookup_profiles = new InMemoryPublicRepositoryLookupProfileStore();
 		$GLOBALS['ran_booster_repository_admin_translations'] = array();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_POST = array();
 		unset( $GLOBALS['ran_booster_repository_admin_translations'] );
@@ -42,8 +44,8 @@ final class RepositoryPickerControllerTest extends TestCase {
 		parent::tearDown();
 	}
 
-	public function testAccessibleBrowseRoutesToTheSelectedProviderAndCredential(): void {
-		$provider = $this->browserProvider(
+	public function test_accessible_browse_routes_to_the_selected_provider_and_credential(): void {
+		$provider = $this->browser_provider(
 			ProviderCode::parse( 'bb' ),
 			array(
 				new RepositoryDescriptor(
@@ -70,11 +72,11 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertSame( 'workspace/repository', $result['data']['repositories'][0]['locator'] );
 		self::assertSame( 'repository', $result['data']['repositories'][0]['package_slug'] );
 		self::assertInstanceOf( RepositoryBrowseRequest::class, $provider->request );
-		self::assertSame( 'bitbucket-deploy', $provider->request->getCredentialId() );
+		self::assertSame( 'bitbucket-deploy', $provider->request->get_credential_id() );
 	}
 
-	public function testAccessibleBrowseRequiresOneSelectedCredential(): void {
-		$provider = $this->browserProvider( ProviderCode::parse( 'bb' ), array() );
+	public function test_accessible_browse_requires_one_selected_credential(): void {
+		$provider = $this->browser_provider( ProviderCode::parse( 'bb' ), array() );
 		$_POST    = array(
 			'provider'      => 'bb',
 			'mode'          => 'accessible',
@@ -84,7 +86,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		$this->controller( $provider )->handle();
 
 		self::assertInstanceOf( RepositoryBrowseRequest::class, $provider->request );
-		self::assertSame( 'all', $provider->request->getCredentialId() );
+		self::assertSame( 'all', $provider->request->get_credential_id() );
 
 		$_POST = array(
 			'provider' => 'bb',
@@ -95,11 +97,11 @@ final class RepositoryPickerControllerTest extends TestCase {
 
 		self::assertFalse( $missing['success'] );
 		self::assertSame( 400, $missing['status'] );
-		self::assertSame( 'all', $provider->request->getCredentialId() );
+		self::assertSame( 'all', $provider->request->get_credential_id() );
 	}
 
-	public function testAnonymousPublicBrowseKeepsUsingTheExistingBrowserCapability(): void {
-		$provider = $this->browserProvider( ProviderCode::parse( 'gh' ), array() );
+	public function test_anonymous_public_browse_keeps_using_the_existing_browser_capability(): void {
+		$provider = $this->browser_provider( ProviderCode::parse( 'gh' ), array() );
 		$_POST    = array(
 			'provider' => 'gh',
 			'mode'     => 'public',
@@ -110,15 +112,15 @@ final class RepositoryPickerControllerTest extends TestCase {
 
 		self::assertTrue( $result['success'] );
 		self::assertInstanceOf( RepositoryBrowseRequest::class, $provider->request );
-		self::assertSame( 'RocketsAreNostalgic', $provider->request->getOwner() );
-		self::assertNull( $provider->request->getCredentialId() );
+		self::assertSame( 'RocketsAreNostalgic', $provider->request->get_owner() );
+		self::assertNull( $provider->request->get_credential_id() );
 	}
 
-	public function testUnreadableSidecarBlocksCredentialedBrowsingBeforeTheProviderRequest(): void {
+	public function test_unreadable_sidecar_blocks_credentialed_browsing_before_the_provider_request(): void {
 		foreach ( array( 'accessible', 'public' ) as $mode ) {
 			$provider = 'accessible' === $mode
-				? $this->browserProvider( ProviderCode::parse( 'gh' ), array() )
-				: $this->credentialedPublicBrowserProviderWithDefaultSupport( ProviderCode::parse( 'gh' ), array(), false );
+				? $this->browser_provider( ProviderCode::parse( 'gh' ), array() )
+				: $this->credentialed_public_browser_provider_with_default_support( ProviderCode::parse( 'gh' ), array(), false );
 			$_POST    = array(
 				'provider'                 => 'gh',
 				'mode'                     => $mode,
@@ -138,9 +140,9 @@ final class RepositoryPickerControllerTest extends TestCase {
 		}
 	}
 
-	public function testConfiguredDefaultIsResolvedOnceAndReturnedForSaveVerification(): void {
-		$provider = $this->credentialedPublicBrowserProvider( ProviderCode::parse( 'gh' ), array() );
-		$this->publicLookupProfiles->set( 'gh', 'Public_Profile' );
+	public function test_configured_default_is_resolved_once_and_returned_for_save_verification(): void {
+		$provider = $this->credentialed_public_browser_provider( ProviderCode::parse( 'gh' ), array() );
+		$this->public_lookup_profiles->set( 'gh', 'Public_Profile' );
 		$_POST = array(
 			'provider'               => 'gh',
 			'mode'                   => 'public',
@@ -151,14 +153,14 @@ final class RepositoryPickerControllerTest extends TestCase {
 		$result = $this->controller( $provider, array( 'Public_Profile' ) )->handle();
 
 		self::assertTrue( $result['success'] );
-		self::assertSame( 'Public_Profile', $provider->request->getCredentialId() );
+		self::assertSame( 'Public_Profile', $provider->request->get_credential_id() );
 		self::assertSame( 'Public_Profile', $result['data']['public_lookup_profile_id'] );
 	}
 
-	public function testMissingOrStaleDefaultFailsWithoutAnonymousFallback(): void {
-		foreach ( array( null, 'missing_profile' ) as $configuredId ) {
-			$provider = $this->credentialedPublicBrowserProvider( ProviderCode::parse( 'gh' ), array() );
-			$this->publicLookupProfiles->set( 'gh', $configuredId );
+	public function test_missing_or_stale_default_fails_without_anonymous_fallback(): void {
+		foreach ( array( null, 'missing_profile' ) as $configured_id ) {
+			$provider = $this->credentialed_public_browser_provider( ProviderCode::parse( 'gh' ), array() );
+			$this->public_lookup_profiles->set( 'gh', $configured_id );
 			$_POST = array(
 				'provider'               => 'gh',
 				'mode'                   => 'public',
@@ -174,9 +176,9 @@ final class RepositoryPickerControllerTest extends TestCase {
 		}
 	}
 
-	public function testAnonymousOverrideDoesNotUseTheConfiguredDefault(): void {
-		$provider = $this->credentialedPublicBrowserProvider( ProviderCode::parse( 'gh' ), array() );
-		$this->publicLookupProfiles->set( 'gh', 'Public_Profile' );
+	public function test_anonymous_override_does_not_use_the_configured_default(): void {
+		$provider = $this->credentialed_public_browser_provider( ProviderCode::parse( 'gh' ), array() );
+		$this->public_lookup_profiles->set( 'gh', 'Public_Profile' );
 		$_POST = array(
 			'provider'               => 'gh',
 			'mode'                   => 'public',
@@ -187,12 +189,12 @@ final class RepositoryPickerControllerTest extends TestCase {
 		$result = $this->controller( $provider, array( 'Public_Profile' ) )->handle();
 
 		self::assertTrue( $result['success'] );
-		self::assertNull( $provider->request->getCredentialId() );
+		self::assertNull( $provider->request->get_credential_id() );
 		self::assertSame( '', $result['data']['public_lookup_profile_id'] );
 	}
 
-	public function testArrayPublicLookupProfileIsRejected(): void {
-		$provider = $this->credentialedPublicBrowserProviderWithDefaultSupport( ProviderCode::parse( 'gh' ), array(), false );
+	public function test_array_public_lookup_profile_is_rejected(): void {
+		$provider = $this->credentialed_public_browser_provider_with_default_support( ProviderCode::parse( 'gh' ), array(), false );
 		$_POST    = array(
 			'provider'                 => 'gh',
 			'mode'                     => 'public',
@@ -208,8 +210,8 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertNull( $provider->request );
 	}
 
-	public function testCredentialedPublicBrowseRequiresTheOptionalCapability(): void {
-		$provider = $this->browserProvider( ProviderCode::parse( 'gh' ), array() );
+	public function test_credentialed_public_browse_requires_the_optional_capability(): void {
+		$provider = $this->browser_provider( ProviderCode::parse( 'gh' ), array() );
 		$_POST    = array(
 			'provider'                 => 'gh',
 			'mode'                     => 'public',
@@ -229,15 +231,15 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertNull( $provider->request );
 	}
 
-	public function testMalformedCredentialedPublicIdentityDoesNotFallBackToAnonymous(): void {
-		foreach ( array( 'Public_Profile!', '   ', "Public_Profile\n" ) as $credentialId ) {
-			$provider = $this->credentialedPublicBrowserProvider( ProviderCode::parse( 'gh' ), array() );
+	public function test_malformed_credentialed_public_identity_does_not_fall_back_to_anonymous(): void {
+		foreach ( array( 'Public_Profile!', '   ', "Public_Profile\n" ) as $credential_id ) {
+			$provider = $this->credentialed_public_browser_provider( ProviderCode::parse( 'gh' ), array() );
 			$_POST    = array(
 				'provider'                 => 'gh',
 				'mode'                     => 'public',
 				'owner'                    => 'RocketsAreNostalgic',
 				'public_lookup_identity'   => 'profile',
-				'public_lookup_profile_id' => $credentialId,
+				'public_lookup_profile_id' => $credential_id,
 			);
 
 			$result = $this->controller( $provider )->handle();
@@ -248,8 +250,8 @@ final class RepositoryPickerControllerTest extends TestCase {
 		}
 	}
 
-	public function testExplicitPublicProfileWorksAlongsideProviderDefaultSupport(): void {
-		$provider = $this->credentialedPublicBrowserProviderWithDefaultSupport( ProviderCode::parse( 'gh' ), array(), true );
+	public function test_explicit_public_profile_works_alongside_provider_default_support(): void {
+		$provider = $this->credentialed_public_browser_provider_with_default_support( ProviderCode::parse( 'gh' ), array(), true );
 		$_POST    = array(
 			'provider'                 => 'gh',
 			'mode'                     => 'public',
@@ -262,14 +264,14 @@ final class RepositoryPickerControllerTest extends TestCase {
 
 		self::assertTrue( $result['success'] );
 		self::assertInstanceOf( RepositoryBrowseRequest::class, $provider->request );
-		self::assertSame( 'RocketsAreNostalgic', $provider->request->getOwner() );
-		self::assertSame( 'Public_Profile', $provider->request->getCredentialId() );
+		self::assertSame( 'RocketsAreNostalgic', $provider->request->get_owner() );
+		self::assertSame( 'Public_Profile', $provider->request->get_credential_id() );
 		self::assertSame( 'Public_Profile', $result['data']['public_lookup_profile_id'] );
 	}
 
-	public function testPublicBrowseRejectsPrivateOrCredentialBearingDescriptors(): void {
+	public function test_public_browse_rejects_private_or_credential_bearing_descriptors(): void {
 		foreach ( array( 'private', 'credential' ) as $case ) {
-			$provider = $this->credentialedPublicBrowserProviderWithDefaultSupport(
+			$provider = $this->credentialed_public_browser_provider_with_default_support(
 				ProviderCode::parse( 'gh' ),
 				array(
 					new RepositoryDescriptor(
@@ -300,7 +302,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		}
 	}
 
-	public function testProviderWithoutBrowsingCapabilityFailsClosed(): void {
+	public function test_provider_without_browsing_capability_fails_closed(): void {
 		$provider = new class() implements RepositoryProvider {
 
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
@@ -324,8 +326,8 @@ final class RepositoryPickerControllerTest extends TestCase {
 		);
 	}
 
-	public function testUnavailableProviderNeverFallsBackAndSameProviderReactivationRestoresBrowsing(): void {
-		$github = $this->browserProvider( ProviderCode::parse( 'gh' ), array() );
+	public function test_unavailable_provider_never_falls_back_and_same_provider_reactivation_restores_browsing(): void {
+		$github = $this->browser_provider( ProviderCode::parse( 'gh' ), array() );
 		$_POST  = array(
 			'provider'      => 'temporarily-offline',
 			'mode'          => 'accessible',
@@ -340,7 +342,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertNull( $github->request );
 
 		$code        = ProviderCode::parse( 'temporarily-offline' );
-		$reactivated = $this->browserProvider(
+		$reactivated = $this->browser_provider(
 			$code,
 			array(
 				new RepositoryDescriptor(
@@ -362,8 +364,8 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertSame( 'stable-repository-id', $restored['data']['repositories'][0]['provider_repository_id'] );
 	}
 
-	public function testMismatchedProviderResponseIsRejectedWithoutReturningRepositoryData(): void {
-		$provider = $this->browserProvider(
+	public function test_mismatched_provider_response_is_rejected_without_returning_repository_data(): void {
+		$provider = $this->browser_provider(
 			ProviderCode::parse( 'bb' ),
 			array(
 				new RepositoryDescriptor(
@@ -391,7 +393,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertSame( 'Repository browsing failed. Please try again.', $result['data']['message'] );
 	}
 
-	public function testRateLimitFailureReturnsAProviderNeutralNoticeWithoutUpstreamDetails(): void {
+	public function test_rate_limit_failure_returns_aprovider_neutral_notice_without_upstream_details(): void {
 		$provider = new class() implements RepositoryProvider, RepositoryBrowser {
 
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
@@ -426,7 +428,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertStringNotContainsString( 'token-canary', $result['data']['message'] );
 	}
 
-	public function testPartialResultsUseOnlyTheControllersFixedSafeMessage(): void {
+	public function test_partial_results_use_only_the_controllers_fixed_safe_message(): void {
 		$provider = new class() implements RepositoryProvider, RepositoryBrowser {
 
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
@@ -460,7 +462,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		);
 	}
 
-	public function testPartialResultDisplayCopyUsesThePluginTranslationDomain(): void {
+	public function test_partial_result_display_copy_uses_the_plugin_translation_domain(): void {
 		$source = 'Some repositories are shown. The provider rate limit was reached; try again later for a complete list.';
 		$GLOBALS['ran_booster_repository_admin_translations'] = array(
 			'ran-booster' => array( $source => 'Les dépôts affichés sont incomplets.' ),
@@ -492,7 +494,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 	/**
 	 * @param list<RepositoryDescriptor> $repositories
 	 */
-	private function browserProvider( ProviderCode $code, array $repositories ): RepositoryProvider&RepositoryBrowser {
+	private function browser_provider( ProviderCode $code, array $repositories ): RepositoryProvider&RepositoryBrowser {
 		return new class( $code, $repositories ) implements RepositoryProvider, RepositoryBrowser {
 
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
@@ -524,19 +526,19 @@ final class RepositoryPickerControllerTest extends TestCase {
 	/**
 	 * @param list<RepositoryDescriptor> $repositories
 	 */
-	private function credentialedPublicBrowserProvider( ProviderCode $code, array $repositories ): RepositoryProvider&CredentialedPublicRepositoryBrowser {
-		return $this->credentialedPublicBrowserProviderWithDefaultSupport( $code, $repositories, true );
+	private function credentialed_public_browser_provider( ProviderCode $code, array $repositories ): RepositoryProvider&CredentialedPublicRepositoryBrowser {
+		return $this->credentialed_public_browser_provider_with_default_support( $code, $repositories, true );
 	}
 
 	/**
 	 * @param list<RepositoryDescriptor> $repositories
 	 */
-	private function credentialedPublicBrowserProviderWithDefaultSupport(
+	private function credentialed_public_browser_provider_with_default_support(
 		ProviderCode $code,
 		array $repositories,
-		bool $supportsDefault
+		bool $supports_default
 	): RepositoryProvider&CredentialedPublicRepositoryBrowser {
-		return new class( $code, $repositories, $supportsDefault ) implements RepositoryProvider, CredentialedPublicRepositoryBrowser {
+		return new class( $code, $repositories, $supports_default ) implements RepositoryProvider, CredentialedPublicRepositoryBrowser {
 
 			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
@@ -548,7 +550,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 			public function __construct(
 				private ProviderCode $code,
 				private array $repositories,
-				private bool $supportsDefault
+				private bool $supports_default
 			) {
 			}
 
@@ -557,7 +559,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 			}
 
 			public function get_public_repository_browse_metadata(): PublicRepositoryBrowseMetadata {
-				return new PublicRepositoryBrowseMetadata( $this->supportsDefault );
+				return new PublicRepositoryBrowseMetadata( $this->supports_default );
 			}
 
 			public function browse_repositories( RepositoryBrowseRequest $request ): \RAN\RepositoryProvider\RepositoryBrowseResult {
@@ -569,26 +571,26 @@ final class RepositoryPickerControllerTest extends TestCase {
 	}
 
 	/**
-	 * @param list<string> $profileIds
+	 * @param list<string> $profile_ids
 	 */
 	private function controller(
 		RepositoryProvider $provider,
-		array $profileIds = array(),
-		bool $storageUnavailable = false
+		array $profile_ids = array(),
+		bool $storage_unavailable = false
 	): RepositoryPickerController {
-		$providerCode = $provider->get_metadata()->code->value;
-		$profiles     = array();
-		foreach ( $profileIds as $profileId ) {
-			$profiles[ $profileId ] = array(
-				'id'         => $profileId,
+		$provider_code = $provider->get_metadata()->code->value;
+		$profiles      = array();
+		foreach ( $profile_ids as $profile_id ) {
+			$profiles[ $profile_id ] = array(
+				'id'         => $profile_id,
 				'configured' => true,
 			);
 		}
 
 		return new RepositoryPickerController(
 			new ProviderRegistry( array( $provider ) ),
-			new RepositoryPickerSecretsFile( array( $providerCode => $profiles ), $storageUnavailable ),
-			$this->publicLookupProfiles
+			new RepositoryPickerSecretsFile( array( $provider_code => $profiles ), $storage_unavailable ),
+			$this->public_lookup_profiles
 		);
 	}
 }
@@ -597,11 +599,11 @@ final class RepositoryPickerControllerTest extends TestCase {
 final class RepositoryPickerSecretsFile extends SecretsFile {
 
 	/** @param array<string, array<string, array<string, mixed>>> $profiles */
-	public function __construct( private array $profiles, private bool $storageUnavailable = false ) {
+	public function __construct( private array $profiles, private bool $storage_unavailable = false ) {
 	}
 
-	public function credentialProfiles( ProviderCode|string $provider ): array {
-		if ( $this->storageUnavailable ) {
+	public function credential_profiles( ProviderCode|string $provider ): array {
+		if ( $this->storage_unavailable ) {
 			throw new SecretsStorageUnavailable( 'Unreadable sidecar at /private/path-canary.' );
 		}
 		$code = $provider instanceof ProviderCode ? $provider->value : $provider;

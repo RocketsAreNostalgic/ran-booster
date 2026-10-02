@@ -36,12 +36,12 @@ try {
 	$database = new class( $wpdb, $ready_marker, $release_marker ) {
 		public string $last_error = '';
 		public string $options;
-		private bool $barrierReached = false;
+		private bool $barrier_reached = false;
 
 		public function __construct(
 			private object $database,
-			private string $readyMarker,
-			private string $releaseMarker
+			private string $ready_marker,
+			private string $release_marker
 		) {
 			$this->options = $database->options;
 		}
@@ -73,16 +73,16 @@ try {
 		}
 
 		public function get_results( string $query ): array|object|null {
-			if ( ! $this->barrierReached && str_contains( $query, 'delivery_id' ) && str_contains( $query, 'FOR UPDATE' ) ) {
-				$this->barrierReached = true;
-				$ready                = fopen( $this->readyMarker, 'x' );
+			if ( ! $this->barrier_reached && str_contains( $query, 'delivery_id' ) && str_contains( $query, 'FOR UPDATE' ) ) {
+				$this->barrier_reached = true;
+				$ready                = fopen( $this->ready_marker, 'x' );
 				if ( false === $ready ) {
 					throw new RuntimeException( 'The delivery-intake database barrier could not be created.' );
 				}
 				fwrite( $ready, "ready\n" );
 				fclose( $ready );
 				$deadline = microtime( true ) + 15.0;
-				while ( ! file_exists( $this->releaseMarker ) ) {
+				while ( ! file_exists( $this->release_marker ) ) {
 					if ( microtime( true ) >= $deadline ) {
 						throw new RuntimeException( 'The delivery-intake database barrier timed out.' );
 					}
@@ -95,7 +95,7 @@ try {
 			return $result;
 		}
 	};
-	$attempts = ( new RAN\Deployment\DeploymentAttemptRepository( $database ) )->admitWebhookBatch(
+	$attempts = ( new RAN\Deployment\DeploymentAttemptRepository( $database ) )->admit_webhook_batch(
 		$provider,
 		$delivery_id,
 		$digest,

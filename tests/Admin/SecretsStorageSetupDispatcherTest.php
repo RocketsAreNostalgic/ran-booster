@@ -26,6 +26,7 @@ use RAN\WordPress\WordPressUpdaterLock;
 
 final class SecretsStorageSetupDispatcherTest extends TestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$_POST                     = array(
 			'ran_booster' => array( 'action' => 'create-secure-storage' ),
@@ -39,6 +40,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		$GLOBALS['ran_booster_admin_test_translations'] = array();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_POST = array();
 		unset(
@@ -52,22 +54,22 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'unavailableActionCases' )]
-	public function testUnavailableStorageActionsLocalizeFallbacksWithoutChangingCodes(
+	#[DataProvider( 'unavailable_action_cases' )]
+	public function test_unavailable_storage_actions_localize_fallbacks_without_changing_codes(
 		string $action,
 		string $code,
-		string $sourceMessage,
-		string $translatedMessage
+		string $source_message,
+		string $translated_message
 	): void {
 		$_POST['ran_booster']['action'] = $action;
-		$GLOBALS['ran_booster_admin_test_translations']['ran-booster'][ $sourceMessage ] = $translatedMessage;
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster'][ $source_message ] = $translated_message;
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
 			->method( 'set_secrets_storage_provisioning_result' )
 			->with(
 				self::callback(
 					static fn ( SecretsStorageProvisioningResult $result ): bool => $code === $result->code()
-						&& $translatedMessage === $result->message()
+						&& $translated_message === $result->message()
 						&& null === $result->candidate_path()
 				)
 			);
@@ -76,7 +78,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 	}
 
 	/** @return iterable<string, array{string, string, string, string}> */
-	public static function unavailableActionCases(): iterable {
+	public static function unavailable_action_cases(): iterable {
 		yield 'create' => array(
 			'create-secure-storage',
 			'provisioner_unavailable',
@@ -97,15 +99,15 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		);
 	}
 
-	#[DataProvider( 'unexpectedFailureActionCases' )]
-	public function testUnexpectedStorageActionFailuresLocalizeFallbacksWithoutLeakingTheThrowable(
+	#[DataProvider( 'unexpected_failure_action_cases' )]
+	public function test_unexpected_storage_action_failures_localize_fallbacks_without_leaking_the_throwable(
 		string $action,
 		string $code,
-		string $sourceMessage,
-		string $translatedMessage
+		string $source_message,
+		string $translated_message
 	): void {
 		$_POST['ran_booster']['action'] = $action;
-		$GLOBALS['ran_booster_admin_test_translations']['ran-booster'][ $sourceMessage ] = $translatedMessage;
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster'][ $source_message ] = $translated_message;
 		$provisioner = new SetupActionProvisioner(
 			SecretsStorageProvisioningResult::setup_available( '/private/canary/secrets.json' ),
 			true
@@ -116,7 +118,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 			->with(
 				self::callback(
 					static fn ( SecretsStorageProvisioningResult $result ): bool => $code === $result->code()
-						&& $translatedMessage === $result->message()
+						&& $translated_message === $result->message()
 						&& null === $result->candidate_path()
 						&& ! str_contains( $result->message(), 'canary' )
 				)
@@ -126,7 +128,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 	}
 
 	/** @return iterable<string, array{string, string, string, string}> */
-	public static function unexpectedFailureActionCases(): iterable {
+	public static function unexpected_failure_action_cases(): iterable {
 		yield 'create' => array(
 			'create-secure-storage',
 			'provisioning_failed',
@@ -147,7 +149,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		);
 	}
 
-	public function testProtectedPostProvisionsAndRedirectsWithoutResultDataInTheUrl(): void {
+	public function test_protected_post_provisions_and_redirects_without_result_data_in_the_url(): void {
 		$provisioner = new SetupActionProvisioner(
 			SecretsStorageProvisioningResult::pending_verification( '/private/canary/secrets.json' )
 		);
@@ -163,7 +165,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 			self::assertStringNotContainsString( 'private', $redirect->url );
 		}
 
-		self::assertSame( 1, $provisioner->provisionCalls );
+		self::assertSame( 1, $provisioner->provision_calls );
 		self::assertSame(
 			array( 'manage_options', 'activate_plugins' ),
 			$GLOBALS['ran_booster_test_capability_checks']
@@ -174,7 +176,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		);
 	}
 
-	public function testGetCannotProvisionOrCheckANonce(): void {
+	public function test_get_cannot_provision_or_check_anonce(): void {
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$provisioner               = new SetupActionProvisioner(
 			SecretsStorageProvisioningResult::pending_verification( '/private/secrets.json' )
@@ -182,11 +184,11 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 
 		$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatch_post_requests();
 
-		self::assertSame( 0, $provisioner->provisionCalls );
+		self::assertSame( 0, $provisioner->provision_calls );
 		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
-	public function testBothCapabilitiesAreRequiredBeforeMutation(): void {
+	public function test_both_capabilities_are_required_before_mutation(): void {
 		$GLOBALS['ran_booster_test_capabilities']['activate_plugins'] = false;
 		$provisioner = new SetupActionProvisioner(
 			SecretsStorageProvisioningResult::pending_verification( '/private/secrets.json' )
@@ -196,12 +198,12 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		try {
 			$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatch_post_requests();
 		} finally {
-			self::assertSame( 0, $provisioner->provisionCalls );
+			self::assertSame( 0, $provisioner->provision_calls );
 			self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
 		}
 	}
 
-	public function testFailureStaysOnTheProtectedResponseWithoutRedirectOrGlobalNotice(): void {
+	public function test_failure_stays_on_the_protected_response_without_redirect_or_global_notice(): void {
 		$result      = SecretsStorageProvisioningResult::manual_required(
 			'filesystem_probe_failed',
 			'The private storage filesystem could not be verified.',
@@ -217,10 +219,10 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 
 		$this->dispatcher( $dashboard, $provisioner )->dispatch_post_requests();
 
-		self::assertSame( 1, $provisioner->provisionCalls );
+		self::assertSame( 1, $provisioner->provision_calls );
 	}
 
-	public function testUnexpectedFailureIsReducedToAPathlessProtectedResult(): void {
+	public function test_unexpected_failure_is_reduced_to_apathless_protected_result(): void {
 		$provisioner = new SetupActionProvisioner(
 			SecretsStorageProvisioningResult::setup_available( '/private/canary/secrets.json' ),
 			true
@@ -240,7 +242,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		$this->dispatcher( $dashboard, $provisioner )->dispatch_post_requests();
 	}
 
-	public function testProtectedPostAdoptsATokenBoundCandidateAndRedirects(): void {
+	public function test_protected_post_adopts_atoken_bound_candidate_and_redirects(): void {
 		$token       = str_repeat( 'a', 64 );
 		$_POST       = array(
 			'ran_booster' => array(
@@ -262,14 +264,14 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 			);
 		}
 
-		self::assertSame( array( $token ), $provisioner->adoptTokens );
+		self::assertSame( array( $token ), $provisioner->adopt_tokens );
 		self::assertSame(
 			array( 'ran-booster-adopt-secure-storage' ),
 			$GLOBALS['ran_booster_test_nonce_checks']
 		);
 	}
 
-	public function testGetCannotAdoptStorage(): void {
+	public function test_get_cannot_adopt_storage(): void {
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$_POST                     = array(
 			'ran_booster' => array(
@@ -283,11 +285,11 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 
 		$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatch_post_requests();
 
-		self::assertSame( array(), $provisioner->adoptTokens );
+		self::assertSame( array(), $provisioner->adopt_tokens );
 		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
-	public function testProtectedPostResetsOnlyThroughTheTypedGuardAndRedirectsPathlessly(): void {
+	public function test_protected_post_resets_only_through_the_typed_guard_and_redirects_pathlessly(): void {
 		$_POST       = array(
 			'ran_booster' => array(
 				'action'             => 'reset-empty-storage',
@@ -312,14 +314,14 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 			self::assertStringNotContainsString( 'private', $redirect->url );
 		}
 
-		self::assertSame( array( SecretsStorageProvisioner::RESET_CONFIRMATION ), $provisioner->resetConfirmations );
+		self::assertSame( array( SecretsStorageProvisioner::RESET_CONFIRMATION ), $provisioner->reset_confirmations );
 		self::assertSame(
 			array( 'ran-booster-reset-empty-storage' ),
 			$GLOBALS['ran_booster_test_nonce_checks']
 		);
 	}
 
-	public function testGetCannotResetStorage(): void {
+	public function test_get_cannot_reset_storage(): void {
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$_POST                     = array(
 			'ran_booster' => array(
@@ -336,11 +338,11 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 
 		$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatch_post_requests();
 
-		self::assertSame( array(), $provisioner->resetConfirmations );
+		self::assertSame( array(), $provisioner->reset_confirmations );
 		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
-	public function testResetRequiresBothCapabilitiesBeforeNonceOrMutation(): void {
+	public function test_reset_requires_both_capabilities_before_nonce_or_mutation(): void {
 		$GLOBALS['ran_booster_test_capabilities']['activate_plugins'] = false;
 		$_POST       = array(
 			'ran_booster' => array(
@@ -359,12 +361,12 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		try {
 			$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatch_post_requests();
 		} finally {
-			self::assertSame( array(), $provisioner->resetConfirmations );
+			self::assertSame( array(), $provisioner->reset_confirmations );
 			self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
 		}
 	}
 
-	public function testResetRequiresItsDedicatedValidNonce(): void {
+	public function test_reset_requires_its_dedicated_valid_nonce(): void {
 		$GLOBALS['ran_booster_test_nonce_valid'] = false;
 		$_POST                                   = array(
 			'ran_booster' => array(
@@ -383,12 +385,12 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		try {
 			$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatch_post_requests();
 		} finally {
-			self::assertSame( array(), $provisioner->resetConfirmations );
+			self::assertSame( array(), $provisioner->reset_confirmations );
 			self::assertSame( array( 'ran-booster-reset-empty-storage' ), $GLOBALS['ran_booster_test_nonce_checks'] );
 		}
 	}
 
-	public function testUnexpectedResetFailureIsReducedToAPathlessProtectedResult(): void {
+	public function test_unexpected_reset_failure_is_reduced_to_apathless_protected_result(): void {
 		$_POST       = array(
 			'ran_booster' => array(
 				'action'             => 'reset-empty-storage',
@@ -441,11 +443,11 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 }
 
 final class SetupActionProvisioner extends SecretsStorageProvisioner {
-	public int $provisionCalls = 0;
+	public int $provision_calls = 0;
 	/** @var list<string> */
-	public array $adoptTokens = array();
+	public array $adopt_tokens = array();
 	/** @var list<string> */
-	public array $resetConfirmations = array();
+	public array $reset_confirmations = array();
 
 	public function __construct(
 		private readonly SecretsStorageProvisioningResult $result,
@@ -454,7 +456,7 @@ final class SetupActionProvisioner extends SecretsStorageProvisioner {
 	}
 
 	public function provision(): SecretsStorageProvisioningResult {
-		++$this->provisionCalls;
+		++$this->provision_calls;
 		if ( $this->throw ) {
 			throw new \RuntimeException( 'Leaked path: /private/canary/secrets.json' );
 		}
@@ -463,7 +465,7 @@ final class SetupActionProvisioner extends SecretsStorageProvisioner {
 	}
 
 	public function adopt_recovery( string $token ): SecretsStorageProvisioningResult {
-		$this->adoptTokens[] = $token;
+		$this->adopt_tokens[] = $token;
 		if ( $this->throw ) {
 			throw new \RuntimeException( 'Leaked path: /private/canary/secrets.json' );
 		}
@@ -472,7 +474,7 @@ final class SetupActionProvisioner extends SecretsStorageProvisioner {
 	}
 
 	public function reset_orphaned_storage( string $confirmation ): SecretsStorageProvisioningResult {
-		$this->resetConfirmations[] = $confirmation;
+		$this->reset_confirmations[] = $confirmation;
 		if ( $this->throw ) {
 			throw new \RuntimeException( 'Leaked path: /private/canary/secrets.json' );
 		}

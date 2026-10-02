@@ -11,6 +11,7 @@ use RAN\Admin\PackagePagePresenter;
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class PackagePagePresenterTest extends TestCase {
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_admin_view_filters']            = array();
 		$GLOBALS['ran_booster_admin_test_translations']       = array();
@@ -19,7 +20,7 @@ final class PackagePagePresenterTest extends TestCase {
 	}
 
 
-	public function testPluginConfigurationPreservesPluginRouting(): void {
+	public function test_plugin_configuration_preserves_plugin_routing(): void {
 		$config = PackagePagePresenter::plugin();
 
 		self::assertSame( 'plugin', $config->get_type() );
@@ -35,7 +36,7 @@ final class PackagePagePresenterTest extends TestCase {
 		self::assertSame( 'bulk-plugin', $config->get_action( 'bulk' ) );
 	}
 
-	public function testThemeConfigurationPreservesThemeRouting(): void {
+	public function test_theme_configuration_preserves_theme_routing(): void {
 		$config = PackagePagePresenter::theme();
 
 		self::assertSame( 'theme', $config->get_type() );
@@ -50,7 +51,7 @@ final class PackagePagePresenterTest extends TestCase {
 		self::assertSame( 'bulk-theme', $config->get_action( 'bulk' ) );
 	}
 
-	public function testPackageTypeLabelsUseContextualTranslationsWithoutChangingMachineValues(): void {
+	public function test_package_type_labels_use_contextual_translations_without_changing_machine_values(): void {
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster'] = array(
 			"Managed package type singular label\004Plugin" => 'Extension',
 			"Managed package type plural label\004Plugins" => 'Extensions',
@@ -73,7 +74,7 @@ final class PackagePagePresenterTest extends TestCase {
 		self::assertSame( 'ran-booster-themes', $theme->get_page_slug() );
 	}
 
-	public function testPackageTypeLabelsResolveTranslationsAvailableAfterConstruction(): void {
+	public function test_package_type_labels_resolve_translations_available_after_construction(): void {
 		$plugin = PackagePagePresenter::plugin();
 		$theme  = PackagePagePresenter::theme();
 
@@ -90,13 +91,13 @@ final class PackagePagePresenterTest extends TestCase {
 		self::assertSame( 'Habillages', $theme->get_plural_label() );
 	}
 
-	public function testUnsupportedActionsAreRejected(): void {
+	public function test_unsupported_actions_are_rejected(): void {
 		$this->expectException( InvalidArgumentException::class );
 
 		PackagePagePresenter::plugin()->get_action( 'publish' );
 	}
 
-	public function testAdvancedSourceSummaryProjectionFailureFallsBackToCoreSummary(): void {
+	public function test_advanced_source_summary_projection_failure_falls_back_to_core_summary(): void {
 		$GLOBALS['ran_booster_admin_view_filters']['ran_booster_admin_package_advanced_source_summary_projection'] = array(
 			static function (): array {
 				throw new \RuntimeException( 'Extension unavailable.' );
@@ -104,7 +105,7 @@ final class PackagePagePresenterTest extends TestCase {
 		);
 
 		$view       = PackagePagePresenter::plugin()->create( array(), false, false, 'branch' );
-		$projection = $view['packageSource']['advanced_summary_projection'];
+		$projection = $view['package_source']['advanced_summary_projection'];
 
 		self::assertSame( 'Branch', $projection['heading'] );
 		self::assertSame( array(), $projection['badges'] );

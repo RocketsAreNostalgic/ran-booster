@@ -9,7 +9,7 @@ namespace RAN\RepositoryProvider;
  */
 final class GitReferenceSyntax {
 
-	public static function isValidNamedReference( string $reference ): bool {
+	public static function is_valid_named_reference( string $reference ): bool {
 		if ( '' === $reference
 			|| trim( $reference ) !== $reference
 			|| strlen( $reference ) > 255

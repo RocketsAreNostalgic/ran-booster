@@ -57,9 +57,9 @@ final class ShippedSecretPolicyCatalog {
 					return array(); }
 				public function webhook_from_constants( array $constants ): ?array {
 					return null; }
-				public function authorize_webhook( SignedWebhookVerification $verification, string $repositoryAuthorityId, string $repository ): bool {
+				public function authorize_webhook( SignedWebhookVerification $verification, string $repository_authority_id, string $repository ): bool {
 					return false; }
-				public function repository_target_matches( string $target, string $repositoryLocator ): bool {
+				public function repository_target_matches( string $target, string $repository_locator ): bool {
 					return false; }
 			}
 		);

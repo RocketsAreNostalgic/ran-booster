@@ -11,7 +11,7 @@ use RAN\Deployment\DeploymentState;
 
 final class DeploymentStatePolicyTest extends TestCase {
 
-	public function testOnlyTheThreeTerminalStatesAreTerminal(): void {
+	public function test_only_the_three_terminal_states_are_terminal(): void {
 		self::assertFalse( DeploymentState::QUEUED->is_terminal() );
 		self::assertFalse( DeploymentState::RUNNING->is_terminal() );
 		self::assertTrue( DeploymentState::SUCCEEDED->is_terminal() );
@@ -19,7 +19,7 @@ final class DeploymentStatePolicyTest extends TestCase {
 		self::assertTrue( DeploymentState::NEEDS_ATTENTION->is_terminal() );
 	}
 
-	public function testPoliciesExpressManualAndWebhookAuthorityWithoutBooleanPtdDrift(): void {
+	public function test_policies_express_manual_and_webhook_authority_without_boolean_ptd_drift(): void {
 		self::assertFalse( DeploymentPolicy::DISABLED->allows_manual_mutation() );
 		self::assertFalse( DeploymentPolicy::DISABLED->allows_webhook_mutation() );
 		self::assertTrue( DeploymentPolicy::MANUAL->allows_manual_mutation() );
@@ -28,7 +28,7 @@ final class DeploymentStatePolicyTest extends TestCase {
 		self::assertTrue( DeploymentPolicy::AUTOMATIC->allows_webhook_mutation() );
 	}
 
-	public function testUnknownPersistedVocabularyIsRejected(): void {
+	public function test_unknown_persisted_vocabulary_is_rejected(): void {
 		$this->expectException( InvalidArgumentException::class );
 		DeploymentState::from_database( 'pending' );
 	}

@@ -32,7 +32,7 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		'tests/fixtures/ran-booster-github-provider-extension/src/Plugin.php',
 	);
 
-	public function testCoreReferencesOnlyTheNamedGitHubCompositionSeam(): void {
+	public function test_core_references_only_the_named_git_hub_composition_seam(): void {
 		$allowed    = array(
 			'RAN/BoosterServiceProvider.php'     => 'use RAN\BoosterGitHubProvider\V1\GitHubProvider;',
 			'RAN/Uninstall/LocalDataRemover.php' => 'use RAN\BoosterGitHubProvider\V1\ReleaseDeployments\WorkflowAssistance\WorkflowAssistanceState;',
@@ -61,7 +61,7 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		self::assertSame( $expected, $references );
 	}
 
-	public function testNeutralReleaseAndWebhookOwnersHaveNoGitHubBranchOrGenericDispatcherSurface(): void {
+	public function test_neutral_release_and_webhook_owners_have_no_git_hub_branch_or_generic_dispatcher_surface(): void {
 		$root  = dirname( __DIR__, 2 );
 		$paths = array(
 			$root . '/RAN/Dashboard.php',
@@ -101,7 +101,7 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		}
 	}
 
-	public function testCoreTestsReferenceGitHubConcretesOnlyThroughExplicitHostIntegrationOwners(): void {
+	public function test_core_tests_reference_git_hub_concretes_only_through_explicit_host_integration_owners(): void {
 		$root       = dirname( __DIR__, 2 );
 		$references = array();
 		$iterator   = new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( $root . '/tests' ) );
@@ -123,13 +123,13 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		self::assertSame( $expected, $references );
 	}
 
-	public function testCoreSelfUpdateUsesTheSelectedUpdaterWithoutProviderCapability(): void {
+	public function test_core_self_update_uses_the_selected_updater_without_provider_capability(): void {
 		$root = dirname( __DIR__, 2 );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static Core composition boundary under test.
 		$bootstrap = file_get_contents( $root . '/ran-booster.php' );
 		self::assertIsString( $bootstrap );
-		self::assertStringContainsString( 'new CoreSelfUpdateNativeTarget( $coreUpdater )', $bootstrap );
+		self::assertStringContainsString( 'new CoreSelfUpdateNativeTarget( $core_updater )', $bootstrap );
 		self::assertStringContainsString( '->make( ManagedReleaseUpdaterRegistrar::class )->plugin(', $bootstrap );
 		self::assertStringNotContainsString( 'RepositoryReleaseNativeTargets', $bootstrap );
 		self::assertStringNotContainsString( 'RepositoryReference', $bootstrap );
@@ -139,12 +139,12 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		$managed = file_get_contents( $root . '/RAN/WordPress/ManagedReleaseTargetRegistrar.php' );
 		self::assertIsString( $managed );
 		self::assertStringContainsString(
-			'$this->providers->requireCapability( $provider_code, RepositoryReleaseNativeTargets::class );',
+			'$this->providers->require_capability( $provider_code, RepositoryReleaseNativeTargets::class );',
 			$managed
 		);
 	}
 
-	public function testReleasedProviderIsTheOnlyBundledGitHubImplementation(): void {
+	public function test_released_provider_is_the_only_bundled_git_hub_implementation(): void {
 		$root = dirname( __DIR__, 2 );
 		self::assertDirectoryDoesNotExist( $root . '/RAN/Booster/GitHub' );
 		self::assertTrue( class_exists( \RAN\BoosterGitHubProvider\V1\GitHubProvider::class ) );

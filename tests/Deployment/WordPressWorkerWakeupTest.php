@@ -21,6 +21,7 @@ final class WordPressWorkerWakeupTest extends TestCase {
 	private WordPressWorkerWakeupDatabase $database;
 	private WordPressWorkerWakeup $wakeup;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		WordPressWorkerWakeupCron::reset();
 		$this->database = new WordPressWorkerWakeupDatabase();
@@ -29,13 +30,13 @@ final class WordPressWorkerWakeupTest extends TestCase {
 		);
 	}
 
-	public function testNoQueuedAttemptRequiresNoWakeup(): void {
+	public function test_no_queued_attempt_requires_no_wakeup(): void {
 		self::assertSame( 'not_required', $this->wakeup->request() );
 		self::assertSame( array(), WordPressWorkerWakeupCron::$events );
 	}
 
-	public function testQueuedAttemptSchedulesOneArgsFreeSingleEvent(): void {
-		$this->database->queuedAt = gmdate( 'Y-m-d H:i:s', time() + 60 );
+	public function test_queued_attempt_schedules_one_args_free_single_event(): void {
+		$this->database->queued_at = gmdate( 'Y-m-d H:i:s', time() + 60 );
 
 		self::assertSame( 'scheduled', $this->wakeup->request() );
 		self::assertCount( 1, WordPressWorkerWakeupCron::$events );
@@ -44,25 +45,25 @@ final class WordPressWorkerWakeupTest extends TestCase {
 		self::assertFalse( WordPressWorkerWakeupCron::$events[0]->schedule );
 	}
 
-	public function testExistingEventIsNotDuplicated(): void {
-		$this->database->queuedAt            = gmdate( 'Y-m-d H:i:s', time() + 60 );
+	public function test_existing_event_is_not_duplicated(): void {
+		$this->database->queued_at           = gmdate( 'Y-m-d H:i:s', time() + 60 );
 		WordPressWorkerWakeupCron::$events[] = $this->event( WordPressWorkerWakeup::HOOK, time() + 30 );
 
 		self::assertSame( 'already_scheduled', $this->wakeup->request() );
 		self::assertCount( 1, WordPressWorkerWakeupCron::$events );
 	}
 
-	public function testQueueReadOrScheduleFailureIsUnavailable(): void {
-		$this->database->readFails = true;
+	public function test_queue_read_or_schedule_failure_is_unavailable(): void {
+		$this->database->read_fails = true;
 		self::assertSame( 'unavailable', $this->wakeup->request() );
 
-		$this->database->readFails                   = false;
-		$this->database->queuedAt                    = gmdate( 'Y-m-d H:i:s', time() + 60 );
-		WordPressWorkerWakeupCron::$scheduleSucceeds = false;
+		$this->database->read_fails                   = false;
+		$this->database->queued_at                    = gmdate( 'Y-m-d H:i:s', time() + 60 );
+		WordPressWorkerWakeupCron::$schedule_succeeds = false;
 		self::assertSame( 'unavailable', $this->wakeup->request() );
 	}
 
-	public function testInspectAndClearAffectOnlyTheBoosterHook(): void {
+	public function test_inspect_and_clear_affect_only_the_booster_hook(): void {
 		WordPressWorkerWakeupCron::$events = array(
 			$this->event( WordPressWorkerWakeup::HOOK, time() + 30 ),
 			$this->event( 'another_plugin_event', time() + 30 ),
@@ -74,7 +75,7 @@ final class WordPressWorkerWakeupTest extends TestCase {
 		self::assertSame( 'another_plugin_event', WordPressWorkerWakeupCron::$events[0]->hook );
 	}
 
-	public function testActivationInstallsSchemaBeforeRequestingWakeup(): void {
+	public function test_activation_installs_schema_before_requesting_wakeup(): void {
 		$wakeup    = new WordPressWorkerWakeupActivationWakeup();
 		$schema    = new WordPressWorkerWakeupSchema( $wakeup );
 		$container = new CoreContainer();
@@ -89,7 +90,7 @@ final class WordPressWorkerWakeupTest extends TestCase {
 		self::assertSame( 1, $wakeup->clears );
 	}
 
-	public function testDeactivationStopsAndRetainsTheTemporaryDebugCapture(): void {
+	public function test_deactivation_stops_and_retains_the_temporary_debug_capture(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-deactivation-capture-' . bin2hex( random_bytes( 6 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable focused fixture setup.
 		self::assertTrue( mkdir( $directory, 0700 ) );
@@ -123,7 +124,7 @@ final class WordPressWorkerWakeupTest extends TestCase {
 		}
 	}
 
-	public function testActivationFailureUsesSafeActionableWpDieAndDoesNotRequestWakeup(): void {
+	public function test_activation_failure_uses_safe_actionable_wp_die_and_does_not_request_wakeup(): void {
 		$wakeup          = new WordPressWorkerWakeupActivationWakeup();
 		$schema          = new WordPressWorkerWakeupSchema( $wakeup );
 		$container       = new CoreContainer();
@@ -163,8 +164,8 @@ final class WordPressWorkerWakeupDatabase {
 
 	public string $prefix     = 'wp_';
 	public string $last_error = '';
-	public ?string $queuedAt  = null;
-	public bool $readFails    = false;
+	public ?string $queued_at = null;
+	public bool $read_fails   = false;
 
 	public function db_server_info(): string {
 		return '8.4.6';
@@ -184,11 +185,11 @@ final class WordPressWorkerWakeupDatabase {
 				),
 			);
 		}
-		if ( $this->readFails ) {
+		if ( $this->read_fails ) {
 			return null;
 		}
 
-		return null === $this->queuedAt ? array() : array( (object) array( 'created_at' => $this->queuedAt ) );
+		return null === $this->queued_at ? array() : array( (object) array( 'created_at' => $this->queued_at ) );
 	}
 }
 

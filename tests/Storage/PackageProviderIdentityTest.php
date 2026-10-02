@@ -22,6 +22,7 @@ require_once __DIR__ . '/StorageTestEnvironment.php';
 
 final class PackageProviderIdentityTest extends RANBoosterTestCase {
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		global $ran_booster_storage_test_options, $wpdb;
 
@@ -30,50 +31,50 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		$wpdb = new StorageTestWpdb();
 	}
 
-	public function testProviderIdentityRoundTripsThroughInsertAndHydration(): void {
+	public function test_provider_identity_round_trips_through_insert_and_hydration(): void {
 		global $wpdb;
 
-		$storage       = $this->storage();
-		$package       = $this->package( 'example/example.php' );
-		$opaqueLocator = 'RocketsAreNostalgic/%2Fexample<tag>';
-		$repository    = new ManagedRepository( 'gh', $opaqueLocator, '000123456789', 'release', false, 'credential-one' );
+		$storage        = $this->storage();
+		$package        = $this->package( 'example/example.php' );
+		$opaque_locator = 'RocketsAreNostalgic/%2Fexample<tag>';
+		$repository     = new ManagedRepository( 'gh', $opaque_locator, '000123456789', 'release', false, 'credential-one' );
 		$package->set_repository( $repository );
 		$package->set_deployment_policy( DeploymentPolicy::AUTOMATIC );
 
-		self::assertSame( PackageMutationStatus::CHANGED, $storage->storeForTest( $package )->get_status() );
+		self::assertSame( PackageMutationStatus::CHANGED, $storage->store_for_test( $package )->get_status() );
 		self::assertSame( 'gh', $wpdb->inserts[0][1]['provider'] );
 		self::assertSame( 'branch', $wpdb->inserts[0][1]['source'] );
 		self::assertSame( 1, $wpdb->inserts[0][1]['source_revision'] );
 		self::assertArrayNotHasKey( 'host', $wpdb->inserts[0][1] );
-		self::assertSame( $opaqueLocator, $wpdb->inserts[0][1]['repository'] );
+		self::assertSame( $opaque_locator, $wpdb->inserts[0][1]['repository'] );
 		self::assertSame( '000123456789', $wpdb->inserts[0][1]['provider_repository_id'], 'Stable IDs must remain opaque strings.' );
 
-		$opaqueProviderId = '000%2F{opaque-repository}-value';
-		$package->set_repository( new ManagedRepository( 'gh', $opaqueLocator, $opaqueProviderId, 'release', false, 'credential-one' ) );
+		$opaque_provider_id = '000%2F{opaque-repository}-value';
+		$package->set_repository( new ManagedRepository( 'gh', $opaque_locator, $opaque_provider_id, 'release', false, 'credential-one' ) );
 
-		self::assertSame( PackageMutationStatus::CHANGED, $storage->storeForTest( $package )->get_status() );
+		self::assertSame( PackageMutationStatus::CHANGED, $storage->store_for_test( $package )->get_status() );
 		self::assertSame( 'gh', $wpdb->updates[0][1]['provider'] );
 		self::assertSame( 'branch', $wpdb->updates[0][1]['source'] );
 		self::assertSame( 2, $wpdb->updates[0][1]['source_revision'] );
 		self::assertSame( 'branch', $wpdb->updates[0][2]['source'] );
 		self::assertSame( 1, $wpdb->updates[0][2]['source_revision'] );
 		self::assertArrayNotHasKey( 'host', $wpdb->updates[0][1] );
-		self::assertSame( $opaqueProviderId, $wpdb->updates[0][1]['provider_repository_id'] );
+		self::assertSame( $opaque_provider_id, $wpdb->updates[0][1]['provider_repository_id'] );
 
 		$wpdb->row = (object) $wpdb->rows[0];
-		$hydrated  = $storage->findForTest( 'example/example.php' );
+		$hydrated  = $storage->find_for_test( 'example/example.php' );
 
 		self::assertInstanceOf( ManagedRepository::class, $hydrated->get_repository() );
 		self::assertSame( 'gh', $hydrated->get_provider_code() );
-		self::assertSame( $opaqueProviderId, $hydrated->get_provider_repository_id() );
-		self::assertSame( $opaqueLocator, (string) $hydrated->get_repository() );
+		self::assertSame( $opaque_provider_id, $hydrated->get_provider_repository_id() );
+		self::assertSame( $opaque_locator, (string) $hydrated->get_repository() );
 		self::assertSame( 'credential-one', $hydrated->get_credential_id() );
 		self::assertSame( 'release', $hydrated->get_branch() );
 		self::assertSame( PackageSource::BRANCH, $hydrated->get_source() );
 		self::assertSame( 2, $hydrated->get_source_revision() );
 	}
 
-	public function testReleaseSourceAndRevisionHydrateWithoutBranchFallback(): void {
+	public function test_release_source_and_revision_hydrate_without_branch_fallback(): void {
 		global $wpdb;
 
 		$wpdb->row = (object) array(
@@ -92,13 +93,13 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 			'subdirectory'           => null,
 		);
 
-		$package = $this->storage()->findForTest( 'example/example.php' );
+		$package = $this->storage()->find_for_test( 'example/example.php' );
 
 		self::assertSame( PackageSource::RELEASE_ASSET, $package->get_source() );
 		self::assertSame( 7, $package->get_source_revision() );
 	}
 
-	public function testMalformedStoredSourceStateFailsClosed(): void {
+	public function test_malformed_stored_source_state_fails_closed(): void {
 		global $wpdb;
 
 		$row = array(
@@ -126,7 +127,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		) {
 			$wpdb->row = (object) array_merge( $row, $invalid );
 			try {
-				$this->storage()->findForTest( 'example/example.php' );
+				$this->storage()->find_for_test( 'example/example.php' );
 				self::fail( 'Expected malformed package source state to fail closed.' );
 			} catch ( \InvalidArgumentException $failure ) {
 				self::assertStringNotContainsString( (string) reset( $invalid ), $failure->getMessage() );
@@ -134,7 +135,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		}
 	}
 
-	public function testOrdinaryStoreCannotOverwriteAReleaseManagedRow(): void {
+	public function test_ordinary_store_cannot_overwrite_arelease_managed_row(): void {
 		global $wpdb;
 
 		$wpdb->rows[] = array(
@@ -156,7 +157,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		$package = $this->package( 'example/example.php' );
 		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'main' ) );
 
-		$result = $this->storage()->storeForTest( $package );
+		$result = $this->storage()->store_for_test( $package );
 
 		self::assertSame( PackageMutationStatus::CONFLICT, $result->get_status() );
 		self::assertSame( 'ran_booster_storage_source_conflict', $result->get_diagnostic_id() );
@@ -164,7 +165,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		self::assertSame( PackageSource::RELEASE_ASSET->value, $wpdb->rows[0]['source'] );
 	}
 
-	public function testReleaseManagedEditPreservesItsSourceWhileChangingAccessAndPolicy(): void {
+	public function test_release_managed_edit_preserves_its_source_while_changing_access_and_policy(): void {
 		global $wpdb;
 
 		$wpdb->rows[] = array(
@@ -183,7 +184,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 			'source_revision'        => 4,
 		);
 
-		$result = $this->storage()->editForTest(
+		$result = $this->storage()->edit_for_test(
 			'example/example.php',
 			array(
 				'repository'               => new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'stable', true, 'new-access' ),
@@ -210,7 +211,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		self::assertNull( $wpdb->rows[0]['subdirectory'] );
 	}
 
-	public function testReleaseManagedEditAcceptsLegacyEmptyRootSubdirectory(): void {
+	public function test_release_managed_edit_accepts_legacy_empty_root_subdirectory(): void {
 		global $wpdb;
 
 		$wpdb->rows[] = array(
@@ -229,7 +230,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 			'source_revision'        => 4,
 		);
 
-		$result = $this->storage()->editForTest(
+		$result = $this->storage()->edit_for_test(
 			'example/example.php',
 			array(
 				'repository'               => new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'stable', true, 'new-access' ),
@@ -247,7 +248,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		self::assertNull( $wpdb->rows[0]['subdirectory'] );
 	}
 
-	public function testLegacyReleaseManagedEditWithSubdirectoryDoesNotWrite(): void {
+	public function test_legacy_release_managed_edit_with_subdirectory_does_not_write(): void {
 		global $wpdb;
 
 		$wpdb->rows[] = array(
@@ -266,7 +267,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 			'source_revision'        => 4,
 		);
 
-		$result = $this->storage()->editForTest(
+		$result = $this->storage()->edit_for_test(
 			'example/example.php',
 			array(
 				'repository'               => new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'stable', true, 'new-access' ),
@@ -286,7 +287,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		self::assertSame( 'packages/example', $wpdb->rows[0]['subdirectory'] );
 	}
 
-	public function testLegacyReleaseManagedEditCannotSilentlyClearItsSubdirectory(): void {
+	public function test_legacy_release_managed_edit_cannot_silently_clear_its_subdirectory(): void {
 		global $wpdb;
 
 		$wpdb->rows[] = array(
@@ -305,7 +306,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 			'source_revision'        => 4,
 		);
 
-		$result = $this->storage()->editForTest(
+		$result = $this->storage()->edit_for_test(
 			'example/example.php',
 			array(
 				'repository'               => new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'stable', true, 'new-access' ),
@@ -324,7 +325,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		self::assertSame( 'packages/example', $wpdb->rows[0]['subdirectory'] );
 	}
 
-	public function testHydrationRetainsAnUnavailableProviderWithoutFallingBackToGitHub(): void {
+	public function test_hydration_retains_an_unavailable_provider_without_falling_back_to_git_hub(): void {
 		global $wpdb;
 
 		$storage   = $this->storage();
@@ -344,7 +345,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 			'subdirectory'           => null,
 		);
 
-		$package = $storage->findForTest( 'example/example.php' );
+		$package = $storage->find_for_test( 'example/example.php' );
 
 		self::assertSame( 'external-offline', $package->get_provider_code() );
 		self::assertSame( 'group/subgroup/package', (string) $package->get_repository() );
@@ -353,7 +354,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		self::assertTrue( $package->is_private() );
 	}
 
-	public function testInvalidStoredProviderIdentityFailsWithASafeStorageError(): void {
+	public function test_invalid_stored_provider_identity_fails_with_asafe_storage_error(): void {
 		global $wpdb;
 
 		$wpdb->row = (object) array(
@@ -371,7 +372,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		);
 
 		try {
-			$this->storage()->findForTest( 'example/example.php' );
+			$this->storage()->find_for_test( 'example/example.php' );
 			self::fail( 'Expected invalid stored provider identity to fail closed.' );
 		} catch ( PackageStorageFailure $failure ) {
 			self::assertSame( 'ran_booster_storage_invalid_provider_identity', $failure->get_diagnostic_id() );
@@ -379,7 +380,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		}
 	}
 
-	public function testLegacyReleaseRowWithoutStableRepositoryIdFailsClosed(): void {
+	public function test_legacy_release_row_without_stable_repository_id_fails_closed(): void {
 		global $wpdb;
 
 		$wpdb->row = (object) array(
@@ -397,7 +398,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		);
 
 		try {
-			$this->storage()->findForTest( 'example/example.php' );
+			$this->storage()->find_for_test( 'example/example.php' );
 			self::fail( 'Expected a legacy row without stable repository identity to fail closed.' );
 		} catch ( PackageStorageFailure $failure ) {
 			self::assertSame( 'ran_booster_storage_invalid_provider_identity', $failure->get_diagnostic_id() );
@@ -405,14 +406,14 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		}
 	}
 
-	public function testManagedRepositoryNormalizesEmptyLocalSettings(): void {
+	public function test_managed_repository_normalizes_empty_local_settings(): void {
 		$repository = new ManagedRepository( 'external-offline', 'group/package', 'stable-id', '', false, '   ' );
 
 		self::assertSame( 'main', $repository->branch );
-		self::assertNull( $repository->reference->credentialId );
+		self::assertNull( $repository->reference->credential_id );
 	}
 
-	public function testEditPersistsExplicitProviderIdentityAndRejectsMissingIdentity(): void {
+	public function test_edit_persists_explicit_provider_identity_and_rejects_missing_identity(): void {
 		global $wpdb;
 
 		$storage      = $this->storage();
@@ -426,7 +427,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		);
 		$repository   = new ManagedRepository( 'gh', 'RocketsAreNostalgic/replacement', '{new-opaque-id}', 'main' );
 
-		$storage->editForTest(
+		$storage->edit_for_test(
 			'example/example.php',
 			array(
 				'repository'               => $repository,
@@ -447,7 +448,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		self::assertSame( 2, $wpdb->updates[0][1]['source_revision'] );
 		self::assertSame( 1, $wpdb->updates[0][2]['source_revision'] );
 
-		$result = $storage->editForTest(
+		$result = $storage->edit_for_test(
 			'example/example.php',
 			array(
 				'repository'               => 'owner/manual',
@@ -470,22 +471,22 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 
 	private function storage(): AbstractPackageRepository {
 		$lifecycle = new class() extends Database {
-			public function requireReady(): void {
+			public function require_ready(): void {
 			}
 		};
 
 		return new class( $lifecycle ) extends AbstractPackageRepository {
 
-			public function storeForTest( Package $package ): PackageMutationResult {
+			public function store_for_test( Package $package ): PackageMutationResult {
 				return $this->store_package( $package );
 			}
 
 			/** @param array<string, mixed> $input */
-			public function editForTest( string $identifier, array $input ): PackageMutationResult {
+			public function edit_for_test( string $identifier, array $input ): PackageMutationResult {
 				return $this->edit_package( $identifier, $input );
 			}
 
-			public function findForTest( string $identifier ): Package {
+			public function find_for_test( string $identifier ): Package {
 				return $this->managed_package( $identifier );
 			}
 

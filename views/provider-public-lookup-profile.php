@@ -15,17 +15,15 @@ defined( 'ABSPATH' ) || exit;
 // material: credential profiles are display-safe metadata supplied by the
 // provider settings presenter.
 
-$publicLookupProfileError = isset( $publicLookupProfileError ) && is_string( $publicLookupProfileError )
-	? $publicLookupProfileError
+$public_lookup_profile_error = isset( $public_lookup_profile_error ) && is_string( $public_lookup_profile_error )
+	? $public_lookup_profile_error
 	: null;
-$publicLookupProfile      = isset( $publicLookupProfile ) && is_array( $publicLookupProfile )
-	? $publicLookupProfile
-	: ( isset( $public_lookup_profile ) && is_array( $public_lookup_profile )
-		? $public_lookup_profile
-		: array(
-			'configured_id' => '',
-			'stale'         => false,
-		) );
+$public_lookup_profile       = isset( $public_lookup_profile ) && is_array( $public_lookup_profile )
+	? $public_lookup_profile
+	: array(
+		'configured_id' => '',
+		'stale'         => false,
+	);
 ?>
 <section id="ran-booster-public-lookup-profile-region" class="ran-booster-provider-section" data-ran-booster-admin-mutation-region="public-lookup-profile" aria-labelledby="ran-booster-public-lookup-heading">
 	<header class="ran-booster-provider-section__header">
@@ -34,7 +32,7 @@ $publicLookupProfile      = isset( $publicLookupProfile ) && is_array( $publicLo
 	</header>
 	<div class="ran-booster-provider-section__body">
 		<div class="ran-booster-public-lookup-profile__panel ran-booster-panel">
-			<div id="ran-booster-public-lookup-profile-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" <?php echo null === $publicLookupProfileError ? 'hidden' : ''; ?>><p><?php echo null === $publicLookupProfileError ? '' : esc_html( $publicLookupProfileError ); ?></p></div>
+			<div id="ran-booster-public-lookup-profile-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" <?php echo null === $public_lookup_profile_error ? 'hidden' : ''; ?>><p><?php echo null === $public_lookup_profile_error ? '' : esc_html( $public_lookup_profile_error ); ?></p></div>
 			<div class="ran-booster-public-lookup-profile__layout">
 				<form method="post" action="" class="ran-booster-public-lookup-profile__form" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-public-lookup-profile-error" hx-post="" hx-target="#ran-booster-public-lookup-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop">
 					<?php wp_nonce_field( 'ran-booster-save-public-lookup-profile' ); ?>
@@ -43,14 +41,14 @@ $publicLookupProfile      = isset( $publicLookupProfile ) && is_array( $publicLo
 					<label class="ran-booster-public-lookup-profile__label ran-booster-eyebrow ran-booster-eyebrow--compact" for="ran-booster-public-lookup-profile"><?php esc_html_e( 'Lookup credential', 'ran-booster' ); ?></label>
 					<div class="ran-booster-public-lookup-profile__controls">
 						<select id="ran-booster-public-lookup-profile" name="ran_booster[profile_id]">
-							<option value="" <?php selected( '', $publicLookupProfile['configured_id'] ); ?>><?php esc_html_e( 'Anonymous', 'ran-booster' ); ?></option>
+							<option value="" <?php selected( '', $public_lookup_profile['configured_id'] ); ?>><?php esc_html_e( 'Anonymous', 'ran-booster' ); ?></option>
 							<?php foreach ( $credential_profiles as $profile ) { ?>
 								<?php if ( $profile['configured'] ) { ?>
-									<option value="<?php echo esc_attr( $profile['id'] ); ?>" <?php selected( $profile['id'], $publicLookupProfile['configured_id'] ); ?>><?php echo esc_html( $profile['label'] . ' (' . $profile['id'] . ')' ); ?></option>
+									<option value="<?php echo esc_attr( $profile['id'] ); ?>" <?php selected( $profile['id'], $public_lookup_profile['configured_id'] ); ?>><?php echo esc_html( $profile['label'] . ' (' . $profile['id'] . ')' ); ?></option>
 								<?php } ?>
 							<?php } ?>
-							<?php if ( $publicLookupProfile['stale'] ) { ?>
-								<option value="<?php echo esc_attr( $publicLookupProfile['configured_id'] ); ?>" selected><?php echo esc_html( 'Missing profile (' . $publicLookupProfile['configured_id'] . ')' ); ?></option>
+							<?php if ( $public_lookup_profile['stale'] ) { ?>
+								<option value="<?php echo esc_attr( $public_lookup_profile['configured_id'] ); ?>" selected><?php echo esc_html( 'Missing profile (' . $public_lookup_profile['configured_id'] . ')' ); ?></option>
 							<?php } ?>
 						</select>
 						<button type="submit" class="button"><?php esc_html_e( 'Save', 'ran-booster' ); ?></button>
@@ -61,7 +59,7 @@ $publicLookupProfile      = isset( $publicLookupProfile ) && is_array( $publicLo
 					<p><?php esc_html_e( 'Prefer a dedicated, expiring, least-privilege credential kept separate from credentials that can access private repositories or deployments.', 'ran-booster' ); ?></p>
 				</aside>
 			</div>
-			<?php if ( $publicLookupProfile['stale'] ) { ?>
+			<?php if ( $public_lookup_profile['stale'] ) { ?>
 				<div class="notice notice-warning inline"><p><?php esc_html_e( 'The configured public lookup profile is missing. Choose Anonymous or another saved profile, then save the preference.', 'ran-booster' ); ?></p></div>
 			<?php } ?>
 		</div>

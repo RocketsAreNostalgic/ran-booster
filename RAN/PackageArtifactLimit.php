@@ -23,8 +23,8 @@ final class PackageArtifactLimit {
 	 * The null-only argument preserves source compatibility with callers from the
 	 * removed future-override seam without accepting any package-specific limit.
 	 */
-	public static function resolve( null $legacyNull = null ): int {
-		unset( $legacyNull );
+	public static function resolve( null $legacy_null = null ): int {
+		unset( $legacy_null );
 		if ( defined( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ) ) {
 			return self::require_valid( constant( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ) );
 		}

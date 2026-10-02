@@ -11,23 +11,24 @@ final class ContainerTest extends RANBoosterTestCase {
 
 	private CoreContainer $container;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->container = new CoreContainer();
 	}
 
-	public function testItCanResolveAClassWithNoDependencies(): void {
+	public function test_it_can_resolve_a_class_with_no_dependencies(): void {
 		$db = $this->container->make( DB::class );
 
 		$this->assertInstanceOf( DB::class, $db );
 	}
 
-	public function testItCanResolveAClassWithNestedDependencies(): void {
+	public function test_it_can_resolve_a_class_with_nested_dependencies(): void {
 		$manager = $this->container->make( UserManager::class );
 
 		$this->assertInstanceOf( UserManager::class, $manager );
 	}
 
-	public function testItCanBindAnAlias(): void {
+	public function test_it_can_bind_an_alias(): void {
 		$this->container->bind( UserRepository::class, DBUserRepository::class );
 
 		$repository = $this->container->make( UserRepository::class );
@@ -35,7 +36,7 @@ final class ContainerTest extends RANBoosterTestCase {
 		$this->assertInstanceOf( DBUserRepository::class, $repository );
 	}
 
-	public function testItCanBindAClosure(): void {
+	public function test_it_can_bind_a_closure(): void {
 		$closure = function ( CoreContainer $container ): DB {
 			return new DB();
 		};
@@ -47,14 +48,14 @@ final class ContainerTest extends RANBoosterTestCase {
 		$this->assertInstanceOf( DB::class, $db );
 	}
 
-	public function testItCanBindAnInstance(): void {
-		$dbInstance = new DB();
+	public function test_it_can_bind_an_instance(): void {
+		$db_instance = new DB();
 
-		$this->container->bind( DB::class, $dbInstance );
+		$this->container->bind( DB::class, $db_instance );
 
 		$db = $this->container->make( DB::class );
 
-		$this->assertSame( $dbInstance, $db );
+		$this->assertSame( $db_instance, $db );
 		$this->assertSame( $db, $this->container->make( DB::class ) );
 	}
 }

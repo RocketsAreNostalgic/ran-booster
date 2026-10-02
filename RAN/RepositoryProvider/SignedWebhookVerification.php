@@ -20,14 +20,14 @@ final readonly class SignedWebhookVerification {
 		}
 	}
 
-	public function getProvider(): ProviderCode {
+	public function get_provider(): ProviderCode {
 		return $this->provider;
 	}
 
 	/**
 	 * @return list<array{id: string, scope: string, target: string, authority_id: string}>
 	 */
-	public function getProfiles(): array {
+	public function get_profiles(): array {
 		return $this->profiles;
 	}
 }

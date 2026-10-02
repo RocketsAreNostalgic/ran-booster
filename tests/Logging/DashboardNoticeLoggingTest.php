@@ -25,6 +25,7 @@ final class DashboardNoticeLoggingTest extends TestCase {
 	private TemporaryDebugCapture $capture;
 	private Dashboard $dashboard;
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->directory = sys_get_temp_dir() . '/ran-booster-dashboard-log-' . bin2hex( random_bytes( 8 ) );
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
@@ -34,13 +35,14 @@ final class DashboardNoticeLoggingTest extends TestCase {
 			static fn(): int => strtotime( '2026-07-23T12:00:00Z' )
 		);
 		$this->capture->start();
-		BoosterLogger::configureCapture( $this->capture );
+		BoosterLogger::configure_capture( $this->capture );
 
 		$this->dashboard = ( new \ReflectionClass( Dashboard::class ) )->newInstanceWithoutConstructor();
 	}
 
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
-		BoosterLogger::configureCapture( null );
+		BoosterLogger::configure_capture( null );
 
 		foreach (
 			array(
@@ -57,7 +59,7 @@ final class DashboardNoticeLoggingTest extends TestCase {
 		}
 	}
 
-	public function testEveryQueuedAdminWarningAndErrorNoticeCreatesASafeLogEvent(): void {
+	public function test_every_queued_admin_warning_and_error_notice_creates_a_safe_log_event(): void {
 		$this->dashboard->add_message(
 			array(
 				'type'    => 'warning',
@@ -92,7 +94,7 @@ final class DashboardNoticeLoggingTest extends TestCase {
 		self::assertStringNotContainsString( 'secret-canary-token', $entries[1]['line'] );
 	}
 
-	public function testUnexpectedManualOperationFailureIsLoggedBeforeTheRedactedNotice(): void {
+	public function test_unexpected_manual_operation_failure_is_logged_before_the_redacted_notice(): void {
 		self::assertFalse( $this->dashboard->post_package_operation( 'install-plugin', array() ) );
 
 		self::assertCount( 1, $this->dashboard->messages );
@@ -108,7 +110,7 @@ final class DashboardNoticeLoggingTest extends TestCase {
 		self::assertStringNotContainsString( 'Package operations are not configured.', $entries[0]['line'] );
 	}
 
-	public function testStorageAttentionLogsOnlyStablePathlessDiagnosticContext(): void {
+	public function test_storage_attention_logs_only_stable_pathless_diagnostic_context(): void {
 		$method = new \ReflectionMethod( Dashboard::class, 'log_secrets_storage_diagnostic' );
 		$method->invoke(
 			$this->dashboard,

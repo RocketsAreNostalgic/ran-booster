@@ -13,7 +13,7 @@ use LogicException;
  */
 final readonly class AdminAddOnTab {
 
-	private string $addOnSlug;
+	private string $add_on_slug;
 
 	private string $key;
 
@@ -24,21 +24,21 @@ final readonly class AdminAddOnTab {
 
 	/** @param callable(AdminAddOnContext): void $renderer */
 	public function __construct(
-		string $addOnSlug,
+		string $add_on_slug,
 		string $key,
 		string $label,
 		callable $renderer,
-		private int $minimumCoreApiVersion = 1,
-		private ?int $maximumCoreApiVersion = null,
-		private int $minimumAddOnApiVersion = 1,
-		private ?int $maximumAddOnApiVersion = null,
-		private ?string $facadeName = null
+		private int $minimum_core_api_version = 1,
+		private ?int $maximum_core_api_version = null,
+		private int $minimum_add_on_api_version = 1,
+		private ?int $maximum_add_on_api_version = null,
+		private ?string $facade_name = null
 	) {
-		$addOnSlug = trim( $addOnSlug );
-		$key       = trim( $key );
-		$label     = trim( $label );
+		$add_on_slug = trim( $add_on_slug );
+		$key         = trim( $key );
+		$label       = trim( $label );
 
-		if ( 1 !== preg_match( '/^[a-z][a-z0-9-]{0,63}$/', $addOnSlug ) ) {
+		if ( 1 !== preg_match( '/^[a-z][a-z0-9-]{0,63}$/', $add_on_slug ) ) {
 			throw new InvalidArgumentException( 'Add-on slugs must be short lowercase identifiers.' );
 		}
 
@@ -50,25 +50,25 @@ final readonly class AdminAddOnTab {
 			throw new InvalidArgumentException( 'Add-on tab labels must be short display values.' );
 		}
 
-		if ( $minimumCoreApiVersion < 1
-			|| ( null !== $maximumCoreApiVersion && $maximumCoreApiVersion < $minimumCoreApiVersion )
-			|| $minimumAddOnApiVersion < 1
-			|| ( null !== $maximumAddOnApiVersion && $maximumAddOnApiVersion < $minimumAddOnApiVersion ) ) {
+		if ( $minimum_core_api_version < 1
+			|| ( null !== $maximum_core_api_version && $maximum_core_api_version < $minimum_core_api_version )
+			|| $minimum_add_on_api_version < 1
+			|| ( null !== $maximum_add_on_api_version && $maximum_add_on_api_version < $minimum_add_on_api_version ) ) {
 			throw new InvalidArgumentException( 'Add-on API compatibility bounds are invalid.' );
 		}
 
-		if ( null !== $facadeName && 1 !== preg_match( '/^[a-z][a-z0-9_]{0,31}$/', $facadeName ) ) {
+		if ( null !== $facade_name && 1 !== preg_match( '/^[a-z][a-z0-9_]{0,31}$/', $facade_name ) ) {
 			throw new InvalidArgumentException( 'Add-on facade names must be short lowercase identifiers.' );
 		}
 
-		$this->addOnSlug = $addOnSlug;
-		$this->key       = $key;
-		$this->label     = $label;
-		$this->renderer  = Closure::fromCallable( $renderer );
+		$this->add_on_slug = $add_on_slug;
+		$this->key         = $key;
+		$this->label       = $label;
+		$this->renderer    = Closure::fromCallable( $renderer );
 	}
 
-	public function addOnSlug(): string {
-		return $this->addOnSlug;
+	public function add_on_slug(): string {
+		return $this->add_on_slug;
 	}
 
 	public function key(): string {
@@ -80,22 +80,22 @@ final readonly class AdminAddOnTab {
 	}
 
 	public function supports( AdminAddOnContext $context ): bool {
-		return $this->supportsApiVersions( $context->coreApiVersion(), $context->addOnApiVersion() );
+		return $this->supports_api_versions( $context->core_api_version(), $context->add_on_api_version() );
 	}
 
-	public function supportsApiVersions( int $coreApiVersion, int $addOnApiVersion ): bool {
-		return $coreApiVersion >= $this->minimumCoreApiVersion
-			&& ( null === $this->maximumCoreApiVersion || $coreApiVersion <= $this->maximumCoreApiVersion )
-			&& $addOnApiVersion >= $this->minimumAddOnApiVersion
-			&& ( null === $this->maximumAddOnApiVersion || $addOnApiVersion <= $this->maximumAddOnApiVersion );
+	public function supports_api_versions( int $core_api_version, int $add_on_api_version ): bool {
+		return $core_api_version >= $this->minimum_core_api_version
+			&& ( null === $this->maximum_core_api_version || $core_api_version <= $this->maximum_core_api_version )
+			&& $add_on_api_version >= $this->minimum_add_on_api_version
+			&& ( null === $this->maximum_add_on_api_version || $add_on_api_version <= $this->maximum_add_on_api_version );
 	}
 
-	public function facadeName(): ?string {
-		return $this->facadeName;
+	public function facade_name(): ?string {
+		return $this->facade_name;
 	}
 
 	public function render( AdminAddOnContext $context ): void {
-		if ( $this->key !== $context->tabKey() ) {
+		if ( $this->key !== $context->tab_key() ) {
 			throw new LogicException( 'Add-on tab rendering requires its matching context.' );
 		}
 

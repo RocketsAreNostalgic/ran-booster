@@ -8,5 +8,5 @@ use RAN\Provider\ProviderCapability;
 
 interface ProviderOwnedCapability extends ProviderCapability {
 
-	public function providerOwnedValue(): string;
+	public function provider_owned_value(): string;
 }

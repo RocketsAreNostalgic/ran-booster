@@ -8,11 +8,11 @@ use LogicException;
 
 final class UnsupportedProviderCapability extends LogicException {
 
-	public static function unknownContract(): self {
+	public static function unknown_contract(): self {
 		return new self( 'Unknown repository provider capability.' );
 	}
 
-	public static function forProvider(): self {
+	public static function for_provider(): self {
 		return new self( 'Repository provider does not support the requested capability.' );
 	}
 }

@@ -248,10 +248,10 @@ final class AbilityCommand extends WP_CLI_Command {
 	 * [--emit-warning]
 	 * : Emit a redacted fixture warning to stderr.
 	 */
-	public function run( array $args, array $assocArgs ): void {
+	public function run( array $args, array $assoc_args ): void {
 		$name   = $args[0] ?? '';
-		$format = $assocArgs['format'] ?? 'human';
-		$raw    = $assocArgs['input'] ?? 'null';
+		$format = $assoc_args['format'] ?? 'human';
+		$raw    = $assoc_args['input'] ?? 'null';
 
 		if ( 0 === get_current_user_id() ) {
 			WP_CLI::error( 'An explicit WordPress user is required.' );
@@ -267,7 +267,7 @@ final class AbilityCommand extends WP_CLI_Command {
 		if ( null === $ability ) {
 			WP_CLI::error( 'The requested fixture ability is unavailable.' );
 		}
-		if ( array_key_exists( 'emit-warning', $assocArgs ) ) {
+		if ( array_key_exists( 'emit-warning', $assoc_args ) ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error -- Deliberate warning-isolation fixture.
 			trigger_error( 'P4 fixture warning with no request data.', E_USER_WARNING );
 		}

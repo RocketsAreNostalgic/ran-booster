@@ -1,12 +1,12 @@
 <?php
 
 // Inspect and clean the compact concurrent delivery proof.
-// phpcs:disable
 
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\DeploymentRequest;
 use RAN\Deployment\DeploymentStorageFailure;
 
+// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
 $mode   = $args[0] ?? '';
 $run_id = $args[1] ?? '';
 if ( ! is_string( $mode ) || ! is_string( $run_id ) || preg_match( '/^[a-f0-9]{24}$/D', $run_id ) !== 1 ) {
@@ -32,16 +32,26 @@ if ( 'cleanup' === $mode ) {
 
 if ( 'cron-state' === $mode ) {
 	$event = wp_get_scheduled_event( RAN\Deployment\WordPressWorkerWakeup::HOOK, array() );
-	WP_CLI::line( false === $event ? 'none' : wp_json_encode( array( 'timestamp' => (int) $event->timestamp, 'schedule' => $event->schedule, 'args' => $event->args ) ) );
+	WP_CLI::line(
+		false === $event ? 'none' : wp_json_encode(
+			array(
+				'timestamp' => (int) $event->timestamp,
+				'schedule'  => $event->schedule,
+				'args'      => $event->args,
+			)
+		)
+	);
 	return;
 }
 
 if ( 'assert' === $mode ) {
 	$results = array();
+	// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
 	foreach ( array( $args[2] ?? '', $args[3] ?? '' ) as $path ) {
 		if ( ! is_string( $path ) || ! str_starts_with( $path, sys_get_temp_dir() . DIRECTORY_SEPARATOR ) ) {
 			throw new RuntimeException( 'A delivery-intake result path is invalid.' );
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 		$data = json_decode( (string) file_get_contents( $path ), true );
 		if ( ! is_array( $data ) ) {
 			throw new RuntimeException( 'A delivery-intake result is invalid.' );
@@ -72,10 +82,26 @@ if ( 'assert' === $mode ) {
 		throw new RuntimeException( 'The race did not persist exactly one immutable queued target.' );
 	}
 
-	$request = new DeploymentRequest( 'group/subgroup/package-' . $run_id, 'race-credential', true, 'main', 'fixture-' . $run_id, null, DeploymentPolicy::AUTOMATIC, null );
-	$target  = array( 'operation' => 'update', 'package_type' => 'plugin', 'provider_repository_id' => 'fixture-repository-' . $run_id, 'requested_ref' => 'commit-' . $run_id, 'package_source' => 'branch', 'package_source_revision' => 1, 'request' => $request );
+	$request     = new DeploymentRequest( 'group/subgroup/package-' . $run_id, 'race-credential', true, 'main', 'fixture-' . $run_id, null, DeploymentPolicy::AUTOMATIC, null );
+	$target      = array(
+		'operation'               => 'update',
+		'package_type'            => 'plugin',
+		'provider_repository_id'  => 'fixture-repository-' . $run_id,
+		'requested_ref'           => 'commit-' . $run_id,
+		'package_source'          => 'branch',
+		'package_source_revision' => 1,
+		'request'                 => $request,
+	);
 	$new_request = new DeploymentRequest( 'group/subgroup/new-' . $run_id, 'race-credential', true, 'main', 'new-' . $run_id, null, DeploymentPolicy::AUTOMATIC, null );
-	$new_target  = array( 'operation' => 'update', 'package_type' => 'plugin', 'provider_repository_id' => 'new-repository-' . $run_id, 'requested_ref' => 'new-commit-' . $run_id, 'package_source' => 'branch', 'package_source_revision' => 1, 'request' => $new_request );
+	$new_target  = array(
+		'operation'               => 'update',
+		'package_type'            => 'plugin',
+		'provider_repository_id'  => 'new-repository-' . $run_id,
+		'requested_ref'           => 'new-commit-' . $run_id,
+		'package_source'          => 'branch',
+		'package_source_revision' => 1,
+		'request'                 => $new_request,
+	);
 	$replay      = $repository->admit_webhook_batch( $provider, $delivery_id, $digest, array( $target, $new_target ) );
 	if ( 1 !== count( $replay ) || $replay[0]->get_id() !== $winner['attempt_id'] || $replay[0]->get_correlation_id() !== $winner['correlation_id'] ) {
 		throw new RuntimeException( 'A fresh provider replay did not preserve the winning target set.' );

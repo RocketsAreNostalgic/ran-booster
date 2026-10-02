@@ -88,7 +88,7 @@ $show_create             = static function ( string $table ) use ( $wpdb ): stri
 };
 $set_schema_version      = static function ( string $version ): void {
 	if ( ! update_option( Database::VERSION_OPTION, $version, false )
-		&& $version !== (string) get_option( Database::VERSION_OPTION, '' ) ) {
+		&& (string) get_option( Database::VERSION_OPTION, '' ) !== $version ) {
 		throw new RuntimeException( 'The database smoke could not set its fixture schema version.' );
 	}
 };
@@ -122,12 +122,12 @@ $assert_rejected_version = static function (
 		if ( ! $rejected ) {
 			throw new RuntimeException( 'The database smoke accepted an unsupported stored schema version.' );
 		}
-		if ( $version !== (string) get_option( Database::VERSION_OPTION, '' ) ) {
+		if ( (string) get_option( Database::VERSION_OPTION, '' ) !== $version ) {
 			throw new RuntimeException( 'The database smoke changed a rejected schema version.' );
 		}
 		if ( $package_before !== $fetch_row( $package_table, 'package', $schema_seven_package['package'] )
 			|| $attempt_before !== $fetch_row( $attempt_table, 'correlation_id', $schema_seven_attempt['correlation_id'] )
-			|| $schemas_before !== array( $show_create( $package_table ), $show_create( $attempt_table ) ) ) {
+			|| array( $show_create( $package_table ), $show_create( $attempt_table ) ) !== $schemas_before ) {
 			throw new RuntimeException( 'The database smoke found mutation after a rejected schema version.' );
 		}
 	} finally {

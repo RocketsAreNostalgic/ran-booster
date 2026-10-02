@@ -62,11 +62,13 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 			array(),
 			$secret_policies,
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $secrets->credentials_for( $code ),
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 
 		$registry->register_with_credential_store(
 			'fixture',
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static function (
 				ProviderCredentialStore $credentials,
 				AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
@@ -305,6 +307,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 			} elseif ( 'register_with_store' === $operation ) {
 				$registry->register_with_credential_store(
 					'nested',
+					// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 					static fn (
 						ProviderCredentialStore $store,
 						AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
@@ -318,11 +321,13 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 		$registry = new ProviderRegistry(
 			array(),
 			$catalog,
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static function ( ProviderCode $code ) use ( $callback ): ProviderCredentialStore {
 				$callback( 'credential_store_factory' );
 
 				return new RegistrationGuardCredentialStore();
 			},
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static function ( ProviderCode $code ) use ( $callback ): AuthenticatedWebhookDeliveryEvidenceReader {
 				$callback( 'delivery_evidence_factory' );
 
@@ -333,6 +338,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 		try {
 			$registry->register_with_credential_store(
 				'outer',
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 				static function (
 					ProviderCredentialStore $store,
 					AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
@@ -642,6 +648,7 @@ final readonly class RegistrationGuardCredentialStore implements ProviderCredent
 
 final readonly class RegistrationGuardDiagnostics implements ProviderDiagnostics {
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterface -- The fixture implementation of diagnose retains the production method contract; these inputs do not affect this controlled result.
 	public function diagnose( ProviderDiagnosticRequest $request ): array {
 		return array();
 	}
@@ -762,6 +769,7 @@ final readonly class RegistrationGuardProvider implements RepositoryProvider, Pr
 		throw new LogicException( 'Unused registration-guard test method.' );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterface -- The fixture implementation of normalize_webhook retains the production method contract; these inputs do not affect this controlled result.
 	public function normalize_webhook( WebhookRequest $request ): WebhookEnvelope {
 		return WebhookEnvelope::ignored();
 	}

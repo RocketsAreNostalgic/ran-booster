@@ -19,7 +19,7 @@ class Theme extends AbstractPackage {
 	protected $text_domain;
 	protected $domain_path;
 
-	public static function from_wp_theme_object( WP_Theme $object ) {
+	public static function from_wp_theme_object( WP_Theme $object ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.objectFound -- Preserve the existing public named-argument signature.
 		$theme = new static();
 
 		$theme->stylesheet  = $object->get_stylesheet();

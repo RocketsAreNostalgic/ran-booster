@@ -37,6 +37,7 @@ final class ContainerTest extends RANBoosterTestCase {
 	}
 
 	public function test_it_can_bind_a_closure(): void {
+		// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- The container factory receives CoreContainer; this fixture deliberately constructs an independent DB instance.
 		$closure = function ( CoreContainer $container ): DB {
 			return new DB();
 		};

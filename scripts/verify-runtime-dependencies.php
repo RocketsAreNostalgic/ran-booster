@@ -233,8 +233,8 @@ foreach ( $expected as $name => $identity ) {
 	$source_url = 'https://github.com/' . $identity['repository'] . '.git';
 	$dist_url   = 'https://api.github.com/repos/' . $identity['repository'] . '/zipball/' . $reference;
 	if (
-		$source_url !== ( $source['url'] ?? null )
-		|| $dist_url !== ( $dist['url'] ?? null )
+		( $source['url'] ?? null ) !== $source_url
+		|| ( $dist['url'] ?? null ) !== $dist_url
 	) {
 		fwrite( STDERR, "Runtime dependency repository identity mismatch for {$name}.\n" );
 		exit( 1 );

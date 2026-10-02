@@ -65,22 +65,27 @@ abstract class WebhookManagementCapabilityProvider implements RepositoryProvider
 }
 
 trait SuppliesWebhookFitness {
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The fixture implementation of assess_setup retains the production method contract; these inputs do not affect this controlled result.
 	public function assess_setup( string $repository_id, string $repository, ?string $credential_profile_id ): RepositoryWebhookFitnessResult {
 		return $this->unexpected_fitness_operation();
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The fixture implementation of assess_check retains the production method contract; these inputs do not affect this controlled result.
 	public function assess_check( string $repository_id, string $repository, ?string $credential_profile_id, string $hook_id ): RepositoryWebhookFitnessResult {
 		return $this->unexpected_fitness_operation();
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The fixture implementation of assess_reconfigure retains the production method contract; these inputs do not affect this controlled result.
 	public function assess_reconfigure( string $repository_id, string $repository, ?string $credential_profile_id, string $hook_id ): RepositoryWebhookFitnessResult {
 		return $this->unexpected_fitness_operation();
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The fixture implementation of assess_remove retains the production method contract; these inputs do not affect this controlled result.
 	public function assess_remove( string $repository_id, string $repository, ?string $credential_profile_id, string $hook_id ): RepositoryWebhookFitnessResult {
 		return $this->unexpected_fitness_operation();
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The fixture implementation of assess_test retains the production method contract; these inputs do not affect this controlled result.
 	public function assess_test( string $repository_id, string $repository, ?string $credential_profile_id, string $hook_id ): RepositoryWebhookFitnessResult {
 		return $this->unexpected_fitness_operation();
 	}
@@ -92,22 +97,27 @@ trait SuppliesWebhookFitness {
 }
 
 trait SuppliesWebhookManagement {
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The fixture implementation of setup retains the production method contract; these inputs do not affect this controlled result.
 	public function setup( string $repository_id, string $repository, string $callback_url, ?string $credential_profile_id, string $signing_secret ): RepositoryWebhookOperationResult {
 		return $this->unexpected_management_operation();
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The fixture implementation of check retains the production method contract; these inputs do not affect this controlled result.
 	public function check( string $repository_id, string $repository, string $hook_id, string $callback_url, ?string $credential_profile_id ): RepositoryWebhookOperationResult {
 		return $this->unexpected_management_operation();
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The fixture implementation of reconfigure retains the production method contract; these inputs do not affect this controlled result.
 	public function reconfigure( string $repository_id, string $repository, string $hook_id, string $callback_url, ?string $credential_profile_id, string $signing_secret ): RepositoryWebhookOperationResult {
 		return $this->unexpected_management_operation();
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The fixture implementation of remove retains the production method contract; these inputs do not affect this controlled result.
 	public function remove( string $repository_id, string $repository, string $hook_id, string $callback_url, ?string $credential_profile_id ): RepositoryWebhookOperationResult {
 		return $this->unexpected_management_operation();
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The fixture implementation of test retains the production method contract; these inputs do not affect this controlled result.
 	public function test( string $repository_id, string $repository, string $hook_id, string $callback_url, ?string $credential_profile_id ): RepositoryWebhookOperationResult {
 		return $this->unexpected_management_operation();
 	}

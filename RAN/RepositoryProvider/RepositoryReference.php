@@ -12,7 +12,7 @@ final readonly class RepositoryReference {
 	public function __construct(
 		string $locator,
 		public ?string $provider_repository_id,
-		public bool $private,
+		public bool $private, // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.privateFound -- Preserve the existing public named-argument signature.
 		public ?string $credential_id
 	) {
 		$this->assert_provider_repository_id( $provider_repository_id );

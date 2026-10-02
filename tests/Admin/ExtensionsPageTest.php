@@ -412,6 +412,7 @@ final class ExtensionsPageTest extends TestCase {
 				public function get_themes_create(): void {}
 				public function get_themes(): void {}
 				/** @param list<array<string, mixed>> $extensions */
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The get_extensions override preserves the View contract; the included extensions.php template reads both parameters as local variables.
 				public function get_extensions( array $extensions, string $plugins_url ): void {
 					require dirname( __DIR__, 2 ) . '/views/extensions.php';
 				}

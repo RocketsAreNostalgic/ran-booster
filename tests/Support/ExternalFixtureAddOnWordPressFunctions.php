@@ -3,13 +3,13 @@
 declare(strict_types=1);
 
 // Focused global WordPress hook and escaping fixture for the external add-on plugin.
-// phpcs:disable
 
 if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', dirname( __DIR__ ) . '/fixtures/wordpress/' );
 }
 
 if ( ! function_exists( 'add_action' ) ) {
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Preserve the WordPress hook-registration signature; this fixture records callbacks without scheduling priority.
 	function add_action( string $hook, callable $callback, int $priority = 10, int $accepted_args = 1 ): bool {
 		$GLOBALS['ran_booster_external_fixture_addon_actions'][ $hook ][] = $callback;
 

@@ -41,17 +41,17 @@ final class CoreContainer {
 		return $this->resolve( $alias );
 	}
 
-	private function resolve( $class ) {
-		$reflection  = new ReflectionClass( $class );
+	private function resolve( $class_name ) {
+		$reflection  = new ReflectionClass( $class_name );
 		$constructor = $reflection->getConstructor();
 
 		if ( ! $constructor ) {
-			return new $class();
+			return new $class_name();
 		}
 
 		$params = $constructor->getParameters();
 		if ( count( $params ) === 0 ) {
-			return new $class();
+			return new $class_name();
 		}
 
 		$new_instance_params = array();

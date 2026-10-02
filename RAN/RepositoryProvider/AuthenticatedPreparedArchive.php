@@ -103,6 +103,7 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 	 * @param array<string, mixed> $headers  Headers Requests would reuse for the redirect.
 	 */
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- Requests before_redirect fixes all five positional arguments; retain the reference location and data/options slots before the original request.
 	public function strip_authentication_from_redirect( mixed &$location, array &$headers, mixed $data, mixed $options, mixed $original ): void {
 		if ( ! is_object( $original ) || ! isset( $original->url ) || $original->url !== $this->url ) {
 			return;
@@ -157,8 +158,8 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 
 		$authorization = array_filter(
 			$headers,
-			static fn ( mixed $value, mixed $name ): bool => 'authorization' === strtolower( (string) $name ),
-			ARRAY_FILTER_USE_BOTH
+			static fn ( mixed $name ): bool => 'authorization' === strtolower( (string) $name ),
+			ARRAY_FILTER_USE_KEY
 		);
 		$value         = array_values( $authorization )[0] ?? null;
 

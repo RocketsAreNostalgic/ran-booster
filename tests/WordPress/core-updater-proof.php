@@ -1,7 +1,6 @@
 <?php
 
 // Executed by WP-CLI inside an isolated disposable WordPress installation.
-// phpcs:disable
 
 require_once ABSPATH . 'wp-admin/includes/file.php';
 require_once ABSPATH . 'wp-admin/includes/plugin.php';
@@ -27,8 +26,8 @@ if ( ! class_exists( ZipArchive::class ) ) {
 
 final class RanBoosterCoreUpdaterProof {
 	private array $archives = array();
-	private array $plugins = array();
-	private array $themes = array();
+	private array $plugins  = array();
+	private array $themes   = array();
 	private string $original_stylesheet;
 
 	public function __construct( private readonly string $run_id ) {
@@ -119,7 +118,7 @@ final class RanBoosterCoreUpdaterProof {
 	}
 
 	public function cleanup(): void {
-		if ( $this->original_stylesheet !== (string) get_option( 'stylesheet' ) ) {
+		if ( (string) get_option( 'stylesheet' ) !== $this->original_stylesheet ) {
 			switch_theme( $this->original_stylesheet );
 		}
 
@@ -147,6 +146,7 @@ final class RanBoosterCoreUpdaterProof {
 		}
 
 		foreach ( $this->archives as $archive ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 			if ( is_file( $archive ) && ! unlink( $archive ) ) {
 				throw new RuntimeException( 'A disposable proof archive could not be removed.' );
 			}
@@ -209,7 +209,7 @@ final class RanBoosterCoreUpdaterProof {
 				if ( ! isset( $transient->response ) || ! is_array( $transient->response ) ) {
 					$transient->response = array();
 				}
-				$transient->response[ $identifier ] = $offer;
+				$transient->response[ $identifier ]           = $offer;
 				$transient->response[ $unrelated_identifier ] = (object) array(
 					'slug'        => dirname( $unrelated_identifier ),
 					'plugin'      => $unrelated_identifier,
@@ -269,14 +269,15 @@ final class RanBoosterCoreUpdaterProof {
 		string $expected_identifier,
 		bool $simulated_fatal_scrape
 	): void {
-		$source_filter   = $this->source_selection_filter( $slug );
-		$archive_path    = (string) ( $offer->package ?? '' );
-		$vcs_filter      = $this->vcs_filter( $type, $expected_identifier );
+		$source_filter = $this->source_selection_filter( $slug );
+		$archive_path  = (string) ( $offer->package ?? '' );
+		$vcs_filter    = $this->vcs_filter( $type, $expected_identifier );
+		// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- Preserve the WordPress callback argument positions; the fixture uses only the arguments needed for its controlled result.
 		$pre_download    = static function ( mixed $reply, mixed $package, mixed $upgrader, array $extra ) use ( $archive_path, $type, $expected_identifier ): mixed {
 			$operation_identifier = 'plugin' === $type ? ( $extra['plugin'] ?? null ) : ( $extra['theme'] ?? null );
 			if ( is_string( $package )
 				&& hash_equals( $archive_path, $package )
-				&& $type === ( $extra['type'] ?? null )
+				&& ( $extra['type'] ?? null ) === $type
 				&& 'update' === ( $extra['action'] ?? null )
 				&& $expected_identifier === $operation_identifier
 			) {
@@ -286,15 +287,16 @@ final class RanBoosterCoreUpdaterProof {
 			return $reply;
 		};
 		$scrape_response = $this->simulated_scrape_response_filter( $simulated_fatal_scrape );
-		$completions    = array();
-		$complete       = static function ( object $upgrader, array $extra ) use ( &$completions ): void {
+		$completions     = array();
+		// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- Preserve the WordPress callback argument positions; the fixture uses only the arguments needed for its controlled result.
+		$complete                 = static function ( object $upgrader, array $extra ) use ( &$completions ): void {
 			$completions[] = $extra;
 		};
 		$automatic_complete_calls = 0;
-		$automatic_complete      = static function () use ( &$automatic_complete_calls ): void {
+		$automatic_complete       = static function () use ( &$automatic_complete_calls ): void {
 			++$automatic_complete_calls;
 		};
-		$target_context = 'plugin' === $type ? WP_PLUGIN_DIR : get_theme_root( $expected_identifier );
+		$target_context           = 'plugin' === $type ? WP_PLUGIN_DIR : get_theme_root( $expected_identifier );
 		if ( false !== $vcs_filter( true, $target_context ) || true !== $vcs_filter( true, ABSPATH ) ) {
 			throw new RuntimeException( 'The disposable VCS exception is not limited to the target package context.' );
 		}
@@ -322,17 +324,19 @@ final class RanBoosterCoreUpdaterProof {
 		if ( $simulated_fatal_scrape ) {
 			if ( ! is_wp_error( $result ) || 'plugin_update_fatal_error_rollback_successful' !== $result->get_error_code() ) {
 				$code = is_wp_error( $result ) ? $result->get_error_code() : get_debug_type( $result );
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 				throw new RuntimeException( 'WordPress core did not report restoration after the simulated fatal-scrape response: ' . $code );
 			}
 		} elseif ( true !== $result ) {
 			$code = is_wp_error( $result ) ? $result->get_error_code() : get_debug_type( $result );
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 			throw new RuntimeException( 'The direct WordPress automatic update failed: ' . $code );
 		}
 		if ( 1 !== count( $completions ) ) {
 			throw new RuntimeException( 'The direct update did not complete exactly one package operation.' );
 		}
 		$extra = $completions[0];
-		if ( $type !== ( $extra['type'] ?? null ) || 'update' !== ( $extra['action'] ?? null ) ) {
+		if ( ( $extra['type'] ?? null ) !== $type || 'update' !== ( $extra['action'] ?? null ) ) {
 			throw new RuntimeException( 'The direct update completed an unexpected package operation.' );
 		}
 		$completed_identifier = 'plugin' === $type ? ( $extra['plugin'] ?? null ) : ( $extra['theme'] ?? null );
@@ -344,13 +348,13 @@ final class RanBoosterCoreUpdaterProof {
 		}
 		foreach (
 			array(
-				$transient_hook              => $transient_filter,
-				'upgrader_pre_download'      => $pre_download,
-				'upgrader_source_selection' => $source_filter,
+				$transient_hook                     => $transient_filter,
+				'upgrader_pre_download'             => $pre_download,
+				'upgrader_source_selection'         => $source_filter,
 				'automatic_updates_is_vcs_checkout' => $vcs_filter,
-				'pre_http_request'           => $scrape_response,
-				'upgrader_process_complete'  => $complete,
-				'automatic_updates_complete' => $automatic_complete,
+				'pre_http_request'                  => $scrape_response,
+				'upgrader_process_complete'         => $complete,
+				'automatic_updates_complete'        => $automatic_complete,
 			) as $hook => $callback
 		) {
 			if ( false !== has_filter( $hook, $callback ) ) {
@@ -364,6 +368,7 @@ final class RanBoosterCoreUpdaterProof {
 		if ( 'theme' === $type ) {
 			$theme_root = realpath( get_theme_root( $identifier ) );
 			if ( false === $theme_root || ! is_dir( $theme_root ) ) {
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Preserve the WordPress callback argument positions; the fixture uses only the arguments needed for its controlled result.
 				return static fn ( bool $checkout, string $context ): bool => $checkout;
 			}
 			$allowed_context = $theme_root;
@@ -393,6 +398,7 @@ final class RanBoosterCoreUpdaterProof {
 	}
 
 	private function source_selection_filter( string $slug ): Closure {
+		// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Preserve the WordPress callback argument positions; the fixture uses only the arguments needed for its controlled result.
 		return static function ( mixed $source, mixed $remote_source, mixed $upgrader ) use ( $slug ): mixed {
 			if ( ! is_string( $source ) || ! is_string( $remote_source ) ) {
 				return new WP_Error( 'ran_booster_core_proof_source', 'The disposable source path is invalid.' );
@@ -421,6 +427,7 @@ final class RanBoosterCoreUpdaterProof {
 	}
 
 	private function simulated_scrape_response_filter( bool $fatal ): Closure {
+		// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- Preserve the WordPress callback argument positions; the fixture uses only the arguments needed for its controlled result.
 		return static function ( mixed $preempt, array $arguments, string $url ) use ( $fatal ): mixed {
 			$query = wp_parse_url( $url, PHP_URL_QUERY );
 			if ( ! is_string( $query ) ) {
@@ -437,7 +444,10 @@ final class RanBoosterCoreUpdaterProof {
 			return array(
 				'headers'  => array(),
 				'body'     => $start . ( $fatal ? '{"type":1}' : '{}' ) . $end,
-				'response' => array( 'code' => 200, 'message' => 'OK' ),
+				'response' => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
 				'cookies'  => array(),
 				'filename' => null,
 			);
@@ -473,13 +483,15 @@ final class RanBoosterCoreUpdaterProof {
 
 	private function assert_plugin( string $identifier, string $version, string $marker, bool $active ): void {
 		wp_clean_plugins_cache( false );
-		$data = get_plugin_data( WP_PLUGIN_DIR . '/' . $identifier, false, false );
+		$data             = get_plugin_data( WP_PLUGIN_DIR . '/' . $identifier, false, false );
 		$observed_version = $data['Version'] ?? null;
 		$observed_active  = is_plugin_active( $identifier );
 		if ( $version !== $observed_version || $active !== $observed_active ) {
 			throw new RuntimeException(
 				'The disposable proof plugin state is incorrect: expected version '
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 				. $version . ' and active=' . ( $active ? 'yes' : 'no' )
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 				. ', observed version ' . ( is_string( $observed_version ) ? $observed_version : 'unavailable' )
 				. ' and active=' . ( $observed_active ? 'yes' : 'no' ) . '.'
 			);
@@ -492,7 +504,7 @@ final class RanBoosterCoreUpdaterProof {
 		$theme = wp_get_theme( $slug );
 		if ( ! $theme->exists()
 			|| $version !== (string) $theme->get( 'Version' )
-			|| $active !== ( $slug === (string) get_option( 'stylesheet' ) )
+			|| ( (string) get_option( 'stylesheet' ) === $slug ) !== $active
 		) {
 			throw new RuntimeException( 'The disposable proof theme state is incorrect.' );
 		}
@@ -500,6 +512,7 @@ final class RanBoosterCoreUpdaterProof {
 	}
 
 	private function assert_marker( string $path, string $expected ): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 		$contents = is_file( $path ) ? file_get_contents( $path ) : false;
 		if ( $expected . "\n" !== $contents ) {
 			throw new RuntimeException( 'WordPress did not install the exact disposable package bytes.' );
@@ -543,7 +556,7 @@ final class RanBoosterCoreUpdaterProof {
 	}
 }
 
-$proof = new RanBoosterCoreUpdaterProof( bin2hex( random_bytes( 6 ) ) );
+$proof   = new RanBoosterCoreUpdaterProof( bin2hex( random_bytes( 6 ) ) );
 $failure = null;
 
 try {

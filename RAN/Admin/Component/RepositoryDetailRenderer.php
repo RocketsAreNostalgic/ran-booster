@@ -14,6 +14,7 @@ final class RepositoryDetailRenderer {
 	 * @param callable():bool|null $render_webhook_panel
 	 * @param callable():void|null $render_release_panel
 	 */
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- Preserve the existing public renderer argument slots and caller evaluation; receiver_message is not rendered by this component.
 	public function render(
 		array $row,
 		string $provider_label,

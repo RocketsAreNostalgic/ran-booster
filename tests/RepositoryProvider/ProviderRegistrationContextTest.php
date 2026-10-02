@@ -254,7 +254,9 @@ final class ProviderRegistrationContextTest extends TestCase {
 		return new ProviderRegistry(
 			array(),
 			new ProviderSecretPolicyCatalog(),
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $credentials,
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => $delivery_evidence,
 			$context
 		);

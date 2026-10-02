@@ -178,18 +178,22 @@ final readonly class Provider implements RepositoryProvider, ProviderCredentialP
 		return null !== $this->delivery_evidence->latest_authenticated_delivery();
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of assess_setup retains the production method contract; these inputs do not affect this controlled result.
 	public function assess_setup( string $repository_id, string $repository, ?string $credential_profile_id ): RepositoryWebhookFitnessResult {
 		return $this->fitness( $credential_profile_id );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of assess_check retains the production method contract; these inputs do not affect this controlled result.
 	public function assess_check( string $repository_id, string $repository, ?string $credential_profile_id, string $hook_id ): RepositoryWebhookFitnessResult {
 		return $this->fitness( $credential_profile_id );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of assess_reconfigure retains the production method contract; these inputs do not affect this controlled result.
 	public function assess_reconfigure( string $repository_id, string $repository, ?string $credential_profile_id, string $hook_id ): RepositoryWebhookFitnessResult {
 		return $this->fitness( $credential_profile_id );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of assess_remove retains the production method contract; these inputs do not affect this controlled result.
 	public function assess_remove( string $repository_id, string $repository, ?string $credential_profile_id, string $hook_id ): RepositoryWebhookFitnessResult {
 		return $this->fitness( $credential_profile_id );
 	}
@@ -198,24 +202,28 @@ final readonly class Provider implements RepositoryProvider, ProviderCredentialP
 		return $this->assess_remove( $repository_id, $repository, $credential_profile_id, $hook_id );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of setup retains the production method contract; these inputs do not affect this controlled result.
 	public function setup( string $repository_id, string $repository, string $callback_url, ?string $credential_profile_id, string $signing_secret ): RepositoryWebhookOperationResult {
 		$this->credential( $credential_profile_id );
 
 		return $this->operation( 'configured_pending_delivery', 'configured_pending_delivery' );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of check retains the production method contract; these inputs do not affect this controlled result.
 	public function check( string $repository_id, string $repository, string $hook_id, string $callback_url, ?string $credential_profile_id ): RepositoryWebhookOperationResult {
 		$this->credential( $credential_profile_id );
 
 		return $this->operation( 'fixture_configuration_confirmed', 'unknown' );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of reconfigure retains the production method contract; these inputs do not affect this controlled result.
 	public function reconfigure( string $repository_id, string $repository, string $hook_id, string $callback_url, ?string $credential_profile_id, string $signing_secret ): RepositoryWebhookOperationResult {
 		$this->credential( $credential_profile_id );
 
 		return $this->operation( 'configured_pending_delivery', 'configured_pending_delivery' );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of remove retains the production method contract; these inputs do not affect this controlled result.
 	public function remove( string $repository_id, string $repository, string $hook_id, string $callback_url, ?string $credential_profile_id ): RepositoryWebhookOperationResult {
 		$this->credential( $credential_profile_id );
 

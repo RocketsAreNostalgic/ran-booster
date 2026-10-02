@@ -1,26 +1,26 @@
 <?php
 
 // Seed, inspect, reconcile and clean the compact hard-stop proof.
-// phpcs:disable
 
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\DeploymentRequest;
 
-$mode = $args[0] ?? '';
+// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
+$mode   = $args[0] ?? '';
 $run_id = $args[1] ?? '';
-$phase = $args[2] ?? '';
+$phase  = $args[2] ?? '';
 if ( ! is_string( $mode ) || preg_match( '/^[a-f0-9]{24}$/D', (string) $run_id ) !== 1 || ! in_array( $phase, array( 'pre', 'post', 'foreign' ), true ) ) {
 	throw new RuntimeException( 'The hard-stop control arguments are invalid.' );
 }
 global $wpdb;
-$booster    = require __DIR__ . '/core-container-fixture.php';
-$attempts   = $booster->make( RAN\Deployment\DeploymentAttemptRepository::class );
-$table      = RAN\Storage\Database::attempt_table_name();
-$manual_slug = 'hard-stop-' . $phase . '-' . $run_id;
+$booster      = require __DIR__ . '/core-container-fixture.php';
+$attempts     = $booster->make( RAN\Deployment\DeploymentAttemptRepository::class );
+$table        = RAN\Storage\Database::attempt_table_name();
+$manual_slug  = 'hard-stop-' . $phase . '-' . $run_id;
 $webhook_slug = 'hard-stop-webhook-' . $phase . '-' . $run_id;
 
 if ( 'cleanup' === $mode ) {
-	$ids = $wpdb->get_col( $wpdb->prepare( 'SELECT id FROM %i WHERE package_slug IN (%s, %s)', $table, $manual_slug, $webhook_slug ) );
+	$ids  = $wpdb->get_col( $wpdb->prepare( 'SELECT id FROM %i WHERE package_slug IN (%s, %s)', $table, $manual_slug, $webhook_slug ) );
 	$core = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'auto_updater.lock' ) );
 	if ( 'pre' !== $phase && is_array( $ids ) && array() !== $ids && is_string( $core ) ) {
 		$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE option_name = %s AND option_value = %s', $wpdb->options, 'auto_updater.lock', $core ) );
@@ -34,15 +34,31 @@ if ( 'seed' === $mode ) {
 	if ( null !== $core ) {
 		throw new RuntimeException( 'The hard-stop proof requires the WordPress updater lock to be idle.' );
 	}
-	$request = new DeploymentRequest( 'org/' . $manual_slug, null, false, 'main', $manual_slug, null, DeploymentPolicy::AUTOMATIC, null );
+	$request         = new DeploymentRequest( 'org/' . $manual_slug, null, false, 'main', $manual_slug, null, DeploymentPolicy::AUTOMATIC, null );
 	$webhook_request = new DeploymentRequest( 'org/' . $webhook_slug, null, false, 'main', $webhook_slug, null, DeploymentPolicy::AUTOMATIC, null );
 	$attempts->admit_webhook_batch(
 		'gh',
 		'hard-stop-delivery-' . $phase . '-' . $run_id,
 		hash( 'sha256', 'hard-stop-' . $phase . '-' . $run_id ),
 		array(
-			array( 'operation' => 'update', 'package_type' => 'plugin', 'provider_repository_id' => 'first-' . $run_id, 'requested_ref' => str_repeat( 'a', 40 ), 'package_source' => 'branch', 'package_source_revision' => 1, 'request' => $request ),
-			array( 'operation' => 'update', 'package_type' => 'plugin', 'provider_repository_id' => 'webhook-' . $run_id, 'requested_ref' => str_repeat( 'a', 40 ), 'package_source' => 'branch', 'package_source_revision' => 1, 'request' => $webhook_request ),
+			array(
+				'operation'               => 'update',
+				'package_type'            => 'plugin',
+				'provider_repository_id'  => 'first-' . $run_id,
+				'requested_ref'           => str_repeat( 'a', 40 ),
+				'package_source'          => 'branch',
+				'package_source_revision' => 1,
+				'request'                 => $request,
+			),
+			array(
+				'operation'               => 'update',
+				'package_type'            => 'plugin',
+				'provider_repository_id'  => 'webhook-' . $run_id,
+				'requested_ref'           => str_repeat( 'a', 40 ),
+				'package_source'          => 'branch',
+				'package_source_revision' => 1,
+				'request'                 => $webhook_request,
+			),
 		)
 	);
 	return;
@@ -55,10 +71,17 @@ if ( ! is_array( $row ) ) {
 
 if ( 'assert-retained' === $mode ) {
 	$expected_fence = 'pre' !== $phase;
-	if ( 'running' !== $row['state'] || $expected_fence !== ( null !== $row['mutation_started_at'] ) ) {
+	if ( 'running' !== $row['state'] || ( null !== $row['mutation_started_at'] ) !== $expected_fence ) {
 		throw new RuntimeException(
 			'The killed worker did not retain the expected state and fence: '
-			. wp_json_encode( array( 'state' => $row['state'], 'id' => (string) $row['id'], 'fenced' => null !== $row['mutation_started_at'], 'expected_fenced' => $expected_fence ) )
+			. wp_json_encode(
+				array(
+					'state'           => $row['state'],
+					'id'              => (string) $row['id'],
+					'fenced'          => null !== $row['mutation_started_at'],
+					'expected_fenced' => $expected_fence,
+				)
+			)
 		);
 	}
 	$core = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'auto_updater.lock' ) );
@@ -91,14 +114,14 @@ if ( 'replace-core-lock' === $mode ) {
 }
 
 if ( 'reconcile' === $mode ) {
-	$core_before = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'auto_updater.lock' ) );
-	$result = $booster->make( RAN\Deployment\DeploymentCoordinator::class )->reconcile_confirmed_stopped( (int) $row['id'], (string) $row['correlation_id'] );
+	$core_before    = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'auto_updater.lock' ) );
+	$result         = $booster->make( RAN\Deployment\DeploymentCoordinator::class )->reconcile_confirmed_stopped( (int) $row['id'], (string) $row['correlation_id'] );
 	$expected_state = 'pre' === $phase ? 'failed' : 'needs_attention';
 	$expected_code  = 'pre' === $phase ? 'worker_stopped' : 'interrupted';
 	if ( $expected_state !== $result->get_state()->value || $expected_code !== $result->get_outcome()?->get_code() ) {
 		throw new RuntimeException( 'Protected reconciliation produced the wrong hard-stop outcome.' );
 	}
-	$webhook = $wpdb->get_row( $wpdb->prepare( 'SELECT state, outcome_code FROM %i WHERE package_slug = %s', $table, $webhook_slug ), ARRAY_A );
+	$webhook                  = $wpdb->get_row( $wpdb->prepare( 'SELECT state, outcome_code FROM %i WHERE package_slug = %s', $table, $webhook_slug ), ARRAY_A );
 	$expected_contender_state = 'pre' === $phase ? 'succeeded' : 'failed';
 	$expected_contender_code  = 'pre' === $phase ? 'no_change' : 'lock_unavailable';
 	if ( ! is_array( $webhook ) || $expected_contender_state !== $webhook['state'] || $expected_contender_code !== $webhook['outcome_code'] ) {

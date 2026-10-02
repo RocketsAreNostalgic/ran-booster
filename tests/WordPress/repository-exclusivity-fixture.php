@@ -1,6 +1,6 @@
 <?php
 
-// Disposable-site integration proof for repository exclusivity. phpcs:disable
+// Disposable-site integration proof for repository exclusivity.
 
 use RAN\Deployment\DeploymentCoordinator;
 use RAN\Deployment\DeploymentPolicy;
@@ -110,7 +110,7 @@ try {
 } catch ( RuntimeException ) {
 	$blocked = true; }
 $after_attempts = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE provider_repository_id = %s', $attempt_table, '1315521150' ) );
-$assert( $blocked && $before_attempts === $after_attempts && $root_hash === hash_file( 'sha256', $root_dir . '/booster-fixture-plugin.php' ), 'Release blocks nested Branch install before attempts or filesystem mutation' );
+$assert( $blocked && $before_attempts === $after_attempts && hash_file( 'sha256', $root_dir . '/booster-fixture-plugin.php' ) === $root_hash, 'Release blocks nested Branch install before attempts or filesystem mutation' );
 
 $nested = $plugin_repository->installed_plugin_from_file( $nested_id );
 $nested->set_repository( $repository );
@@ -124,5 +124,5 @@ $assert( ! $store->transition( 'plugin', $root_id, PackageSource::BRANCH, 1, Pac
 $assert( $plugin_repository->unlink( $nested_id )->is_successful(), 'ordinary unlink removes nested Branch record' );
 $assert( $store->transition( 'plugin', $root_id, PackageSource::BRANCH, 1, PackageSource::RELEASE_ASSET, new ManagedReleaseConfiguration( basename( $root_dir ), 'booster-fixture-plugin.php' ), 1 ), 'sole root Branch transitions to Release' );
 $assert( $store->transition( 'plugin', $root_id, PackageSource::RELEASE_ASSET, 2, PackageSource::BRANCH, null, 1 ), 'sole root Release returns to Branch' );
-$assert( $root_hash === hash_file( 'sha256', $root_dir . '/booster-fixture-plugin.php' ), 'root fixture bytes remain unchanged' );
+$assert( hash_file( 'sha256', $root_dir . '/booster-fixture-plugin.php' ) === $root_hash, 'root fixture bytes remain unchanged' );
 $clean();

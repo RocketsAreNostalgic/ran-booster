@@ -407,7 +407,7 @@ class SecretsFile {
 			$runtime = $this->runtime_credential_record(
 				$provider_code,
 				$id,
-				$this->revalidate_stored_credential( $provider_code, $id, $record )
+				$this->revalidate_stored_credential( $provider_code, $record )
 			);
 
 			return $runtime;
@@ -444,7 +444,6 @@ class SecretsFile {
 			$selected_id,
 			$this->revalidate_stored_credential(
 				$provider_code,
-				$selected_id,
 				$document[ self::CREDENTIALS ][ $provider_code ][ $selected_id ]
 			)
 		);
@@ -470,7 +469,7 @@ class SecretsFile {
 		$this->assert_available();
 		$provider_code = $this->provider_value( $provider );
 		$id            = 'tmp_' . bin2hex( random_bytes( 16 ) );
-		$record        = $this->validate_credential( $provider_code, $id, $metadata, $secret, true );
+		$record        = $this->validate_credential( $provider_code, $metadata, $secret, true );
 
 		$this->temporary_credentials[ $provider_code ][ $id ] = array(
 			'id'            => $id,
@@ -563,7 +562,7 @@ class SecretsFile {
 				}
 			}
 		}
-		$record = $this->validate_credential( $provider_code, $id, $metadata, $secret, $submitted && ! $retain_secret );
+		$record = $this->validate_credential( $provider_code, $metadata, $secret, $submitted && ! $retain_secret );
 
 		return $this->mutate(
 			function ( #[\SensitiveParameter] array $document ) use ( $provider_code, $id, $record, $existing ): array {
@@ -738,7 +737,7 @@ class SecretsFile {
 		$stored   = $document[ self::WEBHOOKS ][ $provider_code ] ?? array();
 
 		foreach ( $stored as $id => $record ) {
-			$record         = $this->revalidate_stored_webhook( $provider_code, $id, $record );
+			$record         = $this->revalidate_stored_webhook( $provider_code, $record );
 			$records[ $id ] = array(
 				'id'           => $id,
 				'provider'     => $provider_code,
@@ -776,7 +775,7 @@ class SecretsFile {
 		if ( ( null === $secret || '' === $secret ) && is_array( $existing ) ) {
 			$secret = $existing['secret'];
 		}
-		$record = $this->validate_webhook( $provider_code, $id, $metadata, $secret, true );
+		$record = $this->validate_webhook( $provider_code, $metadata, $secret, true );
 		if ( is_array( $existing ) ) {
 			foreach ( array( 'scope', 'target', 'authority_id', 'origin' ) as $immutable ) {
 				if ( ! hash_equals( (string) $existing[ $immutable ], (string) $record[ $immutable ] ) ) {
@@ -1009,7 +1008,6 @@ class SecretsFile {
 
 		$record = $this->validate_credential(
 			$provider,
-			self::CONSTANT_PROFILE,
 			$record,
 			$record['secret'] ?? null
 		);
@@ -1053,7 +1051,6 @@ class SecretsFile {
 
 		return $this->validate_webhook(
 			$provider,
-			self::CONSTANT_PROFILE,
 			$record,
 			$record['secret'] ?? null
 		);
@@ -1099,7 +1096,6 @@ class SecretsFile {
 	 */
 	private function validate_credential(
 		string $provider,
-		string $id,
 		array $metadata,
 		#[\SensitiveParameter] mixed $secret,
 		bool $submitted = false
@@ -1198,7 +1194,6 @@ class SecretsFile {
 			$provider  = $this->provider_value( $credential->provider );
 			$record    = $this->validate_credential(
 				$provider,
-				'portable',
 				array(
 					'label'         => $credential->label,
 					'kind'          => $credential->kind,
@@ -1252,7 +1247,6 @@ class SecretsFile {
 	 */
 	private function validate_webhook(
 		string $provider,
-		string $id,
 		array $metadata,
 		#[\SensitiveParameter] mixed $secret,
 		bool $submitted = false
@@ -1680,8 +1674,8 @@ class SecretsFile {
 	}
 
 	/** @param array<string, mixed> $record */
-	private function revalidate_stored_credential( string $provider, string $id, #[\SensitiveParameter] array $record ): array {
-		$validated = $this->validate_credential( $provider, $id, $record, $record['secret'] ?? null );
+	private function revalidate_stored_credential( string $provider, #[\SensitiveParameter] array $record ): array {
+		$validated = $this->validate_credential( $provider, $record, $record['secret'] ?? null );
 		if ( $validated !== $record ) {
 			throw new RuntimeException( 'Stored provider credential material is no longer canonical under the current policy.' );
 		}
@@ -1698,7 +1692,7 @@ class SecretsFile {
 			}
 
 			foreach ( $records as $id => $record ) {
-				$validated = $this->revalidate_stored_credential( $provider, $id, $record );
+				$validated = $this->revalidate_stored_credential( $provider, $record );
 				if ( $policy instanceof SubmittedCredentialValidator ) {
 					$policy->validate_submitted_credential(
 						array(
@@ -1714,8 +1708,8 @@ class SecretsFile {
 	}
 
 	/** @param array<string, mixed> $record */
-	private function revalidate_stored_webhook( string $provider, string $id, #[\SensitiveParameter] array $record ): array {
-		$validated = $this->validate_webhook( $provider, $id, $record, $record['secret'] ?? null );
+	private function revalidate_stored_webhook( string $provider, #[\SensitiveParameter] array $record ): array {
+		$validated = $this->validate_webhook( $provider, $record, $record['secret'] ?? null );
 		if ( $validated !== $record ) {
 			throw new RuntimeException( 'Stored provider webhook material is no longer canonical under the current policy.' );
 		}

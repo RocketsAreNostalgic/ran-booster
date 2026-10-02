@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 // Focused WordPress function and database doubles necessarily use global fixtures.
-// phpcs:disable
 
+// phpcs:ignore Universal.Namespaces.DisallowCurlyBraceSyntax.Forbidden, Universal.Namespaces.DisallowDeclarationWithoutName.Forbidden -- One fixture supplies global WordPress function doubles and the namespaced database fake. Global namespace is required for the WordPress function doubles in this isolated fixture.
 namespace {
 
 	if ( ! defined( 'ABSPATH' ) ) {
@@ -13,6 +13,7 @@ namespace {
 
 	if ( ! function_exists( 'sanitize_text_field' ) ) {
 		function sanitize_text_field( $value ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags -- Minimal isolated sanitize_text_field double intentionally uses native tag removal.
 			return trim( strip_tags( (string) $value ) );
 		}
 	}
@@ -32,6 +33,7 @@ namespace {
 	}
 
 	if ( ! function_exists( 'get_option' ) ) {
+		// phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound -- Preserve the WordPress get_option parameter signature.
 		function get_option( $option, $default = false ) {
 			global $ran_booster_storage_test_options;
 
@@ -48,6 +50,7 @@ namespace {
 	}
 
 	if ( ! function_exists( 'update_option' ) ) {
+		// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Preserve the WordPress update_option signature; this in-memory fixture does not model autoload storage.
 		function update_option( $option, $value, $autoload = null ) {
 			global $ran_booster_storage_test_option_apply_write,
 				$ran_booster_storage_test_option_write_result,
@@ -62,6 +65,7 @@ namespace {
 	}
 
 	if ( ! function_exists( 'dbDelta' ) ) {
+		// phpcs:ignore WordPress.NamingConventions.ValidFunctionName.FunctionNameInvalid -- Exact WordPress dbDelta function signature is replaced by this isolated test double.
 		function dbDelta( $sql ) {
 			global $wpdb;
 
@@ -75,14 +79,16 @@ namespace {
 	}
 }
 
+// phpcs:ignore Universal.Namespaces.OneDeclarationPerFile.MultipleFound, Universal.Namespaces.DisallowCurlyBraceSyntax.Forbidden -- The global WordPress doubles and namespaced database fake are loaded together by this fixture. One fixture supplies global WordPress function doubles and the namespaced database fake.
 namespace Tests\Storage {
 
+	// phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- The fixture pairs WordPress function doubles with its database class for one isolated test environment.
 	final class StorageTestWpdb {
 
-		public string $prefix = 'wp_';
+		public string $prefix      = 'wp_';
 		public string $base_prefix = 'wp_';
-		public string $options = 'wp_options';
-		public string $last_error = '';
+		public string $options     = 'wp_options';
+		public string $last_error  = '';
 
 		/** @var list<string> */
 		public array $schemas = array();
@@ -94,17 +100,17 @@ namespace Tests\Storage {
 		 *     indexes: array<string, array{unique: bool, columns: list<string>, prefixes: list<?int>}>
 		 * }>
 		 */
-		public array $schema_tables = array();
-		public string $schema_engine = 'InnoDB';
+		public array $schema_tables   = array();
+		public string $schema_engine  = 'InnoDB';
 		public string $options_engine = 'InnoDB';
-		public string $server_info = '8.4.6';
+		public string $server_info    = '8.4.6';
 		public string $innodb_support = 'DEFAULT';
-		public int $capability_reads = 0;
+		public int $capability_reads  = 0;
 
 		/** @var list<string> */
-		public array $queries = array();
-		public ?string $query_failure_contains = null;
-		public bool $keep_dropped_tables = false;
+		public array $queries                              = array();
+		public ?string $query_failure_contains             = null;
+		public bool $keep_dropped_tables                   = false;
 		public ?int $successful_table_reads_before_failure = null;
 
 		/** @var list<array<string, mixed>> */
@@ -119,20 +125,20 @@ namespace Tests\Storage {
 		/** @var list<array{0: string, 1: array<string, mixed>}> */
 		public array $deletes = array();
 
-		public ?object $row = null;
+		public ?object $row                  = null;
 		public int|false|null $insert_result = null;
 		/** @var array<string, mixed>|null */
-		public ?array $insert_race_row = null;
-		public int|false|null $update_result = null;
-		public ?int $fail_update_number = null;
-		public int|false|null $delete_result = null;
-		public bool $read_failure = false;
+		public ?array $insert_race_row               = null;
+		public int|false|null $update_result         = null;
+		public ?int $fail_update_number              = null;
+		public int|false|null $delete_result         = null;
+		public bool $read_failure                    = false;
 		public ?int $successful_reads_before_failure = null;
-		public bool $apply_writes = true;
+		public bool $apply_writes                    = true;
 		public bool $coerce_private_as_mysql_tinyint = false;
 		/** @var list<array<string, mixed>>|null */
 		private ?array $transaction_rows = null;
-		private int $update_calls = 0;
+		private int $update_calls        = 0;
 		/** @var list<mixed>|null */
 		public ?array $forced_results = null;
 
@@ -148,12 +154,12 @@ namespace Tests\Storage {
 			foreach ( $arguments as $argument ) {
 				$query = (string) preg_replace_callback(
 					'/%[dis]/',
-					static function ( array $match ) use ( $argument ): string {
-						if ( '%i' === $match[0] ) {
+					static function ( array $matches ) use ( $argument ): string {
+						if ( '%i' === $matches[0] ) {
 							return '`' . str_replace( '`', '``', (string) $argument ) . '`';
 						}
 
-						if ( '%d' === $match[0] ) {
+						if ( '%d' === $matches[0] ) {
 							return (string) (int) $argument;
 						}
 
@@ -261,7 +267,7 @@ namespace Tests\Storage {
 			$this->inserts[] = array( $table, $data );
 			if ( null !== $this->insert_race_row ) {
 				$this->rows[]          = $this->insert_race_row;
-				$this->insert_race_row   = null;
+				$this->insert_race_row = null;
 			}
 
 			if ( ! $this->apply_writes || ( null !== $this->insert_result && $this->insert_result <= 0 ) ) {
@@ -273,7 +279,7 @@ namespace Tests\Storage {
 				$stored_data['private'] = (string) (int) $stored_data['private'];
 			}
 			$stored_data['id'] = count( $this->rows ) + 1;
-			$this->rows[]     = $stored_data;
+			$this->rows[]      = $stored_data;
 
 			return $this->insert_result ?? 1;
 		}
@@ -292,7 +298,7 @@ namespace Tests\Storage {
 				return $this->update_result ?? 0;
 			}
 
-			$updated    = 0;
+			$updated     = 0;
 			$stored_data = $data;
 			if ( $this->coerce_private_as_mysql_tinyint && array_key_exists( 'private', $stored_data ) ) {
 				$stored_data['private'] = (string) (int) $stored_data['private'];
@@ -447,15 +453,16 @@ namespace Tests\Storage {
 				return;
 			}
 
-			$table          = trim( $matches[1], '`' );
-			$columns        = array();
+			$table           = trim( $matches[1], '`' );
+			$columns         = array();
 			$column_metadata = array();
-			$indexes        = array();
-			foreach ( preg_split( '/\R/', $matches[2] ) ?: array() as $line ) {
+			$indexes         = array();
+			$schema_lines    = preg_split( '/\R/', $matches[2] );
+			foreach ( $schema_lines ? $schema_lines : array() as $line ) {
 				$line = trim( $line, " \t\n\r\0\x0B," );
 				if ( 1 === preg_match( '/^([a-z][a-z0-9_]*)\s+([a-z]+(?:\([^)]+\))?(?:\s+unsigned)?)(.*)$/', $line, $column ) ) {
 					$columns[ $column[1] ] = strtolower( $column[2] );
-					$default              = null;
+					$default               = null;
 					if ( 1 === preg_match( "/\\bDEFAULT\\s+'([^']*)'/i", $column[3], $default_match ) ) {
 						$default = $default_match[1];
 					}
@@ -470,24 +477,24 @@ namespace Tests\Storage {
 				if ( str_starts_with( $line, 'PRIMARY KEY' ) ) {
 					preg_match( '/\(([^)]+)\)/', $line, $columns_match );
 					$indexes['PRIMARY'] = array(
-						'unique'  => true,
-						'columns' => $this->index_columns( $columns_match[1] ?? '' ),
+						'unique'   => true,
+						'columns'  => $this->index_columns( $columns_match[1] ?? '' ),
 						'prefixes' => array_fill( 0, count( $this->index_columns( $columns_match[1] ?? '' ) ), null ),
 					);
 					continue;
 				}
 
 				if ( 1 === preg_match( '/^(UNIQUE )?KEY\s+([a-z][a-z0-9_]*)\s+\(([^)]+)\)/i', $line, $index ) ) {
-					$index_columns = $this->index_columns( $index[3] );
+					$index_columns        = $this->index_columns( $index[3] );
 					$indexes[ $index[2] ] = array(
-						'unique'  => '' !== $index[1],
-						'columns' => $index_columns,
+						'unique'   => '' !== $index[1],
+						'columns'  => $index_columns,
 						'prefixes' => array_fill( 0, count( $index_columns ), null ),
 					);
 				}
 			}
 
-			$existing   = $this->schema_tables[ $table ] ?? array(
+			$existing    = $this->schema_tables[ $table ] ?? array(
 				'engine'         => $this->schema_engine,
 				'columns'        => array(),
 				'columnMetadata' => array(),

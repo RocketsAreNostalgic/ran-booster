@@ -31,14 +31,14 @@ final class BranchUpdaterBootstrap {
 		}
 
 		spl_autoload_register(
-			static function ( string $class ) use ( $root ): void {
+			static function ( string $class_name ) use ( $root ): void {
 				foreach ( self::PREFIXES as $prefix => $directory ) {
 					$length = strlen( $prefix );
-					if ( 0 !== strncmp( $prefix, $class, $length ) ) {
+					if ( 0 !== strncmp( $prefix, $class_name, $length ) ) {
 						continue;
 					}
 
-					$file = $root . $directory . str_replace( '\\', '/', substr( $class, $length ) ) . '.php';
+					$file = $root . $directory . str_replace( '\\', '/', substr( $class_name, $length ) ) . '.php';
 					if ( is_file( $file ) && is_readable( $file ) ) {
 						require $file;
 					}

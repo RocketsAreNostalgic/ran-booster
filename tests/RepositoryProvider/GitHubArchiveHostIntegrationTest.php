@@ -173,8 +173,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 	#[DataProvider( 'branch_head_failure_provider' )]
 	public function test_branch_head_failures_are_explicit_and_never_prepare_archive_authentication(
 		mixed $response,
-		int $expected_code,
-		?int $retry_after_seconds = null
+		int $expected_code
 	): void {
 		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
 			array( $this->repository_identity_response( true ), $response )
@@ -203,14 +202,14 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 	}
 
 	/**
-	 * @return array<string, array{mixed, int, int|null}>
+	 * @return array<string, array{mixed, int}>
 	 */
 	public static function branch_head_failure_provider(): array {
 		return array(
-			'transport error'    => array( new \RAN\BoosterGitHubProvider\V1\RepositoryResolverWpError( 'http_request_failed' ), 502, null ),
-			'blocked transport'  => array( new \RAN\BoosterGitHubProvider\V1\RepositoryResolverWpError( 'http_request_not_executed' ), 502, null ),
-			'local policy error' => array( new \RAN\BoosterGitHubProvider\V1\RepositoryResolverWpError( 'local_policy_canary' ), 502, null ),
-			'no transport'       => array( new \RAN\BoosterGitHubProvider\V1\RepositoryResolverWpError( 'http_failure' ), 502, null ),
+			'transport error'    => array( new \RAN\BoosterGitHubProvider\V1\RepositoryResolverWpError( 'http_request_failed' ), 502 ),
+			'blocked transport'  => array( new \RAN\BoosterGitHubProvider\V1\RepositoryResolverWpError( 'http_request_not_executed' ), 502 ),
+			'local policy error' => array( new \RAN\BoosterGitHubProvider\V1\RepositoryResolverWpError( 'local_policy_canary' ), 502 ),
+			'no transport'       => array( new \RAN\BoosterGitHubProvider\V1\RepositoryResolverWpError( 'http_failure' ), 502 ),
 			'rate limit'         => array(
 				array(
 					'response' => array( 'code' => 429 ),
@@ -218,7 +217,6 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 					'body'     => '{"message":"upstream-response-canary"}',
 				),
 				429,
-				null,
 			),
 			'bad gateway'        => array(
 				array(
@@ -226,7 +224,6 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 					'body'     => '{"message":"upstream-response-canary"}',
 				),
 				502,
-				null,
 			),
 			'temporary service'  => array(
 				array(
@@ -235,7 +232,6 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 					'body'     => '{"message":"upstream-response-canary"}',
 				),
 				502,
-				null,
 			),
 			'gateway timeout'    => array(
 				array(
@@ -243,7 +239,6 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 					'body'     => '{"message":"upstream-response-canary"}',
 				),
 				502,
-				null,
 			),
 			'not implemented'    => array(
 				array(
@@ -251,7 +246,6 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 					'body'     => '{"message":"upstream-response-canary"}',
 				),
 				502,
-				null,
 			),
 			'http unsupported'   => array(
 				array(
@@ -259,7 +253,6 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 					'body'     => '{"message":"upstream-response-canary"}',
 				),
 				502,
-				null,
 			),
 			'missing branch'     => array(
 				array(
@@ -267,7 +260,6 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 					'body'     => '{"message":"upstream-response-canary"}',
 				),
 				404,
-				null,
 			),
 			'provider failure'   => array(
 				array(
@@ -275,7 +267,6 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 					'body'     => '{"message":"upstream-response-canary"}',
 				),
 				502,
-				null,
 			),
 			'malformed success'  => array(
 				array(
@@ -283,7 +274,6 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 					'body'     => '{"name":"main"}',
 				),
 				502,
-				null,
 			),
 		);
 	}
@@ -549,7 +539,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 
 	private function archive_request(
 		string $ref,
-		bool $private,
+		bool $is_private,
 		?string $credential_id = null,
 		?string $expected_branch = null
 	): ArchiveRequest {
@@ -557,7 +547,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 			new RepositoryReference(
 				'RocketsAreNostalgic/example-plugin',
 				'987654321',
-				$private,
+				$is_private,
 				$credential_id
 			),
 			$ref,
@@ -570,13 +560,13 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 		self::assertSame( array(), \RAN\RepositoryProvider\authenticated_archive_actions( AuthenticatedPreparedArchive::REDIRECT_HOOK ) );
 	}
 
-	private function repository_identity_response( bool $private = false, string $id = '987654321' ): array {
+	private function repository_identity_response( bool $is_private = false, string $id = '987654321' ): array {
 		return $this->response(
 			200,
 			array(
 				'id'             => $id,
 				'full_name'      => 'RocketsAreNostalgic/example-plugin',
-				'private'        => $private,
+				'private'        => $is_private,
 				'default_branch' => 'main',
 			)
 		);

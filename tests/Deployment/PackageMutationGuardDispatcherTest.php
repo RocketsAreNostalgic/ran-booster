@@ -218,7 +218,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			$plugins->expects( self::once() )
 				->method( 'set_plugin_deployment_policies' )
 				->with(
-					self::callback( static fn ( array $snapshots ): bool => $identifier === ( $snapshots[0]['package'] ?? null ) ),
+					self::callback( static fn ( array $snapshots ): bool => ( $snapshots[0]['package'] ?? null ) === $identifier ),
 					DeploymentPolicy::DISABLED
 				)
 				->willReturnCallback(
@@ -238,7 +238,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			$themes->expects( self::once() )
 				->method( 'set_theme_deployment_policies' )
 				->with(
-					self::callback( static fn ( array $snapshots ): bool => $identifier === ( $snapshots[0]['package'] ?? null ) ),
+					self::callback( static fn ( array $snapshots ): bool => ( $snapshots[0]['package'] ?? null ) === $identifier ),
 					DeploymentPolicy::DISABLED
 				)
 				->willReturnCallback(

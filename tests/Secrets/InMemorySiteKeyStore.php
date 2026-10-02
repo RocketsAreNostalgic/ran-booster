@@ -17,6 +17,7 @@ final class InMemorySiteKeyStore extends SiteKeyStore {
 	public function __construct( private string $identity ) {
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of load retains the production method contract; these inputs do not affect this controlled result.
 	public function load( bool $repair_autoload = true ): ?string {
 		return self::$keys[ $this->identity ] ?? null;
 	}

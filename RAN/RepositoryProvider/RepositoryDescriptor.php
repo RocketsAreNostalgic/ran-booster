@@ -16,7 +16,7 @@ final readonly class RepositoryDescriptor {
 		string $locator,
 		string $package_slug,
 		public string $provider_repository_id,
-		public bool $private,
+		public bool $private, // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.privateFound -- Preserve the existing public named-argument signature.
 		public string $default_branch,
 		public ?string $credential_id
 	) {

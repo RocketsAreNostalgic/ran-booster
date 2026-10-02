@@ -269,12 +269,15 @@ final class AdmittedBranchExecutionTest extends TestCase {
 final class BoundaryPluginRepository extends PluginRepository {
 	public ?Plugin $package = null;
 	public function __construct() {}
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_plugins retains the production method contract; these inputs do not affect this controlled result.
 	public function all_deployment_plugins( ?\RAN\PackageSource $source = null ): array {
 		return null === $this->package ? array() : array( (string) $this->package->get_identifier() => $this->package );
 	}
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of from_slug retains the production method contract; these inputs do not affect this controlled result.
 	public function from_slug( $slug ) {
 		return $this->package ?? throw new RuntimeException( 'Missing test plugin.' );
 	}
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of booster_plugin_from_file retains the production method contract; these inputs do not affect this controlled result.
 	public function booster_plugin_from_file( $file ) {
 		return $this->package ?? throw new RuntimeException( 'Missing test plugin.' );
 	}
@@ -313,6 +316,7 @@ final class BoundaryRepositoryProvider implements RepositoryProvider {
 	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 		throw new RuntimeException( 'Repository resolution is not part of this boundary test.' );
 	}
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterface -- The fixture implementation of prepare_archive retains the production method contract; these inputs do not affect this controlled result.
 	public function prepare_archive( ArchiveRequest $request ): ProviderPreparedArchive {
 		return $this->archive;
 	}
@@ -327,6 +331,7 @@ final class BoundaryAdmittedHost implements AdmittedAttemptJournal, AdmittedArch
 		$this->artifact = new BoundaryAdmittedArtifact( $this->events );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterface -- The fixture implementation of record_resolved_ref retains the production method contract; these inputs do not affect this controlled result.
 	public function record_resolved_ref( string $ref ): void {
 		$this->events[] = 'resolved';
 	}
@@ -336,6 +341,7 @@ final class BoundaryAdmittedHost implements AdmittedAttemptJournal, AdmittedArch
 	public function finish( string $code ): void {
 		$this->events[] = 'finish:' . $code;
 	}
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed -- The fixture implementation of prepare retains the production method contract; these inputs do not affect this controlled result.
 	public function prepare( BranchDeploymentDeclaration $deployment, ?array $baseline ): AdmittedBranchArtifact {
 		$this->events[] = 'prepare';
 		return $this->artifact;
@@ -346,6 +352,7 @@ final class BoundaryAdmittedHost implements AdmittedAttemptJournal, AdmittedArch
 	public function assert_mutation_allowed(): void {
 		$this->events[] = 'allowed';
 	}
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of frozen_target retains the production method contract; these inputs do not affect this controlled result.
 	public function frozen_target( BranchDeploymentDeclaration $deployment, bool $defer_existing ): ?array {
 		$this->events[] = $defer_existing ? 'frozen:defer' : 'frozen:live';
 		return array(
@@ -358,9 +365,11 @@ final class BoundaryAdmittedHost implements AdmittedAttemptJournal, AdmittedArch
 		$this->events[] = 'maintenance';
 		return false;
 	}
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterface -- The fixture implementation of recheck_managed retains the production method contract; these inputs do not affect this controlled result.
 	public function recheck_managed( BranchDeploymentDeclaration $deployment ): void {
 		$this->events[] = 'recheck';
 	}
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterface -- The fixture implementation of installed retains the production method contract; these inputs do not affect this controlled result.
 	public function installed( BranchDeploymentDeclaration $deployment ): array {
 		$this->events[] = 'installed';
 		return array(
@@ -369,17 +378,21 @@ final class BoundaryAdmittedHost implements AdmittedAttemptJournal, AdmittedArch
 			'active'     => false,
 		);
 	}
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of baseline_now retains the production method contract; these inputs do not affect this controlled result.
 	public function baseline_now( BranchDeploymentDeclaration $deployment, array $baseline ): ?array {
 		$this->events[] = 'baseline-now';
 		return $baseline;
 	}
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterface -- The fixture implementation of adopt retains the production method contract; these inputs do not affect this controlled result.
 	public function adopt( BranchDeploymentDeclaration $deployment ): bool {
 		$this->events[] = 'adopt';
 		return true;
 	}
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed -- The fixture implementation of preflight retains the production method contract; these inputs do not affect this controlled result.
 	public function preflight( BranchDeploymentDeclaration $deployment, AdmittedBranchArtifact $artifact ): void {
 		$this->events[] = 'preflight';
 	}
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed -- The fixture implementation of execute retains the production method contract; these inputs do not affect this controlled result.
 	public function execute( BranchDeploymentDeclaration $deployment, ?array $baseline, AdmittedBranchArtifact $artifact ): CorePackageExecutionResult {
 		$this->events[] = 'execute';
 		return CorePackageExecutionResult::succeeded();

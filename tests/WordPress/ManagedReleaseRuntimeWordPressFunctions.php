@@ -20,7 +20,7 @@ if ( ! function_exists( 'ran_booster_table_name' ) ) {
 
 if ( ! function_exists( 'doing_action' ) ) {
 	function doing_action( string $hook ): bool {
-		return $hook === ( $GLOBALS['ran_booster_runtime_action'] ?? '' );
+		return ( $GLOBALS['ran_booster_runtime_action'] ?? '' ) === $hook;
 	}
 }
 

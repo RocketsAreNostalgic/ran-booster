@@ -149,6 +149,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		return $this->attempt;
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed -- AdmittedArchiveSource requires the baseline parameter; this host prepares from its already-admitted deployment attempt.
 	public function prepare( BranchDeploymentDeclaration $deployment, ?array $baseline ): AdmittedBranchArtifact {
 		$this->assert_declaration( $deployment );
 		if ( null !== $this->provider_archive ) {

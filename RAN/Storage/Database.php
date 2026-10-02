@@ -514,13 +514,13 @@ class Database {
 	private function column(
 		string $type,
 		bool $nullable = false,
-		?string $default = null,
+		?string $default_value = null,
 		string $extra = ''
 	): array {
 		return array(
 			'type'     => $this->normalize_column_type( $type ),
 			'nullable' => $nullable,
-			'default'  => $default,
+			'default'  => $default_value,
 			'extra'    => $extra,
 		);
 	}

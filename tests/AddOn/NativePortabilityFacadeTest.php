@@ -122,14 +122,14 @@ final class NativePortabilityFacadeTest extends TestCase {
 	}
 
 	public function test_provider_privacy_drift_cannot_claim_managed_verification(): void {
-		$public  = $this->facade( true, true, $this->managed_plugin( false ) )
+		$public     = $this->facade( true, true, $this->managed_plugin( false ) )
 			->review( $this->candidate(), 'valid-nonce' );
-		$private = $this->facade( true, true, $this->managed_plugin( true ), true, true )
+		$is_private = $this->facade( true, true, $this->managed_plugin( true ), true, true )
 			->review( $this->candidate( array( 'credential_id' => null ) ), 'valid-nonce' );
 
 		self::assertSame( PortabilityReviewResult::MANAGED, $public->action );
-		self::assertSame( PortabilityReviewResult::BLOCKED, $private->action );
-		self::assertNotSame( $public->fingerprint, $private->fingerprint );
+		self::assertSame( PortabilityReviewResult::BLOCKED, $is_private->action );
+		self::assertNotSame( $public->fingerprint, $is_private->fingerprint );
 	}
 
 	public function test_facade_surface_contains_no_persistence_or_source_cleanup_authority(): void {
@@ -183,7 +183,9 @@ final class NativePortabilityFacadeTest extends TestCase {
 
 		return new NativePortabilityFacade(
 			application: $service,
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The Portability authorization callback retains its production callable signature while this fixture selects a controlled result.
 			can_manage: static fn ( string $type, bool $apply ): bool => $authorized,
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The Portability authorization callback retains its production callable signature while this fixture selects a controlled result.
 			verify_nonce: static fn ( string $nonce, string $action ): bool => 'valid-nonce' === $nonce
 		);
 	}
@@ -208,7 +210,7 @@ final class NativePortabilityFacadeTest extends TestCase {
 	}
 
 	private function managed_plugin(
-		bool $private,
+		bool $is_private,
 		DeploymentPolicy $policy = DeploymentPolicy::DISABLED
 	): Plugin {
 		$plugin = Plugin::from_wp_array(
@@ -227,7 +229,7 @@ final class NativePortabilityFacadeTest extends TestCase {
 				'AuthorName'  => '',
 			)
 		);
-		$plugin->set_repository( new ManagedRepository( 'gh', 'owner/repository', 'repository-id', 'main', $private ) );
+		$plugin->set_repository( new ManagedRepository( 'gh', 'owner/repository', 'repository-id', 'main', $is_private ) );
 		$plugin->set_deployment_policy( $policy );
 
 		return $plugin;

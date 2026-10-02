@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 // Focused nonce fixture loaded only inside isolated webhook-management tests.
-// phpcs:disable
 
 if ( ! function_exists( 'wp_create_nonce' ) ) {
 	function wp_create_nonce( string $action ): string {

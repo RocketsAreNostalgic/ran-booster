@@ -580,7 +580,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		string $identifier,
 		string $slug,
 		string $provider_repository_id,
-		bool $private = true,
+		bool $is_private = true,
 		string $credential_id = 'credential-id-canary',
 		PackageSource $source = PackageSource::BRANCH
 	): Package {
@@ -590,9 +590,9 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		$package->method( 'get_slug' )->willReturn( $slug );
 		$package->method( 'get_provider_code' )->willReturn( 'gh' );
 		$package->method( 'get_provider_repository_id' )->willReturn( $provider_repository_id );
-		$package->method( 'get_repository' )->willReturn( new ManagedRepository( 'gh', 'owner/repository', $provider_repository_id, 'main', $private, $credential_id ) );
+		$package->method( 'get_repository' )->willReturn( new ManagedRepository( 'gh', 'owner/repository', $provider_repository_id, 'main', $is_private, $credential_id ) );
 		$package->method( 'get_branch' )->willReturn( 'main' );
-		$package->method( 'is_private' )->willReturn( $private );
+		$package->method( 'is_private' )->willReturn( $is_private );
 		$package->method( 'get_subdirectory' )->willReturn( null );
 		$package->method( 'get_credential_id' )->willReturn( $credential_id );
 		$package->method( 'get_source' )->willReturn( $source );

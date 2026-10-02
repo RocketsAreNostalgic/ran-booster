@@ -127,13 +127,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$predicate = new ReflectionMethod( Dashboard::class, 'should_show_development_safety_notice' );
 		$dashboard = $this->dashboard( $this->throwing_secrets() );
 
-		self::assertFalse( $predicate->invoke( $dashboard, 'packages/index', array(), true ) );
-		self::assertFalse( $predicate->invoke( $dashboard, 'packages/create', array(), true ) );
+		self::assertFalse( $predicate->invoke( $dashboard, 'packages/index', true ) );
+		self::assertFalse( $predicate->invoke( $dashboard, 'packages/create', true ) );
 
 		$GLOBALS['ran_booster_dashboard_test_user_id'] = 8;
 
-		self::assertTrue( $predicate->invoke( $dashboard, 'packages/index', array(), true ) );
-		self::assertFalse( $predicate->invoke( $dashboard, 'packages/create', array(), true ) );
+		self::assertTrue( $predicate->invoke( $dashboard, 'packages/index', true ) );
+		self::assertFalse( $predicate->invoke( $dashboard, 'packages/create', true ) );
 	}
 
 	public function test_repository_branch_check_rejects_missing_and_stale_nonce_without_provider_work(): void {
@@ -427,7 +427,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			providers: new ProviderRegistry( array( $provider ) ),
 			public_lookup_profiles: $lookup
 		);
-		$package          = $this->managed_package( 'example/example.php', 'Example', 'repo-42', credential_id: 'deployment-profile', private: true );
+		$package          = $this->managed_package( 'example/example.php', 'Example', 'repo-42', credential_id: 'deployment-profile', is_private: true );
 		$check            = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
 		$_GET             = array(
 			'ran_booster_repository_branch_check'  => '1',
@@ -555,26 +555,23 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 1, $provider->cleanup_calls );
 	}
 
-	/** @return list<array{string, array<string, string>, bool, bool}> */
+	/** @return list<array{string, bool, bool}> */
 	public static function development_safety_notice_provider(): array {
 		return array(
-			array( 'packages/index', array(), true, true ),
-			array( 'packages/create', array(), true, false ),
-			array( 'packages/edit', array(), true, false ),
-			array( 'index', array( 'tab' => 'portability' ), true, false ),
-			array( 'index', array( 'tab' => 'documentation' ), true, false ),
-			array( 'packages/index', array(), false, false ),
+			array( 'packages/index', true, true ),
+			array( 'packages/create', true, false ),
+			array( 'packages/edit', true, false ),
+			array( 'index', true, false ),
+			array( 'index', true, false ),
+			array( 'packages/index', false, false ),
 		);
 	}
 
-	/**
-	 * @param array<string, string> $data             Selected view data.
-	 */
 	#[DataProvider( 'development_safety_notice_provider' )]
-	public function test_development_safety_notice_uses_detected_environment_only_on_the_package_index( string $view, array $data, bool $development_environment_detected, bool $expected ): void {
+	public function test_development_safety_notice_uses_detected_environment_only_on_the_package_index( string $view, bool $development_environment_detected, bool $expected ): void {
 		$predicate = new ReflectionMethod( Dashboard::class, 'should_show_development_safety_notice' );
 
-		self::assertSame( $expected, $predicate->invoke( $this->dashboard( $this->throwing_secrets() ), $view, $data, $development_environment_detected ) );
+		self::assertSame( $expected, $predicate->invoke( $this->dashboard( $this->throwing_secrets() ), $view, $development_environment_detected ) );
 	}
 
 	public function test_provider_tab_builds_only_the_selected_provider_settings(): void {
@@ -1024,6 +1021,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			public function __construct() {
 				parent::__construct( '/unused/test-secrets.php', array() );
 			}
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of credential_profiles retains the production method contract; these inputs do not affect this controlled result.
 			public function credential_profiles( ProviderCode|string $provider ): array {
 				return array();
 			}
@@ -1085,6 +1083,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			public function __construct() {
 				parent::__construct( '/unused/test-secrets.php', array() );
 			}
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of credential_profiles retains the production method contract; these inputs do not affect this controlled result.
 			public function credential_profiles( ProviderCode|string $provider ): array {
 				return array(
 					'shared-profile'       => array(
@@ -1523,6 +1522,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 				return array( $this->package );
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_plugins retains the production method contract; these inputs do not affect this controlled result.
 			public function all_deployment_plugins( ?\RAN\PackageSource $source = null ): array {
 				return array( $this->package );
 			}
@@ -1535,6 +1535,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 				return array();
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_themes retains the production method contract; these inputs do not affect this controlled result.
 			public function all_deployment_themes( ?\RAN\PackageSource $source = null ): array {
 				return array();
 			}
@@ -1547,6 +1548,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			public function assert_managed_storage_ready(): void {
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of webhook_profiles retains the production method contract; these inputs do not affect this controlled result.
 			public function webhook_profiles( ProviderCode|string $provider ): array {
 				return array(
 					'webhook-profile' => array(
@@ -2596,6 +2598,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 				return array();
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_plugins retains the production method contract; these inputs do not affect this controlled result.
 			public function all_deployment_plugins( ?\RAN\PackageSource $source = null ): array {
 				return array();
 			}
@@ -2609,6 +2612,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 				return array();
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_themes retains the production method contract; these inputs do not affect this controlled result.
 			public function all_deployment_themes( ?\RAN\PackageSource $source = null ): array {
 				return array();
 			}
@@ -2638,10 +2642,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 				parent::__construct( '/unused/test-secrets.php', array() );
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of credential_profiles retains the production method contract; these inputs do not affect this controlled result.
 			public function credential_profiles( ProviderCode|string $provider ): array {
 				throw new RuntimeException( 'Static tabs must not read credential profiles.' );
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of webhook_profiles retains the production method contract; these inputs do not affect this controlled result.
 			public function webhook_profiles( ProviderCode|string $provider ): array {
 				throw new RuntimeException( 'Static tabs must not read webhook profiles.' );
 			}
@@ -2658,7 +2664,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		string $repository = 'owner/repository',
 		string $branch = 'main',
 		string $credential_id = '',
-		bool $private = false,
+		bool $is_private = false,
 		?string $subdirectory = null
 	): Package {
 		$package = $this->createStub( Package::class );
@@ -2667,7 +2673,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$package->method( 'get_slug' )->willReturn( 'example' );
 		$package->method( 'get_provider_code' )->willReturn( $provider );
 		$package->method( 'get_provider_repository_id' )->willReturn( $provider_repository_id );
-		$package->method( 'get_repository' )->willReturn( new ManagedRepository( $provider, $repository, $provider_repository_id, $branch, $private, $credential_id ) );
+		$package->method( 'get_repository' )->willReturn( new ManagedRepository( $provider, $repository, $provider_repository_id, $branch, $is_private, $credential_id ) );
 		$package->method( 'get_branch' )->willReturn( $branch );
 		$package->method( 'get_subdirectory' )->willReturn( $subdirectory );
 		$package->method( 'get_source' )->willReturn( $source );
@@ -2745,6 +2751,7 @@ final class FailingDashboardPluginRepository extends PluginRepository {
 		throw PackageStorageFailure::invalid_provider_identity();
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of booster_plugin_from_file retains the production method contract; these inputs do not affect this controlled result.
 	public function booster_plugin_from_file( $file ) {
 		throw PackageStorageFailure::invalid_provider_identity();
 	}
@@ -2755,6 +2762,7 @@ final class FailingDashboardThemeRepository extends ThemeRepository {
 		throw PackageStorageFailure::invalid_provider_identity();
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of booster_theme_from_stylesheet retains the production method contract; these inputs do not affect this controlled result.
 	public function booster_theme_from_stylesheet( $stylesheet ) {
 		throw PackageStorageFailure::invalid_provider_identity();
 	}
@@ -2817,9 +2825,9 @@ final class DashboardActivityWpdb {
 		foreach ( $arguments as $argument ) {
 			$query = (string) preg_replace_callback(
 				'/%[dis]/',
-				static fn ( array $match ): string => '%i' === $match[0]
+				static fn ( array $matches ): string => '%i' === $matches[0]
 					? '`' . (string) $argument . '`'
-					: ( '%d' === $match[0] ? (string) (int) $argument : "'" . addslashes( (string) $argument ) . "'" ),
+					: ( '%d' === $matches[0] ? (string) (int) $argument : "'" . addslashes( (string) $argument ) . "'" ),
 				$query,
 				1
 			);
@@ -2828,11 +2836,13 @@ final class DashboardActivityWpdb {
 		return $query;
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- The wpdb fixture retains the query call signature while returning the controlled database result.
 	public function query( string $query ): int|false {
 		return 0;
 	}
 
 	/** @param array<string, mixed> $data */
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The wpdb fixture retains the insert call signature while returning the controlled database result.
 	public function insert( string $table, array $data ): int|false {
 		return false;
 	}
@@ -2847,21 +2857,21 @@ final class DashboardActivityWpdb {
 				),
 			);
 		}
-		if ( preg_match( '/WHERE id = (\\d+)/', $query, $match ) === 1 ) {
+		if ( preg_match( '/WHERE id = (\\d+)/', $query, $matches ) === 1 ) {
 			return array_values(
 				array_map(
 					static fn ( array $row ): object => (object) $row,
-					array_filter( $this->rows, static fn ( array $row ): bool => (int) $row['id'] === (int) $match[1] )
+					array_filter( $this->rows, static fn ( array $row ): bool => (int) $row['id'] === (int) $matches[1] )
 				)
 			);
 		}
 		if ( str_contains( $query, 'package_type IN' ) ) {
 			$rows = $this->rows;
-			if ( preg_match( '/AND id < (\\d+)/', $query, $match ) === 1 ) {
-				$rows = array_values( array_filter( $rows, static fn ( array $row ): bool => (int) $row['id'] < (int) $match[1] ) );
+			if ( preg_match( '/AND id < (\\d+)/', $query, $matches ) === 1 ) {
+				$rows = array_values( array_filter( $rows, static fn ( array $row ): bool => (int) $row['id'] < (int) $matches[1] ) );
 			}
 			usort( $rows, static fn ( array $left, array $right ): int => (int) $right['id'] <=> (int) $left['id'] );
-			$limit = preg_match( '/LIMIT (\\d+)/', $query, $match ) === 1 ? (int) $match[1] : count( $rows );
+			$limit = preg_match( '/LIMIT (\\d+)/', $query, $matches ) === 1 ? (int) $matches[1] : count( $rows );
 
 			return array_map( static fn ( array $row ): object => (object) $row, array_slice( $rows, 0, $limit ) );
 		}
@@ -3138,6 +3148,7 @@ final class DashboardBranchCheckEvidenceStore extends RepositoryBranchCheckEvide
 
 final class ThrowingDashboardBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenceStore {
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of record retains the production method contract; these inputs do not affect this controlled result.
 	public function record( string $type, \RAN\Package $package, ?string $profile_id, string $outcome, ?string $profile_fingerprint = null ): void {
 		throw new RuntimeException( 'evidence unavailable' );
 	}

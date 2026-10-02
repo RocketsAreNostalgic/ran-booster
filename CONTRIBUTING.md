@@ -78,6 +78,30 @@ such as `PluginURI`, `ThemeURI`, `AuthorURI`, `TextDomain` and `DomainPath` stay
 unchanged. Paired magic-read tests must distinguish getter keys from backing-field
 fallbacks.
 
+## Current standards coverage and exceptions
+
+The condition and parameter rules now apply by default throughout the PHP tree:
+Yoda conditions, unused parameters (including inherited/interface implementations)
+and reserved parameter names no longer use migration-cohort include lists.
+Existing public/native signatures, callback slots and implicit template/`compact()`
+uses have declaration-local explanations. Owned private parameters and their callers
+must not retain dead arguments merely because a class implements an interface.
+
+The inherited profile is WordPress-Extra plus PHPCompatibilityWP and the RAN
+syntax baseline, not every WordPress-Docs rule. Full PHPStan path coverage remains
+level 1; it does not imply maximum analysis depth. The [standards scope inventory](docs/php-standards-coverage.md)
+records the remaining specific exclusions and their rationale. The former blanket
+exemptions in 29 test/harness files are removed; a token-aware guard rejects new
+whole-file or all-rule suppressions. Specific native/runtime fixture exceptions
+remain explicit and do not constitute a blanket security clearance.
+
+`StandardsCoverageTest` feeds positive and negative fixtures through the actual
+locked checker and this repository's ruleset. It proves new paths receive checks,
+inherited classes cannot conceal unused private parameters, reserved names are
+reported and a local exception does not suppress the next declaration. Keep
+exceptions specific, justified and reviewable; do not add blanket exclusions to
+make the canonical command pass.
+
 ### Historical naming cohort record
 
 The following cohort notes record incremental migrations before the complete

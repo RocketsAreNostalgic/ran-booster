@@ -1405,9 +1405,6 @@ final readonly class ProviderSettingsPresenter {
 			'repositories' => $matches,
 		);
 	}
-	// Translation placeholders in this internal read model retain the provider,
-	// package-count and page-count meanings documented by their returned keys.
-	// phpcs:disable WordPress.WP.I18n.MissingTranslatorsComment
 
 	/**
 	 * Project credential and webhook-profile lists for the provider page.
@@ -1536,8 +1533,8 @@ final readonly class ProviderSettingsPresenter {
 			);
 			$usage_total          = ! empty( $usage['available'] ) ? (int) ( $usage['total'] ?? 0 ) : -1;
 			$usage_label          = ! empty( $usage['available'] )
-				? sprintf( _nx( '%d package', '%d packages', $usage_total, 'Packages using a credential', 'ran-booster' ), $usage_total )
-				: __( 'Usage unavailable', 'ran-booster' );
+				? sprintf( /* translators: %d: number of packages using the credential. */ _nx( '%d package', '%d packages', $usage_total, 'Packages using a credential', 'ran-booster' ), $usage_total )
+				: /* translators: Label shown when package usage cannot be determined. */ __( 'Usage unavailable', 'ran-booster' );
 			$health_label         = ! empty( $profile['configured'] )
 				? (string) ( $profile['expiry_status']['badge_label'] ?? __( 'Stored · Validity checked on use', 'ran-booster' ) )
 				: __( 'Not configured', 'ran-booster' );
@@ -1582,13 +1579,13 @@ final readonly class ProviderSettingsPresenter {
 				'repositories' => array(),
 			);
 			$usage_total         = ! empty( $usage['available'] ) ? (int) ( $usage['total'] ?? 0 ) : -1;
-			$usage_label         = ! empty( $usage['available'] ) ? sprintf( _nx( '%d package', '%d packages', $usage_total, 'Packages using a credential', 'ran-booster' ), $usage_total ) : __( 'Usage unavailable', 'ran-booster' );
+			$usage_label         = ! empty( $usage['available'] ) ? sprintf( /* translators: %d: number of packages using the credential. */ _nx( '%d package', '%d packages', $usage_total, 'Packages using a credential', 'ran-booster' ), $usage_total ) : /* translators: Label shown when package usage cannot be determined. */ __( 'Usage unavailable', 'ran-booster' );
 			$scope               = is_string( $profile['scope'] ?? null ) ? $profile['scope'] : '';
 			$label               = is_string( $profile['label'] ?? null ) ? $profile['label'] : '';
 			$target              = is_string( $profile['target'] ?? null ) ? $profile['target'] : '';
 			$health              = ! empty( $profile['configured'] ) ? __( 'Saved · Remote delivery not verified by Core', 'ran-booster' ) : __( 'Local secret not configured', 'ran-booster' );
 			$delete_confirmation = ! empty( $usage['available'] ) && 0 < $usage_total
-				? sprintf( _n( /* translators: %d is the number of managed packages that use the local secret. */ 'Remove this local secret? %d managed package may be affected. Remote provider webhooks will not be removed.', 'Remove this local secret? %d managed packages may be affected. Remote provider webhooks will not be removed.', $usage_total, 'ran-booster' ), $usage_total )
+				? sprintf( /* translators: %d is the number of managed packages that use the local secret. */ _n( 'Remove this local secret? %d managed package may be affected. Remote provider webhooks will not be removed.', 'Remove this local secret? %d managed packages may be affected. Remote provider webhooks will not be removed.', $usage_total, 'ran-booster' ), $usage_total )
 				: __( 'Remove this local secret? Remote provider webhooks will not be removed.', 'ran-booster' );
 			$rows[]              = $profile + array(
 				'scope_label'         => $scope_labels[ $scope ] ?? ucfirst( $scope ),
@@ -1661,13 +1658,13 @@ final readonly class ProviderSettingsPresenter {
 		return array(
 			'credential' => array(
 				'tone'        => $credential_problem ? 'attention' : ( 0 < $credential_count ? 'ready' : 'pending' ),
-				'heading'     => $credential_problem ? __( 'Repository access needs attention', 'ran-booster' ) : ( 0 === $credential_count ? __( 'No credential saved', 'ran-booster' ) : sprintf( _n( /* translators: %d is the number of saved credentials. */ 'Ready · %d credential', 'Ready · %d credentials', $credential_count, 'ran-booster' ), $credential_count ) ),
+				'heading'     => $credential_problem ? __( 'Repository access needs attention', 'ran-booster' ) : ( 0 === $credential_count ? __( 'No credential saved', 'ran-booster' ) : sprintf( /* translators: %d is the number of saved credentials. */ _n( 'Ready · %d credential', 'Ready · %d credentials', $credential_count, 'ran-booster' ), $credential_count ) ),
 				'description' => $storage_unavailable ? __( 'Restore encrypted credential storage before reviewing or changing saved repository access.', 'ran-booster' ) : ( $credential_attention ? __( 'Review saved credentials that are incomplete, expired, or approaching expiry.', 'ran-booster' ) : ( 0 === $credential_count ? __( 'Public repositories remain available through anonymous lookup. Add a credential only for private access or steadier API limits.', 'ran-booster' ) : __( 'Private repository access is available. Open credential management to validate, replace, or review usage.', 'ran-booster' ) ) ),
 			),
 			'webhook'    => array(
 				'tone'        => $webhook_problem ? 'attention' : ( 0 < $webhook_count ? 'ready' : 'pending' ),
 				'heading'     => $webhook_problem ? __( 'Webhook signing · Needs attention', 'ran-booster' ) : ( 0 === $webhook_count ? __( 'Webhook signing · No secret saved', 'ran-booster' ) : __( 'Webhook signing · Ready locally', 'ran-booster' ) ),
-				'description' => $storage_unavailable ? __( 'Restore encrypted credential storage before Push-to-Deploy can verify signed deliveries.', 'ran-booster' ) : ( $webhook_attention ? __( 'Review saved signing material whose configuration or managed-package usage could not be confirmed.', 'ran-booster' ) : ( 0 === $webhook_count ? ( 0 < $automatic_count ? __( 'Automatic branch deployments require local signing material before provider webhooks can be used safely.', 'ran-booster' ) : __( 'Add local signing material before configuring a provider webhook.', 'ran-booster' ) ) : sprintf( _n( /* translators: %d is the number of local secrets that can verify signed deliveries. */ '%d local secret can verify signed deliveries. This does not prove a matching remote webhook exists.', '%d local secrets can verify signed deliveries. This does not prove matching remote webhooks exist.', $webhook_count, 'ran-booster' ), $webhook_count ) ) ),
+				'description' => $storage_unavailable ? __( 'Restore encrypted credential storage before Push-to-Deploy can verify signed deliveries.', 'ran-booster' ) : ( $webhook_attention ? __( 'Review saved signing material whose configuration or managed-package usage could not be confirmed.', 'ran-booster' ) : ( 0 === $webhook_count ? ( 0 < $automatic_count ? __( 'Automatic branch deployments require local signing material before provider webhooks can be used safely.', 'ran-booster' ) : __( 'Add local signing material before configuring a provider webhook.', 'ran-booster' ) ) : sprintf( /* translators: %d is the number of local secrets that can verify signed deliveries. */ _n( '%d local secret can verify signed deliveries. This does not prove a matching remote webhook exists.', '%d local secrets can verify signed deliveries. This does not prove matching remote webhooks exist.', $webhook_count, 'ran-booster' ), $webhook_count ) ) ),
 			),
 		);
 	}
@@ -1726,7 +1723,7 @@ final readonly class ProviderSettingsPresenter {
 			$result[ $view ] = array(
 				'sort'       => $sort,
 				'pagination' => array(
-					'item_count_label' => sprintf( _n( '%d item', '%d items', $list['total'], 'ran-booster' ), $list['total'] ),
+					'item_count_label' => sprintf( /* translators: %d: item count. */ _n( '%d item', '%d items', $list['total'], 'ran-booster' ), $list['total'] ),
 					'page_label'       => sprintf( /* translators: 1: current page number, 2: total page count. */ __( 'Page %1$d of %2$d', 'ran-booster' ), $list['current'], $list['pages'] ),
 					'current'          => $list['current'],
 					'pages'            => $list['pages'],
@@ -1763,6 +1760,4 @@ final readonly class ProviderSettingsPresenter {
 			'secret_management_description'     => sprintf( /* translators: %s is the repository provider name. */ __( 'Manage local signing material used to verify %s webhook deliveries.', 'ran-booster' ), $label ),
 		);
 	}
-
-	// phpcs:enable WordPress.WP.I18n.MissingTranslatorsComment
 }

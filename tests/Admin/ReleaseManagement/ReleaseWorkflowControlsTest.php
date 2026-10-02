@@ -810,8 +810,10 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 	private function source_guard( string $provider_code = 'fixture' ): RepositorySourceGuard {
 		$database  = new class( $provider_code ) { public string $last_error = '';
 			public function __construct( private string $provider_code ) {}
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of prepare retains the production method contract; these inputs do not affect this controlled result.
 			public function prepare( string $query, mixed ...$arguments ): string {
 				return $query;
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of get_results retains the production method contract; these inputs do not affect this controlled result.
 			} public function get_results( string $query ): array {
 				return array(
 					(object) array(
@@ -829,8 +831,10 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 
 	private function unavailable_source_guard(): RepositorySourceGuard {
 		$database  = new class() { public string $last_error = 'fixture unavailable';
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of prepare retains the production method contract; these inputs do not affect this controlled result.
 			public function prepare( string $query, mixed ...$arguments ): string {
 				return $query;
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of get_results retains the production method contract; these inputs do not affect this controlled result.
 			} public function get_results( string $query ): array {
 				return array();
 			} };

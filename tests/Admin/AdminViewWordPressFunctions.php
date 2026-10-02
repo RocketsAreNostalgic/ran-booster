@@ -280,7 +280,7 @@ if ( ! function_exists( 'wp_parse_url' ) ) {
 }
 
 if ( ! function_exists( 'get_option' ) ) {
-	function get_option( $option, $default = false ) {
+	function get_option( $option, $default = false ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound -- Preserve the WordPress function parameter signature.
 		global $ran_booster_storage_test_options;
 
 		if ( array_key_exists( $option, $ran_booster_storage_test_options ?? array() ) ) {

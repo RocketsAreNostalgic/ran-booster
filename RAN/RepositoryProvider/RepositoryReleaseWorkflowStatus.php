@@ -103,14 +103,14 @@ final readonly class RepositoryReleaseWorkflowStatus {
 
 	public function write_guidance(): string {
 		return $this->write_guidance; }
-	private function text( string $value, int $limit, bool $empty = false ): bool {
-		return ( $empty || '' !== trim( $value ) ) && strlen( $value ) <= $limit && 1 === preg_match( '//u', $value ) && 0 === preg_match( '/[<>\x00-\x1F\x7F]/', $value ); }
+	private function text( string $value, int $limit, bool $allow_empty = false ): bool {
+		return ( $allow_empty || '' !== trim( $value ) ) && strlen( $value ) <= $limit && 1 === preg_match( '//u', $value ) && 0 === preg_match( '/[<>\x00-\x1F\x7F]/', $value ); }
 	private function optional_text( string $value, int $limit ): bool {
 		return '' === $value || $this->text( $value, $limit ); }
-	private function timestamp( string $value, bool $empty = false ): bool {
-		return ( $empty && '' === $value ) || 1 === preg_match( '/\A[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z\z/D', $value ); }
-	private function url( string $value, bool $empty = false ): bool {
-		if ( $empty && '' === $value ) {
+	private function timestamp( string $value, bool $allow_empty = false ): bool {
+		return ( $allow_empty && '' === $value ) || 1 === preg_match( '/\A[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z\z/D', $value ); }
+	private function url( string $value, bool $allow_empty = false ): bool {
+		if ( $allow_empty && '' === $value ) {
 			return true;
 		}
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Provider DTO validation is deliberately WordPress-independent.

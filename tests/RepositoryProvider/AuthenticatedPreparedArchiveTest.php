@@ -158,12 +158,14 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 				throw new RuntimeException( 'authorizer-secret-canary' );
 			},
 			static fn (): string => 'malformed-secret-canary',
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- The archive authorizer accepts request arguments; this negative fixture deliberately returns malformed authorization headers.
 			static fn ( array $arguments ): array => array(
 				'headers' => array(
 					'Authorization' => 'Bearer first-secret-canary',
 					'authorization' => 'Bearer second-secret-canary',
 				),
 			),
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- The archive authorizer accepts request arguments; this negative fixture deliberately returns malformed authorization headers.
 			static fn ( array $arguments ): array => array( 'headers' => array( 'Authorization' => array( 'invalid-secret-canary' ) ) ),
 		);
 

@@ -17,7 +17,7 @@ class Plugin extends AbstractPackage {
 	protected $title;
 	protected $author_name;
 
-	public static function from_wp_array( $file, array $array ) {
+	public static function from_wp_array( $file, array $array ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.arrayFound -- Preserve the existing public named-argument signature.
 		$plugin = new static();
 
 		$plugin->file        = $file;

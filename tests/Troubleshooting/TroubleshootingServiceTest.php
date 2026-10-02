@@ -406,6 +406,7 @@ final class TroubleshootingWebhookProviderFixture extends TroubleshootingProvide
 				return 'x-fixture-signature';
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of normalize_webhook retains the production method contract; these inputs do not affect this controlled result.
 			public function normalize_webhook( array $metadata, mixed $secret ): array {
 				return array(
 					'label'        => 'Fixture',
@@ -440,6 +441,7 @@ final class TroubleshootingWebhookProviderFixture extends TroubleshootingProvide
 		return ( $this->readiness )();
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of normalize_webhook retains the production method contract; these inputs do not affect this controlled result.
 	public function normalize_webhook( WebhookRequest $request ): WebhookEnvelope {
 		return WebhookEnvelope::ignored();
 	}

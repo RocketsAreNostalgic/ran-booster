@@ -26,15 +26,15 @@ native-signature exceptions, current documentation and gettext catalogue.
 
 ## Contracts
 
-| Boundary | Candidate generation |
-| --- | --- |
-| Provider | 14 |
-| Add-on | 17 |
-| Admin Interaction | 3 |
-| Prospective Release | 8 |
-| Portability | 3, unchanged |
-| Portability hash payload | 2, unchanged |
-| Updater runtime protocol | 5, unchanged |
+| Boundary                 | Candidate generation |
+| ------------------------ | -------------------- |
+| Provider                 | 14                   |
+| Add-on                   | 17                   |
+| Admin Interaction        | 3                    |
+| Prospective Release      | 8                    |
+| Portability              | 3, unchanged         |
+| Portability hash payload | 2, unchanged         |
+| Updater runtime protocol | 5, unchanged         |
 
 Owned methods, parameters, properties and locals use snake_case. Renamed PHP
 view variables have matching internal producer and consumer bindings. Persisted
@@ -73,11 +73,11 @@ The completed source tree before this documentation-only record is local commit
 
 Matching satellite preparation is on `naming/beta31-recovered-consumers`:
 
-| Repository | Published preparation commit |
-| --- | --- |
+| Repository      | Published preparation commit               |
+| --------------- | ------------------------------------------ |
 | GitHub Provider | `73a3e3afb747bbb61ead306d6d6bf10d92d94665` |
-| Bitbucket | `87a2dcd46e7a8a50b56444b0a1b3166a4e681039` |
-| Migrator | `063e9230cfa2794fd4e89139869164c9200f74df` |
+| Bitbucket       | `87a2dcd46e7a8a50b56444b0a1b3166a4e681039` |
+| Migrator        | `063e9230cfa2794fd4e89139869164c9200f74df` |
 
 Each retains the originally supplied recovery branch as ancestry. Satellite
 source suites passed at their recorded host checkpoint: Provider 432 tests /
@@ -87,22 +87,29 @@ preparation table.
 
 ## Remaining gates and landing order
 
-The committed Composer lock still binds published GitHub Provider beta.11. That
-package does not implement Provider14. Source-overlay results above are not
-released-lock, archive-runtime, installed-host or published Core certification.
-No package constraint or lock was falsified to label the overlay as adoption.
+GitHub Provider source #53 and release #54 are merged. The immutable
+`v1.0.0-beta.12` release (ID `401815218`) and its tag both target
+`c90777b7a23b7e07244a94c7ccbf3c4faf4fdc2c`. Core now adopts that exact
+Provider14 package in `composer.json` and `composer.lock`; other dependency
+records are unchanged. The earlier beta.11 lock and source-overlay results
+above are historical preparation evidence, not the current dependency state.
 
-1. Review the exact published Core and matching Provider source PRs independently.
-2. Obtain separate owner decisions for Provider source merge and its matching
-   immutable package publication.
-3. Adopt that real released package in Core's dependency lock, then repeat the
-   complete canonical checks, clean no-dev archive/readback, required native CI
-   and installed WordPress/database/load-order proofs on the final tuple.
-4. Obtain a separate Core source merge decision. Release #181 stays held until
-   all remaining gates pass and the owner approves that exact release proposal.
-5. Refresh Bitbucket/Migrator against the actual published Core release and run
+Fresh released-lock checks and clean archive qualification passed on the adoption
+checkpoint. Its installed release-capability proof exposed a stale fixture call
+to `PreparedArtifact::regularFileIdentity`; the corrected fixture uses
+`regular_file_identity`, with a regression exercising actual artifact transfer,
+Core cleanup and repeat-handoff rejection. Final native and installed qualification
+must complete on the corrected head; earlier results do not establish that pass.
+
+1. Complete final canonical checks, clean no-dev archive/readback, required native
+   CI and installed WordPress/database/load-order proofs on the corrected tuple.
+2. Obtain the Core source merge decision only after its exact-head gates and
+   independent review pass. Source merge does not publish Core.
+3. Let the existing release pipeline refresh #181, qualify its exact proposal,
+   and obtain the owner's release decision before publishing Core beta.31.
+4. Refresh Bitbucket/Migrator against the actual published Core release and run
    their existing release-backed host/certification gates. Their held releases
-   and deferred manual/UI acceptance are not waived by this source work.
+   and Migrator’s separate manual acceptance gate are not waived by this source work.
 
 Implementation and source-composition qualification are distinct from merged,
 package-published, released-host-certified and installed-site acceptance states.

@@ -1,10 +1,11 @@
 # Provider extension contract
 
-> Provider API14 naming candidate: consumers must use matching API14 source.
-> The inherited Provider beta.11 dependency lock is not the new candidate's
-> adoption proof. Fresh combined, archive and installed qualification and a
-> separate release decision are required before Core beta.31 can ship.
-
+> Provider API14 naming candidate: Core now pins immutable GitHub Provider
+> `v1.0.0-beta.12` at `c90777b7a23b7e07244a94c7ccbf3c4faf4fdc2c` in its
+> package constraint and dependency lock. The earlier beta.11/API13 tuple is
+> historical. Final native and installed qualification on the corrected Core
+> candidate and a separate release decision remain required before beta.31 ships.
+> See the [current recovery and landing record](beta31-naming-recovery.md#remaining-gates-and-landing-order).
 
 RAN Booster Provider API 14 accepts trusted repository providers through its late
 registration action. A provider plugin attaches a callback from its main plugin
@@ -245,15 +246,17 @@ and API13 providers remain unregistered; there is no V2 compatibility shim.
 The registration factory still receives three arguments. Add-on API17 and Admin
 Interaction API3 are separate connected boundaries. See the
 [coordinated compatibility boundary](provider-release-workflow-api.md#provider-api-14-compatibility-boundary).
-The inherited GitHub Provider `v1.0.0-beta.11` lock
-(`c88045d0b6d6048599454b9549e59ddf176d56f0`) is the API13 baseline;
-the API14 candidate requires matching consumer source and fresh qualification.
+Core now pins immutable GitHub Provider `v1.0.0-beta.12`
+(`c90777b7a23b7e07244a94c7ccbf3c4faf4fdc2c`), the published API14 consumer,
+in both its package constraint and dependency lock. Provider source #53 and
+release #54 are merged; the inherited beta.11/API13 tuple is historical.
 Merged Core #177 passed repository, archive and installed checks for its
 historical beta.8 composition (`556f19923f6564f1bbd5cecee089d6b136afc5cd`).
-That evidence does not qualify this new lock; see the
-[connected naming adoption record](connected-naming-adoption.md).
-Immutable API-13 Core publication and Bitbucket certification remain pending;
-see the [qualification boundary](provider-release-workflow-api.md#qualification-and-delivery-boundary).
+That evidence does not qualify the current lock. Final native and installed
+qualification on the corrected Core candidate, Core publication, and matching
+Bitbucket/Migrator release-backed certification remain separate gates; see the
+[current recovery and landing record](beta31-naming-recovery.md#remaining-gates-and-landing-order)
+and the [qualification boundary](provider-release-workflow-api.md#qualification-and-delivery-boundary).
 
 Check and remove deliberately receive Core's canonical callback URL as well as
 the recorded hook ID. This is the minimum input needed for the provider to
@@ -477,23 +480,19 @@ while an exception means listing was unavailable. The provider owns its remote
 calls, credential use and response normalization. The facet downloads no
 archive and grants no inspection, acquisition, installation or mutation
 authority. Publication time and expected ZIP names remain in the typed value
-only because the unchanged standalone facade still validates them; they grant no
-artifact authority. The bounded list wrapper enforces the result limit, typed
+as bounded facade response metadata; they grant no artifact authority. The bounded list wrapper enforces the result limit, typed
 members and unique provider identities at the capability boundary. List order
 is the provider's bounded inspection preference. Core inspects at most the first
 two candidates in that order, continues only when the provider classifies the
 package as incompatible, and accepts only exact listing-to-inspection identity
 continuity. A vanished, corrupt or contradictory preferred release fails closed
 without falling through to an older release. The facet does not by itself make
-the complete release product available. Until those remaining operations have
-their own provider facets,
-Core's complete-product projection continues to advertise only the bundled
-GitHub implementation. A provider implementing candidate listing alone remains
-available to an authorized listing consumer but receives no complete-product UI
-or later-operation authority. The temporary standalone-add-on facade can project
-only positive integer release identities; opaque provider identities remain
-valid contract values but require the later hard cut before that facade can
-consume them.
+the complete release product available. Core's prospective-release facade requires
+candidate listing, inspection, acquisition, metadata and native-target facets on
+the same registered provider aggregate. Listing alone grants no later-operation
+authority and does not qualify a provider for that facade. The facade preserves
+bounded opaque provider release identities as strings; identities need not be
+positive integers.
 
 When a release listing or inspection read cannot be completed with the supplied
 repository access profile because of credential/access denial, rate limiting, or
@@ -563,7 +562,7 @@ bounded passive value: it contains normalized availability, offered-version,
 check-time, failure and candidate-validation fields, never the provider's raw
 updater object, diagnostics array or internal runtime state. Refresh returns an
 exact boolean. When candidate validation describes the release behind the
-current native offer, `candidateProviderReleaseId` must contain that release's
+current native offer, `candidate_provider_release_id` must contain that release's
 exact opaque provider identity—the same identity returned by candidate listing
 and inspection. It remains empty when there is no current, candidate-validated
 native offer. Core does not infer this identity from a tag or version; without
@@ -692,19 +691,18 @@ Webhook signing-secret scope codes are universally `owner` or `repository`.
 Providers may relabel `owner` for their interface—for example **GitHub Owner**
 or **Bitbucket Workspace**—but may not introduce additional logical scopes.
 
-Core's separately versioned prospective-release facade resolves
-`RepositoryReleaseCandidateListing` before repository resolution and maps its
-typed values to the current add-on response. Candidate listing can therefore be
-implemented independently without granting authority over inspection,
-acquisition or installation. `supported_provider_codes()` remains the
-complete-product projection used by the unchanged add-on and currently exposes
-only the bundled GitHub provider when it implements the listing facet. It does
-not resolve a repository, read credentials or make a remote request.
-Registering a provider, or implementing listing alone, does not imply complete
-published-release support. Core rejects listing with `unsupported_provider`
-when the selected provider omits the listing facet, and rejects later
-prospective operations when the provider is absent from the complete-product
-projection; both checks happen before repository resolution.
+Core's separately versioned prospective-release facade requires all five release
+facets—`RepositoryReleaseCandidateListing`, `RepositoryReleaseInspector`,
+`RepositoryReleaseAcquirer`, `RepositoryReleaseMetadata` and
+`RepositoryReleaseNativeTargets`—before repository resolution, then maps bounded
+typed candidate values to the add-on response. Its `supported_provider_codes()`
+projection checks registered providers against that same complete capability set;
+it is not restricted to GitHub. The projection does not resolve a repository,
+read credentials or make a remote request. Registering a provider, or implementing
+listing alone, does not imply complete published-release support. Core rejects
+listing with `unsupported_provider` when any required facet is absent; later
+prospective operations also enforce the complete capability boundary before
+repository resolution.
 
 For an already managed branch package, Core composes
 `RepositoryReleaseCandidateListing`, `RepositoryReleaseInspector` and

@@ -4,26 +4,26 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5489be7efcb626d8aa3c0addad730baa",
+    "content-hash": "3ac38d1250ef3ec3bb85d8e7151dc842",
     "packages": [
         {
             "name": "ran/booster-github-provider",
-            "version": "v1.0.0-beta.10",
+            "version": "v1.0.0-beta.11",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider.git",
-                "reference": "d39d83747af3109a79e80fd307d50e4fcc34d412"
+                "reference": "c88045d0b6d6048599454b9549e59ddf176d56f0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-booster-github-provider/zipball/d39d83747af3109a79e80fd307d50e4fcc34d412",
-                "reference": "d39d83747af3109a79e80fd307d50e4fcc34d412",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-booster-github-provider/zipball/c88045d0b6d6048599454b9549e59ddf176d56f0",
+                "reference": "c88045d0b6d6048599454b9549e59ddf176d56f0",
                 "shasum": ""
             },
             "require": {
                 "php": "^8.2",
                 "ran/updater-support": "^1.0.0-beta.4",
-                "ran/wp-release-updater": "0.1.0-beta.7"
+                "ran/wp-release-updater": "~1.0.0-beta.9"
             },
             "require-dev": {
                 "php-stubs/wordpress-stubs": "7.0.*",
@@ -99,7 +99,7 @@
                 "security": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider/security/advisories/new",
                 "source": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider"
             },
-            "time": "2026-10-01T23:20:10+00:00"
+            "time": "2026-10-02T06:12:05+00:00"
         },
         {
             "name": "ran/updater-support",
@@ -303,16 +303,16 @@
         },
         {
             "name": "ran/wp-release-updater",
-            "version": "v0.1.0-beta.7",
+            "version": "v1.0.0-beta.9",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater.git",
-                "reference": "203b4cf5e0bc133ff6664617cfd954d7e28dcc04"
+                "reference": "27889528442fc4e49ca060959218d5ec288c3055"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/203b4cf5e0bc133ff6664617cfd954d7e28dcc04",
-                "reference": "203b4cf5e0bc133ff6664617cfd954d7e28dcc04",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/27889528442fc4e49ca060959218d5ec288c3055",
+                "reference": "27889528442fc4e49ca060959218d5ec288c3055",
                 "shasum": ""
             },
             "require": {
@@ -327,8 +327,8 @@
                 "phpcompatibility/phpcompatibility-wp": "3.0.0-alpha2",
                 "phpstan/phpstan": "^2.1",
                 "phpunit/phpunit": "^11.0",
-                "ran/coding-standards": "dev-main",
-                "ran/updater-support": "0.1.0-beta.2",
+                "ran/coding-standards": "^1.0",
+                "ran/updater-support": "1.0.0-beta.4",
                 "szepeviktor/phpstan-wordpress": "^2.0"
             },
             "type": "library",
@@ -343,13 +343,9 @@
                     "@check:updater-support",
                     "@audit:composer",
                     "@lint:syntax",
-                    "@lint:php",
+                    "@standards",
                     "@analyze",
-                    "@test:unit",
-                    "@test:no-dev-consumer"
-                ],
-                "check:php-style": [
-                    "@lint:php"
+                    "@test"
                 ],
                 "analyze": [
                     "phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=1G"
@@ -357,14 +353,18 @@
                 "audit:composer": [
                     "composer audit --locked --no-interaction"
                 ],
-                "format:php": [
+                "standards:fix": [
                     "phpcbf --standard=.phpcs.xml --report=summary"
                 ],
-                "lint:php": [
+                "standards": [
                     "phpcs --standard=.phpcs.xml --report=summary"
                 ],
                 "lint:syntax": [
                     "php scripts/lint-php.php"
+                ],
+                "test": [
+                    "@test:unit",
+                    "@test:no-dev-consumer"
                 ],
                 "test:unit": [
                     "phpunit --configuration phpunit.xml --fail-on-deprecation --fail-on-phpunit-deprecation"
@@ -377,9 +377,6 @@
                 ],
                 "test:wordpress-bulk": [
                     "php tests/Integration/wordpress-native-mixed-bulk-proof.php"
-                ],
-                "test:release-publisher": [
-                    "node --test tests/release-publisher.test.mjs"
                 ],
                 "validate:strict": [
                     "composer validate --strict --no-check-publish"
@@ -400,7 +397,7 @@
                 "security": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater/security/advisories/new",
                 "source": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater"
             },
-            "time": "2026-09-18T15:43:01+00:00"
+            "time": "2026-09-28T12:28:00+00:00"
         }
     ],
     "packages-dev": [

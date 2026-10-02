@@ -27,7 +27,7 @@
 	<rule ref="RANOwnedMethods"/>
 	<!-- Variable, property and named-parameter enforcement covers the complete owned tree. -->
 	<rule ref="WordPress.NamingConventions.ValidVariableName"/>
-	<!-- Audited condition cohorts preserve evaluation order; separately owned API12 paths remain deferred. -->
+	<!-- Audited condition cohorts preserve evaluation order; broader condition scope remains under #167 acceptance. -->
 	<rule ref="WordPress.PHP.YodaConditions">
 		<include-pattern>/RAN/Admin/RepositoryPickerController.php</include-pattern>
 		<include-pattern>/RAN/Admin/ManagedPackageWebhookAuthorityResolver.php</include-pattern>

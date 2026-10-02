@@ -144,24 +144,19 @@ certify API13; matching implementation and later immutable-host certification
 remain explicit coordinated obligations. The broad ReleaseManagement naming
 cohort, other Provider parameters and UI acceptance are not absorbed.
 
-### Verified API13 package adoption candidate
+### Historical API13 beta.10 adoption
 
 Provider release #50 regular-merged as
 `d39d83747af3109a79e80fd307d50e4fcc34d412` (tree
 `d2e58aaffe1d763eb26928a379cd92c67e1c8c9d`). Exact-main CI36940248825 and
 ProfileA36940445426 passed; immutable `v1.0.0-beta.10`, GitHub release401427616,
 was published on 1 October 2026 at23:22:40UTC. Its tag resolves directly to that
-merge. The current Composer requirement and source/dist lock references adopt
-this real release. Branch remains beta.8 and unrelated Composer pins remain
-unchanged. Core219's reviewed development lock is retained from main9bc6cd5.
-
-This is an integration candidate, not a merged or published Core host.
-Final qualification must use the actual installed packages and current source.
-The newly assigned Bitbucket and Release Updater coordinators supply separate
-bounded handoffs; no retired-agent acknowledgement is awaited. The protocol5
-consumer tranche follows this published Provider baseline and must provide its
-own compatible package publication before final Core dependency composition.
-
+merge. Core #220 adopted this release through its Composer requirement and
+source/dist lock references, then squash-merged as
+`d5b35ac53692fc3f40c8cad76eef35155a360ec8`. Branch remained beta.8 and unrelated
+Composer pins were unchanged; Core219's reviewed development lock was retained.
+That completed adoption is historical evidence for the API13 tranche. It does
+not describe the current protocol5 candidate's dependency selection below.
 
 ### Protocol 5 released dependency composition
 

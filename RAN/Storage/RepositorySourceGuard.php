@@ -151,7 +151,7 @@ final class RepositorySourceGuard {
 			throw PackageStorageFailure::query_failed();
 		}
 
-		// The validated package identifier is rendered through the dashboard escape boundary.
+		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The validated package identifier is rendered through the dashboard escape boundary.
 		throw PackageStorageFailure::repository_source_conflict( $result['owner_package'] );
 	}
 

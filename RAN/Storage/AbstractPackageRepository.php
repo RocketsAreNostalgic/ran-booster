@@ -948,7 +948,7 @@ abstract class AbstractPackageRepository {
 		try {
 			$this->database_lifecycle->require_ready();
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
-			// The enum is converted into a display-safe typed storage failure.
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The enum is converted into a display-safe typed storage failure.
 			throw PackageStorageFailure::unsupported_database( $operation );
 		}
 	}

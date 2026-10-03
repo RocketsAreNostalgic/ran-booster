@@ -468,17 +468,17 @@ class WpConfigSecretsPathWriter {
 			if ( null !== $replaced ) {
 				$this->attempt_rollback( $path, $original, $replaced );
 			}
-			// The exception is propagated, not rendered.
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The exception is propagated, not rendered.
 			throw $exception;
 		} catch ( Throwable $exception ) {
 			if ( null !== $replaced ) {
 				$this->attempt_rollback( $path, $original, $replaced );
 			}
-			// The previous exception is retained, not rendered.
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The previous exception is retained, not rendered.
 			throw new WpConfigPathWriteException(
 				'filesystem_failure',
 				'The WordPress configuration could not be updated safely.',
-				// The chained filesystem exception is retained for rollback diagnostics, not rendered.
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The chained filesystem exception is retained for rollback diagnostics, not rendered.
 				$exception
 			);
 		} finally {
@@ -547,11 +547,11 @@ class WpConfigSecretsPathWriter {
 			/** @var list<array{0: int, 1: string, 2: int}|string> $tokens */
 			$tokens = token_get_all( $contents, TOKEN_PARSE );
 		} catch ( ParseError $exception ) {
-			// The parse exception is retained, not rendered.
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The parse exception is retained, not rendered.
 			throw new WpConfigPathWriteException(
 				'config_parse_failed',
 				'The WordPress configuration does not parse as supported PHP.',
-				// The chained filesystem exception is retained for rollback diagnostics, not rendered.
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The chained filesystem exception is retained for rollback diagnostics, not rendered.
 				$exception
 			);
 		}
@@ -880,7 +880,7 @@ class WpConfigSecretsPathWriter {
 	}
 
 	private function fail( string $reason, string $message ): never {
-		// These values form an exception, not output.
+		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- These values form an exception, not output.
 		throw new WpConfigPathWriteException( $reason, $message );
 	}
 }

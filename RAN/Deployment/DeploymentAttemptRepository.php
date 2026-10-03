@@ -81,7 +81,7 @@ final class DeploymentAttemptRepository {
 			function () use ( $operation, $package_type, $provider, $provider_repository_id, $request, $requested_ref, $package_source, $package_source_revision ): DeploymentAttempt {
 				$active = $this->active_package_attempt( $package_type, $request->package_slug );
 				if ( null !== $active ) {
-					// The failure stores a validated, whitelisted attempt projection; it does not render output.
+					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The failure stores a validated, whitelisted attempt projection; it does not render output.
 					throw DeploymentStorageFailure::contention( $active->safe_data() );
 				}
 

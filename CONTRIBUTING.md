@@ -114,11 +114,14 @@ make the canonical command pass.
 
 The released `ran/coding-standards` v1.0.1 adopts a message-specific exclusion for
 `WordPress.Security.EscapeOutput.ExceptionNotEscaped`: exception messages are
-diagnostic values, and escaping belongs at actual output boundaries. Core no
-longer repeats that policy in inline or characterization-path suppressions.
-Existing exception-context comments remain useful, while mixed annotations
-retain their other rule selectors. Output escaping, nonce and sanitization
-checks remain enabled; this adoption does not certify every existing exception.
+diagnostic values, and escaping belongs at actual output boundaries. Core removes
+redundant test-only annotations and the characterization-path XML rule. Shipped
+PHP retains its original annotations because the separate required installed
+Plugin Check scanner uses its own WPCS profile and still reports this message.
+Any alignment of that scanner needs a separate explicit decision. Mixed test
+annotations retain their other selectors and explanations. Output escaping,
+nonce and sanitization checks remain enabled; this adoption does not certify
+every existing exception.
 
 ### Historical naming cohort record
 

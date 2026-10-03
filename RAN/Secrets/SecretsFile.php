@@ -101,7 +101,7 @@ class SecretsFile {
 					return false;
 				}
 				if ( null === $key || ! $has_file ) {
-					// Component presence selects one fixed pathless failure.
+					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Component presence selects one fixed pathless failure.
 					throw $this->incomplete_store( $key, $has_file );
 				}
 
@@ -308,7 +308,7 @@ class SecretsFile {
 					return false;
 				}
 				if ( null === $key || ! $has_file ) {
-					// Component presence selects one fixed pathless failure.
+					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Component presence selects one fixed pathless failure.
 					throw $this->incomplete_store( $key, $has_file );
 				}
 
@@ -896,7 +896,7 @@ class SecretsFile {
 				$key      = $this->load_key( false );
 				$has_file = $this->has_file();
 				if ( ( null !== $key ) !== $has_file ) {
-					// Component presence selects one fixed pathless failure.
+					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Component presence selects one fixed pathless failure.
 					throw $this->incomplete_store( $key, $has_file );
 				}
 				if ( $has_file ) {
@@ -957,7 +957,7 @@ class SecretsFile {
 
 				if ( $has_file ) {
 					if ( null === $key ) {
-						// Component presence selects one fixed pathless failure.
+						// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Component presence selects one fixed pathless failure.
 						throw $this->incomplete_store( $key, $has_file );
 					}
 
@@ -1128,7 +1128,7 @@ class SecretsFile {
 				? $policy->normalize_credential( $metadata, $secret )
 				: $metadata + array( 'secret' => $secret );
 		} catch ( InvalidCredentialInput $failure ) {
-			// Rebuild the closed failure so provider arguments never cross this boundary.
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Rebuild the closed failure so provider arguments never cross this boundary.
 			throw new InvalidCredentialInput( $failure->reason, $failure->getMessage() );
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'Provider credential material could not be validated.' );
@@ -1156,7 +1156,7 @@ class SecretsFile {
 					$validated['secret']
 				);
 			} catch ( InvalidCredentialInput $failure ) {
-				// Rebuild the closed failure so provider arguments never cross this boundary.
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Rebuild the closed failure so provider arguments never cross this boundary.
 				throw new InvalidCredentialInput( $failure->reason, $failure->getMessage() );
 			} catch ( \Throwable ) {
 				throw new RuntimeException( 'Provider credential material could not be validated.' );
@@ -1262,7 +1262,7 @@ class SecretsFile {
 				: $policy_data + array( 'secret' => $secret );
 		} catch ( InvalidWebhookInput $failure ) {
 			if ( $submitted ) {
-				// Rebuild the closed failure so provider arguments never cross this boundary.
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Rebuild the closed failure so provider arguments never cross this boundary.
 				throw new InvalidWebhookInput( $failure->reason );
 			}
 			throw new RuntimeException( 'Provider webhook material could not be validated.' );
@@ -1291,7 +1291,7 @@ class SecretsFile {
 	private function assert_webhook_collection( array $records, bool $submitted = false ): void {
 		if ( count( $records ) > self::MAX_WEBHOOK_PROFILES ) {
 			if ( $submitted ) {
-				// Closed reason maps to fixed administrator-safe copy.
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed reason maps to fixed administrator-safe copy.
 				throw new InvalidWebhookInput( InvalidWebhookInput::CAPACITY );
 			}
 			throw new RuntimeException( 'A provider cannot store more than 16 webhook secrets.' );
@@ -1306,7 +1306,7 @@ class SecretsFile {
 			};
 			if ( isset( $targets[ $key ] ) ) {
 				if ( $submitted ) {
-					// Closed reason maps to fixed administrator-safe copy.
+					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed reason maps to fixed administrator-safe copy.
 					throw new InvalidWebhookInput( InvalidWebhookInput::DUPLICATE_TARGET );
 				}
 				throw new RuntimeException( 'Only one webhook secret may be stored for each owner or repository.' );
@@ -1458,7 +1458,7 @@ class SecretsFile {
 			return $this->empty_document();
 		}
 		if ( null === $key || ! $has_file ) {
-			// Component presence selects one fixed pathless failure.
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Component presence selects one fixed pathless failure.
 			throw $this->incomplete_store( $key, $has_file );
 		}
 
@@ -1752,7 +1752,7 @@ class SecretsFile {
 
 	private function required_string( #[\SensitiveParameter] mixed $value, string $name ): string {
 		if ( ! is_string( $value ) || '' === trim( $value ) ) {
-			// Storage exceptions are caught and escaped at the admin boundary.
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Storage exceptions are caught and escaped at the admin boundary.
 			throw new RuntimeException( $name . ' must be a non-empty string.' );
 		}
 
@@ -1790,7 +1790,7 @@ class SecretsFile {
 			|| 1 !== preg_match( '/\\A(\\d{4})-(\\d{2})-(\\d{2})\\z/D', $value, $matches )
 			|| ! checkdate( (int) $matches[2], (int) $matches[3], (int) $matches[1] )
 		) {
-			// Storage exceptions are caught and escaped at the admin boundary.
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Storage exceptions are caught and escaped at the admin boundary.
 			throw new RuntimeException( $name . ' must be a valid date.' );
 		}
 	}
@@ -1815,7 +1815,7 @@ class SecretsFile {
 		string $message
 	): void {
 		if ( array() !== array_diff( array_keys( $record ), $allowed ) ) {
-			// Storage exceptions are caught and escaped at the admin boundary.
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Storage exceptions are caught and escaped at the admin boundary.
 			throw new RuntimeException( $message );
 		}
 	}
@@ -1921,7 +1921,7 @@ class SecretsFile {
 			|| $path_stat['dev'] !== $handle_stat['dev']
 			|| $path_stat['ino'] !== $handle_stat['ino']
 		) {
-			// Internal filesystem labels are fixed at each call site.
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal filesystem labels are fixed at each call site.
 			throw $this->unavailable( sprintf( 'Refusing to use an invalid encrypted Booster %s.', $label ) );
 		}
 	}
@@ -1960,7 +1960,7 @@ class SecretsFile {
 
 	private function assert_available(): void {
 		if ( ! $this->availability->is_available() ) {
-			// Availability exposes one fixed, pathless operator message.
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Availability exposes one fixed, pathless operator message.
 			throw $this->unavailable( $this->availability->message() );
 		}
 	}
@@ -2163,7 +2163,7 @@ class SecretsFile {
 			|| 0600 !== ( $stat['mode'] & 0777 )
 			|| ! $this->owned_by_process( $stat )
 		) {
-			// Internal filesystem labels are fixed at each call site.
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal filesystem labels are fixed at each call site.
 			throw $this->unavailable( sprintf( 'Refusing to remove an invalid %s.', $label ) );
 		}
 
@@ -2184,7 +2184,7 @@ class SecretsFile {
 			|| $expected['nlink'] !== $current['nlink']
 			|| ! $this->remove_file( $path )
 		) {
-			// Internal filesystem failure messages are fixed at each call site.
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal filesystem failure messages are fixed at each call site.
 			throw $this->unavailable( $message );
 		}
 		clearstatcache( true, $path );

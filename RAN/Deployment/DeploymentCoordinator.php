@@ -398,7 +398,7 @@ class DeploymentCoordinator {
 
 	private function assert_branch_source( Package $package ): void {
 		if ( PackageSource::BRANCH !== $package->get_source() ) {
-			// Internal domain exception; presentation owns escaping.
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal domain exception; presentation owns escaping.
 			throw new DeploymentCheckFailure( DeploymentOutcome::CODE_DEPLOYMENT_RELEASE_SOURCE_BLOCKED, 'Branch deployment is unavailable for a release-managed package.' );
 		}
 	}

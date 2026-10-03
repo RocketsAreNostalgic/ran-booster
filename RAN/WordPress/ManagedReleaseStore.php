@@ -290,7 +290,7 @@ class ManagedReleaseStore {
 		try {
 			$subdirectory = PackageSubdirectory::normalize( $row->subdirectory ?? null );
 		} catch ( \InvalidArgumentException $exception ) {
-			// The prior exception remains internal to the typed storage failure.
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The prior exception remains internal to the typed storage failure.
 			throw new RuntimeException( 'The managed release package subdirectory is invalid.', 0, $exception );
 		}
 		if ( null !== $subdirectory ) {

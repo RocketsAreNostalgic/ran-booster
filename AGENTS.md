@@ -11,8 +11,8 @@ and frontend ESLint/Prettier/Stylelint ancestry comes from
 `@rocketsarenostalgic/quality-config`.
 
 The PHP standards dependency uses the released `ran/coding-standards` 1.x line;
-`composer.lock` binds v1.0.0 to
-`6af816a02b7d1108ad5c990e9d0fda0af0a13de7`. The frontend package remains locked
+`composer.lock` binds v1.0.1 to
+`0248066be3f4f9476ef7095d888657001488a3de`. The frontend package remains locked
 to reviewed candidate `751edd097e3902efb93992bf47401a1a4f4b1fa8`; move it to a
 released version through a separate reviewed dependency change. Do not replace
 locked packages with floating, unreviewed state. The available opt-in

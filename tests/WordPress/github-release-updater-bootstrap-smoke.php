@@ -48,7 +48,7 @@ require dirname( __DIR__, 2 ) . '/autoload.php';
 
 $assert = static function ( bool $condition, string $message ): void {
 	if ( ! $condition ) {
-		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed CLI-only assertion messages.
+		// Fixed CLI-only assertion messages.
 		throw new RuntimeException( $message );
 	}
 };

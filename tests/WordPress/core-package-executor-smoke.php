@@ -611,7 +611,7 @@ final class RanBoosterCorePackageExecutorSmoke {
 
 	private function assert_success( RAN\WordPress\CorePackageExecutionResult $result ): void {
 		if ( ! $result->is_successful() ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
+			// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 			throw new RuntimeException( 'WordPress core did not complete the disposable package operation: ' . $result->get_failure()->value );
 		}
 	}
@@ -623,7 +623,7 @@ final class RanBoosterCorePackageExecutorSmoke {
 	): void {
 		if ( ! in_array( $result->get_failure(), array( $failure, ...$alternative_failures ), true ) ) {
 			$actual = $result->get_failure();
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
+			// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 			throw new RuntimeException( 'The executor did not return the expected bounded failure: ' . ( null === $actual ? 'success' : $actual->value ) );
 		}
 	}

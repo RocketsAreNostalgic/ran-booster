@@ -687,7 +687,7 @@ function phase44_command( array $cmd, string $cwd, ?array $env = null ): array {
 	fclose( $pipes[2] );
 	$code = proc_close( $p );
 	if ( 0 !== $code ) {
-		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
+		// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 		throw new RuntimeException( 'Disposable command failed: ' . implode( ' ', $cmd ) . ' ' . substr( $out . "\n" . $err, 0, 4000 ) );
 	} return array(
 		'stdout' => $out,

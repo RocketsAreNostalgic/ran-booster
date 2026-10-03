@@ -138,13 +138,13 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 		$provider = new RepositoryReleaseWorkflowProviderDouble();
 		$output   = '';
 		ob_start();
-		// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler, WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test-only handler promotes missing-metadata warnings to exceptions.
+		// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Test-only handler promotes missing-metadata warnings to exceptions.
 		set_error_handler(
 			static function ( int $severity, string $message ): never {
 				throw new \ErrorException( $message, 0, $severity );
 			}
 		);
-		// phpcs:enable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler, WordPress.Security.EscapeOutput.ExceptionNotEscaped
+		// phpcs:enable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler
 		try {
 			$url = $this->controller( provider: $provider, providers: $this->registry_without_metadata( $provider ) )->process_workflow_request( $this->request( 'inspect' ) );
 		} finally {

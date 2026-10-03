@@ -65,7 +65,7 @@ foreach (
 	) as $capability
 ) {
 	if ( $provider !== $registry->require_capability( 'gh', $capability ) ) {
-		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
+		// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 		throw new RuntimeException( 'The installed GitHub provider capability is not registered: ' . $capability );
 	}
 }

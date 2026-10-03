@@ -141,13 +141,13 @@ final class RepeatPackageViewTest extends TestCase {
 		$package_provider_settings = $this->provider_settings( true );
 		$buffer_level              = ob_get_level();
 
-		// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler, WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test-only handler promotes render warnings to exceptions.
+		// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Test-only handler promotes render warnings to exceptions.
 		set_error_handler(
 			static function ( int $severity, string $message, string $file, int $line ): never {
 				throw new \ErrorException( $message, 0, $severity, $file, $line );
 			}
 		);
-		// phpcs:enable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler, WordPress.Security.EscapeOutput.ExceptionNotEscaped
+		// phpcs:enable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler
 
 		try {
 			ob_start();

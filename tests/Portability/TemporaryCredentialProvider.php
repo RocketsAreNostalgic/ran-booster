@@ -49,7 +49,7 @@ final class TemporaryCredentialProvider implements RepositoryProvider, ProviderC
 	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 		$this->credential_ids[] = $request->credential_id;
 		if ( null === $request->credential_id && 0 !== $this->anonymous_failure ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test-only provider error has fixed public text.
+			// Test-only provider error has fixed public text.
 			throw new RuntimeException( 'Repository access failed.', $this->anonymous_failure );
 		}
 		if ( null !== $request->credential_id ) {

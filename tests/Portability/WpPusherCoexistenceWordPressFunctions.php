@@ -52,6 +52,6 @@ function esc_url( string $url ): string {
 }
 
 function wp_die( string $message ): never {
-	// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test helper captures the already escaped wp_die message.
+	// Test helper captures the already escaped wp_die message.
 	throw new \RuntimeException( $message );
 }

@@ -419,23 +419,8 @@ final class TemporaryDebugCapture {
 			throw new RuntimeException( 'The Booster debug capture ownership marker is invalid.' );
 		}
 
-		$metadata_keys        = array_keys( $metadata );
-		$allowed_metadata     = array( 'owner', 'format', 'active_until', 'expires_at' );
-		$legacy_metadata_keys = array( 'owner', 'format', 'started_at', 'active_until', 'stopped_at', 'expires_at' );
-		if ( $allowed_metadata !== $metadata_keys && $legacy_metadata_keys !== $metadata_keys ) {
+		if ( array( 'owner', 'format', 'active_until', 'expires_at' ) !== array_keys( $metadata ) ) {
 			throw new RuntimeException( 'The Booster debug capture metadata is invalid.' );
-		}
-
-		if ( $legacy_metadata_keys === $metadata_keys ) {
-			if ( ! is_string( $metadata['started_at'] ) || false === strtotime( $metadata['started_at'] ) ) {
-				throw new RuntimeException( 'The Booster debug capture timestamps are invalid.' );
-			}
-			if ( null !== $metadata['stopped_at'] ) {
-				if ( ! is_string( $metadata['stopped_at'] ) || false === strtotime( $metadata['stopped_at'] ) ) {
-					throw new RuntimeException( 'The Booster debug capture timestamps are invalid.' );
-				}
-				$metadata['active_until'] = $metadata['stopped_at'];
-			}
 		}
 
 		foreach ( array( 'active_until', 'expires_at' ) as $field ) {
@@ -443,7 +428,6 @@ final class TemporaryDebugCapture {
 				throw new RuntimeException( 'The Booster debug capture timestamps are invalid.' );
 			}
 		}
-		unset( $metadata['started_at'], $metadata['stopped_at'] );
 
 		$entries = array();
 		foreach ( $lines as $line ) {

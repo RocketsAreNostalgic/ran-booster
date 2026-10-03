@@ -179,47 +179,39 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		self::assertSame( '2026-07-23T14:00:00Z', $restarted['active_until'] );
 	}
 
-	public function test_legacy_lifecycle_metadata_remains_readable_and_is_removed_on_write(): void {
-		$metadata = array(
-			'owner'        => 'ran-booster',
-			'format'       => 1,
-			'started_at'   => '2026-07-23T12:00:00Z',
-			'active_until' => '2026-07-23T13:00:00Z',
-			'stopped_at'   => null,
-			'expires_at'   => '2026-07-24T13:00:00Z',
-		);
-		file_put_contents( $this->capture_path, "<?php exit; ?>\n" . json_encode( $metadata ) . "\n" );
-		chmod( $this->capture_path, 0600 );
-
-		$capture = $this->capture();
-		self::assertSame( 'active', $capture->snapshot()['state'] );
-		self::assertSame( 'retained', $capture->stop()['state'] );
-
-		$contents = file_get_contents( $this->capture_path );
-		self::assertStringNotContainsString( 'started_at', $contents );
-		self::assertStringNotContainsString( 'stopped_at', $contents );
+	public function test_legacy_active_capture_is_rejected_without_mutation(): void {
+		$this->assert_legacy_metadata_rejected( null );
 	}
 
-	public function test_legacy_stopped_capture_remains_retained_until_it_is_restarted(): void {
+	public function test_legacy_stopped_capture_is_rejected_without_mutation(): void {
+		$this->assert_legacy_metadata_rejected( '2026-07-23T11:30:00Z' );
+	}
+
+	private function assert_legacy_metadata_rejected( ?string $stopped_at ): void {
 		$metadata = array(
 			'owner'        => 'ran-booster',
 			'format'       => 1,
 			'started_at'   => '2026-07-23T11:00:00Z',
 			'active_until' => '2026-07-23T13:00:00Z',
-			'stopped_at'   => '2026-07-23T11:30:00Z',
-			'expires_at'   => '2026-07-24T11:30:00Z',
+			'stopped_at'   => $stopped_at,
+			'expires_at'   => '2026-07-24T13:00:00Z',
 		);
-		file_put_contents( $this->capture_path, "<?php exit; ?>\n" . json_encode( $metadata ) . "\n" );
+		$contents = "<?php exit; ?>\n" . json_encode( $metadata ) . "\n";
+		file_put_contents( $this->capture_path, $contents );
 		chmod( $this->capture_path, 0600 );
 
 		$capture = $this->capture();
-		self::assertSame( 'retained', $capture->snapshot()['state'] );
+		self::assertSame( 'malformed', $capture->snapshot()['state'] );
 		self::assertFalse( $capture->append( '[ran-booster] refused' ) );
-		self::assertSame( 'active', $capture->start()['state'] );
-
-		$contents = file_get_contents( $this->capture_path );
-		self::assertStringNotContainsString( 'started_at', $contents );
-		self::assertStringNotContainsString( 'stopped_at', $contents );
+		$this->assert_mutation_refused( static fn(): array => $capture->start() );
+		$this->assert_mutation_refused( static fn(): array => $capture->stop() );
+		$this->assert_mutation_refused( static fn(): bool => $capture->delete() );
+		$this->assert_mutation_refused(
+			static function () use ( $capture ): void {
+				$capture->delete_managed_storage();
+			}
+		);
+		self::assertSame( $contents, file_get_contents( $this->capture_path ) );
 	}
 
 	public function test_expired_capture_is_lazily_deleted_and_becomes_inactive(): void {

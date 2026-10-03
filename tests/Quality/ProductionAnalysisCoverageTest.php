@@ -6,6 +6,7 @@ namespace Tests\Quality;
 
 use PHPStan\DependencyInjection\Container;
 use PHPStan\DependencyInjection\ContainerFactory;
+use PHPStan\File\DirectoryWalker;
 use PHPStan\File\FileExcluder;
 use PHPStan\File\FileFinder;
 use PHPStan\File\FileHelper;
@@ -46,7 +47,7 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 		$container = $this->analysis_container();
 		$shipped   = $this->shipped_php_files();
 		$helper    = new FileHelper( $this->root() );
-		$finder    = new FileFinder( new FileExcluder( $helper, array( $shipped[0] ) ), $helper, $container->getParameter( 'fileExtensions' ) );
+		$finder    = new FileFinder( new FileExcluder( $helper, array( $shipped[0] ) ), $helper, $container->getParameter( 'fileExtensions' ), $container->getByType( DirectoryWalker::class ) );
 		$analysed  = $finder->findFiles( $container->getParameter( 'paths' ) )->getFiles();
 
 		self::assertSame( array( $shipped[0] ), array_values( array_diff( $shipped, $analysed ) ) );

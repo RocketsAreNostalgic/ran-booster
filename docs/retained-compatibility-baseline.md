@@ -2,7 +2,65 @@
 
 This is the source audit and decision register for [organisation #120](https://github.com/RocketsAreNostalgic/.github/issues/120), [Core #160](https://github.com/RocketsAreNostalgic/ran-booster/issues/160) and parent [#158](https://github.com/RocketsAreNostalgic/ran-booster/issues/158). It records dispositions and the bounded signature cleanup below. It does not authorize releases, complete controlled-site readback or close those issues.
 
-## Exact source baseline and limits
+## Current disposition checkpoint — 3 October 2026
+
+This follow-up inspects Core `0145bb2f9be4866e46e109cb160ed788cbc25e53`,
+tree `bf2fb937d77e31bcdf9eb02450828abc1e6a66cc`. The earlier audit and
+signature-candidate sections below preserve their original evidence. Their
+pending language is superseded by this checkpoint where explicitly listed.
+PR229 is merged as `fdf6ce9e74cf7a3f514111b83ece3a754156bd26`; its null-only
+artifact-limit argument and two unused Dispatcher slots are delivered, not
+remaining work. PR230's development-tool alignment is also on this baseline.
+This follow-up changes documentation only and claims no new runtime or private
+site qualification.
+
+The recommendation is to retain the current safety, recovery and supported
+contract paths. The table below gives every formerly pending guard/state row a
+bounded disposition and reopening condition; it does not imply that each
+fallback is needed in supported production or that private state was inspected.
+
+| Surface                                                                                                                                  | Current recommendation and evidence                                                                                                                                                                                                                                                                                                                                                                                                    | Remaining action / owner / reopening condition                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TemporaryDebugCapture` six-key format1 metadata                                                                                         | **Retain the bounded decoder; defer removal.** Existing tests preserve stopped captures and remove `started_at`/`stopped_at` on rewrite. Current writers use four keys; capture activity is one hour with one-day retention, and expired captures are lazily deleted. Source constants alone do not establish that every controlled site's old file is absent or expired.                                                              | #160 coordinator retains the reader until Ben supplies a non-sensitive inventory/expiry or reset decision for controlled sites, or explicitly accepts continued format1 retention. Record site coverage, observation date and absent/current/legacy/expired classification, without file contents, paths or secrets. Any removal then needs stopped-state, expiry and malformed-file regressions. No reset is authorized here.                                  |
+| `WordPressInstallationStore` option and schema4 records                                                                                  | **Retain current Core-owned provider-neutral state.** The historical `ran_booster_assisted_hooks_installations` name is not a remaining provider-ownership gap. Closed [#150's final reconciliation](https://github.com/RocketsAreNostalgic/ran-booster/issues/150#issuecomment-5728602653) completes repository architecture; its Phase4 integration explicitly preserves this Core store while delegating provider-specific cleanup. | Correct the earlier table's stale “Gap4 closeout” routing; do not reopen #150 or rename/reset this option without a new concrete state/ownership requirement. Ben's two controlled-site deployment prerequisites remain: remove any pre-retirement Assisted Hooks runtime before deployment, and inspect/reset obsolete prerelease workflow-assistance records if present. These are separate from current schema4 records and cannot be certified from GitHub. |
+| `PublicRepositoryLookupProfileStore::read_option()` / `write_option()`                                                                   | **Retain now; defer unsupported-bootstrap simplification.** Reads return empty preferences; writes return false and `set()` checks readback. Current consumers are the picker, package/profile controllers, provider presenter and self-destruct purger, composed by `BoosterServiceProvider`. No maintained pre-option-API production entrypoint was found.                                                                           | #160 may remove the missing-function accommodations with explicit test seams and unchanged real readback/failure behavior in a separate reviewed cleanup. Retain current behavior until then; a supported partial-bootstrap caller or demonstrated failure changes the disposition.                                                                                                                                                                             |
+| `CredentialExpiryObservationStore::read_option()` / `write_option()`                                                                     | **Retain now; defer unsupported-bootstrap simplification.** The same option-API baseline applies. `CredentialExpiryReminder`, presenter, profile controller and purger consume these records; display observations are not independent credential authority. Writes return false and persistence checks readback.                                                                                                                      | Same #160 cleanup trigger and regression boundary as the preference store; no lower WordPress support or permanent beta compatibility is justified.                                                                                                                                                                                                                                                                                                             |
+| `RepositoryBranchCheckEvidenceStore::read_option()`, `write_option()`, `persist()`, `acquire_mutation_lock()`, `release_mutation_lock()` | **Retain for this cut; defer the five missing-host accommodations as test/bootstrap debt.** The traced production routes below require full WordPress and an outer updater lock. Empty reads and success-shaped missing-write/missing-database fallbacks do not prove persistence or a released lock. No supported-production defect was demonstrated.                                                                                 | #160 owns a future explicit-seam/fail-closed simplification, preserving actual option-write/readback and SQL-lock failures. Reopen urgently only with a supported request reproducing the absent API/database condition. This is not fresh installed proof or a new release gate.                                                                                                                                                                               |
+| `Dashboard` branch-check transient guards                                                                                                | **Retain cache-miss behavior; defer test-oriented simplification.** The dashboard route runs after full bootstrap. Missing transients cause a fresh repository check and no cache write; cached `verified` still requires stored evidence. Namespaced functions are test seams.                                                                                                                                                        | #160 can simplify only with the same fresh-check and evidence-validation regressions; no cache result may become deployment authority. There is no demonstrated supported missing-transient route.                                                                                                                                                                                                                                                              |
+| `LocalTroubleshootingService::filesystem_modification_allowed()`                                                                         | **Retain diagnostic fallback; defer simplification.** It uses `wp_is_file_mod_allowed` when present, otherwise observes `DISALLOW_FILE_MODS`. This fallback does not establish that WordPress filters ran. Diagnostic composition is through `BoosterServiceProvider`; filesystem probing separately requires direct mode and private-directory checks.                                                                                | #160 must preserve filtered policy and probe safety if replacing the fallback with explicit unavailable reporting. A reproduced supported-bootstrap discrepancy is the trigger for a behavior fix; this documentation does not certify custom partial-host embedding.                                                                                                                                                                                           |
+
+The other individually listed guards retain their existing affirmative reasons:
+worker wakeup/clear/inspect report unavailable or failure truthfully; lazy admin
+filesystem/plugin APIs are loaded when available; temporary/theme directory
+fallbacks are diagnostic observations; platform, schema, secret recovery,
+multisite/uninstall and WP Pusher boundaries protect current contracts. None is
+an instruction to support older WordPress or weaken secure-directory checks.
+PreparedArtifact covariance and the 15-key magic getter contract remain current
+contracts, not migration adapters. Updating the stale API10 source comment is
+editorial follow-up only; this docs-only proposal does not edit that runtime file.
+
+### Evidence and closeout limits
+
+The source/bootstrap trace below was rechecked against this current Core tuple
+and the same pinned WordPress 7.0 source. `wp-settings.php` loads
+`functions.php` (which loads `option.php`) and initializes the database before
+active plugins; `SHORTINIT` returns before loading them. Preference/expiry store
+constructors do not perform option IO. Maintained consumers execute through
+Core composition, admin routes/presentation or the `admin_init` purger.
+Repository source search found no supported standalone consumer of these stores.
+This is reachability evidence, not a proof about unknown private callers or
+custom database objects.
+
+Organisation #120 can record these explicit retain/defer dispositions once this
+proposal is independently reviewed and accepted. Core #160's pre-1.0 scope and
+parent #158's combined baseline acceptance remain separate; neither is closed
+by a documentation proposal. The unresolved owner evidence is controlled-site
+state/deployment readback, not unfinished #150 provider architecture. The
+separately owned #124 fixes and diagnostics are not duplicated here. Source CI,
+release-candidate proof, immutable publication and owner/manual acceptance remain
+distinct, and release work remains paused.
+
+## Historical source audit baseline and limits
 
 Core main is `0b724f5cb4b43c89a37fb0008df672488983550b`, tree `7783d2ed56743e9689a39657919ba65bb24a9215`. The local audit tree was verified identical to this GitHub tree. Sources, declarations, callers and existing regression tests were inspected. Search covered `RAN/`, root entrypoints, tests and documentation for compatibility/legacy/fallback/version/schema/covariance/magic-access surfaces. This is a bounded source audit, not a claim that all dynamically reachable ecosystem callers or private installations were enumerated. Existing tests below are evidence of intended behavior; this documentation change does not claim a new canonical runtime suite run.
 

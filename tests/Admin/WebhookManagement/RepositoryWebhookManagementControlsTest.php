@@ -44,6 +44,33 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$_GET = array();
 	}
 
+	public function test_missing_package_authority_is_rejected_at_the_controls_constructor(): void {
+		$this->expectException( \ArgumentCountError::class );
+		$this->expectExceptionMessage( RepositoryWebhookManagementControls::class . '::__construct()' );
+
+		new RepositoryWebhookManagementControls(
+			$this->createMock( WebhookAssistanceFacade::class ),
+			$this->createMock( AdminInteractionFacade::class ),
+			new ProviderRegistry( array() ),
+			'/unused/',
+			'https://example.test/unused/'
+		);
+	}
+
+	public function test_null_package_authority_is_rejected_before_internal_controller_composition(): void {
+		$this->expectException( \TypeError::class );
+		$this->expectExceptionMessage( RepositoryWebhookManagementControls::class . '::__construct(): Argument #6 ($authorities)' );
+
+		new RepositoryWebhookManagementControls(
+			$this->createMock( WebhookAssistanceFacade::class ),
+			$this->createMock( AdminInteractionFacade::class ),
+			new ProviderRegistry( array() ),
+			'/unused/',
+			'https://example.test/unused/',
+			null
+		);
+	}
+
 	public function test_it_registers_the_complete_non_git_hub_provider_presentation_and_request_boundary_once(): void {
 		$provider = new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' );
 		$controls = $this->controls( $provider );

@@ -62,8 +62,14 @@ caller-supplied view PHPDoc and the generated Admin Shell bytes; see
 - Core owns the fixed webhook-management control surface under
   `RAN\Admin\WebhookManagement`. It resolves the selected provider's exact
   webhook fitness and management facets, reuses the existing admin-interaction
-  services and retains the current `ran_booster_assisted_hooks_installations`
-  state only until its ownership is explicitly reconciled under #150 Gap 4.
+  services and owns the provider-neutral schema4 webhook installation records
+  stored in `ran_booster_assisted_hooks_installations`. Closed #150 completed
+  this ownership reconciliation: GitHub-specific workflow-assistance state and
+  cleanup belong to the provider package, while this installation store stays
+  Core-owned. The historical option name does not require a migration or restore
+  an Assisted Hooks runtime boundary. Keep #150's controlled-site deployment
+  prerequisites separate: remove any pre-retirement Assisted Hooks runtime and
+  inspect/reset obsolete prerelease workflow-assistance records if present.
   Providers own webhook operations and bounded remediation; they do not supply
   Core UI, routes or schemas. Booster is pre-release: do not add or restore
   runtime adapters, coexistence markers, notices or dispatch branches for the

@@ -1,8 +1,38 @@
 # Beta.31 naming recovery — 2 October 2026
 
-This is a source-preparation checkpoint for #167. It does not authorize a merge,
-package publication, or release #181. Core main remains
-`3cc0c44bb19cd8e1fe32e299067900ca3a415e07`.
+<a id="remaining-gates-and-landing-order"></a>
+
+## Post-merge recovery checkpoint — 2 October 2026
+
+Core [#224](https://github.com/RocketsAreNostalgic/ran-booster/pull/224) is merged
+at `e0f7046521ad3c3b8ab265721efa27b53360d806`, tree
+`aaacaf1e7285b8b79e8c2a3522b53a0314a07dd0`. Owned PHP naming and the immutable
+Provider beta.12 adoption are complete. Exact
+[merged-main Quality](https://github.com/RocketsAreNostalgic/ran-booster/actions/runs/37013068466)
+passed canonical checks, archive verification and installed WordPress/database
+proofs. The corrected artifact-handoff fixture below is included in that tree.
+
+Release [#181](https://github.com/RocketsAreNostalgic/ran-booster/pull/181) remains
+open and unmerged at `4b7631d6f1817653f3bc4e1bbb7081f693733175`. Its
+[managed candidate qualification](https://github.com/RocketsAreNostalgic/ran-booster/actions/runs/37013918155)
+passed; the PR-triggered run is `action_required` and required PR contexts remain
+unfulfilled. No Core beta.31 publication occurred. Release merges, workflow approvals
+and publication work are paused. This checkpoint grants no release authorization.
+
+Actual immutable Core publication and matching Bitbucket/Migrator certification
+remain separate delivery steps. The broader #167 quality/exception acceptance
+matrix and pre-1.0 #158/#160 retained-path audit remain open. Owner-deferred
+[organisation #81](https://github.com/RocketsAreNostalgic/.github/issues/81)/[#85](https://github.com/RocketsAreNostalgic/.github/issues/85)
+UI/presentation and interactive production-onboarding acceptance, and Migrator's
+manual installed acceptance, are not completed by technical CI.
+
+## Historical source-preparation record
+
+The record below preserves the preparation checkpoint and its landing sequence.
+At that time Core main was `3cc0c44bb19cd8e1fe32e299067900ca3a415e07`.
+Its pending source-qualification/merge steps are superseded by the checkpoint
+above. Earlier source-overlay results remain historical evidence and do not
+qualify a later tree or released tuple.
 
 ## Preserved work
 
@@ -85,7 +115,7 @@ source suites passed at their recorded host checkpoint: Provider 432 tests /
 exact current qualification and host-pin evidence; later heads supersede this
 preparation table.
 
-## Remaining gates and landing order
+## Landing gates recorded during source preparation
 
 GitHub Provider source #53 and release #54 are merged. The immutable
 `v1.0.0-beta.12` release (ID `401815218`) and its tag both target

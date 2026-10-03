@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN;
 
+use ArgumentCountError;
 use InvalidArgumentException;
 
 /**
@@ -19,12 +20,12 @@ final class PackageArtifactLimit {
 	public const MINIMUM_ARTIFACT_BYTES         = 1048576;
 	public const MAXIMUM_ARTIFACT_BYTES         = 536870911;
 
-	/**
-	 * The null-only argument preserves source compatibility with callers from the
-	 * removed future-override seam without accepting any package-specific limit.
-	 */
-	public static function resolve( null $legacy_null = null ): int {
-		unset( $legacy_null );
+	public static function resolve(): int {
+		// PHP otherwise ignores extra positional arguments to user-defined methods.
+		if ( func_num_args() !== 0 ) {
+			throw new ArgumentCountError( 'Artifact limits resolve from site configuration without arguments.' );
+		}
+
 		if ( defined( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ) ) {
 			return self::require_valid( constant( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ) );
 		}

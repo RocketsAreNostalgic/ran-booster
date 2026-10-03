@@ -243,9 +243,11 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 				$repository_view_urls,
 				$repository_view_request_urls,
 				null !== $webhook_management && $webhook_management->has_management_capability( $provider['code'] )
-					? static function () use ( $webhook_management, $provider, $requested_repository_id, $provider_return_url, $repository_view_urls, $has_branch_consumer, $selected_repository_row ): void {
+					? static function () use ( $webhook_management, $provider, $requested_repository_id, $provider_return_url, $repository_view_urls, $has_branch_consumer, $selected_repository_row ): bool {
 						$return_url = is_string( $repository_view_urls['branch'] ?? null ) ? $repository_view_urls['branch'] : $provider_return_url;
 						$webhook_management->render_repository_webhook_setup( $provider['code'], $requested_repository_id, $return_url, $has_branch_consumer, (string) ( $selected_repository_row['repository'] ?? '' ) );
+
+						return true;
 					}
 					: null,
 				static function () use ( $selected_repository_row, $provider_return_url, $repository_view_urls ): void {

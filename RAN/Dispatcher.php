@@ -5,12 +5,10 @@ declare(strict_types=1);
 namespace RAN;
 
 use InvalidArgumentException;
-use RAN\Admin\BulkPackageActionService;
 use RAN\Admin\CredentialExpiryObservationStore;
 use RAN\Admin\DeploymentAdminController;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\PackageAdminController;
-use RAN\Admin\PackageRepositoryRequestResolver;
 use RAN\Admin\ProviderProfileAdminController;
 use RAN\Admin\PublicRepositoryLookupProfileStore;
 use RAN\Deployment\DeploymentAttemptRepository;
@@ -42,7 +40,6 @@ class Dispatcher {
 	 * @param Dashboard             $dashboard Dashboard message target.
 	 * @param ProviderRegistry $providers Provider catalog.
 	 * @param SecretsFile      $secrets   Provider credential store.
-	 * @param PackageRepositoryRequestResolver       $package_repositories Package request resolver.
 	 * @param ManagedPackageWebhookAuthorityResolver $webhook_authorities  Stable webhook authority resolver.
 	 * @param PackageAdminController                  $package_admin        Single-package browser owner.
 	 * @param WordPressUpdaterLock                    $updater_lock         Shared package-authority mutation lock.
@@ -54,13 +51,11 @@ class Dispatcher {
 		Dashboard $dashboard,
 		ProviderRegistry $providers,
 		SecretsFile $secrets,
-		PackageRepositoryRequestResolver $package_repositories,
 		ManagedPackageWebhookAuthorityResolver $webhook_authorities,
 		PackageAdminController $package_admin,
 		WordPressUpdaterLock $updater_lock,
 		?DeploymentCoordinator $deployment_coordinator = null,
 		?CredentialUsageReader $credential_usage = null,
-		?BulkPackageActionService $bulk_package_actions = null,
 		?PublicRepositoryLookupProfileStore $public_lookup_profiles = null,
 		?TemporaryDebugCapture $debug_capture = null,
 		?CredentialExpiryObservationStore $expiry_observations = null,
@@ -68,10 +63,6 @@ class Dispatcher {
 		?DeploymentAttemptRepository $deployment_attempts = null,
 		?ProviderProfileAdminController $provider_profile_interaction = null
 	) {
-		// Retained for positional container and test compatibility; their owners are injected below.
-
-		unset( $package_repositories, $bulk_package_actions );
-
 		$this->dashboard = $dashboard;
 
 		$this->package_admin = $package_admin;

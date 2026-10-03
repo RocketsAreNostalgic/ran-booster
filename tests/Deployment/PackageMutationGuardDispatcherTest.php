@@ -562,7 +562,6 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			$dashboard,
 			$providers,
 			$secrets,
-			new PackageRepositoryRequestResolver( $providers ),
 			new ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
 			$package_admin ?? new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: $plugins, themes: $themes, providers: $providers ),
 			$this->createStub( WordPressUpdaterLock::class ),

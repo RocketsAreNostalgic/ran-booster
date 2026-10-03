@@ -1087,7 +1087,6 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			$dashboard,
 			$this->providers,
 			$secrets,
-			new PackageRepositoryRequestResolver( $this->providers ),
 			new ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
 			new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $this->providers ), plugins: $plugins, themes: $themes, providers: $this->providers ),
 			$this->updater_lock,

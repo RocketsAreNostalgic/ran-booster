@@ -364,7 +364,7 @@ class DeploymentCoordinator {
 			is_string( $package->get_subdirectory() ) ? $package->get_subdirectory() : null,
 			$package->get_deployment_policy(),
 			$user_id,
-			PackageArtifactLimit::resolve( null )
+			PackageArtifactLimit::resolve()
 		);
 	}
 

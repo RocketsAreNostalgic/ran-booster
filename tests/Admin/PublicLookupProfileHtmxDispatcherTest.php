@@ -160,7 +160,6 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 			$dashboard,
 			$providers,
 			new SecretsFile( null, array() ),
-			new PackageRepositoryRequestResolver( $providers ),
 			new ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
 			new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: $plugins, themes: $themes, providers: $providers ),
 			$lock,

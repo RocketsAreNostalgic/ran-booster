@@ -4422,64 +4422,64 @@ msgstr ""
 msgid "Booster could not validate the credentials sidecar."
 msgstr ""
 
-#: RAN/Dispatcher.php:251
+#: RAN/Dispatcher.php:242
 msgid "You do not have sufficient permissions to configure Booster storage."
 msgstr ""
 
-#: RAN/Dispatcher.php:261
+#: RAN/Dispatcher.php:252
 msgid "Automatic secure storage setup is unavailable."
 msgstr ""
 
-#: RAN/Dispatcher.php:280
+#: RAN/Dispatcher.php:271
 msgid "Automatic secure storage setup could not be completed."
 msgstr ""
 
-#: RAN/Dispatcher.php:305
+#: RAN/Dispatcher.php:296
 msgid "You do not have sufficient permissions to recover Booster storage."
 msgstr ""
 
-#: RAN/Dispatcher.php:319
+#: RAN/Dispatcher.php:310
 msgid "Automatic storage recovery is unavailable."
 msgstr ""
 
-#: RAN/Dispatcher.php:338
+#: RAN/Dispatcher.php:329
 msgid "Automatic storage recovery could not be completed."
 msgstr ""
 
-#: RAN/Dispatcher.php:361
+#: RAN/Dispatcher.php:352
 msgid "You do not have sufficient permissions to reset Booster storage."
 msgstr ""
 
-#: RAN/Dispatcher.php:375
+#: RAN/Dispatcher.php:366
 msgid "Empty credential storage reset is unavailable."
 msgstr ""
 
-#: RAN/Dispatcher.php:394
+#: RAN/Dispatcher.php:385
 msgid "Empty credential storage could not be reset safely."
 msgstr ""
 
-#: RAN/Dispatcher.php:416
+#: RAN/Dispatcher.php:407
 msgid "You do not have sufficient permissions to manage logging capture."
 msgstr ""
 
-#: RAN/Dispatcher.php:443
-#: RAN/Dispatcher.php:451
+#: RAN/Dispatcher.php:434
+#: RAN/Dispatcher.php:442
 msgid "Booster could not update the temporary logging capture. No deployment was interrupted."
 msgstr ""
 
-#: RAN/Dispatcher.php:465
+#: RAN/Dispatcher.php:456
 msgid "Temporary logging capture started."
 msgstr ""
 
-#: RAN/Dispatcher.php:466
+#: RAN/Dispatcher.php:457
 msgid "Temporary logging capture stopped."
 msgstr ""
 
-#: RAN/Dispatcher.php:480
+#: RAN/Dispatcher.php:471
 msgid "You do not have sufficient permissions to run troubleshooting."
 msgstr ""
 
-#: RAN/Dispatcher.php:568
+#: RAN/Dispatcher.php:559
 msgid "Diagnostics completed successfully."
 msgstr ""
 

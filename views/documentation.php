@@ -29,7 +29,7 @@ $archive_limit_status = array(
 	'expanded'   => null,
 );
 try {
-	$archive_limit_status['compressed'] = \RAN\PackageArtifactLimit::resolve( null );
+	$archive_limit_status['compressed'] = \RAN\PackageArtifactLimit::resolve();
 	$archive_limit_status['expanded']   = $archive_limit_status['compressed'] * 4;
 } catch ( \InvalidArgumentException ) {
 	$archive_limit_status['valid'] = false;

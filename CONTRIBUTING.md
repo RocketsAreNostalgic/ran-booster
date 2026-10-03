@@ -29,6 +29,16 @@ analysis of dependency bodies. Tests and maintenance scripts retain syntax,
 standards and their behavioural gates, rather than being counted as production
 analysis coverage.
 
+Analysis declarations follow the supported WordPress 7.0 floor. The direct
+`php-stubs/wordpress-stubs` constraint is `~7.0.0`: accept 7.0 patch declarations
+without silently modelling a later WordPress minor. Updating the support floor
+requires an explicit declaration review. The locked PHPStan 2.2.16 and
+phpstan-wordpress 2.0.4 support the Composer PHP 8.2 platform; their minimum
+constraints also preserve the coverage test's current analyzer API and the
+extension's WordPress 7.0 declaration support. These are development-only tools.
+Their adoption does not raise the enforced analysis level or change its roots,
+exclusions, or `treatPhpDocTypesAsCertain` policy.
+
 `ProductionAnalysisCoverageTest` derives shipped PHP from `release-files.txt`
 and compares it with PHPStan's effective direct file selection, including
 exclusions. New shipped PHP outside that selection fails the ordinary test

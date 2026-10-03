@@ -1,5 +1,62 @@
 # Changelog
 
+## [1.0.0-beta.31](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.30...v1.0.0-beta.31) (2026-10-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove legacy debug capture metadata reader ([#233](https://github.com/RocketsAreNostalgic/ran-booster/issues/233))
+* remove obsolete artifact-limit and Dispatcher arguments ([#229](https://github.com/RocketsAreNostalgic/ran-booster/issues/229))
+* complete remaining owned PHP naming for beta.31 ([#224](https://github.com/RocketsAreNostalgic/ran-booster/issues/224))
+* integrate Portability API3 naming with preserved wire contracts ([#222](https://github.com/RocketsAreNostalgic/ran-booster/issues/222))
+* adopt Provider API13 contracts and published GitHub Provider beta.10 ([#220](https://github.com/RocketsAreNostalgic/ran-booster/issues/220))
+* adopt connected Branch and Provider naming releases ([#218](https://github.com/RocketsAreNostalgic/ran-booster/issues/218))
+* The initial workflow cut introduced Provider API 12 and removed the V2 workflow interface and later template-update operations. The completed beta.31 composition requires Provider API 14 and bundles immutable GitHub Provider 1.0.0-beta.13. Provider admission uses exact API-marker guards. Release workflow API 3 supports initial setup only; historical occupied records retain ownership without restoring retired update authority.
+* migrate mutation guard and self-update policy naming ([#192](https://github.com/RocketsAreNostalgic/ran-booster/issues/192))
+* migrate package command and result naming ([#191](https://github.com/RocketsAreNostalgic/ran-booster/issues/191))
+* migrate storage mutation and failure naming ([#190](https://github.com/RocketsAreNostalgic/ran-booster/issues/190))
+* migrate deployment attempt and worker naming ([#189](https://github.com/RocketsAreNostalgic/ran-booster/issues/189))
+* migrate package subdirectory naming ([#188](https://github.com/RocketsAreNostalgic/ran-booster/issues/188))
+* migrate deployment storage failure naming ([#187](https://github.com/RocketsAreNostalgic/ran-booster/issues/187))
+* migrate deployment check failure naming ([#186](https://github.com/RocketsAreNostalgic/ran-booster/issues/186))
+* migrate deployment request naming ([#185](https://github.com/RocketsAreNostalgic/ran-booster/issues/185))
+* migrate deployment outcome naming ([#184](https://github.com/RocketsAreNostalgic/ran-booster/issues/184))
+* migrate package source factory naming ([#183](https://github.com/RocketsAreNostalgic/ran-booster/issues/183))
+* migrate deployment policy and state naming ([#182](https://github.com/RocketsAreNostalgic/ran-booster/issues/182))
+
+### Features
+
+* adopt Provider API13 contracts and published GitHub Provider beta.10 ([#220](https://github.com/RocketsAreNostalgic/ran-booster/issues/220)) ([d5b35ac](https://github.com/RocketsAreNostalgic/ran-booster/commit/d5b35ac53692fc3f40c8cad76eef35155a360ec8))
+* adopt released protocol5 updater and GitHub Provider beta.11 ([#223](https://github.com/RocketsAreNostalgic/ran-booster/issues/223)) ([3cc0c44](https://github.com/RocketsAreNostalgic/ran-booster/commit/3cc0c44bb19cd8e1fe32e299067900ca3a415e07))
+* cut repository providers over to initial-only workflow API 12 ([c335d6a](https://github.com/RocketsAreNostalgic/ran-booster/commit/c335d6a1322db6dbb51dec4dee6c0fe2d026cc1e))
+
+
+### Bug Fixes
+
+* adopt released journal and Support dependencies ([#180](https://github.com/RocketsAreNostalgic/ran-booster/issues/180)) ([a992e9d](https://github.com/RocketsAreNostalgic/ran-booster/commit/a992e9d58b555ee019e6bd69fb61eec12c8d19e9))
+* enforce secrets and webhook boundary contracts ([#231](https://github.com/RocketsAreNostalgic/ran-booster/issues/231)) ([6aad7d0](https://github.com/RocketsAreNostalgic/ran-booster/commit/6aad7d0f303930b2b6de41618c6c99e7b80bf0f1))
+* preserve repository webhook panel output ([#228](https://github.com/RocketsAreNostalgic/ran-booster/issues/228)) ([775087a](https://github.com/RocketsAreNostalgic/ran-booster/commit/775087ad93e88a2901d992ff525fb5345d45ff2c))
+
+
+### Code Refactoring
+
+* adopt connected Branch and Provider naming releases ([#218](https://github.com/RocketsAreNostalgic/ran-booster/issues/218)) ([9b634bd](https://github.com/RocketsAreNostalgic/ran-booster/commit/9b634bdf10ae2866ceca54ac6262d4845fa859d2))
+* complete remaining owned PHP naming for beta.31 ([#224](https://github.com/RocketsAreNostalgic/ran-booster/issues/224)) ([e0f7046](https://github.com/RocketsAreNostalgic/ran-booster/commit/e0f7046521ad3c3b8ab265721efa27b53360d806))
+* integrate Portability API3 naming with preserved wire contracts ([#222](https://github.com/RocketsAreNostalgic/ran-booster/issues/222)) ([290fdd1](https://github.com/RocketsAreNostalgic/ran-booster/commit/290fdd164a3f483b84e61b91daba123457aac672))
+* migrate deployment attempt and worker naming ([#189](https://github.com/RocketsAreNostalgic/ran-booster/issues/189)) ([14de5b6](https://github.com/RocketsAreNostalgic/ran-booster/commit/14de5b69f48bebba6509a68062e84a224fde66ac))
+* migrate deployment check failure naming ([#186](https://github.com/RocketsAreNostalgic/ran-booster/issues/186)) ([97f090f](https://github.com/RocketsAreNostalgic/ran-booster/commit/97f090f979ce308370fa94574a88a6a24949102a))
+* migrate deployment outcome naming ([#184](https://github.com/RocketsAreNostalgic/ran-booster/issues/184)) ([d043be0](https://github.com/RocketsAreNostalgic/ran-booster/commit/d043be06a06c2102eda064bdc7a75a1a7466622c))
+* migrate deployment policy and state naming ([#182](https://github.com/RocketsAreNostalgic/ran-booster/issues/182)) ([110859e](https://github.com/RocketsAreNostalgic/ran-booster/commit/110859e09199d558a5f60a1d1cc9c42779172590))
+* migrate deployment request naming ([#185](https://github.com/RocketsAreNostalgic/ran-booster/issues/185)) ([e6a5710](https://github.com/RocketsAreNostalgic/ran-booster/commit/e6a5710417886ba9d18a1d4273fe1ab001403542))
+* migrate deployment storage failure naming ([#187](https://github.com/RocketsAreNostalgic/ran-booster/issues/187)) ([2753e34](https://github.com/RocketsAreNostalgic/ran-booster/commit/2753e34b0b50a53f69e21e6a0db43c55fc903917))
+* migrate mutation guard and self-update policy naming ([#192](https://github.com/RocketsAreNostalgic/ran-booster/issues/192)) ([1e76119](https://github.com/RocketsAreNostalgic/ran-booster/commit/1e7611901a2966524886b8e6c14efc4f87a71101))
+* migrate package command and result naming ([#191](https://github.com/RocketsAreNostalgic/ran-booster/issues/191)) ([a34c4e0](https://github.com/RocketsAreNostalgic/ran-booster/commit/a34c4e082f17fe9ad77f64aa6f63f3eff7c91bb6))
+* migrate package source factory naming ([#183](https://github.com/RocketsAreNostalgic/ran-booster/issues/183)) ([5ab1334](https://github.com/RocketsAreNostalgic/ran-booster/commit/5ab1334d809ea5bef356e470b8af9c3f6206a3b5))
+* migrate package subdirectory naming ([#188](https://github.com/RocketsAreNostalgic/ran-booster/issues/188)) ([ca45654](https://github.com/RocketsAreNostalgic/ran-booster/commit/ca45654a27827e2afba79d2cfcf6c07652285d8d))
+* migrate storage mutation and failure naming ([#190](https://github.com/RocketsAreNostalgic/ran-booster/issues/190)) ([c731a25](https://github.com/RocketsAreNostalgic/ran-booster/commit/c731a25e1e66949b57bd2b281f63a1322e93c015))
+* remove legacy debug capture metadata reader ([#233](https://github.com/RocketsAreNostalgic/ran-booster/issues/233)) ([e7b26f8](https://github.com/RocketsAreNostalgic/ran-booster/commit/e7b26f8e836ca8c73602cd2a3547f11a9d7156ce))
+* remove obsolete artifact-limit and Dispatcher arguments ([#229](https://github.com/RocketsAreNostalgic/ran-booster/issues/229)) ([fdf6ce9](https://github.com/RocketsAreNostalgic/ran-booster/commit/fdf6ce9e74cf7a3f514111b83ece3a754156bd26))
+
 ## [1.0.0-beta.30](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.29...v1.0.0-beta.30) (2026-09-24)
 
 

@@ -23,7 +23,7 @@ final class RepositoryWebhookManagementControls {
 	private readonly WebhookDisplayModel $display;
 	private readonly WordPressInstallationStore $installation_store;
 	private readonly WebhookAssistanceFacade $assistance;
-	private readonly ?ManagedPackageWebhookAuthorityResolver $authorities;
+	private readonly ManagedPackageWebhookAuthorityResolver $authorities;
 	private bool $enabled = false;
 
 	public function __construct(
@@ -32,7 +32,7 @@ final class RepositoryWebhookManagementControls {
 		private readonly ProviderRegistry $providers,
 		private readonly string $plugin_path,
 		private readonly string $plugin_url,
-		?ManagedPackageWebhookAuthorityResolver $authorities = null
+		ManagedPackageWebhookAuthorityResolver $authorities
 	) {
 		$this->assistance         = $facade;
 		$this->authorities        = $authorities;
@@ -71,7 +71,7 @@ final class RepositoryWebhookManagementControls {
 			return;
 		}
 
-		$authority = null === $this->authorities ? null : $this->authorities->for_package( $type, $package->identifier() );
+		$authority = $this->authorities->for_package( $type, $package->identifier() );
 		if ( null === $authority || ! $this->supports_provider( $authority['provider_code'] ) ) {
 			$this->render_unavailable_package_webhook_setup(
 				null === $authority

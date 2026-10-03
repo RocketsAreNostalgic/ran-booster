@@ -241,6 +241,18 @@ final class NormalizedValuesTest extends TestCase {
 		self::assertSame( array( $first, $second ), $result->get_events() );
 	}
 
+	public function test_webhook_envelope_normalizes_named_and_mixed_arguments_to_an_ordered_list(): void {
+		$first  = new PushEvent( ProviderCode::parse( 'bb' ), 'workspace/project', 'one', 'main', 'aaa', 'request' );
+		$second = new PushEvent( ProviderCode::parse( 'bb' ), 'workspace/project', 'one', 'release', 'bbb', 'request' );
+
+		foreach ( array(
+			WebhookEnvelope::events( second: $first, first: $second ),
+			WebhookEnvelope::events( $first, remaining: $second ),
+		) as $envelope ) {
+			self::assertSame( array( $first, $second ), $envelope->get_events() );
+		}
+	}
+
 	public function test_webhook_envelope_distinguishes_probe_and_ignored_requests(): void {
 		self::assertTrue( WebhookEnvelope::probe()->is_probe() );
 		self::assertSame( array(), WebhookEnvelope::probe()->get_events() );

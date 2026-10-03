@@ -143,6 +143,7 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 		$this->artifact = new ParityAdmittedArtifact( $this );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterface -- The fixture implementation of record_resolved_ref retains the production method contract; these inputs do not affect this controlled result.
 	public function record_resolved_ref( string $ref ): void {
 		$this->events[] = 'resolved';
 	}
@@ -158,6 +159,7 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 		$this->events[] = 'finish:' . $code;
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed -- The fixture implementation of prepare retains the production method contract; these inputs do not affect this controlled result.
 	public function prepare( BranchDeploymentDeclaration $deployment, ?array $baseline ): AdmittedBranchArtifact {
 		$this->events[] = 'prepare';
 		return $this->artifact;
@@ -175,6 +177,7 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 		}
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of frozen_target retains the production method contract; these inputs do not affect this controlled result.
 	public function frozen_target( BranchDeploymentDeclaration $deployment, bool $defer_existing ): ?array {
 		$this->events[] = $defer_existing ? 'frozen:defer' : 'frozen:live';
 		return $this->baseline;
@@ -185,10 +188,12 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 		return false;
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterface -- The fixture implementation of recheck_managed retains the production method contract; these inputs do not affect this controlled result.
 	public function recheck_managed( BranchDeploymentDeclaration $deployment ): void {
 		$this->events[] = 'recheck';
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterface -- The fixture implementation of installed retains the production method contract; these inputs do not affect this controlled result.
 	public function installed( BranchDeploymentDeclaration $deployment ): array {
 		$this->events[] = 'installed';
 		return array(
@@ -198,20 +203,24 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 		);
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of baseline_now retains the production method contract; these inputs do not affect this controlled result.
 	public function baseline_now( BranchDeploymentDeclaration $deployment, array $baseline ): ?array {
 		$this->events[] = 'baseline-now';
 		return $baseline;
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterface -- The fixture implementation of adopt retains the production method contract; these inputs do not affect this controlled result.
 	public function adopt( BranchDeploymentDeclaration $deployment ): bool {
 		$this->events[] = 'adopt';
 		return true;
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed -- The fixture implementation of preflight retains the production method contract; these inputs do not affect this controlled result.
 	public function preflight( BranchDeploymentDeclaration $deployment, AdmittedBranchArtifact $artifact ): void {
 		$this->events[] = 'preflight';
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed -- The fixture implementation of execute retains the production method contract; these inputs do not affect this controlled result.
 	public function execute( BranchDeploymentDeclaration $deployment, ?array $baseline, AdmittedBranchArtifact $artifact ): CorePackageExecutionResult {
 		$this->events[] = 'execute';
 		return CorePackageExecutionResult::succeeded();

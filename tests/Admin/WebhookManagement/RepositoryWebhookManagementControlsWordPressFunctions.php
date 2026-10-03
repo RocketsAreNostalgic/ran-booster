@@ -31,6 +31,7 @@ function wp_unslash( mixed $value ): mixed {
 }
 
 /** @param list<string> $dependencies */
+// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- WordPress wp_enqueue_style stub preserves native argument slots; compact() reads the parameters to record the exact call arguments.
 function wp_enqueue_style( string $handle, string $source, array $dependencies = array(), string|bool|null $version = false ): void {
 	$GLOBALS['ran_booster_repository_webhook_management_styles'][] = compact( 'handle', 'source', 'dependencies', 'version' );
 }

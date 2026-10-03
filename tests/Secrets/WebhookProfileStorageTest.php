@@ -251,10 +251,12 @@ final class WebhookProfileStorageTest extends TestCase {
 					return array();
 				}
 
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of webhook_from_constants retains the production method contract; these inputs do not affect this controlled result.
 				public function webhook_from_constants( array $constants ): ?array {
 					return null;
 				}
 
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of authorize_webhook retains the production method contract; these inputs do not affect this controlled result.
 				public function authorize_webhook(
 					SignedWebhookVerification $verification,
 					string $repository_authority_id,
@@ -263,6 +265,7 @@ final class WebhookProfileStorageTest extends TestCase {
 					return false;
 				}
 
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of repository_target_matches retains the production method contract; these inputs do not affect this controlled result.
 				public function repository_target_matches( string $target, string $repository_locator ): bool {
 					return false;
 				}

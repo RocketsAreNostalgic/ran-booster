@@ -66,6 +66,7 @@ final class SignedWebhookVerifierTest extends TestCase {
 				parent::__construct( '/unused/signed-verifier-secrets.php', array() );
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of webhook_materials retains the production method contract; these inputs do not affect this controlled result.
 			public function webhook_materials( ProviderCode|string $provider ): array {
 				++$this->calls;
 
@@ -139,6 +140,7 @@ final class SignedWebhookVerifierTest extends TestCase {
 				parent::__construct( '/unused/signed-verifier-secrets.php', array() );
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of webhook_materials retains the production method contract; these inputs do not affect this controlled result.
 			public function webhook_materials( ProviderCode|string $provider ): array {
 				return $this->profiles;
 			}

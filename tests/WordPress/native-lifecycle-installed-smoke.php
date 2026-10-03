@@ -1,7 +1,6 @@
 <?php
 
 // A fresh WP-CLI request proves the installed Core's eager managed-target scan.
-// phpcs:disable
 
 use RAN\BoosterGitHubProvider\V1\GitHubProvider;
 use RAN\RepositoryProvider\ProviderRegistry;
@@ -12,10 +11,10 @@ if ( ! defined( 'WP_CLI' ) || ! WP_CLI || '1' !== getenv( 'RAN_BOOSTER_RELEASE_C
 	throw new RuntimeException( 'The native lifecycle smoke requires the marked installed CI site.' );
 }
 
-$scale = getenv( 'RAN_BOOSTER_NATIVE_LIFECYCLE_SCALE' );
-$items = get_option( 'ran_booster_c4_native_items', null );
+$scale    = getenv( 'RAN_BOOSTER_NATIVE_LIFECYCLE_SCALE' );
+$items    = get_option( 'ran_booster_c4_native_items', null );
 $archives = get_option( 'ran_booster_c4_native_archives', null );
-if ( ! is_string( $scale ) || ! in_array( $scale, array( '1', '5', '10', '20' ), true ) || ! is_array( $items ) || ! is_array( $archives ) || (int) $scale !== count( $items ) ) {
+if ( ! is_string( $scale ) || ! in_array( $scale, array( '1', '5', '10', '20' ), true ) || ! is_array( $items ) || ! is_array( $archives ) || count( $items ) !== (int) $scale ) {
 	throw new RuntimeException( 'The native lifecycle fixture state is invalid.' );
 }
 
@@ -29,28 +28,56 @@ global $wp_filesystem;
 if ( ! WP_Filesystem() || ! $wp_filesystem instanceof WP_Filesystem_Direct ) {
 	throw new RuntimeException( 'The native lifecycle proof requires the direct WordPress filesystem.' );
 }
-$started = microtime( true );
+$started      = microtime( true );
 $self_archive = getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_ARCHIVE_ROOT' ) . '/ran-booster.zip';
-if ( file_exists( $self_archive ) || is_link( $self_archive ) ) { throw new RuntimeException( 'Self-offer archive is not exclusively owned.' ); }
+if ( file_exists( $self_archive ) || is_link( $self_archive ) ) {
+	throw new RuntimeException( 'Self-offer archive is not exclusively owned.' ); }
 $self_zip = new ZipArchive();
-if ( true !== $self_zip->open( $self_archive, ZipArchive::CREATE ) ) { throw new RuntimeException( 'Self-offer archive creation failed.' ); }
+if ( true !== $self_zip->open( $self_archive, ZipArchive::CREATE ) ) {
+	throw new RuntimeException( 'Self-offer archive creation failed.' ); }
 $self_zip->addFromString( 'ran-booster/ran-booster.php', "<?php\n/*\nPlugin Name: RAN Booster\nVersion: 2.0.0-beta.1\nRequires at least: 7.0\nRequires PHP: 8.2\nUpdate URI: https://github.com/RocketsAreNostalgic/ran-booster\n*/\n" );
 $self_zip->close();
 $archives['RocketsAreNostalgic/ran-booster'] = $self_archive;
-$counts  = array( 'credentials' => 0, 'http' => 0, 'http_bytes' => 0, 'wordpress_org' => 0, 'zip_bytes' => 0, 'zip_count' => 0, 'blocked' => 0 );
+$counts                                      = array(
+	'credentials'   => 0,
+	'http'          => 0,
+	'http_bytes'    => 0,
+	'wordpress_org' => 0,
+	'zip_bytes'     => 0,
+	'zip_count'     => 0,
+	'blocked'       => 0,
+);
 add_filter(
 	'pre_http_request',
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- Preserve the WordPress callback argument positions; the fixture uses only the arguments needed for its controlled result.
 	static function ( mixed $pre, array $args, string $url ) use ( $archives, &$counts ): mixed {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Controlled HTTP fixture parses exact native URL components; retain native return and failure semantics.
 		$host = parse_url( $url, PHP_URL_HOST );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Controlled HTTP fixture parses exact native URL components; retain native return and failure semantics.
 		$path = parse_url( $url, PHP_URL_PATH );
 		if ( 'api.wordpress.org' === $host && in_array( $path, array( '/plugins/update-check/1.1/', '/themes/update-check/1.1/' ), true ) ) {
 			++$counts['wordpress_org'];
 			$body = '/plugins/update-check/1.1/' === $path
-				? array( 'plugins' => array(), 'translations' => array(), 'no_update' => array() )
-				: array( 'themes' => array(), 'translations' => array(), 'no_update' => array() );
-			return array( 'body' => wp_json_encode( $body ), 'headers' => array(), 'response' => array( 'code' => 200, 'message' => 'OK' ) );
+				? array(
+					'plugins'      => array(),
+					'translations' => array(),
+					'no_update'    => array(),
+				)
+				: array(
+					'themes'       => array(),
+					'translations' => array(),
+					'no_update'    => array(),
+				);
+			return array(
+				'body'     => wp_json_encode( $body ),
+				'headers'  => array(),
+				'response' => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
+			);
 		}
-		if ( ! is_string( $path ) || ! str_starts_with( $path, '/repos/ran-booster-c4/' ) && ! str_starts_with( $path, '/repos/RocketsAreNostalgic/ran-booster' ) && ! str_starts_with( $path, '/repositories/' ) ) {
+		if ( ! is_string( $path ) || ( ! str_starts_with( $path, '/repos/ran-booster-c4/' ) && ! str_starts_with( $path, '/repos/RocketsAreNostalgic/ran-booster' ) && ! str_starts_with( $path, '/repositories/' ) ) ) {
 			++$counts['blocked'];
 			return new WP_Error( 'ran_booster_c4_network_denied' );
 		}
@@ -59,27 +86,56 @@ add_filter(
 			++$counts['credentials'];
 		}
 		foreach ( $archives as $repository => $archive ) {
-		if ( ! is_string( $repository ) || ! is_string( $archive ) ) {
-			continue;
-		}
-		$repository_number = (int) substr( $repository, strrpos( $repository, '-' ) + 1 );
-		$self = 'RocketsAreNostalgic/ran-booster' === $repository;
-		$repository_id     = $self ? 1319710173 : 940000 + $repository_number;
-		$release_id        = hexdec( substr( sha1( $repository ), 0, 6 ) );
-		$asset_id          = $release_id + 1;
-		$repository_path   = '/repos/' . $repository;
-		$release          = array( 'id' => $release_id, 'tag_name' => 'v2.0.0', 'draft' => false, 'prerelease' => false, 'immutable' => true, 'published_at' => '2026-09-06T00:00:00Z', 'html_url' => 'https://github.com/' . $repository . '/releases/tag/v2.0.0', 'assets' => array( array( 'id' => $asset_id, 'name' => basename( $archive ), 'size' => filesize( $archive ), 'state' => 'uploaded', 'digest' => 'sha256:' . hash_file( 'sha256', $archive ), 'browser_download_url' => 'https://api.github.com' . $repository_path . '/releases/assets/' . $asset_id ) ) );
-		if ( $self ) { $release['tag_name'] = 'v2.0.0-beta.1'; $release['prerelease'] = true; $release['html_url'] = 'https://github.com/' . $repository . '/releases/tag/v2.0.0-beta.1'; }
-		$repository_body    = array( 'id' => $repository_id, 'name' => basename( $repository ), 'full_name' => $repository, 'private' => false, 'default_branch' => 'main', 'html_url' => 'https://github.com/' . $repository, 'owner' => array( 'login' => $self ? 'RocketsAreNostalgic' : 'ran-booster-c4' ) );
-		$repository_match   = $path === $repository_path || $path === '/repositories/' . $repository_id || str_starts_with( $path, $repository_path . '/' );
-		if ( ! $repository_match ) {
-			continue;
-		}
+			if ( ! is_string( $repository ) || ! is_string( $archive ) ) {
+				continue;
+			}
+			$repository_number = (int) substr( $repository, strrpos( $repository, '-' ) + 1 );
+			$self              = 'RocketsAreNostalgic/ran-booster' === $repository;
+			$repository_id     = $self ? 1319710173 : 940000 + $repository_number;
+			$release_id        = hexdec( substr( sha1( $repository ), 0, 6 ) );
+			$asset_id          = $release_id + 1;
+			$repository_path   = '/repos/' . $repository;
+			$release           = array(
+				'id'           => $release_id,
+				'tag_name'     => 'v2.0.0',
+				'draft'        => false,
+				'prerelease'   => false,
+				'immutable'    => true,
+				'published_at' => '2026-09-06T00:00:00Z',
+				'html_url'     => 'https://github.com/' . $repository . '/releases/tag/v2.0.0',
+				'assets'       => array(
+					array(
+						'id'                   => $asset_id,
+						'name'                 => basename( $archive ),
+						'size'                 => filesize( $archive ),
+						'state'                => 'uploaded',
+						'digest'               => 'sha256:' . hash_file( 'sha256', $archive ),
+						'browser_download_url' => 'https://api.github.com' . $repository_path . '/releases/assets/' . $asset_id,
+					),
+				),
+			);
+			if ( $self ) {
+				$release['tag_name']   = 'v2.0.0-beta.1';
+				$release['prerelease'] = true;
+				$release['html_url']   = 'https://github.com/' . $repository . '/releases/tag/v2.0.0-beta.1'; }
+			$repository_body  = array(
+				'id'             => $repository_id,
+				'name'           => basename( $repository ),
+				'full_name'      => $repository,
+				'private'        => false,
+				'default_branch' => 'main',
+				'html_url'       => 'https://github.com/' . $repository,
+				'owner'          => array( 'login' => $self ? 'RocketsAreNostalgic' : 'ran-booster-c4' ),
+			);
+			$repository_match = $path === $repository_path || '/repositories/' . $repository_id === $path || str_starts_with( $path, $repository_path . '/' );
+			if ( ! $repository_match ) {
+				continue;
+			}
 			if ( true === ( $args['stream'] ?? false ) && is_string( $args['filename'] ?? null ) && copy( $archive, $args['filename'] ) ) {
 				$counts['zip_bytes'] += filesize( $archive );
 				++$counts['zip_count'];
 				$body = null;
-			} elseif ( $path === $repository_path || $path === '/repositories/' . $repository_id ) {
+			} elseif ( $path === $repository_path || '/repositories/' . $repository_id === $path ) {
 				$body = $repository_body;
 			} elseif ( str_ends_with( $path, '/releases' ) ) {
 				$body = array( $release );
@@ -90,9 +146,17 @@ add_filter(
 			} else {
 				continue;
 			}
-			$encoded = null === $body ? '' : wp_json_encode( $body );
+			$encoded               = null === $body ? '' : wp_json_encode( $body );
 			$counts['http_bytes'] += strlen( $encoded );
-			return array( 'body' => $encoded, 'headers' => array(), 'response' => array( 'code' => 200, 'message' => 'OK' ), 'filename' => $args['filename'] ?? null );
+			return array(
+				'body'     => $encoded,
+				'headers'  => array(),
+				'response' => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
+				'filename' => $args['filename'] ?? null,
+			);
 		}
 		return new WP_Error( 'ran_booster_c4_network_denied' );
 	},
@@ -126,6 +190,7 @@ if ( ! $provider instanceof GitHubProvider ) {
 if ( 1 > did_action( 'after_setup_theme' ) ) {
 	throw new RuntimeException( 'The installed request has not crossed the native activation boundary.' );
 }
+// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
 $targets = ( new ReflectionProperty( GitHubProvider::class, 'native_targets' ) )->getValue( $provider );
 if ( ! is_array( $targets ) || count( $targets ) < count( $items ) ) {
 	throw new RuntimeException( 'The fresh installed request did not register every managed GitHub target.' );
@@ -142,7 +207,7 @@ if ( 2 !== $counts['wordpress_org'] ) {
 }
 $plugin_updates = get_site_transient( 'update_plugins' );
 $theme_updates  = get_site_transient( 'update_themes' );
-$active        = 0;
+$active         = 0;
 foreach ( $items as $item ) {
 	if ( ! is_array( $item ) || ! is_string( $item['type'] ?? null ) || ! is_string( $item['identifier'] ?? null ) || ! is_string( $item['policy'] ?? null ) ) {
 		throw new RuntimeException( 'The native lifecycle item is malformed.' );
@@ -155,23 +220,37 @@ foreach ( $items as $item ) {
 	if ( ! is_object( $target ) ) {
 		throw new RuntimeException( 'The installed Core target key is absent.' );
 	}
+	// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
 	$status = $target->status();
 	if ( ! $status->active ) {
 		throw new RuntimeException( 'The beta.4 public registrar did not activate an exact target.' );
 	}
 	$expected_release_id = (string) hexdec( substr( sha1( (string) $item['repository'] ), 0, 6 ) );
 	if ( '2.0.0' !== $status->offered_version || ! hash_equals( $expected_release_id, $status->candidate_provider_release_id ) ) {
-		throw new RuntimeException( 'The installed target did not retain its exact native offer identity: ' . wp_json_encode( array( 'expected_release_id' => $expected_release_id, 'offered_version' => $status->offered_version, 'candidate_release_id' => $status->candidate_provider_release_id, 'candidate_code' => $status->candidate_code, 'failure_code' => $status->failure_code, 'counts' => $counts ) ) );
+		throw new RuntimeException(
+			'The installed target did not retain its exact native offer identity: ' . wp_json_encode(
+				array(
+					'expected_release_id'  => $expected_release_id,
+					'offered_version'      => $status->offered_version,
+					'candidate_release_id' => $status->candidate_provider_release_id,
+					'candidate_code'       => $status->candidate_code,
+					'failure_code'         => $status->failure_code,
+					'counts'               => $counts,
+				)
+			)
+		);
 	}
 	++$active;
 }
 
 
 foreach ( $items as $item ) {
-	$type   = $item['type'];
+	// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
+	$type    = $item['type'];
 	$updates = 'plugin' === $type ? $plugin_updates : $theme_updates;
 	$offer   = is_object( $updates ) && isset( $updates->response[ $item['identifier'] ] ) ? $updates->response[ $item['identifier'] ] : null;
-	if ( is_array( $offer ) ) { $offer = (object) $offer; }
+	if ( is_array( $offer ) ) {
+		$offer = (object) $offer; }
 	if ( ! is_object( $offer ) ) {
 		throw new RuntimeException( 'The installed native target has no WordPress offer.' );
 	}
@@ -180,12 +259,12 @@ foreach ( $items as $item ) {
 		throw new RuntimeException( 'The installed native automatic policy was not applied.' );
 	}
 	if ( 'automatic' === $item['policy'] ) {
-		$result = null;
+		$result           = null;
 		$automatic_update = static function () use ( $type, $offer, &$result ): void {
 			$result = ( new WP_Automatic_Updater() )->update( $type, $offer );
 		};
-		$target_context = 'plugin' === $type ? WP_PLUGIN_DIR : get_theme_root();
-		$vcs_checkout   = static function ( bool $checkout, string $context ) use ( $target_context ): bool {
+		$target_context   = 'plugin' === $type ? WP_PLUGIN_DIR : get_theme_root();
+		$vcs_checkout     = static function ( bool $checkout, string $context ) use ( $target_context ): bool {
 			return realpath( $context ) === realpath( $target_context ) ? false : $checkout;
 		};
 		if ( ! WP_Upgrader::create_lock( 'auto_updater' ) ) {
@@ -205,19 +284,22 @@ foreach ( $items as $item ) {
 			? ( new Plugin_Upgrader( new WP_Upgrader_Skin() ) )->upgrade( $item['identifier'], array( 'clear_update_cache' => false ) )
 			: ( new Theme_Upgrader( new WP_Upgrader_Skin() ) )->upgrade( $item['identifier'], array( 'clear_update_cache' => false ) );
 	}
-		if ( true !== $result ) {
-			throw new RuntimeException( 'The installed native ' . $type . ' ' . $item['policy'] . ' update failed.' );
-		}
+	if ( true !== $result ) {
+		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
+		throw new RuntimeException( 'The installed native ' . $type . ' ' . $item['policy'] . ' update failed.' );
+	}
 		$version = 'plugin' === $type
 			? ( get_plugin_data( WP_PLUGIN_DIR . '/' . $item['identifier'], false, false )['Version'] ?? '' )
 			: ( get_file_data( get_theme_root() . '/' . $item['identifier'] . '/style.css', array( 'Version' => 'Version' ), 'theme' )['Version'] ?? '' );
-		if ( '2.0.0' !== $version ) {
-			throw new RuntimeException( 'The installed native ' . $type . ' version was not replaced.' );
-		}
+	if ( '2.0.0' !== $version ) {
+		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
+		throw new RuntimeException( 'The installed native ' . $type . ' version was not replaced.' );
+	}
 		$metadata_path = 'plugin' === $type ? WP_PLUGIN_DIR . '/' . $item['identifier'] : get_theme_root() . '/' . $item['identifier'] . '/style.css';
-		if ( ! is_string( $item['expected_digest'] ?? null ) || ! hash_equals( $item['expected_digest'], (string) hash_file( 'sha256', $metadata_path ) ) ) {
-			throw new RuntimeException( 'The installed native ' . $type . ' digest was not replaced.' );
-		}
+	if ( ! is_string( $item['expected_digest'] ?? null ) || ! hash_equals( $item['expected_digest'], (string) hash_file( 'sha256', $metadata_path ) ) ) {
+		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
+		throw new RuntimeException( 'The installed native ' . $type . ' digest was not replaced.' );
+	}
 }
 if ( 1 > $counts['http'] || 1 > $counts['zip_bytes'] || 1 > $counts['zip_count'] ) {
 	throw new RuntimeException( 'The controlled GitHub fixture did not serve native metadata and ZIP bytes.' );
@@ -231,19 +313,41 @@ if ( ! is_object( $self_offer ) || '2.0.0-beta.1' !== ( $self_diagnostics['offer
 }
 $before_bulk = $counts;
 $self_digest = hash_file( 'sha256', WP_PLUGIN_DIR . '/ran-booster/ran-booster.php' );
-$bulk = apply_filters(
+$bulk        = apply_filters(
 	'upgrader_pre_download',
 	false,
 	'fixture.zip',
-	(object) array( 'bulk' => true, 'update_count' => 1, 'update_current' => 1 ),
-	array( 'plugin' => 'ran-booster/ran-booster.php', 'action' => 'update', 'type' => 'plugin' )
+	(object) array(
+		'bulk'           => true,
+		'update_count'   => 1,
+		'update_current' => 1,
+	),
+	array(
+		'plugin' => 'ran-booster/ran-booster.php',
+		'action' => 'update',
+		'type'   => 'plugin',
+	)
 );
 if ( ! is_wp_error( $bulk ) || 'ran_booster_native_update_unsupported_context' !== $bulk->get_error_code()
-	|| $counts !== $before_bulk || $self_digest !== hash_file( 'sha256', WP_PLUGIN_DIR . '/ran-booster/ran-booster.php' ) ) {
+	|| $counts !== $before_bulk || hash_file( 'sha256', WP_PLUGIN_DIR . '/ran-booster/ran-booster.php' ) !== $self_digest ) {
 	throw new RuntimeException( 'The installed Core self bulk guard is unavailable.' );
 }
 
-if ( ! unlink( $self_archive ) ) { throw new RuntimeException( 'Self-offer archive cleanup failed.' ); }
+// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
+if ( ! unlink( $self_archive ) ) {
+	throw new RuntimeException( 'Self-offer archive cleanup failed.' ); }
 require __DIR__ . '/native-lifecycle-installed-cleanup.php';
 
-WP_CLI::success( wp_json_encode( array( 'scale' => (int) $scale, 'active' => $active, 'bootstrap' => $bootstrap_probe, 'operation_seconds' => microtime( true ) - $started, 'memory' => memory_get_peak_usage( true ), 'hooks' => did_action( 'after_setup_theme' ), 'http' => $counts ) ) );
+WP_CLI::success(
+	wp_json_encode(
+		array(
+			'scale'             => (int) $scale,
+			'active'            => $active,
+			'bootstrap'         => $bootstrap_probe,
+			'operation_seconds' => microtime( true ) - $started,
+			'memory'            => memory_get_peak_usage( true ),
+			'hooks'             => did_action( 'after_setup_theme' ),
+			'http'              => $counts,
+		)
+	)
+);

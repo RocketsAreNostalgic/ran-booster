@@ -1,7 +1,6 @@
 <?php
 
 // Executed by WP-CLI inside an isolated disposable WordPress installation.
-// phpcs:disable
 
 use RANBoosterP4Phase0Fixture as Fixture;
 use WP\MCP\Core\McpAdapter;
@@ -17,11 +16,12 @@ $wordpress_root  = realpath( ABSPATH );
 $disposable_mark = ABSPATH . '.ran-booster-p4-disposable-site';
 $subscriber_id   = (int) getenv( 'RAN_BOOSTER_P4_SUBSCRIBER_ID' );
 $admin_id        = get_current_user_id();
-$assertions     = 0;
+$assertions      = 0;
 
 $assert = static function ( bool $condition, string $message ) use ( &$assertions ): void {
 	++$assertions;
 	if ( ! $condition ) {
+		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 		throw new RuntimeException( $message );
 	}
 };
@@ -29,9 +29,10 @@ $assert = static function ( bool $condition, string $message ) use ( &$assertion
 $assert(
 	is_string( $expected_root )
 		&& false !== $wordpress_root
-		&& $wordpress_root === realpath( $expected_root )
+		&& realpath( $expected_root ) === $wordpress_root
 		&& ! is_link( $disposable_mark )
 		&& is_file( $disposable_mark )
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 		&& "RAN Booster P4 disposable test site\n" === file_get_contents( $disposable_mark ),
 	'The P4 proof is not running in the exact disposable site.'
 );
@@ -59,8 +60,13 @@ $assert(
 
 $default_result = $ability->execute();
 $assert( is_array( $default_result ) && 'default-target' === ( $default_result['target'] ?? null ), 'Top-level input normalization failed.' );
-$assert( $admin_id === ( $default_result['actor'] ?? null ), 'Direct PHP execution lost the explicit WordPress user.' );
-$invalid_input = $ability->execute( array( 'target' => 'valid', 'secret' => 'must-not-pass' ) );
+$assert( ( $default_result['actor'] ?? null ) === $admin_id, 'Direct PHP execution lost the explicit WordPress user.' );
+$invalid_input = $ability->execute(
+	array(
+		'target' => 'valid',
+		'secret' => 'must-not-pass',
+	)
+);
 $assert( is_wp_error( $invalid_input ) && 'ability_invalid_input' === $invalid_input->get_error_code(), 'Closed input validation failed.' );
 $invalid_output = wp_get_ability( Fixture\BAD_ABILITY )->execute( array( 'target' => 'valid' ) );
 $assert( is_wp_error( $invalid_output ) && 'ability_invalid_output' === $invalid_output->get_error_code(), 'Output validation failed.' );
@@ -75,8 +81,8 @@ $addon_result  = $addon_ability instanceof WP_Ability ? $addon_ability->execute(
 $assert( is_array( $addon_result ) && 'addon' === ( $addon_result['owner'] ?? null ), 'The add-on did not own and execute its declaration.' );
 $assert( ! wp_has_ability( 'p4-incompatible-fixture/read-status' ), 'The incompatible component contributed an executable declaration.' );
 
-$adapter    = McpAdapter::instance();
-$dedicated  = $adapter->get_server( Fixture\MCP_SERVER );
+$adapter     = McpAdapter::instance();
+$dedicated   = $adapter->get_server( Fixture\MCP_SERVER );
 $default_mcp = $adapter->get_server( 'mcp-adapter-default-server' );
 $assert( null !== $dedicated, 'The dedicated Booster fixture MCP server is unavailable.' );
 $assert( null !== $default_mcp, 'The MCP Adapter default server is unavailable for negative proof.' );

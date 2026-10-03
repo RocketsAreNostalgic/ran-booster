@@ -341,19 +341,19 @@ class CorePackageExecutor {
 	}
 
 	private function theme_parent_is_available( PreparedArtifact $artifact, string $slug, ?string $subdirectory ): bool {
-		$parent = $this->theme_parent_from_archive( $artifact, $subdirectory );
-		if ( false === $parent ) {
+		$parent_path = $this->theme_parent_from_archive( $artifact, $subdirectory );
+		if ( false === $parent_path ) {
 			return false;
 		}
-		if ( null === $parent ) {
+		if ( null === $parent_path ) {
 			return true;
 		}
-		if ( $slug === $parent || ! function_exists( 'wp_get_theme' ) ) {
+		if ( $slug === $parent_path || ! function_exists( 'wp_get_theme' ) ) {
 			return false;
 		}
 
 		try {
-			return wp_get_theme( $parent )->exists();
+			return wp_get_theme( $parent_path )->exists();
 		} catch ( Throwable ) {
 			return false;
 		}
@@ -412,8 +412,8 @@ class CorePackageExecutor {
 		}
 	}
 
-	private static function is_canonical_child( string $path, string $parent ): bool {
-		return $path !== $parent && str_starts_with( $path . DIRECTORY_SEPARATOR, $parent . DIRECTORY_SEPARATOR );
+	private static function is_canonical_child( string $path, string $parent_path ): bool {
+		return $path !== $parent_path && str_starts_with( $path . DIRECTORY_SEPARATOR, $parent_path . DIRECTORY_SEPARATOR );
 	}
 
 	/** @param list<array<string, mixed>> $completions */

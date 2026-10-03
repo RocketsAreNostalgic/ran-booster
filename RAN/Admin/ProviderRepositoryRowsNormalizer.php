@@ -15,8 +15,6 @@ use Throwable;
  * Builds and protects Core-owned provider repository rows.
  */
 final class ProviderRepositoryRowsNormalizer {
-	// Placeholder meanings are fixed by the named projection fields below.
-	// phpcs:disable WordPress.WP.I18n.MissingTranslatorsComment
 	/** Build the managed-repository projection consumed by the provider page. */
 	public function project_page( array $data, ?RepositoryWebhookManagementControls $webhook_management = null, ?ReleaseWorkflowControls $release_workflow = null ): array {
 		$provider       = is_array( $data['provider'] ?? null ) ? $data['provider'] : array();
@@ -67,7 +65,7 @@ final class ProviderRepositoryRowsNormalizer {
 			$task_urls['repositories'],
 			$release_workflow
 		);
-		$repository_summary           = $this->repository_summary( $model['webhook_rows'], $model['rows'] );
+		$repository_summary           = $this->repository_summary( $model['rows'] );
 		$repository_view              = in_array( $data['repository_view'] ?? null, array( 'status', 'branch', 'releases' ), true ) ? $data['repository_view'] : 'status';
 		$repository_view_urls         = array();
 		$repository_view_request_urls = array();
@@ -124,7 +122,7 @@ final class ProviderRepositoryRowsNormalizer {
 			'repository_list_url'                 => $model['list_url'],
 			'provider_return_url'                 => $model['return_url'],
 			'repository_table_rows'               => array_values( $model['rows'] ),
-			'repository_row_count_label'          => sprintf( _nx( /* translators: %d is the number of repositories shown. */ '%d repository shown', '%d repositories shown', count( $model['rows'] ), 'Provider table repository count', 'ran-booster' ), count( $model['rows'] ) ),
+			'repository_row_count_label'          => sprintf( /* translators: %d is the number of repositories shown. */ _nx( '%d repository shown', '%d repositories shown', count( $model['rows'] ), 'Provider table repository count', 'ran-booster' ), count( $model['rows'] ) ),
 			'selected_repository_row'             => $model['selected'],
 			'activity_url'                        => admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ),
 		) + $this->copy( $provider_label, is_array( $provider['webhook_setup'] ?? null ) ? $provider['webhook_setup'] : null, $counts, $shared_label );
@@ -655,11 +653,10 @@ final class ProviderRepositoryRowsNormalizer {
 	}
 
 	/**
-	 * @param array<string,array<string,mixed>> $webhook_rows Core and webhook-management rows, before provider extensions.
 	 * @param array<string,array<string,mixed>> $rows        Provider-enriched rows.
 	 * @return array{repositories:int,recorded_hooks:int,needs_review:int,release_packages:int,release_repositories:int,release_totals_incomplete:bool,release_workflows_inventory_incomplete:bool,release_workflows_needing_review:int}
 	 */
-	private function repository_summary( array $webhook_rows, array $rows ): array {
+	private function repository_summary( array $rows ): array {
 		$recorded_hooks                   = 0;
 		$needs_review                     = 0;
 		$release_packages                 = 0;
@@ -1004,13 +1001,13 @@ final class ProviderRepositoryRowsNormalizer {
 	/** @param array{repositories:int,packages:int,automatic:int} $counts */
 	private function copy( string $label, ?array $setup, array $counts, string $shared_secret_label ): array {
 		$automatic_label = 0 < $counts['automatic']
-			? sprintf( _n( /* translators: %d is the number of packages with Automatic updates. */ '%d package is Automatic', '%d packages are Automatic', $counts['automatic'], 'ran-booster' ), $counts['automatic'] )
+			? sprintf( /* translators: %d is the number of packages with Automatic updates. */ _n( '%d package is Automatic', '%d packages are Automatic', $counts['automatic'], 'ran-booster' ), $counts['automatic'] )
 			: __( 'None set to Automatic', 'ran-booster' );
 
 		return array(
 			'providerPushDescription'        => sprintf( /* translators: %s is the repository provider name. */ __( '%s push webhooks can trigger managed branch deployments whose Updates setting is Automatic.', 'ran-booster' ), $label ),
 			'automaticPackageLabel'          => $automatic_label,
-			'managedPackageDescription'      => sprintf( _n( /* translators: 1: number of repositories, 2: number of managed packages. */ '%1$d repository contains %2$d managed package.', '%1$d repositories contain %2$d managed packages.', $counts['repositories'], 'ran-booster' ), $counts['repositories'], $counts['packages'] ),
+			'managedPackageDescription'      => sprintf( /* translators: 1: number of repositories, 2: number of managed packages. */ _n( '%1$d repository contains %2$d managed package.', '%1$d repositories contain %2$d managed packages.', $counts['repositories'], 'ran-booster' ), $counts['repositories'], $counts['packages'] ),
 			'provider_instructions_label'    => sprintf( /* translators: %s is the repository provider name. */ __( 'Open %s instructions', 'ran-booster' ), $label ),
 			'secretChoiceDescription'        => sprintf( /* translators: %s is the shared secret label. */ __( 'Use a saved %s or create a repository-scoped secret when isolation is required.', 'ran-booster' ), strtolower( $shared_secret_label ) ),
 			'createProviderWebhookLabel'     => sprintf( /* translators: %s is the repository provider name. */ __( 'Create the %s webhook', 'ran-booster' ), $label ),
@@ -1027,5 +1024,4 @@ final class ProviderRepositoryRowsNormalizer {
 			),
 		);
 	}
-	// phpcs:enable WordPress.WP.I18n.MissingTranslatorsComment
 }

@@ -561,6 +561,7 @@ final class PortabilityViewTest extends TestCase {
 	/**
 	 * @return array<string, string>
 	 */
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- compact() reads all four parameters to construct the expected row model.
 	private function row( string $name, string $identifier, string $action, string $reason ): array {
 		return compact( 'name', 'identifier', 'action', 'reason' ) + array( 'type' => 'Plugin' );
 	}

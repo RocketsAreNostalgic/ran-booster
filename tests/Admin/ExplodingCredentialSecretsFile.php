@@ -18,6 +18,7 @@ final class ExplodingCredentialSecretsFile extends SecretsFile {
 		parent::__construct( $path, $constants );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of save_credential retains the production method contract; these inputs do not affect this controlled result.
 	public function save_credential(
 		ProviderCode|string $provider,
 		?string $id,

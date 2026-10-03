@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 // Focused database and WordPress cache doubles.
-// phpcs:disable
 
+// phpcs:ignore Universal.Namespaces.DisallowCurlyBraceSyntax.Forbidden, Universal.Namespaces.DisallowDeclarationWithoutName.Forbidden -- One fixture supplies global WordPress function doubles and the namespaced database fake. Global namespace is required for the WordPress function doubles in this isolated fixture.
 namespace {
 	$GLOBALS['ran_booster_attempt_cache_deletes'] = array();
 
@@ -17,34 +17,36 @@ namespace {
 	}
 }
 
+// phpcs:ignore Universal.Namespaces.OneDeclarationPerFile.MultipleFound, Universal.Namespaces.DisallowCurlyBraceSyntax.Forbidden -- The global WordPress doubles and namespaced database fake are loaded together by this fixture. One fixture supplies global WordPress function doubles and the namespaced database fake.
 namespace Tests\Deployment {
 
+	// phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- The fixture pairs WordPress function doubles with its database class for one isolated test environment.
 	final class AttemptRepositoryDatabase {
 
-		public string $options = 'wp_options';
+		public string $options    = 'wp_options';
 		public string $last_error = '';
 		/** @var list<array<string, mixed>> */
 		public array $rows = array();
 		/** @var array<string, string> */
 		public array $option_rows = array();
 		/** @var list<string> */
-		public array $queries = array();
-		public ?string $fail_query_contains = null;
-		public ?string $zero_query_contains = null;
-		public bool $fail_insert = false;
-		public ?int $fail_insert_number = null;
-		public bool $fail_reads = false;
-		public bool $fail_commit = false;
+		public array $queries                = array();
+		public ?string $fail_query_contains  = null;
+		public ?string $zero_query_contains  = null;
+		public bool $fail_insert             = false;
+		public ?int $fail_insert_number      = null;
+		public bool $fail_reads              = false;
+		public bool $fail_commit             = false;
 		public ?string $tamper_insert_column = null;
-		public mixed $tamper_insert_value = null;
+		public mixed $tamper_insert_value    = null;
 		public ?string $tamper_update_column = null;
-		public mixed $tamper_update_value = null;
+		public mixed $tamper_update_value    = null;
 		/** @var array{rows: list<array<string, mixed>>, options: array<string, string>}|null */
-		private ?array $snapshot = null;
-		private int $insert_calls = 0;
-		public string $server_info = '8.4.6';
+		private ?array $snapshot      = null;
+		private int $insert_calls     = 0;
+		public string $server_info    = '8.4.6';
 		public string $innodb_support = 'DEFAULT';
-		public int $capability_reads = 0;
+		public int $capability_reads  = 0;
 
 		public function db_server_info(): string {
 			return $this->server_info;
@@ -54,7 +56,7 @@ namespace Tests\Deployment {
 			foreach ( $arguments as $argument ) {
 				$query = (string) preg_replace_callback(
 					'/%[dis]/',
-					static fn ( array $match ): string => match ( $match[0] ) {
+					static fn ( array $matches ): string => match ( $matches[0] ) {
 						'%i' => '`' . str_replace( '`', '``', (string) $argument ) . '`',
 						'%d' => (string) (int) $argument,
 						default => "'" . addslashes( (string) $argument ) . "'",
@@ -68,6 +70,7 @@ namespace Tests\Deployment {
 		}
 
 		/** @param array<string, mixed> $data */
+		// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- Preserve the wpdb insert signature; this fixture owns one in-memory table.
 		public function insert( string $table, array $data ): int|false {
 			++$this->insert_calls;
 			if ( $this->fail_insert || $this->insert_calls === $this->fail_insert_number ) {
@@ -109,7 +112,10 @@ namespace Tests\Deployment {
 				return 0;
 			}
 			if ( 'START TRANSACTION' === $query ) {
-				$this->snapshot = array( 'rows' => $this->rows, 'options' => $this->option_rows );
+				$this->snapshot = array(
+					'rows'    => $this->rows,
+					'options' => $this->option_rows,
+				);
 
 				return 1;
 			}
@@ -123,7 +129,7 @@ namespace Tests\Deployment {
 			}
 			if ( 'ROLLBACK' === $query ) {
 				if ( null !== $this->snapshot ) {
-					$this->rows       = $this->snapshot['rows'];
+					$this->rows        = $this->snapshot['rows'];
 					$this->option_rows = $this->snapshot['options'];
 				}
 				$this->snapshot = null;
@@ -151,7 +157,7 @@ namespace Tests\Deployment {
 			if ( preg_match( '/^UPDATE `[^`]+` SET (.+) WHERE id = (\d+) AND state = \'([^\']+)\'$/', $query, $matches ) === 1 ) {
 				$id = (int) $matches[2];
 				foreach ( $this->rows as &$row ) {
-					if ( (int) $row['id'] !== $id || $row['state'] !== stripslashes( $matches[3] ) ) {
+					if ( (int) $row['id'] !== $id || stripslashes( $matches[3] ) !== $row['state'] ) {
 						continue;
 					}
 					foreach ( explode( ', ', $matches[1] ) as $assignment ) {
@@ -235,6 +241,7 @@ namespace Tests\Deployment {
 				}
 
 				return array_map(
+					// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- compact() consumes both named callback parameters to construct the result row.
 					static fn ( string $state, int $total ): object => (object) compact( 'state', 'total' ),
 					array_keys( $totals ),
 					array_values( $totals )
@@ -248,8 +255,8 @@ namespace Tests\Deployment {
 				$rows = array_values(
 					array_filter(
 						$this->rows,
-						static fn ( array $row ): bool => $row['package_type'] === stripslashes( $matches[1] )
-							&& $row['package_slug'] === stripslashes( $matches[2] )
+						static fn ( array $row ): bool => stripslashes( $matches[1] ) === $row['package_type']
+							&& stripslashes( $matches[2] ) === $row['package_slug']
 					)
 				);
 				usort( $rows, static fn ( array $a, array $b ): int => $b['id'] <=> $a['id'] );
@@ -268,7 +275,7 @@ namespace Tests\Deployment {
 			}
 			$rows = $this->rows;
 			if ( preg_match( "/correlation_id = '([^']+)'/", $query, $matches ) === 1 ) {
-				$rows = array_filter( $rows, static fn ( array $row ): bool => $row['correlation_id'] === stripslashes( $matches[1] ) );
+				$rows = array_filter( $rows, static fn ( array $row ): bool => stripslashes( $matches[1] ) === $row['correlation_id'] );
 			}
 			if ( preg_match( '/\bid = (\d+)/', $query, $matches ) === 1 ) {
 				$rows = array_filter( $rows, static fn ( array $row ): bool => (int) $row['id'] === (int) $matches[1] );
@@ -278,13 +285,13 @@ namespace Tests\Deployment {
 				$rows = array_filter( $rows, static fn ( array $row ): bool => in_array( (int) $row['id'], $ids, true ) );
 			}
 			if ( preg_match( "/provider = '([^']+)'/", $query, $matches ) === 1 ) {
-				$rows = array_filter( $rows, static fn ( array $row ): bool => $row['provider'] === stripslashes( $matches[1] ) );
+				$rows = array_filter( $rows, static fn ( array $row ): bool => stripslashes( $matches[1] ) === $row['provider'] );
 			}
 			if ( preg_match( "/provider = '([^']+)' AND delivery_id = '([^']+)'/", $query, $matches ) === 1 ) {
 				$rows = array_filter(
 					$rows,
-					static fn ( array $row ): bool => $row['provider'] === stripslashes( $matches[1] )
-						&& $row['delivery_id'] === stripslashes( $matches[2] )
+					static fn ( array $row ): bool => stripslashes( $matches[1] ) === $row['provider']
+						&& stripslashes( $matches[2] ) === $row['delivery_id']
 				);
 			}
 			if ( str_contains( $query, "state = 'queued'" ) ) {
@@ -317,8 +324,8 @@ namespace Tests\Deployment {
 			if ( preg_match( "/package_type = '([^']+)' AND package_slug = '([^']+)'/", $query, $matches ) === 1 ) {
 				$rows = array_filter(
 					$rows,
-					static fn ( array $row ): bool => $row['package_type'] === stripslashes( $matches[1] )
-						&& $row['package_slug'] === stripslashes( $matches[2] )
+					static fn ( array $row ): bool => stripslashes( $matches[1] ) === $row['package_type']
+						&& stripslashes( $matches[2] ) === $row['package_slug']
 				);
 			}
 			if ( preg_match( '/id < (\d+)/', $query, $matches ) === 1 ) {

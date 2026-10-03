@@ -19,7 +19,7 @@ final readonly class ManagedRepository {
 		string $locator,
 		string $provider_repository_id,
 		string $branch,
-		bool $private = false,
+		bool $private = false, // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.privateFound -- Preserve the existing public named-argument signature.
 		?string $credential_id = null
 	) {
 		$credential_id   = null === $credential_id || '' === trim( $credential_id ) ? null : $credential_id;

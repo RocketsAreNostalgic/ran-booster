@@ -8,6 +8,7 @@ function __( string $text, string $domain = 'default' ): string {
 	return \RAN\Admin\ReleaseManagement\__( $text, $domain );
 }
 
+// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- WordPress _n stub preserves native argument slots; this fixture records only the values relevant to its assertions.
 function _n( string $single, string $plural, int $number, string $domain = 'default' ): string {
 	return 1 === $number ? $single : $plural;
 }

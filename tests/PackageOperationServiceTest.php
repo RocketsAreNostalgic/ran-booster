@@ -1477,6 +1477,7 @@ final class OperationPluginRepository extends PluginRepository {
 	public function from_slug( $slug ) {
 		$this->requested_slug = (string) $slug;
 		return $this->package; }
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of booster_plugin_from_file retains the production method contract; these inputs do not affect this controlled result.
 	public function booster_plugin_from_file( $file ) {
 		return null !== $this->fresh_after_mutation && ( null !== $this->stored || array() !== $this->edited )
 			? $this->fresh_after_mutation
@@ -1489,6 +1490,7 @@ final class OperationPluginRepository extends PluginRepository {
 		$this->stored = $plugin;
 		return $this->adoption_result ?? PackageMutationResult::changed( PackageStorageOperation::INSERT );
 	}
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassBeforeLastUsed -- The fixture implementation of edit_plugin retains the production method contract; these inputs do not affect this controlled result.
 	public function edit_plugin( $file, $input ): PackageMutationResult {
 		$this->edited = $input;
 		$this->package->set_repository( $input['repository'] );
@@ -1524,6 +1526,7 @@ final class OperationThemeRepository extends ThemeRepository {
 	public function from_slug( $slug ) {
 		$this->requested_slug = (string) $slug;
 		return $this->package; }
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of booster_theme_from_stylesheet retains the production method contract; these inputs do not affect this controlled result.
 	public function booster_theme_from_stylesheet( $stylesheet ) {
 		return null !== $this->fresh_after_mutation && ( null !== $this->stored || array() !== $this->edited )
 			? $this->fresh_after_mutation
@@ -1536,6 +1539,7 @@ final class OperationThemeRepository extends ThemeRepository {
 		$this->stored = $theme;
 		return PackageMutationResult::changed( PackageStorageOperation::INSERT );
 	}
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassBeforeLastUsed -- The fixture implementation of edit_theme retains the production method contract; these inputs do not affect this controlled result.
 	public function edit_theme( $stylesheet, $input ): PackageMutationResult {
 		$this->edited = $input;
 		$this->package->set_repository( $input['repository'] );

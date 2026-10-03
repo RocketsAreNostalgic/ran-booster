@@ -212,6 +212,7 @@ final class AuthorityPluginRepository extends PluginRepository {
 	public function __construct( private readonly array $packages ) {
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_plugins retains the production method contract; these inputs do not affect this controlled result.
 	public function all_deployment_plugins( ?\RAN\PackageSource $source = null ): array {
 		return $this->packages;
 	}
@@ -223,6 +224,7 @@ final class AuthorityThemeRepository extends ThemeRepository {
 	public function __construct( private readonly array $packages ) {
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_themes retains the production method contract; these inputs do not affect this controlled result.
 	public function all_deployment_themes( ?\RAN\PackageSource $source = null ): array {
 		return $this->packages;
 	}
@@ -240,6 +242,7 @@ final class ExactAuthorityPluginRepository extends PluginRepository {
 		return $this->packages[ $file ];
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_plugins retains the production method contract; these inputs do not affect this controlled result.
 	public function all_deployment_plugins( ?\RAN\PackageSource $source = null ): array {
 		throw new \LogicException( 'History must not scan plugin collections.' );
 	}
@@ -257,6 +260,7 @@ final class ExactAuthorityThemeRepository extends ThemeRepository {
 		return $this->packages[ $stylesheet ];
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_themes retains the production method contract; these inputs do not affect this controlled result.
 	public function all_deployment_themes( ?\RAN\PackageSource $source = null ): array {
 		throw new \LogicException( 'History must not scan theme collections.' );
 	}

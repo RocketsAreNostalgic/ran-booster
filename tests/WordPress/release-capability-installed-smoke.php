@@ -1,7 +1,6 @@
 <?php
 
 // Executed by WP-CLI inside an isolated disposable WordPress installation.
-// phpcs:disable
 
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
 use RAN\PackageSource;
@@ -30,12 +29,14 @@ $expected_targets = array(
 	WP_PLUGIN_DIR . '/ran-booster-p2-fixture-plugin',
 	get_theme_root() . '/ran-booster-p2-fixture-theme',
 );
-if ( ! is_string( $expected_root ) || false === $wordpress_root || $wordpress_root !== realpath( $expected_root )
+if ( ! is_string( $expected_root ) || false === $wordpress_root || realpath( $expected_root ) !== $wordpress_root
 	|| false === $content_root || $content_root !== $wordpress_root . '/wp-content'
 	|| false === $plugin_root || $plugin_root !== $content_root . '/plugins'
 	|| false === $theme_root || $theme_root !== $content_root . '/themes'
+	// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Capture the expected fixture value before WordPress filters can mutate global test state.
 	|| 'http://localhost' !== $expected_url || $expected_url !== get_option( 'siteurl' )
 	|| is_link( $disposable_mark ) || ! is_file( $disposable_mark )
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 	|| "RAN Booster disposable test site\n" !== file_get_contents( $disposable_mark )
 	|| is_link( WP_PLUGIN_DIR . '/ran-booster' ) || ! is_file( WP_PLUGIN_DIR . '/ran-booster/ran-booster.php' )
 	|| is_link( dirname( $fixture_plugin ) ) || ! is_file( $fixture_plugin ) || ! is_plugin_active( plugin_basename( $fixture_plugin ) )
@@ -57,17 +58,20 @@ foreach ( array( 'plugin', 'theme' ) as $archive_type ) {
 
 $container = require __DIR__ . '/core-container-fixture.php';
 $facade    = $container->make( ProspectiveReleaseFacade::class );
+// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
 $plugins   = $container->make( PluginRepository::class );
 $themes    = $container->make( ThemeRepository::class );
 $installed = array();
 
 $assert_result = static function ( object $result, string $code ): void {
 	if ( ! $result->successful() || $code !== $result->code() ) {
+		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 		throw new RuntimeException( 'Unexpected prospective release result: ' . $result->code() );
 	}
 };
 
 try {
+	// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
 	foreach ( array( 'plugin', 'theme' ) as $type ) {
 		$request = array(
 			'provider'      => 'p2-release',
@@ -75,7 +79,7 @@ try {
 			'credential_id' => '',
 			'branch'        => 'main',
 		);
-		$list = $facade->list_candidates(
+		$list    = $facade->list_candidates(
 			$type,
 			$request,
 			'stable',
@@ -120,7 +124,7 @@ try {
 		$identifier = 'plugin' === $type
 			? 'ran-booster-p2-fixture-plugin/ran-booster-p2-fixture-plugin.php'
 			: 'ran-booster-p2-fixture-theme';
-		$package = 'plugin' === $type
+		$package    = 'plugin' === $type
 			? $plugins->booster_plugin_from_file( $identifier )
 			: $themes->booster_theme_from_stylesheet( $identifier );
 		if ( '2.0.0' !== $package->get_version()
@@ -137,6 +141,7 @@ try {
 	}
 } finally {
 	$cleanup = ! (bool) get_option( 'ran_booster_p2_keep_installed', false );
+	// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
 	foreach ( $cleanup ? array_reverse( $installed, true ) : array() as $type => $identifier ) {
 		if ( 'plugin' === $type ) {
 			$plugins->unlink( $identifier )->require_success();
@@ -157,6 +162,8 @@ try {
 	}
 }
 
-WP_CLI::success( $cleanup
+WP_CLI::success(
+	$cleanup
 	? 'Installed release capability list, inspect, fresh acquire, plugin/theme install, adoption, readback and cleanup passed.'
-	: 'Installed release capability list, inspect, fresh acquire, plugin/theme install, adoption and retained readback passed.' );
+	: 'Installed release capability list, inspect, fresh acquire, plugin/theme install, adoption and retained readback passed.'
+);

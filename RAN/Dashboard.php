@@ -1040,7 +1040,7 @@ class Dashboard {
 
 		$data['development_environment_detected'] = $development_environment_detected;
 
-		$data['development_safety_notice'] = $this->should_show_development_safety_notice( $view, $data, $development_environment_detected );
+		$data['development_safety_notice'] = $this->should_show_development_safety_notice( $view, $development_environment_detected );
 		$data['messages']                  = $this->messages;
 		$data['name']                      = $this->booster->get_name();
 
@@ -1056,8 +1056,7 @@ class Dashboard {
 		return include __DIR__ . '/../views/base.php';
 	}
 
-	/** @param array<string, mixed> $data */
-	private function should_show_development_safety_notice( string $view, array $data, bool $development_environment_detected ): bool {
+	private function should_show_development_safety_notice( string $view, bool $development_environment_detected ): bool {
 		$relevant_view = 'packages/index' === $view;
 		$user_id       = get_current_user_id();
 		$dismissed     = $user_id > 0

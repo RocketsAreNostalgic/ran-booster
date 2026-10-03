@@ -45,6 +45,7 @@ function wp_register_script( string $handle, string $source, array $dependencies
 	return true;
 }
 
+// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- WordPress wp_set_script_translations stub preserves native argument slots; compact() reads the parameters to record the exact call arguments.
 function wp_set_script_translations( string $handle, string $domain, string $path = '' ): bool {
 	$GLOBALS['ran_booster_asset_test_script_events'][]       = array(
 		'function' => 'wp_set_script_translations',

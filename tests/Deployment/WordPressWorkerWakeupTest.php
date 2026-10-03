@@ -171,6 +171,7 @@ final class WordPressWorkerWakeupDatabase {
 		return '8.4.6';
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The wpdb fixture retains the prepare call signature while returning the controlled database result.
 	public function prepare( string $query, mixed ...$arguments ): string {
 		return $query;
 	}

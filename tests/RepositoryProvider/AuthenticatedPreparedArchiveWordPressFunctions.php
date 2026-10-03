@@ -59,10 +59,10 @@ function remove_action( string $hook, callable $callback, int $priority = 10 ): 
 	return authenticated_archive_remove_hook( 'ran_booster_authenticated_archive_actions', $hook, $callback, $priority );
 }
 
-function authenticated_archive_remove_hook( string $global, string $hook, callable $callback, int $priority ): bool {
-	foreach ( $GLOBALS[ $global ] ?? array() as $index => $record ) {
+function authenticated_archive_remove_hook( string $global_key, string $hook, callable $callback, int $priority ): bool {
+	foreach ( $GLOBALS[ $global_key ] ?? array() as $index => $record ) {
 		if ( $hook === $record['hook'] && $callback === $record['callback'] && $priority === $record['priority'] ) {
-			unset( $GLOBALS[ $global ][ $index ] );
+			unset( $GLOBALS[ $global_key ][ $index ] );
 
 			return true;
 		}

@@ -27,41 +27,8 @@
 	<rule ref="RANOwnedMethods"/>
 	<!-- Variable, property and named-parameter enforcement covers the complete owned tree. -->
 	<rule ref="WordPress.NamingConventions.ValidVariableName"/>
-	<!-- Audited condition cohorts preserve evaluation order; broader condition scope remains under #167 acceptance. -->
-	<rule ref="WordPress.PHP.YodaConditions">
-		<include-pattern>/RAN/Admin/RepositoryPickerController.php</include-pattern>
-		<include-pattern>/RAN/Admin/ManagedPackageWebhookAuthorityResolver.php</include-pattern>
-		<include-pattern>/RAN/Deployment/AdmittedBranchHostAdapter.php</include-pattern>
-		<include-pattern>/RAN/WordPress/CorePackageExecutor.php</include-pattern>
-		<include-pattern>/RAN/WordPress/ManagedReleaseStore.php</include-pattern>
-		<include-pattern>/RAN/Admin/ProviderProfileAdminController.php</include-pattern>
-		<include-pattern>/RAN/WordPress/ManagedReleaseTargetRegistrar.php</include-pattern>
-		<include-pattern>/RAN/WordPress/CoreSelfUpdatePolicy.php</include-pattern>
-		<include-pattern>/RAN/Uninstall/LocalDataRemover.php</include-pattern>
-		<include-pattern>/RAN/Admin/Component/AdminActionNormalizer.php</include-pattern>
-		<include-pattern>/RAN/Portability/BlueprintPackage.php</include-pattern>
-		<include-pattern>/RAN/Deployment/ReleaseArtifactCustodian.php</include-pattern>
-		<include-pattern>/RAN/RepositoryProvider/GitReferenceSyntax.php</include-pattern>
-		<include-pattern>/RAN/Secrets/WpConfigSecretsPathWriter.php</include-pattern>
-		<include-pattern>/RAN/Portability/BlueprintArchive.php</include-pattern>
-		<include-pattern>/RAN/RepositoryProvider/ProviderCode.php</include-pattern>
-		<include-pattern>/RAN/Portability/ManagedPackageBlueprintExporter.php</include-pattern>
-		<include-pattern>/RAN/PackageOperation.php</include-pattern>
-		<include-pattern>/RAN/Secrets/PrivateLocationCandidateResolver.php</include-pattern>
-		<include-pattern>/RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php</include-pattern>
-		<include-pattern>/views/portability.php</include-pattern>
-		<include-pattern>/RAN/Secrets/SecretsFile.php</include-pattern>
-		<include-pattern>/RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php</include-pattern>
-		<include-pattern>/RAN/Admin/ReleaseManagement/ReleaseManagementControls.php</include-pattern>
-		<include-pattern>/RAN/Storage/AbstractPackageRepository.php</include-pattern>
-		<include-pattern>/RAN/Storage/Database.php</include-pattern>
-		<include-pattern>/RAN/Storage/RepositorySourceGuard.php</include-pattern>
-		<include-pattern>/RAN/Admin/ReleaseManagement/ProspectiveReleaseOperations.php</include-pattern>
-		<include-pattern>/RAN/Admin/ProviderRepositoryRowsNormalizer.php</include-pattern>
-		<include-pattern>/RAN/Admin/PackageRepositoryRequestResolver.php</include-pattern>
-		<include-pattern>/RAN/Admin/ProviderSettingsPresenter.php</include-pattern>
-		<include-pattern>/RAN/Admin/PortabilityController.php</include-pattern>
-	</rule>
+	<!-- Whole-tree conditions retain only documented annotation exceptions. -->
+	<rule ref="WordPress.PHP.YodaConditions"/>
 
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
 		<exclude-pattern>/tests/</exclude-pattern>
@@ -81,20 +48,11 @@
 		<severity>0</severity>
 	</rule>
 
-	<!-- Audited owned parameters block the canonical standards command; concrete callback/compact contracts are line-local. -->
+	<!-- Unused parameters block across the owned tree; required signatures and implicit-use contracts are declaration-local. -->
 	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter">
 		<type>error</type>
-		<include-pattern>/RAN/WordPress/CorePackageExecutor.php</include-pattern>
-		<include-pattern>/RAN/Admin/DeploymentAdminPresenter.php</include-pattern>
-		<include-pattern>/RAN/RepositoryProvider/RepositoryDescriptor.php</include-pattern>
-		<include-pattern>/RAN/RepositoryProvider/PushEvent.php</include-pattern>
-		<include-pattern>/RAN/RepositoryProvider/RepositoryReference.php</include-pattern>
-		<include-pattern>/RAN/Secrets/SecretsStorageProvisioner.php</include-pattern>
-		<include-pattern>/RAN/RepositoryProvider/RepositoryBrowseRequest.php</include-pattern>
-		<include-pattern>/RAN/AddOn/ReleaseTracking/NativeReleaseTrackingFacade.php</include-pattern>
-		<include-pattern>/RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php</include-pattern>
 	</rule>
-	<!-- WPCS class-wide callback exemptions also hide private helpers; these code overrides inherit the audited nine-path scope above. -->
+	<!-- WPCS class-wide callback exemptions also hide private helpers; keep every diagnostic blocking across the same whole-tree scope. -->
 	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed">
 		<severity>5</severity>
 		<type>error</type>
@@ -123,11 +81,8 @@
 		<severity>5</severity>
 		<type>error</type>
 	</rule>
-	<!-- These request types have no external signature obligation; enforce audited parameter names. -->
-	<rule ref="Universal.NamingConventions.NoReservedKeywordParameterNames">
-		<include-pattern>/RAN/PackageOperation.php</include-pattern>
-		<include-pattern>/RAN/Deployment/DeploymentRequest.php</include-pattern>
-	</rule>
+	<!-- Reserved parameter names are checked throughout; retained public/native signatures are declaration-local. -->
+	<rule ref="Universal.NamingConventions.NoReservedKeywordParameterNames"/>
 
 	<!-- The focused container unit test keeps its tiny fixture classes beside the assertions. -->
 	<rule ref="Generic.Files.OneObjectStructurePerFile">

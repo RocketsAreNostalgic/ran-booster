@@ -590,6 +590,7 @@ final class ParityPluginRepository extends PluginRepository {
 
 	public function __construct() {}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_plugins retains the production method contract; these inputs do not affect this controlled result.
 	public function all_deployment_plugins( ?PackageSource $source = null ): array {
 		return $this->managed;
 	}
@@ -618,6 +619,7 @@ final class ParityPluginRepository extends PluginRepository {
 		throw new RuntimeException( 'Missing managed plugin.' );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of adopt retains the production method contract; these inputs do not affect this controlled result.
 	public function adopt( Plugin $plugin ): PackageMutationResult {
 		++$this->adopt_calls;
 		return $this->adoption_result ?? PackageMutationResult::changed( PackageStorageOperation::INSERT );
@@ -676,6 +678,7 @@ final class ParityRepositoryProvider implements RepositoryProvider {
 		throw new RuntimeException( 'Repository resolution is not part of admitted parity coverage.' );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterface -- The fixture implementation of prepare_archive retains the production method contract; these inputs do not affect this controlled result.
 	public function prepare_archive( ArchiveRequest $request ): ProviderPreparedArchive {
 		++$this->prepare_calls;
 		if ( null !== $this->prepare_failure ) {
@@ -692,6 +695,7 @@ final class ParityCoreExecutor extends WordPressCorePackageExecutor {
 
 	public function __construct() {}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of update_plugin retains the production method contract; these inputs do not affect this controlled result.
 	public function update_plugin( PreparedPackageArtifact $artifact, string $package_slug, ?string $subdirectory, string $plugin_file ): CorePackageExecutionResult {
 		++$this->calls;
 		if ( null !== $this->after_execution ) {
@@ -700,6 +704,7 @@ final class ParityCoreExecutor extends WordPressCorePackageExecutor {
 		return CorePackageExecutionResult::succeeded();
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of install_plugin retains the production method contract; these inputs do not affect this controlled result.
 	public function install_plugin( PreparedPackageArtifact $artifact, string $package_slug, ?string $subdirectory ): CorePackageExecutionResult {
 		++$this->calls;
 		if ( null !== $this->after_execution ) {

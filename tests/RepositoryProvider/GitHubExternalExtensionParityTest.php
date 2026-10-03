@@ -451,7 +451,9 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		return new ProviderRegistry(
 			array(),
 			new ProviderSecretPolicyCatalog(),
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $credentials,
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => $delivery,
 			new ProviderRegistrationContext( static fn (): int => $artifact_limit )
 		);

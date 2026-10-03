@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 // Focused WordPress REST request and response doubles necessarily live in the
 // global namespace.
-// phpcs:disable
 
 if ( ! class_exists( 'WP_REST_Request' ) ) {
 	class WP_REST_Request {
 		public int $body_calls   = 0;
 		public int $header_calls = 0;
 
-	public function __construct(
+		public function __construct(
 			private array $url_params,
 			private array $merged_params,
 			private string $body = '{}',
@@ -63,6 +62,7 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 }
 
 if ( ! class_exists( 'WP_REST_Response' ) ) {
+	// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- The isolated REST environment loads its native request and response doubles together.
 	class WP_REST_Response {
 
 		public function __construct(

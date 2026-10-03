@@ -29,7 +29,7 @@ final class TemporaryCredentialProvider implements RepositoryProvider, ProviderC
 		private ProviderCredentialStore $credentials,
 		private int $anonymous_failure,
 		private string $provider_repository_id,
-		private bool $private = false,
+		private bool $is_private = false,
 		private string $provider_code = 'gh',
 		private string $provider_label = 'GitHub',
 		private string $accepted_secret = 'sentinel-portability-token'
@@ -54,7 +54,7 @@ final class TemporaryCredentialProvider implements RepositoryProvider, ProviderC
 		}
 		if ( null !== $request->credential_id ) {
 			$material = $this->credentials->credential_material( $request->credential_id );
-			if ( ! is_array( $material ) || $this->accepted_secret !== ( $material['secret'] ?? null ) ) {
+			if ( ! is_array( $material ) || ( $material['secret'] ?? null ) !== $this->accepted_secret ) {
 				throw new RuntimeException( 'Repository access failed.', 401 );
 			}
 			$this->temporary_credential_id = $request->credential_id;
@@ -65,7 +65,7 @@ final class TemporaryCredentialProvider implements RepositoryProvider, ProviderC
 			'owner/repository',
 			'example',
 			$this->provider_repository_id,
-			$this->private,
+			$this->is_private,
 			'main',
 			$request->credential_id
 		);

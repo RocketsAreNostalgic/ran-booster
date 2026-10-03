@@ -666,13 +666,13 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		);
 	}
 
-	private function package( bool $private = false, string $credential_id = '' ): UnavailableProviderPackage {
+	private function package( bool $is_private = false, string $credential_id = '' ): UnavailableProviderPackage {
 		$repository = new ManagedRepository(
 			'temporarily-offline',
 			'owner/exact-repository',
 			'stable-provider-id',
 			'release',
-			$private,
+			$is_private,
 			'' === $credential_id ? null : $credential_id
 		);
 

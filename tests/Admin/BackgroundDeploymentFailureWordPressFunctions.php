@@ -53,6 +53,7 @@ function apply_filters( string $hook, mixed $value, mixed ...$arguments ): mixed
 }
 
 /** @param list<string> $headers */
+// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- WordPress wp_mail stub preserves native argument slots; compact() reads the parameters to record the exact call arguments.
 function wp_mail( string $to, string $subject, string $message, array $headers = array() ): bool {
 	$GLOBALS['ran_booster_background_failure_mail'][] = compact( 'to', 'subject', 'message', 'headers' );
 

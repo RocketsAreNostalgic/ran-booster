@@ -30,12 +30,14 @@ final class PackageDeploymentPolicyRequestResolverTest extends TestCase {
 
 			public function get_provider_diagnostics(): ProviderDiagnostics {
 				return new class() implements ProviderDiagnostics {
+					// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of diagnose retains the production method contract; these inputs do not affect this controlled result.
 					public function diagnose( ProviderDiagnosticRequest $request ): array {
 						return array();
 					}
 				};
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of resolve_repository retains the production method contract; these inputs do not affect this controlled result.
 			public function resolve_repository( \RAN\RepositoryProvider\RepositoryLookupRequest $request ): \RAN\RepositoryProvider\RepositoryDescriptor {
 				++$this->resolve_calls;
 
@@ -50,6 +52,7 @@ final class PackageDeploymentPolicyRequestResolverTest extends TestCase {
 				);
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of prepare_archive retains the production method contract; these inputs do not affect this controlled result.
 			public function prepare_archive( \RAN\RepositoryProvider\ArchiveRequest $request ): \RAN\RepositoryProvider\PreparedArchive {
 				throw new \RuntimeException( 'Archive preparation is not used by this test.' );
 			}
@@ -79,6 +82,7 @@ final class PackageDeploymentPolicyRequestResolverTest extends TestCase {
 
 			public function get_provider_diagnostics(): ProviderDiagnostics {
 				return new class() implements ProviderDiagnostics {
+					// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of diagnose retains the production method contract; these inputs do not affect this controlled result.
 					public function diagnose( ProviderDiagnosticRequest $request ): array {
 						return array();
 					}
@@ -97,6 +101,7 @@ final class PackageDeploymentPolicyRequestResolverTest extends TestCase {
 				);
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of prepare_archive retains the production method contract; these inputs do not affect this controlled result.
 			public function prepare_archive( \RAN\RepositoryProvider\ArchiveRequest $request ): \RAN\RepositoryProvider\PreparedArchive {
 				throw new \RuntimeException( 'Archive preparation is not used by this test.' );
 			}

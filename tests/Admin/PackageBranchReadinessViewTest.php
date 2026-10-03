@@ -308,7 +308,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	}
 
 	#[DataProvider( 'subdirectory_checklist_provider' )]
-	public function test_subdirectory_has_its_own_readiness_checklist_row( ?string $outcome, string $class, string $message ): void {
+	public function test_subdirectory_has_its_own_readiness_checklist_row( ?string $outcome, string $css_class, string $message ): void {
 		$provider_code              = 'gh';
 		$settings_url               = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
 		$provider_webhook_available = true;
@@ -339,7 +339,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
 		$html = (string) ob_get_clean();
 
-		self::assertMatchesRegularExpression( '/<li class="ran-booster-readiness-item ' . $class . '">\s*<span[^>]*><\/span>\s*<strong>Repository subdirectory<\/strong>/s', $html );
+		self::assertMatchesRegularExpression( '/<li class="ran-booster-readiness-item ' . $css_class . '">\s*<span[^>]*><\/span>\s*<strong>Repository subdirectory<\/strong>/s', $html );
 		self::assertStringContainsString( $message, $html );
 	}
 
@@ -540,7 +540,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	}
 
 	#[DataProvider( 'repository_branch_check_outcome_provider' )]
-	public function test_saved_repository_state_reflects_the_explicit_remote_check( string $outcome, string $class, string $message ): void {
+	public function test_saved_repository_state_reflects_the_explicit_remote_check( string $outcome, string $css_class, string $message ): void {
 		$provider_code                   = 'gh';
 		$settings_url                    = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
 		$provider_webhook_available      = true;
@@ -563,7 +563,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
 		$html = (string) ob_get_clean();
 
-		self::assertMatchesRegularExpression( '/<li class="ran-booster-readiness-item ' . $class . '">\s*<span[^>]*><\/span>\s*<strong>Saved repository<\/strong>/s', $html );
+		self::assertMatchesRegularExpression( '/<li class="ran-booster-readiness-item ' . $css_class . '">\s*<span[^>]*><\/span>\s*<strong>Saved repository<\/strong>/s', $html );
 		self::assertStringContainsString( $message, $html );
 	}
 
@@ -580,8 +580,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 
 	#[DataProvider( 'blocked_receiver_reason_provider' )]
 	public function test_blocked_receiver_reasons_provide_bounded_diagnostics_guidance(
-		string $reason_code,
-		string $expected_message
+		string $reason_code
 	): void {
 		$provider_code              = 'bb';
 		$settings_url               = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
@@ -616,24 +615,20 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( 'GitHub', $html );
 	}
 
-	/** @return array<string, array{string, string}> */
+	/** @return array<string, array{string}> */
 	public static function blocked_receiver_reason_provider(): array {
 		return array(
 			'database unavailable'         => array(
 				'database_unavailable',
-				'Booster could not access the local data required for Push-to-Deploy.',
 			),
 			'secrets storage unavailable'  => array(
 				'secrets_storage_unavailable',
-				'Booster could not access the saved signing setup required for Push-to-Deploy.',
 			),
 			'managed packages unavailable' => array(
 				'managed_packages_unavailable',
-				'Booster could not check the managed packages required for Push-to-Deploy.',
 			),
 			'unknown reason'               => array(
 				'unrecognized_reason',
-				'Booster could not confirm the local webhook receiver.',
 			),
 		);
 	}

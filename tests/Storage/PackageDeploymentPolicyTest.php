@@ -238,6 +238,7 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 				return 1;
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of package_exists retains the production method contract; these inputs do not affect this controlled result.
 			protected function package_exists( string $identifier ): bool {
 				return true;
 			}

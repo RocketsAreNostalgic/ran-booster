@@ -691,7 +691,7 @@ final class BulkActionPackage extends AbstractPackage {
 	public static function make(
 		string $identifier,
 		string $provider,
-		bool $private = false,
+		bool $is_private = false,
 		?string $credential_id = null
 	): self {
 		$package = new self( $identifier );
@@ -702,7 +702,7 @@ final class BulkActionPackage extends AbstractPackage {
 				'owner/' . dirname( $identifier ),
 				'R_' . dirname( $identifier ),
 				'main',
-				$private,
+				$is_private,
 				$credential_id
 			)
 		);
@@ -750,6 +750,7 @@ final class BulkActionPluginRepository extends PluginRepository {
 
 final class BulkActionThemeRepository extends ThemeRepository {
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of booster_theme_from_stylesheet retains the production method contract; these inputs do not affect this controlled result.
 	public function booster_theme_from_stylesheet( $stylesheet ) {
 		throw new ThemeNotFound( 'Missing fixture theme.' );
 	}

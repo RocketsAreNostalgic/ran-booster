@@ -1,12 +1,12 @@
 <?php
 
 // Test-only WordPress filesystem transport loaded by restoration-hard-stop-child.php.
-// phpcs:disable
 
 if ( ! class_exists( 'WP_Filesystem_Direct' ) ) {
 	require_once ABSPATH . 'wp-admin/includes/class-wp-filesystem-direct.php';
 }
 
+// phpcs:ignore PEAR.NamingConventions.ValidClassName.Invalid -- WordPress filesystem transport resolution requires the WP_Filesystem_ran_booster_test class name.
 final class WP_Filesystem_ran_booster_test extends WP_Filesystem_Direct {
 
 	public function move( $source, $destination, $overwrite = false ) {
@@ -55,16 +55,19 @@ final class WP_Filesystem_ran_booster_test extends WP_Filesystem_Direct {
 			throw new RuntimeException( 'The restoration filesystem barrier is invalid.' );
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 		$handle = fopen( $barrier, 'x+b' );
 		if ( false === $handle ) {
 			throw new RuntimeException( 'The restoration filesystem barrier could not be created exclusively.' );
 		}
 		try {
 			$contents = "during_restore\n";
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 			if ( strlen( $contents ) !== fwrite( $handle, $contents ) || ! fflush( $handle ) ) {
 				throw new RuntimeException( 'The restoration filesystem barrier could not be persisted.' );
 			}
 		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 			fclose( $handle );
 		}
 

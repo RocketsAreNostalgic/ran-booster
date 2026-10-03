@@ -161,8 +161,8 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 	}
 
 	#[DataProvider( 'trusted_public_lookup_packages' )]
-	public function test_edit_save_and_branch_check_uses_trusted_public_lookup_only_for_stored_public_package( bool $private, ?string $expected_lookup_credential, bool $expected_public_only ): void {
-		$package          = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh', $private, 'deployment-profile' );
+	public function test_edit_save_and_branch_check_uses_trusted_public_lookup_only_for_stored_public_package( bool $is_private, ?string $expected_lookup_credential, bool $expected_public_only ): void {
+		$package          = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh', $is_private, 'deployment-profile' );
 		$plugins          = new EditBoundaryPluginRepository( $package );
 		$themes           = new EditBoundaryThemeRepository( $package );
 		$provider         = new CapturingPublicLookupProvider();
@@ -381,9 +381,9 @@ final class EditBoundaryPackage extends AbstractPackage {
 	private function __construct( private readonly string $identifier ) {
 	}
 
-	public static function make( string $identifier, string $provider, bool $private = false, ?string $credential_id = null ): self {
+	public static function make( string $identifier, string $provider, bool $is_private = false, ?string $credential_id = null ): self {
 		$package = new self( $identifier );
-		$package->set_repository( new ManagedRepository( $provider, 'owner/original', 'repository-id', 'main', $private, $credential_id ) );
+		$package->set_repository( new ManagedRepository( $provider, 'owner/original', 'repository-id', 'main', $is_private, $credential_id ) );
 
 		return $package;
 	}
@@ -400,6 +400,7 @@ final class EditBoundaryPluginRepository extends PluginRepository {
 	public function __construct( private readonly Package $package ) {
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of booster_plugin_from_file retains the production method contract; these inputs do not affect this controlled result.
 	public function booster_plugin_from_file( $file ) {
 		++$this->lookups;
 
@@ -414,6 +415,7 @@ final class EditBoundaryThemeRepository extends ThemeRepository {
 	public function __construct( private readonly Package $package ) {
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of booster_theme_from_stylesheet retains the production method contract; these inputs do not affect this controlled result.
 	public function booster_theme_from_stylesheet( $stylesheet ) {
 		++$this->lookups;
 

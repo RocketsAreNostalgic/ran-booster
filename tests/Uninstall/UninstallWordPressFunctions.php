@@ -76,7 +76,7 @@ if ( ! function_exists( 'delete_option' ) ) {
 }
 
 if ( ! function_exists( 'get_option' ) ) {
-	function get_option( string $name, mixed $default = false ): mixed {
+	function get_option( string $name, mixed $default = false ): mixed { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound -- Preserve the WordPress function parameter signature.
 		return $GLOBALS['ran_booster_uninstall_options'][ $name ] ?? $default;
 	}
 }

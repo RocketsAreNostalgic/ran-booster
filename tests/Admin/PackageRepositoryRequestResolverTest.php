@@ -213,12 +213,14 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of resolve_repository retains the production method contract; these inputs do not affect this controlled result.
 			public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 				++$this->resolve_calls;
 
 				throw new RuntimeException( 'Resolution must not be reached.' );
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of prepare_archive retains the production method contract; these inputs do not affect this controlled result.
 			public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 				throw new RuntimeException( 'Archive preparation is not used by this test.' );
 			}
@@ -391,10 +393,12 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 				return $this->descriptor;
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of prepare_archive retains the production method contract; these inputs do not affect this controlled result.
 			public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 				throw new RuntimeException( 'Archive preparation is not used by this test.' );
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of normalize_webhook retains the production method contract; these inputs do not affect this controlled result.
 			public function normalize_webhook( WebhookRequest $request ): WebhookEnvelope {
 				throw new RuntimeException( 'Webhook normalization is not used by this test.' );
 			}
@@ -429,6 +433,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 				return new PublicRepositoryBrowseMetadata( true );
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of browse_repositories retains the production method contract; these inputs do not affect this controlled result.
 			public function browse_repositories( RepositoryBrowseRequest $request ): RepositoryBrowseResult {
 				throw new RuntimeException( 'Repository browsing is not used by this test.' );
 			}
@@ -439,6 +444,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 				return $this->descriptor;
 			}
 
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of prepare_archive retains the production method contract; these inputs do not affect this controlled result.
 			public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
 				throw new RuntimeException( 'Archive preparation is not used by this test.' );
 			}

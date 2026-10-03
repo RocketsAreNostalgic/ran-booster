@@ -1,10 +1,11 @@
 # Provider extension contract
 
-> Provider API14 naming candidate: Core now pins immutable GitHub Provider
+> Provider API14 source integration: Core pins immutable GitHub Provider
 > `v1.0.0-beta.12` at `c90777b7a23b7e07244a94c7ccbf3c4faf4fdc2c` in its
 > package constraint and dependency lock. The earlier beta.11/API13 tuple is
-> historical. Final native and installed qualification on the corrected Core
-> candidate and a separate release decision remain required before beta.31 ships.
+> historical. The corrected Core #224 merged tree passed native, archive and
+> installed WordPress/database qualification. Core publication and matching
+> Bitbucket/Migrator released-host certification remain pending; release work is paused.
 > See the [current recovery and landing record](beta31-naming-recovery.md#remaining-gates-and-landing-order).
 
 RAN Booster Provider API 14 accepts trusted repository providers through its late
@@ -252,9 +253,10 @@ in both its package constraint and dependency lock. Provider source #53 and
 release #54 are merged; the inherited beta.11/API13 tuple is historical.
 Merged Core #177 passed repository, archive and installed checks for its
 historical beta.8 composition (`556f19923f6564f1bbd5cecee089d6b136afc5cd`).
-That evidence does not qualify the current lock. Final native and installed
-qualification on the corrected Core candidate, Core publication, and matching
-Bitbucket/Migrator release-backed certification remain separate gates; see the
+That older evidence does not qualify the current lock. The corrected Core #224
+merged tree passed native, archive and installed WordPress/database qualification
+with beta.12. Core publication and matching Bitbucket/Migrator release-backed
+certification remain separate pending gates; see the
 [current recovery and landing record](beta31-naming-recovery.md#remaining-gates-and-landing-order)
 and the [qualification boundary](provider-release-workflow-api.md#qualification-and-delivery-boundary).
 

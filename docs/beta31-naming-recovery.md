@@ -1,6 +1,8 @@
 # Beta.31 naming recovery — 2 October 2026
 
-## Current post-merge checkpoint — release work paused
+<a id="remaining-gates-and-landing-order"></a>
+
+## Post-merge recovery checkpoint — 2 October 2026
 
 Core [#224](https://github.com/RocketsAreNostalgic/ran-booster/pull/224) is merged
 at `e0f7046521ad3c3b8ab265721efa27b53360d806`, tree
@@ -14,7 +16,7 @@ Release [#181](https://github.com/RocketsAreNostalgic/ran-booster/pull/181) rema
 open and unmerged at `4b7631d6f1817653f3bc4e1bbb7081f693733175`. Its
 [managed candidate qualification](https://github.com/RocketsAreNostalgic/ran-booster/actions/runs/37013918155)
 passed; the PR-triggered run is `action_required` and required PR contexts remain
-unfulfilled. No Core beta.31 publication occurred. All merges, workflow approvals
+unfulfilled. No Core beta.31 publication occurred. Release merges, workflow approvals
 and publication work are paused. This checkpoint grants no release authorization.
 
 Actual immutable Core publication and matching Bitbucket/Migrator certification

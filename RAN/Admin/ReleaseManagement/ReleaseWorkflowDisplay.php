@@ -195,7 +195,7 @@ final class ReleaseWorkflowDisplay {
 			}
 			$detail .= $this->form( is_array( $forms['outcome'] ?? null ) ? $forms['outcome'] : array() );
 		} elseif ( null !== $legacy ) {
-			$detail = $this->legacy_detail( $legacy );
+			$detail = $this->legacy_detail();
 		}
 
 		return array(
@@ -205,8 +205,7 @@ final class ReleaseWorkflowDisplay {
 		);
 	}
 
-	/** @param array<string,mixed> $legacy */
-	private function legacy_detail( array $legacy ): string {
+	private function legacy_detail(): string {
 		return '<hr><p>' . esc_html__( 'An earlier workflow record does not match the current package. Review the repository before assessing setup again; Booster will not overwrite that record.', 'ran-booster' ) . '</p>';
 	}
 

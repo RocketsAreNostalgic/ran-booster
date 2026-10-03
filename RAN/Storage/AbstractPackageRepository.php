@@ -939,8 +939,8 @@ abstract class AbstractPackageRepository {
 		return (string) $this->value_from_row( $row, $field, '' );
 	}
 
-	private function value_from_row( object $row, string $field, mixed $default = null ): mixed {
-		return property_exists( $row, $field ) ? $row->$field : $default;
+	private function value_from_row( object $row, string $field, mixed $default_value = null ): mixed {
+		return property_exists( $row, $field ) ? $row->$field : $default_value;
 	}
 
 	private function require_storage_support( PackageStorageOperation $operation ): void {

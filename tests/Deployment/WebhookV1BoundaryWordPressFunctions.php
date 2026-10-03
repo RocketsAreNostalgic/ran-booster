@@ -6,13 +6,13 @@ declare(strict_types=1);
 
 $GLOBALS['ran_booster_webhook_v1_routes'] = array();
 
-function register_rest_route( string $namespace, string $route, array $arguments ): bool {
+function register_rest_route( string $namespace, string $route, array $arguments ): bool { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.namespaceFound,Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Preserve the WordPress signature; compact() reads namespace, route and arguments to record the route.
 	$GLOBALS['ran_booster_webhook_v1_routes'][] = compact( 'namespace', 'route', 'arguments' );
 
 	return true;
 }
 
-function get_option( string $option, mixed $default = false ): mixed {
+function get_option( string $option, mixed $default = false ): mixed { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound -- Preserve the WordPress function parameter signature.
 	unset( $option );
 	$GLOBALS['ran_booster_webhook_v1_operations'][] = 'option';
 

@@ -70,7 +70,7 @@ function register_deactivation_hook( string $file, callable $callback ): void {
 	$GLOBALS['ran_booster_deactivation_callbacks'][ $file ] = $callback;
 }
 
-function register_rest_route( string $namespace, string $route, array $arguments ): bool {
+function register_rest_route( string $namespace, string $route, array $arguments ): bool { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.namespaceFound,Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Preserve the WordPress signature; compact() reads namespace, route and arguments to record the route.
 	$GLOBALS['ran_booster_rest_routes'][] = compact( 'namespace', 'route', 'arguments' );
 
 	return true;
@@ -94,6 +94,7 @@ function plugin_basename( string $file ): string {
 	return basename( dirname( $file ) ) . '/' . basename( $file );
 }
 
+// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- WordPress load_plugin_textdomain stub preserves native argument slots; compact() reads the parameters to record the exact call arguments.
 function load_plugin_textdomain( string $domain, bool $deprecated = false, string $path = '' ): bool {
 	$GLOBALS['ran_booster_loaded_textdomains'][] = compact( 'domain', 'deprecated', 'path' );
 

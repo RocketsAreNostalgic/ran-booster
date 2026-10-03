@@ -533,6 +533,7 @@ final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhoo
 
 	public function get_provider_diagnostics(): ProviderDiagnostics {
 		return new class() implements ProviderDiagnostics {
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterface -- The fixture implementation of diagnose retains the production method contract; these inputs do not affect this controlled result.
 			public function diagnose( ProviderDiagnosticRequest $request ): array {
 				return array();
 			}
@@ -561,26 +562,32 @@ final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhoo
 		throw new \RuntimeException( 'not used' );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of assess_setup retains the production method contract; these inputs do not affect this controlled result.
 	public function assess_setup( string $repository_id, string $repository, ?string $credential_profile_id ): RepositoryWebhookFitnessResult {
 		return $this->fitness( $credential_profile_id );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of assess_check retains the production method contract; these inputs do not affect this controlled result.
 	public function assess_check( string $repository_id, string $repository, ?string $credential_profile_id, string $hook_id ): RepositoryWebhookFitnessResult {
 		return $this->fitness( $credential_profile_id );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of assess_reconfigure retains the production method contract; these inputs do not affect this controlled result.
 	public function assess_reconfigure( string $repository_id, string $repository, ?string $credential_profile_id, string $hook_id ): RepositoryWebhookFitnessResult {
 		return $this->fitness( $credential_profile_id );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of assess_remove retains the production method contract; these inputs do not affect this controlled result.
 	public function assess_remove( string $repository_id, string $repository, ?string $credential_profile_id, string $hook_id ): RepositoryWebhookFitnessResult {
 		return $this->fitness( $credential_profile_id );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of assess_test retains the production method contract; these inputs do not affect this controlled result.
 	public function assess_test( string $repository_id, string $repository, ?string $credential_profile_id, string $hook_id ): RepositoryWebhookFitnessResult {
 		return $this->fitness( $credential_profile_id );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of setup retains the production method contract; these inputs do not affect this controlled result.
 	public function setup( string $repository_id, string $repository, string $callback_url, ?string $credential_profile_id, string $signing_secret ): RepositoryWebhookOperationResult {
 		++$this->calls;
 		$this->credential_id  = $credential_profile_id;
@@ -597,12 +604,14 @@ final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhoo
 		return $this->operation( $this->setup_state, 'succeeded' === $this->setup_state ? 'configured_pending_delivery' : 'setup_failed' );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed -- The fixture implementation of check retains the production method contract; these inputs do not affect this controlled result.
 	public function check( string $repository_id, string $repository, string $hook_id, string $callback_url, ?string $credential_profile_id ): RepositoryWebhookOperationResult {
 		++$this->calls;
 
 		return $this->operation( 'succeeded', 'configuration_confirmed' );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of reconfigure retains the production method contract; these inputs do not affect this controlled result.
 	public function reconfigure( string $repository_id, string $repository, string $hook_id, string $callback_url, ?string $credential_profile_id, string $signing_secret ): RepositoryWebhookOperationResult {
 		++$this->calls;
 		$this->signing_secret = $signing_secret;
@@ -613,6 +622,7 @@ final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhoo
 		return $this->operation( 'succeeded', 'configured_pending_delivery' );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed -- The fixture implementation of remove retains the production method contract; these inputs do not affect this controlled result.
 	public function remove( string $repository_id, string $repository, string $hook_id, string $callback_url, ?string $credential_profile_id ): RepositoryWebhookOperationResult {
 		++$this->calls;
 		if ( null !== $this->during_remove ) {
@@ -627,6 +637,7 @@ final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhoo
 		return $this->operation( $this->remove_state, 'succeeded' === $this->remove_state ? 'absence_confirmed' : 'remove_ambiguous', 'succeeded' === $this->remove_state ? 'absent' : 'unknown' );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of test retains the production method contract; these inputs do not affect this controlled result.
 	public function test( string $repository_id, string $repository, string $hook_id, string $callback_url, ?string $credential_profile_id ): RepositoryWebhookOperationResult {
 		++$this->calls;
 		$this->credential_id = $credential_profile_id;
@@ -670,6 +681,7 @@ final class FixedFacadeSecretsFile extends SecretsFile {
 	public function assert_managed_storage_ready(): void {
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of credential_profiles retains the production method contract; these inputs do not affect this controlled result.
 	public function credential_profiles( ProviderCode|string $provider ): array {
 		return array(
 			'profile_1' => array(
@@ -683,10 +695,12 @@ final class FixedFacadeSecretsFile extends SecretsFile {
 		);
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of webhook_profiles retains the production method contract; these inputs do not affect this controlled result.
 	public function webhook_profiles( ProviderCode|string $provider ): array {
 		return $this->profiles;
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of webhook_materials retains the production method contract; these inputs do not affect this controlled result.
 	public function webhook_materials( ProviderCode|string $provider ): array {
 		if ( $this->throw_material_after_save && array() !== $this->profiles ) {
 			$this->throw_material_after_save = false;
@@ -700,6 +714,7 @@ final class FixedFacadeSecretsFile extends SecretsFile {
 		return array() === $this->materials ? $this->profiles : $this->materials;
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassBeforeLastUsed -- The fixture implementation of save_webhook retains the production method contract; these inputs do not affect this controlled result.
 	public function save_webhook( ProviderCode|string $provider, ?string $id, array $metadata, ?string $secret ): string {
 		$id                  ??= 'wh_' . str_repeat( 'a', 24 );
 		$this->saved_secret    = (string) $secret;
@@ -715,6 +730,7 @@ final class FixedFacadeSecretsFile extends SecretsFile {
 		return $id;
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassBeforeLastUsed -- The fixture implementation of delete_webhook retains the production method contract; these inputs do not affect this controlled result.
 	public function delete_webhook( ProviderCode|string $provider, string $id ): bool {
 		unset( $this->profiles[ $id ] );
 		unset( $this->materials[ $id ] );
@@ -724,7 +740,7 @@ final class FixedFacadeSecretsFile extends SecretsFile {
 
 	public function delete_webhook_if_revision( ProviderCode|string $provider, string $id, int $expected_revision ): bool {
 		$current = $this->webhook_materials( $provider )[ $id ] ?? null;
-		if ( ! is_array( $current ) || $expected_revision !== (int) ( $current['revision'] ?? 0 ) ) {
+		if ( ! is_array( $current ) || (int) ( $current['revision'] ?? 0 ) !== $expected_revision ) {
 			return false;
 		}
 
@@ -752,12 +768,14 @@ final class FixedPluginRepository extends PluginRepository {
 	public function __construct( private FixedFacadePackage $package ) {
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_plugins retains the production method contract; these inputs do not affect this controlled result.
 	public function all_deployment_plugins( ?\RAN\PackageSource $source = null ): array {
 		return array( $this->package );
 	}
 }
 
 final class FixedThemeRepository extends ThemeRepository {
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_themes retains the production method contract; these inputs do not affect this controlled result.
 	public function all_deployment_themes( ?\RAN\PackageSource $source = null ): array {
 		return array();
 	}

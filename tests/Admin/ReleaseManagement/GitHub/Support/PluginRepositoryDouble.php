@@ -19,7 +19,7 @@ final class PluginRepositoryDouble extends PluginRepository {
 		private readonly bool $missing = false,
 		private readonly string $repository_id = '101',
 		private readonly string $repository = 'example/example',
-		private readonly bool $private = false
+		private readonly bool $is_private = false
 	) {
 		parent::__construct();
 	}
@@ -31,8 +31,8 @@ final class PluginRepositoryDouble extends PluginRepository {
 			throw new RuntimeException( 'missing-package' );
 		}
 
-		return new class( $this->provider_code, $this->source_revision, (string) $file, $this->repository_id, $this->repository, $this->private ) {
-			public function __construct( private readonly string $provider_code, private readonly int $source_revision, private readonly string $identifier, private readonly string $repository_id, private readonly string $repository, private readonly bool $private ) {
+		return new class( $this->provider_code, $this->source_revision, (string) $file, $this->repository_id, $this->repository, $this->is_private ) {
+			public function __construct( private readonly string $provider_code, private readonly int $source_revision, private readonly string $identifier, private readonly string $repository_id, private readonly string $repository, private readonly bool $is_private ) {
 			}
 			public function get_identifier(): string {
 				return $this->identifier;
@@ -50,7 +50,7 @@ final class PluginRepositoryDouble extends PluginRepository {
 				return $this->source_revision;
 			}
 			public function is_private(): bool {
-				return $this->private;
+				return $this->is_private;
 			}
 		};
 	}

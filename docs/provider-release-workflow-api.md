@@ -1,10 +1,11 @@
 # Provider release-workflow capability
 
-> Provider API14 naming candidate: Core now pins immutable GitHub Provider
+> Provider API14 source integration: Core pins immutable GitHub Provider
 > `v1.0.0-beta.12` at `c90777b7a23b7e07244a94c7ccbf3c4faf4fdc2c` in its
 > package constraint and dependency lock. The earlier beta.11/API13 tuple is
-> historical. Final native and installed qualification on the corrected Core
-> candidate and a separate release decision remain required before beta.31 ships.
+> historical. The corrected Core #224 merged tree passed native, archive and
+> installed WordPress/database qualification. Core publication and matching
+> Bitbucket/Migrator released-host certification remain pending; release work is paused.
 > See the [current recovery and landing record](beta31-naming-recovery.md#remaining-gates-and-landing-order).
 
 Provider API 14 keeps release-workflow setup as an optional, separately versioned

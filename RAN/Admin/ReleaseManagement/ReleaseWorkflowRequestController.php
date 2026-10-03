@@ -92,7 +92,7 @@ final class ReleaseWorkflowRequestController {
 			do {
 				if ( ! in_array( $operation, array( 'inspect', 'setup', 'outcome' ), true )
 					|| '' === $type || '' === $identifier || $revision < 1 || null === $preview_key || '' === $nonce
-					|| '' === $provider_code || strlen( $provider_code ) > 32 || $provider_code !== sanitize_key( $provider_code )
+					|| '' === $provider_code || strlen( $provider_code ) > 32 || sanitize_key( $provider_code ) !== $provider_code
 					|| '' === $repository_id || strlen( $repository_id ) > 191 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $repository_id )
 					|| ( 'inspect' === $operation && 'stable' !== $channel ) ) {
 					break; }
@@ -487,12 +487,12 @@ final class ReleaseWorkflowRequestController {
 			$values[] = wp_unslash( $value );
 		}
 		[ $code, $success, $type, $identifier, $revision, $provider, $repository, $channel, $stage, $diagnostic, $available, $reference, $message, $remediation, $nonce ] = $values;
-		if ( $code !== sanitize_key( $code ) || '' === $code || strlen( $code ) > 64
-			|| $provider !== sanitize_key( $provider ) || strlen( $provider ) > 32
+		if ( sanitize_key( $code ) !== $code || '' === $code || strlen( $code ) > 64
+			|| sanitize_key( $provider ) !== $provider || strlen( $provider ) > 32
 			|| strlen( $repository ) > 191 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $repository )
 			|| ! in_array( $success, array( '0', '1' ), true )
 			|| ! in_array( $type, array( 'plugin', 'theme' ), true )
-			|| $identifier !== sanitize_text_field( $identifier ) || strlen( $identifier ) > 255
+			|| sanitize_text_field( $identifier ) !== $identifier || strlen( $identifier ) > 255
 			|| 1 !== preg_match( '/\A(?:0|[1-9][0-9]{0,9})\z/D', $revision )
 			|| ! in_array( $channel, array( '', 'stable' ), true )
 			|| ! in_array( $stage, array( '', 'request_validation', 'credential_authorisation', 'release_preflight', 'repository_snapshot', 'template_pack', 'preview_storage', 'repository_mutation', 'local_persistence', 'unexpected' ), true )
@@ -566,7 +566,7 @@ final class ReleaseWorkflowRequestController {
 		}
 
 		return ! is_string( $package ) || '' === $package
-			|| $result['identifier'] === sanitize_text_field( wp_unslash( $package ) );
+			|| sanitize_text_field( wp_unslash( $package ) ) === $result['identifier'];
 	}
 
 	/** @param array<string, mixed> $request */

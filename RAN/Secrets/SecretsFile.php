@@ -1399,7 +1399,7 @@ class SecretsFile {
 			return false;
 		}
 		$stat = lstat( $this->path );
-		if ( 0100000 !== ( $stat['mode'] & 0170000 ) || 1 !== $stat['nlink'] ) {
+		if ( false === $stat || 0100000 !== ( $stat['mode'] & 0170000 ) || 1 !== $stat['nlink'] ) {
 			throw $this->unavailable( 'Refusing to use an invalid encrypted Booster secrets file.' );
 		}
 

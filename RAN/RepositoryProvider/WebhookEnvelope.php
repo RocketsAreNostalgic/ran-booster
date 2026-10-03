@@ -34,7 +34,7 @@ final readonly class WebhookEnvelope {
 			throw new InvalidArgumentException( 'An event envelope requires at least one push event.' );
 		}
 
-		return new self( self::EVENTS, $events );
+		return new self( self::EVENTS, array_values( $events ) );
 	}
 
 	public function is_probe(): bool {

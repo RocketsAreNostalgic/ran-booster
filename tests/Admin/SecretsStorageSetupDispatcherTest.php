@@ -483,7 +483,7 @@ final class SetupActionProvisioner extends SecretsStorageProvisioner {
 
 final class SetupActionDispatcher extends Dispatcher {
 	protected function redirect_to( string $url ): never {
-		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test spy preserves the fixed redirect URL for assertions.
+		// Test spy preserves the fixed redirect URL for assertions.
 		throw new SetupActionRedirect( $url );
 	}
 }

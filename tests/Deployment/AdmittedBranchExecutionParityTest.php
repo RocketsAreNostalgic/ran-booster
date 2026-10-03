@@ -172,7 +172,7 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 	public function assert_mutation_allowed(): void {
 		$this->events[] = 'allowed';
 		if ( null !== $this->policy_failure ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test double transports a domain failure code.
+			// Test double transports a domain failure code.
 			throw new AdmittedBranchStageFailure( $this->policy_failure );
 		}
 	}

@@ -435,7 +435,7 @@ final readonly class PortabilityApplicationService {
 		try {
 			$this->secrets->assert_managed_storage_ready();
 		} catch ( Throwable $failure ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The typed exception is caught by the controller and never rendered directly.
+			// The typed exception is caught by the controller and never rendered directly.
 			throw LocalSecretStoreUnavailable::for_portability( $failure );
 		}
 	}

@@ -31,6 +31,21 @@ an exact annotation to its intended declaration. A token-aware inventory guard
 rejects blanket disable, blanket ignore and ignoreFile annotations in maintained
 PHP while distinguishing actual comments from fixture strings.
 
+## Shared policy adoption after beta.31
+
+The current lock adopts `ran/coding-standards` v1.0.1 at
+`0248066be3f4f9476ef7095d888657001488a3de`. Its precise
+`WordPress.Security.EscapeOutput.ExceptionNotEscaped` exclusion recognizes that
+exceptions carry diagnostic values; actual output must still be escaped at its
+rendering boundary. Core removes 120 occurrences of that selector across 45 PHP
+files (110 ignores, five disables and five enables), plus the redundant
+characterization-path XML rule. Eight mixed directives retain their other
+selector and explanation; exception-context comments remain as ordinary comments.
+No executable PHP tokens, public contracts, other suppressions or runtime
+dependencies change. This is a policy adoption and redundant-suppression cleanup,
+not whole-inventory semantic acceptance. The tranche record below remains
+historical evidence.
+
 ## Findings and changes
 
 The pre-change broad scans found 28 Yoda diagnostics, 12 production and 417 test

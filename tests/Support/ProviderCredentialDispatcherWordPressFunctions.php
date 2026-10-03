@@ -23,7 +23,7 @@ function check_admin_referer( string $action, string $query_arg = '_wpnonce' ): 
 }
 
 function wp_die( string $message ): never {
-	// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test shim preserves the production call for assertions.
+	// Test shim preserves the production call for assertions.
 	throw new \RuntimeException( $message );
 }
 

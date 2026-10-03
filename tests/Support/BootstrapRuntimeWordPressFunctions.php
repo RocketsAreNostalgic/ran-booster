@@ -132,6 +132,6 @@ function current_user_can( string $capability ): bool {
 }
 
 function wp_die( string $message ): never {
-	// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test spy preserves the already escaped message for assertions.
+	// Test spy preserves the already escaped message for assertions.
 	throw new RuntimeException( $message );
 }

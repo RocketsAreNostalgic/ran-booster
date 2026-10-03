@@ -30,7 +30,7 @@ $nested_id = basename( $nested_dir ) . '/booster-fixture-branch.php';
 $table     = ran_booster_table_name();
 $assert    = static function ( bool $condition, string $message ): void {
 	if ( ! $condition ) {
-		throw new RuntimeException( $message ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed test assertion.
+		throw new RuntimeException( $message ); // Fixed test assertion.
 	}
 	echo 'assertion: ' . esc_html( $message ) . "\n";
 };

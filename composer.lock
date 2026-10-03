@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "0308fad0151790628106400c92f09aaf",
+    "content-hash": "7116367ef9783d0b517bd5acf16be24a",
     "packages": [
         {
             "name": "ran/booster-github-provider",
@@ -1747,16 +1747,16 @@
         },
         {
             "name": "ran/coding-standards",
-            "version": "v1.0.0",
+            "version": "v1.0.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-coding-standards.git",
-                "reference": "6af816a02b7d1108ad5c990e9d0fda0af0a13de7"
+                "reference": "0248066be3f4f9476ef7095d888657001488a3de"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-coding-standards/zipball/6af816a02b7d1108ad5c990e9d0fda0af0a13de7",
-                "reference": "6af816a02b7d1108ad5c990e9d0fda0af0a13de7",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-coding-standards/zipball/0248066be3f4f9476ef7095d888657001488a3de",
+                "reference": "0248066be3f4f9476ef7095d888657001488a3de",
                 "shasum": ""
             },
             "require": {
@@ -1793,7 +1793,7 @@
             ],
             "description": "Shared PHP and WordPress coding standards for Rockets Are Nostalgic projects.",
             "homepage": "https://github.com/RocketsAreNostalgic/ran-coding-standards",
-            "time": "2026-09-23T13:30:00+00:00"
+            "time": "2026-10-03T20:17:13+00:00"
         },
         {
             "name": "sebastian/cli-parser",

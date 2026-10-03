@@ -76,7 +76,7 @@ final class PackageMutationResult {
 
 	public function require_success(): void {
 		if ( ! $this->is_successful() ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The exception carries a fixed translated message for the controller boundary.
+			// The exception carries a fixed translated message for the controller boundary.
 			throw PackageStorageFailure::from_mutation_result( $this );
 		}
 	}

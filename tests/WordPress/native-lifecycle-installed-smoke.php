@@ -285,19 +285,19 @@ foreach ( $items as $item ) {
 			: ( new Theme_Upgrader( new WP_Upgrader_Skin() ) )->upgrade( $item['identifier'], array( 'clear_update_cache' => false ) );
 	}
 	if ( true !== $result ) {
-		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
+		// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 		throw new RuntimeException( 'The installed native ' . $type . ' ' . $item['policy'] . ' update failed.' );
 	}
 		$version = 'plugin' === $type
 			? ( get_plugin_data( WP_PLUGIN_DIR . '/' . $item['identifier'], false, false )['Version'] ?? '' )
 			: ( get_file_data( get_theme_root() . '/' . $item['identifier'] . '/style.css', array( 'Version' => 'Version' ), 'theme' )['Version'] ?? '' );
 	if ( '2.0.0' !== $version ) {
-		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
+		// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 		throw new RuntimeException( 'The installed native ' . $type . ' version was not replaced.' );
 	}
 		$metadata_path = 'plugin' === $type ? WP_PLUGIN_DIR . '/' . $item['identifier'] : get_theme_root() . '/' . $item['identifier'] . '/style.css';
 	if ( ! is_string( $item['expected_digest'] ?? null ) || ! hash_equals( $item['expected_digest'], (string) hash_file( 'sha256', $metadata_path ) ) ) {
-		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
+		// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 		throw new RuntimeException( 'The installed native ' . $type . ' digest was not replaced.' );
 	}
 }

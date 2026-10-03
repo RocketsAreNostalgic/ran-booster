@@ -1104,9 +1104,9 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 		$this->writer_called = true;
 		if ( null !== $this->writer_failure_code ) {
 			throw new \RAN\Secrets\WpConfigPathWriteException(
-				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test seam throws a stable fixture code, never rendered output.
+				// Test seam throws a stable fixture code, never rendered output.
 				$this->writer_failure_code,
-				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test seam throws raw fixture text to prove it is not rendered.
+				// Test seam throws raw fixture text to prove it is not rendered.
 				$this->writer_failure_message
 			);
 		}
@@ -1122,9 +1122,9 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 		$this->writer_called = true;
 		if ( null !== $this->writer_failure_code ) {
 			throw new \RAN\Secrets\WpConfigPathWriteException(
-				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test seam throws a stable fixture code, never rendered output.
+				// Test seam throws a stable fixture code, never rendered output.
 				$this->writer_failure_code,
-				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test seam throws raw fixture text to prove it is not rendered.
+				// Test seam throws raw fixture text to prove it is not rendered.
 				$this->writer_failure_message
 			);
 		}
@@ -1170,7 +1170,7 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 
 	protected function managed_storage_healthy(): bool {
 		if ( $this->health_failure ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test-only fixed fixture message.
+			// Test-only fixed fixture message.
 			throw new \RAN\Secrets\SecretsStorageUnavailable( $this->health_failure_message, $this->health_failure_reason );
 		}
 

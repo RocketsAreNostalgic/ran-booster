@@ -22,7 +22,7 @@ if ( 2 !== $ran_booster_theme_callback_count ) {
 	throw new RuntimeException(
 		sprintf(
 			'Booster registered %d neutral managed-theme callbacks; expected exactly 2.',
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The bounded integer count is emitted only to diagnose the disposable CLI proof.
+			// The bounded integer count is emitted only to diagnose the disposable CLI proof.
 			$ran_booster_theme_callback_count
 		)
 	);

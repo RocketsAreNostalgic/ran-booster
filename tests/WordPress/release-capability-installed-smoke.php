@@ -65,7 +65,7 @@ $installed = array();
 
 $assert_result = static function ( object $result, string $code ): void {
 	if ( ! $result->successful() || $code !== $result->code() ) {
-		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
+		// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 		throw new RuntimeException( 'Unexpected prospective release result: ' . $result->code() );
 	}
 };

@@ -183,7 +183,7 @@ class ProviderProfileAdminController {
 		$kind          = is_string( $request['kind'] ?? null ) ? sanitize_key( wp_unslash( $request['kind'] ) ) : '';
 		$kind_metadata = $this->provider_admin( $provider )->get_credential_kind( $kind );
 		if ( null === $kind_metadata ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+			// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Choose a supported credential type.', 'ran-booster' ) );
 		}
 		$submitted_configuration = is_array( $request['configuration'] ?? null )
@@ -194,24 +194,24 @@ class ProviderProfileAdminController {
 			$value                        = $submitted_configuration[ $field->key ] ?? '';
 			$configuration[ $field->key ] = is_string( $value ) ? sanitize_text_field( $value ) : '';
 			if ( $field->required && '' === trim( $configuration[ $field->key ] ) ) {
-				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+				// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 				throw new CredentialRequestException( __( 'Complete every required credential field.', 'ran-booster' ) );
 			}
 			if ( 'email' === $field->type && false === filter_var( $configuration[ $field->key ], FILTER_VALIDATE_EMAIL ) ) {
-				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+				// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 				throw new CredentialRequestException( __( 'Enter a valid account email address.', 'ran-booster' ) );
 			}
 		}
 		$secret = is_string( $request['secret'] ?? null ) ? trim( wp_unslash( $request['secret'] ) ) : '';
 		if ( null === $id && '' === $secret ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+			// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Enter the credential secret.', 'ran-booster' ) );
 		}
 		$manual_expiry_submitted = array_key_exists( 'expires_on', $request );
 		$manual_expiry           = null;
 		if ( $manual_expiry_submitted ) {
 			if ( ! is_string( $request['expires_on'] ) ) {
-				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+				// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 				throw new CredentialRequestException( __( 'Enter a valid credential expiry date.', 'ran-booster' ) );
 			}
 			$manual_expiry = trim( wp_unslash( $request['expires_on'] ) );
@@ -219,7 +219,7 @@ class ProviderProfileAdminController {
 			if ( null !== $manual_expiry
 				&& ( 1 !== preg_match( '/\A(\d{4})-(\d{2})-(\d{2})\z/D', $manual_expiry, $expiry_parts )
 					|| ! checkdate( (int) $expiry_parts[2], (int) $expiry_parts[3], (int) $expiry_parts[1] ) ) ) {
-				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+				// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 				throw new CredentialRequestException( __( 'Enter a valid expiry / removal date.', 'ran-booster' ) );
 			}
 		}
@@ -238,12 +238,12 @@ class ProviderProfileAdminController {
 			}
 		}
 		if ( '' === $secret && null !== $manual_expiry && null !== $provider_expiry && $manual_expiry > $provider_expiry ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+			// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'The expiry / removal date cannot be later than the expiry reported by the provider.', 'ran-booster' ) );
 		}
 		$self_destruct = isset( $request['self_destruct'] ) && '1' === $request['self_destruct'];
 		if ( $self_destruct && null === $manual_expiry ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+			// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Enter an expiry / removal date before enabling automatic removal.', 'ran-booster' ) );
 		}
 		$manual_expiry_is_provider_fallback = '' === $secret
@@ -285,7 +285,7 @@ class ProviderProfileAdminController {
 					|| ( $saved_profile['self_destruct'] ?? null ) !== $self_destruct
 					|| ( $self_destruct ? $manual_expiry : null ) !== ( $saved_profile['destroy_on'] ?? null )
 					|| empty( $saved_profile['configured'] ) ) {
-					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+					// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 					throw new CredentialRequestException( __( 'Booster could not verify that the repository credential was saved.', 'ran-booster' ) );
 				}
 				if ( $is_replacement ) {
@@ -317,16 +317,16 @@ class ProviderProfileAdminController {
 		$secret         = is_string( $request['secret'] ?? null ) ? trim( wp_unslash( $request['secret'] ) ) : '';
 		$scope_metadata = $admin->get_webhook_scope( $scope );
 		if ( null === $scope_metadata ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+			// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Choose a supported Push-to-Deploy scope.', 'ran-booster' ) );
 		}
 
 		if ( $scope_metadata->requires_target && '' === trim( $target ) ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+			// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Enter the target for this Push-to-Deploy scope.', 'ran-booster' ) );
 		}
 		if ( null === $id && '' === $secret ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+			// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Enter the Push-to-Deploy secret.', 'ran-booster' ) );
 		}
 		$authority_id = '';
@@ -358,14 +358,14 @@ class ProviderProfileAdminController {
 			|| ( $saved_profile['authority_id'] ?? null ) !== $authority_id
 			|| 'manual' !== ( $saved_profile['origin'] ?? null )
 			|| empty( $saved_profile['configured'] ) ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+			// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Booster could not verify that the Push-to-Deploy secret was saved.', 'ran-booster' ) );
 		}
 		return __( 'Push-to-Deploy secret saved.', 'ran-booster' );
 	}
 	private function delete_access_profile( ProviderCode $provider, ?string $id ): string {
 		if ( null === $id ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+			// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Choose a repository credential to remove.', 'ran-booster' ) );
 		}
 
@@ -373,7 +373,7 @@ class ProviderProfileAdminController {
 			function () use ( $provider, $id ): string {
 				$profile = $this->secrets->credential_profiles( $provider )[ $id ] ?? null;
 				if ( ! is_array( $profile ) || ! empty( $profile['immutable'] ) || 'file' !== ( $profile['source'] ?? null ) ) {
-					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+					// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 					throw new CredentialRequestException( __( 'Choose a saved repository credential to remove.', 'ran-booster' ) );
 				}
 
@@ -382,15 +382,15 @@ class ProviderProfileAdminController {
 					throw new CredentialRequestException(
 						sprintf(
 							/* translators: %d is the number of managed packages using this repository credential. */
-							_n( 'This repository credential is used by %d managed package. Assign another credential before deleting it.', 'This repository credential is used by %d managed packages. Assign another credential before deleting it.', $usage_count, 'ran-booster' ), // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
-							$usage_count // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal count is escaped at the response boundary.
+							_n( 'This repository credential is used by %d managed package. Assign another credential before deleting it.', 'This repository credential is used by %d managed packages. Assign another credential before deleting it.', $usage_count, 'ran-booster' ), // Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+							$usage_count // Internal count is escaped at the response boundary.
 						)
 					);
 				}
 
 				$cleared_default = $id === $this->public_lookup_profiles->get( $provider->value );
 				if ( ! $this->secrets->delete_credential( $provider, $id ) || isset( $this->secrets->credential_profiles( $provider )[ $id ] ) ) {
-					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+					// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 					throw new CredentialRequestException( __( 'Booster could not verify that the repository credential was removed.', 'ran-booster' ) );
 				}
 				if ( $cleared_default ) {
@@ -424,16 +424,16 @@ class ProviderProfileAdminController {
 	}
 	private function delete_webhook_profile( ProviderCode $provider, ?string $id ): string {
 		if ( null === $id ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+			// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Choose a Push-to-Deploy secret to remove.', 'ran-booster' ) );
 		}
 		$profile = $this->secrets->webhook_profiles( $provider )[ $id ] ?? null;
 		if ( ! is_array( $profile ) || ! empty( $profile['immutable'] ) || 'file' !== ( $profile['source'] ?? null ) ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+			// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Choose a saved Push-to-Deploy secret to remove.', 'ran-booster' ) );
 		}
 		if ( ! $this->secrets->delete_webhook( $provider, $id ) || isset( $this->secrets->webhook_profiles( $provider )[ $id ] ) ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+			// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Booster could not verify that the Push-to-Deploy secret was removed.', 'ran-booster' ) );
 		}
 		return __( 'Push-to-Deploy secret removed.', 'ran-booster' );
@@ -452,12 +452,12 @@ class ProviderProfileAdminController {
 			return null;
 		}
 		if ( ! is_string( $request['id'] ) ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+			// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Choose a valid credential profile.', 'ran-booster' ) );
 		}
 		$id = trim( wp_unslash( $request['id'] ) );
 		if ( '' !== $id && 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/D', $id ) ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+			// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Choose a valid credential profile.', 'ran-booster' ) );
 		}
 		return '' === $id ? null : $id;
@@ -511,7 +511,7 @@ class ProviderProfileAdminController {
 			$this->providers->get( $provider );
 			return $provider;
 		} catch ( \Throwable ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+			// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Choose a supported repository provider.', 'ran-booster' ) );
 		}
 	}
@@ -519,11 +519,11 @@ class ProviderProfileAdminController {
 		try {
 			$admin = $this->providers->get( $provider )->get_metadata()->admin;
 		} catch ( \Throwable ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+			// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Choose a supported repository provider.', 'ran-booster' ) );
 		}
 		if ( null === $admin ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+			// Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 			throw new CredentialRequestException( __( 'Repository provider settings are unavailable.', 'ran-booster' ) );
 		}
 		return $admin;

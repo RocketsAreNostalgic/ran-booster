@@ -215,7 +215,7 @@ final class HtmxPublicLookupTestController extends ProviderProfileAdminControlle
 			'status'   => $status,
 		);
 
-		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The test spy captures its fixed method arguments without output.
+		// The test spy captures its fixed method arguments without output.
 		throw new HtmxPublicLookupResponse( $provider, $message, $error, $status );
 	}
 }

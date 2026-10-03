@@ -25,7 +25,7 @@ final class ExplodingCredentialSecretsFile extends SecretsFile {
 		array $metadata,
 		?string $secret
 	): string {
-		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The canary verifies Dispatcher redacts unexpected storage failures.
+		// The canary verifies Dispatcher redacts unexpected storage failures.
 		throw new RuntimeException( 'Storage failed after receiving ' . $this->canary . '.' );
 	}
 }

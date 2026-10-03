@@ -71,7 +71,7 @@ final readonly class ManagedPackageBlueprintExporter {
 			throw new InvalidArgumentException( 'The managed package selection is invalid.' );
 		}
 		if ( array() !== $unsupported ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The typed exception carries only display-safe package failure context to the administrator boundary.
+			// The typed exception carries only display-safe package failure context to the administrator boundary.
 			throw new UnsupportedBlueprintPackages( $unsupported );
 		}
 
@@ -157,7 +157,7 @@ final readonly class ManagedPackageBlueprintExporter {
 				}
 				$material = $materials[ $key ] ??= $this->secrets->credential_material( $blueprint->provider, $credential_id );
 			} catch ( \Throwable $failure ) {
-				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The typed exception is caught at the admin boundary.
+				// The typed exception is caught at the admin boundary.
 				throw LocalSecretStoreUnavailable::for_portability( $failure );
 			}
 			if ( ! is_array( $material ) || 'file' !== ( $material['source'] ?? null )

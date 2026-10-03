@@ -47,12 +47,12 @@ final readonly class CredentialPolicy implements ProviderCredentialPolicy, Submi
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of validate_submitted_credential retains the production method contract; these inputs do not affect this controlled result.
 	public function validate_submitted_credential( array $metadata, #[\SensitiveParameter] string $secret ): void {
 		if ( ! str_starts_with( $secret, 'fixture_' ) ) {
-			// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Core revalidates this conformance fixture's fixed safe copy.
+			// Core revalidates this conformance fixture's fixed safe copy.
 			throw new InvalidCredentialInput(
 				InvalidCredentialInput::INVALID_SECRET_SHAPE,
 				'Fixture API keys must begin with fixture_.'
 			);
-			// phpcs:enable WordPress.Security.EscapeOutput.ExceptionNotEscaped
+
 		}
 	}
 

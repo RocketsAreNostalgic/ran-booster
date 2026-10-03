@@ -73,7 +73,7 @@ final readonly class DeploymentRequest {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_decode_json_decode -- Value object remains usable at CLI and worker boundaries.
 			$data = json_decode( $json, true, 8, JSON_THROW_ON_ERROR );
 		} catch ( JsonException $exception ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Chained for developers and never rendered.
+			// Chained for developers and never rendered.
 			throw new InvalidArgumentException( 'The stored deployment request is invalid.', 0, $exception );
 		}
 
@@ -127,7 +127,7 @@ final readonly class DeploymentRequest {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Value object remains usable at CLI and worker boundaries.
 			return json_encode( $value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES );
 		} catch ( JsonException $exception ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Chained for developers and never rendered.
+			// Chained for developers and never rendered.
 			throw new InvalidArgumentException( 'The deployment request cannot be encoded.', 0, $exception );
 		}
 	}
@@ -160,7 +160,7 @@ final readonly class DeploymentRequest {
 		try {
 			$normalized = PackageSubdirectory::normalize( $value );
 		} catch ( InvalidArgumentException $exception ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Chained for developers and never rendered.
+			// Chained for developers and never rendered.
 			throw new InvalidArgumentException( 'The package subdirectory is invalid.', 0, $exception );
 		}
 		if ( null === $normalized ) {

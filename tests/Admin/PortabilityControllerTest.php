@@ -188,6 +188,26 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertNull( $method->invoke( $this->controller() ) );
 	}
 
+	public function test_target_credential_ids_keep_numeric_key_and_value_validation(): void {
+		$_POST['target_credentials'] = array(
+			0         => 'saved-profile',
+			'01'      => 'second-profile',
+			'invalid' => 'ignored',
+			128       => 'out-of-range',
+			2         => array( 'malformed' ),
+			3         => str_repeat( 'x', 129 ),
+		);
+		$method                      = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'target_credential_ids' );
+
+		self::assertSame(
+			array(
+				0 => 'saved-profile',
+				1 => 'second-profile',
+			),
+			$method->invoke( $this->controller() )
+		);
+	}
+
 	public function test_credential_decision_parser_accepts_only_the_closed_ordinal_shape(): void {
 		$blueprint                     = $this->credential_blueprint();
 		$_POST['credential_decisions'] = array(

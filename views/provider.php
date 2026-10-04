@@ -306,8 +306,8 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 						$webhook_summary['tone'],
 						$webhook_summary['heading'],
 						$webhook_summary['description'],
-						static function () use ( $has_webhook_settings, $secrets_url, $storage_unavailable, $webhook_row_count ): void {
-							if ( 0 === $webhook_row_count && $has_webhook_settings ) {
+						static function () use ( $secrets_url, $storage_unavailable, $webhook_row_count ): void {
+							if ( 0 === $webhook_row_count ) {
 								?>
 								<button type="button" class="button ran-booster-open-credential-modal" data-modal="webhook"><?php esc_html_e( 'Add webhook secret', 'ran-booster' ); ?></button>
 									<?php

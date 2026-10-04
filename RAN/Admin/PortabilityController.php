@@ -413,7 +413,7 @@ final readonly class PortabilityController {
 
 		$ids = array();
 		foreach ( $input as $index => $value ) {
-			if ( ( ! is_int( $index ) && ( ! is_string( $index ) || ! ctype_digit( $index ) ) )
+			if ( ( ! is_int( $index ) && ! ctype_digit( $index ) )
 				|| (int) $index > PackageBlueprint::MAX_PACKAGES - 1
 				|| ! is_string( $value ) || strlen( $value ) > 128 ) {
 				continue;
@@ -435,7 +435,7 @@ final readonly class PortabilityController {
 		$decisions = array();
 		foreach ( $input as $ordinal => $value ) {
 			$canonical = is_int( $ordinal ) ? (string) $ordinal : $ordinal;
-			if ( ! is_string( $canonical ) || ! ctype_digit( $canonical ) || (string) (int) $canonical !== $canonical
+			if ( ! ctype_digit( $canonical ) || (string) (int) $canonical !== $canonical
 				|| (int) $canonical >= count( $blueprint->credentials ) || ! is_array( $value ) || array_is_list( $value )
 				|| array_diff( array_keys( $value ), array( 'action', 'target_id' ) ) ) {
 				throw new InvalidArgumentException();

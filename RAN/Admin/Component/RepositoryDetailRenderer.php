@@ -242,7 +242,7 @@ final class RepositoryDetailRenderer {
 		}
 		$message = $has_branch_consumer && ! $receiver_ready
 			? __( 'Repository webhook management is unavailable until this site can receive provider deliveries.', 'ran-booster' )
-			: ( $has_branch_consumer ? __( 'Assisted webhook setup is unavailable for this provider.', 'ran-booster' ) : __( 'Published-release packages ignore pushes; no Branch package currently uses this repository webhook.', 'ran-booster' ) );
+			: __( 'Published-release packages ignore pushes; no Branch package currently uses this repository webhook.', 'ran-booster' );
 		?>
 		<section class="ran-booster-settings-section ran-booster-repository-webhook-section" aria-labelledby="ran-booster-repository-webhook-heading">
 			<header class="ran-booster-settings-section__header">

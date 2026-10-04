@@ -1380,11 +1380,7 @@ final class PackageOperationServiceTest extends TestCase {
 
 	/** @return array{operation: string, identifier: string}|null */
 	private function invoke_package_success_notice( Dashboard $dashboard, string $type ): ?array {
-		$method = new \ReflectionMethod( Dashboard::class, 'add_package_success_notice' );
-		$result = $method->invoke( $dashboard, $type );
-
-		/** @var array{operation: string, identifier: string}|null $result */
-		return $result;
+		return ( new PackageAdminController() )->add_success_notice( $dashboard, $type );
 	}
 
 	/** @return array<string, string> */

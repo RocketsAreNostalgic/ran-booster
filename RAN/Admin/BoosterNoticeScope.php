@@ -13,9 +13,7 @@ final readonly class BoosterNoticeScope {
 	public static function allows( ?string $screen_id = null ): bool {
 		if ( null === $screen_id ) {
 			$screen    = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-			$screen_id = is_object( $screen ) && isset( $screen->id ) && is_string( $screen->id )
-				? $screen->id
-				: '';
+			$screen_id = self::screen_id_from( $screen );
 		}
 
 		return in_array( $screen_id, array( 'plugins', 'plugins-network' ), true )
@@ -26,12 +24,17 @@ final readonly class BoosterNoticeScope {
 	public static function is_booster_screen( ?string $screen_id = null ): bool {
 		if ( null === $screen_id ) {
 			$screen    = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-			$screen_id = is_object( $screen ) && isset( $screen->id ) && is_string( $screen->id )
-				? $screen->id
-				: '';
+			$screen_id = self::screen_id_from( $screen );
 		}
 
 		return str_starts_with( $screen_id, 'toplevel_page_ran-booster' )
 			|| str_starts_with( $screen_id, 'ran-booster_page_ran-booster' );
+	}
+
+	/** Validate WordPress's mutable current-screen observation before selecting notice scope. */
+	private static function screen_id_from( mixed $screen ): string {
+		return is_object( $screen ) && isset( $screen->id ) && is_string( $screen->id )
+			? $screen->id
+			: '';
 	}
 }

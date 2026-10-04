@@ -201,8 +201,8 @@ class Dashboard {
 			if ( null !== $this->secrets_storage ) {
 				$include_storage_details = current_user_can( 'manage_options' )
 					&& current_user_can( 'activate_plugins' );
-				$wordpress_root          = defined( 'ABSPATH' ) && is_string( ABSPATH )
-					? ABSPATH
+				$wordpress_root          = defined( 'ABSPATH' ) && is_string( constant( 'ABSPATH' ) )
+					? constant( 'ABSPATH' )
 					: '';
 				$result                  = $this->secrets_storage_result ?? $this->secrets_storage->status();
 				$this->log_secrets_storage_diagnostic( $result );
@@ -729,11 +729,6 @@ class Dashboard {
 				$this->add_message_with_context( $message, $context );
 			}
 		);
-	}
-
-	/** @return array{operation: string, identifier: string}|null */
-	private function add_package_success_notice( string $type ): ?array {
-		return $this->package_admin->add_success_notice( $this, $type );
 	}
 
 	private function package_storage_failure_index( PackagePagePresenter $package_view, string $type, PackageStorageFailure $failure ): mixed {

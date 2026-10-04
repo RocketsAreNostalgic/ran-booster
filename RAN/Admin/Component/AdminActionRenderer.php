@@ -9,7 +9,7 @@ namespace RAN\Admin\Component;
  */
 final class AdminActionRenderer {
 
-	/** @param array<string, array<string, mixed>> $actions */
+	/** @param array<array-key, array<string, mixed>> $actions */
 	public function render( array $actions, bool $emphasize_first = false ): void {
 		$position = 0;
 		foreach ( $actions as $action ) {

@@ -553,7 +553,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		);
 	}
 
-	/** @param array<string, list<string>> $selection */
+	/** @param array<string, list<mixed>> $selection */
 	#[DataProvider( 'invalid_credential_selections' )]
 	public function test_it_rejects_invalid_stale_or_unrelated_credential_selections( array $selection ): void {
 		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id' );
@@ -563,11 +563,17 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 
 		$this->expectException( InvalidArgumentException::class );
+		$this->expectExceptionMessage( 'The managed package credential selection is invalid.' );
 		( new ManagedPackageBlueprintExporter( $plugins, $themes, new SecretsFile( null, array() ) ) )->export( $selection );
 	}
 
-	/** @return iterable<string, array{array<string, list<string>>}> */
+	/** @return iterable<string, array{array<string, list<mixed>>}> */
 	public static function invalid_credential_selections(): iterable {
+		yield 'integer profile' => array( array( 'gh' => array( 123 ) ) );
+		yield 'boolean profile' => array( array( 'gh' => array( true ) ) );
+		yield 'null profile' => array( array( 'gh' => array( null ) ) );
+		yield 'array profile' => array( array( 'gh' => array( array() ) ) );
+		yield 'object profile' => array( array( 'gh' => array( new \stdClass() ) ) );
 		yield 'unknown profile' => array( array( 'gh' => array( 'unknown-profile' ) ) );
 		yield 'wrong provider' => array( array( 'bb' => array( 'credential-id-canary' ) ) );
 		yield 'constant' => array( array( 'gh' => array( SecretsFile::CONSTANT_PROFILE ) ) );

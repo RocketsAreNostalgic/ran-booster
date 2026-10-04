@@ -121,7 +121,7 @@ final class DocumentationHookRenderer {
 			);
 		}
 
-		if ( ! is_string( $content ) || '' === trim( $content ) ) {
+		if ( '' === trim( $content ) ) {
 			return null;
 		}
 

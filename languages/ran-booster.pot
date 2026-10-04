@@ -360,10 +360,6 @@ msgid "Repository webhook management is unavailable until this site can receive 
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:245
-msgid "Assisted webhook setup is unavailable for this provider."
-msgstr ""
-
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:245
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:366
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:438
 msgid "Published-release packages ignore pushes; no Branch package currently uses this repository webhook."
@@ -1026,7 +1022,7 @@ msgid "RAN Booster automatic deployment failed."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:59
-#: RAN/Dashboard.php:1036
+#: RAN/Dashboard.php:1031
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 

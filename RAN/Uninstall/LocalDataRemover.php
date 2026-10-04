@@ -226,7 +226,7 @@ class LocalDataRemover {
 	}
 
 	protected function loaded_wp_config_path(): string {
-		$root = $this->canonical_directory( defined( 'ABSPATH' ) && is_string( ABSPATH ) ? ABSPATH : '' );
+		$root = $this->canonical_directory( defined( 'ABSPATH' ) && is_string( constant( 'ABSPATH' ) ) ? ABSPATH : '' );
 		if ( null === $root ) {
 			throw new RuntimeException( 'The loaded WordPress configuration could not be verified.' );
 		}
@@ -247,7 +247,7 @@ class LocalDataRemover {
 
 		$loaded = array();
 		foreach ( get_included_files() as $included ) {
-			if ( ! is_string( $included ) || 'wp-config.php' !== basename( $included ) ) {
+			if ( 'wp-config.php' !== basename( $included ) ) {
 				continue;
 			}
 			$canonical = $this->canonical_regular_file( $included );
@@ -331,8 +331,8 @@ class LocalDataRemover {
 		try {
 
 			return $this->location_resolver->resolve(
-				defined( 'ABSPATH' ) && is_string( ABSPATH ) ? ABSPATH : '',
-				defined( 'WP_CONTENT_DIR' ) && is_string( WP_CONTENT_DIR ) ? WP_CONTENT_DIR : '',
+				defined( 'ABSPATH' ) && is_string( constant( 'ABSPATH' ) ) ? ABSPATH : '',
+				defined( 'WP_CONTENT_DIR' ) && is_string( constant( 'WP_CONTENT_DIR' ) ) ? WP_CONTENT_DIR : '',
 				dirname( __DIR__, 2 ),
 				isset( $_SERVER['DOCUMENT_ROOT'] ) && is_string( $_SERVER['DOCUMENT_ROOT'] )
 					? $_SERVER['DOCUMENT_ROOT']

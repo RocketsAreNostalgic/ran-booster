@@ -252,7 +252,7 @@ final class TroubleshootingService {
 	private function provider_locator_hints(): array {
 		$hints = array();
 		foreach ( $this->providers->ordered_metadata() as $metadata ) {
-			$hints[ $metadata->code->value ] = $metadata->admin?->repository_locator_hint ?? '';
+			$hints[ $metadata->code->value ] = $metadata->admin->repository_locator_hint ?? '';
 		}
 
 		return $hints;

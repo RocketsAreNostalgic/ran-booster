@@ -271,7 +271,7 @@ class LocalTroubleshootingService {
 		);
 	}
 
-	/** @return array{queued: int, running: int, needs_attention: int, earliest_queued_at: string|null, latest_terminal_at: string|null}|null */
+	/** @return array{queued: int, running: int, needs_attention: int}|null */
 	protected function deployment_snapshot(): ?array {
 
 		if ( null === $this->deployment_attempts ) {
@@ -401,7 +401,7 @@ class LocalTroubleshootingService {
 			$successful = false;
 		} finally {
 			if ( is_resource( $handle ) && is_array( $handle_stat ) ) {
-				$cleanup_okay = $this->cleanup_marker( $source ?? '', $handle_stat ) && $cleanup_okay;
+				$cleanup_okay = $this->cleanup_marker( $source ?? '', $handle_stat );
 				$cleanup_okay = $this->cleanup_marker( $destination ?? '', $handle_stat ) && $cleanup_okay;
 			}
 
@@ -516,7 +516,12 @@ class LocalTroubleshootingService {
 		return $left['dev'] === $right['dev'] && $left['ino'] === $right['ino'];
 	}
 
-	/** @param array<string|int, int> $expected */
+	/**
+	 * Reobserve the directory because another process can replace it.
+	 *
+	 * @param array<string|int, int> $expected
+	 * @phpstan-impure
+	 */
 	private function same_directory( string $path, array $expected ): bool {
 		$current = $this->path_stat( $path );
 
@@ -550,7 +555,7 @@ class LocalTroubleshootingService {
 	protected function filesystem_method(): ?string {
 		if ( ! function_exists( 'get_filesystem_method' )
 			&& defined( 'ABSPATH' )
-			&& is_string( ABSPATH )
+			&& is_string( constant( 'ABSPATH' ) )
 			&& is_file( ABSPATH . 'wp-admin/includes/file.php' )
 		) {
 			require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -564,7 +569,7 @@ class LocalTroubleshootingService {
 	}
 
 	protected function plugin_directory(): string {
-		return defined( 'WP_PLUGIN_DIR' ) && is_string( WP_PLUGIN_DIR ) ? WP_PLUGIN_DIR : '';
+		return defined( 'WP_PLUGIN_DIR' ) && is_string( constant( 'WP_PLUGIN_DIR' ) ) ? WP_PLUGIN_DIR : '';
 	}
 
 	protected function theme_directory(): string {
@@ -612,7 +617,12 @@ class LocalTroubleshootingService {
 		return @unlink( $path );
 	}
 
-	/** @return array<string|int, int>|false */
+	/**
+	 * Read current filesystem state without reusing an earlier observation.
+	 *
+	 * @return array<string|int, int>|false
+	 * @phpstan-impure
+	 */
 	protected function path_stat( string $path ): array|false {
 		clearstatcache( true, $path );
 		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Probe failures are returned as safe typed results.

@@ -5,28 +5,124 @@ declare(strict_types=1);
 namespace Tests\Quality;
 
 use PHPUnit\Framework\TestCase;
-use FilesystemIterator;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
+use PHP_CodeSniffer\Config;
+use PHP_CodeSniffer\Files\FileList;
+use PHP_CodeSniffer\Runner;
 
 final class StandardsCoverageTest extends TestCase {
 
 	public function test_owned_php_cannot_disable_every_standard(): void {
-		$root  = dirname( __DIR__, 2 );
-		$paths = glob( $root . '/*.php' );
-		self::assertIsArray( $paths );
-		foreach ( array( 'RAN', 'views', 'assets', 'scripts', 'tests' ) as $directory ) {
-			foreach ( new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $root . '/' . $directory, FilesystemIterator::SKIP_DOTS ) ) as $file ) {
-				if ( $file->isFile() && 'php' === $file->getExtension() ) {
-					$paths[] = $file->getPathname();
-				}
-			}
-		}
+		$paths = $this->tracked_php_files( dirname( __DIR__, 2 ) );
 		foreach ( $paths as $path ) {
 			$source = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Inspect only local owned source; never load or execute the fixture.
 			self::assertIsString( $source );
 			self::assertFalse( $this->has_blanket_suppression( $source ), $path . ' must identify the specific rule and reason instead of disabling all standards.' );
 		}
+	}
+
+	public function test_canonical_commands_keep_the_inventory_checker_scope(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read the local command contract; do not execute manifest content.
+		$source = file_get_contents( dirname( __DIR__, 2 ) . '/composer.json' );
+		self::assertIsString( $source );
+		$manifest = json_decode( $source, true, 512, JSON_THROW_ON_ERROR );
+		self::assertSame( 'phpcs --standard=.phpcs.xml --report=summary', $manifest['scripts']['standards'] ?? null, 'Command changes must preserve the real-checker inventory contract; extra paths or ignore arguments cannot silently narrow it.' );
+		self::assertSame( 'phpcbf --standard=.phpcs.xml --report=summary', $manifest['scripts']['standards:fix'] ?? null, 'Check and fix must keep the same reviewed selection.' );
+	}
+
+	public function test_every_tracked_php_file_is_selected_by_the_real_checker(): void {
+		$tracked  = $this->tracked_php_files( dirname( __DIR__, 2 ) );
+		$selected = $this->selected_php_files();
+		self::assertNotEmpty( $tracked );
+		self::assertSame( array(), array_values( array_diff( $tracked, $selected ) ), 'Every tracked PHP file needs standards coverage; a new exclusion requires explicit policy review.' );
+	}
+
+	public function test_a_checker_exclusion_exposes_the_omitted_owned_file(): void {
+		$tracked  = $this->tracked_php_files( dirname( __DIR__, 2 ) );
+		$selected = $this->selected_php_files( array( '--ignore=*/RAN/Theme.php' ) );
+		self::assertSame( array( dirname( __DIR__, 2 ) . '/RAN/Theme.php' ), array_values( array_diff( $tracked, $selected ) ) );
+	}
+
+	public function test_a_new_tracked_root_reaches_discovery_and_the_blanket_guard(): void {
+		$root      = sys_get_temp_dir() . '/ran-standards-' . bin2hex( random_bytes( 8 ) );
+		$directory = $root . '/new-tooling';
+		$path      = $directory . '/probe.php';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create an isolated CLI-only Git inventory fixture.
+		self::assertTrue( mkdir( $directory, 0700, true ) );
+		try {
+			$source = "<?php\n// phpcs:disable\n";
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write only the isolated inventory fixture; it is never executed.
+			self::assertSame( strlen( $source ), file_put_contents( $path, $source ) );
+			$this->git_output( $root, array( 'init', '--quiet' ) );
+			$this->git_output( $root, array( 'add', '--', 'new-tooling/probe.php' ) );
+			$tracked = $this->tracked_php_files( $root );
+			self::assertSame( array( $path ), $tracked );
+			self::assertContains( $path, $this->selected_php_files( array( $directory ) ) );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read the inert fixture through the same discovered path used by the guard.
+			$discovered = file_get_contents( $tracked[0] );
+			self::assertIsString( $discovered );
+			self::assertTrue( $this->has_blanket_suppression( $discovered ) );
+		} finally {
+			// This unique fixture contains only files created above and by Git init/add.
+			$files = new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( $root, \FilesystemIterator::SKIP_DOTS ), \RecursiveIteratorIterator::CHILD_FIRST );
+			foreach ( $files as $file ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir, WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only the isolated CLI fixture tree.
+				$file->isDir() ? rmdir( $file->getPathname() ) : unlink( $file->getPathname() );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove the now-empty fixture root.
+			rmdir( $root );
+		}
+	}
+
+	/** @return list<string> */
+	private function tracked_php_files( string $root ): array {
+		$output = $this->git_output( $root, array( 'ls-files', '-z', '--', '*.php' ) );
+		$paths  = array_map( static fn( string $path ): string => $root . '/' . $path, array_filter( explode( "\0", $output ), static fn( string $path ): bool => '' !== $path ) );
+		sort( $paths );
+		return $paths;
+	}
+
+	/** @param list<string> $arguments */
+	private function git_output( string $root, array $arguments ): string {
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open -- Read tracked CLI inventory or prepare its isolated negative fixture without invoking a shell.
+		$process = proc_open(
+			array( 'git', '-C', $root, ...$arguments ),
+			array(
+				0 => array( 'pipe', 'r' ),
+				1 => array( 'pipe', 'w' ),
+				2 => array( 'pipe', 'w' ),
+			),
+			$pipes
+		);
+		self::assertIsResource( $process );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the child input pipe; Git reads no input.
+		fclose( $pipes[0] );
+		$output = stream_get_contents( $pipes[1] );
+		$error  = stream_get_contents( $pipes[2] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the child output pipe.
+		fclose( $pipes[1] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the child error pipe.
+		fclose( $pipes[2] );
+		self::assertSame( 0, proc_close( $process ), (string) $error );
+		self::assertIsString( $output );
+		return $output;
+	}
+
+	/**
+	 * @param list<string> $arguments
+	 * @return list<string>
+	 */
+	private function selected_php_files( array $arguments = array() ): array {
+		$root = dirname( __DIR__, 2 );
+		require_once $root . '/vendor/squizlabs/php_codesniffer/autoload.php';
+		$runner         = new Runner();
+		$runner->config = new Config( array( '--standard=' . $root . '/.phpcs.xml', ...$arguments ) );
+		$runner->init();
+		$paths = array();
+		foreach ( new FileList( $runner->config, $runner->ruleset ) as $path => $file ) {
+			$paths[] = $path;
+		}
+		sort( $paths );
+		return $paths;
 	}
 
 	public function test_blanket_guard_distinguishes_annotations_from_fixture_strings(): void {

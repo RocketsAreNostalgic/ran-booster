@@ -435,6 +435,7 @@ final class NormalizedValuesTest extends TestCase {
 		self::assertFalse( $result->is_valid() );
 		self::assertSame( $reason, $result->reason );
 		self::assertSame( $expected_message, $result->get_display_message() );
+		self::assertNotSame( '', $result->get_display_message() );
 		self::assertLessThanOrEqual( 160, strlen( $expected_message ) );
 		self::assertDoesNotMatchRegularExpression( '/[\x00-\x1F\x7F]/', $expected_message );
 		self::assertStringNotContainsString( 'canary', $expected_message );

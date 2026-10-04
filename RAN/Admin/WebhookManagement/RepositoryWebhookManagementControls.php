@@ -278,7 +278,7 @@ final class RepositoryWebhookManagementControls {
 				return null;
 			}
 			$provider = $this->providers->require_capability( $provider_code, RepositoryWebhookSettingsLink::class );
-			$url      = null === $repository ? '' : trim( $provider->repository_webhook_settings_url( $repository ) );
+			$url      = trim( $provider->repository_webhook_settings_url( $repository ) );
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Provider returns an external display URL which is checked before rendering.
 			$parts = parse_url( $url );
 			if ( '' === $url || strlen( $url ) > 2048 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $url ) || false === filter_var( $url, FILTER_VALIDATE_URL ) || false === $parts || 'https' !== strtolower( $parts['scheme'] ?? '' ) || '' === ( $parts['host'] ?? '' ) || array_intersect_key( $parts, array_flip( array( 'user', 'pass', 'query', 'fragment' ) ) ) ) {
@@ -557,8 +557,11 @@ final class RepositoryWebhookManagementControls {
 	}
 
 	public function handle_admin_post(): void {
-		$request  = is_array( $_POST ) ? wp_unslash( $_POST ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- The controller verifies the operation-bound nonce before dispatch.
-		$query    = is_array( $_GET ) ? wp_unslash( $_GET ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reads the nonce that the controller verifies before dispatch.
+		// Integrations can replace request globals; retain the malformed-value fallback.
+		$post     = $GLOBALS['_POST'] ?? null;
+		$get      = $GLOBALS['_GET'] ?? null;
+		$request  = is_array( $post ) ? wp_unslash( $post ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- The controller verifies the operation-bound nonce before dispatch.
+		$query    = is_array( $get ) ? wp_unslash( $get ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reads the nonce that the controller verifies before dispatch.
 		$nonce    = is_string( $query['_wpnonce'] ?? null ) ? trim( $query['_wpnonce'] ) : '';
 		$redirect = $this->controller->handle_admin_post( $request, $nonce );
 

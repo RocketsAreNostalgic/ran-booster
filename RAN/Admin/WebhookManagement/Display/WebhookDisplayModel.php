@@ -518,7 +518,7 @@ final class WebhookDisplayModel {
 		);
 	}
 
-	/** @return list<array<string, string>> */
+	/** @return list<array{key:string,label:string,value:string,tone?:string,recorded?:bool,state?:string,datetime?:string}> */
 	private function history_details( string $status_code, ?InstallationRecord $record ): array {
 		$history = null === $record ? null : WebhookHistory::from_record( $record )->to_array();
 		$details = array(

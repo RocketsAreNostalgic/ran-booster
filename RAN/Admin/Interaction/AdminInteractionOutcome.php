@@ -20,6 +20,7 @@ final readonly class AdminInteractionOutcome {
 
 	public const UNEXPECTED_FAILURE = 'unexpected_failure';
 
+	/** @param self::SUCCESS|self::ACCEPTED|self::VALIDATION_FAILURE|self::UNEXPECTED_FAILURE $kind */
 	private function __construct(
 		private AdminInteractionRequest $request,
 		private string $kind,
@@ -55,6 +56,7 @@ final readonly class AdminInteractionOutcome {
 		return $this->request;
 	}
 
+	/** @return self::SUCCESS|self::ACCEPTED|self::VALIDATION_FAILURE|self::UNEXPECTED_FAILURE */
 	public function kind(): string {
 		return $this->kind;
 	}

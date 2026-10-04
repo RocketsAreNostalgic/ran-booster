@@ -124,6 +124,11 @@ class WordPressUpdaterLock {
 		return 1 === $result;
 	}
 
+	/**
+	 * Attempt a fresh database write, including after releasing an expired lock.
+	 *
+	 * @phpstan-impure
+	 */
 	private function insert( string $token ): bool {
 		global $wpdb;
 

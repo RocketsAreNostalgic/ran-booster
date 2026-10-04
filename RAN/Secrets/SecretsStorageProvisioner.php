@@ -391,7 +391,10 @@ class SecretsStorageProvisioner {
 			: $this->recovery_failure( $current, 'wp_config_verification_unavailable', __( 'Booster could not require a fresh WordPress configuration check.', 'ran-booster' ) );
 	}
 
-	/** @param list<array{directory:string,code:string,reason:string,component:string|null}>|null $discarded */
+	/**
+	 * @param list<array{directory:string,code:string,reason:string,component:string|null}>|null $discarded
+	 * @param-out list<array{directory:string,code:string,reason:string,component:string|null}> $discarded
+	 */
 	protected function resolve_candidate( ?array &$discarded = null ): ?string {
 		return $this->resolver->resolve(
 			$this->wordpress_root(),
@@ -461,11 +464,13 @@ class SecretsStorageProvisioner {
 	}
 
 	protected function wordpress_root(): string {
-		return defined( 'ABSPATH' ) && is_string( ABSPATH ) ? ABSPATH : '';
+		// Validate actual configured values even when WordPress analysis stubs declare strings.
+		return defined( 'ABSPATH' ) && is_string( constant( 'ABSPATH' ) ) ? ABSPATH : '';
 	}
 
 	protected function content_directory(): string {
-		return defined( 'WP_CONTENT_DIR' ) && is_string( WP_CONTENT_DIR ) ? WP_CONTENT_DIR : '';
+		// Validate actual configured values even when WordPress analysis stubs declare strings.
+		return defined( 'WP_CONTENT_DIR' ) && is_string( constant( 'WP_CONTENT_DIR' ) ) ? WP_CONTENT_DIR : '';
 	}
 
 	protected function plugin_directory(): string {
@@ -586,7 +591,10 @@ class SecretsStorageProvisioner {
 		return SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL;
 	}
 
-	/** @return list<array{candidate_path:string,token:string,safe:bool,fit:bool}> */
+	/**
+	 * @param-out bool $complete
+	 * @return list<array{candidate_path:string,token:string,safe:bool,fit:bool}>
+	 */
 	private function recovery_candidates( string $current, ?bool &$complete = null ): array {
 		$complete = true;
 		$base     = $this->automatic_storage_base( $current );
@@ -608,8 +616,7 @@ class SecretsStorageProvisioner {
 
 		$candidates = array();
 		foreach ( $entries as $entry ) {
-			if ( ! is_string( $entry )
-				|| 1 !== preg_match( '/\A[a-f0-9]{16}\z/D', $entry )
+			if ( 1 !== preg_match( '/\A[a-f0-9]{16}\z/D', $entry )
 				|| dirname( $current ) === $base . '/' . $entry
 			) {
 				continue;

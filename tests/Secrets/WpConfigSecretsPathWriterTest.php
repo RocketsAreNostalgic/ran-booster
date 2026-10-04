@@ -414,6 +414,18 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 				}
 			},
 		);
+		yield 'fsync after permissions' => array(
+			'temporary_permissions_failed',
+			static fn(): WpConfigSecretsPathWriter => new class() extends WpConfigSecretsPathWriter {
+				private int $sync_calls = 0;
+
+				protected function sync_handle( mixed $handle ): bool {
+					++$this->sync_calls;
+
+					return 1 === $this->sync_calls && parent::sync_handle( $handle );
+				}
+			},
+		);
 		yield 'temporary read-back' => array(
 			'temporary_readback_failed',
 			static fn(): WpConfigSecretsPathWriter => new class() extends WpConfigSecretsPathWriter {

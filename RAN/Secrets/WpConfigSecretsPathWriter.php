@@ -493,7 +493,7 @@ class WpConfigSecretsPathWriter {
 
 	/**
 	 * @param array{contents: string, dev: int, ino: int, mode: int, uid: int, gid: int, nlink: int, size: int, mtime: int, ctime: int} $original
-	 * @param array<string, int> $replaced
+	 * @param array<int|string, int> $replaced
 	 */
 	private function attempt_rollback( string $path, array $original, array $replaced ): void {
 		try {
@@ -680,8 +680,8 @@ class WpConfigSecretsPathWriter {
 	}
 
 	/**
-	 * @param array<string, int> $first
-	 * @param array<string, int> $second
+	 * @param array{dev:int,ino:int} $first
+	 * @param array{dev:int,ino:int,mode:int,nlink:int} $second
 	 */
 	private function same_identity( array $first, array $second ): bool {
 		return $first['dev'] === $second['dev']
@@ -691,8 +691,8 @@ class WpConfigSecretsPathWriter {
 	}
 
 	/**
-	 * @param array<string, int> $first
-	 * @param array<string, int> $second
+	 * @param array<int|string, int> $first
+	 * @param array<int|string, int> $second
 	 */
 	private function same_metadata( array $first, array $second ): bool {
 		foreach ( array( 'dev', 'ino', 'mode', 'uid', 'gid', 'nlink', 'size', 'mtime', 'ctime' ) as $key ) {
@@ -855,7 +855,10 @@ class WpConfigSecretsPathWriter {
 	}
 
 	/**
+	 * Each synchronization can fail independently, including after permissions change.
+	 *
 	 * @param resource $handle
+	 * @phpstan-impure
 	 */
 	protected function sync_handle( mixed $handle ): bool {
 		return ! function_exists( 'fsync' ) || fsync( $handle );

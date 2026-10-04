@@ -20,6 +20,15 @@ final class StandardsCoverageTest extends TestCase {
 		}
 	}
 
+	public function test_canonical_commands_keep_the_inventory_checker_scope(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read the local command contract; do not execute manifest content.
+		$source = file_get_contents( dirname( __DIR__, 2 ) . '/composer.json' );
+		self::assertIsString( $source );
+		$manifest = json_decode( $source, true, 512, JSON_THROW_ON_ERROR );
+		self::assertSame( 'phpcs --standard=.phpcs.xml --report=summary', $manifest['scripts']['standards'] ?? null, 'Command changes must preserve the real-checker inventory contract; extra paths or ignore arguments cannot silently narrow it.' );
+		self::assertSame( 'phpcbf --standard=.phpcs.xml --report=summary', $manifest['scripts']['standards:fix'] ?? null, 'Check and fix must keep the same reviewed selection.' );
+	}
+
 	public function test_every_tracked_php_file_is_selected_by_the_real_checker(): void {
 		$tracked  = $this->tracked_php_files( dirname( __DIR__, 2 ) );
 		$selected = $this->selected_php_files();

@@ -297,7 +297,7 @@ final class ReleaseArtifactCustodian {
 		return null === $stat ? null : self::stable_identity( $stat );
 	}
 
-	/** @return array<string, int>|null */
+	/** @return array<string|int, int>|null */
 	private static function path_file_stat( string $path ): ?array {
 		clearstatcache( true, $path );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_lstat -- Symlink-aware identity is required for the exclusive Core-owned file.
@@ -307,7 +307,7 @@ final class ReleaseArtifactCustodian {
 		return false !== $stat && 0100000 === ( $mode & 0170000 ) ? $stat : null;
 	}
 
-	/** @param array<string, int> $stat @return array{device:int,inode:int,links:int,owner:int,group:int} */
+	/** @param array<string|int, int> $stat @return array{device:int,inode:int,links:int,owner:int,group:int} */
 	private static function stable_identity( array $stat ): array {
 		return array(
 			'device' => (int) ( $stat['dev'] ?? -1 ),

@@ -584,7 +584,7 @@ final class TemporaryDebugCapture {
 		}
 	}
 
-	/** @param array<string, int> $stat */
+	/** @param array<string|int, int> $stat */
 	private function owned_by_process( array $stat ): bool {
 		$effective_user_id = function_exists( 'posix_geteuid' ) ? posix_geteuid() : null;
 

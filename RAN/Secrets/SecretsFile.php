@@ -1315,6 +1315,7 @@ class SecretsFile {
 		}
 	}
 
+	/** @return 'owner'|'repository' */
 	private function webhook_scope( mixed $scope ): string {
 		$scope = $this->required_string( $scope, 'Webhook secret scope' );
 		if ( ! in_array( $scope, array( 'owner', 'repository' ), true ) ) {
@@ -1390,6 +1391,11 @@ class SecretsFile {
 		);
 	}
 
+	/**
+	 * Observe filesystem state again after acquiring a lock; an earlier result is not stable.
+	 *
+	 * @phpstan-impure
+	 */
 	private function has_file(): bool {
 		if ( ! is_string( $this->path ) || '' === $this->path ) {
 			return false;
@@ -1966,8 +1972,9 @@ class SecretsFile {
 	}
 
 	private function configured_location_is_private(): bool {
-		$wordpress_root = defined( 'ABSPATH' ) && is_string( ABSPATH ) ? ABSPATH : '';
-		$content_dir    = defined( 'WP_CONTENT_DIR' ) && is_string( WP_CONTENT_DIR ) ? WP_CONTENT_DIR : '';
+		// Validate actual configured values even when WordPress analysis stubs declare strings.
+		$wordpress_root = defined( 'ABSPATH' ) && is_string( constant( 'ABSPATH' ) ) ? ABSPATH : '';
+		$content_dir    = defined( 'WP_CONTENT_DIR' ) && is_string( constant( 'WP_CONTENT_DIR' ) ) ? WP_CONTENT_DIR : '';
 		$plugin_dir     = realpath( dirname( __DIR__, 2 ) );
 		$document_root  = $_SERVER['DOCUMENT_ROOT'] ?? null;
 
@@ -2127,7 +2134,7 @@ class SecretsFile {
 		}
 	}
 
-	/** @param array<string, int> $stat */
+	/** @param array<int|string, int> $stat */
 	private function owned_by_process( array $stat ): bool {
 		$effective_user_id = $this->effective_user_id();
 

@@ -27,6 +27,19 @@ use RAN\Secrets\WpConfigSecretsPathWriter;
 #[CoversClass( SecretsStorageProvisioningResult::class )]
 final class SecretsStorageProvisionerTest extends TestCase {
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_invalid_wordpress_directory_constants_remain_unusable(): void {
+		define( 'ABSPATH', 123 );
+		define( 'WP_CONTENT_DIR', false );
+
+		$reflection  = new \ReflectionClass( SecretsStorageProvisioner::class );
+		$provisioner = $reflection->newInstanceWithoutConstructor();
+
+		self::assertSame( '', $reflection->getMethod( 'wordpress_root' )->invoke( $provisioner ) );
+		self::assertSame( '', $reflection->getMethod( 'content_directory' )->invoke( $provisioner ) );
+	}
+
 	private string $root;
 	private string $wordpress_root;
 	private string $config_path;

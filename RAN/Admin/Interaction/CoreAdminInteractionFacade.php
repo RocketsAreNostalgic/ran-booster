@@ -35,6 +35,7 @@ final class CoreAdminInteractionFacade implements
 
 	private SignedAdminInteractionFlow $flow;
 
+	/** @param (callable(): never)|null $terminate */
 	public function __construct(
 		?callable $emit_header = null,
 		?callable $emit_status = null,

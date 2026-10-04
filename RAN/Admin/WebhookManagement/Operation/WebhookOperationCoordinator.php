@@ -20,6 +20,7 @@ final class WebhookOperationCoordinator {
 	}
 
 	/**
+	 * @param 'setup'|'check'|'reconfigure'|'remove'|'test' $operation
 	 * @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool}
 	 */
 	public function execute(
@@ -79,14 +80,14 @@ final class WebhookOperationCoordinator {
 		} catch ( \Throwable ) {
 			return $this->outcome( 'operation_failed' );
 		}
-		if ( ! $result instanceof RepositoryWebhookOperationResult ) {
-			return $this->outcome( 'operation_failed' );
-		}
 
 		return $this->apply_result( $operation, $target, $record, $credential_id, $result );
 	}
 
-	/** @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool} */
+	/**
+	 * @param 'setup'|'check'|'reconfigure'|'remove'|'test' $operation
+	 * @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool}
+	 */
 	private function apply_result( string $operation, AssistanceTarget $target, ?InstallationRecord $record, string $credential_id, RepositoryWebhookOperationResult $result ): array {
 		$projection    = $result->to_array();
 		$state         = $projection['state'] ?? null;

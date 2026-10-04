@@ -283,6 +283,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		);
 	}
 
+	/** @param 'setup'|'check'|'reconfigure'|'remove'|'test' $action */
 	private function assess( string $action, AssistanceTarget $target, ?string $credential_id, ?string $hook_id, ?string $profile_id, ?int $profile_revision, string $nonce, bool $allow_cleanup ): RepositoryWebhookFitnessResult {
 		$current = $this->authorize( $action, $target, $nonce, $allow_cleanup );
 		if ( null === $current || ! $this->credential_profile_available( $current->provider_code(), (string) $credential_id ) || ( null !== $profile_id && null === $this->exact_profile( $current, $profile_id, (int) $profile_revision ) ) ) {
@@ -354,6 +355,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		}
 	}
 
+	/** @param 'setup'|'check'|'reconfigure'|'remove'|'test' $action */
 	private function identity_confirmed( string $action, AssistanceTarget $target, ?string $credential_id, ?string $hook_id = null ): bool {
 		$fitness = $this->provider_assessment( $action, $target, $credential_id, $hook_id )->to_array();
 
@@ -362,6 +364,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 			&& in_array( $fitness['evidence'], array( 'observed', 'inferred', 'unknown_by_design' ), true );
 	}
 
+	/** @param 'setup'|'check'|'reconfigure'|'remove'|'test' $action */
 	private function provider_assessment( string $action, AssistanceTarget $target, ?string $credential_id, ?string $hook_id ): RepositoryWebhookFitnessResult {
 		$provider = $this->complete_webhook_provider( $target->provider_code() );
 
@@ -374,6 +377,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		};
 	}
 
+	/** @return RepositoryWebhookManagement&RepositoryWebhookFitness&WebhookNormalizer */
 	private function complete_webhook_provider( string $provider_code ): RepositoryWebhookManagement {
 		$fitness    = $this->providers->require_capability( $provider_code, RepositoryWebhookFitness::class );
 		$management = $this->providers->require_capability( $provider_code, RepositoryWebhookManagement::class );

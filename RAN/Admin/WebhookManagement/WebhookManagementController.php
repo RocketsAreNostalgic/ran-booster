@@ -137,7 +137,8 @@ final class WebhookManagementController {
 
 	/** @return array{result:?string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string} */
 	public function panel_context(): array {
-		$query          = is_array( $_GET ) ? wp_unslash( $_GET ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Bounded display-only context.
+		$get            = $GLOBALS['_GET'] ?? null;
+		$query          = is_array( $get ) ? wp_unslash( $get ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Bounded display-only context.
 		$code           = $this->string_value( $query, 'webhook_management_result' );
 		$safe_reference = static fn ( mixed $value ): ?string => is_string( $value )
 			&& 1 === preg_match( '/^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/', $value )

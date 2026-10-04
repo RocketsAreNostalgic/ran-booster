@@ -102,7 +102,7 @@ final class CredentialUsageReader {
 			}
 			$type       = (string) $type_value;
 			$identifier = $row->package;
-			if ( ! in_array( $type, array( '1', '2' ), true ) || '' === $identifier || trim( $identifier ) !== $identifier || strlen( $identifier ) > 255 || preg_match( '/[\x00-\x1F\x7F]/', $identifier ) ) {
+			if ( '' === $identifier || trim( $identifier ) !== $identifier || strlen( $identifier ) > 255 || preg_match( '/[\x00-\x1F\x7F]/', $identifier ) ) {
 				throw new RuntimeException( 'Booster could not verify repository credential usage.' );
 			}
 

@@ -7,6 +7,7 @@ use RAN\PackageSource;
 use RAN\Theme;
 use RAN\WordPress\ManagedReleaseConfiguration;
 
+/** @extends AbstractPackageRepository<Theme> */
 class ThemeRepository extends AbstractPackageRepository {
 
 	public function all_booster_themes() {
@@ -55,6 +56,7 @@ class ThemeRepository extends AbstractPackageRepository {
 	 * @param $stylesheet
 	 * @return Theme
 	 * @throws ThemeNotFound
+	 * @throws PackageStorageFailure
 	 */
 	public function booster_theme_from_stylesheet( $stylesheet ) {
 		return $this->managed_package( $stylesheet );
@@ -101,6 +103,7 @@ class ThemeRepository extends AbstractPackageRepository {
 		return $theme->exists() && false === $theme->errors();
 	}
 
+	/** @return Theme */
 	protected function package_from_installation( string $identifier ): Package {
 		return Theme::from_wp_theme_object( wp_get_theme( $identifier ) );
 	}

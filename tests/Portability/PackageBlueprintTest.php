@@ -244,6 +244,21 @@ final class PackageBlueprintTest extends TestCase {
 		new PackageBlueprint( array( $this->package(), $this->package() ) );
 	}
 
+	public function test_named_constructor_preserves_validated_properties_and_rejects_foreign_items(): void {
+		$package   = $this->package();
+		$blueprint = new PackageBlueprint( packages: array( $package ), credentials: array() );
+		self::assertSame( array( $package ), $blueprint->packages );
+		self::assertSame( array(), $blueprint->credentials );
+		foreach ( array( array( array( new \stdClass() ), array() ), array( array( $package ), array( new \stdClass() ) ) ) as [$packages, $credentials] ) {
+			try {
+				new PackageBlueprint( packages: $packages, credentials: $credentials );
+				self::fail( 'Foreign blueprint item was accepted.' );
+			} catch ( InvalidArgumentException ) {
+				self::addToAssertionCount( 1 );
+			}
+		}
+	}
+
 	public function test_package_identity_includes_its_type(): void {
 		$plugin = $this->package( identifier: 'example.php' );
 		$theme  = $this->package( 'theme', 'example.php', 'Example Theme' );

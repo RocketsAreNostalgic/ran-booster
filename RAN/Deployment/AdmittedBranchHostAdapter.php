@@ -350,7 +350,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		$installed->set_repository( $repository );
 		$installed->set_subdirectory( $request->subdirectory );
 		$installed->set_deployment_policy( $request->deployment_policy );
-		$result = 'plugin' === $deployment->package_type ? $this->plugins->adopt( $installed ) : $this->themes->adopt( $installed );
+		$result = $installed instanceof \RAN\Plugin ? $this->plugins->adopt( $installed ) : $this->themes->adopt( $installed );
 		if ( $result->is_successful() ) {
 			return true;
 		}
@@ -618,6 +618,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		);
 	}
 
+	/** @return \RAN\Plugin|\RAN\Theme */
 	private function installed_package( string $type, string $slug ): Package {
 		return 'plugin' === $type ? $this->plugins->from_slug( $slug ) : $this->themes->from_slug( $slug );
 	}

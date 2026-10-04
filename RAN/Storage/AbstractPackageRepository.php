@@ -14,6 +14,7 @@ use RAN\Runtime\RuntimeSupport;
 use RAN\WordPress\ManagedReleaseConfiguration;
 use Throwable;
 
+/** @template TPackage of Package */
 abstract class AbstractPackageRepository {
 
 	private ?Database $database_lifecycle = null;
@@ -25,7 +26,7 @@ abstract class AbstractPackageRepository {
 	/**
 	 * Return all installed packages managed by Booster, keyed by their identifier.
 	 *
-	 * @return array<string, Package>
+	 * @return array<string, TPackage>
 	 */
 	protected function all_packages( ?PackageSource $source = null ): array {
 		$rows     = $this->package_rows( null, $source );
@@ -346,6 +347,7 @@ abstract class AbstractPackageRepository {
 	/**
 	 * Load one managed package or throw the adapter's package-specific exception.
 	 *
+	 * @return TPackage
 	 * @throws Throwable When the managed package cannot be found.
 	 */
 	protected function managed_package( mixed $identifier ): Package {
@@ -692,7 +694,10 @@ abstract class AbstractPackageRepository {
 	}
 
 	/**
+	 * Each call observes the current database state, including intervening writes.
+	 *
 	 * @return list<object>
+	 * @phpstan-impure
 	 */
 	private function package_rows( ?string $identifier = null, ?PackageSource $source = null ): array {
 		global $wpdb;
@@ -900,6 +905,7 @@ abstract class AbstractPackageRepository {
 		return true;
 	}
 
+	/** @return TPackage */
 	private function hydrate_package( object $row ): Package {
 		$identifier = $this->string_from_row( $row, 'package' );
 		$package    = $this->package_from_installation( $identifier );
@@ -957,6 +963,7 @@ abstract class AbstractPackageRepository {
 
 	abstract protected function package_exists( string $identifier ): bool;
 
+	/** @return TPackage */
 	abstract protected function package_from_installation( string $identifier ): Package;
 
 	abstract protected function not_found_exception(): Throwable;

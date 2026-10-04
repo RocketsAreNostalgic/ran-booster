@@ -126,7 +126,7 @@ class DeploymentCoordinator {
 	/**
 	 * Persist one validated administrator selection for sequential cron execution.
 	 *
-	 * @param list<array{package_type: string, provider: string, provider_repository_id: string, requested_ref: string, request: DeploymentRequest}> $targets
+	 * @param list<array{package_type: string, provider: string, provider_repository_id: string, requested_ref: string, package_source: string, package_source_revision: int, request: DeploymentRequest}> $targets
 	 * @return array{queued: int, busy: int, runner_status: string}
 	 */
 	public function queue_manual_updates( array $targets ): array {

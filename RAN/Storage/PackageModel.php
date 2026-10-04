@@ -10,6 +10,23 @@ use RAN\PackageSubdirectory;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\RepositoryLocator;
 
+/**
+ * Validated row attributes exposed by __get(), without public write access.
+ *
+ * Optional attributes remain null when absent from the constructor input.
+ *
+ * @property-read string|null $package
+ * @property-read string|null $repository
+ * @property-read string|null $branch
+ * @property-read string $deployment_policy
+ * @property-read string $source
+ * @property-read int $source_revision
+ * @property-read string|null $provider
+ * @property-read string|null $provider_repository_id
+ * @property-read int|null $private
+ * @property-read string|null $credential_id
+ * @property-read string|null $subdirectory
+ */
 class PackageModel {
 
 	protected $package;

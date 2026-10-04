@@ -54,9 +54,9 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 	private \Closure $current_user_id;
 
 	/**
-	 * @param callable(string): bool|null         $canManage
-	 * @param callable(string, string): bool|null $verifyNonce
-	 * @param callable(): int|null                $currentUserId
+	 * @param callable(string): bool|null         $can_manage
+	 * @param callable(string, string): bool|null $verify_nonce
+	 * @param callable(): int|null                $current_user_id
 	 */
 	public function __construct(
 		private PackageRepositoryRequestResolver $repositories,

@@ -6,7 +6,11 @@ namespace RAN;
 
 use RAN\Deployment\DeploymentPolicy;
 
-/** @phpstan-consistent-constructor */
+/**
+ * @phpstan-consistent-constructor
+ * @property-read ManagedRepository $repository Getter-backed repository read.
+ * @property-read mixed $name Optional plugin/theme metadata, returned unchanged.
+ */
 abstract class AbstractPackage implements Package {
 
 	protected $repository;

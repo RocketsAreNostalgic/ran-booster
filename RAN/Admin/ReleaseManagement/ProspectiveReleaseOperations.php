@@ -12,7 +12,7 @@ final class ProspectiveReleaseOperations {
 	/** @var \Closure(string, array<string, mixed>, string): \RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult */
 	private readonly \Closure $read_candidates;
 
-	/** @param callable(string, array<string, mixed>, string): \RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult $readCandidates */
+	/** @param callable(string, array<string, mixed>, string): \RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult $read_candidates */
 
 	public function __construct( private readonly ProspectiveReleaseFacade $prospective, callable $read_candidates ) {
 
@@ -60,7 +60,7 @@ final class ProspectiveReleaseOperations {
 		return $outcome( 'operation_failed', false );
 	}
 
-	/** @param array<string, mixed> $untrustedRepository */
+	/** @param array<string, mixed> $untrusted_repository */
 	public function execute(
 		string $operation,
 		string $type,

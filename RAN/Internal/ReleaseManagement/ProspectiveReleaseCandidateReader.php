@@ -27,7 +27,7 @@ final class ProspectiveReleaseCandidateReader {
 	) {
 	}
 
-	/** @param array<string, mixed> $repositoryRequest */
+	/** @param array<string, mixed> $repository_request */
 
 	public function read( string $type, array $repository_request, string $channel ): ProspectiveReleaseResult {
 		if ( ! RuntimeSupport::current()->allows_managed_operations() ) {

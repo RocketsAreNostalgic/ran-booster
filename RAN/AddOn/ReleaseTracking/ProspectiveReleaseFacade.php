@@ -25,7 +25,7 @@ interface ProspectiveReleaseFacade {
 	public function supported_provider_codes( string $type ): array;
 
 	/**
-	 * @param array<string, mixed>  $repositoryRequest
+	 * @param array<string, mixed>  $repository_request
 	 * @param 'stable'|'prerelease' $channel
 	 */
 	public function list_candidates(
@@ -36,7 +36,7 @@ interface ProspectiveReleaseFacade {
 	): ProspectiveReleaseResult;
 
 	/**
-	 * @param array<string, mixed>  $repositoryRequest
+	 * @param array<string, mixed>  $repository_request
 	 * @param 'stable'|'prerelease' $channel
 	 */
 	public function inspect(
@@ -49,7 +49,7 @@ interface ProspectiveReleaseFacade {
 	): ProspectiveReleaseResult;
 
 	/**
-	 * @param array<string, mixed>  $repositoryRequest
+	 * @param array<string, mixed>  $repository_request
 	 * @param 'stable'|'prerelease' $channel
 	 */
 	public function install(

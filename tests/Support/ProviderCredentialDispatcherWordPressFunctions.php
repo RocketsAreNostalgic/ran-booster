@@ -22,7 +22,13 @@ function check_admin_referer( string $action, string $query_arg = '_wpnonce' ): 
 	return true;
 }
 
-function wp_die( string $message ): never {
+function wp_die( string $message ): void {
+	if ( $GLOBALS['ran_booster_test_wp_die_returns'] ?? false ) {
+		$GLOBALS['ran_booster_test_wp_die_messages'][] = $message;
+
+		return;
+	}
+
 	// Test shim preserves the production call for assertions.
 	throw new \RuntimeException( $message );
 }

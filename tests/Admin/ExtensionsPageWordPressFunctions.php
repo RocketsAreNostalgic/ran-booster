@@ -8,8 +8,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', dirname( __DIR__, 2 ) . '/' );
 }
 
-/** @param callable|null $callback */
-function add_menu_page( string $page_title, string $menu_title, string $capability, string $menu_slug, ?callable $callback = null, string $icon_url = '' ): void {
+/** @param callable|string $callback */
+function add_menu_page( string $page_title, string $menu_title, string $capability, string $menu_slug, callable|string $callback = '', string $icon_url = '' ): void {
 	$GLOBALS['ran_booster_extensions_page_menus'][] = array(
 		'page_title' => $page_title,
 		'menu_title' => $menu_title,

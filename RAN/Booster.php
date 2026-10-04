@@ -134,50 +134,40 @@ class Booster {
 
 	public function activate() {
 		if ( ! $this->sodium_available() ) {
-			wp_die(
+			return wp_die(
 				esc_html__(
 					'RAN Booster requires the PHP Sodium extension for encrypted credential storage. Ask your hosting provider to enable Sodium, then activate the plugin again.',
 					'ran-booster'
 				)
 			);
-
-			return;
 		}
 		if ( $this->is_multisite_installation() ) {
-			wp_die(
+			return wp_die(
 				esc_html__(
 					'RAN Booster encrypted credential storage is not available on multisite in this Beta release. Use a single-site WordPress installation.',
 					'ran-booster'
 				)
 			);
-
-			return;
 		}
 		try {
 			WpPusherCoexistencePolicy::assert_package_mutation_allowed();
 		} catch ( \RuntimeException $failure ) {
-			wp_die( esc_html( $failure->getMessage() ) );
-
-			return;
+			return wp_die( esc_html( $failure->getMessage() ) );
 		}
 
 		try {
 			$this->service( 'RAN\Storage\Database' )->install();
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure $exception ) {
 			BoosterLogger::log_exception( 'plugin activation database unsupported', $exception, array( 'step' => 'plugin_activation' ) );
-			wp_die( esc_html( $exception->getMessage() ) );
-
-			return;
+			return wp_die( esc_html( $exception->getMessage() ) );
 		} catch ( \Throwable $exception ) {
 			BoosterLogger::log_exception( 'plugin activation failed', $exception, array( 'step' => 'plugin_activation' ) );
-			wp_die(
+			return wp_die(
 				esc_html__(
 					'RAN Booster could not complete its database setup, so WordPress left the plugin inactive. Confirm that WordPress can create and update plugin tables, then try again or contact your hosting provider.',
 					'ran-booster'
 				)
 			);
-
-			return;
 		}
 
 		$this->service( WordPressWorkerWakeup::class )->request();
@@ -219,7 +209,7 @@ class Booster {
 	}
 
 	public function admin_menu() {
-		add_menu_page( $this->get_name(), $this->get_name(), 'manage_options', 'ran-booster', null, $this->get_menu_icon() );
+		add_menu_page( $this->get_name(), $this->get_name(), 'manage_options', 'ran-booster', '', $this->get_menu_icon() );
 		add_submenu_page( 'ran-booster', $this->get_name(), __( 'Overview', 'ran-booster' ), 'manage_options', 'ran-booster', array( $this->service( 'RAN\Dashboard' ), 'get_index' ) );
 		add_submenu_page( 'ran-booster', __( 'Install Plugin', 'ran-booster' ), __( 'Install Plugin', 'ran-booster' ), 'manage_options', 'ran-booster-plugins-create', array( $this->service( 'RAN\Dashboard' ), 'get_plugins_create' ) );
 		add_submenu_page( 'ran-booster', __( 'Managed Plugins', 'ran-booster' ), __( 'Plugins', 'ran-booster' ), 'manage_options', 'ran-booster-plugins', array( $this->service( 'RAN\Dashboard' ), 'get_plugins' ) );

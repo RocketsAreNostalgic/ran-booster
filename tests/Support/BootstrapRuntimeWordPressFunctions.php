@@ -14,7 +14,7 @@ $GLOBALS['ran_booster_rest_routes']            = array();
 $GLOBALS['ran_booster_loaded_textdomains']     = array();
 
 function is_multisite(): bool {
-	return true;
+	return $GLOBALS['ran_booster_bootstrap_multisite'] ?? true;
 }
 
 function did_action( string $hook ): int {

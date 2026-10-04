@@ -40,6 +40,7 @@ final class SignedAdminInteractionFlow {
 
 	/**
 	 * @param callable(string, string, string, string): ?SignedAdminInteractionRequest $resolve_pending_request
+	 * @param (callable(): never)|null $terminate
 	 */
 	public function __construct(
 		callable $resolve_pending_request,
@@ -245,7 +246,7 @@ final class SignedAdminInteractionFlow {
 	}
 
 	/**
-	 * @return array{request: SignedAdminInteractionRequest, kind: string, message: string}|null
+	 * @return array{request: SignedAdminInteractionRequest, kind: AdminInteractionOutcome::SUCCESS|AdminInteractionOutcome::ACCEPTED|AdminInteractionOutcome::VALIDATION_FAILURE|AdminInteractionOutcome::UNEXPECTED_FAILURE, message: string}|null
 	 */
 	private function pending_outcome(): ?array {
 		$operation  = $this->query_string( self::QUERY_OPERATION );
@@ -299,6 +300,7 @@ final class SignedAdminInteractionFlow {
 		);
 	}
 
+	/** @phpstan-assert AdminInteractionOutcome::SUCCESS|AdminInteractionOutcome::ACCEPTED|AdminInteractionOutcome::VALIDATION_FAILURE|AdminInteractionOutcome::UNEXPECTED_FAILURE $kind */
 	private function assert_outcome( string $kind, string $message ): void {
 		if ( ! in_array(
 			$kind,
@@ -317,6 +319,7 @@ final class SignedAdminInteractionFlow {
 		}
 	}
 
+	/** @param AdminInteractionOutcome::SUCCESS|AdminInteractionOutcome::ACCEPTED|AdminInteractionOutcome::VALIDATION_FAILURE|AdminInteractionOutcome::UNEXPECTED_FAILURE $kind */
 	private function status( string $kind ): int {
 		return match ( $kind ) {
 			AdminInteractionOutcome::SUCCESS            => 200,

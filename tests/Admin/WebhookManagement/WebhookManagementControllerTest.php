@@ -38,6 +38,50 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class WebhookManagementControllerTest extends TestCase {
+	public function test_malformed_and_missing_query_globals_cannot_supply_panel_feedback(): void {
+		$original = $GLOBALS['_GET'] ?? null;
+		try {
+			foreach ( array( null, false, 17, 'webhook_management_result=verified' ) as $query ) {
+				$GLOBALS['_GET'] = $query;
+				self::assertSame(
+					array(
+						'result'      => null,
+						'recovery'    => null,
+						'remediation' => null,
+					),
+					$this->controller()->panel_context()
+				);
+			}
+			unset( $GLOBALS['_GET'] );
+			self::assertSame(
+				array(
+					'result'      => null,
+					'recovery'    => null,
+					'remediation' => null,
+				),
+				$this->controller()->panel_context()
+			);
+		} finally {
+			$_GET = $original;
+		}
+	}
+
+	public function test_native_return_type_failure_preserves_every_operation_failure_boundary(): void {
+		foreach ( array( 'setup', 'check', 'reconfigure', 'remove', 'test' ) as $operation ) {
+			$gateway = $this->createMock( WebhookAssistanceFacade::class );
+			$gateway->method( 'target' )->willReturn( $this->target() );
+			$gateway->expects( self::once() )->method( $operation )->willReturnCallback( static fn (): string => 'invalid provider result' );
+			$store         = new OperationStoreFixture();
+			$store->record = 'setup' === $operation ? null : $this->record();
+			$original      = $store->record;
+			$result        = ( new WebhookOperationCoordinator( $gateway, $store ) )->execute( $operation, 'gh', '1234', 'credential_1', null, 'valid' );
+			self::assertSame( 'operation_failed', $result['code'] );
+			self::assertFalse( $result['successful'] );
+			self::assertFalse( $result['inline_safe'] );
+			self::assertSame( $original, $store->record );
+		}
+	}
+
 	public function test_it_enriches_only_the_reserved_core_provider_action(): void {
 		$store         = new OperationStoreFixture();
 		$store->record = $this->record();

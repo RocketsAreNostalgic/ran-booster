@@ -9,9 +9,11 @@ release, installed acceptance claim or change to the supported APIs.
 The locked `RANWordPressPlugin` ancestry is RAN syntax + WordPress-Extra +
 PHPCompatibilityWP. Core sets WordPress 7.0 and PHP 8.2+, established namespace
 and hook prefixes, and its own runtime exceptions. It does not enable the whole
-WordPress-Docs standard. The unchanged PHPStan floor is level 1; direct coverage
-of all 345 shipped owned PHP files is tested independently against the release
-manifest. Generated Admin Shell PHP is selected and remains immutable.
+WordPress-Docs standard. The original checkpoint retained PHPStan level 1;
+the subsequent #127 analysis tranche raises the required floor to level 5.
+Direct coverage of all 345 shipped owned PHP files is tested independently
+against the release manifest. Generated Admin Shell PHP is selected and remains
+immutable. Levels 6–8 and retained-exception acceptance remain separate work.
 
 The default PHP selection covers root entrypoints, RAN, views, assets, scripts,
 tests and fixtures. Vendor, node_modules, Workbench and generated test/cache

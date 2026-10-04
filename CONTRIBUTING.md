@@ -21,13 +21,14 @@ RAN Booster is distributed through verified GitHub release artifacts rather than
 
 ## Production PHP analysis coverage
 
-`composer analyze` is blocking PHPStan level 1. Its direct roots cover the four
+`composer analyze` is blocking PHPStan level 5. Its direct roots cover the four
 root entrypoints, `RAN/`, `views/` (including the immutable generated Admin Shell)
 and PHP under `assets/`. At the #167 coverage checkpoint this is 345 shipped Core
 PHP files. Dependency `scanDirectories` supplies symbols; it is not direct
 analysis of dependency bodies. Tests and maintenance scripts retain syntax,
 standards and their behavioural gates, rather than being counted as production
-analysis coverage.
+analysis coverage. Levels 6–8 remain separately scoped; this gate does not imply
+maximum analysis depth or complete retained-exception acceptance.
 
 Analysis declarations follow the supported WordPress 7.0 floor. The direct
 `php-stubs/wordpress-stubs` constraint is `~7.0.0`: accept 7.0 patch declarations
@@ -98,8 +99,8 @@ uses have declaration-local explanations. Owned private parameters and their cal
 must not retain dead arguments merely because a class implements an interface.
 
 The inherited profile is WordPress-Extra plus PHPCompatibilityWP and the RAN
-syntax baseline, not every WordPress-Docs rule. Full PHPStan path coverage remains
-level 1; it does not imply maximum analysis depth. The [standards scope inventory](docs/php-standards-coverage.md)
+syntax baseline, not every WordPress-Docs rule. Full PHPStan path coverage is
+enforced at level 5; it does not imply maximum analysis depth. The [standards scope inventory](docs/php-standards-coverage.md)
 records the remaining specific exclusions and their rationale. The former blanket
 exemptions in 29 test/harness files are removed; a token-aware guard rejects new
 whole-file or all-rule suppressions. Specific native/runtime fixture exceptions

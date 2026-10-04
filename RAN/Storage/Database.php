@@ -556,7 +556,7 @@ class Database {
 
 	private function inspect_capabilities(): void {
 		$database = $this->connection();
-		if ( defined( 'WP_CONTENT_DIR' ) && is_string( WP_CONTENT_DIR ) && is_file( rtrim( WP_CONTENT_DIR, '/\\' ) . '/db.php' ) ) {
+		if ( defined( 'WP_CONTENT_DIR' ) && is_string( constant( 'WP_CONTENT_DIR' ) ) && is_file( rtrim( WP_CONTENT_DIR, '/\\' ) . '/db.php' ) ) {
 			throw new DatabaseCompatibilityFailure( 'database_drop_in' );
 		}
 		if ( ! method_exists( $database, 'db_server_info' ) ) {

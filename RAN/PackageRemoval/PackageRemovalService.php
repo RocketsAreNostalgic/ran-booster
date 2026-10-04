@@ -69,7 +69,7 @@ final readonly class PackageRemovalService {
 				if ( null !== $blocker ) {
 					$result = PackageRemovalResult::failed( $blocker );
 				} else {
-					$this->disable( $operation->package_type, $package );
+					$this->disable( $package );
 					$result = 'plugin' === $operation->package_type
 						? $this->delete_plugin( $identifier, $package )
 						: $this->delete_theme( $identifier, $package );
@@ -150,8 +150,8 @@ final readonly class PackageRemovalService {
 		return PackageRemovalResult::deleted();
 	}
 
-	private function disable( string $type, Package $package ): void {
-		$result = 'plugin' === $type
+	private function disable( \RAN\Plugin|\RAN\Theme $package ): void {
+		$result = $package instanceof \RAN\Plugin
 			? $this->plugins->disable_plugin_for_removal( $package )
 			: $this->themes->disable_theme_for_removal( $package );
 		$result->require_success();
@@ -179,6 +179,7 @@ final readonly class PackageRemovalService {
 		return $this->wordpress->theme_deletion_blocker( $identifier );
 	}
 
+	/** @return \RAN\Plugin|\RAN\Theme */
 	private function find( string $type, string $identifier ): Package {
 		return 'plugin' === $type
 			? $this->plugins->booster_plugin_from_file( $identifier )

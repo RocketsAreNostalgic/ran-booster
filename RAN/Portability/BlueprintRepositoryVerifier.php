@@ -169,6 +169,7 @@ final readonly class BlueprintRepositoryVerifier {
 			&& isset( $this->secrets->credential_profiles( $provider )[ $credential_id ] );
 	}
 
+	/** @param-out bool $repository_private */
 	private function verified_item( BlueprintPlanItem $item, ?string $credential_id, ?bool &$repository_private ): BlueprintPlanItem {
 		$package            = $item->package;
 		$provider           = ProviderCode::parse( $package->provider );

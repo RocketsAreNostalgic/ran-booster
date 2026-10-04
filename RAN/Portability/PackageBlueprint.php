@@ -15,9 +15,18 @@ final readonly class PackageBlueprint {
 	public const MAX_PACKAGES    = 128;
 	public const MAX_CREDENTIALS = 128;
 
-	/** @param list<BlueprintPackage> $packages @param list<BlueprintCredential> $credentials */
-	public function __construct( public array $packages, #[\SensitiveParameter] public array $credentials = array() ) {
-		if ( count( $packages ) > self::MAX_PACKAGES || count( $credentials ) > self::MAX_CREDENTIALS ) {
+	/** @var list<BlueprintPackage> */
+	public array $packages;
+
+	/** @var list<BlueprintCredential> */
+	public array $credentials;
+
+	/**
+	 * @param array<array-key, mixed> $packages
+	 * @param array<array-key, mixed> $credentials
+	 */
+	public function __construct( array $packages, #[\SensitiveParameter] array $credentials = array() ) {
+		if ( ! array_is_list( $packages ) || ! array_is_list( $credentials ) || count( $packages ) > self::MAX_PACKAGES || count( $credentials ) > self::MAX_CREDENTIALS ) {
 			throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
 		}
 		$identities = array();
@@ -55,6 +64,8 @@ final readonly class PackageBlueprint {
 				$associated[ $key ] = true;
 			}
 		}
+		$this->packages    = $packages;
+		$this->credentials = $credentials;
 	}
 
 	public static function from_json( #[\SensitiveParameter] string $json ): self {

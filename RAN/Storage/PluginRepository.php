@@ -7,6 +7,7 @@ use RAN\PackageSource;
 use RAN\Plugin;
 use RAN\WordPress\ManagedReleaseConfiguration;
 
+/** @extends AbstractPackageRepository<Plugin> */
 class PluginRepository extends AbstractPackageRepository {
 
 	public function all_booster_plugins() {
@@ -65,6 +66,7 @@ class PluginRepository extends AbstractPackageRepository {
 	 * @param $file
 	 * @return Plugin $plugin
 	 * @throws PluginNotFound
+	 * @throws PackageStorageFailure
 	 */
 	public function booster_plugin_from_file( $file ) {
 		include_once ABSPATH . 'wp-admin/includes/plugin.php';
@@ -118,6 +120,7 @@ class PluginRepository extends AbstractPackageRepository {
 		return isset( get_plugins()[ $identifier ] );
 	}
 
+	/** @return Plugin */
 	protected function package_from_installation( string $identifier ): Package {
 		return Plugin::from_wp_array(
 			$identifier,

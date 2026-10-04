@@ -61,6 +61,24 @@ final class DeploymentAttemptTest extends TestCase {
 		DeploymentAttempt::from_database( $row );
 	}
 
+	public function test_validates_delivery_digest_without_exposing_it(): void {
+		$row                    = $this->row();
+		$row['source']          = 'webhook';
+		$row['delivery_id']     = 'delivery-1';
+		$row['delivery_digest'] = str_repeat( 'b', 64 );
+		self::assertSame( 'delivery-1', DeploymentAttempt::from_database( $row )->safe_data()['delivery_id'] );
+		self::assertArrayNotHasKey( 'delivery_digest', DeploymentAttempt::from_database( $row )->safe_data() );
+		foreach ( array( null, 'invalid-digest', str_repeat( 'b', 63 ) ) as $digest ) {
+			$row['delivery_digest'] = $digest;
+			try {
+				DeploymentAttempt::from_database( $row );
+				self::fail( 'Malformed or incomplete delivery identity was accepted.' );
+			} catch ( DeploymentStorageFailure ) {
+				self::addToAssertionCount( 1 );
+			}
+		}
+	}
+
 	/** @return array<string, mixed> */
 	private function row(): array {
 		$request = new DeploymentRequest( 'group/package', null, false, 'main', 'example', null, DeploymentPolicy::MANUAL, 1 );

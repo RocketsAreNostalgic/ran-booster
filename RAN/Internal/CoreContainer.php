@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Internal;
 
 use ReflectionClass;
+use ReflectionNamedType;
 
 /**
  * Core's request-local composition mechanism.
@@ -60,6 +61,11 @@ final class CoreContainer {
 			if ( null === $type ) {
 				$new_instance_params[] = null;
 				continue;
+			}
+
+			if ( ! $type instanceof ReflectionNamedType ) {
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed internal diagnostic; escaping belongs at the output boundary.
+				throw new \Error( 'Core container cannot resolve union or intersection constructor parameter types.' );
 			}
 
 			$new_instance_params[] = $this->make( $type->getName() );

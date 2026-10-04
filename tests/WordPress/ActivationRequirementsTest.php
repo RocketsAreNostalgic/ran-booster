@@ -22,7 +22,51 @@ final class ActivationRequirementsTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
-		unset( $GLOBALS['ran_booster_wp_pusher_active_plugins'] );
+		unset( $GLOBALS['ran_booster_wp_pusher_active_plugins'], $GLOBALS['ran_booster_test_wp_die_returns'], $GLOBALS['ran_booster_test_wp_die_messages'] );
+	}
+
+	/** @return array<string, array{bool, bool, bool, ?\Throwable, int}> */
+	public static function returning_handler_provider(): array {
+		return array(
+			'sodium'        => array( false, false, false, null, 0 ),
+			'multisite'     => array( true, true, false, null, 0 ),
+			'coexistence'   => array( true, false, true, null, 0 ),
+			'compatibility' => array( true, false, false, new DatabaseCompatibilityFailure( 'unsupported_version' ), 1 ),
+			'lifecycle'     => array( true, false, false, new DatabaseLifecycleFailure( 'schema_operation_failed' ), 1 ),
+			'unexpected'    => array( true, false, false, new \RuntimeException( 'private database detail' ), 1 ),
+		);
+	}
+
+	#[DataProvider( 'returning_handler_provider' )]
+	public function test_returning_die_handler_still_stops_activation( bool $sodium, bool $multisite, bool $wp_pusher, ?\Throwable $failure, int $installs ): void {
+		$GLOBALS['ran_booster_test_wp_die_returns']      = true;
+		$GLOBALS['ran_booster_test_wp_die_messages']     = array();
+		$GLOBALS['ran_booster_wp_pusher_active_plugins'] = $wp_pusher ? array( 'wppusher/wppusher.php' ) : array();
+		$database                                        = null === $failure ? new ActivationRequirementsDatabase() : new FailingActivationDatabase( $failure );
+		$wakeup    = new ActivationRequirementsWakeup();
+		$container = new CoreContainer();
+		$container->bind( Database::class, $database );
+		$container->bind( WordPressWorkerWakeup::class, $wakeup );
+		$booster = new ActivationRequirementsBooster( $container, $sodium, $multisite );
+
+		self::assertNull( $booster->activate() );
+		self::assertSame( $installs, $database->installs );
+		self::assertSame( 0, $wakeup->requests );
+		self::assertCount( 1, $GLOBALS['ran_booster_test_wp_die_messages'] );
+		self::assertStringNotContainsString( 'private database detail', $GLOBALS['ran_booster_test_wp_die_messages'][0] );
+	}
+
+	public function test_supported_activation_installs_and_requests_wakeup(): void {
+		$database  = new ActivationRequirementsDatabase();
+		$wakeup    = new ActivationRequirementsWakeup();
+		$container = new CoreContainer();
+		$container->bind( Database::class, $database );
+		$container->bind( WordPressWorkerWakeup::class, $wakeup );
+		$booster = new ActivationRequirementsBooster( $container, true, false );
+
+		self::assertNull( $booster->activate() );
+		self::assertSame( 1, $database->installs );
+		self::assertSame( 1, $wakeup->requests );
 	}
 
 	/** @return list<array{bool, bool, string}> */
@@ -133,7 +177,7 @@ final class ActivationRequirementsDatabase {
 final class FailingActivationDatabase extends Database {
 	public int $installs = 0;
 
-	public function __construct( private DatabaseCompatibilityFailure|DatabaseLifecycleFailure $failure ) {
+	public function __construct( private \Throwable $failure ) {
 	}
 
 	public function install(): void {

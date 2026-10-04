@@ -25,19 +25,19 @@ if ( ! defined( 'WPINC' ) ) {
 
 if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) ) {
 	define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
-} elseif ( 14 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+} elseif ( 14 !== constant( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) ) {
 	throw new LogicException( 'RAN Booster Provider API 14 conflicts with an existing API version marker.' );
 }
 
 if ( ! defined( 'RAN_BOOSTER_ADDON_API_VERSION' ) ) {
 	define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
-} elseif ( 17 !== RAN_BOOSTER_ADDON_API_VERSION ) {
+} elseif ( 17 !== constant( 'RAN_BOOSTER_ADDON_API_VERSION' ) ) {
 	throw new LogicException( 'RAN Booster Add-on API 17 conflicts with an existing API version marker.' );
 }
 
 if ( ! defined( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION' ) ) {
 	define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 3 );
-} elseif ( 3 !== RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION ) {
+} elseif ( 3 !== constant( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION' ) ) {
 	throw new LogicException( 'RAN Booster Admin Interaction API 3 conflicts with an existing API version marker.' );
 }
 
@@ -103,7 +103,7 @@ BranchUpdaterBootstrap::register();
 $ran_booster_release_updater = ReleaseUpdaterBootstrap::register();
 if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' ) ) {
 	define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', PortabilityFacade::API_VERSION );
-} elseif ( PortabilityFacade::API_VERSION !== RAN_BOOSTER_PORTABILITY_API_VERSION ) {
+} elseif ( PortabilityFacade::API_VERSION !== constant( 'RAN_BOOSTER_PORTABILITY_API_VERSION' ) ) {
 	throw new LogicException( 'RAN Booster Portability API 3 conflicts with an existing API version marker.' );
 }
 $ran_booster_core_development_notice = new CoreSelfUpdateDevelopmentNotice( $ran_booster_self_update_policy );

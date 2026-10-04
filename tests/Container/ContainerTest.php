@@ -16,6 +16,24 @@ final class ContainerTest extends RANBoosterTestCase {
 		$this->container = new CoreContainer();
 	}
 
+	public function test_untyped_parameter_still_receives_null(): void {
+		$result = $this->container->make( UntypedDependency::class );
+
+		self::assertNull( $result->dependency );
+	}
+
+	public function test_union_dependency_is_rejected_without_selecting_an_alternative(): void {
+		$this->expectException( \Error::class );
+		$this->expectExceptionMessage( 'Core container cannot resolve union or intersection constructor parameter types.' );
+		$this->container->make( UnionDependency::class );
+	}
+
+	public function test_intersection_dependency_is_rejected_without_selecting_a_component(): void {
+		$this->expectException( \Error::class );
+		$this->expectExceptionMessage( 'Core container cannot resolve union or intersection constructor parameter types.' );
+		$this->container->make( IntersectionDependency::class );
+	}
+
 	public function test_it_can_resolve_a_class_with_no_dependencies(): void {
 		$db = $this->container->make( DB::class );
 
@@ -87,5 +105,20 @@ class UserManager {
 
 	public function __construct( DBUserRepository $users ) {
 		// Constructor stuff
+	}
+}
+
+class UntypedDependency {
+	public function __construct( public $dependency ) {
+	}
+}
+
+class UnionDependency {
+	public function __construct( public DB|EntityMapper $dependency ) {
+	}
+}
+
+class IntersectionDependency {
+	public function __construct( public DB&EntityMapper $dependency ) {
 	}
 }

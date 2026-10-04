@@ -2515,7 +2515,7 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:687
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:323
-#: RAN/Booster.php:675
+#: RAN/Booster.php:665
 #: views/attempts/index.php:46
 #: views/onboarding.php:28
 #: views/packages/branch-readiness.php:200
@@ -4218,193 +4218,193 @@ msgstr ""
 msgid "RAN Booster requires the PHP Sodium extension for encrypted credential storage. Ask your hosting provider to enable Sodium, then activate the plugin again."
 msgstr ""
 
-#: RAN/Booster.php:148
+#: RAN/Booster.php:146
 msgid "RAN Booster encrypted credential storage is not available on multisite in this Beta release. Use a single-site WordPress installation."
 msgstr ""
 
-#: RAN/Booster.php:174
+#: RAN/Booster.php:166
 msgid "RAN Booster could not complete its database setup, so WordPress left the plugin inactive. Confirm that WordPress can create and update plugin tables, then try again or contact your hosting provider."
 msgstr ""
 
-#: RAN/Booster.php:223
+#: RAN/Booster.php:213
 msgid "Overview"
 msgstr ""
 
-#: RAN/Booster.php:224
+#: RAN/Booster.php:214
 msgid "Install Plugin"
 msgstr ""
 
-#: RAN/Booster.php:225
+#: RAN/Booster.php:215
 msgid "Managed Plugins"
 msgstr ""
 
-#: RAN/Booster.php:225
+#: RAN/Booster.php:215
 #: views/base.php:43
 msgid "Plugins"
 msgstr ""
 
-#: RAN/Booster.php:226
+#: RAN/Booster.php:216
 msgid "Install Theme"
 msgstr ""
 
-#: RAN/Booster.php:227
+#: RAN/Booster.php:217
 msgid "Managed Themes"
 msgstr ""
 
-#: RAN/Booster.php:227
+#: RAN/Booster.php:217
 #: views/base.php:48
 msgid "Themes"
 msgstr ""
 
-#: RAN/Booster.php:228
+#: RAN/Booster.php:218
 #: views/portability.php:43
 #: views/portability.php:71
 #: views/portability.php:266
 msgid "Transporter"
 msgstr ""
 
-#: RAN/Booster.php:229
+#: RAN/Booster.php:219
 #: views/extensions.php:18
 msgid "Extensions"
 msgstr ""
 
-#: RAN/Booster.php:260
+#: RAN/Booster.php:250
 msgid "RAN Booster Extensions"
 msgstr ""
 
-#: RAN/Booster.php:261
+#: RAN/Booster.php:251
 msgid "Extensions are temporarily unavailable. Reload the page or check the Booster installation."
 msgstr ""
 
-#: RAN/Booster.php:275
+#: RAN/Booster.php:265
 msgid "Connect Booster to Bitbucket Cloud repositories for managed deployments."
 msgstr ""
 
-#: RAN/Booster.php:276
+#: RAN/Booster.php:266
 msgid "Add Bitbucket Cloud as a first-party repository provider while Booster continues to own credentials, webhook verification, and deployment policy."
 msgstr ""
 
-#: RAN/Booster.php:278
+#: RAN/Booster.php:268
 msgid "Connect and configure Bitbucket Cloud repositories in Booster."
 msgstr ""
 
-#: RAN/Booster.php:279
+#: RAN/Booster.php:269
 msgid "Use provider-specific package and credential guidance."
 msgstr ""
 
-#: RAN/Booster.php:280
+#: RAN/Booster.php:270
 msgid "Carry eligible file-stored credentials through Transporter for explicit import on the target site."
 msgstr ""
 
-#: RAN/Booster.php:283
+#: RAN/Booster.php:273
 msgid "WordPress 7.0 or later and PHP 8.2 or later."
 msgstr ""
 
-#: RAN/Booster.php:284
+#: RAN/Booster.php:274
 msgid "A version of Booster compatible with this extension."
 msgstr ""
 
-#: RAN/Booster.php:285
+#: RAN/Booster.php:275
 msgid "Manual Bitbucket webhook setup for Push-to-Deploy."
 msgstr ""
 
-#: RAN/Booster.php:289
-#: RAN/Booster.php:314
+#: RAN/Booster.php:279
+#: RAN/Booster.php:304
 msgid "Free"
 msgstr ""
 
-#: RAN/Booster.php:300
+#: RAN/Booster.php:290
 msgid "Move existing WP Pusher-managed plugins and themes into Booster without reinstalling them."
 msgstr ""
 
-#: RAN/Booster.php:301
+#: RAN/Booster.php:291
 msgid "Review and adopt supported packages from an inactive WP Pusher 3.0.13 installation. Adopted packages start with deployments disabled, so enabling deployment remains an explicit decision."
 msgstr ""
 
-#: RAN/Booster.php:303
+#: RAN/Booster.php:293
 msgid "Review retained WP Pusher package records before migration."
 msgstr ""
 
-#: RAN/Booster.php:304
+#: RAN/Booster.php:294
 msgid "Adopt supported GitHub and Bitbucket Cloud packages through Booster Transporter."
 msgstr ""
 
-#: RAN/Booster.php:305
+#: RAN/Booster.php:295
 msgid "Keep the source records in place until you verify the result and remove them yourself."
 msgstr ""
 
-#: RAN/Booster.php:308
+#: RAN/Booster.php:298
 msgid "WordPress 7.0 or later, PHP 8.2 or later, and a compatible version of Booster."
 msgstr ""
 
-#: RAN/Booster.php:309
+#: RAN/Booster.php:299
 msgid "A single site with WP Pusher 3.0.13 installed but inactive."
 msgstr ""
 
-#: RAN/Booster.php:310
+#: RAN/Booster.php:300
 msgid "Existing Booster credentials for private repositories; GitLab packages are not supported."
 msgstr ""
 
-#: RAN/Booster.php:387
+#: RAN/Booster.php:377
 msgid "Manage with RAN Booster"
 msgstr ""
 
-#: RAN/Booster.php:671
+#: RAN/Booster.php:661
 #: views/attempts/index.php:41
 #: views/packages/index.php:61
 msgid "Queued"
 msgstr ""
 
-#: RAN/Booster.php:672
+#: RAN/Booster.php:662
 #: views/attempts/index.php:42
 #: views/packages/index.php:62
 msgid "Running"
 msgstr ""
 
-#: RAN/Booster.php:673
+#: RAN/Booster.php:663
 #: views/attempts/index.php:43
 #: views/packages/index.php:63
 msgid "Succeeded"
 msgstr ""
 
-#: RAN/Booster.php:674
+#: RAN/Booster.php:664
 #: views/attempts/index.php:45
 #: views/packages/index.php:64
 #: views/troubleshooting.php:42
 msgid "Failed"
 msgstr ""
 
-#: RAN/Booster.php:676
+#: RAN/Booster.php:666
 #: views/packages/index.php:307
 msgid "Reinstall queued"
 msgstr ""
 
-#: RAN/Booster.php:677
+#: RAN/Booster.php:667
 #: views/packages/index.php:309
 msgid "Reinstall in progress…"
 msgstr ""
 
-#: RAN/Booster.php:678
+#: RAN/Booster.php:668
 msgid "Package reinstalled."
 msgstr ""
 
-#: RAN/Booster.php:679
+#: RAN/Booster.php:669
 msgid "Package reinstall failed. Review deployment activity."
 msgstr ""
 
-#: RAN/Booster.php:680
+#: RAN/Booster.php:670
 msgid "Package reinstall needs attention. Review deployment activity before retrying."
 msgstr ""
 
-#: RAN/Booster.php:681
+#: RAN/Booster.php:671
 msgid "Live reinstall progress is unavailable. Refresh this page to check the latest state."
 msgstr ""
 
-#: RAN/Booster.php:682
+#: RAN/Booster.php:672
 msgid "Booster reinstalls are in progress. Queued: {queued}. Reinstalling: {running}. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster.php:683
+#: RAN/Booster.php:673
 msgid "Booster reinstalls have finished. Review the package statuses below. Skipped: {skipped}."
 msgstr ""
 

@@ -78,7 +78,7 @@ final class ExtensionsPageTest extends TestCase {
 			array_diff_key( $GLOBALS['ran_booster_extensions_page_submenus'][0], array( 'callback' => true ) )
 		);
 		self::assertSame( 'get_index', $GLOBALS['ran_booster_extensions_page_submenus'][0]['callback'][1] );
-		self::assertNull( $GLOBALS['ran_booster_extensions_page_menus'][0]['callback'] );
+		self::assertSame( '', $GLOBALS['ran_booster_extensions_page_menus'][0]['callback'] );
 		self::assertSame(
 			array(
 				'parent_slug' => 'ran-booster',

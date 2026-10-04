@@ -563,7 +563,7 @@ final class DatabaseCapabilityProbeFailureConnection {
 	}
 
 	public function get_results( string $query ): array {
-		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The probe must contain and replace this test-only low-level detail.
+		// The probe must contain and replace this test-only low-level detail.
 		throw new RuntimeException( $query . ' engine-probe-canary' );
 	}
 }

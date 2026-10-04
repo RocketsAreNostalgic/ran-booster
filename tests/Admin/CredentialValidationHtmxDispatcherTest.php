@@ -198,7 +198,7 @@ final class HtmxCredentialValidationTestController extends ProviderProfileAdminC
 			'status'  => $status,
 		);
 
-		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The test spy captures its fixed method arguments without output.
+		// The test spy captures its fixed method arguments without output.
 		throw new HtmxCredentialValidationResponse( $credential_id, $message, $error, $status );
 	}
 }

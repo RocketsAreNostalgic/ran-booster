@@ -569,7 +569,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		if ( $intercept_redirect ) {
 				return new class( ...$args ) extends Dispatcher {
 					protected function redirect_to( string $url ): never {
-						// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test-only interception preserves the exact redirect target.
+						// Test-only interception preserves the exact redirect target.
 						throw new \RuntimeException( 'redirect:' . $url );
 					}
 				};

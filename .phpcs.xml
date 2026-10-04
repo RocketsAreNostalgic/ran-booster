@@ -105,9 +105,6 @@
 	<rule ref="WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents">
 		<exclude-pattern>/tests/characterization.php</exclude-pattern>
 	</rule>
-	<rule ref="WordPress.Security.EscapeOutput.ExceptionNotEscaped">
-		<exclude-pattern>/tests/characterization.php</exclude-pattern>
-	</rule>
 	<rule ref="WordPress.Security.EscapeOutput.OutputNotEscaped">
 		<exclude-pattern>/tests/characterization.php</exclude-pattern>
 	</rule>

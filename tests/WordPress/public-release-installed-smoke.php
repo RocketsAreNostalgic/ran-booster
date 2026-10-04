@@ -8,7 +8,7 @@ use RAN\Storage\ThemeRepository;
 
 $assert       = static function ( bool $condition, string $message ): void {
 	if ( ! $condition ) {
-		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
+		// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 		throw new RuntimeException( $message ); }
 };
 $site         = realpath( (string) getenv( 'RAN_BOOSTER_WORDPRESS_PATH' ) );

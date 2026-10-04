@@ -21,7 +21,7 @@ $assertions      = 0;
 $assert = static function ( bool $condition, string $message ) use ( &$assertions ): void {
 	++$assertions;
 	if ( ! $condition ) {
-		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
+		// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 		throw new RuntimeException( $message );
 	}
 };

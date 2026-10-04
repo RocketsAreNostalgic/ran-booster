@@ -89,7 +89,7 @@ function wp_send_json_success( array $data ): array {
 }
 
 function wp_die( string $message = '' ): never {
-	// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The focused shim preserves already escaped controller denial copy.
+	// The focused shim preserves already escaped controller denial copy.
 	throw new \RuntimeException( '' !== $message ? $message : 'ran_booster_test_wp_die' );
 }
 

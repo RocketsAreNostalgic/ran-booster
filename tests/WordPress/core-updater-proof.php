@@ -324,12 +324,12 @@ final class RanBoosterCoreUpdaterProof {
 		if ( $simulated_fatal_scrape ) {
 			if ( ! is_wp_error( $result ) || 'plugin_update_fatal_error_rollback_successful' !== $result->get_error_code() ) {
 				$code = is_wp_error( $result ) ? $result->get_error_code() : get_debug_type( $result );
-				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
+				// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 				throw new RuntimeException( 'WordPress core did not report restoration after the simulated fatal-scrape response: ' . $code );
 			}
 		} elseif ( true !== $result ) {
 			$code = is_wp_error( $result ) ? $result->get_error_code() : get_debug_type( $result );
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
+			// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 			throw new RuntimeException( 'The direct WordPress automatic update failed: ' . $code );
 		}
 		if ( 1 !== count( $completions ) ) {
@@ -489,9 +489,9 @@ final class RanBoosterCoreUpdaterProof {
 		if ( $version !== $observed_version || $active !== $observed_active ) {
 			throw new RuntimeException(
 				'The disposable proof plugin state is incorrect: expected version '
-				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
+				// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 				. $version . ' and active=' . ( $active ? 'yes' : 'no' )
-				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
+				// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 				. ', observed version ' . ( is_string( $observed_version ) ? $observed_version : 'unavailable' )
 				. ' and active=' . ( $observed_active ? 'yes' : 'no' ) . '.'
 			);

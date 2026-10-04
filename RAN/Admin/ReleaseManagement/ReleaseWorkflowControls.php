@@ -47,7 +47,7 @@ final class ReleaseWorkflowControls {
 
 	/**
 	 * @param array<string, array<string, mixed>> $rows
-	 * @param array<string, array<string, mixed>> $repositoryProjections
+	 * @param array<string, array<string, mixed>> $repository_projections
 	 * @return array<string, array<string, mixed>>
 	 */
 	public function enrich_repository_rows( array $rows, string $provider_code, array $repository_projections, string $return_url ): array {

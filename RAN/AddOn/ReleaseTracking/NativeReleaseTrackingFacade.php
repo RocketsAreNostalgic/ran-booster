@@ -60,11 +60,11 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	private RepositorySourceGuard $source_guard;
 
 	/**
-	 * @param callable(string): bool|null         $canManage
-	 * @param callable(string, string): bool|null $verifyNonce
-	 * @param callable(string): void|null         $refreshNative
-	 * @param callable(): bool|null $metadataEligible
-	 * @param callable(string): void|null         $invalidateNative
+	 * @param callable(string): bool|null         $can_manage
+	 * @param callable(string, string): bool|null $verify_nonce
+	 * @param callable(string): void|null         $refresh_native
+	 * @param callable(): bool|null $metadata_eligible
+	 * @param callable(string): void|null         $invalidate_native
 	 * @param callable(string): ?string|null      $public_lookup_profile
 	 */
 	public function __construct(

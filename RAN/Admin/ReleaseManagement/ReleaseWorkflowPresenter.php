@@ -58,7 +58,7 @@ final class ReleaseWorkflowPresenter {
 	 * Add local release-workflow status and navigation to managed repository rows.
 	 *
 	 * @param array<string, array<string, mixed>> $rows
-	 * @param array<string, array<string, mixed>> $repositoryProjections
+	 * @param array<string, array<string, mixed>> $repository_projections
 	 * @return array<string, array<string, mixed>>
 	 */
 

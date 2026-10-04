@@ -64,6 +64,7 @@ final class ReleaseTrackingOperations {
 			'change_channel' => $this->releases->change_channel( $type, $identifier, $revision, $channel, $nonce ),
 			'refresh' => $this->releases->refresh( $type, $identifier, $revision, $nonce ),
 			'return_to_branch' => $this->releases->return_to_branch( $type, $identifier, $revision, $nonce ),
+			default => throw new \UnhandledMatchError( 'Unsupported release tracking operation.' ),
 		};
 		$code       = $result->code();
 		$successful = $result->successful();

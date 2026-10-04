@@ -549,23 +549,6 @@ final class ReleaseManagementDisplay {
 		<?php
 	}
 
-	private function render_ineligible_release_track( string $selected_channel ): void {
-		?>
-		<fieldset class="ran-booster-release-track-control is-disabled" disabled>
-			<legend class="screen-reader-text"><?php esc_html_e( 'Release track', 'ran-booster' ); ?></legend>
-			<div class="button-group ran-booster-release-track-options">
-				<?php foreach ( array( 'stable', 'prerelease' ) as $channel ) { ?>
-					<label class="button ran-booster-release-track-option">
-						<input type="radio" class="screen-reader-text" name="release_channel" value="<?php echo esc_attr( $channel ); ?>"<?php checked( $channel === $selected_channel ); ?>>
-						<span><?php echo esc_html( $this->release_track_label( $channel ) ); ?></span>
-					</label>
-				<?php } ?>
-			</div>
-			<p class="description"><?php esc_html_e( 'Stable follows final published releases. Preview also includes prereleases.', 'ran-booster' ); ?></p>
-			<div class="notice notice-warning inline ran-booster-release-track-notice"><p><?php esc_html_e( 'Complete the eligibility requirements above before choosing a release track.', 'ran-booster' ); ?></p></div>
-		</fieldset>
-		<?php
-	}
 
 	private function render_prospective_setup( string $type, array $prospective ): void {
 		$candidates_nonce    = is_string( $prospective['list_candidates'] ?? null ) ? $prospective['list_candidates'] : null;

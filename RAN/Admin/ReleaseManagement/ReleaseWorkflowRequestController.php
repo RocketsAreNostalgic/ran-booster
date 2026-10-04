@@ -48,8 +48,9 @@ final class ReleaseWorkflowRequestController {
 
 	public function handle_workflow(): never {
 		// This controller validates the exact local authority and purpose nonce before reading request-only secrets.
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$request = is_array( $_POST ) ? $_POST : array();
+		// Read the mutable global defensively: another plugin may have replaced it.
+		$request = $GLOBALS['_POST'] ?? null;
+		$request = is_array( $request ) ? $request : array();
 		$this->redirect_to( $this->process_workflow_request( $request ) );
 	}
 
@@ -223,8 +224,8 @@ final class ReleaseWorkflowRequestController {
 	}
 
 	private function workflow_status( string $type, string $identifier, int $revision ): ?ReleaseTrackingStatus {
-		$status = $this->releases?->status( $type, $identifier );
-		if ( ! $status instanceof ReleaseTrackingStatus || ! $status->eligible() || $revision !== $status->source_revision()
+		$status = $this->releases->status( $type, $identifier );
+		if ( ! $status->eligible() || $revision !== $status->source_revision()
 			|| ! hash_equals( $type, $status->type() ) || ! hash_equals( $identifier, $status->identifier() ) ) {
 			return null;
 		}
@@ -367,7 +368,7 @@ final class ReleaseWorkflowRequestController {
 			$provider = $this->providers->require_capability( $provider_code, RepositoryReleaseWorkflowManagementV3::class );
 			$release  = $this->providers->get( $provider_code );
 			return 3 === $provider::RELEASE_WORKFLOW_API_VERSION
-				&& null !== ( ( $this->providers->metadata()[ $provider_code ] ?? null )?->admin ?? null )
+				&& null !== ( ( $this->providers->metadata()[ $provider_code ] ?? null )->admin ?? null )
 				&& $release instanceof \RAN\RepositoryProvider\RepositoryReleaseMetadata
 				&& $release instanceof \RAN\RepositoryProvider\RepositoryReleaseCandidateListing
 				&& $release instanceof \RAN\RepositoryProvider\RepositoryReleaseInspector

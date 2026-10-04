@@ -76,7 +76,6 @@ final readonly class CredentialValidationResult {
 		$message = self::FAILURE_MESSAGES[ $reason ] ?? null;
 
 		if ( ! is_string( $message )
-			|| '' === $message
 			|| self::MAX_DISPLAY_MESSAGE_BYTES < strlen( $message )
 			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $message )
 		) {

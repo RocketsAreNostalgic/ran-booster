@@ -87,10 +87,12 @@ final readonly class ManagedPackageBlueprintExporter {
 				throw new InvalidArgumentException( 'The managed package credential selection is invalid.' );
 			}
 			foreach ( $ids as $id ) {
-				$key = is_string( $id ) ? $provider . "\0" . $id : '';
 				if ( ! is_string( $id ) || SecretsFile::CONSTANT_PROFILE === $id
-					|| 1 !== preg_match( '/\A[A-Za-z0-9_-]{3,64}\z/', $id ) || isset( $selected[ $key ] )
-					|| count( $selected ) >= PackageBlueprint::MAX_CREDENTIALS ) {
+					|| 1 !== preg_match( '/\A[A-Za-z0-9_-]{3,64}\z/', $id ) ) {
+					throw new InvalidArgumentException( 'The managed package credential selection is invalid.' );
+				}
+				$key = $provider . "\0" . $id;
+				if ( isset( $selected[ $key ] ) || count( $selected ) >= PackageBlueprint::MAX_CREDENTIALS ) {
 					throw new InvalidArgumentException( 'The managed package credential selection is invalid.' );
 				}
 				$selected[ $key ] = true;

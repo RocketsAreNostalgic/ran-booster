@@ -88,6 +88,6 @@ final class BlueprintArchive {
 	}
 
 	private static function zip_available( bool $aes = false ): bool {
-		return class_exists( ZipArchive::class ) && ( ! $aes || ( defined( ZipArchive::class . '::EM_AES_256' ) && method_exists( ZipArchive::class, 'isEncryptionMethodSupported' ) && ZipArchive::isEncryptionMethodSupported( ZipArchive::EM_AES_256, true ) && ZipArchive::isEncryptionMethodSupported( ZipArchive::EM_AES_256, false ) ) );
+		return class_exists( ZipArchive::class ) && ( ! $aes || ( defined( ZipArchive::class . '::EM_AES_256' ) && is_callable( array( ZipArchive::class, 'isEncryptionMethodSupported' ) ) && ZipArchive::isEncryptionMethodSupported( ZipArchive::EM_AES_256, true ) && ZipArchive::isEncryptionMethodSupported( ZipArchive::EM_AES_256, false ) ) );
 	}
 }

@@ -989,6 +989,49 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringNotContainsString( 'Published release controls are temporarily unavailable.', $html );
 	}
 
+	public function test_overwritten_post_global_is_rejected_before_release_mutation(): void {
+		$tracking      = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$controls      = ReleaseManagementFixture::controls( $tracking );
+		$original_post = $GLOBALS['_POST'] ?? array();
+
+		try {
+			foreach ( array( null, 'not-an-array', new \stdClass() ) as $malformed ) {
+				$GLOBALS['_POST'] = $malformed;
+				try {
+					$controls->handle_enable();
+				} catch ( \RuntimeException $redirect ) {
+					self::assertSame( 'native-redirect', $redirect->getMessage() );
+				}
+				self::assertStringContainsString( 'ran_booster_release_result=invalid_request', $GLOBALS['ran_booster_release_management_test_redirect'] );
+				self::assertSame( array(), $tracking->calls );
+			}
+		} finally {
+			$GLOBALS['_POST'] = $original_post;
+		}
+	}
+
+	public function test_unknown_operation_is_rejected_before_any_release_mutation(): void {
+		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$controls = ReleaseManagementFixture::controls( $tracking );
+
+		$url = $controls->process_admin_post_request( 'unknown', $this->request( 'enable' ) );
+
+		self::assertStringContainsString( 'ran_booster_release_result=invalid_request', $url );
+		self::assertSame( array(), $tracking->calls );
+	}
+
+	public function test_direct_unknown_operation_keeps_the_existing_match_error_without_mutation(): void {
+		$tracking   = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$operations = new \RAN\Admin\ReleaseManagement\ReleaseTrackingOperations( $tracking );
+
+		try {
+			$operations->execute( 'unknown', 'plugin', 'example/example.php', 3, 'stable', 'nonce' );
+			self::fail( 'Unknown operations must not execute a release mutation.' );
+		} catch ( \UnhandledMatchError ) {
+			self::assertSame( array(), $tracking->calls );
+		}
+	}
+
 	public function test_every_mutation_forwards_exact_authority_revision_channel_and_nonce(): void {
 		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
 		$controls = ReleaseManagementFixture::controls( $tracking );

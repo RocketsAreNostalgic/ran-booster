@@ -47,7 +47,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	/** @var \Closure(string): void */
 	private \Closure $refresh_native;
 
-	/** @var \Closure(string, string, string): bool */
+	/** @var \Closure(): bool */
 	private \Closure $metadata_eligible;
 	private bool $metadata_eligibility_overridden;
 
@@ -193,7 +193,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			? null
 			: $this->registrar->status( $type, $identifier );
 
-		$latest_version = $target_status?->offered_version ?? '';
+		$latest_version = $target_status->offered_version ?? '';
 		if ( ! $incompatible && PackageSource::RELEASE_ASSET === $package->get_source() && null !== $configuration ) {
 			$preflight = $this->project_candidate_validation(
 				$package_root,
@@ -211,7 +211,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			$failure_code = $preflight->code();
 		}
 
-		$native_relationship  = $target_status?->version_relationship ?? '';
+		$native_relationship  = $target_status->version_relationship ?? '';
 		$version_relationship = $preflight?->version_relationship()
 			?? ( '' !== $native_relationship ? $native_relationship : 'invalid' );
 		if ( '' === $failure_code && null !== $target_status ) {
@@ -238,7 +238,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			$this->diagnostic_time( $target_status?->next_check ),
 			$failure_code,
 			$configuration?->channel() ?? 'stable',
-			$target_status?->candidate_provider_release_id ?? ''
+			$target_status->candidate_provider_release_id ?? ''
 		);
 	}
 
@@ -720,12 +720,14 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			if ( PackageSource::RELEASE_ASSET !== $package->get_source()
 
 				|| $expected_source_revision !== $package->get_source_revision()
-				|| null === $configuration
-				|| null === $this->registrar->target( $type, $identifier ) ) {
+				|| null === $configuration ) {
 				return ReleaseTrackingResult::failed( 'source_changed', self::SOURCE_CHANGED_MESSAGE );
 			}
 			$target = $this->registrar->target( $type, $identifier );
-			if ( null === $target || ! $target->refresh() ) {
+			if ( null === $target ) {
+				return ReleaseTrackingResult::failed( 'source_changed', self::SOURCE_CHANGED_MESSAGE );
+			}
+			if ( ! $target->refresh() ) {
 				return ReleaseTrackingResult::failed( 'refresh_failed', 'Published release information could not be refreshed.' );
 			}
 			( $this->refresh_native )( $type );

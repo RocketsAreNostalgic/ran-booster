@@ -380,7 +380,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 						);
 					} elseif ( ! $result->is_successful() ) {
 						$outcome = ProspectiveReleaseResult::failure(
-							$result->get_failure()?->value ?? 'wordpress_failed'
+							$result->get_failure()->value ?? 'wordpress_failed'
 						);
 					} else {
 						$outcome = ProspectiveReleaseResult::failure(
@@ -603,21 +603,6 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			&& ( $this->verify_nonce )( $nonce, $this->nonce_action( $operation, $type ) );
 	}
 
-	/** @param array<string, mixed> $repository_request */
-	private function release_candidate_listing( array $repository_request ): ?RepositoryReleaseCandidateListing {
-		$provider = $repository_request['provider'] ?? null;
-		if ( ! is_string( $provider ) ) {
-			return null;
-		}
-
-		try {
-			$capability = $this->providers->require_capability( $provider, RepositoryReleaseCandidateListing::class );
-		} catch ( Throwable ) {
-			return null;
-		}
-
-		return $capability instanceof RepositoryReleaseCandidateListing ? $capability : null;
-	}
 
 	/** @param array<string, mixed> $repository_request */
 	private function release_acquirer( array $repository_request ): ?RepositoryReleaseAcquirer {

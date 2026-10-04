@@ -595,7 +595,7 @@ final class ReleaseWorkflowPresenter {
 			$write_guidance = __( 'Choose a saved credential that can manage release workflows and open pull requests. Its secret is never stored with this setup.', 'ran-booster' );
 		}
 		$extra  = array(
-			'provider_label'        => $metadata?->label ?? $provider_code,
+			'provider_label'        => $metadata->label ?? $provider_code,
 			'documentation_links'   => $state?->documentation_links() ?? array(),
 			'provider_workflow_url' => $state?->provider_workflow_url() ?? '',
 			'write_guidance'        => $write_guidance,
@@ -701,8 +701,8 @@ final class ReleaseWorkflowPresenter {
 	}
 	/** Render-only identity check. POST requests continue through workflow_status(). */
 	private function workflow_display_status( string $type, string $identifier, int $revision ): ?ReleaseTrackingStatus {
-		$status = $this->releases?->status( $type, $identifier );
-		if ( ! $status instanceof ReleaseTrackingStatus || $revision !== $status->source_revision()
+		$status = $this->releases->status( $type, $identifier );
+		if ( $revision !== $status->source_revision()
 			|| ! hash_equals( $type, $status->type() ) || ! hash_equals( $identifier, $status->identifier() ) ) {
 			return null;
 		}
@@ -735,7 +735,7 @@ final class ReleaseWorkflowPresenter {
 	): ?array {
 		$preflight = '';
 		if ( in_array( $operation, array( 'inspect', 'setup' ), true ) ) {
-			if ( null === $this->releases || 'stable' !== $channel ) {
+			if ( 'stable' !== $channel ) {
 				return null;
 			}
 			$action = $this->releases->nonce_action( 'assessment_preflight', $status->type(), $status->identifier(), $status->source_revision(), $channel );
@@ -782,7 +782,7 @@ final class ReleaseWorkflowPresenter {
 		);
 	}
 
-	/** @return list<array{id:string,label:string}> */
+	/** Resolve the exact provider capability, retaining unavailable-provider fallback. */
 	private function workflow_capability( string $provider_code ): ?RepositoryReleaseWorkflowManagementV3 {
 		try {
 			return $this->providers->require_capability( $provider_code, RepositoryReleaseWorkflowManagementV3::class );
@@ -793,7 +793,7 @@ final class ReleaseWorkflowPresenter {
 
 	private function workflow_provider( string $provider_code ): ?RepositoryReleaseWorkflowManagementV3 {
 		$provider = $this->workflow_capability( $provider_code );
-		return null !== $provider && 3 === $provider::RELEASE_WORKFLOW_API_VERSION && null !== ( ( $this->providers->metadata()[ $provider_code ] ?? null )?->admin ?? null ) && $this->release_provider_supported( $provider_code ) ? $provider : null;
+		return null !== $provider && 3 === $provider::RELEASE_WORKFLOW_API_VERSION && null !== ( ( $this->providers->metadata()[ $provider_code ] ?? null )->admin ?? null ) && $this->release_provider_supported( $provider_code ) ? $provider : null;
 	}
 
 	private function release_provider_supported( string $provider_code ): bool {

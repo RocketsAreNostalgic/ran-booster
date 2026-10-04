@@ -24,7 +24,6 @@ final class ReleaseManagementControls {
 	private const CHANNEL_QUERY_KEY        = 'ran_booster_release_channel';
 
 	private readonly ProspectiveReleaseOperations $prospective_operations;
-	private readonly ReleaseTrackingFacade $releases;
 	private readonly ReleaseTrackingOperations $tracking;
 	private readonly ManagedReleaseBrowserOperations $managed_browser;
 	private readonly ReleaseManagementDisplay $display;
@@ -38,7 +37,6 @@ final class ReleaseManagementControls {
 		?RepositorySourceGuard $source_guard = null
 	) {
 		$this->display  = new ReleaseManagementDisplay();
-		$this->releases = $releases;
 		$this->tracking = new ReleaseTrackingOperations( $releases );
 
 		$this->managed_browser = new ManagedReleaseBrowserOperations( $managed_browser, $releases );
@@ -77,9 +75,6 @@ final class ReleaseManagementControls {
 	 */
 
 	public function filter_management_rows( array $rows, string $surface, array $packages ): array {
-		if ( null === $this->tracking ) {
-			return $rows;
-		}
 		$coordinates = $this->request_boundary( fn (): array => $this->management_coordinates( $surface, $rows, $packages ), array() );
 		if ( array() === $coordinates ) {
 			return $rows;
@@ -98,9 +93,6 @@ final class ReleaseManagementControls {
 	 */
 
 	public function filter_management_actions( array $actions, string $surface, object $package ): array {
-		if ( null === $this->tracking ) {
-			return $actions;
-		}
 		$status = $this->package_status( $package );
 		$action = null !== $status ? $this->package_nonce_action( 'refresh', $package ) : null;
 		$nonce  = null === $action ? null : wp_create_nonce( $action );
@@ -123,10 +115,7 @@ final class ReleaseManagementControls {
 		string $page_url
 	): array {
 		unset( $type );
-		if ( null === $this->tracking || ! isset( $choices['release_asset'] ) ) {
-			return $choices;
-		}
-		if ( 'create' === $mode && null === $this->prospective_operations ) {
+		if ( ! isset( $choices['release_asset'] ) ) {
 			return $choices;
 		}
 
@@ -176,9 +165,6 @@ final class ReleaseManagementControls {
 		?object $package,
 		string $page_url
 	): void {
-		if ( 'create' === $mode && null === $this->prospective_operations ) {
-			return;
-		}
 
 		$result = $this->requested_result();
 		if ( null !== $result && ( 'edit' !== $mode || null === $package
@@ -235,9 +221,6 @@ final class ReleaseManagementControls {
 		?object $package
 	): string {
 		unset( $type );
-		if ( null === $this->tracking ) {
-			return $summary;
-		}
 
 		return $this->request_boundary( fn (): string => $this->display->advanced_source_summary( $summary, $mode, $selected_source, $package, null === $package ? null : $this->package_status( $package ) ), $summary );
 	}
@@ -255,9 +238,6 @@ final class ReleaseManagementControls {
 	): array {
 
 		unset( $type, $selected_source );
-		if ( null === $this->tracking ) {
-			return $projection;
-		}
 
 		return $this->request_boundary(
 			fn (): array => $this->display->advanced_source_summary_projection(
@@ -274,7 +254,7 @@ final class ReleaseManagementControls {
 	public function render_operation_notice(): void {
 		$result = $this->requested_result();
 		$code   = $result['code'] ?? '';
-		if ( '' === $code || null === $this->tracking || ! $this->result_matches_current_screen( $result ) || $this->is_package_settings_request() ) {
+		if ( '' === $code || ! $this->result_matches_current_screen( $result ) || $this->is_package_settings_request() ) {
 			return;
 		}
 
@@ -364,8 +344,9 @@ final class ReleaseManagementControls {
 
 	public function handle_prospective_install(): never {
 		// This controller selects and validates the exact purpose nonce before reading prospective domain values.
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$request = is_array( $_POST ) ? $_POST : array();
+		// Read the mutable global defensively: another plugin may have replaced it.
+		$request = $GLOBALS['_POST'] ?? null;
+		$request = is_array( $request ) ? $request : array();
 		$outcome = $this->process_prospective_request( 'install', $request );
 		$url     = 'installed' === $outcome['code'] && $outcome['successful']
 			? $this->return_url( $outcome['type'], $outcome['identifier'], true )
@@ -380,7 +361,7 @@ final class ReleaseManagementControls {
 		$page = isset( $_GET['page'] ) && is_string( $_GET['page'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only screen routing.
 			? sanitize_key( wp_unslash( $_GET['page'] ) ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only screen routing.
 			: '';
-		if ( null === $this->tracking || ! in_array( $page, array( 'ran-booster-plugins-create', 'ran-booster-themes-create', 'ran-booster-plugins', 'ran-booster-themes' ), true ) ) {
+		if ( ! in_array( $page, array( 'ran-booster-plugins-create', 'ran-booster-themes-create', 'ran-booster-plugins', 'ran-booster-themes' ), true ) ) {
 			return;
 		}
 
@@ -398,9 +379,6 @@ final class ReleaseManagementControls {
 		wp_set_script_translations( 'ran-booster-release-management', 'ran-booster', $plugin_root . '/languages' );
 		if ( in_array( $page, array( 'ran-booster-plugins', 'ran-booster-themes' ), true ) ) {
 			wp_enqueue_style( 'ran-booster-release-management', plugins_url( 'assets/ran-booster-release-management.css', $plugin_root . '/ran-booster.php' ), array( 'ran-booster-styles' ), is_file( $asset_root . '/ran-booster-release-management.css' ) ? (string) filemtime( $asset_root . '/ran-booster-release-management.css' ) : '1' );
-			return;
-		}
-		if ( null === $this->prospective_operations ) {
 			return;
 		}
 		$projection = $this->request_boundary(
@@ -450,8 +428,9 @@ final class ReleaseManagementControls {
 
 	private function handle_admin_post( string $operation ): never {
 		// This controller validates local authority and the operation-specific nonce before optional values.
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$request = is_array( $_POST ) ? $_POST : array();
+		// Read the mutable global defensively: another plugin may have replaced it.
+		$request = $GLOBALS['_POST'] ?? null;
+		$request = is_array( $request ) ? $request : array();
 		$url     = $this->process_admin_post_request( $operation, $request );
 
 		$this->redirect_to( $url );
@@ -491,10 +470,7 @@ final class ReleaseManagementControls {
 		$nonce      = is_string( $request['_wpnonce'] ?? null ) ? sanitize_text_field( wp_unslash( $request['_wpnonce'] ) ) : '';
 		$outcome    = $this->package_outcome( $type, $identifier, 'invalid_request', false );
 		$operations = array( 'enable', 'refresh', 'change_channel', 'return_to_branch' );
-		if ( null === $this->tracking ) {
-			$outcome = $this->package_outcome( $type, $identifier, 'service_unavailable', false );
-		}
-		if ( null !== $this->tracking && in_array( $operation, $operations, true ) && '' !== $type && '' !== $identifier && $revision > 0 ) {
+		if ( in_array( $operation, $operations, true ) && '' !== $type && '' !== $identifier && $revision > 0 ) {
 			if ( ! current_user_can( 'manage_options' ) || ! current_user_can( 'plugin' === $type ? 'update_plugins' : 'update_themes' ) ) {
 				$outcome = $this->package_outcome( $type, $identifier, 'forbidden', false );
 			} else {
@@ -540,8 +516,9 @@ final class ReleaseManagementControls {
 
 	private function handle_prospective_ajax( string $operation ): never {
 		// This controller selects and validates the exact purpose nonce before reading prospective domain values.
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$request = is_array( $_POST ) ? $_POST : array();
+		// Read the mutable global defensively: another plugin may have replaced it.
+		$request = $GLOBALS['_POST'] ?? null;
+		$request = is_array( $request ) ? $request : array();
 		$outcome = $this->process_prospective_request( $operation, $request );
 
 		wp_send_json(
@@ -555,8 +532,9 @@ final class ReleaseManagementControls {
 
 	private function handle_managed_browser_ajax( string $operation ): never {
 		// This route reads only identity/revision values until the purpose nonce is proven.
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$request = is_array( $_POST ) ? $_POST : array();
+		// Read the mutable global defensively: another plugin may have replaced it.
+		$request = $GLOBALS['_POST'] ?? null;
+		$request = is_array( $request ) ? $request : array();
 		$outcome = $this->process_managed_browser_request( $operation, $request );
 
 		wp_send_json(
@@ -627,9 +605,6 @@ final class ReleaseManagementControls {
 		if ( ! current_user_can( 'manage_options' ) || ! current_user_can( 'plugin' === $type ? 'install_plugins' : 'install_themes' ) ) {
 			return $this->prospective_outcome( $type, 'forbidden' );
 		}
-		if ( null === $this->prospective_operations ) {
-			return $this->prospective_outcome( $type, 'service_unavailable' );
-		}
 		$nonce_action = $this->request_boundary( fn (): string => $this->prospective_operations->nonce_action( $operation, $type ), null );
 		if ( null === $nonce_action || '' === $nonce_action ) {
 			return $this->prospective_outcome( $type, 'service_unavailable' );
@@ -690,7 +665,7 @@ final class ReleaseManagementControls {
 	private function package_status( object $package ): ?ReleaseTrackingStatus {
 		return $this->request_boundary(
 			function () use ( $package ): ?ReleaseTrackingStatus {
-				if ( null === $this->tracking || ! is_callable( array( $package, 'type' ) )
+				if ( ! is_callable( array( $package, 'type' ) )
 					|| ! is_callable( array( $package, 'identifier' ) ) || ! is_callable( array( $package, 'source_revision' ) ) ) {
 					return null;
 				}
@@ -777,7 +752,7 @@ final class ReleaseManagementControls {
 	private function package_nonce_action( string $operation, object $package, string $channel = '' ): ?string {
 		$action = $this->request_boundary(
 			function () use ( $operation, $package, $channel ): string {
-				if ( null === $this->tracking || ! is_callable( array( $package, 'type' ) )
+				if ( ! is_callable( array( $package, 'type' ) )
 					|| ! is_callable( array( $package, 'identifier' ) ) || ! is_callable( array( $package, 'source_revision' ) ) ) {
 					return '';
 				}
@@ -849,16 +824,16 @@ final class ReleaseManagementControls {
 
 	/** @return array<string,mixed> */
 	private function prospective_projection( string $type ): array {
-		if ( null === $this->prospective_operations || ! in_array( $type, array( 'plugin', 'theme' ), true ) ) {
+		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) ) {
 			return array();
 		}
 
 		return $this->request_boundary(
 			fn (): array => array(
-				'providers'       => $this->prospective_operations?->supported_provider_codes( $type ) ?? array(),
-				'list_candidates' => wp_create_nonce( $this->prospective_operations?->nonce_action( 'list_candidates', $type ) ?? '' ),
-				'inspect'         => wp_create_nonce( $this->prospective_operations?->nonce_action( 'inspect', $type ) ?? '' ),
-				'install'         => wp_create_nonce( $this->prospective_operations?->nonce_action( 'install', $type ) ?? '' ),
+				'providers'       => $this->prospective_operations->supported_provider_codes( $type ),
+				'list_candidates' => wp_create_nonce( $this->prospective_operations->nonce_action( 'list_candidates', $type ) ),
+				'inspect'         => wp_create_nonce( $this->prospective_operations->nonce_action( 'inspect', $type ) ),
+				'install'         => wp_create_nonce( $this->prospective_operations->nonce_action( 'install', $type ) ),
 			),
 			array()
 		);

@@ -126,17 +126,33 @@ final class StandardsCoverageTest extends TestCase {
 	}
 
 	public function test_blanket_guard_distinguishes_annotations_from_fixture_strings(): void {
-		foreach ( array( '// phpcs:disable', '// phpcs:disable -- fixture', '// phpcs:ignore', '// phpcs:ignoreFile -- fixture' ) as $annotation ) {
+		foreach ( array( '// phpcs:disable', '// phpcs:disable -- fixture', '// phpcs:ignore', '// phpcs:ignoreFile -- fixture', "/**\n * @codingStandardsIgnoreStart\n */", '/** @codingStandardsIgnoreFile */', '/** @codingStandardsIgnoreLine */' ) as $annotation ) {
 			self::assertTrue( $this->has_blanket_suppression( "<?php\n" . $annotation . "\n" ) );
 		}
 		self::assertFalse( $this->has_blanket_suppression( "<?php\n// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Required evaluation order.\n" ) );
 		self::assertFalse( $this->has_blanket_suppression( '<?php $fixture = "// phpcs:disable";' ) );
+		self::assertFalse( $this->has_blanket_suppression( '<?php $fixture = "/* @codingStandardsIgnoreFile */";' ) );
+	}
+
+	public function test_legacy_and_block_suppressions_cannot_hide_checker_findings(): void {
+		$probe  = 'function ran_booster_probe( $unused, $value ) { return $value === 1; }';
+		$result = $this->inspect( "<?php\n" . $probe, 'RAN/NewQualityProbe.php' );
+		self::assertContains( 'WordPress.PHP.YodaConditions.NotYoda', $result['sources'] );
+		self::assertContains( 'Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed', $result['sources'] );
+		foreach ( array( '@codingStandardsIgnoreStart', '@codingStandardsIgnoreFile', '@codingStandardsIgnoreLine', 'phpcs:disable', 'phpcs:ignoreFile', 'phpcs:ignore' ) as $directive ) {
+			foreach ( array( '// ' . $directive, '/* ' . $directive . ' */' ) as $annotation ) {
+				$source = "<?php\n" . $annotation . "\n" . $probe;
+				$result = $this->inspect( $source, 'RAN/NewQualityProbe.php' );
+				self::assertSame( array(), $result['sources'], $annotation . ' must demonstrate a real checker suppression.' );
+				self::assertTrue( $this->has_blanket_suppression( $source ), $annotation . ' must still fail the independent blanket guard.' );
+			}
+		}
 	}
 
 	private function has_blanket_suppression( string $source ): bool {
 		foreach ( token_get_all( $source ) as $token ) {
 			if ( is_array( $token ) && in_array( $token[0], array( T_COMMENT, T_DOC_COMMENT ), true )
-				&& 1 === preg_match( '/phpcs:(?:ignoreFile\b|(?:disable|ignore)(?:\s*(?:--[^\r\n]*)?\s*(?:\*\/)?\s*$))/m', $token[1] ) ) {
+				&& 1 === preg_match( '/@codingStandardsIgnore(?:Start|File|Line)|phpcs:(?:ignoreFile\b|(?:disable|ignore)(?:\s*(?:--[^\r\n]*)?\s*(?:\*\/)?\s*$))/m', $token[1] ) ) {
 				return true;
 			}
 		}

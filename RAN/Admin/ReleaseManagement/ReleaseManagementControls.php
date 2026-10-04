@@ -686,7 +686,7 @@ final class ReleaseManagementControls {
 		);
 	}
 
-	/** @param array<string, mixed> $request */
+	/** Read tracking status from a validated package projection. */
 	private function package_status( object $package ): ?ReleaseTrackingStatus {
 		return $this->request_boundary(
 			function () use ( $package ): ?ReleaseTrackingStatus {

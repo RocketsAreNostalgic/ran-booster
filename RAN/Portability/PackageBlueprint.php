@@ -22,11 +22,11 @@ final readonly class PackageBlueprint {
 	public array $credentials;
 
 	/**
-	 * @param list<mixed> $packages
-	 * @param list<mixed> $credentials
+	 * @param array<array-key, mixed> $packages
+	 * @param array<array-key, mixed> $credentials
 	 */
 	public function __construct( array $packages, #[\SensitiveParameter] array $credentials = array() ) {
-		if ( count( $packages ) > self::MAX_PACKAGES || count( $credentials ) > self::MAX_CREDENTIALS ) {
+		if ( ! array_is_list( $packages ) || ! array_is_list( $credentials ) || count( $packages ) > self::MAX_PACKAGES || count( $credentials ) > self::MAX_CREDENTIALS ) {
 			throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
 		}
 		$identities = array();

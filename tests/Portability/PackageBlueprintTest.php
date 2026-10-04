@@ -259,6 +259,27 @@ final class PackageBlueprintTest extends TestCase {
 		}
 	}
 
+	public function test_constructor_requires_package_and_credential_lists(): void {
+		$package    = $this->package();
+		$credential = new BlueprintCredential( 'gh', 'Token', 'classic', array(), 'secret', array( $this->identity() ) );
+		$blueprint  = new PackageBlueprint( packages: array( $package ), credentials: array( $credential ) );
+		self::assertSame( array( $package ), $blueprint->packages );
+		self::assertSame( array( $credential ), $blueprint->credentials );
+		foreach ( array(
+			array( array( 'unexpected' => $package ), array( $credential ) ),
+			array( array( 1 => $package ), array( $credential ) ),
+			array( array( $package ), array( 'unexpected' => $credential ) ),
+			array( array( $package ), array( 1 => $credential ) ),
+		) as [$packages, $credentials] ) {
+			try {
+				new PackageBlueprint( packages: $packages, credentials: $credentials );
+				self::fail( 'Non-list blueprint input was accepted.' );
+			} catch ( InvalidArgumentException $exception ) {
+				self::assertSame( 'The portability blueprint is invalid.', $exception->getMessage() );
+			}
+		}
+	}
+
 	public function test_package_identity_includes_its_type(): void {
 		$plugin = $this->package( identifier: 'example.php' );
 		$theme  = $this->package( 'theme', 'example.php', 'Example Theme' );

@@ -234,7 +234,6 @@ final class ProspectiveReleaseOperations {
 					'fingerprint' => $this->valid_fingerprint( $value ),
 					'identifier' => $this->valid_identifier( $value ),
 					'channel' => in_array( $value, array( 'stable', 'prerelease' ), true ),
-					default => true,
 				};
 				if ( $valid ) {
 					$safe[ $key ] = $value;

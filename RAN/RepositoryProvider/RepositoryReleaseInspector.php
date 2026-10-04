@@ -7,7 +7,10 @@ namespace RAN\RepositoryProvider;
 use RAN\Provider\ProviderCapability;
 
 interface RepositoryReleaseInspector extends ProviderCapability {
-	/** @throws RepositoryReleaseInspectionRejected When the exact release is absent, invalid or package-incompatible. */
+	/**
+	 * @throws RepositoryReleaseInspectionRejected When the exact release is absent, invalid or package-incompatible.
+	 * @throws RepositoryReleaseReadUnavailable When provider access prevents inspection of the release.
+	 */
 	public function inspect_release(
 		string $package_type,
 		RepositoryReference $repository,

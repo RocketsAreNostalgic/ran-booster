@@ -2577,6 +2577,38 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 'release_configuration_invalid', $result->code() );
 	}
 
+	public function test_refresh_rejects_missing_registered_target_before_running_the_updater(): void {
+		$package = $this->package( 'theme', 'example-theme', 'example-theme', DeploymentPolicy::MANUAL );
+		$plugins = $this->createStub( PluginRepository::class );
+		$themes  = $this->createStub( ThemeRepository::class );
+		$themes->method( 'booster_theme_from_stylesheet' )->willReturn( $package );
+		$store     = new RuntimeReleaseStore(
+			array( "theme\0example-theme" => new ManagedReleaseConfiguration( 'example-theme', 'style.css' ) )
+		);
+		$registrar = $this->registrar(
+			$plugins,
+			$themes,
+			$store,
+			new RuntimeUpdaterLock(),
+			$this->release_metadata_registry()
+		);
+		$facade    = $this->facade(
+			$plugins,
+			$themes,
+			$store,
+			$registrar,
+			new RuntimeUpdaterLock(),
+			$this->release_metadata_registry(),
+			static fn (): bool => true,
+			static fn (): bool => true
+		);
+
+		$result = $facade->refresh( 'theme', 'example-theme', 1, 'nonce' );
+
+		self::assertFalse( $result->successful() );
+		self::assertSame( 'source_changed', $result->code() );
+	}
+
 	public function test_branch_statuses_project_safe_local_state_without_passive_preflight(): void {
 		$package = $this->package(
 			'plugin',

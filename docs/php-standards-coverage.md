@@ -123,10 +123,10 @@ public contracts, dependency versions or required gates change.
 | WpConfigSecretsPathWriter | Locked inode identity, same-directory replacement, owner/group/mode preservation, exact read-back and rollback. Existing concurrency, partial-write and failed-read-back tests exercise these invariants. |
 | TemporaryDebugCapture, LocalDataRemover and LocalTroubleshootingService | Exact local ownership/deletion fences, native locks and probe cleanup. Existing foreign-file, symlink, partial-cleanup and troubleshooting tests retain these safeguards. |
 
-`StandardsCoverageTest` feeds the actual SecretsFile and codec sources plus an
-unrelated native read to the locked checker. The new read must be reported;
-restoring either the XML exemption or the file-wide category disable conceals
-it and fails the negative control. No custom exception registry is introduced.
+`StandardsCoverageTest` feeds all nine actual migrated sources plus an
+unrelated native read to the locked checker. The new read must be reported in
+every file; restoring the SecretsFile XML exemption or any of the eight
+file-wide category disables conceals it and fails the negative control. No custom exception registry is introduced.
 
 ## Completion and separate work
 

@@ -190,7 +190,17 @@ final class StandardsCoverageTest extends TestCase {
 	}
 
 	public function test_native_boundary_exceptions_do_not_cover_new_operations(): void {
-		foreach ( array( 'RAN/Secrets/SecretsFile.php', 'RAN/Secrets/EncryptedSecretsEnvelopeCodec.php' ) as $path ) {
+		foreach ( array(
+			'RAN/Secrets/SecretsFile.php',
+			'RAN/Secrets/EncryptedSecretsEnvelopeCodec.php',
+			'RAN/Secrets/PrivateLocationCandidateResolver.php',
+			'RAN/Secrets/SecretsStorageProvisioner.php',
+			'RAN/Secrets/PosixFilesystemProbe.php',
+			'RAN/Secrets/WpConfigSecretsPathWriter.php',
+			'RAN/Logging/TemporaryDebugCapture.php',
+			'RAN/Uninstall/LocalDataRemover.php',
+			'RAN/Troubleshooting/LocalTroubleshootingService.php',
+		) as $path ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read actual local exception scope into an inert checker fixture.
 			$source = file_get_contents( dirname( __DIR__, 2 ) . '/' . $path );
 			self::assertIsString( $source );

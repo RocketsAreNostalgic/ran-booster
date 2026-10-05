@@ -17,7 +17,7 @@ permissions:
 jobs:
   runtime-archive:
     name: Runtime archive
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -184,7 +184,7 @@ jobs:
       name: Repository quality
       needs: runtime-archive
       if: ${{ needs.runtime-archive.outputs.lane == 'full' }}
-      runs-on: blacksmith-2vcpu-ubuntu-2404
+      runs-on: ubuntu-24.04
       timeout-minutes: 10
       steps:
           - name: Check out repository
@@ -249,7 +249,7 @@ jobs:
       name: Release candidate install readback
       needs: runtime-archive
       if: ${{ needs.runtime-archive.outputs.lane == 'release-candidate' }}
-      runs-on: blacksmith-2vcpu-ubuntu-2404
+      runs-on: ubuntu-24.04
       timeout-minutes: 10
       services:
           mysql:
@@ -389,7 +389,7 @@ jobs:
               && needs.runtime-archive.outputs.lane == 'full'
               && needs.repository-quality.result == 'success'
           }}
-      runs-on: blacksmith-2vcpu-ubuntu-2404
+      runs-on: ubuntu-24.04
       timeout-minutes: 10
       strategy:
           fail-fast: false
@@ -783,7 +783,7 @@ jobs:
       - repository-quality
       - wordpress-release-candidate
       - wordpress
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Require applicable Core quality evidence

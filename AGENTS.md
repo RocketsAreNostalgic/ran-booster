@@ -27,7 +27,7 @@ admin-shell parity, race/hard-stop/runtime proofs, frontend source globs and
 globals, asset tests, and release verification. Shared-package adoption must
 never remove or silently weaken those local guarantees.
 
-PHPStan level 1 directly covers all Core PHP shipped by `release-files.txt`,
+PHPStan level 5 directly covers all Core PHP shipped by `release-files.txt`,
 including views and asset entrypoints. `ProductionAnalysisCoverageTest` checks
 the effective roots/exclusions against that manifest. Preserve accurate
 caller-supplied view PHPDoc and the generated Admin Shell bytes; see

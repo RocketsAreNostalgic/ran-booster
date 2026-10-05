@@ -1508,6 +1508,7 @@ class SecretsFile {
 			throw $this->unavailable( 'The encrypted Booster secrets path is not configured.' );
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Retain a native handle for the local inode, lock and permission checks.
 		$handle = fopen( $this->path, 'rb' );
 		if ( false === $handle ) {
 			throw $this->unavailable( 'The encrypted Booster secrets file is not readable.' );
@@ -1532,6 +1533,7 @@ class SecretsFile {
 
 			return $contents;
 		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the same native handle used for local identity and lock checks.
 			fclose( $handle );
 		}
 	}
@@ -1881,6 +1883,7 @@ class SecretsFile {
 			throw $this->unavailable( 'Refusing to use an invalid encrypted Booster secrets lock.' );
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Retain a native handle for the local inode, lock and permission checks.
 		$lock = fopen( $lock_path, $create ? 'c+b' : 'r+b' );
 		if ( false === $lock ) {
 			throw $this->unavailable( 'Could not open the encrypted Booster secrets lock.' );
@@ -1911,6 +1914,7 @@ class SecretsFile {
 			return $callback( $lock );
 		} finally {
 			flock( $lock, LOCK_UN );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the same native handle used for local identity and lock checks.
 			fclose( $lock );
 		}
 	}
@@ -1954,6 +1958,7 @@ class SecretsFile {
 			|| 0700 !== ( $stat['mode'] & 0777 )
 			|| ! $this->owned_by_process( $stat )
 			|| ! is_readable( $directory )
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- Observe native process permissions at the validated local path; remote filesystem credentials cannot establish this boundary.
 			|| ! is_writable( $directory )
 		) {
 			throw $this->unavailable( 'The encrypted Booster secrets directory is not secure and writable.' );
@@ -2059,6 +2064,7 @@ class SecretsFile {
 				throw $this->unavailable( 'Could not secure the temporary encrypted Booster secrets file.' );
 			}
 
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Retain a native handle for the local inode, lock and permission checks.
 			$handle = fopen( $temporary, 'wb' );
 			if ( false === $handle ) {
 				throw $this->unavailable( 'Could not open the temporary encrypted Booster secrets file.' );
@@ -2085,6 +2091,7 @@ class SecretsFile {
 					throw $this->unavailable( 'Could not write the temporary encrypted Booster secrets file.' );
 				}
 			} finally {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the same native handle used for local identity and lock checks.
 				fclose( $handle );
 			}
 
@@ -2094,6 +2101,7 @@ class SecretsFile {
 			$temporary = '';
 		} finally {
 			if ( '' !== $temporary && ( is_file( $temporary ) || is_link( $temporary ) ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only the local file admitted by the surrounding ownership and cleanup guards; no WordPress deletion filter may redirect it.
 				unlink( $temporary );
 			}
 		}
@@ -2115,6 +2123,7 @@ class SecretsFile {
 			|| 0100000 !== ( $stat['mode'] & 0170000 )
 			|| 1 !== $stat['nlink']
 			|| ! $this->owned_by_process( $stat )
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only the local file admitted by the surrounding ownership and cleanup guards; no WordPress deletion filter may redirect it.
 			|| ! unlink( $this->path )
 		) {
 			throw $this->unavailable( 'Could not remove the failed encrypted Booster secrets file.' );
@@ -2125,6 +2134,7 @@ class SecretsFile {
 	/** @param array<string, mixed> $document */
 	private function encode_canonical_document( #[\SensitiveParameter] array $document ): string {
 		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Preserve JSON_THROW_ON_ERROR, explicit unescaped flags and exact encrypted-document serialization bytes.
 			return json_encode(
 				$document,
 				JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
@@ -2151,6 +2161,7 @@ class SecretsFile {
 	 * @param resource $handle
 	 */
 	protected function write_handle( mixed $handle, #[\SensitiveParameter] string $contents ): int|false {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Write the checked native handle so partial-write, flush and identity checks retain their semantics.
 		return fwrite( $handle, $contents );
 	}
 
@@ -2272,14 +2283,17 @@ class SecretsFile {
 	 * replacing the native sidecar implementation in production.
 	 */
 	protected function change_permissions( string $path, int $mode ): bool {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Apply exact POSIX permissions to the validated private local file.
 		return chmod( $path, $mode );
 	}
 
 	protected function replace_file( string $source, string $destination ): bool {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- Use same-directory native atomic replacement while the local lock and identity guards remain held.
 		return rename( $source, $destination );
 	}
 
 	protected function remove_file( string $path ): bool {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only the local file admitted by the surrounding ownership and cleanup guards; no WordPress deletion filter may redirect it.
 		return unlink( $path );
 	}
 }

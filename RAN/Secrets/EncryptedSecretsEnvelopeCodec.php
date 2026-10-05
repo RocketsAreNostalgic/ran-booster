@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Secrets;
 
 // Native JSON and Sodium calls define the strict encrypted-document format.
-// phpcs:disable WordPress.WP.AlternativeFunctions
 // Base64 is the binding RFC 4648 binary encoding for envelope fields.
 // phpcs:disable WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode, WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
 
@@ -121,6 +120,7 @@ final class EncryptedSecretsEnvelopeCodec {
 
 	private function canonical_envelope( string $nonce, string $ciphertext ): string {
 		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Preserve JSON_THROW_ON_ERROR, explicit unescaped flags and exact encrypted-document serialization bytes.
 			$json = json_encode(
 				array(
 					'format'     => self::FORMAT,

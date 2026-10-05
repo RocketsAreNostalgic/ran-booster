@@ -102,6 +102,32 @@ with WordPress-specific rules. They are not a request to re-enable contradictory
 upstream conventions. Core explicitly restores the seven unused-parameter
 callback/extended/interface codes as blocking errors.
 
+## Native operation exception narrowing — organisation #128
+
+The retained-exception review against Core `48e86ebd5d6ca153311f60bc385173349ed81e30`
+keeps native runtime behavior while removing eight file-wide
+`WordPress.WP.AlternativeFunctions` annotations and the SecretsFile XML category
+exemption. Each required exception now names the specific diagnostic at its
+operation. Base64, output, nonce, native-signature and other retained exceptions
+remain separately scoped; this is not whole-inventory acceptance.
+
+The locked checker identified 67 alternative-function diagnostic occurrences
+across these nine files, including one existing precise SecretsFile JSON
+annotation. The other 66 are now operation-local. No executable PHP tokens,
+public contracts, dependency versions or required gates change.
+
+| Boundary | Retained invariant and existing evidence |
+| --- | --- |
+| SecretsFile and EncryptedSecretsEnvelopeCodec | Native handles and atomic private-file replacement; JSON error behavior, explicit flags and authenticated bytes. SecretsFile characterization, stat-failure and envelope canonical/base64/authentication tests remain authoritative. |
+| PrivateLocationCandidateResolver, SecretsStorageProvisioner and PosixFilesystemProbe | Native process permissions, private-directory modes and exclusive same-directory probe handles. Existing resolver/provisioning/probe tests retain unsafe-path and ownership rejection. |
+| WpConfigSecretsPathWriter | Locked inode identity, same-directory replacement, owner/group/mode preservation, exact read-back and rollback. Existing concurrency, partial-write and failed-read-back tests exercise these invariants. |
+| TemporaryDebugCapture, LocalDataRemover and LocalTroubleshootingService | Exact local ownership/deletion fences, native locks and probe cleanup. Existing foreign-file, symlink, partial-cleanup and troubleshooting tests retain these safeguards. |
+
+`StandardsCoverageTest` feeds the actual SecretsFile and codec sources plus an
+unrelated native read to the locked checker. The new read must be reported;
+restoring either the XML exemption or the file-wide category disable conceals
+it and fails the negative control. No custom exception registry is introduced.
+
 ## Completion and separate work
 
 Qualification evidence belongs in the exact opened PR and the central quality

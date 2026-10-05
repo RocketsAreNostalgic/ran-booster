@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Uninstall;
 
 // Exact inode and empty-directory checks require native local filesystem operations.
-// phpcs:disable WordPress.WP.AlternativeFunctions
 
 use RAN\Admin\DeploymentAdminPresenter;
 use RAN\Admin\CredentialExpiryNotice;
@@ -302,6 +301,7 @@ class LocalDataRemover {
 		}
 
 		$this->assert_wp_config_lock_removable( $config_path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only the local file admitted by the surrounding ownership and cleanup guards; no WordPress deletion filter may redirect it.
 		if ( ! unlink( $lock_path ) ) {
 			throw new RuntimeException( 'The Booster WordPress configuration lock could not be removed safely.' );
 		}
@@ -359,6 +359,7 @@ class LocalDataRemover {
 			|| 0700 !== ( $stat['mode'] & 0777 )
 			|| ! function_exists( 'posix_geteuid' )
 			|| posix_geteuid() !== $stat['uid']
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only the verified owned empty local directory; preserve unexpected contents.
 			|| ! rmdir( $directory )
 		) {
 			throw new RuntimeException( 'An empty Booster storage directory could not be removed safely.' );

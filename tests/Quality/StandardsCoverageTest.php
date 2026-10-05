@@ -189,6 +189,19 @@ final class StandardsCoverageTest extends TestCase {
 		self::assertSame( array( 4 ), $result['lines'] );
 	}
 
+	public function test_native_boundary_exceptions_do_not_cover_new_operations(): void {
+		foreach ( array( 'RAN/Secrets/SecretsFile.php', 'RAN/Secrets/EncryptedSecretsEnvelopeCodec.php' ) as $path ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read actual local exception scope into an inert checker fixture.
+			$source = file_get_contents( dirname( __DIR__, 2 ) . '/' . $path );
+			self::assertIsString( $source );
+			$source .= "\nfunction ran_booster_unrelated_read() { return file_get_contents( 'unrelated-fixture' ); }\n";
+			$result  = $this->inspect( $source, $path );
+
+			self::assertNotSame( 0, $result['exit'], $path );
+			self::assertSame( array( 'WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents' ), $result['sources'], $path );
+		}
+	}
+
 	public function test_a_compliant_new_file_passes_the_same_rules(): void {
 		$result = $this->inspect( '<?php function ran_booster_probe( $value ) { return 1 === $value; }', 'RAN/NewQualityProbe.php' );
 		self::assertSame( 0, $result['exit'] );
@@ -204,7 +217,7 @@ final class StandardsCoverageTest extends TestCase {
 				PHP_BINARY,
 				$root . '/vendor/bin/phpcs',
 				'--standard=' . $root . '/.phpcs.xml',
-				'--sniffs=WordPress.PHP.YodaConditions,Generic.CodeAnalysis.UnusedFunctionParameter,Universal.NamingConventions.NoReservedKeywordParameterNames',
+				'--sniffs=WordPress.PHP.YodaConditions,Generic.CodeAnalysis.UnusedFunctionParameter,Universal.NamingConventions.NoReservedKeywordParameterNames,WordPress.WP.AlternativeFunctions',
 				'--report=json',
 				'--no-colors',
 				'--parallel=1',

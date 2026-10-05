@@ -112,13 +112,6 @@
 		<exclude-pattern>/tests/characterization.php</exclude-pattern>
 	</rule>
 
-	<!--
-		SecretsFile uses a site-owned encrypted JSON sidecar and atomic temp-file + rename writes.
-		WP_Filesystem cannot provide the same same-directory atomic replacement contract.
-	-->
-	<rule ref="WordPress.WP.AlternativeFunctions">
-		<exclude-pattern>/RAN/Secrets/SecretsFile.php</exclude-pattern>
-	</rule>
 	<rule ref="WordPress.WP.I18n">
 		<properties>
 			<property name="text_domain" type="array">

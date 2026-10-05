@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Secrets;
 
 // The probe intentionally verifies native local-filesystem behavior.
-// phpcs:disable WordPress.WP.AlternativeFunctions
 
 /**
  * Proves the small set of POSIX behaviors required by the encrypted sidecar.
@@ -30,14 +29,17 @@ final class PosixFilesystemProbe {
 			}
 
 			$probe_path = $site_directory . '/.probe-' . bin2hex( random_bytes( 12 ) );
-			$first      = fopen( $probe_path, 'x+b' );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Retain a native handle for the local inode, lock and permission checks.
+			$first = fopen( $probe_path, 'x+b' );
 			if ( false === $first ) {
 				return false;
 			}
 			$handles[] = $first;
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Apply exact POSIX permissions to the validated private local file.
 			if ( ! chmod( $probe_path, 0600 ) || ! $this->safe_file( $probe_path, $first ) ) {
 				return false;
 			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Retain a native handle for the local inode, lock and permission checks.
 			$second = fopen( $probe_path, 'rb' );
 			if ( false === $second ) {
 				return false;
@@ -48,8 +50,10 @@ final class PosixFilesystemProbe {
 			$passed = false;
 		} finally {
 			foreach ( array_reverse( $handles ) as $handle ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the same native handle used for local identity and lock checks.
 				fclose( $handle );
 			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only the local file admitted by the surrounding ownership and cleanup guards; no WordPress deletion filter may redirect it.
 			if ( '' !== $probe_path && ( is_file( $probe_path ) || is_link( $probe_path ) ) && ! unlink( $probe_path ) ) {
 				$passed = false;
 			}
@@ -75,6 +79,7 @@ final class PosixFilesystemProbe {
 		return false !== $stat
 			&& 0040000 === ( $stat['mode'] & 0170000 )
 			&& ! is_link( $path )
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- Observe native process permissions at the validated local path; remote filesystem credentials cannot establish this boundary.
 			&& is_writable( $path )
 			&& ( ! function_exists( 'posix_geteuid' ) || posix_geteuid() === $stat['uid'] )
 			&& ( ! $require_private_mode || 0700 === ( $stat['mode'] & 0777 ) )
@@ -86,6 +91,7 @@ final class PosixFilesystemProbe {
 			return $this->safe_directory( $path, true );
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the private local directory with the required initial POSIX mode.
 		return mkdir( $path, 0700 ) && $this->safe_directory( $path, true );
 	}
 

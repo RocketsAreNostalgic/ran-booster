@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Secrets;
 
 // Candidate discovery must inspect native paths rather than a WordPress transport.
-// phpcs:disable WordPress.WP.AlternativeFunctions
 
 /**
  * Suggests one site-specific secrets path outside known public/VCS boundaries.
@@ -145,6 +144,7 @@ final class PrivateLocationCandidateResolver {
 				return $this->failure( 'broad_private_path_permissions', 'A private path component is writable by its group or by other users.', $current );
 			}
 			if ( $current === $private_base
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- Observe native process permissions at the validated local path; remote filesystem credentials cannot establish this boundary.
 				&& ( ! is_writable( $current ) || ( function_exists( 'posix_geteuid' ) && posix_geteuid() !== $stat['uid'] ) )
 			) {
 				return $this->failure( 'private_anchor_not_owned', 'The private account directory is not writable and owned by the PHP process user.', $current );
@@ -173,6 +173,7 @@ final class PrivateLocationCandidateResolver {
 			&& is_array( $process_groups )
 			&& $effective_group !== $stat['gid']
 			&& ! in_array( $stat['gid'], $process_groups, true )
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- Observe native process permissions at the validated local path; remote filesystem credentials cannot establish this boundary.
 			&& ! is_writable( $path );
 	}
 

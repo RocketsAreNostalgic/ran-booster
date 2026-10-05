@@ -4606,185 +4606,185 @@ msgstr ""
 msgid "Read the version-specific Multisite recovery guide"
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:44
+#: RAN/Secrets/SecretsStorageProvisioner.php:43
 msgid "The encrypted secrets path constant is not a valid absolute path."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:55
+#: RAN/Secrets/SecretsStorageProvisioner.php:54
 msgid "The resolved configured storage directory is not a verified private location. It may be inside the public web root, use a symbolic link or cross another unsafe path boundary. Choose a real local directory outside the public web root."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:90
+#: RAN/Secrets/SecretsStorageProvisioner.php:89
 msgid "Automatic secure storage setup requires a direct local POSIX filesystem."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:100
-#: RAN/Secrets/SecretsStorageProvisioner.php:108
+#: RAN/Secrets/SecretsStorageProvisioner.php:99
+#: RAN/Secrets/SecretsStorageProvisioner.php:107
 msgid "Booster could not determine a safe private storage location."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:117
-#: RAN/Secrets/SecretsStorageProvisioner.php:136
-#: RAN/Secrets/SecretsStorageProvisioner.php:374
+#: RAN/Secrets/SecretsStorageProvisioner.php:116
+#: RAN/Secrets/SecretsStorageProvisioner.php:135
+#: RAN/Secrets/SecretsStorageProvisioner.php:373
 msgid "Booster could not safely identify the wp-config.php loaded by WordPress."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:149
+#: RAN/Secrets/SecretsStorageProvisioner.php:148
 msgid "The private storage filesystem did not pass Booster's safety checks."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:156
+#: RAN/Secrets/SecretsStorageProvisioner.php:155
 msgid "The private storage location changed or did not pass Booster's final path-safety check."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:164
+#: RAN/Secrets/SecretsStorageProvisioner.php:163
 msgid "The private storage location and WordPress configuration are not on one verified local filesystem."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:180
+#: RAN/Secrets/SecretsStorageProvisioner.php:179
 #: RAN/Secrets/SecretsStorageProvisioner.php:1062
 #: RAN/Secrets/SecretsStorageProvisioner.php:1070
 msgid "The WordPress configuration could not be updated safely."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:188
-#: RAN/Secrets/SecretsStorageProvisioner.php:391
+#: RAN/Secrets/SecretsStorageProvisioner.php:187
+#: RAN/Secrets/SecretsStorageProvisioner.php:390
 msgid "Booster could not require a fresh WordPress configuration check."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:223
+#: RAN/Secrets/SecretsStorageProvisioner.php:222
 msgid "Booster found plausible prior storage material that it could not inspect completely. Restore or review that material manually before resetting credential storage."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:237
+#: RAN/Secrets/SecretsStorageProvisioner.php:236
 msgid "Booster found encrypted credential storage without its matching database key. Restore the matching database key if possible, or explicitly discard the unauthenticated ciphertext and start with empty credential storage."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:249
+#: RAN/Secrets/SecretsStorageProvisioner.php:248
 msgid "Booster found a database encryption key without its matching encrypted file. Restore the matching file if possible, or explicitly reset this empty credential store."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:267
+#: RAN/Secrets/SecretsStorageProvisioner.php:266
 msgid "Booster found prior storage material, but no database key is available to authenticate it. Restore the matching database key before adopting or resetting storage."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:279
+#: RAN/Secrets/SecretsStorageProvisioner.php:278
 msgid "Booster found more than one authenticated prior storage set. Choose and configure the correct private location manually."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:302
+#: RAN/Secrets/SecretsStorageProvisioner.php:301
 msgid "Booster authenticated prior credential storage, but its location does not pass the current private-path policy. Move the matching storage set to a verified private location before using it."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:303
+#: RAN/Secrets/SecretsStorageProvisioner.php:302
 msgid "Booster authenticated prior credential storage, but one or more credentials do not pass their current provider policy. Review or restore the matching storage set before using it."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:304
+#: RAN/Secrets/SecretsStorageProvisioner.php:303
 msgid "Booster authenticated prior credential storage, but the active wp-config.php definition is operator-managed. Configure the verified private path manually."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:305
+#: RAN/Secrets/SecretsStorageProvisioner.php:304
 msgid "Booster authenticated prior credential storage, but it crosses an unsupported filesystem boundary. Configure the verified private path manually."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:319
+#: RAN/Secrets/SecretsStorageProvisioner.php:318
 msgid "Booster found one prior storage set that authenticates with this site's database key and whose credentials pass their current provider policies."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:334
+#: RAN/Secrets/SecretsStorageProvisioner.php:333
 msgid "The empty-storage reset request is invalid. Review the current storage state and try again."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:339
+#: RAN/Secrets/SecretsStorageProvisioner.php:338
 msgid "The credential storage state changed and was not reset. Review it again before continuing."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:349
+#: RAN/Secrets/SecretsStorageProvisioner.php:348
 msgid "The incomplete credential storage could not be reset safely. No storage reset was confirmed."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:359
+#: RAN/Secrets/SecretsStorageProvisioner.php:358
 msgid "The storage recovery request is invalid. Review the current storage state and try again."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:369
+#: RAN/Secrets/SecretsStorageProvisioner.php:368
 msgid "The recoverable storage candidate is no longer uniquely safe and authenticated. Review the current storage state again."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:386
+#: RAN/Secrets/SecretsStorageProvisioner.php:385
 msgid "The recoverable storage path could not be adopted safely."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:736
+#: RAN/Secrets/SecretsStorageProvisioner.php:735
 msgid "PHP cannot see the configured storage directory. It may be absent, or PHP may lack execute/traverse permission on a parent directory. Keep the storage directory itself owner-only with mode 0700."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:742
+#: RAN/Secrets/SecretsStorageProvisioner.php:741
 msgid "The configured secrets directory must be a real directory on a supported local filesystem, not a symbolic link."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:750
+#: RAN/Secrets/SecretsStorageProvisioner.php:749
 msgid "Booster could not verify the configured secrets directory."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:767
+#: RAN/Secrets/SecretsStorageProvisioner.php:766
 msgid "The configured secrets file must be a regular file, not a symbolic link."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:774
+#: RAN/Secrets/SecretsStorageProvisioner.php:773
 msgid "Booster could not verify the configured secrets file."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:779
+#: RAN/Secrets/SecretsStorageProvisioner.php:778
 msgid "The configured secrets file has additional hard links."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:792
+#: RAN/Secrets/SecretsStorageProvisioner.php:791
 msgid "The secrets file exists, but its matching lock file is missing. Restore the matching storage set from one backup."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:798
+#: RAN/Secrets/SecretsStorageProvisioner.php:797
 msgid "The configured secrets lock must be a regular file, not a symbolic link."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:805
+#: RAN/Secrets/SecretsStorageProvisioner.php:804
 msgid "Booster could not verify the configured secrets lock file."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:810
+#: RAN/Secrets/SecretsStorageProvisioner.php:809
 msgid "The configured secrets lock file has additional hard links."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:828
+#: RAN/Secrets/SecretsStorageProvisioner.php:827
 msgctxt "Configured secrets storage item"
 msgid "directory"
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:829
+#: RAN/Secrets/SecretsStorageProvisioner.php:828
 msgctxt "Configured secrets storage item"
 msgid "file"
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:830
+#: RAN/Secrets/SecretsStorageProvisioner.php:829
 msgctxt "Configured secrets storage item"
 msgid "lock file"
 msgstr ""
 
 #. translators: 1: configured secrets storage item, 2: current octal mode, 3: required octal mode.
-#: RAN/Secrets/SecretsStorageProvisioner.php:838
+#: RAN/Secrets/SecretsStorageProvisioner.php:837
 #, php-format
 msgid "The configured secrets %1$s uses mode %2$04o; mode %3$04o is required."
 msgstr ""
 
 #. translators: %s: configured secrets storage item.
-#: RAN/Secrets/SecretsStorageProvisioner.php:847
+#: RAN/Secrets/SecretsStorageProvisioner.php:846
 #, php-format
 msgid "The configured secrets %s is not owned by the PHP process user."
 msgstr ""
 
 #. translators: %s: configured secrets storage item.
-#: RAN/Secrets/SecretsStorageProvisioner.php:854
+#: RAN/Secrets/SecretsStorageProvisioner.php:853
 #, php-format
 msgid "The configured secrets %s is not readable by PHP."
 msgstr ""

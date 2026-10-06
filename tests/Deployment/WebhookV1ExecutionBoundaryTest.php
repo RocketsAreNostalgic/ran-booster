@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Deployment;
+namespace RAN\Tests\Deployment;
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused boundary spies stay beside their integration test.
 // phpcs:disable WordPress.WP.AlternativeFunctions -- Test-only cleanup removes the exact temporary capture paths.
@@ -26,7 +26,7 @@ use RAN\RepositoryProvider\WebhookRequest;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\Database;
 use RAN\Webhook\SignedWebhookVerifier;
-use Tests\RepositoryProvider\Support\InertWebhookPolicy;
+use RAN\Tests\RepositoryProvider\Support\InertWebhookPolicy;
 
 #[RunTestsInSeparateProcesses]
 #[PreserveGlobalState( false )]
@@ -159,7 +159,7 @@ final class WebhookV1BoundarySecretsFile extends SecretsFile {
 }
 
 final class WebhookV1BoundaryProvider implements RepositoryProvider, WebhookNormalizer {
-	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 	/** @param list<string> $operations */
 	public function __construct( private array &$operations ) {

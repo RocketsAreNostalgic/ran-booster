@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Webhook;
+namespace RAN\Tests\Webhook;
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused webhook fakes stay beside their tests.
 
@@ -25,7 +25,7 @@ use RAN\Secrets\SecretsFile;
 use RAN\Webhook\WebhookProcessor;
 use RAN\Webhook\SignedWebhookVerifier;
 use RuntimeException;
-use Tests\RepositoryProvider\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
+use RAN\Tests\RepositoryProvider\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
 use Throwable;
 
 final class WebhookProcessorTest extends TestCase {
@@ -47,7 +47,7 @@ final class WebhookProcessorTest extends TestCase {
 
 		$metadata_only = new class() implements RepositoryProvider {
 
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
@@ -532,7 +532,7 @@ final class WebhookProcessorTest extends TestCase {
 
 final readonly class WebhookProcessorProvider implements RepositoryProvider, WebhookNormalizer {
 
-	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 	private \Closure $normalizer;
 

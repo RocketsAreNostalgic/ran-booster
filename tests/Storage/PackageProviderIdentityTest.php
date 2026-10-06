@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Storage;
+namespace RAN\Tests\Storage;
 
 use RAN\AbstractPackage;
 use RAN\Deployment\DeploymentPolicy;
@@ -15,7 +15,7 @@ use RAN\Storage\PackageMutationResult;
 use RAN\Storage\PackageMutationStatus;
 use RAN\Storage\PackageStorageFailure;
 use RuntimeException;
-use Tests\RANBoosterTestCase;
+use RAN\Tests\RANBoosterTestCase;
 use Throwable;
 
 require_once __DIR__ . '/StorageTestEnvironment.php';

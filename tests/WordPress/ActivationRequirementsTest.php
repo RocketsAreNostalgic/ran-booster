@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\WordPress;
+namespace RAN\Tests\WordPress;
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused activation spies belong to this test.
 

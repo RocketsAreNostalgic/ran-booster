@@ -2,7 +2,7 @@
 
 declare( strict_types = 1 );
 
-namespace Tests\Admin\WebhookManagement;
+namespace RAN\Tests\Admin\WebhookManagement;
 
 use PHPUnit\Framework\TestCase;
 use RAN\AddOn\WebhookAssistance\AssistanceTarget;
@@ -17,12 +17,12 @@ use RAN\PackageSource;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
-use Tests\Support\AbsentWebhookManagementCapabilityProvider;
-use Tests\Support\CompleteWebhookManagementCapabilityProvider;
-use Tests\Support\FitnessOnlyWebhookManagementCapabilityProvider;
-use Tests\Support\ManagementOnlyWebhookManagementCapabilityProvider;
-use Tests\Support\UnnormalizedWebhookManagementCapabilityProvider;
-use Tests\Support\WebhookManagementCapabilityProvider;
+use RAN\Tests\Support\AbsentWebhookManagementCapabilityProvider;
+use RAN\Tests\Support\CompleteWebhookManagementCapabilityProvider;
+use RAN\Tests\Support\FitnessOnlyWebhookManagementCapabilityProvider;
+use RAN\Tests\Support\ManagementOnlyWebhookManagementCapabilityProvider;
+use RAN\Tests\Support\UnnormalizedWebhookManagementCapabilityProvider;
+use RAN\Tests\Support\WebhookManagementCapabilityProvider;
 
 require_once __DIR__ . '/RepositoryWebhookManagementControlsWordPressFunctions.php';
 require_once __DIR__ . '/WordPressInstallationStoreWordPressFunctions.php';
@@ -34,6 +34,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		if ( ! defined( 'ABSPATH' ) ) {
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 			define( 'ABSPATH', __DIR__ . '/' );
 		}
 		$GLOBALS['ran_booster_repository_webhook_management_actions']      = array();

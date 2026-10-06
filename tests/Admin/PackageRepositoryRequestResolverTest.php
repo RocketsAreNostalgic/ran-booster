@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
+namespace RAN\Tests\Admin;
 
 require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
 require_once __DIR__ . '/../Support/PackageOperationWordPressFunctions.php';
@@ -30,7 +30,7 @@ use RAN\RepositoryProvider\WebhookEnvelope;
 use RAN\RepositoryProvider\WebhookNormalizer;
 use RAN\RepositoryProvider\WebhookRequest;
 use RuntimeException;
-use Tests\RepositoryProvider\Support\InertWebhookPolicy;
+use RAN\Tests\RepositoryProvider\Support\InertWebhookPolicy;
 
 final class PackageRepositoryRequestResolverTest extends TestCase {
 
@@ -205,7 +205,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 	public function test_push_to_deploy_requires_webhook_capability_before_resolution(): void {
 		$provider = new class() implements RepositoryProvider {
 
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public int $resolve_calls = 0;
 
@@ -372,7 +372,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		$registered_code ??= ProviderCode::parse( 'bb' );
 		return new class( $descriptor, $registered_code ) implements RepositoryProvider, WebhookNormalizer {
 
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public ?RepositoryLookupRequest $request;
 
@@ -418,7 +418,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 	): RepositoryProvider&CredentialedPublicRepositoryBrowser {
 		return new class( $descriptor ) implements RepositoryProvider, CredentialedPublicRepositoryBrowser {
 
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public ?RepositoryLookupRequest $request = null;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\RepositoryProvider;
+namespace RAN\Tests\RepositoryProvider;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -435,7 +435,7 @@ final class ProviderContractsTest extends TestCase {
 
 	public function test_manual_capability_fixture_resolves_readonly_lookup_values(): void {
 		$provider = new class() implements RepositoryProvider {
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'fixture' ), 'Fixture', 'https://example.test/', 'Owner' );
@@ -508,7 +508,7 @@ final class ProviderContractsTest extends TestCase {
 		};
 		$provider = new class( $archive ) implements RepositoryProvider {
 
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public ?ArchiveRequest $request = null;
 

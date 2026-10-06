@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Secrets;
+namespace RAN\Tests\Secrets;
 
 // Direct local filesystem operations exercise the encrypted sidecar lifecycle.
 // phpcs:disable WordPress.WP.AlternativeFunctions
@@ -15,7 +15,7 @@ use RAN\RepositoryProvider\ProviderWebhookPolicy;
 use RAN\RepositoryProvider\SignedWebhookVerification;
 use RAN\Secrets\SecretsFile;
 use RuntimeException;
-use Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
+use RAN\Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
 
 final class WebhookProfileStorageTest extends TestCase {
 

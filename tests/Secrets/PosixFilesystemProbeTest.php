@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Secrets;
+namespace RAN\Tests\Secrets;
 
 // Test fixtures deliberately exercise native filesystem semantics.
 // phpcs:disable WordPress.WP.AlternativeFunctions

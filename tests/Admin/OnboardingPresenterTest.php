@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
+namespace RAN\Tests\Admin;
 
 use LogicException;
 use PHPUnit\Framework\TestCase;

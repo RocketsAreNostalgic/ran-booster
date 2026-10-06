@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
+namespace RAN\Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/WPError.php';
@@ -33,7 +33,7 @@ use RAN\Storage\Database;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\WordPressUpdaterLock;
 use RAN\WordPress\CorePackageExecutor;
-use Tests\Deployment\AttemptRepositoryDatabase;
+use RAN\Tests\Deployment\AttemptRepositoryDatabase;
 
 #[RunTestsInSeparateProcesses]
 #[PreserveGlobalState( false )]

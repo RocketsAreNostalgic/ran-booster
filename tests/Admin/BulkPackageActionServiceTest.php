@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
+namespace RAN\Tests\Admin;
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile -- Focused service fixtures stay beside the contract tests.
 
@@ -30,7 +30,7 @@ use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeNotFound;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\WordPressUpdaterLock;
-use Tests\RepositoryProvider\Support\ExternalFixtureProvider;
+use RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider;
 
 final class BulkPackageActionServiceTest extends TestCase {
 

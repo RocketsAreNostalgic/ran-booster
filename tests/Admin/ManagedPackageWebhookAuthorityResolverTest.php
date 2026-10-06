@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
+namespace RAN\Tests\Admin;
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused authority fixtures stay beside their tests.
 

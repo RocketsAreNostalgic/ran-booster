@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-namespace RANBoosterP4Phase0Fixture;
+namespace RAN_Booster_P4Phase0Fixture;
 
 // phpcs:disable Universal.Files.SeparateFunctionsFromOO.Mixed, Generic.Files.OneObjectStructurePerFile.MultipleFound -- A single-file installed plugin fixture keeps disposable ownership explicit.
 

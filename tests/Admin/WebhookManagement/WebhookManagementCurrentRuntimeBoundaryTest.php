@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin\WebhookManagement;
+namespace RAN\Tests\Admin\WebhookManagement;
 
 use PHPUnit\Framework\TestCase;
 

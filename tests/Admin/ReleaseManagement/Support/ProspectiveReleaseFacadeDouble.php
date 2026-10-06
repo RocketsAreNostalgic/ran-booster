@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin\ReleaseManagement\Support;
+namespace RAN\Tests\Admin\ReleaseManagement\Support;
 
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult;

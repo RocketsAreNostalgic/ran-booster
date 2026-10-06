@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin\ReleaseManagement\GitHub\Support;
+namespace RAN\Tests\Admin\ReleaseManagement\GitHub\Support;
 
 use RAN\Storage\PluginRepository;
 use RuntimeException;

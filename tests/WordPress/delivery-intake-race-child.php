@@ -1,4 +1,5 @@
 <?php
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Isolated CLI harness locals do not enter shipped plugin scope; declarations and hooks remain checked.
 
 // Concurrent participant for the compact webhook-attempt admission proof.
 

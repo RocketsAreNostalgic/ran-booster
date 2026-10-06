@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\RepositoryProvider;
+namespace RAN\Tests\RepositoryProvider;
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Private registration spies belong with this host-boundary test.
 
@@ -41,6 +41,7 @@ require_once dirname( __DIR__ ) . '/Admin/Interaction/AdminInteractionWordPressF
 require_once __DIR__ . '/BuiltInGitHubRegistrationWordPressFunctions.php';
 
 if ( ! defined( 'ABSPATH' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 	define( 'ABSPATH', dirname( __DIR__ ) . '/fixtures/wordpress/' );
 }
 

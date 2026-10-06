@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin\ReleaseManagement;
+namespace RAN\Tests\Admin\ReleaseManagement;
 
 require_once __DIR__ . '/Support/ReleaseManagementWordPressFunctions.php';
 require_once __DIR__ . '/GitHub/Support/GitHubReleaseWorkflowWordPressFunctions.php';

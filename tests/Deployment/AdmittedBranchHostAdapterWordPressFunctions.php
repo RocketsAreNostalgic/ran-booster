@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace RAN\Deployment;
 
 if ( ! defined( 'ABSPATH' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 	define( 'ABSPATH', sys_get_temp_dir() . '/ran-booster-admitted-parity-wp/' );
 }
 if ( ! defined( 'WP_CONTENT_DIR' ) ) {

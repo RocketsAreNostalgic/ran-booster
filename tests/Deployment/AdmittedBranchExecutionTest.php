@@ -5,7 +5,7 @@ declare(strict_types=1);
 // phpcs:disable Generic.Files.OneObjectStructurePerFile -- Focused admitted-boundary collaborators live with the test.
 // phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited -- The updater lock deliberately uses the scoped wpdb double.
 
-namespace Tests\Deployment;
+namespace RAN\Tests\Deployment;
 
 require_once __DIR__ . '/AttemptRepositoryDatabase.php';
 require_once __DIR__ . '/DeploymentCoordinatorWordPressFunctions.php';
@@ -46,7 +46,7 @@ use RAN\WPBranchUpdater\V1\Runtime\BranchUpdater;
 use RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionResult;
 use RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor;
 use RuntimeException;
-use Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+use RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 final class AdmittedBranchExecutionTest extends TestCase {
 	private AttemptRepositoryDatabase $database;

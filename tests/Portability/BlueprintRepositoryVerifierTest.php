@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Portability;
+namespace RAN\Tests\Portability;
 
 // phpcs:disable WordPress.WP.AlternativeFunctions, WordPress.PHP.DevelopmentFunctions.error_log_var_export
 
@@ -21,7 +21,7 @@ use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
 use RAN\Secrets\SecretsFile;
-use Tests\Secrets\SecretsFileTestFactory;
+use RAN\Tests\Secrets\SecretsFileTestFactory;
 
 #[CoversClass( BlueprintRepositoryVerifier::class )]
 final class BlueprintRepositoryVerifierTest extends TestCase {

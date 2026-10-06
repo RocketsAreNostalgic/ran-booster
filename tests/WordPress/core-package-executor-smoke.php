@@ -1,4 +1,5 @@
 <?php
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Isolated CLI harness locals do not enter shipped plugin scope; declarations and hooks remain checked.
 
 // Executed by WP-CLI inside an isolated disposable WordPress installation.
 
@@ -39,7 +40,7 @@ if ( wp_doing_cron() || PHP_VERSION_ID < 80200 || version_compare( get_bloginfo(
 	throw new RuntimeException( 'The core executor smoke test requires WordPress 7, PHP 8.2 and non-cron request semantics.' );
 }
 
-final class RanBoosterCorePackageExecutorSmoke {
+final class RAN_Booster_CorePackageExecutorSmoke {
 	private array $artifacts = array();
 	private array $plugins   = array();
 	private array $themes    = array();
@@ -266,7 +267,8 @@ final class RanBoosterCorePackageExecutorSmoke {
 			$source_isolation_observed = false;
 			$executor                  = new RAN\WordPress\CorePackageExecutor(
 				static function ( string $action, string $type, string $path, ?object $offer ) use ( $value, &$source_isolation_observed ): mixed {
-					$unrelated                 = apply_filters(
+					$unrelated = apply_filters(
+						// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 						'upgrader_source_selection',
 						'/unrelated-source',
 						'/unrelated-remote',
@@ -277,7 +279,8 @@ final class RanBoosterCorePackageExecutorSmoke {
 							$type    => 'other/other.php',
 						)
 					);
-					$nested                    = apply_filters(
+					$nested = apply_filters(
+						// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 						'upgrader_source_selection',
 						'/nested-source',
 						'/nested-remote',
@@ -287,7 +290,8 @@ final class RanBoosterCorePackageExecutorSmoke {
 							'action' => 'install',
 						)
 					);
-					$consumed                  = apply_filters(
+					$consumed = apply_filters(
+						// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 						'upgrader_pre_download',
 						false,
 						$path,
@@ -321,7 +325,8 @@ final class RanBoosterCorePackageExecutorSmoke {
 		$observed = false;
 		$executor = new RAN\WordPress\CorePackageExecutor(
 			static function ( string $action, string $type, string $path ) use ( &$observed ): bool {
-				$exact         = apply_filters(
+				$exact = apply_filters(
+					// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 					'upgrader_pre_download',
 					false,
 					$path,
@@ -331,7 +336,8 @@ final class RanBoosterCorePackageExecutorSmoke {
 						'action' => $action,
 					)
 				);
-				$unrelated     = apply_filters(
+				$unrelated = apply_filters(
+					// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 					'upgrader_pre_download',
 					'unrelated-reply',
 					$path,
@@ -343,6 +349,7 @@ final class RanBoosterCorePackageExecutorSmoke {
 					)
 				);
 				$nested_source = apply_filters(
+					// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 					'upgrader_source_selection',
 					'/nested-install-source',
 					'/nested-install-remote',
@@ -353,8 +360,9 @@ final class RanBoosterCorePackageExecutorSmoke {
 						$type    => 'other/other.php',
 					)
 				);
-				$observed      = $path === $exact && 'unrelated-reply' === $unrelated && '/nested-install-source' === $nested_source;
+				$observed = $path === $exact && 'unrelated-reply' === $unrelated && '/nested-install-source' === $nested_source;
 				do_action(
+					// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 					'upgrader_process_complete',
 					new stdClass(),
 					array(
@@ -449,6 +457,7 @@ final class RanBoosterCorePackageExecutorSmoke {
 			return $checkout;
 		};
 		$pre_update      = static function () use ( &$observed_other ): void {
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 			$observed_other = apply_filters( 'automatic_updates_is_vcs_checkout', true, ABSPATH );
 		};
 		add_filter( 'automatic_updates_is_vcs_checkout', $observer, 20, 2 );
@@ -668,7 +677,7 @@ final class RanBoosterCorePackageExecutorSmoke {
 	}
 }
 
-$smoke   = new RanBoosterCorePackageExecutorSmoke( bin2hex( random_bytes( 6 ) ) );
+$smoke   = new RAN_Booster_CorePackageExecutorSmoke( bin2hex( random_bytes( 6 ) ) );
 $failure = null;
 try {
 	$smoke->run();

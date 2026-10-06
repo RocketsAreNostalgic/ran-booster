@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\WordPress;
+namespace RAN\Tests\WordPress;
 
 use PHPUnit\Framework\TestCase;
 use RAN\WordPress\CorePackageExecutor;

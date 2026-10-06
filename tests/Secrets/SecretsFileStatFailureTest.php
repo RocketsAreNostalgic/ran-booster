@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Secrets;
+namespace RAN\Tests\Secrets;
 
 // phpcs:disable WordPress.WP.AlternativeFunctions -- Native temporary file proves existence before the injected stat failure.
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\WordPress;
+namespace RAN\Tests\WordPress;
 
 use RAN\PackageSource;
 use RAN\WordPress\ManagedReleaseConfiguration;

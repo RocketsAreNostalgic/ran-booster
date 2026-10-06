@@ -9,6 +9,7 @@ if ( ! function_exists( 'ran_booster_table_name' ) ) {
 }
 
 if ( ! function_exists( '__' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function __( string $text, string $domain = 'default' ): string {
 		return $GLOBALS['ran_booster_package_view_translations'][ $domain ][ $text ]
 			?? $GLOBALS['ran_booster_admin_test_translations'][ $domain ][ $text ]
@@ -17,12 +18,14 @@ if ( ! function_exists( '__' ) ) {
 }
 
 if ( ! function_exists( 'status_header' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function status_header( int $code ): void {
 		$GLOBALS['ran_booster_test_status_header'] = $code;
 	}
 }
 
 if ( ! function_exists( 'admin_url' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function admin_url( string $path = '' ): string {
 		return 'https://example.test/wp-admin/' . ltrim( $path, '/' );
 	}
@@ -39,12 +42,14 @@ if ( ! function_exists( 'wp_verify_nonce' ) ) {
 }
 
 if ( ! function_exists( 'get_current_user_id' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function get_current_user_id(): int {
 		return (int) ( $GLOBALS['ran_booster_package_operation_user_id'] ?? 1 );
 	}
 }
 
 if ( ! function_exists( 'wp_is_file_mod_allowed' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function wp_is_file_mod_allowed( string $context ): bool {
 		unset( $context );
 

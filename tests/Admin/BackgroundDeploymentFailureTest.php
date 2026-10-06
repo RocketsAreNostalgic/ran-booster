@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
+namespace RAN\Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Deployment/AttemptRepositoryDatabase.php';
 require_once dirname( __DIR__ ) . '/Support/RepositoryAdminWordPressFunctions.php';
@@ -26,7 +26,7 @@ use RAN\Plugin;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\Storage\Database;
 use RAN\Storage\PluginRepository;
-use Tests\Deployment\AttemptRepositoryDatabase;
+use RAN\Tests\Deployment\AttemptRepositoryDatabase;
 
 final class BackgroundDeploymentFailureTest extends TestCase {
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin\ReleaseManagement;
+namespace RAN\Tests\Admin\ReleaseManagement;
 
 require_once __DIR__ . '/Support/ReleaseManagementWordPressFunctions.php';
 require_once __DIR__ . '/Support/ReleaseManagementFixtures.php';
@@ -13,9 +13,9 @@ use PHPUnit\Framework\TestCase;
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult;
 use RAN\Admin\ReleaseManagement\ProspectiveReleaseOperations;
 use RuntimeException;
-use Tests\Admin\ReleaseManagement\Support\ProspectiveReleaseFacadeDouble;
-use Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture;
-use Tests\Admin\ReleaseManagement\Support\UnreadSecretCanary;
+use RAN\Tests\Admin\ReleaseManagement\Support\ProspectiveReleaseFacadeDouble;
+use RAN\Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture;
+use RAN\Tests\Admin\ReleaseManagement\Support\UnreadSecretCanary;
 
 final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 	#[Before]

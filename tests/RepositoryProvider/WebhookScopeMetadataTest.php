@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\RepositoryProvider;
+namespace RAN\Tests\RepositoryProvider;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\CoversClass;

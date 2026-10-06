@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\AddOn\WebhookAssistance;
+namespace RAN\Tests\AddOn\WebhookAssistance;
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused fixtures stay beside the facade contract tests.
 
@@ -36,8 +36,8 @@ use RAN\Secrets\SecretsFile;
 use RAN\Storage\Database;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
-use Tests\RepositoryProvider\Support\InertWebhookPolicy;
-use Tests\Support\FitnessOnlyWebhookManagementCapabilityProvider;
+use RAN\Tests\RepositoryProvider\Support\InertWebhookPolicy;
+use RAN\Tests\Support\FitnessOnlyWebhookManagementCapabilityProvider;
 
 require_once dirname( __DIR__, 2 ) . '/Support/WebhookManagementCapabilityProviders.php';
 

@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 // Focused database and WordPress cache doubles.
 
-// phpcs:ignore Universal.Namespaces.DisallowCurlyBraceSyntax.Forbidden, Universal.Namespaces.DisallowDeclarationWithoutName.Forbidden -- One fixture supplies global WordPress function doubles and the namespaced database fake. Global namespace is required for the WordPress function doubles in this isolated fixture.
+// phpcs:ignore Universal.Namespaces.DisallowCurlyBraceSyntax.Forbidden, Universal.Namespaces.DisallowDeclarationWithoutName.Forbidden -- Global namespace is required for the WordPress function doubles in this isolated fixture.
 namespace {
 	$GLOBALS['ran_booster_attempt_cache_deletes'] = array();
 
 	if ( ! function_exists( 'wp_cache_delete' ) ) {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 		function wp_cache_delete( $key, $group = '' ) {
 			$GLOBALS['ran_booster_attempt_cache_deletes'][] = array( $key, $group );
 
@@ -17,8 +18,8 @@ namespace {
 	}
 }
 
-// phpcs:ignore Universal.Namespaces.OneDeclarationPerFile.MultipleFound, Universal.Namespaces.DisallowCurlyBraceSyntax.Forbidden -- The global WordPress doubles and namespaced database fake are loaded together by this fixture. One fixture supplies global WordPress function doubles and the namespaced database fake.
-namespace Tests\Deployment {
+// phpcs:ignore Universal.Namespaces.OneDeclarationPerFile.MultipleFound, Universal.Namespaces.DisallowCurlyBraceSyntax.Forbidden -- The global WordPress doubles and namespaced database fake are loaded together by this fixture.
+namespace RAN\Tests\Deployment {
 
 	// phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- The fixture pairs WordPress function doubles with its database class for one isolated test environment.
 	final class AttemptRepositoryDatabase {

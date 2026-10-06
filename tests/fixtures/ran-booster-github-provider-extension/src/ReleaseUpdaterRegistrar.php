@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace RANBoosterGitHubProviderExtensionFixture;
+namespace RAN_Booster_GitHubProviderExtensionFixture;
 
 use Closure;
 use LogicException;

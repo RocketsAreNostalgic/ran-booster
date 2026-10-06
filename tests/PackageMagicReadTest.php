@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests;
+namespace RAN\Tests;
 
 use PHPUnit\Framework\TestCase;
 use RAN\AbstractPackage;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\RepositoryProvider;
+namespace RAN\Tests\RepositoryProvider;
 
 require_once __DIR__ . '/Support/RepositoryResolverWordPressFunctions.php';
 require_once __DIR__ . '/AuthenticatedPreparedArchiveWordPressFunctions.php';
@@ -15,8 +15,8 @@ use RAN\RepositoryProvider\AuthenticatedPreparedArchive;
 use RAN\RepositoryProvider\RepositoryReference;
 use RAN\RepositoryProvider\StaleDeployment;
 use RuntimeException;
-use Tests\RepositoryProvider\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
-use Tests\RepositoryProvider\Support\RepositoryResolverSecretsStub;
+use RAN\Tests\RepositoryProvider\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
+use RAN\Tests\RepositoryProvider\Support\RepositoryResolverSecretsStub;
 
 final class GitHubArchiveHostIntegrationTest extends TestCase {
 

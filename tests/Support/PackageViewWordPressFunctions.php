@@ -3,22 +3,26 @@
 declare(strict_types=1);
 
 if ( ! defined( 'WPINC' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 	define( 'WPINC', 'test' );
 }
 
 if ( ! function_exists( 'esc_attr' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function esc_attr( mixed $value ): string {
 		return htmlspecialchars( (string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' );
 	}
 }
 
 if ( ! function_exists( 'esc_html' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function esc_html( mixed $value ): string {
 		return htmlspecialchars( (string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' );
 	}
 }
 
 if ( ! function_exists( '__' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function __( string $text, string $domain = 'default' ): string {
 		return $GLOBALS['ran_booster_package_view_translations'][ $domain ][ $text ]
 			?? $GLOBALS['ran_booster_admin_test_translations'][ $domain ][ $text ]
@@ -27,6 +31,7 @@ if ( ! function_exists( '__' ) ) {
 }
 
 if ( ! function_exists( '_x' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function _x( string $text, string $context, string $domain = 'default' ): string {
 		return $GLOBALS['ran_booster_package_view_translations'][ $domain ][ $context . "\004" . $text ]
 			?? $GLOBALS['ran_booster_admin_test_translations'][ $domain ][ $context . "\004" . $text ]
@@ -35,6 +40,7 @@ if ( ! function_exists( '_x' ) ) {
 }
 
 if ( ! function_exists( 'esc_html_e' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function esc_html_e( string $text, string $domain = 'default' ): void {
 		// phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText,WordPress.WP.I18n.NonSingularStringLiteralDomain -- Test shim forwards fixture strings.
 		echo esc_html( __( $text, $domain ) );
@@ -42,6 +48,7 @@ if ( ! function_exists( 'esc_html_e' ) ) {
 }
 
 if ( ! function_exists( 'esc_html__' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function esc_html__( string $text, string $domain = 'default' ): string {
 		// phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText,WordPress.WP.I18n.NonSingularStringLiteralDomain -- Test shim forwards fixture strings.
 		return esc_html( __( $text, $domain ) );
@@ -49,6 +56,7 @@ if ( ! function_exists( 'esc_html__' ) ) {
 }
 
 if ( ! function_exists( 'esc_attr_e' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function esc_attr_e( string $text, string $domain = 'default' ): void {
 		// phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText,WordPress.WP.I18n.NonSingularStringLiteralDomain -- Test shim forwards fixture strings.
 		echo esc_attr( __( $text, $domain ) );
@@ -56,6 +64,7 @@ if ( ! function_exists( 'esc_attr_e' ) ) {
 }
 
 if ( ! function_exists( '_n' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function _n( string $single, string $plural, int $number, string $domain = 'default' ): string {
 		unset( $domain );
 
@@ -64,6 +73,7 @@ if ( ! function_exists( '_n' ) ) {
 }
 
 if ( ! function_exists( '_nx' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function _nx( string $single, string $plural, int $number, string $context, string $domain = 'default' ): string {
 		unset( $context, $domain );
 
@@ -72,42 +82,49 @@ if ( ! function_exists( '_nx' ) ) {
 }
 
 if ( ! function_exists( 'esc_url' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function esc_url( mixed $value ): string {
 		return esc_attr( $value );
 	}
 }
 
 if ( ! function_exists( 'wp_kses_post' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function wp_kses_post( mixed $value ): string {
 		return (string) $value;
 	}
 }
 
 if ( ! function_exists( 'wp_make_link_relative' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function wp_make_link_relative( string $link ): string {
 		return (string) preg_replace( '|^(https?:)?//[^/]+(/?.*)|i', '$2', $link );
 	}
 }
 
 if ( ! function_exists( 'sanitize_key' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function sanitize_key( mixed $value ): string {
 		return (string) preg_replace( '/[^a-z0-9_\-]/', '', strtolower( (string) $value ) );
 	}
 }
 
 if ( ! function_exists( 'sanitize_text_field' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function sanitize_text_field( mixed $value ): string {
 		return trim( (string) preg_replace( '/<[^>]*>/', '', (string) $value ) );
 	}
 }
 
 if ( ! function_exists( 'wp_unslash' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function wp_unslash( mixed $value ): mixed {
 		return $value;
 	}
 }
 
 if ( ! function_exists( 'wp_strip_all_tags' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function wp_strip_all_tags( mixed $value, bool $remove_breaks = false ): string {
 		$value = (string) preg_replace( '/<[^>]*>/', '', (string) $value );
 
@@ -116,6 +133,7 @@ if ( ! function_exists( 'wp_strip_all_tags' ) ) {
 }
 
 if ( ! function_exists( 'selected' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function selected( mixed $selected, mixed $current = true, bool $display = true ): string {
 		$result = (string) $selected === (string) $current ? ' selected="selected"' : '';
 		if ( $display ) {
@@ -127,6 +145,7 @@ if ( ! function_exists( 'selected' ) ) {
 }
 
 if ( ! function_exists( 'disabled' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function disabled( mixed $disabled, mixed $current = true, bool $display = true ): string {
 		$result = (string) $disabled === (string) $current ? ' disabled="disabled"' : '';
 		if ( $display ) {
@@ -138,6 +157,7 @@ if ( ! function_exists( 'disabled' ) ) {
 }
 
 if ( ! function_exists( 'checked' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function checked( mixed $checked, mixed $current = true, bool $display = true ): string {
 		$result = (string) $checked === (string) $current ? ' checked="checked"' : '';
 		if ( $display ) {
@@ -149,36 +169,42 @@ if ( ! function_exists( 'checked' ) ) {
 }
 
 if ( ! function_exists( 'wp_nonce_field' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function wp_nonce_field( string $action ): void {
 		echo '<input type="hidden" name="_wpnonce" value="' . esc_attr( $action ) . '">';
 	}
 }
 
 if ( ! function_exists( 'admin_url' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function admin_url( string $path = '' ): string {
 		return 'https://example.test/wp-admin/' . ltrim( $path, '/' );
 	}
 }
 
 if ( ! function_exists( 'network_admin_url' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function network_admin_url( string $path = '' ): string {
 		return 'https://example.test/wp-admin/network/' . ltrim( $path, '/' );
 	}
 }
 
 if ( ! function_exists( 'rest_url' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function rest_url( string $path = '' ): string {
 		return 'https://example.test/wp-json/' . ltrim( $path, '/' );
 	}
 }
 
 if ( ! function_exists( 'is_multisite' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function is_multisite(): bool {
 		return true === ( $GLOBALS['ran_booster_package_view_multisite'] ?? false );
 	}
 }
 
 if ( ! function_exists( 'add_query_arg' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function add_query_arg( mixed $key, mixed $value = null, mixed $url = null ): string {
 		if ( is_array( $key ) ) {
 			$base = (string) $value;
@@ -194,12 +220,14 @@ if ( ! function_exists( 'add_query_arg' ) ) {
 
 if ( ! function_exists( 'wp_parse_str' ) ) {
 	/** @param array<string, mixed> $output */
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function wp_parse_str( string $input, array &$output ): void {
 		parse_str( $input, $output );
 	}
 }
 
 if ( ! function_exists( 'wp_parse_url' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function wp_parse_url( string $url ): array|false {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Test shim for the WordPress wrapper.
 		return parse_url( $url );
@@ -207,6 +235,7 @@ if ( ! function_exists( 'wp_parse_url' ) ) {
 }
 
 if ( ! function_exists( 'current_user_can' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function current_user_can( string $capability ): bool {
 		unset( $capability );
 
@@ -221,6 +250,7 @@ if ( ! function_exists( 'wp_create_nonce' ) ) {
 }
 
 if ( ! function_exists( 'submit_button' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function submit_button(
 		string $text,
 		string $type = 'primary',
@@ -233,6 +263,7 @@ if ( ! function_exists( 'submit_button' ) ) {
 }
 
 if ( ! function_exists( 'is_plugin_active' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function is_plugin_active( string $plugin ): bool {
 		return in_array( $plugin, $GLOBALS['ran_booster_bulk_active_plugins'] ?? array(), true );
 	}

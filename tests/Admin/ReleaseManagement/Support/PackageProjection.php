@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin\ReleaseManagement\Support;
+namespace RAN\Tests\Admin\ReleaseManagement\Support;
 
 final readonly class PackageProjection {
 	public function __construct(

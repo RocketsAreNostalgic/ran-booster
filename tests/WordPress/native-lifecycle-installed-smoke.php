@@ -1,4 +1,5 @@
 <?php
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Isolated CLI harness locals do not enter shipped plugin scope; declarations and hooks remain checked.
 
 // A fresh WP-CLI request proves the installed Core's eager managed-target scan.
 
@@ -254,6 +255,7 @@ foreach ( $items as $item ) {
 	if ( ! is_object( $offer ) ) {
 		throw new RuntimeException( 'The installed native target has no WordPress offer.' );
 	}
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 	$automatic = apply_filters( 'plugin' === $type ? 'auto_update_plugin' : 'auto_update_theme', false, $offer );
 	if ( ( 'automatic' === $item['policy'] ) !== $automatic ) {
 		throw new RuntimeException( 'The installed native automatic policy was not applied.' );
@@ -273,6 +275,7 @@ foreach ( $items as $item ) {
 		add_filter( 'automatic_updates_is_vcs_checkout', $vcs_checkout, PHP_INT_MAX, 2 );
 		add_action( 'wp_maybe_auto_update', $automatic_update, PHP_INT_MAX );
 		try {
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 			do_action( 'wp_maybe_auto_update' );
 		} finally {
 			remove_action( 'wp_maybe_auto_update', $automatic_update, PHP_INT_MAX );
@@ -308,12 +311,14 @@ if ( 1 > $counts['http'] || 1 > $counts['zip_bytes'] || 1 > $counts['zip_count']
 $self_offer       = $plugin_updates->response['ran-booster/ran-booster.php'] ?? null;
 $self_diagnostics = $container->make( CoreSelfUpdateStatus::class )->diagnostics();
 if ( ! is_object( $self_offer ) || '2.0.0-beta.1' !== ( $self_diagnostics['offered_version'] ?? null )
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 	|| false !== apply_filters( 'auto_update_plugin', true, $self_offer ) ) {
 	throw new RuntimeException( 'Self Manual offer or Automatic denial is unavailable.' );
 }
 $before_bulk = $counts;
 $self_digest = hash_file( 'sha256', WP_PLUGIN_DIR . '/ran-booster/ran-booster.php' );
 $bulk        = apply_filters(
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 	'upgrader_pre_download',
 	false,
 	'fixture.zip',

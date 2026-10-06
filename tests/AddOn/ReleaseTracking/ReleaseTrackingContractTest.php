@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\AddOn\ReleaseTracking;
+namespace RAN\Tests\AddOn\ReleaseTracking;
 
 use PHPUnit\Framework\TestCase;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingResult;

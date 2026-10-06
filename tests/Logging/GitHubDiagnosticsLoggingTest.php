@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Logging;
+namespace RAN\Tests\Logging;
 
 // Direct local filesystem operations inspect the bounded temporary capture under test.
 // phpcs:disable WordPress.WP.AlternativeFunctions
@@ -168,7 +168,7 @@ final class GitHubDiagnosticsLoggingTest extends TestCase {
 }
 
 final class EscapingDiagnosticProvider implements RepositoryProvider, WebhookNormalizer {
-	use \Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
 
 	public function __construct( private Throwable $failure, private bool $fail_readiness ) {
 	}

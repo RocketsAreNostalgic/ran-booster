@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace RANBoosterGitHubProviderExtensionFixture;
+namespace RAN_Booster_GitHubProviderExtensionFixture;
 
 use RAN\BoosterGitHubProvider\V1\GitHubProvider;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;

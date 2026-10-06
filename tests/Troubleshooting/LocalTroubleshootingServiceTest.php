@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Troubleshooting;
+namespace RAN\Tests\Troubleshooting;
 
 // phpcs:disable WordPress.WP.AlternativeFunctions -- Tests exercise native exclusive-file safety seams.
 

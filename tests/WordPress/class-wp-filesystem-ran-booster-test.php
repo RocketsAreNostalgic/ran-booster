@@ -6,7 +6,7 @@ if ( ! class_exists( 'WP_Filesystem_Direct' ) ) {
 	require_once ABSPATH . 'wp-admin/includes/class-wp-filesystem-direct.php';
 }
 
-// phpcs:ignore PEAR.NamingConventions.ValidClassName.Invalid -- WordPress filesystem transport resolution requires the WP_Filesystem_ran_booster_test class name.
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedClassFound, PEAR.NamingConventions.ValidClassName.Invalid -- WordPress filesystem transport resolution requires the WP_Filesystem_ran_booster_test class name. WordPress class identity is required by the host fixture contract.
 final class WP_Filesystem_ran_booster_test extends WP_Filesystem_Direct {
 
 	public function move( $source, $destination, $overwrite = false ) {

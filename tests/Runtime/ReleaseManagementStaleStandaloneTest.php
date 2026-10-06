@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Tests\Runtime;
+namespace RAN\Tests\Runtime;
 
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
-use Tests\Runtime\Support\ReleaseManagementCutoverHookBus;
-use Tests\Runtime\Support\StaleReleaseDeploymentsBeta8Fixture;
+use RAN\Tests\Runtime\Support\ReleaseManagementCutoverHookBus;
+use RAN\Tests\Runtime\Support\StaleReleaseDeploymentsBeta8Fixture;
 
 final class ReleaseManagementStaleStandaloneTest extends TestCase {
 	#[RunInSeparateProcess]

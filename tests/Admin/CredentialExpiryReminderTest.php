@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
+namespace RAN\Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Support/RepositoryAdminWordPressFunctions.php';
 require_once __DIR__ . '/CredentialExpiryWordPressFunctions.php';
@@ -18,10 +18,10 @@ use RAN\RepositoryProvider\CredentialExpiryReport;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
 use RAN\Secrets\SecretsFile;
-use Tests\Admin\Support\ExpiryReminderProvider;
-use Tests\Secrets\InMemorySiteKeyStore;
-use Tests\Secrets\SecretsFileTestFactory;
-use Tests\Support\InMemoryCredentialExpiryObservationStore;
+use RAN\Tests\Admin\Support\ExpiryReminderProvider;
+use RAN\Tests\Secrets\InMemorySiteKeyStore;
+use RAN\Tests\Secrets\SecretsFileTestFactory;
+use RAN\Tests\Support\InMemoryCredentialExpiryObservationStore;
 
 // Direct local filesystem operations exercise the sidecar-backed reminder fixture.
 // phpcs:disable WordPress.WP.AlternativeFunctions

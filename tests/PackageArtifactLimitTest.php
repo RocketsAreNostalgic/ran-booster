@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests;
+namespace RAN\Tests;
 
 use ArgumentCountError;
 use Error;

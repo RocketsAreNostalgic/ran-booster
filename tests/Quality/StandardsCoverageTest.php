@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Quality;
+namespace RAN\Tests\Quality;
 
 use PHPUnit\Framework\TestCase;
 use PHP_CodeSniffer\Config;
@@ -248,6 +248,41 @@ final class StandardsCoverageTest extends TestCase {
 		$source = "<?php\n// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Caller-owned include bindings.\n\$binding = true;\nfunction unprefixed_helper() {}";
 		$result = $this->inspect( $source, 'views/new-probe.php', 'WordPress.NamingConventions.PrefixAllGlobals' );
 		self::assertSame( array( 'WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound' ), $result['sources'] );
+	}
+
+	public function test_test_locals_do_not_exempt_new_declarations_or_hooks(): void {
+		$sniff  = 'WordPress.NamingConventions.PrefixAllGlobals';
+		$source = '<?php $fixture_state = true; function unprefixed_helper() {} class UnprefixedType {} const UNPREFIXED_VALUE = 1; do_action( "unprefixed_hook" );';
+		foreach ( array( 'tests/new-probe.php', 'tests/fixtures/nested/new-probe.php', 'RAN/tests/new-probe.php' ) as $path ) {
+			$result = $this->inspect( $source, $path, $sniff );
+			foreach ( array( 'NonPrefixedFunctionFound', 'NonPrefixedClassFound', 'NonPrefixedConstantFound', 'NonPrefixedHooknameFound' ) as $code ) {
+				self::assertContains( $sniff . '.' . $code, $result['sources'], $path );
+			}
+			self::assertContains( $sniff . '.NonPrefixedVariableFound', $result['sources'] );
+		}
+	}
+
+	public function test_wordpress_double_exception_does_not_hide_the_next_owned_helper(): void {
+		$source = "<?php\n// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress-owned fixture identity.\nfunction wp_example() {}\nfunction owned_helper() {}\n";
+		$result = $this->inspect( $source, 'tests/fixtures/new-double.php', 'WordPress.NamingConventions.PrefixAllGlobals' );
+		self::assertSame( array( 'WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound' ), $result['sources'] );
+		self::assertSame( array( 4 ), $result['lines'] );
+	}
+
+	public function test_namespace_exceptions_do_not_disable_unrelated_namespaces(): void {
+		$sniff = 'WordPress.NamingConventions.PrefixAllGlobals';
+		foreach ( array( 'RAN/NewProbe.php', 'tests/fixtures/NewProbe.php' ) as $path ) {
+			$result = $this->inspect( '<?php namespace Unrelated;', $path, $sniff );
+			self::assertContains( $sniff . '.NonPrefixedNamespaceFound', $result['sources'] );
+			$result = $this->inspect( '<?php namespace RAN\\Quality;', $path, $sniff );
+			self::assertSame( array(), $result['sources'] );
+		}
+		foreach ( array( 'RAN' ) as $namespace ) {
+			$source = "<?php\nnamespace " . $namespace . "; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedNamespaceFound -- Established namespace identity.\nnamespace Unrelated;\n";
+			$result = $this->inspect( $source, 'tests/fixtures/NewProbe.php', $sniff );
+			self::assertSame( array( $sniff . '.NonPrefixedNamespaceFound' ), $result['sources'] );
+			self::assertSame( array( 3 ), $result['lines'] );
+		}
 	}
 
 	/** @return array{exit: int, sources: list<string>, lines: list<int>} */

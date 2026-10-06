@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\RepositoryProvider;
+namespace RAN\Tests\RepositoryProvider;
 
 // Native temporary files exercise the encrypted provider-policy boundary.
 // phpcs:disable WordPress.WP.AlternativeFunctions
@@ -16,8 +16,8 @@ use RAN\RepositoryProvider\InvalidCredentialInput;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
 use RAN\Secrets\SecretsFile;
-use Tests\Secrets\InMemorySiteKeyStore;
-use Tests\Secrets\SecretsFileTestFactory;
+use RAN\Tests\Secrets\InMemorySiteKeyStore;
+use RAN\Tests\Secrets\SecretsFileTestFactory;
 
 final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 

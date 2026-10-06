@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Uninstall;
+namespace RAN\Tests\Uninstall;
 
 final class UninstallDatabase {
 

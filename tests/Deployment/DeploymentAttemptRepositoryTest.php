@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Deployment;
+namespace RAN\Tests\Deployment;
 
 use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;

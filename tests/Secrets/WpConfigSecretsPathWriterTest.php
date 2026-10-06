@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Secrets;
+namespace RAN\Tests\Secrets;
 
 // Native local filesystem behavior is the subject of these tests.
 // phpcs:disable WordPress.WP.AlternativeFunctions

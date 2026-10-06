@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Support;
+namespace RAN\Tests\Support;
 
 /** Records native-target registrar arguments for host composition tests. */
 final class RecordingReleaseUpdaterRuntime {

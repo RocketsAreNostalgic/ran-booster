@@ -2,7 +2,7 @@
 
 declare( strict_types = 1 );
 
-namespace Tests\Admin\WebhookManagement;
+namespace RAN\Tests\Admin\WebhookManagement;
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Closely coupled operation fixtures keep this focused integration suite readable.
 
@@ -27,13 +27,14 @@ use RAN\Package;
 use RAN\PackageSource;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
-use Tests\Support\CompleteWebhookManagementCapabilityProvider;
-use Tests\Support\FitnessOnlyWebhookManagementCapabilityProvider;
+use RAN\Tests\Support\CompleteWebhookManagementCapabilityProvider;
+use RAN\Tests\Support\FitnessOnlyWebhookManagementCapabilityProvider;
 
 require_once dirname( __DIR__, 3 ) . '/tests/Support/PackageViewWordPressFunctions.php';
 require_once dirname( __DIR__, 2 ) . '/Support/WebhookManagementCapabilityProviders.php';
 
 if ( ! defined( 'ABSPATH' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 	define( 'ABSPATH', dirname( __DIR__, 2 ) . '/fixtures/wordpress/' );
 }
 

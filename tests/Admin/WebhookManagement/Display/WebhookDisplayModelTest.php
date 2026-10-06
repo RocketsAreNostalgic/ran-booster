@@ -2,7 +2,7 @@
 
 declare( strict_types = 1 );
 
-namespace Tests\Admin\WebhookManagement\Display;
+namespace RAN\Tests\Admin\WebhookManagement\Display;
 
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\WebhookManagement\Display\WebhookDisplayModel;

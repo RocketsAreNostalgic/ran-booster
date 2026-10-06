@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
+namespace RAN\Tests\Admin;
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- The bounded database fake belongs to its production-controller test.
 
@@ -65,10 +65,10 @@ use RAN\Troubleshooting\LocalTroubleshootingService;
 use RAN\Troubleshooting\TroubleshootingService;
 use RAN\WordPress\WordPressUpdaterLock;
 use RuntimeException;
-use Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
-use Tests\Deployment\AttemptRepositoryDatabase;
-use Tests\Support\CredentialUsageDatabase;
-use Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
+use RAN\Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
+use RAN\Tests\Deployment\AttemptRepositoryDatabase;
+use RAN\Tests\Support\CredentialUsageDatabase;
+use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
@@ -2696,7 +2696,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 	private function provider( ProviderCode $code, string $label, bool $with_credentials = false ): RepositoryProvider {
 		return new class( $code, $label, $with_credentials ) implements RepositoryProvider, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, \RAN\RepositoryProvider\WebhookNormalizer {
 
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public function __construct(
 				private ProviderCode $code,
@@ -2918,7 +2918,7 @@ final class ReadyDashboardDatabase extends Database {
 
 final class DashboardBranchCheckProvider implements RepositoryProvider, CredentialedPublicRepositoryBrowser, \RAN\RepositoryProvider\RepositoryPathInspector {
 
-	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 	public int $prepare_calls       = 0;
 	public int $resolved_ref_calls  = 0;
@@ -3005,7 +3005,7 @@ final class DashboardBranchCheckProvider implements RepositoryProvider, Credenti
 
 final class DashboardBranchCheckProviderWithoutPathInspector implements RepositoryProvider, CredentialedPublicRepositoryBrowser {
 
-	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 	public int $path_calls = 0;
 
@@ -3084,7 +3084,7 @@ final class DashboardBranchCheckUpdaterLock extends WordPressUpdaterLock {
 
 final class DashboardUncredentialedBranchCheckProvider implements RepositoryProvider {
 
-	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 	public ?ArchiveRequest $request = null;
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile -- Focused admitted-boundary collaborators live with the test.
 
-namespace Tests\Deployment;
+namespace RAN\Tests\Deployment;
 
 use PHPUnit\Framework\TestCase;
 use RAN\Deployment\DeploymentOutcome;

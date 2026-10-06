@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Deployment;
+namespace RAN\Tests\Deployment;
 
 require_once __DIR__ . '/PackageMutationGuardWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Portability/WpPusherCoexistenceWordPressFunctions.php';

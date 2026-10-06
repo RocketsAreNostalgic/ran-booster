@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Troubleshooting;
+namespace RAN\Tests\Troubleshooting;
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Private focused fixtures keep orchestration behavior visible beside its tests.
 
@@ -353,7 +353,7 @@ final class TroubleshootingSecretsFixture extends SecretsFile {
 }
 
 class TroubleshootingProviderFixture implements RepositoryProvider {
-	use \Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
 
 	public int $runs = 0;
 

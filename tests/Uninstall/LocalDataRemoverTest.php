@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Uninstall;
+namespace RAN\Tests\Uninstall;
 
 // Native fixture operations prove the WP-CLI config-path fallback.
 // phpcs:disable WordPress.WP.AlternativeFunctions
@@ -343,7 +343,9 @@ final class LocalDataRemoverTest extends TestCase {
 		$config = $root . '/wp-config.php';
 		self::assertTrue( mkdir( $root, 0700 ) );
 		self::assertNotFalse( file_put_contents( $config, "<?php\n" ) );
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'ABSPATH', $root . '/' );
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'WP_CLI', true );
 
 		$remover = new class(

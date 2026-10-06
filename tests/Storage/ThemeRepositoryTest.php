@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Storage;
+namespace RAN\Tests\Storage;
 
 use PHPUnit\Framework\TestCase;
 use RAN\Storage\ThemeNotFound;

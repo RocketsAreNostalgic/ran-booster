@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\RepositoryProvider;
+namespace RAN\Tests\RepositoryProvider;
 
 use PHPUnit\Framework\TestCase;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidence;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
+namespace RAN\Tests\Admin;
 
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
@@ -11,7 +11,7 @@ use RAN\Deployment\DeploymentAttempt;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\DeploymentRequest;
-use Tests\Deployment\AttemptRepositoryDatabase;
+use RAN\Tests\Deployment\AttemptRepositoryDatabase;
 
 require_once dirname( __DIR__ ) . '/Support/RepositoryAdminWordPressFunctions.php';
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';

@@ -5,7 +5,7 @@ declare(strict_types=1);
 // phpcs:disable WordPress.WP.AlternativeFunctions -- Test fixtures deliberately create isolated local ZIP files.
 // phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited -- Test-only namespaced disk-space state.
 
-namespace Tests\Deployment;
+namespace RAN\Tests\Deployment;
 
 require_once __DIR__ . '/AdmittedBranchHostAdapterWordPressFunctions.php';
 

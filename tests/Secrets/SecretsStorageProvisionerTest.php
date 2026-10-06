@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Secrets;
+namespace RAN\Tests\Secrets;
 
 require_once __DIR__ . '/SecretsStorageWordPressFunctions.php';
 
@@ -30,6 +30,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_invalid_wordpress_directory_constants_remain_unusable(): void {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'ABSPATH', 123 );
 		define( 'WP_CONTENT_DIR', false );
 

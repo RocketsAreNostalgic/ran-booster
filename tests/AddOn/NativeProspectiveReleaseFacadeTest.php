@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\AddOn;
+namespace RAN\Tests\AddOn;
 
 	require_once __DIR__ . '/../Support/WPError.php';
 	require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
@@ -57,9 +57,9 @@ use RAN\Storage\RepositorySourceGuard;
 	use RAN\WordPress\CorePackageExecutor;
 	use RAN\WordPress\ManagedReleaseConfiguration;
 	use RAN\WordPress\WordPressUpdaterLock;
-	use RANBoosterReleaseCapabilityFixture\PartialProvider as ReleaseFixturePartialProvider;
-	use RANBoosterReleaseCapabilityFixture\ReleaseProvider as ReleaseFixtureCompleteProvider;
-	use RANBoosterReleaseCapabilityFixture\ZeroProvider as ReleaseFixtureZeroProvider;
+	use RAN_Booster_ReleaseCapabilityFixture\PartialProvider as ReleaseFixturePartialProvider;
+	use RAN_Booster_ReleaseCapabilityFixture\ReleaseProvider as ReleaseFixtureCompleteProvider;
+	use RAN_Booster_ReleaseCapabilityFixture\ZeroProvider as ReleaseFixtureZeroProvider;
 	use RuntimeException;
 	use Throwable;
 
@@ -111,7 +111,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	public function test_installed_fixture_hands_the_exact_artifact_to_core_once(): void {
 		$this->set_ready_release();
 		$path    = (string) $this->artifact_path;
-		$release = new \RANBoosterReleaseCapabilityFixture\FixtureReleaseArtifact( $path, 'example', 'example.php' );
+		$release = new \RAN_Booster_ReleaseCapabilityFixture\FixtureReleaseArtifact( $path, 'example', 'example.php' );
 
 		$artifact = $release->handoff_to_core();
 		self::assertSame( $path, $artifact->get_path() );

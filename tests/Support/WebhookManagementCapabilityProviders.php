@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Support;
+namespace RAN\Tests\Support;
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Closely related capability fixtures share one focused support file.
 
@@ -26,7 +26,7 @@ use RAN\RepositoryProvider\WebhookEnvelope;
 use RAN\RepositoryProvider\WebhookNormalizer;
 use RAN\RepositoryProvider\WebhookRequest;
 use RuntimeException;
-use Tests\RepositoryProvider\Support\InertWebhookPolicy;
+use RAN\Tests\RepositoryProvider\Support\InertWebhookPolicy;
 
 abstract class WebhookManagementCapabilityProvider implements RepositoryProvider {
 	public int $provider_operation_calls = 0;

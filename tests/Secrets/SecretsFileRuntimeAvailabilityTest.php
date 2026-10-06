@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Secrets;
+namespace RAN\Tests\Secrets;
 
 // Test-only inspection proves PHP exception arguments redact secret material.
 // phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_var_export
@@ -21,7 +21,7 @@ use RAN\Secrets\EncryptedSecretsEnvelopeCodec;
 use RAN\Secrets\SecretsRuntimeAvailability;
 use RAN\Secrets\SecretsStorageUnavailable;
 use RAN\Secrets\SiteKeyStore;
-use Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
+use RAN\Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
 
 final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 
@@ -213,6 +213,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_confirmed_uninstall_gets_adeletion_only_single_site_availability_context(): void {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'WP_UNINSTALL_PLUGIN', 'renamed-booster/ran-booster.php' );
 
 		$availability = SecretsRuntimeAvailability::for_confirmed_uninstall(
@@ -226,6 +227,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_confirmed_uninstall_rejects_an_unrelated_same_basename_plugin(): void {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'WP_UNINSTALL_PLUGIN', 'other-plugin/ran-booster.php' );
 
 		$this->expectException( \LogicException::class );
@@ -266,6 +268,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		self::assertFileExists( $path . '.lock' );
 		self::assertNotNull( $key_store->load( false ) );
 
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'WP_UNINSTALL_PLUGIN', 'renamed-booster/ran-booster.php' );
 		$confirmed = $this->real_secrets(
 			$path,
@@ -307,6 +310,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		$key = $key_store->load( false );
 		self::assertNotNull( $key );
 		self::assertTrue( $key_store->delete_exact( $key ) );
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'WP_UNINSTALL_PLUGIN', 'ran-booster/ran-booster.php' );
 
 		try {

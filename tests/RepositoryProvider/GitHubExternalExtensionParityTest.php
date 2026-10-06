@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\RepositoryProvider;
+namespace RAN\Tests\RepositoryProvider;
 
 // Native temporary-plugin materialization proves a physically separate extension layout.
 // phpcs:disable WordPress.WP.AlternativeFunctions
@@ -43,7 +43,7 @@ use RAN\RepositoryProvider\RepositoryReleaseWorkflowTarget;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
 use RAN\Secrets\SecretsFile;
-use RANBoosterGitHubProviderExtensionFixture\ReleaseUpdaterRegistrar;
+use RAN_Booster_GitHubProviderExtensionFixture\ReleaseUpdaterRegistrar;
 use RuntimeException;
 
 final class GitHubExternalExtensionParityTest extends TestCase {
@@ -107,10 +107,10 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		require_once dirname( __DIR__ ) . '/Admin/ReleaseManagement/GitHub/Support/ThemeRepositoryDouble.php';
 
 		$provider   = GitHubProvider::create( new Phase5CredentialStore(), new Phase5DeliveryEvidenceReader(), new Phase5BundledReleaseUpdater() );
-		$status     = \Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture::status();
-		$tracking   = new \Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble( $status );
-		$plugins    = new \Tests\Admin\ReleaseManagement\GitHub\Support\PluginRepositoryDouble();
-		$themes     = new \Tests\Admin\ReleaseManagement\GitHub\Support\ThemeRepositoryDouble();
+		$status     = \RAN\Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture::status();
+		$tracking   = new \RAN\Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble( $status );
+		$plugins    = new \RAN\Tests\Admin\ReleaseManagement\GitHub\Support\PluginRepositoryDouble();
+		$themes     = new \RAN\Tests\Admin\ReleaseManagement\GitHub\Support\ThemeRepositoryDouble();
 		$registry   = new ProviderRegistry( array( $provider ) );
 		$controller = new \RAN\Admin\ReleaseManagement\ReleaseWorkflowRequestController( $tracking, $plugins, $themes, $registry, new \RAN\Storage\RepositorySourceGuard() );
 		$presenter  = new \RAN\Admin\ReleaseManagement\ReleaseWorkflowPresenter( $tracking, $plugins, $themes, $registry, $controller );

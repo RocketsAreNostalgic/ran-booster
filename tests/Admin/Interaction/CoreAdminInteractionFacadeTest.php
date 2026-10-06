@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin\Interaction;
+namespace RAN\Tests\Admin\Interaction;
 
 use function RAN\Admin\Interaction\wp_make_link_relative;
 

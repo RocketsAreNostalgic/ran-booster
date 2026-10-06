@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace RANBoosterP4Phase0AddonFixture;
+namespace RAN_Booster_P4Phase0AddonFixture;
 
 // phpcs:disable Universal.Files.SeparateFunctionsFromOO.Mixed -- A single-file installed plugin fixture keeps disposable ownership explicit.
 
@@ -17,8 +17,8 @@ const CATEGORY = 'p4-phase-0-addon-fixture';
 const ABILITY  = 'p4-addon-fixture/read-status';
 
 function compatible(): bool {
-	return defined( 'RANBoosterP4Phase0Fixture\\API_VERSION' )
-		&& 1 === constant( 'RANBoosterP4Phase0Fixture\\API_VERSION' );
+	return defined( 'RAN_Booster_P4Phase0Fixture\\API_VERSION' )
+		&& 1 === constant( 'RAN_Booster_P4Phase0Fixture\\API_VERSION' );
 }
 
 function register_category(): void {

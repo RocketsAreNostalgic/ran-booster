@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace RAN;
+namespace RAN; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedNamespaceFound -- Core owns the established three-character RAN namespace; WPCS requires four characters.
 
 if ( ! function_exists( __NAMESPACE__ . '\\wp_unslash' ) ) {
 	function wp_unslash( mixed $value ): mixed {

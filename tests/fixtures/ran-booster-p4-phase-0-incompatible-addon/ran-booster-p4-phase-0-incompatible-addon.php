@@ -7,11 +7,11 @@
 
 declare(strict_types=1);
 
-namespace RANBoosterP4Phase0IncompatibleAddonFixture;
+namespace RAN_Booster_P4Phase0IncompatibleAddonFixture;
 
 function compatible(): bool {
-	return defined( 'RANBoosterP4Phase0Fixture\\API_VERSION' )
-		&& 2 === constant( 'RANBoosterP4Phase0Fixture\\API_VERSION' );
+	return defined( 'RAN_Booster_P4Phase0Fixture\\API_VERSION' )
+		&& 2 === constant( 'RAN_Booster_P4Phase0Fixture\\API_VERSION' );
 }
 
 function register_category(): void {

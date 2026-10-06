@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
+namespace RAN\Tests\Admin;
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused dispatcher fixtures stay beside their tests.
 
@@ -36,8 +36,8 @@ use RAN\Secrets\SecretsFile;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\WordPressUpdaterLock;
-use Tests\RepositoryProvider\Support\ExternalFixtureProvider;
-use Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
+use RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider;
+use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 use WP_Error;
 
 final class PackageAdminControllerDispatcherTest extends TestCase {
@@ -424,7 +424,7 @@ final class EditBoundaryThemeRepository extends ThemeRepository {
 
 final class CapturingPublicLookupProvider implements RepositoryProvider, CredentialedPublicRepositoryBrowser {
 
-	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 	/** @var list<RepositoryLookupRequest> */
 	public array $requests = array();
@@ -467,7 +467,7 @@ final class CapturingPublicLookupProvider implements RepositoryProvider, Credent
 
 final class CapturingRepositoryProvider implements RepositoryProvider {
 
-	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 	/** @var list<RepositoryLookupRequest> */
 	public array $requests = array();

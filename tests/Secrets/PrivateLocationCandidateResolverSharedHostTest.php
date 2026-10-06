@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Secrets;
+namespace RAN\Tests\Secrets;
 
 // Test-only namespaced functions model metadata that cannot be created without root.
 require_once __DIR__ . '/fixtures/shared-host-functions.php';

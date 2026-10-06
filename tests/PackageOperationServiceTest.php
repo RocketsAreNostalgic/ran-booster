@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests;
+namespace RAN\Tests;
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused collaborators stay beside the service test.
 
@@ -34,7 +34,7 @@ use RAN\Storage\PackageStorageOperation;
 use RAN\Storage\Database;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\RepositorySourceGuard;
-use Tests\Support\RepositorySourceGuardDatabase;
+use RAN\Tests\Support\RepositorySourceGuardDatabase;
 use RAN\Storage\ThemeRepository;
 use RAN\Theme;
 use RAN\Troubleshooting\TroubleshootingService;

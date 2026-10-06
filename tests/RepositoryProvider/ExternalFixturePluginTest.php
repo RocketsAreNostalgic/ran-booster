@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\RepositoryProvider;
+namespace RAN\Tests\RepositoryProvider;
 
 require_once __DIR__ . '/../Support/ExternalFixturePluginWordPressFunctions.php';
 require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
@@ -37,10 +37,10 @@ use RAN\RepositoryProvider\RepositoryReference;
 	use RAN\RepositoryProvider\WebhookNormalizer;
 	use RAN\RepositoryProvider\WebhookRequest;
 use RAN\Secrets\SecretsFile;
-use Tests\Secrets\SecretsFileTestFactory;
+use RAN\Tests\Secrets\SecretsFileTestFactory;
 use RAN\Storage\CredentialUsageReader;
-use Tests\Support\CredentialUsageDatabase;
-	use RANBoosterFixtureProvider\Provider;
+use RAN\Tests\Support\CredentialUsageDatabase;
+	use RAN_Booster_FixtureProvider\Provider;
 
 final class ExternalFixturePluginTest extends TestCase {
 

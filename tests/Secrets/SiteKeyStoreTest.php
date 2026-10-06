@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Secrets;
+namespace RAN\Tests\Secrets;
 
 // Test doubles stay local to this focused persistence test and base64 inspects the defined key encoding.
 // Native files model one atomic database option across forked processes.

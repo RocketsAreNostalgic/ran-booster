@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\WordPress;
+namespace RAN\Tests\WordPress;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
@@ -155,6 +155,7 @@ final class CoreSelfUpdatePolicyTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_enabled_override_allows_disposable_update_testing_without_amarker(): void {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.VariableConstantNameFound -- Exercise the exact runtime configuration marker selected by this fixture.
 		define( CoreSelfUpdatePolicy::CONFIGURATION, 'enabled' );
 
 		$policy = CoreSelfUpdatePolicy::detect( plugin_file: $this->plugin_file(), plugin_version: '1.2.3' );
@@ -166,6 +167,7 @@ final class CoreSelfUpdatePolicyTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_disabled_override_wins_over_avalid_marker(): void {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.VariableConstantNameFound -- Exercise the exact runtime configuration marker selected by this fixture.
 		define( CoreSelfUpdatePolicy::CONFIGURATION, 'disabled' );
 		$this->write_marker( '1.2.3', str_repeat( 'c', 40 ) );
 
@@ -178,6 +180,7 @@ final class CoreSelfUpdatePolicyTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_invalid_override_fails_closed(): void {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.VariableConstantNameFound -- Exercise the exact runtime configuration marker selected by this fixture.
 		define( CoreSelfUpdatePolicy::CONFIGURATION, 'development' );
 
 		$policy = CoreSelfUpdatePolicy::detect( plugin_file: $this->plugin_file(), plugin_version: '1.2.3' );

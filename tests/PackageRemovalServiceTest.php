@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests;
+namespace RAN\Tests;
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused collaborators stay beside the removal service test.
 

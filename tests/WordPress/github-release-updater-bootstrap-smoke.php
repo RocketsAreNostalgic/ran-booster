@@ -1,4 +1,5 @@
 <?php
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Isolated CLI harness locals do not enter shipped plugin scope; declarations and hooks remain checked.
 
 declare(strict_types=1);
 
@@ -6,6 +7,7 @@ declare(strict_types=1);
 // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
 $GLOBALS['ran_booster_updater_smoke_hooks'] = array();
 
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 define( 'ABSPATH', dirname( __DIR__ ) . '/fixtures/wordpress/' );
 
 function add_action( string $hook, callable $callback, int $priority = 10, int $accepted_args = 1 ): bool {

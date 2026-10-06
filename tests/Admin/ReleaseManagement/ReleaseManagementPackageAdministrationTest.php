@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin\ReleaseManagement;
+namespace RAN\Tests\Admin\ReleaseManagement;
 
 require_once __DIR__ . '/Support/ReleaseManagementWordPressFunctions.php';
 require_once __DIR__ . '/Support/ReleaseManagementFixtures.php';
@@ -16,9 +16,9 @@ use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use RAN\RepositoryProvider\RepositoryReleaseCandidate;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateList;
-use Tests\Admin\ReleaseManagement\Support\PackageProjection;
-use Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture;
-use Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble;
+use RAN\Tests\Admin\ReleaseManagement\Support\PackageProjection;
+use RAN\Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture;
+use RAN\Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble;
 
 final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	#[Before]
@@ -219,7 +219,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	}
 
 	private function conflict_controls( bool $unavailable = false, int $extra_count = 0 ): \RAN\Admin\ReleaseManagement\ReleaseManagementControls {
-		$database = new \Tests\Support\RepositorySourceGuardDatabase();
+		$database = new \RAN\Tests\Support\RepositorySourceGuardDatabase();
 		foreach ( array( array( 1, 'example/example.php' ), array( 1, 'nested/nested.php' ), array( 2, 'companion-theme' ) ) as [ $type, $identifier ] ) {
 			$database->rows[] = (object) array(
 				'type'                   => $type,

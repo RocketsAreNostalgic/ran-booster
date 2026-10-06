@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
+namespace RAN\Tests\Admin;
 
 // phpcs:disable WordPress.WP.AlternativeFunctions -- Focused temporary-file tests exercise the native archive and debug-capture boundaries.
 
@@ -45,7 +45,7 @@ use RAN\Storage\ThemeRepository;
 use RAN\Theme;
 use ReflectionClass;
 use RuntimeException;
-use Tests\Portability\TemporaryCredentialProvider;
+use RAN\Tests\Portability\TemporaryCredentialProvider;
 
 require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';

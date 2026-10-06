@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Secrets;
+namespace RAN\Tests\Secrets;
 
 // Native JSON and base64 calls inspect the exact pure codec wire format.
 // phpcs:disable WordPress.WP.AlternativeFunctions

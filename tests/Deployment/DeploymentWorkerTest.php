@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Deployment;
+namespace RAN\Tests\Deployment;
 
 require_once __DIR__ . '/DeploymentWorkerPhpFunctions.php';
 require_once __DIR__ . '/WordPressWorkerWakeupCron.php';

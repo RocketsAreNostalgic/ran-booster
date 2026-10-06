@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 // Focused WordPress function and database doubles necessarily use global fixtures.
 
-// phpcs:ignore Universal.Namespaces.DisallowCurlyBraceSyntax.Forbidden, Universal.Namespaces.DisallowDeclarationWithoutName.Forbidden -- One fixture supplies global WordPress function doubles and the namespaced database fake. Global namespace is required for the WordPress function doubles in this isolated fixture.
+// phpcs:ignore Universal.Namespaces.DisallowCurlyBraceSyntax.Forbidden, Universal.Namespaces.DisallowDeclarationWithoutName.Forbidden -- Global namespace is required for the WordPress function doubles in this isolated fixture.
 namespace {
 
 	if ( ! defined( 'ABSPATH' ) ) {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'ABSPATH', dirname( __DIR__ ) . '/fixtures/wordpress/' );
 	}
 
 	if ( ! function_exists( 'sanitize_text_field' ) ) {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 		function sanitize_text_field( $value ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags -- Minimal isolated sanitize_text_field double intentionally uses native tag removal.
 			return trim( strip_tags( (string) $value ) );
@@ -19,6 +21,7 @@ namespace {
 	}
 
 	if ( ! function_exists( '__' ) ) {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 		function __( $text, $domain = 'default' ) {
 			return $GLOBALS['ran_booster_package_view_translations'][ $domain ][ $text ]
 				?? $GLOBALS['ran_booster_admin_test_translations'][ $domain ][ $text ]
@@ -33,7 +36,7 @@ namespace {
 	}
 
 	if ( ! function_exists( 'get_option' ) ) {
-		// phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound -- Preserve the WordPress get_option parameter signature.
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound, Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound -- Preserve the WordPress get_option parameter signature. WordPress function double must retain the host-owned name.
 		function get_option( $option, $default = false ) {
 			global $ran_booster_storage_test_options;
 
@@ -50,7 +53,7 @@ namespace {
 	}
 
 	if ( ! function_exists( 'update_option' ) ) {
-		// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Preserve the WordPress update_option signature; this in-memory fixture does not model autoload storage.
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound, Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Preserve the WordPress update_option signature; this in-memory fixture does not model autoload storage. WordPress function double must retain the host-owned name.
 		function update_option( $option, $value, $autoload = null ) {
 			global $ran_booster_storage_test_option_apply_write,
 				$ran_booster_storage_test_option_write_result,
@@ -65,7 +68,7 @@ namespace {
 	}
 
 	if ( ! function_exists( 'dbDelta' ) ) {
-		// phpcs:ignore WordPress.NamingConventions.ValidFunctionName.FunctionNameInvalid -- Exact WordPress dbDelta function signature is replaced by this isolated test double.
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound, WordPress.NamingConventions.ValidFunctionName.FunctionNameInvalid -- Exact WordPress dbDelta function signature is replaced by this isolated test double. WordPress function double must retain the host-owned name.
 		function dbDelta( $sql ) {
 			global $wpdb;
 
@@ -79,8 +82,8 @@ namespace {
 	}
 }
 
-// phpcs:ignore Universal.Namespaces.OneDeclarationPerFile.MultipleFound, Universal.Namespaces.DisallowCurlyBraceSyntax.Forbidden -- The global WordPress doubles and namespaced database fake are loaded together by this fixture. One fixture supplies global WordPress function doubles and the namespaced database fake.
-namespace Tests\Storage {
+// phpcs:ignore Universal.Namespaces.OneDeclarationPerFile.MultipleFound, Universal.Namespaces.DisallowCurlyBraceSyntax.Forbidden -- The global WordPress doubles and namespaced database fake are loaded together by this fixture.
+namespace RAN\Tests\Storage {
 
 	// phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- The fixture pairs WordPress function doubles with its database class for one isolated test environment.
 	final class StorageTestWpdb {

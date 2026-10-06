@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Deployment;
+namespace RAN\Tests\Deployment;
 
 final class WordPressWorkerWakeupCron {
 

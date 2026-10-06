@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
+namespace RAN\Tests\Admin;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -89,7 +89,7 @@ final class AdminTabRegistryTest extends TestCase {
 	public function test_metadata_only_providers_do_not_become_settings_tabs(): void {
 		$metadata_only = new class() implements RepositoryProvider {
 
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'Metadata only', 'https://example.test/', 'Owner' );
@@ -119,7 +119,7 @@ final class AdminTabRegistryTest extends TestCase {
 	private function provider( ProviderCode $code, string $label ): RepositoryProvider {
 		return new class( $code, $label ) implements RepositoryProvider {
 
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public function __construct(
 				private ProviderCode $code,

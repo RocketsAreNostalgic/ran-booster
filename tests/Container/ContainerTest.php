@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Tests\Container;
+namespace RAN\Tests\Container;
 
 use RAN\Internal\CoreContainer;
-use Tests\RANBoosterTestCase;
+use RAN\Tests\RANBoosterTestCase;
 
 final class ContainerTest extends RANBoosterTestCase {
 

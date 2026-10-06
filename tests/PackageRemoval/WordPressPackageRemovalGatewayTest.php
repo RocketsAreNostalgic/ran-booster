@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\PackageRemoval;
+namespace RAN\Tests\PackageRemoval;
 
 require_once __DIR__ . '/WordPressPackageRemovalGatewayWordPressFunctions.php';
 

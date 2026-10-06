@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Logging;
+namespace RAN\Tests\Logging;
 
 require_once __DIR__ . '/LoggingWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';

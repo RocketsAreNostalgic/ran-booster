@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Portability;
+namespace RAN\Tests\Portability;
 
 // Native temporary files model two independent target sites.
 // phpcs:disable WordPress.WP.AlternativeFunctions
@@ -33,7 +33,7 @@ use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use RuntimeException;
 use ReflectionClass;
-use Tests\Secrets\InMemorySiteKeyStore;
+use RAN\Tests\Secrets\InMemorySiteKeyStore;
 
 require_once __DIR__ . '/../Support/PackageOperationGlobalWordPressFunctions.php';
 

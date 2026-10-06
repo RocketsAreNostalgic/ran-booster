@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Troubleshooting;
+namespace RAN\Tests\Troubleshooting;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;

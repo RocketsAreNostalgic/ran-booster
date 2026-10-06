@@ -25,8 +25,8 @@ add_action(
 
 		require_once __DIR__ . '/src/Providers.php';
 
-		$registry->register( new \RANBoosterReleaseCapabilityFixture\ZeroProvider() );
-		$registry->register( new \RANBoosterReleaseCapabilityFixture\PartialProvider() );
-		$registry->register( new \RANBoosterReleaseCapabilityFixture\ReleaseProvider() );
+		$registry->register( new \RAN_Booster_ReleaseCapabilityFixture\ZeroProvider() );
+		$registry->register( new \RAN_Booster_ReleaseCapabilityFixture\PartialProvider() );
+		$registry->register( new \RAN_Booster_ReleaseCapabilityFixture\ReleaseProvider() );
 	}
 );

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace RANBoosterReleaseCapabilityFixture;
+namespace RAN_Booster_ReleaseCapabilityFixture;
 
 use RAN\Deployment\PreparedArtifact;
 use RAN\Provider\ProviderCapability;

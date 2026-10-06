@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Portability;
+namespace RAN\Tests\Portability;
 
 use RAN\RepositoryProvider\ArchiveRequest;
 use RAN\BoosterGitHubProvider\V1\CredentialPolicy as GitHubCredentialPolicy;
@@ -19,7 +19,7 @@ use RuntimeException;
 
 final class TemporaryCredentialProvider implements RepositoryProvider, ProviderCredentialPolicySupplier {
 
-	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 	/** @var list<string|null> */
 	public array $credential_ids            = array();

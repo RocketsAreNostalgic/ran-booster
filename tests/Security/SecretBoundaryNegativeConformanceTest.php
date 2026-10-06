@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Security;
+namespace RAN\Tests\Security;
 
 use PHPUnit\Framework\TestCase;
 use RAN\AddOn\Portability\PortabilityFacade;

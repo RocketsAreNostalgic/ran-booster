@@ -1,4 +1,5 @@
 <?php
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Isolated CLI harness locals do not enter shipped plugin scope; declarations and hooks remain checked.
 
 // Executed by WP-CLI inside an isolated disposable WordPress installation.
 
@@ -8,6 +9,7 @@ require_once ABSPATH . 'wp-admin/includes/theme.php';
 require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
 
 if ( ! defined( 'DOING_CRON' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 	define( 'DOING_CRON', true );
 }
 
@@ -24,7 +26,7 @@ if ( ! class_exists( ZipArchive::class ) ) {
 	throw new RuntimeException( 'The WordPress-core updater proof requires ZipArchive.' );
 }
 
-final class RanBoosterCoreUpdaterProof {
+final class RAN_Booster_CoreUpdaterProof {
 	private array $archives = array();
 	private array $plugins  = array();
 	private array $themes   = array();
@@ -556,7 +558,7 @@ final class RanBoosterCoreUpdaterProof {
 	}
 }
 
-$proof   = new RanBoosterCoreUpdaterProof( bin2hex( random_bytes( 6 ) ) );
+$proof   = new RAN_Booster_CoreUpdaterProof( bin2hex( random_bytes( 6 ) ) );
 $failure = null;
 
 try {

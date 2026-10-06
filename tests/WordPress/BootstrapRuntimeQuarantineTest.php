@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\WordPress;
+namespace RAN\Tests\WordPress;
 
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
@@ -16,7 +16,9 @@ final class BootstrapRuntimeQuarantineTest extends TestCase {
 	#[PreserveGlobalState( false )]
 	public function test_converted_multisite_boots_only_the_recovery_allowlist(): void {
 		require dirname( __DIR__ ) . '/Support/BootstrapRuntimeWordPressFunctions.php';
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'WPINC', 'wp-includes' );
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'ABSPATH', dirname( __DIR__ ) . '/fixtures/wordpress/' );
 
 		$plugin_file = dirname( __DIR__, 2 ) . '/ran-booster.php';
@@ -80,7 +82,9 @@ final class BootstrapRuntimeQuarantineTest extends TestCase {
 	#[PreserveGlobalState( false )]
 	public function test_unsupported_lifecycle_refuses_activation_and_clears_only_the_worker_schedule(): void {
 		require dirname( __DIR__ ) . '/Support/BootstrapRuntimeWordPressFunctions.php';
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'WPINC', 'wp-includes' );
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'ABSPATH', dirname( __DIR__ ) . '/fixtures/wordpress/' );
 
 		$plugin_file = dirname( __DIR__, 2 ) . '/ran-booster.php';
@@ -110,7 +114,9 @@ final class BootstrapRuntimeQuarantineTest extends TestCase {
 	#[PreserveGlobalState( false )]
 	public function test_unsupported_notice_is_restricted_to_network_plugin_managers(): void {
 		require dirname( __DIR__ ) . '/Support/BootstrapRuntimeWordPressFunctions.php';
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'WPINC', 'wp-includes' );
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'ABSPATH', dirname( __DIR__ ) . '/fixtures/wordpress/' );
 
 		$plugin_file = dirname( __DIR__, 2 ) . '/ran-booster.php';
@@ -139,7 +145,9 @@ final class BootstrapRuntimeQuarantineTest extends TestCase {
 	#[PreserveGlobalState( false )]
 	public function test_unsupported_notice_is_hidden_from_unauthorized_administrators(): void {
 		require dirname( __DIR__ ) . '/Support/BootstrapRuntimeWordPressFunctions.php';
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'WPINC', 'wp-includes' );
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'ABSPATH', dirname( __DIR__ ) . '/fixtures/wordpress/' );
 		$GLOBALS['ran_booster_bootstrap_manage_network_plugins'] = false;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\AddOn;
+namespace RAN\Tests\AddOn;
 
 require_once __DIR__ . '/../Support/ExternalFixtureAddOnWordPressFunctions.php';
 

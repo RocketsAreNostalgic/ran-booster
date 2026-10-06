@@ -1,4 +1,5 @@
 <?php
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Isolated CLI harness locals do not enter shipped plugin scope; declarations and hooks remain checked.
 
 // Recover the active Core container from its WordPress lifecycle callback for
 // source-owned WP-CLI proofs. This test-only inspection must never become a

@@ -1,8 +1,9 @@
 <?php
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Isolated CLI harness locals do not enter shipped plugin scope; declarations and hooks remain checked.
 
 // Executed by WP-CLI inside an isolated disposable WordPress installation.
 
-use RANBoosterP4Phase0Fixture as Fixture;
+use RAN_Booster_P4Phase0Fixture as Fixture;
 use WP\MCP\Core\McpAdapter;
 
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI
@@ -38,9 +39,9 @@ $assert(
 );
 $assert( '7.0.4' === get_bloginfo( 'version' ), 'The exact WordPress fixture version changed.' );
 $assert( defined( 'WP_MCP_VERSION' ) && '0.5.0' === WP_MCP_VERSION, 'The exact MCP Adapter fixture version changed.' );
-$assert( defined( 'RANBoosterP4Phase0Fixture\\API_VERSION' ) && 1 === constant( 'RANBoosterP4Phase0Fixture\\API_VERSION' ), 'The Core fixture API is unavailable.' );
+$assert( defined( 'RAN_Booster_P4Phase0Fixture\\API_VERSION' ) && 1 === constant( 'RAN_Booster_P4Phase0Fixture\\API_VERSION' ), 'The Core fixture API is unavailable.' );
 $assert( wp_has_ability_category( Fixture\CATEGORY ), 'The Core-owned category was not registered.' );
-$assert( wp_has_ability_category( \RANBoosterP4Phase0AddonFixture\CATEGORY ), 'The add-on-owned category was not registered.' );
+$assert( wp_has_ability_category( \RAN_Booster_P4Phase0AddonFixture\CATEGORY ), 'The add-on-owned category was not registered.' );
 
 $probe = $GLOBALS['ran_booster_p4_phase_0_probe'] ?? null;
 $assert( is_array( $probe ), 'The registration probe is unavailable.' );
@@ -76,7 +77,7 @@ $denied = $ability->execute( array( 'target' => 'permission-check' ) );
 $assert( is_wp_error( $denied ), 'The explicit low-privilege WordPress user was permitted.' );
 wp_set_current_user( $admin_id );
 
-$addon_ability = wp_get_ability( \RANBoosterP4Phase0AddonFixture\ABILITY );
+$addon_ability = wp_get_ability( \RAN_Booster_P4Phase0AddonFixture\ABILITY );
 $addon_result  = $addon_ability instanceof WP_Ability ? $addon_ability->execute( array() ) : null;
 $assert( is_array( $addon_result ) && 'addon' === ( $addon_result['owner'] ?? null ), 'The add-on did not own and execute its declaration.' );
 $assert( ! wp_has_ability( 'p4-incompatible-fixture/read-status' ), 'The incompatible component contributed an executable declaration.' );
@@ -90,6 +91,7 @@ $assert( 1 === count( $dedicated->get_tools() ), 'The dedicated server does not 
 $assert( null === $dedicated->get_mcp_tool( 'mcp-adapter-execute-ability' ), 'The dedicated server exposes a generic executor.' );
 $assert( null !== $dedicated->get_mcp_tool( 'p4-fixture-read-status' ), 'The dedicated server lacks its explicit read tool.' );
 
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 do_action( 'rest_api_init' );
 $routes = rest_get_server()->get_routes();
 $assert( ! array_key_exists( '/ran-booster-p4/v1/fixture', $routes ), 'The dedicated Booster fixture server registered an HTTP route.' );
@@ -108,7 +110,7 @@ WP_CLI::line(
 			'wordpress'   => get_bloginfo( 'version' ),
 			'wp_cli'      => WP_CLI_VERSION,
 			'mcp_adapter' => WP_MCP_VERSION,
-			'abilities'   => array( Fixture\READ_ABILITY, \RANBoosterP4Phase0AddonFixture\ABILITY ),
+			'abilities'   => array( Fixture\READ_ABILITY, \RAN_Booster_P4Phase0AddonFixture\ABILITY ),
 			'mcp_tools'   => array_keys( $dedicated->get_tools() ),
 		),
 		JSON_UNESCAPED_SLASHES

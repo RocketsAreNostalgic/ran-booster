@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
+namespace RAN\Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/RepositoryAdminWordPressFunctions.php';
@@ -41,12 +41,12 @@ use RAN\Storage\Database;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\WordPressUpdaterLock;
-use Tests\RepositoryProvider\Support\ExternalFixtureCredentialPolicy;
-use Tests\Secrets\InMemorySiteKeyStore;
-use Tests\Secrets\SecretsFileTestFactory;
-use Tests\Support\CredentialUsageDatabase;
-use Tests\Support\InMemoryCredentialExpiryObservationStore;
-use Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
+use RAN\Tests\RepositoryProvider\Support\ExternalFixtureCredentialPolicy;
+use RAN\Tests\Secrets\InMemorySiteKeyStore;
+use RAN\Tests\Secrets\SecretsFileTestFactory;
+use RAN\Tests\Support\CredentialUsageDatabase;
+use RAN\Tests\Support\InMemoryCredentialExpiryObservationStore;
+use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 
 // Direct local filesystem operations exercise the encrypted sidecar fixture.
 // phpcs:disable WordPress.WP.AlternativeFunctions

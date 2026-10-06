@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Troubleshooting;
+namespace RAN\Tests\Troubleshooting;
 
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\WordPressWorkerWakeup;

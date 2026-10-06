@@ -8,16 +8,16 @@
  * inside that fixture.  It never points at the Local site or its database.
  */
 
-const RAN_P44_MARKER = 'RAN_BOOSTER_PHASE44_DISPOSABLE';
+const RAN_BOOSTER_P44_MARKER = 'RAN_BOOSTER_PHASE44_DISPOSABLE';
 
 if ( '1' === getenv( 'RAN_BOOSTER_PHASE44_WORKER' ) ) {
-	phase44_worker();
+	ran_booster_phase44_worker();
 	exit( 0 );
 }
 
-phase44_launcher();
+ran_booster_phase44_launcher();
 
-function phase44_launcher(): void {
+function ran_booster_phase44_launcher(): void {
 	$root                    = realpath( dirname( __DIR__, 2 ) );
 	$wp_environment          = getenv( 'RAN_BOOSTER_PHASE44_WORDPRESS_ROOT' );
 	$wp                      = $wp_environment ? $wp_environment : dirname( (string) $root, 3 );
@@ -25,7 +25,7 @@ function phase44_launcher(): void {
 	$zip                     = is_string( $root ) ? $root . '/build/ran-booster-1.0.0-beta.27.zip' : '';
 	$artifact_sha256         = getenv( 'RAN_BOOSTER_PHASE44_ARTIFACT_SHA256' );
 	$artifact_source_commit  = getenv( 'RAN_BOOSTER_PHASE44_ARTIFACT_SOURCE_COMMIT' );
-	$php                     = phase44_php82();
+	$php                     = ran_booster_phase44_php82();
 	$wp_cli                  = '/usr/local/bin/wp';
 	$mysqld_environment      = getenv( 'RAN_BOOSTER_PHASE44_MYSQLD' );
 	$mysqld                  = $mysqld_environment ? $mysqld_environment : '/Applications/Local.app/Contents/Resources/extraResources/lightning-services/mysql-8.4.0/bin/darwin-arm64/bin/mysqld';
@@ -34,11 +34,11 @@ function phase44_launcher(): void {
 		&& 1 === preg_match( '/\A[a-f0-9]{64}\z/D', $artifact_sha256 )
 		&& 1 === preg_match( '/\A[a-f0-9]{40}\z/D', $artifact_source_commit )
 		&& is_file( $zip )
-		&& phase44_exact_artifact( $zip, $artifact_sha256, $artifact_source_commit );
+		&& ran_booster_phase44_exact_artifact( $zip, $artifact_sha256, $artifact_source_commit );
 	if ( ! is_string( $root ) || ! is_string( $wp ) || ! is_file( $wp . '/wp-load.php' ) || is_link( $wp ) || ! $artifact_contract_valid || ! is_file( $php ) || ! is_executable( $php ) || ! is_file( $wp_cli ) || ! is_file( $mysqld ) || ! is_executable( $mysqld ) ) {
 		throw new RuntimeException( 'Phase 4.4 requires exact artifact SHA-256 and source-commit environment contracts, local WordPress 7.0.4, PHP 8.2, WP-CLI, mysqld and the built Core ZIP.' );
 	}
-	if ( '7.0.4' !== trim( phase44_command( array( $php, $wp_cli, '--path=' . $wp, 'core', 'version' ), $wp )['stdout'] ) ) {
+	if ( '7.0.4' !== trim( ran_booster_phase44_command( array( $php, $wp_cli, '--path=' . $wp, 'core', 'version' ), $wp )['stdout'] ) ) {
 		throw new RuntimeException( 'Phase 4.4 refuses a WordPress source other than 7.0.4.' );
 	}
 	$base = '/private/tmp/ran-booster-phase44-' . bin2hex( random_bytes( 16 ) );
@@ -46,9 +46,9 @@ function phase44_launcher(): void {
 	if ( '/private/tmp' !== realpath( dirname( $base ) ) || file_exists( $base ) || is_link( $base ) || ! mkdir( $base, 0700 ) ) {
 		throw new RuntimeException( 'Phase 4.4 could not establish a private disposable root.' );
 	}
-	$marker = $base . '/' . RAN_P44_MARKER . '.marker';
+	$marker = $base . '/' . RAN_BOOSTER_P44_MARKER . '.marker';
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
-	file_put_contents( $marker, RAN_P44_MARKER . "\n" );
+	file_put_contents( $marker, RAN_BOOSTER_P44_MARKER . "\n" );
 	$server = null;
 	try {
 		$mysql  = $base . '/mysql';
@@ -56,7 +56,7 @@ function phase44_launcher(): void {
 		$socket = $mysql . '/mysql.sock';
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 		mkdir( $mysql, 0700, true );
-		phase44_command( array( $mysqld, '--no-defaults', '--initialize-insecure', '--datadir=' . $data ), $mysql );
+		ran_booster_phase44_command( array( $mysqld, '--no-defaults', '--initialize-insecure', '--datadir=' . $data ), $mysql );
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open -- Standalone proof owns an isolated child process and its pipes; no WordPress process wrapper exists.
 		$server = proc_open(
 			array( $mysqld, '--no-defaults', '--datadir=' . $data, '--socket=' . $socket, '--pid-file=' . $mysql . '/mysqld.pid', '--skip-networking', '--log-error=' . $mysql . '/mysqld.err' ),
@@ -73,7 +73,7 @@ function phase44_launcher(): void {
 		}
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 		fclose( $pipes[0] );
-		phase44_mysql_ready( $socket );
+		ran_booster_phase44_mysql_ready( $socket );
 		$db = 'ran_booster_p44_' . random_int( 100000, 999999 );
 		// phpcs:ignore WordPress.DB.RestrictedFunctions.mysql_mysqli_init -- Standalone proof controls its isolated MySQL process before WordPress bootstrap.
 		$mysqli = mysqli_init();
@@ -82,27 +82,27 @@ function phase44_launcher(): void {
 		$mysqli->query( 'CREATE DATABASE `' . $db . '`' );
 		$mysqli->close();
 		$site = $base . '/site';
-		phase44_copy_tree( $wp, $site, array( 'wp-content', 'wp-config.php', '.git' ) );
+		ran_booster_phase44_copy_tree( $wp, $site, array( 'wp-content', 'wp-config.php', '.git' ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 		mkdir( $site . '/wp-content/plugins', 0700, true );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 		mkdir( $site . '/wp-content/themes', 0700, true );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 		mkdir( $site . '/wp-content/uploads', 0700, true );
-		phase44_extract_core( $zip, $site . '/wp-content/plugins' );
-		phase44_copy_tree( $root . '/tests/fixtures/ran-booster-release-capability-provider', $site . '/wp-content/plugins/ran-booster-release-capability-provider' );
+		ran_booster_phase44_extract_core( $zip, $site . '/wp-content/plugins' );
+		ran_booster_phase44_copy_tree( $root . '/tests/fixtures/ran-booster-release-capability-provider', $site . '/wp-content/plugins/ran-booster-release-capability-provider' );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 		file_put_contents( $site . '/.ran-booster-disposable-test-site', "RAN Booster disposable test site\n" );
-		phase44_config( $site . '/wp-config.php', $db, $socket );
+		ran_booster_phase44_config( $site . '/wp-config.php', $db, $socket );
 		$env = array(
 			'RAN_BOOSTER_PHASE44_ROOT'   => $root,
 			'RAN_BOOSTER_PHASE44_MARKER' => $marker,
 			'RAN_BOOSTER_PHASE44_SITE'   => $site,
 			'RAN_BOOSTER_PHASE44_WORKER' => '1',
 		);
-		phase44_command( array( $php, $wp_cli, '--path=' . $site, 'core', 'install', '--skip-email', '--url=http://phase44.invalid', '--title=phase44', '--admin_user=admin', '--admin_password=phase44-password', '--admin_email=admin@example.invalid' ), $site, $env );
-		phase44_command( array( $php, $wp_cli, '--path=' . $site, 'plugin', 'activate', 'ran-booster' ), $site, $env );
-		phase44_command( array( $php, $wp_cli, '--path=' . $site, 'plugin', 'activate', 'ran-booster-release-capability-provider' ), $site, $env );
+		ran_booster_phase44_command( array( $php, $wp_cli, '--path=' . $site, 'core', 'install', '--skip-email', '--url=http://phase44.invalid', '--title=phase44', '--admin_user=admin', '--admin_password=phase44-password', '--admin_email=admin@example.invalid' ), $site, $env );
+		ran_booster_phase44_command( array( $php, $wp_cli, '--path=' . $site, 'plugin', 'activate', 'ran-booster' ), $site, $env );
+		ran_booster_phase44_command( array( $php, $wp_cli, '--path=' . $site, 'plugin', 'activate', 'ran-booster-release-capability-provider' ), $site, $env );
 		$phases = array();
 		foreach ( array( 'manual', 'automatic' ) as $policy ) {
 			foreach ( array( 'plugin', 'theme' ) as $type ) {
@@ -124,14 +124,14 @@ function phase44_launcher(): void {
 				'RAN_BOOSTER_PHASE44_TYPE'   => $phase[2],
 				'RAN_BOOSTER_PHASE44_MODE'   => $phase[3],
 			);
-			$out     = phase44_command( array( $php, $wp_cli, '--path=' . $site, 'eval-file', __FILE__, '--user=admin' ), $site, $run_env );
+			$out     = ran_booster_phase44_command( array( $php, $wp_cli, '--path=' . $site, 'eval-file', __FILE__, '--user=admin' ), $site, $run_env );
 			$proof   = json_decode( trim( $out['stdout'] ), true, 32, JSON_THROW_ON_ERROR );
 			if ( true !== ( $proof['pass'] ?? null ) ) {
 				throw new RuntimeException( 'Phase 4.4 proof failed: ' . implode( ':', $phase ) );
 			}
 			if ( 'native' === $phase[0] && 'failure' === $phase[3] ) {
 				$identity = 'plugin' === $phase[2] ? 'phase44-plugin/phase44-plugin.php' : 'phase44-theme';
-				$read     = phase44_command( array( $php, $wp_cli, '--path=' . $site, 'eval', 'echo wp_json_encode(array("version"=>"plugin"==="' . $phase[2] . '"?get_plugin_data(WP_PLUGIN_DIR . "/' . $identity . '",false,false)["Version"]:get_file_data(get_theme_root() . "/' . $identity . '/style.css",array("Version"=>"Version"),"theme")["Version"],"digest"=>hash_file("sha256","plugin"==="' . $phase[2] . '"?WP_PLUGIN_DIR . "/' . $identity . '":get_theme_root() . "/' . $identity . '/style.css"),"backup"=>is_dir(WP_CONTENT_DIR . "/upgrade-temp-backup/" . ("plugin"==="' . $phase[2] . '"?"plugins/phase44-plugin":"themes/phase44-theme")),"maintenance"=>is_file(ABSPATH . ".maintenance")));', '--user=admin' ), $site, $env );
+				$read     = ran_booster_phase44_command( array( $php, $wp_cli, '--path=' . $site, 'eval', 'echo wp_json_encode(array("version"=>"plugin"==="' . $phase[2] . '"?get_plugin_data(WP_PLUGIN_DIR . "/' . $identity . '",false,false)["Version"]:get_file_data(get_theme_root() . "/' . $identity . '/style.css",array("Version"=>"Version"),"theme")["Version"],"digest"=>hash_file("sha256","plugin"==="' . $phase[2] . '"?WP_PLUGIN_DIR . "/' . $identity . '":get_theme_root() . "/' . $identity . '/style.css"),"backup"=>is_dir(WP_CONTENT_DIR . "/upgrade-temp-backup/" . ("plugin"==="' . $phase[2] . '"?"plugins/phase44-plugin":"themes/phase44-theme")),"maintenance"=>is_file(ABSPATH . ".maintenance")));', '--user=admin' ), $site, $env );
 				$post     = json_decode( trim( $read['stdout'] ), true, 16, JSON_THROW_ON_ERROR );
 				if ( '1.0.0' !== ( $post['version'] ?? null ) || ( $proof['before_digest'] ?? null ) !== ( $post['digest'] ?? null ) || true === ( $post['backup'] ?? null ) || true === ( $post['maintenance'] ?? null ) ) {
 					throw new RuntimeException( 'Post-shutdown rollback readback failed.' );
@@ -140,7 +140,7 @@ function phase44_launcher(): void {
 			}
 				$results[ implode( ':', $phase ) ] = $proof;
 		}
-		$readback = phase44_command( array( $php, $wp_cli, '--path=' . $site, 'eval', 'echo wp_json_encode(array("active"=>is_plugin_active("ran-booster/ran-booster.php"),"version"=>get_plugin_data(WP_PLUGIN_DIR . "/ran-booster/ran-booster.php", false, false)["Version"]));', '--user=admin' ), $site, $env );
+		$readback = ran_booster_phase44_command( array( $php, $wp_cli, '--path=' . $site, 'eval', 'echo wp_json_encode(array("active"=>is_plugin_active("ran-booster/ran-booster.php"),"version"=>get_plugin_data(WP_PLUGIN_DIR . "/ran-booster/ran-booster.php", false, false)["Version"]));', '--user=admin' ), $site, $env );
 		$body     = json_decode( trim( $readback['stdout'] ), true, 16, JSON_THROW_ON_ERROR );
 		if ( true !== ( $body['active'] ?? null ) || '1.0.0-beta.27' !== ( $body['version'] ?? null ) ) {
 			throw new RuntimeException( 'Installed Core CLI readback failed.' );
@@ -161,8 +161,8 @@ function phase44_launcher(): void {
 			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Best-effort cleanup tolerates an already-removed disposable fixture or stopped child process.
 			@proc_close( $server ); }
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
-		if ( ! is_link( $base ) && realpath( $base ) === $base && '/private/tmp' === realpath( dirname( $base ) ) && is_file( $marker ) && RAN_P44_MARKER . "\n" === file_get_contents( $marker ) ) {
-			phase44_remove_tree( $base );
+		if ( ! is_link( $base ) && realpath( $base ) === $base && '/private/tmp' === realpath( dirname( $base ) ) && is_file( $marker ) && RAN_BOOSTER_P44_MARKER . "\n" === file_get_contents( $marker ) ) {
+			ran_booster_phase44_remove_tree( $base );
 		}
 	}
 }
@@ -171,7 +171,7 @@ function phase44_launcher(): void {
  * The artifact source is deliberately supplied separately from this proof's
  * checkout HEAD: test-only evidence may follow the built release artifact.
  */
-function phase44_exact_artifact( string $zip, string $expected_sha256, string $expected_source_commit ): bool {
+function ran_booster_phase44_exact_artifact( string $zip, string $expected_sha256, string $expected_source_commit ): bool {
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_hash_file -- The caller supplies the exact immutable artifact digest.
 	$actual_sha256 = hash_file( 'sha256', $zip );
 	if ( ! is_string( $actual_sha256 ) || ! hash_equals( $expected_sha256, $actual_sha256 ) ) {
@@ -200,7 +200,7 @@ function phase44_exact_artifact( string $zip, string $expected_sha256, string $e
 	) === $document;
 }
 
-function phase44_worker(): void {
+function ran_booster_phase44_worker(): void {
 	$root   = getenv( 'RAN_BOOSTER_PHASE44_ROOT' );
 	$site   = getenv( 'RAN_BOOSTER_PHASE44_SITE' );
 	$marker = getenv( 'RAN_BOOSTER_PHASE44_MARKER' );
@@ -209,7 +209,7 @@ function phase44_worker(): void {
 	$type   = getenv( 'RAN_BOOSTER_PHASE44_TYPE' );
 	$mode   = getenv( 'RAN_BOOSTER_PHASE44_MODE' );
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
-	if ( ! is_string( $root ) || ! is_string( $site ) || ! is_string( $marker ) || ! is_file( $marker ) || RAN_P44_MARKER . "\n" !== file_get_contents( $marker ) || realpath( ABSPATH ) !== realpath( $site ) || ! in_array( $kind, array( 'native', 'prospective' ), true ) || ! in_array( $type, array( 'plugin', 'theme' ), true ) || ! in_array( $mode, array( 'success', 'failure' ), true ) ) {
+	if ( ! is_string( $root ) || ! is_string( $site ) || ! is_string( $marker ) || ! is_file( $marker ) || RAN_BOOSTER_P44_MARKER . "\n" !== file_get_contents( $marker ) || realpath( ABSPATH ) !== realpath( $site ) || ! in_array( $kind, array( 'native', 'prospective' ), true ) || ! in_array( $type, array( 'plugin', 'theme' ), true ) || ! in_array( $mode, array( 'success', 'failure' ), true ) ) {
 		throw new RuntimeException( 'Phase 4.4 worker guard rejected its environment.' );
 	}
 	require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -255,7 +255,7 @@ function phase44_worker(): void {
 				return new WP_Error( 'phase44_network_forbidden' );
 			}
 			$fixture  = $GLOBALS['ran_booster_phase44_github_fixture'] ?? null;
-			$response = is_array( $fixture ) ? phase44_github_response( $fixture, $args, $url ) : null;
+			$response = is_array( $fixture ) ? ran_booster_phase44_github_response( $fixture, $args, $url ) : null;
 			if ( is_array( $response ) ) {
 				++$http['allowed'];
 				return $response;
@@ -282,9 +282,9 @@ function phase44_worker(): void {
 		throw new RuntimeException( 'Network guard failed closed.' );
 	}
 	if ( 'prospective' === $kind ) {
-		$proof = phase44_prospective( $root, $site, $type, $mode );
+		$proof = ran_booster_phase44_prospective( $root, $site, $type, $mode );
 	} else {
-		$proof = phase44_native( $site, $type, $policy, $mode ); }
+		$proof = ran_booster_phase44_native( $site, $type, $policy, $mode ); }
 	$expected_mail      = 'native' === $kind && 'automatic' === $policy ? 1 : 0;
 	$expected_count     = 'native' === $kind ? count( $http['expected_blocked'] ) : 0;
 	$expected_automatic = 'native' === $kind && 'automatic' === $policy ? 1 : 0;
@@ -318,13 +318,13 @@ function phase44_worker(): void {
 	echo json_encode( $proof, JSON_UNESCAPED_SLASHES ) . PHP_EOL;
 }
 
-function phase44_native( string $site, string $type, string $policy, string $mode ): array {
+function ran_booster_phase44_native( string $site, string $type, string $policy, string $mode ): array {
 	$slug = 'phase44-' . $type;
 	$id   = 'plugin' === $type ? $slug . '/' . $slug . '.php' : $slug;
 	$uri  = 'https://github.com/phase44-owner/' . $slug;
-	phase44_fixture( $site, $type, $slug, '1.0.0', $uri );
+	ran_booster_phase44_fixture( $site, $type, $slug, '1.0.0', $uri );
 	$before_digest                                 = hash_file( 'sha256', 'plugin' === $type ? WP_PLUGIN_DIR . '/' . $id : get_theme_root() . '/' . $id . '/style.css' );
-	$archive                                       = phase44_archive( $site, $type, $slug, '2.0.0', $uri );
+	$archive                                       = ran_booster_phase44_archive( $site, $type, $slug, '2.0.0', $uri );
 	$GLOBALS['ran_booster_phase44_github_fixture'] = array(
 		'archive' => $archive,
 		'mode'    => $mode,
@@ -343,7 +343,7 @@ function phase44_native( string $site, string $type, string $policy, string $mod
 		),
 		'theme'
 	);
-	// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores -- The native WordPress Update URI hostname hook deliberately contains github.com.
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound, WordPress.NamingConventions.ValidHookName.UseUnderscores -- The native WordPress Update URI hostname hook deliberately contains github.com. Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 	$offer = apply_filters( 'update_' . ( 'plugin' === $type ? 'plugins_' : 'themes_' ) . 'github.com', false, $headers, $id, array() );
 	if ( ! is_array( $offer ) || '2.0.0' !== ( $offer['version'] ?? null ) || ! is_string( $offer['package'] ?? null ) || ! str_starts_with( $offer['package'], 'ran-wp-release-updater:v1:' ) ) {
 		throw new RuntimeException( 'Installed Core target did not publish the exact fixture offer.' );
@@ -459,7 +459,7 @@ function phase44_native( string $site, string $type, string $policy, string $mod
 }
 
 /** @param array{archive:string,mode:string,type:string} $fixture @param array<string,mixed> $args @return array<string,mixed>|null */
-function phase44_github_response( array $fixture, array $args, string $url ): ?array {
+function ran_booster_phase44_github_response( array $fixture, array $args, string $url ): ?array {
 	$locator = 'phase44-owner/phase44-' . $fixture['type'];
 	$tag     = 'v2.0.0';
 	$asset   = 'https://api.github.com/repos/' . $locator . '/releases/assets/301';
@@ -511,9 +511,9 @@ function phase44_github_response( array $fixture, array $args, string $url ): ?a
 	);
 }
 
-function phase44_prospective( string $root, string $site, string $type, string $mode ): array {
+function ran_booster_phase44_prospective( string $root, string $site, string $type, string $mode ): array {
 	$package_root = 'ran-booster-p2-fixture-' . $type;
-	$archive      = phase44_archive( $site, $type, $package_root, '2.0.0', 'https://p2.invalid/fixtures/' . $type );
+	$archive      = ran_booster_phase44_archive( $site, $type, $package_root, '2.0.0', 'https://p2.invalid/fixtures/' . $type );
 	update_option( 'ran_booster_p2_' . $type . '_archive', $archive, false );
 	$container = require $root . '/tests/WordPress/core-container-fixture.php';
 	$facade    = $container->make( RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade::class );
@@ -596,10 +596,10 @@ function phase44_prospective( string $root, string $site, string $type, string $
 	);
 }
 
-function phase44_fixture( string $site, string $type, string $slug, string $version, string $uri ): void {
+function ran_booster_phase44_fixture( string $site, string $type, string $slug, string $version, string $uri ): void {
 	$dir = $site . '/wp-content/' . ( 'plugin' === $type ? 'plugins/' : 'themes/' ) . $slug;
 	if ( is_dir( $dir ) ) {
-		phase44_remove_tree( $dir );
+		ran_booster_phase44_remove_tree( $dir );
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 	} mkdir( $dir, 0700, true );
 	if ( 'plugin' === $type ) {
@@ -610,7 +610,7 @@ function phase44_fixture( string $site, string $type, string $slug, string $vers
 		file_put_contents( $dir . '/style.css', "/*\nTheme Name: Phase44\nVersion: $version\nUpdate URI: $uri\n*/\n" );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 		file_put_contents( $dir . '/index.php', '<?php' ); } }
-function phase44_archive( string $site, string $type, string $slug, string $version, string $uri ): string {
+function ran_booster_phase44_archive( string $site, string $type, string $slug, string $version, string $uri ): string {
 	$path = $site . '/wp-content/uploads/phase44-' . $type . '-' . bin2hex( random_bytes( 4 ) ) . '.zip';
 	$zip  = new ZipArchive();
 	if ( true !== $zip->open( $path, ZipArchive::CREATE | ZipArchive::OVERWRITE ) ) {
@@ -624,7 +624,7 @@ function phase44_archive( string $site, string $type, string $slug, string $vers
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 	chmod( $path, 0600 );
 	return $path; }
-function phase44_extract_core( string $zip_path, string $plugins ): void {
+function ran_booster_phase44_extract_core( string $zip_path, string $plugins ): void {
 	$zip = new ZipArchive();
 	if ( true !== $zip->open( $zip_path ) ) {
 		throw new RuntimeException( 'Could not open Core ZIP.' );
@@ -639,16 +639,16 @@ function phase44_extract_core( string $zip_path, string $plugins ): void {
 	if ( ! is_file( $plugins . '/ran-booster/ran-booster.php' ) ) {
 		throw new RuntimeException( 'Installed Core ZIP is incomplete.' );
 	} }
-function phase44_config( string $path, string $db, string $socket ): void {
+function ran_booster_phase44_config( string $path, string $db, string $socket ): void {
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 	file_put_contents( $path, "<?php\ndefine('DB_NAME','$db'); define('DB_USER','root'); define('DB_PASSWORD',''); define('DB_HOST','localhost:$socket'); define('DB_CHARSET','utf8'); define('DB_COLLATE',''); define('AUTH_KEY','phase44'); define('SECURE_AUTH_KEY','phase44'); define('LOGGED_IN_KEY','phase44'); define('NONCE_KEY','phase44'); define('AUTH_SALT','phase44'); define('SECURE_AUTH_SALT','phase44'); define('LOGGED_IN_SALT','phase44'); define('NONCE_SALT','phase44'); \$table_prefix='wp_'; define('FS_METHOD','direct'); define('DISABLE_WP_CRON',true); if(!defined('ABSPATH')) define('ABSPATH',dirname(__FILE__).'/'); require_once ABSPATH.'wp-settings.php';\n" ); }
-function phase44_php82(): string {
+function ran_booster_phase44_php82(): string {
 	$from_env = getenv( 'RAN_BOOSTER_PHASE44_PHP82' );
 	if ( is_string( $from_env ) && '' !== $from_env ) {
 		return $from_env;
 	} $found = glob( '/Applications/Local.app/Contents/Resources/extraResources/lightning-services/php-8.2*/bin/darwin-arm64/bin/php' );
 	return is_array( $found ) && isset( $found[0] ) ? $found[0] : ''; }
-function phase44_mysql_ready( string $socket ): void {
+function ran_booster_phase44_mysql_ready( string $socket ): void {
 	for ( $i = 0;$i < 120;++$i ) {
 		try {
 			// phpcs:ignore WordPress.DB.RestrictedFunctions.mysql_mysqli_init -- Standalone proof controls its isolated MySQL process before WordPress bootstrap.
@@ -662,7 +662,7 @@ function phase44_mysql_ready( string $socket ): void {
 		} catch ( mysqli_sql_exception ) {
 		} usleep( 25000 );
 	} throw new RuntimeException( 'Isolated MySQL did not become ready.' ); }
-function phase44_command( array $cmd, string $cwd, ?array $env = null ): array {
+function ran_booster_phase44_command( array $cmd, string $cwd, ?array $env = null ): array {
 	// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open -- Standalone proof owns an isolated child process and its pipes; no WordPress process wrapper exists.
 	$p = proc_open(
 		$cmd,
@@ -693,7 +693,7 @@ function phase44_command( array $cmd, string $cwd, ?array $env = null ): array {
 		'stdout' => $out,
 		'stderr' => $err,
 	); }
-function phase44_copy_tree( string $source, string $target, array $exclude = array() ): void {
+function ran_booster_phase44_copy_tree( string $source, string $target, array $exclude = array() ): void {
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 	if ( ! is_dir( $source ) || is_link( $source ) || ! mkdir( $target, 0700, true ) ) {
 		throw new RuntimeException( 'Could not create disposable copy.' );
@@ -711,7 +711,7 @@ function phase44_copy_tree( string $source, string $target, array $exclude = arr
 			throw new RuntimeException( 'Disposable copy failed.' );
 		}
 	}}
-function phase44_remove_tree( string $path ): void {
+function ran_booster_phase44_remove_tree( string $path ): void {
 	if ( ! is_dir( $path ) || is_link( $path ) ) {
 		return;
 	} $it = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $path, FilesystemIterator::SKIP_DOTS ), RecursiveIteratorIterator::CHILD_FIRST );

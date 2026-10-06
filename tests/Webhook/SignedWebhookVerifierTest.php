@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Webhook;
+namespace RAN\Tests\Webhook;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\AddOn;
+namespace RAN\Tests\AddOn;
 
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;

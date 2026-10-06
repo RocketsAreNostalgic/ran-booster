@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Storage;
+namespace RAN\Tests\Storage;
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile -- Focused capability-probe fake stays beside its tests.
 
@@ -12,7 +12,7 @@ use RAN\Storage\Database;
 use RAN\Storage\DatabaseCompatibilityFailure;
 use RAN\Storage\DatabaseLifecycleFailure;
 use RuntimeException;
-use Tests\RANBoosterTestCase;
+use RAN\Tests\RANBoosterTestCase;
 
 require_once __DIR__ . '/StorageTestEnvironment.php';
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Quality;
+namespace RAN\Tests\Quality;
 
 use PHPStan\DependencyInjection\Container;
 use PHPStan\DependencyInjection\ContainerFactory;

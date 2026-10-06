@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Runtime\Support;
+namespace RAN\Tests\Runtime\Support;
 
 /**
  * Exact compatibility and actionable-registration shape of standalone beta.8.

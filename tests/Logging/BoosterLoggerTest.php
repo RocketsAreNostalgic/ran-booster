@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Logging;
+namespace RAN\Tests\Logging;
 
 // Direct local filesystem operations inspect the bounded capture under test.
 // phpcs:disable WordPress.WP.AlternativeFunctions

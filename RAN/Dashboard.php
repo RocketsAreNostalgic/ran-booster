@@ -1,6 +1,6 @@
 <?php
 
-namespace RAN;
+namespace RAN; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedNamespaceFound -- Core owns the established three-character RAN namespace; WPCS requires four characters.
 
 use LogicException;
 use RAN\Admin\AdminAddOnRegistry;

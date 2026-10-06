@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Portability;
+namespace RAN\Tests\Portability;
 
 require_once __DIR__ . '/WpPusherCoexistenceWordPressFunctions.php';
 

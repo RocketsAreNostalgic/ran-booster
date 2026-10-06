@@ -17,6 +17,7 @@ if ( ! function_exists( 'wp_verify_nonce' ) ) {
 }
 
 if ( ! function_exists( 'wp_nonce_field' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function wp_nonce_field( string $action ): void {
 		echo '<input type="hidden" name="_wpnonce" value="' . esc_attr( wp_create_nonce( $action ) ) . '">';
 	}

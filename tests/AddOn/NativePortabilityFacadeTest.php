@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\AddOn;
+namespace RAN\Tests\AddOn;
 
 use PHPUnit\Framework\TestCase;
 use RAN\AddOn\Portability\NativePortabilityFacade;
@@ -22,7 +22,7 @@ use RAN\Secrets\SecretsFile;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use ReflectionClass;
-use Tests\Portability\TemporaryCredentialProvider;
+use RAN\Tests\Portability\TemporaryCredentialProvider;
 
 require_once __DIR__ . '/../Support/PackageOperationGlobalWordPressFunctions.php';
 require_once __DIR__ . '/../Runtime/RuntimeSupportWordPressFunctions.php';

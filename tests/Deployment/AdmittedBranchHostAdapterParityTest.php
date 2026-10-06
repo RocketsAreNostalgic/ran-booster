@@ -6,7 +6,7 @@ declare(strict_types=1);
 // phpcs:disable WordPress.WP.AlternativeFunctions -- Tests deliberately create and remove isolated fixture files.
 // phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited -- The updater lock deliberately uses the scoped wpdb double.
 
-namespace Tests\Deployment;
+namespace RAN\Tests\Deployment;
 
 require_once __DIR__ . '/AttemptRepositoryDatabase.php';
 require_once __DIR__ . '/AdmittedBranchHostAdapterWordPressFunctions.php';
@@ -51,8 +51,8 @@ use RAN\WPBranchUpdater\V1\Runtime\BranchUpdater;
 use RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionResult;
 use RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor;
 use RuntimeException;
-use Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
-use Tests\Support\RepositorySourceGuardDatabase;
+use RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+use RAN\Tests\Support\RepositorySourceGuardDatabase;
 use ZipArchive;
 
 final class AdmittedBranchHostAdapterParityTest extends TestCase {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\RepositoryProvider;
+namespace RAN\Tests\RepositoryProvider;
 
 require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
 
@@ -46,10 +46,10 @@ use RAN\RepositoryProvider\WebhookNormalizer;
 use RAN\RepositoryProvider\WebhookRequest;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\CredentialUsageReader;
-use Tests\Secrets\SecretsFileTestFactory;
-use Tests\Support\CredentialUsageDatabase;
-use Tests\RepositoryProvider\Support\ExternalFixtureProvider;
-use Tests\RepositoryProvider\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
+use RAN\Tests\Secrets\SecretsFileTestFactory;
+use RAN\Tests\Support\CredentialUsageDatabase;
+use RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider;
+use RAN\Tests\RepositoryProvider\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
 
 final class ProviderDiagnosticsContractTest extends TestCase {
 
@@ -189,7 +189,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 
 	public function test_failing_diagnostics_supplier_is_safely_rejected_before_mutation(): void {
 		$provider = new class() implements RepositoryProvider {
-			use \Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
 
 			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'unsafe' ), 'Unsafe', 'https://example.test/', 'Owner' );
@@ -234,7 +234,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 	public function test_sealed_registry_rejects_late_registration(): void {
 		$metadata_calls = 0;
 		$provider       = new class( $metadata_calls ) implements RepositoryProvider {
-			use \Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
 
 			public function __construct( private int &$metadata_calls ) {
 			}
@@ -724,7 +724,7 @@ final readonly class RegistrationGuardWebhookPolicy implements ProviderWebhookPo
 
 final readonly class RegistrationGuardProvider implements RepositoryProvider, ProviderCredentialPolicySupplier, WebhookNormalizer {
 
-	use \Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
 
 	private ProviderCode $code;
 

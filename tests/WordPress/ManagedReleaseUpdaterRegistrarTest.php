@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Tests\WordPress;
+namespace RAN\Tests\WordPress;
 
 use PHPUnit\Framework\TestCase;
 use RAN\PackageArtifactLimit;
 use RAN\WordPress\ManagedReleaseUpdaterRegistrar;
-use Tests\Support\RecordingReleaseUpdaterRuntime;
+use RAN\Tests\Support\RecordingReleaseUpdaterRuntime;
 
 /** Proves the current release-updater registrar argument contract. */
 final class ManagedReleaseUpdaterRegistrarTest extends TestCase {

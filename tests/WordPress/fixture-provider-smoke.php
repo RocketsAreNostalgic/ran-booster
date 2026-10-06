@@ -1,4 +1,5 @@
 <?php
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Isolated CLI harness locals do not enter shipped plugin scope; declarations and hooks remain checked.
 
 // Executed by WP-CLI inside a disposable WordPress installation.
 
@@ -28,7 +29,7 @@ if ( 0 !== $provider->get_client()->get_request_count() ) {
 }
 
 if ( ! $registry->is_sealed()
-	|| ! $provider instanceof RANBoosterFixtureProvider\Provider
+	|| ! $provider instanceof RAN_Booster_FixtureProvider\Provider
 	|| $provider instanceof RAN\RepositoryProvider\RepositoryBrowser
 	|| ! $provider instanceof RAN\RepositoryProvider\WebhookNormalizer
 ) {

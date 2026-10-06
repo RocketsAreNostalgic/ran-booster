@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
+namespace RAN\Tests\Admin;
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Private hook spies belong with this full-flow isolation test.
 
@@ -24,6 +24,7 @@ require_once __DIR__ . '/DashboardRoutingWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/TroubleshootingGetWordPressFunctions.php';
 
 if ( ! defined( 'ABSPATH' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 	define( 'ABSPATH', dirname( __DIR__ ) . '/fixtures/wordpress/' );
 }
 

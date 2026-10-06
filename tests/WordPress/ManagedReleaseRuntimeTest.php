@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\WordPress;
+namespace RAN\Tests\WordPress;
 
 require_once __DIR__ . '/ManagedReleaseRuntimeWordPressFunctions.php';
 require_once __DIR__ . '/RuntimeReleaseStore.php';
@@ -52,7 +52,7 @@ use RAN\WordPress\ManagedReleaseStore;
 use RAN\WordPress\ManagedReleaseSubdirectoryNotSupported;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
 use RAN\WordPress\WordPressUpdaterLock;
-use Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
+use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 
 final class ManagedReleaseRuntimeTest extends TestCase {
 
@@ -1972,7 +1972,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$themes    = $this->createStub( ThemeRepository::class );
 		$provider  = new class() implements RepositoryProvider, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseNativeTargets {
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public int $list_calls = 0;
 
@@ -3045,7 +3045,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 	private function metadata_only_registry( string $code = 'gh', string $base_url = 'https://github.com/' ): ProviderRegistry {
 		$provider = new class( $code, $base_url ) implements RepositoryProvider, RepositoryReleaseMetadata {
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public function __construct( private string $code, private string $base_url ) {
 			}

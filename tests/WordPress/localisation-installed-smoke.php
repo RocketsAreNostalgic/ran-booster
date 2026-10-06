@@ -1,4 +1,5 @@
 <?php
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Isolated CLI harness locals do not enter shipped plugin scope; declarations and hooks remain checked.
 
 // Executed by WP-CLI inside an isolated disposable WordPress installation.
 
@@ -54,12 +55,14 @@ if ( ! is_textdomain_loaded( 'ran-booster' ) || $expected_php_translation !== $p
 
 $_GET = array( 'page' => 'ran-booster-plugins' ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only route fixture.
 set_current_screen( 'ran-booster_page_ran-booster-plugins' );
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 do_action( 'admin_enqueue_scripts', 'ran-booster_page_ran-booster-plugins' );
 $_GET = array( // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only route fixture.
 	'page' => 'ran-booster',
 	'tab'  => 'portability',
 );
 set_current_screen( 'toplevel_page_ran-booster' );
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 do_action( 'admin_enqueue_scripts', 'toplevel_page_ran-booster' );
 
 $scripts = wp_scripts();

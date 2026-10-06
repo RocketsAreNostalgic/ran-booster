@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Runtime;
+namespace RAN\Tests\Runtime;
 
 require_once __DIR__ . '/Support/GitHubWorkflowAssistanceWordPressFunctions.php';
 

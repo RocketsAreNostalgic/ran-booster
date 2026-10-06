@@ -115,7 +115,7 @@ final class StandardsCoverageTest extends TestCase {
 		$root = dirname( __DIR__, 2 );
 		require_once $root . '/vendor/squizlabs/php_codesniffer/autoload.php';
 		$runner         = new Runner();
-		$runner->config = new Config( array( '--standard=' . $root . '/.phpcs.xml', ...$arguments ) );
+		$runner->config = new Config( array( '--standard=' . ( $standard ?? $root . '/.phpcs.xml' ), ...$arguments ) );
 		$runner->init();
 		$paths = array();
 		foreach ( new FileList( $runner->config, $runner->ruleset ) as $path => $file ) {
@@ -187,6 +187,56 @@ final class StandardsCoverageTest extends TestCase {
 			self::assertContains( 'WordPress.PHP.YodaConditions.NotYoda', $result['sources'], $path );
 			self::assertContains( 'Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed', $result['sources'], $path );
 		}
+	}
+
+	public function test_local_ruleset_cannot_disable_diagnostics_with_severity_overrides(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Inspect the owned quality configuration without executing it.
+		$xml = file_get_contents( dirname( __DIR__, 2 ) . '/.phpcs.xml' );
+		self::assertIsString( $xml );
+		self::assertFalse( $this->has_disabled_severity( $xml ), 'Local severity overrides must retain positive diagnostic severity.' );
+	}
+
+	public function test_variable_naming_diagnostics_remain_enforced_across_owned_paths(): void {
+		$source = '<?php function ran_booster_probe( $camelCase ) { return $camelCase; }';
+		foreach ( array( 'RAN/NewQualityProbe.php', 'views/new-quality-probe.php', 'scripts/new-quality-probe.php', 'tests/Quality/NewQualityProbe.php', 'new-quality-probe.php' ) as $path ) {
+			$result = $this->inspect( $source, $path, 'WordPress.NamingConventions.ValidVariableName' );
+			self::assertSame( array_fill( 0, 2, 'WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase' ), $result['sources'], $path );
+		}
+	}
+
+	public function test_zero_severity_hides_real_diagnostics_but_fails_the_guard(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Copy only the owned ruleset into a disposable negative control.
+		$xml = file_get_contents( dirname( __DIR__, 2 ) . '/.phpcs.xml' );
+		self::assertIsString( $xml );
+		$xml = str_replace( '</ruleset>', '<rule ref="WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase"><severity>0</severity></rule></ruleset>', $xml );
+		self::assertTrue( $this->has_disabled_severity( $xml ) );
+		$path = sys_get_temp_dir() . '/ran-severity-' . bin2hex( random_bytes( 12 ) ) . '.xml';
+		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write only the uniquely allocated private ruleset fixture.
+			self::assertSame( strlen( $xml ), file_put_contents( $path, $xml ) );
+			$result = $this->inspect( '<?php function ran_booster_probe( $camelCase ) { return $camelCase; }', 'RAN/NewQualityProbe.php', 'WordPress.NamingConventions.ValidVariableName', $path );
+			self::assertSame( array(), $result['sources'], 'The rejected configuration must demonstrate a real checker bypass.' );
+			self::assertSame( 0, $result['exit'] );
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this uniquely allocated disposable ruleset.
+			unlink( $path );
+		}
+		foreach ( array( '00', '-1', 'invalid' ) as $severity ) {
+			self::assertTrue( $this->has_disabled_severity( '<ruleset><rule ref="WordPress"><severity>' . $severity . '</severity></rule></ruleset>' ) );
+		}
+		self::assertFalse( $this->has_disabled_severity( '<ruleset><rule ref="WordPress"><severity>5</severity></rule></ruleset>' ) );
+	}
+
+	private function has_disabled_severity( string $xml ): bool {
+		$ruleset = new \DOMDocument();
+		self::assertTrue( $ruleset->loadXML( $xml, LIBXML_NONET ) );
+		foreach ( ( new \DOMXPath( $ruleset ) )->query( '//rule/severity' ) as $severity ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOMNode exposes the native textContent property.
+			if ( ! preg_match( '/^[1-9][0-9]*$/D', trim( $severity->textContent ) ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public function test_an_inherited_class_does_not_hide_an_unused_private_parameter(): void {
@@ -286,14 +336,14 @@ final class StandardsCoverageTest extends TestCase {
 	}
 
 	/** @return array{exit: int, sources: list<string>, lines: list<int>} */
-	private function inspect( string $source, string $path, string $sniffs = 'WordPress.PHP.YodaConditions,Generic.CodeAnalysis.UnusedFunctionParameter,Universal.NamingConventions.NoReservedKeywordParameterNames' ): array {
+	private function inspect( string $source, string $path, string $sniffs = 'WordPress.PHP.YodaConditions,Generic.CodeAnalysis.UnusedFunctionParameter,Universal.NamingConventions.NoReservedKeywordParameterNames', ?string $standard = null ): array {
 		$root = dirname( __DIR__, 2 );
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open -- Run the locked checker in isolation; these are CLI-only enforcement controls.
 		$process = proc_open(
 			array(
 				PHP_BINARY,
 				$root . '/vendor/bin/phpcs',
-				'--standard=' . $root . '/.phpcs.xml',
+				'--standard=' . ( $standard ?? $root . '/.phpcs.xml' ),
 				'--sniffs=' . $sniffs,
 				'--report=json',
 				'--no-colors',

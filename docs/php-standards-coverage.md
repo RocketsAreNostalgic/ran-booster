@@ -147,6 +147,15 @@ with WordPress-specific rules. They are not a request to re-enable contradictory
 upstream conventions. Core explicitly restores the seven unused-parameter
 callback/extended/interface codes as blocking errors.
 
+Local rule-level severity overrides must remain positive integers. The existing
+`StandardsCoverageTest` checks this directly and requires the exact variable-name
+diagnostic across root, source, view, script and test paths. Its negative control
+copies the real ruleset, sets that diagnostic to severity zero, and proves both
+that PHPCS hides the violation and that the independent guard rejects the change.
+This closes a reproduced local XML bypass; it does not certify every inherited
+rule or dispose the remaining sniff-level annotation inventory. Unexplained or
+file-wide exact/sniff-level suppressions still require separate narrowing.
+
 ## Completion and separate work
 
 Qualification evidence belongs in the exact opened PR and the central quality

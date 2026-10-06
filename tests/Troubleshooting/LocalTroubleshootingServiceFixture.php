@@ -97,7 +97,7 @@ final class LocalTroubleshootingServiceFixture extends LocalTroubleshootingServi
 		return $this->file_modifications_allowed;
 	}
 
-	protected function filesystem_method(): ?string {
+	protected function filesystem_method(): string {
 		++$this->filesystem_reads;
 
 		return $this->filesystem_method;

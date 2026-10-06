@@ -152,6 +152,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 					static fn (): null => null
 				),
 				'storage_ready'       => $secrets->assert_managed_storage_ready(),
+				default               => throw new \UnhandledMatchError( 'Unknown managed-operation fixture.' ),
 			};
 			self::fail( 'Managed secret use must fail closed when the runtime is unsupported.' );
 		} catch ( SecretsStorageUnavailable $failure ) {
@@ -612,7 +613,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			}
 
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of load retains the production method contract; these inputs do not affect this controlled result.
-			public function load( bool $repair_autoload = true ): ?string {
+			public function load( bool $repair_autoload = true ): string {
 				return $this->key;
 			}
 

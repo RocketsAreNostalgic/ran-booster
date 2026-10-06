@@ -240,13 +240,13 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 			$codec->encrypt( str_repeat( 'x', EncryptedSecretsEnvelopeCodec::MAX_BYTES + 1 ), self::KEY );
 			self::fail( 'An oversized plaintext must fail.' );
 		} catch ( RuntimeException ) {
-			self::assertTrue( true );
+			self::addToAssertionCount( 1 );
 		}
 		try {
 			$codec->encrypt( str_repeat( 'x', 800000 ), self::KEY );
 			self::fail( 'A plaintext whose encoded envelope exceeds the limit must fail.' );
 		} catch ( RuntimeException ) {
-			self::assertTrue( true );
+			self::addToAssertionCount( 1 );
 		}
 
 		$this->expectException( RuntimeException::class );

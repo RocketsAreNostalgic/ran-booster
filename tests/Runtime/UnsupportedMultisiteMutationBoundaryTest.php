@@ -144,7 +144,7 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 			$facade->status( 'plugin', 'example/example.php' );
 			self::fail( 'A retained release facade must not read status on unsupported Multisite.' );
 		} catch ( UnsupportedRuntimeException ) {
-			self::assertTrue( true );
+			self::addToAssertionCount( 1 );
 		}
 
 		$this->expectException( UnsupportedRuntimeException::class );
@@ -164,7 +164,7 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 			$service->execute( $this->blank( PackageOperation::class ) );
 			self::fail( 'Package operations must be unavailable.' );
 		} catch ( UnsupportedRuntimeException ) {
-			self::assertTrue( true );
+			self::addToAssertionCount( 1 );
 		}
 
 		$coordinator = $this->deployment_coordinator();
@@ -172,7 +172,7 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 			$coordinator->queue_manual_updates( array() );
 			self::fail( 'Queued mutations must be unavailable.' );
 		} catch ( UnsupportedRuntimeException ) {
-			self::assertTrue( true );
+			self::addToAssertionCount( 1 );
 		}
 
 		$this->expectException( UnsupportedRuntimeException::class );
@@ -192,7 +192,7 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 			$removal->execute( $this->blank( PackageOperation::class ) );
 			self::fail( 'Package removal must be unavailable.' );
 		} catch ( UnsupportedRuntimeException ) {
-			self::assertTrue( true );
+			self::addToAssertionCount( 1 );
 		}
 
 		$this->expectException( UnsupportedRuntimeException::class );
@@ -227,7 +227,7 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 				$entry_point();
 				self::fail( 'Transporter must be unavailable.' );
 			} catch ( UnsupportedRuntimeException ) {
-				self::assertTrue( true );
+				self::addToAssertionCount( 1 );
 			}
 		}
 	}
@@ -236,7 +236,9 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		$entry_points = array(
 			static fn (): mixed => ( new PluginRepository() )->unlink( 'example/example.php' ),
 			fn (): mixed => $this->blank( DeploymentAttemptRepository::class )->claim_next(),
-			fn (): mixed => $this->blank( Database::class )->maybe_upgrade(),
+			function (): void {
+				$this->blank( Database::class )->maybe_upgrade();
+			},
 		);
 
 		foreach ( $entry_points as $entry_point ) {
@@ -244,7 +246,7 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 				$entry_point();
 				self::fail( 'The lowest mutation seam must be unavailable.' );
 			} catch ( UnsupportedRuntimeException ) {
-				self::assertTrue( true );
+				self::addToAssertionCount( 1 );
 			}
 		}
 	}

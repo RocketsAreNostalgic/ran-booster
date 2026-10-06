@@ -56,14 +56,15 @@ and does not raise the analysis level or certify new dependency/host versions.
 ## Development analysis migration
 
 The separate level-5 `phpstan-development.neon` invocation now covers all PHP
-under `scripts/`, `tests/PackageRemoval/`, `tests/Security/`, `tests/Uninstall/`
-and `tests/Webhook/`: 12 of 362 maintained development files, alongside the
+under `scripts/`, `tests/PackageRemoval/`, `tests/Security/`, `tests/Uninstall/`,
+`tests/Webhook/`, `tests/Portability/`, `tests/Secrets/`, `tests/Troubleshooting/`
+and `tests/Runtime/`: 50 of 362 maintained development files, alongside the
 unchanged 345 shipped production files. Production analysis runs separately;
 development function doubles do not enter its symbol discovery.
 
 Development discovery starts at the whole scripts/tests roots. Temporary excluded
 roles are explicit in configuration, and `phpstan-development-pending.txt` records
-the exact 350 unresolved files. This is migration debt, **not accepted or permanent
+the exact 312 unresolved files. This is migration debt, **not accepted or permanent
 exemptions**, and does not establish all-maintained or ecosystem acceptance.
 `ProductionAnalysisCoverageTest` independently discovers all development PHP and
 compares its effective analysis population plus the exact pending inventory.
@@ -80,6 +81,16 @@ cohort changes only accurate fixture types (PHPUnit stub intersection, non-null
 fixture return, integer/string keys in intentionally malformed webhook input).
 The CLI verifier also handles an unavailable argument array through its existing
 usage-failure path. Ordinary CLI behavior, production PHP and dependencies are unchanged.
+
+The next four cohorts retain all deliberate rejection assertions. Catch-block
+success markers now increment PHPUnit's assertion count instead of asserting the
+literal `true`; the preceding failure and exact exception catch still prove rejection.
+The shared in-memory key fixture explicitly reads mutable static state, preserving
+same-instance reset/recovery tests without narrowing away their checks. Other
+fixture declarations describe their actual return values and a pure failure double;
+the configuration parser check now also asserts a nonempty token result. A dynamic
+bootstrap constant is read with `constant()`, retaining the exact API-version check.
+No production source or dependency changes are needed for these cohorts.
 
 Controls cover new root/nested files, pending-role splits, stub-file removal and
 real bad-return/corrected-return diagnostics. Effective level below five or

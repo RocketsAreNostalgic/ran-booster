@@ -195,18 +195,18 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 			}
 
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of query retains the production method contract; these inputs do not affect this controlled result.
-			public function query( string $query ): int|false {
+			public function query( string $query ): false {
 				return false;
 			}
 
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of get_results retains the production method contract; these inputs do not affect this controlled result.
-			public function get_results( string $query ): array|false {
+			public function get_results( string $query ): false {
 				return false;
 			}
 
 			/** @param array<string, mixed> $data */
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of insert retains the production method contract; these inputs do not affect this controlled result.
-			public function insert( string $table, array $data ): int|false {
+			public function insert( string $table, array $data ): false {
 				return false;
 			}
 		};

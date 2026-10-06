@@ -69,7 +69,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		self::assertIsString( $written );
 		self::assertStringNotContainsString( "\n", str_replace( "\r\n", '', $written ) );
 		self::assertStringContainsString( "agency\\'s\\\\directory' );\r\n", $written );
-		token_get_all( $written, TOKEN_PARSE );
+		self::assertNotEmpty( token_get_all( $written, TOKEN_PARSE ) );
 	}
 
 	public function test_arepeated_write_refuses_the_existing_constant_without_changing_bytes(): void {
@@ -408,6 +408,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		yield 'fsync' => array(
 			'temporary_sync_failed',
 			static fn(): WpConfigSecretsPathWriter => new class() extends WpConfigSecretsPathWriter {
+				/** @phpstan-pure This failure double performs no filesystem operation. */
 				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of sync_handle retains the production method contract; these inputs do not affect this controlled result.
 				protected function sync_handle( mixed $handle ): bool {
 					return false;

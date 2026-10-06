@@ -1158,7 +1158,7 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 		return $this->root . '/wp-content/plugins/ran-booster';
 	}
 
-	protected function document_root(): ?string {
+	protected function document_root(): string {
 		return $this->root;
 	}
 

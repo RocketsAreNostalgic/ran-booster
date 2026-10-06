@@ -35,8 +35,9 @@ caller-supplied view PHPDoc and the generated Admin Shell bytes; see
 
 `composer analyze` also runs the separate level-5 development profile. Its broad
 `scripts/` and `tests/` discovery currently qualifies scripts plus PackageRemoval,
-Security, Uninstall and Webhook test directories (12 PHP files). The temporary
-`phpstan-development-pending.txt` inventory pins the remaining 350 unqualified
+Security, Uninstall, Webhook, Portability, Secrets, Troubleshooting and Runtime
+test directories (50 PHP files). The temporary
+`phpstan-development-pending.txt` inventory pins the remaining 312 unqualified
 files; these are pending debt, not accepted exemptions. The existing coverage
 suite compares all development PHP with effective selection plus that exact
 inventory, so a new or split file cannot silently enlarge an excluded role.

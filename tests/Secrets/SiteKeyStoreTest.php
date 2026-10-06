@@ -372,7 +372,7 @@ final class AtomicFileSiteKeyStore extends SiteKeyStore {
 		}
 	}
 
-	protected function read_autoload_value(): ?string {
+	protected function read_autoload_value(): string {
 		return 'off';
 	}
 

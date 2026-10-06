@@ -66,8 +66,10 @@ symbol environments, not lists of files permitted to enter analysis.
 The isolated development sweep can exceed Composer's five-minute process limit.
 Only after production analysis, the `analyze` script invokes Composer's built-in
 timeout override before running that sweep; every analyzer exit remains blocking.
-The repository-quality CI job retains a bounded twenty-minute limit for dependency
-setup, the complete PHP contract and frontend checks.
+The repository-quality CI job retains a bounded thirty-minute limit for dependency
+setup, the complete PHP contract and frontend checks. The first full native run
+took 19 minutes 55 seconds, so twenty minutes leaves insufficient scheduling and
+future-file headroom. All other CI job limits are unchanged.
 
 The old 312-file pending inventory is removed. There are 363 analyzed development
 files and 345 production files at this candidate (708 directly analyzed of 710

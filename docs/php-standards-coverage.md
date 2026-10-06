@@ -35,10 +35,13 @@ PHP while distinguishing actual comments from fixture strings.
 
 ## Exemption hardening under organisation #134
 
-The included-view exception now selects only the variable-prefix diagnostic.
+The 32 existing handwritten views retain only the variable-prefix diagnostic through
+file-local explanations. New files, including nested views, have no automatic
+waiver. The immutable generated Admin Shell retains one exact-filename message
+exception, with a tracked-inventory guard rejecting any other matching path.
 A single dynamic hook invocation in `views/portability.php` has an exact-line
 exception: both callers pass literal `ran_booster_portability_*` hooks. New
-functions, classes, constants and hooks in views remain checked. No executable
+functions, classes, constants, hooks and unreviewed variable bindings remain checked. No executable
 production tokens change.
 
 The token-aware guard now rejects case variants and standard/category selectors,
@@ -104,7 +107,7 @@ The generated catalogue is checked by the repository's warning-fatal generator.
 | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | PSR-4 class filenames                      | Shared ancestry intentionally excludes WordPress hyphenated/lowercase class-file rules.                                                                                                                                                                                          |
 | RAN namespace                              | WPCS hard-codes a four-character minimum; Core retains its established three-character root and disables that specific namespace diagnostic. Other configured global/hook prefixes remain checked.                                                                               |
-| Test global names and included view locals | WordPress/native test doubles need real function names; included template locals are not plugin globals. Only NonPrefixedVariableFound is exempt in views; declarations and hooks remain checked, including nested future files. The broad tests exemption remains a separate, unaccepted narrowing cohort.                                                                                                             |
+| Test global names and included view locals | WordPress/native test doubles need real function names; included template locals are not plugin globals. Existing handwritten views explain NonPrefixedVariableFound at the file; new views have no automatic exemption. The immutable generated view retains one exact-filename rule guarded against duplicate-path collisions. The broad tests exemption remains a separate, unaccepted narrowing cohort.                                                                                                             |
 | Native methods, properties and signatures  | PHPUnit lifecycle names, WordPress/wpdb/Requests contracts, MySQL metadata and ZipArchive fields cannot be renamed as owned identifiers. Exact annotations name the boundary.                                                                                                    |
 | Public named arguments                     | Existing public factory/DTO parameter names and retained renderer slots remain stable in this standards-only change; they are not new aliases or API compatibility layers.                                                                                                       |
 | Callbacks and implicit use                 | Fixed positional slots, pass-by-reference redirect arguments, include locals and compact() fields are retained with declaration-specific reasons.                                                                                                                                |

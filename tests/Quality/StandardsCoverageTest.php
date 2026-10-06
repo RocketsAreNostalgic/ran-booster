@@ -218,15 +218,36 @@ final class StandardsCoverageTest extends TestCase {
 	public function test_view_locals_do_not_exempt_new_declarations_or_hooks(): void {
 		$sniff  = 'WordPress.NamingConventions.PrefixAllGlobals';
 		$source = '<?php $view_binding = true; function unprefixed_helper() {} class UnprefixedType {} const UNPREFIXED_VALUE = 1; do_action( "unprefixed_hook" );';
-		foreach ( array( 'views/new-probe.php', 'views/nested/new-probe.php' ) as $path ) {
+		foreach ( array( 'views/new-probe.php', 'views/nested/new-probe.php', 'RAN/views/new-probe.php' ) as $path ) {
 			$result = $this->inspect( $source, $path, $sniff );
 			foreach ( array( 'NonPrefixedFunctionFound', 'NonPrefixedClassFound', 'NonPrefixedConstantFound', 'NonPrefixedHooknameFound' ) as $code ) {
 				self::assertContains( $sniff . '.' . $code, $result['sources'], $path );
 			}
-			self::assertNotContains( $sniff . '.NonPrefixedVariableFound', $result['sources'] );
+			self::assertContains( $sniff . '.NonPrefixedVariableFound', $result['sources'] );
 		}
 		$result = $this->inspect( '<?php $view_binding = true;', 'RAN/NewProbe.php', $sniff );
 		self::assertContains( $sniff . '.NonPrefixedVariableFound', $result['sources'] );
+	}
+
+	public function test_only_the_immutable_admin_shell_can_match_its_path_exception(): void {
+		$root = dirname( __DIR__, 2 );
+		foreach ( $this->tracked_php_files( $root ) as $path ) {
+			self::assertFalse( $this->is_generated_exception_collision( substr( $path, strlen( $root ) + 1 ) ), $path );
+		}
+		self::assertTrue( $this->is_generated_exception_collision( 'RAN/views/generated/ran-admin-shell.php' ) );
+		self::assertFalse( $this->is_generated_exception_collision( 'views/generated/ran-admin-shell.php' ) );
+		$result = $this->inspect( '<?php $binding = true;', 'RAN/views/generated/ran-admin-shell.php', 'WordPress.NamingConventions.PrefixAllGlobals' );
+		self::assertSame( array(), $result['sources'], 'The collision guard must detect this real rule-pattern exemption.' );
+	}
+
+	private function is_generated_exception_collision( string $path ): bool {
+		return 'views/generated/ran-admin-shell.php' !== $path && 1 === preg_match( '~/views/generated/ran-admin-shell\.php$~i', '/' . $path );
+	}
+
+	public function test_view_binding_annotation_only_exempts_its_exact_diagnostic(): void {
+		$source = "<?php\n// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Caller-owned include bindings.\n\$binding = true;\nfunction unprefixed_helper() {}";
+		$result = $this->inspect( $source, 'views/new-probe.php', 'WordPress.NamingConventions.PrefixAllGlobals' );
+		self::assertSame( array( 'WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound' ), $result['sources'] );
 	}
 
 	/** @return array{exit: int, sources: list<string>, lines: list<int>} */

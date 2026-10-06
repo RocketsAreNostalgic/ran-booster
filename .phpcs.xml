@@ -41,9 +41,9 @@
 		</properties>
 	</rule>
 
-	<!-- Included view bindings are locals; declarations and hooks still require prefixes. -->
+	<!-- Immutable generated Admin Shell is verified independently; handwritten view exceptions are local. -->
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound">
-		<exclude-pattern>/views/</exclude-pattern>
+		<exclude-pattern>/views/generated/ran-admin-shell\.php$</exclude-pattern>
 	</rule>
 
 	<!-- WPCS 3.4 hard-codes a four-character minimum; Booster's established production namespace root is RAN. -->

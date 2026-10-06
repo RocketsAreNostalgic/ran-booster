@@ -201,8 +201,8 @@ final class ReleaseManagementControls {
 		}
 		$prospective = $this->prospective_projection( $type );
 		$recheck     = isset( $_GET['ran_booster_release_recheck'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only UI marker.
-			&& is_scalar( $_GET['ran_booster_release_recheck'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			&& '1' === (string) $_GET['ran_booster_release_recheck']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			&& is_scalar( $_GET['ran_booster_release_recheck'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This scalar flag only selects read-only source-section presentation; it does not perform a release recheck.
+			&& '1' === (string) $_GET['ran_booster_release_recheck']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This literal comparison only selects read-only source-section presentation; mutation controls keep their separate nonces.
 
 		$this->request_boundary( fn () => $this->display->render_advanced_source_section( $mode, $type, $selected_source, $package, $status, $page_url, $result['channel'] ?? '', $nonces, $prospective, $recheck, $operation_notice_html, $repository_conflict ), null );
 		if ( $release_pane ) {

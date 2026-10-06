@@ -28,4 +28,4 @@ if ( 2 !== $ran_booster_theme_callback_count ) {
 	);
 }
 
-WP_CLI::success( 'Normal Booster registration covers active and inactive managed themes through the neutral updater hooks.' );
+WP_CLI::success( 'Normal Booster registration covers active and inactive managed themes through the neutral updater hooks.' ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)

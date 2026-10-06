@@ -150,7 +150,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		self::assertSame( 403, $controller->handle()['status'] );
 		$GLOBALS['ran_booster_repository_admin_capabilities']['manage_options'] = true;
 		$GLOBALS['ran_booster_repository_admin_nonce_valid']                    = false;
-		self::assertSame( 403, $controller->handle()['status'] );
+		self::assertThat( $controller->handle()['status'], self::identicalTo( 403 ) );
 		$GLOBALS['ran_booster_repository_admin_nonce_valid']           = true;
 		$GLOBALS['ran_booster_repository_admin_user_meta_write_fails'] = true;
 		self::assertSame( 500, $controller->handle()['status'] );

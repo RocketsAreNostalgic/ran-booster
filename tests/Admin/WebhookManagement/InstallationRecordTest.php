@@ -148,7 +148,7 @@ final class InstallationRecordTest extends TestCase {
 				);
 				self::fail( 'Invalid profile metadata was accepted.' );
 			} catch ( \InvalidArgumentException ) {
-				self::assertTrue( true );
+				$this->addToAssertionCount( 1 );
 			}
 		}
 	}

@@ -164,9 +164,9 @@ final class RepositoryWebhookManagementControls {
 	}
 
 	/**
-	 * @param array<string, array<string, mixed>> $rows
-	 * @param array<string, array<string, mixed>> $repository_projections
-	 * @return array<string, array<string, mixed>>
+	 * @param array<array-key, array<string, mixed>> $rows
+	 * @param array<array-key, array<string, mixed>> $repository_projections
+	 * @return array<array-key, array<string, mixed>>
 	 */
 	public function enrich_repository_rows( array $rows, string $provider_code, array $repository_projections, string $return_url ): array {
 		$metadata = $this->supports_provider( $provider_code ) ? $this->controller->provider_metadata( $provider_code ) : null;

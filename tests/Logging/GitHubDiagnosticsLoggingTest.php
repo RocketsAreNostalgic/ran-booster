@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace RAN\Tests\Logging;
 
 // Direct local filesystem operations inspect the bounded temporary capture under test.
-// phpcs:disable WordPress.WP.AlternativeFunctions
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused escaping-provider fixture belongs beside the logging boundary tests.
 
 require_once __DIR__ . '/LoggingWordPressFunctions.php';
 
@@ -42,6 +40,7 @@ final class GitHubDiagnosticsLoggingTest extends TestCase {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->capture_directory = sys_get_temp_dir() . '/ran-booster-github-diagnostics-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		self::assertTrue( mkdir( $this->capture_directory, 0700 ) );
 		$this->capture = new TemporaryDebugCapture(
 			$this->capture_directory . '/secrets.php',
@@ -57,10 +56,12 @@ final class GitHubDiagnosticsLoggingTest extends TestCase {
 		foreach ( array( 'ran-booster-debug.php', 'ran-booster-debug.php.lock' ) as $name ) {
 			$path = $this->capture_directory . '/' . $name;
 			if ( is_file( $path ) || is_link( $path ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 				unlink( $path );
 			}
 		}
 		if ( is_dir( $this->capture_directory ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 			rmdir( $this->capture_directory );
 		}
 	}
@@ -167,6 +168,7 @@ final class GitHubDiagnosticsLoggingTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class EscapingDiagnosticProvider implements RepositoryProvider, WebhookNormalizer {
 	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
 
@@ -206,7 +208,13 @@ final class EscapingDiagnosticProvider implements RepositoryProvider, WebhookNor
 			}
 			public function normalize_webhook( array $metadata, mixed $secret ): array {
 				unset( $metadata, $secret );
-				return array();
+				return array(
+					'label'        => '',
+					'scope'        => '',
+					'target'       => '',
+					'authority_id' => '',
+					'secret'       => '',
+				);
 			}
 			public function get_constant_names(): array {
 				return array();

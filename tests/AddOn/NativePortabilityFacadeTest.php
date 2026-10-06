@@ -76,7 +76,7 @@ final class NativePortabilityFacadeTest extends TestCase {
 		$result = $facade->review( $this->candidate(), 'valid-nonce' );
 
 		self::assertSame( PortabilityReviewResult::ADOPT, $result->action );
-		self::assertSame( 1, count( $this->provider?->credential_ids ?? array() ) );
+		self::assertSame( 1, count( $this->provider->credential_ids ?? array() ) );
 
 		$missing = $this->facade( false )->review( $this->candidate(), 'valid-nonce' );
 		self::assertSame( PortabilityReviewResult::BLOCKED, $missing->action );

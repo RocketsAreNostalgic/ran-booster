@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Logging;
 
 // Direct local filesystem operations provide the atomic, permission and private-location guarantees required by this bounded sidecar.
-// phpcs:disable WordPress.WP.AlternativeFunctions
 
 use Closure;
 use RuntimeException;
@@ -200,6 +199,7 @@ final class TemporaryDebugCapture {
 				if ( is_link( $lock_path ) ) {
 					throw new RuntimeException( 'Refusing to delete an invalid Booster debug capture lock.' );
 				}
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Delete only the exact local storage entry after the surrounding native ownership, type and identity checks.
 				if ( ! unlink( $lock_path ) ) {
 					throw new RuntimeException( 'Could not delete the Booster debug capture lock safely.' );
 				}
@@ -304,7 +304,8 @@ final class TemporaryDebugCapture {
 		}
 
 		$had_lock = file_exists( $lock_path );
-		$lock     = fopen( $lock_path, 'c+b' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- The lock requires a native handle for flock and fstat without truncating existing bytes.
+		$lock = fopen( $lock_path, 'c+b' );
 		if ( false === $lock ) {
 			throw new RuntimeException( 'Could not open the Booster debug capture lock.' );
 		}
@@ -318,6 +319,7 @@ final class TemporaryDebugCapture {
 				throw new RuntimeException( 'Could not inspect the Booster debug capture lock.' );
 			}
 			if ( 0600 !== ( $lock_stat['mode'] & 0777 )
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set and verify native POSIX permission bits on the private file before it can be trusted or installed.
 				&& ( ( $had_lock && ! $repair_existing_permissions ) || ! chmod( $lock_path, 0600 ) )
 			) {
 				throw new RuntimeException( 'Could not secure the Booster debug capture lock.' );
@@ -329,6 +331,7 @@ final class TemporaryDebugCapture {
 			return $operation( $lock );
 		} finally {
 			flock( $lock, LOCK_UN );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the native handle acquired for bounded reads, exclusive locking or atomic local replacement.
 			fclose( $lock );
 		}
 	}
@@ -356,6 +359,7 @@ final class TemporaryDebugCapture {
 			&& 0700 === ( $stat['mode'] & 0777 )
 			&& $this->owned_by_process( $stat )
 			&& is_readable( $directory )
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- The private local storage boundary checks actual PHP-process writability alongside canonical path and inode checks.
 			&& is_writable( $directory );
 	}
 
@@ -379,6 +383,7 @@ final class TemporaryDebugCapture {
 			throw new RuntimeException( 'Refusing to read an invalid Booster debug capture.' );
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- The native read handle supplies fstat type/mode/size checks and a bounded stream read.
 		$handle = fopen( $this->path, 'rb' );
 		if ( false === $handle ) {
 			throw new RuntimeException( 'The Booster debug capture is not readable.' );
@@ -399,6 +404,7 @@ final class TemporaryDebugCapture {
 				throw new RuntimeException( 'The Booster debug capture exceeds its size limit.' );
 			}
 		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the native handle acquired for bounded reads, exclusive locking or atomic local replacement.
 			fclose( $handle );
 		}
 
@@ -486,20 +492,24 @@ final class TemporaryDebugCapture {
 		}
 
 		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set and verify native POSIX permission bits on the private file before it can be trusted or installed.
 			if ( is_link( $temporary ) || ! chmod( $temporary, 0600 ) ) {
 				throw new RuntimeException( 'Could not secure the temporary Booster debug capture.' );
 			}
 
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- The same-directory replacement requires a native stream for checked writes and flushes.
 			$temporary_handle = fopen( $temporary, 'wb' );
 			if ( false === $temporary_handle ) {
 				throw new RuntimeException( 'Could not open the temporary Booster debug capture.' );
 			}
 			try {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Write through the verified native handle so short writes and flush failures preserve the atomic replacement boundary.
 				$written = fwrite( $temporary_handle, $contents );
 				if ( false === $written || strlen( $contents ) !== $written || ! fflush( $temporary_handle ) ) {
 					throw new RuntimeException( 'Could not write the temporary Booster debug capture.' );
 				}
 			} finally {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the native handle acquired for bounded reads, exclusive locking or atomic local replacement.
 				fclose( $temporary_handle );
 			}
 
@@ -509,6 +519,7 @@ final class TemporaryDebugCapture {
 				throw new RuntimeException( 'Refusing to replace an unexpected Booster debug capture.' );
 			}
 
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- Same-directory native rename supplies the atomic replacement required by the verified local-file transaction.
 			if ( ! rename( $temporary, $this->path ) ) {
 				throw new RuntimeException( 'Could not replace the Booster debug capture.' );
 			}
@@ -516,6 +527,7 @@ final class TemporaryDebugCapture {
 			$temporary = '';
 		} finally {
 			if ( '' !== $temporary && ( is_file( $temporary ) || is_link( $temporary ) ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Clean up only the same-directory temporary entry owned by this failed native replacement transaction.
 				unlink( $temporary );
 			}
 		}
@@ -579,6 +591,7 @@ final class TemporaryDebugCapture {
 	 * Delete the capture after its caller validates the ownership marker.
 	 */
 	private function delete_owned_file(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Delete only the exact local storage entry after the surrounding native ownership, type and identity checks.
 		if ( is_link( $this->path ) || ! unlink( $this->path ) ) {
 			throw new RuntimeException( 'Could not delete the Booster debug capture.' );
 		}

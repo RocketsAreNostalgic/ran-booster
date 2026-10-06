@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace RAN\Admin\Interaction;
 
-// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Focused Core facade fixture.
-
 function __( string $text, string $domain = 'default' ): string {
 	return $GLOBALS['ran_booster_interaction_test_translations'][ $domain ][ $text ] ?? $text;
 }

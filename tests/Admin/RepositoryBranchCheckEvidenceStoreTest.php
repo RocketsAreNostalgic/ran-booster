@@ -125,6 +125,7 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 		};
 		$release           = static function () use ( &$locked, &$queued, &$store ): bool {
 			$locked = false;
+			// @phpstan-ignore instanceof.alwaysFalse, booleanAnd.alwaysFalse (This by-reference callback executes after the store is assigned below.)
 			if ( $queued && $store instanceof InMemoryRepositoryBranchCheckEvidenceStore ) {
 				$queued = false;
 				$store->bump_profile_generation( 'gh', 'profile-a' );
@@ -169,7 +170,8 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 	}
 }
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Local fixtures keep the cache contract self-contained.
+
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Local fixtures keep the cache contract self-contained.
 final class InMemoryRepositoryBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenceStore {
 
 	/** @var array<string, mixed> */
@@ -209,9 +211,10 @@ final class InMemoryRepositoryBranchCheckEvidenceStore extends RepositoryBranchC
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Local fixtures keep the cache contract self-contained.
 final class BranchEvidencePackage extends AbstractPackage {
 
-	public function __construct( ManagedRepository $repository, private string $identifier = 'example/example.php' ) {
+	public function __construct( ?ManagedRepository $repository = null, private string $identifier = 'example/example.php' ) {
 		$this->repository = $repository;
 	}
 

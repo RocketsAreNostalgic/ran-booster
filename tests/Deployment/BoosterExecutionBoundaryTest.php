@@ -63,17 +63,20 @@ final class BoosterExecutionBoundaryTest extends TestCase {
 	}
 }
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile -- Focused order spies.
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class ExecutionBoundaryDatabase extends Database {
 	/** @param list<string> $calls */
+	// @phpstan-ignore property.onlyWritten (The caller reads this by-reference event buffer to verify exact execution ordering.)
 	public function __construct( private array &$calls ) {}
 	public function maybe_upgrade(): void {
 		$this->calls[] = 'schema'; }
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class BlockedExecutionBoundaryDatabase extends Database {
 	/** @param list<string> $calls */
 	public function __construct(
+		// @phpstan-ignore property.onlyWritten (The caller reads this by-reference event buffer to verify exact execution ordering.)
 		private array &$calls,
 		private DatabaseCompatibilityFailure|DatabaseLifecycleFailure $failure
 	) {
@@ -89,18 +92,21 @@ final class BlockedExecutionBoundaryDatabase extends Database {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class ExecutionBoundaryWorker {
 	/** @param list<string> $calls */
+	// @phpstan-ignore property.onlyWritten (The caller reads this by-reference event buffer to verify exact execution ordering.)
 	public function __construct( private array &$calls ) {}
 	public function run_once(): array {
 		$this->calls[] = 'worker';
 		return array(); }
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class ExecutionBoundaryWebhookController {
 	/** @param list<string> $calls */
+	// @phpstan-ignore property.onlyWritten (The caller reads this by-reference event buffer to verify exact execution ordering.)
 	public function __construct( private array &$calls ) {}
 	public function register_routes(): void {
 		$this->calls[] = 'routes'; }
 }
-// phpcs:enable Generic.Files.OneObjectStructurePerFile

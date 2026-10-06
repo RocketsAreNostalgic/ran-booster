@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 // Focused WordPress lifecycle doubles use explicit global state.
-// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
 
 if ( ! function_exists( 'wp_clear_scheduled_hook' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- The isolated uninstall fixture must provide this exact WordPress function identity.
 	function wp_clear_scheduled_hook( string $hook, array $arguments = array() ): int|false {
 		unset( $arguments );
 		$GLOBALS['ran_booster_uninstall_cron_calls'][] = $hook;
@@ -20,6 +20,7 @@ if ( ! function_exists( 'wp_clear_scheduled_hook' ) ) {
 }
 
 if ( ! function_exists( 'delete_site_transient' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- The isolated uninstall fixture must provide this exact WordPress function identity.
 	function delete_site_transient( string $name ): bool {
 		$GLOBALS['ran_booster_uninstall_deleted_transients'][] = $name;
 		unset( $GLOBALS['ran_booster_uninstall_transients'][ $name ] );
@@ -29,12 +30,14 @@ if ( ! function_exists( 'delete_site_transient' ) ) {
 }
 
 if ( ! function_exists( 'get_site_transient' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- The isolated uninstall fixture must provide this exact WordPress function identity.
 	function get_site_transient( string $name ): mixed {
 		return $GLOBALS['ran_booster_uninstall_transients'][ $name ] ?? false;
 	}
 }
 
 if ( ! function_exists( 'plugin_basename' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- The isolated uninstall fixture must provide this exact WordPress function identity.
 	function plugin_basename( string $file ): string {
 		unset( $file );
 
@@ -47,6 +50,7 @@ if ( ! function_exists( 'get_file_data' ) ) {
 	 * @param array<string, string> $headers
 	 * @return array<string, string>
 	 */
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- The isolated uninstall fixture must provide this exact WordPress function identity.
 	function get_file_data( string $file, array $headers, string $context = '' ): array {
 		unset( $file, $headers, $context );
 
@@ -64,6 +68,7 @@ if ( ! function_exists( 'get_file_data' ) ) {
 }
 
 if ( ! function_exists( 'delete_option' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- The isolated uninstall fixture must provide this exact WordPress function identity.
 	function delete_option( string $name ): bool {
 		$GLOBALS['ran_booster_uninstall_deleted_options'][] = $name;
 		if ( ( $GLOBALS['ran_booster_uninstall_undeletable_option'] ?? null ) === $name ) {
@@ -76,24 +81,27 @@ if ( ! function_exists( 'delete_option' ) ) {
 }
 
 if ( ! function_exists( 'get_option' ) ) {
-	function get_option( string $name, mixed $default = false ): mixed { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound -- Preserve the WordPress function parameter signature.
+	function get_option( string $name, mixed $default = false ): mixed { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Preserve the WordPress function parameter signature. The isolated uninstall fixture must provide this exact WordPress function identity.
 		return $GLOBALS['ran_booster_uninstall_options'][ $name ] ?? $default;
 	}
 }
 
 if ( ! function_exists( 'is_multisite' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- The isolated uninstall fixture must provide this exact WordPress function identity.
 	function is_multisite(): bool {
 		return (bool) ( $GLOBALS['ran_booster_uninstall_multisite'] ?? false );
 	}
 }
 
 if ( ! function_exists( 'get_current_blog_id' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- The isolated uninstall fixture must provide this exact WordPress function identity.
 	function get_current_blog_id(): int {
 		return (int) ( $GLOBALS['ran_booster_uninstall_current_blog_id'] ?? 1 );
 	}
 }
 
 if ( ! function_exists( 'get_main_site_id' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- The isolated uninstall fixture must provide this exact WordPress function identity.
 	function get_main_site_id(): int {
 		return (int) ( $GLOBALS['ran_booster_uninstall_main_site_id'] ?? 1 );
 	}

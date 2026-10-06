@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Secrets;
 
 // Native metadata reads verify local inode, permission and device boundaries.
-// phpcs:disable WordPress.WP.AlternativeFunctions
 
 use Throwable;
 
@@ -855,6 +854,7 @@ class SecretsStorageProvisioner {
 				$display_label
 			);
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- Report actual PHP-process access alongside native owner and mode checks for the configured private path.
 		if ( ! is_writable( $path ) ) {
 			$issues[] = sprintf(
 				/* translators: %s: configured secrets storage item. */

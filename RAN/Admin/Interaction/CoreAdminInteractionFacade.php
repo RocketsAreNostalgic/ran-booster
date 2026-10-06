@@ -297,7 +297,7 @@ final class CoreAdminInteractionFacade implements
 
 	private function query_value( string $key ): string {
 		// Read-only provider presentation state does not authorize mutation.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only provider presentation keys are string-checked and sanitized; mutation authorization is separate.
 		$value = $_GET[ $key ] ?? null;
 
 		return is_string( $value ) ? sanitize_key( wp_unslash( $value ) ) : '';
@@ -305,7 +305,7 @@ final class CoreAdminInteractionFacade implements
 
 	private function query_text( string $key, int $maximum_length ): string {
 		// Read-only provider presentation state does not authorize mutation.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only presentation text is bounded and rejects control bytes; it does not authorize an operation.
 		$value = $_GET[ $key ] ?? null;
 		$value = is_string( $value ) ? trim( wp_unslash( $value ) ) : '';
 
@@ -319,16 +319,18 @@ final class CoreAdminInteractionFacade implements
 	/** @return array<string, int|string> */
 	private function provider_list_query( string $view ): array {
 		// Read-only provider list state does not authorize mutation.
-		// phpcs:disable WordPress.Security.NonceVerification.Recommended
-		$search   = isset( $_GET['s'] ) && is_string( $_GET['s'] )
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
+		$search = isset( $_GET['s'] ) && is_string( $_GET['s'] )
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
 			? substr( trim( sanitize_text_field( wp_unslash( $_GET['s'] ) ) ), 0, 100 )
 			: '';
-		$orderby  = $this->query_value( 'orderby' );
-		$order    = $this->query_value( 'order' );
-		$paged    = isset( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1;
+		$orderby = $this->query_value( 'orderby' );
+		$order   = $this->query_value( 'order' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
+		$paged = isset( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1;
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
 		$per_page = isset( $_GET['per_page'] ) && 50 === absint( $_GET['per_page'] ) ? 50 : 20;
-		// phpcs:enable WordPress.Security.NonceVerification.Recommended
-		$args = array(
+		$args     = array(
 			's'        => $search,
 			'status'   => $this->query_value( 'status' ),
 			'orderby'  => in_array( $orderby, array( 'name', 'kind', 'scope', 'usage', 'health' ), true ) ? $orderby : 'name',

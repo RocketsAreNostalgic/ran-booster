@@ -22,6 +22,7 @@ final class RuntimeReleaseProvider implements RepositoryProvider, RepositoryRele
 
 	private \Closure $list_releases;
 	private \Closure $inspect;
+	/** @var \Closure(mixed ...): mixed */
 	private \Closure $target_factory;
 
 	public function __construct(

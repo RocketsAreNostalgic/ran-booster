@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited -- Test-only namespaced WordPress function state.
 
 namespace RAN\Deployment;
 

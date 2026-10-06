@@ -7,8 +7,6 @@ namespace RAN\Tests;
 use PHPUnit\Framework\TestCase;
 
 // CLI-only release contract tests intentionally use direct local file/process primitives.
-// phpcs:disable WordPress.WP.AlternativeFunctions
-// phpcs:disable WordPress.PHP.DiscouragedPHPFunctions
 
 final class ReleasePlatformContractTest extends TestCase {
 	private const RUNTIME_PACKAGING_POLICY = array(
@@ -211,7 +209,7 @@ final class ReleasePlatformContractTest extends TestCase {
 			self::assertSame( $expected['archive_root'], $root );
 			self::assertSame( $this->surface_specs( $expected['surfaces'] ), $surface_specs );
 			$expected_role = $expected['build_role'] ?? '-';
-			self::assertSame( $expected_role ?? '-', $role );
+			self::assertSame( $expected_role, $role );
 			if ( 'neutral-updater' === $role ) {
 				self::assertFalse( $seen_neutral_updater );
 				$seen_neutral_updater = true;
@@ -418,6 +416,7 @@ final class ReleasePlatformContractTest extends TestCase {
 	 */
 	private function read_json( string $path ): array {
 		$document = json_decode(
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 			(string) file_get_contents( $path ),
 			true,
 			512,
@@ -428,6 +427,7 @@ final class ReleasePlatformContractTest extends TestCase {
 	}
 
 	private function read_text( string $path ): string {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		$text = file_get_contents( $path );
 		self::assertIsString( $text );
 		return $text;
@@ -445,16 +445,6 @@ final class ReleasePlatformContractTest extends TestCase {
 			}
 		}
 		self::fail( 'Runtime packaging policy does not identify a neutral updater.' );
-	}
-
-	private function trust_path_block( string $workflow ): string {
-		$start = strpos( $workflow, 'for trust_path in \\' );
-		self::assertIsInt( $start );
-
-		$end = strpos( $workflow, '; do', $start );
-		self::assertIsInt( $end );
-
-		return substr( $workflow, $start, $end - $start );
 	}
 
 	/**
@@ -475,6 +465,7 @@ final class ReleasePlatformContractTest extends TestCase {
 		$command[] = $lock_path;
 		$command[] = $policy_path;
 
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open -- The isolated contract test must execute the real verifier process and inspect its exit status.
 		$process = proc_open(
 			$command,
 			array(
@@ -486,7 +477,9 @@ final class ReleasePlatformContractTest extends TestCase {
 		self::assertIsResource( $process );
 		$stdout = stream_get_contents( $pipes[1] );
 		$stderr = stream_get_contents( $pipes[2] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		fclose( $pipes[1] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		fclose( $pipes[2] );
 		$exit = proc_close( $process );
 		self::assertIsString( $stdout );
@@ -504,8 +497,10 @@ final class ReleasePlatformContractTest extends TestCase {
 	private function write_temporary_json( array $document ): string {
 		$path = tempnam( sys_get_temp_dir(), 'ran-booster-runtime-policy-' );
 		self::assertIsString( $path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		$bytes = file_put_contents(
 			$path,
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Native JSON encodes the isolated fixture without requiring WordPress bootstrap.
 			json_encode(
 				$document,
 				JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
@@ -517,6 +512,7 @@ final class ReleasePlatformContractTest extends TestCase {
 
 	private function remove_temporary_file( string $path ): void {
 		if ( is_file( $path ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 			unlink( $path );
 		}
 	}

@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-// phpcs:disable WordPress.WP.AlternativeFunctions -- Test fixtures deliberately create isolated local ZIP files.
-// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited -- Test-only namespaced disk-space state.
 
 namespace RAN\Tests\Deployment;
 
@@ -40,17 +38,20 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 		unset( $GLOBALS['ran_booster_admitted_disk_free_space'] );
 		foreach ( $this->files as $file ) {
 			if ( file_exists( $file ) || is_link( $file ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 				unlink( $file );
 			}
 		}
 		foreach ( array_reverse( $this->directories ) as $directory ) {
 			if ( is_dir( $directory ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 				rmdir( $directory );
 			}
 		}
 	}
 
 	public function test_adapter_consumes_package_expanded_byte_fact_without_rescanning_zip(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		$source = file_get_contents( __DIR__ . '/../../RAN/Deployment/AdmittedBranchHostAdapter.php' );
 		self::assertIsString( $source );
 		self::assertStringContainsString( '$artifact->archive()->expanded_bytes()', $source );
@@ -101,6 +102,7 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 		if ( false === $source ) {
 			throw new RuntimeException( 'Unable to create the capacity ZIP fixture path.' );
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		unlink( $source );
 		$zip = new ZipArchive();
 		if ( true !== $zip->open( $source, ZipArchive::CREATE | ZipArchive::OVERWRITE ) ) {
@@ -152,6 +154,7 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 	}
 
 	private function ensure_directory( string $path ): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		if ( ! is_dir( $path ) && ! mkdir( $path, 0777, true ) && ! is_dir( $path ) ) {
 			throw new RuntimeException( 'Unable to create the capacity test directory.' );
 		}

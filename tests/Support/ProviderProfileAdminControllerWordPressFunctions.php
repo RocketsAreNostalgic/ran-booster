@@ -17,7 +17,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\check_admin_referer' ) ) {
 }
 
 if ( ! function_exists( __NAMESPACE__ . '\\wp_die' ) ) {
-	function wp_die( string $message = '' ): never {
+	function wp_die( string $message = '' ): void {
 		\RAN\wp_die( $message );
 	}
 }

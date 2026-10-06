@@ -33,16 +33,22 @@ the effective roots/exclusions against that manifest. Preserve accurate
 caller-supplied view PHPDoc and the generated Admin Shell bytes; see
 `CONTRIBUTING.md` for coverage and remaining #167 acceptance boundaries.
 
-`composer analyze` also runs the separate level-5 development profile. Its broad
-`scripts/` and `tests/` discovery currently qualifies scripts plus PackageRemoval,
-Security, Uninstall, Webhook, Portability, Secrets, Troubleshooting and Runtime
-test directories (50 PHP files). The temporary
-`phpstan-development-pending.txt` inventory pins the remaining 312 unqualified
-files; these are pending debt, not accepted exemptions. The existing coverage
-suite compares all development PHP with effective selection plus that exact
-inventory, so a new or split file cannot silently enlarge an excluded role.
-Remove pending entries as cohorts qualify; adding an entry requires explicit
-review. Preserve production symbol isolation and deliberate negative assertions.
+`composer analyze` also runs automatic per-file level-5 analysis of all maintained
+`scripts/` and `tests/` PHP. The development and installed-integration symbol
+profiles are pathless: only the runner selects the file for each invocation.
+This preserves incompatible fixture worlds without an analysis allowlist.
+Two deliberately unloadable API11/API12 registration fixtures are exact-file
+exemptions, with immutable identity and their actual rejection tests protected by
+`ProductionAnalysisCoverageTest` and `ProviderApiLifecycleTest`. See CONTRIBUTING
+for their evidence and review trigger. No pending-file inventory or baseline
+remains. All other maintained PHP enters analysis automatically, including new
+production roots and split development files.
+
+PHPCS disables are limited to the exact global-variable diagnostic on caller-bound
+views. All other maintained-code allowances must identify a specific diagnostic
+at its occurrence with the concrete foreign/security/negative-test contract.
+The real-checker controls protect immediately outside these allowances, and XML
+rule exclusions retain only the parity-checked generated Admin Shell binding.
 
 - Work from an accepted public request or issue. Inspect the affected code and
   tests before editing, verify the result before declaring completion, and

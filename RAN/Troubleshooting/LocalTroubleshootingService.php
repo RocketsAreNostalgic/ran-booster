@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace RAN\Troubleshooting;
 
-// phpcs:disable WordPress.WP.AlternativeFunctions -- Native handles are required for exclusive same-directory inode checks.
-
 use RAN\RepositoryProvider\ProviderDiagnosticResult;
 use RAN\Secrets\SecretsFile;
 use RAN\Deployment\DeploymentAttemptRepository;
@@ -342,6 +340,7 @@ class LocalTroubleshootingService {
 
 	private function probe_directory( string $directory ): bool {
 		$directory = $this->canonical_directory( $directory );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- The private local storage boundary checks actual PHP-process writability alongside canonical path and inode checks.
 		if ( null === $directory || ! is_writable( $directory ) ) {
 			return false;
 		}
@@ -406,6 +405,7 @@ class LocalTroubleshootingService {
 			}
 
 			if ( is_resource( $handle ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the exclusively created probe handle after its path/inode cleanup checks.
 				fclose( $handle );
 			}
 		}
@@ -584,7 +584,7 @@ class LocalTroubleshootingService {
 	protected function open_exclusive( string $path ): mixed {
 		$previous_mask = umask( $this->creation_mask() );
 		try {
-			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Probe failures are returned as safe typed results.
+			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Probe failures are returned as safe typed results. Exclusive native creation must fail on an existing path and return the handle used for inode checks.
 			return @fopen( $path, 'x+b' );
 		} finally {
 			umask( $previous_mask );
@@ -597,7 +597,7 @@ class LocalTroubleshootingService {
 
 	/** @param resource $handle */
 	protected function write_marker( mixed $handle, string $contents ): int|false {
-		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Probe failures are returned as safe typed results.
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Probe failures are returned as safe typed results. Write through the exclusive marker handle so short writes fail before no-clobber hard-link promotion.
 		return @fwrite( $handle, $contents );
 	}
 
@@ -613,7 +613,7 @@ class LocalTroubleshootingService {
 	}
 
 	protected function remove_marker( string $path ): bool {
-		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Probe failures are returned as safe typed results.
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Probe failures are returned as safe typed results. Remove the exact marker after the caller verifies the current native path/handle identity.
 		return @unlink( $path );
 	}
 

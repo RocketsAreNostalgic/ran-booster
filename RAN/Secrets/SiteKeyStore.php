@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Secrets;
 
 // Base64 is the explicit canonical storage encoding for the binary site key.
-// phpcs:disable WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode, WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
 
 use RuntimeException;
 
@@ -51,6 +50,7 @@ class SiteKeyStore {
 
 		$key = $this->generate_key();
 		$this->require_raw_key( $key );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Canonical site-key storage bytes require strict base64 decoding and exact re-encoding; this is not obfuscation.
 		$encoded = base64_encode( $key );
 		$created = $this->add_stored_value( $encoded );
 		if ( ! $created ) {
@@ -76,6 +76,7 @@ class SiteKeyStore {
 	 */
 	public function delete_exact( #[\SensitiveParameter] string $key ): bool {
 		$this->require_raw_key( $key );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Canonical site-key storage bytes require strict base64 decoding and exact re-encoding; this is not obfuscation.
 		$result = $this->delete_stored_value_exact( base64_encode( $key ) );
 
 		if ( false === $result || $result < 0 || $result > 1 ) {
@@ -181,9 +182,11 @@ class SiteKeyStore {
 			throw new RuntimeException( 'The Booster site key is invalid.' );
 		}
 
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Canonical site-key storage bytes require strict base64 decoding and exact re-encoding; this is not obfuscation.
 		$key = base64_decode( $value, true );
 		if ( false === $key
 			|| self::KEY_BYTES !== strlen( $key )
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Canonical site-key storage bytes require strict base64 decoding and exact re-encoding; this is not obfuscation.
 			|| ! hash_equals( base64_encode( $key ), $value )
 		) {
 			throw new RuntimeException( 'The Booster site key is invalid.' );

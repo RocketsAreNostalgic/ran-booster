@@ -1,0 +1,25 @@
+includes:
+	- vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+	level: 5
+	treatPhpDocTypesAsCertain: false
+	# Installed/historical hosts provide these values; the source checkout is not their runtime.
+	dynamicConstantNames:
+		- RAN_BOOSTER_API_VERSION
+		- RAN_BOOSTER_PROVIDER_API_VERSION
+		- RAN_BOOSTER_PORTABILITY_API_VERSION
+		- RAN_Booster_P4Phase0Fixture\API_VERSION
+		- RAN_BOOSTER_ADDON_API_VERSION
+	scanDirectories:
+		- tests/fixtures
+		- vendor/ran/wp-release-updater/src
+	scanFiles:
+		- ran-booster.php
+		- tests/WordPress/WordPressOrgUpdateRequestFilterWordPressFunctions.php
+		- scripts/analysis-stubs/WpCliCommand.php
+	excludePaths:
+		analyseAndScan:
+			# Deliberately unloadable historical contracts: exact identities are pinned by the coverage test.
+			- tests/fixtures/provider-api11-registration/workflow-provider.php
+			- tests/fixtures/provider-api12-registration/repository-provider.php

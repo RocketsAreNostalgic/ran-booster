@@ -469,63 +469,66 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		self::assertCount( 1, $wpdb->updates );
 	}
 
-	private function storage(): AbstractPackageRepository {
+	private function storage(): ProviderIdentityTestRepository {
 		$lifecycle = new class() extends Database {
 			public function require_ready(): void {
 			}
 		};
 
-		return new class( $lifecycle ) extends AbstractPackageRepository {
-
-			public function store_for_test( Package $package ): PackageMutationResult {
-				return $this->store_package( $package );
-			}
-
-			/** @param array<string, mixed> $input */
-			public function edit_for_test( string $identifier, array $input ): PackageMutationResult {
-				return $this->edit_package( $identifier, $input );
-			}
-
-			public function find_for_test( string $identifier ): Package {
-				return $this->managed_package( $identifier );
-			}
-
-			protected function package_type(): int {
-				return 1;
-			}
-
-			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of package_exists retains the production method contract; these inputs do not affect this controlled result.
-			protected function package_exists( string $identifier ): bool {
-				return true;
-			}
-
-			protected function package_from_installation( string $identifier ): Package {
-				return new class( $identifier ) extends AbstractPackage {
-
-					public function __construct( private readonly string $identifier ) {
-					}
-
-					public function get_identifier(): mixed {
-						return $this->identifier;
-					}
-				};
-			}
-
-			protected function not_found_exception(): Throwable {
-				return new RuntimeException( 'Package not found.' );
-			}
-		};
+		return new ProviderIdentityTestRepository( $lifecycle );
 	}
 
 	private function package( string $identifier ): Package {
 		return new class( $identifier ) extends AbstractPackage {
 
-			public function __construct( private readonly string $identifier ) {
+			public function __construct( private readonly string $identifier = '' ) {
 			}
 
 			public function get_identifier(): mixed {
 				return $this->identifier;
 			}
 		};
+	}
+}
+
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
+final class ProviderIdentityTestRepository extends AbstractPackageRepository {
+
+	public function store_for_test( Package $package ): PackageMutationResult {
+		return $this->store_package( $package );
+	}
+
+	/** @param array<string, mixed> $input */
+	public function edit_for_test( string $identifier, array $input ): PackageMutationResult {
+		return $this->edit_package( $identifier, $input );
+	}
+
+	public function find_for_test( string $identifier ): Package {
+		return $this->managed_package( $identifier );
+	}
+
+	protected function package_type(): int {
+		return 1;
+	}
+
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of package_exists retains the production method contract; these inputs do not affect this controlled result.
+	protected function package_exists( string $identifier ): bool {
+		return true;
+	}
+
+	protected function package_from_installation( string $identifier ): Package {
+		return new class( $identifier ) extends AbstractPackage {
+
+			public function __construct( private readonly string $identifier = '' ) {
+			}
+
+			public function get_identifier(): mixed {
+				return $this->identifier;
+			}
+		};
+	}
+
+	protected function not_found_exception(): Throwable {
+		return new RuntimeException( 'Package not found.' );
 	}
 }

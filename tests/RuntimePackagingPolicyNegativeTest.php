@@ -7,8 +7,6 @@ namespace RAN\Tests;
 use PHPUnit\Framework\TestCase;
 
 // CLI-only release contract tests intentionally use direct local file/process primitives.
-// phpcs:disable WordPress.WP.AlternativeFunctions
-// phpcs:disable WordPress.PHP.DiscouragedPHPFunctions
 
 final class RuntimePackagingPolicyNegativeTest extends TestCase {
 	public function test_verifier_rejects_dot_segment_package_names(): void {
@@ -103,7 +101,9 @@ final class RuntimePackagingPolicyNegativeTest extends TestCase {
 		$target = $root . '/vendor/ran/updater-support/LICENSE';
 
 		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 			unlink( $target );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 			mkdir( $target );
 			$result = $this->run_verifier(
 				dirname( __DIR__ ) . '/composer.lock',
@@ -123,6 +123,7 @@ final class RuntimePackagingPolicyNegativeTest extends TestCase {
 		$empty  = $root . '/vendor/ran/updater-support/src/empty-subdirectory';
 
 		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 			mkdir( $empty );
 			$result = $this->run_verifier(
 				dirname( __DIR__ ) . '/composer.lock',
@@ -141,6 +142,7 @@ final class RuntimePackagingPolicyNegativeTest extends TestCase {
 	 */
 	private function create_installed_fixture( array $policy ): string {
 		$root = sys_get_temp_dir() . '/ran-booster-runtime-install-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		self::assertTrue( mkdir( $root, 0777, true ) );
 
 		foreach ( $policy['packages'] as $record ) {
@@ -148,6 +150,7 @@ final class RuntimePackagingPolicyNegativeTest extends TestCase {
 			$archive_root = $record['archive_root'] ?? null;
 			self::assertIsString( $archive_root );
 			$package_root = $root . '/' . $archive_root;
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 			self::assertTrue( mkdir( $package_root, 0777, true ) );
 
 			foreach ( $record['surfaces'] as $surface ) {
@@ -158,10 +161,13 @@ final class RuntimePackagingPolicyNegativeTest extends TestCase {
 				self::assertIsString( $kind );
 				$surface_path = $package_root . '/' . $path;
 				if ( 'file' === $kind ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 					self::assertIsInt( file_put_contents( $surface_path, "fixture\\n" ) );
 					continue;
 				}
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 				self::assertTrue( mkdir( $surface_path, 0777, true ) );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 				self::assertIsInt( file_put_contents( $surface_path . '/fixture.txt', "fixture\\n" ) );
 			}
 		}
@@ -181,6 +187,7 @@ final class RuntimePackagingPolicyNegativeTest extends TestCase {
 		$command[] = $lock_path;
 		$command[] = $policy_path;
 
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open -- The isolated contract test must execute the real verifier process and inspect its exit status.
 		$process = proc_open(
 			$command,
 			array(
@@ -192,7 +199,9 @@ final class RuntimePackagingPolicyNegativeTest extends TestCase {
 		self::assertIsResource( $process );
 		$stdout = stream_get_contents( $pipes[1] );
 		$stderr = stream_get_contents( $pipes[2] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		fclose( $pipes[1] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		fclose( $pipes[2] );
 		$exit = proc_close( $process );
 		self::assertIsString( $stdout );
@@ -208,6 +217,7 @@ final class RuntimePackagingPolicyNegativeTest extends TestCase {
 	 * @return array<string, mixed>
 	 */
 	private function read_json( string $path ): array {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		$document = json_decode( (string) file_get_contents( $path ), true, 512, JSON_THROW_ON_ERROR );
 		self::assertIsArray( $document );
 		return $document;
@@ -219,8 +229,10 @@ final class RuntimePackagingPolicyNegativeTest extends TestCase {
 	private function write_temporary_json( array $document ): string {
 		$path = tempnam( sys_get_temp_dir(), 'ran-booster-runtime-negative-' );
 		self::assertIsString( $path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		$bytes = file_put_contents(
 			$path,
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Native JSON encodes the isolated fixture without requiring WordPress bootstrap.
 			json_encode( $document, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR )
 		);
 		self::assertIsInt( $bytes );
@@ -229,12 +241,14 @@ final class RuntimePackagingPolicyNegativeTest extends TestCase {
 
 	private function remove_temporary_file( string $path ): void {
 		if ( is_file( $path ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 			unlink( $path );
 		}
 	}
 
 	private function remove_tree( string $path ): void {
 		if ( is_link( $path ) || is_file( $path ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 			unlink( $path );
 			return;
 		}
@@ -249,6 +263,7 @@ final class RuntimePackagingPolicyNegativeTest extends TestCase {
 			}
 			$this->remove_tree( $path . '/' . $entry );
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		rmdir( $path );
 	}
 }

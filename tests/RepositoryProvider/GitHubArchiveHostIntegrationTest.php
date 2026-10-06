@@ -586,12 +586,4 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 			'body'     => $sha,
 		);
 	}
-
-	private function error_response( int $status, array $headers ): array {
-		return array(
-			'response' => array( 'code' => $status ),
-			'headers'  => $headers,
-			'body'     => '{"message":"upstream-response-canary"}',
-		);
-	}
 }

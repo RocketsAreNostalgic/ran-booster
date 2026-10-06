@@ -8,7 +8,6 @@ namespace RAN\Tests\Secrets;
 require_once __DIR__ . '/fixtures/shared-host-functions.php';
 
 // Test fixtures deliberately exercise native filesystem semantics.
-// phpcs:disable WordPress.WP.AlternativeFunctions
 
 use PHPUnit\Framework\TestCase;
 use RAN\Secrets\PrivateLocationCandidateResolver;
@@ -23,9 +22,13 @@ final class PrivateLocationCandidateResolverSharedHostTest extends TestCase {
 		$suffix                   = bin2hex( random_bytes( 6 ) );
 		$this->root               = sys_get_temp_dir() . '/ran-booster-shared-host-' . $suffix;
 		$this->temporary_boundary = sys_get_temp_dir() . '/ran-booster-shared-host-temp-' . $suffix;
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $this->root . '/account/site/public/wp-content/plugins/ran-booster', 0700, true ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $this->root . '/account/site/.git', 0700 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $this->root . '/account/private/ran-booster', 0700, true ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $this->temporary_boundary, 0700 ) );
 		$this->root = (string) realpath( $this->root );
 	}
@@ -34,12 +37,14 @@ final class PrivateLocationCandidateResolverSharedHostTest extends TestCase {
 	protected function tearDown(): void {
 		unset( $GLOBALS['ran_booster_shared_host_stat'] );
 		unset( $GLOBALS['ran_booster_shared_host_identity'] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		chmod( $this->root, 0700 );
 		$this->remove( $this->root );
 		$this->remove( $this->temporary_boundary );
 	}
 
 	public function test_accepts_ahost_managed_group_writable_ancestor_outside_the_php_identity(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->root, 0770 ) );
 		$groups = posix_getgroups();
 		self::assertIsArray( $groups );
@@ -72,6 +77,7 @@ final class PrivateLocationCandidateResolverSharedHostTest extends TestCase {
 	}
 
 	public function test_rejects_ahost_ancestor_in_the_php_effective_group(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->root, 0770 ) );
 		$effective_group                             = posix_getegid();
 		$GLOBALS['ran_booster_shared_host_stat']     = array(
@@ -91,6 +97,7 @@ final class PrivateLocationCandidateResolverSharedHostTest extends TestCase {
 	}
 
 	public function test_fails_closed_when_supplementary_groups_cannot_be_read(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->root, 0770 ) );
 		$GLOBALS['ran_booster_shared_host_stat']     = array(
 			'path' => $this->root,
@@ -123,6 +130,7 @@ final class PrivateLocationCandidateResolverSharedHostTest extends TestCase {
 
 	private function remove( string $path ): void {
 		if ( is_link( $path ) || is_file( $path ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 			unlink( $path );
 			return;
 		}
@@ -135,6 +143,7 @@ final class PrivateLocationCandidateResolverSharedHostTest extends TestCase {
 				$this->remove( $path . '/' . $entry );
 			}
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 		rmdir( $path );
 	}
 }

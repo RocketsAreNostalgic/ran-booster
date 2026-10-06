@@ -198,8 +198,8 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 	}
 
 	public function test_every_provider_has_the_manual_deployment_capabilities(): void {
-		self::assertTrue( method_exists( RepositoryProvider::class, 'resolve_repository' ) );
-		self::assertTrue( method_exists( RepositoryProvider::class, 'prepare_archive' ) );
+		self::assertContains( 'resolve_repository', get_class_methods( RepositoryProvider::class ) );
+		self::assertContains( 'prepare_archive', get_class_methods( RepositoryProvider::class ) );
 	}
 
 	public function test_push_to_deploy_requires_webhook_capability_before_resolution(): void {
@@ -365,6 +365,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		);
 	}
 
+	/** @return RepositoryProvider&WebhookNormalizer&object{request: ?RepositoryLookupRequest} */
 	private function resolving_provider(
 		RepositoryDescriptor $descriptor,
 		?ProviderCode $registered_code = null
@@ -413,6 +414,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		};
 	}
 
+	/** @return RepositoryProvider&CredentialedPublicRepositoryBrowser&object{request: ?RepositoryLookupRequest} */
 	private function credentialed_resolving_provider(
 		RepositoryDescriptor $descriptor
 	): RepositoryProvider&CredentialedPublicRepositoryBrowser {

@@ -80,7 +80,7 @@ final class ProviderApiLifecycleTest extends TestCase {
 		self::assertTrue( $parameters[4]->isOptional() );
 		self::assertTrue( $parameters[4]->allowsNull() );
 		self::assertInstanceOf( ReflectionNamedType::class, $parameters[4]->getType() );
-		self::assertSame( ProviderRegistrationContext::class, $parameters[4]->getType()?->getName() );
+		self::assertSame( ProviderRegistrationContext::class, $parameters[4]->getType()->getName() );
 	}
 
 	public function test_provider_registry_requires_no_logging_facade(): void {

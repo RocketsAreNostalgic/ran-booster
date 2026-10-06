@@ -16,7 +16,7 @@ final class StandardsCoverageTest extends TestCase {
 		foreach ( $paths as $path ) {
 			$source = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Inspect only local owned source; never load or execute the fixture.
 			self::assertIsString( $source );
-			self::assertFalse( $this->has_blanket_suppression( $source ), $path . ' must identify the specific rule and reason instead of suppressing a whole standard or category.' );
+			self::assertFalse( $this->has_blanket_suppression( $source, $path ), $path . ' must identify the specific rule and reason instead of suppressing a whole standard or category.' );
 		}
 	}
 
@@ -73,6 +73,60 @@ final class StandardsCoverageTest extends TestCase {
 		}
 	}
 
+	public function test_narrowed_real_annotations_do_not_cover_new_neighbors(): void {
+		$cases = array(
+			array( 'tests/Uninstall/UninstallWordPressFunctions.php', 'WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound', "function unrelated_probe() {}\n" ),
+			array( 'RAN/Secrets/SecretsFile.php', 'WordPress.WP.AlternativeFunctions.file_system_operations_fopen', "fopen( '/tmp/unused-probe', 'rb' );\n" ),
+			array( 'RAN/Deployment/AdmittedBranchHostAdapter.php', 'WordPress.WP.AlternativeFunctions.parse_url_parse_url', "parse_url( 'https://example.invalid/' );\n" ),
+		);
+		foreach ( $cases as list( $path, $diagnostic, $probe ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Use each real narrowed annotation as the fixture; never execute its source.
+			$source = file_get_contents( dirname( __DIR__, 2 ) . '/' . $path );
+			self::assertIsString( $source );
+			self::assertStringContainsString( 'phpcs:ignore ' . $diagnostic, $source );
+			$sniff = implode( '.', array_slice( explode( '.', $diagnostic ), 0, 3 ) );
+			self::assertNotContains( $diagnostic, $this->inspect( $source, $path, $sniff )['sources'] );
+			self::assertContains( $diagnostic, $this->inspect( $source . "\n" . $probe, $path, $sniff )['sources'] );
+		}
+	}
+
+	public function test_rule_exclusions_only_cover_the_immutable_generated_binding(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Inspect only the canonical local XML without resolving external entities.
+		$source = file_get_contents( dirname( __DIR__, 2 ) . '/.phpcs.xml' );
+		self::assertIsString( $source );
+		$xml = new \DOMDocument();
+		self::assertTrue( $xml->loadXML( $source, LIBXML_NONET ) );
+		$xpath      = new \DOMXPath( $xml );
+		$exclusions = $xpath->query( '//rule/exclude-pattern | //rule/exclude' );
+		self::assertCount( 1, $exclusions );
+		$entry = $exclusions->item( 0 );
+		self::assertInstanceOf( \DOMElement::class, $entry );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM exposes the native parentNode and textContent properties.
+		$parent = $entry->parentNode;
+		self::assertInstanceOf( \DOMElement::class, $parent );
+		self::assertSame( 'WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound', $parent->getAttribute( 'ref' ) );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Compare the native DOM textContent of the one independently parity-checked generated exception.
+		self::assertSame( '/views/generated/ran-admin-shell\\.php$', $entry->textContent );
+	}
+
+	public function test_phpstan_annotations_are_identifier_local_with_reasons(): void {
+		foreach ( $this->tracked_php_files( dirname( __DIR__, 2 ) ) as $path ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Parse comments as inert tokens; fixture strings must not become policy directives.
+			$source = file_get_contents( $path );
+			self::assertIsString( $source );
+			foreach ( token_get_all( $source ) as $token ) {
+				if ( ! is_array( $token ) || ! in_array( $token[0], array( T_COMMENT, T_DOC_COMMENT ), true ) ) {
+					continue;
+				}
+				if ( preg_match_all( '/@phpstan-ignore[^\r\n]*/i', $token[1], $annotations ) ) {
+					foreach ( $annotations[0] as $annotation ) {
+						self::assertMatchesRegularExpression( '/^@phpstan-ignore\s+[a-zA-Z][a-zA-Z0-9]*\.[a-zA-Z0-9.]+(?:\s*,\s*[a-zA-Z][a-zA-Z0-9]*\.[a-zA-Z0-9.]+)*\s+\(\S.+\)/', $annotation, $path . ':' . $token[2] );
+					}
+				}
+			}
+		}
+	}
+
 	/** @return list<string> */
 	private function tracked_php_files( string $root ): array {
 		$output = $this->git_output( $root, array( 'ls-files', '-z', '--', '*.php' ) );
@@ -126,12 +180,19 @@ final class StandardsCoverageTest extends TestCase {
 	}
 
 	public function test_blanket_guard_distinguishes_annotations_from_fixture_strings(): void {
-		foreach ( array( '// @CODINGSTANDARDSCHANGESETTING WordPress.NamingConventions.PrefixAllGlobals prefixes rogue', '// PHPCS:DISABLE', '// phpcs:ignorefile', '// phpcs:ignore WordPress -- Too broad.', '// phpcs:disable WordPress.Security -- Too broad.', '// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda, WordPress -- Mixed broad selector.', '// phpcs:disable', '// phpcs:disable -- fixture', '// phpcs:ignore', '// phpcs:ignoreFile -- fixture', "/**\n * @codingStandardsIgnoreStart\n */", '/** @codingStandardsIgnoreFile */', '/** @codingStandardsIgnoreLine */' ) as $annotation ) {
+		foreach ( array( '// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda', '// phpcs:ignore WordPress.WP.AlternativeFunctions -- Whole sniff.', '// phpcs:disable WordPress.PHP.YodaConditions.NotYoda -- Still future-wide.', '// @CODINGSTANDARDSCHANGESETTING WordPress.NamingConventions.PrefixAllGlobals prefixes rogue', '// PHPCS:DISABLE', '// phpcs:ignorefile', '// phpcs:ignore WordPress -- Too broad.', '// phpcs:disable WordPress.Security -- Too broad.', '// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda, WordPress -- Mixed broad selector.', '// phpcs:disable', '// phpcs:disable -- fixture', '// phpcs:ignore', '// phpcs:ignoreFile -- fixture', "/**\n * @codingStandardsIgnoreStart\n */", '/** @codingStandardsIgnoreFile */', '/** @codingStandardsIgnoreLine */' ) as $annotation ) {
 			self::assertTrue( $this->has_blanket_suppression( "<?php\n" . $annotation . "\n" ) );
 		}
 		self::assertFalse( $this->has_blanket_suppression( "<?php\n// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Required evaluation order.\n" ) );
 		self::assertFalse( $this->has_blanket_suppression( '<?php $fixture = "// phpcs:disable";' ) );
 		self::assertFalse( $this->has_blanket_suppression( '<?php $fixture = "/* @codingStandardsIgnoreFile */";' ) );
+	}
+
+	public function test_a_template_binding_cannot_authorize_another_directive_in_the_same_comment(): void {
+		$source = "<?php\n/* phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Caller binding.\nphpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- Unrelated future-wide escape.\n*/\necho \$_GET['x'];";
+		self::assertNotContains( 'WordPress.Security.EscapeOutput.OutputNotEscaped', $this->inspect( $source, 'views/probe.php', 'WordPress.Security.EscapeOutput' )['sources'] );
+		self::assertTrue( $this->has_blanket_suppression( $source, 'views/probe.php' ) );
+		self::assertFalse( $this->has_blanket_suppression( "<?php\n// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Caller binding.\n", 'views/probe.php' ) );
 	}
 
 	public function test_legacy_and_block_suppressions_cannot_hide_checker_findings(): void {
@@ -169,18 +230,28 @@ final class StandardsCoverageTest extends TestCase {
 		}
 	}
 
-	private function has_blanket_suppression( string $source ): bool {
+	private function has_blanket_suppression( string $source, string $path = '' ): bool {
 		foreach ( token_get_all( $source ) as $token ) {
 			if ( is_array( $token ) && in_array( $token[0], array( T_COMMENT, T_DOC_COMMENT ), true )
 				&& 1 === preg_match( '/@codingStandards(?:Ignore(?:Start|File|Line)|ChangeSetting)|phpcs:(?:set\b|ignoreFile|(?:disable|ignore)(?:\s*(?:--[^\r\n]*)?\s*(?:\*\/)?\s*$))/im', $token[1] ) ) {
 				return true;
 			}
 			if ( is_array( $token ) && in_array( $token[0], array( T_COMMENT, T_DOC_COMMENT ), true )
-				&& preg_match_all( '/phpcs:(?:disable|ignore)\b([^\r\n]*)/i', $token[1], $matches ) ) {
-				foreach ( $matches[1] as $directive ) {
+				&& preg_match_all( '/phpcs:(disable|ignore)\b([^\r\n]*)/i', $token[1], $matches ) ) {
+				foreach ( $matches[2] as $index => $directive ) {
+					if ( ! preg_match( '/--\s+\S/', $directive ) ) {
+						return true;
+					}
+					if ( 'disable' === strtolower( $matches[1][ $index ] ) ) {
+						$template_binding = preg_match( '~(?:^|/)views/(?!generated/).*\.php$~', str_replace( '\\', '/', $path ) )
+							&& preg_match( '/^\s*WordPress\.NamingConventions\.PrefixAllGlobals\.NonPrefixedVariableFound\s+--\s+\S/i', $directive );
+						if ( ! $template_binding ) {
+							return true;
+						}
+					}
 					$selectors = explode( ',', explode( '--', $directive, 2 )[0] );
 					foreach ( $selectors as $selector ) {
-						if ( count( explode( '.', trim( $selector, " \t*/" ) ) ) < 3 ) {
+						if ( count( explode( '.', trim( $selector, " \t*/" ) ) ) < 4 ) {
 							return true;
 						}
 					}
@@ -233,11 +304,35 @@ final class StandardsCoverageTest extends TestCase {
 		}
 	}
 
+	public function test_owned_method_rule_removal_cannot_hide_inherited_declarations(): void {
+		$diagnostic = 'RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase';
+		$source     = "<?php\nnamespace RAN;\nclass Probe extends \\stdClass {\n// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- Required foreign spelling in this boundary fixture.\npublic function acceptedLegacy(): void {}\npublic function camelCase(): void {}\n}\n";
+		foreach ( array( 'RAN/NewQualityProbe.php', 'tests/Quality/NewQualityProbe.php' ) as $path ) {
+			$result = $this->inspect( $source, $path, '' );
+			self::assertSame( 1, count( array_filter( $result['sources'], static fn( string $actual ): bool => $diagnostic === $actual ) ), 'The canonical profile must reject the neighboring owned method without overriding sniff selection.' );
+		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Mutate only a disposable copy of the canonical ruleset.
+		$xml = file_get_contents( dirname( __DIR__, 2 ) . '/.phpcs.xml' );
+		self::assertIsString( $xml );
+		$fixture_xml = str_replace( '<rule ref="RANOwnedMethods"/>', '', $xml );
+		self::assertNotSame( $xml, $fixture_xml, 'The negative control must remove the actual owned-method rule.' );
+		$path = sys_get_temp_dir() . '/ran-owned-methods-' . bin2hex( random_bytes( 12 ) ) . '.xml';
+		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write only this unique private ruleset mutation; the canonical profile stays unchanged.
+			self::assertSame( strlen( $fixture_xml ), file_put_contents( $path, $fixture_xml ) );
+			self::assertNotContains( $diagnostic, $this->inspect( $source, 'RAN/NewQualityProbe.php', '', $path )['sources'], 'Deleting the rule must demonstrate a real inherited-method bypass that the canonical probe prevents.' );
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this unique private ruleset mutation.
+			unlink( $path );
+		}
+	}
+
 	private function has_unreviewed_arguments( string $xml ): bool {
 		$ruleset = new \DOMDocument();
 		self::assertTrue( $ruleset->loadXML( $xml, LIBXML_NONET ) );
 		$arguments = array();
 		foreach ( ( new \DOMXPath( $ruleset ) )->query( '//arg' ) as $argument ) {
+			self::assertInstanceOf( \DOMElement::class, $argument );
 			$arguments[] = $argument->getAttribute( 'name' ) . ':' . $argument->getAttribute( 'value' );
 		}
 		sort( $arguments );

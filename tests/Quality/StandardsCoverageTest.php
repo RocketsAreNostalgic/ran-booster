@@ -115,7 +115,7 @@ final class StandardsCoverageTest extends TestCase {
 		$root = dirname( __DIR__, 2 );
 		require_once $root . '/vendor/squizlabs/php_codesniffer/autoload.php';
 		$runner         = new Runner();
-		$runner->config = new Config( array( '--standard=' . ( $standard ?? $root . '/.phpcs.xml' ), ...$arguments ) );
+		$runner->config = new Config( array( '--standard=' . $root . '/.phpcs.xml', ...$arguments ) );
 		$runner->init();
 		$paths = array();
 		foreach ( new FileList( $runner->config, $runner->ruleset ) as $path => $file ) {
@@ -193,7 +193,7 @@ final class StandardsCoverageTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Inspect the owned quality configuration without executing it.
 		$xml = file_get_contents( dirname( __DIR__, 2 ) . '/.phpcs.xml' );
 		self::assertIsString( $xml );
-		self::assertFalse( $this->has_disabled_severity( $xml ), 'Local severity overrides must retain positive diagnostic severity.' );
+		self::assertFalse( $this->has_disabled_severity( $xml ), 'Local severity overrides must meet the default minimum diagnostic severity of five.' );
 	}
 
 	public function test_variable_naming_diagnostics_remain_enforced_across_owned_paths(): void {
@@ -204,22 +204,24 @@ final class StandardsCoverageTest extends TestCase {
 		}
 	}
 
-	public function test_zero_severity_hides_real_diagnostics_but_fails_the_guard(): void {
+	public function test_below_threshold_severity_hides_real_diagnostics_but_fails_the_guard(): void {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Copy only the owned ruleset into a disposable negative control.
 		$xml = file_get_contents( dirname( __DIR__, 2 ) . '/.phpcs.xml' );
 		self::assertIsString( $xml );
-		$xml = str_replace( '</ruleset>', '<rule ref="WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase"><severity>0</severity></rule></ruleset>', $xml );
-		self::assertTrue( $this->has_disabled_severity( $xml ) );
-		$path = sys_get_temp_dir() . '/ran-severity-' . bin2hex( random_bytes( 12 ) ) . '.xml';
-		try {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write only the uniquely allocated private ruleset fixture.
-			self::assertSame( strlen( $xml ), file_put_contents( $path, $xml ) );
-			$result = $this->inspect( '<?php function ran_booster_probe( $camelCase ) { return $camelCase; }', 'RAN/NewQualityProbe.php', 'WordPress.NamingConventions.ValidVariableName', $path );
-			self::assertSame( array(), $result['sources'], 'The rejected configuration must demonstrate a real checker bypass.' );
-			self::assertSame( 0, $result['exit'] );
-		} finally {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this uniquely allocated disposable ruleset.
-			unlink( $path );
+		foreach ( array( 0, 1, 4 ) as $level ) {
+			$fixture_xml = str_replace( '</ruleset>', '<rule ref="WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase"><severity>' . $level . '</severity></rule></ruleset>', $xml );
+			self::assertTrue( $this->has_disabled_severity( $fixture_xml ) );
+			$path = sys_get_temp_dir() . '/ran-severity-' . bin2hex( random_bytes( 12 ) ) . '.xml';
+			try {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write only the uniquely allocated private ruleset fixture.
+				self::assertSame( strlen( $fixture_xml ), file_put_contents( $path, $fixture_xml ) );
+				$result = $this->inspect( '<?php function ran_booster_probe( $camelCase ) { return $camelCase; }', 'RAN/NewQualityProbe.php', 'WordPress.NamingConventions.ValidVariableName', $path );
+				self::assertSame( array(), $result['sources'], 'The rejected configuration must demonstrate a real checker bypass.' );
+				self::assertSame( 0, $result['exit'] );
+			} finally {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this uniquely allocated disposable ruleset.
+				unlink( $path );
+			}
 		}
 		foreach ( array( '00', '-1', 'invalid' ) as $severity ) {
 			self::assertTrue( $this->has_disabled_severity( '<ruleset><rule ref="WordPress"><severity>' . $severity . '</severity></rule></ruleset>' ) );
@@ -232,7 +234,7 @@ final class StandardsCoverageTest extends TestCase {
 		self::assertTrue( $ruleset->loadXML( $xml, LIBXML_NONET ) );
 		foreach ( ( new \DOMXPath( $ruleset ) )->query( '//rule/severity' ) as $severity ) {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOMNode exposes the native textContent property.
-			if ( ! preg_match( '/^[1-9][0-9]*$/D', trim( $severity->textContent ) ) ) {
+			if ( ! preg_match( '/^[1-9][0-9]*$/D', trim( $severity->textContent ) ) || 5 > (int) $severity->textContent ) {
 				return true;
 			}
 		}

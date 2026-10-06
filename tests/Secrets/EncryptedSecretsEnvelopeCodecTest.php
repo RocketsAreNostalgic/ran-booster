@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace RAN\Tests\Secrets;
 
 // Native JSON and base64 calls inspect the exact pure codec wire format.
-// phpcs:disable WordPress.WP.AlternativeFunctions
-// phpcs:disable WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode, WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -44,7 +42,9 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 		self::assertSame( EncryptedSecretsEnvelopeCodec::FORMAT, $decoded['format'] );
 		self::assertSame( EncryptedSecretsEnvelopeCodec::VERSION, $decoded['version'] );
 		self::assertSame( EncryptedSecretsEnvelopeCodec::ALGORITHM, $decoded['algorithm'] );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode, WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 		self::assertSame( base64_encode( base64_decode( $decoded['nonce'], true ) ), $decoded['nonce'] );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode, WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 		self::assertSame( base64_encode( base64_decode( $decoded['ciphertext'], true ) ), $decoded['ciphertext'] );
 	}
 
@@ -77,6 +77,7 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 					$value = json_decode( $json, true, 4, JSON_THROW_ON_ERROR );
 					unset( $value['algorithm'] );
 
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Preserve native JSON bytes for the isolated fixture/trace assertion without loading WordPress.
 					return json_encode( $value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES ) . "\n";
 				},
 			),
@@ -85,6 +86,7 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 					$value          = json_decode( $json, true, 4, JSON_THROW_ON_ERROR );
 					$value['extra'] = true;
 
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Preserve native JSON bytes for the isolated fixture/trace assertion without loading WordPress.
 					return json_encode( $value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES ) . "\n";
 				},
 			),
@@ -92,6 +94,7 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 				static function ( string $json ): string {
 					$value = json_decode( $json, true, 4, JSON_THROW_ON_ERROR );
 
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Preserve native JSON bytes for the isolated fixture/trace assertion without loading WordPress.
 					return json_encode(
 						array(
 							'version'    => $value['version'],
@@ -129,7 +132,8 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 		$value           = json_decode( $codec->encrypt( self::PLAINTEXT, self::KEY ), true, 4, JSON_THROW_ON_ERROR );
 		$original        = $value[ $field ];
 		$value[ $field ] = $mutate( $original );
-		$invalid         = json_encode( $value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES ) . "\n";
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Preserve native JSON bytes for the isolated fixture/trace assertion without loading WordPress.
+		$invalid = json_encode( $value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES ) . "\n";
 
 		$this->expectException( RuntimeException::class );
 		$codec->decrypt( $invalid, self::KEY );
@@ -142,19 +146,24 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 			'extra padding'     => array( 'nonce', static fn( string $value ): string => $value . '=' ),
 			'whitespace'        => array( 'ciphertext', static fn( string $value ): string => $value . ' ' ),
 			'url-safe alphabet' => array( 'ciphertext', static fn( string $value ): string => '-' . substr( $value, 1 ) ),
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 			'short nonce'       => array( 'nonce', static fn(): string => base64_encode( 'short' ) ),
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 			'short ciphertext'  => array( 'ciphertext', static fn(): string => base64_encode( 'short' ) ),
 		);
 	}
 
 	public function test_tamper_and_wrong_key_fail_authentication(): void {
-		$codec               = new EncryptedSecretsEnvelopeCodec();
-		$envelope            = $codec->encrypt( self::PLAINTEXT, self::KEY );
-		$value               = json_decode( $envelope, true, 4, JSON_THROW_ON_ERROR );
-		$bytes               = base64_decode( $value['ciphertext'], true );
-		$bytes[0]            = chr( ord( $bytes[0] ) ^ 1 );
+		$codec    = new EncryptedSecretsEnvelopeCodec();
+		$envelope = $codec->encrypt( self::PLAINTEXT, self::KEY );
+		$value    = json_decode( $envelope, true, 4, JSON_THROW_ON_ERROR );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
+		$bytes    = base64_decode( $value['ciphertext'], true );
+		$bytes[0] = chr( ord( $bytes[0] ) ^ 1 );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 		$value['ciphertext'] = base64_encode( $bytes );
-		$tampered            = json_encode( $value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES ) . "\n";
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Preserve native JSON bytes for the isolated fixture/trace assertion without loading WordPress.
+		$tampered = json_encode( $value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES ) . "\n";
 
 		foreach ( array(
 			$tampered => self::KEY,
@@ -181,13 +190,16 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 		string $field,
 		int $offset
 	): void {
-		$codec            = new EncryptedSecretsEnvelopeCodec();
-		$value            = json_decode( $codec->encrypt( self::PLAINTEXT, self::KEY ), true, 4, JSON_THROW_ON_ERROR );
+		$codec = new EncryptedSecretsEnvelopeCodec();
+		$value = json_decode( $codec->encrypt( self::PLAINTEXT, self::KEY ), true, 4, JSON_THROW_ON_ERROR );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 		$bytes            = base64_decode( $value[ $field ], true );
 		$offset           = $offset < 0 ? strlen( $bytes ) + $offset : $offset;
 		$bytes[ $offset ] = chr( ord( $bytes[ $offset ] ) ^ 1 );
-		$value[ $field ]  = base64_encode( $bytes );
-		$mutated          = json_encode( $value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES ) . "\n";
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
+		$value[ $field ] = base64_encode( $bytes );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Preserve native JSON bytes for the isolated fixture/trace assertion without loading WordPress.
+		$mutated = json_encode( $value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES ) . "\n";
 
 		$this->expectException( RuntimeException::class );
 		$codec->decrypt( $mutated, self::KEY );
@@ -203,9 +215,11 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 	}
 
 	public function test_changed_additional_authenticated_data_cannot_decrypt_the_envelope(): void {
-		$envelope   = ( new EncryptedSecretsEnvelopeCodec() )->encrypt( self::PLAINTEXT, self::KEY );
-		$value      = json_decode( $envelope, true, 4, JSON_THROW_ON_ERROR );
-		$nonce      = base64_decode( $value['nonce'], true );
+		$envelope = ( new EncryptedSecretsEnvelopeCodec() )->encrypt( self::PLAINTEXT, self::KEY );
+		$value    = json_decode( $envelope, true, 4, JSON_THROW_ON_ERROR );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
+		$nonce = base64_decode( $value['nonce'], true );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 		$ciphertext = base64_decode( $value['ciphertext'], true );
 
 		self::assertFalse(
@@ -240,13 +254,13 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 			$codec->encrypt( str_repeat( 'x', EncryptedSecretsEnvelopeCodec::MAX_BYTES + 1 ), self::KEY );
 			self::fail( 'An oversized plaintext must fail.' );
 		} catch ( RuntimeException ) {
-			self::assertTrue( true );
+			self::addToAssertionCount( 1 );
 		}
 		try {
 			$codec->encrypt( str_repeat( 'x', 800000 ), self::KEY );
 			self::fail( 'A plaintext whose encoded envelope exceeds the limit must fail.' );
 		} catch ( RuntimeException ) {
-			self::assertTrue( true );
+			self::addToAssertionCount( 1 );
 		}
 
 		$this->expectException( RuntimeException::class );

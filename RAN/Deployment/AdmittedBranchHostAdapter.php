@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 // Internal exception values are control-flow/diagnostic transport, not rendered output.
 // Trust-boundary URL parsing and local writability probes intentionally use PHP primitives.
-// phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url
-// phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_is_writable
 
 namespace RAN\Deployment;
 
@@ -519,6 +517,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		if ( ! is_string( $url ) || '' === $url || trim( $url ) !== $url ) {
 			$this->stage( DeploymentOutcome::CODE_ARCHIVE_URL_INVALID );
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Trust-boundary validation rejects malformed URLs using native parse_url semantics before admitting HTTPS artifacts.
 		$parts = parse_url( $url );
 		if ( false === filter_var( $url, FILTER_VALIDATE_URL ) || ! is_array( $parts ) || 'https' !== strtolower( (string) ( $parts['scheme'] ?? '' ) ) || '' === (string) ( $parts['host'] ?? '' ) || isset( $parts['user'] ) || isset( $parts['pass'] ) || isset( $parts['fragment'] ) ) {
 			$this->stage( DeploymentOutcome::CODE_ARCHIVE_URL_INVALID );
@@ -541,6 +540,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	private function canonical_writable_directory( string $path ): ?string {
 		$canonical = realpath( $path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- Admission requires a real canonical directory writable by the local PHP process before WordPress installation.
 		return false !== $canonical && is_dir( $canonical ) && is_writable( $canonical ) ? $canonical : null;
 	}
 

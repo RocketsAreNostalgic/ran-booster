@@ -15,29 +15,41 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 // The dispatcher verifies the action nonce before this template repopulates submitted values.
-// phpcs:disable WordPress.Security.NonceVerification.Missing
 
-$provider_options         = $package_provider_settings['providers'];
-$default_provider_code    = $package_provider_settings['default_provider'];
-$selected_credential_id   = isset( $_POST['ran_booster']['credential_id'] )
+$provider_options      = $package_provider_settings['providers'];
+$default_provider_code = $package_provider_settings['default_provider'];
+// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
+$selected_credential_id = isset( $_POST['ran_booster']['credential_id'] )
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
 	? sanitize_text_field( (string) $_POST['ran_booster']['credential_id'] )
 	: '';
-$repository_value         = isset( $_POST['ran_booster']['repository'] ) ? (string) $_POST['ran_booster']['repository'] : '';
-$branch_value             = isset( $_POST['ran_booster']['branch'] ) ? (string) $_POST['ran_booster']['branch'] : '';
-$subdirectory_value       = isset( $_POST['ran_booster']['subdirectory'] ) ? (string) $_POST['ran_booster']['subdirectory'] : '';
+// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
+$repository_value = isset( $_POST['ran_booster']['repository'] ) ? (string) $_POST['ran_booster']['repository'] : '';
+// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
+$branch_value = isset( $_POST['ran_booster']['branch'] ) ? (string) $_POST['ran_booster']['branch'] : '';
+// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
+$subdirectory_value = isset( $_POST['ran_booster']['subdirectory'] ) ? (string) $_POST['ran_booster']['subdirectory'] : '';
+// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
 $public_lookup_profile_id = isset( $_POST['ran_booster']['public_lookup_profile_id'] ) && is_string( $_POST['ran_booster']['public_lookup_profile_id'] )
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
 	? sanitize_text_field( $_POST['ran_booster']['public_lookup_profile_id'] )
 	: '';
 if ( '' !== $public_lookup_profile_id && 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/D', $public_lookup_profile_id ) ) {
 	$public_lookup_profile_id = '';
 }
 
-$deployment_policy                   = isset( $_POST['ran_booster']['deployment_policy'] )
+// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
+$deployment_policy = isset( $_POST['ran_booster']['deployment_policy'] )
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
 	? sanitize_key( (string) $_POST['ran_booster']['deployment_policy'] )
 	: \RAN\Deployment\DeploymentPolicy::MANUAL->value;
-$provider_code                       = isset( $_POST['ran_booster']['provider'] ) ? sanitize_key( (string) $_POST['ran_booster']['provider'] ) : $default_provider_code;
-$provider_repository_id              = isset( $_POST['ran_booster']['provider_repository_id'] ) ? wp_strip_all_tags( wp_unslash( (string) $_POST['ran_booster']['provider_repository_id'] ), true ) : '';
+// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
+$provider_code = isset( $_POST['ran_booster']['provider'] ) ? sanitize_key( (string) $_POST['ran_booster']['provider'] ) : $default_provider_code;
+// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
+$provider_repository_id = isset( $_POST['ran_booster']['provider_repository_id'] ) ? wp_strip_all_tags( wp_unslash( (string) $_POST['ran_booster']['provider_repository_id'] ), true ) : '';
+// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
 $provider_repository_identity_source = isset( $_POST['ran_booster']['provider_repository_identity_source'] )
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
 	? sanitize_key( (string) $_POST['ran_booster']['provider_repository_identity_source'] )
 	: 'manual';
 
@@ -69,6 +81,7 @@ $package_advanced_summary   = isset( $package_source ) && is_string( $package_so
 	: __( 'Branch · provider default', 'ran-booster' );
 $package_source_view        = 'branch';
 $package_source_mode        = 'create';
+// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
 $package_advanced_open      = isset( $_POST['ran_booster'] ) && is_array( $_POST['ran_booster'] );
 $package_repository_ready   = '' !== trim( $repository_value )
 	&& strlen( $repository_value ) <= 512
@@ -134,7 +147,7 @@ $managed_package_url        = '' === $managed_package_identifier
 							<div class="ran-booster-settings-fields">
 								<div class="ran-booster-settings-field ran-booster-settings-field--wide">
 									<label>
-										<input type="checkbox" name="ran_booster[dry-run]" <?php checked( isset( $_POST['ran_booster']['dry-run'] ) ); ?>>
+										<input type="checkbox" name="ran_booster[dry-run]" <?php /* phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification. */ checked( isset( $_POST['ran_booster']['dry-run'] ) ); ?>>
 										<?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Link installed %s', 'ran-booster' ), $package_view->get_type() ) ); ?>
 									</label>
 									<p class="description"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Let Booster manage an already installed %s instead of deploying it now.', 'ran-booster' ), $package_view->get_type() ) ); ?></p>
@@ -158,4 +171,4 @@ $managed_package_url        = '' === $managed_package_identifier
 	</div>
 </div>
 
-<?php // phpcs:enable WordPress.Security.NonceVerification.Missing ?>
+<?php // End of package template. ?>

@@ -67,7 +67,8 @@
         "test:published-template-pack": "bash tests/published-template-pack.sh",
         "analyze": [
             "phpstan analyse --configuration=phpstan.neon --no-progress --debug --memory-limit=2G",
-            "phpstan analyse --configuration=phpstan-development.neon --no-progress --memory-limit=2G"
+            "Composer\\Config::disableProcessTimeout",
+            "@php scripts/analyze-development.php"
         ],
         "test:delivery-intake-race": "bash tests/WordPress/delivery-intake-race.sh",
         "test:worker-hard-stop": "bash tests/WordPress/worker-hard-stop.sh",

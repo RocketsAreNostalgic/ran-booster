@@ -415,9 +415,9 @@ class Booster {
 		}
 
 		// Read-only routing state; this guard prevents state access and performs no action.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only page routing defers database/sidecar bootstrap; it does not authorize an action.
 		$page_input = $_GET['page'] ?? '';
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only tab routing defers database/sidecar bootstrap; it does not authorize an action.
 		$tab_input = $_GET['tab'] ?? '';
 		if ( ! is_string( $page_input ) || ! is_string( $tab_input ) ) {
 			return false;
@@ -431,7 +431,7 @@ class Booster {
 		// Activity reads durable journals. Diagnostics and Logging
 		// defer sidecar validation during bootstrap; Logging reads
 		// only its bounded file when rendered.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The allowlisted panel decides whether bootstrap may read durable journals, not whether a mutation is authorized.
 		$panel_input = $_GET['panel'] ?? 'diagnostics';
 		$panel       = is_string( $panel_input )
 			? sanitize_key( wp_unslash( $panel_input ) )
@@ -470,13 +470,13 @@ class Booster {
 
 		if ( 'toplevel_page_ran-booster' === $hook || $is_transporter_page ) {
 			// Read-only allowlisted navigation state; no action is performed from this value.
-			// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only navigation state.
 			if ( $is_transporter_page ) {
 				$requested_tab = 'portability';
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
 			} elseif ( isset( $_GET['tab'] ) && is_string( $_GET['tab'] ) ) {
+					// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
 					$requested_tab = sanitize_key( wp_unslash( $_GET['tab'] ) );
 			}
-			// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 			if ( $this->is_provider_admin_tab( $requested_tab ) || in_array( $requested_tab, array( 'portability', 'troubleshooting' ), true ) ) {
 				$should_enqueue_htmx = true;

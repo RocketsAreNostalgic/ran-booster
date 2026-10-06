@@ -82,41 +82,6 @@
 	<!-- Reserved parameter names are checked throughout; retained public/native signatures are declaration-local. -->
 	<rule ref="Universal.NamingConventions.NoReservedKeywordParameterNames"/>
 
-	<!-- The focused container unit test keeps its tiny fixture classes beside the assertions. -->
-	<rule ref="Generic.Files.OneObjectStructurePerFile">
-		<exclude-pattern>/tests/Container/ContainerTest.php</exclude-pattern>
-		<exclude-pattern>/tests/Booster/GitHub/WebhookManagement/WebhookManagementControllerTest.php</exclude-pattern>
-	</rule>
-
-	<!-- The migrated behavior fixture intentionally exercises raw request arrays and exact serialized legacy records. -->
-	<rule ref="WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize">
-		<exclude-pattern>/tests/Booster/GitHub/WebhookManagement/WebhookManagementControllerTest.php</exclude-pattern>
-	</rule>
-	<rule ref="WordPress.WP.AlternativeFunctions.parse_url_parse_url">
-		<exclude-pattern>/tests/Booster/GitHub/WebhookManagement/WebhookManagementControllerTest.php</exclude-pattern>
-	</rule>
-	<rule ref="WordPress.Security.NonceVerification.Recommended">
-		<exclude-pattern>/tests/Booster/GitHub/WebhookManagement/WebhookManagementControllerTest.php</exclude-pattern>
-	</rule>
-
-	<!-- The single-file characterization harness is CLI-only and asserts source text verbatim. -->
-	<rule ref="WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents">
-		<exclude-pattern>/tests/characterization.php</exclude-pattern>
-	</rule>
-	<rule ref="WordPress.Security.EscapeOutput.OutputNotEscaped">
-		<exclude-pattern>/tests/characterization.php</exclude-pattern>
-	</rule>
-	<rule ref="WordPress.WP.CapitalPDangit.MisspelledInText">
-		<exclude-pattern>/tests/characterization.php</exclude-pattern>
-	</rule>
-
-	<!--
-		SecretsFile uses a site-owned encrypted JSON sidecar and atomic temp-file + rename writes.
-		WP_Filesystem cannot provide the same same-directory atomic replacement contract.
-	-->
-	<rule ref="WordPress.WP.AlternativeFunctions">
-		<exclude-pattern>/RAN/Secrets/SecretsFile.php</exclude-pattern>
-	</rule>
 	<rule ref="WordPress.WP.I18n">
 		<properties>
 			<property name="text_domain" type="array">

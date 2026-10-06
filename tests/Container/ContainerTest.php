@@ -80,45 +80,53 @@ final class ContainerTest extends RANBoosterTestCase {
 }
 
 // Fixtures:
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete dependency fixture stays beside the container reflection assertions.
 class DB {
 
 	// Class with no dependencies
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete dependency fixture stays beside the container reflection assertions.
 class EntityMapper {
 
 	// Class with no dependencies
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete dependency fixture stays beside the container reflection assertions.
 interface UserRepository {
 
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete dependency fixture stays beside the container reflection assertions.
 class DBUserRepository {
 
-	public function __construct( DB $db, EntityMapper $em ) {
+	public function __construct( public DB $db, public EntityMapper $em ) {
 		// Constructor stuff
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete dependency fixture stays beside the container reflection assertions.
 class UserManager {
 
-	public function __construct( DBUserRepository $users ) {
+	public function __construct( public DBUserRepository $users ) {
 		// Constructor stuff
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete dependency fixture stays beside the container reflection assertions.
 class UntypedDependency {
 	public function __construct( public $dependency ) {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete dependency fixture stays beside the container reflection assertions.
 class UnionDependency {
 	public function __construct( public DB|EntityMapper $dependency ) {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete dependency fixture stays beside the container reflection assertions.
 class IntersectionDependency {
-	public function __construct( public DB&EntityMapper $dependency ) {
+	public function __construct( public DB&UserRepository $dependency ) {
 	}
 }

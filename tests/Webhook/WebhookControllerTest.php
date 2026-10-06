@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace RAN\Tests\Webhook;
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused REST fakes stay beside their tests.
-
 use PHPUnit\Framework\TestCase;
 use RAN\Deployment\DeploymentCoordinator;
 use RAN\RepositoryProvider\ProviderCode;
@@ -214,6 +212,7 @@ final class WebhookControllerTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
 final readonly class WebhookControllerProvider implements RepositoryProvider, WebhookNormalizer {
 
 	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
@@ -247,6 +246,7 @@ final readonly class WebhookControllerProvider implements RepositoryProvider, We
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
 final class WebhookControllerCoordinator extends DeploymentCoordinator {
 
 	/** @param array{status: string, correlation_id: string, accepted_targets: int, runner_status: string}|null $result */

@@ -37,4 +37,4 @@ foreach ( $ran_booster_theme_fixtures as $ran_booster_stylesheet => $ran_booster
 	}
 }
 
-WP_CLI::success( 'Seeded active and inactive release-managed themes.' );
+WP_CLI::success( 'Seeded active and inactive release-managed themes.' ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)

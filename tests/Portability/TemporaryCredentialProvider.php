@@ -76,7 +76,7 @@ final class TemporaryCredentialProvider implements RepositoryProvider, ProviderC
 	}
 }
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused test provider policy belongs with the provider double.
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
 final readonly class TemporaryProviderCredentialPolicy implements ProviderCredentialPolicy {
 
 	public function __construct( private ProviderCode $provider ) {

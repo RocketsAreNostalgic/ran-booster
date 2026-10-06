@@ -161,7 +161,7 @@ function ran_booster_phase44_launcher(): void {
 			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Best-effort cleanup tolerates an already-removed disposable fixture or stopped child process.
 			@proc_close( $server ); }
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
-		if ( ! is_link( $base ) && realpath( $base ) === $base && '/private/tmp' === realpath( dirname( $base ) ) && is_file( $marker ) && RAN_BOOSTER_P44_MARKER . "\n" === file_get_contents( $marker ) ) {
+		if ( ! is_link( $base ) && realpath( $base ) === $base && '/private/tmp' === realpath( dirname( $base ) ) && is_file( $marker ) && RAN_BOOSTER_P44_MARKER . "\n" === file_get_contents( $marker ) ) { // @phpstan-ignore booleanNot.alwaysTrue (Cleanup must recheck the disposable root against concurrent symlink replacement before deleting it.)
 			ran_booster_phase44_remove_tree( $base );
 		}
 	}
@@ -233,7 +233,7 @@ function ran_booster_phase44_worker(): void {
 		},
 		PHP_INT_MIN
 	);
-	add_filter(
+	add_filter( // @phpstan-ignore arguments.count (WordPress supplies the documented hook arguments; this controlled callback deliberately consumes only the needed subset.)
 		'pre_wp_mail',
 		static function () use ( &$mail ): bool {
 			++$mail;
@@ -330,7 +330,7 @@ function ran_booster_phase44_native( string $site, string $type, string $policy,
 		'mode'    => $mode,
 		'type'    => $type,
 	);
-	$target                                        = new RAN\BoosterGitHubProvider\V1\GitHubReleaseNativeTarget( $type, 'plugin' === $type ? WP_PLUGIN_DIR . '/' . $id : get_theme_root() . '/' . $id . '/style.css', 'phase44-owner/' . $slug, '101', $slug, $id, static fn (): string => 'phase44-token', 'stable', $policy );
+	$target                                        = new RAN\BoosterGitHubProvider\V1\GitHubReleaseNativeTarget( $type, 'plugin' === $type ? WP_PLUGIN_DIR . '/' . $id : get_theme_root() . '/' . $id . '/style.css', 'phase44-owner/' . $slug, '101', $slug, $id, static fn (): string => 'phase44-token', 'stable', $policy ); // @phpstan-ignore argument.type, argument.type (Historical beta27 artifact proof deliberately uses that artifact's native-target constructor; current Composer provider has a later contract.)
 	if ( ! $target->register() ) {
 		throw new RuntimeException( 'Installed Core target registration failed.' );
 	}
@@ -390,7 +390,7 @@ function ran_booster_phase44_native( string $site, string $type, string $policy,
 			$rollback['backup']    = is_dir( WP_CONTENT_DIR . '/upgrade-temp-backup/' . ( 'plugin' === $type ? 'plugins/' : 'themes/' ) . $slug );
 			return new WP_Error( 'phase44_injected_rollback' );
 		};
-		add_filter( 'upgrader_post_install', $fail, PHP_INT_MAX, 3 ); }
+		add_filter( 'upgrader_post_install', $fail, PHP_INT_MAX, 3 ); } // @phpstan-ignore arguments.count (WordPress supplies the documented hook arguments; this controlled callback deliberately consumes only the needed subset.)
 	try {
 		if ( 'automatic' === $policy ) {
 			if ( 'plugin' === $type && is_plugin_active( $id ) ) {
@@ -628,7 +628,9 @@ function ran_booster_phase44_extract_core( string $zip_path, string $plugins ): 
 	$zip = new ZipArchive();
 	if ( true !== $zip->open( $zip_path ) ) {
 		throw new RuntimeException( 'Could not open Core ZIP.' );
-	} for ( $i = 0; $i < $zip->num_files; ++$i ) {
+	}
+	// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Native ZipArchive exposes numFiles; changing its spelling skips the archive safety loop.
+	for ( $i = 0; $i < $zip->numFiles; ++$i ) {
 		$name = $zip->getNameIndex( $i );
 		if ( ! is_string( $name ) || ! str_starts_with( $name, 'ran-booster/' ) || str_contains( $name, '..' ) || str_contains( $name, '\\' ) ) {
 			throw new RuntimeException( 'Core ZIP path is unsafe.' );

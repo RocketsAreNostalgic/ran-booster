@@ -4,41 +4,13 @@ includes:
 parameters:
 	level: 5
 	treatPhpDocTypesAsCertain: false
-	paths:
-		- scripts
+	# The runner supplies one discovered file; broad paths contaminate isolated fixtures.
+	scanDirectories:
 		- tests
-	# Temporary unresolved cohorts. The coverage test pins exact pending files,
-	# so these roles cannot silently exempt a newly added or split file.
+		- vendor/ran/wp-release-updater/src
+		- vendor/squizlabs/php_codesniffer/src
 	excludePaths:
 		analyseAndScan:
-			- tests/AddOn/*
-			- tests/Admin/*
-			- tests/Container/*
-			- tests/Deployment/*
-			- tests/Integration/*
-			- tests/LocalisationCatalogContractTest.php
-			- tests/Logging/*
-			- tests/PackageArtifactLimitTest.php
-			- tests/PackageMagicReadTest.php
-			- tests/PackageOperationServiceTest.php
-			- tests/PackageRemovalServiceTest.php
-			- tests/PackageSlugTest.php
-			- tests/PackageSubdirectoryTest.php
-			- tests/Portability/*
-			- tests/Quality/*
-			- tests/RANBoosterTestCase.php
-			- tests/ReleasePlatformContractTest.php
-			- tests/ReleasePromotionBoundaryTest.php
-			- tests/ReleaseWorkflowContractTest.php
-			- tests/RepositoryProvider/*
-			- tests/Runtime/*
-			- tests/RuntimePackagingPolicyNegativeTest.php
-			- tests/Secrets/*
-			- tests/Storage/*
-			- tests/Support/*
-			- tests/Troubleshooting/*
-			- tests/WordPress/*
-			- tests/characterization.php
-			- tests/fixtures/*
-	scanDirectories:
-		- vendor/ran/wp-release-updater/src
+			# Deliberately unloadable historical contracts: exact identities are pinned by the coverage test.
+			- tests/fixtures/provider-api11-registration/workflow-provider.php
+			- tests/fixtures/provider-api12-registration/repository-provider.php

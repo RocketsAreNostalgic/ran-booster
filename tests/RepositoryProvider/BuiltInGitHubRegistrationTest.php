@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace RAN\Tests\RepositoryProvider;
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Private registration spies belong with this host-boundary test.
-
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
@@ -88,7 +86,7 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		self::assertSame( 'GitHub', $metadata->label );
 		self::assertSame( 'https://github.com/', $metadata->repository_url_base );
 		self::assertSame( ProviderNavigationPlacement::GIT_HOST, $metadata->admin?->navigation?->group );
-		self::assertSame( 100, $metadata->admin?->navigation?->slot );
+		self::assertSame( 100, $metadata->admin->navigation->slot );
 		self::assertSame( 1, $secrets->credential_stores_issued );
 		self::assertSame( 0, $secrets->credential_store->reads );
 
@@ -148,6 +146,7 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class RegistrationTrackingSecretsFile extends SecretsFile {
 	public int $credential_stores_issued = 0;
 	public RegistrationTrackingCredentialStore $credential_store;
@@ -165,6 +164,7 @@ final class RegistrationTrackingSecretsFile extends SecretsFile {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class RegistrationTrackingCredentialStore implements ProviderCredentialStore {
 	public int $reads = 0;
 

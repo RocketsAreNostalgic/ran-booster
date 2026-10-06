@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace RAN\Tests\Admin;
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Private hook spies belong with this full-flow isolation test.
-
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\Booster;
@@ -234,7 +232,7 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 		self::assertSame( 1, $fixture['secrets']->validations );
 	}
 
-	/** @return array{secrets: TrackingSecretsFile, database: TrackingDatabase, plugins: TrackingPluginRepository, dashboard: \RAN\Dashboard} */
+	/** @return array{secrets: TrackingSecretsFile, database: TrackingDatabase, plugins: TrackingPluginRepository, dashboard: \RAN\Dashboard&\PHPUnit\Framework\MockObject\MockObject} */
 	private function registered_fixture(): array {
 		$secrets   = null;
 		$database  = new TrackingDatabase();
@@ -305,6 +303,7 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Private hook spies belong with this full-flow isolation test.
 final class TrackingSecretsFile extends SecretsFile {
 	public int $validations                = 0;
 	public int $purges                     = 0;
@@ -330,6 +329,7 @@ final class TrackingSecretsFile extends SecretsFile {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Private hook spies belong with this full-flow isolation test.
 final class TrackingDatabase extends Database {
 	public int $upgrades = 0;
 
@@ -348,6 +348,7 @@ final class TrackingDatabase extends Database {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Private hook spies belong with this full-flow isolation test.
 final class TrackingPluginRepository extends PluginRepository {
 	public int $reads = 0;
 

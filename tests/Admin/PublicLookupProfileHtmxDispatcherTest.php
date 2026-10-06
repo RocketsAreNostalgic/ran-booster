@@ -189,7 +189,8 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 	}
 }
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile -- Focused HTMX response spy.
+
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused HTMX response spy.
 final class HtmxPublicLookupResponse extends \RuntimeException {
 
 	public function __construct(
@@ -202,6 +203,7 @@ final class HtmxPublicLookupResponse extends \RuntimeException {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused HTMX response spy.
 final class HtmxPublicLookupTestController extends ProviderProfileAdminController {
 
 	/** @var array{provider:string,message:?string,error:?string,status:int}|null */
@@ -219,4 +221,3 @@ final class HtmxPublicLookupTestController extends ProviderProfileAdminControlle
 		throw new HtmxPublicLookupResponse( $provider, $message, $error, $status );
 	}
 }
-// phpcs:enable Generic.Files.OneObjectStructurePerFile

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace RAN\Tests\Webhook;
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused webhook fakes stay beside their tests.
-
 use PHPUnit\Framework\TestCase;
 use RAN\Deployment\DeploymentCoordinator;
 use RAN\Deployment\DeploymentStorageFailure;
@@ -530,6 +528,7 @@ final class WebhookProcessorTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
 final readonly class WebhookProcessorProvider implements RepositoryProvider, WebhookNormalizer {
 
 	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
@@ -562,6 +561,7 @@ final readonly class WebhookProcessorProvider implements RepositoryProvider, Web
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
 final class WebhookProcessorCoordinator extends DeploymentCoordinator {
 
 	/**
@@ -591,6 +591,7 @@ final class WebhookProcessorCoordinator extends DeploymentCoordinator {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
 final class WebhookProcessorCoordinatorSpy {
 
 	public int $calls = 0;

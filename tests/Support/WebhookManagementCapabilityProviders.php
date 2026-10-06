@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace RAN\Tests\Support;
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Closely related capability fixtures share one focused support file.
-
 use RAN\RepositoryProvider\ArchiveRequest;
 use RAN\RepositoryProvider\PreparedArchive;
 use RAN\RepositoryProvider\ProviderCode;
@@ -64,6 +62,7 @@ abstract class WebhookManagementCapabilityProvider implements RepositoryProvider
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 trait SuppliesWebhookFitness {
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The fixture implementation of assess_setup retains the production method contract; these inputs do not affect this controlled result.
 	public function assess_setup( string $repository_id, string $repository, ?string $credential_profile_id ): RepositoryWebhookFitnessResult {
@@ -96,6 +95,7 @@ trait SuppliesWebhookFitness {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 trait SuppliesWebhookManagement {
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The fixture implementation of setup retains the production method contract; these inputs do not affect this controlled result.
 	public function setup( string $repository_id, string $repository, string $callback_url, ?string $credential_profile_id, string $signing_secret ): RepositoryWebhookOperationResult {
@@ -128,6 +128,7 @@ trait SuppliesWebhookManagement {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class CompleteWebhookManagementCapabilityProvider extends WebhookManagementCapabilityProvider implements RepositoryWebhookFitness, RepositoryWebhookManagement, RepositoryWebhookSettingsLink, WebhookNormalizer {
 	use SuppliesWebhookFitness;
 	use SuppliesWebhookManagement;
@@ -154,6 +155,7 @@ final class CompleteWebhookManagementCapabilityProvider extends WebhookManagemen
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class UnnormalizedWebhookManagementCapabilityProvider extends WebhookManagementCapabilityProvider implements RepositoryWebhookFitness, RepositoryWebhookManagement {
 	use SuppliesWebhookFitness;
 	use SuppliesWebhookManagement;
@@ -162,13 +164,16 @@ final class UnnormalizedWebhookManagementCapabilityProvider extends WebhookManag
 	public const VERSION   = RepositoryWebhookFitness::VERSION;
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class FitnessOnlyWebhookManagementCapabilityProvider extends WebhookManagementCapabilityProvider implements RepositoryWebhookFitness {
 	use SuppliesWebhookFitness;
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class ManagementOnlyWebhookManagementCapabilityProvider extends WebhookManagementCapabilityProvider implements RepositoryWebhookManagement {
 	use SuppliesWebhookManagement;
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class AbsentWebhookManagementCapabilityProvider extends WebhookManagementCapabilityProvider {
 }

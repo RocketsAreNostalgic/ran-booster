@@ -21,9 +21,9 @@ RAN Booster is distributed through verified GitHub release artifacts rather than
 
 ## Production PHP analysis coverage
 
-`composer analyze` is blocking PHPStan level 5. Its direct roots cover the four
-root entrypoints, `RAN/`, `views/` (including the immutable generated Admin Shell)
-and PHP under `assets/`. At the #167 coverage checkpoint this is 345 shipped Core
+`composer analyze` is blocking PHPStan level 5. Its production profile defaults to the repository root, with root-relative
+exclusions for development, dependencies and disposable output. New production
+roots enter automatically, including views and the immutable generated Admin Shell. At the #167 coverage checkpoint this is 345 shipped Core
 PHP files. Dependency `scanDirectories` supplies symbols; it is not direct
 analysis of dependency bodies. Tests and maintenance scripts retain syntax,
 standards and their behavioural gates, rather than being counted as production
@@ -53,38 +53,67 @@ actual fallback/guard. Generated Admin Shell bytes are verified through
 not complete #167's naming, condition, exception or connected-contract work,
 and does not raise the analysis level or certify new dependency/host versions.
 
-## Development analysis migration
+## Maintained development PHP and reviewed exception boundaries
 
-The separate level-5 `phpstan-development.neon` invocation now covers all PHP
-under `scripts/`, `tests/PackageRemoval/`, `tests/Security/`, `tests/Uninstall/`
-and `tests/Webhook/`: 12 of 362 maintained development files, alongside the
-unchanged 345 shipped production files. Production analysis runs separately;
-development function doubles do not enter its symbol discovery.
+`composer analyze` invokes `scripts/analyze-development.php`, which discovers all
+PHP recursively under `scripts/` and `tests/`. It invokes the locked level-5
+analyzer once per file. `phpstan-development.neon` provides unit-test symbols;
+`phpstan-integration.neon` provides the separate installed WordPress/fixture
+symbol world. Both remain pathless: adding broad paths would reintroduce unrelated
+fixture declarations into supposedly isolated invocations. Their names select
+symbol environments, not lists of files permitted to enter analysis.
 
-Development discovery starts at the whole scripts/tests roots. Temporary excluded
-roles are explicit in configuration, and `phpstan-development-pending.txt` records
-the exact 350 unresolved files. This is migration debt, **not accepted or permanent
-exemptions**, and does not establish all-maintained or ecosystem acceptance.
-`ProductionAnalysisCoverageTest` independently discovers all development PHP and
-compares its effective analysis population plus the exact pending inventory.
-A new file in a covered or new role enters analysis automatically. A split/new file
-inside a pending role fails coverage until analyzed or separately reviewed; a stale
-pending entry also fails. Do not expand the inventory merely to make CI green.
+The isolated development sweep can exceed Composer's five-minute process limit.
+Only after production analysis, the `analyze` script invokes Composer's built-in
+timeout override before running that sweep; every analyzer exit remains blocking.
+The repository-quality CI job retains a bounded thirty-minute limit for dependency
+setup, the complete PHP contract and frontend checks. The first full native run
+took 19 minutes 55 seconds, so twenty minutes leaves insufficient scheduling and
+future-file headroom. All other CI job limits are unchanged.
 
-The combined pre-migration level-5 probe had 708 diagnostics across 120 files;
-those are exposure estimates, not defect counts. It mixed incompatible harness
-symbol worlds: for example, `RAN\wp_die` intentionally returns in one fixture
-and never returns in others. Further cohorts need their actual harness boundaries
-and negative assertions preserved, not blanket ignores or baselines. This first
-cohort changes only accurate fixture types (PHPUnit stub intersection, non-null
-fixture return, integer/string keys in intentionally malformed webhook input).
-The CLI verifier also handles an unavailable argument array through its existing
-usage-failure path. Ordinary CLI behavior, production PHP and dependencies are unchanged.
+The old 312-file pending inventory is removed. There are 363 analyzed development
+files and 345 production files at this candidate (708 directly analyzed of 710
+maintained PHP). Future root/split files enter automatically. The two exceptions
+below are proposed for independent review within the owner's explicit policy for
+files that genuinely cannot be analyzed; green CI alone does not approve them.
 
-Controls cover new root/nested files, pending-role splits, stub-file removal and
-real bad-return/corrected-return diagnostics. Effective level below five or
-configured ignored diagnostics fails the guard; canonical Composer commands
-must keep both profiles. Remove the pending manifest once every role qualifies.
+| Exact exemption | Evidence and disposition |
+| --- | --- |
+| `tests/fixtures/provider-api11-registration/workflow-provider.php` | Intentionally implements removed `RepositoryReleaseWorkflowManagementV2`; loading it against the current host fatals. PHPStan reports non-ignorable `interface.notFound`. Preserve the historical rejection fixture rather than inventing a compatible interface. |
+| `tests/fixtures/provider-api12-registration/repository-provider.php` | Intentionally lacks four current provider methods; loading it fatals and PHPStan reports four non-ignorable `method.abstract` diagnostics. Preserve that incompatibility contract. |
+
+`ProviderApiLifecycleTest` proves both historical versions are rejected in both
+load orders, without loading their classes or populating the provider registry.
+The coverage guard pins the exact SHA-256 identity of each file, rejects a new,
+changed or stale exemption, and checks all other maintained files against actual
+analyzer selection. Retiring/changing those historical contracts requires fresh
+review and removal/requalification of these exemptions. Neither exemption grants
+future siblings or split files an analysis waiver.
+
+The small analysis-only `WP_CLI_Command` base declaration reflects upstream
+WP-CLI v2.12.0's actual constructor contract, with source-blob provenance in the
+file. It is analyzed itself and never loaded by the product or fixture runtime;
+installed WP-CLI still provides the real class. Dynamic API constants in the
+integration profile represent the separately installed host, whose identity is
+checked by those harnesses, rather than the source checkout's current literals.
+
+PHPStan occurrence annotations retain intrinsically invalid calls and historical
+host contracts, magic-property probes, externally mutated fixture state and
+locked-tool implementation APIs. The exact identifiers and reasons remain beside
+the probes; no blanket ignore, baseline or broad ignored-error configuration is
+allowed. Removing annotations must expose the intended diagnostic, while an
+adjacent unrelated violation remains rejected. Exception dispositions are grouped
+by these contracts, not by diagnostic counts, and require independent review.
+
+WPCS native I/O exceptions preserve real inode/permission/atomic-write semantics,
+private disposable test paths and exact encoded bytes. Framework names and
+co-located test collaborators have declaration-local allowances. Broad native-I/O,
+class, function, nonce and CLI output disables and whole-file XML exemptions are
+removed. Only caller-bound view locals retain the exact variable-prefix allowance;
+new functions/classes/constants/hooks in those views remain checked. Production
+executable PHP is unchanged; four map PHPDocs now accurately include numeric IDs
+coerced to integer keys by PHP. A developer-only ZIP safety loop now uses native
+`numFiles`, with regular and malicious-entry regression controls.
 
 ## Current PHP naming contract
 

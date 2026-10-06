@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace RAN\Tests\Admin;
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused authority fixtures stay beside their tests.
-
 use PHPUnit\Framework\TestCase;
 use RAN\AbstractPackage;
 use RAN\Admin\CredentialRequestException;
@@ -127,7 +125,7 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 				}
 				self::fail( 'Release-managed packages must not establish branch webhook authority.' );
 			} catch ( CredentialRequestException ) {
-				self::assertTrue( true );
+				$this->addToAssertionCount( 1 );
 			}
 		}
 	}
@@ -180,9 +178,10 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused authority fixtures stay beside their tests.
 final class AuthorityPackage extends AbstractPackage {
 
-	private function __construct( private readonly string $identifier, private readonly ?string $authority_id ) {
+	public function __construct( private readonly string $identifier = '', private readonly ?string $authority_id = null ) {
 	}
 
 	public static function make(
@@ -206,6 +205,7 @@ final class AuthorityPackage extends AbstractPackage {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused authority fixtures stay beside their tests.
 final class AuthorityPluginRepository extends PluginRepository {
 
 	/** @param list<AuthorityPackage> $packages */
@@ -214,10 +214,15 @@ final class AuthorityPluginRepository extends PluginRepository {
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_plugins retains the production method contract; these inputs do not affect this controlled result.
 	public function all_deployment_plugins( ?\RAN\PackageSource $source = null ): array {
-		return $this->packages;
+		$packages = array();
+		foreach ( $this->packages as $package ) {
+			$packages[ $package->get_identifier() ] = $package;
+		}
+		return $packages;
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused authority fixtures stay beside their tests.
 final class AuthorityThemeRepository extends ThemeRepository {
 
 	/** @param list<AuthorityPackage> $packages */
@@ -226,14 +231,21 @@ final class AuthorityThemeRepository extends ThemeRepository {
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_themes retains the production method contract; these inputs do not affect this controlled result.
 	public function all_deployment_themes( ?\RAN\PackageSource $source = null ): array {
-		return $this->packages;
+		$packages = array();
+		foreach ( $this->packages as $package ) {
+			$packages[ $package->get_identifier() ] = $package;
+		}
+		return $packages;
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused authority fixtures stay beside their tests.
 final class ExactAuthorityPluginRepository extends PluginRepository {
 	/** @param array<string, AuthorityPackage> $packages */
 	public function __construct( private readonly array $packages ) {}
 
+	/** @return AuthorityPackage */
+	// @phpstan-ignore method.childReturnType (This shared neutral Package fixture models exact lookup for both repository kinds without plugin-specific behavior.)
 	public function booster_plugin_from_file( $file ): AuthorityPackage {
 		if ( ! is_string( $file ) || ! isset( $this->packages[ $file ] ) ) {
 			throw new \RuntimeException( 'Exact plugin lookup did not match.' );
@@ -248,10 +260,13 @@ final class ExactAuthorityPluginRepository extends PluginRepository {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused authority fixtures stay beside their tests.
 final class ExactAuthorityThemeRepository extends ThemeRepository {
 	/** @param array<string, AuthorityPackage> $packages */
 	public function __construct( private readonly array $packages ) {}
 
+	/** @return AuthorityPackage */
+	// @phpstan-ignore method.childReturnType (This shared neutral Package fixture models exact lookup for both repository kinds without theme-specific behavior.)
 	public function booster_theme_from_stylesheet( $stylesheet ): AuthorityPackage {
 		if ( ! is_string( $stylesheet ) || ! isset( $this->packages[ $stylesheet ] ) ) {
 			throw new \RuntimeException( 'Exact theme lookup did not match.' );
@@ -266,6 +281,7 @@ final class ExactAuthorityThemeRepository extends ThemeRepository {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused authority fixtures stay beside their tests.
 final class AuthorityInstallationStore implements InstallationStore {
 	/** @param array<string, InstallationRecord> $records */
 	public function __construct( private readonly array $records ) {}
@@ -287,6 +303,7 @@ final class AuthorityInstallationStore implements InstallationStore {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused authority fixtures stay beside their tests.
 final readonly class AuthorityWebhookPolicy implements ProviderWebhookPolicy {
 
 	public function get_provider(): ProviderCode {

@@ -96,13 +96,12 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		);
 		$output   = '';
 		ob_start();
-		// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Test-only handler promotes missing-metadata warnings to exceptions.
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Test-only handler promotes missing-metadata warnings to exceptions.
 		set_error_handler(
 			static function ( int $severity, string $message ): never {
 				throw new \ErrorException( $message, 0, $severity );
 			}
 		);
-		// phpcs:enable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler
 		try {
 			$actual = $this->controls( provider: $provider, providers: $this->registry_without_metadata( $provider ) )->enrich_repository_rows( $rows, 'fixture', array(), 'https://example.test/return' );
 		} finally {
@@ -130,7 +129,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		$_POST   = $request;
 		try {
 			$this->controls()->handle_workflow();
-			self::fail( 'Expected the native redirect to stop execution.' );
+			self::fail( 'Expected the native redirect to stop execution.' ); // @phpstan-ignore deadCode.unreachable (Retain the failure assertion if the never-returning redirect contract regresses.)
 		} catch ( \RuntimeException $exception ) {
 			self::assertSame( 'native-redirect', $exception->getMessage() );
 		}
@@ -149,7 +148,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 			$_SERVER['HTTP_HX_REQUEST'] = 'true';
 			try {
 				$this->controls()->handle_workflow();
-				self::fail( 'Expected the HX response to stop execution.' );
+				self::fail( 'Expected the HX response to stop execution.' ); // @phpstan-ignore deadCode.unreachable (Retain the failure assertion if the never-returning response contract regresses.)
 			} catch ( \RuntimeException $exception ) {
 				self::assertSame( 'hx-redirect', $exception->getMessage() );
 			}

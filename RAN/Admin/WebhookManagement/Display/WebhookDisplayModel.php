@@ -23,9 +23,9 @@ final class WebhookDisplayModel {
 	}
 
 	/**
-	 * @param array<string, array<string, mixed>> $rows
-	 * @param array<string, array<string, mixed>> $repository_projections
-	 * @return array<string, array<string, mixed>>
+	 * @param array<array-key, array<string, mixed>> $rows
+	 * @param array<array-key, array<string, mixed>> $repository_projections
+	 * @return array<array-key, array<string, mixed>>
 	 */
 	public function enrich_rows( array $rows, string $provider_code, string $provider_label, string $repository_url_base, array $repository_projections, string $return_url ): array {
 		$this->projected_statuses = array();
@@ -90,7 +90,7 @@ final class WebhookDisplayModel {
 		return $rows;
 	}
 
-	/** @param array<string,array<string,mixed>> $rows @param array<string,array<string,mixed>> $repository_projections @return array<string,array<string,mixed>> */
+	/** @param array<array-key,array<string,mixed>> $rows @param array<array-key,array<string,mixed>> $repository_projections @return array<array-key,array<string,mixed>> */
 	public function enrich_historical_rows( array $rows, string $provider_code, array $repository_projections ): array {
 		$records = $this->records->all();
 

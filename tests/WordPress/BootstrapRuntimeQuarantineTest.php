@@ -24,7 +24,7 @@ final class BootstrapRuntimeQuarantineTest extends TestCase {
 		$plugin_file = dirname( __DIR__, 2 ) . '/ran-booster.php';
 		require $plugin_file;
 
-		self::assertSame( 'multisite_unsupported', RAN_BOOSTER_RUNTIME_MODE );
+		self::assertSame( 'multisite_unsupported', constant( 'RAN_BOOSTER_RUNTIME_MODE' ) );
 		self::assertArrayHasKey( $plugin_file, $GLOBALS['ran_booster_activation_callbacks'] );
 		self::assertArrayHasKey( $plugin_file, $GLOBALS['ran_booster_deactivation_callbacks'] );
 		self::assertFalse( function_exists( 'ran_booster' ) );

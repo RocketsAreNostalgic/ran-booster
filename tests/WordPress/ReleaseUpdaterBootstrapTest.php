@@ -21,7 +21,7 @@ final class ReleaseUpdaterBootstrapTest extends TestCase {
 		$registrar = ReleaseUpdaterBootstrap::register();
 		$broker    = $GLOBALS['ran_wp_release_updater_v1_broker'] ?? null;
 
-		self::assertIsObject( $registrar );
+		self::assertIsObject( $registrar ); // @phpstan-ignore staticMethod.alreadyNarrowedType (Runtime bootstrap acceptance asserts the actual loaded public registrar rather than relying on its declared return type.)
 		self::assertIsObject( $broker );
 		self::assertSame( 5, $broker->protocol_version() );
 		self::assertSame( 1, $broker->diagnostics()['candidate_count'] );

@@ -36,7 +36,7 @@ use RAN\RepositoryProvider\RepositoryWebhookManagement;
 
 final class ProviderContractsTest extends TestCase {
 	public function test_release_native_targets_are_one_exact_typed_capability(): void {
-		self::assertTrue( is_subclass_of( RepositoryReleaseNativeTargets::class, \RAN\Provider\ProviderCapability::class ) );
+		self::assertTrue( ( new \ReflectionClass( RepositoryReleaseNativeTargets::class ) )->isSubclassOf( \RAN\Provider\ProviderCapability::class ) );
 		self::assertSame(
 			array( 'has_registered_native_target', 'create_native_target' ),
 			get_class_methods( RepositoryReleaseNativeTargets::class )
@@ -113,7 +113,7 @@ final class ProviderContractsTest extends TestCase {
 	}
 
 	public function test_release_candidate_listing_is_one_exact_typed_capability(): void {
-		self::assertTrue( is_subclass_of( RepositoryReleaseCandidateListing::class, \RAN\Provider\ProviderCapability::class ) );
+		self::assertTrue( ( new \ReflectionClass( RepositoryReleaseCandidateListing::class ) )->isSubclassOf( \RAN\Provider\ProviderCapability::class ) );
 
 		$methods = get_class_methods( RepositoryReleaseCandidateListing::class );
 		self::assertSame( array( 'list_release_candidates' ), $methods );
@@ -209,7 +209,7 @@ final class ProviderContractsTest extends TestCase {
 	}
 
 	public function test_release_inspection_is_one_exact_typed_capability(): void {
-		self::assertTrue( is_subclass_of( RepositoryReleaseInspector::class, \RAN\Provider\ProviderCapability::class ) );
+		self::assertTrue( ( new \ReflectionClass( RepositoryReleaseInspector::class ) )->isSubclassOf( \RAN\Provider\ProviderCapability::class ) );
 		self::assertSame( array( 'inspect_release' ), get_class_methods( RepositoryReleaseInspector::class ) );
 
 		$method     = new \ReflectionMethod( RepositoryReleaseInspector::class, 'inspect_release' );
@@ -227,7 +227,7 @@ final class ProviderContractsTest extends TestCase {
 	}
 
 	public function test_release_acquisition_is_one_exact_typed_capability(): void {
-		self::assertTrue( is_subclass_of( RepositoryReleaseAcquirer::class, \RAN\Provider\ProviderCapability::class ) );
+		self::assertTrue( ( new \ReflectionClass( RepositoryReleaseAcquirer::class ) )->isSubclassOf( \RAN\Provider\ProviderCapability::class ) );
 		self::assertSame( array( 'acquire_release' ), get_class_methods( RepositoryReleaseAcquirer::class ) );
 
 		$method     = new \ReflectionMethod( RepositoryReleaseAcquirer::class, 'acquire_release' );
@@ -353,7 +353,7 @@ final class ProviderContractsTest extends TestCase {
 	}
 
 	public function test_release_metadata_is_an_exact_optional_capability(): void {
-		self::assertTrue( is_subclass_of( RepositoryReleaseMetadata::class, \RAN\Provider\ProviderCapability::class ) );
+		self::assertTrue( ( new \ReflectionClass( RepositoryReleaseMetadata::class ) )->isSubclassOf( \RAN\Provider\ProviderCapability::class ) );
 
 		$methods = get_class_methods( RepositoryReleaseMetadata::class );
 		sort( $methods );
@@ -386,7 +386,7 @@ final class ProviderContractsTest extends TestCase {
 	}
 
 	public function test_credentialed_public_browsing_is_an_additive_optional_capability(): void {
-		self::assertTrue( is_subclass_of( CredentialedPublicRepositoryBrowser::class, RepositoryBrowser::class ) );
+		self::assertTrue( ( new \ReflectionClass( CredentialedPublicRepositoryBrowser::class ) )->isSubclassOf( RepositoryBrowser::class ) );
 
 		$methods = get_class_methods( CredentialedPublicRepositoryBrowser::class );
 		sort( $methods );

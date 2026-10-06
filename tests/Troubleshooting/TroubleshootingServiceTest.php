@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace RAN\Tests\Troubleshooting;
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Private focused fixtures keep orchestration behavior visible beside its tests.
-
 use Closure;
 use PHPUnit\Framework\TestCase;
 use RAN\RepositoryProvider\ProviderCode;
@@ -312,6 +310,7 @@ final class TroubleshootingServiceTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
 class TroubleshootingLocalFixture extends LocalTroubleshootingService {
 	public int $runs = 0;
 
@@ -337,6 +336,7 @@ class TroubleshootingLocalFixture extends LocalTroubleshootingService {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
 final class TroubleshootingSecretsFixture extends SecretsFile {
 	/** @param array<string, array<string, mixed>> $profiles */
 	public function __construct( private array $profiles ) {
@@ -352,6 +352,7 @@ final class TroubleshootingSecretsFixture extends SecretsFile {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
 class TroubleshootingProviderFixture implements RepositoryProvider {
 	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
 
@@ -382,6 +383,7 @@ class TroubleshootingProviderFixture implements RepositoryProvider {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
 final class TroubleshootingWebhookProviderFixture extends TroubleshootingProviderFixture implements WebhookNormalizer {
 	public int $readiness_runs = 0;
 

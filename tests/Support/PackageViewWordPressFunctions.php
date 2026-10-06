@@ -219,7 +219,7 @@ if ( ! function_exists( 'add_query_arg' ) ) {
 }
 
 if ( ! function_exists( 'wp_parse_str' ) ) {
-	/** @param array<string, mixed> $output */
+	/** @param-out array<int|string, mixed> $output */
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function wp_parse_str( string $input, array &$output ): void {
 		parse_str( $input, $output );

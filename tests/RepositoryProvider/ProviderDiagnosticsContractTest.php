@@ -7,7 +7,6 @@ namespace RAN\Tests\RepositoryProvider;
 require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
 
 // Direct local filesystem operations verify the provider-owned sidecar contract.
-// phpcs:disable WordPress.WP.AlternativeFunctions, Generic.Files.OneObjectStructurePerFile.MultipleFound
 
 use Closure;
 use InvalidArgumentException;
@@ -135,12 +134,14 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 		$resolved_ref = sha1( "group/subgroup/package\0main" );
 		self::assertSame( $resolved_ref, $archive->get_resolved_ref() );
 		self::assertSame( 'https://fixtures.example.test/group/subgroup/package/' . $resolved_ref . '.zip', $archive->get_url() );
-		self::assertNotInstanceOf( WebhookNormalizer::class, $provider );
+		self::assertFalse( ( new \ReflectionClass( $provider ) )->implementsInterface( WebhookNormalizer::class ) );
 
 		if ( is_file( $path ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this test-owned temporary fixture during cleanup.
 			unlink( $path );
 		}
 		if ( is_file( $path . '.lock' ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this test-owned temporary fixture during cleanup.
 			unlink( $path . '.lock' );
 		}
 	}
@@ -174,7 +175,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 		$registry = new ProviderRegistry( array(), $catalog );
 
 		try {
-			// @phpstan-ignore-next-line Deliberately prove the typed public boundary.
+			// @phpstan-ignore argument.type (A provider without the required diagnostics contract must be rejected at the typed registration boundary.)
 			$registry->register( $provider );
 			self::fail( 'A provider without diagnostics must be rejected.' );
 		} catch ( \TypeError ) {
@@ -601,7 +602,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 				ProviderCode::parse( $invalid );
 				self::fail( 'Expected provider ID rejection.' );
 			} catch ( InvalidProviderCode ) {
-				self::assertTrue( true );
+				$this->addToAssertionCount( 1 );
 			}
 		}
 	}
@@ -631,6 +632,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final readonly class RegistrationGuardCredentialStore implements ProviderCredentialStore {
 
 	public function credential_profiles(): array {
@@ -646,6 +648,7 @@ final readonly class RegistrationGuardCredentialStore implements ProviderCredent
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final readonly class RegistrationGuardDiagnostics implements ProviderDiagnostics {
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterface -- The fixture implementation of diagnose retains the production method contract; these inputs do not affect this controlled result.
@@ -654,6 +657,7 @@ final readonly class RegistrationGuardDiagnostics implements ProviderDiagnostics
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final readonly class RegistrationGuardCredentialPolicy implements ProviderCredentialPolicy {
 
 	public function __construct( private ProviderCode $code, private Closure $callback ) {
@@ -678,6 +682,7 @@ final readonly class RegistrationGuardCredentialPolicy implements ProviderCreden
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final readonly class RegistrationGuardWebhookPolicy implements ProviderWebhookPolicy {
 
 	public function __construct( private ProviderCode $code, private Closure $callback ) {
@@ -722,6 +727,7 @@ final readonly class RegistrationGuardWebhookPolicy implements ProviderWebhookPo
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final readonly class RegistrationGuardProvider implements RepositoryProvider, ProviderCredentialPolicySupplier, WebhookNormalizer {
 
 	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;

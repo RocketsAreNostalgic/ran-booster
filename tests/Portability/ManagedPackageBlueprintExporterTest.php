@@ -265,7 +265,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 			}
 			public function assert_managed_storage_ready(): void {
 			}
-			public function credential_material( \RAN\RepositoryProvider\ProviderCode|string $provider, ?string $id = null ): ?array {
+			public function credential_material( \RAN\RepositoryProvider\ProviderCode|string $provider, ?string $id = null ): array {
 				$provider_code = $provider instanceof \RAN\RepositoryProvider\ProviderCode ? $provider->value : $provider;
 
 				return array(

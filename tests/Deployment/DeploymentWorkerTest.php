@@ -167,7 +167,7 @@ final class DeploymentWorkerTest extends TestCase {
 	}
 }
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile -- Purpose-built worker spy.
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class WorkerCoordinator extends DeploymentCoordinator {
 
 	public int $calls = 0;
@@ -188,4 +188,3 @@ final class WorkerCoordinator extends DeploymentCoordinator {
 		return DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED );
 	}
 }
-// phpcs:enable Generic.Files.OneObjectStructurePerFile

@@ -8,7 +8,6 @@ use PHPUnit\Framework\TestCase;
 use RAN\Deployment\PreparedArtifact;
 use RuntimeException;
 
-// phpcs:disable WordPress.WP.AlternativeFunctions -- Tests deliberately own private temporary files.
 
 final class PreparedArtifactTest extends TestCase {
 
@@ -19,6 +18,7 @@ final class PreparedArtifactTest extends TestCase {
 	protected function tearDown(): void {
 		foreach ( $this->paths as $path ) {
 			if ( file_exists( $path ) || is_link( $path ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 				unlink( $path );
 			}
 		}
@@ -35,6 +35,7 @@ final class PreparedArtifactTest extends TestCase {
 	public function test_cleanup_rejects_changed_artifact_without_deleting_it(): void {
 		$artifact = $this->artifact();
 		$path     = $artifact->get_path();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		file_put_contents( $path, 'changed Core artifact' );
 		try {
 			$artifact->cleanup();
@@ -50,7 +51,9 @@ final class PreparedArtifactTest extends TestCase {
 		$path = tempnam( sys_get_temp_dir(), 'ran-booster-claim-' );
 		self::assertIsString( $path );
 		$this->paths[] = $path;
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		file_put_contents( $path, 'immutable Core artifact' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		chmod( $path, 0600 );
 		$identity = PreparedArtifact::regular_file_identity( $path );
 		self::assertIsArray( $identity );

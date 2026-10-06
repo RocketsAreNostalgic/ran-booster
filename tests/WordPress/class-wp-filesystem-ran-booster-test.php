@@ -35,7 +35,7 @@ final class WP_Filesystem_ran_booster_test extends WP_Filesystem_Direct {
 	}
 
 	private function stop_at_barrier(): void {
-		$barrier   = RAN_BOOSTER_HARD_STOP_BARRIER;
+		$barrier   = constant( 'RAN_BOOSTER_HARD_STOP_BARRIER' );
 		$temp_root = realpath( sys_get_temp_dir() );
 		$parent    = is_string( $barrier ) ? realpath( dirname( $barrier ) ) : false;
 		if ( ! is_string( $barrier )

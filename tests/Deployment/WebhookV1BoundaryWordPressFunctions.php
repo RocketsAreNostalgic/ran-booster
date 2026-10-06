@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Isolated REST boundary spies replace WordPress.
 
 $GLOBALS['ran_booster_webhook_v1_routes'] = array();
 
-function register_rest_route( string $namespace, string $route, array $arguments ): bool { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.namespaceFound,Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Preserve the WordPress signature; compact() reads namespace, route and arguments to record the route.
+function register_rest_route( string $namespace, string $route, array $arguments ): bool { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound,Universal.NamingConventions.NoReservedKeywordParameterNames.namespaceFound,Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Exact WordPress spy identity and signature are required. Preserve the WordPress signature; compact() reads namespace, route and arguments to record the route.
 	$GLOBALS['ran_booster_webhook_v1_routes'][] = compact( 'namespace', 'route', 'arguments' );
 
 	return true;
 }
 
-function get_option( string $option, mixed $default = false ): mixed { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound -- Preserve the WordPress function parameter signature.
+function get_option( string $option, mixed $default = false ): mixed { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound,Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound -- Exact WordPress spy identity and signature are required. Preserve the WordPress function parameter signature.
 	unset( $option );
 	$GLOBALS['ran_booster_webhook_v1_operations'][] = 'option';
 
 	return $default;
 }
 
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Exact WordPress function identity is required by this isolated boundary spy.
 function update_option( string $option, mixed $value, bool|string|null $autoload = null ): bool {
 	unset( $option, $value, $autoload );
 	$GLOBALS['ran_booster_webhook_v1_operations'][] = 'option';
@@ -26,11 +26,13 @@ function update_option( string $option, mixed $value, bool|string|null $autoload
 	return true;
 }
 
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Exact WordPress function identity is required by this isolated boundary spy.
 function wp_json_encode( mixed $value, int $flags = 0, int $depth = 512 ): string|false {
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Isolated WordPress test double.
 	return json_encode( $value, $flags, $depth );
 }
 
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Exact WordPress function identity is required by this isolated boundary spy.
 function wp_remote_request( string $url, array $arguments = array() ): array {
 	unset( $url, $arguments );
 	$GLOBALS['ran_booster_webhook_v1_operations'][] = 'remote';

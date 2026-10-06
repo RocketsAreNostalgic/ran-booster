@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace RAN\Tests\Secrets;
 
-// phpcs:disable WordPress.WP.AlternativeFunctions -- Native temporary file proves existence before the injected stat failure.
-
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
@@ -43,6 +41,7 @@ final class SecretsFileStatFailureTest extends TestCase {
 			}
 		} finally {
 			restore_error_handler();
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 			unlink( $path );
 		}
 

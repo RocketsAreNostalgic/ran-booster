@@ -140,7 +140,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 			$this->dispatcher( $this->createStub( Dashboard::class ), $capture )->dispatch_post_requests();
 			self::fail( 'An invalid nonce must terminate the request.' );
 		} catch ( \RuntimeException ) {
-			self::assertSame( 'inactive', $capture->snapshot()['state'] );
+			self::assertThat( $capture->snapshot()['state'], self::identicalTo( 'inactive' ) );
 		}
 	}
 
@@ -426,15 +426,15 @@ final class OperatorActionDispatcherTest extends TestCase {
 		$_POST['ran_booster']                   = $request + array( 'confirm_stopped' => '1' );
 		$_POST['ran_booster']['correlation_id'] = str_repeat( 'c', 32 );
 		$this->dispatcher( $dashboard, attempts: $attempts, coordinator: $coordinator )->dispatch_post_requests();
-		self::assertSame( 'running', $attempts->find_exact( 12 )?->get_state()->value );
+		self::assertThat( $attempts->find_exact( 12 )->get_state()->value, self::identicalTo( 'running' ) );
 
 		$_POST['ran_booster'] = $request + array( 'confirm_stopped' => '1' );
 		$this->dispatcher( $dashboard, attempts: $attempts, coordinator: $coordinator )->dispatch_post_requests();
 
 		$fresh = $attempts->find_exact( 12 );
-		self::assertSame( str_repeat( 'b', 32 ), $fresh?->get_correlation_id() );
-		self::assertSame( 'failed', $fresh?->get_state()->value );
-		self::assertSame( DeploymentOutcome::CODE_WORKER_STOPPED, $fresh?->get_outcome()?->get_code() );
+		self::assertSame( str_repeat( 'b', 32 ), $fresh->get_correlation_id() );
+		self::assertSame( 'failed', $fresh->get_state()->value );
+		self::assertSame( DeploymentOutcome::CODE_WORKER_STOPPED, $fresh->get_outcome()->get_code() );
 		self::assertSame( array_fill( 0, 3, array( 'manage_options', 'update_plugins', 'update_themes' ) ), array_chunk( $GLOBALS['ran_booster_test_capability_checks'], 3 ) );
 		self::assertSame( array_fill( 0, 3, 'ran-booster-reconcile-deployment-worker' ), $GLOBALS['ran_booster_test_nonce_checks'] );
 		self::assertStringContainsString( "WHERE id = 12 AND state = 'running'", implode( "\n", $database->queries ) );
@@ -538,13 +538,15 @@ final class OperatorActionDispatcherTest extends TestCase {
 	}
 }
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile -- Focused redirect and coordinator spies.
+
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused redirect and coordinator spies.
 final class DebugCaptureRedirect extends \RuntimeException {
 	public function __construct( public readonly string $url ) {
 		parent::__construct( 'Redirected.' );
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused redirect and coordinator spies.
 class DebugCaptureTestDispatcher extends Dispatcher {
 	protected function redirect_to( string $url ): never {
 		// The test spy preserves the fixed redirect URL for assertions.
@@ -552,6 +554,7 @@ class DebugCaptureTestDispatcher extends Dispatcher {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused redirect and coordinator spies.
 final class HtmxDebugCaptureResponse extends \RuntimeException {
 	public function __construct(
 		public readonly ?string $toast_message,
@@ -562,12 +565,14 @@ final class HtmxDebugCaptureResponse extends \RuntimeException {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused redirect and coordinator spies.
 final class HtmxDiagnosticsResponse extends \RuntimeException {
 	public function __construct( public readonly bool $succeeded ) {
 		parent::__construct( 'HTMX diagnostics response sent.' );
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused redirect and coordinator spies.
 final class HtmxDebugCaptureTestDispatcher extends DebugCaptureTestDispatcher {
 	protected function respond_to_htmx_debug_capture( ?string $message, ?string $error, int $status ): never {
 		// The test spy captures fixed method arguments without output.
@@ -580,6 +585,7 @@ final class HtmxDebugCaptureTestDispatcher extends DebugCaptureTestDispatcher {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused redirect and coordinator spies.
 final class OperatorDispatcherCoordinator extends DeploymentCoordinator {
 	public int $requests = 0;
 	public function __construct() {}
@@ -589,4 +595,3 @@ final class OperatorDispatcherCoordinator extends DeploymentCoordinator {
 		return 'scheduled';
 	}
 }
-// phpcs:enable Generic.Files.OneObjectStructurePerFile

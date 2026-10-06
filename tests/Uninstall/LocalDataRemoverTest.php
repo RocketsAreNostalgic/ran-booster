@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Tests\Uninstall;
 
 // Native fixture operations prove the WP-CLI config-path fallback.
-// phpcs:disable WordPress.WP.AlternativeFunctions
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
@@ -341,7 +340,9 @@ final class LocalDataRemoverTest extends TestCase {
 			. '/ran-booster-uninstall-config-'
 			. bin2hex( random_bytes( 6 ) );
 		$config = $root . '/wp-config.php';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $root, 0700 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $config, "<?php\n" ) );
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'ABSPATH', $root . '/' );
@@ -371,7 +372,9 @@ final class LocalDataRemoverTest extends TestCase {
 		try {
 			self::assertSame( $config, $remover->discovered_config_path() );
 		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 			unlink( $config );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 			rmdir( $root );
 		}
 	}
@@ -388,10 +391,15 @@ final class LocalDataRemoverTest extends TestCase {
 		$sidecar     = $site . '/secrets.json';
 		$config      = $root . '/wp-config.php';
 		$config_lock = $config . '.ran-booster.lock';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $site, 0700, true ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $config, "<?php\n" ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $config_lock, '' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $base, 0700 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $config_lock, 0600 ) );
 
 		$secrets = $this->secrets( $sidecar );
@@ -431,15 +439,20 @@ final class LocalDataRemoverTest extends TestCase {
 			self::assertDirectoryDoesNotExist( $base );
 		} finally {
 			if ( is_file( $config_lock ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 				unlink( $config_lock );
 			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 			unlink( $config );
 			if ( is_dir( $site ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 				rmdir( $site );
 			}
 			if ( is_dir( $base ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 				rmdir( $base );
 			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 			rmdir( $root );
 		}
 	}

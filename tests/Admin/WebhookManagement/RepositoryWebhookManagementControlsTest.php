@@ -49,6 +49,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$this->expectException( \ArgumentCountError::class );
 		$this->expectExceptionMessage( RepositoryWebhookManagementControls::class . '::__construct()' );
 
+		// @phpstan-ignore arguments.count (Deliberately omit the required authority to prove PHP rejects this unsupported constructor call.)
 		new RepositoryWebhookManagementControls(
 			$this->createMock( WebhookAssistanceFacade::class ),
 			$this->createMock( AdminInteractionFacade::class ),
@@ -68,7 +69,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			new ProviderRegistry( array() ),
 			'/unused/',
 			'https://example.test/unused/',
-			null
+			null // @phpstan-ignore argument.type (Deliberately pass null to prove the required authority cannot be bypassed.)
 		);
 	}
 

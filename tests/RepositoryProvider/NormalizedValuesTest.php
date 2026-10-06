@@ -113,7 +113,7 @@ final class NormalizedValuesTest extends TestCase {
 				};
 				self::fail( 'Expected an invalid repository locator to be rejected.' );
 			} catch ( InvalidArgumentException ) {
-				self::assertTrue( true );
+				$this->addToAssertionCount( 1 );
 			}
 		}
 	}

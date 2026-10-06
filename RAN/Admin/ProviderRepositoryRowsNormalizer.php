@@ -129,9 +129,9 @@ final class ProviderRepositoryRowsNormalizer {
 	}
 
 	/**
-	 * @param array<string, array<string, mixed>> $base_rows
+	 * @param array<array-key, array<string, mixed>> $base_rows
 	 * @param mixed                               $presented
-	 * @return array<string, array<string, mixed>>
+	 * @return array<array-key, array<string, mixed>>
 	 */
 	public function normalize( array $base_rows, mixed $presented, string $provider_code, bool $allow_core_detail_append = false ): array {
 		if ( ! is_array( $presented ) ) {
@@ -223,9 +223,9 @@ final class ProviderRepositoryRowsNormalizer {
 
 	/**
 	 * @param list<array<string,mixed>> $repositories
-	 * @param array{by_id:array<string,array<string,mixed>>,by_repository:array<string,array<string,mixed>>} $readiness
+	 * @param array{by_id:array<array-key,array<string,mixed>>,by_repository:array<string,array<string,mixed>>} $readiness
 	 * @param callable(array<string,mixed>):string $provider_url
-	 * @return array{requested_id:string,list_url:string,return_url:string,webhook_rows:array<string,array<string,mixed>>,rows:array<string,array<string,mixed>>,selected:?array}
+	 * @return array{requested_id:string,list_url:string,return_url:string,webhook_rows:array<array-key,array<string,mixed>>,rows:array<array-key,array<string,mixed>>,selected:?array}
 	 */
 	public function project(
 		array $repositories,
@@ -653,7 +653,7 @@ final class ProviderRepositoryRowsNormalizer {
 	}
 
 	/**
-	 * @param array<string,array<string,mixed>> $rows        Provider-enriched rows.
+	 * @param array<array-key,array<string,mixed>> $rows        Provider-enriched rows.
 	 * @return array{repositories:int,recorded_hooks:int,needs_review:int,release_packages:int,release_repositories:int,release_totals_incomplete:bool,release_workflows_inventory_incomplete:bool,release_workflows_needing_review:int}
 	 */
 	private function repository_summary( array $rows ): array {
@@ -961,7 +961,7 @@ final class ProviderRepositoryRowsNormalizer {
 		);
 	}
 
-	/** @return array{by_id:array<string,array<string,mixed>>,by_repository:array<string,array<string,mixed>>} */
+	/** @return array{by_id:array<array-key,array<string,mixed>>,by_repository:array<string,array<string,mixed>>} */
 	private function readiness_indexes( mixed $candidates, string $provider_code ): array {
 		$by_id         = array();
 		$by_repository = array();

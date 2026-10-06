@@ -158,7 +158,7 @@ function wp_parse_url( string $url, int $component = -1 ): array|int|string|null
 	return parse_url( $url, $component );
 }
 
-/** @param array<string, mixed> $output */
+/** @param array<int|string, mixed> $output */
 function wp_parse_str( string $input, array &$output ): void {
 	parse_str( $input, $output );
 }

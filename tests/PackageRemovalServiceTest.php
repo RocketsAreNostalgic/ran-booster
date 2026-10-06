@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace RAN\Tests;
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused collaborators stay beside the removal service test.
-
 require_once __DIR__ . '/Support/PackageOperationWordPressFunctions.php';
 require_once __DIR__ . '/Support/PackageOperationGlobalWordPressFunctions.php';
 require_once __DIR__ . '/Support/RepositoryAdminWordPressFunctions.php';
@@ -66,7 +64,7 @@ final class PackageRemovalServiceTest extends TestCase {
 				PackageOperation::from_input( 'unlink-plugin', array_merge( $this->input(), $override ) );
 				self::fail( 'Expected an invalid removal request.' );
 			} catch ( InvalidArgumentException ) {
-				self::assertTrue( true );
+				$this->addToAssertionCount( 1 );
 			}
 		}
 
@@ -577,6 +575,7 @@ final class PackageRemovalServiceTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final readonly class RemovalFixture {
 	public function __construct(
 		public RemovalPlugin $plugin,
@@ -589,6 +588,7 @@ final readonly class RemovalFixture {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class RemovalPlugin extends Plugin {
 	public static function make( string $identifier ): self {
 		return self::from_wp_array(
@@ -610,13 +610,15 @@ final class RemovalPlugin extends Plugin {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class RemovalTheme extends Theme {
-	public function __construct( string $stylesheet ) {
+	public function __construct( string $stylesheet = '' ) {
 		$this->stylesheet = $stylesheet;
 		$this->name       = 'Example';
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class RemovalPluginRepository extends PluginRepository {
 	public bool $installed      = true;
 	public bool $unlinked       = false;
@@ -658,6 +660,7 @@ final class RemovalPluginRepository extends PluginRepository {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class RemovalThemeRepository extends ThemeRepository {
 	public bool $installed = true;
 	public bool $unlinked  = false;
@@ -690,6 +693,7 @@ final class RemovalThemeRepository extends ThemeRepository {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class RemovalBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenceStore {
 
 	/** @var array<string, mixed> */
@@ -714,6 +718,7 @@ final class RemovalBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenc
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class RemovalGateway implements PackageRemovalGateway {
 	public bool $plugin_active             = false;
 	public bool $plugin_active_dependents  = false;
@@ -786,6 +791,7 @@ final class RemovalGateway implements PackageRemovalGateway {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class RemovalUpdaterLock extends WordPressUpdaterLock {
 	public bool $available  = true;
 	public bool $releasable = true;

@@ -233,7 +233,7 @@ namespace RAN\Tests\Storage {
 			return 0;
 		}
 
-		public function get_var( string $query ): int|false|string|null {
+		public function get_var( string $query ): int|string|null {
 			if ( $this->read_failure ) {
 				$this->last_error = 'database details must not escape';
 				return null;

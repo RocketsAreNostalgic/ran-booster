@@ -198,10 +198,10 @@ final class RepositoryPickerController {
 
 	private function public_lookup_profile_id( ProviderCode $provider ): ?string {
 		// The AJAX nonce is verified before this helper is called.
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handle() verifies manage_options and the repository-picker AJAX nonce before calling this private helper.
 		$identity_input = isset( $_POST['public_lookup_identity'] ) ? wp_unslash( $_POST['public_lookup_identity'] ) : 'anonymous';
 		$identity       = is_string( $identity_input ) ? sanitize_key( $identity_input ) : '';
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handle() verifies the AJAX nonce before this private helper; credential_id() then validates the profile identity.
 		$profile_input = isset( $_POST['public_lookup_profile_id'] ) ? wp_unslash( $_POST['public_lookup_profile_id'] ) : '';
 		$profile_id    = $this->credential_id( $profile_input, true );
 

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace RAN\Tests\Portability;
 
-// phpcs:disable WordPress.WP.AlternativeFunctions, WordPress.PHP.DevelopmentFunctions.error_log_var_export
-
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -37,6 +35,7 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 	protected function setUp(): void {
 		$this->directory = sys_get_temp_dir() . '/ran-booster-portability-' . bin2hex( random_bytes( 8 ) );
 		$this->path      = $this->directory . '/secrets.json';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
 	}
 
@@ -44,10 +43,12 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 	protected function tearDown(): void {
 		foreach ( array( $this->path, $this->path . '.lock' ) as $path ) {
 			if ( is_file( $path ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 				unlink( $path );
 			}
 		}
 		if ( is_dir( $this->directory ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 			rmdir( $this->directory );
 		}
 	}
@@ -107,6 +108,7 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 			),
 			self::CLASSIC_TOKEN
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		$before = (string) file_get_contents( $this->path );
 
 		$result = $verifier->verify( $this->install_item(), $this->credential(), BlueprintCredentialAction::IMPORT, 'target-pat' );
@@ -118,6 +120,7 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		self::assertNotSame( 'target-pat', $provider->temporary_credential_id );
 		self::assertNull( $secrets->credential_material( 'gh', $provider->temporary_credential_id ) );
 		self::assertSame( array( 'target-pat' ), array_keys( $secrets->credential_profiles( 'gh' ) ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertSame( $before, (string) file_get_contents( $this->path ) );
 	}
 

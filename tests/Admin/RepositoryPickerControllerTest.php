@@ -496,6 +496,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 
 	/**
 	 * @param list<RepositoryDescriptor> $repositories
+	 * @return RepositoryProvider&RepositoryBrowser&object{request: ?RepositoryBrowseRequest}
 	 */
 	private function browser_provider( ProviderCode $code, array $repositories ): RepositoryProvider&RepositoryBrowser {
 		return new class( $code, $repositories ) implements RepositoryProvider, RepositoryBrowser {
@@ -528,6 +529,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 
 	/**
 	 * @param list<RepositoryDescriptor> $repositories
+	 * @return RepositoryProvider&CredentialedPublicRepositoryBrowser&object{request: ?RepositoryBrowseRequest}
 	 */
 	private function credentialed_public_browser_provider( ProviderCode $code, array $repositories ): RepositoryProvider&CredentialedPublicRepositoryBrowser {
 		return $this->credentialed_public_browser_provider_with_default_support( $code, $repositories, true );
@@ -535,6 +537,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 
 	/**
 	 * @param list<RepositoryDescriptor> $repositories
+	 * @return RepositoryProvider&CredentialedPublicRepositoryBrowser&object{request: ?RepositoryBrowseRequest}
 	 */
 	private function credentialed_public_browser_provider_with_default_support(
 		ProviderCode $code,
@@ -598,7 +601,8 @@ final class RepositoryPickerControllerTest extends TestCase {
 	}
 }
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused display-safe secrets fixture.
+
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused display-safe secrets fixture.
 final class RepositoryPickerSecretsFile extends SecretsFile {
 
 	/** @param array<string, array<string, array<string, mixed>>> $profiles */
@@ -614,4 +618,3 @@ final class RepositoryPickerSecretsFile extends SecretsFile {
 		return $this->profiles[ $code ] ?? array();
 	}
 }
-// phpcs:enable Generic.Files.OneObjectStructurePerFile.MultipleFound

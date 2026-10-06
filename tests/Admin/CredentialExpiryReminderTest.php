@@ -24,9 +24,9 @@ use RAN\Tests\Secrets\SecretsFileTestFactory;
 use RAN\Tests\Support\InMemoryCredentialExpiryObservationStore;
 
 // Direct local filesystem operations exercise the sidecar-backed reminder fixture.
-// phpcs:disable WordPress.WP.AlternativeFunctions
+
 // Base64 mutation creates an authentication failure without exposing plaintext.
-// phpcs:disable WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode, WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
+
 
 final class CredentialExpiryReminderTest extends TestCase {
 
@@ -47,6 +47,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 		$this->path         = $this->directory . '/secrets.php';
 		$this->now          = new DateTimeImmutable( '2026-07-23T12:00:00Z', new DateTimeZone( 'UTC' ) );
 		$this->observations = new InMemoryCredentialExpiryObservationStore();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Native filesystem calls exercise the encrypted sidecar fixture.
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
 		$policies        = new ProviderSecretPolicyCatalog();
 		$this->secrets   = SecretsFileTestFactory::create( $this->path, array(), $policies );
@@ -64,10 +65,12 @@ final class CredentialExpiryReminderTest extends TestCase {
 		InMemorySiteKeyStore::reset( $this->path );
 		foreach ( array( $this->path, $this->path . '.lock' ) as $path ) {
 			if ( is_file( $path ) || is_link( $path ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native filesystem calls exercise the encrypted sidecar fixture.
 				unlink( $path );
 			}
 		}
 		if ( is_dir( $this->directory ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Native filesystem calls exercise the encrypted sidecar fixture.
 			rmdir( $this->directory );
 		}
 		unset(
@@ -176,7 +179,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertSame( 403, $controller->handle()['status'] );
 		$GLOBALS['ran_booster_repository_admin_allowed']     = true;
 		$GLOBALS['ran_booster_repository_admin_nonce_valid'] = false;
-		self::assertSame( 403, $controller->handle()['status'] );
+		self::assertThat( $controller->handle()['status'], self::identicalTo( 403 ) );
 		$GLOBALS['ran_booster_repository_admin_nonce_valid']           = true;
 		$GLOBALS['ran_booster_repository_admin_user_meta_write_fails'] = true;
 		self::assertSame( 500, $controller->handle()['status'] );
@@ -224,6 +227,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertIsString( $key_before );
 
 		$this->make_sidecar_unreadable( $state );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native filesystem calls exercise the encrypted sidecar fixture.
 		$bytes_before = is_file( $this->path ) ? file_get_contents( $this->path ) : null;
 		$key_before   = $key_store->load();
 		$notice       = new CredentialExpiryNotice( $this->reminders() );
@@ -243,16 +247,19 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertStringNotContainsString( 'could not be authenticated', $html );
 		self::assertStringNotContainsString( 'test-token-storage_failure', $html );
 		self::assertFalse( $notice->should_load_dismissal_script() );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native filesystem calls exercise the encrypted sidecar fixture.
 		self::assertSame( $bytes_before, is_file( $this->path ) ? file_get_contents( $this->path ) : null );
 		self::assertSame( $key_before, $key_store->load() );
 	}
 
 	public function test_dismissal_endpoint_contains_unreadable_sidecar_without_changing_storage(): void {
 		$this->credential( 'storage_failure', 'Storage failure' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native filesystem calls exercise the encrypted sidecar fixture.
 		$bytes_before = (string) file_get_contents( $this->path );
 		$key_store    = SecretsFileTestFactory::key_store( $this->path );
 		$key_before   = $key_store->load();
 		$this->make_sidecar_unreadable( 'authentication_failure' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native filesystem calls exercise the encrypted sidecar fixture.
 		$tampered = (string) file_get_contents( $this->path );
 
 		$result = ( new CredentialExpiryNoticeController( $this->reminders() ) )->handle();
@@ -261,6 +268,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertStringContainsString( 'Restore the matching sidecar and site key', $result['data']['message'] );
 		self::assertStringNotContainsString( $this->directory, $result['data']['message'] );
 		self::assertStringNotContainsString( 'authenticated', $result['data']['message'] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native filesystem calls exercise the encrypted sidecar fixture.
 		self::assertSame( $tampered, file_get_contents( $this->path ) );
 		self::assertNotSame( $bytes_before, $tampered );
 		self::assertSame( $key_before, $key_store->load() );
@@ -290,6 +298,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 
 	private function make_sidecar_unreadable( string $state ): void {
 		if ( 'key_only' === $state ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native filesystem calls exercise the encrypted sidecar fixture.
 			self::assertTrue( unlink( $this->path ) );
 			return;
 		}
@@ -298,27 +307,37 @@ final class CredentialExpiryReminderTest extends TestCase {
 			return;
 		}
 		if ( 'malformed_envelope' === $state ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Native filesystem calls exercise the encrypted sidecar fixture.
 			self::assertNotFalse( file_put_contents( $this->path, "{}\n" ) );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Native filesystem calls exercise the encrypted sidecar fixture.
 			self::assertTrue( chmod( $this->path, 0600 ) );
 			return;
 		}
 		if ( 'truncated_envelope' === $state ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Native filesystem calls exercise the encrypted sidecar fixture.
 			self::assertNotFalse( file_put_contents( $this->path, '{"format":' ) );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Native filesystem calls exercise the encrypted sidecar fixture.
 			self::assertTrue( chmod( $this->path, 0600 ) );
 			return;
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native filesystem calls exercise the encrypted sidecar fixture.
 		$decoded = json_decode( (string) file_get_contents( $this->path ), true, 4, JSON_THROW_ON_ERROR );
-		$bytes   = base64_decode( (string) $decoded['ciphertext'], true );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- The fixture deliberately mutates the encoded authentication envelope without revealing plaintext.
+		$bytes = base64_decode( (string) $decoded['ciphertext'], true );
 		self::assertIsString( $bytes );
-		$bytes[0]              = chr( ord( $bytes[0] ) ^ 1 );
+		$bytes[0] = chr( ord( $bytes[0] ) ^ 1 );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- The fixture deliberately mutates the encoded authentication envelope without revealing plaintext.
 		$decoded['ciphertext'] = base64_encode( $bytes );
 		self::assertNotFalse(
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Native filesystem calls exercise the encrypted sidecar fixture.
 			file_put_contents(
 				$this->path,
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- The fixture deliberately mutates the encoded authentication envelope without revealing plaintext.
 				json_encode( $decoded, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES ) . "\n"
 			)
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Native filesystem calls exercise the encrypted sidecar fixture.
 		self::assertTrue( chmod( $this->path, 0600 ) );
 	}
 
@@ -343,5 +362,3 @@ final class CredentialExpiryReminderTest extends TestCase {
 		return $profile;
 	}
 }
-
-// phpcs:enable WordPress.WP.AlternativeFunctions, WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode, WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode

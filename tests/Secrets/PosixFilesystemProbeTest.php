@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Tests\Secrets;
 
 // Test fixtures deliberately exercise native filesystem semantics.
-// phpcs:disable WordPress.WP.AlternativeFunctions
 
 use PHPUnit\Framework\TestCase;
 use RAN\Secrets\PosixFilesystemProbe;
@@ -17,6 +16,7 @@ final class PosixFilesystemProbeTest extends TestCase {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->root = sys_get_temp_dir() . '/ran-booster-probe-' . bin2hex( random_bytes( 6 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		mkdir( $this->root, 0700 );
 	}
 
@@ -43,11 +43,15 @@ final class PosixFilesystemProbeTest extends TestCase {
 		$private   = $this->root . '/.ran-booster';
 		$sentinel  = $private . '/operator-owned-canary';
 		$candidate = $private . '/0123456789abcdef/secrets.json';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $private, 0700 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $sentinel, 'operator-owned-content' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $private, 0770 ) );
 
 		self::assertFalse( ( new PosixFilesystemProbe() )->probe( $candidate ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertSame( 'operator-owned-content', file_get_contents( $sentinel ) );
 		self::assertDirectoryDoesNotExist( dirname( $candidate ) );
 		self::assertFileDoesNotExist( $candidate );
@@ -55,6 +59,7 @@ final class PosixFilesystemProbeTest extends TestCase {
 
 	private function remove( string $path ): void {
 		if ( is_link( $path ) || is_file( $path ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 			unlink( $path );
 			return;
 		}
@@ -67,6 +72,7 @@ final class PosixFilesystemProbeTest extends TestCase {
 				$this->remove( $path . '/' . $entry );
 			}
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 		rmdir( $path );
 	}
 }

@@ -1508,6 +1508,7 @@ class SecretsFile {
 			throw $this->unavailable( 'The encrypted Booster secrets path is not configured.' );
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Native read handles permit bounded reads and handle/path inode validation before trusting local bytes.
 		$handle = fopen( $this->path, 'rb' );
 		if ( false === $handle ) {
 			throw $this->unavailable( 'The encrypted Booster secrets file is not readable.' );
@@ -1532,6 +1533,7 @@ class SecretsFile {
 
 			return $contents;
 		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the native handle acquired for bounded reads, exclusive locking or atomic local replacement.
 			fclose( $handle );
 		}
 	}
@@ -1881,6 +1883,7 @@ class SecretsFile {
 			throw $this->unavailable( 'Refusing to use an invalid encrypted Booster secrets lock.' );
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- The lock requires a native handle for flock and fstat without truncating existing bytes.
 		$lock = fopen( $lock_path, $create ? 'c+b' : 'r+b' );
 		if ( false === $lock ) {
 			throw $this->unavailable( 'Could not open the encrypted Booster secrets lock.' );
@@ -1911,6 +1914,7 @@ class SecretsFile {
 			return $callback( $lock );
 		} finally {
 			flock( $lock, LOCK_UN );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the native handle acquired for bounded reads, exclusive locking or atomic local replacement.
 			fclose( $lock );
 		}
 	}
@@ -1954,6 +1958,7 @@ class SecretsFile {
 			|| 0700 !== ( $stat['mode'] & 0777 )
 			|| ! $this->owned_by_process( $stat )
 			|| ! is_readable( $directory )
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- The private local storage boundary checks actual PHP-process writability alongside canonical path and inode checks.
 			|| ! is_writable( $directory )
 		) {
 			throw $this->unavailable( 'The encrypted Booster secrets directory is not secure and writable.' );
@@ -2059,6 +2064,7 @@ class SecretsFile {
 				throw $this->unavailable( 'Could not secure the temporary encrypted Booster secrets file.' );
 			}
 
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- The same-directory replacement requires a native stream for checked writes, flushes and inode validation.
 			$handle = fopen( $temporary, 'wb' );
 			if ( false === $handle ) {
 				throw $this->unavailable( 'Could not open the temporary encrypted Booster secrets file.' );
@@ -2085,6 +2091,7 @@ class SecretsFile {
 					throw $this->unavailable( 'Could not write the temporary encrypted Booster secrets file.' );
 				}
 			} finally {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the native handle acquired for bounded reads, exclusive locking or atomic local replacement.
 				fclose( $handle );
 			}
 
@@ -2094,6 +2101,7 @@ class SecretsFile {
 			$temporary = '';
 		} finally {
 			if ( '' !== $temporary && ( is_file( $temporary ) || is_link( $temporary ) ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Clean up only the same-directory temporary entry owned by this failed native replacement transaction.
 				unlink( $temporary );
 			}
 		}
@@ -2115,6 +2123,7 @@ class SecretsFile {
 			|| 0100000 !== ( $stat['mode'] & 0170000 )
 			|| 1 !== $stat['nlink']
 			|| ! $this->owned_by_process( $stat )
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Delete only the exact local storage entry after the surrounding native ownership, type and identity checks.
 			|| ! unlink( $this->path )
 		) {
 			throw $this->unavailable( 'Could not remove the failed encrypted Booster secrets file.' );
@@ -2125,6 +2134,7 @@ class SecretsFile {
 	/** @param array<string, mixed> $document */
 	private function encode_canonical_document( #[\SensitiveParameter] array $document ): string {
 		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- The encrypted document contract requires native throwing JSON encoding with exact unescaped canonical bytes.
 			return json_encode(
 				$document,
 				JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
@@ -2151,6 +2161,7 @@ class SecretsFile {
 	 * @param resource $handle
 	 */
 	protected function write_handle( mixed $handle, #[\SensitiveParameter] string $contents ): int|false {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Write through the verified native handle so short writes and flush failures preserve the atomic replacement boundary.
 		return fwrite( $handle, $contents );
 	}
 
@@ -2272,14 +2283,17 @@ class SecretsFile {
 	 * replacing the native sidecar implementation in production.
 	 */
 	protected function change_permissions( string $path, int $mode ): bool {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set and verify native POSIX permission bits on the private file before it can be trusted or installed.
 		return chmod( $path, $mode );
 	}
 
 	protected function replace_file( string $source, string $destination ): bool {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- Same-directory native rename supplies the atomic replacement required by the verified local-file transaction.
 		return rename( $source, $destination );
 	}
 
 	protected function remove_file( string $path ): bool {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Delete only the exact local storage entry after the surrounding native ownership, type and identity checks.
 		return unlink( $path );
 	}
 }

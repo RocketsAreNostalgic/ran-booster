@@ -97,13 +97,13 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 		$original = $this->private_archive( $this->authorizer( 'Bearer original-canary' ), '-clone' );
 
 		try {
-			clone $original;
+			clone $original; // @phpstan-ignore expr.resultUnused (Executing the private clone hook must throw; the result is intentionally unused.)
 			self::fail( 'Prepared archives must not be cloneable.' );
-		} catch ( \Error $error ) {
+		} catch ( \Error $error ) { // @phpstan-ignore catch.neverThrown (PHP throws Error for the private clone hook; PHPStan does not model that runtime rejection.)
 			self::assertStringNotContainsString( 'original-canary', $error->getMessage() );
 		}
 
-		self::assertCount( 1, $this->filters() );
+		self::assertCount( 1, $this->filters() ); // @phpstan-ignore deadCode.unreachable (The private-clone Error is caught above and cleanup authority must remain intact.)
 		self::assertCount( 1, $this->actions() );
 		$this->assert_duplicate_url_rejected( $original->get_url() );
 		self::assertCount( 1, $this->filters() );

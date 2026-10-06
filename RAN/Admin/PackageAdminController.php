@@ -287,11 +287,9 @@ final class PackageAdminController {
 				return null;
 			}
 		}
-		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only signed feedback.
 		$operation  = sanitize_key( wp_unslash( (string) $_GET['ran_booster_result'] ) );
 		$identifier = sanitize_text_field( wp_unslash( (string) $_GET['ran_booster_package'] ) );
 		$nonce      = wp_unslash( (string) $_GET['_ran_booster_notice_nonce'] );
-		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 		if ( ! in_array( $operation, array( 'install', 'update', 'edit', 'unlink', 'unlink-and-delete', 'already-managed' ), true )
 			|| false === wp_verify_nonce( $nonce, 'ran-booster-package-success|' . $type . '|' . $operation . '|' . $identifier ) ) {
 			return null;

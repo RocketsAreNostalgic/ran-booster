@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace RAN\Tests\Admin;
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused dispatcher fixtures stay beside their tests.
-
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/WPError.php';
 require_once dirname( __DIR__ ) . '/Support/ProviderProfileAdminControllerWordPressFunctions.php';
@@ -375,9 +373,10 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused dispatcher fixtures stay beside their tests.
 final class EditBoundaryPackage extends AbstractPackage {
 
-	private function __construct( private readonly string $identifier ) {
+	public function __construct( private readonly string $identifier = '' ) {
 	}
 
 	public static function make( string $identifier, string $provider, bool $is_private = false, ?string $credential_id = null ): self {
@@ -392,6 +391,7 @@ final class EditBoundaryPackage extends AbstractPackage {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused dispatcher fixtures stay beside their tests.
 final class EditBoundaryPluginRepository extends PluginRepository {
 
 	public int $lookups = 0;
@@ -399,6 +399,7 @@ final class EditBoundaryPluginRepository extends PluginRepository {
 	public function __construct( private readonly Package $package ) {
 	}
 
+	/** @return Package */
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of booster_plugin_from_file retains the production method contract; these inputs do not affect this controlled result.
 	public function booster_plugin_from_file( $file ) {
 		++$this->lookups;
@@ -407,6 +408,7 @@ final class EditBoundaryPluginRepository extends PluginRepository {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused dispatcher fixtures stay beside their tests.
 final class EditBoundaryThemeRepository extends ThemeRepository {
 
 	public int $lookups = 0;
@@ -414,6 +416,7 @@ final class EditBoundaryThemeRepository extends ThemeRepository {
 	public function __construct( private readonly Package $package ) {
 	}
 
+	/** @return Package */
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of booster_theme_from_stylesheet retains the production method contract; these inputs do not affect this controlled result.
 	public function booster_theme_from_stylesheet( $stylesheet ) {
 		++$this->lookups;
@@ -422,6 +425,7 @@ final class EditBoundaryThemeRepository extends ThemeRepository {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused dispatcher fixtures stay beside their tests.
 final class CapturingPublicLookupProvider implements RepositoryProvider, CredentialedPublicRepositoryBrowser {
 
 	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
@@ -465,6 +469,7 @@ final class CapturingPublicLookupProvider implements RepositoryProvider, Credent
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused dispatcher fixtures stay beside their tests.
 final class CapturingRepositoryProvider implements RepositoryProvider {
 
 	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;

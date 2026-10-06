@@ -6,11 +6,11 @@ namespace RAN\Tests\Secrets;
 
 // Test doubles stay local to this focused persistence test and base64 inspects the defined key encoding.
 // Native files model one atomic database option across forked processes.
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound, WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
-// phpcs:disable WordPress.WP.AlternativeFunctions
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\Secrets\SiteKeyStore;
 use RuntimeException;
@@ -37,6 +37,7 @@ final class SiteKeyStoreTest extends TestCase {
 
 		self::assertSame( self::KEY, $result['key'] );
 		self::assertTrue( $result['created'] );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 		self::assertSame( base64_encode( self::KEY ), $store->stored_value );
 		self::assertSame( 44, strlen( (string) $store->stored_value ) );
 		self::assertSame( 'off', $store->autoload );
@@ -46,17 +47,22 @@ final class SiteKeyStoreTest extends TestCase {
 	public function test_concurrent_creation_loser_uses_the_winning_valid_key(): void {
 		$store                = new TestSiteKeyStore();
 		$store->generated_key = self::KEY;
-		$store->race_winner   = base64_encode( self::WINNER );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
+		$store->race_winner = base64_encode( self::WINNER );
 
 		$result = $store->load_or_create();
 
 		self::assertSame( self::WINNER, $result['key'] );
 		self::assertFalse( $result['created'] );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 		self::assertSame( base64_encode( self::WINNER ), $store->stored_value );
 		self::assertSame( 1, $store->cache_invalidations );
 		self::assertFalse( $store->stale_negative_cache );
 	}
 
+	// Fork before analyzer PHAR streams and shutdown handlers can enter this process.
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function test_concurrent_first_creators_elect_one_random_key_across_processes(): void {
 		if ( ! function_exists( 'pcntl_fork' )
 			|| ! function_exists( 'pcntl_waitpid' )
@@ -70,6 +76,7 @@ final class SiteKeyStoreTest extends TestCase {
 		$barrier   = $directory . '/start';
 		$children  = array();
 		$count     = 6;
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $directory, 0700 ) );
 
 		try {
@@ -82,14 +89,17 @@ final class SiteKeyStoreTest extends TestCase {
 					}
 
 					try {
-						$result  = ( new AtomicFileSiteKeyStore( $key_path ) )->load_or_create();
+						$result = ( new AtomicFileSiteKeyStore( $key_path ) )->load_or_create();
+						// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Preserve native JSON bytes for the isolated fixture/trace assertion without loading WordPress.
 						$payload = json_encode(
 							array(
+								// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 								'key'     => base64_encode( $result['key'] ),
 								'created' => $result['created'],
 							),
 							JSON_THROW_ON_ERROR
 						);
+						// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 						file_put_contents( $directory . '/result-' . $index . '.json', $payload );
 						exit( 0 );
 					} catch ( \Throwable ) {
@@ -100,6 +110,7 @@ final class SiteKeyStoreTest extends TestCase {
 				$children[] = $pid;
 			}
 
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 			self::assertNotFalse( file_put_contents( $barrier, 'start' ) );
 			foreach ( $children as $pid ) {
 				self::assertSame( $pid, pcntl_waitpid( $pid, $status ) );
@@ -110,6 +121,7 @@ final class SiteKeyStoreTest extends TestCase {
 			$results = array();
 			for ( $index = 0; $index < $count; ++$index ) {
 				$decoded = json_decode(
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 					(string) file_get_contents( $directory . '/result-' . $index . '.json' ),
 					true,
 					4,
@@ -121,20 +133,24 @@ final class SiteKeyStoreTest extends TestCase {
 
 			self::assertSame( 1, count( array_filter( $results, static fn ( array $result ): bool => true === $result['created'] ) ) );
 			self::assertCount( 1, array_unique( array_column( $results, 'key' ) ) );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 			self::assertSame( $results[0]['key'], file_get_contents( $key_path ) );
 		} finally {
 			$paths = glob( $directory . '/*' );
 			foreach ( false === $paths ? array() : $paths as $path ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 				unlink( $path );
 			}
 			if ( is_dir( $directory ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 				rmdir( $directory );
 			}
 		}
 	}
 
 	public function test_existing_valid_key_is_never_replaced(): void {
-		$store               = new TestSiteKeyStore();
+		$store = new TestSiteKeyStore();
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 		$store->stored_value = base64_encode( self::WINNER );
 
 		$result = $store->load_or_create();
@@ -168,13 +184,16 @@ final class SiteKeyStoreTest extends TestCase {
 			'non-string'           => array( array( 'sentinel' ) ),
 			'boolean false'        => array( false ),
 			'invalid base64'       => array( 'sentinel-not-base64!' ),
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 			'unpadded base64'      => array( rtrim( base64_encode( self::KEY ), '=' ) ),
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 			'wrong decoded length' => array( base64_encode( 'too-short' ) ),
 		);
 	}
 
 	public function test_valid_autoloaded_key_is_repaired_without_changing_its_bytes(): void {
-		$store               = new TestSiteKeyStore();
+		$store = new TestSiteKeyStore();
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 		$store->stored_value = base64_encode( self::KEY );
 		$store->autoload     = 'on';
 		$before              = $store->stored_value;
@@ -186,7 +205,8 @@ final class SiteKeyStoreTest extends TestCase {
 	}
 
 	public function test_read_only_load_rejects_autoloaded_key_without_repairing_it(): void {
-		$store               = new TestSiteKeyStore();
+		$store = new TestSiteKeyStore();
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 		$store->stored_value = base64_encode( self::KEY );
 		$store->autoload     = 'on';
 
@@ -200,7 +220,8 @@ final class SiteKeyStoreTest extends TestCase {
 	}
 
 	public function test_unverifiable_autoload_repair_fails_without_changing_the_key(): void {
-		$store               = new TestSiteKeyStore();
+		$store = new TestSiteKeyStore();
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 		$store->stored_value = base64_encode( self::KEY );
 		$store->autoload     = 'on';
 		$store->fail_repair  = true;
@@ -216,7 +237,8 @@ final class SiteKeyStoreTest extends TestCase {
 	}
 
 	public function test_missing_autoload_metadata_fails_closed(): void {
-		$store                 = new TestSiteKeyStore();
+		$store = new TestSiteKeyStore();
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 		$store->stored_value   = base64_encode( self::KEY );
 		$store->autoload_known = false;
 
@@ -234,10 +256,12 @@ final class SiteKeyStoreTest extends TestCase {
 	}
 
 	public function test_exact_deletion_cannot_remove_adifferent_key(): void {
-		$store               = new TestSiteKeyStore();
+		$store = new TestSiteKeyStore();
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 		$store->stored_value = base64_encode( self::WINNER );
 
 		self::assertFalse( $store->delete_exact( self::KEY ) );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 		self::assertSame( base64_encode( self::WINNER ), $store->stored_value );
 		self::assertSame( 0, $store->cache_invalidations );
 
@@ -247,7 +271,8 @@ final class SiteKeyStoreTest extends TestCase {
 	}
 
 	public function test_deletion_storage_failure_does_not_claim_success(): void {
-		$store               = new TestSiteKeyStore();
+		$store = new TestSiteKeyStore();
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 		$store->stored_value = base64_encode( self::KEY );
 		$store->fail_delete  = true;
 
@@ -256,6 +281,7 @@ final class SiteKeyStoreTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
 final class TestSiteKeyStore extends SiteKeyStore {
 
 	public mixed $stored_value;
@@ -340,6 +366,7 @@ final class TestSiteKeyStore extends SiteKeyStore {
  * Models atomic add_option() visibility using a fully written temporary inode
  * and one atomic hard-link election.
  */
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
 final class AtomicFileSiteKeyStore extends SiteKeyStore {
 
 	public function __construct( private string $path ) {
@@ -351,13 +378,16 @@ final class AtomicFileSiteKeyStore extends SiteKeyStore {
 			return $this->missing_stored_value();
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		return file_get_contents( $this->path );
 	}
 
 	protected function add_stored_value( #[\SensitiveParameter] string $encoded ): bool {
 		$temporary = $this->path . '.candidate-' . bin2hex( random_bytes( 8 ) );
 		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 			if ( strlen( $encoded ) !== file_put_contents( $temporary, $encoded, LOCK_EX )
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 				|| ! chmod( $temporary, 0600 )
 			) {
 				return false;
@@ -367,6 +397,7 @@ final class AtomicFileSiteKeyStore extends SiteKeyStore {
 			return @link( $temporary, $this->path );
 		} finally {
 			if ( is_file( $temporary ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 				unlink( $temporary );
 			}
 		}
@@ -381,6 +412,7 @@ final class AtomicFileSiteKeyStore extends SiteKeyStore {
 			return 0;
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 		return unlink( $this->path ) ? 1 : false;
 	}
 

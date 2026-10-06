@@ -4,8 +4,6 @@ declare( strict_types = 1 );
 
 namespace RAN\Admin\WebhookManagement\Installation;
 
-// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Focused option-store fixture.
-
 if ( ! function_exists( __NAMESPACE__ . '\\get_option' ) ) {
 	function get_option( string $name, mixed $default = false ): mixed { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound -- Preserve the WordPress function parameter signature.
 		return $GLOBALS['ran_booster_repository_webhook_management_test_options'][ $name ] ?? $default;

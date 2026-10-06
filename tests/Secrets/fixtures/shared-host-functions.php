@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Secrets;
 
 // Native filesystem seams model host-owned ancestors that a test user cannot chown.
-// phpcs:disable WordPress.WP.AlternativeFunctions
 
 /** @return array<int|string, int>|false */
 function lstat( string $path ): array|false {
@@ -24,6 +23,7 @@ function is_writable( string $path ): bool {
 
 	return is_array( $mock ) && ( $mock['path'] ?? null ) === $path
 		? false
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- Delegate non-injected paths to PHP so the shared-host permission fixture preserves native behavior.
 		: \is_writable( $path );
 }
 

@@ -336,14 +336,14 @@ if ( ! function_exists( 'settings_errors' ) ) {
 }
 
 if ( ! function_exists( 'settings_fields' ) ) {
-	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name. @phpstan-ignore void.pure (The WordPress rendering double deliberately produces no settings fields.)
 	function settings_fields( string $group ): void {
 		unset( $group );
 	}
 }
 
 if ( ! function_exists( 'do_settings_sections' ) ) {
-	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name. @phpstan-ignore void.pure (The WordPress rendering double deliberately produces no registered sections.)
 	function do_settings_sections( string $page ): void {
 		unset( $page );
 	}

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace RAN\Tests\Admin;
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused purger collaborators stay beside the lifecycle contract test.
-
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\CredentialExpiryObservationStore;
 use RAN\Admin\CredentialSelfDestructPurger;
@@ -49,6 +47,7 @@ final class CredentialSelfDestructPurgerTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused purger collaborators stay beside the lifecycle contract test.
 final class PurgerSecretsFile extends SecretsFile {
 
 	/** @param array<string, list<string>> $removed */
@@ -62,12 +61,14 @@ final class PurgerSecretsFile extends SecretsFile {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused purger collaborators stay beside the lifecycle contract test.
 final class PurgerObservations extends CredentialExpiryObservationStore {
 
 	public function clear( string $provider, string $profile_id ): void {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused purger collaborators stay beside the lifecycle contract test.
 final class PurgerLookupProfiles extends PublicRepositoryLookupProfileStore {
 
 	/** @var array<string, string> */
@@ -86,6 +87,7 @@ final class PurgerLookupProfiles extends PublicRepositoryLookupProfileStore {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused purger collaborators stay beside the lifecycle contract test.
 final class PurgerEvidenceStore extends RepositoryBranchCheckEvidenceStore {
 
 	/** @var list<string> */
@@ -102,6 +104,7 @@ final class PurgerEvidenceStore extends RepositoryBranchCheckEvidenceStore {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused purger collaborators stay beside the lifecycle contract test.
 final class ThrowingPurgerEvidenceStore extends RepositoryBranchCheckEvidenceStore {
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of bump_profile_generation retains the production method contract; these inputs do not affect this controlled result.

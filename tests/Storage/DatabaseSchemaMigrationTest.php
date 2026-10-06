@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace RAN\Tests\Storage;
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile -- Focused capability-probe fake stays beside its tests.
-
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RAN\Storage\Database;
@@ -540,6 +538,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class DatabaseCapabilityProbeFailureConnection {
 	public string $last_error      = 'preserved-error';
 	public bool $errors_suppressed = false;
@@ -567,5 +566,3 @@ final class DatabaseCapabilityProbeFailureConnection {
 		throw new RuntimeException( $query . ' engine-probe-canary' );
 	}
 }
-
-// phpcs:enable Generic.Files.OneObjectStructurePerFile

@@ -172,7 +172,8 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 	}
 }
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile -- Focused HTMX response spy.
+
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused HTMX response spy.
 final class HtmxCredentialValidationResponse extends \RuntimeException {
 
 	public function __construct(
@@ -185,6 +186,7 @@ final class HtmxCredentialValidationResponse extends \RuntimeException {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused HTMX response spy.
 final class HtmxCredentialValidationTestController extends ProviderProfileAdminController {
 
 	/** @var array{id:string,message:?string,error:?string,status:int}|null */
@@ -202,4 +204,3 @@ final class HtmxCredentialValidationTestController extends ProviderProfileAdminC
 		throw new HtmxCredentialValidationResponse( $credential_id, $message, $error, $status );
 	}
 }
-// phpcs:enable Generic.Files.OneObjectStructurePerFile

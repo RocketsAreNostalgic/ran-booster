@@ -19,7 +19,7 @@ final class CredentialExpiryReportTest extends TestCase {
 		$unknown = CredentialValidationResult::valid( CredentialExpiryReport::unknown() );
 
 		self::assertSame( '2026-08-23T12:30:00Z', $known->expiry?->expires_at );
-		self::assertTrue( $known->expiry?->is_known() );
+		self::assertTrue( $known->expiry->is_known() );
 		self::assertNull( $unknown->expiry?->expires_at );
 		self::assertFalse( $unknown->expiry?->is_known() );
 		self::assertNull( CredentialValidationResult::valid()->expiry );

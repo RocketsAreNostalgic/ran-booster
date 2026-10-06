@@ -9,7 +9,6 @@ require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunct
 require_once dirname( __DIR__ ) . '/Support/WPError.php';
 
 // Direct local filesystem operations inspect the bounded capture under test.
-// phpcs:disable WordPress.WP.AlternativeFunctions
 
 use PHPUnit\Framework\TestCase;
 use RAN\Dashboard;
@@ -28,6 +27,7 @@ final class DashboardNoticeLoggingTest extends TestCase {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->directory = sys_get_temp_dir() . '/ran-booster-dashboard-log-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
 
 		$this->capture = new TemporaryDebugCapture(
@@ -51,10 +51,12 @@ final class DashboardNoticeLoggingTest extends TestCase {
 			) as $path
 		) {
 			if ( is_file( $path ) || is_link( $path ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 				unlink( $path );
 			}
 		}
 		if ( is_dir( $this->directory ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 			rmdir( $this->directory );
 		}
 	}

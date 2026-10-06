@@ -109,7 +109,7 @@ final readonly class PackageBlueprint {
 		usort( $credentials, static fn( BlueprintCredential $left, BlueprintCredential $right ): int => $left->to_array() <=> $right->to_array() );
 		try {
 			// The core is deliberately WordPress-independent so it can be unit tested without bootstrapping WordPress.
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Canonical blueprint identity requires native throwing JSON encoding with exact unescaped bytes, including outside WordPress.
 			$json = json_encode(
 				array(
 					'format'      => self::FORMAT,

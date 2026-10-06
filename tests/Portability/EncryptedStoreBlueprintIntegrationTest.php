@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace RAN\Tests\Portability;
 
 // Native temporary files model two independent target sites.
-// phpcs:disable WordPress.WP.AlternativeFunctions
 // Base64 is used only to prove that key material is absent from the envelope.
-// phpcs:disable WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 
 use PHPUnit\Framework\TestCase;
 use RAN\ManagedRepository;
@@ -52,7 +50,9 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		$this->source_path  = $this->root . '/source/secrets.json';
 		$this->target_path  = $this->root . '/target/secrets.json';
 		$this->archive_path = $this->root . '/blueprint.zip';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( dirname( $this->source_path ), 0700, true ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( dirname( $this->target_path ), 0700, true ) );
 		InMemorySiteKeyStore::reset( $this->source_path );
 		InMemorySiteKeyStore::reset( $this->target_path );
@@ -243,9 +243,12 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		self::assertIsString( $source_key );
 		self::assertIsString( $target_key );
 		self::assertNotSame( $source_key, $target_key );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		$envelope = (string) file_get_contents( $this->target_path );
 		self::assertStringNotContainsString( self::CLASSIC_TOKEN, $envelope );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 		self::assertStringNotContainsString( base64_encode( $source_key ), $envelope );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 		self::assertStringNotContainsString( base64_encode( $target_key ), $envelope );
 
 		$this->expectException( RuntimeException::class );
@@ -285,6 +288,7 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 
 	private function remove_tree( string $path ): void {
 		if ( is_link( $path ) || is_file( $path ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 			unlink( $path );
 			return;
 		}
@@ -297,6 +301,7 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 				$this->remove_tree( $path . '/' . $entry );
 			}
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 		rmdir( $path );
 	}
 }

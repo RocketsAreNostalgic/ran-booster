@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace RAN\Tests\Admin;
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused package fake stays beside its view tests.
-
 require_once dirname( __DIR__ ) . '/Support/PackageViewWordPressFunctions.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Admin/Component/AdminActionRenderer.php';
 
@@ -684,6 +682,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused package fake stays beside its view tests.
 final class UnavailableProviderPackage extends AbstractPackage {
 	public string $name = 'Exact package';
 

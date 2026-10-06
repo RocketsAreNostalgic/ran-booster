@@ -9,7 +9,6 @@ use RAN\WordPress\CorePackageExecutor;
 use RAN\WordPress\CorePackageExecutionResult;
 use ReflectionMethod;
 
-// phpcs:disable WordPress.WP.AlternativeFunctions -- Tests deliberately own private temporary files.
 
 final class CorePackageExecutorTest extends TestCase {
 

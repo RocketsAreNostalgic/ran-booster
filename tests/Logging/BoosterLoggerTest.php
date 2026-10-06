@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Tests\Logging;
 
 // Direct local filesystem operations inspect the bounded capture under test.
-// phpcs:disable WordPress.WP.AlternativeFunctions
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
@@ -26,6 +25,7 @@ final class BoosterLoggerTest extends TestCase {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$this->directory = sys_get_temp_dir() . '/ran-booster-logger-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
 
 		$this->capture = new TemporaryDebugCapture(
@@ -48,10 +48,12 @@ final class BoosterLoggerTest extends TestCase {
 			) as $path
 		) {
 			if ( is_file( $path ) || is_link( $path ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 				unlink( $path );
 			}
 		}
 		if ( is_dir( $this->directory ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 			rmdir( $this->directory );
 		}
 	}
@@ -111,6 +113,7 @@ final class BoosterLoggerTest extends TestCase {
 		self::assertFalse( BoosterLogger::log( 'after stop', array( 'step' => 'ignored' ) ) );
 		self::assertSame( array(), $this->capture->snapshot()['entries'] );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		chmod( $this->directory . '/ran-booster-debug.php', 0644 );
 		self::assertFalse( BoosterLogger::log( 'unsafe file', array( 'step' => 'ignored' ) ) );
 		self::assertSame( 'malformed', $this->capture->snapshot()['state'] );
@@ -127,6 +130,7 @@ final class BoosterLoggerTest extends TestCase {
 		self::assertTrue( BoosterLogger::log( 'dual destination', array( 'step' => 'logging' ) ) );
 
 		$expected = '[ran-booster] dual destination {"step":"logging"}';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		self::assertStringContainsString( $expected, (string) file_get_contents( $wordpress_log ) );
 		self::assertSame( $expected, $this->capture->snapshot()['entries'][0]['line'] );
 	}

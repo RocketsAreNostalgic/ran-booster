@@ -15,8 +15,6 @@ final class CoreSelfUpdatePolicyTest extends TestCase {
 
 	// Test fixtures intentionally use direct temporary-file operations and PHP
 	// JSON encoding so this pure policy remains independent from WordPress APIs.
-	// phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-	// phpcs:disable WordPress.WP.AlternativeFunctions.json_encode_json_encode
 
 	private string $directory;
 
@@ -116,8 +114,10 @@ final class CoreSelfUpdatePolicyTest extends TestCase {
 		) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable focused fixture setup.
 			self::assertIsInt(
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- The test writes an exact owned temporary fixture before WordPress is loaded; the native filesystem operation is part of this proof.
 				file_put_contents(
 					$this->directory . '/ran-booster-release.json',
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- The standalone fixture writes deterministic JSON before the WordPress runtime is loaded.
 					(string) json_encode( $marker )
 				)
 			);
@@ -130,6 +130,7 @@ final class CoreSelfUpdatePolicyTest extends TestCase {
 	public function test_rejects_an_oversized_or_symlinked_marker(): void {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable focused fixture setup.
 		self::assertIsInt(
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- The test writes an exact owned temporary fixture before WordPress is loaded; the native filesystem operation is part of this proof.
 			file_put_contents(
 				$this->directory . '/ran-booster-release.json',
 				str_repeat( 'x', 4097 )
@@ -203,13 +204,12 @@ final class CoreSelfUpdatePolicyTest extends TestCase {
 		);
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable focused fixture setup.
 		self::assertIsInt(
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- The test writes an exact owned temporary fixture before WordPress is loaded; the native filesystem operation is part of this proof.
 			file_put_contents(
 				$this->directory . '/ran-booster-release.json',
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- The standalone fixture writes deterministic JSON before the WordPress runtime is loaded.
 				(string) json_encode( $marker )
 			)
 		);
 	}
-
-	// phpcs:enable WordPress.WP.AlternativeFunctions.json_encode_json_encode
-	// phpcs:enable WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
 }

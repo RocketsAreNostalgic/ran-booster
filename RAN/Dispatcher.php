@@ -90,7 +90,7 @@ class Dispatcher {
 
 	public function dispatch_post_requests() {
 		// The selected action determines which nonce is verified before any mutation occurs.
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Only select the action here; each dispatched mutation verifies its own capability and action-specific nonce.
 		if ( isset( $_POST['ran_booster'] ) && is_array( $_POST['ran_booster'] ) ) {
 			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified in the selected action branch below.
 			$request = $_POST['ran_booster'];

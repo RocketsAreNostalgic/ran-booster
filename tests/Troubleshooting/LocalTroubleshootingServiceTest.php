@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace RAN\Tests\Troubleshooting;
 
-// phpcs:disable WordPress.WP.AlternativeFunctions -- Tests exercise native exclusive-file safety seams.
-
 use FilesystemIterator;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
@@ -38,6 +36,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 		$this->theme_directory     = $this->directory . '/themes';
 
 		foreach ( $this->directories() as $directory ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 			mkdir( $directory, 0700, true );
 		}
 	}
@@ -55,12 +54,15 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 
 		foreach ( $iterator as $item ) {
 			if ( $item->isLink() || $item->isFile() ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 				unlink( $item->getPathname() );
 			} else {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 				rmdir( $item->getPathname() );
 			}
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 		rmdir( $this->directory );
 	}
 
@@ -96,6 +98,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 	}
 
 	public function test_operational_rows_do_not_introduce_options_schedulers_or_logging(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		$source = file_get_contents( dirname( __DIR__, 2 ) . '/RAN/Troubleshooting/LocalTroubleshootingService.php' );
 
 		self::assertIsString( $source );
@@ -335,18 +338,21 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 	public function test_rejects_a_symbolic_link_at_the_credential_sidecar_path(): void {
 		$target = $this->directory . '/credential-target';
 		$link   = $this->secrets_directory . '/secrets.json';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		file_put_contents( $target, 'credential target canary' );
 		symlink( $target, $link );
 
 		$payload = $this->service( $link )->diagnose();
 
 		self::assertSame( 'local.filesystem.unavailable', $payload['results'][1]->code );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertSame( 'credential target canary', file_get_contents( $target ) );
 	}
 
 	public function test_resolves_an_ancestor_alias_and_uses_only_the_canonical_root(): void {
 		$real_parent = $this->directory . '/real-parent';
 		$link_parent = $this->directory . '/linked-parent';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		mkdir( $real_parent . '/nested', 0700, true );
 		symlink( $real_parent, $link_parent );
 
@@ -387,11 +393,13 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 		$service = $this->service();
 		$suffix  = $service->next_suffix();
 		$marker  = $this->temporary_directory . '/.ran-booster-diagnostic-' . $suffix . '.pending';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		file_put_contents( $marker, 'race canary' );
 
 		$payload = $service->diagnose();
 
 		self::assertSame( 'local.filesystem.unavailable', $payload['results'][1]->code );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertSame( 'race canary', file_get_contents( $marker ) );
 	}
 
@@ -447,7 +455,9 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 
 	public function test_permission_path_substitution_does_not_change_the_symlink_target_mode(): void {
 		$target = $this->directory . '/permission-target';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		file_put_contents( $target, 'permission target canary' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		chmod( $target, 0644 );
 
 		$service                               = $this->service();
@@ -457,10 +467,12 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 		clearstatcache( true, $target );
 		self::assertSame( 'local.filesystem.unavailable', $payload['results'][1]->code );
 		self::assertSame( 0644, fileperms( $target ) & 0777 );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertSame( 'permission target canary', file_get_contents( $target ) );
 	}
 
 	public function test_destination_root_failure_is_reported_in_the_third_row(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 		rmdir( $this->plugin_directory );
 
 		$payload = $this->service()->diagnose();
@@ -483,6 +495,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 		$secret_canary = 'ghp_secret_diagnostic_canary';
 		$path_canary   = 'absolute-path-diagnostic-canary';
 		$directory     = $this->directory . '/' . $path_canary . '/' . $secret_canary;
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		mkdir( $directory, 0700, true );
 
 		$service                      = $this->service();
@@ -493,6 +506,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 			static fn( ProviderDiagnosticResult $result ): array => $result->to_array(),
 			$service->diagnose()['results']
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Preserve native JSON bytes for the isolated fixture/trace assertion without loading WordPress.
 		$encoded = json_encode( $payload, JSON_THROW_ON_ERROR );
 
 		self::assertStringNotContainsString( $secret_canary, $encoded );
@@ -550,6 +564,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 		$contents = array();
 		$markers  = glob( $directory . '/.ran-booster-diagnostic-*' );
 		foreach ( false === $markers ? array() : $markers as $marker ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 			$contents[] = (string) file_get_contents( $marker );
 		}
 

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace RAN\Tests\WordPress;
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused activation spies belong to this test.
-
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Portability/WpPusherCoexistenceWordPressFunctions.php';
 
@@ -148,6 +146,7 @@ final class ActivationRequirementsTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This exact fixture spy remains beside the contract it exercises; its existing class identity and load order are intentional.
 final class ActivationRequirementsBooster extends Booster {
 	public function __construct(
 		CoreContainer $container,
@@ -166,6 +165,7 @@ final class ActivationRequirementsBooster extends Booster {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This exact fixture spy remains beside the contract it exercises; its existing class identity and load order are intentional.
 final class ActivationRequirementsDatabase {
 	public int $installs = 0;
 
@@ -174,6 +174,7 @@ final class ActivationRequirementsDatabase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This exact fixture spy remains beside the contract it exercises; its existing class identity and load order are intentional.
 final class FailingActivationDatabase extends Database {
 	public int $installs = 0;
 
@@ -186,6 +187,7 @@ final class FailingActivationDatabase extends Database {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This exact fixture spy remains beside the contract it exercises; its existing class identity and load order are intentional.
 final class ActivationRequirementsWakeup {
 	public int $requests = 0;
 

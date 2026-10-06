@@ -62,6 +62,6 @@ final class BootstrapApiMarkerTest extends TestCase {
 
 		require dirname( __DIR__, 2 ) . '/ran-booster.php';
 
-		self::assertSame( 'multisite_unsupported', RAN_BOOSTER_RUNTIME_MODE );
+		self::assertSame( 'multisite_unsupported', constant( 'RAN_BOOSTER_RUNTIME_MODE' ) );
 	}
 }

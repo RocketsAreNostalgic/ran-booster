@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace RAN\Secrets;
 
 // Native JSON and Sodium calls define the strict encrypted-document format.
-// phpcs:disable WordPress.WP.AlternativeFunctions
 // Base64 is the binding RFC 4648 binary encoding for envelope fields.
-// phpcs:disable WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode, WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
 
 use JsonException;
 use RuntimeException;
@@ -45,7 +43,9 @@ final class EncryptedSecretsEnvelopeCodec {
 				$key
 			);
 			$envelope   = $this->canonical_envelope(
+				// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Canonical encrypted-envelope bytes require strict base64 decoding and exact re-encoding; this is not obfuscation.
 				base64_encode( $nonce ),
+				// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Canonical encrypted-envelope bytes require strict base64 decoding and exact re-encoding; this is not obfuscation.
 				base64_encode( $ciphertext )
 			);
 		} catch ( Throwable ) {
@@ -121,6 +121,7 @@ final class EncryptedSecretsEnvelopeCodec {
 
 	private function canonical_envelope( string $nonce, string $ciphertext ): string {
 		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- The encrypted document contract requires native throwing JSON encoding with exact unescaped canonical bytes.
 			$json = json_encode(
 				array(
 					'format'     => self::FORMAT,
@@ -139,7 +140,9 @@ final class EncryptedSecretsEnvelopeCodec {
 	}
 
 	private function decode_base64( string $encoded ): string {
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Canonical encrypted-envelope bytes require strict base64 decoding and exact re-encoding; this is not obfuscation.
 		$decoded = base64_decode( $encoded, true );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Canonical encrypted-envelope bytes require strict base64 decoding and exact re-encoding; this is not obfuscation.
 		if ( false === $decoded || ! hash_equals( base64_encode( $decoded ), $encoded ) ) {
 			throw new RuntimeException( 'The encrypted Booster secrets document is invalid.' );
 		}

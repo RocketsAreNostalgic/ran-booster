@@ -324,8 +324,9 @@ final class RepositoryDetailRendererTest extends TestCase {
 			'branch',
 			$this->view_urls(),
 			$this->view_request_urls(),
-			static function (): void {
+			static function (): bool {
 				echo '<div data-test-webhook></div>';
+				return true;
 			},
 			null
 		);

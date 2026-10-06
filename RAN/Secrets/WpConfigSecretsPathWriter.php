@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Secrets;
 
 // Native local filesystem operations are required to verify inode, lock and atomic-replacement semantics.
-// phpcs:disable WordPress.WP.AlternativeFunctions
 
 use ParseError;
 use Throwable;
@@ -72,6 +71,7 @@ class WpConfigSecretsPathWriter {
 		}
 
 		$directory = dirname( $config_path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- The configuration replacement boundary checks actual PHP-process writability alongside canonical path and inode checks.
 		if ( ! is_dir( $directory ) || is_link( $directory ) || ! is_writable( $directory ) ) {
 			$this->fail( 'config_directory_invalid', 'The WordPress configuration directory is not safe and writable.' );
 		}
@@ -133,6 +133,7 @@ class WpConfigSecretsPathWriter {
 		}
 
 		$directory = dirname( $config_path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- The configuration replacement boundary checks actual PHP-process writability alongside canonical path and inode checks.
 		if ( ! is_dir( $directory ) || is_link( $directory ) || ! is_writable( $directory ) ) {
 			$this->fail( 'config_directory_invalid', 'The WordPress configuration directory is not safe and writable.' );
 		}
@@ -184,6 +185,7 @@ class WpConfigSecretsPathWriter {
 			$this->replace_config( $config_path, $candidate, $locked );
 		} finally {
 			$this->release_lock( $lock );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the native handle acquired for bounded reads, exclusive locking or atomic local replacement.
 			fclose( $lock );
 		}
 
@@ -195,6 +197,7 @@ class WpConfigSecretsPathWriter {
 	 */
 	private function inspect_config_path( string $path, bool $require_writable = true ): array {
 		clearstatcache( true, $path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- The configuration replacement boundary checks actual PHP-process writability alongside canonical path and inode checks.
 		if ( is_link( $path ) || ! is_file( $path ) || ( $require_writable && ! is_writable( $path ) ) ) {
 			$this->fail( 'config_file_invalid', 'The WordPress configuration is not a writable regular file.' );
 		}
@@ -228,6 +231,7 @@ class WpConfigSecretsPathWriter {
 				$this->fail( 'config_read_failed', 'Could not read the complete WordPress configuration.' );
 			}
 		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the native handle acquired for bounded reads, exclusive locking or atomic local replacement.
 			fclose( $handle );
 		}
 
@@ -438,6 +442,7 @@ class WpConfigSecretsPathWriter {
 			) {
 				$this->fail( 'temporary_metadata_invalid', 'The edited WordPress configuration metadata could not be verified.' );
 			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the native handle acquired for bounded reads, exclusive locking or atomic local replacement.
 			fclose( $handle );
 			$handle = null;
 
@@ -483,9 +488,11 @@ class WpConfigSecretsPathWriter {
 			);
 		} finally {
 			if ( is_resource( $handle ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the native handle acquired for bounded reads, exclusive locking or atomic local replacement.
 				fclose( $handle );
 			}
 			if ( '' !== $temporary && ( is_file( $temporary ) || is_link( $temporary ) ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Clean up only the same-directory temporary entry owned by this failed native replacement transaction.
 				unlink( $temporary );
 			}
 		}
@@ -520,6 +527,7 @@ class WpConfigSecretsPathWriter {
 				if ( ! $this->change_permissions( $temporary, $original['mode'] & 0777 ) || ! $this->sync_handle( $handle ) ) {
 					return;
 				}
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the native handle acquired for bounded reads, exclusive locking or atomic local replacement.
 				fclose( $handle );
 				$handle = null;
 				if ( $this->replace_path( $temporary, $path ) ) {
@@ -527,9 +535,11 @@ class WpConfigSecretsPathWriter {
 				}
 			} finally {
 				if ( is_resource( $handle ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the native handle acquired for bounded reads, exclusive locking or atomic local replacement.
 					fclose( $handle );
 				}
 				if ( '' !== $temporary && ( is_file( $temporary ) || is_link( $temporary ) ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Clean up only the same-directory temporary entry owned by this failed native replacement transaction.
 					unlink( $temporary );
 				}
 			}
@@ -776,6 +786,7 @@ class WpConfigSecretsPathWriter {
 	 * @return resource
 	 */
 	protected function open_config_for_read( string $path ): mixed {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Native read handles permit bounded reads and handle/path inode validation before trusting local bytes.
 		$handle = fopen( $path, 'rb' );
 		if ( false === $handle ) {
 			$this->fail( 'config_read_failed', 'Could not open the WordPress configuration.' );
@@ -791,6 +802,7 @@ class WpConfigSecretsPathWriter {
 		if ( is_link( $path ) ) {
 			$this->fail( 'lock_invalid', 'The WordPress configuration edit lock is not safe.' );
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- The lock requires a native handle for flock and fstat without truncating existing bytes.
 		$handle = fopen( $path, 'c+b' );
 		if ( false === $handle ) {
 			$this->fail( 'lock_open_failed', 'Could not open the WordPress configuration edit lock.' );
@@ -818,7 +830,8 @@ class WpConfigSecretsPathWriter {
 	 */
 	protected function create_temporary( string $directory ): array {
 		for ( $attempt = 0; $attempt < 8; ++$attempt ) {
-			$path   = $directory . '/' . self::TEMP_PREFIX . bin2hex( random_bytes( 12 ) ) . '.php';
+			$path = $directory . '/' . self::TEMP_PREFIX . bin2hex( random_bytes( 12 ) ) . '.php';
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Exclusive native creation must fail on an existing path and return the handle used for inode/lock checks.
 			$handle = fopen( $path, 'x+b' );
 			if ( false !== $handle ) {
 				return array( $path, $handle );
@@ -829,14 +842,17 @@ class WpConfigSecretsPathWriter {
 	}
 
 	protected function change_permissions( string $path, int $mode ): bool {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set and verify native POSIX permission bits on the private file before it can be trusted or installed.
 		return chmod( $path, $mode );
 	}
 
 	protected function change_owner( string $path, int $uid ): bool {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chown -- Atomic wp-config replacement must preserve the verified original native owner and group.
 		return chown( $path, $uid );
 	}
 
 	protected function change_group( string $path, int $gid ): bool {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chgrp -- Atomic wp-config replacement must preserve the verified original native owner and group.
 		return chgrp( $path, $gid );
 	}
 
@@ -844,6 +860,7 @@ class WpConfigSecretsPathWriter {
 	 * @param resource $handle
 	 */
 	protected function write_handle( mixed $handle, string $contents ): int|false {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Write through the verified native handle so short writes and flush failures preserve the atomic replacement boundary.
 		return fwrite( $handle, $contents );
 	}
 
@@ -865,10 +882,12 @@ class WpConfigSecretsPathWriter {
 	}
 
 	protected function read_back( string $path ): string|false {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read back exact local wp-config bytes to verify the same-directory replacement transaction.
 		return file_get_contents( $path );
 	}
 
 	protected function replace_path( string $source, string $destination ): bool {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- Same-directory native rename supplies the atomic replacement required by the verified local-file transaction.
 		return rename( $source, $destination );
 	}
 

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Tests\Secrets;
 
 // Native local filesystem behavior is the subject of these tests.
-// phpcs:disable WordPress.WP.AlternativeFunctions
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -29,6 +28,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		$this->config_path  = $this->directory . '/wp-config.php';
 		$this->sidecar_path = $this->directory . '/private/secrets.json';
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
 		$this->write_config( $this->valid_config() );
 	}
@@ -39,6 +39,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 	}
 
 	public function test_it_adds_the_fixed_definition_and_requires_asecond_request_verification(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->config_path, 0640 ) );
 
 		$result = ( new WpConfigSecretsPathWriter() )->write( $this->config_path, $this->sidecar_path );
@@ -53,6 +54,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 			. "/* RAN Booster encrypted secrets storage. */\n"
 			. "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '" . dirname( $this->sidecar_path ) . "' );\n\n"
 			. "/* That's all, stop editing! Happy publishing. */\n",
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 			file_get_contents( $this->config_path )
 		);
 		self::assertSame( array(), $this->temporary_files() );
@@ -65,6 +67,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 
 		( new WpConfigSecretsPathWriter() )->write( $this->config_path, $sidecar );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		$written = file_get_contents( $this->config_path );
 		self::assertIsString( $written );
 		self::assertStringNotContainsString( "\n", str_replace( "\r\n", '', $written ) );
@@ -75,12 +78,14 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 	public function test_arepeated_write_refuses_the_existing_constant_without_changing_bytes(): void {
 		$writer = new WpConfigSecretsPathWriter();
 		$writer->write( $this->config_path, $this->sidecar_path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		$written = file_get_contents( $this->config_path );
 
 		$this->assert_refused(
 			'constant_exists',
 			fn() => $writer->write( $this->config_path, $this->sidecar_path )
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertSame( $written, file_get_contents( $this->config_path ) );
 	}
 
@@ -100,7 +105,9 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 	}
 
 	public function test_it_removes_only_the_owned_definition_and_preserves_surrounding_bytes_and_metadata(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->config_path, 0640 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		$original = file_get_contents( $this->config_path );
 		$owner    = fileowner( $this->config_path );
 		$group    = filegroup( $this->config_path );
@@ -108,6 +115,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		$writer->write( $this->config_path, $this->sidecar_path );
 
 		self::assertTrue( $writer->remove_owned_definition( $this->config_path, $this->sidecar_path ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertSame( $original, file_get_contents( $this->config_path ) );
 		self::assertSame( 0640, fileperms( $this->config_path ) & 0777 );
 		self::assertSame( $owner, fileowner( $this->config_path ) );
@@ -117,13 +125,15 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 
 	public function test_it_atomically_retargets_only_the_owned_definition_and_preserves_metadata(): void {
 		$replacement = $this->directory . '/private/previous/secrets.json';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->config_path, 0640 ) );
 		$writer = new WpConfigSecretsPathWriter();
 		$writer->write( $this->config_path, $this->sidecar_path );
 		$owner = fileowner( $this->config_path );
 		$group = filegroup( $this->config_path );
 
-		$result  = $writer->retarget_owned_definition( $this->config_path, $this->sidecar_path, $replacement );
+		$result = $writer->retarget_owned_definition( $this->config_path, $this->sidecar_path, $replacement );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		$written = (string) file_get_contents( $this->config_path );
 
 		self::assertTrue( $result->requires_next_request_verification() );
@@ -151,6 +161,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 				$this->directory . '/private/previous/secrets.json'
 			)
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertSame( $config, file_get_contents( $this->config_path ) );
 		self::assertFileDoesNotExist( $this->config_path . '.ran-booster.lock' );
 	}
@@ -163,6 +174,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		$writer->write( $this->config_path, $sidecar );
 
 		self::assertTrue( $writer->remove_owned_definition( $this->config_path, $sidecar ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertSame( $config, file_get_contents( $this->config_path ) );
 	}
 
@@ -170,9 +182,11 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		$writer = new WpConfigSecretsPathWriter();
 		$writer->write( $this->config_path, $this->sidecar_path );
 		self::assertTrue( $writer->remove_owned_definition( $this->config_path, $this->sidecar_path ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		$removed = file_get_contents( $this->config_path );
 
 		self::assertFalse( $writer->remove_owned_definition( $this->config_path, $this->sidecar_path ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertSame( $removed, file_get_contents( $this->config_path ) );
 		self::assertSame( array(), $this->temporary_files() );
 	}
@@ -180,12 +194,14 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 	public function test_removal_preflight_proves_the_exact_definition_without_changing_bytes(): void {
 		$writer = new WpConfigSecretsPathWriter();
 		$writer->write( $this->config_path, $this->sidecar_path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		$written = file_get_contents( $this->config_path );
 
 		self::assertTrue(
 			$writer->assert_owned_definition_removable( $this->config_path, $this->sidecar_path )
 		);
 		self::assertTrue( $writer->has_owned_definition( $this->config_path, $this->sidecar_path ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertSame( $written, file_get_contents( $this->config_path ) );
 	}
 
@@ -194,11 +210,13 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 			. "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', '" . $this->sidecar_path . "' );\n"
 			. "/* That's all, stop editing! Happy publishing. */\n";
 		$this->write_config( $config );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->config_path, 0400 ) );
 
 		self::assertFalse(
 			( new WpConfigSecretsPathWriter() )->remove_owned_definition( $this->config_path, $this->sidecar_path )
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertSame( $config, file_get_contents( $this->config_path ) );
 		self::assertFileDoesNotExist( $this->config_path . '.ran-booster.lock' );
 	}
@@ -213,6 +231,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		self::assertFalse(
 			( new WpConfigSecretsPathWriter() )->remove_owned_definition( $this->config_path, $this->sidecar_path )
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertSame( $config, file_get_contents( $this->config_path ) );
 		self::assertFileDoesNotExist( $this->config_path . '.ran-booster.lock' );
 	}
@@ -230,6 +249,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 				$this->sidecar_path
 			)
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertSame( $config, file_get_contents( $this->config_path ) );
 	}
 
@@ -286,16 +306,19 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 	#[DataProvider( 'invalid_config_provider' )]
 	public function test_it_refuses_ambiguous_malformed_or_previously_configured_files( string $config, string $reason ): void {
 		$this->write_config( $config );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		$original = file_get_contents( $this->config_path );
 		$this->assert_refused(
 			$reason,
 			fn() => ( new WpConfigSecretsPathWriter() )->write( $this->config_path, $this->sidecar_path )
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertSame( $original, file_get_contents( $this->config_path ) );
 	}
 
 	public function test_it_refuses_asymlinked_config(): void {
 		$target = $this->directory . '/actual-config.php';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- Move the actual fixture inode to exercise replacement/symlink race handling.
 		self::assertTrue( rename( $this->config_path, $target ) );
 		self::assertTrue( symlink( $target, $this->config_path ) );
 		$this->assert_refused(
@@ -314,6 +337,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 	}
 
 	public function test_it_refuses_agroup_writable_config(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->config_path, 0660 ) );
 		$this->assert_refused(
 			'config_permissions_unsafe',
@@ -332,9 +356,11 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 	}
 
 	public function test_it_detects_aconcurrent_config_change_before_replacement(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		$original = file_get_contents( $this->config_path );
 		$writer   = new class() extends WpConfigSecretsPathWriter {
 			protected function before_final_config_check( string $config_path ): void {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 				file_put_contents( $config_path, "\n// concurrent edit\n", FILE_APPEND );
 			}
 		};
@@ -342,7 +368,9 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 			'config_changed',
 			fn() => $writer->write( $this->config_path, $this->sidecar_path )
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertNotSame( $original, file_get_contents( $this->config_path ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertStringNotContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', file_get_contents( $this->config_path ) );
 	}
 
@@ -350,6 +378,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		( new WpConfigSecretsPathWriter() )->write( $this->config_path, $this->sidecar_path );
 		$writer = new class() extends WpConfigSecretsPathWriter {
 			protected function before_final_config_check( string $config_path ): void {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 				file_put_contents( $config_path, "\n// concurrent edit\n", FILE_APPEND );
 			}
 		};
@@ -359,8 +388,10 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		);
 		self::assertStringContainsString(
 			'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR',
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 			(string) file_get_contents( $this->config_path )
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertStringContainsString( '// concurrent edit', (string) file_get_contents( $this->config_path ) );
 		self::assertSame( array(), $this->temporary_files() );
 	}
@@ -452,12 +483,14 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		string $reason,
 		callable $writer_factory
 	): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		$original = file_get_contents( $this->config_path );
 		$writer   = $writer_factory();
 		$this->assert_refused(
 			$reason,
 			fn() => $writer->write( $this->config_path, $this->sidecar_path )
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertSame( $original, file_get_contents( $this->config_path ) );
 		self::assertSame( array(), $this->temporary_files() );
 	}
@@ -468,17 +501,20 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		callable $writer_factory
 	): void {
 		( new WpConfigSecretsPathWriter() )->write( $this->config_path, $this->sidecar_path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		$original = file_get_contents( $this->config_path );
 		$writer   = $writer_factory();
 		$this->assert_refused(
 			$reason,
 			fn() => $writer->remove_owned_definition( $this->config_path, $this->sidecar_path )
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertSame( $original, file_get_contents( $this->config_path ) );
 		self::assertSame( array(), $this->temporary_files() );
 	}
 
 	public function test_afailed_post_replacement_readback_restores_the_original_bytes(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		$original = file_get_contents( $this->config_path );
 		$writer   = new class() extends WpConfigSecretsPathWriter {
 			private int $installed_reads = 0;
@@ -496,12 +532,14 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 			'replacement_readback_failed',
 			fn() => $writer->write( $this->config_path, $this->sidecar_path )
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertSame( $original, file_get_contents( $this->config_path ) );
 		self::assertSame( array(), $this->temporary_files() );
 	}
 
 	public function test_afailed_removal_post_replacement_readback_restores_the_owned_definition(): void {
 		( new WpConfigSecretsPathWriter() )->write( $this->config_path, $this->sidecar_path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		$original = file_get_contents( $this->config_path );
 		$writer   = new class() extends WpConfigSecretsPathWriter {
 			private int $installed_reads = 0;
@@ -519,11 +557,13 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 			'replacement_readback_failed',
 			fn() => $writer->remove_owned_definition( $this->config_path, $this->sidecar_path )
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertSame( $original, file_get_contents( $this->config_path ) );
 		self::assertSame( array(), $this->temporary_files() );
 	}
 
 	public function test_partial_temporary_writes_complete_and_preserve_metadata(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->config_path, 0640 ) );
 		$owner  = fileowner( $this->config_path );
 		$group  = filegroup( $this->config_path );
@@ -539,6 +579,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		self::assertSame( 0640, fileperms( $this->config_path ) & 0777 );
 		self::assertSame( $owner, fileowner( $this->config_path ) );
 		self::assertSame( $group, filegroup( $this->config_path ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertStringContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', (string) file_get_contents( $this->config_path ) );
 		self::assertSame( array(), $this->temporary_files() );
 	}
@@ -548,7 +589,9 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 	}
 
 	private function write_config( string $contents ): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $this->config_path, $contents ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->config_path, 0600 ) );
 	}
 
@@ -582,6 +625,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 
 	private function remove_tree( string $path ): void {
 		if ( is_link( $path ) || is_file( $path ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 			unlink( $path );
 			return;
 		}
@@ -595,6 +639,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 			}
 			$this->remove_tree( $path . '/' . $entry );
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 		rmdir( $path );
 	}
 }

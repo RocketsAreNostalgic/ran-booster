@@ -156,16 +156,16 @@ class Dashboard {
 		}
 
 		$requested_tab = null;
-		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only allowlisted navigation state.
 
 		if ( null !== $forced_tab && '' !== $forced_tab ) {
 
 			$requested_tab = $forced_tab;
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
 		} elseif ( isset( $_GET['tab'] ) && is_string( $_GET['tab'] ) ) {
 			// Read-only navigation state; no action is performed from this query value.
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
 			$requested_tab = wp_unslash( $_GET['tab'] );
 		}
-		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		$requested_add_on_key = is_string( $requested_tab ) ? strtolower( trim( $requested_tab ) ) : '';
 		$selected_add_on      = '' === $requested_add_on_key || null === $this->admin_add_ons
@@ -315,7 +315,7 @@ class Dashboard {
 		ob_start();
 		// Internal controllers provide the fixed presentation payload. No request
 		// input reaches extract().
-		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed keys from the internal provider-settings builder bind this Core-owned included view; request keys are not extracted.
 		extract( $settings );
 		require __DIR__ . '/../views/provider-public-lookup-profile.php';
 
@@ -476,7 +476,7 @@ class Dashboard {
 		$this->add_bulk_package_notice( $type );
 
 		// Read-only package selection; mutations use separately nonce-protected forms.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Select the package presentation only; branch checks and form mutations verify their own action nonce.
 		if ( isset( $_GET['package'] ) ) {
 			try {
 				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only package selection.
@@ -522,8 +522,8 @@ class Dashboard {
 
 	/** @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|null */
 	private function requested_package_repository_branch_check( Package $package, string $type ): ?string {
-		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- This boundary verifies the action-specific nonce below.
 		if ( ! isset( $_GET['ran_booster_repository_branch_check'] )
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This request flag is followed by capability and action-specific nonce verification before the provider check.
 			|| '1' !== (string) $_GET['ran_booster_repository_branch_check']
 			|| ! current_user_can( 'manage_options' )
 			|| ! isset( $_GET['_ran_booster_repository_branch_nonce'] )
@@ -533,7 +533,6 @@ class Dashboard {
 		}
 		$action = PackageAdminController::repository_branch_check_action( $package, $type );
 		$nonce  = wp_unslash( $_GET['_ran_booster_repository_branch_nonce'] );
-		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 		if ( ! wp_verify_nonce( $nonce, $action ) ) {
 			return null;
 		}
@@ -589,20 +588,26 @@ class Dashboard {
 	 * @return array{search: string, provider: string, source: string, policy: string}
 	 */
 	private function requested_package_list_state(): array {
-		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only package list filtering.
-		$search   = isset( $_GET['s'] ) && is_string( $_GET['s'] )
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
+		$search = isset( $_GET['s'] ) && is_string( $_GET['s'] )
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
 			? sanitize_text_field( wp_unslash( $_GET['s'] ) )
 			: '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
 		$provider = isset( $_GET['provider'] ) && is_string( $_GET['provider'] )
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
 			? sanitize_key( wp_unslash( $_GET['provider'] ) )
 			: '';
-		$source   = isset( $_GET['source'] ) && is_string( $_GET['source'] )
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
+		$source = isset( $_GET['source'] ) && is_string( $_GET['source'] )
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
 			? sanitize_key( wp_unslash( $_GET['source'] ) )
 			: '';
-		$policy   = isset( $_GET['policy'] ) && is_string( $_GET['policy'] )
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
+		$policy = isset( $_GET['policy'] ) && is_string( $_GET['policy'] )
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
 			? sanitize_key( wp_unslash( $_GET['policy'] ) )
 			: '';
-		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		return array(
 			'search'   => substr( trim( $search ), 0, 100 ),
@@ -810,16 +815,16 @@ class Dashboard {
 
 	private function requested_provider(): ?string {
 		// Read-only provider selection for package setup.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only provider selection is string-checked and sanitized before building package setup.
 		return isset( $_GET['provider'] ) && is_string( $_GET['provider'] )
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Sanitize the read-only provider selector; this value does not authorize package mutation.
 			? sanitize_key( wp_unslash( $_GET['provider'] ) )
 			: null;
 	}
 
 	private function has_requested_provider(): bool {
 		// Read-only provider selection for package setup.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Test only whether the read-only provider selector is present and nonempty after sanitization.
 		return isset( $_GET['provider'] ) && is_string( $_GET['provider'] ) && '' !== sanitize_key( wp_unslash( $_GET['provider'] ) );
 	}
 
@@ -834,9 +839,9 @@ class Dashboard {
 
 	private function requested_troubleshooting_panel(): string {
 		// Read-only allowlisted routing state.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only panel selection is sanitized and restricted to the fixed diagnostics, debug-capture and activity routes.
 		$panel = isset( $_GET['panel'] ) && is_string( $_GET['panel'] )
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Sanitize the panel before the fixed route allowlist; no mutation is performed.
 			? sanitize_key( wp_unslash( $_GET['panel'] ) )
 			: 'diagnostics';
 
@@ -878,9 +883,8 @@ class Dashboard {
 	}
 
 	private function requested_provider_repository_id(): string {
-		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only bounded repository selection.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
 		$value = $_GET['repository'] ?? null;
-		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 		if ( ! is_string( $value ) ) {
 			return '';
 		}
@@ -909,28 +913,40 @@ class Dashboard {
 	 * }
 	 */
 	private function requested_provider_list_state(): array {
-		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only list filtering and pagination.
-		$search   = isset( $_GET['s'] ) && is_string( $_GET['s'] )
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
+		$search = isset( $_GET['s'] ) && is_string( $_GET['s'] )
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
 			? sanitize_text_field( wp_unslash( $_GET['s'] ) )
 			: '';
-		$kind     = isset( $_GET['kind'] ) && is_string( $_GET['kind'] )
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
+		$kind = isset( $_GET['kind'] ) && is_string( $_GET['kind'] )
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
 			? sanitize_key( wp_unslash( $_GET['kind'] ) )
 			: '';
-		$scope    = isset( $_GET['scope'] ) && is_string( $_GET['scope'] )
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
+		$scope = isset( $_GET['scope'] ) && is_string( $_GET['scope'] )
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
 			? sanitize_key( wp_unslash( $_GET['scope'] ) )
 			: '';
-		$status   = isset( $_GET['status'] ) && is_string( $_GET['status'] )
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
+		$status = isset( $_GET['status'] ) && is_string( $_GET['status'] )
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
 			? sanitize_key( wp_unslash( $_GET['status'] ) )
 			: '';
-		$orderby  = isset( $_GET['orderby'] ) && is_string( $_GET['orderby'] )
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
+		$orderby = isset( $_GET['orderby'] ) && is_string( $_GET['orderby'] )
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
 			? sanitize_key( wp_unslash( $_GET['orderby'] ) )
 			: 'name';
-		$order    = isset( $_GET['order'] ) && is_string( $_GET['order'] )
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
+		$order = isset( $_GET['order'] ) && is_string( $_GET['order'] )
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
 			? sanitize_key( wp_unslash( $_GET['order'] ) )
 			: 'asc';
-		$paged    = isset( $_GET['paged'] ) ? absint( $_GET['paged'] ) : 1;
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
+		$paged = isset( $_GET['paged'] ) ? absint( $_GET['paged'] ) : 1;
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
 		$per_page = isset( $_GET['per_page'] ) ? absint( $_GET['per_page'] ) : 20;
-		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		return array(
 			'search'   => substr( trim( $search ), 0, 100 ),
@@ -1045,7 +1061,7 @@ class Dashboard {
 		}
 
 		// Internal controllers provide a fixed set of view locals; no request keys reach extract().
-		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Internal controllers supply the fixed view-local keys after the manage_options capability check; request keys are not extracted.
 		extract( $data );
 
 		return include __DIR__ . '/../views/base.php';

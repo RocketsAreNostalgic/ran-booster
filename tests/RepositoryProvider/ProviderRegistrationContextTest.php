@@ -27,9 +27,6 @@ final class ProviderRegistrationContextTest extends TestCase {
 			},
 		);
 		$methods     = get_class_methods( ProviderRegistrationContext::class );
-		if ( false === $methods ) {
-			self::fail( 'ProviderRegistrationContext methods could not be inspected.' );
-		}
 		sort( $methods );
 
 		self::assertSame( 0, $resolutions );

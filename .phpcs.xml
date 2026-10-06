@@ -32,8 +32,6 @@
 
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
 		<exclude-pattern>/tests/</exclude-pattern>
-		<!-- Template locals are passed into included view files; they are not plugin globals. -->
-		<exclude-pattern>/views/</exclude-pattern>
 		<properties>
 			<property name="prefixes" type="array">
 				<element value="ran_booster"/>
@@ -41,6 +39,11 @@
 				<element value="RAN\"/>
 			</property>
 		</properties>
+	</rule>
+
+	<!-- Included view bindings are locals; declarations and hooks still require prefixes. -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound">
+		<exclude-pattern>/views/</exclude-pattern>
 	</rule>
 
 	<!-- WPCS 3.4 hard-codes a four-character minimum; Booster's established production namespace root is RAN. -->

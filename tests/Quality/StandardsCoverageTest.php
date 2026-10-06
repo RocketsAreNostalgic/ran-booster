@@ -16,7 +16,7 @@ final class StandardsCoverageTest extends TestCase {
 		foreach ( $paths as $path ) {
 			$source = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Inspect only local owned source; never load or execute the fixture.
 			self::assertIsString( $source );
-			self::assertFalse( $this->has_blanket_suppression( $source ), $path . ' must identify the specific rule and reason instead of disabling all standards.' );
+			self::assertFalse( $this->has_blanket_suppression( $source ), $path . ' must identify the specific rule and reason instead of suppressing a whole standard or category.' );
 		}
 	}
 
@@ -126,7 +126,7 @@ final class StandardsCoverageTest extends TestCase {
 	}
 
 	public function test_blanket_guard_distinguishes_annotations_from_fixture_strings(): void {
-		foreach ( array( '// phpcs:disable', '// phpcs:disable -- fixture', '// phpcs:ignore', '// phpcs:ignoreFile -- fixture', "/**\n * @codingStandardsIgnoreStart\n */", '/** @codingStandardsIgnoreFile */', '/** @codingStandardsIgnoreLine */' ) as $annotation ) {
+		foreach ( array( '// PHPCS:DISABLE', '// phpcs:ignorefile', '// phpcs:ignore WordPress -- Too broad.', '// phpcs:disable WordPress.Security -- Too broad.', '// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda, WordPress -- Mixed broad selector.', '// phpcs:disable', '// phpcs:disable -- fixture', '// phpcs:ignore', '// phpcs:ignoreFile -- fixture', "/**\n * @codingStandardsIgnoreStart\n */", '/** @codingStandardsIgnoreFile */', '/** @codingStandardsIgnoreLine */' ) as $annotation ) {
 			self::assertTrue( $this->has_blanket_suppression( "<?php\n" . $annotation . "\n" ) );
 		}
 		self::assertFalse( $this->has_blanket_suppression( "<?php\n// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Required evaluation order.\n" ) );
@@ -139,7 +139,7 @@ final class StandardsCoverageTest extends TestCase {
 		$result = $this->inspect( "<?php\n" . $probe, 'RAN/NewQualityProbe.php' );
 		self::assertContains( 'WordPress.PHP.YodaConditions.NotYoda', $result['sources'] );
 		self::assertContains( 'Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed', $result['sources'] );
-		foreach ( array( '@codingStandardsIgnoreStart', '@codingStandardsIgnoreFile', '@codingStandardsIgnoreLine', 'phpcs:disable', 'phpcs:ignoreFile', 'phpcs:ignore' ) as $directive ) {
+		foreach ( array( '@codingStandardsIgnoreStart', '@codingStandardsIgnoreFile', '@codingStandardsIgnoreLine', 'phpcs:disable', 'PHPCS:DISABLE', 'phpcs:ignorefile', 'phpcs:ignoreFileSuffix', 'phpcs:ignoreFile', 'phpcs:ignore' ) as $directive ) {
 			foreach ( array( '// ' . $directive, '/* ' . $directive . ' */' ) as $annotation ) {
 				$source = "<?php\n" . $annotation . "\n" . $probe;
 				$result = $this->inspect( $source, 'RAN/NewQualityProbe.php' );
@@ -149,11 +149,31 @@ final class StandardsCoverageTest extends TestCase {
 		}
 	}
 
+	public function test_broad_selectors_really_hide_diagnostics_but_fail_the_guard(): void {
+		foreach ( array( 'phpcs:ignore WordPress', 'PHPCS:DISABLE WordPress.PHP', 'phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed, WordPress' ) as $directive ) {
+			$source = "<?php\n// " . $directive . " -- Broad fixture.\nfunction ran_booster_probe( \$value ) { return \$value === 1; }";
+			$result = $this->inspect( $source, 'views/nested/new-probe.php' );
+			self::assertNotContains( 'WordPress.PHP.YodaConditions.NotYoda', $result['sources'] );
+			self::assertTrue( $this->has_blanket_suppression( $source ) );
+		}
+	}
+
 	private function has_blanket_suppression( string $source ): bool {
 		foreach ( token_get_all( $source ) as $token ) {
 			if ( is_array( $token ) && in_array( $token[0], array( T_COMMENT, T_DOC_COMMENT ), true )
-				&& 1 === preg_match( '/@codingStandardsIgnore(?:Start|File|Line)|phpcs:(?:ignoreFile\b|(?:disable|ignore)(?:\s*(?:--[^\r\n]*)?\s*(?:\*\/)?\s*$))/m', $token[1] ) ) {
+				&& 1 === preg_match( '/@codingStandardsIgnore(?:Start|File|Line)|phpcs:(?:ignoreFile|(?:disable|ignore)(?:\s*(?:--[^\r\n]*)?\s*(?:\*\/)?\s*$))/im', $token[1] ) ) {
 				return true;
+			}
+			if ( is_array( $token ) && in_array( $token[0], array( T_COMMENT, T_DOC_COMMENT ), true )
+				&& preg_match_all( '/phpcs:(?:disable|ignore)\b([^\r\n]*)/i', $token[1], $matches ) ) {
+				foreach ( $matches[1] as $directive ) {
+					$selectors = explode( ',', explode( '--', $directive, 2 )[0] );
+					foreach ( $selectors as $selector ) {
+						if ( count( explode( '.', trim( $selector, " \t*/" ) ) ) < 3 ) {
+							return true;
+						}
+					}
+				}
 			}
 		}
 		return false;
@@ -195,8 +215,22 @@ final class StandardsCoverageTest extends TestCase {
 		self::assertSame( array(), $result['sources'] );
 	}
 
+	public function test_view_locals_do_not_exempt_new_declarations_or_hooks(): void {
+		$sniff  = 'WordPress.NamingConventions.PrefixAllGlobals';
+		$source = '<?php $view_binding = true; function unprefixed_helper() {} class UnprefixedType {} const UNPREFIXED_VALUE = 1; do_action( "unprefixed_hook" );';
+		foreach ( array( 'views/new-probe.php', 'views/nested/new-probe.php' ) as $path ) {
+			$result = $this->inspect( $source, $path, $sniff );
+			foreach ( array( 'NonPrefixedFunctionFound', 'NonPrefixedClassFound', 'NonPrefixedConstantFound', 'NonPrefixedHooknameFound' ) as $code ) {
+				self::assertContains( $sniff . '.' . $code, $result['sources'], $path );
+			}
+			self::assertNotContains( $sniff . '.NonPrefixedVariableFound', $result['sources'] );
+		}
+		$result = $this->inspect( '<?php $view_binding = true;', 'RAN/NewProbe.php', $sniff );
+		self::assertContains( $sniff . '.NonPrefixedVariableFound', $result['sources'] );
+	}
+
 	/** @return array{exit: int, sources: list<string>, lines: list<int>} */
-	private function inspect( string $source, string $path ): array {
+	private function inspect( string $source, string $path, string $sniffs = 'WordPress.PHP.YodaConditions,Generic.CodeAnalysis.UnusedFunctionParameter,Universal.NamingConventions.NoReservedKeywordParameterNames' ): array {
 		$root = dirname( __DIR__, 2 );
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open -- Run the locked checker in isolation; these are CLI-only enforcement controls.
 		$process = proc_open(
@@ -204,7 +238,7 @@ final class StandardsCoverageTest extends TestCase {
 				PHP_BINARY,
 				$root . '/vendor/bin/phpcs',
 				'--standard=' . $root . '/.phpcs.xml',
-				'--sniffs=WordPress.PHP.YodaConditions,Generic.CodeAnalysis.UnusedFunctionParameter,Universal.NamingConventions.NoReservedKeywordParameterNames',
+				'--sniffs=' . $sniffs,
 				'--report=json',
 				'--no-colors',
 				'--parallel=1',

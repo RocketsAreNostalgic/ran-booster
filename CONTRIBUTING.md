@@ -860,3 +860,16 @@ PortabilityCandidate and PortabilityApplyResult join both audited naming scopes.
 Provider and Blueprint DTO consumers use their current snake_case contracts.
 The extension catalogue must describe the published Migrator accurately; recovery
 branches and candidate-source checks are not released-package certification.
+
+
+The local standards guard also rejects rule `include-pattern` selectors,
+`phpcs-only`/`phpcbf-only` conditional elements, and unreviewed PHPCS config values
+(including success-on-error settings). Actual checker mutations prove the hidden
+JSON diagnostic or zero failure status before the independent guard rejects them.
+Locked PHPCS ignores relative mode on rule-specific patterns: the generated Admin
+Shell variable exception therefore retains its suffix pattern, while the existing
+tracked-file guard rejects every matching path except the exact parity-checked
+`views/generated/ran-admin-shell.php`. Nested same-path and case-variant matches
+require explicit review; a suffix neighbor still receives the diagnostic. This
+limitation is protected by include-or-fail inventory rather than represented as
+an exact-path XML capability that the locked checker does not implement.

@@ -107,6 +107,10 @@ final class StandardsCoverageTest extends TestCase {
 		self::assertSame( 'WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound', $parent->getAttribute( 'ref' ) );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Compare the native DOM textContent of the one independently parity-checked generated exception.
 		self::assertSame( '/views/generated/ran-admin-shell\\.php$', $entry->textContent );
+		$root = dirname( __DIR__, 2 );
+		foreach ( $this->tracked_php_files( $root ) as $path ) {
+			self::assertFalse( $this->has_generated_binding_collision( substr( $path, strlen( $root ) + 1 ) ), 'Only the exact parity-checked root binding may receive the generated-variable exception: ' . $path );
+		}
 	}
 
 	public function test_phpstan_annotations_are_identifier_local_with_reasons(): void {
@@ -325,6 +329,69 @@ final class StandardsCoverageTest extends TestCase {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this unique private ruleset mutation.
 			unlink( $path );
 		}
+	}
+
+	public function test_local_xml_selectors_and_exit_configuration_cannot_weaken_checks(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Inspect the owned canonical profile as inert XML.
+		$xml = file_get_contents( dirname( __DIR__, 2 ) . '/.phpcs.xml' );
+		self::assertIsString( $xml );
+		self::assertFalse( $this->has_unreviewed_xml_selection( $xml ) );
+		$source     = '<?php json_encode( array() );';
+		$diagnostic = 'WordPress.WP.AlternativeFunctions.json_encode_json_encode';
+		self::assertContains( $diagnostic, $this->inspect( $source, 'RAN/FutureSelection.php', '' )['sources'] );
+		$mutations = array(
+			str_replace( '</ruleset>', '<rule ref="' . $diagnostic . '"><include-pattern>*/existing-only.php</include-pattern></rule></ruleset>', $xml ),
+			str_replace( '<rule ref="RANWordPressPlugin"/>', '<rule ref="RANWordPressPlugin" phpcbf-only="true"/>', $xml ),
+			str_replace( '<rule ref="RANWordPressPlugin"/>', '<rule ref="RANWordPressPlugin" phpcs-only="false"/>', $xml ),
+			str_replace( '</ruleset>', '<config name="ignore_errors_on_exit" value="1"/><config name="ignore_warnings_on_exit" value="1"/></ruleset>', $xml ),
+		);
+		foreach ( $mutations as $index => $mutation ) {
+			self::assertTrue( $this->has_unreviewed_xml_selection( $mutation ) );
+			$path = sys_get_temp_dir() . '/ran-selector-' . bin2hex( random_bytes( 12 ) ) . '.xml';
+			try {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write the unique inert profile mutation for the real checker.
+				self::assertSame( strlen( $mutation ), file_put_contents( $path, $mutation ) );
+				$result = $this->inspect( $source, 'RAN/FutureSelection.php', '', $path );
+				if ( 3 === $index ) {
+					self::assertContains( $diagnostic, $result['sources'] );
+					self::assertSame( 0, $result['exit'], 'The rejected config hides diagnostic failure in the exit status.' );
+				} else {
+					self::assertNotContains( $diagnostic, $result['sources'], 'The rejected selector must hide the actual native JSON diagnostic.' );
+				}
+			} finally {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this unique private profile mutation.
+				unlink( $path );
+			}
+		}
+	}
+
+	private function has_unreviewed_xml_selection( string $source ): bool {
+		$xml = new \DOMDocument();
+		self::assertTrue( $xml->loadXML( $source, LIBXML_NONET ) );
+		$xpath = new \DOMXPath( $xml );
+		if ( 0 !== $xpath->query( '//rule/include-pattern | //*[@phpcs-only or @phpcbf-only]' )->length ) {
+			return true;
+		}
+		$configs = array();
+		foreach ( $xpath->query( '//config' ) as $config ) {
+			self::assertInstanceOf( \DOMElement::class, $config );
+			$configs[] = $config->getAttribute( 'name' ) . ':' . $config->getAttribute( 'value' );
+		}
+		sort( $configs );
+		return array( 'minimum_wp_version:7.0', 'testVersion:8.2-' ) !== $configs;
+	}
+
+	private function has_generated_binding_collision( string $path ): bool {
+		return 'views/generated/ran-admin-shell.php' !== $path && 1 === preg_match( '~(?:^|/)views/generated/ran-admin-shell\\.php$~i', $path );
+	}
+
+	public function test_generated_binding_suffix_collision_requires_explicit_review(): void {
+		$diagnostic = 'WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound';
+		foreach ( array( 'views/generated/ran-admin-shell.php', 'new-root/views/generated/ran-admin-shell.php', 'views/generated/RAN-ADMIN-SHELL.php' ) as $path ) {
+			self::assertNotContains( $diagnostic, $this->inspect( '<?php $unrelated = 1;', $path, '' )['sources'], 'Locked PHPCS rule patterns match absolute suffixes and ignore relative mode.' );
+			self::assertSame( 'views/generated/ran-admin-shell.php' !== $path, $this->has_generated_binding_collision( $path ) );
+		}
+		self::assertContains( $diagnostic, $this->inspect( '<?php $unrelated = 1;', 'views/generated/ran-admin-shell.php-extra.php', '' )['sources'] );
 	}
 
 	private function has_unreviewed_arguments( string $xml ): bool {

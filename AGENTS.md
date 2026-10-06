@@ -33,6 +33,16 @@ the effective roots/exclusions against that manifest. Preserve accurate
 caller-supplied view PHPDoc and the generated Admin Shell bytes; see
 `CONTRIBUTING.md` for coverage and remaining #167 acceptance boundaries.
 
+`composer analyze` also runs the separate level-5 development profile. Its broad
+`scripts/` and `tests/` discovery currently qualifies scripts plus PackageRemoval,
+Security, Uninstall and Webhook test directories (12 PHP files). The temporary
+`phpstan-development-pending.txt` inventory pins the remaining 350 unqualified
+files; these are pending debt, not accepted exemptions. The existing coverage
+suite compares all development PHP with effective selection plus that exact
+inventory, so a new or split file cannot silently enlarge an excluded role.
+Remove pending entries as cohorts qualify; adding an entry requires explicit
+review. Preserve production symbol isolation and deliberate negative assertions.
+
 - Work from an accepted public request or issue. Inspect the affected code and
   tests before editing, verify the result before declaring completion, and
   record concrete check evidence. Do not invent unavailable private context.

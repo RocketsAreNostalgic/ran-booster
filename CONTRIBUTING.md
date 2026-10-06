@@ -53,6 +53,39 @@ actual fallback/guard. Generated Admin Shell bytes are verified through
 not complete #167's naming, condition, exception or connected-contract work,
 and does not raise the analysis level or certify new dependency/host versions.
 
+## Development analysis migration
+
+The separate level-5 `phpstan-development.neon` invocation now covers all PHP
+under `scripts/`, `tests/PackageRemoval/`, `tests/Security/`, `tests/Uninstall/`
+and `tests/Webhook/`: 12 of 362 maintained development files, alongside the
+unchanged 345 shipped production files. Production analysis runs separately;
+development function doubles do not enter its symbol discovery.
+
+Development discovery starts at the whole scripts/tests roots. Temporary excluded
+roles are explicit in configuration, and `phpstan-development-pending.txt` records
+the exact 350 unresolved files. This is migration debt, **not accepted or permanent
+exemptions**, and does not establish all-maintained or ecosystem acceptance.
+`ProductionAnalysisCoverageTest` independently discovers all development PHP and
+compares its effective analysis population plus the exact pending inventory.
+A new file in a covered or new role enters analysis automatically. A split/new file
+inside a pending role fails coverage until analyzed or separately reviewed; a stale
+pending entry also fails. Do not expand the inventory merely to make CI green.
+
+The combined pre-migration level-5 probe had 708 diagnostics across 120 files;
+those are exposure estimates, not defect counts. It mixed incompatible harness
+symbol worlds: for example, `RAN\wp_die` intentionally returns in one fixture
+and never returns in others. Further cohorts need their actual harness boundaries
+and negative assertions preserved, not blanket ignores or baselines. This first
+cohort changes only accurate fixture types (PHPUnit stub intersection, non-null
+fixture return, integer/string keys in intentionally malformed webhook input).
+The CLI verifier also handles an unavailable argument array through its existing
+usage-failure path. Ordinary CLI behavior, production PHP and dependencies are unchanged.
+
+Controls cover new root/nested files, pending-role splits, stub-file removal and
+real bad-return/corrected-return diagnostics. Effective level below five or
+configured ignored diagnostics fails the guard; canonical Composer commands
+must keep both profiles. Remove the pending manifest once every role qualifies.
+
 ## Current PHP naming contract
 
 All owned PHP methods, properties, parameters and variables use ASCII snake_case,

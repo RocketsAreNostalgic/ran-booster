@@ -131,11 +131,11 @@ final class SignedWebhookVerifierTest extends TestCase {
 		new WebhookRequest( ProviderCode::parse( 'gh' ), str_repeat( 'x', 262145 ), array(), array() );
 	}
 
-	/** @param array<string, array<string, mixed>>|null $profiles */
+	/** @param array<int|string, array<string, mixed>>|null $profiles */
 	private function verifier( ?array $profiles = null ): SignedWebhookVerifier {
 		$profiles ??= array( 'profile-one' => $this->profile() );
 		$secrets    = new class( $profiles ) extends SecretsFile {
-			/** @param array<string, array<string, mixed>> $profiles */
+			/** @param array<int|string, array<string, mixed>> $profiles */
 			public function __construct( private array $profiles ) {
 				parent::__construct( '/unused/signed-verifier-secrets.php', array() );
 			}

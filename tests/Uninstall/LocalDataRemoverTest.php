@@ -418,7 +418,7 @@ final class LocalDataRemoverTest extends TestCase {
 				return $this->config_path;
 			}
 
-			protected function automatic_sidecar_path(): ?string {
+			protected function automatic_sidecar_path(): string {
 				return $this->automatic_path;
 			}
 		};
@@ -444,6 +444,7 @@ final class LocalDataRemoverTest extends TestCase {
 		}
 	}
 
+	/** @return SecretsFile&\PHPUnit\Framework\MockObject\Stub */
 	private function secrets( ?string $path ): SecretsFile {
 		$secrets = $this->createStub( SecretsFile::class );
 		$secrets->method( 'path' )->willReturn( $path );

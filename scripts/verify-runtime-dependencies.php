@@ -8,7 +8,7 @@ declare(strict_types=1);
 // phpcs:disable WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 // phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped
 
-$arguments      = array_slice( $argv, 1 );
+$arguments      = array_slice( $argv ?? array(), 1 );
 $packaging      = false;
 $installed_root = null;
 $usage          = 'Usage: php scripts/verify-runtime-dependencies.php '

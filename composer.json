@@ -65,7 +65,10 @@
         "i18n:fixture:check": "bash scripts/make-test-i18n-fixture.sh --check",
         "test:unit": "phpunit --configuration phpunit.xml --fail-on-phpunit-deprecation",
         "test:published-template-pack": "bash tests/published-template-pack.sh",
-        "analyze": "phpstan analyse --configuration=phpstan.neon --no-progress --debug --memory-limit=2G",
+        "analyze": [
+            "phpstan analyse --configuration=phpstan.neon --no-progress --debug --memory-limit=2G",
+            "phpstan analyse --configuration=phpstan-development.neon --no-progress --memory-limit=2G"
+        ],
         "test:delivery-intake-race": "bash tests/WordPress/delivery-intake-race.sh",
         "test:worker-hard-stop": "bash tests/WordPress/worker-hard-stop.sh",
         "test:native-lock-race": "bash tests/WordPress/native-updater-lock-race.sh",

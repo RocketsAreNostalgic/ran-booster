@@ -153,7 +153,12 @@ minimum diagnostic severity of five. The existing
 diagnostic across root, source, view, script and test paths. Its negative control
 copies the real ruleset, sets that diagnostic to severity zero, one and four, and proves both
 that PHPCS hides the violation and that the independent guard rejects the change.
-This closes a reproduced local XML bypass; it does not certify every inherited
+The same guard pins the five reviewed local checker arguments and proves that
+`sniffs`/`exclude` arguments hide diagnostics when no probe override is present.
+Source-level property changes (`phpcs:set` and legacy setting directives) are
+rejected, including case variants; real-checker controls demonstrate how they
+can replace the approved prefix policy.
+This closes reproduced local XML and annotation bypasses; it does not certify every inherited
 rule or dispose the remaining sniff-level annotation inventory. Unexplained or
 file-wide exact/sniff-level suppressions still require separate narrowing.
 

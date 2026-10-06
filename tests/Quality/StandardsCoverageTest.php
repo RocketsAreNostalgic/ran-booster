@@ -126,7 +126,7 @@ final class StandardsCoverageTest extends TestCase {
 	}
 
 	public function test_blanket_guard_distinguishes_annotations_from_fixture_strings(): void {
-		foreach ( array( '// PHPCS:DISABLE', '// phpcs:ignorefile', '// phpcs:ignore WordPress -- Too broad.', '// phpcs:disable WordPress.Security -- Too broad.', '// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda, WordPress -- Mixed broad selector.', '// phpcs:disable', '// phpcs:disable -- fixture', '// phpcs:ignore', '// phpcs:ignoreFile -- fixture', "/**\n * @codingStandardsIgnoreStart\n */", '/** @codingStandardsIgnoreFile */', '/** @codingStandardsIgnoreLine */' ) as $annotation ) {
+		foreach ( array( '// @CODINGSTANDARDSCHANGESETTING WordPress.NamingConventions.PrefixAllGlobals prefixes rogue', '// PHPCS:DISABLE', '// phpcs:ignorefile', '// phpcs:ignore WordPress -- Too broad.', '// phpcs:disable WordPress.Security -- Too broad.', '// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda, WordPress -- Mixed broad selector.', '// phpcs:disable', '// phpcs:disable -- fixture', '// phpcs:ignore', '// phpcs:ignoreFile -- fixture', "/**\n * @codingStandardsIgnoreStart\n */", '/** @codingStandardsIgnoreFile */', '/** @codingStandardsIgnoreLine */' ) as $annotation ) {
 			self::assertTrue( $this->has_blanket_suppression( "<?php\n" . $annotation . "\n" ) );
 		}
 		self::assertFalse( $this->has_blanket_suppression( "<?php\n// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Required evaluation order.\n" ) );
@@ -158,10 +158,21 @@ final class StandardsCoverageTest extends TestCase {
 		}
 	}
 
+	public function test_inline_properties_cannot_redefine_the_approved_prefix_policy(): void {
+		$sniff  = 'WordPress.NamingConventions.PrefixAllGlobals';
+		$source = "<?php\nfunction rogue_function() {}\n";
+		self::assertContains( $sniff . '.NonPrefixedFunctionFound', $this->inspect( $source, 'RAN/NewQualityProbe.php', $sniff )['sources'] );
+		foreach ( array( 'phpcs:set', 'PHPCS:SET', '@codingStandardsChangeSetting' ) as $directive ) {
+			$source = "<?php\n// " . $directive . ' ' . $sniff . " prefixes rogue\nfunction rogue_function() {}\n";
+			self::assertSame( array(), $this->inspect( $source, 'RAN/NewQualityProbe.php', $sniff )['sources'], 'The property annotation must demonstrate a real checker bypass.' );
+			self::assertTrue( $this->has_blanket_suppression( $source ), 'Source annotations cannot replace the approved ruleset property.' );
+		}
+	}
+
 	private function has_blanket_suppression( string $source ): bool {
 		foreach ( token_get_all( $source ) as $token ) {
 			if ( is_array( $token ) && in_array( $token[0], array( T_COMMENT, T_DOC_COMMENT ), true )
-				&& 1 === preg_match( '/@codingStandardsIgnore(?:Start|File|Line)|phpcs:(?:ignoreFile|(?:disable|ignore)(?:\s*(?:--[^\r\n]*)?\s*(?:\*\/)?\s*$))/im', $token[1] ) ) {
+				&& 1 === preg_match( '/@codingStandards(?:Ignore(?:Start|File|Line)|ChangeSetting)|phpcs:(?:set\b|ignoreFile|(?:disable|ignore)(?:\s*(?:--[^\r\n]*)?\s*(?:\*\/)?\s*$))/im', $token[1] ) ) {
 				return true;
 			}
 			if ( is_array( $token ) && in_array( $token[0], array( T_COMMENT, T_DOC_COMMENT ), true )
@@ -194,6 +205,43 @@ final class StandardsCoverageTest extends TestCase {
 		$xml = file_get_contents( dirname( __DIR__, 2 ) . '/.phpcs.xml' );
 		self::assertIsString( $xml );
 		self::assertFalse( $this->has_disabled_severity( $xml ), 'Local severity overrides must meet the default minimum diagnostic severity of five.' );
+	}
+
+	public function test_local_ruleset_arguments_preserve_canonical_diagnostics(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Inspect only the owned checker configuration.
+		$xml = file_get_contents( dirname( __DIR__, 2 ) . '/.phpcs.xml' );
+		self::assertIsString( $xml );
+		self::assertFalse( $this->has_unreviewed_arguments( $xml ), 'Local checker arguments must preserve the reviewed canonical invocation.' );
+		$source     = '<?php function ran_booster_probe( $camelCase ) { return $camelCase; }';
+		$diagnostic = 'WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase';
+		self::assertContains( $diagnostic, $this->inspect( $source, 'RAN/NewQualityProbe.php', '' )['sources'] );
+		foreach ( array(
+			'sniffs'  => 'Generic.PHP.Syntax',
+			'exclude' => 'WordPress.NamingConventions.ValidVariableName',
+		) as $name => $value ) {
+			$fixture_xml = str_replace( '</ruleset>', '<arg name="' . $name . '" value="' . $value . '"/></ruleset>', $xml );
+			self::assertTrue( $this->has_unreviewed_arguments( $fixture_xml ) );
+			$path = sys_get_temp_dir() . '/ran-arguments-' . bin2hex( random_bytes( 12 ) ) . '.xml';
+			try {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write only the unique disposable ruleset fixture.
+				self::assertSame( strlen( $fixture_xml ), file_put_contents( $path, $fixture_xml ) );
+				self::assertNotContains( $diagnostic, $this->inspect( $source, 'RAN/NewQualityProbe.php', '', $path )['sources'], 'The rejected argument must hide an actual diagnostic without a probe sniff override.' );
+			} finally {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this unique disposable ruleset fixture.
+				unlink( $path );
+			}
+		}
+	}
+
+	private function has_unreviewed_arguments( string $xml ): bool {
+		$ruleset = new \DOMDocument();
+		self::assertTrue( $ruleset->loadXML( $xml, LIBXML_NONET ) );
+		$arguments = array();
+		foreach ( ( new \DOMXPath( $ruleset ) )->query( '//arg' ) as $argument ) {
+			$arguments[] = $argument->getAttribute( 'name' ) . ':' . $argument->getAttribute( 'value' );
+		}
+		sort( $arguments );
+		return array( ':sp', 'basepath:.', 'colors:', 'extensions:php', 'parallel:4' ) !== $arguments;
 	}
 
 	public function test_variable_naming_diagnostics_remain_enforced_across_owned_paths(): void {
@@ -346,7 +394,7 @@ final class StandardsCoverageTest extends TestCase {
 				PHP_BINARY,
 				$root . '/vendor/bin/phpcs',
 				'--standard=' . ( $standard ?? $root . '/.phpcs.xml' ),
-				'--sniffs=' . $sniffs,
+				...( '' === $sniffs ? array() : array( '--sniffs=' . $sniffs ) ),
 				'--report=json',
 				'--no-colors',
 				'--parallel=1',

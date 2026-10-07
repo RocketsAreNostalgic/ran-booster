@@ -367,11 +367,44 @@ final class StandardsCoverageTest extends TestCase {
 		}
 	}
 
+	public function test_root_exclusions_need_review_before_future_files_exist(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Inspect only the canonical profile before creating inert XML mutations.
+		$xml = file_get_contents( dirname( __DIR__, 2 ) . '/.phpcs.xml' );
+		self::assertIsString( $xml );
+		self::assertFalse( $this->has_unreviewed_xml_selection( $xml ) );
+		foreach ( array(
+			str_replace( '</ruleset>', '<exclude-pattern>*/not-yet-created/*</exclude-pattern></ruleset>', $xml ),
+			str_replace( '<exclude-pattern>/vendor/</exclude-pattern>', '', $xml ),
+			str_replace( '<exclude-pattern>/vendor/</exclude-pattern>', '<exclude-pattern>/vendor/</exclude-pattern><exclude-pattern>/vendor/</exclude-pattern>', $xml ),
+			str_replace( '<exclude-pattern>/vendor/', '<exclude-pattern type="relative">/vendor/', $xml ),
+			str_replace( '<exclude-pattern>/vendor/', '<exclude-pattern>*/vendor/', $xml ),
+			str_replace( '<exclude-pattern>/views/generated/', '<exclude-pattern type="relative">/views/generated/', $xml ),
+		) as $mutation ) {
+			self::assertNotSame( $xml, $mutation );
+			self::assertTrue( $this->has_unreviewed_xml_selection( $mutation ) );
+		}
+	}
+
 	private function has_unreviewed_xml_selection( string $source ): bool {
 		$xml = new \DOMDocument();
 		self::assertTrue( $xml->loadXML( $source, LIBXML_NONET ) );
 		$xpath = new \DOMXPath( $xml );
 		if ( 0 !== $xpath->query( '//rule/include-pattern | //*[@phpcs-only or @phpcbf-only]' )->length ) {
+			return true;
+		}
+		foreach ( $xpath->query( '//exclude-pattern' ) as $exclusion ) {
+			self::assertInstanceOf( \DOMElement::class, $exclusion );
+			if ( $exclusion->hasAttributes() ) {
+				return true;
+			}
+		}
+		$root_exclusions = array();
+		foreach ( $xpath->query( '/ruleset/exclude-pattern' ) as $exclusion ) {
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM exposes textContent for inspecting the existing exclusion patterns.
+			$root_exclusions[] = $exclusion->textContent;
+		}
+		sort( $root_exclusions );
+		if ( array( '/.phpcs-cache', '/.phpunit.cache/', '/.plugin-check/', '/coverage/', '/node_modules/', '/ran-booster-workbench/', '/vendor/' ) !== $root_exclusions ) {
 			return true;
 		}
 		$configs = array();

@@ -163,6 +163,35 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 		}
 	}
 
+	public function test_a_future_extensionless_entrypoint_cannot_escape_analysis_coverage(): void {
+		$root = sys_get_temp_dir() . '/ran-entrypoint-' . bin2hex( random_bytes( 8 ) );
+		$path = $root . '/bin/new-command';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create only a private new-root analyzer fixture.
+		self::assertTrue( mkdir( $root . '/bin', 0700, true ) );
+		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write inert invalid PHP to demonstrate the real extension-based finder omission.
+			file_put_contents( $path, "#!/usr/bin/env php\n<?php\nfunction ran_entrypoint_probe(): int { return 'invalid'; }\n" );
+			$container = $this->analysis_container();
+			$selected  = $container->getService( 'fileFinderAnalyse' )->findFiles( array( $root ) )->getFiles();
+			self::assertNotContains( $path, $selected );
+			self::assertSame( array( $path ), array_values( array_diff( $this->root_php_files( $root ), $selected ) ), 'The canonical maintained-file comparison must fail closed for an unsupported PHP entrypoint.' );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Use the locked analyzer at the required level with the entrypoint explicitly selected as a diagnostic control.
+			file_put_contents( $root . '/analysis.neon', "parameters:\n\tlevel: 5\n" );
+			list( $status, $output ) = $this->analyse_development_fixture( $root . '/analysis.neon', $path );
+			self::assertSame( 1, $status, $output );
+			self::assertStringContainsString( 'return.type', $output );
+		} finally {
+			foreach ( array( $path, $root . '/analysis.neon' ) as $file ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this test-owned inert source and configuration.
+				unlink( $file );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove the empty private fixture directory.
+			rmdir( $root . '/bin' );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove the empty private fixture root.
+			rmdir( $root );
+		}
+	}
+
 	public function test_production_profile_weakening_is_rejected_by_the_real_guard(): void {
 		$root    = $this->root();
 		$fixture = sys_get_temp_dir() . '/ran-production-profile-' . bin2hex( random_bytes( 8 ) );
@@ -194,11 +223,17 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 	}
 
 	/** @return list<string> */
-	private function root_php_files(): array {
+	private function root_php_files( ?string $root = null ): array {
 		$files    = array();
-		$iterator = new \RecursiveCallbackFilterIterator( new RecursiveDirectoryIterator( $this->root(), FilesystemIterator::SKIP_DOTS ), static fn( \SplFileInfo $file ): bool => ! in_array( $file->getFilename(), array( '.git', 'vendor', 'node_modules', 'ran-booster-workbench', '.phpunit.cache', '.plugin-check', 'coverage' ), true ) );
+		$iterator = new \RecursiveCallbackFilterIterator( new RecursiveDirectoryIterator( $root ?? $this->root(), FilesystemIterator::SKIP_DOTS ), static fn( \SplFileInfo $file ): bool => ! in_array( $file->getFilename(), array( '.git', 'vendor', 'node_modules', 'ran-booster-workbench', '.phpunit.cache', '.plugin-check', 'coverage' ), true ) );
 		foreach ( new RecursiveIteratorIterator( $iterator ) as $file ) {
-			if ( $file->isFile() && 'php' === strtolower( $file->getExtension() ) ) {
+			if ( ! $file->isFile() ) {
+				continue;
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Discover nonstandard entrypoints from bounded inert headers; never execute maintained source.
+			$header = file_get_contents( $file->getPathname(), false, null, 0, 256 );
+			self::assertIsString( $header );
+			if ( 'php' === strtolower( $file->getExtension() ) || preg_match( '/\A(?:#![^\r\n]*\R)?\s*<\?(?:php(?:\s|$)|=)/i', $header ) ) {
 				$files[] = str_replace( '\\', '/', $file->getPathname() );
 			}
 		}

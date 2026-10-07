@@ -49,13 +49,17 @@ final class StandardsCoverageTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create an isolated CLI-only Git inventory fixture.
 		self::assertTrue( mkdir( $directory, 0700, true ) );
 		try {
-			$source = "<?php\n// phpcs:disable\n";
+			$source = "#!/usr/bin/env php\n<?php\n// phpcs:disable\n";
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write only the isolated inventory fixture; it is never executed.
 			self::assertSame( strlen( $source ), file_put_contents( $path, $source ) );
 			$this->git_output( $root, array( 'init', '--quiet' ) );
 			$this->git_output( $root, array( 'add', '--', 'new-tooling/probe.php' ) );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- A second tracked entrypoint has no extension and must fail the same inventory comparison.
+			file_put_contents( $directory . '/new-command', $source );
+			$this->git_output( $root, array( 'add', '--', 'new-tooling/new-command' ) );
 			$tracked = $this->tracked_php_files( $root );
-			self::assertSame( array( $path ), $tracked );
+			self::assertSame( array( $directory . '/new-command', $path ), $tracked );
+			self::assertSame( array( $directory . '/new-command' ), array_values( array_diff( $tracked, $this->selected_php_files( array( $directory ) ) ) ), 'The canonical standards coverage comparison must reject an unsupported PHP entrypoint.' );
 			self::assertContains( $path, $this->selected_php_files( array( $directory ) ) );
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read the inert fixture through the same discovered path used by the guard.
 			$discovered = file_get_contents( $tracked[0] );
@@ -135,8 +139,19 @@ final class StandardsCoverageTest extends TestCase {
 
 	/** @return list<string> */
 	private function tracked_php_files( string $root ): array {
-		$output = $this->git_output( $root, array( 'ls-files', '-z', '--', '*.php' ) );
+		$output = $this->git_output( $root, array( 'ls-files', '-z' ) );
 		$paths  = array_map( static fn( string $path ): string => $root . '/' . $path, array_filter( explode( "\0", $output ), static fn( string $path ): bool => '' !== $path ) );
+		$paths  = array_values(
+			array_filter(
+				$paths,
+				static function ( string $path ): bool {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Inspect bounded tracked-file headers so extensionless PHP cannot evade selection or suppression guards.
+					$header = file_get_contents( $path, false, null, 0, 256 );
+					self::assertIsString( $header );
+					return 'php' === strtolower( pathinfo( $path, PATHINFO_EXTENSION ) ) || 1 === preg_match( '/\A(?:#![^\r\n]*\R)?\s*<\?(?:php(?:\s|$)|=)/i', $header );
+				}
+			)
+		);
 		sort( $paths );
 		return $paths;
 	}

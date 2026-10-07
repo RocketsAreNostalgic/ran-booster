@@ -12,6 +12,10 @@ foreach ( array( 'ran-booster-managed-active', 'ran-booster-managed-inactive' ) 
 	if ( ! $ran_booster_theme->exists() || false !== $ran_booster_theme->errors() ) {
 		throw new RuntimeException( 'A managed fixture theme is unavailable.' );
 	}
+	$ran_booster_package = \RAN\Theme::from_wp_theme_object( wp_theme: $ran_booster_theme );
+	if ( $ran_booster_stylesheet !== $ran_booster_package->get_identifier() || $ran_booster_theme->get( 'Version' ) !== $ran_booster_package->get_version() ) {
+		throw new RuntimeException( 'The named Theme factory changed the installed theme identity or version.' );
+	}
 }
 
 $ran_booster_theme_hook           = $GLOBALS['wp_filter']['update_themes_github.com'] ?? null;

@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7116367ef9783d0b517bd5acf16be24a",
+    "content-hash": "a014944bfd82bd91afb95ca7c1cc0fc5",
     "packages": [
         {
             "name": "ran/booster-github-provider",
-            "version": "v1.0.0-beta.13",
+            "version": "v1.0.0-beta.14",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider.git",
-                "reference": "34de47b67f91719679eeeb8ecd93716e3b6ff377"
+                "reference": "a3ab400b5014735a8c0d3eb3862e27a6e93f8794"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-booster-github-provider/zipball/34de47b67f91719679eeeb8ecd93716e3b6ff377",
-                "reference": "34de47b67f91719679eeeb8ecd93716e3b6ff377",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-booster-github-provider/zipball/a3ab400b5014735a8c0d3eb3862e27a6e93f8794",
+                "reference": "a3ab400b5014735a8c0d3eb3862e27a6e93f8794",
                 "shasum": ""
             },
             "require": {
@@ -32,7 +32,7 @@
                 "phpcompatibility/phpcompatibility-wp": "3.0.0-alpha2",
                 "phpstan/phpstan": "^2.1",
                 "phpunit/phpunit": "^11.0",
-                "ran/coding-standards": "1.0.0",
+                "ran/coding-standards": "1.0.1",
                 "szepeviktor/phpstan-wordpress": "^2.0"
             },
             "type": "library",
@@ -43,7 +43,7 @@
             },
             "autoload-dev": {
                 "psr-4": {
-                    "Tests\\": "tests/"
+                    "RAN\\BoosterGitHubProvider\\V1\\Tests\\": "tests/"
                 }
             },
             "scripts": {
@@ -72,7 +72,8 @@
                     "phpcbf --standard=.phpcs.xml --report=summary"
                 ],
                 "analyze": [
-                    "phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=512M"
+                    "@analyze:production",
+                    "@analyze:development"
                 ],
                 "test:release-control": [
                     "node --test tests/release-classification.test.mjs tests/release-workflow-contract.test.mjs"
@@ -87,7 +88,17 @@
                 "check:host": [
                     "@test:host-contract",
                     "@analyze",
+                    "@test:analysis-coverage",
                     "@test:implementation"
+                ],
+                "test:analysis-coverage": [
+                    "bash tests/analysis-coverage.sh"
+                ],
+                "analyze:production": [
+                    "phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=512M"
+                ],
+                "analyze:development": [
+                    "phpstan analyse --configuration=phpstan-development.neon --no-progress --memory-limit=512M"
                 ]
             },
             "license": [
@@ -99,7 +110,7 @@
                 "security": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider/security/advisories/new",
                 "source": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider"
             },
-            "time": "2026-10-03T12:29:07+00:00"
+            "time": "2026-10-07T21:04:01+00:00"
         },
         {
             "name": "ran/updater-support",

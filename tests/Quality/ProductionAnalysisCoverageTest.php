@@ -160,6 +160,20 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 				self::assertContains( $template_path, $this->development_files( $fixture ) );
 				self::assertNotContains( $template_path, $this->development_analysed_files( $fixture . '/analysis.neon', false ) );
 			}
+			foreach ( array(
+				'<main>Template</main><? echo 7; ?>' => true,
+				"\xEF\xBB\xBF<? echo 7; ?>"          => true,
+				str_repeat( '<p>Template</p>', 100 ) . '<? echo 7; ?>' => true,
+				'<?xmlfoo ?>'                        => true,
+				'<?xml version="1.0"?><root/><? echo 7; ?>' => true,
+				'<?xml version="1.0"?><root/>'       => false,
+				"\xEF\xBB\xBF<?xml version=\"1.0\" encoding=\"UTF-8\"?><root/>" => false,
+			) as $source => $expected ) {
+				$template_path = $fixture . '/tests/Admin/short.tpl';
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Short tags must enter development discovery under either INI setting; genuine XML remains inert.
+				file_put_contents( $template_path, $source );
+				self::assertSame( $expected, in_array( $template_path, $this->development_files( $fixture ), true ), $source );
+			}
 		} finally {
 			foreach ( new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $fixture, FilesystemIterator::SKIP_DOTS ), RecursiveIteratorIterator::CHILD_FIRST ) as $file ) {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir, WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this private analyzer fixture, children first.
@@ -179,7 +193,7 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 			$container = $this->analysis_container();
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Use the locked analyzer at level five for an explicit invalid-body control.
 			file_put_contents( $root . '/analysis.neon', "parameters:\n\tlevel: 5\n" );
-			foreach ( array( 'new-command', 'template.phtml', 'template.PHTML', 'template.inc', 'template.html', 'template.htm' ) as $name ) {
+			foreach ( array( 'new-command', 'template.phtml', 'template.PHTML', 'template.inc', 'template.html', 'template.htm', 'template.custom', 'template.tpl' ) as $name ) {
 				$path = $root . '/bin/' . $name;
 				foreach ( array( "#!/usr/bin/env php\n", "<main>Template</main>\n", str_repeat( '<p>Template</p>', 100 ) ) as $preamble ) {
 					foreach ( array( '1', "'invalid'" ) as $value ) {
@@ -193,6 +207,23 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only the current inert fixture.
 				unlink( $path );
 			}
+			foreach ( array(
+				'<main>Template</main><? echo 7; ?>' => true,
+				"\xEF\xBB\xBF<? echo 7; ?>"          => true,
+				str_repeat( '<p>Template</p>', 100 ) . '<? echo 7; ?>' => true,
+				'<?xmlfoo ?>'                        => true,
+				'<?xml version="1.0"?><root/><? echo 7; ?>' => true,
+				'<?xml version="1.0"?><root/>'       => false,
+				"\xEF\xBB\xBF<?xml version=\"1.0\" encoding=\"UTF-8\"?><root/>" => false,
+			) as $source => $expected ) {
+				$path = $root . '/bin/template.custom';
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Inspect inert short tags independently of the host INI setting, preserving genuine XML data.
+				file_put_contents( $path, $source );
+				self::assertSame( $expected, in_array( $path, $this->root_php_files( $root ), true ), $source );
+				self::assertNotContains( $path, $container->getService( 'fileFinderAnalyse' )->findFiles( array( $root . '/bin' ) )->getFiles() );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this private template fixture.
+			unlink( $path );
 			$path = $root . '/bin/new-command';
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- The locked analyzer must report the omitted invalid body when explicitly selected.
 			file_put_contents( $path, "<main>Template</main><?php function ran_entrypoint_probe(): int { return 'invalid'; }" );
@@ -289,18 +320,27 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 
 	/** @return list<string> */
 	private function root_php_files( ?string $root = null ): array {
+		$root   ??= $this->root();
 		$files    = array();
-		$iterator = new \RecursiveCallbackFilterIterator( new RecursiveDirectoryIterator( $root ?? $this->root(), FilesystemIterator::SKIP_DOTS ), static fn( \SplFileInfo $file ): bool => ! in_array( $file->getFilename(), array( '.git', 'vendor', 'node_modules', 'ran-booster-workbench', '.phpunit.cache', '.plugin-check', 'coverage' ), true ) );
+		$iterator = new \RecursiveCallbackFilterIterator( new RecursiveDirectoryIterator( $root, FilesystemIterator::SKIP_DOTS ), static fn( \SplFileInfo $file ): bool => ! in_array( $file->getFilename(), array( '.git', 'vendor', 'node_modules', 'ran-booster-workbench', '.phpunit.cache', '.plugin-check', 'coverage' ), true ) );
 		foreach ( new RecursiveIteratorIterator( $iterator ) as $file ) {
 			if ( ! $file->isFile() ) {
 				continue;
 			}
 			$extension = strtolower( $file->getExtension() );
-			$template  = in_array( $extension, array( '', 'phtml', 'inc', 'html', 'htm' ), true );
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Discover inert PHP/template bodies, including HTML preambles; never execute source.
-			$header = file_get_contents( $file->getPathname(), false, null, 0, $template ? null : 256 );
+			$header = file_get_contents( $file->getPathname() );
 			self::assertIsString( $header );
-			if ( in_array( $extension, array( 'php', 'phtml' ), true ) || preg_match( $template ? '/<\?(?:php(?:\s|$)|=)/i' : '/\A(?:#![^\r\n]*\R)?\s*<\?(?:php(?:\s|$)|=)/i', $header ) ) {
+			// Only actual data and declared shell fixtures retain embedded PHP examples.
+			$json_data = 'json' === $extension && null !== json_decode( $header );
+			$shell     = 'sh' === $extension && 1 === preg_match( '~\A#!(?:/usr/bin/env[ \t]+bash|/bin/bash)(?:[ \t][^\r\n]*)?\r?\n~', $header );
+			$relative  = substr( $file->getPathname(), strlen( $root ) + 1 );
+			$png_data  = isset( StandardsCoverageTest::INERT_BRANDING_FILES[ $relative ] ) && hash_equals( StandardsCoverageTest::INERT_BRANDING_FILES[ $relative ], hash( 'sha256', $header ) );
+			$template  = 'md' !== $extension && ! $json_data && ! $shell && ! $png_data;
+			// Strip only a genuine leading XML declaration; later processing instructions remain visible.
+			$xml_declaration = '~\A(?:\xEF\xBB\xBF)?<\?xml[ \t\r\n]+version[ \t\r\n]*=[ \t\r\n]*(?:"1\.[01]"|\'1\.[01]\')(?:[ \t\r\n]+encoding[ \t\r\n]*=[ \t\r\n]*(?:"[A-Za-z][A-Za-z0-9._-]*"|\'[A-Za-z][A-Za-z0-9._-]*\'))?(?:[ \t\r\n]+standalone[ \t\r\n]*=[ \t\r\n]*(?:"(?:yes|no)"|\'(?:yes|no)\'))?[ \t\r\n]*\?>~';
+			$header          = preg_replace( $xml_declaration, '', $header ) ?? $header;
+			if ( in_array( $extension, array( 'php', 'phtml' ), true ) || preg_match( $template ? '/<\?/' : '/\A(?:\xEF\xBB\xBF)?(?:#![^\r\n]*\R)?\s*<\?/', $header ) ) {
 				$files[] = str_replace( '\\', '/', $file->getPathname() );
 			}
 		}
@@ -361,10 +401,18 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 					continue;
 				}
 				$extension = strtolower( $file->getExtension() );
-				$template  = in_array( $extension, array( '', 'phtml', 'inc', 'html', 'htm' ), true );
-				$header    = file_get_contents( $file->getPathname(), false, null, 0, $template ? null : 256 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read inert PHP/template bytes, including HTML preambles; never execute fixtures.
+				$header    = file_get_contents( $file->getPathname() ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read inert PHP/template bytes, including HTML preambles; never execute fixtures.
 				self::assertIsString( $header );
-				if ( in_array( $extension, array( 'php', 'phtml' ), true ) || preg_match( $template ? '/<\?(?:php(?:\s|$)|=)/i' : '/\A(?:#![^\r\n]*\R)?\s*<\?(?:php(?:\s|$)|=)/i', $header ) ) {
+				// Only actual data and declared shell fixtures retain embedded PHP examples.
+				$json_data = 'json' === $extension && null !== json_decode( $header );
+				$shell     = 'sh' === $extension && 1 === preg_match( '~\A#!(?:/usr/bin/env[ \t]+bash|/bin/bash)(?:[ \t][^\r\n]*)?\r?\n~', $header );
+				$relative  = substr( $file->getPathname(), strlen( $root ) + 1 );
+				$png_data  = isset( StandardsCoverageTest::INERT_BRANDING_FILES[ $relative ] ) && hash_equals( StandardsCoverageTest::INERT_BRANDING_FILES[ $relative ], hash( 'sha256', $header ) );
+				$template  = 'md' !== $extension && ! $json_data && ! $shell && ! $png_data;
+				// Strip only a genuine leading XML declaration; later processing instructions remain visible.
+				$xml_declaration = '~\A(?:\xEF\xBB\xBF)?<\?xml[ \t\r\n]+version[ \t\r\n]*=[ \t\r\n]*(?:"1\.[01]"|\'1\.[01]\')(?:[ \t\r\n]+encoding[ \t\r\n]*=[ \t\r\n]*(?:"[A-Za-z][A-Za-z0-9._-]*"|\'[A-Za-z][A-Za-z0-9._-]*\'))?(?:[ \t\r\n]+standalone[ \t\r\n]*=[ \t\r\n]*(?:"(?:yes|no)"|\'(?:yes|no)\'))?[ \t\r\n]*\?>~';
+				$header          = preg_replace( $xml_declaration, '', $header ) ?? $header;
+				if ( in_array( $extension, array( 'php', 'phtml' ), true ) || preg_match( $template ? '/<\?/' : '/\A(?:\xEF\xBB\xBF)?(?:#![^\r\n]*\R)?\s*<\?/', $header ) ) {
 					$files[] = str_replace( '\\', '/', $file->getPathname() );
 				}
 			}

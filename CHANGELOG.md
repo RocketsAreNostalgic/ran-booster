@@ -1,17 +1,5 @@
 # Changelog
 
-## [1.0.0-beta.32](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.31...v1.0.0-beta.32) (2026-10-07)
-
-
-### Bug Fixes
-
-* clarify release control type and failure contracts ([#241](https://github.com/RocketsAreNostalgic/ran-booster/issues/241)) ([4ecc314](https://github.com/RocketsAreNostalgic/ran-booster/commit/4ecc3146a595202a9d0162acb2410956a4c7ea2d))
-* **deps:** adopt immutable GitHub Provider beta.14 ([#264](https://github.com/RocketsAreNostalgic/ran-booster/issues/264)) ([143ee52](https://github.com/RocketsAreNostalgic/ran-booster/commit/143ee5246c917262175e42bc43d255fe5ba6f0dc))
-* describe secrets filesystem observations and type contracts ([#239](https://github.com/RocketsAreNostalgic/ran-booster/issues/239)) ([11bfdf9](https://github.com/RocketsAreNostalgic/ran-booster/commit/11bfdf963d597357eeaf80fbf5b7edf9029755cb))
-* enforce package storage and blueprint contracts ([#244](https://github.com/RocketsAreNostalgic/ran-booster/issues/244)) ([1e37068](https://github.com/RocketsAreNostalgic/ran-booster/commit/1e370689a4612a20ab5515a3ea324fe06f0cc92a))
-* **quality:** clarify bootstrap and container boundaries ([#247](https://github.com/RocketsAreNostalgic/ran-booster/issues/247)) ([a4dee29](https://github.com/RocketsAreNostalgic/ran-booster/commit/a4dee2950eb7bcafb87481c8650baac54bd7e9b3))
-* retain shipped annotations required by independent Plugin Check ([4181753](https://github.com/RocketsAreNostalgic/ran-booster/commit/4181753b3fcc4371b2a3eb6e07d82ce12fe1f95c))
-
 ## [1.0.0-beta.31](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.30...v1.0.0-beta.31) (2026-10-03)
 
 

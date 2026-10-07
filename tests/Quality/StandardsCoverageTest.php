@@ -10,6 +10,20 @@ use PHP_CodeSniffer\Files\FileList;
 use PHP_CodeSniffer\Runner;
 
 final class StandardsCoverageTest extends TestCase {
+	/** Immutable branding and published test archives with incidental short-tag bytes; changed identities require discovery review. */
+	public const INERT_BINARY_FILES = array(
+		// These archive identities are already verified by tests/published-template-pack.sh before native quality checks.
+		'build/test-artifacts/published-template-packs/v0.2.0.zip' => '2c223e14287a1fab28aa91e92d6a454b27e647cfb33f1bb3df965ed995cd89db',
+		'build/test-artifacts/published-template-packs/v0.2.1.zip' => '7518b7c30b23fe95fb6c3c5211607657394ffcf440d258323d55c20b15bb5b14',
+		'branding/assets/banner-1544x500.png' => '241f337c9c41b9b2d456a40a5cc1740977a9f3176fd4c2e1e4bb3f97fecb8af8',
+		'branding/assets/banner-772x250.png'  => '853a6688b55ed881ed3fa89a2a9a586318865ffd1ea2e21bd568311ed5b76df9',
+		'branding/assets/drafts/2026-07-20-staging-booster/banner-source.png' => 'b155379aac8e517e56866f1925c178ac518539873b014e80403cd22876f2e3b1',
+		'branding/assets/drafts/2026-07-20-staging-booster/icon-source-v2.png' => '63b6c344babbedfe4a02733d728eda6647d621cd07f4fe09eeb26a0a5f441550',
+		'branding/assets/drafts/2026-07-20-staging-booster/icon-source.png' => 'b8c93f6a6556fd98def0038bfc57e5534dc839d1597fd0d18cb2b81f1e79e86c',
+		'branding/assets/icon-128x128.png'    => '74532bde9854a4c3820ee6a7b0166e38559a2f005ce242300e8205cdf71dce11',
+		'branding/assets/icon-256x256.png'    => '500be49d480c0b248575f5dde9d83bb2f435671bb1372e8f6ffc4b53e92b2443',
+	);
+
 
 	public function test_owned_php_cannot_disable_every_standard(): void {
 		$paths = $this->tracked_php_files( dirname( __DIR__, 2 ) );
@@ -65,21 +79,63 @@ final class StandardsCoverageTest extends TestCase {
 			$discovered = file_get_contents( $tracked[0] );
 			self::assertIsString( $discovered );
 			self::assertTrue( $this->has_blanket_suppression( $discovered ) );
-			foreach ( array( 'template.phtml', 'template.PHTML', 'template.inc', 'template.html', 'template.htm', 'template-command' ) as $name ) {
+			foreach ( array( 'template.phtml', 'template.PHTML', 'template.inc', 'template.html', 'template.htm', 'template.custom', 'template.tpl', 'template.png', 'template-command' ) as $name ) {
 				$template_path = $directory . '/' . $name;
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write inert mixed HTML/PHP beyond the former header bound; never execute it.
-				file_put_contents( $template_path, str_repeat( '<p>Template</p>', 100 ) . '<?php function ( {' );
+				file_put_contents( $template_path, ( 'template.png' === $name ? "\x89PNG\r\n\x1a\n" : '' ) . str_repeat( '<p>Template</p>', 100 ) . '<?php function ( {' );
 				$this->git_output( $root, array( 'add', '--', 'new-tooling/' . $name ) );
 				self::assertContains( $template_path, $this->tracked_php_files( $root ) );
 				if ( in_array( $name, array( 'template.phtml', 'template.PHTML', 'template-command' ), true ) ) {
 					self::assertNotContains( $template_path, $this->selected_php_files( array( $directory ) ) );
 				}
 			}
+			foreach ( array(
+				'<main>Template</main><? echo 7; ?>' => true,
+				"\xEF\xBB\xBF<? echo 7; ?>"          => true,
+				str_repeat( '<p>Template</p>', 100 ) . '<? echo 7; ?>' => true,
+				'<?xmlfoo ?>'                        => true,
+				'<?xml version="1.0"?><root/><? echo 7; ?>' => true,
+				'<?xml version="1.0"?><root/>'       => false,
+				"\xEF\xBB\xBF<?xml version=\"1.0\" encoding=\"UTF-8\"?><root/>" => false,
+			) as $source => $expected ) {
+				$template_path = $directory . '/short.tpl';
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- The tracked inventory must discover short tags while retaining genuine XML data.
+				file_put_contents( $template_path, $source );
+				$this->git_output( $root, array( 'add', '--', 'new-tooling/short.tpl' ) );
+				self::assertSame( $expected, in_array( $template_path, $this->tracked_php_files( $root ), true ), $source );
+			}
+			$asset = 'branding/assets/icon-128x128.png';
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read the existing immutable asset as data to prove the exact exception boundary.
+			$asset_bytes = file_get_contents( dirname( __DIR__, 2 ) . '/' . $asset );
+			self::assertIsString( $asset_bytes );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create only the private fixture's exact branding path.
+			self::assertTrue( mkdir( $root . '/branding/assets', 0700, true ) );
+			foreach ( array(
+				$asset                   => $asset_bytes,
+				'new-tooling/copied.png' => $asset_bytes,
+			) as $relative => $bytes ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- The same bytes must be exempt only at their reviewed path.
+				file_put_contents( $root . '/' . $relative, $bytes );
+				$this->git_output( $root, array( 'add', '--', $relative ) );
+			}
+			self::assertNotContains( $root . '/' . $asset, $this->tracked_php_files( $root ) );
+			self::assertContains( $root . '/new-tooling/copied.png', $this->tracked_php_files( $root ) );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Changed bytes at the reviewed path require a new deliberate decision.
+			file_put_contents( $root . '/' . $asset, $asset_bytes . '<? echo 7; ?>' );
+			self::assertContains( $root . '/' . $asset, $this->tracked_php_files( $root ) );
 			foreach ( array( 'example.md', 'example.json', 'example.sh' ) as $name ) {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Documentation/data/shell PHP examples must not become executable PHP merely by containing an opening tag.
-				file_put_contents( $directory . '/' . $name, 'Example: <?php echo 1;' );
+				file_put_contents( $directory . '/' . $name, 'example.sh' === $name ? "#!/usr/bin/env bash\necho '<?php echo 1;'\n" : ( 'example.json' === $name ? '"Example: <?php echo 1;"' : 'Example: <?php echo 1;' ) );
 				$this->git_output( $root, array( 'add', '--', 'new-tooling/' . $name ) );
 				self::assertNotContains( $directory . '/' . $name, $this->tracked_php_files( $root ) );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- The inert format allowance cannot conceal a PHP entrypoint using that same suffix.
+				file_put_contents( $directory . '/' . $name, '<? echo 7; ?>' );
+				self::assertContains( $directory . '/' . $name, $this->tracked_php_files( $root ) );
+				if ( 'example.md' !== $name ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Invalid JSON and undeclared shell templates cannot inherit the inert data allowance.
+					file_put_contents( $directory . '/' . $name, '<p>Template</p><? echo 7; ?>' );
+					self::assertContains( $directory . '/' . $name, $this->tracked_php_files( $root ) );
+				}
 			}
 		} finally {
 			// This unique fixture contains only files created above and by Git init/add.
@@ -160,13 +216,21 @@ final class StandardsCoverageTest extends TestCase {
 		$paths  = array_values(
 			array_filter(
 				$paths,
-				static function ( string $path ): bool {
+				static function ( string $path ) use ( $root ): bool {
 					$extension = strtolower( pathinfo( $path, PATHINFO_EXTENSION ) );
-					$template  = in_array( $extension, array( '', 'phtml', 'inc', 'html', 'htm' ), true );
 					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Inspect inert tracked PHP/template bytes, including HTML preambles; never execute source.
-					$header = file_get_contents( $path, false, null, 0, $template ? null : 256 );
+					$header = file_get_contents( $path );
 					self::assertIsString( $header );
-					return in_array( $extension, array( 'php', 'phtml' ), true ) || 1 === preg_match( $template ? '/<\?(?:php(?:\s|$)|=)/i' : '/\A(?:#![^\r\n]*\R)?\s*<\?(?:php(?:\s|$)|=)/i', $header );
+					// Only actual data and declared shell fixtures retain embedded PHP examples.
+					$json_data   = 'json' === $extension && null !== json_decode( $header );
+					$shell       = 'sh' === $extension && 1 === preg_match( '~\A#!(?:/usr/bin/env[ \t]+bash|/bin/bash)(?:[ \t][^\r\n]*)?\r?\n~', $header );
+					$relative    = substr( $path, strlen( $root ) + 1 );
+					$binary_data = isset( self::INERT_BINARY_FILES[ $relative ] ) && hash_equals( self::INERT_BINARY_FILES[ $relative ], hash( 'sha256', $header ) );
+					$template    = 'md' !== $extension && ! $json_data && ! $shell && ! $binary_data;
+					// Strip only a genuine leading XML declaration; later processing instructions remain visible.
+					$xml_declaration = '~\A(?:\xEF\xBB\xBF)?<\?xml[ \t\r\n]+version[ \t\r\n]*=[ \t\r\n]*(?:"1\.[01]"|\'1\.[01]\')(?:[ \t\r\n]+encoding[ \t\r\n]*=[ \t\r\n]*(?:"[A-Za-z][A-Za-z0-9._-]*"|\'[A-Za-z][A-Za-z0-9._-]*\'))?(?:[ \t\r\n]+standalone[ \t\r\n]*=[ \t\r\n]*(?:"(?:yes|no)"|\'(?:yes|no)\'))?[ \t\r\n]*\?>~';
+					$header          = preg_replace( $xml_declaration, '', $header ) ?? $header;
+					return in_array( $extension, array( 'php', 'phtml' ), true ) || 1 === preg_match( $template ? '/<\?/' : '/\A(?:\xEF\xBB\xBF)?(?:#![^\r\n]*\R)?\s*<\?/', $header );
 				}
 			)
 		);

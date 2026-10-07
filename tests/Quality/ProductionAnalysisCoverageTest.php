@@ -242,6 +242,51 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 		}
 	}
 
+	public function test_published_archive_data_requires_exact_paths_and_bytes(): void {
+		$root      = sys_get_temp_dir() . '/ran-published-coverage-' . bin2hex( random_bytes( 8 ) );
+		$relative  = 'build/test-artifacts/published-template-packs/v0.2.0.zip';
+		$directory = $root . '/' . dirname( $relative );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create only a private generated-artifact inventory fixture.
+		self::assertTrue( mkdir( $directory, 0700, true ) );
+		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Keep both immutable archive exemptions tied to the existing download-verification contract.
+			$contract = file_get_contents( $this->root() . '/tests/published-template-pack.sh' );
+			self::assertIsString( $contract );
+			foreach ( array( 'v0.2.0.zip', 'v0.2.1.zip' ) as $name ) {
+				$key = 'build/test-artifacts/published-template-packs/' . $name;
+				self::assertStringContainsString( StandardsCoverageTest::INERT_BINARY_FILES[ $key ], $contract );
+			}
+			foreach ( array( 'v0.2.0.zip', 'new.php', 'new.tpl' ) as $name ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Neither a corrupt archive nor source beside it inherits the data exemption.
+				file_put_contents( $directory . '/' . $name, '<? echo 7; ?>' );
+				self::assertContains( $directory . '/' . $name, $this->root_php_files( $root ) );
+			}
+			// Native CI downloads this immutable archive before running the canonical tests.
+			if ( is_file( $this->root() . '/' . $relative ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read the verified published archive as inert data, never extract or execute it.
+				$bytes = file_get_contents( $this->root() . '/' . $relative );
+				self::assertIsString( $bytes );
+				self::assertStringContainsString( '<?', $bytes );
+				foreach ( array( $root . '/' . $relative, $root . '/copied.zip' ) as $path ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- The same immutable bytes are exempt only at their exact downloaded-fixture path.
+					file_put_contents( $path, $bytes );
+				}
+				self::assertNotContains( $root . '/' . $relative, $this->root_php_files( $root ) );
+				self::assertContains( $root . '/copied.zip', $this->root_php_files( $root ) );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Changed archive bytes must re-enter discovery even at the original path.
+				file_put_contents( $root . '/' . $relative, $bytes . '<? echo 7; ?>' );
+				self::assertContains( $root . '/' . $relative, $this->root_php_files( $root ) );
+			}
+		} finally {
+			foreach ( new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $root, FilesystemIterator::SKIP_DOTS ), RecursiveIteratorIterator::CHILD_FIRST ) as $file ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir, WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this test-owned private fixture.
+				$file->isDir() ? rmdir( $file->getPathname() ) : unlink( $file->getPathname() );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove the empty private fixture root.
+			rmdir( $root );
+		}
+	}
+
 	public function test_production_profile_weakening_is_rejected_by_the_real_guard(): void {
 		$root    = $this->root();
 		$fixture = sys_get_temp_dir() . '/ran-production-profile-' . bin2hex( random_bytes( 8 ) );
@@ -332,11 +377,11 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 			$header = file_get_contents( $file->getPathname() );
 			self::assertIsString( $header );
 			// Only actual data and declared shell fixtures retain embedded PHP examples.
-			$json_data = 'json' === $extension && null !== json_decode( $header );
-			$shell     = 'sh' === $extension && 1 === preg_match( '~\A#!(?:/usr/bin/env[ \t]+bash|/bin/bash)(?:[ \t][^\r\n]*)?\r?\n~', $header );
-			$relative  = substr( $file->getPathname(), strlen( $root ) + 1 );
-			$png_data  = isset( StandardsCoverageTest::INERT_BRANDING_FILES[ $relative ] ) && hash_equals( StandardsCoverageTest::INERT_BRANDING_FILES[ $relative ], hash( 'sha256', $header ) );
-			$template  = 'md' !== $extension && ! $json_data && ! $shell && ! $png_data;
+			$json_data   = 'json' === $extension && null !== json_decode( $header );
+			$shell       = 'sh' === $extension && 1 === preg_match( '~\A#!(?:/usr/bin/env[ \t]+bash|/bin/bash)(?:[ \t][^\r\n]*)?\r?\n~', $header );
+			$relative    = substr( $file->getPathname(), strlen( $root ) + 1 );
+			$binary_data = isset( StandardsCoverageTest::INERT_BINARY_FILES[ $relative ] ) && hash_equals( StandardsCoverageTest::INERT_BINARY_FILES[ $relative ], hash( 'sha256', $header ) );
+			$template    = 'md' !== $extension && ! $json_data && ! $shell && ! $binary_data;
 			// Strip only a genuine leading XML declaration; later processing instructions remain visible.
 			$xml_declaration = '~\A(?:\xEF\xBB\xBF)?<\?xml[ \t\r\n]+version[ \t\r\n]*=[ \t\r\n]*(?:"1\.[01]"|\'1\.[01]\')(?:[ \t\r\n]+encoding[ \t\r\n]*=[ \t\r\n]*(?:"[A-Za-z][A-Za-z0-9._-]*"|\'[A-Za-z][A-Za-z0-9._-]*\'))?(?:[ \t\r\n]+standalone[ \t\r\n]*=[ \t\r\n]*(?:"(?:yes|no)"|\'(?:yes|no)\'))?[ \t\r\n]*\?>~';
 			$header          = preg_replace( $xml_declaration, '', $header ) ?? $header;
@@ -404,11 +449,11 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 				$header    = file_get_contents( $file->getPathname() ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read inert PHP/template bytes, including HTML preambles; never execute fixtures.
 				self::assertIsString( $header );
 				// Only actual data and declared shell fixtures retain embedded PHP examples.
-				$json_data = 'json' === $extension && null !== json_decode( $header );
-				$shell     = 'sh' === $extension && 1 === preg_match( '~\A#!(?:/usr/bin/env[ \t]+bash|/bin/bash)(?:[ \t][^\r\n]*)?\r?\n~', $header );
-				$relative  = substr( $file->getPathname(), strlen( $root ) + 1 );
-				$png_data  = isset( StandardsCoverageTest::INERT_BRANDING_FILES[ $relative ] ) && hash_equals( StandardsCoverageTest::INERT_BRANDING_FILES[ $relative ], hash( 'sha256', $header ) );
-				$template  = 'md' !== $extension && ! $json_data && ! $shell && ! $png_data;
+				$json_data   = 'json' === $extension && null !== json_decode( $header );
+				$shell       = 'sh' === $extension && 1 === preg_match( '~\A#!(?:/usr/bin/env[ \t]+bash|/bin/bash)(?:[ \t][^\r\n]*)?\r?\n~', $header );
+				$relative    = substr( $file->getPathname(), strlen( $root ) + 1 );
+				$binary_data = isset( StandardsCoverageTest::INERT_BINARY_FILES[ $relative ] ) && hash_equals( StandardsCoverageTest::INERT_BINARY_FILES[ $relative ], hash( 'sha256', $header ) );
+				$template    = 'md' !== $extension && ! $json_data && ! $shell && ! $binary_data;
 				// Strip only a genuine leading XML declaration; later processing instructions remain visible.
 				$xml_declaration = '~\A(?:\xEF\xBB\xBF)?<\?xml[ \t\r\n]+version[ \t\r\n]*=[ \t\r\n]*(?:"1\.[01]"|\'1\.[01]\')(?:[ \t\r\n]+encoding[ \t\r\n]*=[ \t\r\n]*(?:"[A-Za-z][A-Za-z0-9._-]*"|\'[A-Za-z][A-Za-z0-9._-]*\'))?(?:[ \t\r\n]+standalone[ \t\r\n]*=[ \t\r\n]*(?:"(?:yes|no)"|\'(?:yes|no)\'))?[ \t\r\n]*\?>~';
 				$header          = preg_replace( $xml_declaration, '', $header ) ?? $header;

@@ -10,8 +10,11 @@ use PHP_CodeSniffer\Files\FileList;
 use PHP_CodeSniffer\Runner;
 
 final class StandardsCoverageTest extends TestCase {
-	/** Immutable branding data containing incidental short-tag bytes; changed or new assets require discovery review. */
-	public const INERT_BRANDING_FILES = array(
+	/** Immutable branding and published test archives with incidental short-tag bytes; changed identities require discovery review. */
+	public const INERT_BINARY_FILES = array(
+		// These archive identities are already verified by tests/published-template-pack.sh before native quality checks.
+		'build/test-artifacts/published-template-packs/v0.2.0.zip' => '2c223e14287a1fab28aa91e92d6a454b27e647cfb33f1bb3df965ed995cd89db',
+		'build/test-artifacts/published-template-packs/v0.2.1.zip' => '7518b7c30b23fe95fb6c3c5211607657394ffcf440d258323d55c20b15bb5b14',
 		'branding/assets/banner-1544x500.png' => '241f337c9c41b9b2d456a40a5cc1740977a9f3176fd4c2e1e4bb3f97fecb8af8',
 		'branding/assets/banner-772x250.png'  => '853a6688b55ed881ed3fa89a2a9a586318865ffd1ea2e21bd568311ed5b76df9',
 		'branding/assets/drafts/2026-07-20-staging-booster/banner-source.png' => 'b155379aac8e517e56866f1925c178ac518539873b014e80403cd22876f2e3b1',
@@ -219,11 +222,11 @@ final class StandardsCoverageTest extends TestCase {
 					$header = file_get_contents( $path );
 					self::assertIsString( $header );
 					// Only actual data and declared shell fixtures retain embedded PHP examples.
-					$json_data = 'json' === $extension && null !== json_decode( $header );
-					$shell     = 'sh' === $extension && 1 === preg_match( '~\A#!(?:/usr/bin/env[ \t]+bash|/bin/bash)(?:[ \t][^\r\n]*)?\r?\n~', $header );
-					$relative  = substr( $path, strlen( $root ) + 1 );
-					$png_data  = isset( self::INERT_BRANDING_FILES[ $relative ] ) && hash_equals( self::INERT_BRANDING_FILES[ $relative ], hash( 'sha256', $header ) );
-					$template  = 'md' !== $extension && ! $json_data && ! $shell && ! $png_data;
+					$json_data   = 'json' === $extension && null !== json_decode( $header );
+					$shell       = 'sh' === $extension && 1 === preg_match( '~\A#!(?:/usr/bin/env[ \t]+bash|/bin/bash)(?:[ \t][^\r\n]*)?\r?\n~', $header );
+					$relative    = substr( $path, strlen( $root ) + 1 );
+					$binary_data = isset( self::INERT_BINARY_FILES[ $relative ] ) && hash_equals( self::INERT_BINARY_FILES[ $relative ], hash( 'sha256', $header ) );
+					$template    = 'md' !== $extension && ! $json_data && ! $shell && ! $binary_data;
 					// Strip only a genuine leading XML declaration; later processing instructions remain visible.
 					$xml_declaration = '~\A(?:\xEF\xBB\xBF)?<\?xml[ \t\r\n]+version[ \t\r\n]*=[ \t\r\n]*(?:"1\.[01]"|\'1\.[01]\')(?:[ \t\r\n]+encoding[ \t\r\n]*=[ \t\r\n]*(?:"[A-Za-z][A-Za-z0-9._-]*"|\'[A-Za-z][A-Za-z0-9._-]*\'))?(?:[ \t\r\n]+standalone[ \t\r\n]*=[ \t\r\n]*(?:"(?:yes|no)"|\'(?:yes|no)\'))?[ \t\r\n]*\?>~';
 					$header          = preg_replace( $xml_declaration, '', $header ) ?? $header;

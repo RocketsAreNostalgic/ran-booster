@@ -156,9 +156,21 @@ fallbacks.
 The condition and parameter rules now apply by default throughout the PHP tree:
 Yoda conditions, unused parameters (including inherited/interface implementations)
 and reserved parameter names no longer use migration-cohort include lists.
-Existing public/native signatures, callback slots and implicit template/`compact()`
+Foreign/native signatures, fixed callback slots and implicit template/`compact()`
 uses have declaration-local explanations. Owned private parameters and their callers
 must not retain dead arguments merely because a class implements an interface.
+
+Under the accepted pre-public-beta naming policy in #167, owned public parameter
+names do not justify reserved-keyword exemptions. `Theme::from_wp_theme_object()`
+uses `$wp_theme`; `Plugin::from_wp_array()` uses `$plugin_data`; the
+`ManagedRepository`, `RepositoryDescriptor` and `RepositoryReference` constructors
+use `$is_private`. Named callers must use these names; no compatibility aliases
+are added. Positional argument order, defaults, the DTOs' public readonly `$private`
+properties and their `private` wire fields remain unchanged. The current eight
+consumer candidates have no affected named calls or parameter-reflection contracts.
+Locked-checker mutations of all five real declarations must report the original
+reserved-name diagnostic. Runtime tests exercise the new named arguments alongside
+existing positional calls; installed WordPress proof exercises the theme factory.
 
 The inherited profile is WordPress-Extra plus PHPCompatibilityWP and the RAN
 syntax baseline, not every WordPress-Docs rule. Full PHPStan path coverage is

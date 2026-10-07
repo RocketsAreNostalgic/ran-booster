@@ -8,13 +8,15 @@ use InvalidArgumentException;
 
 final readonly class RepositoryReference {
 	public string $locator;
+	public bool $private;
 
 	public function __construct(
 		string $locator,
 		public ?string $provider_repository_id,
-		public bool $private, // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.privateFound -- Preserve the existing public named-argument signature.
+		bool $is_private,
 		public ?string $credential_id
 	) {
+		$this->private = $is_private;
 		$this->assert_provider_repository_id( $provider_repository_id );
 		$this->locator = RepositoryLocator::require_valid( $locator );
 		$this->reject_empty_value( $credential_id );

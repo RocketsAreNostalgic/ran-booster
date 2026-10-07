@@ -169,7 +169,7 @@ if ( 'release' === $action ) {
 	$ran_booster_ok = ( new ManagedReleaseStore( $ran_booster_database ) )->transition( 'plugin', $ran_booster_package, PackageSource::BRANCH, 1, PackageSource::RELEASE_ASSET, new ManagedReleaseConfiguration( 'exclusivity-root', 'exclusivity-root.php' ), 1 );
 } else {
 	$ran_booster_wp_theme = wp_get_theme( $ran_booster_theme );
-	$ran_booster_managed  = Theme::from_wp_theme_object( $ran_booster_wp_theme );
+	$ran_booster_managed  = Theme::from_wp_theme_object( wp_theme: $ran_booster_wp_theme );
 	$ran_booster_managed->set_repository( new ManagedRepository( 'gh', 'example/exclusivity-fixture', 'race-' . $ran_booster_run_id, 'main' ) );
 	$ran_booster_ok = ( new ThemeRepository() )->adopt( $ran_booster_managed )->is_successful();
 }

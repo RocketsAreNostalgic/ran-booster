@@ -16,6 +16,26 @@ use RuntimeException;
 
 final class PackageMagicReadTest extends TestCase {
 
+	public function test_plugin_factory_accepts_owned_named_arguments_with_unchanged_headers(): void {
+		$headers = array(
+			'Name'        => 'Example plugin',
+			'PluginURI'   => 'https://example.org/plugin',
+			'Version'     => '2.3.4',
+			'Description' => 'Example description',
+			'Author'      => 'Example author',
+			'AuthorURI'   => 'https://example.org/author',
+			'TextDomain'  => 'example-plugin',
+			'DomainPath'  => '/languages',
+			'Network'     => true,
+			'Title'       => 'Example title',
+			'AuthorName'  => 'Example author name',
+		);
+		$named   = Plugin::from_wp_array( file: 'example/example.php', plugin_data: $headers );
+		self::assertEquals( Plugin::from_wp_array( 'example/example.php', $headers ), $named );
+		self::assertSame( 'example/example.php', $named->get_identifier() );
+		self::assertSame( '2.3.4', $named->get_version() );
+	}
+
 	public function test_existing_getter_property_reads_retain_their_values_and_case_insensitivity(): void {
 		foreach ( array(
 			Plugin::class => 'example/example.php',

@@ -463,6 +463,29 @@ final class StandardsCoverageTest extends TestCase {
 		self::assertContains( 'Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound', $result['sources'] );
 	}
 
+	public function test_owned_factories_and_dtos_enforce_reserved_parameter_names(): void {
+		$sniff = 'Universal.NamingConventions.NoReservedKeywordParameterNames';
+		$cases = array(
+			array( 'RAN/Theme.php', '$wp_theme', '$object', 'objectFound' ),
+			array( 'RAN/Plugin.php', '$plugin_data', '$array', 'arrayFound' ),
+			array( 'RAN/ManagedRepository.php', '$is_private', '$private', 'privateFound' ),
+			array( 'RAN/RepositoryProvider/RepositoryDescriptor.php', '$is_private', '$private', 'privateFound' ),
+			array( 'RAN/RepositoryProvider/RepositoryReference.php', '$is_private', '$private', 'privateFound' ),
+		);
+		foreach ( $cases as list( $path, $parameter, $reserved, $code ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Inspect the real owned signature without executing its source.
+			$source = file_get_contents( dirname( __DIR__, 2 ) . '/' . $path );
+			self::assertIsString( $source );
+			self::assertStringContainsString( $parameter, $source );
+			$accepted = $this->inspect( $source, $path, $sniff );
+			self::assertSame( 0, $accepted['exit'], $path );
+			self::assertSame( array(), $accepted['sources'], $path );
+			$regressed = $this->inspect( str_replace( $parameter, $reserved, $source ), $path, $sniff );
+			self::assertNotSame( 0, $regressed['exit'], $path );
+			self::assertSame( array( $sniff . '.' . $code ), $regressed['sources'], $path );
+		}
+	}
+
 	public function test_a_signature_exception_does_not_hide_the_next_declaration(): void {
 		$source = "<?php\n// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Required external callback signature.\nfunction ran_booster_callback( \$unused ) { return true; }\nfunction ran_booster_helper( \$unused ) { return true; }\n";
 		$result = $this->inspect( $source, 'RAN/NewQualityProbe.php' );

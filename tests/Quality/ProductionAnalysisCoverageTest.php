@@ -121,7 +121,7 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write inert PHP to prove broad discovery without a file allowlist.
 				file_put_contents( $fixture . '/' . $path, '<?php' );
 			}
-			self::assertSame( $this->development_files( $fixture ), $this->development_analysed_files( $fixture . '/analysis.neon' ) );
+			self::assertSame( $this->development_files( $fixture ), $this->development_analysed_files( $fixture . '/analysis.neon', false ) );
 			list( $status, $output ) = $this->run_development_runner( $fixture, array( '--list' ) );
 			self::assertSame( 0, $status, $output );
 			$profiles = json_decode( $output, true, 512, JSON_THROW_ON_ERROR );
@@ -152,13 +152,13 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 			self::assertSame( 0, $status, $output );
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- The finder must expose a maintained file silently converted into a symbol-only stub.
 			file_put_contents( $fixture . '/stub.neon', $config . "\tstubFiles:\n\t\t- tests/Admin/Split.php\n" );
-			self::assertNotContains( $path, $this->development_analysed_files( $fixture . '/stub.neon' ) );
+			self::assertNotContains( $path, $this->development_analysed_files( $fixture . '/stub.neon', false ) );
 			foreach ( array( 'tests/Admin/template.phtml', 'scripts/template-command' ) as $template_path ) {
 				$template_path = $fixture . '/' . $template_path;
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Mixed PHP must enter independent development coverage even beyond the old bounded header.
 				file_put_contents( $template_path, str_repeat( '<p>Template</p>', 100 ) . '<?php echo 1;' );
 				self::assertContains( $template_path, $this->development_files( $fixture ) );
-				self::assertNotContains( $template_path, $this->development_analysed_files( $fixture . '/analysis.neon' ) );
+				self::assertNotContains( $template_path, $this->development_analysed_files( $fixture . '/analysis.neon', false ) );
 			}
 		} finally {
 			foreach ( new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $fixture, FilesystemIterator::SKIP_DOTS ), RecursiveIteratorIterator::CHILD_FIRST ) as $file ) {
@@ -241,6 +241,52 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 		}
 	}
 
+	public function test_bootstrap_early_success_cannot_replace_analysis(): void {
+		$fixture = sys_get_temp_dir() . '/ran-bootstrap-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create only a private analyzer fixture.
+		self::assertTrue( mkdir( $fixture, 0700 ) );
+		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- This inert invalid body proves diagnostics disappear if an unreviewed bootstrap terminates analysis.
+			file_put_contents( $fixture . '/invalid.php', "<?php function ran_bootstrap_probe(): int { return 'invalid'; }" );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- The disposable bootstrap intentionally terminates only its analyzer subprocess.
+			file_put_contents( $fixture . '/stop.php', '<?php exit( 0 );' );
+			foreach ( array( 'phpstan.neon', 'phpstan-development.neon', 'phpstan-integration.neon' ) as $profile ) {
+				$config = "includes:\n\t- " . $this->root() . '/' . $profile . "\n";
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Preserve the canonical profile and mutate only this private inherited configuration.
+				file_put_contents( $fixture . '/analysis.neon', $config );
+				list( $status, $output ) = $this->analyse_development_fixture( $fixture . '/analysis.neon', $fixture . '/invalid.php' );
+				self::assertSame( 1, $status, $output );
+				$json_start = strpos( $output, '{"totals"' );
+				self::assertNotFalse( $json_start, $output );
+				$report = json_decode( explode( "\n", substr( $output, $json_start ) )[0], true, 512, JSON_THROW_ON_ERROR );
+				self::assertSame( 'return.type', $report['files'][ $fixture . '/invalid.php' ]['messages'][0]['identifier'] );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Demonstrate real successful early exit before requiring the independent guard to reject the bootstrap.
+				file_put_contents( $fixture . '/analysis.neon', $config . "parameters:\n\tbootstrapFiles:\n\t\t- " . $fixture . "/stop.php\n" );
+				list( $status, $output ) = $this->analyse_development_fixture( $fixture . '/analysis.neon', $fixture . '/invalid.php' );
+				self::assertSame( 0, $status, $output );
+				self::assertSame( '', $output );
+				try {
+					if ( 'phpstan.neon' === $profile ) {
+						$this->analysis_container( $fixture . '/analysis.neon' );
+					} else {
+						$this->development_analysed_files( $fixture . '/analysis.neon' );
+					}
+				} catch ( \PHPUnit\Framework\AssertionFailedError $failure ) {
+					self::assertStringContainsString( 'Analysis bootstrap execution requires exact reviewed identities.', $failure->getMessage() );
+					continue;
+				}
+				self::fail( 'An unreviewed bootstrap replaced analysis with successful early exit.' );
+			}
+		} finally {
+			foreach ( array( 'invalid.php', 'stop.php', 'analysis.neon' ) as $name ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this test-owned fixture.
+				unlink( $fixture . '/' . $name );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove the empty private fixture directory.
+			rmdir( $fixture );
+		}
+	}
+
 	/** @return list<string> */
 	private function root_php_files( ?string $root = null ): array {
 		$files    = array();
@@ -298,7 +344,9 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 			dirname( $config )
 		);
 		self::assertIsResource( $process );
-		$output = stream_get_contents( $pipes[1] ) . stream_get_contents( $pipes[2] );
+		$output  = stream_get_contents( $pipes[1] );
+		$error   = stream_get_contents( $pipes[2] );
+		$output .= '' === $error ? '' : "\n" . $error;
 		fclose( $pipes[1] ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the test-owned analyzer stdout pipe.
 		fclose( $pipes[2] ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the test-owned analyzer stderr pipe.
 		return array( proc_close( $process ), $output );
@@ -326,9 +374,10 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 	}
 
 	/** @return list<string> */
-	private function development_analysed_files( string $config ): array {
+	private function development_analysed_files( string $config, bool $wordpress = true ): array {
 		$container = ( new ContainerFactory( $this->root() ) )->create( $this->root() . '/.phpunit.cache/development-coverage', array( $config ), array() );
-		$level     = $container->getParameter( 'level' );
+		$this->assert_analysis_bootstraps( $container, $wordpress );
+		$level = $container->getParameter( 'level' );
 		self::assertTrue( 'max' === $level || (int) $level >= 5, 'Maintained development PHP requires at least level 5.' );
 		self::assertSame( array(), $container->getParameter( 'ignoreErrors' ), 'Development analysis must not hide diagnostics.' );
 		self::assertSame( array(), $container->getParameter( 'paths' ), 'Only the runner may select the per-file analysis target.' );
@@ -347,7 +396,8 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 			array( $config ?? $this->root() . '/phpstan.neon' ),
 			array()
 		);
-		$level     = $container->getParameter( 'level' );
+		$this->assert_analysis_bootstraps( $container );
+		$level = $container->getParameter( 'level' );
 		self::assertTrue( 'max' === $level || (int) $level >= 5, 'Production PHP requires at least level 5.' );
 		self::assertSame( array(), $container->getParameter( 'ignoreErrors' ), 'Production analysis cannot hide diagnostics.' );
 		// @phpstan-ignore phpstanApi.constructor (Use the locked analyzer's real stub matching instead of counting scanned declarations as analyzed bodies.)
@@ -357,6 +407,20 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 			self::assertFalse( $stubs->isExcludedFromAnalysing( $path ), $path );
 		}
 		return $container;
+	}
+
+	private function assert_analysis_bootstraps( Container $container, bool $wordpress = true ): void {
+		$phar = realpath( $this->root() . '/vendor/phpstan/phpstan/phpstan.phar' );
+		self::assertIsString( $phar );
+		$expected = array();
+		foreach ( array( 'ReflectionUnionType.php', 'ReflectionAttribute.php', 'Attribute85.php', 'ReflectionIntersectionType.php' ) as $runtime ) {
+			$expected[] = 'phar://' . $phar . '/stubs/runtime/' . $runtime;
+		}
+		if ( $wordpress ) {
+			$expected[] = $this->root() . '/vendor/php-stubs/wordpress-stubs/wordpress-stubs.php';
+			$expected[] = $this->root() . '/vendor/szepeviktor/phpstan-wordpress/bootstrap.php';
+		}
+		self::assertSame( $expected, $container->getParameter( 'bootstrapFiles' ), 'Analysis bootstrap execution requires exact reviewed identities.' );
 	}
 
 	/** @return list<string> */

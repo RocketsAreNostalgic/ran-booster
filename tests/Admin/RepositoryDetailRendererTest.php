@@ -582,6 +582,91 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'Manage repository webhook', $html );
 	}
 
+	public function test_bounded_fragments_preserve_preescaped_markup_and_escape_owned_row_values(): void {
+		foreach ( array( 'branch', 'releases' ) as $view ) {
+			$unsafe   = '<script>alert("fixture")</script>';
+			$fragment = static function () use ( $unsafe ): bool {
+				echo '<form method="post" hx-post="https://example.test/action" hx-target="#result"><input name="_wpnonce" value="fixture-nonce"><span>';
+				echo esc_html( $unsafe );
+				echo '</span></form>';
+				return true;
+			};
+			ob_start();
+			( new RepositoryDetailRenderer() )->render(
+				array(
+					'repository' => $unsafe,
+					'source_key' => 'branch',
+				),
+				$unsafe,
+				'',
+				'',
+				true,
+				'',
+				$view,
+				$this->view_urls(),
+				$this->view_request_urls(),
+				'branch' === $view ? $fragment : null,
+				'releases' === $view ? static function () use ( $fragment ): void {
+					$fragment();
+				} : null
+			);
+			$html = (string) ob_get_clean();
+			self::assertStringNotContainsString( $unsafe, $html );
+			self::assertStringContainsString( esc_html( $unsafe ), $html );
+			self::assertStringContainsString( '<form method="post" hx-post="https://example.test/action" hx-target="#result">', $html );
+			self::assertStringContainsString( '<input name="_wpnonce" value="fixture-nonce">', $html );
+			self::assertStringNotContainsString( '&lt;form', $html );
+		}
+	}
+
+	public function test_empty_or_throwing_fragments_restore_buffers_and_show_bounded_fallbacks(): void {
+		foreach ( array( 'branch', 'releases' ) as $view ) {
+			foreach ( array( false, true ) as $throws ) {
+				$fragment = static function () use ( $throws ): bool {
+					if ( $throws ) {
+						echo 'discarded partial fragment';
+						ob_start();
+						throw new \RuntimeException( 'private callback failure' );
+					}
+					echo '  ';
+					return true;
+				};
+				$level    = ob_get_level();
+				ob_start();
+				try {
+					( new RepositoryDetailRenderer() )->render(
+						array(
+							'repository' => 'owner/repository',
+							'source_key' => 'branch',
+						),
+						'Fixture',
+						'',
+						'',
+						true,
+						'',
+						$view,
+						$this->view_urls(),
+						$this->view_request_urls(),
+						'branch' === $view ? $fragment : null,
+						'releases' === $view ? static function () use ( $fragment ): void {
+							$fragment();
+						} : null
+					);
+					self::assertSame( $level + 1, ob_get_level() );
+					$html = (string) ob_get_contents();
+					self::assertStringNotContainsString( 'discarded partial fragment', $html );
+					self::assertStringNotContainsString( 'private callback failure', $html );
+					self::assertStringContainsString( 'branch' === $view ? 'Repository webhook management is temporarily unavailable' : 'Release workflow setup is unavailable', $html );
+				} finally {
+					while ( ob_get_level() > $level ) {
+						ob_end_clean();
+					}
+				}
+				self::assertSame( $level, ob_get_level() );
+			}
+		}
+	}
+
 	/** @return array<string, string> */
 	private function view_urls(): array {
 		return array(

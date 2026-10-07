@@ -78,7 +78,7 @@ final class RepositoryDetailRenderer {
 						<?php $this->render_incomplete_workflow_controls( 'branch', $omitted ); ?>
 					<?php } elseif ( 'branch' === $active_view ) { ?>
 						<?php if ( '' !== $webhook_panel ) { ?>
-							<?php echo $webhook_panel; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captured from the trusted Core renderer. ?>
+							<?php echo $webhook_panel; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- The provider view supplies Core RepositoryWebhookManagementControls; its fixed panel template escapes model values. ?>
 						<?php } else { ?>
 							<?php $this->render_unavailable_webhook_guidance( $source_key, $receiver_ready, null !== $render_webhook_panel ); ?>
 						<?php } ?>
@@ -117,7 +117,7 @@ final class RepositoryDetailRenderer {
 			$output = '';
 		}
 		if ( '' !== trim( $output ) ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core owns escaping inside this bounded callback composition seam.
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- The provider view invokes the repository-release action; Core ReleaseWorkflowControls renders its bounded presenter through the escaping display.
 			echo $output;
 			return;
 		}

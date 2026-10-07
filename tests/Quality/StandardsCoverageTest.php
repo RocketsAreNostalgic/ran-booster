@@ -75,6 +75,8 @@ final class StandardsCoverageTest extends TestCase {
 
 	public function test_narrowed_real_annotations_do_not_cover_new_neighbors(): void {
 		$cases = array(
+			array( 'RAN/Admin/Component/RepositoryDetailRenderer.php', 'WordPress.Security.EscapeOutput.OutputNotEscaped', "echo \$unescaped_probe;\n" ),
+			array( 'RAN/Admin/DeploymentAdminPresenter.php', 'WordPress.Security.NonceVerification.Recommended', "\$query_probe = \$_GET['probe'];\n" ),
 			array( 'tests/Uninstall/UninstallWordPressFunctions.php', 'WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound', "function unrelated_probe() {}\n" ),
 			array( 'RAN/Secrets/SecretsFile.php', 'WordPress.WP.AlternativeFunctions.file_system_operations_fopen', "fopen( '/tmp/unused-probe', 'rb' );\n" ),
 			array( 'RAN/Deployment/AdmittedBranchHostAdapter.php', 'WordPress.WP.AlternativeFunctions.parse_url_parse_url', "parse_url( 'https://example.invalid/' );\n" ),

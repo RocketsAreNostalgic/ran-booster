@@ -248,7 +248,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			array(
 				array(
 					'id'    => 'credential-1',
-					'label' => 'Repository access',
+					'label' => '<script>Repository access</script>',
 					'kind'  => 'token',
 				),
 			)
@@ -259,6 +259,8 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		ob_start();
 		$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository' );
 		$html = (string) ob_get_clean();
+		self::assertStringContainsString( '&lt;script&gt;Repository access&lt;/script&gt;', $html );
+		self::assertStringNotContainsString( '<script>Repository access</script>', $html );
 
 		self::assertStringContainsString( '<h3 id="ran-booster-repository-webhook-heading">Push-to-deploy</h3>', $html );
 		self::assertStringContainsString( 'Webhook setup', $html );

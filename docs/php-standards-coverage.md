@@ -163,6 +163,37 @@ every inherited rule or dispose all retained exact-diagnostic allowances. Only t
 32 caller-bound handwritten views retain persistent variable-prefix suppressions;
 semantic acceptance of retained occurrences remains separate from passing guards.
 
+## Focused fragment and passive-query evidence
+
+Four existing exact security-diagnostic occurrences remain pending explicit owner
+disposition under #167/#65; the rationale and passing checks alone do not accept
+them. No runtime or public composition contract is changed by these tests.
+
+- `RepositoryDetailRenderer::render()` emits the captured webhook fragment supplied
+  by `views/provider.php` through Core `RepositoryWebhookManagementControls` and
+  its fixed escaping panel template. `render_release_content()` emits the captured
+  repository-release action output; the current Core registrar is
+  `ReleaseWorkflowControls`, whose presenter feeds the escaping display. The action
+  is mutable trusted PHP, not proof that arbitrary callbacks are safe, and this
+  evidence does not declare a new public add-on surface. Existing renderer tests
+  now verify preescaped fragment preservation and escaped row values, unchanged
+  form/HTMX/nonce markup, empty
+  output fallbacks, discarded partial output on exceptions and buffer restoration.
+  Actual escaping-owner evidence is separate: `ReleaseWorkflowDisplayTest` checks
+  hostile presenter fields; `RepositoryWebhookManagementControlsTest` now passes
+  a hostile credential label through the real repository panel.
+- `DeploymentAdminPresenter::query_has_key()` and `query_value()` read passive
+  activity selectors. Presence preserves detail mode; canonical positive-integer
+  and exact correlation validation precede attempt/history queries. Populated
+  repository tests now record reads and writes for malformed, partial, array and
+  overflow selectors, with a successful passive history read as the positive
+  control. Invalid detail remains unavailable=false with no detail; invalid cursor
+  remains unavailable=true. No nonce requirement or mutation authority is added.
+
+These controls supply bounded semantic evidence for the four occurrences. They
+neither certify every callback nor replace existing capability, mutation nonce,
+real-checker outside-scope and exact-candidate review requirements.
+
 ## Completion and separate work
 
 Qualification evidence belongs in the exact opened PR and the central quality

@@ -2460,6 +2460,68 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertTrue( $data['unavailable'] );
 	}
 
+	public function test_invalid_activity_queries_with_available_storage_never_read_history_or_write(): void {
+		$reference = str_repeat( 'a', 32 );
+		$cases     = array(
+			array(
+				'attempt'   => '01',
+				'reference' => $reference,
+			),
+			array( 'attempt' => '1' ),
+			array( 'reference' => $reference ),
+			array(
+				'attempt'   => array( '1' ),
+				'reference' => $reference,
+			),
+			array(
+				'attempt'   => '1',
+				'reference' => array( $reference ),
+			),
+			array(
+				'attempt'   => (string) PHP_INT_MAX . '0',
+				'reference' => $reference,
+			),
+			array(
+				'attempt'   => '1',
+				'reference' => strtoupper( $reference ),
+			),
+			array(
+				'attempt'   => '1',
+				'reference' => $reference . 'a',
+			),
+			array(
+				'attempt'   => null,
+				'reference' => $reference,
+			),
+			array( 'before' => '01' ),
+			array( 'before' => array( '1' ) ),
+			array( 'before' => (string) PHP_INT_MAX . '0' ),
+			array( 'before' => '' ),
+			array( 'before' => null ),
+		);
+		foreach ( $cases as $query ) {
+			$database       = new DashboardActivityWpdb();
+			$database->rows = array( DashboardActivityWpdb::attempt( 1, 'succeeded' ) );
+			$presenter      = new DeploymentAdminPresenter( attempts: $this->deployment_attempts( $database ) );
+			$_GET           = $query;
+			$data           = $presenter->activity();
+			$is_cursor      = array_key_exists( 'before', $query );
+			self::assertSame( $is_cursor ? 'list' : 'detail', $data['mode'] );
+			self::assertSame( array(), $data['items'] );
+			self::assertSame( $is_cursor, $data['unavailable'] );
+			self::assertSame( $is_cursor, $data['has_cursor'] );
+			self::assertArrayNotHasKey( 'detail', $data );
+			self::assertSame( array(), $database->reads );
+			self::assertSame( 0, $database->writes );
+		}
+		// The same available repository must really service a valid passive history query.
+		$_GET = array();
+		$data = $presenter->activity();
+		self::assertCount( 1, $data['items'] );
+		self::assertNotEmpty( $database->reads );
+		self::assertSame( 0, $database->writes );
+	}
+
 	public function test_attempt_detail_loads_only_the_requested_attempt(): void {
 		$attempt        = DashboardActivityWpdb::attempt( 1, 'succeeded' );
 		$database       = new DashboardActivityWpdb();
@@ -2824,7 +2886,10 @@ final class DashboardNeedsAttentionCoordinator extends DeploymentCoordinator {
 final class DashboardActivityWpdb {
 
 	/** @var list<array<string, mixed>> */
-	public array $rows        = array();
+	public array $rows = array();
+	/** @var list<string> */
+	public array $reads       = array();
+	public int $writes        = 0;
 	public string $prefix     = 'wp_';
 	public string $last_error = '';
 
@@ -2849,17 +2914,20 @@ final class DashboardActivityWpdb {
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- The wpdb fixture retains the query call signature while returning the controlled database result.
 	public function query( string $query ): int {
+		++$this->writes;
 		return 0;
 	}
 
 	/** @param array<string, mixed> $data */
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The wpdb fixture retains the insert call signature while returning the controlled database result.
 	public function insert( string $table, array $data ): false {
+		++$this->writes;
 		return false;
 	}
 
 	/** @return list<object> */
 	public function get_results( string $query ): array {
+		$this->reads[] = $query;
 		if ( 'SHOW ENGINES' === $query ) {
 			return array(
 				(object) array(

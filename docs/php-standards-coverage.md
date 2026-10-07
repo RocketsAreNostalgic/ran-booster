@@ -47,10 +47,9 @@ production tokens change.
 The token-aware guard now rejects case variants and standard/category selectors,
 including a broad selector mixed with an exact one. Actual-checker probes prove
 these directives suppress diagnostics while the independent guard rejects them.
-Existing sniff-level (three-component) and exact-message annotations are retained
-pending their separate semantic review; this is not acceptance of that inventory.
-The test-directory and global namespace exemptions are removed by the dependent
-cohort below; existing whole-sniff annotations still require semantic review.
+The earlier sniff-level annotations and test-directory/global namespace exemptions
+have since been narrowed or removed. Retained allowances now name exact diagnostics;
+this mechanical scope correction does not establish semantic acceptance of every occurrence.
 
 ## Test prefix hardening under organisation #134
 
@@ -76,7 +75,8 @@ follow the renamed declarations; no compatibility aliases are introduced.
 Seven exact-root RAN test-interception declarations retain the same minimum-length
 checker explanation as production. Real-checker controls reject unrelated
 namespaces and show an annotated root cannot hide the next declaration.
-Existing sniff-level native annotations remain separate semantic audit work.
+Retained occurrence-local native-operation allowances still require their specific
+contract evidence and reviewed disposition.
 
 ## Shared policy adoption after beta.31
 
@@ -140,7 +140,7 @@ The generated catalogue is checked by the repository's warning-fatal generator.
 | Condition evaluation order                 | Mutable expected state must be read before a WordPress option filter can change it; exact comparison exceptions preserve this order. A small number of WPCS token-walk false positives are identified locally.                                                                   |
 | Native filesystem and encoding             | Atomic same-directory rename, inode/permission/lock checks, encrypted bytes, temporary capture and exact fixture/archive work cannot be replaced mechanically with WP_Filesystem. Existing native-boundary exceptions remain; added calls in these classes still require review. |
 | Security/escaping and database fixtures    | CLI output, non-rendered domain exceptions, trusted pre-escaped fragments, nonce-verifier doubles, controlled SQL and direct disposable database work have specific code/line reasons. These are not blanket security clearance.                                                 |
-| Characterization fixtures                  | The existing small XML exceptions for serialized legacy records, CLI source inspection and colocated fixture classes retain their precise files/rules.                                                                                                                           |
+| Characterization fixtures                  | Former characterization XML exclusions are removed. Required historical identity, CLI inspection and colocated-fixture allowances are occurrence-local. The sole local rule-specific XML exception is the generated Admin Shell variable binding, protected by parity and duplicate-path guards.                                                                                                                           |
 
 Inherited WPCS severity-zero overrides include intentional formatting overlaps
 with WordPress-specific rules. They are not a request to re-enable contradictory
@@ -158,9 +158,10 @@ The same guard pins the five reviewed local checker arguments and proves that
 Source-level property changes (`phpcs:set` and legacy setting directives) are
 rejected, including case variants; real-checker controls demonstrate how they
 can replace the approved prefix policy.
-This closes reproduced local XML and annotation bypasses; it does not certify every inherited
-rule or dispose the remaining sniff-level annotation inventory. Unexplained or
-file-wide exact/sniff-level suppressions still require separate narrowing.
+These controls reject the reproduced XML and annotation bypasses; they do not certify
+every inherited rule or dispose all retained exact-diagnostic allowances. Only the
+32 caller-bound handwritten views retain persistent variable-prefix suppressions;
+semantic acceptance of retained occurrences remains separate from passing guards.
 
 ## Completion and separate work
 

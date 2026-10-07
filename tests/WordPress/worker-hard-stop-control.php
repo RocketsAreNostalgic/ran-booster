@@ -6,106 +6,106 @@ use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\DeploymentRequest;
 
 // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
-$mode   = $args[0] ?? '';
-$run_id = $args[1] ?? '';
-$phase  = $args[2] ?? '';
-if ( ! is_string( $mode ) || preg_match( '/^[a-f0-9]{24}$/D', (string) $run_id ) !== 1 || ! in_array( $phase, array( 'pre', 'post', 'foreign' ), true ) ) {
+$mode               = $args[0] ?? '';
+$ran_booster_run_id = $args[1] ?? '';
+$ran_booster_phase  = $args[2] ?? '';
+if ( ! is_string( $mode ) || preg_match( '/^[a-f0-9]{24}$/D', (string) $ran_booster_run_id ) !== 1 || ! in_array( $ran_booster_phase, array( 'pre', 'post', 'foreign' ), true ) ) {
 	throw new RuntimeException( 'The hard-stop control arguments are invalid.' );
 }
 global $wpdb;
-$booster      = require __DIR__ . '/core-container-fixture.php';
-$attempts     = $booster->make( RAN\Deployment\DeploymentAttemptRepository::class );
-$table        = RAN\Storage\Database::attempt_table_name();
-$manual_slug  = 'hard-stop-' . $phase . '-' . $run_id;
-$webhook_slug = 'hard-stop-webhook-' . $phase . '-' . $run_id;
+$ran_booster_booster      = require __DIR__ . '/core-container-fixture.php';
+$ran_booster_attempts     = $ran_booster_booster->make( RAN\Deployment\DeploymentAttemptRepository::class );
+$ran_booster_table        = RAN\Storage\Database::attempt_table_name();
+$ran_booster_manual_slug  = 'hard-stop-' . $ran_booster_phase . '-' . $ran_booster_run_id;
+$ran_booster_webhook_slug = 'hard-stop-webhook-' . $ran_booster_phase . '-' . $ran_booster_run_id;
 
 if ( 'cleanup' === $mode ) {
-	$ids  = $wpdb->get_col( $wpdb->prepare( 'SELECT id FROM %i WHERE package_slug IN (%s, %s)', $table, $manual_slug, $webhook_slug ) );
-	$core = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'auto_updater.lock' ) );
-	if ( 'pre' !== $phase && is_array( $ids ) && array() !== $ids && is_string( $core ) ) {
-		$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE option_name = %s AND option_value = %s', $wpdb->options, 'auto_updater.lock', $core ) );
+	$ran_booster_ids  = $wpdb->get_col( $wpdb->prepare( 'SELECT id FROM %i WHERE package_slug IN (%s, %s)', $ran_booster_table, $ran_booster_manual_slug, $ran_booster_webhook_slug ) );
+	$ran_booster_core = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'auto_updater.lock' ) );
+	if ( 'pre' !== $ran_booster_phase && is_array( $ran_booster_ids ) && array() !== $ran_booster_ids && is_string( $ran_booster_core ) ) {
+		$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE option_name = %s AND option_value = %s', $wpdb->options, 'auto_updater.lock', $ran_booster_core ) );
 	}
-	$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE package_slug IN (%s, %s)', $table, $manual_slug, $webhook_slug ) );
+	$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE package_slug IN (%s, %s)', $ran_booster_table, $ran_booster_manual_slug, $ran_booster_webhook_slug ) );
 	return;
 }
 
 if ( 'seed' === $mode ) {
-	$core = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'auto_updater.lock' ) );
-	if ( null !== $core ) {
+	$ran_booster_core = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'auto_updater.lock' ) );
+	if ( null !== $ran_booster_core ) {
 		throw new RuntimeException( 'The hard-stop proof requires the WordPress updater lock to be idle.' );
 	}
-	$request         = new DeploymentRequest( 'org/' . $manual_slug, null, false, 'main', $manual_slug, null, DeploymentPolicy::AUTOMATIC, null );
-	$webhook_request = new DeploymentRequest( 'org/' . $webhook_slug, null, false, 'main', $webhook_slug, null, DeploymentPolicy::AUTOMATIC, null );
-	$attempts->admit_webhook_batch(
+	$ran_booster_request         = new DeploymentRequest( 'org/' . $ran_booster_manual_slug, null, false, 'main', $ran_booster_manual_slug, null, DeploymentPolicy::AUTOMATIC, null );
+	$ran_booster_webhook_request = new DeploymentRequest( 'org/' . $ran_booster_webhook_slug, null, false, 'main', $ran_booster_webhook_slug, null, DeploymentPolicy::AUTOMATIC, null );
+	$ran_booster_attempts->admit_webhook_batch(
 		'gh',
-		'hard-stop-delivery-' . $phase . '-' . $run_id,
-		hash( 'sha256', 'hard-stop-' . $phase . '-' . $run_id ),
+		'hard-stop-delivery-' . $ran_booster_phase . '-' . $ran_booster_run_id,
+		hash( 'sha256', 'hard-stop-' . $ran_booster_phase . '-' . $ran_booster_run_id ),
 		array(
 			array(
 				'operation'               => 'update',
 				'package_type'            => 'plugin',
-				'provider_repository_id'  => 'first-' . $run_id,
+				'provider_repository_id'  => 'first-' . $ran_booster_run_id,
 				'requested_ref'           => str_repeat( 'a', 40 ),
 				'package_source'          => 'branch',
 				'package_source_revision' => 1,
-				'request'                 => $request,
+				'request'                 => $ran_booster_request,
 			),
 			array(
 				'operation'               => 'update',
 				'package_type'            => 'plugin',
-				'provider_repository_id'  => 'webhook-' . $run_id,
+				'provider_repository_id'  => 'webhook-' . $ran_booster_run_id,
 				'requested_ref'           => str_repeat( 'a', 40 ),
 				'package_source'          => 'branch',
 				'package_source_revision' => 1,
-				'request'                 => $webhook_request,
+				'request'                 => $ran_booster_webhook_request,
 			),
 		)
 	);
 	return;
 }
 
-$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE package_slug = %s LIMIT 1', $table, $manual_slug ), ARRAY_A );
-if ( ! is_array( $row ) ) {
+$ran_booster_row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE package_slug = %s LIMIT 1', $ran_booster_table, $ran_booster_manual_slug ), ARRAY_A );
+if ( ! is_array( $ran_booster_row ) ) {
 	throw new RuntimeException( 'The hard-stop manual attempt is missing.' );
 }
 
 if ( 'assert-retained' === $mode ) {
-	$expected_fence = 'pre' !== $phase;
-	if ( 'running' !== $row['state'] || ( null !== $row['mutation_started_at'] ) !== $expected_fence ) {
+	$ran_booster_expected_fence = 'pre' !== $ran_booster_phase;
+	if ( 'running' !== $ran_booster_row['state'] || ( null !== $ran_booster_row['mutation_started_at'] ) !== $ran_booster_expected_fence ) {
 		throw new RuntimeException(
 			'The killed worker did not retain the expected state and fence: '
 			. wp_json_encode(
 				array(
-					'state'           => $row['state'],
-					'id'              => (string) $row['id'],
-					'fenced'          => null !== $row['mutation_started_at'],
-					'expected_fenced' => $expected_fence,
+					'state'           => $ran_booster_row['state'],
+					'id'              => (string) $ran_booster_row['id'],
+					'fenced'          => null !== $ran_booster_row['mutation_started_at'],
+					'expected_fenced' => $ran_booster_expected_fence,
 				)
 			)
 		);
 	}
-	$core = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'auto_updater.lock' ) );
-	if ( 'pre' === $phase ) {
-		if ( null !== $core ) {
+	$ran_booster_core = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'auto_updater.lock' ) );
+	if ( 'pre' === $ran_booster_phase ) {
+		if ( null !== $ran_booster_core ) {
 			throw new RuntimeException( 'The pre-acquisition kill unexpectedly owns the core lock.' );
 		}
-	} elseif ( ! is_string( $core ) || preg_match( '/^\d+$/D', $core ) !== 1 ) {
+	} elseif ( ! is_string( $ran_booster_core ) || preg_match( '/^\d+$/D', $ran_booster_core ) !== 1 ) {
 		throw new RuntimeException( 'The post-acquisition kill did not retain the native core-lock token.' );
 	}
 	return;
 }
 
 if ( 'replace-core-lock' === $mode ) {
-	if ( 'foreign' !== $phase ) {
+	if ( 'foreign' !== $ran_booster_phase ) {
 		throw new RuntimeException( 'Only the foreign-lock proof may replace the core token.' );
 	}
-	$core = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'auto_updater.lock' ) );
-	if ( ! is_string( $core ) || preg_match( '/^\d+$/D', $core ) !== 1 ) {
+	$ran_booster_core = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'auto_updater.lock' ) );
+	if ( ! is_string( $ran_booster_core ) || preg_match( '/^\d+$/D', $ran_booster_core ) !== 1 ) {
 		throw new RuntimeException( 'The retained core lock is unavailable for replacement.' );
 	}
-	$foreign = (string) max( time(), (int) $core + 1 );
-	$updated = $wpdb->query( $wpdb->prepare( 'UPDATE %i SET option_value = %s WHERE option_name = %s', $wpdb->options, $foreign, 'auto_updater.lock' ) );
-	if ( 1 !== $updated ) {
+	$ran_booster_foreign = (string) max( time(), (int) $ran_booster_core + 1 );
+	$ran_booster_updated = $wpdb->query( $wpdb->prepare( 'UPDATE %i SET option_value = %s WHERE option_name = %s', $wpdb->options, $ran_booster_foreign, 'auto_updater.lock' ) );
+	if ( 1 !== $ran_booster_updated ) {
 		throw new RuntimeException( 'The foreign core lock could not be installed.' );
 	}
 	wp_cache_delete( 'auto_updater.lock', 'options' );
@@ -114,24 +114,24 @@ if ( 'replace-core-lock' === $mode ) {
 }
 
 if ( 'reconcile' === $mode ) {
-	$core_before    = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'auto_updater.lock' ) );
-	$result         = $booster->make( RAN\Deployment\DeploymentCoordinator::class )->reconcile_confirmed_stopped( (int) $row['id'], (string) $row['correlation_id'] );
-	$expected_state = 'pre' === $phase ? 'failed' : 'needs_attention';
-	$expected_code  = 'pre' === $phase ? 'worker_stopped' : 'interrupted';
-	if ( $expected_state !== $result->get_state()->value || $expected_code !== $result->get_outcome()?->get_code() ) {
+	$ran_booster_core_before    = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'auto_updater.lock' ) );
+	$ran_booster_result         = $ran_booster_booster->make( RAN\Deployment\DeploymentCoordinator::class )->reconcile_confirmed_stopped( (int) $ran_booster_row['id'], (string) $ran_booster_row['correlation_id'] );
+	$ran_booster_expected_state = 'pre' === $ran_booster_phase ? 'failed' : 'needs_attention';
+	$ran_booster_expected_code  = 'pre' === $ran_booster_phase ? 'worker_stopped' : 'interrupted';
+	if ( $ran_booster_expected_state !== $ran_booster_result->get_state()->value || $ran_booster_expected_code !== $ran_booster_result->get_outcome()?->get_code() ) {
 		throw new RuntimeException( 'Protected reconciliation produced the wrong hard-stop outcome.' );
 	}
-	$webhook                  = $wpdb->get_row( $wpdb->prepare( 'SELECT state, outcome_code FROM %i WHERE package_slug = %s', $table, $webhook_slug ), ARRAY_A );
-	$expected_contender_state = 'pre' === $phase ? 'succeeded' : 'failed';
-	$expected_contender_code  = 'pre' === $phase ? 'no_change' : 'lock_unavailable';
-	if ( ! is_array( $webhook ) || $expected_contender_state !== $webhook['state'] || $expected_contender_code !== $webhook['outcome_code'] ) {
+	$ran_booster_webhook                  = $wpdb->get_row( $wpdb->prepare( 'SELECT state, outcome_code FROM %i WHERE package_slug = %s', $ran_booster_table, $ran_booster_webhook_slug ), ARRAY_A );
+	$ran_booster_expected_contender_state = 'pre' === $ran_booster_phase ? 'succeeded' : 'failed';
+	$ran_booster_expected_contender_code  = 'pre' === $ran_booster_phase ? 'no_change' : 'lock_unavailable';
+	if ( ! is_array( $ran_booster_webhook ) || $ran_booster_expected_contender_state !== $ran_booster_webhook['state'] || $ran_booster_expected_contender_code !== $ran_booster_webhook['outcome_code'] ) {
 		throw new RuntimeException( 'The independent contender did not retain its explicit native-lock outcome.' );
 	}
-	$core_after = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'auto_updater.lock' ) );
-	if ( $core_before !== $core_after ) {
+	$ran_booster_core_after = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'auto_updater.lock' ) );
+	if ( $ran_booster_core_before !== $ran_booster_core_after ) {
 		throw new RuntimeException( 'Protected reconciliation changed the native WordPress updater lock.' );
 	}
-	WP_CLI::success( 'The ' . $phase . '-fence hard stop reconciled truthfully without changing the native updater lock.' );
+	WP_CLI::success( 'The ' . $ran_booster_phase . '-fence hard stop reconciled truthfully without changing the native updater lock.' ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)
 	return;
 }
 

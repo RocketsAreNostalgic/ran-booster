@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
+namespace RAN\Tests\Admin;
 
 require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
 require_once __DIR__ . '/../Support/PackageOperationWordPressFunctions.php';
@@ -30,7 +30,7 @@ use RAN\RepositoryProvider\WebhookEnvelope;
 use RAN\RepositoryProvider\WebhookNormalizer;
 use RAN\RepositoryProvider\WebhookRequest;
 use RuntimeException;
-use Tests\RepositoryProvider\Support\InertWebhookPolicy;
+use RAN\Tests\RepositoryProvider\Support\InertWebhookPolicy;
 
 final class PackageRepositoryRequestResolverTest extends TestCase {
 
@@ -198,14 +198,14 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 	}
 
 	public function test_every_provider_has_the_manual_deployment_capabilities(): void {
-		self::assertTrue( method_exists( RepositoryProvider::class, 'resolve_repository' ) );
-		self::assertTrue( method_exists( RepositoryProvider::class, 'prepare_archive' ) );
+		self::assertContains( 'resolve_repository', get_class_methods( RepositoryProvider::class ) );
+		self::assertContains( 'prepare_archive', get_class_methods( RepositoryProvider::class ) );
 	}
 
 	public function test_push_to_deploy_requires_webhook_capability_before_resolution(): void {
 		$provider = new class() implements RepositoryProvider {
 
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public int $resolve_calls = 0;
 
@@ -365,6 +365,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		);
 	}
 
+	/** @return RepositoryProvider&WebhookNormalizer&object{request: ?RepositoryLookupRequest} */
 	private function resolving_provider(
 		RepositoryDescriptor $descriptor,
 		?ProviderCode $registered_code = null
@@ -372,7 +373,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		$registered_code ??= ProviderCode::parse( 'bb' );
 		return new class( $descriptor, $registered_code ) implements RepositoryProvider, WebhookNormalizer {
 
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public ?RepositoryLookupRequest $request;
 
@@ -413,12 +414,13 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		};
 	}
 
+	/** @return RepositoryProvider&CredentialedPublicRepositoryBrowser&object{request: ?RepositoryLookupRequest} */
 	private function credentialed_resolving_provider(
 		RepositoryDescriptor $descriptor
 	): RepositoryProvider&CredentialedPublicRepositoryBrowser {
 		return new class( $descriptor ) implements RepositoryProvider, CredentialedPublicRepositoryBrowser {
 
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public ?RepositoryLookupRequest $request = null;
 

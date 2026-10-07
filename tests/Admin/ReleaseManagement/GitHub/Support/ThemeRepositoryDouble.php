@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin\ReleaseManagement\GitHub\Support;
+namespace RAN\Tests\Admin\ReleaseManagement\GitHub\Support;
 
 use RAN\Storage\ThemeRepository;
 use RuntimeException;
@@ -24,6 +24,7 @@ final class ThemeRepositoryDouble extends ThemeRepository {
 		parent::__construct();
 	}
 
+	/** @return object */
 	public function booster_theme_from_stylesheet( $stylesheet ): object {
 		++$this->reads;
 		$this->identifiers[] = (string) $stylesheet;

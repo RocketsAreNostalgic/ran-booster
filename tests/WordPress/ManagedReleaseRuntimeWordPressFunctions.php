@@ -7,6 +7,7 @@ if ( ! defined( 'WP_PLUGIN_DIR' ) ) {
 }
 
 if ( ! function_exists( 'get_theme_root' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function get_theme_root(): string {
 		return '/test/themes';
 	}
@@ -19,12 +20,14 @@ if ( ! function_exists( 'ran_booster_table_name' ) ) {
 }
 
 if ( ! function_exists( 'doing_action' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function doing_action( string $hook ): bool {
 		return ( $GLOBALS['ran_booster_runtime_action'] ?? '' ) === $hook;
 	}
 }
 
 if ( ! function_exists( 'add_action' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function add_action(
 		string $hook,
 		callable $callback,
@@ -43,6 +46,7 @@ if ( ! function_exists( 'add_action' ) ) {
 }
 
 if ( ! function_exists( 'add_filter' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function add_filter(
 		string $hook,
 		callable $callback,

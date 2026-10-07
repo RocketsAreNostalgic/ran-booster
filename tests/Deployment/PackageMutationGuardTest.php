@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Deployment;
+namespace RAN\Tests\Deployment;
 
 require_once __DIR__ . '/PackageMutationGuardWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Portability/WpPusherCoexistenceWordPressFunctions.php';
@@ -72,7 +72,7 @@ final class PackageMutationGuardTest extends TestCase {
 			PackageMutationGuard::assert_admin_action_allowed( 'update-plugin', array( 'file' => $identifier ) );
 		}
 
-		self::assertTrue( true );
+		$this->addToAssertionCount( 1 );
 	}
 
 	public function test_installed_plugin_link_guard_rejects_only_the_exact_booster_file(): void {
@@ -83,7 +83,7 @@ final class PackageMutationGuardTest extends TestCase {
 	public function test_installed_plugin_link_guard_allows_a_similar_name(): void {
 		PackageMutationGuard::assert_plugin_file_allowed( 'ran-booster-extra/ran-booster.php' );
 
-		self::assertTrue( true );
+		$this->addToAssertionCount( 1 );
 	}
 
 	public function test_target_cap_allows_sixty_four_targets_and_rejects_the_sixty_fifth(): void {

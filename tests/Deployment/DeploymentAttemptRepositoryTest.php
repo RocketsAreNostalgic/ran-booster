@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Deployment;
+namespace RAN\Tests\Deployment;
 
 use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
@@ -488,6 +488,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			$this->repository->admit_manual_batch( array( $release_target ) );
 			self::fail( 'The branch queue must reject release-managed targets.' );
 		} catch ( DeploymentStorageFailure ) {
+			// @phpstan-ignore staticMethod.alreadyNarrowedType (Repeat the assertion after external database filesystem or scheduler state changes; earlier narrowing must not replace the runtime check.)
 			self::assertSame( array(), $this->database->queries );
 		}
 
@@ -601,6 +602,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$github_evidence    = $this->repository->latest_authenticated_delivery( ProviderCode::parse( 'gh' ) );
 		$bitbucket_evidence = $this->repository->latest_authenticated_delivery( ProviderCode::parse( 'bb' ) );
 
+		// @phpstan-ignore staticMethod.impossibleType (Repeat the assertion after external database filesystem or scheduler state changes; earlier narrowing must not replace the runtime check.)
 		self::assertNotNull( $github_evidence );
 		self::assertTrue( $github_evidence->provider->equals( ProviderCode::parse( 'gh' ) ) );
 		self::assertSame( '2026-07-19 00:00:00', $github_evidence->received_at );
@@ -737,7 +739,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		} catch ( DeploymentStorageFailure ) {
 			$stored = $this->repository->find_exact( $attention->get_id() );
 			self::assertTrue( $stored?->requires_operator_resolution() );
-			self::assertNull( $stored?->safe_data()['resolved_at'] );
+			self::assertNull( $stored->safe_data()['resolved_at'] );
 		}
 	}
 

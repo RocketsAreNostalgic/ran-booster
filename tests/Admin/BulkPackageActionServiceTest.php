@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
-
-// phpcs:disable Generic.Files.OneObjectStructurePerFile -- Focused service fixtures stay beside the contract tests.
+namespace RAN\Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Deployment/PackageMutationGuardWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/RepositoryAdminWordPressFunctions.php';
@@ -30,7 +28,7 @@ use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeNotFound;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\WordPressUpdaterLock;
-use Tests\RepositoryProvider\Support\ExternalFixtureProvider;
+use RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider;
 
 final class BulkPackageActionServiceTest extends TestCase {
 
@@ -442,7 +440,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 			);
 			self::fail( 'Duplicate bulk selections must be rejected.' );
 		} catch ( \InvalidArgumentException ) {
-			self::assertTrue( true );
+			$this->addToAssertionCount( 1 );
 		}
 	}
 
@@ -469,7 +467,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 				);
 				self::fail( 'Deployment selections above twenty must be rejected.' );
 			} catch ( \InvalidArgumentException ) {
-				self::assertTrue( true );
+				$this->addToAssertionCount( 1 );
 			}
 		}
 	}
@@ -497,7 +495,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 				);
 				self::fail( 'Activation selections above two hundred must be rejected.' );
 			} catch ( \InvalidArgumentException ) {
-				self::assertTrue( true );
+				$this->addToAssertionCount( 1 );
 			}
 		}
 	}
@@ -523,7 +521,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 				);
 				self::fail( 'Malformed package identifiers and types must be rejected.' );
 			} catch ( \InvalidArgumentException ) {
-				self::assertTrue( true );
+				$this->addToAssertionCount( 1 );
 			}
 		}
 	}
@@ -534,7 +532,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 			BulkPackageAction::from_input( $package_type, $input );
 			self::fail( 'The invalid bulk action should have been rejected.' );
 		} catch ( \InvalidArgumentException ) {
-			self::assertTrue( true );
+			$this->addToAssertionCount( 1 );
 		}
 	}
 
@@ -683,9 +681,10 @@ final class BulkPackageActionServiceTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused service fixtures stay beside the contract tests.
 final class BulkActionPackage extends AbstractPackage {
 
-	private function __construct( private readonly string $identifier ) {
+	public function __construct( private readonly string $identifier = '' ) {
 	}
 
 	public static function make(
@@ -715,6 +714,7 @@ final class BulkActionPackage extends AbstractPackage {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused service fixtures stay beside the contract tests.
 final class BulkActionPluginRepository extends PluginRepository {
 
 	/** @var array<string, Package> */
@@ -728,6 +728,7 @@ final class BulkActionPluginRepository extends PluginRepository {
 		$this->packages = $packages;
 	}
 
+	/** @return Package */
 	public function booster_plugin_from_file( $file ) {
 		if ( ! isset( $this->packages[ $file ] ) ) {
 			throw new PluginNotFound( 'Missing fixture plugin.' );
@@ -748,14 +749,17 @@ final class BulkActionPluginRepository extends PluginRepository {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused service fixtures stay beside the contract tests.
 final class BulkActionThemeRepository extends ThemeRepository {
 
+	/** @return Package */
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of booster_theme_from_stylesheet retains the production method contract; these inputs do not affect this controlled result.
 	public function booster_theme_from_stylesheet( $stylesheet ) {
 		throw new ThemeNotFound( 'Missing fixture theme.' );
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused service fixtures stay beside the contract tests.
 final class BulkActionCoordinator extends DeploymentCoordinator {
 
 	/** @var list<array<string, mixed>> */
@@ -776,5 +780,3 @@ final class BulkActionCoordinator extends DeploymentCoordinator {
 		return $this->result;
 	}
 }
-
-// phpcs:enable Generic.Files.OneObjectStructurePerFile

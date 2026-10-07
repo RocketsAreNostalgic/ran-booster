@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Portability;
+namespace RAN\Tests\Portability;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;

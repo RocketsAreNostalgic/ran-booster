@@ -1,6 +1,6 @@
 <?php
 
-namespace RAN;
+namespace RAN; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedNamespaceFound -- Core owns the established three-character RAN namespace; WPCS requires four characters.
 
 use WP_Theme;
 
@@ -19,21 +19,21 @@ class Theme extends AbstractPackage {
 	protected $text_domain;
 	protected $domain_path;
 
-	public static function from_wp_theme_object( WP_Theme $object ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.objectFound -- Preserve the existing public named-argument signature.
+	public static function from_wp_theme_object( WP_Theme $wp_theme ) {
 		$theme = new static();
 
-		$theme->stylesheet  = $object->get_stylesheet();
-		$theme->name        = $object->get( 'Name' );
-		$theme->theme_uri   = $object->get( 'ThemeURI' );
-		$theme->description = $object->get( 'Description' );
-		$theme->author      = $object->get( 'Author' );
-		$theme->author_uri  = $object->get( 'AuthorURI' );
-		$theme->version     = $object->get( 'Version' );
-		$theme->template    = $object->get_template();
-		$theme->status      = $object->get( 'Status' );
-		$theme->tags        = $object->get( 'Tags' );
-		$theme->text_domain = $object->get( 'TextDomain' );
-		$theme->domain_path = $object->get( 'DomainPath' );
+		$theme->stylesheet  = $wp_theme->get_stylesheet();
+		$theme->name        = $wp_theme->get( 'Name' );
+		$theme->theme_uri   = $wp_theme->get( 'ThemeURI' );
+		$theme->description = $wp_theme->get( 'Description' );
+		$theme->author      = $wp_theme->get( 'Author' );
+		$theme->author_uri  = $wp_theme->get( 'AuthorURI' );
+		$theme->version     = $wp_theme->get( 'Version' );
+		$theme->template    = $wp_theme->get_template();
+		$theme->status      = $wp_theme->get( 'Status' );
+		$theme->tags        = $wp_theme->get( 'Tags' );
+		$theme->text_domain = $wp_theme->get( 'TextDomain' );
+		$theme->domain_path = $wp_theme->get( 'DomainPath' );
 
 		return $theme;
 	}

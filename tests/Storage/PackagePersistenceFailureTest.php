@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Storage;
+namespace RAN\Tests\Storage;
 
 use InvalidArgumentException;
 use RAN\AbstractPackage;
@@ -19,7 +19,7 @@ use RAN\Storage\PackageModel;
 use RAN\Storage\PackageStorageFailure;
 use RAN\Storage\PackageStorageOperation;
 use RuntimeException;
-use Tests\RANBoosterTestCase;
+use RAN\Tests\RANBoosterTestCase;
 use Throwable;
 
 require_once __DIR__ . '/StorageTestEnvironment.php';
@@ -390,70 +390,14 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		self::assertSame( array( 'release/release.php' ), array_keys( $this->storage()->all_for_test( PackageSource::RELEASE_ASSET ) ) );
 	}
 
-	private function storage( bool $package_exists = true, ?Database $database = null ): AbstractPackageRepository {
-		return new class( $package_exists, $database ) extends AbstractPackageRepository {
-
-			public function __construct( private readonly bool $exists, ?Database $database ) {
-				parent::__construct( $database );
-			}
-
-			/** @return array<string, Package> */
-			public function all_for_test( ?PackageSource $source = null ): array {
-				return $this->all_packages( $source );
-			}
-
-			public function has_management_record_for_test( string $identifier ): bool {
-				return $this->has_management_record( $identifier );
-			}
-
-			public function store_for_test( Package $package ): PackageMutationResult {
-				return $this->store_package( $package );
-			}
-
-			public function adopt_for_test( Package $package ): PackageMutationResult {
-				return $this->adopt_package( $package );
-			}
-
-			public function unlink_for_test( string $identifier ): PackageMutationResult {
-				return $this->unlink( $identifier );
-			}
-
-			/** @param array<string, mixed> $input */
-			public function edit_for_test( string $identifier, array $input ): PackageMutationResult {
-				return $this->edit_package( $identifier, $input );
-			}
-
-			protected function package_type(): int {
-				return 1;
-			}
-
-			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of package_exists retains the production method contract; these inputs do not affect this controlled result.
-			protected function package_exists( string $identifier ): bool {
-				return $this->exists;
-			}
-
-			protected function package_from_installation( string $identifier ): Package {
-				return new class( $identifier ) extends AbstractPackage {
-
-					public function __construct( private readonly string $identifier ) {
-					}
-
-					public function get_identifier(): mixed {
-						return $this->identifier;
-					}
-				};
-			}
-
-			protected function not_found_exception(): Throwable {
-				return new RuntimeException( 'Package not found.' );
-			}
-		};
+	private function storage( bool $package_exists = true, ?Database $database = null ): PersistenceFailureTestRepository {
+		return new PersistenceFailureTestRepository( $package_exists, $database );
 	}
 
 	private function package( string $identifier = 'example/example.php' ): Package {
 		$package    = new class( $identifier ) extends AbstractPackage {
 
-			public function __construct( private readonly string $identifier ) {
+			public function __construct( private readonly string $identifier = '' ) {
 			}
 
 			public function get_identifier(): mixed {
@@ -509,5 +453,64 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 			'source'                 => 'branch',
 			'source_revision'        => 1,
 		);
+	}
+}
+
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
+final class PersistenceFailureTestRepository extends AbstractPackageRepository {
+
+	public function __construct( private readonly bool $exists, ?Database $database ) {
+		parent::__construct( $database );
+	}
+
+	/** @return array<string, Package> */
+	public function all_for_test( ?PackageSource $source = null ): array {
+		return $this->all_packages( $source );
+	}
+
+	public function has_management_record_for_test( string $identifier ): bool {
+		return $this->has_management_record( $identifier );
+	}
+
+	public function store_for_test( Package $package ): PackageMutationResult {
+		return $this->store_package( $package );
+	}
+
+	public function adopt_for_test( Package $package ): PackageMutationResult {
+		return $this->adopt_package( $package );
+	}
+
+	public function unlink_for_test( string $identifier ): PackageMutationResult {
+		return $this->unlink( $identifier );
+	}
+
+	/** @param array<string, mixed> $input */
+	public function edit_for_test( string $identifier, array $input ): PackageMutationResult {
+		return $this->edit_package( $identifier, $input );
+	}
+
+	protected function package_type(): int {
+		return 1;
+	}
+
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of package_exists retains the production method contract; these inputs do not affect this controlled result.
+	protected function package_exists( string $identifier ): bool {
+		return $this->exists;
+	}
+
+	protected function package_from_installation( string $identifier ): Package {
+		return new class( $identifier ) extends AbstractPackage {
+
+			public function __construct( private readonly string $identifier = '' ) {
+			}
+
+			public function get_identifier(): mixed {
+				return $this->identifier;
+			}
+		};
+	}
+
+	protected function not_found_exception(): Throwable {
+		return new RuntimeException( 'Package not found.' );
 	}
 }

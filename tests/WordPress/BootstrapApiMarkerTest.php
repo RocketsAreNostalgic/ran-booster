@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\WordPress;
+namespace RAN\Tests\WordPress;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
@@ -35,8 +35,11 @@ final class BootstrapApiMarkerTest extends TestCase {
 	#[PreserveGlobalState( false )]
 	public function test_conflicting_preexisting_marker_stops_bootstrap( string $marker, mixed $value, string $message ): void {
 		require dirname( __DIR__ ) . '/Support/BootstrapRuntimeWordPressFunctions.php';
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'WPINC', 'wp-includes' );
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'ABSPATH', dirname( __DIR__ ) . '/fixtures/wordpress/' );
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.VariableConstantNameFound -- Exercise the exact runtime configuration marker selected by this fixture.
 		define( $marker, $value );
 		$GLOBALS['ran_booster_bootstrap_multisite'] = false;
 
@@ -49,7 +52,9 @@ final class BootstrapApiMarkerTest extends TestCase {
 	#[PreserveGlobalState( false )]
 	public function test_matching_early_markers_remain_accepted(): void {
 		require dirname( __DIR__ ) . '/Support/BootstrapRuntimeWordPressFunctions.php';
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'WPINC', 'wp-includes' );
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'ABSPATH', dirname( __DIR__ ) . '/fixtures/wordpress/' );
 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
@@ -57,6 +62,6 @@ final class BootstrapApiMarkerTest extends TestCase {
 
 		require dirname( __DIR__, 2 ) . '/ran-booster.php';
 
-		self::assertSame( 'multisite_unsupported', RAN_BOOSTER_RUNTIME_MODE );
+		self::assertSame( 'multisite_unsupported', constant( 'RAN_BOOSTER_RUNTIME_MODE' ) );
 	}
 }

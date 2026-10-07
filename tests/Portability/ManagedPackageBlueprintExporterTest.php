@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Portability;
+namespace RAN\Tests\Portability;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -20,8 +20,8 @@ use RAN\Secrets\SecretsRuntimeAvailability;
 use RAN\Storage\Database;
 use RAN\Storage\DatabaseLifecycleFailure;
 use RAN\Storage\PackageStorageFailure;
-use Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
-use Tests\Secrets\SecretsFileTestFactory;
+use RAN\Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
+use RAN\Tests\Secrets\SecretsFileTestFactory;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 
@@ -265,7 +265,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 			}
 			public function assert_managed_storage_ready(): void {
 			}
-			public function credential_material( \RAN\RepositoryProvider\ProviderCode|string $provider, ?string $id = null ): ?array {
+			public function credential_material( \RAN\RepositoryProvider\ProviderCode|string $provider, ?string $id = null ): array {
 				$provider_code = $provider instanceof \RAN\RepositoryProvider\ProviderCode ? $provider->value : $provider;
 
 				return array(

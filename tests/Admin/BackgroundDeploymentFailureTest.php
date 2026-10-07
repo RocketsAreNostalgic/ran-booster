@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
+namespace RAN\Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Deployment/AttemptRepositoryDatabase.php';
 require_once dirname( __DIR__ ) . '/Support/RepositoryAdminWordPressFunctions.php';
@@ -26,7 +26,7 @@ use RAN\Plugin;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\Storage\Database;
 use RAN\Storage\PluginRepository;
-use Tests\Deployment\AttemptRepositoryDatabase;
+use RAN\Tests\Deployment\AttemptRepositoryDatabase;
 
 final class BackgroundDeploymentFailureTest extends TestCase {
 
@@ -150,7 +150,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		self::assertSame( 403, $controller->handle()['status'] );
 		$GLOBALS['ran_booster_repository_admin_capabilities']['manage_options'] = true;
 		$GLOBALS['ran_booster_repository_admin_nonce_valid']                    = false;
-		self::assertSame( 403, $controller->handle()['status'] );
+		self::assertThat( $controller->handle()['status'], self::identicalTo( 403 ) );
 		$GLOBALS['ran_booster_repository_admin_nonce_valid']           = true;
 		$GLOBALS['ran_booster_repository_admin_user_meta_write_fails'] = true;
 		self::assertSame( 500, $controller->handle()['status'] );

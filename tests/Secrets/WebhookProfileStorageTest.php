@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tests\Secrets;
+namespace RAN\Tests\Secrets;
 
 // Direct local filesystem operations exercise the encrypted sidecar lifecycle.
-// phpcs:disable WordPress.WP.AlternativeFunctions
 
 use PHPUnit\Framework\TestCase;
 use RAN\RepositoryProvider\InvalidWebhookInput;
@@ -15,7 +14,7 @@ use RAN\RepositoryProvider\ProviderWebhookPolicy;
 use RAN\RepositoryProvider\SignedWebhookVerification;
 use RAN\Secrets\SecretsFile;
 use RuntimeException;
-use Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
+use RAN\Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
 
 final class WebhookProfileStorageTest extends TestCase {
 
@@ -29,6 +28,7 @@ final class WebhookProfileStorageTest extends TestCase {
 
 		$this->directory = sys_get_temp_dir() . '/ran-booster-webhook-profile-' . bin2hex( random_bytes( 8 ) );
 		$this->path      = $this->directory . '/secrets.json';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
 		$this->secrets = SecretsFileTestFactory::create( $this->path, array(), ShippedSecretPolicyCatalog::create() );
 	}
@@ -38,10 +38,12 @@ final class WebhookProfileStorageTest extends TestCase {
 		InMemorySiteKeyStore::reset( $this->path );
 		foreach ( array( $this->path, $this->path . '.lock' ) as $path ) {
 			if ( is_file( $path ) || is_link( $path ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 				unlink( $path );
 			}
 		}
 		if ( is_dir( $this->directory ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 			rmdir( $this->directory );
 		}
 
@@ -157,6 +159,7 @@ final class WebhookProfileStorageTest extends TestCase {
 			self::assertSame( InvalidWebhookInput::INVALID_SECRET, $failure->reason );
 			self::assertStringContainsString( '32 to 512 bytes', $failure->getMessage() );
 			self::assertStringNotContainsString( $secret, $failure->getMessage() );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Preserve native JSON bytes for the isolated fixture/trace assertion without loading WordPress.
 			self::assertFalse( str_contains( (string) json_encode( $failure->getTrace() ), $secret ) );
 		}
 	}

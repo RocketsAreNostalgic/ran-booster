@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
+namespace RAN\Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/RepositoryAdminWordPressFunctions.php';
@@ -41,15 +41,15 @@ use RAN\Storage\Database;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\WordPressUpdaterLock;
-use Tests\RepositoryProvider\Support\ExternalFixtureCredentialPolicy;
-use Tests\Secrets\InMemorySiteKeyStore;
-use Tests\Secrets\SecretsFileTestFactory;
-use Tests\Support\CredentialUsageDatabase;
-use Tests\Support\InMemoryCredentialExpiryObservationStore;
-use Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
+use RAN\Tests\RepositoryProvider\Support\ExternalFixtureCredentialPolicy;
+use RAN\Tests\Secrets\InMemorySiteKeyStore;
+use RAN\Tests\Secrets\SecretsFileTestFactory;
+use RAN\Tests\Support\CredentialUsageDatabase;
+use RAN\Tests\Support\InMemoryCredentialExpiryObservationStore;
+use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 
 // Direct local filesystem operations exercise the encrypted sidecar fixture.
-// phpcs:disable WordPress.WP.AlternativeFunctions
+
 final class CredentialProfileInteractionDispatcherTest extends TestCase {
 
 	private string $directory;
@@ -72,6 +72,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 
 		$this->directory = sys_get_temp_dir() . '/ran-booster-provider-profile-' . bin2hex( random_bytes( 8 ) );
 		$this->path      = $this->directory . '/secrets.php';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Native filesystem calls exercise the encrypted sidecar fixture.
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
 
 		$policies        = new ProviderSecretPolicyCatalog();
@@ -101,10 +102,12 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		InMemorySiteKeyStore::reset( $this->path );
 		foreach ( array( $this->path, $this->path . '.lock' ) as $path ) {
 			if ( is_file( $path ) || is_link( $path ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native filesystem calls exercise the encrypted sidecar fixture.
 				unlink( $path );
 			}
 		}
 		if ( is_dir( $this->directory ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Native filesystem calls exercise the encrypted sidecar fixture.
 			rmdir( $this->directory );
 		}
 
@@ -276,7 +279,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$dispatcher         = $this->dispatcher( $dashboard, $this->secrets, $interaction, $lookup );
 
 		$response = $interaction->dispatch( $dispatcher );
-		self::assertNotNull( $response );
+		self::assertThat( $response, self::logicalNot( self::isNull() ) );
 		self::assertSame( 'success', $response->kind );
 		self::assertSame( $expected_message, $response->feedback_message );
 		self::assertSame( 'core:' . $request['action'], $response->request->operation );
@@ -384,7 +387,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 				new InMemoryPublicRepositoryLookupProfileStore()
 			)
 		);
-		self::assertNotNull( $response );
+		self::assertThat( $response, self::logicalNot( self::isNull() ) );
 		self::assertSame( 'validation_failure', $response->kind );
 		self::assertSame( $expected_message, $response->feedback_message );
 		self::assertStringNotContainsString( 'secret-canary', $response->feedback_message );
@@ -419,7 +422,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			)
 		);
 
-		self::assertNotNull( $response );
+		self::assertThat( $response, self::logicalNot( self::isNull() ) );
 		self::assertSame( 'success', $response->kind );
 		$profiles = array_values(
 			array_filter(
@@ -470,7 +473,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			)
 		);
 
-		self::assertNotNull( $response );
+		self::assertThat( $response, self::logicalNot( self::isNull() ) );
 		self::assertSame( 'validation_failure', $response->kind );
 		self::assertSame(
 			'The expiry / removal date cannot be later than the expiry reported by the provider.',
@@ -787,7 +790,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 
 		$response = $interaction->dispatch( $this->dispatcher( $dashboard, $this->secrets, $interaction, $lookup ) );
 
-		self::assertNotNull( $response );
+		self::assertThat( $response, self::logicalNot( self::isNull() ) );
 		self::assertSame( 'unexpected_failure', $response->kind );
 		self::assertSame( 'We could not complete that request. Please try again.', $response->feedback_message );
 		self::assertArrayHasKey( 'credential_existing', $this->secrets->credential_profiles( 'fixture' ) );
@@ -822,7 +825,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			)
 		);
 
-		self::assertNotNull( $response );
+		self::assertThat( $response, self::logicalNot( self::isNull() ) );
 		self::assertSame( 'unexpected_failure', $response->kind );
 		self::assertSame( 'We could not complete that request. Please try again.', $response->feedback_message );
 		self::assertContains(
@@ -857,7 +860,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 				new InMemoryPublicRepositoryLookupProfileStore()
 			)
 		);
-		self::assertNotNull( $response );
+		self::assertThat( $response, self::logicalNot( self::isNull() ) );
 		self::assertSame( 'unexpected_failure', $response->kind );
 		self::assertSame( 'We could not complete that request. Please try again.', $response->feedback_message );
 		self::assertStringNotContainsString( 'secret-canary', $response->feedback_message );
@@ -914,7 +917,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 				$expiry_observations
 			)
 		);
-		self::assertNotNull( $response );
+		self::assertThat( $response, self::logicalNot( self::isNull() ) );
 		self::assertSame( 'validation_failure', $response->kind );
 		self::assertSame(
 			'The submitted credential does not match the selected credential kind. Choose the matching kind or enter another credential secret.',
@@ -949,7 +952,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			)
 		);
 
-		self::assertNotNull( $response );
+		self::assertThat( $response, self::logicalNot( self::isNull() ) );
 		self::assertSame( 'validation_failure', $response->kind );
 		self::assertSame(
 			'A Push-to-Deploy secret already exists for this owner or repository. Edit the existing secret instead.',
@@ -986,7 +989,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			)
 		);
 
-		self::assertNotNull( $response );
+		self::assertThat( $response, self::logicalNot( self::isNull() ) );
 		self::assertSame( 'unexpected_failure', $response->kind );
 		self::assertSame( 'We could not complete that request. Please try again.', $response->feedback_message );
 		self::assertStringNotContainsString( 'secret-canary', $response->feedback_message );
@@ -1064,6 +1067,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			->willReturn( new ExternalFixtureCredentialPolicy( $code ) );
 		$provider->method( 'get_webhook_policy' )->willReturn( $webhook_policy );
 
+		self::assertInstanceOf( RepositoryProvider::class, $provider );
 		return $provider;
 	}
 
@@ -1109,7 +1113,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	}
 }
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile -- Focused provider profile interaction fixtures.
+
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused provider profile interaction fixtures.
 final readonly class CapturedProviderProfileResponse {
 
 	public function __construct(
@@ -1119,6 +1124,7 @@ final readonly class CapturedProviderProfileResponse {
 	) {}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused provider profile interaction fixtures.
 final class CapturingProviderProfileInteraction {
 
 	public ?CapturedProviderProfileResponse $response = null;
@@ -1170,6 +1176,7 @@ final class CapturingProviderProfileInteraction {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused provider profile interaction fixtures.
 final class ReplacementAwareBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenceStore {
 
 	/** @var list<string> */
@@ -1185,6 +1192,7 @@ final class ReplacementAwareBranchCheckEvidenceStore extends RepositoryBranchChe
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused provider profile interaction fixtures.
 final class ThrowingBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenceStore {
 
 	public function bump_profile_generation( string $provider, string $profile_id ): void {
@@ -1192,6 +1200,3 @@ final class ThrowingBranchCheckEvidenceStore extends RepositoryBranchCheckEviden
 		throw new \RuntimeException( 'Fixture evidence invalidation failed.' );
 	}
 }
-
-// phpcs:enable Generic.Files.OneObjectStructurePerFile
-// phpcs:enable WordPress.WP.AlternativeFunctions

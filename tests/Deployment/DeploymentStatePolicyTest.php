@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Deployment;
+namespace RAN\Tests\Deployment;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;

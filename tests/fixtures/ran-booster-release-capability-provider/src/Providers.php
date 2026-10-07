@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace RANBoosterReleaseCapabilityFixture;
+namespace RAN_Booster_ReleaseCapabilityFixture;
 
 use RAN\Deployment\PreparedArtifact;
 use RAN\Provider\ProviderCapability;
@@ -30,12 +30,12 @@ use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargetStatus;
 use RuntimeException;
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Installed fixture aggregates belong together.
 
 interface FixturePrivateCapability extends ProviderCapability {
 	public function private_value(): string;
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This exact fixture spy remains beside the contract it exercises; its existing class identity and load order are intentional.
 abstract class BaseProvider implements RepositoryProvider {
 	public function __construct( private readonly string $code ) {
 	}
@@ -73,6 +73,7 @@ abstract class BaseProvider implements RepositoryProvider {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This exact fixture spy remains beside the contract it exercises; its existing class identity and load order are intentional.
 final class ZeroProvider extends BaseProvider implements FixturePrivateCapability {
 	public function __construct() {
 		parent::__construct( 'p2-zero' );
@@ -83,6 +84,7 @@ final class ZeroProvider extends BaseProvider implements FixturePrivateCapabilit
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This exact fixture spy remains beside the contract it exercises; its existing class identity and load order are intentional.
 final class PartialProvider extends BaseProvider implements RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseNativeTargets {
 	public function __construct() {
 		parent::__construct( 'p2-partial' );
@@ -125,6 +127,7 @@ final class PartialProvider extends BaseProvider implements RepositoryReleaseMet
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This exact fixture spy remains beside the contract it exercises; its existing class identity and load order are intentional.
 final class ReleaseProvider extends BaseProvider implements RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseNativeTargets, FixturePrivateCapability {
 	private const FINGERPRINT = 'v2:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 
@@ -240,6 +243,7 @@ final class ReleaseProvider extends BaseProvider implements RepositoryReleaseMet
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This exact fixture spy remains beside the contract it exercises; its existing class identity and load order are intentional.
 final class FixtureReleaseArtifact implements RepositoryReleaseArtifact {
 	private bool $handed_off = false;
 

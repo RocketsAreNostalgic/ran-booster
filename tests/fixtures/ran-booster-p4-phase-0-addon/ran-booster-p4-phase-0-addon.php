@@ -7,9 +7,7 @@
 
 declare(strict_types=1);
 
-namespace RANBoosterP4Phase0AddonFixture;
-
-// phpcs:disable Universal.Files.SeparateFunctionsFromOO.Mixed -- A single-file installed plugin fixture keeps disposable ownership explicit.
+namespace RAN_Booster_P4Phase0AddonFixture;
 
 use WP_CLI;
 
@@ -17,8 +15,8 @@ const CATEGORY = 'p4-phase-0-addon-fixture';
 const ABILITY  = 'p4-addon-fixture/read-status';
 
 function compatible(): bool {
-	return defined( 'RANBoosterP4Phase0Fixture\\API_VERSION' )
-		&& 1 === constant( 'RANBoosterP4Phase0Fixture\\API_VERSION' );
+	return defined( 'RAN_Booster_P4Phase0Fixture\\API_VERSION' )
+		&& 1 === constant( 'RAN_Booster_P4Phase0Fixture\\API_VERSION' );
 }
 
 function register_category(): void {
@@ -80,9 +78,10 @@ function register_ability(): void {
 	);
 }
 
+// phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- This installed single-file fixture deliberately owns these exact function and command declarations together.
 final class AddOnCommand {
 	public function __invoke(): void {
-		WP_CLI::line( 'addon-ready' );
+		WP_CLI::line( 'addon-ready' ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)
 	}
 }
 
@@ -90,7 +89,7 @@ function register_cli(): void {
 	if ( ! compatible() || ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 		return;
 	}
-	WP_CLI::add_command( 'ran-booster fixture-addon', AddOnCommand::class );
+	WP_CLI::add_command( 'ran-booster fixture-addon', AddOnCommand::class ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)
 }
 
 add_action( 'wp_abilities_api_categories_init', __NAMESPACE__ . '\\register_category' );

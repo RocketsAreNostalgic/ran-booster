@@ -1,0 +1,16 @@
+includes:
+	- vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+	level: 5
+	treatPhpDocTypesAsCertain: false
+	# The runner supplies one discovered file; broad paths contaminate isolated fixtures.
+	scanDirectories:
+		- tests
+		- vendor/ran/wp-release-updater/src
+		- vendor/squizlabs/php_codesniffer/src
+	excludePaths:
+		analyseAndScan:
+			# Deliberately unloadable historical contracts: exact identities are pinned by the coverage test.
+			- tests/fixtures/provider-api11-registration/workflow-provider.php
+			- tests/fixtures/provider-api12-registration/repository-provider.php

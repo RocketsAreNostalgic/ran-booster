@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\AddOn\WebhookAssistance;
-
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused fixtures stay beside the facade contract tests.
+namespace RAN\Tests\AddOn\WebhookAssistance;
 
 require_once __DIR__ . '/WebhookAssistanceWordPressFunctions.php';
 
@@ -36,8 +34,8 @@ use RAN\Secrets\SecretsFile;
 use RAN\Storage\Database;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
-use Tests\RepositoryProvider\Support\InertWebhookPolicy;
-use Tests\Support\FitnessOnlyWebhookManagementCapabilityProvider;
+use RAN\Tests\RepositoryProvider\Support\InertWebhookPolicy;
+use RAN\Tests\Support\FitnessOnlyWebhookManagementCapabilityProvider;
 
 require_once dirname( __DIR__, 2 ) . '/Support/WebhookManagementCapabilityProviders.php';
 
@@ -179,7 +177,7 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		self::assertSame( 'partial', $result->state() );
 		self::assertSame( 'profile_cleanup_failed', $result->code() );
 		self::assertSame( 2, $result->profile()?->revision() );
-		self::assertSame( 'rotated-secret', $secrets->materials[ $result->profile()?->id() ]['secret'] ?? null );
+		self::assertSame( 'rotated-secret', $secrets->materials[ $result->profile()->id() ]['secret'] ?? null );
 	}
 
 	public function test_pre_provider_failure_cannot_delete_a_profile_rotated_after_creation(): void {
@@ -233,7 +231,7 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		self::assertInstanceOf( RepositoryWebhookOperationResult::class, $nested );
 		self::assertSame( 'operation_busy', $nested->code() );
 		self::assertCount( 1, $secrets->profiles );
-		self::assertFalse( $held );
+		self::assertThat( $held, self::identicalTo( false ) );
 	}
 
 	public function test_separate_request_facades_contend_on_the_same_target_lock(): void {
@@ -268,7 +266,7 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		self::assertInstanceOf( RepositoryWebhookOperationResult::class, $nested );
 		self::assertSame( 'operation_busy', $nested->code() );
 		self::assertCount( 1, $secrets->profiles );
-		self::assertFalse( $held );
+		self::assertThat( $held, self::identicalTo( false ) );
 	}
 
 	public function test_lock_release_failure_does_not_overwrite_ambiguous_recovery_evidence(): void {
@@ -510,6 +508,7 @@ final class AssistedWebhookFacadeTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhookFitness, RepositoryWebhookManagement, WebhookNormalizer {
 	public const OPERATION             = 'repository-webhook-management';
 	public const VERSION               = 1;
@@ -670,6 +669,7 @@ final class FixedWebhookProvider implements RepositoryProvider, RepositoryWebhoo
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class FixedFacadeSecretsFile extends SecretsFile {
 	/** @var array<string,array<string,mixed>> */
 	public array $profiles = array();
@@ -764,16 +764,18 @@ final class FixedFacadeSecretsFile extends SecretsFile {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class FixedPluginRepository extends PluginRepository {
 	public function __construct( private FixedFacadePackage $package ) {
 	}
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_plugins retains the production method contract; these inputs do not affect this controlled result.
 	public function all_deployment_plugins( ?\RAN\PackageSource $source = null ): array {
-		return array( $this->package );
+		return array( (string) $this->package->get_identifier() => $this->package );
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class FixedThemeRepository extends ThemeRepository {
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_themes retains the production method contract; these inputs do not affect this controlled result.
 	public function all_deployment_themes( ?\RAN\PackageSource $source = null ): array {
@@ -781,8 +783,9 @@ final class FixedThemeRepository extends ThemeRepository {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class FixedFacadePackage extends AbstractPackage {
-	public function __construct( ManagedRepository $repository ) {
+	public function __construct( ?ManagedRepository $repository = null ) {
 		$this->repository        = $repository;
 		$this->deployment_policy = DeploymentPolicy::MANUAL;
 	}
@@ -791,7 +794,7 @@ final class FixedFacadePackage extends AbstractPackage {
 		return 'plugin/example.php';
 	}
 
-	public function get_provider_repository_id(): ?string {
+	public function get_provider_repository_id(): string {
 		return '101';
 	}
 
@@ -800,6 +803,7 @@ final class FixedFacadePackage extends AbstractPackage {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class FixedDatabase extends Database {
 	public function require_ready(): void {
 	}

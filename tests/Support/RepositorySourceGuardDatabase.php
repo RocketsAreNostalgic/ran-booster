@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Support;
+namespace RAN\Tests\Support;
 
 /** Raw-row fixture for the production repository admission helper. */
 final class RepositorySourceGuardDatabase {

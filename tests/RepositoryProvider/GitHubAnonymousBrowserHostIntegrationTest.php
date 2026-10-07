@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\RepositoryProvider;
+namespace RAN\Tests\RepositoryProvider;
 
 require_once __DIR__ . '/Support/RepositoryResolverWordPressFunctions.php';
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\RepositoryProvider\Support;
+namespace RAN\Tests\RepositoryProvider\Support;
 
 use RAN\BoosterGitHubProvider\V1\CredentialPolicy as GitHubCredentialPolicy;
 use RAN\BoosterGitHubProvider\V1\WebhookPolicy as GitHubWebhookPolicy;

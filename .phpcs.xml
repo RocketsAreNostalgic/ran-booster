@@ -31,9 +31,6 @@
 	<rule ref="WordPress.PHP.YodaConditions"/>
 
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
-		<exclude-pattern>/tests/</exclude-pattern>
-		<!-- Template locals are passed into included view files; they are not plugin globals. -->
-		<exclude-pattern>/views/</exclude-pattern>
 		<properties>
 			<property name="prefixes" type="array">
 				<element value="ran_booster"/>
@@ -43,10 +40,11 @@
 		</properties>
 	</rule>
 
-	<!-- WPCS 3.4 hard-codes a four-character minimum; Booster's established production namespace root is RAN. -->
-	<rule ref="WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedNamespaceFound">
-		<severity>0</severity>
+	<!-- Immutable generated Admin Shell is verified independently; handwritten view exceptions are local. -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound">
+		<exclude-pattern>/views/generated/ran-admin-shell\.php$</exclude-pattern>
 	</rule>
+
 
 	<!-- Unused parameters block across the owned tree; required signatures and implicit-use contracts are declaration-local. -->
 	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter">
@@ -84,41 +82,6 @@
 	<!-- Reserved parameter names are checked throughout; retained public/native signatures are declaration-local. -->
 	<rule ref="Universal.NamingConventions.NoReservedKeywordParameterNames"/>
 
-	<!-- The focused container unit test keeps its tiny fixture classes beside the assertions. -->
-	<rule ref="Generic.Files.OneObjectStructurePerFile">
-		<exclude-pattern>/tests/Container/ContainerTest.php</exclude-pattern>
-		<exclude-pattern>/tests/Booster/GitHub/WebhookManagement/WebhookManagementControllerTest.php</exclude-pattern>
-	</rule>
-
-	<!-- The migrated behavior fixture intentionally exercises raw request arrays and exact serialized legacy records. -->
-	<rule ref="WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize">
-		<exclude-pattern>/tests/Booster/GitHub/WebhookManagement/WebhookManagementControllerTest.php</exclude-pattern>
-	</rule>
-	<rule ref="WordPress.WP.AlternativeFunctions.parse_url_parse_url">
-		<exclude-pattern>/tests/Booster/GitHub/WebhookManagement/WebhookManagementControllerTest.php</exclude-pattern>
-	</rule>
-	<rule ref="WordPress.Security.NonceVerification.Recommended">
-		<exclude-pattern>/tests/Booster/GitHub/WebhookManagement/WebhookManagementControllerTest.php</exclude-pattern>
-	</rule>
-
-	<!-- The single-file characterization harness is CLI-only and asserts source text verbatim. -->
-	<rule ref="WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents">
-		<exclude-pattern>/tests/characterization.php</exclude-pattern>
-	</rule>
-	<rule ref="WordPress.Security.EscapeOutput.OutputNotEscaped">
-		<exclude-pattern>/tests/characterization.php</exclude-pattern>
-	</rule>
-	<rule ref="WordPress.WP.CapitalPDangit.MisspelledInText">
-		<exclude-pattern>/tests/characterization.php</exclude-pattern>
-	</rule>
-
-	<!--
-		SecretsFile uses a site-owned encrypted JSON sidecar and atomic temp-file + rename writes.
-		WP_Filesystem cannot provide the same same-directory atomic replacement contract.
-	-->
-	<rule ref="WordPress.WP.AlternativeFunctions">
-		<exclude-pattern>/RAN/Secrets/SecretsFile.php</exclude-pattern>
-	</rule>
 	<rule ref="WordPress.WP.I18n">
 		<properties>
 			<property name="text_domain" type="array">

@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tests\Secrets;
+namespace RAN\Tests\Secrets;
 
 // Test fixtures deliberately exercise native filesystem semantics.
-// phpcs:disable WordPress.WP.AlternativeFunctions
 
 use PHPUnit\Framework\TestCase;
 use RAN\Secrets\PrivateLocationCandidateResolver;
@@ -20,8 +19,11 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 		$suffix                   = bin2hex( random_bytes( 6 ) );
 		$this->root               = sys_get_temp_dir() . '/ran-booster-location-' . $suffix;
 		$this->temporary_boundary = sys_get_temp_dir() . '/ran-booster-temporary-boundary-' . $suffix;
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		mkdir( $this->root . '/account/site/public/wp-content/plugins/ran-booster', 0700, true );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		mkdir( $this->root . '/account/site/.git', 0700 );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		mkdir( $this->temporary_boundary, 0700 );
 		$this->root = (string) realpath( $this->root );
 	}
@@ -67,6 +69,7 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 	}
 
 	public function test_never_suggests_apath_that_fails_the_configured_ancestor_policy(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->root . '/account', 0770 ) );
 		$resolver  = new PrivateLocationCandidateResolver( $this->temporary_boundary );
 		$discarded = array();
@@ -94,6 +97,7 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 	}
 
 	public function test_rejects_agroup_writable_ancestor_owned_by_php_even_when_owner_write_is_disabled(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->root, 0570 ) );
 		$resolver  = new PrivateLocationCandidateResolver( $this->temporary_boundary );
 		$discarded = array();
@@ -111,11 +115,13 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 			self::assertSame( 'php_accessible_group_writable_ancestor', $discarded[0]['code'] ?? null );
 			self::assertSame( $this->root, $discarded[0]['component'] ?? null );
 		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 			chmod( $this->root, 0700 );
 		}
 	}
 
 	public function test_rejects_aworld_writable_host_ancestor(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->root, 0777 ) );
 		$resolver  = new PrivateLocationCandidateResolver( $this->temporary_boundary );
 		$discarded = array();
@@ -133,11 +139,13 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 			self::assertSame( 'world_writable_host_ancestor', $discarded[0]['code'] ?? null );
 			self::assertSame( $this->root, $discarded[0]['component'] ?? null );
 		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 			chmod( $this->root, 0700 );
 		}
 	}
 
 	public function test_rejects_unrelated_or_symlinked_boundaries(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		mkdir( $this->root . '/other', 0700 );
 		$resolver = new PrivateLocationCandidateResolver( $this->temporary_boundary );
 		self::assertNull(
@@ -164,6 +172,7 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 		$content   = $wordpress . '/wp-content';
 		$plugin    = $content . '/plugins/ran-booster';
 		$private   = $this->root . '/account/private';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $private, 0700 ) );
 
 		self::assertTrue(
@@ -184,6 +193,7 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 				$wordpress
 			)
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $private, 0770 ) );
 		self::assertFalse(
 			$resolver->validate_configured(
@@ -194,6 +204,7 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 				$wordpress
 			)
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $private, 0700 ) );
 
 		self::assertTrue( symlink( $private, $this->root . '/account/private-link' ) );
@@ -210,6 +221,7 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 
 	private function remove( string $path ): void {
 		if ( is_link( $path ) || is_file( $path ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 			unlink( $path );
 			return;
 		}
@@ -222,6 +234,7 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 				$this->remove( $path . '/' . $entry );
 			}
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 		rmdir( $path );
 	}
 

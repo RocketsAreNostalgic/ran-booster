@@ -19,4 +19,4 @@ require __DIR__ . '/vendor/autoload.php';
 require __DIR__ . '/src/ReleaseUpdaterRegistrar.php';
 require __DIR__ . '/src/Plugin.php';
 
-\RANBoosterGitHubProviderExtensionFixture\Plugin::boot();
+\RAN_Booster_GitHubProviderExtensionFixture\Plugin::boot();

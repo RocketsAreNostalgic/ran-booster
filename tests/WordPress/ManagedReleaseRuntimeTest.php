@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\WordPress;
+namespace RAN\Tests\WordPress;
 
 require_once __DIR__ . '/ManagedReleaseRuntimeWordPressFunctions.php';
 require_once __DIR__ . '/RuntimeReleaseStore.php';
@@ -52,7 +52,7 @@ use RAN\WordPress\ManagedReleaseStore;
 use RAN\WordPress\ManagedReleaseSubdirectoryNotSupported;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
 use RAN\WordPress\WordPressUpdaterLock;
-use Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
+use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 
 final class ManagedReleaseRuntimeTest extends TestCase {
 
@@ -111,7 +111,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				ManagedReleaseConfiguration::from_json( $json );
 				self::fail( 'Removed artifact authority must not remain readable.' );
 			} catch ( InvalidArgumentException ) {
-				self::assertTrue( true );
+				self::addToAssertionCount( 1 );
 			}
 		}
 	}
@@ -191,7 +191,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				$invalid();
 				self::fail( 'Invalid release configuration must fail closed.' );
 			} catch ( InvalidArgumentException ) {
-				self::assertTrue( true );
+				self::addToAssertionCount( 1 );
 			}
 		}
 	}
@@ -1654,16 +1654,18 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$profiles           = new InMemoryPublicRepositoryLookupProfileStore();
 		$profiles->profiles = array( 'gh' => 'public-profile' );
 		$references         = array();
-		$failure_mode       = 'typed';
+		$failure_mode       = new class() {
+			public string $value = 'typed';
+		};
 		$providers          = $this->release_metadata_registry(
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- The release-runtime fixture callback retains the registered factory or provider callable signature while returning a controlled result.
 			list_releases: static function ( string $type, RepositoryReference $repository, string $channel ) use ( &$references, &$failure_mode ): RepositoryReleaseCandidateList {
 				$references[] = $repository;
 				if ( in_array( $repository->credential_id, array( 'package-profile', 'private-profile' ), true ) ) {
-					if ( 'typed' === $failure_mode ) {
+					if ( 'typed' === $failure_mode->value ) {
 						throw new RepositoryReleaseReadUnavailable( 'Fixture access failure.' );
 					}
-					if ( 'domain' === $failure_mode ) {
+					if ( 'domain' === $failure_mode->value ) {
 						throw new \RuntimeException( 'Fixture domain failure.' );
 					}
 				}
@@ -1674,10 +1676,10 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			inspect: static function ( string $type, RepositoryReference $repository, string $release_id, string $tag, string $channel ) use ( &$references, &$failure_mode ): RepositoryReleaseInspection {
 				$references[] = $repository;
 				if ( in_array( $repository->credential_id, array( 'package-profile', 'private-profile' ), true ) ) {
-					if ( 'typed' === $failure_mode ) {
+					if ( 'typed' === $failure_mode->value ) {
 						throw new RepositoryReleaseReadUnavailable( 'Fixture access failure.' );
 					}
-					if ( 'domain' === $failure_mode ) {
+					if ( 'domain' === $failure_mode->value ) {
 						throw new \RuntimeException( 'Fixture domain failure.' );
 					}
 				}
@@ -1717,25 +1719,25 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( array( 'private-profile', 'private-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credential_id, $references ) );
 		self::assertSame( array( true, true ), array_map( static fn ( RepositoryReference $reference ): bool => $reference->private, $references ) );
 
-		$failure_mode = 'none';
-		$current      = 'explicit';
-		$references   = array();
-		$nonce        = $facade->nonce_action( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' );
+		$failure_mode->value = 'none';
+		$current             = 'explicit';
+		$references          = array();
+		$nonce               = $facade->nonce_action( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' );
 		self::assertInstanceOf( RepositoryReleaseCandidateList::class, $facade->list_candidates( 'plugin', 'example/example.php', 1, 'stable', $nonce ) );
 		$nonce = $facade->nonce_action( 'inspect_candidate', 'plugin', 'example/example.php', 1, 'stable' );
 		self::assertTrue( $facade->inspect_candidate( 'plugin', 'example/example.php', 1, '101', 'v2.0.0', 'stable', $nonce )?->ready() );
 		self::assertSame( array( 'package-profile', 'package-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credential_id, $references ) );
 
-		$failure_mode = 'domain';
-		$references   = array();
-		$nonce        = $facade->nonce_action( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' );
+		$failure_mode->value = 'domain';
+		$references          = array();
+		$nonce               = $facade->nonce_action( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' );
 		self::assertNull( $facade->list_candidates( 'plugin', 'example/example.php', 1, 'stable', $nonce ) );
 		self::assertSame( array( 'package-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credential_id, $references ) );
 
-		$failure_mode = 'none';
-		$current      = 'private_lookup';
-		$references   = array();
-		$nonce        = $facade->nonce_action( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' );
+		$failure_mode->value = 'none';
+		$current             = 'private_lookup';
+		$references          = array();
+		$nonce               = $facade->nonce_action( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' );
 		self::assertNull( $facade->list_candidates( 'plugin', 'example/example.php', 1, 'stable', $nonce ) );
 		$nonce = $facade->nonce_action( 'inspect_candidate', 'plugin', 'example/example.php', 1, 'stable' );
 		self::assertNull( $facade->inspect_candidate( 'plugin', 'example/example.php', 1, '101', 'v2.0.0', 'stable', $nonce ) );
@@ -1754,7 +1756,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$references                = array();
 		$nonce                     = $facade->nonce_action( 'preflight', 'plugin', 'example/example.php', 1, 'stable' );
 		$preflight                 = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
-		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $preflight?->code() );
+		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $preflight->code() );
 		self::assertSame( array( 'public-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credential_id, $references ) );
 		self::assertNull( $packages['branch_public']->get_repository()->reference->credential_id );
 
@@ -1768,10 +1770,10 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 		$current                     = 'branch_explicit';
 		$references                  = array();
-		$failure_mode                = 'typed';
+		$failure_mode->value         = 'typed';
 		$nonce                       = $facade->nonce_action( 'preflight', 'plugin', 'example/example.php', 1, 'stable' );
 		$preflight                   = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
-		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $preflight?->code() );
+		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $preflight->code() );
 		self::assertSame( array( 'package-profile', 'public-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credential_id, $references ) );
 		self::assertSame( 'package-profile', $packages['branch_explicit']->get_repository()->reference->credential_id );
 	}
@@ -1818,7 +1820,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 		$preflight_nonce = $facade->nonce_action( 'preflight', 'plugin', 'example/example.php', 1, 'stable' );
 		$preflight       = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $preflight_nonce );
-		self::assertSame( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $preflight?->code() );
+		self::assertSame( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $preflight->code() );
 		self::assertSame(
 			array( 'package-profile' ),
 			array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credential_id, $references )
@@ -1850,17 +1852,19 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$themes           = $this->createStub( ThemeRepository::class );
 		$store            = new RuntimeReleaseStore();
 		$lock             = new RuntimeUpdaterLock();
-		$mode             = 'release_id';
+		$mode             = new class() {
+			public string $value = 'release_id';
+		};
 		$inspection_calls = 0;
 		$providers        = $this->release_metadata_registry(
 			list_releases: static function () use ( &$mode ): RepositoryReleaseCandidateList {
-				if ( 'operational' === $mode ) {
+				if ( 'operational' === $mode->value ) {
 					throw new \RuntimeException( 'token=must-not-escape' );
 				}
-				if ( 'none' === $mode ) {
+				if ( 'none' === $mode->value ) {
 					return new RepositoryReleaseCandidateList( array() );
 				}
-				if ( 'incompatible_budget' === $mode ) {
+				if ( 'incompatible_budget' === $mode->value ) {
 					return new RepositoryReleaseCandidateList(
 						array(
 							new RepositoryReleaseCandidate( '101', 'v3.0.0', '3.0.0', false, '2026-08-17T12:00:00Z', array( 'example.zip' ) ),
@@ -1870,13 +1874,13 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 					);
 				}
 
-				$prerelease = 'channel' === $mode;
-				$version    = 'hyphenated_stable' === $mode ? '2026-08' : ( $prerelease ? '2.0.0-beta' : '2.0.0' );
+				$prerelease = 'channel' === $mode->value;
+				$version    = 'hyphenated_stable' === $mode->value ? '2026-08' : ( $prerelease ? '2.0.0-beta' : '2.0.0' );
 				return new RepositoryReleaseCandidateList(
 					array(
 						new RepositoryReleaseCandidate(
 							'101',
-							$prerelease ? 'v2.0.0-beta' : ( 'hyphenated_stable' === $mode ? 'v2026-08' : 'v2.0.0' ),
+							$prerelease ? 'v2.0.0-beta' : ( 'hyphenated_stable' === $mode->value ? 'v2026-08' : 'v2.0.0' ),
 							$version,
 							$prerelease,
 							'2026-08-17T12:00:00Z',
@@ -1888,17 +1892,17 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			inspect: static function ( string $type, RepositoryReference $repository, string $release_id, string $tag, string $channel ) use ( &$mode, &$inspection_calls ): RepositoryReleaseInspection {
 				++$inspection_calls;
 				unset( $type, $repository, $channel );
-				if ( 'incompatible_budget' === $mode ) {
+				if ( 'incompatible_budget' === $mode->value ) {
 					throw RepositoryReleaseInspectionRejected::incompatible();
 				}
 
 				return new RepositoryReleaseInspection(
-					'release_id' === $mode ? '999' : $release_id,
-					'tag' === $mode ? 'v2.0.1' : $tag,
-					'version' === $mode ? '2.0.1' : ( 'hyphenated_stable' === $mode ? '2026-08' : '2.0.0' ),
+					'release_id' === $mode->value ? '999' : $release_id,
+					'tag' === $mode->value ? 'v2.0.1' : $tag,
+					'version' === $mode->value ? '2.0.1' : ( 'hyphenated_stable' === $mode->value ? '2026-08' : '2.0.0' ),
 					str_repeat( 'a', 40 ),
-					'package_root' === $mode ? 'other' : 'example',
-					'main_file' === $mode ? 'other.php' : 'example.php',
+					'package_root' === $mode->value ? 'other' : 'example',
+					'main_file' === $mode->value ? 'other.php' : 'example.php',
 					'v1:' . str_repeat( 'b', 64 )
 				);
 			}
@@ -1922,38 +1926,38 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 		$nonce            = $facade->nonce_action( 'preflight', 'plugin', 'example/example.php', 1, 'stable' );
 
-		foreach ( array( 'release_id', 'tag', 'version', 'package_root', 'main_file' ) as $mode ) {
+		foreach ( array( 'release_id', 'tag', 'version', 'package_root', 'main_file' ) as $mode->value ) {
 			$result = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
-			self::assertSame( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $result?->code(), $mode );
-			self::assertSame( 'release_identity_mismatch', $result?->reason_code(), $mode );
+			self::assertSame( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $result->code(), $mode->value );
+			self::assertSame( 'release_identity_mismatch', $result->reason_code(), $mode->value );
 		}
 
-		$mode   = 'channel';
-		$result = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
-		self::assertSame( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $result?->code() );
-		self::assertSame( 'invalid_release', $result?->reason_code() );
+		$mode->value = 'channel';
+		$result      = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+		self::assertSame( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $result->code() );
+		self::assertSame( 'invalid_release', $result->reason_code() );
 
-		$mode   = 'none';
-		$result = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
-		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $result?->code() );
-		self::assertSame( 'no_releases', $result?->reason_code() );
+		$mode->value = 'none';
+		$result      = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $result->code() );
+		self::assertSame( 'no_releases', $result->reason_code() );
 
-		$mode   = 'operational';
-		$result = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
-		self::assertSame( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $result?->code() );
-		self::assertSame( 'provider_unavailable', $result?->reason_code() );
-		self::assertStringNotContainsString( 'token', $result?->reason_code() ?? '' );
+		$mode->value = 'operational';
+		$result      = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+		self::assertSame( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $result->code() );
+		self::assertSame( 'provider_unavailable', $result->reason_code() );
+		self::assertStringNotContainsString( 'token', $result->reason_code() );
 
-		$mode   = 'hyphenated_stable';
-		$result = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
-		self::assertSame( ReleaseTrackingPreflight::READY, $result?->code() );
-		self::assertSame( '2026-08', $result?->latest_version() );
+		$mode->value = 'hyphenated_stable';
+		$result      = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+		self::assertSame( ReleaseTrackingPreflight::READY, $result->code() );
+		self::assertSame( '2026-08', $result->latest_version() );
 
 		$calls_before_budget = $inspection_calls;
-		$mode                = 'incompatible_budget';
+		$mode->value         = 'incompatible_budget';
 		$result              = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
-		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $result?->code() );
-		self::assertSame( 'release_incompatible', $result?->reason_code() );
+		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $result->code() );
+		self::assertSame( 'release_incompatible', $result->reason_code() );
 		self::assertSame( 2, $inspection_calls - $calls_before_budget );
 		self::assertSame( array(), $store->transitions );
 		self::assertSame( 0, $lock->acquires );
@@ -1972,7 +1976,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$themes    = $this->createStub( ThemeRepository::class );
 		$provider  = new class() implements RepositoryProvider, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseNativeTargets {
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public int $list_calls = 0;
 
@@ -2040,8 +2044,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 		$result = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
 
-		self::assertSame( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $result?->code() );
-		self::assertSame( 'provider_unavailable', $result?->reason_code() );
+		self::assertSame( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $result->code() );
+		self::assertSame( 'provider_unavailable', $result->reason_code() );
 		self::assertSame( 0, $provider->list_calls );
 		self::assertSame( array(), $store->transitions );
 		self::assertSame( 0, $lock->acquires );
@@ -2091,8 +2095,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 		$result = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
 
-		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $result?->code() );
-		self::assertSame( 'no_releases', $result?->reason_code() );
+		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $result->code() );
+		self::assertSame( 'no_releases', $result->reason_code() );
 		self::assertSame( 1, $list_calls );
 		self::assertSame( array(), $store->transitions );
 		self::assertSame( 0, $lock->acquires );
@@ -2416,11 +2420,13 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertTrue( $status->update_available() );
 		self::assertTrue( $facade->refresh( 'theme', 'example-theme', 1, 'nonce' )->successful() );
 		self::assertSame( array( 'theme' ), $refreshes );
-		self::assertSame( 1, $registrar->target( 'theme', 'example-theme' )?->refreshes() );
-		$registrar->target( 'theme', 'example-theme' )?->reject_refresh();
+		$target = $registrar->target( 'theme', 'example-theme' );
+		self::assertInstanceOf( RuntimeUpdaterFacade::class, $target );
+		self::assertSame( 1, $target->refreshes() );
+		$target->reject_refresh();
 		self::assertSame( 'refresh_failed', $facade->refresh( 'theme', 'example-theme', 1, 'nonce' )->code() );
 		self::assertSame( array( 'theme' ), $refreshes );
-		$registrar->target( 'theme', 'example-theme' )?->fail_refresh();
+		$target->fail_refresh();
 		self::assertSame( 'refresh_failed', $facade->refresh( 'theme', 'example-theme', 1, 'nonce' )->code() );
 		self::assertSame( array( 'theme' ), $refreshes );
 		self::assertFalse( $facade->refresh( 'theme', 'example-theme', 2, 'nonce' )->successful() );
@@ -2446,7 +2452,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				return true;
 			}
 
-			/** @var array<string, int|string|null> */
+			/** @var array<string, mixed> */
 			public array $current_status = array(
 				'state'                => 'active',
 				'declaration_accepted' => true,
@@ -2742,8 +2748,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 'release_version_mismatch', $status->failure_code() );
 		self::assertFalse( $status->update_available() );
 		self::assertNotNull( $status->preflight() );
-		self::assertSame( 'v2.1.0', $status->preflight()?->release_tag() );
-		self::assertSame( '2.0.0', $status->preflight()?->package_header_version() );
+		self::assertSame( 'v2.1.0', $status->preflight()->release_tag() );
+		self::assertSame( '2.0.0', $status->preflight()->package_header_version() );
 	}
 
 	public function test_returning_to_branch_remains_truthful_when_provider_and_native_cache_cleanup_fail(): void {
@@ -2773,7 +2779,9 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			)
 		);
 		$registrar->register();
-		$registrar->target( 'plugin', 'example/example.php' )?->fail_refresh();
+		$target = $registrar->target( 'plugin', 'example/example.php' );
+		self::assertInstanceOf( RuntimeUpdaterFacade::class, $target );
+		$target->fail_refresh();
 		$invalidated = array();
 		$lock        = new RuntimeUpdaterLock();
 		$facade      = $this->facade(
@@ -2797,7 +2805,9 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertTrue( $result->successful() );
 		self::assertSame( PackageSource::BRANCH, $store->transitions[0]['new_source'] );
 		self::assertSame( array( 'plugin' ), $invalidated );
-		self::assertSame( 0, $registrar->target( 'plugin', 'example/example.php' )?->refreshes() );
+		$target = $registrar->target( 'plugin', 'example/example.php' );
+		self::assertInstanceOf( RuntimeUpdaterFacade::class, $target );
+		self::assertSame( 0, $target->refreshes() );
 		self::assertSame( 1, $lock->acquires );
 		self::assertSame( array( 'runtime-lock' ), $lock->releases );
 
@@ -2884,7 +2894,9 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$store->channel_changes
 		);
 		self::assertSame( array( 'plugin' ), $invalidated );
-		self::assertSame( 0, $registrar->target( 'plugin', 'example/example.php' )?->refreshes() );
+		$target = $registrar->target( 'plugin', 'example/example.php' );
+		self::assertInstanceOf( RuntimeUpdaterFacade::class, $target );
+		self::assertSame( 0, $target->refreshes() );
 		self::assertSame( array(), $store->transitions );
 		self::assertSame( 1, $lock->acquires );
 		self::assertSame( array( 'runtime-lock' ), $lock->releases );
@@ -3045,7 +3057,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 	private function metadata_only_registry( string $code = 'gh', string $base_url = 'https://github.com/' ): ProviderRegistry {
 		$provider = new class( $code, $base_url ) implements RepositoryProvider, RepositoryReleaseMetadata {
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public function __construct( private string $code, private string $base_url ) {
 			}
@@ -3180,7 +3192,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 	}
 }
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused lock spy belongs with the registrar contract.
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This exact fixture spy remains beside the contract it exercises; its existing class identity and load order are intentional.
 final class RuntimeUpdaterLock extends WordPressUpdaterLock {
 
 	public int $acquires          = 0;

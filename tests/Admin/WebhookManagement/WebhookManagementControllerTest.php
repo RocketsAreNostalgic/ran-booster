@@ -2,9 +2,7 @@
 
 declare( strict_types = 1 );
 
-namespace Tests\Admin\WebhookManagement;
-
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Closely coupled operation fixtures keep this focused integration suite readable.
+namespace RAN\Tests\Admin\WebhookManagement;
 
 use PHPUnit\Framework\TestCase;
 use RAN\AddOn\WebhookAssistance\AssistanceReadiness;
@@ -27,13 +25,14 @@ use RAN\Package;
 use RAN\PackageSource;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
-use Tests\Support\CompleteWebhookManagementCapabilityProvider;
-use Tests\Support\FitnessOnlyWebhookManagementCapabilityProvider;
+use RAN\Tests\Support\CompleteWebhookManagementCapabilityProvider;
+use RAN\Tests\Support\FitnessOnlyWebhookManagementCapabilityProvider;
 
 require_once dirname( __DIR__, 3 ) . '/tests/Support/PackageViewWordPressFunctions.php';
 require_once dirname( __DIR__, 2 ) . '/Support/WebhookManagementCapabilityProviders.php';
 
 if ( ! defined( 'ABSPATH' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 	define( 'ABSPATH', dirname( __DIR__, 2 ) . '/fixtures/wordpress/' );
 }
 
@@ -53,13 +52,15 @@ final class WebhookManagementControllerTest extends TestCase {
 				);
 			}
 			unset( $GLOBALS['_GET'] );
-			self::assertSame(
-				array(
-					'result'      => null,
-					'recovery'    => null,
-					'remediation' => null,
-				),
-				$this->controller()->panel_context()
+			self::assertThat(
+				$this->controller()->panel_context(),
+				self::identicalTo(
+					array(
+						'result'      => null,
+						'recovery'    => null,
+						'remediation' => null,
+					)
+				)
 			);
 		} finally {
 			$_GET = $original;
@@ -417,8 +418,8 @@ final class WebhookManagementControllerTest extends TestCase {
 			'valid'
 		);
 
-		self::assertSame( 'credential_2', $store->record?->management_credential_id() );
-		self::assertSame( 'wh_0123456789abcdef01234567', $store->record?->webhook_profile_id() );
+		self::assertSame( 'credential_2', $store->record->management_credential_id() );
+		self::assertSame( 'wh_0123456789abcdef01234567', $store->record->webhook_profile_id() );
 
 		$this->controller( gateway: $gateway, store: $store )->handle_admin_post(
 			$this->request(
@@ -430,7 +431,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			'valid'
 		);
 
-		self::assertSame( 'credential_3', $store->record?->management_credential_id() );
+		self::assertSame( 'credential_3', $store->record->management_credential_id() );
 	}
 
 	public function test_failed_or_ambiguous_recorded_operations_do_not_replace_the_management_credential_id(): void {
@@ -450,7 +451,7 @@ final class WebhookManagementControllerTest extends TestCase {
 				'valid'
 			);
 
-			self::assertSame( 'credential_1', $store->record?->management_credential_id() );
+			self::assertSame( 'credential_1', $store->record->management_credential_id() );
 		}
 	}
 
@@ -473,7 +474,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'webhook_management_result=configured_pending_delivery', $redirect );
 		self::assertSame( 'needs_verification', $store->record?->status() );
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Test-only scalar inspection; no serialized input is consumed.
-		self::assertStringNotContainsString( 'synthetic-request-credential', serialize( $store->record?->to_array() ) );
+		self::assertStringNotContainsString( 'synthetic-request-credential', serialize( $store->record->to_array() ) );
 	}
 
 	public function test_setup_requires_an_explicit_known_signing_secret_selection(): void {
@@ -758,8 +759,8 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		self::assertStringContainsString( 'webhook_management_result=setup_response_invalid', $redirect );
 		self::assertTrue( $store->record?->requires_hook_identification() );
-		self::assertSame( 'orphaned', $store->record?->status() );
-		self::assertSame( 'wh_0123456789abcdef01234567', $store->record?->webhook_profile_id() );
+		self::assertSame( 'orphaned', $store->record->status() );
+		self::assertSame( 'wh_0123456789abcdef01234567', $store->record->webhook_profile_id() );
 		self::assertSame( 1, count( $gateway->mutation_calls ) );
 
 		$second_redirect = $controller->handle_admin_post( $this->request(), 'valid' );
@@ -781,8 +782,8 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		self::assertSame( 2, $store->save_attempts );
 		self::assertSame( '77', $store->record?->hook_id() );
-		self::assertSame( 'wh_0123456789abcdef01234567', $store->record?->webhook_profile_id() );
-		self::assertSame( 'orphaned', $store->record?->status() );
+		self::assertSame( 'wh_0123456789abcdef01234567', $store->record->webhook_profile_id() );
+		self::assertSame( 'orphaned', $store->record->status() );
 		self::assertStringContainsString( 'webhook_management_result=orphaned', $redirect );
 	}
 
@@ -854,7 +855,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$redirect = $this->controller( gateway: $gateway, store: $store )->handle_admin_post( $this->request(), 'valid' );
 
 		self::assertSame( $current->to_array(), $store->record?->to_array() );
-		self::assertFalse( $store->record?->requires_hook_identification() );
+		self::assertFalse( $store->record->requires_hook_identification() );
 		self::assertSame( 1, $store->save_attempts );
 		self::assertStringContainsString( 'webhook_management_result=record_conflict', $redirect );
 		self::assertStringContainsString( 'recovery_hook=recovery%3Ahook-identity-unavailable', $redirect );
@@ -917,7 +918,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		);
 
 		self::assertSame( array( array( 'check', 'credential_1', '77', 'wh_0123456789abcdef01234567', 1, 'valid' ) ), $gateway->mutation_calls );
-		self::assertSame( 'needs_verification', $store->record?->status() );
+		self::assertSame( 'needs_verification', $store->record->status() );
 		self::assertStringContainsString( 'webhook_management_result=configured_pending_delivery', $redirect );
 	}
 
@@ -932,8 +933,8 @@ final class WebhookManagementControllerTest extends TestCase {
 		);
 
 		self::assertSame( array( array( 'test', 'credential_1', '77', 'wh_0123456789abcdef01234567', 1, 'valid' ) ), $gateway->mutation_calls );
-		self::assertSame( 'needs_verification', $store->record?->status() );
-		self::assertSame( 'credential_1', $store->record?->management_credential_id() );
+		self::assertSame( 'needs_verification', $store->record->status() );
+		self::assertSame( 'credential_1', $store->record->management_credential_id() );
 		self::assertStringContainsString( 'webhook_management_result=ping_requested', $redirect );
 	}
 
@@ -947,7 +948,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			'valid'
 		);
 
-		self::assertSame( 'needs_verification', $store->record?->status() );
+		self::assertSame( 'needs_verification', $store->record->status() );
 		self::assertStringContainsString( 'webhook_management_result=ping_requested', $redirect );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url,WordPress.Security.NonceVerification.Recommended -- Test parses a local redirect into display-only query state.
@@ -983,7 +984,7 @@ final class WebhookManagementControllerTest extends TestCase {
 				'valid'
 			);
 
-			self::assertSame( 'absent' === $expected ? 'remote_missing' : 'configuration_drift', $store->record?->status() );
+			self::assertSame( 'absent' === $expected ? 'remote_missing' : 'configuration_drift', $store->record->status() );
 			self::assertStringContainsString( 'webhook_management_result=' . ( 'absent' === $expected ? 'remote_missing' : 'configuration_drift' ), $redirect );
 		}
 	}
@@ -1009,7 +1010,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			'valid'
 		);
 
-		self::assertSame( 'configuration_drift', $store->record?->status() );
+		self::assertSame( 'configuration_drift', $store->record->status() );
 		self::assertStringContainsString( 'webhook_management_result=configuration_drift', $redirect );
 
 		$gateway->result = $this->operation_result( 'failed', 'ping_delivery_failed', '77', delivery: 'absent' );
@@ -1019,7 +1020,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			'valid'
 		);
 
-		self::assertSame( 'remote_missing', $store->record?->status() );
+		self::assertSame( 'remote_missing', $store->record->status() );
 		self::assertStringContainsString( 'webhook_management_result=remote_missing', $redirect );
 	}
 
@@ -1036,7 +1037,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		);
 
 		self::assertSame( array( array( 'remove', 'credential_1', '77', 'wh_0123456789abcdef01234567', 1, 'valid' ) ), $gateway->mutation_calls );
-		self::assertSame( 'removal_pending', $store->record?->status() );
+		self::assertSame( 'removal_pending', $store->record->status() );
 		self::assertStringContainsString( 'webhook_management_result=remove_outcome_unknown', $redirect );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url,WordPress.Security.NonceVerification.Recommended -- Test parses a local redirect into display-only query state.
@@ -1079,7 +1080,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			'valid'
 		);
 
-		self::assertSame( $current->to_array(), $store->record?->to_array() );
+		self::assertSame( $current->to_array(), $store->record->to_array() );
 		self::assertStringContainsString( 'webhook_management_result=record_conflict', $redirect );
 	}
 
@@ -1095,7 +1096,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			'valid'
 		);
 
-		self::assertSame( 'remote_missing', $store->record?->status() );
+		self::assertSame( 'remote_missing', $store->record->status() );
 		self::assertNull( $interaction->outcome, 'Authoritative absence must refresh the page so the persisted remote-missing state is rendered.' );
 		self::assertStringContainsString( 'webhook_management_result=remote_missing', $redirect );
 	}
@@ -1113,8 +1114,8 @@ final class WebhookManagementControllerTest extends TestCase {
 			'valid'
 		);
 
-		self::assertSame( 'needs_verification', $store->record?->status() );
-		self::assertSame( 'https://hooks.example.test/previous', $store->record?->endpoint() );
+		self::assertSame( 'needs_verification', $store->record->status() );
+		self::assertSame( 'https://hooks.example.test/previous', $store->record->endpoint() );
 		self::assertNull( $interaction->outcome, 'Uncertain mutations must retain the refresh path so the persisted state is rendered.' );
 		self::assertStringContainsString( 'webhook_management_result=reconfigure_readback_unavailable', $redirect );
 
@@ -1206,7 +1207,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			'valid'
 		);
 
-		self::assertSame( 'configuration_drift', $store->record?->status() );
+		self::assertSame( 'configuration_drift', $store->record->status() );
 		self::assertStringContainsString( 'webhook_management_result=configuration_drift', $redirect );
 
 		$html = $this->render_panel( $gateway, $store );
@@ -1227,7 +1228,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			'valid'
 		);
 
-		self::assertSame( 'needs_verification', $store->record?->status() );
+		self::assertSame( 'needs_verification', $store->record->status() );
 		self::assertStringContainsString( 'webhook_management_result=operation_lock_release_failed', $redirect );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url,WordPress.Security.NonceVerification.Recommended -- Test parses a local redirect into display-only query state.
@@ -1260,9 +1261,9 @@ final class WebhookManagementControllerTest extends TestCase {
 			self::assertInstanceOf( AdminInteractionOutcome::class, $interaction->outcome );
 		}
 
-		self::assertSame( AdminInteractionOutcome::VALIDATION_FAILURE, $interaction->outcome?->kind() );
-		self::assertSame( 422, $interaction->outcome?->status() );
-		self::assertStringContainsString( 'No remote hook was established', $interaction->outcome?->message() ?? '' );
+		self::assertSame( AdminInteractionOutcome::VALIDATION_FAILURE, $interaction->outcome->kind() );
+		self::assertSame( 422, $interaction->outcome->status() );
+		self::assertStringContainsString( 'No remote hook was established', $interaction->outcome->message() );
 	}
 
 	public function test_failed_state_cannot_smuggle_a_verified_success_code_into_the_inline_response(): void {
@@ -1279,8 +1280,8 @@ final class WebhookManagementControllerTest extends TestCase {
 		}
 
 		self::assertNull( $store->record );
-		self::assertSame( AdminInteractionOutcome::VALIDATION_FAILURE, $interaction->outcome?->kind() );
-		self::assertStringContainsString( 'could not confirm', $interaction->outcome?->message() ?? '' );
+		self::assertSame( AdminInteractionOutcome::VALIDATION_FAILURE, $interaction->outcome->kind() );
+		self::assertStringContainsString( 'could not confirm', $interaction->outcome->message() );
 	}
 
 	public function test_ambiguous_setup_keeps_the_refresh_path_for_recovery_state(): void {
@@ -1521,6 +1522,7 @@ final class WebhookManagementControllerTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This fixture shares the focused operation suite that owns its state and assertions.
 final class OperationStoreFixture implements InstallationStore {
 	public ?InstallationRecord $record = null;
 	public int $all_attempts           = 0;
@@ -1601,6 +1603,7 @@ final class OperationStoreFixture implements InstallationStore {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This fixture shares the focused operation suite that owns its state and assertions.
 final class OperationGatewayFixture implements WebhookAssistanceFacade {
 	/** @var list<array<mixed>> */
 	public array $calls = array();
@@ -1783,9 +1786,11 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This fixture shares the focused operation suite that owns its state and assertions.
 final class AdminInteractionResponded extends \RuntimeException {
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This fixture shares the focused operation suite that owns its state and assertions.
 final class CapturingAdminInteractionFacade implements AdminInteractionFacade {
 	public ?AdminInteractionOutcome $outcome = null;
 

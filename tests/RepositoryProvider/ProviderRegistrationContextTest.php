@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\RepositoryProvider;
+namespace RAN\Tests\RepositoryProvider;
 
 use PHPUnit\Framework\TestCase;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidence;
@@ -13,7 +13,7 @@ use RAN\RepositoryProvider\InvalidProviderPolicy;
 use RAN\RepositoryProvider\ProviderRegistrationContext;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
-use Tests\RepositoryProvider\Support\ExternalFixtureProvider;
+use RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider;
 
 final class ProviderRegistrationContextTest extends TestCase {
 
@@ -27,9 +27,6 @@ final class ProviderRegistrationContextTest extends TestCase {
 			},
 		);
 		$methods     = get_class_methods( ProviderRegistrationContext::class );
-		if ( false === $methods ) {
-			self::fail( 'ProviderRegistrationContext methods could not be inspected.' );
-		}
 		sort( $methods );
 
 		self::assertSame( 0, $resolutions );

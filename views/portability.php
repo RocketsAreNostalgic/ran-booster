@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Included view bindings are supplied by the caller; declarations and hooks still require prefixes.
 
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
@@ -25,7 +25,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 	$buffer_level = ob_get_level();
 	ob_start();
 	try {
-		do_action( $hook );
+		do_action( $hook ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- Both callers supply literal ran_booster_portability_* extension hooks.
 		$markup = (string) ob_get_clean();
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Add-ons own and escape their bounded extension markup.
 		echo $markup;

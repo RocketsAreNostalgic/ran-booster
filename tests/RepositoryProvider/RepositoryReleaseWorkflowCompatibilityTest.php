@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\RepositoryProvider;
+namespace RAN\Tests\RepositoryProvider;
 
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
@@ -32,8 +32,8 @@ final class RepositoryReleaseWorkflowCompatibilityTest extends TestCase {
 			}
 		}
 
-		self::assertTrue( class_exists( 'RANBoosterWorkflowV3FeatureDetectionProvider', false ) );
-		self::assertFalse( class_exists( 'RANBoosterWorkflowV3FeatureDetectionProviderV3', false ) );
+		self::assertTrue( class_exists( 'RAN_Booster_WorkflowV3FeatureDetectionProvider', false ) );
+		self::assertFalse( class_exists( 'RAN_Booster_WorkflowV3FeatureDetectionProviderV3', false ) );
 	}
 
 	public function test_api_three_is_provider_neutral_facet(): void {

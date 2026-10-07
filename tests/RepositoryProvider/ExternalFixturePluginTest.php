@@ -2,13 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Tests\RepositoryProvider;
+namespace RAN\Tests\RepositoryProvider;
 
 require_once __DIR__ . '/../Support/ExternalFixturePluginWordPressFunctions.php';
 require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
 
 	// Direct temporary sidecar operations prove the external credential boundary.
-	// phpcs:disable WordPress.WP.AlternativeFunctions
 
 	use PHPUnit\Framework\Attributes\PreserveGlobalState;
 	use PHPUnit\Framework\Attributes\DataProvider;
@@ -37,10 +36,10 @@ use RAN\RepositoryProvider\RepositoryReference;
 	use RAN\RepositoryProvider\WebhookNormalizer;
 	use RAN\RepositoryProvider\WebhookRequest;
 use RAN\Secrets\SecretsFile;
-use Tests\Secrets\SecretsFileTestFactory;
+use RAN\Tests\Secrets\SecretsFileTestFactory;
 use RAN\Storage\CredentialUsageReader;
-use Tests\Support\CredentialUsageDatabase;
-	use RANBoosterFixtureProvider\Provider;
+use RAN\Tests\Support\CredentialUsageDatabase;
+	use RAN_Booster_FixtureProvider\Provider;
 
 final class ExternalFixturePluginTest extends TestCase {
 
@@ -258,7 +257,9 @@ final class ExternalFixturePluginTest extends TestCase {
 			$management = $registry->require_capability( 'fixture-provider', RepositoryWebhookManagement::class );
 			$operation  = $management->setup( $resolved['provider_repository_id'], $resolved['repository'], 'https://site.example/webhook', $credential_id, str_repeat( 's', 32 ) );
 			self::assertSame( 'configured_pending_delivery', $operation->code() );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Native JSON encoding preserves the exact fixture payload or secret-containment evidence without a WordPress runtime.
 			self::assertStringNotContainsString( 'fixture_not-a-real-secret', json_encode( $operation->to_array(), JSON_THROW_ON_ERROR ) );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Native JSON encoding preserves the exact fixture payload or secret-containment evidence without a WordPress runtime.
 			self::assertStringNotContainsString( str_repeat( 's', 32 ), json_encode( $operation->to_array(), JSON_THROW_ON_ERROR ) );
 
 			$normalizer = $registry->require_capability( 'fixture-provider', WebhookNormalizer::class );
@@ -406,6 +407,7 @@ final class ExternalFixturePluginTest extends TestCase {
 	private function clean_sidecar( string $path ): void {
 		foreach ( array( $path, $path . '.lock' ) as $candidate ) {
 			if ( is_file( $candidate ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this test-owned temporary fixture during cleanup.
 				unlink( $candidate );
 			}
 		}

@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tests\Logging;
+namespace RAN\Tests\Logging;
 
 // Direct local filesystem operations are the behavior under test.
-// phpcs:disable WordPress.WP.AlternativeFunctions
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
@@ -29,6 +28,7 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		$this->capture_path = $this->directory . '/ran-booster-debug.php';
 		$this->now          = strtotime( '2026-07-23T12:00:00Z' );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
 	}
 
@@ -42,12 +42,15 @@ final class TemporaryDebugCaptureTest extends TestCase {
 			) as $path
 		) {
 			if ( is_link( $path ) || is_file( $path ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 				unlink( $path );
 			}
 		}
 
 		if ( is_dir( $this->directory ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 			chmod( $this->directory, 0700 );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 			rmdir( $this->directory );
 		}
 	}
@@ -64,7 +67,9 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		self::assertSame( '2026-07-24T13:00:00Z', $started['expires_at'] );
 		self::assertSame( 0600, fileperms( $this->capture_path ) & 0777 );
 		self::assertSame( 0600, fileperms( $this->capture_path . '.lock' ) & 0777 );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		self::assertStringStartsWith( "<?php exit; ?>\n", file_get_contents( $this->capture_path ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		self::assertStringContainsString( '"owner":"ran-booster"', file_get_contents( $this->capture_path ) );
 
 		self::assertTrue( $capture->append( "[ran-booster] first\nline" ) );
@@ -96,9 +101,11 @@ final class TemporaryDebugCaptureTest extends TestCase {
 	public function test_managed_storage_deletion_removes_owned_capture_and_exact_lock_idempotently(): void {
 		$capture = $this->capture();
 		$capture->start();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		$contents = file_get_contents( $this->capture_path );
 
 		$capture->assert_managed_storage_deletable();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		self::assertSame( $contents, file_get_contents( $this->capture_path ) );
 
 		$capture->delete_managed_storage();
@@ -114,6 +121,7 @@ final class TemporaryDebugCaptureTest extends TestCase {
 	public function test_managed_storage_deletion_removes_an_orphaned_exact_lock(): void {
 		$capture = $this->capture();
 		$capture->start();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		self::assertTrue( unlink( $this->capture_path ) );
 
 		$capture->delete_managed_storage();
@@ -125,6 +133,7 @@ final class TemporaryDebugCaptureTest extends TestCase {
 	public function test_managed_storage_deletion_secures_a_new_lock_when_the_capture_lock_is_missing(): void {
 		$capture = $this->capture();
 		$capture->start();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		self::assertTrue( unlink( $this->capture_path . '.lock' ) );
 
 		$original_umask = umask( 0022 );
@@ -140,7 +149,9 @@ final class TemporaryDebugCaptureTest extends TestCase {
 
 	public function test_managed_storage_deletion_retains_foreign_or_unsafe_material(): void {
 		$capture = $this->capture();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		file_put_contents( $this->capture_path, "<?php exit; ?>\n{\"owner\":\"someone-else\"}\n" );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		chmod( $this->capture_path, 0600 );
 
 		$this->assert_mutation_refused(
@@ -151,8 +162,11 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		self::assertFileExists( $this->capture_path );
 		self::assertFileExists( $this->capture_path . '.lock' );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		unlink( $this->capture_path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		file_put_contents( $this->capture_path, 'unsafe' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		chmod( $this->capture_path, 0644 );
 		$this->assert_mutation_refused(
 			static function () use ( $capture ): void {
@@ -196,8 +210,11 @@ final class TemporaryDebugCaptureTest extends TestCase {
 			'stopped_at'   => $stopped_at,
 			'expires_at'   => '2026-07-24T13:00:00Z',
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Native JSON encodes the isolated fixture without requiring WordPress bootstrap.
 		$contents = "<?php exit; ?>\n" . json_encode( $metadata ) . "\n";
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		file_put_contents( $this->capture_path, $contents );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		chmod( $this->capture_path, 0600 );
 
 		$capture = $this->capture();
@@ -211,6 +228,7 @@ final class TemporaryDebugCaptureTest extends TestCase {
 				$capture->delete_managed_storage();
 			}
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		self::assertSame( $contents, file_get_contents( $this->capture_path ) );
 	}
 
@@ -248,6 +266,7 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		clearstatcache( true, $this->capture_path );
 		self::assertLessThanOrEqual( 262144, filesize( $this->capture_path ) );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		$lines = explode( "\n", file_get_contents( $this->capture_path ) );
 		array_shift( $lines );
 		array_shift( $lines );
@@ -259,21 +278,29 @@ final class TemporaryDebugCaptureTest extends TestCase {
 	public function test_foreign_malformed_and_unsafe_files_are_never_overwritten_or_deleted(): void {
 		$capture = $this->capture();
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		file_put_contents( $this->capture_path, "<?php exit; ?>\n{\"owner\":\"someone-else\"}\n" );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		chmod( $this->capture_path, 0600 );
 		self::assertSame( 'malformed', $capture->snapshot()['state'] );
 		$this->assert_mutation_refused( static fn(): array => $capture->start() );
 		$this->assert_mutation_refused( static fn(): bool => $capture->delete() );
 		self::assertFileExists( $this->capture_path );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		unlink( $this->capture_path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		file_put_contents( $this->capture_path, "not-a-capture\n" );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		chmod( $this->capture_path, 0600 );
 		self::assertSame( 'malformed', $capture->snapshot()['state'] );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		unlink( $this->capture_path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		file_put_contents( $this->directory . '/link-target', 'foreign' );
 		symlink( $this->directory . '/link-target', $this->capture_path );
+		// @phpstan-ignore staticMethod.alreadyNarrowedType (Repeat the assertion after external database filesystem or scheduler state changes; earlier narrowing must not replace the runtime check.)
 		self::assertSame( 'malformed', $capture->snapshot()['state'] );
 		$this->assert_mutation_refused( static fn(): array => $capture->start() );
 		self::assertTrue( is_link( $this->capture_path ) );
@@ -287,10 +314,14 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		self::assertSame( 'active', $capture->snapshot()['state'] );
 		self::assertTrue( $capture->append( '[ran-booster] accepted' ) );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		unlink( $this->directory . '/link-target' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		unlink( $this->capture_path . '.lock' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		file_put_contents( $this->directory . '/link-target', '' );
 		self::assertTrue( link( $this->directory . '/link-target', $this->capture_path . '.lock' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		chmod( $this->capture_path . '.lock', 0600 );
 		self::assertSame( 'active', $capture->snapshot()['state'] );
 	}
@@ -298,11 +329,14 @@ final class TemporaryDebugCaptureTest extends TestCase {
 	public function test_symlinked_lock_is_refused(): void {
 		$capture = $this->capture();
 		$capture->start();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		unlink( $this->capture_path . '.lock' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		file_put_contents( $this->directory . '/link-target', 'foreign' );
 		self::assertTrue( symlink( $this->directory . '/link-target', $this->capture_path . '.lock' ) );
 
 		self::assertSame( 'unavailable', $capture->snapshot()['state'] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		self::assertSame( 'foreign', file_get_contents( $this->directory . '/link-target' ) );
 	}
 
@@ -315,11 +349,14 @@ final class TemporaryDebugCaptureTest extends TestCase {
 
 		$available = $this->capture();
 		$available->start();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		chmod( $this->capture_path, 0644 );
 		self::assertSame( 'malformed', $available->snapshot()['state'] );
 		self::assertFalse( $available->append( '[ran-booster] fail open' ) );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		chmod( $this->capture_path, 0600 );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		chmod( $this->directory, 0755 );
 		self::assertSame( 'unavailable', $available->snapshot()['state'] );
 		$this->assert_mutation_refused( static fn(): array => $available->start() );
@@ -337,7 +374,7 @@ final class TemporaryDebugCaptureTest extends TestCase {
 			$operation();
 			self::fail( 'Expected an unsafe capture mutation to be refused.' );
 		} catch ( RuntimeException ) {
-			self::assertTrue( true );
+			$this->addToAssertionCount( 1 );
 		}
 	}
 }

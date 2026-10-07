@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests;
+namespace RAN\Tests;
 
 use PHPUnit\Framework\TestCase;
 use RAN\AbstractPackage;
@@ -15,6 +15,26 @@ use ReflectionClass;
 use RuntimeException;
 
 final class PackageMagicReadTest extends TestCase {
+
+	public function test_plugin_factory_accepts_owned_named_arguments_with_unchanged_headers(): void {
+		$headers = array(
+			'Name'        => 'Example plugin',
+			'PluginURI'   => 'https://example.org/plugin',
+			'Version'     => '2.3.4',
+			'Description' => 'Example description',
+			'Author'      => 'Example author',
+			'AuthorURI'   => 'https://example.org/author',
+			'TextDomain'  => 'example-plugin',
+			'DomainPath'  => '/languages',
+			'Network'     => true,
+			'Title'       => 'Example title',
+			'AuthorName'  => 'Example author name',
+		);
+		$named   = Plugin::from_wp_array( file: 'example/example.php', plugin_data: $headers );
+		self::assertEquals( Plugin::from_wp_array( 'example/example.php', $headers ), $named );
+		self::assertSame( 'example/example.php', $named->get_identifier() );
+		self::assertSame( '2.3.4', $named->get_version() );
+	}
 
 	public function test_existing_getter_property_reads_retain_their_values_and_case_insensitivity(): void {
 		foreach ( array(
@@ -52,23 +72,30 @@ final class PackageMagicReadTest extends TestCase {
 			);
 			foreach ( $expected as $property => $value ) {
 				foreach ( array( $property, ucfirst( $property ), strtoupper( $property ), strtolower( $property ) ) as $case ) {
+					// @phpstan-ignore property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.protected, property.protected, property.protected (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
 					self::assertSame( $value, $package->$case, $class . '::$' . $case );
 				}
 				$snake = strtolower( (string) preg_replace( '/(?<!^)[A-Z]/', '_$0', $property ) );
 				self::assertNull( $package->{'_' . $snake} );
 				if ( $snake !== $property ) {
+					// @phpstan-ignore property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
 					self::assertNull( $package->{'_' . $property} );
 					if ( in_array( $snake, array( 'deployment_policy', 'source_revision', 'deployment_ref' ), true ) ) {
+						// @phpstan-ignore property.protected, property.protected, property.protected (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
 						self::assertSame( $value, $package->$snake );
 					} else {
 						self::assertNull( $package->$snake );
 					}
 				}
 			}
+			// @phpstan-ignore property.protected (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
 			self::assertSame( 'installation-fallback', $package->installation_slug );
+			// @phpstan-ignore property.notFound (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
 			self::assertNull( $package->_installation_slug );
 			self::assertSame( $identifier, (string) $package );
+			// @phpstan-ignore property.notFound (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
 			self::assertNull( $package->unknown );
+			// @phpstan-ignore property.notFound (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
 			self::assertNull( $package->{''} );
 		}
 	}
@@ -83,9 +110,11 @@ final class PackageMagicReadTest extends TestCase {
 			foreach ( $fields as $field ) {
 				$value = 'header-' . $field;
 				$reflection->getProperty( $field )->setValue( $package, $value );
+				// @phpstan-ignore property.protected, property.protected, property.protected, property.protected, property.protected, property.protected (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
 				self::assertSame( $value, $package->$field );
 				$old_field = lcfirst( str_replace( ' ', '', ucwords( str_replace( '_', ' ', $field ) ) ) );
 				self::assertNull( $package->$old_field );
+				// @phpstan-ignore property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
 				self::assertNull( $package->{strtoupper( $field )} );
 			}
 		}
@@ -118,19 +147,27 @@ final class PackageMagicReadTest extends TestCase {
 			}
 		};
 
+		// @phpstan-ignore property.protected (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
 		self::assertSame( 'getter-version', $package->version );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Intentional case-variant probe of the magic getter contract.
-		self::assertSame( 'getter-version', $package->VERSION );
+		self::assertSame( 'getter-version', $package->VERSION ); // @phpstan-ignore property.notFound (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
+		// @phpstan-ignore property.protected (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
 		self::assertSame( 'raw-value', $package->raw );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Intentional case-variant probe of the magic getter contract.
-		self::assertNull( $package->RAW );
+		self::assertNull( $package->RAW ); // @phpstan-ignore property.notFound (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
+		// @phpstan-ignore property.protected (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
 		self::assertNull( $package->absent );
+		// @phpstan-ignore property.notFound (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
 		self::assertNull( $package->unknown );
+		// @phpstan-ignore property.notFound (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
 		self::assertNull( $package->{''} );
+		// @phpstan-ignore property.protected (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
 		self::assertSame( 'legacy-custom', $package->custom );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Intentional case-variant probe of the magic getter contract.
-		self::assertSame( 'legacy-custom', $package->CUSTOM );
+		self::assertSame( 'legacy-custom', $package->CUSTOM ); // @phpstan-ignore property.notFound (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
+		// @phpstan-ignore property.notFound (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
 		self::assertSame( 'underscore-custom', $package->_custom );
+		// @phpstan-ignore property.protected (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
 		self::assertSame( 'raw-underscore-identifier', $package->_identifier );
 		self::assertSame( 'override-id', (string) $package );
 	}
@@ -150,6 +187,7 @@ final class PackageMagicReadTest extends TestCase {
 
 		$this->expectException( RuntimeException::class );
 		$this->expectExceptionMessage( 'getter failure' );
+		// @phpstan-ignore property.protected, expr.resultUnused (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
 		$package->version;
 	}
 }

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin\ReleaseManagement\Support;
+namespace RAN\Tests\Admin\ReleaseManagement\Support;
 
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
 use RAN\Admin\ReleaseManagement\ManagedReleaseBrowser;
@@ -39,7 +39,7 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, Manage
 	/** @var null|callable():void */
 	public $after_candidate_inspection = null;
 
-	/** @param array<string,ReleaseTrackingStatus> $releaseStatuses */
+	/** @param array<string,ReleaseTrackingStatus> $release_statuses */
 	public function __construct(
 		private ReleaseTrackingStatus $release_status,
 		private array $release_statuses = array()

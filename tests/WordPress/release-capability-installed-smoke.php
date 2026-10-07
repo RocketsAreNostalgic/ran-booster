@@ -16,154 +16,154 @@ require_once ABSPATH . 'wp-admin/includes/plugin.php';
 require_once ABSPATH . 'wp-admin/includes/theme.php';
 require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
 
-$expected_root    = getenv( 'RAN_BOOSTER_WORDPRESS_PATH' );
-$expected_url     = getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_TEST_URL' );
-$archive_root     = getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_ARCHIVE_ROOT' );
-$wordpress_root   = realpath( ABSPATH );
-$content_root     = realpath( WP_CONTENT_DIR );
-$plugin_root      = realpath( WP_PLUGIN_DIR );
-$theme_root       = realpath( get_theme_root() );
-$fixture_plugin   = WP_PLUGIN_DIR . '/ran-booster-release-capability-provider/ran-booster-release-capability-provider.php';
-$disposable_mark  = ABSPATH . '.ran-booster-disposable-test-site';
-$expected_targets = array(
+$ran_booster_expected_root    = getenv( 'RAN_BOOSTER_WORDPRESS_PATH' );
+$ran_booster_expected_url     = getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_TEST_URL' );
+$ran_booster_archive_root     = getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_ARCHIVE_ROOT' );
+$ran_booster_wordpress_root   = realpath( ABSPATH );
+$ran_booster_content_root     = realpath( WP_CONTENT_DIR );
+$ran_booster_plugin_root      = realpath( WP_PLUGIN_DIR );
+$ran_booster_theme_root       = realpath( get_theme_root() );
+$ran_booster_fixture_plugin   = WP_PLUGIN_DIR . '/ran-booster-release-capability-provider/ran-booster-release-capability-provider.php';
+$ran_booster_disposable_mark  = ABSPATH . '.ran-booster-disposable-test-site';
+$ran_booster_expected_targets = array(
 	WP_PLUGIN_DIR . '/ran-booster-p2-fixture-plugin',
 	get_theme_root() . '/ran-booster-p2-fixture-theme',
 );
-if ( ! is_string( $expected_root ) || false === $wordpress_root || realpath( $expected_root ) !== $wordpress_root
-	|| false === $content_root || $content_root !== $wordpress_root . '/wp-content'
-	|| false === $plugin_root || $plugin_root !== $content_root . '/plugins'
-	|| false === $theme_root || $theme_root !== $content_root . '/themes'
+if ( ! is_string( $ran_booster_expected_root ) || false === $ran_booster_wordpress_root || realpath( $ran_booster_expected_root ) !== $ran_booster_wordpress_root
+	|| false === $ran_booster_content_root || $ran_booster_content_root !== $ran_booster_wordpress_root . '/wp-content'
+	|| false === $ran_booster_plugin_root || $ran_booster_plugin_root !== $ran_booster_content_root . '/plugins'
+	|| false === $ran_booster_theme_root || $ran_booster_theme_root !== $ran_booster_content_root . '/themes'
 	// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Capture the expected fixture value before WordPress filters can mutate global test state.
-	|| 'http://localhost' !== $expected_url || $expected_url !== get_option( 'siteurl' )
-	|| is_link( $disposable_mark ) || ! is_file( $disposable_mark )
+	|| 'http://localhost' !== $ran_booster_expected_url || $ran_booster_expected_url !== get_option( 'siteurl' )
+	|| is_link( $ran_booster_disposable_mark ) || ! is_file( $ran_booster_disposable_mark )
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
-	|| "RAN Booster disposable test site\n" !== file_get_contents( $disposable_mark )
+	|| "RAN Booster disposable test site\n" !== file_get_contents( $ran_booster_disposable_mark )
 	|| is_link( WP_PLUGIN_DIR . '/ran-booster' ) || ! is_file( WP_PLUGIN_DIR . '/ran-booster/ran-booster.php' )
-	|| is_link( dirname( $fixture_plugin ) ) || ! is_file( $fixture_plugin ) || ! is_plugin_active( plugin_basename( $fixture_plugin ) )
-	|| ! is_string( $archive_root ) || false === realpath( $archive_root ) ) {
+	|| is_link( dirname( $ran_booster_fixture_plugin ) ) || ! is_file( $ran_booster_fixture_plugin ) || ! is_plugin_active( plugin_basename( $ran_booster_fixture_plugin ) )
+	|| ! is_string( $ran_booster_archive_root ) || false === realpath( $ran_booster_archive_root ) ) {
 	throw new RuntimeException( 'The installed release-capability smoke requires the exact disposable site and fixture.' );
 }
-foreach ( $expected_targets as $target ) {
-	if ( is_link( $target ) || file_exists( $target ) ) {
+foreach ( $ran_booster_expected_targets as $ran_booster_target ) {
+	if ( is_link( $ran_booster_target ) || file_exists( $ran_booster_target ) ) {
 		throw new RuntimeException( 'A disposable release-capability target already exists.' );
 	}
 }
-foreach ( array( 'plugin', 'theme' ) as $archive_type ) {
-	$archive = get_option( 'ran_booster_p2_' . $archive_type . '_archive', '' );
-	if ( ! is_string( $archive ) || false === realpath( $archive ) || realpath( dirname( $archive ) ) !== realpath( $archive_root )
-		|| is_link( $archive ) || ! is_file( $archive ) || 'zip' !== pathinfo( $archive, PATHINFO_EXTENSION ) ) {
+foreach ( array( 'plugin', 'theme' ) as $ran_booster_archive_type ) {
+	$ran_booster_archive = get_option( 'ran_booster_p2_' . $ran_booster_archive_type . '_archive', '' );
+	if ( ! is_string( $ran_booster_archive ) || false === realpath( $ran_booster_archive ) || realpath( dirname( $ran_booster_archive ) ) !== realpath( $ran_booster_archive_root )
+		|| is_link( $ran_booster_archive ) || ! is_file( $ran_booster_archive ) || 'zip' !== pathinfo( $ran_booster_archive, PATHINFO_EXTENSION ) ) {
 		throw new RuntimeException( 'A disposable release-capability archive is outside the exact archive root.' );
 	}
 }
 
-$container = require __DIR__ . '/core-container-fixture.php';
-$facade    = $container->make( ProspectiveReleaseFacade::class );
+$ran_booster_container = require __DIR__ . '/core-container-fixture.php';
+$ran_booster_facade    = $ran_booster_container->make( ProspectiveReleaseFacade::class );
 // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
-$plugins   = $container->make( PluginRepository::class );
-$themes    = $container->make( ThemeRepository::class );
-$installed = array();
+$plugins               = $ran_booster_container->make( PluginRepository::class );
+$ran_booster_themes    = $ran_booster_container->make( ThemeRepository::class );
+$ran_booster_installed = array();
 
-$assert_result = static function ( object $result, string $code ): void {
-	if ( ! $result->successful() || $code !== $result->code() ) {
+$ran_booster_assert_result = static function ( object $ran_booster_result, string $code ): void {
+	if ( ! $ran_booster_result->successful() || $code !== $ran_booster_result->code() ) {
 		// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
-		throw new RuntimeException( 'Unexpected prospective release result: ' . $result->code() );
+		throw new RuntimeException( 'Unexpected prospective release result: ' . $ran_booster_result->code() );
 	}
 };
 
 try {
 	// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
 	foreach ( array( 'plugin', 'theme' ) as $type ) {
-		$request = array(
+		$ran_booster_request = array(
 			'provider'      => 'p2-release',
 			'repository'    => 'fixtures/' . $type,
 			'credential_id' => '',
 			'branch'        => 'main',
 		);
-		$list    = $facade->list_candidates(
+		$ran_booster_list    = $ran_booster_facade->list_candidates(
 			$type,
-			$request,
+			$ran_booster_request,
 			'stable',
-			wp_create_nonce( $facade->nonce_action( 'list_candidates', $type ) )
+			wp_create_nonce( $ran_booster_facade->nonce_action( 'list_candidates', $type ) )
 		);
-		$assert_result( $list, 'release_candidates_available' );
-		$candidate = $list->data()['candidates'][0] ?? null;
-		if ( ! is_array( $candidate )
-			|| '42' !== ( $candidate['release_id'] ?? null )
-			|| 'v2.0.0' !== ( $candidate['tag'] ?? null )
-			|| '2.0.0' !== ( $candidate['version'] ?? null )
-			|| false !== ( $candidate['prerelease'] ?? null )
+		$ran_booster_assert_result( $ran_booster_list, 'release_candidates_available' );
+		$ran_booster_candidate = $ran_booster_list->data()['candidates'][0] ?? null;
+		if ( ! is_array( $ran_booster_candidate )
+			|| '42' !== ( $ran_booster_candidate['release_id'] ?? null )
+			|| 'v2.0.0' !== ( $ran_booster_candidate['tag'] ?? null )
+			|| '2.0.0' !== ( $ran_booster_candidate['version'] ?? null )
+			|| false !== ( $ran_booster_candidate['prerelease'] ?? null )
 		) {
 			throw new RuntimeException( 'The installed candidate projection is invalid.' );
 		}
 
-		$inspection = $facade->inspect(
+		$ran_booster_inspection = $ran_booster_facade->inspect(
 			$type,
-			$request,
+			$ran_booster_request,
 			'42',
 			'v2.0.0',
 			'stable',
-			wp_create_nonce( $facade->nonce_action( 'inspect', $type ) )
+			wp_create_nonce( $ran_booster_facade->nonce_action( 'inspect', $type ) )
 		);
-		$assert_result( $inspection, 'release_ready' );
-		$evidence = $inspection->data();
-		if ( 'v2:' . str_repeat( 'b', 64 ) !== ( $evidence['fingerprint'] ?? null ) ) {
+		$ran_booster_assert_result( $ran_booster_inspection, 'release_ready' );
+		$ran_booster_evidence = $ran_booster_inspection->data();
+		if ( 'v2:' . str_repeat( 'b', 64 ) !== ( $ran_booster_evidence['fingerprint'] ?? null ) ) {
 			throw new RuntimeException( 'The installed release fingerprint is invalid.' );
 		}
 
-		$result = $facade->install(
+		$ran_booster_result = $ran_booster_facade->install(
 			$type,
-			$request,
+			$ran_booster_request,
 			'42',
 			'v2.0.0',
-			$evidence['fingerprint'],
+			$ran_booster_evidence['fingerprint'],
 			'stable',
-			wp_create_nonce( $facade->nonce_action( 'install', $type ) )
+			wp_create_nonce( $ran_booster_facade->nonce_action( 'install', $type ) )
 		);
-		$assert_result( $result, 'installed' );
+		$ran_booster_assert_result( $ran_booster_result, 'installed' );
 
-		$identifier = 'plugin' === $type
+		$ran_booster_identifier = 'plugin' === $type
 			? 'ran-booster-p2-fixture-plugin/ran-booster-p2-fixture-plugin.php'
 			: 'ran-booster-p2-fixture-theme';
-		$package    = 'plugin' === $type
-			? $plugins->booster_plugin_from_file( $identifier )
-			: $themes->booster_theme_from_stylesheet( $identifier );
-		if ( '2.0.0' !== $package->get_version()
-			|| PackageSource::RELEASE_ASSET !== $package->get_source()
-			|| 1 !== $package->get_source_revision()
+		$ran_booster_package    = 'plugin' === $type
+			? $plugins->booster_plugin_from_file( $ran_booster_identifier )
+			: $ran_booster_themes->booster_theme_from_stylesheet( $ran_booster_identifier );
+		if ( '2.0.0' !== $ran_booster_package->get_version()
+			|| PackageSource::RELEASE_ASSET !== $ran_booster_package->get_source()
+			|| 1 !== $ran_booster_package->get_source_revision()
 		) {
 			throw new RuntimeException( 'The installed release package readback is invalid.' );
 		}
-		$artifact = get_option( 'ran_booster_p2_last_artifact', '' );
-		if ( ! is_string( $artifact ) || '' === $artifact || file_exists( $artifact ) || is_link( $artifact ) ) {
+		$ran_booster_artifact = get_option( 'ran_booster_p2_last_artifact', '' );
+		if ( ! is_string( $ran_booster_artifact ) || '' === $ran_booster_artifact || file_exists( $ran_booster_artifact ) || is_link( $ran_booster_artifact ) ) {
 			throw new RuntimeException( 'The acquired release artifact was not cleaned exactly once.' );
 		}
-		$installed[ $type ] = $identifier;
+		$ran_booster_installed[ $type ] = $ran_booster_identifier;
 	}
 } finally {
-	$cleanup = ! (bool) get_option( 'ran_booster_p2_keep_installed', false );
+	$ran_booster_cleanup = ! (bool) get_option( 'ran_booster_p2_keep_installed', false );
 	// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
-	foreach ( $cleanup ? array_reverse( $installed, true ) : array() as $type => $identifier ) {
+	foreach ( $ran_booster_cleanup ? array_reverse( $ran_booster_installed, true ) : array() as $type => $ran_booster_identifier ) {
 		if ( 'plugin' === $type ) {
-			$plugins->unlink( $identifier )->require_success();
-			if ( is_plugin_active( $identifier ) ) {
-				deactivate_plugins( $identifier, true );
+			$plugins->unlink( $ran_booster_identifier )->require_success();
+			if ( is_plugin_active( $ran_booster_identifier ) ) {
+				deactivate_plugins( $ran_booster_identifier, true );
 			}
-			$result = delete_plugins( array( $identifier ) );
+			$ran_booster_result = delete_plugins( array( $ran_booster_identifier ) );
 		} else {
-			$themes->unlink( $identifier )->require_success();
-			$result = delete_theme( $identifier );
+			$ran_booster_themes->unlink( $ran_booster_identifier )->require_success();
+			$ran_booster_result = delete_theme( $ran_booster_identifier );
 		}
-		if ( is_wp_error( $result ) || false === $result ) {
+		if ( is_wp_error( $ran_booster_result ) || false === $ran_booster_result ) {
 			throw new RuntimeException( 'The installed release fixture could not be cleaned.' );
 		}
 	}
-	if ( $cleanup ) {
+	if ( $ran_booster_cleanup ) {
 		delete_option( 'ran_booster_p2_last_artifact' );
 	}
 }
 
-WP_CLI::success(
-	$cleanup
+WP_CLI::success( // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)
+	$ran_booster_cleanup
 	? 'Installed release capability list, inspect, fresh acquire, plugin/theme install, adoption, readback and cleanup passed.'
 	: 'Installed release capability list, inspect, fresh acquire, plugin/theme install, adoption and retained readback passed.'
 );

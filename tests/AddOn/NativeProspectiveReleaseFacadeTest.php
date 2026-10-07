@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\AddOn;
+namespace RAN\Tests\AddOn;
 
 	require_once __DIR__ . '/../Support/WPError.php';
 	require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
@@ -57,13 +57,12 @@ use RAN\Storage\RepositorySourceGuard;
 	use RAN\WordPress\CorePackageExecutor;
 	use RAN\WordPress\ManagedReleaseConfiguration;
 	use RAN\WordPress\WordPressUpdaterLock;
-	use RANBoosterReleaseCapabilityFixture\PartialProvider as ReleaseFixturePartialProvider;
-	use RANBoosterReleaseCapabilityFixture\ReleaseProvider as ReleaseFixtureCompleteProvider;
-	use RANBoosterReleaseCapabilityFixture\ZeroProvider as ReleaseFixtureZeroProvider;
+	use RAN_Booster_ReleaseCapabilityFixture\PartialProvider as ReleaseFixturePartialProvider;
+	use RAN_Booster_ReleaseCapabilityFixture\ReleaseProvider as ReleaseFixtureCompleteProvider;
+	use RAN_Booster_ReleaseCapabilityFixture\ZeroProvider as ReleaseFixtureZeroProvider;
 	use RuntimeException;
 	use Throwable;
 
-	// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused collaborators stay with the facade contract tests.
 
 final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
@@ -111,7 +110,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	public function test_installed_fixture_hands_the_exact_artifact_to_core_once(): void {
 		$this->set_ready_release();
 		$path    = (string) $this->artifact_path;
-		$release = new \RANBoosterReleaseCapabilityFixture\FixtureReleaseArtifact( $path, 'example', 'example.php' );
+		$release = new \RAN_Booster_ReleaseCapabilityFixture\FixtureReleaseArtifact( $path, 'example', 'example.php' );
 
 		$artifact = $release->handoff_to_core();
 		self::assertSame( $path, $artifact->get_path() );
@@ -179,7 +178,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( $partial, $registry->require_capability( 'p2-partial', RepositoryReleaseMetadata::class ) );
 		self::assertSame( $partial, $registry->require_capability( 'p2-partial', RepositoryReleaseNativeTargets::class ) );
 		foreach ( array( RepositoryReleaseCandidateListing::class, RepositoryReleaseInspector::class, RepositoryReleaseAcquirer::class, RepositoryReleaseMetadata::class, RepositoryReleaseNativeTargets::class ) as $capability ) {
-			self::assertNotInstanceOf( $capability, $zero );
+			self::assertFalse( ( new \ReflectionClass( $zero ) )->implementsInterface( $capability ) );
 			self::assertSame( $complete, $registry->require_capability( 'p2-release', $capability ) );
 		}
 	}
@@ -634,7 +633,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			$facade->list_candidates(
 				'plugin',
 				$this->repository_request(),
-				'preview',
+				'preview', // @phpstan-ignore argument.type (Deliberately invalid channel proves rejection before prospective release work.)
 				'valid-nonce'
 			),
 			$facade->inspect(
@@ -642,7 +641,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 				$this->repository_request(),
 				'42',
 				'v1.2.3',
-				'preview',
+				'preview', // @phpstan-ignore argument.type (Deliberately invalid channel proves rejection before prospective release work.)
 				'valid-nonce'
 			),
 			$facade->install(
@@ -651,7 +650,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 				'42',
 				'v1.2.3',
 				self::FINGERPRINT,
-				'preview',
+				'preview', // @phpstan-ignore argument.type (Deliberately invalid channel proves rejection before prospective release work.)
 				'valid-nonce'
 			),
 		);
@@ -793,25 +792,25 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 1, $plugins->adoption_calls );
 		self::assertSame( 17, $plugins->adoption_user_id );
 		self::assertInstanceOf( Plugin::class, $plugins->adopted_package );
-		self::assertSame( PackageSource::RELEASE_ASSET, $plugins->adopted_package?->get_source() );
-		self::assertSame( 1, $plugins->adopted_package?->get_source_revision() );
-		self::assertSame( DeploymentPolicy::MANUAL, $plugins->adopted_package?->get_deployment_policy() );
-		self::assertSame( 'gh', $plugins->adopted_package?->get_provider_code() );
-		self::assertSame( 'owner/example', (string) $plugins->adopted_package?->get_repository() );
-		self::assertSame( '123456789', $plugins->adopted_package?->get_provider_repository_id() );
-		self::assertSame( 'main', $plugins->adopted_package?->get_branch() );
+		self::assertSame( PackageSource::RELEASE_ASSET, $plugins->adopted_package->get_source() );
+		self::assertSame( 1, $plugins->adopted_package->get_source_revision() );
+		self::assertSame( DeploymentPolicy::MANUAL, $plugins->adopted_package->get_deployment_policy() );
+		self::assertSame( 'gh', $plugins->adopted_package->get_provider_code() );
+		self::assertSame( 'owner/example', (string) $plugins->adopted_package->get_repository() );
+		self::assertSame( '123456789', $plugins->adopted_package->get_provider_repository_id() );
+		self::assertSame( 'main', $plugins->adopted_package->get_branch() );
 		self::assertSame( 'example', $plugins->adopted_configuration?->package_root() );
-		self::assertSame( 'example.php', $plugins->adopted_configuration?->metadata_file() );
-		self::assertSame( 'prerelease', $plugins->adopted_configuration?->channel() );
+		self::assertSame( 'example.php', $plugins->adopted_configuration->metadata_file() );
+		self::assertSame( 'prerelease', $plugins->adopted_configuration->channel() );
 		self::assertSame( 'plugin', ProspectiveRepositoryProvider::$acquisition_input['package_type'] ?? null );
 		self::assertSame( 'owner/example', ProspectiveRepositoryProvider::$acquisition_input['repository']?->locator );
-		self::assertSame( '123456789', ProspectiveRepositoryProvider::$acquisition_input['repository']?->provider_repository_id );
+		self::assertSame( '123456789', ProspectiveRepositoryProvider::$acquisition_input['repository']->provider_repository_id );
 		self::assertSame( '42', ProspectiveRepositoryProvider::$acquisition_input['release_id'] ?? null );
 		self::assertSame( 'v1.2.3', ProspectiveRepositoryProvider::$acquisition_input['tag'] ?? null );
 		self::assertSame( self::FINGERPRINT, ProspectiveRepositoryProvider::$acquisition_input['fingerprint'] ?? null );
 		self::assertSame( 'prerelease', ProspectiveRepositoryProvider::$acquisition_input['channel'] ?? null );
 		self::assertSame( 1, $this->acquisition?->handoff_calls );
-		self::assertSame( 0, $this->acquisition?->discard_calls );
+		self::assertSame( 0, $this->acquisition->discard_calls );
 		self::assertSame( 1, $lock->acquire_calls );
 		self::assertSame( 1, $lock->release_calls );
 		self::assertFileDoesNotExist( (string) $this->artifact_path );
@@ -885,7 +884,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 1, ProspectiveRepositoryProvider::$metadata_calls );
 		self::assertSame( 'plugin', ProspectiveRepositoryProvider::$inspection_input['package_type'] ?? null );
 		self::assertSame( 'owner/example', ProspectiveRepositoryProvider::$inspection_input['repository']?->locator );
-		self::assertSame( '123456789', ProspectiveRepositoryProvider::$inspection_input['repository']?->provider_repository_id );
+		self::assertSame( '123456789', ProspectiveRepositoryProvider::$inspection_input['repository']->provider_repository_id );
 		self::assertSame( '42', ProspectiveRepositoryProvider::$inspection_input['release_id'] ?? null );
 		self::assertSame( 'v1.2.3', ProspectiveRepositoryProvider::$inspection_input['tag'] ?? null );
 		self::assertSame( 'stable', ProspectiveRepositoryProvider::$inspection_input['channel'] ?? null );
@@ -1069,7 +1068,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'package_already_exists', $result->code() );
 		self::assertSame( 0, $this->acquisition?->handoff_calls );
-		self::assertSame( 1, $this->acquisition?->discard_calls );
+		self::assertSame( 1, $this->acquisition->discard_calls );
 		self::assertSame( 0, $executor->install_calls );
 		self::assertSame( 1, $lock->release_calls );
 	}
@@ -1097,7 +1096,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'install_failed', $result->code() );
 		self::assertSame( 0, $this->acquisition?->handoff_calls );
-		self::assertSame( 1, $this->acquisition?->discard_calls );
+		self::assertSame( 1, $this->acquisition->discard_calls );
 		self::assertSame( 0, $executor->install_calls );
 		self::assertSame( 1, $lock->release_calls );
 	}
@@ -1184,8 +1183,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( array(), $result->data() );
 		self::assertSame( 0, $lock->acquire_calls );
 		self::assertSame( 0, $lock->release_calls );
-		self::assertSame( 0, $this->acquisition?->handoff_calls );
-		self::assertSame( 1, $this->acquisition?->discard_calls );
+		self::assertSame( 0, $this->acquisition->handoff_calls );
+		self::assertSame( 1, $this->acquisition->discard_calls );
 		self::assertSame( 2, $database->reads );
 		self::assertSame( 0, $executor->install_calls );
 	}
@@ -1324,7 +1323,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'installation_cleanup_failed', $result->code() );
-		self::assertSame( 1, $this->acquisition?->discard_calls );
+		self::assertSame( 1, $this->acquisition->discard_calls );
 		self::assertSame( 0, $lock->release_calls );
 		self::assertFileExists( (string) $this->artifact_path );
 	}
@@ -1519,15 +1518,16 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 1, $executor->install_calls );
 		self::assertSame( 1, $plugins->adoption_calls );
 		self::assertSame( PackageSource::RELEASE_ASSET, $plugins->adopted_package?->get_source() );
-		self::assertSame( DeploymentPolicy::MANUAL, $plugins->adopted_package?->get_deployment_policy() );
+		self::assertSame( DeploymentPolicy::MANUAL, $plugins->adopted_package->get_deployment_policy() );
 		self::assertFileDoesNotExist( (string) $this->artifact_path );
 	}
 
 	private function set_ready_release(): void {
-		$this->artifact_path = tempnam( sys_get_temp_dir(), 'ran-booster-prospective-' );
-		if ( false === $this->artifact_path ) {
+		$artifact_path = tempnam( sys_get_temp_dir(), 'ran-booster-prospective-' );
+		if ( false === $artifact_path ) {
 			throw new RuntimeException( 'The test release artifact could not be created.' );
 		}
+		$this->artifact_path = $artifact_path;
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test-only temporary artifact.
 		file_put_contents( $this->artifact_path, 'verified-release-archive' );
 		$this->acquisition                          = new ProspectiveRepositoryReleaseArtifact(
@@ -1588,6 +1588,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class ProspectiveRepositoryProvider implements RepositoryProvider, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseMetadata, RepositoryReleaseNativeTargets {
 	private const EXPECTED_FINGERPRINT = 'v2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
@@ -1781,6 +1782,7 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class ProspectiveListingOnlyProvider implements RepositoryProvider, RepositoryReleaseCandidateListing {
 	private ProspectiveRepositoryProvider $provider;
 
@@ -1813,6 +1815,7 @@ final class ProspectiveListingOnlyProvider implements RepositoryProvider, Reposi
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class ProspectiveProviderWithoutAcquisition implements RepositoryProvider, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseMetadata {
 	private ProspectiveRepositoryProvider $provider;
 
@@ -1863,6 +1866,7 @@ final class ProspectiveProviderWithoutAcquisition implements RepositoryProvider,
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 abstract class ProspectivePartialReleaseProvider implements RepositoryProvider {
 	public int $resolve_calls = 0;
 
@@ -1906,6 +1910,7 @@ abstract class ProspectivePartialReleaseProvider implements RepositoryProvider {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class ProspectiveAcquisitionOnlyProvider implements RepositoryProvider, RepositoryReleaseAcquirer {
 	private ProspectiveRepositoryProvider $provider;
 
@@ -1941,6 +1946,7 @@ final class ProspectiveAcquisitionOnlyProvider implements RepositoryProvider, Re
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class ProspectiveRepositoryProviderWithoutListing implements RepositoryProvider {
 
 	public int $resolve_calls = 0;
@@ -1985,6 +1991,7 @@ final class ProspectiveRepositoryProviderWithoutListing implements RepositoryPro
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class ProspectiveRepositoryReleaseArtifact implements RepositoryReleaseArtifact {
 	public int $handoff_calls          = 0;
 	public int $discard_calls          = 0;
@@ -2074,6 +2081,7 @@ final class ProspectiveRepositoryReleaseArtifact implements RepositoryReleaseArt
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class ProspectiveExecutor extends CorePackageExecutor {
 
 	public int $install_calls          = 0;
@@ -2109,6 +2117,7 @@ final class ProspectiveExecutor extends CorePackageExecutor {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class ProspectivePluginRepository extends PluginRepository {
 
 	public int $adoption_calls                                 = 0;
@@ -2159,12 +2168,14 @@ final class ProspectivePluginRepository extends PluginRepository {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class ProspectiveThemeRepository extends ThemeRepository {
 
 	public function __construct() {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 
 	public int $acquire_calls     = 0;
@@ -2197,8 +2208,9 @@ final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class SequencedSourceGuardDatabase {
-	/** @param list<list<object>> $rowsByRead */
+	/** @param list<list<object>> $rows_by_read */
 	public function __construct( public array $rows_by_read ) {
 	}
 
@@ -2222,6 +2234,7 @@ final class SequencedSourceGuardDatabase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class ProspectiveSourceGuardDatabase {
 	public string $last_error = '';
 
@@ -2242,13 +2255,12 @@ final class ProspectiveSourceGuardDatabase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class ProspectiveInstalledPlugin extends Plugin {
 
-	public function __construct( string $file, string $version ) {
+	public function __construct( string $file = '', string $version = '' ) {
 		$this->file    = $file;
 		$this->name    = 'Example';
 		$this->version = $version;
 	}
 }
-
-	// phpcs:enable Generic.Files.OneObjectStructurePerFile.MultipleFound

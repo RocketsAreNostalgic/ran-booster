@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
+namespace RAN\Tests\Admin;
 
 use RAN\RepositoryProvider\CredentialValidationResult;
 use RAN\RepositoryProvider\CredentialValidator;
@@ -12,7 +12,7 @@ use RAN\RepositoryProvider\RepositoryProvider;
 
 final class CredentialValidationProvider implements RepositoryProvider, CredentialValidator {
 
-	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 	/** @var list<string> */
 	public array $validated_ids = array();

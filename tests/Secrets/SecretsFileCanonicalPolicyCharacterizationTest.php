@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tests\Secrets;
+namespace RAN\Tests\Secrets;
 
 // Native temporary files exercise the authenticated encrypted-sidecar contract.
-// phpcs:disable WordPress.WP.AlternativeFunctions, Generic.Files.OneObjectStructurePerFile.MultipleFound
 
 use PHPUnit\Framework\TestCase;
 use RAN\Portability\BlueprintCredential;
@@ -43,6 +42,7 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 
 		$this->directory = sys_get_temp_dir() . '/ran-booster-canonical-policy-' . bin2hex( random_bytes( 8 ) );
 		$this->path      = $this->directory . '/secrets.json';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
 		$this->key_store = new InMemorySiteKeyStore( $this->path );
 		$this->codec     = new EncryptedSecretsEnvelopeCodec();
@@ -56,10 +56,12 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		InMemorySiteKeyStore::reset( $this->path );
 		foreach ( array( $this->path, $this->path . '.lock' ) as $file ) {
 			if ( is_file( $file ) || is_link( $file ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 				unlink( $file );
 			}
 		}
 		if ( is_dir( $this->directory ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 			rmdir( $this->directory );
 		}
 
@@ -468,20 +470,25 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 
 	public function test_tampered_and_authenticated_non_canonical_documents_fail_before_policy(): void {
 		$this->seed_representative_document();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		$canonical_envelope = (string) file_get_contents( $this->path );
 		$tampered           = json_decode( $canonical_envelope, true, 4, JSON_THROW_ON_ERROR );
 		self::assertIsArray( $tampered );
 		$tampered['ciphertext'][12] = 'A' === $tampered['ciphertext'][12] ? 'B' : 'A';
 		self::assertNotFalse(
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents, WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 			file_put_contents( $this->path, json_encode( $tampered, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES ) . "\n" )
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->path, 0600 ) );
 		$this->calls->reset();
 
 		$this->expect_storage_failure( fn (): bool => $this->secrets->has_healthy_managed_storage() );
 		self::assertSame( array(), $this->calls->counts() );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $this->path, $canonical_envelope ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->path, 0600 ) );
 		$document      = $this->decoded_document();
 		$non_canonical = array(
@@ -727,6 +734,7 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		self::assertNotSame( $before['ino'], $after['ino'] );
 		self::assertSame( 0600, $after['mode'] & 0777 );
 		self::assertSame( 1, $after['nlink'] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Preserve native JSON bytes for the isolated fixture/trace assertion without loading WordPress.
 		$canonical = json_encode( $document, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . "\n";
 		self::assertSame( hash( 'sha256', $canonical ), hash( 'sha256', $this->decrypted_document() ) );
 	}
@@ -822,6 +830,7 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 	private function record_digest( array $records ): string {
 		return hash(
 			'sha256',
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Preserve native JSON bytes for the isolated fixture/trace assertion without loading WordPress.
 			json_encode( $records, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE )
 		);
 	}
@@ -830,6 +839,7 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		$key = $this->key_store->load( false );
 		self::assertIsString( $key );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		return $this->codec->decrypt( (string) file_get_contents( $this->path ), $key );
 	}
 
@@ -837,8 +847,11 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 	private function write_authenticated_document( array $document ): void {
 		$key = $this->key_store->load( false );
 		self::assertIsString( $key );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Preserve native JSON bytes for the isolated fixture/trace assertion without loading WordPress.
 		$plaintext = json_encode( $document, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . "\n";
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $this->path, $this->codec->encrypt( $plaintext, $key ) ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->path, 0600 ) );
 	}
 
@@ -863,6 +876,7 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
 final class CanonicalPolicyCallRecorder {
 
 	/** @var list<array{provider:string,kind:string,method:string,has_plaintext:bool,lock_held:bool,names:list<string>}> */
@@ -993,6 +1007,7 @@ final class CanonicalPolicyCallRecorder {
 			return false;
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Use the native stream required by the fixture lock-contention contract.
 		$handle = fopen( $this->lock_path, 'r+b' );
 		if ( false === $handle ) {
 			return true;
@@ -1006,11 +1021,13 @@ final class CanonicalPolicyCallRecorder {
 
 			return ! $acquired;
 		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Use the native stream required by the fixture lock-contention contract.
 			fclose( $handle );
 		}
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
 final readonly class RecordingCredentialPolicy implements ProviderCredentialPolicy {
 
 	public function __construct(
@@ -1066,6 +1083,7 @@ final readonly class RecordingCredentialPolicy implements ProviderCredentialPoli
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
 final readonly class RecordingWebhookPolicy implements ProviderWebhookPolicy {
 
 	public function __construct(

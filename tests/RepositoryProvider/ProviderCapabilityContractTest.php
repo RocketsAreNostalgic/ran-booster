@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\RepositoryProvider;
+namespace RAN\Tests\RepositoryProvider;
 
 require_once __DIR__ . '/Support/ProviderOwnedCapability.php';
 require_once __DIR__ . '/Support/SecondProviderOwnedCapability.php';
@@ -18,8 +18,8 @@ use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\UnsupportedProviderCapability;
 use ReflectionClass;
 use Stringable;
-use Tests\RepositoryProvider\Support\ProviderOwnedCapability;
-use Tests\RepositoryProvider\Support\SecondProviderOwnedCapability;
+use RAN\Tests\RepositoryProvider\Support\ProviderOwnedCapability;
+use RAN\Tests\RepositoryProvider\Support\SecondProviderOwnedCapability;
 
 final class ProviderCapabilityContractTest extends TestCase {
 
@@ -89,7 +89,7 @@ final class ProviderCapabilityContractTest extends TestCase {
 
 	private function provider(): RepositoryProvider&ProviderOwnedCapability&SecondProviderOwnedCapability {
 		return new class() implements RepositoryProvider, ProviderOwnedCapability, SecondProviderOwnedCapability {
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'facet-fixture' ), 'Facet fixture', 'https://example.test/', 'Owner' );

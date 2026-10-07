@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
-
-// phpcs:disable WordPress.WP.AlternativeFunctions -- Focused temporary-file tests exercise the native archive and debug-capture boundaries.
+namespace RAN\Tests\Admin;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -45,7 +43,7 @@ use RAN\Storage\ThemeRepository;
 use RAN\Theme;
 use ReflectionClass;
 use RuntimeException;
-use Tests\Portability\TemporaryCredentialProvider;
+use RAN\Tests\Portability\TemporaryCredentialProvider;
 
 require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
@@ -308,6 +306,7 @@ final class PortabilityControllerTest extends TestCase {
 		$path   = tempnam( sys_get_temp_dir(), 'ran-booster-controller-archive-' );
 		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'archive_bytes' );
 		self::assertIsString( $path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Focused temporary-file tests exercise the native archive and debug-capture boundaries.
 		self::assertNotFalse( file_put_contents( $path, 'complete-archive-bytes' ) );
 
 		try {
@@ -328,6 +327,7 @@ final class PortabilityControllerTest extends TestCase {
 		} finally {
 			unset( $GLOBALS['ran_booster_repository_admin_file_read'] );
 			if ( is_file( $path ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Focused temporary-file tests exercise the native archive and debug-capture boundaries.
 				unlink( $path );
 			}
 		}
@@ -402,6 +402,7 @@ final class PortabilityControllerTest extends TestCase {
 
 	public function test_portability_apply_canary_never_enters_the_json_result_or_debug_capture(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-portability-log-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Focused temporary-file tests exercise the native archive and debug-capture boundaries.
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		$capture = new TemporaryDebugCapture(
 			$directory . '/secrets.json',
@@ -423,10 +424,12 @@ final class PortabilityControllerTest extends TestCase {
 			BoosterLogger::configure_capture( null );
 			foreach ( array( $directory . '/ran-booster-debug.php', $directory . '/ran-booster-debug.php.lock' ) as $path ) {
 				if ( is_file( $path ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Focused temporary-file tests exercise the native archive and debug-capture boundaries.
 					unlink( $path );
 				}
 			}
 			if ( is_dir( $directory ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Focused temporary-file tests exercise the native archive and debug-capture boundaries.
 				rmdir( $directory );
 			}
 		}
@@ -1064,7 +1067,8 @@ final class PortabilityControllerTest extends TestCase {
 	}
 }
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused readiness spy belongs with controller behavior tests.
+
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused readiness spy belongs with controller behavior tests.
 final class PortabilityReadinessSpySecretsFile extends SecretsFile {
 	public int $readiness_checks = 0;
 

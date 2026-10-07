@@ -2,13 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Tests\Secrets;
+namespace RAN\Tests\Secrets;
 
 require_once __DIR__ . '/SecretsStorageWordPressFunctions.php';
 
 // Native local filesystem behavior is part of this focused composition test.
-// phpcs:disable WordPress.WP.AlternativeFunctions
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -30,6 +28,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_invalid_wordpress_directory_constants_remain_unusable(): void {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'ABSPATH', 123 );
 		define( 'WP_CONTENT_DIR', false );
 
@@ -52,7 +51,9 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$suffix                   = bin2hex( random_bytes( 8 ) );
 		$this->root               = sys_get_temp_dir() . '/ran-booster-provisioner-' . $suffix;
 		$this->temporary_boundary = sys_get_temp_dir() . '/ran-booster-temporary-boundary-' . $suffix;
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $this->root, 0700 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $this->temporary_boundary, 0700 ) );
 		$canonical_root = realpath( $this->root );
 		self::assertIsString( $canonical_root );
@@ -61,14 +62,18 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$this->config_path    = $this->wordpress_root . '/wp-config.php';
 		$this->candidate      = $this->root . '/private/.ran-booster/0123456789abcdef/secrets.json';
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $this->wordpress_root . '/wp-content/plugins/ran-booster', 0700, true ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $this->root . '/private', 0700 ) );
 		self::assertNotFalse(
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 			file_put_contents(
 				$this->config_path,
 				"<?php\n\ndefine( 'DB_NAME', 'example' );\n\n/* That's all, stop editing! Happy publishing. */\n"
 			)
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->config_path, 0600 ) );
 	}
 
@@ -124,6 +129,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		);
 
 		$directory = $this->root . '/translated-directory';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $directory, 0755 ) );
 		$provisioner             = $this->provisioner();
 		$provisioner->configured = $directory . '/secrets.json';
@@ -135,9 +141,12 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertStringContainsString( '0755', $directory_result->message() );
 		self::assertStringContainsString( '0700', $directory_result->message() );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $directory, 0700 ) );
 		$file = $provisioner->configured;
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $file, '{}' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $file, 0644 ) );
 		$file_result = $provisioner->status();
 
@@ -147,9 +156,12 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertStringContainsString( '0644', $file_result->message() );
 		self::assertStringContainsString( '0600', $file_result->message() );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $file, 0600 ) );
 		$lock = $file . '.lock';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $lock, '' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $lock, 0644 ) );
 		$lock_result = $provisioner->status();
 
@@ -206,6 +218,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 	public function test_localizes_managed_storage_diagnostic_branches_without_changing_match_routing(): void {
 		$directory = $this->root . '/translated-managed-diagnostics';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		$provisioner                 = $this->provisioner();
 		$provisioner->configured     = $directory . '/secrets.json';
@@ -287,10 +300,12 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertFileDoesNotExist( $this->candidate );
 		self::assertStringContainsString(
 			"define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '" . dirname( $this->candidate ) . "' );",
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 			(string) file_get_contents( $this->config_path )
 		);
 		self::assertStringNotContainsString(
 			'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE',
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 			(string) file_get_contents( $this->config_path )
 		);
 
@@ -304,6 +319,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 	public function test_valid_manual_override_is_handled_before_automatic_suggestion_resolution(): void {
 		$manual = $this->root . '/manual';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $manual, 0700 ) );
 		$provisioner             = $this->provisioner();
 		$provisioner->configured = $manual . '/secrets.json';
@@ -323,6 +339,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 	public function test_directory_constant_appends_the_managed_filename(): void {
 		$wp_config_directory = $this->root . '/public';
 		$directory           = dirname( $wp_config_directory ) . '/operator-private';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', $directory );
 
@@ -340,6 +357,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 	public function test_legacy_file_constant_blocks_otherwise_valid_directory_configuration(): void {
 		$wp_config_directory = $this->root . '/public';
 		$directory           = dirname( $wp_config_directory ) . '/operator-private';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', $directory );
 		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', $directory . '/legacy-secrets.json' );
@@ -359,6 +377,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 	public function test_legacy_file_constant_is_rejected_even_when_its_path_is_otherwise_valid(): void {
 		$wp_config_directory = $this->root . '/public';
 		$directory           = dirname( $wp_config_directory ) . '/operator-file';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', $directory . '/secrets.json' );
 
@@ -404,6 +423,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 	public function test_configured_path_reports_authenticated_and_broken_storage_truthfully(): void {
 		$manual = $this->root . '/manual-health';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $manual, 0700 ) );
 		$provisioner             = $this->provisioner();
 		$provisioner->configured = $manual . '/secrets.json';
@@ -431,6 +451,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertSame( 'storage_directory_unavailable', $result->code() );
 		self::assertStringContainsString( 'execute/traverse', $result->message() );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $directory, 0755 ) );
 		$result = $provisioner->status();
 		self::assertSame( 'storage_directory_unusable', $result->code() );
@@ -441,9 +462,12 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 	public function test_configured_path_explains_unsafe_file_permissions(): void {
 		$directory = $this->root . '/manual-file-attention';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		$file = $directory . '/secrets.json';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $file, '{}' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $file, 0644 ) );
 
 		$provisioner             = $this->provisioner();
@@ -458,9 +482,12 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 	public function test_configured_path_explains_missing_and_unsafe_lock_file(): void {
 		$directory = $this->root . '/manual-lock-attention';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		$file = $directory . '/secrets.json';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $file, '{}' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $file, 0600 ) );
 
 		$provisioner             = $this->provisioner();
@@ -470,19 +497,23 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertStringContainsString( 'matching lock file is missing', $result->message() );
 
 		$lock = $file . '.lock';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $lock, '' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $lock, 0644 ) );
 		$result = $provisioner->status();
 		self::assertSame( 'storage_lock_unusable', $result->code() );
 		self::assertStringContainsString( '0644', $result->message() );
 		self::assertStringContainsString( '0600', $result->message() );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $lock, 0600 ) );
 		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $provisioner->status()->status() );
 	}
 
 	public function test_configured_path_distinguishes_incomplete_and_authentication_failures(): void {
 		$directory = $this->root . '/manual-managed-attention';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		$provisioner                 = $this->provisioner();
 		$provisioner->configured     = $directory . '/secrets.json';
@@ -507,6 +538,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 	public function test_manual_path_does_not_require_automatic_filesystem_eligibility(): void {
 		$manual = $this->root . '/manual-platform';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $manual, 0700 ) );
 		$provisioner                 = $this->provisioner();
 		$provisioner->configured     = $manual . '/secrets.json';
@@ -548,6 +580,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 	public function test_manual_override_rejects_symlinked_components_and_unsafe_existing_target(): void {
 		$actual = $this->root . '/manual-actual';
 		$link   = $this->root . '/manual-link';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $actual, 0700 ) );
 		self::assertTrue( symlink( $actual, $link ) );
 
@@ -556,12 +589,17 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertSame( 'configured_path_unsafe', $provisioner->status()->code() );
 
 		$provisioner->configured = $actual . '/secrets.json';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $provisioner->configured, '{}' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $provisioner->configured, 0644 ) );
 		self::assertSame( 'storage_file_unusable', $provisioner->status()->code() );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $provisioner->configured, 0600 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $provisioner->configured . '.lock', '' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $provisioner->configured . '.lock', 0600 ) );
 		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $provisioner->status()->status() );
 	}
@@ -570,7 +608,9 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$provisioner           = $this->provisioner();
 		$other                 = $this->root . '/other/wp-config.php';
 		$provisioner->included = array( $this->config_path, $other );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( dirname( $other ), 0700 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $other, "<?php\n" ) );
 
 		$result = $provisioner->status();
@@ -581,14 +621,17 @@ final class SecretsStorageProvisionerTest extends TestCase {
 	}
 
 	public function test_parent_configuration_uses_the_core_fallback_rule(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 		self::assertTrue( unlink( $this->config_path ) );
 		$parent_config = $this->root . '/wp-config.php';
 		self::assertNotFalse(
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 			file_put_contents(
 				$parent_config,
 				"<?php\n\n/* That's all, stop editing! Happy publishing. */\n"
 			)
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $parent_config, 0600 ) );
 		$provisioner           = $this->provisioner();
 		$provisioner->included = array( $parent_config );
@@ -598,6 +641,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 			$provisioner->status()->status()
 		);
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $this->root . '/wp-settings.php', "<?php\n" ) );
 		self::assertSame( 'wp_config_unavailable', $provisioner->status()->code() );
 	}
@@ -640,6 +684,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertStringNotContainsString( $this->root, $result->message() );
 		self::assertStringNotContainsString(
 			'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR',
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 			(string) file_get_contents( $this->config_path )
 		);
 	}
@@ -723,6 +768,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 		$result = $provisioner->adopt_recovery( (string) $recovery['token'] );
 		self::assertTrue( $result->requires_next_request_verification() );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		$config = (string) file_get_contents( $this->config_path );
 		self::assertStringContainsString( dirname( $old ), $config );
 		self::assertStringNotContainsString( dirname( $this->candidate ), $config );
@@ -754,8 +800,11 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 	public function test_existing_managed_lock_does_not_hide_an_authenticated_sibling(): void {
 		$old = $this->recovery_store( 'abcdef0123456789' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( dirname( $this->candidate ), 0700 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $this->candidate . '.lock', '' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->candidate . '.lock', 0600 ) );
 		( new WpConfigSecretsPathWriter() )->write( $this->config_path, $this->candidate );
 		$provisioner                        = $this->provisioner();
@@ -775,6 +824,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 			'Booster found a database encryption key without its matching encrypted file. Restore the matching file if possible, or explicitly reset this empty credential store.' => 'Clé de stockage orpheline.',
 			'Incomplete credential storage was reset. Booster will initialize fresh encrypted storage when you next save or import a credential.' => 'Stockage réinitialisé.',
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( dirname( $this->candidate ), 0700, true ) );
 		( new WpConfigSecretsPathWriter() )->write( $this->config_path, $this->candidate );
 		$provisioner                           = $this->provisioner();
@@ -806,10 +856,15 @@ final class SecretsStorageProvisionerTest extends TestCase {
 	}
 
 	public function test_explicit_reset_also_handles_secure_orphaned_ciphertext_without_its_database_key(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( dirname( $this->candidate ), 0700, true ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $this->candidate, 'encrypted-canary' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->candidate, 0600 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $this->candidate . '.lock', '' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->candidate . '.lock', 0600 ) );
 		( new WpConfigSecretsPathWriter() )->write( $this->config_path, $this->candidate );
 		$provisioner                                      = $this->provisioner();
@@ -834,10 +889,15 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 	public function test_missing_database_key_cannot_reset_while_prior_storage_material_needs_review(): void {
 		$this->recovery_store( 'abcdef0123456789' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( dirname( $this->candidate ), 0700, true ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $this->candidate, 'encrypted-canary' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->candidate, 0600 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $this->candidate . '.lock', '' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->candidate . '.lock', 0600 ) );
 		( new WpConfigSecretsPathWriter() )->write( $this->config_path, $this->candidate );
 		$provisioner                                      = $this->provisioner();
@@ -914,6 +974,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 	public function test_malformed_or_over_limit_sibling_scan_blocks_reset(): void {
 		$malformed = $this->recovery_store( 'abcdef0123456789' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 		self::assertTrue( unlink( $malformed . '.lock' ) );
 		( new WpConfigSecretsPathWriter() )->write( $this->config_path, $this->candidate );
 		$provisioner                           = $this->provisioner();
@@ -932,8 +993,10 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		);
 		self::assertSame( array(), $provisioner->reset_candidates );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 		self::assertTrue( unlink( $malformed ) );
 		for ( $index = 0; $index <= 64; ++$index ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 			self::assertTrue( mkdir( dirname( dirname( $this->candidate ) ) . '/' . sprintf( '%016x', $index ), 0700 ) );
 		}
 		$overflow = $provisioner->recovery_state( $provisioner->status() );
@@ -989,10 +1052,15 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 	private function recovery_store( string $fingerprint ): string {
 		$path = dirname( dirname( $this->candidate ) ) . '/' . $fingerprint . '/secrets.json';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( dirname( $path ), 0700, true ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $path, '{}' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $path, 0600 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $path . '.lock', '' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $path . '.lock', 0600 ) );
 
 		return $path;
@@ -1000,6 +1068,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 	private function remove_tree( string $path ): void {
 		if ( is_link( $path ) || is_file( $path ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 			unlink( $path );
 			return;
 		}
@@ -1012,10 +1081,12 @@ final class SecretsStorageProvisionerTest extends TestCase {
 				$this->remove_tree( $path . '/' . $entry );
 			}
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 		rmdir( $path );
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
 final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 
 	public string $root      = '';
@@ -1157,7 +1228,7 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 		return $this->root . '/wp-content/plugins/ran-booster';
 	}
 
-	protected function document_root(): ?string {
+	protected function document_root(): string {
 		return $this->root;
 	}
 

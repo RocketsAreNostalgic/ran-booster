@@ -2,10 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Deployment;
-
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused boundary spies stay beside their integration test.
-// phpcs:disable WordPress.WP.AlternativeFunctions -- Test-only cleanup removes the exact temporary capture paths.
+namespace RAN\Tests\Deployment;
 
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -26,7 +23,7 @@ use RAN\RepositoryProvider\WebhookRequest;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\Database;
 use RAN\Webhook\SignedWebhookVerifier;
-use Tests\RepositoryProvider\Support\InertWebhookPolicy;
+use RAN\Tests\RepositoryProvider\Support\InertWebhookPolicy;
 
 #[RunTestsInSeparateProcesses]
 #[PreserveGlobalState( false )]
@@ -44,6 +41,7 @@ final class WebhookV1ExecutionBoundaryTest extends TestCase {
 		$GLOBALS['ran_booster_webhook_v1_operations'] = array();
 		$this->operations                             = &$GLOBALS['ran_booster_webhook_v1_operations'];
 		$this->directory                              = sys_get_temp_dir() . '/ran-booster-webhook-v1-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
 		$this->capture = new TemporaryDebugCapture(
 			$this->directory . '/secrets.php',
@@ -65,10 +63,12 @@ final class WebhookV1ExecutionBoundaryTest extends TestCase {
 			) as $path
 		) {
 			if ( is_file( $path ) || is_link( $path ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 				unlink( $path );
 			}
 		}
 		if ( is_dir( $this->directory ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 			rmdir( $this->directory );
 		}
 	}
@@ -130,8 +130,10 @@ final class WebhookV1ExecutionBoundaryTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class WebhookV1BoundaryDatabase extends Database {
 	/** @param list<string> $operations */
+	// @phpstan-ignore property.onlyWritten (The caller reads this by-reference event buffer to verify exact execution ordering.)
 	public function __construct( private array &$operations ) {
 	}
 
@@ -144,8 +146,10 @@ final class WebhookV1BoundaryDatabase extends Database {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class WebhookV1BoundarySecretsFile extends SecretsFile {
 	/** @param list<string> $operations */
+	// @phpstan-ignore property.onlyWritten (The caller reads this by-reference event buffer to verify exact execution ordering.)
 	public function __construct( private array &$operations ) {
 		parent::__construct( '/unused/webhook-v1-boundary-secrets.php', array() );
 	}
@@ -158,10 +162,12 @@ final class WebhookV1BoundarySecretsFile extends SecretsFile {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class WebhookV1BoundaryProvider implements RepositoryProvider, WebhookNormalizer {
-	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 	/** @param list<string> $operations */
+	// @phpstan-ignore property.onlyWritten (The caller reads this by-reference event buffer to verify exact execution ordering.)
 	public function __construct( private array &$operations ) {
 	}
 
@@ -194,8 +200,10 @@ final class WebhookV1BoundaryProvider implements RepositoryProvider, WebhookNorm
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class WebhookV1BoundaryCoordinator extends DeploymentCoordinator {
 	/** @param list<string> $operations */
+	// @phpstan-ignore property.onlyWritten (The caller reads this by-reference event buffer to verify exact execution ordering.)
 	public function __construct( private array &$operations ) {
 	}
 

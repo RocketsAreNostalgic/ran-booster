@@ -2,12 +2,12 @@
 
 // Executed by WP-CLI inside an isolated disposable WordPress installation.
 
-$root = getenv( 'RAN_BOOSTER_EXECUTOR_ROOT' );
-if ( ! is_string( $root ) || '' === $root ) {
+$ran_booster_root = getenv( 'RAN_BOOSTER_EXECUTOR_ROOT' );
+if ( ! is_string( $ran_booster_root ) || '' === $ran_booster_root ) {
 	throw new RuntimeException( 'The executor source root is unavailable.' );
 }
 
-$executor_source = array(
+$ran_booster_executor_source = array(
 	RAN\PackageSubdirectory::class                   => '/RAN/PackageSubdirectory.php',
 	RAN\Deployment\PreparedArtifact::class           => '/RAN/Deployment/PreparedArtifact.php',
 	RAN\Runtime\RuntimeSupport::class                => '/RAN/Runtime/RuntimeSupport.php',
@@ -15,18 +15,18 @@ $executor_source = array(
 	RAN\WordPress\CorePackageExecutionResult::class  => '/RAN/WordPress/CorePackageExecutionResult.php',
 	RAN\WordPress\CorePackageExecutor::class         => '/RAN/WordPress/CorePackageExecutor.php',
 );
-foreach ( $executor_source as $class => $relative_path ) {
-	$source_path = $root . $relative_path;
-	if ( class_exists( $class, false ) ) {
-		$loaded_path = ( new ReflectionClass( $class ) )->getFileName();
-		$source_hash = hash_file( 'sha256', $source_path );
-		$loaded_hash = is_string( $loaded_path ) ? hash_file( 'sha256', $loaded_path ) : false;
-		if ( ! is_string( $source_hash ) || ! is_string( $loaded_hash ) || ! hash_equals( $source_hash, $loaded_hash ) ) {
+foreach ( $ran_booster_executor_source as $ran_booster_class => $ran_booster_relative_path ) {
+	$ran_booster_source_path = $ran_booster_root . $ran_booster_relative_path;
+	if ( class_exists( $ran_booster_class, false ) ) {
+		$ran_booster_loaded_path = ( new ReflectionClass( $ran_booster_class ) )->getFileName();
+		$ran_booster_source_hash = hash_file( 'sha256', $ran_booster_source_path );
+		$ran_booster_loaded_hash = is_string( $ran_booster_loaded_path ) ? hash_file( 'sha256', $ran_booster_loaded_path ) : false;
+		if ( ! is_string( $ran_booster_source_hash ) || ! is_string( $ran_booster_loaded_hash ) || ! hash_equals( $ran_booster_source_hash, $ran_booster_loaded_hash ) ) {
 			throw new RuntimeException( 'The loaded executor source does not match the checkout under test.' );
 		}
 		continue;
 	}
-	require_once $source_path;
+	require_once $ran_booster_source_path;
 }
 
 require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -35,11 +35,11 @@ require_once ABSPATH . 'wp-admin/includes/theme.php';
 require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
 require_once ABSPATH . 'wp-admin/includes/class-wp-automatic-updater.php';
 
-if ( wp_doing_cron() || PHP_VERSION_ID < 80200 || version_compare( get_bloginfo( 'version' ), '7.0', '<' ) ) {
+if ( wp_doing_cron() || PHP_VERSION_ID < 80200 || version_compare( get_bloginfo( 'version' ), '7.0', '<' ) ) { // @phpstan-ignore smaller.alwaysFalse (Installed proof must refuse unsupported host PHP before mutating its disposable site; analyzer PHP range cannot prove the external host.)
 	throw new RuntimeException( 'The core executor smoke test requires WordPress 7, PHP 8.2 and non-cron request semantics.' );
 }
 
-final class RanBoosterCorePackageExecutorSmoke {
+final class RAN_Booster_CorePackageExecutorSmoke {
 	private array $artifacts = array();
 	private array $plugins   = array();
 	private array $themes    = array();
@@ -165,7 +165,7 @@ final class RanBoosterCorePackageExecutorSmoke {
 		$this->assert_plugin( $identifier, '1.5.0', 'plugin-downgrade', true );
 
 		$blocked = static fn (): bool => false;
-		add_filter( 'auto_update_plugin', $blocked, 100, 2 );
+		add_filter( 'auto_update_plugin', $blocked, 100, 2 ); // @phpstan-ignore arguments.count (WordPress supplies the documented hook arguments; this controlled callback deliberately consumes only the needed subset.)
 		try {
 			$refused = $executor->update_plugin(
 				$this->artifact( 'plugin', $slug, '1.6.0', 'plugin-policy-refused' ),
@@ -199,7 +199,7 @@ final class RanBoosterCorePackageExecutorSmoke {
 			return new WP_Error( 'unexpected_request' );
 		};
 		$before        = $this->hook_fingerprint();
-		add_filter( 'pre_http_request', $block_request, 100, 3 );
+		add_filter( 'pre_http_request', $block_request, 100, 3 ); // @phpstan-ignore arguments.count (WordPress supplies the documented hook arguments; this controlled callback deliberately consumes only the needed subset.)
 		try {
 			$missing = $executor->install_theme(
 				$this->artifact( 'theme', $child_slug, '1.0.0', 'missing-child', null, $missing_parent ),
@@ -266,7 +266,8 @@ final class RanBoosterCorePackageExecutorSmoke {
 			$source_isolation_observed = false;
 			$executor                  = new RAN\WordPress\CorePackageExecutor(
 				static function ( string $action, string $type, string $path, ?object $offer ) use ( $value, &$source_isolation_observed ): mixed {
-					$unrelated                 = apply_filters(
+					$unrelated = apply_filters(
+						// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 						'upgrader_source_selection',
 						'/unrelated-source',
 						'/unrelated-remote',
@@ -277,7 +278,8 @@ final class RanBoosterCorePackageExecutorSmoke {
 							$type    => 'other/other.php',
 						)
 					);
-					$nested                    = apply_filters(
+					$nested = apply_filters(
+						// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 						'upgrader_source_selection',
 						'/nested-source',
 						'/nested-remote',
@@ -287,7 +289,8 @@ final class RanBoosterCorePackageExecutorSmoke {
 							'action' => 'install',
 						)
 					);
-					$consumed                  = apply_filters(
+					$consumed = apply_filters(
+						// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 						'upgrader_pre_download',
 						false,
 						$path,
@@ -321,7 +324,8 @@ final class RanBoosterCorePackageExecutorSmoke {
 		$observed = false;
 		$executor = new RAN\WordPress\CorePackageExecutor(
 			static function ( string $action, string $type, string $path ) use ( &$observed ): bool {
-				$exact         = apply_filters(
+				$exact = apply_filters(
+					// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 					'upgrader_pre_download',
 					false,
 					$path,
@@ -331,7 +335,8 @@ final class RanBoosterCorePackageExecutorSmoke {
 						'action' => $action,
 					)
 				);
-				$unrelated     = apply_filters(
+				$unrelated = apply_filters(
+					// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 					'upgrader_pre_download',
 					'unrelated-reply',
 					$path,
@@ -343,6 +348,7 @@ final class RanBoosterCorePackageExecutorSmoke {
 					)
 				);
 				$nested_source = apply_filters(
+					// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 					'upgrader_source_selection',
 					'/nested-install-source',
 					'/nested-install-remote',
@@ -353,8 +359,9 @@ final class RanBoosterCorePackageExecutorSmoke {
 						$type    => 'other/other.php',
 					)
 				);
-				$observed      = $path === $exact && 'unrelated-reply' === $unrelated && '/nested-install-source' === $nested_source;
+				$observed = $path === $exact && 'unrelated-reply' === $unrelated && '/nested-install-source' === $nested_source;
 				do_action(
+					// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 					'upgrader_process_complete',
 					new stdClass(),
 					array(
@@ -381,8 +388,8 @@ final class RanBoosterCorePackageExecutorSmoke {
 
 			return $reply;
 		};
-		add_filter( 'upgrader_pre_download', $veto, 5, 4 );
-		add_filter( 'upgrader_pre_download', $observer, 20, 4 );
+		add_filter( 'upgrader_pre_download', $veto, 5, 4 ); // @phpstan-ignore arguments.count (WordPress supplies the documented hook arguments; this controlled callback deliberately consumes only the needed subset.)
+		add_filter( 'upgrader_pre_download', $observer, 20, 4 ); // @phpstan-ignore arguments.count (WordPress supplies the documented hook arguments; this controlled callback deliberately consumes only the needed subset.)
 		$before = $this->hook_fingerprint();
 		try {
 			$vetoed = ( new RAN\WordPress\CorePackageExecutor() )->install_plugin( $veto_artifact, $veto_slug, null );
@@ -421,7 +428,7 @@ final class RanBoosterCorePackageExecutorSmoke {
 			}
 		};
 		add_action( 'upgrader_process_complete', $observer, 101, 2 );
-		add_action( 'pre_auto_update', $pre_update, 101, 3 );
+		add_action( 'pre_auto_update', $pre_update, 101, 3 ); // @phpstan-ignore arguments.count (WordPress supplies the documented hook arguments; this controlled callback deliberately consumes only the needed subset.)
 		try {
 			$operation();
 		} finally {
@@ -449,10 +456,11 @@ final class RanBoosterCorePackageExecutorSmoke {
 			return $checkout;
 		};
 		$pre_update      = static function () use ( &$observed_other ): void {
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
 			$observed_other = apply_filters( 'automatic_updates_is_vcs_checkout', true, ABSPATH );
 		};
 		add_filter( 'automatic_updates_is_vcs_checkout', $observer, 20, 2 );
-		add_action( 'pre_auto_update', $pre_update, 20, 3 );
+		add_action( 'pre_auto_update', $pre_update, 20, 3 ); // @phpstan-ignore arguments.count (WordPress supplies the documented hook arguments; this controlled callback deliberately consumes only the needed subset.)
 		try {
 			$this->assert_success( $operation() );
 		} finally {
@@ -668,19 +676,19 @@ final class RanBoosterCorePackageExecutorSmoke {
 	}
 }
 
-$smoke   = new RanBoosterCorePackageExecutorSmoke( bin2hex( random_bytes( 6 ) ) );
-$failure = null;
+$ran_booster_smoke   = new RAN_Booster_CorePackageExecutorSmoke( bin2hex( random_bytes( 6 ) ) );
+$ran_booster_failure = null;
 try {
-	$smoke->run();
+	$ran_booster_smoke->run();
 } catch ( Throwable $caught ) {
-	$failure = $caught;
+	$ran_booster_failure = $caught;
 }
 try {
-	$smoke->cleanup();
+	$ran_booster_smoke->cleanup();
 } catch ( Throwable $cleanup_failure ) {
-	$failure = $cleanup_failure;
+	$ran_booster_failure = $cleanup_failure;
 }
-if ( null !== $failure ) {
-	throw $failure;
+if ( null !== $ran_booster_failure ) {
+	throw $ran_booster_failure;
 }
-WP_CLI::success( 'Core package executor smoke test passed.' );
+WP_CLI::success( 'Core package executor smoke test passed.' ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)

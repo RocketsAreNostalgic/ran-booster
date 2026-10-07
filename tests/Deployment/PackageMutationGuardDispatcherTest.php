@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Deployment;
+namespace RAN\Tests\Deployment;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/WPError.php';
@@ -202,7 +202,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			'identifiers' => array( $identifier ),
 		);
 		$package              = new class( $identifier ) extends AbstractPackage {
-			public function __construct( private readonly string $identifier ) {
+			public function __construct( private readonly string $identifier = '' ) {
 				$this->set_installation_slug( str_contains( $identifier, '/' ) ? dirname( $identifier ) : $identifier );
 				$this->set_repository( new ManagedRepository( 'fixture', 'owner/repository', 'R_fixture', 'main' ) );
 			}

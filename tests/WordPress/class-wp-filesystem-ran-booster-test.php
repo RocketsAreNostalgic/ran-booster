@@ -6,7 +6,7 @@ if ( ! class_exists( 'WP_Filesystem_Direct' ) ) {
 	require_once ABSPATH . 'wp-admin/includes/class-wp-filesystem-direct.php';
 }
 
-// phpcs:ignore PEAR.NamingConventions.ValidClassName.Invalid -- WordPress filesystem transport resolution requires the WP_Filesystem_ran_booster_test class name.
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedClassFound, PEAR.NamingConventions.ValidClassName.Invalid -- WordPress filesystem transport resolution requires the WP_Filesystem_ran_booster_test class name. WordPress class identity is required by the host fixture contract.
 final class WP_Filesystem_ran_booster_test extends WP_Filesystem_Direct {
 
 	public function move( $source, $destination, $overwrite = false ) {
@@ -35,7 +35,7 @@ final class WP_Filesystem_ran_booster_test extends WP_Filesystem_Direct {
 	}
 
 	private function stop_at_barrier(): void {
-		$barrier   = RAN_BOOSTER_HARD_STOP_BARRIER;
+		$barrier   = constant( 'RAN_BOOSTER_HARD_STOP_BARRIER' );
 		$temp_root = realpath( sys_get_temp_dir() );
 		$parent    = is_string( $barrier ) ? realpath( dirname( $barrier ) ) : false;
 		if ( ! is_string( $barrier )

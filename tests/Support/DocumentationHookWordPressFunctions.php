@@ -48,7 +48,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\wp_kses_allowed_html' ) ) {
 }
 
 if ( ! function_exists( __NAMESPACE__ . '\\wp_kses' ) ) {
-	/** @param array<string, array<string, true>> $allowedHtml */
+	/** @param array<string, array<string, true>> $allowed_html */
 	function wp_kses( string $content, array $allowed_html ): string {
 		$content = wp_kses_post( $content );
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Storage;
+namespace RAN\Tests\Storage;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -10,7 +10,7 @@ use RAN\PackageSource;
 use RAN\Storage\Database;
 use RAN\Storage\PackageStorageFailure;
 use RAN\Storage\RepositorySourceGuard;
-use Tests\Support\RepositorySourceGuardDatabase;
+use RAN\Tests\Support\RepositorySourceGuardDatabase;
 
 require_once __DIR__ . '/StorageTestEnvironment.php';
 

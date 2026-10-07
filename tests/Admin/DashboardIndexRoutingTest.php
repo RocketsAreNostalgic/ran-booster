@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
-
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- The bounded database fake belongs to its production-controller test.
+namespace RAN\Tests\Admin;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -65,10 +63,10 @@ use RAN\Troubleshooting\LocalTroubleshootingService;
 use RAN\Troubleshooting\TroubleshootingService;
 use RAN\WordPress\WordPressUpdaterLock;
 use RuntimeException;
-use Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
-use Tests\Deployment\AttemptRepositoryDatabase;
-use Tests\Support\CredentialUsageDatabase;
-use Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
+use RAN\Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
+use RAN\Tests\Deployment\AttemptRepositoryDatabase;
+use RAN\Tests\Support\CredentialUsageDatabase;
+use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
@@ -191,11 +189,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 1, $provider->resolved_ref_calls );
 		self::assertSame( 1, $provider->cleanup_calls );
 		self::assertSame( 'owner/example', $provider->request?->repository->locator );
-		self::assertSame( 'repo-42', $provider->request?->repository->provider_repository_id );
-		self::assertSame( 'feature/test', $provider->request?->ref );
-		self::assertNull( $provider->request?->expected_branch );
-		self::assertFalse( $provider->request?->repository->private );
-		self::assertNull( $provider->request?->repository->credential_id );
+		self::assertSame( 'repo-42', $provider->request->repository->provider_repository_id );
+		self::assertSame( 'feature/test', $provider->request->ref );
+		self::assertNull( $provider->request->expected_branch );
+		self::assertFalse( $provider->request->repository->private );
+		self::assertNull( $provider->request->repository->credential_id );
 	}
 
 	public function test_repository_branch_check_consumes_its_one_time_marker_before_repeating_remote_work(): void {
@@ -214,7 +212,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
-		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertThat( $check->invoke( $dashboard, $package, 'plugin' ), self::identicalTo( 'verified' ) );
 		self::assertSame( 1, $provider->prepare_calls );
 	}
 
@@ -302,9 +300,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
 		$evidence->bump_profile_generation( 'gh', 'public-profile' );
-		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertThat( $check->invoke( $dashboard, $package, 'plugin' ), self::identicalTo( 'verified' ) );
 		$evidence->bump_provider_generation( 'gh' );
-		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertThat( $check->invoke( $dashboard, $package, 'plugin' ), self::identicalTo( 'verified' ) );
 		self::assertSame( 3, $provider->prepare_calls );
 	}
 
@@ -365,9 +363,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
 		self::assertSame( 'owner/repository', $provider->request?->repository->locator );
-		self::assertSame( 'repo-42', $provider->request?->repository->provider_repository_id );
-		self::assertFalse( $provider->request?->repository->private );
-		self::assertSame( 'public-profile', $provider->request?->repository->credential_id );
+		self::assertSame( 'repo-42', $provider->request->repository->provider_repository_id );
+		self::assertFalse( $provider->request->repository->private );
+		self::assertSame( 'public-profile', $provider->request->repository->credential_id );
 	}
 
 	public function test_repository_branch_check_clears_earlier_evidence_when_the_provider_is_unavailable(): void {
@@ -438,7 +436,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
 		self::assertTrue( $provider->request?->repository->private );
-		self::assertSame( 'deployment-profile', $provider->request?->repository->credential_id );
+		self::assertSame( 'deployment-profile', $provider->request->repository->credential_id );
 	}
 
 	public function test_repository_branch_check_verifies_aconfigured_subdirectory_when_the_provider_supports_it(): void {
@@ -483,7 +481,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 
 		self::assertSame( 'subdirectory_unavailable', $check->invoke( $dashboard, $package, 'plugin' ) );
-		self::assertSame( 'subdirectory_unavailable', $check->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertThat( $check->invoke( $dashboard, $package, 'plugin' ), self::identicalTo( 'subdirectory_unavailable' ) );
 		self::assertSame( 1, $provider->prepare_calls );
 		self::assertSame( 1, $provider->path_calls );
 	}
@@ -515,7 +513,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 
 		self::assertSame( 'subdirectory_unverified', $check->invoke( $dashboard, $package, 'plugin' ) );
-		self::assertSame( 'subdirectory_unverified', $check->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertThat( $check->invoke( $dashboard, $package, 'plugin' ), self::identicalTo( 'subdirectory_unverified' ) );
 		self::assertSame( 1, $provider->prepare_calls );
 		self::assertSame( 1, $provider->path_calls );
 	}
@@ -647,7 +645,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 		$profiles = array();
 		for ( $index = 1; $index <= 21; ++$index ) {
-			$profiles[] = array(
+			$profiles[ 'profile-' . $index ] = array(
 				'id'            => 'profile-' . $index,
 				'label'         => sprintf( 'Credential %02d', $index ),
 				'kind'          => 'api-key',
@@ -656,7 +654,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 				'configured'    => true,
 			);
 		}
-		$profiles[] = array(
+		$profiles['filtered-canary'] = array(
 			'id'            => 'filtered-canary',
 			'label'         => 'Filtered canary',
 			'kind'          => 'other',
@@ -664,11 +662,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'source'        => 'file',
 			'configured'    => true,
 		);
-		$secrets    = new class( $profiles ) extends SecretsFile {
-			/** @param list<array<string,mixed>> $profiles */
+		$secrets                     = new class( $profiles ) extends SecretsFile {
+			/** @param array<string, array<string,mixed>> $profiles */
 			public function __construct( private array $profiles ) {
 				parent::__construct( '/unused/test-secrets.php', array(), ShippedSecretPolicyCatalog::create() );
 			}
+			/** @return array<string, array<string, mixed>> */
 			public function credential_profiles( ProviderCode|string $provider ): array {
 				return 'bb' === (string) $provider ? $this->profiles : array();
 			}
@@ -677,10 +676,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 				return array();
 			}
 		};
-		$data       = $this->dashboard( $secrets, provider_credentials: true )->get_index()['data'];
+		$data                        = $this->dashboard( $secrets, provider_credentials: true )->get_index()['data'];
 
 		// Dashboard supplies a fixed provider-route model; the passive view only renders and escapes it.
-		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard route model as caller variables required by the production provider view.
 		extract( $data );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
@@ -1049,13 +1048,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 	}
 
 	public function test_native_transporter_route_forces_the_canonical_tab_without_mutating_the_request(): void {
-		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Fixture verifies the route leaves the request intact.
+
 		$_GET = array( 'tab' => 'documentation' );
 
 		$data = $this->dashboard( $this->throwing_secrets() )->get_transporter()['data'];
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Fixture verifies the route leaves the request intact.
 		self::assertSame( array( 'tab' => 'documentation' ), $_GET );
-		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
 		self::assertSame( 'portability', $data['tab'] );
 		self::assertSame( 'portability.php', $data['tab_view'] );
 		self::assertSame( array( false, false, false, true, false, false ), array_column( $data['tabs'], 'active' ) );
@@ -1514,6 +1514,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			public function __construct( private Package $package ) {
 			}
 
+			/** @return Package|null */
 			public function booster_plugin_from_file( $file ) {
 				return 'release/release.php' === $file ? $this->package : null;
 			}
@@ -1524,7 +1525,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_plugins retains the production method contract; these inputs do not affect this controlled result.
 			public function all_deployment_plugins( ?\RAN\PackageSource $source = null ): array {
-				return array( $this->package );
+				return array( 'release/release.php' => $this->package );
 			}
 		};
 		$themes   = new class() extends ThemeRepository {
@@ -1574,6 +1575,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$provider->expects( self::never() )->method( 'resolve_repository' );
 		$provider->expects( self::never() )->method( 'prepare_archive' );
 		self::assertInstanceOf( \RAN\RepositoryProvider\WebhookNormalizer::class, $provider );
+		self::assertInstanceOf( RepositoryProvider::class, $provider );
 		$evaluator = new WebhookAssistanceReadinessEvaluator( $plugins, $themes, $secrets, new ReadyDashboardDatabase(), static fn (): bool => true );
 		self::assertSame( 'ready', $evaluator->evaluate( 'gh', rest_url( 'ran-booster/v1/webhooks/gh' ) )->to_array()['site']['status'] );
 		$dashboard = $this->dashboard(
@@ -2108,9 +2110,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 				runner_status: 'unavailable'
 			)
 		);
-		// phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test reconstructs the signed redirect query.
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.WP.AlternativeFunctions.parse_url_parse_url -- The test reconstructs the signed redirect query.
 		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
-		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended
 
 		$dashboard->get_plugins();
 
@@ -2137,9 +2139,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 				'not_required'
 			)
 		);
-		// phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test reconstructs the signed redirect query.
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.WP.AlternativeFunctions.parse_url_parse_url -- The test reconstructs the signed redirect query.
 		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
-		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended
 
 		$dashboard->get_plugins();
 
@@ -2164,9 +2166,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 				)
 			)
 		);
-		// phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test reconstructs the signed redirect query.
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.WP.AlternativeFunctions.parse_url_parse_url -- The test reconstructs the signed redirect query.
 		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
-		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended
 
 		$dashboard->get_themes();
 
@@ -2193,9 +2195,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 				)
 			)
 		);
-		// phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test reconstructs the signed redirect query.
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.WP.AlternativeFunctions.parse_url_parse_url -- The test reconstructs the signed redirect query.
 		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
-		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended
 
 		$dashboard->get_plugins();
 
@@ -2213,9 +2215,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'plugin',
 			BulkPackageResult::queue( 1, 1, array(), 'scheduled' )
 		);
-		// phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test reconstructs the signed redirect query.
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.WP.AlternativeFunctions.parse_url_parse_url -- The test reconstructs the signed redirect query.
 		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
-		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended
+
 		$_GET['ran_booster_bulk_queued'] = '20';
 
 		$dashboard->get_plugins();
@@ -2229,9 +2232,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'plugin',
 			BulkPackageResult::queue( 1, 1, array(), 'scheduled' )
 		);
-		// phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test reconstructs the signed redirect query and deliberately presents it to the other package type.
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.WP.AlternativeFunctions.parse_url_parse_url -- The test reconstructs the signed redirect query and deliberately presents it to the other package type.
 		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
-		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended
 
 		$dashboard->get_themes();
 
@@ -2244,9 +2247,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'plugin',
 			BulkPackageResult::queue( 1, 1, array(), 'scheduled' )
 		);
-		// phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The test deliberately replaces the signed redirect marker.
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.WP.AlternativeFunctions.parse_url_parse_url -- The test deliberately replaces the signed redirect marker.
 		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
-		// phpcs:enable WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended
+
 		$_GET['_ran_booster_bulk_notice_nonce'] = 'forged';
 
 		$dashboard->get_plugins();
@@ -2456,6 +2460,68 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertTrue( $data['unavailable'] );
 	}
 
+	public function test_invalid_activity_queries_with_available_storage_never_read_history_or_write(): void {
+		$reference = str_repeat( 'a', 32 );
+		$cases     = array(
+			array(
+				'attempt'   => '01',
+				'reference' => $reference,
+			),
+			array( 'attempt' => '1' ),
+			array( 'reference' => $reference ),
+			array(
+				'attempt'   => array( '1' ),
+				'reference' => $reference,
+			),
+			array(
+				'attempt'   => '1',
+				'reference' => array( $reference ),
+			),
+			array(
+				'attempt'   => (string) PHP_INT_MAX . '0',
+				'reference' => $reference,
+			),
+			array(
+				'attempt'   => '1',
+				'reference' => strtoupper( $reference ),
+			),
+			array(
+				'attempt'   => '1',
+				'reference' => $reference . 'a',
+			),
+			array(
+				'attempt'   => null,
+				'reference' => $reference,
+			),
+			array( 'before' => '01' ),
+			array( 'before' => array( '1' ) ),
+			array( 'before' => (string) PHP_INT_MAX . '0' ),
+			array( 'before' => '' ),
+			array( 'before' => null ),
+		);
+		foreach ( $cases as $query ) {
+			$database       = new DashboardActivityWpdb();
+			$database->rows = array( DashboardActivityWpdb::attempt( 1, 'succeeded' ) );
+			$presenter      = new DeploymentAdminPresenter( attempts: $this->deployment_attempts( $database ) );
+			$_GET           = $query;
+			$data           = $presenter->activity();
+			$is_cursor      = array_key_exists( 'before', $query );
+			self::assertSame( $is_cursor ? 'list' : 'detail', $data['mode'] );
+			self::assertSame( array(), $data['items'] );
+			self::assertSame( $is_cursor, $data['unavailable'] );
+			self::assertSame( $is_cursor, $data['has_cursor'] );
+			self::assertArrayNotHasKey( 'detail', $data );
+			self::assertSame( array(), $database->reads );
+			self::assertSame( 0, $database->writes );
+		}
+		// The same available repository must really service a valid passive history query.
+		$_GET = array();
+		$data = $presenter->activity();
+		self::assertCount( 1, $data['items'] );
+		self::assertNotEmpty( $database->reads );
+		self::assertSame( 0, $database->writes );
+	}
+
 	public function test_attempt_detail_loads_only_the_requested_attempt(): void {
 		$attempt        = DashboardActivityWpdb::attempt( 1, 'succeeded' );
 		$database       = new DashboardActivityWpdb();
@@ -2530,11 +2596,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 409, $GLOBALS['ran_booster_test_status_header'] );
 		self::assertStringContainsString( 'attempt=43', $dashboard->messages[0]['message'] );
 		self::assertStringContainsString( 'reference=' . $attempt['correlation_id'], $dashboard->messages[0]['message'] );
-		self::assertCount( 1, $attempt_database->rows );
+		self::assertThat( $attempt_database->rows, self::countOf( 1 ) );
 
 		self::assertFalse( $dashboard->post_package_operation( 'install-plugin', $request ) );
 		self::assertSame( 2, $coordinator->calls );
-		self::assertCount( 1, $attempt_database->rows );
+		self::assertThat( $attempt_database->rows, self::countOf( 1 ) );
 
 		$attempts->resolve_needs_attention( 43, $attempt['correlation_id'], 7 );
 		self::assertNotNull( $attempt_database->rows[0]['resolved_at'] );
@@ -2542,7 +2608,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertFalse( $dashboard->post_package_operation( 'install-plugin', $request ) );
 		self::assertSame( 3, $coordinator->calls );
-		self::assertCount( 2, $attempt_database->rows );
+		self::assertThat( $attempt_database->rows, self::countOf( 2 ) );
+		// @phpstan-ignore offsetAccess.notFound (The injected coordinator appends the second row during the preceding retry; preserve its exact position assertion.)
 		self::assertSame( 'failed', $attempt_database->rows[1]['state'] );
 
 		$_GET     = array(
@@ -2696,7 +2763,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 	private function provider( ProviderCode $code, string $label, bool $with_credentials = false ): RepositoryProvider {
 		return new class( $code, $label, $with_credentials ) implements RepositoryProvider, ProviderCredentialPolicySupplier, RepositoryWebhookSettingsLink, \RAN\RepositoryProvider\WebhookNormalizer {
 
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public function __construct(
 				private ProviderCode $code,
@@ -2746,22 +2813,26 @@ final class DashboardIndexRoutingTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- The bounded database fake belongs to its production-controller test.
 final class FailingDashboardPluginRepository extends PluginRepository {
 	public function all_booster_plugins(): array {
 		throw PackageStorageFailure::invalid_provider_identity();
 	}
 
+	/** @return Package|null */
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of booster_plugin_from_file retains the production method contract; these inputs do not affect this controlled result.
 	public function booster_plugin_from_file( $file ) {
 		throw PackageStorageFailure::invalid_provider_identity();
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- The bounded database fake belongs to its production-controller test.
 final class FailingDashboardThemeRepository extends ThemeRepository {
 	public function all_booster_themes(): array {
 		throw PackageStorageFailure::invalid_provider_identity();
 	}
 
+	/** @return Package|null */
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of booster_theme_from_stylesheet retains the production method contract; these inputs do not affect this controlled result.
 	public function booster_theme_from_stylesheet( $stylesheet ) {
 		throw PackageStorageFailure::invalid_provider_identity();
@@ -2769,6 +2840,7 @@ final class FailingDashboardThemeRepository extends ThemeRepository {
 }
 
 /** Bounded coordinator double that preserves the real package-operation boundary. */
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- The bounded database fake belongs to its production-controller test.
 final class DashboardNeedsAttentionCoordinator extends DeploymentCoordinator {
 	public int $calls = 0;
 
@@ -2810,10 +2882,14 @@ final class DashboardNeedsAttentionCoordinator extends DeploymentCoordinator {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- The bounded database fake belongs to its production-controller test.
 final class DashboardActivityWpdb {
 
 	/** @var list<array<string, mixed>> */
-	public array $rows        = array();
+	public array $rows = array();
+	/** @var list<string> */
+	public array $reads       = array();
+	public int $writes        = 0;
 	public string $prefix     = 'wp_';
 	public string $last_error = '';
 
@@ -2837,18 +2913,21 @@ final class DashboardActivityWpdb {
 	}
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- The wpdb fixture retains the query call signature while returning the controlled database result.
-	public function query( string $query ): int|false {
+	public function query( string $query ): int {
+		++$this->writes;
 		return 0;
 	}
 
 	/** @param array<string, mixed> $data */
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The wpdb fixture retains the insert call signature while returning the controlled database result.
-	public function insert( string $table, array $data ): int|false {
+	public function insert( string $table, array $data ): false {
+		++$this->writes;
 		return false;
 	}
 
 	/** @return list<object> */
 	public function get_results( string $query ): array {
+		$this->reads[] = $query;
 		if ( 'SHOW ENGINES' === $query ) {
 			return array(
 				(object) array(
@@ -2908,6 +2987,7 @@ final class DashboardActivityWpdb {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- The bounded database fake belongs to its production-controller test.
 final class ReadyDashboardDatabase extends Database {
 	public function __construct() {
 	}
@@ -2916,9 +2996,10 @@ final class ReadyDashboardDatabase extends Database {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- The bounded database fake belongs to its production-controller test.
 final class DashboardBranchCheckProvider implements RepositoryProvider, CredentialedPublicRepositoryBrowser, \RAN\RepositoryProvider\RepositoryPathInspector {
 
-	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 	public int $prepare_calls       = 0;
 	public int $resolved_ref_calls  = 0;
@@ -3003,9 +3084,10 @@ final class DashboardBranchCheckProvider implements RepositoryProvider, Credenti
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- The bounded database fake belongs to its production-controller test.
 final class DashboardBranchCheckProviderWithoutPathInspector implements RepositoryProvider, CredentialedPublicRepositoryBrowser {
 
-	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 	public int $path_calls = 0;
 
@@ -3052,6 +3134,7 @@ final class DashboardBranchCheckProviderWithoutPathInspector implements Reposito
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- The bounded database fake belongs to its production-controller test.
 final class DashboardBranchCheckUpdaterLock extends WordPressUpdaterLock {
 
 	/** @var list<string> */
@@ -3082,9 +3165,10 @@ final class DashboardBranchCheckUpdaterLock extends WordPressUpdaterLock {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- The bounded database fake belongs to its production-controller test.
 final class DashboardUncredentialedBranchCheckProvider implements RepositoryProvider {
 
-	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 	public ?ArchiveRequest $request = null;
 
@@ -3123,6 +3207,7 @@ final class DashboardUncredentialedBranchCheckProvider implements RepositoryProv
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- The bounded database fake belongs to its production-controller test.
 final class DashboardBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenceStore {
 
 	/** @var array<string, mixed> */
@@ -3146,6 +3231,7 @@ final class DashboardBranchCheckEvidenceStore extends RepositoryBranchCheckEvide
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- The bounded database fake belongs to its production-controller test.
 final class ThrowingDashboardBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenceStore {
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of record retains the production method contract; these inputs do not affect this controlled result.

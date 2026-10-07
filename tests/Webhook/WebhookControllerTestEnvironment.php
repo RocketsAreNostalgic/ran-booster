@@ -6,6 +6,7 @@ declare(strict_types=1);
 // global namespace.
 
 if ( ! class_exists( 'WP_REST_Request' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedClassFound -- WordPress class identity is required by the host fixture contract.
 	class WP_REST_Request {
 		public int $body_calls   = 0;
 		public int $header_calls = 0;
@@ -62,7 +63,7 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 }
 
 if ( ! class_exists( 'WP_REST_Response' ) ) {
-	// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- The isolated REST environment loads its native request and response doubles together.
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedClassFound, Generic.Files.OneObjectStructurePerFile.MultipleFound -- The isolated REST environment loads its native request and response doubles together. WordPress class identity is required by the host fixture contract.
 	class WP_REST_Response {
 
 		public function __construct(

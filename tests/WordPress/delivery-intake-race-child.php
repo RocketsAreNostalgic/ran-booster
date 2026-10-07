@@ -1,44 +1,46 @@
 <?php
 
+/** @var list<string> $args Arguments injected by WP-CLI eval-file. */
+
 // Concurrent participant for the compact webhook-attempt admission proof.
 
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\DeploymentRequest;
 
-[$label, $run_id, $ready_marker, $release_marker, $result_marker] = array_pad( $args, 5, '' );
-if ( ! in_array( $label, array( 'a', 'b' ), true ) || preg_match( '/^[a-f0-9]{24}$/D', $run_id ) !== 1 ) {
+[$ran_booster_label, $ran_booster_run_id, $ran_booster_ready_marker, $ran_booster_release_marker, $ran_booster_result_marker] = array_pad( $args, 5, '' );
+if ( ! in_array( $ran_booster_label, array( 'a', 'b' ), true ) || preg_match( '/^[a-f0-9]{24}$/D', $ran_booster_run_id ) !== 1 ) {
 	throw new RuntimeException( 'The delivery-intake race arguments are invalid.' );
 }
 // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
-foreach ( array( $ready_marker, $release_marker, $result_marker ) as $path ) {
+foreach ( array( $ran_booster_ready_marker, $ran_booster_release_marker, $ran_booster_result_marker ) as $path ) {
 	if ( ! is_string( $path ) || ! str_starts_with( $path, sys_get_temp_dir() . DIRECTORY_SEPARATOR ) ) {
 		throw new RuntimeException( 'A delivery-intake marker path is invalid.' );
 	}
 }
 
-$provider    = 'fixture-provider';
-$delivery_id = 'delivery-intake-race-' . $run_id;
-$digest      = hash( 'sha256', 'authenticated-body-' . $run_id );
-$slug        = 'fixture-' . $run_id;
-$request     = new DeploymentRequest(
-	'group/subgroup/package-' . $run_id,
+$ran_booster_provider    = 'fixture-provider';
+$ran_booster_delivery_id = 'delivery-intake-race-' . $ran_booster_run_id;
+$ran_booster_digest      = hash( 'sha256', 'authenticated-body-' . $ran_booster_run_id );
+$ran_booster_slug        = 'fixture-' . $ran_booster_run_id;
+$ran_booster_request     = new DeploymentRequest(
+	'group/subgroup/package-' . $ran_booster_run_id,
 	'race-credential',
 	true,
 	'main',
-	$slug,
+	$ran_booster_slug,
 	null,
 	DeploymentPolicy::AUTOMATIC,
 	null
 );
-$result      = array(
-	'label'          => $label,
+$ran_booster_result      = array(
+	'label'          => $ran_booster_label,
 	'status'         => 'loser',
 	'attempt_id'     => null,
 	'correlation_id' => null,
 );
 try {
 	global $wpdb;
-	$database = new class( $wpdb, $ready_marker, $release_marker ) {
+	$ran_booster_database = new class( $wpdb, $ran_booster_ready_marker, $ran_booster_release_marker ) {
 		public string $last_error = '';
 		public string $options;
 		private bool $barrier_reached = false;
@@ -103,43 +105,43 @@ try {
 			return $result;
 		}
 	};
-	$attempts = ( new RAN\Deployment\DeploymentAttemptRepository( $database ) )->admit_webhook_batch(
-		$provider,
-		$delivery_id,
-		$digest,
+	$ran_booster_attempts = ( new RAN\Deployment\DeploymentAttemptRepository( $ran_booster_database ) )->admit_webhook_batch(
+		$ran_booster_provider,
+		$ran_booster_delivery_id,
+		$ran_booster_digest,
 		array(
 			array(
 				'operation'               => 'update',
 				'package_type'            => 'plugin',
-				'provider_repository_id'  => 'fixture-repository-' . $run_id,
-				'requested_ref'           => 'commit-' . $run_id,
+				'provider_repository_id'  => 'fixture-repository-' . $ran_booster_run_id,
+				'requested_ref'           => 'commit-' . $ran_booster_run_id,
 				'package_source'          => 'branch',
 				'package_source_revision' => 1,
-				'request'                 => $request,
+				'request'                 => $ran_booster_request,
 			),
 		)
 	);
-	if ( 1 !== count( $attempts ) ) {
+	if ( 1 !== count( $ran_booster_attempts ) ) {
 		throw new RuntimeException( 'The concurrent admission did not return one target.' );
 	}
-	$result = array(
-		'label'          => $label,
+	$ran_booster_result = array(
+		'label'          => $ran_booster_label,
 		'status'         => 'winner',
-		'attempt_id'     => $attempts[0]->get_id(),
-		'correlation_id' => $attempts[0]->get_correlation_id(),
+		'attempt_id'     => $ran_booster_attempts[0]->get_id(),
+		'correlation_id' => $ran_booster_attempts[0]->get_correlation_id(),
 	);
 } catch ( RAN\Deployment\DeploymentStorageFailure $failure ) {
 	// A database-selected loser is safe; provider redelivery is the retry.
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 	fwrite( STDERR, 'Delivery-intake admission lost safely: ' . $failure->getMessage() . "\n" );
 }
-$json = wp_json_encode( $result );
+$ran_booster_json = wp_json_encode( $ran_booster_result );
 // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
-$file = fopen( $result_marker, 'x' );
-if ( ! is_string( $json ) || false === $file ) {
+$ran_booster_file = fopen( $ran_booster_result_marker, 'x' );
+if ( ! is_string( $ran_booster_json ) || false === $ran_booster_file ) {
 	throw new RuntimeException( 'The delivery-intake result could not be written.' );
 }
 // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
-fwrite( $file, $json . "\n" );
+fwrite( $ran_booster_file, $ran_booster_json . "\n" );
 // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
-fclose( $file );
+fclose( $ran_booster_file );

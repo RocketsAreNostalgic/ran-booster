@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Deployment;
+namespace RAN\Tests\Deployment;
 
 require_once __DIR__ . '/WordPressWorkerWakeupCron.php';
 require_once __DIR__ . '/WordPressWorkerWakeupWordPressFunctions.php';
@@ -60,6 +60,7 @@ final class WordPressWorkerWakeupTest extends TestCase {
 		$this->database->read_fails                   = false;
 		$this->database->queued_at                    = gmdate( 'Y-m-d H:i:s', time() + 60 );
 		WordPressWorkerWakeupCron::$schedule_succeeds = false;
+		// @phpstan-ignore staticMethod.alreadyNarrowedType (Repeat the assertion after external database filesystem or scheduler state changes; earlier narrowing must not replace the runtime check.)
 		self::assertSame( 'unavailable', $this->wakeup->request() );
 	}
 
@@ -159,7 +160,7 @@ final class WordPressWorkerWakeupTest extends TestCase {
 	}
 }
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile -- Focused database stub for the wake-up repository query.
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class WordPressWorkerWakeupDatabase {
 
 	public string $prefix     = 'wp_';
@@ -194,6 +195,7 @@ final class WordPressWorkerWakeupDatabase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class WordPressWorkerWakeupSchema {
 
 	public int $installs        = 0;
@@ -214,6 +216,7 @@ final class WordPressWorkerWakeupSchema {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class WordPressWorkerWakeupActivationWakeup {
 
 	public int $requests = 0;
@@ -231,5 +234,3 @@ final class WordPressWorkerWakeupActivationWakeup {
 		return true;
 	}
 }
-
-// phpcs:enable Generic.Files.OneObjectStructurePerFile

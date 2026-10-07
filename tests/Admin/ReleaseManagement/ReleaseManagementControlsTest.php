@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin\ReleaseManagement;
+namespace RAN\Tests\Admin\ReleaseManagement;
 
 require_once __DIR__ . '/Support/ReleaseManagementWordPressFunctions.php';
 require_once __DIR__ . '/Support/ReleaseManagementFixtures.php';
@@ -10,10 +10,10 @@ require_once __DIR__ . '/Support/ReleaseManagementFixtures.php';
 use PHPUnit\Framework\Attributes\Before;
 use PHPUnit\Framework\TestCase;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingEligibility;
-use Tests\Admin\ReleaseManagement\Support\ProspectiveReleaseFacadeDouble;
-use Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture;
-use Tests\Admin\ReleaseManagement\Support\PackageProjection;
-use Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble;
+use RAN\Tests\Admin\ReleaseManagement\Support\ProspectiveReleaseFacadeDouble;
+use RAN\Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture;
+use RAN\Tests\Admin\ReleaseManagement\Support\PackageProjection;
+use RAN\Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble;
 
 final class ReleaseManagementControlsTest extends TestCase {
 	#[Before]

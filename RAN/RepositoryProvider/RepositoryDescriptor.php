@@ -9,6 +9,7 @@ use RAN\PackageSubdirectory;
 
 final readonly class RepositoryDescriptor {
 	public string $locator;
+	public bool $private;
 	public string $package_slug;
 
 	public function __construct(
@@ -16,10 +17,11 @@ final readonly class RepositoryDescriptor {
 		string $locator,
 		string $package_slug,
 		public string $provider_repository_id,
-		public bool $private, // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.privateFound -- Preserve the existing public named-argument signature.
+		bool $is_private,
 		public string $default_branch,
 		public ?string $credential_id
 	) {
+		$this->private      = $is_private;
 		$this->locator      = RepositoryLocator::require_valid( $locator );
 		$this->package_slug = PackageSubdirectory::normalize_slug( $package_slug );
 		if ( strlen( $this->package_slug ) > 191 ) {

@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests;
-
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused collaborators stay beside the service test.
+namespace RAN\Tests;
 
 require_once __DIR__ . '/Support/PackageOperationWordPressFunctions.php';
 require_once __DIR__ . '/Support/PackageOperationGlobalWordPressFunctions.php';
@@ -34,7 +32,7 @@ use RAN\Storage\PackageStorageOperation;
 use RAN\Storage\Database;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\RepositorySourceGuard;
-use Tests\Support\RepositorySourceGuardDatabase;
+use RAN\Tests\Support\RepositorySourceGuardDatabase;
 use RAN\Storage\ThemeRepository;
 use RAN\Theme;
 use RAN\Troubleshooting\TroubleshootingService;
@@ -1417,6 +1415,7 @@ final class PackageOperationServiceTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class OperationCoordinator extends DeploymentCoordinator {
 	public int $calls                      = 0;
 	public ?\Throwable $failure            = null;
@@ -1439,6 +1438,7 @@ final class OperationCoordinator extends DeploymentCoordinator {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class OperationUpdaterLock extends WordPressUpdaterLock {
 	public bool $available  = true;
 	public bool $releasable = true;
@@ -1460,6 +1460,7 @@ final class OperationUpdaterLock extends WordPressUpdaterLock {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class OperationPluginRepository extends PluginRepository {
 	public ?Plugin $stored                                = null;
 	/** @var array<string, mixed> */ public array $edited = array();
@@ -1511,6 +1512,7 @@ final class OperationPluginRepository extends PluginRepository {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class OperationThemeRepository extends ThemeRepository {
 	public ?Theme $stored                                 = null;
 	/** @var array<string, mixed> */ public array $edited = array();
@@ -1557,13 +1559,15 @@ final class OperationThemeRepository extends ThemeRepository {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class OperationTheme extends Theme {
-	public function __construct( string $stylesheet ) {
+	public function __construct( string $stylesheet = '' ) {
 		$this->stylesheet = $stylesheet;
 		$this->name       = 'Example';
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class OperationRemovalGateway implements PackageRemovalGateway {
 	public function plugin_is_active( string $identifier ): bool {
 		unset( $identifier );

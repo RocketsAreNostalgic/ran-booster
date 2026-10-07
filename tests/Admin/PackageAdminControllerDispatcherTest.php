@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
-
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused dispatcher fixtures stay beside their tests.
+namespace RAN\Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/WPError.php';
@@ -36,8 +34,8 @@ use RAN\Secrets\SecretsFile;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\WordPressUpdaterLock;
-use Tests\RepositoryProvider\Support\ExternalFixtureProvider;
-use Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
+use RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider;
+use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 use WP_Error;
 
 final class PackageAdminControllerDispatcherTest extends TestCase {
@@ -375,9 +373,10 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused dispatcher fixtures stay beside their tests.
 final class EditBoundaryPackage extends AbstractPackage {
 
-	private function __construct( private readonly string $identifier ) {
+	public function __construct( private readonly string $identifier = '' ) {
 	}
 
 	public static function make( string $identifier, string $provider, bool $is_private = false, ?string $credential_id = null ): self {
@@ -392,6 +391,7 @@ final class EditBoundaryPackage extends AbstractPackage {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused dispatcher fixtures stay beside their tests.
 final class EditBoundaryPluginRepository extends PluginRepository {
 
 	public int $lookups = 0;
@@ -399,6 +399,7 @@ final class EditBoundaryPluginRepository extends PluginRepository {
 	public function __construct( private readonly Package $package ) {
 	}
 
+	/** @return Package */
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of booster_plugin_from_file retains the production method contract; these inputs do not affect this controlled result.
 	public function booster_plugin_from_file( $file ) {
 		++$this->lookups;
@@ -407,6 +408,7 @@ final class EditBoundaryPluginRepository extends PluginRepository {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused dispatcher fixtures stay beside their tests.
 final class EditBoundaryThemeRepository extends ThemeRepository {
 
 	public int $lookups = 0;
@@ -414,6 +416,7 @@ final class EditBoundaryThemeRepository extends ThemeRepository {
 	public function __construct( private readonly Package $package ) {
 	}
 
+	/** @return Package */
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of booster_theme_from_stylesheet retains the production method contract; these inputs do not affect this controlled result.
 	public function booster_theme_from_stylesheet( $stylesheet ) {
 		++$this->lookups;
@@ -422,9 +425,10 @@ final class EditBoundaryThemeRepository extends ThemeRepository {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused dispatcher fixtures stay beside their tests.
 final class CapturingPublicLookupProvider implements RepositoryProvider, CredentialedPublicRepositoryBrowser {
 
-	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 	/** @var list<RepositoryLookupRequest> */
 	public array $requests = array();
@@ -465,9 +469,10 @@ final class CapturingPublicLookupProvider implements RepositoryProvider, Credent
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused dispatcher fixtures stay beside their tests.
 final class CapturingRepositoryProvider implements RepositoryProvider {
 
-	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 	/** @var list<RepositoryLookupRequest> */
 	public array $requests = array();

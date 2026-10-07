@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tests\RepositoryProvider;
+namespace RAN\Tests\RepositoryProvider;
 
 // Native temporary files exercise the encrypted provider-policy boundary.
-// phpcs:disable WordPress.WP.AlternativeFunctions
 
 use PHPUnit\Framework\TestCase;
 use RAN\Portability\BlueprintCredential;
@@ -16,8 +15,8 @@ use RAN\RepositoryProvider\InvalidCredentialInput;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
 use RAN\Secrets\SecretsFile;
-use Tests\Secrets\InMemorySiteKeyStore;
-use Tests\Secrets\SecretsFileTestFactory;
+use RAN\Tests\Secrets\InMemorySiteKeyStore;
+use RAN\Tests\Secrets\SecretsFileTestFactory;
 
 final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 
@@ -38,6 +37,7 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 	public function test_blank_secret_edit_retains_the_existing_token_without_submitted_validation(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-github-legacy-edit-' . bin2hex( random_bytes( 8 ) );
 		$path      = $directory . '/secrets.json';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create this isolated test-owned fixture directory without a WordPress filesystem runtime.
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		$catalog = new ProviderSecretPolicyCatalog();
 		$catalog->register( ProviderCode::parse( 'gh' ), new GitHubCredentialPolicy(), null );
@@ -72,10 +72,12 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 			InMemorySiteKeyStore::reset( $path );
 			foreach ( array( $path, $path . '.lock' ) as $file ) {
 				if ( is_file( $file ) || is_link( $file ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this test-owned temporary fixture during cleanup.
 					unlink( $file );
 				}
 			}
 			if ( is_dir( $directory ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only this test-owned temporary fixture during cleanup.
 				rmdir( $directory );
 			}
 		}
@@ -84,6 +86,7 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 	public function test_recovery_fitness_rejects_adecryptable_stored_git_hub_prefix_mismatch(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-github-recovery-' . bin2hex( random_bytes( 8 ) );
 		$path      = $directory . '/secrets.json';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create this isolated test-owned fixture directory without a WordPress filesystem runtime.
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		$catalog = new ProviderSecretPolicyCatalog();
 		$catalog->register( ProviderCode::parse( 'gh' ), new GitHubCredentialPolicy(), null );
@@ -119,10 +122,12 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 			InMemorySiteKeyStore::reset( $path );
 			foreach ( array( $path, $path . '.lock' ) as $file ) {
 				if ( is_file( $file ) || is_link( $file ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this test-owned temporary fixture during cleanup.
 					unlink( $file );
 				}
 			}
 			if ( is_dir( $directory ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only this test-owned temporary fixture during cleanup.
 				rmdir( $directory );
 			}
 		}
@@ -131,13 +136,14 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 	public function test_encrypted_store_preserves_only_the_closed_submitted_token_failure(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-github-input-' . bin2hex( random_bytes( 8 ) );
 		$path      = $directory . '/secrets.json';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create this isolated test-owned fixture directory without a WordPress filesystem runtime.
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		$catalog = new ProviderSecretPolicyCatalog();
 		$catalog->register( ProviderCode::parse( 'gh' ), new GitHubCredentialPolicy(), null );
 		$secrets = SecretsFileTestFactory::create( $path, array(), $catalog );
 
+		$token = 'github_pat_' . str_repeat( 'a', 40 );
 		try {
-			$token = 'github_pat_' . str_repeat( 'a', 40 );
 			$secrets->save_credential(
 				'gh',
 				null,
@@ -154,6 +160,7 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 			self::assertSame( InvalidCredentialInput::CREDENTIAL_KIND_MISMATCH, $failure->reason );
 			self::assertStringContainsString( 'must begin with ghp_', $failure->getMessage() );
 			self::assertFalse(
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Native JSON encoding preserves the exact fixture payload or secret-containment evidence without a WordPress runtime.
 				str_contains( (string) json_encode( $failure->getTrace() ), $token ),
 				'The submitted token must not survive in the boundary exception trace.'
 			);
@@ -161,10 +168,12 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 			InMemorySiteKeyStore::reset( $path );
 			foreach ( array( $path, $path . '.lock' ) as $file ) {
 				if ( is_file( $file ) || is_link( $file ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this test-owned temporary fixture during cleanup.
 					unlink( $file );
 				}
 			}
 			if ( is_dir( $directory ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only this test-owned temporary fixture during cleanup.
 				rmdir( $directory );
 			}
 		}
@@ -173,6 +182,7 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 	public function test_blueprint_import_rejects_amismatched_decoded_token_before_persistence(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-github-blueprint-' . bin2hex( random_bytes( 8 ) );
 		$path      = $directory . '/secrets.json';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create this isolated test-owned fixture directory without a WordPress filesystem runtime.
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		$catalog = new ProviderSecretPolicyCatalog();
 		$catalog->register( ProviderCode::parse( 'gh' ), new GitHubCredentialPolicy(), null );
@@ -204,10 +214,12 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 			InMemorySiteKeyStore::reset( $path );
 			foreach ( array( $path, $path . '.lock' ) as $file ) {
 				if ( is_file( $file ) || is_link( $file ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this test-owned temporary fixture during cleanup.
 					unlink( $file );
 				}
 			}
 			if ( is_dir( $directory ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only this test-owned temporary fixture during cleanup.
 				rmdir( $directory );
 			}
 		}

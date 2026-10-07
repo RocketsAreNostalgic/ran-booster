@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
+namespace RAN\Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Support/PackageViewWordPressFunctions.php';
 
@@ -202,13 +202,12 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		);
 		$buffer_level               = ob_get_level();
 
-		// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Test-only handler promotes render warnings to exceptions.
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Test-only handler promotes render warnings to exceptions.
 		set_error_handler(
 			static function ( int $severity, string $message, string $file, int $line ): never {
 				throw new \ErrorException( $message, 0, $severity, $file, $line );
 			}
 		);
-		// phpcs:enable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler
 
 		try {
 			$html = ( static function () use ( $provider_code, $settings_url, $provider_webhook_available, $branch_value, $deployment_policy, $package_mutation_available, $package_branch_readiness ): string {

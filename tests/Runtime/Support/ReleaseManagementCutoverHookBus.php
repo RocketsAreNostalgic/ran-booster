@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Runtime\Support;
+namespace RAN\Tests\Runtime\Support;
 
 final class ReleaseManagementCutoverHookBus {
 	/** @var array<string,list<array{callback:callable,priority:int,sequence:int}>> */

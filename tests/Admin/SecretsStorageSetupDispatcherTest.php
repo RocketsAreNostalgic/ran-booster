@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
-
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused action spies belong to this dispatcher test.
+namespace RAN\Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
@@ -440,6 +438,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused action spies belong to this dispatcher test.
 final class SetupActionProvisioner extends SecretsStorageProvisioner {
 	public int $provision_calls = 0;
 	/** @var list<string> */
@@ -481,6 +480,7 @@ final class SetupActionProvisioner extends SecretsStorageProvisioner {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused action spies belong to this dispatcher test.
 final class SetupActionDispatcher extends Dispatcher {
 	protected function redirect_to( string $url ): never {
 		// Test spy preserves the fixed redirect URL for assertions.
@@ -488,6 +488,7 @@ final class SetupActionDispatcher extends Dispatcher {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused action spies belong to this dispatcher test.
 final class SetupActionRedirect extends \RuntimeException {
 	public function __construct( public readonly string $url ) {
 		parent::__construct( 'Redirected.' );

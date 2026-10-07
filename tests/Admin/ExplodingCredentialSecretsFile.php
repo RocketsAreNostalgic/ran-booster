@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
+namespace RAN\Tests\Admin;
 
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\Secrets\SecretsFile;
@@ -23,7 +23,8 @@ final class ExplodingCredentialSecretsFile extends SecretsFile {
 		ProviderCode|string $provider,
 		?string $id,
 		array $metadata,
-		?string $secret
+		?string $secret,
+		bool $submitted = false
 	): string {
 		// The canary verifies Dispatcher redacts unexpected storage failures.
 		throw new RuntimeException( 'Storage failed after receiving ' . $this->canary . '.' );

@@ -43,7 +43,7 @@ add_action(
 				\RAN\RepositoryProvider\ProviderCredentialStore $credentials,
 				\RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
 				\RAN\RepositoryProvider\ProviderRegistrationContext $registration_context
-			): \RAN\RepositoryProvider\RepositoryProvider => new \RANBoosterFixtureProvider\Provider( $credentials, $delivery_evidence )
+			): \RAN\RepositoryProvider\RepositoryProvider => new \RAN_Booster_FixtureProvider\Provider( $credentials, $delivery_evidence )
 		);
 	}
 );

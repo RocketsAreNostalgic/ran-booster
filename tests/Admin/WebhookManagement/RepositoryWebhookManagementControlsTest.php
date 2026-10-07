@@ -2,7 +2,7 @@
 
 declare( strict_types = 1 );
 
-namespace Tests\Admin\WebhookManagement;
+namespace RAN\Tests\Admin\WebhookManagement;
 
 use PHPUnit\Framework\TestCase;
 use RAN\AddOn\WebhookAssistance\AssistanceTarget;
@@ -17,12 +17,12 @@ use RAN\PackageSource;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
-use Tests\Support\AbsentWebhookManagementCapabilityProvider;
-use Tests\Support\CompleteWebhookManagementCapabilityProvider;
-use Tests\Support\FitnessOnlyWebhookManagementCapabilityProvider;
-use Tests\Support\ManagementOnlyWebhookManagementCapabilityProvider;
-use Tests\Support\UnnormalizedWebhookManagementCapabilityProvider;
-use Tests\Support\WebhookManagementCapabilityProvider;
+use RAN\Tests\Support\AbsentWebhookManagementCapabilityProvider;
+use RAN\Tests\Support\CompleteWebhookManagementCapabilityProvider;
+use RAN\Tests\Support\FitnessOnlyWebhookManagementCapabilityProvider;
+use RAN\Tests\Support\ManagementOnlyWebhookManagementCapabilityProvider;
+use RAN\Tests\Support\UnnormalizedWebhookManagementCapabilityProvider;
+use RAN\Tests\Support\WebhookManagementCapabilityProvider;
 
 require_once __DIR__ . '/RepositoryWebhookManagementControlsWordPressFunctions.php';
 require_once __DIR__ . '/WordPressInstallationStoreWordPressFunctions.php';
@@ -34,6 +34,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		if ( ! defined( 'ABSPATH' ) ) {
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 			define( 'ABSPATH', __DIR__ . '/' );
 		}
 		$GLOBALS['ran_booster_repository_webhook_management_actions']      = array();
@@ -48,6 +49,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$this->expectException( \ArgumentCountError::class );
 		$this->expectExceptionMessage( RepositoryWebhookManagementControls::class . '::__construct()' );
 
+		// @phpstan-ignore arguments.count (Deliberately omit the required authority to prove PHP rejects this unsupported constructor call.)
 		new RepositoryWebhookManagementControls(
 			$this->createMock( WebhookAssistanceFacade::class ),
 			$this->createMock( AdminInteractionFacade::class ),
@@ -67,7 +69,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			new ProviderRegistry( array() ),
 			'/unused/',
 			'https://example.test/unused/',
-			null
+			null // @phpstan-ignore argument.type (Deliberately pass null to prove the required authority cannot be bypassed.)
 		);
 	}
 
@@ -246,7 +248,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			array(
 				array(
 					'id'    => 'credential-1',
-					'label' => 'Repository access',
+					'label' => '<script>Repository access</script>',
 					'kind'  => 'token',
 				),
 			)
@@ -257,6 +259,8 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		ob_start();
 		$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository' );
 		$html = (string) ob_get_clean();
+		self::assertStringContainsString( '&lt;script&gt;Repository access&lt;/script&gt;', $html );
+		self::assertStringNotContainsString( '<script>Repository access</script>', $html );
 
 		self::assertStringContainsString( '<h3 id="ran-booster-repository-webhook-heading">Push-to-deploy</h3>', $html );
 		self::assertStringContainsString( 'Webhook setup', $html );

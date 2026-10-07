@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin\Interaction;
+namespace RAN\Tests\Admin\Interaction;
 
 use function RAN\Admin\Interaction\wp_make_link_relative;
 
@@ -81,7 +81,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 			AdminInteractionOutcome::success( $request, "Unsafe\nmessage" );
 			self::fail( 'Control characters must be rejected.' );
 		} catch ( InvalidArgumentException ) {
-			self::assertTrue( true );
+			$this->addToAssertionCount( 1 );
 		}
 
 		$failure = AdminInteractionOutcome::unexpected_failure( $request );
@@ -654,7 +654,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 			$callback();
 			self::fail( 'The facade response must terminate the request.' );
 		} catch ( InteractionTerminated ) {
-			self::assertTrue( true );
+			$this->addToAssertionCount( 1 );
 		}
 	}
 
@@ -676,6 +676,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 	}
 }
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused termination sentinel belongs with its facade test.
+
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused termination sentinel belongs with its facade test.
 final class InteractionTerminated extends RuntimeException {
 }

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace RANBoosterFixtureProvider;
+namespace RAN_Booster_FixtureProvider;
 
 use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\ProviderDiagnosticRequest;

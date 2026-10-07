@@ -9,9 +9,7 @@
 
 declare(strict_types=1);
 
-namespace RANBoosterP4Phase0Fixture;
-
-// phpcs:disable Universal.Files.SeparateFunctionsFromOO.Mixed, Generic.Files.OneObjectStructurePerFile.MultipleFound -- A single-file installed plugin fixture keeps disposable ownership explicit.
+namespace RAN_Booster_P4Phase0Fixture;
 
 use WP_CLI;
 use WP_CLI_Command;
@@ -200,8 +198,9 @@ function register_abilities(): void {
 /**
  * Register the dedicated local STDIO-only server with one explicit read tool.
  */
+// @phpstan-ignore class.notFound (The explicitly version-checked external MCP adapter supplies this runtime contract.)
 function register_mcp_server( McpAdapter $adapter ): void {
-	$adapter->create_server(
+	$adapter->create_server( // @phpstan-ignore class.notFound (External MCP adapter contract supplied by the explicitly version-checked installed phase-zero proof.)
 		MCP_SERVER,
 		'ran-booster-p4/v1',
 		'fixture',
@@ -218,18 +217,21 @@ function register_mcp_server( McpAdapter $adapter ): void {
 	);
 }
 
+// phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- This installed single-file fixture deliberately owns these exact function and command declarations together.
 final class RootCommand extends WP_CLI_Command {
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This exact fixture spy remains beside the contract it exercises; its existing class identity and load order are intentional.
 final class VersionCommand {
 	/**
 	 * Print the test-only fixture version.
 	 */
 	public function __invoke(): void {
-		WP_CLI::line( '0.0.0-test-only' );
+		WP_CLI::line( '0.0.0-test-only' ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This exact fixture spy remains beside the contract it exercises; its existing class identity and load order are intentional.
 final class AbilityCommand extends WP_CLI_Command {
 	/**
 	 * Run one registered fixture ability.
@@ -254,18 +256,18 @@ final class AbilityCommand extends WP_CLI_Command {
 		$raw    = $assoc_args['input'] ?? 'null';
 
 		if ( 0 === get_current_user_id() ) {
-			WP_CLI::error( 'An explicit WordPress user is required.' );
+			WP_CLI::error( 'An explicit WordPress user is required.' ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)
 		}
 		if ( '-' === $raw ) {
 			$raw = (string) file_get_contents( 'php://stdin' );
 		}
 		$input = json_decode( $raw, true );
 		if ( JSON_ERROR_NONE !== json_last_error() ) {
-			WP_CLI::error( 'Input must be valid JSON.' );
+			WP_CLI::error( 'Input must be valid JSON.' ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)
 		}
 		$ability = wp_get_ability( $name );
 		if ( null === $ability ) {
-			WP_CLI::error( 'The requested fixture ability is unavailable.' );
+			WP_CLI::error( 'The requested fixture ability is unavailable.' ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)
 		}
 		if ( array_key_exists( 'emit-warning', $assoc_args ) ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error -- Deliberate warning-isolation fixture.
@@ -273,13 +275,13 @@ final class AbilityCommand extends WP_CLI_Command {
 		}
 		$result = $ability->execute( $input );
 		if ( $result instanceof WP_Error ) {
-			WP_CLI::error( 'The fixture ability rejected the request.' );
+			WP_CLI::error( 'The fixture ability rejected the request.' ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)
 		}
 		if ( 'json' === $format ) {
-			WP_CLI::line( (string) wp_json_encode( $result, JSON_UNESCAPED_SLASHES ) );
+			WP_CLI::line( (string) wp_json_encode( $result, JSON_UNESCAPED_SLASHES ) ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)
 			return;
 		}
-		WP_CLI::line( sprintf( 'P4 fixture %s: %s', $result['target'], $result['status'] ) );
+		WP_CLI::line( sprintf( 'P4 fixture %s: %s', $result['target'], $result['status'] ) ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)
 	}
 }
 
@@ -290,9 +292,9 @@ function register_cli(): void {
 	if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 		return;
 	}
-	WP_CLI::add_command( 'ran-booster', RootCommand::class );
-	WP_CLI::add_command( 'ran-booster version', VersionCommand::class );
-	WP_CLI::add_command( 'ran-booster ability', AbilityCommand::class );
+	WP_CLI::add_command( 'ran-booster', RootCommand::class ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)
+	WP_CLI::add_command( 'ran-booster version', VersionCommand::class ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)
+	WP_CLI::add_command( 'ran-booster ability', AbilityCommand::class ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)
 }
 
 add_action( 'wp_abilities_api_categories_init', __NAMESPACE__ . '\\register_category' );

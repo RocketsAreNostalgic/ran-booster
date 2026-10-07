@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\RepositoryProvider\Support;
+namespace RAN\Tests\RepositoryProvider\Support;
 
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
 use RAN\RepositoryProvider\Admin\CredentialFieldMetadata;

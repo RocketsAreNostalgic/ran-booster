@@ -2,10 +2,8 @@
 
 declare(strict_types=1);
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile -- Focused admitted-boundary collaborators live with the test.
-// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited -- The updater lock deliberately uses the scoped wpdb double.
 
-namespace Tests\Deployment;
+namespace RAN\Tests\Deployment;
 
 require_once __DIR__ . '/AttemptRepositoryDatabase.php';
 require_once __DIR__ . '/DeploymentCoordinatorWordPressFunctions.php';
@@ -46,7 +44,7 @@ use RAN\WPBranchUpdater\V1\Runtime\BranchUpdater;
 use RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionResult;
 use RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor;
 use RuntimeException;
-use Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+use RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 final class AdmittedBranchExecutionTest extends TestCase {
 	private AttemptRepositoryDatabase $database;
@@ -57,7 +55,8 @@ final class AdmittedBranchExecutionTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
-		$this->database         = new AttemptRepositoryDatabase();
+		$this->database = new AttemptRepositoryDatabase();
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- This isolated test assigns the WordPress database double required by the updater lock.
 		$GLOBALS['wpdb']        = $this->database;
 		$this->attempts         = new DeploymentAttemptRepository(
 			$this->database,
@@ -266,6 +265,7 @@ final class AdmittedBranchExecutionTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class BoundaryPluginRepository extends PluginRepository {
 	public ?Plugin $package = null;
 	public function __construct() {}
@@ -283,10 +283,12 @@ final class BoundaryPluginRepository extends PluginRepository {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class BoundaryThemeRepository extends ThemeRepository {
 	public function __construct() {}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class BoundaryProviderArchive implements ProviderPreparedArchive {
 	public int $cleanup_calls       = 0;
 	public bool $resolved_ref_fails = false;
@@ -306,6 +308,7 @@ final class BoundaryProviderArchive implements ProviderPreparedArchive {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class BoundaryRepositoryProvider implements RepositoryProvider {
 	use SuppliesProviderDiagnostics;
 
@@ -322,6 +325,7 @@ final class BoundaryRepositoryProvider implements RepositoryProvider {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class BoundaryAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiveSource, AdmittedTargetFacts, AdmittedPackageExecutor, MutationLock {
 	/** @var list<string> */
 	public array $events = array();
@@ -353,7 +357,7 @@ final class BoundaryAdmittedHost implements AdmittedAttemptJournal, AdmittedArch
 		$this->events[] = 'allowed';
 	}
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of frozen_target retains the production method contract; these inputs do not affect this controlled result.
-	public function frozen_target( BranchDeploymentDeclaration $deployment, bool $defer_existing ): ?array {
+	public function frozen_target( BranchDeploymentDeclaration $deployment, bool $defer_existing ): array {
 		$this->events[] = $defer_existing ? 'frozen:defer' : 'frozen:live';
 		return array(
 			'identifier' => 'example/example.php',
@@ -379,7 +383,7 @@ final class BoundaryAdmittedHost implements AdmittedAttemptJournal, AdmittedArch
 		);
 	}
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of baseline_now retains the production method contract; these inputs do not affect this controlled result.
-	public function baseline_now( BranchDeploymentDeclaration $deployment, array $baseline ): ?array {
+	public function baseline_now( BranchDeploymentDeclaration $deployment, array $baseline ): array {
 		$this->events[] = 'baseline-now';
 		return $baseline;
 	}
@@ -407,8 +411,10 @@ final class BoundaryAdmittedHost implements AdmittedAttemptJournal, AdmittedArch
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class BoundaryAdmittedArtifact implements AdmittedBranchArtifact {
 	/** @param list<string> $events */
+	// @phpstan-ignore property.onlyWritten (The caller reads this by-reference event buffer to verify exact execution ordering.)
 	public function __construct( private array &$events ) {}
 	public function resolved_ref(): string {
 		return str_repeat( 'a', 40 );

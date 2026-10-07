@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin\ReleaseManagement;
+namespace RAN\Tests\Admin\ReleaseManagement;
 
 require_once __DIR__ . '/Support/ReleaseManagementWordPressFunctions.php';
 require_once __DIR__ . '/Support/ReleaseManagementFixtures.php';
@@ -21,12 +21,12 @@ use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\Storage\Database;
 use RAN\Storage\RepositorySourceGuard;
-use Tests\Admin\ReleaseManagement\GitHub\Support\PluginRepositoryDouble;
-use Tests\Admin\ReleaseManagement\GitHub\Support\ThemeRepositoryDouble;
-use Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture;
-use Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble;
-use Tests\Admin\ReleaseManagement\Support\RepositoryReleaseWorkflowProviderDouble;
-use Tests\Admin\ReleaseManagement\Support\PartialRepositoryReleaseWorkflowProviderDouble;
+use RAN\Tests\Admin\ReleaseManagement\GitHub\Support\PluginRepositoryDouble;
+use RAN\Tests\Admin\ReleaseManagement\GitHub\Support\ThemeRepositoryDouble;
+use RAN\Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture;
+use RAN\Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble;
+use RAN\Tests\Admin\ReleaseManagement\Support\RepositoryReleaseWorkflowProviderDouble;
+use RAN\Tests\Admin\ReleaseManagement\Support\PartialRepositoryReleaseWorkflowProviderDouble;
 
 final class ReleaseWorkflowRequestControllerTest extends TestCase {
 	#[Before]
@@ -138,13 +138,12 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 		$provider = new RepositoryReleaseWorkflowProviderDouble();
 		$output   = '';
 		ob_start();
-		// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Test-only handler promotes missing-metadata warnings to exceptions.
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Test-only handler promotes missing-metadata warnings to exceptions.
 		set_error_handler(
 			static function ( int $severity, string $message ): never {
 				throw new \ErrorException( $message, 0, $severity );
 			}
 		);
-		// phpcs:enable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler
 		try {
 			$url = $this->controller( provider: $provider, providers: $this->registry_without_metadata( $provider ) )->process_workflow_request( $this->request( 'inspect' ) );
 		} finally {
@@ -272,7 +271,7 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 		$request             = $this->request( 'inspect' );
 		$request['_wpnonce'] = 'wrong';
 		$this->controller( provider: $provider )->process_workflow_request( $request );
-		self::assertSame( array(), $provider->calls );
+		self::assertThat( $provider->calls, self::identicalTo( array() ) );
 	}
 
 	public function test_setup_uses_the_preview_channel_for_core_preflight(): void {

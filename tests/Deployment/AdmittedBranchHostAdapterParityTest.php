@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile -- Focused host-boundary collaborators live with the parity tests.
-// phpcs:disable WordPress.WP.AlternativeFunctions -- Tests deliberately create and remove isolated fixture files.
-// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited -- The updater lock deliberately uses the scoped wpdb double.
 
-namespace Tests\Deployment;
+namespace RAN\Tests\Deployment;
 
 require_once __DIR__ . '/AttemptRepositoryDatabase.php';
 require_once __DIR__ . '/AdmittedBranchHostAdapterWordPressFunctions.php';
@@ -51,8 +48,8 @@ use RAN\WPBranchUpdater\V1\Runtime\BranchUpdater;
 use RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionResult;
 use RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor;
 use RuntimeException;
-use Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
-use Tests\Support\RepositorySourceGuardDatabase;
+use RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+use RAN\Tests\Support\RepositorySourceGuardDatabase;
 use ZipArchive;
 
 final class AdmittedBranchHostAdapterParityTest extends TestCase {
@@ -83,10 +80,12 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		$this->ensure_directory( (string) $GLOBALS['ran_booster_admitted_temp_root'] );
 		$file = ABSPATH . 'wp-admin/includes/file.php';
 		if ( ! file_exists( $file ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 			file_put_contents( $file, "<?php\n" );
 		}
 
-		$this->database         = new AttemptRepositoryDatabase();
+		$this->database = new AttemptRepositoryDatabase();
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- This isolated test assigns the WordPress database double required by the updater lock.
 		$GLOBALS['wpdb']        = $this->database;
 		$this->attempts         = new DeploymentAttemptRepository(
 			$this->database,
@@ -100,13 +99,14 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		$this->themes           = new ParityThemeRepository();
 		$this->source_database  = new RepositorySourceGuardDatabase();
 		$this->source_guard     = new RepositorySourceGuard( $this->source_database, $this->createStub( Database::class ) );
-		$this->plugins->managed = array( $this->plugin() );
+		$this->plugins->managed = array( 'fixture' => $this->plugin() );
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		foreach ( $this->fixtures as $fixture ) {
 			if ( file_exists( $fixture ) || is_link( $fixture ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 				unlink( $fixture );
 			}
 		}
@@ -219,7 +219,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		$this->plugins->installed = $this->plugin( version: '2.0.0' );
 		$this->download_fixture( 'example' );
 		$executor->after_execution = function (): void {
-			$this->plugins->managed = array( $this->plugin( repository: 'other/example' ) );
+			$this->plugins->managed = array( 'fixture' => $this->plugin( repository: 'other/example' ) );
 		};
 
 		$code = $this->deploy( $adapter );
@@ -287,7 +287,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 	}
 
 	public function test_single_file_plugin_is_rejected_before_provider_contact(): void {
-		$this->plugins->managed = array( $this->plugin( identifier: 'example.php' ) );
+		$this->plugins->managed = array( 'fixture' => $this->plugin( identifier: 'example.php' ) );
 		$provider               = new ParityRepositoryProvider( new ParityProviderArchive( str_repeat( 'a', 40 ) ) );
 		$attempt                = $this->running_update();
 		$coordinator            = $this->coordinator( $provider );
@@ -507,6 +507,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		if ( false === $path ) {
 			throw new RuntimeException( 'Unable to create ZIP fixture path.' );
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		unlink( $path );
 		$zip = new ZipArchive();
 		if ( true !== $zip->open( $path, ZipArchive::CREATE | ZipArchive::OVERWRITE ) ) {
@@ -552,6 +553,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 	}
 
 	private function ensure_directory( string $path ): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		if ( ! is_dir( $path ) && ! mkdir( $path, 0777, true ) && ! is_dir( $path ) ) {
 			throw new RuntimeException( 'Unable to create parity test directory.' );
 		}
@@ -573,15 +575,18 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			if ( is_dir( $child ) && ! is_link( $child ) ) {
 				$this->remove_tree( $child );
 			} elseif ( file_exists( $child ) || is_link( $child ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 				unlink( $child );
 			}
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		rmdir( $path );
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class ParityPluginRepository extends PluginRepository {
-	/** @var list<Plugin> */
+	/** @var array<string, Plugin> */
 	public array $managed                          = array();
 	public ?Plugin $installed                      = null;
 	public ?Plugin $by_identifier                  = null;
@@ -626,10 +631,12 @@ final class ParityPluginRepository extends PluginRepository {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class ParityThemeRepository extends ThemeRepository {
 	public function __construct() {}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class ParityProviderArchive implements ProviderPreparedArchive {
 	public string $url        = 'https://example.test/archive.zip';
 	public int $cleanup_calls = 0;
@@ -662,6 +669,7 @@ final class ParityProviderArchive implements ProviderPreparedArchive {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class ParityRepositoryProvider implements RepositoryProvider {
 	use SuppliesProviderDiagnostics;
 
@@ -688,6 +696,7 @@ final class ParityRepositoryProvider implements RepositoryProvider {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class ParityCoreExecutor extends WordPressCorePackageExecutor {
 	public int $calls = 0;
 	/** @var null|callable(): void */
@@ -714,6 +723,7 @@ final class ParityCoreExecutor extends WordPressCorePackageExecutor {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class ParityFailureNotifier implements DeploymentFailureNotifier {
 	/** @var list<DeploymentAttempt> */
 	public array $attempts = array();

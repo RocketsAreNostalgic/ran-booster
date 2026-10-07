@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tests\RepositoryProvider;
+namespace RAN\Tests\RepositoryProvider;
 
 // Direct local filesystem operations verify sidecar policy and deactivation behavior.
-// phpcs:disable WordPress.WP.AlternativeFunctions, Generic.Files.OneObjectStructurePerFile.MultipleFound
 
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\ProviderSettingsPresenter;
@@ -32,14 +31,14 @@ use RAN\RepositoryProvider\WebhookNormalizer;
 use RAN\RepositoryProvider\WebhookRequest;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\CredentialUsageReader;
-use Tests\Support\CredentialUsageDatabase;
+use RAN\Tests\Support\CredentialUsageDatabase;
 use RuntimeException;
-use Tests\RepositoryProvider\Support\ExternalFixtureCredentialPolicy;
-use Tests\RepositoryProvider\Support\ExternalFixtureProvider;
-use Tests\RepositoryProvider\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
-use Tests\RepositoryProvider\Support\InertWebhookPolicy;
-use Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
-use Tests\Secrets\SecretsFileTestFactory;
+use RAN\Tests\RepositoryProvider\Support\ExternalFixtureCredentialPolicy;
+use RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider;
+use RAN\Tests\RepositoryProvider\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
+use RAN\Tests\RepositoryProvider\Support\InertWebhookPolicy;
+use RAN\Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
+use RAN\Tests\Secrets\SecretsFileTestFactory;
 
 final class ProviderSecretPolicyContractTest extends TestCase {
 
@@ -117,7 +116,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 
 	public function test_webhook_metadata_without_the_optional_capability_is_rejected(): void {
 		$provider = new class() implements RepositoryProvider {
-			use \Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
 
 			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata(
@@ -153,7 +152,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 
 	public function test_credential_metadata_without_the_optional_policy_is_rejected_atomically(): void {
 		$provider = new class() implements RepositoryProvider {
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata(
@@ -211,7 +210,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		self::assertInstanceOf( ExternalFixtureProvider::class, $provider );
 		self::assertSame( array(), $settings['webhook_profiles'] );
 		self::assertFalse( $settings['provider']['capabilities']['webhooks'] );
-		self::assertNotInstanceOf( WebhookNormalizer::class, $provider );
+		self::assertFalse( ( new \ReflectionClass( $provider ) )->implementsInterface( WebhookNormalizer::class ) );
 	}
 
 	public function test_credential_store_factory_failures_are_redacted_and_leave_registration_unchanged(): void {
@@ -292,7 +291,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => new EmptyAuthenticatedWebhookDeliveryEvidenceReader()
 		);
 		$provider = new class() implements RepositoryProvider {
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public function get_metadata(): ProviderMetadata {
 				throw new RuntimeException( 'provider-metadata-token-canary' );
@@ -324,7 +323,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$registry = new ProviderRegistry( array(), $catalog );
 		$provider = new class() implements RepositoryProvider {
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public function get_metadata(): ProviderMetadata {
 				throw new RuntimeException( 'direct-provider-metadata-token-canary' );
@@ -546,15 +545,19 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$this->assert_credential_policy_unavailable( $catalog, ProviderCode::parse( 'other-fixture' ) );
 		self::assertSame( $provider, $registry->get( 'fixture' ) );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this test-owned temporary fixture during cleanup.
 		unlink( $path );
 		if ( is_file( $path . '.lock' ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this test-owned temporary fixture during cleanup.
 			unlink( $path . '.lock' );
 		}
 	}
 
 	public function test_unknown_provider_access_fails_before_sidecar_inclusion(): void {
 		$path = sys_get_temp_dir() . '/ran-booster-explosive-' . bin2hex( random_bytes( 8 ) ) . '.php';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write only the local test-owned fixture bytes exercised by this contract.
 		file_put_contents( $path, "<?php throw new \\RuntimeException('explosive-sidecar-include');" );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- The test controls the local fixture permissions at the secrets boundary.
 		chmod( $path, 0600 );
 
 		try {
@@ -564,6 +567,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		} catch ( RuntimeException $exception ) {
 			self::assertSame( 'Credential provider is not supported.', $exception->getMessage() );
 		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this test-owned temporary fixture during cleanup.
 			unlink( $path );
 		}
 	}
@@ -629,8 +633,10 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		self::assertSame( $before, $after );
 		self::assertSame( 'GitHub renamed', $deactivated->credential_profiles( 'gh' )['github_primary']['label'] );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this test-owned temporary fixture during cleanup.
 		unlink( $path );
 		if ( is_file( $path . '.lock' ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this test-owned temporary fixture during cleanup.
 			unlink( $path . '.lock' );
 		}
 	}
@@ -703,8 +709,9 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final readonly class AtomicPolicyProvider implements RepositoryProvider, ProviderCredentialPolicySupplier, WebhookNormalizer {
-	use \Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
 
 	public function __construct(
 		private ProviderCode $code,
@@ -744,6 +751,7 @@ final readonly class AtomicPolicyProvider implements RepositoryProvider, Provide
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final readonly class EmptyProviderDiagnostics implements ProviderDiagnostics {
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterface -- The fixture implementation of diagnose retains the production method contract; these inputs do not affect this controlled result.
@@ -752,8 +760,9 @@ final readonly class EmptyProviderDiagnostics implements ProviderDiagnostics {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class AlternatingMetadataProvider implements RepositoryProvider, ProviderCredentialPolicySupplier {
-	use \Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
 
 	public int $metadata_calls = 0;
 
@@ -790,6 +799,7 @@ final class AlternatingMetadataProvider implements RepositoryProvider, ProviderC
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class AlternatingCredentialPolicy implements ProviderCredentialPolicy {
 
 	public int $provider_calls = 0;
@@ -818,8 +828,9 @@ final class AlternatingCredentialPolicy implements ProviderCredentialPolicy {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final readonly class MutablePolicyProvider implements RepositoryProvider, ProviderCredentialPolicySupplier {
-	use \Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
 
 	public function __construct( private ProviderCredentialPolicy $policy ) {
 	}
@@ -854,6 +865,7 @@ final readonly class MutablePolicyProvider implements RepositoryProvider, Provid
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final readonly class ExplodingCredentialPolicy implements ProviderCredentialPolicy {
 
 	public function get_provider(): ProviderCode {
@@ -873,6 +885,7 @@ final readonly class ExplodingCredentialPolicy implements ProviderCredentialPoli
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final readonly class ExplodingWebhookPolicy implements ProviderWebhookPolicy {
 
 	public function get_provider(): ProviderCode {

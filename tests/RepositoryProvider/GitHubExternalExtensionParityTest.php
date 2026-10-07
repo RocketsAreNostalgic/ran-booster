@@ -2,11 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tests\RepositoryProvider;
+namespace RAN\Tests\RepositoryProvider;
 
 // Native temporary-plugin materialization proves a physically separate extension layout.
-// phpcs:disable WordPress.WP.AlternativeFunctions
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused Phase 5 fixture doubles belong with the proof.
 
 require_once dirname( __DIR__ ) . '/Support/ExternalFixturePluginWordPressFunctions.php';
 require_once __DIR__ . '/Support/RepositoryResolverWordPressFunctions.php';
@@ -43,7 +41,7 @@ use RAN\RepositoryProvider\RepositoryReleaseWorkflowTarget;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
 use RAN\Secrets\SecretsFile;
-use RANBoosterGitHubProviderExtensionFixture\ReleaseUpdaterRegistrar;
+use RAN_Booster_GitHubProviderExtensionFixture\ReleaseUpdaterRegistrar;
 use RuntimeException;
 
 final class GitHubExternalExtensionParityTest extends TestCase {
@@ -78,19 +76,23 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 				'operation'      => 'template_update',
 			),
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Native JSON encoding preserves the exact fixture payload or secret-containment evidence without a WordPress runtime.
 		$before = json_encode( $GLOBALS['ran_booster_release_deployments_test_options'], JSON_THROW_ON_ERROR );
 		$status = $provider->workflow_status( $target );
 		self::assertTrue( $status->record_occupied() );
 		self::assertFalse( $status->record_exact() );
 		self::assertSame( '', $status->record_operation() );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Native JSON encoding preserves the exact fixture payload or secret-containment evidence without a WordPress runtime.
 		self::assertSame( $before, json_encode( $GLOBALS['ran_booster_release_deployments_test_options'], JSON_THROW_ON_ERROR ) );
 		foreach ( array( 'update_inspect', 'update_setup' ) as $operation ) {
 			$obsolete              = $current;
 			$obsolete['operation'] = $operation;
 			foreach ( array( array( $obsolete ), array( $current, $obsolete ) ) as $history ) {
 				$GLOBALS['ran_booster_release_deployments_test_options'] = array( $option => $history );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Native JSON encoding preserves the exact fixture payload or secret-containment evidence without a WordPress runtime.
 				$before = json_encode( $GLOBALS['ran_booster_release_deployments_test_options'], JSON_THROW_ON_ERROR );
 				self::assertSame( array(), $provider->workflow_status( $target )->failure_history() );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Native JSON encoding preserves the exact fixture payload or secret-containment evidence without a WordPress runtime.
 				self::assertSame( $before, json_encode( $GLOBALS['ran_booster_release_deployments_test_options'], JSON_THROW_ON_ERROR ) );
 			}
 		}
@@ -106,11 +108,12 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		require_once dirname( __DIR__ ) . '/Admin/ReleaseManagement/GitHub/Support/PluginRepositoryDouble.php';
 		require_once dirname( __DIR__ ) . '/Admin/ReleaseManagement/GitHub/Support/ThemeRepositoryDouble.php';
 
-		$provider   = GitHubProvider::create( new Phase5CredentialStore(), new Phase5DeliveryEvidenceReader(), new Phase5BundledReleaseUpdater() );
-		$status     = \Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture::status();
-		$tracking   = new \Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble( $status );
-		$plugins    = new \Tests\Admin\ReleaseManagement\GitHub\Support\PluginRepositoryDouble();
-		$themes     = new \Tests\Admin\ReleaseManagement\GitHub\Support\ThemeRepositoryDouble();
+		$provider = GitHubProvider::create( new Phase5CredentialStore(), new Phase5DeliveryEvidenceReader(), new Phase5BundledReleaseUpdater() );
+		self::assertInstanceOf( \RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3::class, $provider );
+		$status     = \RAN\Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture::status();
+		$tracking   = new \RAN\Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble( $status );
+		$plugins    = new \RAN\Tests\Admin\ReleaseManagement\GitHub\Support\PluginRepositoryDouble();
+		$themes     = new \RAN\Tests\Admin\ReleaseManagement\GitHub\Support\ThemeRepositoryDouble();
 		$registry   = new ProviderRegistry( array( $provider ) );
 		$controller = new \RAN\Admin\ReleaseManagement\ReleaseWorkflowRequestController( $tracking, $plugins, $themes, $registry, new \RAN\Storage\RepositorySourceGuard() );
 		$presenter  = new \RAN\Admin\ReleaseManagement\ReleaseWorkflowPresenter( $tracking, $plugins, $themes, $registry, $controller );
@@ -160,6 +163,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 			$GLOBALS['ran_booster_release_deployments_test_options'] = array(
 				'ran_booster_github_provider_release_workflow_setup_records' => array( '101' => $stored ),
 			);
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Native JSON encoding preserves the exact fixture payload or secret-containment evidence without a WordPress runtime.
 			$before = json_encode( $GLOBALS['ran_booster_release_deployments_test_options'], JSON_THROW_ON_ERROR );
 			$actual = $provider->workflow_status( $target );
 			self::assertTrue( $actual->record_occupied(), $case );
@@ -168,6 +172,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 				$admission = new \ReflectionMethod( $consumer, 'record_matches_package_status' );
 				self::assertSame( 'current_bootstrap' === $case, $admission->invoke( $consumer, $actual, $status ), $case . ': ' . $consumer::class );
 			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Native JSON encoding preserves the exact fixture payload or secret-containment evidence without a WordPress runtime.
 			self::assertSame( $before, json_encode( $GLOBALS['ran_booster_release_deployments_test_options'], JSON_THROW_ON_ERROR ), $case );
 		}
 	}
@@ -279,9 +284,11 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 	}
 
 	public function test_fixture_declares_native_dependency_and_uses_only_public_composition_surfaces(): void {
-		$root       = dirname( __DIR__ ) . '/fixtures/ran-booster-github-provider-extension';
+		$root = dirname( __DIR__ ) . '/fixtures/ran-booster-github-provider-extension';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read the local fixture or source bytes whose exact contents this test verifies.
 		$entrypoint = file_get_contents( $root . '/ran-booster-github-provider-extension.php' );
-		$plugin     = file_get_contents( $root . '/src/Plugin.php' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read the local fixture or source bytes whose exact contents this test verifies.
+		$plugin = file_get_contents( $root . '/src/Plugin.php' );
 
 		self::assertIsString( $entrypoint );
 		self::assertIsString( $plugin );
@@ -420,6 +427,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 			if ( ! $file->isFile() || 'php' !== $file->getExtension() ) {
 				continue;
 			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read the local fixture or source bytes whose exact contents this test verifies.
 			$source = file_get_contents( $file->getPathname() );
 			self::assertIsString( $source );
 			foreach ( $forbidden as $namespace ) {
@@ -429,6 +437,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 	}
 
 	private function assert_self_update_is_provider_independent(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read the local fixture or source bytes whose exact contents this test verifies.
 		$bootstrap = file_get_contents( dirname( __DIR__, 2 ) . '/ran-booster.php' );
 		self::assertIsString( $bootstrap );
 		$start = strpos( $bootstrap, 'if ( $ran_booster_self_update_policy->allows_native_discovery() )' );
@@ -504,6 +513,7 @@ spl_autoload_register(
 	true
 );
 PHP;
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write only the local test-owned fixture bytes exercised by this contract.
 		self::assertNotFalse( file_put_contents( $root . '/vendor/autoload.php', $autoload ) );
 
 		return $root;
@@ -511,6 +521,7 @@ PHP;
 
 	private function copy_tree( string $source, string $destination ): void {
 		self::assertDirectoryExists( $source );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create this isolated test-owned fixture directory without a WordPress filesystem runtime.
 		self::assertTrue( is_dir( $destination ) || mkdir( $destination, 0700, true ) );
 
 		$iterator = new \RecursiveIteratorIterator(
@@ -522,6 +533,7 @@ PHP;
 			$relative = substr( $item->getPathname(), strlen( $source ) + 1 );
 			$target   = $destination . '/' . $relative;
 			if ( $item->isDir() ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create this isolated test-owned fixture directory without a WordPress filesystem runtime.
 				self::assertTrue( is_dir( $target ) || mkdir( $target, 0700, true ) );
 			} else {
 				self::assertTrue( copy( $item->getPathname(), $target ) );
@@ -538,8 +550,10 @@ PHP;
 			\RecursiveIteratorIterator::CHILD_FIRST
 		);
 		foreach ( $iterator as $item ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir,WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this test-owned temporary fixture during cleanup.
 			$item->isDir() ? rmdir( $item->getPathname() ) : unlink( $item->getPathname() );
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only this test-owned temporary fixture during cleanup.
 		rmdir( $root );
 	}
 
@@ -547,11 +561,13 @@ PHP;
 	private function response( array $body ): array {
 		return array(
 			'response' => array( 'code' => 200 ),
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Native JSON encoding preserves the exact fixture payload or secret-containment evidence without a WordPress runtime.
 			'body'     => json_encode( $body, JSON_THROW_ON_ERROR ),
 		);
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class Phase5CredentialStore implements ProviderCredentialStore {
 	public function credential_profiles(): array {
 		return array();
@@ -568,12 +584,14 @@ final class Phase5CredentialStore implements ProviderCredentialStore {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class Phase5DeliveryEvidenceReader implements AuthenticatedWebhookDeliveryEvidenceReader {
 	public function latest_authenticated_delivery(): ?AuthenticatedWebhookDeliveryEvidence {
 		return null;
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class Phase5BundledReleaseUpdater {
 	/** @var list<mixed>|null */
 	public ?array $release_arguments = null;
@@ -596,6 +614,7 @@ final class Phase5BundledReleaseUpdater {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class Phase5SecretsFile extends SecretsFile {
 	private Phase5CredentialStore $credentials;
 

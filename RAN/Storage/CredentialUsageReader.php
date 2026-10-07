@@ -54,7 +54,6 @@ final class CredentialUsageReader {
 			throw new RuntimeException( 'Booster could not verify repository credential usage.' );
 		}
 		// This safety-critical check must read current references immediately before deletion.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared
 		$count = $database->get_var( $count_query );
 		$this->assert_query_succeeded( $database );
 		if ( ! is_int( $count ) && ( ! is_string( $count ) || 1 !== preg_match( '/^(0|[1-9][0-9]*)$/D', $count ) ) ) {
@@ -83,7 +82,6 @@ final class CredentialUsageReader {
 			throw new RuntimeException( 'Booster could not verify repository credential usage.' );
 		}
 		// This bounded list explains the live references that block credential deletion.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared
 		$rows = $database->get_results( $detail_query );
 		$this->assert_query_succeeded( $database );
 		if ( ! is_array( $rows ) || count( $rows ) !== min( $total, self::DISPLAY_LIMIT ) ) {

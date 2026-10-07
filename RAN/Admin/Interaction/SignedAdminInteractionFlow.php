@@ -73,7 +73,7 @@ final class SignedAdminInteractionFlow {
 	}
 	public function is_enhanced_request( SignedAdminInteractionRequest $request ): bool {
 		// Transport metadata never authorizes an operation.
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Transport metadata selects the HTMX response shape against the signed request target; it never authorizes the operation.
 		$payload = $_POST['ran_booster_interaction'] ?? null;
 
 		return $this->is_htmx_target( $request )
@@ -380,7 +380,7 @@ final class SignedAdminInteractionFlow {
 				return false;
 			}
 			// Read-only routing is compared with the signed canonical URL.
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Compare read-only route values with the resolved canonical URL before pending_outcome() verifies the complete signed marker.
 			$current = $_GET[ $key ] ?? null;
 			if ( ! is_string( $current )
 				|| ! hash_equals( $expected_value, wp_unslash( $current ) ) ) {
@@ -393,7 +393,7 @@ final class SignedAdminInteractionFlow {
 
 	private function query_string( string $key ): ?string {
 		// Display-only values are used only after complete marker verification.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read and bound marker components; pending_outcome() verifies their combined action nonce before returning display data.
 		$value = $_GET[ $key ] ?? null;
 		if ( ! is_string( $value ) || strlen( $value ) > 2048 ) {
 			return null;

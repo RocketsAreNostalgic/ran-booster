@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\RepositoryProvider;
+namespace RAN\Tests\RepositoryProvider;
 
 use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -40,16 +40,17 @@ final class ProviderApiLifecycleTest extends TestCase {
 	/** @return array<string, array{bool, int, string}> */
 	public static function registration_load_orders(): array {
 		return array(
-			'API 11 core first'     => array( true, 11, 'RANBoosterApiElevenWorkflowProvider' ),
-			'API 11 provider first' => array( false, 11, 'RANBoosterApiElevenWorkflowProvider' ),
-			'API 12 core first'     => array( true, 12, 'RANBoosterApiTwelveProvider' ),
-			'API 12 provider first' => array( false, 12, 'RANBoosterApiTwelveProvider' ),
+			'API 11 core first'     => array( true, 11, 'RAN_Booster_ApiElevenWorkflowProvider' ),
+			'API 11 provider first' => array( false, 11, 'RAN_Booster_ApiElevenWorkflowProvider' ),
+			'API 12 core first'     => array( true, 12, 'RAN_Booster_ApiTwelveProvider' ),
+			'API 12 provider first' => array( false, 12, 'RAN_Booster_ApiTwelveProvider' ),
 		);
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_conflicting_provider_api_marker_fails_clearly(): void {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'WPINC', 'wpinc' );
 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 1 );
 
@@ -79,7 +80,7 @@ final class ProviderApiLifecycleTest extends TestCase {
 		self::assertTrue( $parameters[4]->isOptional() );
 		self::assertTrue( $parameters[4]->allowsNull() );
 		self::assertInstanceOf( ReflectionNamedType::class, $parameters[4]->getType() );
-		self::assertSame( ProviderRegistrationContext::class, $parameters[4]->getType()?->getName() );
+		self::assertSame( ProviderRegistrationContext::class, $parameters[4]->getType()->getName() );
 	}
 
 	public function test_provider_registry_requires_no_logging_facade(): void {

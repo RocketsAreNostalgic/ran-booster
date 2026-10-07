@@ -5,12 +5,17 @@ parameters:
 	level: 5
 	treatPhpDocTypesAsCertain: false
 	paths:
-		- autoload.php
-		- index.php
-		- ran-booster.php
-		- uninstall.php
-		- RAN
-		- views
-		- assets
+		- .
+	# Root-relative development and external/generated state use their own boundaries.
+	excludePaths:
+		analyseAndScan:
+			- ./scripts/*
+			- ./tests/*
+			- ./vendor/*
+			- ./node_modules/*
+			- ./ran-booster-workbench/*
+			- ./.phpunit.cache/*
+			- ./.plugin-check/*
+			- ./coverage/*
 	scanDirectories:
 		- vendor/ran/wp-release-updater/src

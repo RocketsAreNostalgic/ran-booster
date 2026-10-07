@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Troubleshooting;
+namespace RAN\Tests\Troubleshooting;
 
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\WordPressWorkerWakeup;
@@ -10,7 +10,6 @@ use RAN\Secrets\SecretsFile;
 use RAN\Storage\Database;
 use RAN\Troubleshooting\LocalTroubleshootingService;
 
-// phpcs:disable WordPress.WP.AlternativeFunctions -- Fixture simulates native exclusive-file races and failures.
 
 final class LocalTroubleshootingServiceFixture extends LocalTroubleshootingService {
 
@@ -97,7 +96,7 @@ final class LocalTroubleshootingServiceFixture extends LocalTroubleshootingServi
 		return $this->file_modifications_allowed;
 	}
 
-	protected function filesystem_method(): ?string {
+	protected function filesystem_method(): string {
 		++$this->filesystem_reads;
 
 		return $this->filesystem_method;
@@ -158,13 +157,16 @@ final class LocalTroubleshootingServiceFixture extends LocalTroubleshootingServi
 			&& str_starts_with( $path, $this->replace_directory_on_open . DIRECTORY_SEPARATOR )
 		) {
 			$original = $this->replace_directory_on_open . '-original';
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- Inject the native filesystem race/canary required by the boundary assertion.
 			rename( $this->replace_directory_on_open, $original );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 			mkdir( $this->replace_directory_on_open, 0700 );
 			$this->replace_directory_on_open = null;
 		}
 
 		$handle = parent::open_exclusive( $path );
 		if ( is_resource( $handle ) && null !== $this->substitute_before_permission ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 			unlink( $path );
 			symlink( $this->substitute_before_permission, $path );
 		}
@@ -182,10 +184,13 @@ final class LocalTroubleshootingServiceFixture extends LocalTroubleshootingServi
 		}
 
 		if ( null !== $this->race_on_promotion && str_starts_with( $source, $this->race_on_promotion ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 			unlink( $source );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Inject the native filesystem race/canary required by the boundary assertion.
 			file_put_contents( $source, 'attacker replacement canary' );
 		}
 		if ( null !== $this->race_destination && str_starts_with( $destination, $this->race_destination ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Inject the native filesystem race/canary required by the boundary assertion.
 			file_put_contents( $destination, 'destination race canary' );
 		}
 

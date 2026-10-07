@@ -1,6 +1,6 @@
 <?php
 
-namespace RAN;
+namespace RAN; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedNamespaceFound -- Core owns the established three-character RAN namespace; WPCS requires four characters.
 
 class Plugin extends AbstractPackage {
 
@@ -17,21 +17,21 @@ class Plugin extends AbstractPackage {
 	protected $title;
 	protected $author_name;
 
-	public static function from_wp_array( $file, array $array ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.arrayFound -- Preserve the existing public named-argument signature.
+	public static function from_wp_array( $file, array $plugin_data ) {
 		$plugin = new static();
 
 		$plugin->file        = $file;
-		$plugin->name        = $array['Name'];
-		$plugin->plugin_uri  = $array['PluginURI'];
-		$plugin->version     = $array['Version'];
-		$plugin->description = $array['Description'];
-		$plugin->author      = $array['Author'];
-		$plugin->author_uri  = $array['AuthorURI'];
-		$plugin->text_domain = $array['TextDomain'];
-		$plugin->domain_path = $array['DomainPath'];
-		$plugin->network     = $array['Network'];
-		$plugin->title       = $array['Title'];
-		$plugin->author_name = $array['AuthorName'];
+		$plugin->name        = $plugin_data['Name'];
+		$plugin->plugin_uri  = $plugin_data['PluginURI'];
+		$plugin->version     = $plugin_data['Version'];
+		$plugin->description = $plugin_data['Description'];
+		$plugin->author      = $plugin_data['Author'];
+		$plugin->author_uri  = $plugin_data['AuthorURI'];
+		$plugin->text_domain = $plugin_data['TextDomain'];
+		$plugin->domain_path = $plugin_data['DomainPath'];
+		$plugin->network     = $plugin_data['Network'];
+		$plugin->title       = $plugin_data['Title'];
+		$plugin->author_name = $plugin_data['AuthorName'];
 
 		return $plugin;
 	}

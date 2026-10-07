@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\AddOn;
+namespace RAN\Tests\AddOn;
 
 use PHPUnit\Framework\TestCase;
 use RAN\AddOn\Portability\NativePortabilityFacade;
@@ -22,7 +22,7 @@ use RAN\Secrets\SecretsFile;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use ReflectionClass;
-use Tests\Portability\TemporaryCredentialProvider;
+use RAN\Tests\Portability\TemporaryCredentialProvider;
 
 require_once __DIR__ . '/../Support/PackageOperationGlobalWordPressFunctions.php';
 require_once __DIR__ . '/../Runtime/RuntimeSupportWordPressFunctions.php';
@@ -76,7 +76,7 @@ final class NativePortabilityFacadeTest extends TestCase {
 		$result = $facade->review( $this->candidate(), 'valid-nonce' );
 
 		self::assertSame( PortabilityReviewResult::ADOPT, $result->action );
-		self::assertSame( 1, count( $this->provider?->credential_ids ?? array() ) );
+		self::assertSame( 1, count( $this->provider->credential_ids ?? array() ) );
 
 		$missing = $this->facade( false )->review( $this->candidate(), 'valid-nonce' );
 		self::assertSame( PortabilityReviewResult::BLOCKED, $missing->action );

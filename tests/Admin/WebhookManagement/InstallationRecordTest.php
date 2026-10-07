@@ -2,7 +2,7 @@
 
 declare( strict_types = 1 );
 
-namespace Tests\Admin\WebhookManagement;
+namespace RAN\Tests\Admin\WebhookManagement;
 
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\WebhookManagement\Installation\InstallationRecord;
@@ -148,7 +148,7 @@ final class InstallationRecordTest extends TestCase {
 				);
 				self::fail( 'Invalid profile metadata was accepted.' );
 			} catch ( \InvalidArgumentException ) {
-				self::assertTrue( true );
+				$this->addToAssertionCount( 1 );
 			}
 		}
 	}

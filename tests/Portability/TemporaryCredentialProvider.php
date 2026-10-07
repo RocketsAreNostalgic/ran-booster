@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Portability;
+namespace RAN\Tests\Portability;
 
 use RAN\RepositoryProvider\ArchiveRequest;
 use RAN\BoosterGitHubProvider\V1\CredentialPolicy as GitHubCredentialPolicy;
@@ -19,7 +19,7 @@ use RuntimeException;
 
 final class TemporaryCredentialProvider implements RepositoryProvider, ProviderCredentialPolicySupplier {
 
-	use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 	/** @var list<string|null> */
 	public array $credential_ids            = array();
@@ -76,7 +76,7 @@ final class TemporaryCredentialProvider implements RepositoryProvider, ProviderC
 	}
 }
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused test provider policy belongs with the provider double.
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
 final readonly class TemporaryProviderCredentialPolicy implements ProviderCredentialPolicy {
 
 	public function __construct( private ProviderCode $provider ) {

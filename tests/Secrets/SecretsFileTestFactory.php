@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Secrets;
+namespace RAN\Tests\Secrets;
 
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
 use RAN\Secrets\EncryptedSecretsEnvelopeCodec;

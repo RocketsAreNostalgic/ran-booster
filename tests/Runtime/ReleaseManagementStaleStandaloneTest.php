@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Tests\Runtime;
+namespace RAN\Tests\Runtime;
 
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
-use Tests\Runtime\Support\ReleaseManagementCutoverHookBus;
-use Tests\Runtime\Support\StaleReleaseDeploymentsBeta8Fixture;
+use RAN\Tests\Runtime\Support\ReleaseManagementCutoverHookBus;
+use RAN\Tests\Runtime\Support\StaleReleaseDeploymentsBeta8Fixture;
 
 final class ReleaseManagementStaleStandaloneTest extends TestCase {
 	#[RunInSeparateProcess]
@@ -48,7 +48,7 @@ final class ReleaseManagementStaleStandaloneTest extends TestCase {
 		}
 		$hooks->fire( 'plugins_loaded' );
 
-		self::assertSame( 17, RAN_BOOSTER_ADDON_API_VERSION );
+		self::assertSame( 17, constant( 'RAN_BOOSTER_ADDON_API_VERSION' ) );
 		self::assertSame( array( 'plugins_loaded', 'admin_notices' ), $hooks->action_hooks() );
 		self::assertSame( array(), $hooks->filter_hooks() );
 		foreach ( array(

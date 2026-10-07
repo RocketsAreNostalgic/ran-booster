@@ -8,10 +8,11 @@ require_once ABSPATH . 'wp-admin/includes/theme.php';
 require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
 
 if ( ! defined( 'DOING_CRON' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 	define( 'DOING_CRON', true );
 }
 
-if ( PHP_VERSION_ID < 80200 || version_compare( get_bloginfo( 'version' ), '7.0', '<' ) ) {
+if ( PHP_VERSION_ID < 80200 || version_compare( get_bloginfo( 'version' ), '7.0', '<' ) ) { // @phpstan-ignore smaller.alwaysFalse (Installed proof must refuse unsupported host PHP before mutating its disposable site; analyzer PHP range cannot prove the external host.)
 	throw new RuntimeException( 'The WordPress-core updater proof requires PHP 8.2 and WordPress 7.0 or newer.' );
 }
 if ( is_multisite() ) {
@@ -24,7 +25,7 @@ if ( ! class_exists( ZipArchive::class ) ) {
 	throw new RuntimeException( 'The WordPress-core updater proof requires ZipArchive.' );
 }
 
-final class RanBoosterCoreUpdaterProof {
+final class RAN_Booster_CoreUpdaterProof {
 	private array $archives = array();
 	private array $plugins  = array();
 	private array $themes   = array();
@@ -129,7 +130,7 @@ final class RanBoosterCoreUpdaterProof {
 			$directory = WP_PLUGIN_DIR . '/' . dirname( $identifier );
 			if ( is_dir( $directory ) && ! is_link( $directory ) ) {
 				$result = delete_plugins( array( $identifier ) );
-				if ( is_wp_error( $result ) || false === $result || is_dir( $directory ) ) {
+				if ( is_wp_error( $result ) || false === $result || is_dir( $directory ) ) { // @phpstan-ignore booleanOr.rightAlwaysTrue (The filesystem safety fence rechecks disk after WordPress deletion; analyzer purity inference cannot model that filesystem mutation.)
 					throw new RuntimeException( 'A disposable proof plugin could not be removed.' );
 				}
 			}
@@ -139,7 +140,7 @@ final class RanBoosterCoreUpdaterProof {
 			$directory = get_theme_root( $stylesheet ) . '/' . $stylesheet;
 			if ( is_dir( $directory ) && ! is_link( $directory ) ) {
 				$result = delete_theme( $stylesheet );
-				if ( is_wp_error( $result ) || false === $result || is_dir( $directory ) ) {
+				if ( is_wp_error( $result ) || false === $result || is_dir( $directory ) ) { // @phpstan-ignore booleanOr.rightAlwaysTrue (The filesystem safety fence rechecks disk after WordPress deletion; analyzer purity inference cannot model that filesystem mutation.)
 					throw new RuntimeException( 'A disposable proof theme could not be removed.' );
 				}
 			}
@@ -556,23 +557,23 @@ final class RanBoosterCoreUpdaterProof {
 	}
 }
 
-$proof   = new RanBoosterCoreUpdaterProof( bin2hex( random_bytes( 6 ) ) );
-$failure = null;
+$ran_booster_proof   = new RAN_Booster_CoreUpdaterProof( bin2hex( random_bytes( 6 ) ) );
+$ran_booster_failure = null;
 
 try {
-	$proof->run();
+	$ran_booster_proof->run();
 } catch ( Throwable $caught ) {
-	$failure = $caught;
+	$ran_booster_failure = $caught;
 }
 
 try {
-	$proof->cleanup();
+	$ran_booster_proof->cleanup();
 } catch ( Throwable $cleanup_failure ) {
-	$failure = $cleanup_failure;
+	$ran_booster_failure = $cleanup_failure;
 }
 
-if ( null !== $failure ) {
-	throw $failure;
+if ( null !== $ran_booster_failure ) {
+	throw $ran_booster_failure;
 }
 
-WP_CLI::success( 'WordPress-core updater proof passed: local installs, one-item updates, activation, same-version bytes, downgrade-shaped replacement, restoration after a simulated fatal-scrape response, unrelated-package isolation and exact hook cleanup.' );
+WP_CLI::success( 'WordPress-core updater proof passed: local installs, one-item updates, activation, same-version bytes, downgrade-shaped replacement, restoration after a simulated fatal-scrape response, unrelated-package isolation and exact hook cleanup.' ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)

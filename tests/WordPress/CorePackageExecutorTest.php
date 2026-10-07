@@ -2,14 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Tests\WordPress;
+namespace RAN\Tests\WordPress;
 
 use PHPUnit\Framework\TestCase;
 use RAN\WordPress\CorePackageExecutor;
 use RAN\WordPress\CorePackageExecutionResult;
 use ReflectionMethod;
 
-// phpcs:disable WordPress.WP.AlternativeFunctions -- Tests deliberately own private temporary files.
 
 final class CorePackageExecutorTest extends TestCase {
 

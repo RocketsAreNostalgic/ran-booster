@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Secrets;
 
 // The probe intentionally verifies native local-filesystem behavior.
-// phpcs:disable WordPress.WP.AlternativeFunctions
 
 /**
  * Proves the small set of POSIX behaviors required by the encrypted sidecar.
@@ -30,14 +29,17 @@ final class PosixFilesystemProbe {
 			}
 
 			$probe_path = $site_directory . '/.probe-' . bin2hex( random_bytes( 12 ) );
-			$first      = fopen( $probe_path, 'x+b' );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Exclusive native creation must fail on an existing path and return the handle used for inode/lock checks.
+			$first = fopen( $probe_path, 'x+b' );
 			if ( false === $first ) {
 				return false;
 			}
 			$handles[] = $first;
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set and verify native POSIX permission bits on the private file before it can be trusted or installed.
 			if ( ! chmod( $probe_path, 0600 ) || ! $this->safe_file( $probe_path, $first ) ) {
 				return false;
 			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- A second native handle proves a held nonblocking flock cannot be acquired again.
 			$second = fopen( $probe_path, 'rb' );
 			if ( false === $second ) {
 				return false;
@@ -48,8 +50,10 @@ final class PosixFilesystemProbe {
 			$passed = false;
 		} finally {
 			foreach ( array_reverse( $handles ) as $handle ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close both native lock-probe handles before removing the uniquely named probe entry.
 				fclose( $handle );
 			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove the uniquely named native lock-probe entry after closing its handles; failure invalidates the probe.
 			if ( '' !== $probe_path && ( is_file( $probe_path ) || is_link( $probe_path ) ) && ! unlink( $probe_path ) ) {
 				$passed = false;
 			}
@@ -75,6 +79,7 @@ final class PosixFilesystemProbe {
 		return false !== $stat
 			&& 0040000 === ( $stat['mode'] & 0170000 )
 			&& ! is_link( $path )
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- The private local storage boundary checks actual PHP-process writability alongside canonical path and inode checks.
 			&& is_writable( $path )
 			&& ( ! function_exists( 'posix_geteuid' ) || posix_geteuid() === $stat['uid'] )
 			&& ( ! $require_private_mode || 0700 === ( $stat['mode'] & 0777 ) )
@@ -86,6 +91,7 @@ final class PosixFilesystemProbe {
 			return $this->safe_directory( $path, true );
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the private directory with mode 0700, then verify its native ownership and mode.
 		return mkdir( $path, 0700 ) && $this->safe_directory( $path, true );
 	}
 

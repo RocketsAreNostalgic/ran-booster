@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
-
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused package fake stays beside shared view coverage.
+namespace RAN\Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Support/PackageViewWordPressFunctions.php';
 
@@ -141,13 +139,12 @@ final class RepeatPackageViewTest extends TestCase {
 		$package_provider_settings = $this->provider_settings( true );
 		$buffer_level              = ob_get_level();
 
-		// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Test-only handler promotes render warnings to exceptions.
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Test-only handler promotes render warnings to exceptions.
 		set_error_handler(
 			static function ( int $severity, string $message, string $file, int $line ): never {
 				throw new \ErrorException( $message, 0, $severity, $file, $line );
 			}
 		);
-		// phpcs:enable WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler
 
 		try {
 			ob_start();
@@ -697,12 +694,6 @@ final class RepeatPackageViewTest extends TestCase {
 		return $matches[0];
 	}
 
-	private function form_by_class( string $html, string $css_class ): string {
-		self::assertMatchesRegularExpression( '/<form[^>]*class="[^"]*' . preg_quote( $css_class, '/' ) . '[^"]*".*?<\/form>/s', $html );
-		preg_match( '/<form[^>]*class="[^"]*' . preg_quote( $css_class, '/' ) . '[^"]*".*?<\/form>/s', $html, $matches );
-
-		return $matches[0];
-	}
 
 	private function action_group_by_class( string $html, string $css_class ): string {
 		self::assertMatchesRegularExpression( '/<div[^>]*class="[^"]*' . preg_quote( $css_class, '/' ) . '[^"]*"[^>]*>.*?<\/div>/s', $html );
@@ -722,10 +713,11 @@ final class RepeatPackageViewTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused package fake stays beside shared view coverage.
 final class RepeatPackageViewPackage extends AbstractPackage {
 	public string $name;
 
-	public function __construct( private readonly string $identifier ) {
+	public function __construct( private readonly string $identifier = '' ) {
 		$this->name = 'Example package';
 	}
 
@@ -737,5 +729,3 @@ final class RepeatPackageViewPackage extends AbstractPackage {
 		return 'example';
 	}
 }
-
-// phpcs:enable Generic.Files.OneObjectStructurePerFile.MultipleFound

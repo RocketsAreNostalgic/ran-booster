@@ -2,11 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tests\Secrets;
+namespace RAN\Tests\Secrets;
 
 // Test-only inspection proves PHP exception arguments redact secret material.
-// phpcs:disable WordPress.PHP.DevelopmentFunctions.error_log_var_export
-// phpcs:disable WordPress.WP.AlternativeFunctions -- Exact local sidecar fixtures exercise the native cleanup boundary.
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
@@ -21,13 +19,14 @@ use RAN\Secrets\EncryptedSecretsEnvelopeCodec;
 use RAN\Secrets\SecretsRuntimeAvailability;
 use RAN\Secrets\SecretsStorageUnavailable;
 use RAN\Secrets\SiteKeyStore;
-use Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
+use RAN\Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
 
 final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 
 	public function test_self_destruct_credential_is_withheld_and_physically_purged_after_deadline(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-self-destruct-' . bin2hex( random_bytes( 8 ) );
 		$path      = $directory . '/secrets.php';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		$secrets = SecretsFileTestFactory::create( $path, array(), ShippedSecretPolicyCatalog::create() );
 		$secrets->save_credential(
@@ -51,15 +50,18 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		InMemorySiteKeyStore::reset( $path );
 		foreach ( array( $path, $path . '.lock' ) as $file ) {
 			if ( is_file( $file ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 				unlink( $file );
 			}
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 		rmdir( $directory );
 	}
 
 	public function test_provider_expiry_can_only_shorten_self_destruct_retention(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-self-destruct-provider-' . bin2hex( random_bytes( 8 ) );
 		$path      = $directory . '/secrets.php';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		$secrets = SecretsFileTestFactory::create( $path, array(), ShippedSecretPolicyCatalog::create() );
 		$secrets->save_credential(
@@ -82,9 +84,11 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		InMemorySiteKeyStore::reset( $path );
 		foreach ( array( $path, $path . '.lock' ) as $file ) {
 			if ( is_file( $file ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 				unlink( $file );
 			}
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 		rmdir( $directory );
 	}
 
@@ -152,6 +156,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 					static fn (): null => null
 				),
 				'storage_ready'       => $secrets->assert_managed_storage_ready(),
+				default               => throw new \UnhandledMatchError( 'Unknown managed-operation fixture.' ),
 			};
 			self::fail( 'Managed secret use must fail closed when the runtime is unsupported.' );
 		} catch ( SecretsStorageUnavailable $failure ) {
@@ -159,6 +164,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			self::assertStringContainsString( 'Sodium extension is missing', $failure->getMessage() );
 			self::assertStringNotContainsString( 'secret-canary', $failure->getMessage() );
 			self::assertStringNotContainsString( '/srv/', $failure->getMessage() );
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export -- Inspect exception trace bytes to prove secret redaction; no production logging occurs.
 			self::assertStringNotContainsString( 'secret-canary', var_export( $failure->getTrace(), true ) );
 		}
 	}
@@ -193,6 +199,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			$this->secrets( false, false )->import_credentials_if_absent( $blueprint, $credential );
 			self::fail( 'Credential import must fail closed when the runtime is unavailable.' );
 		} catch ( SecretsStorageUnavailable $failure ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export -- Inspect exception trace bytes to prove secret redaction; no production logging occurs.
 			self::assertStringNotContainsString( $canary, var_export( $failure->getTrace(), true ) );
 		}
 	}
@@ -213,6 +220,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_confirmed_uninstall_gets_adeletion_only_single_site_availability_context(): void {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'WP_UNINSTALL_PLUGIN', 'renamed-booster/ran-booster.php' );
 
 		$availability = SecretsRuntimeAvailability::for_confirmed_uninstall(
@@ -226,6 +234,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_confirmed_uninstall_rejects_an_unrelated_same_basename_plugin(): void {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'WP_UNINSTALL_PLUGIN', 'other-plugin/ran-booster.php' );
 
 		$this->expectException( \LogicException::class );
@@ -266,6 +275,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		self::assertFileExists( $path . '.lock' );
 		self::assertNotNull( $key_store->load( false ) );
 
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'WP_UNINSTALL_PLUGIN', 'renamed-booster/ran-booster.php' );
 		$confirmed = $this->real_secrets(
 			$path,
@@ -284,6 +294,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		self::assertFileDoesNotExist( $path );
 		self::assertFileDoesNotExist( $path . '.lock' );
 		self::assertNull( $key_store->load( false ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 		rmdir( $root );
 	}
 
@@ -307,6 +318,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		$key = $key_store->load( false );
 		self::assertNotNull( $key );
 		self::assertTrue( $key_store->delete_exact( $key ) );
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'WP_UNINSTALL_PLUGIN', 'ran-booster/ran-booster.php' );
 
 		try {
@@ -327,8 +339,11 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 
 		self::assertFileExists( $path );
 		self::assertFileExists( $path . '.lock' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 		unlink( $path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 		unlink( $path . '.lock' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 		rmdir( $root );
 	}
 
@@ -345,10 +360,13 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		$this->assert_storage_preflight_refused( $key_only, 'storage_lock_missing' );
 		self::assertSame( $key, $key_store->load( false ) );
 		self::assertTrue( $key_store->delete_exact( $key ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 		rmdir( $key_root );
 
 		[$lock_root, $lock_path] = $this->sidecar_fixture();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $lock_path . '.lock', '' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $lock_path . '.lock', 0600 ) );
 		$lock_only = $this->real_secrets(
 			$lock_path,
@@ -360,6 +378,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		$lock_only->assert_managed_storage_deletable();
 		$lock_only->delete_managed_storage();
 		self::assertFileDoesNotExist( $lock_path . '.lock' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 		rmdir( $lock_root );
 
 		[$missing_root, $missing_path] = $this->sidecar_fixture();
@@ -380,14 +399,17 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			),
 			'pre-conversion-secret-canary'
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 		self::assertTrue( unlink( $missing_path . '.lock' ) );
 		$this->assert_storage_preflight_refused( $missing_lock, 'storage_lock_missing' );
 		self::assertFileExists( $missing_path );
 		self::assertNotNull( $missing_key_store->load( false ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 		unlink( $missing_path );
 		$missing_key = $missing_key_store->load( false );
 		self::assertNotNull( $missing_key );
 		self::assertTrue( $missing_key_store->delete_exact( $missing_key ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 		rmdir( $missing_root );
 	}
 
@@ -403,7 +425,9 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 				new SecretsRuntimeAvailability( true, false )
 			);
 			if ( $existing_lock ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 				self::assertNotFalse( file_put_contents( $path . '.lock', '' ) );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 				self::assertTrue( chmod( $path . '.lock', 0600 ) );
 			}
 
@@ -433,8 +457,11 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			self::assertTrue( $secrets->has_healthy_managed_storage() );
 
 			InMemorySiteKeyStore::reset( $path );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 			unlink( $path );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 			unlink( $path . '.lock' );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 			rmdir( $root );
 		}
 	}
@@ -485,8 +512,11 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		self::assertTrue( $secrets->has_healthy_managed_storage() );
 
 		InMemorySiteKeyStore::reset( $path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 		unlink( $path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 		unlink( $path . '.lock' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 		rmdir( $root );
 	}
 
@@ -527,6 +557,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		$restored = $key_store->load( false );
 		self::assertNotNull( $restored );
 		self::assertTrue( $key_store->delete_exact( $restored ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $path, 0660 ) );
 		try {
 			$secrets->reset_orphaned_ciphertext_at( $path );
@@ -537,8 +568,11 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		self::assertFileExists( $path );
 
 		InMemorySiteKeyStore::reset( $path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 		unlink( $path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 		unlink( $path . '.lock' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 		rmdir( $root );
 	}
 
@@ -554,7 +588,9 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		);
 
 		self::assertFalse( $secrets->can_reset_orphaned_key_at( $path . '.changed' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $path, '{}' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $path, 0600 ) );
 		self::assertFalse( $secrets->can_reset_orphaned_key_at( $path ) );
 		try {
@@ -566,8 +602,11 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		self::assertSame( $key, $key_store->load( false ) );
 
 		InMemorySiteKeyStore::reset( $path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 		unlink( $path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 		unlink( $path . '.lock' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 		rmdir( $root );
 	}
 
@@ -581,7 +620,9 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			new EncryptedSecretsEnvelopeCodec(),
 			new SecretsRuntimeAvailability( true, false )
 		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $path . '.lock', '' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $path . '.lock', 0660 ) );
 
 		try {
@@ -594,7 +635,9 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		self::assertSame( $key, $key_store->load( false ) );
 
 		InMemorySiteKeyStore::reset( $path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 		unlink( $path . '.lock' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 		rmdir( $root );
 	}
 
@@ -608,7 +651,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			}
 
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of load retains the production method contract; these inputs do not affect this controlled result.
-			public function load( bool $repair_autoload = true ): ?string {
+			public function load( bool $repair_autoload = true ): string {
 				return $this->key;
 			}
 
@@ -644,7 +687,9 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		self::assertFileDoesNotExist( $path );
 		self::assertFileExists( $path . '.lock' );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
 		unlink( $path . '.lock' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 		rmdir( $root );
 	}
 
@@ -659,6 +704,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 	/** @return array{string, string} */
 	private function sidecar_fixture(): array {
 		$root = sys_get_temp_dir() . '/ran-booster-converted-uninstall-' . bin2hex( random_bytes( 6 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $root, 0700 ) );
 
 		return array( $root, $root . '/secrets.json' );

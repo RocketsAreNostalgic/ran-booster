@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile -- Focused admitted-boundary collaborators live with the test.
 
-namespace Tests\Deployment;
+namespace RAN\Tests\Deployment;
 
 use PHPUnit\Framework\TestCase;
 use RAN\Deployment\DeploymentOutcome;
@@ -124,6 +123,7 @@ final class AdmittedBranchExecutionParityTest extends TestCase {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiveSource, AdmittedTargetFacts, AdmittedPackageExecutor, MutationLock {
 	/** @var list<string> */
 	public array $events = array();
@@ -204,7 +204,7 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 	}
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of baseline_now retains the production method contract; these inputs do not affect this controlled result.
-	public function baseline_now( BranchDeploymentDeclaration $deployment, array $baseline ): ?array {
+	public function baseline_now( BranchDeploymentDeclaration $deployment, array $baseline ): array {
 		$this->events[] = 'baseline-now';
 		return $baseline;
 	}
@@ -236,6 +236,7 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class ParityAdmittedArtifact implements AdmittedBranchArtifact {
 	public function __construct( private ParityAdmittedHost $host ) {}
 

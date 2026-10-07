@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
+namespace RAN\Tests\Admin;
 
 require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
 
@@ -21,7 +21,7 @@ use RAN\RepositoryProvider\RepositoryProvider;
 use RuntimeException;
 use RAN\Secrets\SecretsFile;
 use RAN\Secrets\SecretsStorageUnavailable;
-use Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
+use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 
 final class RepositoryPickerControllerTest extends TestCase {
 
@@ -305,7 +305,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 	public function test_provider_without_browsing_capability_fails_closed(): void {
 		$provider = new class() implements RepositoryProvider {
 
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
@@ -396,7 +396,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 	public function test_rate_limit_failure_returns_aprovider_neutral_notice_without_upstream_details(): void {
 		$provider = new class() implements RepositoryProvider, RepositoryBrowser {
 
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
@@ -432,7 +432,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 	public function test_partial_results_use_only_the_controllers_fixed_safe_message(): void {
 		$provider = new class() implements RepositoryProvider, RepositoryBrowser {
 
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
@@ -471,7 +471,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		);
 		$provider = new class() implements RepositoryProvider, RepositoryBrowser {
 
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
@@ -496,11 +496,12 @@ final class RepositoryPickerControllerTest extends TestCase {
 
 	/**
 	 * @param list<RepositoryDescriptor> $repositories
+	 * @return RepositoryProvider&RepositoryBrowser&object{request: ?RepositoryBrowseRequest}
 	 */
 	private function browser_provider( ProviderCode $code, array $repositories ): RepositoryProvider&RepositoryBrowser {
 		return new class( $code, $repositories ) implements RepositoryProvider, RepositoryBrowser {
 
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public ?RepositoryBrowseRequest $request;
 
@@ -528,6 +529,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 
 	/**
 	 * @param list<RepositoryDescriptor> $repositories
+	 * @return RepositoryProvider&CredentialedPublicRepositoryBrowser&object{request: ?RepositoryBrowseRequest}
 	 */
 	private function credentialed_public_browser_provider( ProviderCode $code, array $repositories ): RepositoryProvider&CredentialedPublicRepositoryBrowser {
 		return $this->credentialed_public_browser_provider_with_default_support( $code, $repositories, true );
@@ -535,6 +537,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 
 	/**
 	 * @param list<RepositoryDescriptor> $repositories
+	 * @return RepositoryProvider&CredentialedPublicRepositoryBrowser&object{request: ?RepositoryBrowseRequest}
 	 */
 	private function credentialed_public_browser_provider_with_default_support(
 		ProviderCode $code,
@@ -543,7 +546,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 	): RepositoryProvider&CredentialedPublicRepositoryBrowser {
 		return new class( $code, $repositories, $supports_default ) implements RepositoryProvider, CredentialedPublicRepositoryBrowser {
 
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public ?RepositoryBrowseRequest $request = null;
 
@@ -598,7 +601,8 @@ final class RepositoryPickerControllerTest extends TestCase {
 	}
 }
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused display-safe secrets fixture.
+
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused display-safe secrets fixture.
 final class RepositoryPickerSecretsFile extends SecretsFile {
 
 	/** @param array<string, array<string, array<string, mixed>>> $profiles */
@@ -614,4 +618,3 @@ final class RepositoryPickerSecretsFile extends SecretsFile {
 		return $this->profiles[ $code ] ?? array();
 	}
 }
-// phpcs:enable Generic.Files.OneObjectStructurePerFile.MultipleFound

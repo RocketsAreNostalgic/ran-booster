@@ -21,9 +21,9 @@ RAN Booster is distributed through verified GitHub release artifacts rather than
 
 ## Production PHP analysis coverage
 
-`composer analyze` is blocking PHPStan level 5. Its direct roots cover the four
-root entrypoints, `RAN/`, `views/` (including the immutable generated Admin Shell)
-and PHP under `assets/`. At the #167 coverage checkpoint this is 345 shipped Core
+`composer analyze` is blocking PHPStan level 5. Its production profile defaults to the repository root, with root-relative
+exclusions for development, dependencies and disposable output. New production
+roots enter automatically, including views and the immutable generated Admin Shell. At the #167 coverage checkpoint this is 345 shipped Core
 PHP files. Dependency `scanDirectories` supplies symbols; it is not direct
 analysis of dependency bodies. Tests and maintenance scripts retain syntax,
 standards and their behavioural gates, rather than being counted as production
@@ -52,6 +52,68 @@ actual fallback/guard. Generated Admin Shell bytes are verified through
 `composer admin-shell:check` and must not be hand-edited. Full path coverage does
 not complete #167's naming, condition, exception or connected-contract work,
 and does not raise the analysis level or certify new dependency/host versions.
+
+## Maintained development PHP and reviewed exception boundaries
+
+`composer analyze` invokes `scripts/analyze-development.php`, which discovers all
+PHP recursively under `scripts/` and `tests/`. It invokes the locked level-5
+analyzer once per file. `phpstan-development.neon` provides unit-test symbols;
+`phpstan-integration.neon` provides the separate installed WordPress/fixture
+symbol world. Both remain pathless: adding broad paths would reintroduce unrelated
+fixture declarations into supposedly isolated invocations. Their names select
+symbol environments, not lists of files permitted to enter analysis.
+
+The isolated development sweep can exceed Composer's five-minute process limit.
+Only after production analysis, the `analyze` script invokes Composer's built-in
+timeout override before running that sweep; every analyzer exit remains blocking.
+The repository-quality CI job retains a bounded thirty-minute limit for dependency
+setup, the complete PHP contract and frontend checks. The first full native run
+took 19 minutes 55 seconds, so twenty minutes leaves insufficient scheduling and
+future-file headroom. All other CI job limits are unchanged.
+
+The old 312-file pending inventory is removed. There are 363 analyzed development
+files and 345 production files at this candidate (708 directly analyzed of 710
+maintained PHP). Future root/split files enter automatically. The two exceptions
+below are proposed for independent review within the owner's explicit policy for
+files that genuinely cannot be analyzed; green CI alone does not approve them.
+
+| Exact exemption | Evidence and disposition |
+| --- | --- |
+| `tests/fixtures/provider-api11-registration/workflow-provider.php` | Intentionally implements removed `RepositoryReleaseWorkflowManagementV2`; loading it against the current host fatals. PHPStan reports non-ignorable `interface.notFound`. Preserve the historical rejection fixture rather than inventing a compatible interface. |
+| `tests/fixtures/provider-api12-registration/repository-provider.php` | Intentionally lacks four current provider methods; loading it fatals and PHPStan reports four non-ignorable `method.abstract` diagnostics. Preserve that incompatibility contract. |
+
+`ProviderApiLifecycleTest` proves both historical versions are rejected in both
+load orders, without loading their classes or populating the provider registry.
+The coverage guard pins the exact SHA-256 identity of each file, rejects a new,
+changed or stale exemption, and checks all other maintained files against actual
+analyzer selection. Retiring/changing those historical contracts requires fresh
+review and removal/requalification of these exemptions. Neither exemption grants
+future siblings or split files an analysis waiver.
+
+The small analysis-only `WP_CLI_Command` base declaration reflects upstream
+WP-CLI v2.12.0's actual constructor contract, with source-blob provenance in the
+file. It is analyzed itself and never loaded by the product or fixture runtime;
+installed WP-CLI still provides the real class. Dynamic API constants in the
+integration profile represent the separately installed host, whose identity is
+checked by those harnesses, rather than the source checkout's current literals.
+
+PHPStan occurrence annotations retain intrinsically invalid calls and historical
+host contracts, magic-property probes, externally mutated fixture state and
+locked-tool implementation APIs. The exact identifiers and reasons remain beside
+the probes; no blanket ignore, baseline or broad ignored-error configuration is
+allowed. Removing annotations must expose the intended diagnostic, while an
+adjacent unrelated violation remains rejected. Exception dispositions are grouped
+by these contracts, not by diagnostic counts, and require independent review.
+
+WPCS native I/O exceptions preserve real inode/permission/atomic-write semantics,
+private disposable test paths and exact encoded bytes. Framework names and
+co-located test collaborators have declaration-local allowances. Broad native-I/O,
+class, function, nonce and CLI output disables and whole-file XML exemptions are
+removed. Only caller-bound view locals retain the exact variable-prefix allowance;
+new functions/classes/constants/hooks in those views remain checked. Production
+executable PHP is unchanged; four map PHPDocs now accurately include numeric IDs
+coerced to integer keys by PHP. A developer-only ZIP safety loop now uses native
+`numFiles`, with regular and malicious-entry regression controls.
 
 ## Current PHP naming contract
 
@@ -94,9 +156,21 @@ fallbacks.
 The condition and parameter rules now apply by default throughout the PHP tree:
 Yoda conditions, unused parameters (including inherited/interface implementations)
 and reserved parameter names no longer use migration-cohort include lists.
-Existing public/native signatures, callback slots and implicit template/`compact()`
+Foreign/native signatures, fixed callback slots and implicit template/`compact()`
 uses have declaration-local explanations. Owned private parameters and their callers
 must not retain dead arguments merely because a class implements an interface.
+
+Under the accepted pre-public-beta naming policy in #167, owned public parameter
+names do not justify reserved-keyword exemptions. `Theme::from_wp_theme_object()`
+uses `$wp_theme`; `Plugin::from_wp_array()` uses `$plugin_data`; the
+`ManagedRepository`, `RepositoryDescriptor` and `RepositoryReference` constructors
+use `$is_private`. Named callers must use these names; no compatibility aliases
+are added. Positional argument order, defaults, the DTOs' public readonly `$private`
+properties and their `private` wire fields remain unchanged. The current eight
+consumer candidates have no affected named calls or parameter-reflection contracts.
+Locked-checker mutations of all five real declarations must report the original
+reserved-name diagnostic. Runtime tests exercise the new named arguments alongside
+existing positional calls; installed WordPress proof exercises the theme factory.
 
 The inherited profile is WordPress-Extra plus PHPCompatibilityWP and the RAN
 syntax baseline, not every WordPress-Docs rule. Full PHPStan path coverage is
@@ -798,3 +872,16 @@ PortabilityCandidate and PortabilityApplyResult join both audited naming scopes.
 Provider and Blueprint DTO consumers use their current snake_case contracts.
 The extension catalogue must describe the published Migrator accurately; recovery
 branches and candidate-source checks are not released-package certification.
+
+
+The local standards guard also rejects rule `include-pattern` selectors,
+`phpcs-only`/`phpcbf-only` conditional elements, and unreviewed PHPCS config values
+(including success-on-error settings). Actual checker mutations prove the hidden
+JSON diagnostic or zero failure status before the independent guard rejects them.
+Locked PHPCS ignores relative mode on rule-specific patterns: the generated Admin
+Shell variable exception therefore retains its suffix pattern, while the existing
+tracked-file guard rejects every matching path except the exact parity-checked
+`views/generated/ran-admin-shell.php`. Nested same-path and case-variant matches
+require explicit review; a suffix neighbor still receives the diagnostic. This
+limitation is protected by include-or-fail inventory rather than represented as
+an exact-path XML capability that the locked checker does not implement.

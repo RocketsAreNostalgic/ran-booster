@@ -276,7 +276,7 @@ class Database {
 		$query            = $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table_name ) );
 		$wpdb->last_error = '';
 		// Schema installation must inspect the authoritative database.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The preceding prepare() binds the escaped LIKE value; authoritative schema installation cannot use a cached existence result.
 		$result = $wpdb->get_var( $query );
 		if ( '' !== trim( (string) $wpdb->last_error ) ) {
 			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
@@ -321,13 +321,13 @@ class Database {
 		$indexes_query    = $wpdb->prepare( 'SHOW INDEX FROM %i', $table_name );
 		$wpdb->last_error = '';
 		// Schema installation must inspect the authoritative database.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The preceding prepare() binds the table name as %s; inspect the live engine metadata before accepting the schema.
 		$status = $wpdb->get_row( $status_query );
 		// Schema installation must inspect the authoritative database.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The preceding prepare() binds the table identifier as %i; inspect live column definitions before accepting the schema.
 		$column_rows = $wpdb->get_results( $columns_query );
 		// Schema installation must inspect the authoritative database.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The preceding prepare() binds the table identifier as %i; inspect live index definitions before accepting the schema.
 		$index_rows = $wpdb->get_results( $indexes_query );
 		if ( '' !== trim( (string) $wpdb->last_error )
 			|| ! is_array( $column_rows )
@@ -587,7 +587,6 @@ class Database {
 			}
 
 			// Capability inspection must read the authoritative server engine list.
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$engines = $database->get_results( 'SHOW ENGINES' );
 			$error   = property_exists( $database, 'last_error' ) ? trim( (string) $database->last_error ) : '';
 			if ( ! is_array( $engines ) || '' !== $error ) {

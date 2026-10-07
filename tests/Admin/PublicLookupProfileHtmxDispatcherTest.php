@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Admin;
+namespace RAN\Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/ProviderProfileAdminControllerWordPressFunctions.php';
@@ -29,7 +29,7 @@ use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use RAN\Storage\CredentialUsageReader;
 use RAN\WordPress\WordPressUpdaterLock;
-use Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
+use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 
 final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 	private HtmxPublicLookupTestController $controller;
@@ -171,7 +171,7 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 	private function provider(): RepositoryProvider&CredentialedPublicRepositoryBrowser {
 		return new class() implements RepositoryProvider, CredentialedPublicRepositoryBrowser {
 
-			use \Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public function get_metadata(): ProviderMetadata {
 				return new ProviderMetadata( ProviderCode::parse( 'fixture' ), 'Fixture', 'https://example.test/', 'Owner' );
@@ -189,7 +189,8 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 	}
 }
 
-// phpcs:disable Generic.Files.OneObjectStructurePerFile -- Focused HTMX response spy.
+
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused HTMX response spy.
 final class HtmxPublicLookupResponse extends \RuntimeException {
 
 	public function __construct(
@@ -202,6 +203,7 @@ final class HtmxPublicLookupResponse extends \RuntimeException {
 	}
 }
 
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused HTMX response spy.
 final class HtmxPublicLookupTestController extends ProviderProfileAdminController {
 
 	/** @var array{provider:string,message:?string,error:?string,status:int}|null */
@@ -219,4 +221,3 @@ final class HtmxPublicLookupTestController extends ProviderProfileAdminControlle
 		throw new HtmxPublicLookupResponse( $provider, $message, $error, $status );
 	}
 }
-// phpcs:enable Generic.Files.OneObjectStructurePerFile

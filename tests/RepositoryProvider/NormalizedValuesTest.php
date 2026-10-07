@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Tests\RepositoryProvider;
+namespace RAN\Tests\RepositoryProvider;
 
 use InvalidArgumentException;
+use RAN\ManagedRepository;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -52,6 +53,35 @@ final class NormalizedValuesTest extends TestCase {
 			$repository->to_array(),
 			array_intersect_key( $repository->to_array(), array_flip( array_keys( $repository->to_array() ) ) )
 		);
+	}
+
+	public function test_owned_named_arguments_preserve_positional_defaults_and_wire_values(): void {
+		$provider = ProviderCode::parse( 'gh' );
+		foreach ( array( false, true ) as $is_private ) {
+			$descriptor = new RepositoryDescriptor( provider: $provider, locator: 'owner/package', package_slug: 'package', provider_repository_id: '1234', is_private: $is_private, default_branch: 'main', credential_id: 'credential-one' );
+			$positional = new RepositoryDescriptor( $provider, 'owner/package', 'package', '1234', $is_private, 'main', 'credential-one' );
+			self::assertEquals( $positional, $descriptor );
+			self::assertSame( $positional->to_array(), $descriptor->to_array() );
+			self::assertSame( $is_private, $descriptor->to_array()['private'] );
+			self::assertSame( $is_private, $descriptor->private );
+			$reference = new RepositoryReference( locator: 'owner/package', provider_repository_id: '1234', is_private: $is_private, credential_id: 'credential-one' );
+			self::assertEquals( new RepositoryReference( 'owner/package', '1234', $is_private, 'credential-one' ), $reference );
+			self::assertEquals( RepositoryReference::from_descriptor( $descriptor ), $reference );
+			self::assertSame( $is_private, $reference->with_credential( null )->private );
+			$managed = new ManagedRepository( provider: $provider, locator: 'owner/package', provider_repository_id: '1234', branch: 'main', is_private: $is_private, credential_id: 'credential-one' );
+			self::assertEquals( new ManagedRepository( $provider, 'owner/package', '1234', 'main', $is_private, 'credential-one' ), $managed );
+			self::assertEquals( $reference, $managed->reference );
+		}
+		$defaults = new ManagedRepository( provider: 'gh', locator: 'owner/package', provider_repository_id: '1234', branch: '' );
+		self::assertEquals( new ManagedRepository( 'gh', 'owner/package', '1234', '' ), $defaults );
+		self::assertFalse( $defaults->reference->private );
+		self::assertNull( $defaults->reference->credential_id );
+		self::assertSame( 'main', $defaults->branch );
+		foreach ( array( RepositoryDescriptor::class, RepositoryReference::class ) as $class ) {
+			$property = ( new ReflectionClass( $class ) )->getProperty( 'private' );
+			self::assertTrue( $property->isPublic() );
+			self::assertTrue( $property->isReadOnly() );
+		}
 	}
 
 	public function test_repository_contracts_keep_opaque_nested_locators_without_rewriting_provider_data(): void {
@@ -113,7 +143,7 @@ final class NormalizedValuesTest extends TestCase {
 				};
 				self::fail( 'Expected an invalid repository locator to be rejected.' );
 			} catch ( InvalidArgumentException ) {
-				self::assertTrue( true );
+				$this->addToAssertionCount( 1 );
 			}
 		}
 	}

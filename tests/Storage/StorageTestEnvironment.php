@@ -40,6 +40,10 @@ namespace {
 		function get_option( $option, $default = false ) {
 			global $ran_booster_storage_test_options;
 
+			if ( isset( $GLOBALS['ran_booster_storage_test_option_read'] ) ) {
+				$GLOBALS['ran_booster_storage_test_option_read']( $option );
+			}
+
 			if ( array_key_exists( $option, $ran_booster_storage_test_options ) ) {
 				return $ran_booster_storage_test_options[ $option ];
 			}

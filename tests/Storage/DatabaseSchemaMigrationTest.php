@@ -6,6 +6,8 @@ namespace RAN\Tests\Storage;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use RAN\Storage\Database;
 use RAN\Storage\DatabaseCompatibilityFailure;
 use RAN\Storage\DatabaseLifecycleFailure;
@@ -459,6 +461,57 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		( new Database() )->require_ready();
 
 		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+	}
+
+	/** @return array<string, array{bool, string}> */
+	public static function version_comparison_provider(): array {
+		return array(
+			'failed write readback'         => array( false, 'version_write_failed' ),
+			'successful write verification' => array( true, 'version_verification_failed' ),
+		);
+	}
+
+	#[DataProvider( 'version_comparison_provider' )]
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_version_comparison_reads_expected_version_before_option_filter( bool $write_result, string $reason ): void {
+		global $ran_booster_storage_test_option_write_result, $ran_booster_storage_test_options;
+
+		$expected_version                                = Database::$booster_db_version;
+		$previous_options                                = $ran_booster_storage_test_options;
+		$previous_write_result                           = $ran_booster_storage_test_option_write_result;
+		$previous_read_filter                            = $GLOBALS['ran_booster_storage_test_option_read'] ?? null;
+		$version_reads                                   = 0;
+		$ran_booster_storage_test_option_write_result    = $write_result;
+		$GLOBALS['ran_booster_storage_test_option_read'] = static function ( string $option ) use ( &$version_reads ): void {
+			if ( Database::VERSION_OPTION !== $option || 2 !== ++$version_reads ) {
+				return;
+			}
+
+			// Model an option filter changing both the expected version and returned option.
+			Database::$booster_db_version                           = '999.0';
+			$GLOBALS['ran_booster_storage_test_options'][ $option ] = '999.0';
+		};
+
+		try {
+			try {
+				( new Database() )->install();
+				self::fail( 'Expected comparison against the version read before the option filter.' );
+			} catch ( DatabaseLifecycleFailure $failure ) {
+				self::assertSame( $reason, $failure->reason() );
+			}
+			self::assertSame( 2, $version_reads );
+			self::assertSame( '999.0', Database::$booster_db_version );
+		} finally {
+			Database::$booster_db_version                 = $expected_version;
+			$ran_booster_storage_test_options             = $previous_options;
+			$ran_booster_storage_test_option_write_result = $previous_write_result;
+			if ( null === $previous_read_filter ) {
+				unset( $GLOBALS['ran_booster_storage_test_option_read'] );
+			} else {
+				$GLOBALS['ran_booster_storage_test_option_read'] = $previous_read_filter;
+			}
+		}
 	}
 
 	public function test_version_verification_failure_does_not_claim_readiness(): void {

@@ -153,6 +153,13 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- The finder must expose a maintained file silently converted into a symbol-only stub.
 			file_put_contents( $fixture . '/stub.neon', $config . "\tstubFiles:\n\t\t- tests/Admin/Split.php\n" );
 			self::assertNotContains( $path, $this->development_analysed_files( $fixture . '/stub.neon' ) );
+			foreach ( array( 'tests/Admin/template.phtml', 'scripts/template-command' ) as $template_path ) {
+				$template_path = $fixture . '/' . $template_path;
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Mixed PHP must enter independent development coverage even beyond the old bounded header.
+				file_put_contents( $template_path, str_repeat( '<p>Template</p>', 100 ) . '<?php echo 1;' );
+				self::assertContains( $template_path, $this->development_files( $fixture ) );
+				self::assertNotContains( $template_path, $this->development_analysed_files( $fixture . '/analysis.neon' ) );
+			}
 		} finally {
 			foreach ( new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $fixture, FilesystemIterator::SKIP_DOTS ), RecursiveIteratorIterator::CHILD_FIRST ) as $file ) {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir, WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this private analyzer fixture, children first.
@@ -169,14 +176,26 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create only a private new-root analyzer fixture.
 		self::assertTrue( mkdir( $root . '/bin', 0700, true ) );
 		try {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write inert invalid PHP to demonstrate the real extension-based finder omission.
-			file_put_contents( $path, "#!/usr/bin/env php\n<?php\nfunction ran_entrypoint_probe(): int { return 'invalid'; }\n" );
 			$container = $this->analysis_container();
-			$selected  = $container->getService( 'fileFinderAnalyse' )->findFiles( array( $root ) )->getFiles();
-			self::assertNotContains( $path, $selected );
-			self::assertSame( array( $path ), array_values( array_diff( $this->root_php_files( $root ), $selected ) ), 'The canonical maintained-file comparison must fail closed for an unsupported PHP entrypoint.' );
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Use the locked analyzer at the required level with the entrypoint explicitly selected as a diagnostic control.
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Use the locked analyzer at level five for an explicit invalid-body control.
 			file_put_contents( $root . '/analysis.neon', "parameters:\n\tlevel: 5\n" );
+			foreach ( array( 'new-command', 'template.phtml', 'template.PHTML', 'template.inc', 'template.html', 'template.htm' ) as $name ) {
+				$path = $root . '/bin/' . $name;
+				foreach ( array( "#!/usr/bin/env php\n", "<main>Template</main>\n", str_repeat( '<p>Template</p>', 100 ) ) as $preamble ) {
+					foreach ( array( '1', "'invalid'" ) as $value ) {
+						// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Valid and invalid bodies must both fail closed when their nonstandard path is omitted.
+						file_put_contents( $path, $preamble . "<?php\nfunction ran_entrypoint_probe(): int { return " . $value . "; }\n" );
+						$selected = $container->getService( 'fileFinderAnalyse' )->findFiles( array( $root . '/bin' ) )->getFiles();
+						self::assertNotContains( $path, $selected );
+						self::assertContains( $path, array_values( array_diff( $this->root_php_files( $root ), $selected ) ) );
+					}
+				}
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only the current inert fixture.
+				unlink( $path );
+			}
+			$path = $root . '/bin/new-command';
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- The locked analyzer must report the omitted invalid body when explicitly selected.
+			file_put_contents( $path, "<main>Template</main><?php function ran_entrypoint_probe(): int { return 'invalid'; }" );
 			list( $status, $output ) = $this->analyse_development_fixture( $root . '/analysis.neon', $path );
 			self::assertSame( 1, $status, $output );
 			self::assertStringContainsString( 'return.type', $output );
@@ -230,10 +249,12 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 			if ( ! $file->isFile() ) {
 				continue;
 			}
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Discover nonstandard entrypoints from bounded inert headers; never execute maintained source.
-			$header = file_get_contents( $file->getPathname(), false, null, 0, 256 );
+			$extension = strtolower( $file->getExtension() );
+			$template  = in_array( $extension, array( '', 'phtml', 'inc', 'html', 'htm' ), true );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Discover inert PHP/template bodies, including HTML preambles; never execute source.
+			$header = file_get_contents( $file->getPathname(), false, null, 0, $template ? null : 256 );
 			self::assertIsString( $header );
-			if ( 'php' === strtolower( $file->getExtension() ) || preg_match( '/\A(?:#![^\r\n]*\R)?\s*<\?(?:php(?:\s|$)|=)/i', $header ) ) {
+			if ( in_array( $extension, array( 'php', 'phtml' ), true ) || preg_match( $template ? '/<\?(?:php(?:\s|$)|=)/i' : '/\A(?:#![^\r\n]*\R)?\s*<\?(?:php(?:\s|$)|=)/i', $header ) ) {
 				$files[] = str_replace( '\\', '/', $file->getPathname() );
 			}
 		}
@@ -291,9 +312,11 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 				if ( ! $file->isFile() ) {
 					continue;
 				}
-				$header = file_get_contents( $file->getPathname(), false, null, 0, 256 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Discover nonstandard PHP entrypoints from inert headers, without executing fixtures.
+				$extension = strtolower( $file->getExtension() );
+				$template  = in_array( $extension, array( '', 'phtml', 'inc', 'html', 'htm' ), true );
+				$header    = file_get_contents( $file->getPathname(), false, null, 0, $template ? null : 256 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read inert PHP/template bytes, including HTML preambles; never execute fixtures.
 				self::assertIsString( $header );
-				if ( 'php' === strtolower( $file->getExtension() ) || preg_match( '/\A(?:#![^\r\n]*\R)?\s*<\?(?:php(?:\s|$)|=)/i', $header ) ) {
+				if ( in_array( $extension, array( 'php', 'phtml' ), true ) || preg_match( $template ? '/<\?(?:php(?:\s|$)|=)/i' : '/\A(?:#![^\r\n]*\R)?\s*<\?(?:php(?:\s|$)|=)/i', $header ) ) {
 					$files[] = str_replace( '\\', '/', $file->getPathname() );
 				}
 			}

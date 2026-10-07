@@ -65,6 +65,22 @@ final class StandardsCoverageTest extends TestCase {
 			$discovered = file_get_contents( $tracked[0] );
 			self::assertIsString( $discovered );
 			self::assertTrue( $this->has_blanket_suppression( $discovered ) );
+			foreach ( array( 'template.phtml', 'template.PHTML', 'template.inc', 'template.html', 'template.htm', 'template-command' ) as $name ) {
+				$template_path = $directory . '/' . $name;
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write inert mixed HTML/PHP beyond the former header bound; never execute it.
+				file_put_contents( $template_path, str_repeat( '<p>Template</p>', 100 ) . '<?php function ( {' );
+				$this->git_output( $root, array( 'add', '--', 'new-tooling/' . $name ) );
+				self::assertContains( $template_path, $this->tracked_php_files( $root ) );
+				if ( in_array( $name, array( 'template.phtml', 'template.PHTML', 'template-command' ), true ) ) {
+					self::assertNotContains( $template_path, $this->selected_php_files( array( $directory ) ) );
+				}
+			}
+			foreach ( array( 'example.md', 'example.json', 'example.sh' ) as $name ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Documentation/data/shell PHP examples must not become executable PHP merely by containing an opening tag.
+				file_put_contents( $directory . '/' . $name, 'Example: <?php echo 1;' );
+				$this->git_output( $root, array( 'add', '--', 'new-tooling/' . $name ) );
+				self::assertNotContains( $directory . '/' . $name, $this->tracked_php_files( $root ) );
+			}
 		} finally {
 			// This unique fixture contains only files created above and by Git init/add.
 			$files = new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( $root, \FilesystemIterator::SKIP_DOTS ), \RecursiveIteratorIterator::CHILD_FIRST );
@@ -145,10 +161,12 @@ final class StandardsCoverageTest extends TestCase {
 			array_filter(
 				$paths,
 				static function ( string $path ): bool {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Inspect bounded tracked-file headers so extensionless PHP cannot evade selection or suppression guards.
-					$header = file_get_contents( $path, false, null, 0, 256 );
+					$extension = strtolower( pathinfo( $path, PATHINFO_EXTENSION ) );
+					$template  = in_array( $extension, array( '', 'phtml', 'inc', 'html', 'htm' ), true );
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Inspect inert tracked PHP/template bytes, including HTML preambles; never execute source.
+					$header = file_get_contents( $path, false, null, 0, $template ? null : 256 );
 					self::assertIsString( $header );
-					return 'php' === strtolower( pathinfo( $path, PATHINFO_EXTENSION ) ) || 1 === preg_match( '/\A(?:#![^\r\n]*\R)?\s*<\?(?:php(?:\s|$)|=)/i', $header );
+					return in_array( $extension, array( 'php', 'phtml' ), true ) || 1 === preg_match( $template ? '/<\?(?:php(?:\s|$)|=)/i' : '/\A(?:#![^\r\n]*\R)?\s*<\?(?:php(?:\s|$)|=)/i', $header );
 				}
 			)
 		);

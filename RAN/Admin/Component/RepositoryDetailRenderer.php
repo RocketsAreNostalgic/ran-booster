@@ -103,7 +103,10 @@ final class RepositoryDetailRenderer {
 		<?php
 	}
 
-	/** @param callable():void $render_release_panel @param list<array<string,mixed>> $packages */
+	/**
+	 * @param callable():void $render_release_panel
+	 * @param list<array<string,mixed>> $packages
+	 */
 	private function render_release_content( callable $render_release_panel, array $packages ): void {
 		$buffer_level = ob_get_level();
 		ob_start();
@@ -125,7 +128,10 @@ final class RepositoryDetailRenderer {
 		$this->render_unavailable_release_guidance( $packages );
 	}
 
-	/** @param array<string, mixed> $row @param list<array<string, mixed>> $packages */
+	/**
+	 * @param array<string, mixed> $row
+	 * @param list<array<string, mixed>> $packages
+	 */
 	private function render_status( array $row, array $packages, int $omitted ): void {
 		$branch_count  = count( array_filter( $packages, static fn ( array $package ): bool => 'branch' === ( $package['source'] ?? null ) ) );
 		$release_count = count( $packages ) - $branch_count;
@@ -373,7 +379,10 @@ final class RepositoryDetailRenderer {
 		return is_string( $key ) && str_starts_with( $key, 'core:webhook-' );
 	}
 
-	/** @param array<string, mixed> $row @return list<array<string, mixed>> */
+	/**
+	 * @param array<string, mixed> $row
+	 * @return list<array<string, mixed>>
+	 */
 	private function integration_details( array $row ): array {
 		return array_values(
 			array_filter(
@@ -386,7 +395,10 @@ final class RepositoryDetailRenderer {
 		);
 	}
 
-	/** @param array<string, mixed> $row @return list<array<string, mixed>> */
+	/**
+	 * @param array<string, mixed> $row
+	 * @return list<array<string, mixed>>
+	 */
 	private function packages( array $row ): array {
 		return array_values( array_filter( is_array( $row['package_summaries'] ?? null ) ? $row['package_summaries'] : array(), static fn ( mixed $package ): bool => is_array( $package ) ) );
 	}

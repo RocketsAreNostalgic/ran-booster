@@ -1290,6 +1290,7 @@ final readonly class ProviderSettingsPresenter {
 	}
 
 	/**
+	 * @param array{available:bool,owners:list<string>,repositories:list<array<string,mixed>>} $managed_repositories
 	 * @return list<array<string, mixed>>
 	 */
 	private function webhook_profiles(
@@ -1566,7 +1567,11 @@ final readonly class ProviderSettingsPresenter {
 		);
 	}
 
-	/** @param list<array<string,mixed>> $profiles @param array<string,string> $scope_labels @return list<array<string,mixed>> */
+	/**
+	 * @param list<array<string,mixed>> $profiles
+	 * @param array<string,string> $scope_labels
+	 * @return list<array<string,mixed>>
+	 */
 	private function webhook_rows( array $profiles, array $scope_labels ): array {
 		$rows = array();
 		foreach ( $profiles as $profile ) {
@@ -1601,7 +1606,11 @@ final readonly class ProviderSettingsPresenter {
 		return $rows;
 	}
 
-	/** @param list<array<string,mixed>> $rows @param array<string,mixed> $state @return array{rows:list<array<string,mixed>>,total:int,pages:int,current:int} */
+	/**
+	 * @param list<array<string,mixed>> $rows
+	 * @param array<string,mixed> $state
+	 * @return array{rows:list<array<string,mixed>>,total:int,pages:int,current:int}
+	 */
 	private function filter_and_page( array $rows, string $view, array $state ): array {
 		$search   = strtolower( trim( (string) $state['search'] ) );
 		$rows     = array_values(

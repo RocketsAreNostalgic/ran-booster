@@ -22,6 +22,7 @@ final readonly class AdminAddOnContext {
 	) {
 	}
 
+	/** @param array<string, object> $facades */
 	public static function for_current_administrator(
 		string $tab_key,
 		string $booster_url,

@@ -44,8 +44,10 @@ use Throwable;
 use WP_Error;
 
 class Dashboard {
+	/** @var list<mixed> */
 	public $messages = array();
 
+	/** @var Booster */
 	private $booster;
 
 	/**
@@ -65,6 +67,7 @@ class Dashboard {
 
 	private ProviderSettingsPresenter $provider_settings;
 	private TroubleshootingService $troubleshooting;
+	/** @var array<string, mixed>|null */
 	private ?array $troubleshooting_payload = null;
 
 	private ?AdminTabRegistry $admin_tabs;
@@ -150,6 +153,9 @@ class Dashboard {
 	}
 
 
+	/**
+	 * @return mixed The included template result, or an overridden renderer result.
+	 */
 	public function get_index( ?string $forced_tab = null ) {
 		if ( null === $this->admin_tabs ) {
 			throw new LogicException( 'Booster admin tabs are not configured.' );
@@ -296,7 +302,11 @@ class Dashboard {
 		return $this->render( 'index', $data );
 	}
 
-	/** Render the native sidebar route through the canonical Transporter tab. */
+	/**
+	 * Render the native sidebar route through the canonical Transporter tab.
+	 *
+	 * @return mixed The included template result, or an overridden renderer result.
+	 */
 	public function get_transporter() {
 		return $this->get_index( 'portability' );
 	}
@@ -441,24 +451,38 @@ class Dashboard {
 		return empty( $this->troubleshooting_payload['partial'] );
 	}
 
+	/**
+	 * @return mixed The included template result, or an overridden renderer result.
+	 */
 	public function get_plugins() {
 		return $this->render_package_page( $this->plugin_pages );
 	}
 
+	/**
+	 * @return mixed The package renderer result.
+	 */
 	public function get_plugins_create() {
 		return $this->render_package_create( $this->plugin_pages );
 	}
 
+	/**
+	 * @return mixed The included template result, or an overridden renderer result.
+	 */
 	public function get_themes() {
 		return $this->render_package_page( $this->theme_pages );
 	}
 
+	/**
+	 * @return mixed The package renderer result.
+	 */
 	public function get_themes_create() {
 		return $this->render_package_create( $this->theme_pages );
 	}
 
-	/** @param list<array<string, mixed>> $extensions */
-
+	/**
+	 * @param list<array<string, mixed>> $extensions
+	 * @return mixed The included template result, or an overridden renderer result.
+	 */
 	public function get_extensions( array $extensions, string $plugins_url ) {
 		return $this->render(
 			'extensions',
@@ -470,6 +494,9 @@ class Dashboard {
 		);
 	}
 
+	/**
+	 * @return mixed The included template result, or an overridden renderer result.
+	 */
 	private function render_package_page( PackagePagePresenter $package_view ) {
 		$type = $package_view->get_type();
 		$this->package_admin->add_success_notice( $this, $type );
@@ -677,18 +704,34 @@ class Dashboard {
 		);
 	}
 
+	/**
+	 * @param mixed $message Notice input is classified defensively before storage.
+	 * @return void
+	 */
 	public function add_message( $message ) {
 		$this->record_message( $message );
 	}
 
+	/**
+	 * @param mixed $message Notice input is classified defensively before storage.
+	 * @param array<string, mixed> $context
+	 */
 	public function add_failure_message( $message, Throwable $failure, array $context = array() ): void {
 		$this->record_message( $message, $failure, $context );
 	}
 
+	/**
+	 * @param mixed $message Notice input is classified defensively before storage.
+	 * @param array<string, mixed> $context
+	 */
 	private function add_message_with_context( $message, array $context ): void {
 		$this->record_message( $message, null, $context );
 	}
 
+	/**
+	 * @param mixed $message Notice input is classified defensively before storage.
+	 * @param array<string, mixed> $context
+	 */
 	private function record_message( $message, ?Throwable $failure = null, array $context = array() ): void {
 		if ( is_wp_error( $message ) ) {
 			$message = array(
@@ -1042,6 +1085,11 @@ class Dashboard {
 		return $tabs;
 	}
 
+	/**
+	 * @param string $view
+	 * @param array<string, mixed> $data
+	 * @return mixed The included template result, or an overridden renderer result.
+	 */
 	protected function render( $view, $data = array() ) {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'ran-booster' ) );

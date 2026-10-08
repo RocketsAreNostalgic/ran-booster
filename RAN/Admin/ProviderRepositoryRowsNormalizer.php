@@ -15,7 +15,12 @@ use Throwable;
  * Builds and protects Core-owned provider repository rows.
  */
 final class ProviderRepositoryRowsNormalizer {
-	/** Build the managed-repository projection consumed by the provider page. */
+	/**
+	 * Build the managed-repository projection consumed by the provider page.
+	 *
+	 * @param array<string, mixed> $data Provider settings and repository inventory.
+	 * @return array<string, mixed>
+	 */
 	public function project_page( array $data, ?RepositoryWebhookManagementControls $webhook_management = null, ?ReleaseWorkflowControls $release_workflow = null ): array {
 		$provider       = is_array( $data['provider'] ?? null ) ? $data['provider'] : array();
 		$provider_code  = is_string( $provider['code'] ?? null ) ? $provider['code'] : '';
@@ -225,7 +230,7 @@ final class ProviderRepositoryRowsNormalizer {
 	 * @param list<array<string,mixed>> $repositories
 	 * @param array{by_id:array<array-key,array<string,mixed>>,by_repository:array<string,array<string,mixed>>} $readiness
 	 * @param callable(array<string,mixed>):string $provider_url
-	 * @return array{requested_id:string,list_url:string,return_url:string,webhook_rows:array<array-key,array<string,mixed>>,rows:array<array-key,array<string,mixed>>,selected:?array}
+	 * @return array{requested_id:string,list_url:string,return_url:string,webhook_rows:array<array-key,array<string,mixed>>,rows:array<array-key,array<string,mixed>>,selected:array<string,mixed>|null}
 	 */
 	public function project(
 		array $repositories,
@@ -550,7 +555,10 @@ final class ProviderRepositoryRowsNormalizer {
 		);
 	}
 
-	/** @param list<string> $described_by @return array<string,array<string,mixed>> */
+	/**
+	 * @param list<string> $described_by
+	 * @return array<string,array<string,mixed>>
+	 */
 	private function webhook_management_action( string $repository, array $described_by ): array {
 		return array(
 			'core:webhook-management' => array(
@@ -567,7 +575,11 @@ final class ProviderRepositoryRowsNormalizer {
 		);
 	}
 
-	/** @param array<string,array<string,mixed>> $actions @param array<string,mixed> $repository @param list<string> $references */
+	/**
+	 * @param array<string,array<string,mixed>> $actions
+	 * @param array<string,mixed> $repository
+	 * @param list<string> $references
+	 */
 	private function append_repository_actions( array &$actions, array $repository, array $references, bool $is_release, string $coverage, string $provider_label, string $reason_id, string $locator, string $detail_url ): void {
 		if ( $is_release ) {
 			$url             = '' === $detail_url ? '' : add_query_arg( 'repository_view', 'branch', $detail_url ) . '#ran-booster-repository-webhook-setup-heading';
@@ -945,7 +957,10 @@ final class ProviderRepositoryRowsNormalizer {
 		);
 	}
 
-	/** @return array{repositories:int,packages:int,automatic:int} */
+	/**
+	 * @param list<mixed> $repositories Inventory entries before row projection.
+	 * @return array{repositories:int,packages:int,automatic:int}
+	 */
 	private function counts( array $repositories ): array {
 		$packages  = 0;
 		$automatic = 0;
@@ -983,7 +998,10 @@ final class ProviderRepositoryRowsNormalizer {
 		);
 	}
 
-	/** @param list<mixed> $codes @return list<string> */
+	/**
+	 * @param list<mixed> $codes
+	 * @return list<string>
+	 */
 	private function site_reasons( array $codes, string $endpoint ): array {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Display-safe endpoint parsing performs no network I/O.
 		$host     = parse_url( $endpoint, PHP_URL_HOST );
@@ -998,7 +1016,11 @@ final class ProviderRepositoryRowsNormalizer {
 		return array_values( array_filter( array_map( static fn ( mixed $code ): ?string => is_string( $code ) ? ( $labels[ $code ] ?? null ) : null, $codes ) ) );
 	}
 
-	/** @param array{repositories:int,packages:int,automatic:int} $counts */
+	/**
+	 * @param array<string,mixed>|null $setup Provider webhook setup metadata.
+	 * @param array{repositories:int,packages:int,automatic:int} $counts
+	 * @return array<string,string>
+	 */
 	private function copy( string $label, ?array $setup, array $counts, string $shared_secret_label ): array {
 		$automatic_label = 0 < $counts['automatic']
 			? sprintf( /* translators: %d is the number of packages with Automatic updates. */ _n( '%d package is Automatic', '%d packages are Automatic', $counts['automatic'], 'ran-booster' ), $counts['automatic'] )

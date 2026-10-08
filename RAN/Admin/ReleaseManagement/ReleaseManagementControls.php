@@ -226,9 +226,9 @@ final class ReleaseManagementControls {
 	}
 
 	/**
-	 * @return array{heading:string,badges:list<array{label:string}>,status:string}
+	 * @return array{heading:string,badges:list<array{label:string}>,status?:string}
+	 * @param array{heading:string,badges:list<array{label:string}>,status?:string} $projection
 	 */
-
 	public function filter_advanced_source_summary_projection(
 		array $projection,
 		string $mode,
@@ -262,7 +262,10 @@ final class ReleaseManagementControls {
 		$this->request_boundary( fn () => $this->display->render_operation_notice( $code, $result['successful'], $result['type'], $result['identifier'], $result['channel'], $status ), null );
 	}
 
-	/** @param list<array<string, mixed>> $sections @return list<array<string, mixed>> */
+	/**
+	 * @param list<array<string, mixed>> $sections
+	 * @return list<array<string, mixed>>
+	 */
 
 	public function filter_documentation_sections( array $sections, string $documentation_url, string $scope ): array {
 
@@ -546,7 +549,10 @@ final class ReleaseManagementControls {
 		);
 	}
 
-	/** @param array<string,mixed> $request @return array{code:string,successful:bool,data:array<mixed>} */
+	/**
+	 * @param array<string,mixed> $request
+	 * @return array{code:string,successful:bool,data:array<mixed>}
+	 */
 
 	public function process_managed_browser_request( string $operation, array $request ): array {
 		$type       = $this->strict_requested_type( $request );
@@ -638,12 +644,18 @@ final class ReleaseManagementControls {
 		);
 	}
 
+	/**
+	 * @param array<string, mixed> $request
+	 */
 	private function strict_requested_type( array $request ): string {
 		$type = is_string( $request['expected_type'] ?? null ) ? sanitize_key( wp_unslash( $request['expected_type'] ) ) : '';
 
 		return in_array( $type, array( 'plugin', 'theme' ), true ) ? $type : '';
 	}
 
+	/**
+	 * @param array<string, mixed> $request
+	 */
 	private function requested_revision( array $request ): int {
 		$value = $request['expected_source_revision'] ?? null;
 		$value = is_string( $value ) ? wp_unslash( $value ) : $value;

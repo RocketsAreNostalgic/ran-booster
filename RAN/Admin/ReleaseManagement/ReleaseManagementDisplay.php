@@ -18,6 +18,10 @@ final class ReleaseManagementDisplay {
 	);
 
 
+	/**
+	 * @param array<string,string> $nonce_actions
+	 * @param list<array{name:string,url:string,type:string,view_all?:bool}> $repository_conflict
+	 */
 	public function render_settings(
 		object $package,
 		?ReleaseTrackingStatus $status,
@@ -328,6 +332,11 @@ final class ReleaseManagementDisplay {
 	}
 
 
+	/**
+	 * @param array<string,string> $nonce_actions
+	 * @param array{providers?:list<string>,list_candidates?:string,inspect?:string,install?:string} $prospective
+	 * @param list<array{name:string,url:string,type:string,view_all?:bool}> $repository_conflict
+	 */
 	public function render_advanced_source_section(
 		string $mode,
 		string $type,
@@ -427,9 +436,9 @@ final class ReleaseManagementDisplay {
 	}
 
 	/**
-	 * @return array{heading:string,badges:list<array{label:string}>,status:string}
+	 * @return array{heading:string,badges:list<array{label:string}>,status?:string}
+	 * @param array{heading:string,badges:list<array{label:string}>,status?:string} $fallback
 	 */
-
 	public function advanced_source_summary_projection(
 		array $fallback,
 		string $mode,
@@ -550,6 +559,9 @@ final class ReleaseManagementDisplay {
 	}
 
 
+	/**
+	 * @param array{providers?:list<string>,list_candidates?:string,inspect?:string,install?:string} $prospective
+	 */
 	private function render_prospective_setup( string $type, array $prospective ): void {
 		$candidates_nonce    = is_string( $prospective['list_candidates'] ?? null ) ? $prospective['list_candidates'] : null;
 		$inspect_nonce       = is_string( $prospective['inspect'] ?? null ) ? $prospective['inspect'] : null;
@@ -640,8 +652,8 @@ final class ReleaseManagementDisplay {
 	 * @param array<string, array<string, mixed>> $rows
 	 * @param list<object>                        $packages
 	 * @return array<string, array<string, mixed>>
+	 * @param array<string,ReleaseTrackingStatus|null> $statuses
 	 */
-
 	public function present_management( array $rows, string $surface, array $packages, array $statuses ): array {
 		if ( ! in_array( $surface, array( 'plugin', 'theme' ), true ) ) {
 			return $rows;

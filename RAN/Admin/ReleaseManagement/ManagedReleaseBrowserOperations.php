@@ -124,7 +124,10 @@ final class ManagedReleaseBrowserOperations {
 		return '' !== $value && strlen( $value ) <= $maximum && 1 !== preg_match( '/[\x00-\x1F\x7F]/', $value );
 	}
 
-	/** @return array{code:string,successful:bool,data:array<mixed>} */
+	/**
+	 * @return array{code:string,successful:bool,data:array<mixed>}
+	 * @param array<string, mixed> $data
+	 */
 	private function outcome( string $code, bool $successful = false, array $data = array() ): array {
 		return array(
 			'code'       => $code,

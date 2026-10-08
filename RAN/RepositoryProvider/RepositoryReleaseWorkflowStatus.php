@@ -8,7 +8,11 @@ use InvalidArgumentException;
 
 /** Secret-free current workflow record and assessment evidence. */
 final readonly class RepositoryReleaseWorkflowStatus {
-	/** @param list<array{operation:string,outcome_code:string,failure_stage:string,diagnostic_code:string,diagnostic_available:bool,correlation_reference:string,recorded_at:string}> $failure_history @param list<array{id:string,label:string}> $credential_choices @param list<array{label:string,url:string}> $documentation_links */
+	/**
+	 * @param list<array{operation:string,outcome_code:string,failure_stage:string,diagnostic_code:string,diagnostic_available:bool,correlation_reference:string,recorded_at:string}> $failure_history Failure evidence.
+	 * @param list<array{id:string,label:string}> $credential_choices Available credentials.
+	 * @param list<array{label:string,url:string}> $documentation_links Provider documentation.
+	 */
 	public function __construct( private string $provider_code, private string $repository_id, private bool $record_exact, private bool $record_occupied, private string $pull_request_url = '', private string $package_type = '', private string $package_identifier = '', private int $source_revision = 0, private string $record_operation = '', private string $observation_kind = '', private string $observed_at = '', private array $failure_history = array(), private array $credential_choices = array(), private array $documentation_links = array(), private string $provider_workflow_url = '', private string $write_guidance = '' ) {
 		if ( $this->record_exact && ! $this->record_occupied ) {
 			throw new InvalidArgumentException( 'An exact release workflow record must occupy the repository.' );
@@ -85,14 +89,17 @@ final readonly class RepositoryReleaseWorkflowStatus {
 		return $this->observed_at;
 	}
 
+	/** @return list<array{operation:string,outcome_code:string,failure_stage:string,diagnostic_code:string,diagnostic_available:bool,correlation_reference:string,recorded_at:string}> */
 	public function failure_history(): array {
 		return $this->failure_history;
 	}
 
+	/** @return list<array{id:string,label:string}> */
 	public function credential_choices(): array {
 		return $this->credential_choices;
 	}
 
+	/** @return list<array{label:string,url:string}> */
 	public function documentation_links(): array {
 		return $this->documentation_links;
 	}

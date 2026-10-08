@@ -73,7 +73,7 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 		}
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Verify canonical analysis actually invokes the broad development runner.
 		$composer = json_decode( (string) file_get_contents( $root . '/composer.json' ), true, 512, JSON_THROW_ON_ERROR );
-		self::assertSame( array( 'phpstan analyse --configuration=phpstan.neon --no-progress --debug --memory-limit=2G', 'Composer\\Config::disableProcessTimeout', '@php scripts/analyze-development.php' ), $composer['scripts']['analyze'] );
+		self::assertSame( array( 'phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=2G -vv', 'Composer\\Config::disableProcessTimeout', '@php scripts/analyze-development.php' ), $composer['scripts']['analyze'] );
 		list( $status, $output ) = $this->run_development_runner( $root, array( '--list' ) );
 		self::assertSame( 0, $status, $output );
 		$profiles = json_decode( $output, true, 512, JSON_THROW_ON_ERROR );
@@ -255,12 +255,14 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Both batched and isolated branches must report their own real body error.
 				file_put_contents( $fixture . '/' . $path, $prefix . 'class ' . $class . ' { public function body_error(): int { return "invalid"; } }' );
 			}
-			list( $status, $output ) = $this->run_development_runner( $fixture, array() );
-			self::assertSame( 1, $status, $output );
-			self::assertStringContainsString( 'BatchAdded::body_error()', $output );
-			self::assertStringContainsString( 'BatchInstalled::body_error()', $output );
-			self::assertStringContainsString( 'partition_consumer()', $output );
-			self::assertStringContainsString( 'return.type', $output );
+			foreach ( array( 1, 2, 4 ) as $workers ) {
+				list( $status, $output ) = $this->run_development_runner( $fixture, array(), $workers );
+				self::assertSame( 1, $status, $output );
+				self::assertStringContainsString( 'BatchAdded::body_error()', $output );
+				self::assertStringContainsString( 'BatchInstalled::body_error()', $output );
+				self::assertStringContainsString( 'partition_consumer()', $output );
+				self::assertStringContainsString( 'return.type', $output );
+			}
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Correct the consumer while retaining the deliberately incompatible fixture declarations.
 			file_put_contents( $fixture . '/tests/FunctionB.php', $prefix . 'function PARTITION_SYMBOL(): string { return "valid"; } function partition_consumer(): string { return PARTITION_SYMBOL(); }' );
 			foreach ( array(
@@ -270,8 +272,11 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Correct only the deliberate body violations.
 				file_put_contents( $fixture . '/' . $path, $prefix . 'class ' . $class . ' { public function body_error(): int { return 1; } }' );
 			}
-			list( $status, $output ) = $this->run_development_runner( $fixture, array() );
+			list( $status, $output ) = $this->run_development_runner( $fixture, array(), 4 );
 			self::assertSame( 0, $status, $output );
+			list( $status, $output ) = $this->run_development_runner( $fixture, array(), 0 );
+			self::assertSame( 2, $status, $output );
+			self::assertStringContainsString( 'must be 1, 2 or 4', $output );
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- Move only the private file to prove that profile ownership follows its current path.
 			self::assertTrue( rename( $fixture . '/tests/Candidate.php', $fixture . '/tests/WordPress/Candidate.php' ) );
 			list( $status, $output ) = $this->run_development_runner( $fixture, array( '--list-batch' ) );
@@ -499,7 +504,7 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 	/** @param list<string> $arguments
 	 * @return array{int, string}
 	 */
-	private function run_development_runner( string $root, array $arguments ): array {
+	private function run_development_runner( string $root, array $arguments, ?int $workers = null ): array {
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open -- Query only the maintained runner's real selection; do not execute analyzed fixtures.
 		$process = proc_open(
 			array( PHP_BINARY, $root . '/scripts/analyze-development.php', ...$arguments ),
@@ -508,7 +513,8 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 				2 => array( 'pipe', 'w' ),
 			),
 			$pipes,
-			$root
+			$root,
+			null === $workers ? null : array_merge( getenv(), array( 'PHPSTAN_DEVELOPMENT_PROCESSES' => (string) $workers ) )
 		);
 		self::assertIsResource( $process );
 		$output = stream_get_contents( $pipes[1] ) . stream_get_contents( $pipes[2] );

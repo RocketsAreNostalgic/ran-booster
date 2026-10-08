@@ -19,6 +19,29 @@ Follow [SUPPORT.md](SUPPORT.md) for ordinary support, non-sensitive defects, and
 
 RAN Booster is distributed through verified GitHub release artifacts rather than WordPress.org. Do not add WordPress.org/SVN publication, a hosted licence service, telemetry, or a second update authority without a separate decision.
 
+## PHPStan result cache
+
+Production analysis uses PHPStan's native result cache in
+`vendor/.phpstan-cache/production`, outside maintained-source discovery and the
+runtime archive. The analyser still runs on every check. CI restores and saves
+only this directory, with separate namespaces for each Git ref, PHP environment
+and dependency lock; cache failures fall back to ordinary analysis. PR cache
+state is not restored by main or the publisher. Unique run/attempt keys allow
+new results to be saved without overwriting older entries.
+
+Production analysis retains one worker to bound memory. For a cold diagnostic
+run, use `vendor/bin/phpstan analyse --configuration=phpstan.neon --no-progress
+--debug --memory-limit=2G`; `--debug` disables result-cache use and saving. Use
+`-vv` without `--debug` to inspect normal cache reuse and invalidation.
+Dependency updates must use Composer and update the committed lock. The locked
+PHPStan does not reliably invalidate in-place edits of installed vendor source
+with an unchanged lock; use the cold diagnostic command for such experiments.
+CI installs the committed immutable dependencies before restoring analysis state.
+
+Development analysis remains uncached: the locked PHPStan does not save result
+caches for file-list inputs. Compatible classes are batched, and other fixture
+worlds remain separate processes as described below.
+
 ## Production PHP analysis coverage
 
 `composer analyze` is blocking PHPStan level 5. Its production profile defaults to the repository root, with root-relative
@@ -75,19 +98,30 @@ New and moved files enter the current appropriate execution group automatically.
 `--list` reports complete discovery; `--list-batch` reports the actual batch.
 
 Batching removes repeated PHPStan startup work. File-list invocations do not use
-PHPStan's result cache, so this is not a development-cache claim. One worker keeps
-the batch's memory bounded. Required coverage checks and real-checker probes
-protect both the batch and isolated remainder, including fixture signatures that
-would hide a body error if combined. A failed batch still allows the isolated
-checks to run, and any failed invocation fails the complete analysis.
+PHPStan's result cache, so this is not a development-cache claim. Each invocation
+keeps its own symbol world and a 1 GiB analyzer limit. Local execution is serial
+by default. Set `PHPSTAN_DEVELOPMENT_PROCESSES` to `1`, `2` or `4` to select a
+bounded number of concurrent invocations; CI uses four. PHPStan may also create
+one child worker per invocation, so allow memory for the complete process tree.
+The runner starts bounded groups, waits for every child and prints each child's
+buffered diagnostics in selection order. Temporary output streams are removed
+when closed. Invalid concurrency settings fail the command.
+
+Required coverage checks and real-checker probes protect both the batch and
+isolated remainder, including fixture signatures that would hide a body error
+if combined. They exercise serial and concurrent execution. A failed batch still
+allows isolated checks to run, and any failed invocation fails the complete
+analysis.
 
 The isolated development sweep can exceed Composer's five-minute process limit.
 Only after production analysis, the `analyze` script invokes Composer's built-in
 timeout override before running that sweep; every analyzer exit remains blocking.
 The repository-quality CI job retains a bounded thirty-minute limit for dependency
-setup, the complete PHP contract and frontend checks. The first full native run
-took 19 minutes 55 seconds, so twenty minutes leaves insufficient scheduling and
-future-file headroom. All other CI job limits are unchanged.
+setup, the complete PHP contract and frontend checks. Installed WordPress/database
+checks start alongside repository quality after the exact runtime archive is
+verified. Each installed lane still verifies the source and artifact identity;
+the final Quality job requires both repository and installed checks to succeed.
+Release candidates retain their separate install-readback path.
 
 The old 312-file pending inventory is removed. There are 363 analyzed development
 files and 345 production files at this candidate (708 directly analyzed of 710

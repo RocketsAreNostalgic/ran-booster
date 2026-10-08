@@ -40,6 +40,9 @@ selects every other file individually. Source-derived declaration checks keep
 incompatible fixture worlds isolated without an analysis allowlist or a cached
 partition. Preserve those checks and the independent real-checker controls when
 changing execution grouping; a green naive batch can conceal fixture errors.
+CI runs up to four isolated analyzer invocations concurrently; local execution
+remains serial unless `PHPSTAN_DEVELOPMENT_PROCESSES` is set to `2` or `4`.
+Preserve the process bound, separate symbol worlds and failure propagation.
 Two deliberately unloadable API11/API12 registration fixtures are exact-file
 exemptions, with immutable identity and their actual rejection tests protected by
 `ProductionAnalysisCoverageTest` and `ProviderApiLifecycleTest`. See CONTRIBUTING

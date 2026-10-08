@@ -10,6 +10,7 @@ use RAN\WordPress\ManagedReleaseConfiguration;
 /** @extends AbstractPackageRepository<Theme> */
 class ThemeRepository extends AbstractPackageRepository {
 
+	/** @return array<string, Theme> */
 	public function all_booster_themes() {
 		return $this->all_packages();
 	}
@@ -23,6 +24,10 @@ class ThemeRepository extends AbstractPackageRepository {
 		return $this->all_packages( $source );
 	}
 
+	/**
+	 * @param mixed $stylesheet Identifier is validated by package hydration.
+	 * @param array<string, mixed> $input Editable package fields, validated before persistence.
+	 */
 	public function edit_theme( $stylesheet, $input ): PackageMutationResult {
 		return $this->edit_package( $stylesheet, $input );
 	}
@@ -40,7 +45,7 @@ class ThemeRepository extends AbstractPackageRepository {
 	}
 
 	/**
-	 * @param $slug
+	 * @param string $slug
 	 * @return Theme
 	 */
 	public function from_slug( $slug ) {
@@ -53,7 +58,7 @@ class ThemeRepository extends AbstractPackageRepository {
 	}
 
 	/**
-	 * @param $stylesheet
+	 * @param mixed $stylesheet Identifier is validated by package hydration.
 	 * @return Theme
 	 * @throws ThemeNotFound
 	 * @throws PackageStorageFailure

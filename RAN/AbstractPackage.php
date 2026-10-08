@@ -13,10 +13,12 @@ use RAN\Deployment\DeploymentPolicy;
  */
 abstract class AbstractPackage implements Package {
 
+	/** @var ManagedRepository|null Unset until repository hydration. */
 	protected $repository;
 	protected DeploymentPolicy $deployment_policy = DeploymentPolicy::MANUAL;
 	protected PackageSource $source               = PackageSource::BRANCH;
 	protected int $source_revision                = 1;
+	/** @var string|null Normalized relative path, or no subdirectory. */
 	protected $subdirectory;
 	protected ?string $deployment_ref    = null;
 	protected ?string $installation_slug = null;

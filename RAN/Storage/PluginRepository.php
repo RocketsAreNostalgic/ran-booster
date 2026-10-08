@@ -27,6 +27,10 @@ class PluginRepository extends AbstractPackageRepository {
 		return $this->all_packages( $source );
 	}
 
+	/**
+	 * @param mixed $file Identifier is validated by package hydration.
+	 * @param array<string, mixed> $input Editable package fields, validated before persistence.
+	 */
 	public function edit_plugin( $file, $input ): PackageMutationResult {
 		return $this->edit_package( $file, $input );
 	}
@@ -44,7 +48,7 @@ class PluginRepository extends AbstractPackageRepository {
 	}
 
 	/**
-	 * @param $slug
+	 * @param string $slug
 	 * @return Plugin
 	 */
 	public function from_slug( $slug ) {
@@ -63,7 +67,7 @@ class PluginRepository extends AbstractPackageRepository {
 	}
 
 	/**
-	 * @param $file
+	 * @param mixed $file Identifier is validated by package hydration.
 	 * @return Plugin $plugin
 	 * @throws PluginNotFound
 	 * @throws PackageStorageFailure

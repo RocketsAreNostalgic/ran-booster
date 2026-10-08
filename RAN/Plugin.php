@@ -4,19 +4,36 @@ namespace RAN; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonP
 
 class Plugin extends AbstractPackage {
 
+	/** @var string|null */
 	protected $file;
+	/** @var string|null */
 	protected $name;
+	/** @var string|null */
 	protected $plugin_uri;
+	/** @var string|null */
 	protected $version;
+	/** @var string|null */
 	protected $description;
+	/** @var string|null */
 	protected $author;
+	/** @var string|null */
 	protected $author_uri;
+	/** @var string|null */
 	protected $text_domain;
+	/** @var string|null */
 	protected $domain_path;
+	/** @var bool|null */
 	protected $network;
+	/** @var string|null */
 	protected $title;
+	/** @var string|null */
 	protected $author_name;
 
+	/**
+	 * @param string $file WordPress plugin identifier.
+	 * @param array{Name:string,PluginURI:string,Version:string,Description:string,Author:string,AuthorURI:string,TextDomain:string,DomainPath:string,Network:bool,Title:string,AuthorName:string} $plugin_data Headers returned by WordPress.
+	 * @return static
+	 */
 	public static function from_wp_array( $file, array $plugin_data ) {
 		$plugin = new static();
 

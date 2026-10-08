@@ -55,9 +55,7 @@ function ran_booster_branch_installed_smoke(): void {
 				'install' => '1.0.0',
 				'update'  => '2.0.0',
 			) as $operation => $version ) {
-				if ( is_link( $target ) || ( file_exists( $target ) && realpath( $target ) !== $target ) ) {
-					throw new RuntimeException( 'Branch target ceased to be a canonical disposable path.' );
-				}
+				ran_booster_branch_assert_canonical_path( $target );
 				$declaration             = new BranchDeploymentDeclaration( $run_id, $type, $slug, 'fixtures/consumer', 'fixture', 'main', null, $operation, 'packages/target', $identifier );
 				$artifact                = ran_booster_branch_installed_artifact( $declaration, $version, $custody );
 				$hook                    = 'pre_site_transient_update_' . ( 'plugin' === $type ? 'plugins' : 'themes' );
@@ -119,9 +117,8 @@ function ran_booster_branch_installed_smoke(): void {
 				}
 			}
 		} finally {
-			if ( is_link( $target ) || is_link( $custody ) ) {
-				throw new RuntimeException( 'Refusing symlinked Branch proof cleanup.' );
-			}
+			ran_booster_branch_assert_canonical_path( $target );
+			ran_booster_branch_assert_canonical_path( $custody );
 			if ( is_dir( $target ) ) {
 				$deleted = 'plugin' === $type ? delete_plugins( array( $identifier ) ) : delete_theme( $slug );
 				if ( true !== $deleted ) {
@@ -134,6 +131,12 @@ function ran_booster_branch_installed_smoke(): void {
 		}
 	}
 	echo "Installed Branch consumer: plugin/theme install/update, source relocation and reference-safe transient scope passed.\n";
+}
+
+function ran_booster_branch_assert_canonical_path( string $path ): void {
+	if ( is_link( $path ) || ( file_exists( $path ) && realpath( $path ) !== $path ) ) {
+		throw new RuntimeException( 'Branch proof path is not canonical.' );
+	}
 }
 
 function ran_booster_branch_installed_artifact( BranchDeploymentDeclaration $declaration, string $version, string $custody ): PreparedArchive {

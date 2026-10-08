@@ -32,6 +32,7 @@ class ProviderProfileAdminController {
 
 		$this->branch_check_evidence = $branch_check_evidence ?? new RepositoryBranchCheckEvidenceStore();
 	}
+	/** @param array<string, mixed> $request Untrusted request fields, validated before use. */
 	public function manage_credential_profiles( array $request ): void {
 		$this->authorize( 'ran-booster-save-secrets' );
 		$action              = is_string( $request['action'] ?? null ) ? $request['action'] : '';
@@ -63,6 +64,7 @@ class ProviderProfileAdminController {
 		}
 	}
 
+	/** @param array<string, mixed> $request Untrusted request fields, validated before use. */
 	public function manage_credential_validation( array $request, bool $htmx_request ): void {
 		$this->authorize( 'ran-booster-save-secrets' );
 		$provider = null;
@@ -126,6 +128,7 @@ class ProviderProfileAdminController {
 		}
 	}
 
+	/** @param array<string, mixed> $request Untrusted request fields, validated before use. */
 	public function manage_public_lookup_profile( array $request, bool $htmx_request ): void {
 		$this->authorize( 'ran-booster-save-public-lookup-profile' );
 		$provider = null;
@@ -174,6 +177,7 @@ class ProviderProfileAdminController {
 			$this->respond_to_htmx_public_lookup_profile( $provider->value, $message, $error, $status );
 		}
 	}
+	/** @param array<string, mixed> $request Untrusted request fields, validated before use. */
 	private function save_access_profile(
 		array $request,
 		ProviderCode $provider,
@@ -304,6 +308,7 @@ class ProviderProfileAdminController {
 			}
 		);
 	}
+	/** @param array<string, mixed> $request Untrusted request fields, validated before use. */
 	private function save_webhook_profile(
 		array $request,
 		ProviderCode $provider,
@@ -447,6 +452,7 @@ class ProviderProfileAdminController {
 		}
 		check_admin_referer( $nonce );
 	}
+	/** @param array<string, mixed> $request Untrusted request fields, validated before use. */
 	private function profile_id( array $request ): ?string {
 		if ( ! array_key_exists( 'id', $request ) ) {
 			return null;
@@ -502,6 +508,7 @@ class ProviderProfileAdminController {
 				? $exception->getMessage()
 				: __( 'Booster could not complete the credential request.', 'ran-booster' );
 	}
+	/** @param array<string, mixed> $request Untrusted request fields, validated before use. */
 	private function provider_code( array $request ): ProviderCode {
 		try {
 			if ( ! is_string( $request['provider'] ?? null ) ) {

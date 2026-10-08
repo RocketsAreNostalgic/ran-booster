@@ -36,6 +36,7 @@ final class CredentialExpiryReminder {
 	}
 
 	/**
+	 * @param array<string, mixed> $profile Display-safe credential profile.
 	 * @return array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:?string,source:?string,stage:string,days:?int,badge_class:string,badge_label:string}
 	 */
 	public function status( string $provider, array $profile ): array {

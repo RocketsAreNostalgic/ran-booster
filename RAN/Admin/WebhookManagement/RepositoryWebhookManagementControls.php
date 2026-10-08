@@ -329,7 +329,10 @@ final class RepositoryWebhookManagementControls {
 		<?php
 	}
 
-	/** @param list<array{label:string,message:string,state:string}> $items @param list<array{class:string,message:string}> $notices */
+	/**
+	 * @param list<array{label:string,message:string,state:string}> $items
+	 * @param list<array{class:string,message:string}> $notices
+	 */
 	private function render_repository_webhook_section( array $items, string $panel, bool $has_branch_consumer, array $notices, bool $setup_available = true ): void {
 		$inactive = ! $has_branch_consumer || ! $setup_available;
 		?>
@@ -533,7 +536,10 @@ final class RepositoryWebhookManagementControls {
 		<?php
 	}
 
-	/** @param list<array<string, mixed>> $sections @return list<array<string, mixed>> */
+	/**
+	 * @param list<array<string, mixed>> $sections
+	 * @return list<array<string, mixed>>
+	 */
 	public function documentation_sections( array $sections, string $provider_code, string $provider_label ): array {
 		if ( ! $this->enabled || null === $this->controller->provider_metadata( $provider_code ) ) {
 			return $sections;

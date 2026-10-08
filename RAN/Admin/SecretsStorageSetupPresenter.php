@@ -13,6 +13,7 @@ use RAN\Secrets\SecretsStorageProvisioningResult;
 final readonly class SecretsStorageSetupPresenter {
 
 	/**
+	 * @param array<string, mixed>|null $recovery Recovery state fields, normalized for display.
 	 * @return array{
 	 *     status: string,
 	 *     reason_code: string,

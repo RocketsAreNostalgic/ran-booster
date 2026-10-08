@@ -807,7 +807,8 @@
 	padding: 0;
 	background: transparent;
 	font-size: var(--ran-booster-font-size-xs);
-	word-break: break-word;
+	overflow-wrap: anywhere;
+	word-break: normal;
 }
 
 .ran-booster-admin .ran-booster-portability__status,

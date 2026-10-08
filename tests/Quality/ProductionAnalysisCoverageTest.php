@@ -73,7 +73,7 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 		}
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Verify canonical analysis actually invokes the broad development runner.
 		$composer = json_decode( (string) file_get_contents( $root . '/composer.json' ), true, 512, JSON_THROW_ON_ERROR );
-		self::assertSame( array( 'phpstan analyse --configuration=phpstan.neon --no-progress --debug --memory-limit=2G', 'Composer\\Config::disableProcessTimeout', '@php scripts/analyze-development.php' ), $composer['scripts']['analyze'] );
+		self::assertSame( array( 'phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=2G -vv', 'Composer\\Config::disableProcessTimeout', '@php scripts/analyze-development.php' ), $composer['scripts']['analyze'] );
 		list( $status, $output ) = $this->run_development_runner( $root, array( '--list' ) );
 		self::assertSame( 0, $status, $output );
 		$profiles = json_decode( $output, true, 512, JSON_THROW_ON_ERROR );

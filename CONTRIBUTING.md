@@ -19,6 +19,27 @@ Follow [SUPPORT.md](SUPPORT.md) for ordinary support, non-sensitive defects, and
 
 RAN Booster is distributed through verified GitHub release artifacts rather than WordPress.org. Do not add WordPress.org/SVN publication, a hosted licence service, telemetry, or a second update authority without a separate decision.
 
+## PHPStan result cache
+
+Production analysis uses PHPStan's native result cache in
+`vendor/.phpstan-cache/production`, outside maintained-source discovery and the
+runtime archive. The analyser still runs on every check. CI restores and saves
+only this directory, with separate namespaces for each Git ref, PHP environment
+and dependency lock; cache failures fall back to ordinary analysis. PR cache
+state is not restored by main or the publisher. Unique run/attempt keys allow
+new results to be saved without overwriting older entries.
+
+Production analysis retains one worker to bound memory. For a cold diagnostic
+run, use `vendor/bin/phpstan analyse --configuration=phpstan.neon --no-progress
+--debug --memory-limit=2G`; `--debug` disables result-cache use and saving. Use
+`-vv` without `--debug` to inspect normal cache reuse and invalidation.
+
+The isolated development/integration sweep still runs uncached. The locked
+PHPStan does not save result caches when only individual files are supplied;
+separate per-file directories alone do not address that limitation. Keep those
+fixture worlds isolated until a measured, independently reviewed alternative
+is available under organisation issue #154.
+
 ## Production PHP analysis coverage
 
 `composer analyze` is blocking PHPStan level 5. Its production profile defaults to the repository root, with root-relative

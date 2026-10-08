@@ -238,8 +238,26 @@ jobs:
           - name: Install Node.js dependencies
             run: pnpm install --frozen-lockfile
 
+          - name: Restore production PHPStan cache
+            id: phpstan-cache-restore
+            uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
+            continue-on-error: true
+            with:
+                path: vendor/.phpstan-cache/production
+                key: phpstan-production-v1-${{ runner.os }}-php8.2-${{ github.ref }}-${{ hashFiles('composer.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
+                restore-keys: |
+                    phpstan-production-v1-${{ runner.os }}-php8.2-${{ github.ref }}-${{ hashFiles('composer.lock') }}-
+
           - name: Run the complete PHP quality contract
             run: composer check
+
+          - name: Save production PHPStan cache
+            if: ${{ !cancelled() && steps.phpstan-cache-restore.outcome == 'success' }}
+            uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+            continue-on-error: true
+            with:
+                path: vendor/.phpstan-cache/production
+                key: phpstan-production-v1-${{ runner.os }}-php8.2-${{ github.ref }}-${{ hashFiles('composer.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
 
           - name: Run asset quality checks
             run: pnpm check

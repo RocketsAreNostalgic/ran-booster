@@ -18,6 +18,9 @@ final class CoreContainer {
 
 	/**
 	 * @internal Core composition only; this is not an extension API.
+	 *
+	 * @param string $alias Service lookup key.
+	 * @param callable|string|object $concrete Factory, class name or instance.
 	 */
 	public function bind( $alias, $concrete ): void {
 		$this->services[ $alias ] = $concrete;
@@ -25,6 +28,9 @@ final class CoreContainer {
 
 	/**
 	 * @internal Core composition only; this is not an extension API.
+	 *
+	 * @param string $alias Service alias or class name.
+	 * @return mixed Factories may return any value; reflected services are objects.
 	 */
 	public function make( $alias ) {
 		if ( isset( $this->services[ $alias ] ) && is_callable( $this->services[ $alias ] ) ) {
@@ -42,6 +48,10 @@ final class CoreContainer {
 		return $this->resolve( $alias );
 	}
 
+	/**
+	 * @param string $class_name Class name to resolve through reflection.
+	 * @return object
+	 */
 	private function resolve( $class_name ) {
 		$reflection  = new ReflectionClass( $class_name );
 		$constructor = $reflection->getConstructor();

@@ -193,7 +193,12 @@ class LocalTroubleshootingService {
 		}
 	}
 
-	/** Report the identity-free operational state of the durable journal. */
+	/**
+	 * Report the identity-free operational state of the durable journal.
+	 *
+	 * @param array{queued: int, running: int, needs_attention: int}|null $snapshot
+	 * @param array{valid: bool, maximum_rows: int, source: 'configured'|'default'}|null $retention
+	 */
 	private function deployment_attempts_result( ?array $snapshot, ?array $retention ): ProviderDiagnosticResult {
 		if ( null === $snapshot ) {
 			return new ProviderDiagnosticResult(
@@ -238,7 +243,11 @@ class LocalTroubleshootingService {
 		);
 	}
 
-	/** Report the read-only state of the sequential worker wake-up. */
+	/**
+	 * Report the read-only state of the sequential worker wake-up.
+	 *
+	 * @param array{queued: int, running: int, needs_attention: int}|null $snapshot
+	 */
 	private function deployment_worker_result( ?array $snapshot ): ProviderDiagnosticResult {
 		if ( null === $snapshot ) {
 			return $this->worker_unavailable();

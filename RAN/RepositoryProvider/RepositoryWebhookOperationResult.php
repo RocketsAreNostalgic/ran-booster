@@ -74,6 +74,7 @@ final readonly class RepositoryWebhookOperationResult {
 			'profile'       => $this->profile?->to_array(),
 		);
 	}
+	/** @param list<string> $allowed */
 	private function assert_value( string $value, array $allowed ): void {
 		if ( ! in_array( $value, $allowed, true ) ) {
 			throw new InvalidArgumentException( 'Webhook operation result is invalid.' );

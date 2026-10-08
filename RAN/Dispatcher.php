@@ -88,6 +88,7 @@ class Dispatcher {
 		);
 	}
 
+	/** @return void */
 	public function dispatch_post_requests() {
 		// The selected action determines which nonce is verified before any mutation occurs.
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Only select the action here; each dispatched mutation verifies its own capability and action-specific nonce.

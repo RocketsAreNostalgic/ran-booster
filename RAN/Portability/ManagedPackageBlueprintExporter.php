@@ -78,7 +78,10 @@ final readonly class ManagedPackageBlueprintExporter {
 		return new PackageBlueprint( $packages, array() === $credentials ? array() : $this->credentials( $managed, $credentials ) );
 	}
 
-	/** @param array<string, list<string>> $selection @return array<string, true> */
+	/**
+	 * @param array<string, list<string>> $selection
+	 * @return array<string, true>
+	 */
 	private function credential_selection( array $selection ): array {
 		$selected = array();
 		foreach ( $selection as $provider => $ids ) {
@@ -134,6 +137,7 @@ final readonly class ManagedPackageBlueprintExporter {
 
 	/**
 	 * @param list<array{package: Package, blueprint: BlueprintPackage}> $managed
+	 * @param array<string, true>                                      $selected
 	 * @return list<BlueprintCredential>
 	 */
 	private function credentials( array $managed, array $selected ): array {

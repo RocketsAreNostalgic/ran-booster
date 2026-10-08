@@ -16,6 +16,7 @@ final readonly class PackageOperation {
 	private const OPERATIONS = array( 'install', 'edit', 'update', 'unlink', 'unlink-and-delete' );
 	private const TYPES      = array( 'plugin', 'theme' );
 
+	/** @param array<string, string|int|bool|DeploymentPolicy|PackageSource|null> $expected_package */
 	private function __construct(
 		public string $operation,
 		public string $package_type,
@@ -226,7 +227,22 @@ final readonly class PackageOperation {
 		}
 	}
 
-	/** @param array<string, mixed> $input */
+	/**
+	 * @param array<string, mixed> $input
+	 * @return array{
+	 *     provider: string|null,
+	 *     provider_repository_id: string|null,
+	 *     repository: string|null,
+	 *     branch: string|null,
+	 *     credential_id: string|null,
+	 *     subdirectory: string|null,
+	 *     private: bool|null,
+	 *     package_slug: string|null,
+	 *     deployment_policy: DeploymentPolicy|null,
+	 *     source: PackageSource|null,
+	 *     source_revision: int|null
+	 * }
+	 */
 	private static function expected_package( array $input ): array {
 		return array(
 			'provider'               => self::nullable_scalar( $input['expected_provider'] ?? null ),

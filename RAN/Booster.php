@@ -56,9 +56,11 @@ class Booster {
 	);
 
 
+	/** @var string|null Bootstrap assigns the plugin location before runtime use. */
 	public $booster_path;
 
 
+	/** @var string|null Bootstrap assigns the plugin location before runtime use. */
 	public $booster_url;
 
 	/** @internal Core constructs the live runtime with its request-local container. */
@@ -66,6 +68,7 @@ class Booster {
 		$this->container = $container ?? new CoreContainer();
 	}
 
+	/** @return void */
 	public function init() {
 		add_action( 'admin_init', array( $this->service( \RAN\Admin\CredentialSelfDestructPurger::class ), 'purge' ), 1 );
 		add_action( 'admin_init', array( $this, 'maybe_upgrade_database' ) );
@@ -208,6 +211,7 @@ class Booster {
 		$this->service( 'RAN\Webhook\WebhookController' )->register_routes();
 	}
 
+	/** @return void */
 	public function admin_menu() {
 		add_menu_page( $this->get_name(), $this->get_name(), 'manage_options', 'ran-booster', '', $this->get_menu_icon() );
 		add_submenu_page( 'ran-booster', $this->get_name(), __( 'Overview', 'ran-booster' ), 'manage_options', 'ran-booster', array( $this->service( 'RAN\Dashboard' ), 'get_index' ) );
@@ -335,6 +339,7 @@ class Booster {
 		return $catalogue;
 	}
 
+	/** @return string */
 	public function get_name() {
 		return 'RAN Booster';
 	}
@@ -353,6 +358,7 @@ class Booster {
 		return 'data:image/svg+xml;base64,' . base64_encode( $svg );
 	}
 
+	/** @return void */
 	public function register_plugin_action_links() {
 		if ( $this->is_passive_troubleshooting_request() ) {
 			return;
@@ -389,6 +395,8 @@ class Booster {
 
 	/**
 	 * Keep the passive Troubleshooting GET free of database-backed bootstrap work.
+	 *
+	 * @return void
 	 */
 	public function maybe_upgrade_database() {
 		if ( $this->is_passive_troubleshooting_request() ) {
@@ -440,6 +448,10 @@ class Booster {
 		return ! in_array( $panel, array( 'activity', 'deployment-activity' ), true );
 	}
 
+	/**
+	 * @param mixed $hook Screen identifier, validated before loading assets.
+	 * @return void
+	 */
 	public function load_scripts( $hook ) {
 		if ( ! is_string( $hook ) || ! in_array( $hook, self::ADMIN_PAGE_HOOKS, true ) ) {
 			return;
@@ -718,6 +730,8 @@ class Booster {
 	/**
 	 * Load the dedicated dismissal asset on any administration screen where
 	 * the current administrator will receive an expiry notice.
+	 *
+	 * @param mixed $hook Unused screen identifier supplied by WordPress.
 	 */
 	public function load_credential_expiry_notice_script( $hook ): void {
 		unset( $hook );
@@ -750,6 +764,8 @@ class Booster {
 
 	/**
 	 * Load the small dismissal asset only when a background failure is visible.
+	 *
+	 * @param mixed $hook Unused screen identifier supplied by WordPress.
 	 */
 	public function load_background_deployment_failure_notice_script( $hook ): void {
 		unset( $hook );
@@ -780,6 +796,10 @@ class Booster {
 		wp_enqueue_script( 'ran-booster-background-deployment-failure-notice' );
 	}
 
+	/**
+	 * @param string $alias Internal service alias or class name.
+	 * @return mixed The registered factory result or resolved instance.
+	 */
 	private function service( $alias ) {
 		return $this->container->make( $alias );
 	}

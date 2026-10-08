@@ -273,7 +273,10 @@ final class ReleaseArtifactCustodian {
 			: null;
 	}
 
-	/** @param resource $stream @return array{device:int,inode:int,links:int,owner:int,group:int}|null */
+	/**
+	 * @param resource $stream
+	 * @return array{device:int,inode:int,links:int,owner:int,group:int}|null
+	 */
 	private static function created_file_identity( string $path, $stream ): ?array {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fstat -- The exclusive file handle must identify the same Core-owned path.
 		$stream_stat = fstat( $stream );
@@ -307,7 +310,10 @@ final class ReleaseArtifactCustodian {
 		return false !== $stat && 0100000 === ( $mode & 0170000 ) ? $stat : null;
 	}
 
-	/** @param array<string|int, int> $stat @return array{device:int,inode:int,links:int,owner:int,group:int} */
+	/**
+	 * @param array<string|int, int> $stat
+	 * @return array{device:int,inode:int,links:int,owner:int,group:int}
+	 */
 	private static function stable_identity( array $stat ): array {
 		return array(
 			'device' => (int) ( $stat['dev'] ?? -1 ),

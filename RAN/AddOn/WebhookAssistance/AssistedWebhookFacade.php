@@ -501,7 +501,10 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		return is_array( $material ) ? $this->profile_record_from_material( $provider_code, $profile_id, $material ) : null;
 	}
 
-	/** @param array<string,mixed> $material @return array{WebhookProfileMetadata,string}|null */
+	/**
+	 * @param array<string,mixed> $material
+	 * @return array{WebhookProfileMetadata,string}|null
+	 */
 	private function profile_record_from_material( string $provider_code, string $profile_id, array $material ): ?array {
 		if ( ! is_string( $material['secret'] ?? null ) ) {
 			return null;

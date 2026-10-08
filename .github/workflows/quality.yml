@@ -661,6 +661,7 @@ jobs:
                 printf '%s\n' 'RAN Booster disposable test site' > build/wordpress/.ran-booster-disposable-test-site
                 composer test:core-updater-proof
                 composer test:core-package-executor
+                wp eval-file tests/WordPress/branch-updater-installed-smoke.php --path="$RAN_BOOSTER_WORDPRESS_PATH"
 
           - name: Prove installed release capability lifecycle
             if: ${{ matrix.suite == 'critical' }}

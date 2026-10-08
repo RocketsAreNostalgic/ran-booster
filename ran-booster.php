@@ -70,6 +70,7 @@ use RAN\WordPress\ReleaseUpdaterBootstrap;
 use RAN\WordPress\WordPressOrgUpdateRequestFilter;
 
 if ( ! function_exists( 'ran_booster_table_name' ) ) {
+	/** @return string */
 	function ran_booster_table_name() {
 		global $wpdb;
 		$db_prefix = is_multisite() ? $wpdb->base_prefix : $wpdb->prefix;

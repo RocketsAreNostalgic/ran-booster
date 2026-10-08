@@ -35,6 +35,7 @@ final readonly class RepositoryWebhookFitnessResult {
 			'remediation'     => $this->remediation,
 		);
 	}
+	/** @param list<string> $allowed */
 	private function assert_value( string $value, array $allowed ): void {
 		if ( ! in_array( $value, $allowed, true ) ) {
 			throw new InvalidArgumentException( 'Webhook fitness result is invalid.' );

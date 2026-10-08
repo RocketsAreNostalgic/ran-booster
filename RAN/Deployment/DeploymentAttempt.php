@@ -199,6 +199,7 @@ final readonly class DeploymentAttempt {
 		return null === $value ? null : self::positive_int( $value );
 	}
 
+	/** @param list<string> $allowed */
 	private static function one_of( mixed $value, array $allowed ): string {
 		if ( ! is_string( $value ) || ! in_array( $value, $allowed, true ) ) {
 			throw new InvalidArgumentException( 'A deployment attempt field is not recognised.' );

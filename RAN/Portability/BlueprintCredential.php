@@ -10,7 +10,10 @@ use RAN\RepositoryProvider\ProviderCode;
 /** A normalized, source-ID-free credential carried only inside an encrypted blueprint. */
 final readonly class BlueprintCredential {
 
-	/** @param array<string, mixed> $configuration @param list<array{type:string,identifier:string}> $packages */
+	/**
+	 * @param array<string, mixed> $configuration
+	 * @param list<array{type:string,identifier:string}> $packages
+	 */
 	public function __construct(
 		public string $provider,
 		public string $label,
@@ -70,7 +73,10 @@ final readonly class BlueprintCredential {
 		return '' !== $value && trim( $value ) === $value && strlen( $value ) <= $maximum && 1 === preg_match( '//u', $value ) && ! preg_match( '/[\x00-\x1F\x7F]/', $value );
 	}
 
-	/** @param array<string, mixed> $configuration @return array<string, mixed> */
+	/**
+	 * @param array<string, mixed> $configuration
+	 * @return array<string, mixed>
+	 */
 	private static function canonical_configuration( array $configuration ): array {
 		$nodes = 0;
 		/** @var array<string, mixed> $result */

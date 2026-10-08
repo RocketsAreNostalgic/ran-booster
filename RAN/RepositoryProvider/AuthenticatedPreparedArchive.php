@@ -14,7 +14,7 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 
 	public const REDIRECT_HOOK = 'requests-requests.before_redirect';
 
-	/** @var array<string, WeakReference> */
+	/** @var array<string, WeakReference<self>> */
 	private static array $reserved_urls = array();
 
 	private bool $authentication_filter_registered = false;

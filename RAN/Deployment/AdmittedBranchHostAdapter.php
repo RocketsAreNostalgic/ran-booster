@@ -590,6 +590,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 	}
 
+	/** @param array<string, bool|int|string|null> $data */
 	private function assert_package_snapshot( Package $package, array $data, DeploymentRequest $request ): void {
 		if ( $package->get_provider_code() !== $data['provider']
 			|| ! hash_equals( (string) $package->get_provider_repository_id(), (string) $data['provider_repository_id'] )

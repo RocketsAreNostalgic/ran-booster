@@ -32,6 +32,7 @@ final class BoosterLogger {
 		'transition'      => true,
 	);
 
+	/** @param array<array-key, mixed> $context Untrusted context filtered to safe keys and scalar values. */
 	public static function log( string $message, array $context = array() ): bool {
 		$wordpress_logging = self::enabled();
 		if ( ! $wordpress_logging && null === self::$capture ) {
@@ -61,6 +62,7 @@ final class BoosterLogger {
 	}
 
 
+	/** @param array<array-key, mixed> $context Untrusted context filtered to safe keys and scalar values. */
 	public static function log_exception( string $message, Throwable $exception, array $context = array() ): void {
 		$context['exception_class'] = $exception::class;
 		$code                       = $exception->getCode();
@@ -80,6 +82,10 @@ final class BoosterLogger {
 		return defined( 'WP_DEBUG_LOG' ) && (bool) WP_DEBUG_LOG;
 	}
 
+	/**
+	 * @param array<array-key, mixed> $context
+	 * @return array<string, string|bool|int|float|null>
+	 */
 	private static function sanitize_context( array $context ): array {
 		$safe = array();
 

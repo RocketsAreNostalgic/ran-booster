@@ -468,6 +468,7 @@ final class ManagedReleaseTargetRegistrar {
 	}
 
 	/**
+	 * @param array<string, mixed> $hook_extra
 	 * @return array{type: 'plugin'|'theme', identifier: string}|null
 	 */
 	private function native_target( array $hook_extra, bool $bulk = false ): ?array {

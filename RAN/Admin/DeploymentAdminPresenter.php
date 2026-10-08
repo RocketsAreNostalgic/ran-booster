@@ -169,7 +169,10 @@ final class DeploymentAdminPresenter {
 		return $base;
 	}
 
-	/** @param list<Package> $packages */
+	/**
+	 * @param list<Package> $packages
+	 * @return array{items: array<array-key, array{latest: \RAN\Deployment\DeploymentAttempt|null, last_successful: \RAN\Deployment\DeploymentAttempt|null}>, unavailable: bool}
+	 */
 	public function package_activity( array $packages, string $type ): array {
 		if ( null === $this->attempts || count( $packages ) > 50 ) {
 			return $this->package_activity_result();
@@ -262,6 +265,7 @@ final class DeploymentAdminPresenter {
 		return $integer > 0 && (string) $integer === $value ? $integer : null;
 	}
 
+	/** @return array{message: array{type: string, code: string, message: string}, context: array{correlation_id: string, operation: string, step: string, outcome_code?: string}} */
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- compact() reads type, code and operation to preserve the outcome and logging context keys.
 	private function outcome( string $type, string $code, string $message, string $correlation_id_input, string $operation, ?string $outcome_code = null ): array {
 		$correlation_id = $correlation_id_input;
@@ -274,7 +278,10 @@ final class DeploymentAdminPresenter {
 		return compact( 'message', 'context' );
 	}
 
-	/** @param array<string, mixed> $items */
+	/**
+	 * @param array<array-key, array{latest: \RAN\Deployment\DeploymentAttempt|null, last_successful: \RAN\Deployment\DeploymentAttempt|null}> $items
+	 * @return array{items: array<array-key, array{latest: \RAN\Deployment\DeploymentAttempt|null, last_successful: \RAN\Deployment\DeploymentAttempt|null}>, unavailable: bool}
+	 */
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- compact() reads items and unavailable to build the package activity result.
 	private function package_activity_result( array $items = array(), bool $unavailable = true ): array {
 		return compact( 'items', 'unavailable' );

@@ -83,6 +83,8 @@ final class PackagePagePresenter {
 
 	/**
 	 * @param array<string, Package>|list<Package> $packages
+	 * @param list<array<string, mixed>> $package_providers
+	 * @param array{search: string, provider: string, source: string, policy: string} $package_list_state
 	 * @return array<string, mixed>
 	 */
 	public function index(
@@ -112,7 +114,11 @@ final class PackagePagePresenter {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * @param array<string, mixed> $package_provider_settings
+	 * @param array<string, mixed>|null $package_branch_readiness
+	 * @return array<string, mixed>
+	 */
 	public function edit(
 		Package $package,
 		array $package_provider_settings,
@@ -130,7 +136,10 @@ final class PackagePagePresenter {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * @param array<string, mixed> $package_provider_settings
+	 * @return array<string, mixed>
+	 */
 	public function create(
 		array $package_provider_settings,
 		bool $explicit_provider,
@@ -149,7 +158,10 @@ final class PackagePagePresenter {
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * @param array<string, mixed> $package_provider_settings
+	 * @return array<string, mixed>
+	 */
 	public function unavailable_create( array $package_provider_settings, bool $explicit_provider ): array {
 		return array(
 			'package_provider_settings'  => $package_provider_settings,

@@ -535,8 +535,11 @@ final class PackageAdminController {
 		return null;
 	}
 
-	/** @param array<string, mixed> $request @return array<string, mixed>|null */
-	/** @param array{profile_id: string|null}|null $trusted_public_lookup */
+	/**
+	 * @param array<string, mixed> $request
+	 * @param array{profile_id: string|null}|null $trusted_public_lookup
+	 * @return array<string, mixed>|null
+	 */
 	private function resolve( Dashboard $dashboard, array $request, ?array $trusted_public_lookup = null ): ?array {
 		try {
 			if ( null !== $trusted_public_lookup ) {
@@ -575,8 +578,10 @@ final class PackageAdminController {
 		return null;
 	}
 
-	/** @param array<string, mixed> $request */
-	/** @return array{profile_id: string|null}|null */
+	/**
+	 * @param array<string, mixed> $request
+	 * @return array{profile_id: string|null}|null
+	 */
 	private function trusted_public_lookup_profile( array $request, ?Package $package ): ?array {
 		if ( ! $package instanceof Package
 			|| ! $this->enabled( $request, 'check_repository_branch_after_save' )
@@ -644,6 +649,7 @@ final class PackageAdminController {
 			. $package->get_source()->value . '|' . $package->get_source_revision();
 	}
 
+	/** @param array<string, mixed> $request */
 	private function enabled( array $request, string $key ): bool {
 		return isset( $request[ $key ] ) && is_scalar( $request[ $key ] ) && '1' === (string) $request[ $key ];
 	}
@@ -658,7 +664,10 @@ final class PackageAdminController {
 		);
 	}
 
-	/** @param array<string, int> $reasons @param array<string, string> $labels */
+	/**
+	 * @param array<string, int> $reasons
+	 * @param array<string, string> $labels
+	 */
 	private function append_bulk_reasons( string $message, array $reasons, array $labels ): string {
 		$details = array();
 		foreach ( $reasons as $reason => $count ) {
@@ -677,6 +686,7 @@ final class PackageAdminController {
 		return false;
 	}
 
+	/** @param array<string, mixed> $result */
 	private function terminal_deployment_failure( Dashboard $dashboard, \Closure $add_context_message, array $result, string $action ): bool {
 		$notice = $this->deployments?->deployment_failure( $result['outcome_code'] ?? null, $result['correlation_id'], $action );
 		if ( null === $notice ) {

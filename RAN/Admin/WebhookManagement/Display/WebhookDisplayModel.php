@@ -90,7 +90,11 @@ final class WebhookDisplayModel {
 		return $rows;
 	}
 
-	/** @param array<array-key,array<string,mixed>> $rows @param array<array-key,array<string,mixed>> $repository_projections @return array<array-key,array<string,mixed>> */
+	/**
+	 * @param array<array-key,array<string,mixed>> $rows
+	 * @param array<array-key,array<string,mixed>> $repository_projections
+	 * @return array<array-key,array<string,mixed>>
+	 */
 	public function enrich_historical_rows( array $rows, string $provider_code, array $repository_projections ): array {
 		$records = $this->records->all();
 
@@ -191,7 +195,10 @@ final class WebhookDisplayModel {
 		);
 	}
 
-	/** @param array<string,string> $available @return list<array{key:string,label:string,url:string,primary:bool,disabled:bool}> */
+	/**
+	 * @param array<string,string> $available
+	 * @return list<array{key:string,label:string,url:string,primary:bool,disabled:bool}>
+	 */
 	private function operation_models( array $available, string $provider_code, string $repository_id ): array {
 		$labels     = array(
 			'setup'       => __( 'Set up webhook', 'ran-booster' ),
@@ -281,6 +288,7 @@ final class WebhookDisplayModel {
 		);
 	}
 
+	/** @param array{hook_id: string, profile_id: string}|null $recovery */
 	public function notice( string $code, ?array $recovery = null, ?string $remediation = null ): string {
 		if ( 'orphaned' === $code ) {
 			return __( 'The remote hook may be active without a complete local record. Inspect it manually at the provider before retrying.', 'ran-booster' );

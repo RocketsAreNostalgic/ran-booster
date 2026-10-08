@@ -371,6 +371,7 @@
 
 	.ran-booster-documentation__section {
 		break-inside: avoid-page;
+		/* stylelint-disable-next-line property-no-deprecated -- Preserve the existing fallback for print engines without break-inside support; CSS tooling adoption in .github#65. */
 		page-break-inside: avoid;
 	}
 
@@ -382,6 +383,7 @@
 		cursor: default;
 		list-style: none;
 		break-after: avoid-page;
+		/* stylelint-disable-next-line property-no-deprecated -- Preserve the existing fallback for print engines without break-after support; CSS tooling adoption in .github#65. */
 		page-break-after: avoid;
 	}
 
@@ -399,6 +401,7 @@
 
 	.ran-booster-documentation__content :is(h3, h4) {
 		break-after: avoid-page;
+		/* stylelint-disable-next-line property-no-deprecated -- Preserve the existing fallback for print engines without break-after support; CSS tooling adoption in .github#65. */
 		page-break-after: avoid;
 	}
 

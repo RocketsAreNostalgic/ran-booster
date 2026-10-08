@@ -56,12 +56,30 @@ and does not raise the analysis level or certify new dependency/host versions.
 ## Maintained development PHP and reviewed exception boundaries
 
 `composer analyze` invokes `scripts/analyze-development.php`, which discovers all
-PHP recursively under `scripts/` and `tests/`. It invokes the locked level-5
-analyzer once per file. `phpstan-development.neon` provides unit-test symbols;
+PHP recursively under `scripts/` and `tests/`. It batches compatible test classes
+in one locked level-5 analyzer invocation and analyzes all remaining files
+individually. `phpstan-development.neon` provides unit-test symbols;
 `phpstan-integration.neon` provides the separate installed WordPress/fixture
 symbol world. Both remain pathless: adding broad paths would reintroduce unrelated
 fixture declarations into supposedly isolated invocations. Their names select
 symbol environments, not lists of files permitted to enter analysis.
+
+The runner uses the already locked PHP parser to identify test-owned named
+classes, interfaces, traits and enums under `RAN\\Tests`. Only development-profile
+files with these declarations are eligible for batching. Foreign declarations,
+functions, global constants, defining or dynamic function calls and `eval` retain
+individual analysis. Case-insensitive duplicate class declarations anywhere in
+the discovered source also retain individual analysis. This partition is rebuilt
+from source every time; it has no maintained file inventory or cached verdict.
+New and moved files enter the current appropriate execution group automatically.
+`--list` reports complete discovery; `--list-batch` reports the actual batch.
+
+Batching removes repeated PHPStan startup work. File-list invocations do not use
+PHPStan's result cache, so this is not a development-cache claim. One worker keeps
+the batch's memory bounded. Required coverage checks and real-checker probes
+protect both the batch and isolated remainder, including fixture signatures that
+would hide a body error if combined. A failed batch still allows the isolated
+checks to run, and any failed invocation fails the complete analysis.
 
 The isolated development sweep can exceed Composer's five-minute process limit.
 Only after production analysis, the `analyze` script invokes Composer's built-in

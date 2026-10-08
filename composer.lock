@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a014944bfd82bd91afb95ca7c1cc0fc5",
+    "content-hash": "03b961c9141a93f8c5ff1297a712ab90",
     "packages": [
         {
             "name": "ran/booster-github-provider",
@@ -189,16 +189,16 @@
         },
         {
             "name": "ran/wp-branch-updater",
-            "version": "v1.0.0-beta.8",
+            "version": "v1.0.0-beta.9",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-wp-branch-updater.git",
-                "reference": "729a15c30f088236d0702b52d4a9cbe15c851508"
+                "reference": "5867f427eca326ce2105f45d26b905cac9faa5e3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-branch-updater/zipball/729a15c30f088236d0702b52d4a9cbe15c851508",
-                "reference": "729a15c30f088236d0702b52d4a9cbe15c851508",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-branch-updater/zipball/5867f427eca326ce2105f45d26b905cac9faa5e3",
+                "reference": "5867f427eca326ce2105f45d26b905cac9faa5e3",
                 "shasum": ""
             },
             "require": {
@@ -259,13 +259,14 @@
                     "@php tests/core-package-error-code.php"
                 ],
                 "standards": [
-                    "phpcs --standard=.phpcs.xml -s"
+                    "phpcs --standard=.phpcs.xml -s && phpcs --standard=.phpcs-cli-compat.xml -s"
                 ],
                 "standards:fix": [
-                    "phpcbf --standard=.phpcs.xml --report=summary"
+                    "bash -c 'for ruleset in .phpcs.xml .phpcs-cli-compat.xml; do phpcbf --standard=\"$ruleset\" --report=summary; result=$?; if [ \"$result\" -gt 1 ]; then exit \"$result\"; fi; done'"
                 ],
                 "analyze": [
-                    "phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=1G"
+                    "@analyze:production",
+                    "@analyze:maintained"
                 ],
                 "check": [
                     "@validate:strict",
@@ -299,6 +300,12 @@
                 ],
                 "test:naming": [
                     "@php tests/naming-enforcement.php"
+                ],
+                "analyze:production": [
+                    "phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=1G"
+                ],
+                "analyze:maintained": [
+                    "phpstan analyse --configuration=phpstan-maintained.neon --no-progress --memory-limit=1G"
                 ]
             },
             "license": [
@@ -310,7 +317,7 @@
                 "security": "https://github.com/RocketsAreNostalgic/ran-wp-branch-updater/security/advisories/new",
                 "source": "https://github.com/RocketsAreNostalgic/ran-wp-branch-updater"
             },
-            "time": "2026-10-01T21:14:30+00:00"
+            "time": "2026-10-08T17:59:08+00:00"
         },
         {
             "name": "ran/wp-release-updater",

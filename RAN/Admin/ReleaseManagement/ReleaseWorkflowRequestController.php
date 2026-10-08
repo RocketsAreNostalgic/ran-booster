@@ -288,7 +288,10 @@ final class ReleaseWorkflowRequestController {
 		);
 	}
 
-	/** @param array{type:string,identifier:string,code:string,successful:bool,preview_key:string,failure_stage:string,diagnostic_code:string,diagnostic_available:bool,correlation_reference:string} $outcome */
+	/**
+	 * @param array{type:string,identifier:string,code:string,successful:bool,preview_key:string,failure_stage:string,diagnostic_code:string,diagnostic_available:bool,correlation_reference:string,message:string,remediation:string} $outcome
+	 * @return array{type:string,identifier:string,code:string,successful:bool,preview_key:string,failure_stage:string,diagnostic_code:string,diagnostic_available:bool,correlation_reference:string,message:string,remediation:string}
+	 */
 	private function preserve_request_failure( string $operation, array $outcome, string $provider_code ): array {
 		$diagnostic                       = $this->failure_diagnostic_code( $outcome['diagnostic_code'], $outcome['failure_stage'] );
 		$reference                        = $this->failure_reference();

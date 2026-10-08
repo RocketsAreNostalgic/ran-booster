@@ -152,6 +152,9 @@ final class ReleaseWorkflowDisplay {
 	}
 
 
+	/**
+	 * @param array<string,mixed> $view
+	 */
 	public function workflow( array $view, bool $include_result_notice = true ): string {
 		$model = $this->workflow_model( $view );
 		$html  = '<div class="ran-booster-release-workflow">';
@@ -178,7 +181,10 @@ final class ReleaseWorkflowDisplay {
 		return is_multisite() ? network_admin_url( $path ) : admin_url( $path );
 	}
 
-	/** @return array{notice:string,inspect_form:string,detail:string} */
+	/**
+	 * @return array{notice:string,inspect_form:string,detail:string}
+	 * @param array<string,mixed> $view
+	 */
 	private function workflow_model( array $view ): array {
 		$forms   = is_array( $view['forms'] ?? null ) ? $view['forms'] : array();
 		$preview = is_array( $view['preview'] ?? null ) ? $view['preview'] : null;
@@ -209,8 +215,10 @@ final class ReleaseWorkflowDisplay {
 		return '<hr><p>' . esc_html__( 'An earlier workflow record does not match the current package. Review the repository before assessing setup again; Booster will not overwrite that record.', 'ran-booster' ) . '</p>';
 	}
 
-	/** Render the one state-specific notice for the stable workflow shell. */
-
+	/**
+	 * Render the one state-specific notice for the stable workflow shell.
+	 * @param array<string,mixed> $view
+	 */
 	public function state_notice( array $view ): string {
 		$unavailable = true === ( $view['unavailable'] ?? false );
 		$reason      = is_string( $view['unavailable_reason'] ?? null ) ? $view['unavailable_reason'] : '';
@@ -222,6 +230,9 @@ final class ReleaseWorkflowDisplay {
 	}
 
 
+	/**
+	 * @param array<string,mixed> $view
+	 */
 	public function result_notice( array $view ): string {
 		$code                 = is_string( $view['result_code'] ?? null ) ? $view['result_code'] : '';
 		$successful           = true === ( $view['result_successful'] ?? false );
@@ -261,8 +272,10 @@ final class ReleaseWorkflowDisplay {
 		return $html . '</div>';
 	}
 
-	/** Mark an already-persisted result so the client can consume its signed PRG query. */
-
+	/**
+	 * Mark an already-persisted result so the client can consume its signed PRG query.
+	 * @param array<string,mixed> $view
+	 */
 	public function result_marker( array $view ): string {
 		$code = is_string( $view['result_code'] ?? null ) ? $view['result_code'] : '';
 

@@ -24,6 +24,12 @@ use RuntimeException;
  * Deployment constants are runtime-only overlays. File records use a
  * provider-scoped, versioned schema so a credential ID has meaning only with
  * its provider and secret material is never returned by display APIs.
+ *
+ * Provider configuration stays opaque after the array check; provider policies
+ * own the meaning and validation of its entries.
+ *
+ * @phpstan-type StoredCredential array{label:string,kind:string,configuration:array<array-key,mixed>,secret:string,self_destruct?:true,destroy_on?:string,provider_destroy_on?:string}
+ * @phpstan-type StoredWebhook array{label:string,scope:string,target:string,authority_id:string,revision:positive-int,origin:'manual'|'assisted',secret:string}
  */
 class SecretsFile {
 
@@ -1024,7 +1030,10 @@ class SecretsFile {
 		);
 	}
 
-	/** @param array<string, mixed> $record */
+	/**
+	 * @param array<string, mixed> $record
+	 * @return array{id:'constant',provider:string,label:string,kind:string,configuration:array<array-key,mixed>,secret:string,source:'constant',immutable:true}
+	 */
 	private function runtime_constant_credential( string $provider, #[\SensitiveParameter] array $record ): array {
 		return array(
 			'id'            => self::CONSTANT_PROFILE,
@@ -1038,7 +1047,7 @@ class SecretsFile {
 		);
 	}
 
-	/** @return array<string, string>|null */
+	/** @return StoredWebhook|null */
 	private function constant_webhook( string $provider, ProviderWebhookPolicy $policy ): ?array {
 		try {
 			$record = $policy->webhook_from_constants( $this->declared_constants( $policy->get_constant_names() ) );
@@ -1074,7 +1083,10 @@ class SecretsFile {
 		return $values;
 	}
 
-	/** @param array<string, mixed> $record */
+	/**
+	 * @param array<string, mixed> $record
+	 * @return array{id:string,provider:string,label:string,kind:string,configuration:array<array-key,mixed>,secret:string,source:'file',immutable:false,self_destruct:bool,destroy_on:string|null}
+	 */
 	private function runtime_credential_record( string $provider, string $id, #[\SensitiveParameter] array $record ): array {
 		return array(
 			'id'            => $id,
@@ -1092,7 +1104,7 @@ class SecretsFile {
 
 	/**
 	 * @param array<string, mixed> $metadata Credential metadata.
-	 * @return array<string, mixed>
+	 * @return StoredCredential
 	 */
 	private function validate_credential(
 		string $provider,
@@ -1176,7 +1188,7 @@ class SecretsFile {
 	}
 
 	/**
-	 * @param list<BlueprintCredential> $credentials
+	 * @param array<array-key, BlueprintCredential> $credentials
 	 * @return list<array{provider:string,id:string,record:array<string,mixed>}>
 	 */
 	private function portable_credential_records(
@@ -1243,7 +1255,7 @@ class SecretsFile {
 
 	/**
 	 * @param array<string, mixed> $metadata Webhook metadata.
-	 * @return array<string, string|int>
+	 * @return StoredWebhook
 	 */
 	private function validate_webhook(
 		string $provider,
@@ -1618,7 +1630,10 @@ class SecretsFile {
 		return $normalised;
 	}
 
-	/** @param array<string, mixed> $record */
+	/**
+	 * @param array<string, mixed> $record
+	 * @return StoredCredential
+	 */
 	private function validate_stored_credential( #[\SensitiveParameter] array $record ): array {
 		$this->assert_only_keys( $record, array( 'label', 'kind', 'configuration', 'secret', 'self_destruct', 'destroy_on', 'provider_destroy_on' ), 'A provider credential contains unsupported fields.' );
 		if ( ! is_array( $record['configuration'] ?? null ) ) {
@@ -1661,7 +1676,10 @@ class SecretsFile {
 		return $validated;
 	}
 
-	/** @param array<string, mixed> $record */
+	/**
+	 * @param array<string, mixed> $record
+	 * @return StoredWebhook
+	 */
 	private function validate_stored_webhook( #[\SensitiveParameter] array $record ): array {
 		$this->assert_only_keys( $record, array( 'label', 'scope', 'target', 'authority_id', 'revision', 'origin', 'secret' ), 'A provider webhook secret contains unsupported fields.' );
 		$revision = $record['revision'] ?? 1;
@@ -1681,7 +1699,10 @@ class SecretsFile {
 		);
 	}
 
-	/** @param array<string, mixed> $record */
+	/**
+	 * @param array<string, mixed> $record
+	 * @return StoredCredential
+	 */
 	private function revalidate_stored_credential( string $provider, #[\SensitiveParameter] array $record ): array {
 		$validated = $this->validate_credential( $provider, $record, $record['secret'] ?? null );
 		if ( $validated !== $record ) {
@@ -1715,7 +1736,10 @@ class SecretsFile {
 		}
 	}
 
-	/** @param array<string, mixed> $record */
+	/**
+	 * @param array<string, mixed> $record
+	 * @return StoredWebhook
+	 */
 	private function revalidate_stored_webhook( string $provider, #[\SensitiveParameter] array $record ): array {
 		$validated = $this->validate_webhook( $provider, $record, $record['secret'] ?? null );
 		if ( $validated !== $record ) {

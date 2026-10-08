@@ -36,6 +36,10 @@ final class ReleaseWorkflowPresenter {
 	}
 
 
+	/**
+	 * @param array<string,array<string,mixed>> $choices
+	 * @return array<string,array<string,mixed>>
+	 */
 	public function keep_release_settings_discoverable(
 		array $choices,
 		string $mode,
@@ -121,7 +125,10 @@ final class ReleaseWorkflowPresenter {
 			&& hash_equals( $repository_id, $status->provider_repository_id() );
 	}
 
-	/** @param array<string,mixed>|null $result @return array{result_view:?array<string,mixed>,url:string} */
+	/**
+	 * @param array<string,mixed>|null $result
+	 * @return array{result_view:?array<string,mixed>,url:string}
+	 */
 
 	public function package_projection( object $package, ReleaseTrackingStatus $status, ?array $result ): array {
 		if ( ! is_callable( array( $package, 'provider_code' ) )
@@ -161,7 +168,11 @@ final class ReleaseWorkflowPresenter {
 		);
 	}
 
-	/** @param array<string,mixed> $row @param array<string,mixed>|null $result @return array<string,mixed>|null */
+	/**
+	 * @param array<string,mixed> $row
+	 * @param array<string,mixed>|null $result
+	 * @return array<string,mixed>|null
+	 */
 
 	public function repository_section_projection( array $row, string $return_url, string $preview_key, ?array $result ): ?array {
 		$provider_code = is_string( $row['provider_code'] ?? null ) ? $row['provider_code'] : '';
@@ -390,6 +401,9 @@ final class ReleaseWorkflowPresenter {
 		};
 	}
 
+	/**
+	 * @return array{allowed:bool,code:string,relationship_count:int,release_count:int,owner_type:?int,owner_package:?string}
+	 */
 	private function workflow_source_guard( string $type, string $identifier, object $package ): array {
 		if ( ! is_callable( array( $package, 'get_provider_code' ) )
 			|| ! is_callable( array( $package, 'get_provider_repository_id' ) )
@@ -723,7 +737,10 @@ final class ReleaseWorkflowPresenter {
 		};
 	}
 
-	/** @return array<string,mixed>|null */
+	/**
+	 * @return array<string,mixed>|null
+	 * @param list<array{id:string,label:string}> $credentials
+	 */
 	private function workflow_form(
 		string $operation,
 		ReleaseTrackingStatus $status,

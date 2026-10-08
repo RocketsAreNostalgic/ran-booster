@@ -18,7 +18,10 @@ final class PrivateLocationCandidateResolver {
 		$this->temporary_root = false === $resolved_temporary ? sys_get_temp_dir() : $resolved_temporary;
 	}
 
-	/** @param-out list<array{directory:string,code:string,reason:string,component:string|null}> $discarded */
+	/**
+	 * @param array<array-key, mixed>|null $discarded Previous contents are discarded before candidate discovery.
+	 * @param-out list<array{directory:string,code:string,reason:string,component:string|null}> $discarded
+	 */
 	public function resolve(
 		string $wordpress_root,
 		string $content_dir,

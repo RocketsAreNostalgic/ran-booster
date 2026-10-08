@@ -30,7 +30,10 @@ final class ProspectiveReleaseOperations {
 		return $this->prospective->supported_provider_codes( $type );
 	}
 
-	/** @param array<string, mixed> $repository @return array{type:string,identifier:string,code:string,successful:bool,data:array<mixed>} */
+	/**
+	 * @param array<string, mixed> $repository
+	 * @return array{type:string,identifier:string,code:string,successful:bool,data:array<mixed>}
+	 */
 
 	public function list_candidates( string $type, array $repository, string $channel ): array {
 		$outcome    = static fn ( string $code, bool $successful, array $data = array() ): array => array(
@@ -60,7 +63,10 @@ final class ProspectiveReleaseOperations {
 		return $outcome( 'operation_failed', false );
 	}
 
-	/** @param array<string, mixed> $untrusted_repository */
+	/**
+	 * @param array<string, mixed> $untrusted_repository
+	 * @return array{type:string,identifier:string,code:string,successful:bool,data:array<string,string>}
+	 */
 	public function execute(
 		string $operation,
 		string $type,
@@ -174,7 +180,10 @@ final class ProspectiveReleaseOperations {
 		return $safe;
 	}
 
-	/** @param array<string, mixed> $repository @return array<string, string>|null */
+	/**
+	 * @param array<string, mixed> $repository
+	 * @return array<string, string>|null
+	 */
 	private function normalize_prospective_repository( array $repository ): ?array {
 		$allowed = array(
 			'provider'                            => 32,
@@ -214,7 +223,10 @@ final class ProspectiveReleaseOperations {
 		return $safe;
 	}
 
-	/** @param array<mixed> $data @return array<string, bool|string> */
+	/**
+	 * @param array<mixed> $data
+	 * @return array<string, string>
+	 */
 	private function normalize_prospective_data( array $data ): array {
 		$allowed = array( 'release_id', 'tag', 'version', 'commit', 'details_url', 'package_root', 'main_file', 'fingerprint', 'identifier', 'channel' );
 		$safe    = array();

@@ -184,6 +184,109 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 		}
 	}
 
+	public function test_batching_preserves_fixture_worlds_and_reports_new_body_errors(): void {
+		$fixture = sys_get_temp_dir() . '/ran-batch-analysis-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create only the private runner fixture.
+		self::assertTrue( mkdir( $fixture . '/scripts', 0700, true ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Exercise the existing installed-host partition.
+		self::assertTrue( mkdir( $fixture . '/tests/WordPress', 0700, true ) );
+		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_symlink -- Reuse locked tools without copying or executing fixture source.
+			self::assertTrue( symlink( $this->root() . '/vendor', $fixture . '/vendor' ) );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_copy -- Exercise the maintained runner rather than an imitation of its partition.
+			self::assertTrue( copy( $this->root() . '/scripts/analyze-development.php', $fixture . '/scripts/analyze-development.php' ) );
+			$prefix = "<?php\nnamespace RAN\\Tests;\n";
+			$clean  = $prefix . 'class BatchCandidate { public function value(): int { return 1; } }';
+			$setup  = array(
+				'phpstan-development.neon'      => "parameters:\n\tlevel: 5\n\tparallel:\n\t\tmaximumNumberOfProcesses: 1\n",
+				'phpstan-integration.neon'      => "parameters:\n\tlevel: 5\n",
+				'tests/First.php'               => $prefix . 'class BatchFirst { public function value(): int { return 1; } }',
+				'tests/Candidate.php'           => $clean,
+				'tests/WordPress/Installed.php' => $prefix . 'class BatchInstalled { public function installed_error(): int { return 1; } }',
+			);
+			foreach ( $setup as $path => $source ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write only this test's inert source and analyzer configuration.
+				file_put_contents( $fixture . '/' . $path, $source );
+			}
+			list( $status, $output ) = $this->run_development_runner( $fixture, array( '--list-batch' ) );
+			self::assertSame( 0, $status, $output );
+			self::assertSame( array( $fixture . '/tests/Candidate.php', $fixture . '/tests/First.php' ), json_decode( $output, true, 512, JSON_THROW_ON_ERROR ) );
+
+			$isolated = array(
+				'foreign class'          => '<?php namespace RAN; class BatchForeign {}',
+				'function'               => $prefix . 'function fixture_symbol(): int { return 1; } class BatchCandidate {}',
+				'constant'               => $prefix . 'const FIXTURE_VALUE = 1; class BatchCandidate {}',
+				'define'                 => $prefix . "define('FIXTURE_VALUE', 1); class BatchCandidate {}",
+				'qualified define'       => $prefix . "\\define('FIXTURE_VALUE', 1); class BatchCandidate {}",
+				'aliased define'         => $prefix . "use function define as fixture_define; fixture_define('FIXTURE_VALUE', 1); class BatchCandidate {}",
+				'class alias'            => $prefix . "class_alias(BatchCandidate::class, 'ForeignAlias'); class BatchCandidate {}",
+				'aliased class alias'    => $prefix . "use function class_alias as fixture_alias; fixture_alias(BatchCandidate::class, 'ForeignAlias'); class BatchCandidate {}",
+				'dynamic call'           => $prefix . '$callback = "define"; $callback("FIXTURE_VALUE", 1); class BatchCandidate {}',
+				'eval'                   => $prefix . 'eval("class ForeignAlias {}"); class BatchCandidate {}',
+				'procedural file'        => $prefix . 'echo 1;',
+				'conditional duplicate'  => $prefix . 'if (true) { class BatchFirst {} }',
+				'case variant duplicate' => $prefix . 'class BATCHFIRST {}',
+				'same-file duplicate'    => $prefix . 'if (true) { class BatchCandidate {} } else { class BATCHCANDIDATE {} }',
+			);
+			foreach ( $isolated as $reason => $source ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Each declaration probe is parsed, never loaded or executed.
+				file_put_contents( $fixture . '/tests/Candidate.php', $source );
+				list( $status, $output ) = $this->run_development_runner( $fixture, array( '--list-batch' ) );
+				self::assertSame( 0, $status, $reason . ': ' . $output );
+				$batch = json_decode( $output, true, 512, JSON_THROW_ON_ERROR );
+				self::assertNotContains( $fixture . '/tests/Candidate.php', $batch, $reason );
+				if ( in_array( $reason, array( 'conditional duplicate', 'case variant duplicate' ), true ) ) {
+					self::assertNotContains( $fixture . '/tests/First.php', $batch, $reason );
+				}
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Restore compatible declarations before invoking the actual analyzer.
+			file_put_contents( $fixture . '/tests/Candidate.php', $clean );
+			foreach ( array(
+				'tests/FunctionA.php' => $prefix . 'function partition_symbol(): int { return 1; }',
+				'tests/FunctionB.php' => $prefix . 'function PARTITION_SYMBOL(): string { return "valid"; } function partition_consumer(): int { return PARTITION_SYMBOL(); }',
+			) as $path => $source ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Reproduce the incompatible fixture signatures that a naive batch silently masks.
+				file_put_contents( $fixture . '/' . $path, $source );
+			}
+			foreach ( array(
+				'tests/Added.php'               => 'BatchAdded',
+				'tests/WordPress/Installed.php' => 'BatchInstalled',
+			) as $path => $class ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Both batched and isolated branches must report their own real body error.
+				file_put_contents( $fixture . '/' . $path, $prefix . 'class ' . $class . ' { public function body_error(): int { return "invalid"; } }' );
+			}
+			list( $status, $output ) = $this->run_development_runner( $fixture, array() );
+			self::assertSame( 1, $status, $output );
+			self::assertStringContainsString( 'BatchAdded::body_error()', $output );
+			self::assertStringContainsString( 'BatchInstalled::body_error()', $output );
+			self::assertStringContainsString( 'partition_consumer()', $output );
+			self::assertStringContainsString( 'return.type', $output );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Correct the consumer while retaining the deliberately incompatible fixture declarations.
+			file_put_contents( $fixture . '/tests/FunctionB.php', $prefix . 'function PARTITION_SYMBOL(): string { return "valid"; } function partition_consumer(): string { return PARTITION_SYMBOL(); }' );
+			foreach ( array(
+				'tests/Added.php'               => 'BatchAdded',
+				'tests/WordPress/Installed.php' => 'BatchInstalled',
+			) as $path => $class ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Correct only the deliberate body violations.
+				file_put_contents( $fixture . '/' . $path, $prefix . 'class ' . $class . ' { public function body_error(): int { return 1; } }' );
+			}
+			list( $status, $output ) = $this->run_development_runner( $fixture, array() );
+			self::assertSame( 0, $status, $output );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- Move only the private file to prove that profile ownership follows its current path.
+			self::assertTrue( rename( $fixture . '/tests/Candidate.php', $fixture . '/tests/WordPress/Candidate.php' ) );
+			list( $status, $output ) = $this->run_development_runner( $fixture, array( '--list-batch' ) );
+			self::assertSame( 0, $status, $output );
+			self::assertSame( array( $fixture . '/tests/Added.php', $fixture . '/tests/First.php' ), json_decode( $output, true, 512, JSON_THROW_ON_ERROR ) );
+		} finally {
+			foreach ( new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $fixture, FilesystemIterator::SKIP_DOTS ), RecursiveIteratorIterator::CHILD_FIRST ) as $file ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir, WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only the private fixture without traversing its dependency symlink.
+				$file->isDir() && ! $file->isLink() ? rmdir( $file->getPathname() ) : unlink( $file->getPathname() );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove the empty test-owned fixture root.
+			rmdir( $fixture );
+		}
+	}
+
 	public function test_a_future_extensionless_entrypoint_cannot_escape_analysis_coverage(): void {
 		$root = sys_get_temp_dir() . '/ran-entrypoint-' . bin2hex( random_bytes( 8 ) );
 		$path = $root . '/bin/new-command';

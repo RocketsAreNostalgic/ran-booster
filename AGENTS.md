@@ -33,10 +33,13 @@ the effective roots/exclusions against that manifest. Preserve accurate
 caller-supplied view PHPDoc and the generated Admin Shell bytes; see
 `CONTRIBUTING.md` for coverage and remaining #167 acceptance boundaries.
 
-`composer analyze` also runs automatic per-file level-5 analysis of all maintained
+`composer analyze` also runs automatic level-5 analysis of all maintained
 `scripts/` and `tests/` PHP. The development and installed-integration symbol
-profiles are pathless: only the runner selects the file for each invocation.
-This preserves incompatible fixture worlds without an analysis allowlist.
+profiles are pathless: the runner batches compatible test-owned classes and
+selects every other file individually. Source-derived declaration checks keep
+incompatible fixture worlds isolated without an analysis allowlist or a cached
+partition. Preserve those checks and the independent real-checker controls when
+changing execution grouping; a green naive batch can conceal fixture errors.
 Two deliberately unloadable API11/API12 registration fixtures are exact-file
 exemptions, with immutable identity and their actual rejection tests protected by
 `ProductionAnalysisCoverageTest` and `ProviderApiLifecycleTest`. See CONTRIBUTING

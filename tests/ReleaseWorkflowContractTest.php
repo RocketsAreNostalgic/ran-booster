@@ -81,6 +81,61 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'test "$RELEASE_CANDIDATE_RESULT" = success', $workflow );
 	}
 
+	public function test_terminal_quality_rejects_missing_or_failed_evidence(): void {
+		$workflow = $this->workflow( 'quality.yml' );
+		$matches  = array();
+		self::assertSame( 1, preg_match( '/^  quality:\n(?:(?!^  [a-z]).)*?^        run: \|\n((?:^          .*\n|^\n)+)/ms', $workflow, $matches ) );
+		$script = preg_replace( '/^          /m', '', $matches[1] );
+		self::assertIsString( $script );
+
+		$valid_lanes = array(
+			'full'              => array( 'success', 'success', 'skipped', 'success' ),
+			'release-candidate' => array( 'success', 'skipped', 'success', 'skipped' ),
+		);
+		$keys        = array( 'RUNTIME_ARCHIVE_RESULT', 'REPOSITORY_QUALITY_RESULT', 'RELEASE_CANDIDATE_RESULT', 'WORDPRESS_RESULT' );
+		$cases       = array();
+		foreach ( $valid_lanes as $lane => $valid_results ) {
+			$cases[] = array( $lane, $valid_results, true );
+			foreach ( $valid_results as $index => $expected_result ) {
+				foreach ( array( 'success', 'failure', 'cancelled', 'skipped' ) as $result ) {
+					if ( $expected_result === $result ) {
+						continue;
+					}
+					$changed           = $valid_results;
+					$changed[ $index ] = $result;
+					$cases[]           = array( $lane, $changed, false );
+				}
+			}
+		}
+		$cases[] = array( '', $valid_lanes['full'], false );
+		$cases[] = array( 'unknown', $valid_lanes['full'], false );
+
+		foreach ( $cases as [ $lane, $results, $should_pass ] ) {
+			$environment         = array_combine( $keys, $results );
+			$environment['LANE'] = $lane;
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open -- Execute the actual terminal gate to prove failure, cancellation and skipped-evidence behavior.
+			$process = proc_open(
+				array( '/bin/bash', '-c', $script ),
+				array(
+					1 => array( 'pipe', 'w' ),
+					2 => array( 'pipe', 'w' ),
+				),
+				$pipes,
+				null,
+				$environment
+			);
+			self::assertIsResource( $process );
+			$output = stream_get_contents( $pipes[1] );
+			$errors = stream_get_contents( $pipes[2] );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the isolated gate subprocess output pipe.
+			fclose( $pipes[1] );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the isolated gate subprocess error pipe.
+			fclose( $pipes[2] );
+			$exit_code = proc_close( $process );
+			self::assertSame( $should_pass, 0 === $exit_code, $lane . ': ' . implode( ', ', $results ) . '\n' . $output . $errors );
+		}
+	}
+
 	public function test_quality_keeps_neutral_updater_runtime_readback(): void {
 		$workflow = $this->workflow( 'quality.yml' );
 

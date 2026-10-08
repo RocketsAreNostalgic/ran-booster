@@ -249,6 +249,8 @@ jobs:
                     phpstan-production-v1-${{ runner.os }}-php8.2-${{ github.ref }}-${{ hashFiles('composer.lock') }}-
 
           - name: Run the complete PHP quality contract
+            env:
+                PHPSTAN_DEVELOPMENT_PROCESSES: '4'
             run: composer check
 
           - name: Save production PHPStan cache
@@ -397,16 +399,9 @@ jobs:
 
   wordpress:
       name: WordPress ${{ matrix.wordpress }} / ${{ matrix.database }} / PHP 8.2
-      needs:
-          - runtime-archive
-          - repository-quality
-      if: >-
-          ${{
-              always()
-              && needs.runtime-archive.result == 'success'
-              && needs.runtime-archive.outputs.lane == 'full'
-              && needs.repository-quality.result == 'success'
-          }}
+      # Installed proofs consume only the exact archive; the final Quality job requires both lanes.
+      needs: runtime-archive
+      if: ${{ needs.runtime-archive.outputs.lane == 'full' }}
       runs-on: ubuntu-24.04
       timeout-minutes: 10
       strategy:

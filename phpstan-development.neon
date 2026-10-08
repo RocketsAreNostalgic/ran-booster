@@ -4,7 +4,9 @@ includes:
 parameters:
 	level: 5
 	treatPhpDocTypesAsCertain: false
-	# The runner supplies one discovered file; broad paths contaminate isolated fixtures.
+	parallel:
+		maximumNumberOfProcesses: 1
+	# The runner selects a compatible test-class batch or one isolated fixture file.
 	scanDirectories:
 		- tests
 		- vendor/ran/wp-release-updater/src

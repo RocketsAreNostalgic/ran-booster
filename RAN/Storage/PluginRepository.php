@@ -10,6 +10,7 @@ use RAN\WordPress\ManagedReleaseConfiguration;
 /** @extends AbstractPackageRepository<Plugin> */
 class PluginRepository extends AbstractPackageRepository {
 
+	/** @return array<string, Plugin> */
 	public function all_booster_plugins() {
 		include_once ABSPATH . 'wp-admin/includes/plugin.php';
 
@@ -27,6 +28,10 @@ class PluginRepository extends AbstractPackageRepository {
 		return $this->all_packages( $source );
 	}
 
+	/**
+	 * @param mixed $file Identifier is validated by package hydration.
+	 * @param array<string, mixed> $input Editable package fields, validated before persistence.
+	 */
 	public function edit_plugin( $file, $input ): PackageMutationResult {
 		return $this->edit_package( $file, $input );
 	}
@@ -44,7 +49,7 @@ class PluginRepository extends AbstractPackageRepository {
 	}
 
 	/**
-	 * @param $slug
+	 * @param string $slug
 	 * @return Plugin
 	 */
 	public function from_slug( $slug ) {
@@ -63,7 +68,7 @@ class PluginRepository extends AbstractPackageRepository {
 	}
 
 	/**
-	 * @param $file
+	 * @param mixed $file Identifier is validated by package hydration.
 	 * @return Plugin $plugin
 	 * @throws PluginNotFound
 	 * @throws PackageStorageFailure

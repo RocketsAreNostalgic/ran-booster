@@ -29,8 +29,11 @@ use RAN\RepositoryProvider\RepositoryLocator;
  */
 class PackageModel {
 
+	/** @var string|null */
 	protected $package;
+	/** @var string|null */
 	protected $repository;
+	/** @var string|null */
 	protected $branch;
 	protected string $deployment_policy       = DeploymentPolicy::MANUAL->value;
 	protected string $source                  = PackageSource::BRANCH->value;
@@ -39,8 +42,10 @@ class PackageModel {
 	protected ?string $provider_repository_id = null;
 	protected int $private;
 	protected ?string $credential_id = null;
+	/** @var string|null */
 	protected $subdirectory;
 
+	/** @param array<string, mixed> $attributes Untrusted row values validated during hydration. */
 	public function __construct( array $attributes ) {
 		foreach ( $attributes as $key => $value ) {
 			if ( ! property_exists( $this, $key ) ) {
@@ -130,6 +135,10 @@ class PackageModel {
 		}
 	}
 
+	/**
+	 * @param string $name PHP magic-property name.
+	 * @return mixed Existing subclass getters may expose their own value types.
+	 */
 	public function __get( $name ) {
 		$method = 'get' . ucfirst( $name );
 

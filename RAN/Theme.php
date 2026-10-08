@@ -6,19 +6,32 @@ use WP_Theme;
 
 class Theme extends AbstractPackage {
 
+	/** @var string|null */
 	protected $stylesheet;
+	/** @var string|false|null */
 	protected $name;
+	/** @var string|false|null */
 	protected $theme_uri;
+	/** @var string|false|null */
 	protected $description;
+	/** @var string|false|null */
 	protected $author;
+	/** @var string|false|null */
 	protected $author_uri;
+	/** @var string|false|null */
 	protected $version;
+	/** @var string|null */
 	protected $template;
+	/** @var string|false|null */
 	protected $status;
+	/** @var array<array-key, string>|false|null */
 	protected $tags;
+	/** @var string|false|null */
 	protected $text_domain;
+	/** @var string|false|null */
 	protected $domain_path;
 
+	/** @return static */
 	public static function from_wp_theme_object( WP_Theme $wp_theme ) {
 		$theme = new static();
 

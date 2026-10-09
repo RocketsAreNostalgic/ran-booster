@@ -50,7 +50,7 @@ roots enter automatically, including views and the immutable generated Admin She
 PHP files. Dependency `scanDirectories` supplies symbols; it is not direct
 analysis of dependency bodies. Tests and maintenance scripts retain syntax,
 standards and their behavioural gates, rather than being counted as production
-analysis coverage. Levels 6–8 remain separately scoped; this gate does not imply
+analysis coverage. Levels 7–8 remain separately scoped; this gate does not imply
 maximum analysis depth or complete retained-exception acceptance.
 
 Analysis declarations follow the supported WordPress 7.0 floor. The direct

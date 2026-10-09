@@ -267,23 +267,23 @@ final class RepeatPackageViewTest extends TestCase {
 				'<a href="https://github.com/owner/example" class="ran-booster-repository-link"',
 				$html
 			);
-			$advanced_position     = strpos( $html, '<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings"' );
-			$advanced_end          = strpos( $html, '</details>', $advanced_position );
-			$readiness_position    = strpos( $html, 'id="ran-booster-branch-readiness"', $advanced_position );
-			$automation_position   = strpos( $html, 'name="ran_booster[deployment_policy]"' );
-			$operation_position    = strpos( $html, 'class="ran-booster-settings-section ran-booster-package-operation-settings"' );
-			$actions_position      = strpos( $html, 'class="ran-booster-package-operation-settings__actions"', $operation_position );
-			$reinstall_position    = strpos( $html, 'data-ran-booster-settings-reinstall', $actions_position );
-			$operation_end         = strpos( $html, '</section>', $operation_position );
-			$save_actions_position = strpos( $html, 'class="ran-booster-settings-actions ran-booster-package-settings__save-actions"', $operation_end );
+			$advanced_position = strpos( $html, '<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings"' );
 			self::assertIsInt( $advanced_position );
+			$advanced_end = strpos( $html, '</details>', $advanced_position );
 			self::assertIsInt( $advanced_end );
+			$readiness_position = strpos( $html, 'id="ran-booster-branch-readiness"', $advanced_position );
 			self::assertIsInt( $readiness_position );
+			$automation_position = strpos( $html, 'name="ran_booster[deployment_policy]"' );
 			self::assertIsInt( $automation_position );
+			$operation_position = strpos( $html, 'class="ran-booster-settings-section ran-booster-package-operation-settings"' );
 			self::assertIsInt( $operation_position );
+			$actions_position = strpos( $html, 'class="ran-booster-package-operation-settings__actions"', $operation_position );
 			self::assertIsInt( $actions_position );
+			$reinstall_position = strpos( $html, 'data-ran-booster-settings-reinstall', $actions_position );
 			self::assertIsInt( $reinstall_position );
+			$operation_end = strpos( $html, '</section>', $operation_position );
 			self::assertIsInt( $operation_end );
+			$save_actions_position = strpos( $html, 'class="ran-booster-settings-actions ran-booster-package-settings__save-actions"', $operation_end );
 			self::assertIsInt( $save_actions_position );
 			self::assertLessThan( $automation_position, $advanced_position );
 			self::assertTrue( $advanced_position < $readiness_position );
@@ -691,6 +691,8 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertMatchesRegularExpression( '/<form\s+id="' . preg_quote( $id, '/' ) . '".*?<\/form>/s', $html );
 		preg_match( '/<form\s+id="' . preg_quote( $id, '/' ) . '".*?<\/form>/s', $html, $matches );
 
+		self::assertTrue( array_key_exists( 0, $matches ) );
+
 		return $matches[0];
 	}
 
@@ -698,6 +700,8 @@ final class RepeatPackageViewTest extends TestCase {
 	private function action_group_by_class( string $html, string $css_class ): string {
 		self::assertMatchesRegularExpression( '/<div[^>]*class="[^"]*' . preg_quote( $css_class, '/' ) . '[^"]*"[^>]*>.*?<\/div>/s', $html );
 		preg_match( '/<div[^>]*class="[^"]*' . preg_quote( $css_class, '/' ) . '[^"]*"[^>]*>.*?<\/div>/s', $html, $matches );
+
+		self::assertTrue( array_key_exists( 0, $matches ) );
 
 		return $matches[0];
 	}

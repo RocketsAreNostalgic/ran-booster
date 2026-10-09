@@ -129,6 +129,7 @@ $ran_booster_database = new class( $wpdb, $ran_booster_ready, $ran_booster_relea
 	public string $prefix;
 	public string $base_prefix;
 	private bool $paused = false;
+	/** @param wpdb $wpdb The installed WordPress connection wrapped by this race participant. */
 	public function __construct( private object $wpdb, private string $ready, private string $release ) {
 		$this->options     = $wpdb->options;
 		$this->prefix      = $wpdb->prefix;
@@ -142,8 +143,8 @@ $ran_booster_database = new class( $wpdb, $ran_booster_ready, $ran_booster_relea
 		$value            = $this->wpdb->{$name}( ...$arguments );
 		$this->last_error = (string) $this->wpdb->last_error;
 		return $value; }
-	/** @return array<array-key, mixed>|object|null */
-	public function get_results( string $query ): array|object|null {
+	/** @return array<array-key, mixed>|null */
+	public function get_results( string $query ): array|null {
 		if ( ! $this->paused && str_contains( $query, 'provider_repository_id' ) && str_contains( $query, 'FOR UPDATE' ) ) {
 			$this->paused = true;
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.

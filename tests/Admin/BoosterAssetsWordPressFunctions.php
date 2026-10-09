@@ -15,7 +15,7 @@ function trailingslashit( string $value ): string {
 }
 
 /** @param list<string> $dependencies */
-function wp_register_style( string $handle, string $source, array $dependencies = array(), int|false|null $version = false ): bool {
+function wp_register_style( string $handle, string $source, array $dependencies = array(), string|bool|null $version = false ): bool {
 	$GLOBALS['ran_booster_asset_test_registered_styles'][ $handle ] = array(
 		'source'       => $source,
 		'dependencies' => $dependencies,
@@ -30,7 +30,7 @@ function wp_enqueue_style( string $handle ): void {
 }
 
 /** @param list<string> $dependencies */
-function wp_register_script( string $handle, string $source, array $dependencies = array(), int|false|null $version = false, bool $footer = false ): bool {
+function wp_register_script( string $handle, string $source, array $dependencies = array(), string|bool|null $version = false, bool $footer = false ): bool {
 	$GLOBALS['ran_booster_asset_test_script_events'][]               = array(
 		'function' => 'wp_register_script',
 		'handle'   => $handle,

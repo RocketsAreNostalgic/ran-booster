@@ -86,8 +86,8 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 1, $coordinator->calls );
 		self::assertInstanceOf( PackageOperation::class, $coordinator->last_command );
 		self::assertSame( 'update', $coordinator->last_command->operation );
-		self::assertSame( DeploymentPolicy::MANUAL, $coordinator->last_command->expected_package['deployment_policy'] );
 		self::assertTrue( $coordinator->last_command->has_expected_package() );
+		self::assertSame( DeploymentPolicy::MANUAL, $coordinator->last_command->expected_package['deployment_policy'] );
 		self::assertSame( 'manual', $package->get_deployment_policy()->value );
 		$query = $this->redirect_query( $redirect );
 		self::assertSame( 'update', $query['ran_booster_result'] );
@@ -395,6 +395,7 @@ final class PackageOperationServiceTest extends TestCase {
 			$result  = $service->execute( PackageOperation::from_input( $action, $change( $this->input( $action ) ) ) );
 
 			self::assertSame( 'conflict', $result['status'], $case );
+			self::assertTrue( array_key_exists( 'package', $result ) );
 			self::assertSame( $package, $result['package'], $case );
 			self::assertSame( array(), 'edit-plugin' === $action ? $plugins->edited : $themes->edited, $case );
 		}
@@ -555,6 +556,7 @@ final class PackageOperationServiceTest extends TestCase {
 		$result = $service->execute( $operation );
 
 		self::assertSame( 'linked', $result['status'] );
+		self::assertTrue( array_key_exists( 'package', $result ) );
 		self::assertSame( DeploymentPolicy::DISABLED, $result['package']->get_deployment_policy() );
 		self::assertSame( $plugins->stored, $result['package'] );
 	}
@@ -596,8 +598,11 @@ final class PackageOperationServiceTest extends TestCase {
 		foreach ( array( 'install-plugin', 'install-theme', 'update-plugin', 'update-theme' ) as $action ) {
 			$result = $service->execute( PackageOperation::from_input( $action, $this->input( $action ) ) );
 			self::assertSame( 'succeeded', $result['status'] );
+			self::assertTrue( array_key_exists( 'outcome_code', $result ) );
 			self::assertSame( 'deployed', $result['outcome_code'] );
+			self::assertTrue( array_key_exists( 'correlation_id', $result ) );
 			self::assertSame( str_repeat( 'a', 32 ), $result['correlation_id'] );
+			self::assertTrue( array_key_exists( 'package', $result ) );
 			self::assertInstanceOf( Package::class, $result['package'] );
 		}
 		self::assertSame( 4, $coordinator->calls );
@@ -619,7 +624,9 @@ final class PackageOperationServiceTest extends TestCase {
 		$result = $service->execute( PackageOperation::from_input( 'install-plugin', $this->input( 'install-plugin' ) ) );
 
 		self::assertSame( 'already-managed', $result['status'] );
+		self::assertTrue( array_key_exists( 'outcome_code', $result ) );
 		self::assertSame( 'already_managed', $result['outcome_code'] );
+		self::assertTrue( array_key_exists( 'package', $result ) );
 		self::assertInstanceOf( Package::class, $result['package'] );
 	}
 
@@ -857,6 +864,7 @@ final class PackageOperationServiceTest extends TestCase {
 		$original = 'edit-plugin' === $action ? $plugin_original : $theme_original;
 		$fresh    = 'edit-plugin' === $action ? $plugin_fresh : $theme_fresh;
 		self::assertSame( 'edited', $result['status'] );
+		self::assertTrue( array_key_exists( 'package', $result ) );
 		self::assertSame( $fresh, $result['package'] );
 		self::assertNotSame( $original, $result['package'] );
 	}
@@ -1424,7 +1432,7 @@ final class OperationCoordinator extends DeploymentCoordinator {
 	public int $calls                      = 0;
 	public ?\Throwable $failure            = null;
 	public ?PackageOperation $last_command = null;
-	/** @var array<string, mixed> */
+	/** @var array{status: 'failed'|'succeeded', correlation_id: string, outcome_code: string} */
 	public array $result = array(
 		'status'         => 'succeeded',
 		'correlation_id' => 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',

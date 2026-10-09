@@ -44,13 +44,13 @@ worlds remain separate processes as described below.
 
 ## Production PHP analysis coverage
 
-`composer analyze` is blocking PHPStan level 5. Its production profile defaults to the repository root, with root-relative
+`composer analyze` is blocking PHPStan level 6. Its production profile defaults to the repository root, with root-relative
 exclusions for development, dependencies and disposable output. New production
 roots enter automatically, including views and the immutable generated Admin Shell. At the #167 coverage checkpoint this is 345 shipped Core
 PHP files. Dependency `scanDirectories` supplies symbols; it is not direct
 analysis of dependency bodies. Tests and maintenance scripts retain syntax,
 standards and their behavioural gates, rather than being counted as production
-analysis coverage. Levels 6–8 remain separately scoped; this gate does not imply
+analysis coverage. Levels 7–8 remain separately scoped; this gate does not imply
 maximum analysis depth or complete retained-exception acceptance.
 
 Analysis declarations follow the supported WordPress 7.0 floor. The direct
@@ -80,7 +80,7 @@ and does not raise the analysis level or certify new dependency/host versions.
 
 `composer analyze` invokes `scripts/analyze-development.php`, which discovers all
 PHP recursively under `scripts/` and `tests/`. It batches compatible test classes
-in one locked level-5 analyzer invocation and analyzes all remaining files
+in one locked level-6 analyzer invocation and analyzes all remaining files
 individually. `phpstan-development.neon` provides unit-test symbols;
 `phpstan-integration.neon` provides the separate installed WordPress/fixture
 symbol world. Both remain pathless: adding broad paths would reintroduce unrelated
@@ -226,7 +226,7 @@ existing positional calls; installed WordPress proof exercises the theme factory
 
 The inherited profile is WordPress-Extra plus PHPCompatibilityWP and the RAN
 syntax baseline, not every WordPress-Docs rule. Full PHPStan path coverage is
-enforced at level 5; it does not imply maximum analysis depth. The [standards scope inventory](docs/php-standards-coverage.md)
+enforced at level 6; it does not imply maximum analysis depth. The [standards scope inventory](docs/php-standards-coverage.md)
 records the remaining specific exclusions and their rationale. The former blanket
 exemptions in 29 test/harness files are removed; a token-aware guard rejects new
 whole-file or all-rule suppressions. Specific native/runtime fixture exceptions

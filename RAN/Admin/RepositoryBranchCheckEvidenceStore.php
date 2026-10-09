@@ -114,7 +114,7 @@ class RepositoryBranchCheckEvidenceStore {
 		);
 	}
 
-	/** @return array{records: array<string, array<string, string>>, generation: int} */
+	/** @return array<array-key, mixed> */
 	protected function read_option(): array {
 		if ( ! function_exists( 'get_option' ) ) {
 			return array(
@@ -134,7 +134,7 @@ class RepositoryBranchCheckEvidenceStore {
 		return ! function_exists( 'update_option' ) || update_option( self::OPTION_NAME, $records, false );
 	}
 
-	/** @return array{records: array<string, array<string, string>>, generation: int} */
+	/** @return array{records: array<array-key, mixed>, generation: int} */
 	private function all(): array {
 		$value = $this->read_option();
 		return array(

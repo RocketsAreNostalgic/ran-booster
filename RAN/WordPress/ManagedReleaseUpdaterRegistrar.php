@@ -24,7 +24,7 @@ final readonly class ManagedReleaseUpdaterRegistrar {
 		return $this->invoke( 'releases', $arguments );
 	}
 
-	/** @param list<mixed> $arguments */
+	/** @param array<array-key, mixed> $arguments */
 	private function invoke( string $method, array $arguments ): object {
 		$callable = array( $this->registrar, $method );
 		if ( ! is_callable( $callable ) ) {

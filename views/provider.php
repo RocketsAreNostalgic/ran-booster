@@ -49,10 +49,10 @@
  * @var array<string, string> $task_request_urls
  * @var array<string, string> $task_urls
  * @var array<string, string> $webhook_sort_urls
- * @var array<string, mixed> $credential_pagination
+ * @var array{item_count_label:string,page_label:string,current:int,pages:int,per_page:int,action_url:string,hidden_fields:array<string,scalar>,previous_url:string,next_url:string} $credential_pagination
  * @var array<string, mixed> $provider
  * @var array<string, mixed> $provider_list_state
- * @var array<string, mixed> $webhook_pagination
+ * @var array{item_count_label:string,page_label:string,current:int,pages:int,per_page:int,action_url:string,hidden_fields:array<string,scalar>,previous_url:string,next_url:string} $webhook_pagination
  * @var array{rows: list<array<string, mixed>>, total: int, pages: int, current: int} $credential_list
  * @var array{rows: list<array<string, mixed>>, total: int, pages: int, current: int} $webhook_list
  * @var array{tone: string, heading: string, description: string} $credential_summary

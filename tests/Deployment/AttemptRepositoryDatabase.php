@@ -31,7 +31,7 @@ namespace RAN\Tests\Deployment {
 
 		public string $options    = 'wp_options';
 		public string $last_error = '';
-		/** @var list<array<string, mixed>> */
+		/** @var array<int, array<string, mixed>> */
 		public array $rows = array();
 		/** @var array<string, string> */
 		public array $option_rows = array();
@@ -47,7 +47,7 @@ namespace RAN\Tests\Deployment {
 		public mixed $tamper_insert_value    = null;
 		public ?string $tamper_update_column = null;
 		public mixed $tamper_update_value    = null;
-		/** @var array{rows: list<array<string, mixed>>, options: array<string, string>}|null */
+		/** @var array{rows: array<int, array<string, mixed>>, options: array<string, string>}|null */
 		private ?array $snapshot      = null;
 		private int $insert_calls     = 0;
 		public string $server_info    = '8.4.6';
@@ -167,8 +167,17 @@ namespace RAN\Tests\Deployment {
 						continue;
 					}
 					foreach ( explode( ', ', $matches[1] ) as $assignment ) {
-						preg_match( '/^([a-z_]+) = (NULL|\'(.*)\')$/', $assignment, $parts );
-						$row[ $parts[1] ] = 'NULL' === $parts[2] ? null : stripslashes( $parts[3] );
+						if ( 1 !== preg_match( '/^([a-z_]+) = (NULL|\'(.*)\')$/', $assignment, $parts ) ) {
+							\PHPUnit\Framework\Assert::fail( 'Expected a supported SQL assignment.' );
+						}
+						if ( 'NULL' === $parts[2] ) {
+							$row[ $parts[1] ] = null;
+						} else {
+							if ( ! isset( $parts[3] ) ) {
+								\PHPUnit\Framework\Assert::fail( 'Expected the quoted SQL assignment value.' );
+							}
+							$row[ $parts[1] ] = stripslashes( $parts[3] );
+						}
 					}
 					if ( null !== $this->tamper_update_column ) {
 						$row[ $this->tamper_update_column ] = $this->tamper_update_value;

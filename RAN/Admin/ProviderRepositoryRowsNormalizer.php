@@ -556,7 +556,7 @@ final class ProviderRepositoryRowsNormalizer {
 	}
 
 	/**
-	 * @param list<string> $described_by
+	 * @param array<array-key, string> $described_by
 	 * @return array<string,array<string,mixed>>
 	 */
 	private function webhook_management_action( string $repository, array $described_by ): array {
@@ -999,7 +999,7 @@ final class ProviderRepositoryRowsNormalizer {
 	}
 
 	/**
-	 * @param list<mixed> $codes
+	 * @param array<array-key, mixed> $codes
 	 * @return list<string>
 	 */
 	private function site_reasons( array $codes, string $endpoint ): array {

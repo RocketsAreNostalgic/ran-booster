@@ -80,6 +80,9 @@ final class DeploymentWorkerTest extends TestCase {
 		$result = $this->worker()->run_once();
 
 		self::assertSame( 'processed', $result['status'] );
+		if ( ! array_key_exists( 'correlation_id', $result ) ) {
+			self::fail( 'Expected correlation_id in the successful result.' );
+		}
 		self::assertSame( $first->get_correlation_id(), $result['correlation_id'] );
 		self::assertSame( 'scheduled', $result['runner_status'] );
 		self::assertSame( array( $first->get_id() ), $this->coordinator->attempt_ids );
@@ -96,6 +99,9 @@ final class DeploymentWorkerTest extends TestCase {
 
 		$result = $this->worker()->run_once();
 
+		if ( ! array_key_exists( 'correlation_id', $result ) ) {
+			self::fail( 'Expected correlation_id in the successful result.' );
+		}
 		self::assertSame( $manual_correlation, $result['correlation_id'] );
 		self::assertSame( array( 1 ), $this->coordinator->attempt_ids );
 		self::assertSame( 'manual', $this->database->rows[0]['source'] );
@@ -123,6 +129,9 @@ final class DeploymentWorkerTest extends TestCase {
 		$result = $this->worker()->run_once();
 
 		self::assertSame( 'processed', $result['status'] );
+		if ( ! array_key_exists( 'correlation_id', $result ) ) {
+			self::fail( 'Expected correlation_id in the successful result.' );
+		}
 		self::assertSame( $waiting->get_correlation_id(), $result['correlation_id'] );
 		self::assertSame( array( $waiting->get_id() ), $this->coordinator->attempt_ids );
 		self::assertSame( 'running', $this->database->rows[0]['state'] );

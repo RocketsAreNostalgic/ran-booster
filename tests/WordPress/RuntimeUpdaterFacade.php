@@ -17,7 +17,7 @@ final class RuntimeUpdaterFacade implements RepositoryReleaseNativeTarget {
 	private bool $refresh_fails         = false;
 
 	/**
-	 * @param array<string, mixed> $target
+	 * @param array<array-key, mixed> $target
 	 * @param array<string, mixed> $diagnostics
 	 */
 	public function __construct(
@@ -66,7 +66,7 @@ final class RuntimeUpdaterFacade implements RepositoryReleaseNativeTarget {
 		$this->diagnostics_fail = true;
 	}
 
-	/** @return array<string, mixed> */
+	/** @return array<array-key, mixed> */
 	public function diagnostics(): array {
 		if ( $this->diagnostics_fail ) {
 			throw new \RuntimeException( 'diagnostics failed' );

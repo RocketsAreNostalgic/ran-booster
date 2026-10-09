@@ -14,8 +14,10 @@ use RAN\RepositoryProvider\RepositoryLocator;
  * Validated row attributes exposed by __get(), without public write access.
  *
  * Optional attributes remain null when absent from the constructor input.
+ * A supplied package identity is a string after constructor validation succeeds.
  *
- * @property-read string|null $package
+ * @template-covariant TAttributes of array<string, mixed> = array<string, mixed>
+ * @property-read (TAttributes is array{package: mixed} ? string : string|null) $package
  * @property-read string|null $repository
  * @property-read string|null $branch
  * @property-read string $deployment_policy
@@ -45,7 +47,7 @@ class PackageModel {
 	/** @var string|null */
 	protected $subdirectory;
 
-	/** @param array<string, mixed> $attributes Untrusted row values validated during hydration. */
+	/** @param TAttributes $attributes Untrusted row values validated during hydration. */
 	public function __construct( array $attributes ) {
 		foreach ( $attributes as $key => $value ) {
 			if ( ! property_exists( $this, $key ) ) {

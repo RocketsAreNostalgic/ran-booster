@@ -27,13 +27,13 @@ admin-shell parity, race/hard-stop/runtime proofs, frontend source globs and
 globals, asset tests, and release verification. Shared-package adoption must
 never remove or silently weaken those local guarantees.
 
-PHPStan level 5 directly covers all Core PHP shipped by `release-files.txt`,
+PHPStan level 6 directly covers all Core PHP shipped by `release-files.txt`,
 including views and asset entrypoints. `ProductionAnalysisCoverageTest` checks
 the effective roots/exclusions against that manifest. Preserve accurate
 caller-supplied view PHPDoc and the generated Admin Shell bytes; see
 `CONTRIBUTING.md` for coverage and remaining #167 acceptance boundaries.
 
-`composer analyze` also runs automatic level-5 analysis of all maintained
+`composer analyze` also runs automatic level-6 analysis of all maintained
 `scripts/` and `tests/` PHP. The development and installed-integration symbol
 profiles are pathless: the runner batches compatible test-owned classes and
 selects every other file individually. Source-derived declaration checks keep

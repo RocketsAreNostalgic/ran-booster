@@ -106,7 +106,7 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Include a future installed-host fixture in the runner's second symbol profile.
 		self::assertTrue( mkdir( $fixture . '/tests/WordPress', 0700, true ) );
 		try {
-			$config = "parameters:\n\tlevel: 5\n";
+			$config = "parameters:\n\tlevel: 6\n";
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_symlink -- Reuse only the locked dependency tree; cleanup removes this link without traversing its target.
 			self::assertTrue( symlink( $root . '/vendor', $fixture . '/vendor' ) );
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_copy -- Exercise the actual maintained runner, including its invocation loop, in an isolated root.
@@ -198,8 +198,8 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 			$prefix = "<?php\nnamespace RAN\\Tests;\n";
 			$clean  = $prefix . 'class BatchCandidate { public function value(): int { return 1; } }';
 			$setup  = array(
-				'phpstan-development.neon'      => "parameters:\n\tlevel: 5\n\tparallel:\n\t\tmaximumNumberOfProcesses: 1\n",
-				'phpstan-integration.neon'      => "parameters:\n\tlevel: 5\n",
+				'phpstan-development.neon'      => "parameters:\n\tlevel: 6\n\tparallel:\n\t\tmaximumNumberOfProcesses: 1\n",
+				'phpstan-integration.neon'      => "parameters:\n\tlevel: 6\n",
 				'tests/First.php'               => $prefix . 'class BatchFirst { public function value(): int { return 1; } }',
 				'tests/Candidate.php'           => $clean,
 				'tests/WordPress/Installed.php' => $prefix . 'class BatchInstalled { public function installed_error(): int { return 1; } }',
@@ -299,8 +299,8 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 		self::assertTrue( mkdir( $root . '/bin', 0700, true ) );
 		try {
 			$container = $this->analysis_container();
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Use the locked analyzer at level five for an explicit invalid-body control.
-			file_put_contents( $root . '/analysis.neon', "parameters:\n\tlevel: 5\n" );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Use the locked analyzer at level six for an explicit invalid-body control.
+			file_put_contents( $root . '/analysis.neon', "parameters:\n\tlevel: 6\n" );
 			foreach ( array( 'new-command', 'template.phtml', 'template.PHTML', 'template.inc', 'template.html', 'template.htm', 'template.custom', 'template.tpl' ) as $name ) {
 				$path = $root . '/bin/' . $name;
 				foreach ( array( "#!/usr/bin/env php\n", "<main>Template</main>\n", str_repeat( '<p>Template</p>', 100 ) ) as $preamble ) {
@@ -401,7 +401,7 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 		$paths   = array();
 		try {
 			foreach ( array(
-				'Production PHP requires at least level 5.' => "\tlevel: 0\n",
+				'Production PHP requires at least level 6.' => "\tlevel: 5\n",
 				'Production analysis cannot hide diagnostics.' => "\tignoreErrors:\n\t\t- '#unreviewed suppression#'\n",
 				$root . '/RAN/Theme.php' => "\tstubFiles:\n\t\t- " . $root . "/RAN/Theme.php\n",
 			) as $expected => $mutation ) {
@@ -425,13 +425,33 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 		}
 	}
 
+	public function test_development_profile_level_five_is_rejected_by_the_real_guard(): void {
+		$path = sys_get_temp_dir() . '/ran-development-level-' . bin2hex( random_bytes( 8 ) ) . '.neon';
+		try {
+			foreach ( array( 'phpstan-development.neon', 'phpstan-integration.neon' ) as $profile ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Downgrade only a private inherited profile, never the canonical configuration.
+				file_put_contents( $path, "includes:\n\t- " . $this->root() . '/' . $profile . "\nparameters:\n\tlevel: 5\n" );
+				try {
+					$this->development_analysed_files( $path );
+				} catch ( \PHPUnit\Framework\AssertionFailedError $failure ) {
+					self::assertStringContainsString( 'Maintained development PHP requires at least level 6.', $failure->getMessage() );
+					continue;
+				}
+				self::fail( 'The development guard accepted level five.' );
+			}
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this test-owned configuration.
+			unlink( $path );
+		}
+	}
+
 	public function test_bootstrap_early_success_cannot_replace_analysis(): void {
 		$fixture = sys_get_temp_dir() . '/ran-bootstrap-' . bin2hex( random_bytes( 8 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create only a private analyzer fixture.
 		self::assertTrue( mkdir( $fixture, 0700 ) );
 		try {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- This inert invalid body proves diagnostics disappear if an unreviewed bootstrap terminates analysis.
-			file_put_contents( $fixture . '/invalid.php', "<?php function ran_bootstrap_probe(): int { return 'invalid'; }" );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- This missing iterable type requires level six and proves diagnostics disappear if an unreviewed bootstrap terminates analysis.
+			file_put_contents( $fixture . '/invalid.php', '<?php function ran_bootstrap_probe( array $values ): void {}' );
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- The disposable bootstrap intentionally terminates only its analyzer subprocess.
 			file_put_contents( $fixture . '/stop.php', '<?php exit( 0 );' );
 			foreach ( array( 'phpstan.neon', 'phpstan-development.neon', 'phpstan-integration.neon' ) as $profile ) {
@@ -443,7 +463,7 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 				$json_start = strpos( $output, '{"totals"' );
 				self::assertNotFalse( $json_start, $output );
 				$report = json_decode( explode( "\n", substr( $output, $json_start ) )[0], true, 512, JSON_THROW_ON_ERROR );
-				self::assertSame( 'return.type', $report['files'][ $fixture . '/invalid.php' ]['messages'][0]['identifier'] );
+				self::assertSame( 'missingType.iterableValue', $report['files'][ $fixture . '/invalid.php' ]['messages'][0]['identifier'] );
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Demonstrate real successful early exit before requiring the independent guard to reject the bootstrap.
 				file_put_contents( $fixture . '/analysis.neon', $config . "parameters:\n\tbootstrapFiles:\n\t\t- " . $fixture . "/stop.php\n" );
 				list( $status, $output ) = $this->analyse_development_fixture( $fixture . '/analysis.neon', $fixture . '/invalid.php' );
@@ -580,7 +600,7 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 		$container = ( new ContainerFactory( $this->root() ) )->create( $this->root() . '/.phpunit.cache/development-coverage', array( $config ), array() );
 		$this->assert_analysis_bootstraps( $container, $wordpress );
 		$level = $container->getParameter( 'level' );
-		self::assertTrue( 'max' === $level || (int) $level >= 5, 'Maintained development PHP requires at least level 5.' );
+		self::assertTrue( 'max' === $level || (int) $level >= 6, 'Maintained development PHP requires at least level 6.' );
 		self::assertSame( array(), $container->getParameter( 'ignoreErrors' ), 'Development analysis must not hide diagnostics.' );
 		self::assertSame( array(), $container->getParameter( 'paths' ), 'Only the runner may select the per-file analysis target.' );
 		$files = $container->getService( 'fileFinderAnalyse' )->findFiles( array( dirname( $config ) . '/scripts', dirname( $config ) . '/tests' ) )->getFiles();
@@ -600,7 +620,7 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 		);
 		$this->assert_analysis_bootstraps( $container );
 		$level = $container->getParameter( 'level' );
-		self::assertTrue( 'max' === $level || (int) $level >= 5, 'Production PHP requires at least level 5.' );
+		self::assertTrue( 'max' === $level || (int) $level >= 6, 'Production PHP requires at least level 6.' );
 		self::assertSame( array(), $container->getParameter( 'ignoreErrors' ), 'Production analysis cannot hide diagnostics.' );
 		// @phpstan-ignore phpstanApi.constructor (Use the locked analyzer's real stub matching instead of counting scanned declarations as analyzed bodies.)
 		$stubs = new FileExcluder( $container->getByType( FileHelper::class ), $container->getParameter( 'stubFiles' ) );

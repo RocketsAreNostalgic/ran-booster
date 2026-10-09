@@ -36,7 +36,8 @@ final class ReleaseManagementDisplay {
 			return;
 		}
 
-		$status_available = null !== $status;
+		$eligibility      = $status?->eligibility();
+		$status_available = null !== $status && null !== $eligibility;
 		$source           = $status_available ? $status->source() : $package->source();
 
 		$selected_channel = 'branch' === $source
@@ -44,7 +45,6 @@ final class ReleaseManagementDisplay {
 			? ( $this->normalize_release_channel( $selected_channel ) ?? 'stable' )
 			: ( $status_available ? $status->channel() : null );
 
-		$eligibility               = $status_available ? $status->eligibility() : null;
 		$eligibility_code          = $status_available ? $eligibility->code() : '';
 		$subdirectory_incompatible = 'subdirectory_not_supported' === $eligibility_code;
 		$expected_update_uri       = $status_available ? $eligibility->expected_update_uri() : '';
@@ -985,6 +985,7 @@ final class ReleaseManagementDisplay {
 			: $this->release_status_message( $status );
 	}
 
+	/** @param ReleaseTrackingStatus $status */
 	private function release_status_message( object $status ): string {
 		$installed = $this->bounded_string( $status->installed_version(), 64 );
 		$latest    = $this->bounded_string( $status->latest_version(), 64 );
@@ -1024,6 +1025,7 @@ final class ReleaseManagementDisplay {
 		<?php
 	}
 
+	/** @param \RAN\AddOn\ReleaseTracking\ReleaseTrackingEligibility $eligibility */
 	private function eligibility_message( object $eligibility, string $source ): string {
 		return match ( $eligibility->code() ) {
 			'subdirectory_not_supported' => 'branch' === $source
@@ -1048,6 +1050,7 @@ final class ReleaseManagementDisplay {
 		};
 	}
 
+	/** @param \RAN\AddOn\ReleaseTracking\ReleaseTrackingEligibility $eligibility */
 	private function requires_update_uri_remediation( object $eligibility ): bool {
 		return '' !== $eligibility->expected_update_uri()
 			&& in_array( $eligibility->code(), array( 'missing_update_uri', 'mismatched_update_uri' ), true );

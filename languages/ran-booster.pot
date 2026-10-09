@@ -1054,7 +1054,7 @@ msgstr ""
 #: RAN/Admin/PortabilityController.php:465
 #: RAN/Admin/PortabilityController.php:582
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:342
-#: RAN/Admin/ProviderSettingsPresenter.php:1476
+#: RAN/Admin/ProviderSettingsPresenter.php:1491
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
 #: views/portability.php:168
 #: views/portability.php:249
@@ -1067,7 +1067,7 @@ msgstr ""
 #: RAN/Admin/PortabilityController.php:465
 #: RAN/Admin/PortabilityController.php:582
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:342
-#: RAN/Admin/ProviderSettingsPresenter.php:1477
+#: RAN/Admin/ProviderSettingsPresenter.php:1492
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
 #: views/portability.php:168
 #: views/portability.php:249
@@ -1690,7 +1690,7 @@ msgid "Repository provider settings are unavailable."
 msgstr ""
 
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:30
-#: RAN/Admin/ProviderSettingsPresenter.php:1425
+#: RAN/Admin/ProviderSettingsPresenter.php:1440
 msgid "Owner"
 msgstr ""
 
@@ -1933,18 +1933,18 @@ msgid "No managed %s repositories are available yet. Install a package to add it
 msgstr ""
 
 #. translators: 1: repository provider name, 2: repository provider code.
-#: RAN/Admin/ProviderSettingsPresenter.php:1474
+#: RAN/Admin/ProviderSettingsPresenter.php:1489
 #, php-format
 msgid "The active %1$s provider can read every credential saved under provider code %2$s. Install and activate only providers you trust; Booster does not authenticate a third-party publisher."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1528
+#: RAN/Admin/ProviderSettingsPresenter.php:1543
 msgid "Account"
 msgstr ""
 
 #. translators: %d: number of packages using the credential.
-#: RAN/Admin/ProviderSettingsPresenter.php:1537
-#: RAN/Admin/ProviderSettingsPresenter.php:1587
+#: RAN/Admin/ProviderSettingsPresenter.php:1552
+#: RAN/Admin/ProviderSettingsPresenter.php:1602
 #: views/portability-review.php:56
 #, php-format
 msgctxt "Packages using a credential"
@@ -1954,30 +1954,30 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: Label shown when package usage cannot be determined.
-#: RAN/Admin/ProviderSettingsPresenter.php:1538
-#: RAN/Admin/ProviderSettingsPresenter.php:1587
+#: RAN/Admin/ProviderSettingsPresenter.php:1553
+#: RAN/Admin/ProviderSettingsPresenter.php:1602
 msgid "Usage unavailable"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1540
+#: RAN/Admin/ProviderSettingsPresenter.php:1555
 msgid "Stored · Validity checked on use"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1541
+#: RAN/Admin/ProviderSettingsPresenter.php:1556
 #: views/troubleshooting.php:43
 msgid "Not configured"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1591
+#: RAN/Admin/ProviderSettingsPresenter.php:1606
 msgid "Saved · Remote delivery not verified by Core"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1591
+#: RAN/Admin/ProviderSettingsPresenter.php:1606
 msgid "Local secret not configured"
 msgstr ""
 
 #. translators: %d is the number of managed packages that use the local secret.
-#: RAN/Admin/ProviderSettingsPresenter.php:1593
+#: RAN/Admin/ProviderSettingsPresenter.php:1608
 #, php-format
 msgid "Remove this local secret? %d managed package may be affected. Remote provider webhooks will not be removed."
 msgid_plural "Remove this local secret? %d managed packages may be affected. Remote provider webhooks will not be removed."
@@ -1985,20 +1985,20 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d is the number of managed packages that use the local secret.
-#: RAN/Admin/ProviderSettingsPresenter.php:1594
+#: RAN/Admin/ProviderSettingsPresenter.php:1609
 msgid "Remove this local secret? Remote provider webhooks will not be removed."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1670
+#: RAN/Admin/ProviderSettingsPresenter.php:1685
 msgid "Repository access needs attention"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1670
+#: RAN/Admin/ProviderSettingsPresenter.php:1685
 msgid "No credential saved"
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1670
+#: RAN/Admin/ProviderSettingsPresenter.php:1685
 #, php-format
 msgid "Ready · %d credential"
 msgid_plural "Ready · %d credentials"
@@ -2006,55 +2006,55 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1671
+#: RAN/Admin/ProviderSettingsPresenter.php:1686
 msgid "Restore encrypted credential storage before reviewing or changing saved repository access."
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1671
+#: RAN/Admin/ProviderSettingsPresenter.php:1686
 msgid "Review saved credentials that are incomplete, expired, or approaching expiry."
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1671
+#: RAN/Admin/ProviderSettingsPresenter.php:1686
 msgid "Public repositories remain available through anonymous lookup. Add a credential only for private access or steadier API limits."
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1671
+#: RAN/Admin/ProviderSettingsPresenter.php:1686
 msgid "Private repository access is available. Open credential management to validate, replace, or review usage."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1675
+#: RAN/Admin/ProviderSettingsPresenter.php:1690
 msgid "Webhook signing · Needs attention"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1675
+#: RAN/Admin/ProviderSettingsPresenter.php:1690
 msgid "Webhook signing · No secret saved"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1675
+#: RAN/Admin/ProviderSettingsPresenter.php:1690
 msgid "Webhook signing · Ready locally"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1676
+#: RAN/Admin/ProviderSettingsPresenter.php:1691
 msgid "Restore encrypted credential storage before Push-to-Deploy can verify signed deliveries."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1676
+#: RAN/Admin/ProviderSettingsPresenter.php:1691
 msgid "Review saved signing material whose configuration or managed-package usage could not be confirmed."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1676
+#: RAN/Admin/ProviderSettingsPresenter.php:1691
 msgid "Automatic branch deployments require local signing material before provider webhooks can be used safely."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1676
+#: RAN/Admin/ProviderSettingsPresenter.php:1691
 msgid "Add local signing material before configuring a provider webhook."
 msgstr ""
 
 #. translators: %d is the number of local secrets that can verify signed deliveries.
-#: RAN/Admin/ProviderSettingsPresenter.php:1676
+#: RAN/Admin/ProviderSettingsPresenter.php:1691
 #, php-format
 msgid "%d local secret can verify signed deliveries. This does not prove a matching remote webhook exists."
 msgid_plural "%d local secrets can verify signed deliveries. This does not prove matching remote webhooks exist."
@@ -2062,7 +2062,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: item count.
-#: RAN/Admin/ProviderSettingsPresenter.php:1735
+#: RAN/Admin/ProviderSettingsPresenter.php:1750
 #: views/packages/index.php:96
 #, php-format
 msgid "%d item"
@@ -2071,25 +2071,25 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: current page number, 2: total page count.
-#: RAN/Admin/ProviderSettingsPresenter.php:1736
+#: RAN/Admin/ProviderSettingsPresenter.php:1751
 #, php-format
 msgid "Page %1$d of %2$d"
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ProviderSettingsPresenter.php:1767
+#: RAN/Admin/ProviderSettingsPresenter.php:1782
 #, php-format
 msgid "Back to %s overview"
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ProviderSettingsPresenter.php:1768
+#: RAN/Admin/ProviderSettingsPresenter.php:1783
 #, php-format
 msgid "Manage saved credentials used for %s repository access."
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ProviderSettingsPresenter.php:1769
+#: RAN/Admin/ProviderSettingsPresenter.php:1784
 #, php-format
 msgid "Manage local signing material used to verify %s webhook deliveries."
 msgstr ""
@@ -2645,7 +2645,7 @@ msgid "The published release operation could not be completed."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:919
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1031
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1033
 msgid "Published releases require this plugin or theme to be at the repository root. Return to Branch to keep using its configured repository subdirectory."
 msgstr ""
 
@@ -2766,89 +2766,89 @@ msgid "The release check completed, but its version result is unavailable. Revie
 msgstr ""
 
 #. translators: 1: installed version, 2: available version.
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:994
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:995
 #, php-format
 msgid "Version %1$s is installed; version %2$s is available. WordPress controls installation."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:995
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1003
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:996
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1004
 msgid "unknown"
 msgstr ""
 
 #. translators: %s is the installed version.
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1002
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1003
 #, php-format
 msgid "Version %s is installed; no newer eligible release was found."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1018
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1019
 msgid "Why this happened and how to fix it"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1019
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1020
 msgid "What Booster found:"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1020
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1021
 msgid "What to do:"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1021
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1022
 #: views/documentation.php:187
 #: views/documentation.php:409
 msgid "Open Troubleshooting"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1022
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1023
 msgid "Technical reason:"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1030
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1032
 msgid "Published releases require this plugin or theme to be at the repository root. This package can continue using its configured repository subdirectory with Branch deployments."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1032
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1034
 msgid "This package header does not declare an Update URI for its configured repository."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1033
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1035
 msgid "This package header Update URI does not match its configured repository."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1034
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1036
 msgid "The repository provider does not support published release tracking."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1035
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1037
 msgid "The configured repository is invalid."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1036
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1038
 msgid "This package already registers its own release updater. Use either that updater or Booster published-release tracking, not both."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1037
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1039
 msgid "The installed plugin or theme identity is not eligible for published release tracking."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1043
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1045
 msgid "Published releases require the repository root."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1044
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1046
 msgid "Missing from the installed package header."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1045
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1047
 msgid "Does not match the configured repository."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1046
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1048
 msgid "Matches, but this package already registers its own updater."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1047
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1049
 msgid "Cannot be validated until the provider and repository are ready."
 msgstr ""
 

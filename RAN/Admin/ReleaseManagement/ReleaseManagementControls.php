@@ -194,7 +194,7 @@ final class ReleaseManagementControls {
 		$duplicate_conflict    = in_array( $code, array( 'release_repository_conflict', 'repository_release_owner_exists' ), true )
 			&& null !== $status && in_array( $status->failure_code(), array( 'release_repository_conflict', 'repository_release_owner_exists' ), true )
 			&& $release_pane;
-		if ( 'edit' === $mode && '' !== $code && ! $duplicate_conflict ) {
+		if ( 'edit' === $mode && null !== $result && '' !== $code && ! $duplicate_conflict ) {
 			ob_start();
 			$this->request_boundary( fn () => $this->display->render_operation_notice( $code, $result['successful'], $result['type'], $result['identifier'], $result['channel'], $status ), null );
 			$operation_notice_html = (string) ob_get_clean();
@@ -254,7 +254,7 @@ final class ReleaseManagementControls {
 	public function render_operation_notice(): void {
 		$result = $this->requested_result();
 		$code   = $result['code'] ?? '';
-		if ( '' === $code || ! $this->result_matches_current_screen( $result ) || $this->is_package_settings_request() ) {
+		if ( null === $result || '' === $code || ! $this->result_matches_current_screen( $result ) || $this->is_package_settings_request() ) {
 			return;
 		}
 
@@ -851,6 +851,13 @@ final class ReleaseManagementControls {
 		);
 	}
 
+	/**
+	 * @template TResult
+	 * @template TFailure
+	 * @param callable(): TResult $operation
+	 * @param TFailure $failure
+	 * @return TResult|TFailure
+	 */
 	private function request_boundary( callable $operation, mixed $failure ): mixed {
 		$buffer_level = ob_get_level();
 		ob_start();

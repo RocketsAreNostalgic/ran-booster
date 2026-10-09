@@ -340,7 +340,7 @@ final readonly class ProviderSettingsPresenter {
 		}
 	}
 
-	/** @return 'verified'|'unable_to_check'|'provider_unavailable' */
+	/** @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable' */
 	private function check_package_repository_branch_while_locked( string $type, Package $package ): string {
 		$profile_id          = $this->effective_branch_check_profile( $package );
 		$profile_fingerprint = $this->branch_check_evidence->profile_fingerprint_for( $package, $profile_id );
@@ -410,7 +410,10 @@ final readonly class ProviderSettingsPresenter {
 		return $this->record_package_repository_branch_check( $type, $package, $profile_id, $result, $profile_fingerprint );
 	}
 
-	/** @param 'verified'|'unable_to_check'|'provider_unavailable' $outcome */
+	/**
+	 * @param 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable' $outcome
+	 * @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'
+	 */
 	private function record_package_repository_branch_check(
 		string $type,
 		Package $package,
@@ -590,7 +593,14 @@ final readonly class ProviderSettingsPresenter {
 	 * Registered providers remain available even when they omit an optional
 	 * package capability or package-admin metadata.
 	 *
-	 * @return list<array<string, mixed>>
+	 * @return list<array{
+	 *   code: string, label: string, owner_label: string, repository_url_base: string,
+	 *   credentials_url: string, available: bool, browse: bool, credentialed_public_browse: bool,
+	 *   provider_default_public_lookup_profile: bool, deploy: bool, webhooks: bool,
+	 *   default_credential_id: string, credential_kind_labels: array<string, string>,
+	 *   credential_profiles: list<array{id: string, label: string, kind: string, kind_label: string, detail: string, source: string, configured: bool}>,
+	 *   public_lookup: array{supports_default: bool, configured_id: string, configured_label: string, stale: bool}|null
+	 * }>
 	 */
 	private function package_providers(): array {
 		$providers = array();
@@ -803,7 +813,7 @@ final readonly class ProviderSettingsPresenter {
 	/**
 	 * List repository targets already managed by Booster without mutating package rows.
 	 *
-	 * @return array{available: bool, owners: list<string>, repositories: list<array<string, mixed>>}
+	 * @return array{available: bool, owners: list<string>, repositories: list<array<string, mixed>&array{target: string, repository_id: string, package_count: int, package_references: list<string>}>}
 	 */
 	private function managed_repositories( string $provider, RepositoryProvider $repository_provider, bool $branch_only ): array {
 		if ( null === $this->plugins || null === $this->themes ) {
@@ -1160,7 +1170,7 @@ final readonly class ProviderSettingsPresenter {
 	}
 
 	/**
-	 * @return array<string, mixed>
+	 * @return array{code: string, label: string, short_label: string, secret_label: string, secret_placeholder: string, fields: list<array<string, mixed>>}
 	 */
 	private function credential_kind( CredentialKindMetadata $kind ): array {
 		return array(
@@ -1208,7 +1218,12 @@ final readonly class ProviderSettingsPresenter {
 	}
 
 	/**
-	 * @return list<array<string, mixed>>
+	 * @return list<array{
+	 *   id: string, provider: string, label: string, kind: string, configuration: array<string, string>,
+	 *   source: string, immutable: bool, configured: bool, editable: bool, self_destruct: bool,
+	 *   destroy_on: string|null, expiry: array<string, mixed>, expiry_status: array<string, mixed>,
+	 *   usage: array{available: bool, total: int|null, packages: list<array{type: string, identifier: string, installed: bool, edit_url: string|null}>}
+	 * }>
 	 */
 	private function credential_profiles( string $provider, ProviderAdminMetadata $admin, bool $include_usage = false ): array {
 
@@ -1290,7 +1305,7 @@ final readonly class ProviderSettingsPresenter {
 	}
 
 	/**
-	 * @param array{available:bool,owners:list<string>,repositories:list<array<string,mixed>>} $managed_repositories
+	 * @param array{available:bool,owners:list<string>,repositories:list<array<string,mixed>&array{target: string, repository_id: string, package_count: int, package_references: list<string>}>} $managed_repositories
 	 * @return list<array<string, mixed>>
 	 */
 	private function webhook_profiles(
@@ -1500,7 +1515,7 @@ final readonly class ProviderSettingsPresenter {
 
 
 	/**
-	 * @param list<array<string,mixed>> $profiles
+	 * @param array<array-key, mixed> $profiles Profile entries; non-array entries are skipped.
 	 * @param array<string,string> $kind_labels
 	 * @param array<string,string> $field_labels
 	 * @return array{rows:list<array<string,mixed>>,scopes:array<string,string>}
@@ -1568,7 +1583,7 @@ final readonly class ProviderSettingsPresenter {
 	}
 
 	/**
-	 * @param list<array<string,mixed>> $profiles
+	 * @param array<array-key, mixed> $profiles Profile entries; non-array entries are skipped.
 	 * @param array<string,string> $scope_labels
 	 * @return list<array<string,mixed>>
 	 */

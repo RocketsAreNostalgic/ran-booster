@@ -32,6 +32,10 @@ function add_filter( string $hook, callable $callback, int $priority = 10, int $
 	return true;
 }
 
+/**
+ * @param array<string, string> $headers
+ * @return array<string, string>
+ */
 // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- This isolated bootstrap proof must supply the exact WordPress-owned function name consumed by the installed updater.
 function get_file_data( string $file, array $headers, string $context = '' ): array {
 	unset( $context );

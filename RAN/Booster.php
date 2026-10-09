@@ -135,6 +135,7 @@ class Booster {
 		add_action( 'load-plugins.php', array( $this->service( \RAN\Admin\ManagedPluginFailureRows::class ), 'register' ) );
 	}
 
+	/** @return null */
 	public function activate() {
 		if ( ! $this->sodium_available() ) {
 			return wp_die(
@@ -174,6 +175,8 @@ class Booster {
 		}
 
 		$this->service( WordPressWorkerWakeup::class )->request();
+
+		return null;
 	}
 
 	protected function sodium_available(): bool {

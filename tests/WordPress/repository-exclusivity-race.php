@@ -137,10 +137,12 @@ $ran_booster_database = new class( $wpdb, $ran_booster_ready, $ran_booster_relea
 		return (string) $this->wpdb->db_server_info(); }
 	public function suppress_errors( bool $suppress = true ): bool {
 		return (bool) $this->wpdb->suppress_errors( $suppress ); }
+	/** @param array<array-key, mixed> $arguments */
 	public function __call( string $name, array $arguments ): mixed {
 		$value            = $this->wpdb->{$name}( ...$arguments );
 		$this->last_error = (string) $this->wpdb->last_error;
 		return $value; }
+	/** @return array<array-key, mixed>|object|null */
 	public function get_results( string $query ): array|object|null {
 		if ( ! $this->paused && str_contains( $query, 'provider_repository_id' ) && str_contains( $query, 'FOR UPDATE' ) ) {
 			$this->paused = true;

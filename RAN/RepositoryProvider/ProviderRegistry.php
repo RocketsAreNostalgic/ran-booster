@@ -247,8 +247,8 @@ final class ProviderRegistry {
 	 *
 	 * @template TCapability of object
 	 * @param ProviderCode|string       $code       Provider code.
-	 * @param class-string<TCapability> $capability Capability contract.
-	 * @return TCapability
+	 * @param string $capability Capability contract name, validated before resolution.
+	 * @return ($capability is class-string<TCapability> ? TCapability : object)
 	 */
 
 	public function require_capability( ProviderCode|string $code, string $capability ): object {

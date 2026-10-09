@@ -24,7 +24,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class TroubleshootingViewTest extends TestCase {
 
-	/** @param array<string,mixed> $data @return array<string,mixed> */
+	/**
+	 * @param array<string,mixed> $data
+	 * @return array<string,mixed>
+	 */
 	private function provider_view_data( array $data ): array {
 		$presenter                     = ( new \ReflectionClass( ProviderSettingsPresenter::class ) )->newInstanceWithoutConstructor();
 		$data['provider_list_state'] ??= array(

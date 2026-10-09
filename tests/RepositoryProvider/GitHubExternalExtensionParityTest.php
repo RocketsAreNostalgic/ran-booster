@@ -557,7 +557,10 @@ PHP;
 		rmdir( $root );
 	}
 
-	/** @param array<string, mixed>|list<array<string, mixed>> $body */
+	/**
+	 * @param array<string, mixed>|list<array<string, mixed>> $body
+	 * @return array{response: array{code: int}, body: string}
+	 */
 	private function response( array $body ): array {
 		return array(
 			'response' => array( 'code' => 200 ),

@@ -183,6 +183,9 @@ if ( ! function_exists( 'activate_plugin' ) ) {
 }
 
 if ( ! function_exists( 'deactivate_plugins' ) ) {
+	/**
+	 * @param string|array<array-key, string> $plugins
+	 */
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function deactivate_plugins( string|array $plugins, bool $silent = false, ?bool $network_wide = null ): void {
 		unset( $silent, $network_wide );
@@ -266,6 +269,10 @@ if ( ! function_exists( 'wp_date' ) ) {
 }
 
 if ( ! function_exists( 'get_file_data' ) ) {
+	/**
+	 * @param array<string, string> $default_headers
+	 * @return array<string, string>
+	 */
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function get_file_data( string $file, array $default_headers, string $context = '' ): array {
 		unset( $file, $default_headers, $context );
@@ -306,6 +313,9 @@ if ( ! function_exists( 'rest_url' ) ) {
 }
 
 if ( ! function_exists( 'wp_parse_url' ) ) {
+	/**
+	 * @return array{scheme?: string, host?: string, port?: int, user?: string, pass?: string, path?: string, query?: string, fragment?: string}|false
+	 */
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function wp_parse_url( string $url ): array|false {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Test shim for the WordPress wrapper.
@@ -314,6 +324,11 @@ if ( ! function_exists( 'wp_parse_url' ) ) {
 }
 
 if ( ! function_exists( 'get_option' ) ) {
+	/**
+	 * @param string $option
+	 * @param mixed $default
+	 * @return mixed
+	 */
 	function get_option( $option, $default = false ) { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound, Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound -- Preserve the WordPress function parameter signature. WordPress function double must retain the host-owned name.
 		global $ran_booster_storage_test_options;
 

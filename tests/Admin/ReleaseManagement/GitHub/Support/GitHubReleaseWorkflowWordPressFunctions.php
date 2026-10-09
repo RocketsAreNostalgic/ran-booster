@@ -95,6 +95,9 @@ function is_multisite(): bool {
 	return \RAN\Admin\ReleaseManagement\is_multisite();
 }
 
+/**
+ * @param array<string, mixed>|string $key
+ */
 function add_query_arg( array|string $key, mixed $value = null, ?string $url = null ): string {
 	return \RAN\Admin\ReleaseManagement\add_query_arg( $key, $value, $url );
 }

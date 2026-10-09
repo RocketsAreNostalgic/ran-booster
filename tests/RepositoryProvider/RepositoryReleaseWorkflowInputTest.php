@@ -44,6 +44,7 @@ final class RepositoryReleaseWorkflowInputTest extends TestCase {
 		yield 'mixed-case scheme' => array( 'HtTpS://github.com/owner/example' );
 	}
 
+	/** @param list<mixed> $arguments */
 	#[DataProvider( 'invalid_targets' )]
 	public function test_target_rejects_invalid_provider_facts( array $arguments ): void {
 		$this->expectException( InvalidArgumentException::class );

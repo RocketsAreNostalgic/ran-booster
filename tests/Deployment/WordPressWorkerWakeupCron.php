@@ -19,6 +19,9 @@ final class WordPressWorkerWakeupCron {
 		self::$clear_succeeds      = true;
 	}
 
+	/**
+	 * @param array<array-key, mixed> $arguments
+	 */
 	public static function next( string $hook, array $arguments ): object|false {
 		$events = array_values(
 			array_filter(
@@ -34,6 +37,9 @@ final class WordPressWorkerWakeupCron {
 		return $events[0];
 	}
 
+	/**
+	 * @param array<array-key, mixed> $arguments
+	 */
 	public static function schedule( int $timestamp, string $hook, array $arguments ): bool {
 		if ( ! self::$schedule_succeeds ) {
 			return false;
@@ -48,6 +54,9 @@ final class WordPressWorkerWakeupCron {
 		return true;
 	}
 
+	/**
+	 * @param array<array-key, mixed> $arguments
+	 */
 	public static function unschedule( int $timestamp, string $hook, array $arguments ): bool {
 		if ( ! self::$unschedule_succeeds ) {
 			return false;

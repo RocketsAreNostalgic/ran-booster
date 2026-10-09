@@ -19,7 +19,10 @@ final class RepositorySourceGuardDatabase {
 		return $arguments;
 	}
 
-	/** @return list<object> */
+	/**
+	 * @param list<mixed> $arguments
+	 * @return list<object>
+	 */
 	public function get_results( array $arguments ): array {
 		++$this->reads;
 		return array_values( array_filter( $this->rows, static fn ( object $row ): bool => $row->provider === $arguments[1] && $row->provider_repository_id === $arguments[2] ) );

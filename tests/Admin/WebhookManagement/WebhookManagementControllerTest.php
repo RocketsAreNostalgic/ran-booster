@@ -1335,7 +1335,10 @@ final class WebhookManagementControllerTest extends TestCase {
 		unset( $GLOBALS['ran_booster_package_view_multisite'] );
 	}
 
-	/** @param array<string, mixed> $changes @return array<string, mixed> */
+	/**
+	 * @param array<string, mixed> $changes
+	 * @return array<string, mixed>
+	 */
 	private function request( array $changes = array() ): array {
 		return array_merge(
 			array(

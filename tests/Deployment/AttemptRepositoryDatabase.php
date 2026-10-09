@@ -9,6 +9,11 @@ namespace {
 	$GLOBALS['ran_booster_attempt_cache_deletes'] = array();
 
 	if ( ! function_exists( 'wp_cache_delete' ) ) {
+		/**
+		 * @param int|string $key
+		 * @param string $group
+		 * @return true
+		 */
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 		function wp_cache_delete( $key, $group = '' ) {
 			$GLOBALS['ran_booster_attempt_cache_deletes'][] = array( $key, $group );

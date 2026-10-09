@@ -40,9 +40,12 @@ if ( wp_doing_cron() || PHP_VERSION_ID < 80200 || version_compare( get_bloginfo(
 }
 
 final class RAN_Booster_CorePackageExecutorSmoke {
+	/** @var list<\RAN\Deployment\PreparedArtifact> */
 	private array $artifacts = array();
-	private array $plugins   = array();
-	private array $themes    = array();
+	/** @var list<string> */
+	private array $plugins = array();
+	/** @var list<string> */
+	private array $themes = array();
 	private string $original_stylesheet;
 
 	public function __construct( private readonly string $run_id ) {
@@ -644,6 +647,7 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 		}
 	}
 
+	/** @return array<string, list<string>> */
 	private function hook_fingerprint(): array {
 		global $wp_filter;
 		$fingerprint = array();
@@ -661,6 +665,10 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 		return $fingerprint;
 	}
 
+	/**
+	 * @param array<string, list<string>> $before
+	 * @param array<string, list<string>> $after
+	 */
 	private function has_added_hooks( array $before, array $after ): bool {
 		foreach ( $after as $hook => $callbacks ) {
 			if ( array() !== array_diff( $callbacks, $before[ $hook ] ?? array() ) ) {

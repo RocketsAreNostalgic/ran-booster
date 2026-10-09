@@ -13,6 +13,10 @@ namespace {
 	}
 
 	if ( ! function_exists( 'sanitize_text_field' ) ) {
+		/**
+		 * @param mixed $value
+		 * @return string
+		 */
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 		function sanitize_text_field( $value ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags -- Minimal isolated sanitize_text_field double intentionally uses native tag removal.
@@ -21,6 +25,11 @@ namespace {
 	}
 
 	if ( ! function_exists( '__' ) ) {
+		/**
+		 * @param string $text
+		 * @param string $domain
+		 * @return string
+		 */
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 		function __( $text, $domain = 'default' ) {
 			return $GLOBALS['ran_booster_package_view_translations'][ $domain ][ $text ]
@@ -30,12 +39,20 @@ namespace {
 	}
 
 	if ( ! function_exists( 'ran_booster_table_name' ) ) {
+		/**
+		 * @return string
+		 */
 		function ran_booster_table_name() {
 			return 'wp_ran_booster_packages';
 		}
 	}
 
 	if ( ! function_exists( 'get_option' ) ) {
+		/**
+		 * @param string $option
+		 * @param mixed $default
+		 * @return mixed
+		 */
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound, Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound -- Preserve the WordPress get_option parameter signature. WordPress function double must retain the host-owned name.
 		function get_option( $option, $default = false ) {
 			global $ran_booster_storage_test_options;
@@ -57,6 +74,12 @@ namespace {
 	}
 
 	if ( ! function_exists( 'update_option' ) ) {
+		/**
+		 * @param string $option
+		 * @param mixed $value
+		 * @param bool|string|null $autoload
+		 * @return bool
+		 */
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound, Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Preserve the WordPress update_option signature; this in-memory fixture does not model autoload storage. WordPress function double must retain the host-owned name.
 		function update_option( $option, $value, $autoload = null ) {
 			global $ran_booster_storage_test_option_apply_write,
@@ -72,6 +95,10 @@ namespace {
 	}
 
 	if ( ! function_exists( 'dbDelta' ) ) {
+		/**
+		 * @param string $sql
+		 * @return array{}
+		 */
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound, WordPress.NamingConventions.ValidFunctionName.FunctionNameInvalid -- Exact WordPress dbDelta function signature is replaced by this isolated test double. WordPress function double must retain the host-owned name.
 		function dbDelta( $sql ) {
 			global $wpdb;
@@ -553,7 +580,10 @@ namespace RAN\Tests\Storage {
 			return $this->delete_result ?? $deleted;
 		}
 
-		/** @param array<string, mixed> $where */
+		/**
+		 * @param array<string, mixed> $row
+		 * @param array<string, mixed> $where
+		 */
 		private function matches( array $row, array $where ): bool {
 			foreach ( $where as $key => $value ) {
 				if ( (string) ( $row[ $key ] ?? '' ) !== (string) $value ) {

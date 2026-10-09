@@ -1519,6 +1519,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 				return 'release/release.php' === $file ? $this->package : null;
 			}
 
+			/** @return list<Package> */
 			public function all_booster_plugins(): array {
 				return array( $this->package );
 			}
@@ -2661,6 +2662,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			public function __construct() {
 			}
 
+			/** @return array{} */
 			public function all_booster_plugins(): array {
 				return array();
 			}
@@ -2815,6 +2817,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- The bounded database fake belongs to its production-controller test.
 final class FailingDashboardPluginRepository extends PluginRepository {
+	/** @return never */
 	public function all_booster_plugins(): array {
 		throw PackageStorageFailure::invalid_provider_identity();
 	}

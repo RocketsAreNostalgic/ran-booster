@@ -16,7 +16,10 @@ final class RuntimeUpdaterFacade implements RepositoryReleaseNativeTarget {
 	private bool $registration_succeeds = true;
 	private bool $refresh_fails         = false;
 
-	/** @param array<string, mixed> $target @param array<string, mixed> $diagnostics */
+	/**
+	 * @param array<string, mixed> $target
+	 * @param array<string, mixed> $diagnostics
+	 */
 	public function __construct(
 		private array $target = array(),
 		private array $diagnostics = array()

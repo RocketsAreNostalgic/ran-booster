@@ -1540,6 +1540,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		ProspectiveRepositoryProvider::$acquisition = $this->acquisition;
 	}
 
+	/** @param RepositoryProvider|iterable<RepositoryProvider>|null $provider */
 	private function facade(
 		ProspectivePluginRepository $plugins,
 		ProspectiveExecutor $executor,

@@ -67,6 +67,7 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		self::assertFileDoesNotExist( $this->path );
 	}
 
+	/** @param array<string, string> $configuration */
 	#[DataProvider( 'transferred_provider_credential_provider' )]
 	public function test_transferred_credential_verification_is_provider_neutral(
 		string $provider_code,
@@ -401,6 +402,7 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		return new BlueprintPlanItem( $this->package( $provider ), TargetPackageAction::INSTALL, TargetPackageReason::NONE );
 	}
 
+	/** @param array<string, string> $configuration */
 	private function credential(
 		string $identifier = 'example/example.php',
 		string $secret = self::CLASSIC_TOKEN,

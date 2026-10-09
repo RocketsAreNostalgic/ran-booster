@@ -249,6 +249,9 @@ final class AbilityCommand extends WP_CLI_Command {
 	 *
 	 * [--emit-warning]
 	 * : Emit a redacted fixture warning to stderr.
+	 *
+	 * @param list<string> $args Positional WP-CLI arguments.
+	 * @param array<string, string|bool> $assoc_args Named WP-CLI arguments.
 	 */
 	public function run( array $args, array $assoc_args ): void {
 		$name   = $args[0] ?? '';

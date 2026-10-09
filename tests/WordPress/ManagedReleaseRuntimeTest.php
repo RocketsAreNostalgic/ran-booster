@@ -428,11 +428,16 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$database  = new class() {
 			public string $last_error = '';
 
+			/** @return array<array-key, mixed> */
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassBeforeLastUsed -- The fixture implementation of prepare retains the production method contract; these inputs do not affect this controlled result.
 			public function prepare( string $query, mixed ...$arguments ): array {
 				return $arguments;
 			}
 
+			/**
+			 * @param array<array-key, mixed> $arguments
+			 * @return list<object>
+			 */
 			public function get_results( array $arguments ): array {
 				if ( 'unavailable' === $arguments[2] ) {
 					throw new \RuntimeException( 'repository source unavailable' );
@@ -3139,10 +3144,15 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$database = new class( fn (): array => $this->repository_rows ) {
 			public string $last_error = '';
 			public function __construct( private \Closure $rows ) {}
+			/** @return array<array-key, mixed> */
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassBeforeLastUsed -- The fixture implementation of prepare retains the production method contract; these inputs do not affect this controlled result.
 			public function prepare( string $query, mixed ...$arguments ): array {
 				return $arguments;
 			}
+			/**
+			 * @param array<array-key, mixed> $arguments
+			 * @return list<object>
+			 */
 			public function get_results( array $arguments ): array {
 				return array_values( array_filter( ( $this->rows )(), static fn ( object $row ): bool => $row->provider === $arguments[1] && $row->provider_repository_id === $arguments[2] ) );
 			}

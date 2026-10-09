@@ -9,6 +9,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', dirname( __DIR__ ) . '/fixtures/wordpress/' );
 }
 
+/**
+ * @param array<array-key, string> $plugins
+ */
 function delete_plugins( array $plugins ): mixed {
 	$GLOBALS['ran_booster_package_removal_gateway_events'][] = array( 'delete', $plugins );
 	$result = $GLOBALS['ran_booster_package_removal_gateway_result'] ?? false;

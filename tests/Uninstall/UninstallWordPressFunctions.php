@@ -5,6 +5,9 @@ declare(strict_types=1);
 // Focused WordPress lifecycle doubles use explicit global state.
 
 if ( ! function_exists( 'wp_clear_scheduled_hook' ) ) {
+	/**
+	 * @param array<array-key, mixed> $arguments
+	 */
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- The isolated uninstall fixture must provide this exact WordPress function identity.
 	function wp_clear_scheduled_hook( string $hook, array $arguments = array() ): int|false {
 		unset( $arguments );

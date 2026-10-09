@@ -3,7 +3,10 @@
 declare(strict_types=1);
 
 if ( ! function_exists( 'wp_safe_remote_request' ) ) {
-	/** @param array<string,mixed> $args @return array<string,mixed> */
+	/**
+	 * @param array<string,mixed> $args
+	 * @return array<string,mixed>
+	 */
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function wp_safe_remote_request( string $url, array $args ): array {
 		$GLOBALS['ran_booster_github_release_workflow_test_remote'][] = array(

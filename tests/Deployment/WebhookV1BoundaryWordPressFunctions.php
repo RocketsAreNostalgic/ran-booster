@@ -5,6 +5,9 @@ declare(strict_types=1);
 
 $GLOBALS['ran_booster_webhook_v1_routes'] = array();
 
+/**
+ * @param array<string, mixed> $arguments
+ */
 function register_rest_route( string $namespace, string $route, array $arguments ): bool { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound,Universal.NamingConventions.NoReservedKeywordParameterNames.namespaceFound,Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Exact WordPress spy identity and signature are required. Preserve the WordPress signature; compact() reads namespace, route and arguments to record the route.
 	$GLOBALS['ran_booster_webhook_v1_routes'][] = compact( 'namespace', 'route', 'arguments' );
 
@@ -32,6 +35,10 @@ function wp_json_encode( mixed $value, int $flags = 0, int $depth = 512 ): strin
 	return json_encode( $value, $flags, $depth );
 }
 
+/**
+ * @param array<string, mixed> $arguments
+ * @return array{}
+ */
 // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Exact WordPress function identity is required by this isolated boundary spy.
 function wp_remote_request( string $url, array $arguments = array() ): array {
 	unset( $url, $arguments );

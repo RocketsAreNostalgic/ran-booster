@@ -378,6 +378,7 @@ class TroubleshootingProviderFixture implements RepositoryProvider {
 		};
 	}
 
+	/** @return list<mixed> Includes invalid provider results to exercise rejection. */
 	public function run_diagnostics( ProviderDiagnosticRequest $request ): array {
 		return ( $this->diagnose )( $request );
 	}

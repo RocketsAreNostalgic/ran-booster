@@ -560,6 +560,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 		self::assertSame( array(), \RAN\RepositoryProvider\authenticated_archive_actions( AuthenticatedPreparedArchive::REDIRECT_HOOK ) );
 	}
 
+	/** @return array{response: array{code: int}, body: string} */
 	private function repository_identity_response( bool $is_private = false, string $id = '987654321' ): array {
 		return $this->response(
 			200,
@@ -572,6 +573,10 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 		);
 	}
 
+	/**
+	 * @param array<string, mixed> $body
+	 * @return array{response: array{code: int}, body: string}
+	 */
 	private function response( int $status, array $body ): array {
 		return array(
 			'response' => array( 'code' => $status ),
@@ -580,6 +585,7 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 		);
 	}
 
+	/** @return array{response: array{code: int}, body: string} */
 	private function sha_response( string $sha ): array {
 		return array(
 			'response' => array( 'code' => 200 ),

@@ -251,7 +251,10 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 		);
 	}
 
-	/** @param array<string, mixed> $row */
+	/**
+	 * @param array<string, mixed> $row
+	 * @return array<string, mixed>
+	 */
 	private function snapshot( array $row ): array {
 		unset( $row['id'], $row['type'] );
 
@@ -259,6 +262,7 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 	}
 }
 
+/** @extends AbstractPackageRepository<Package> */
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class DeploymentPolicyTestRepository extends AbstractPackageRepository {
 

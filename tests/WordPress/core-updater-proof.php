@@ -26,9 +26,12 @@ if ( ! class_exists( ZipArchive::class ) ) {
 }
 
 final class RAN_Booster_CoreUpdaterProof {
+	/** @var list<string> */
 	private array $archives = array();
-	private array $plugins  = array();
-	private array $themes   = array();
+	/** @var list<string> */
+	private array $plugins = array();
+	/** @var list<string> */
+	private array $themes = array();
 	private string $original_stylesheet;
 
 	public function __construct( private readonly string $run_id ) {

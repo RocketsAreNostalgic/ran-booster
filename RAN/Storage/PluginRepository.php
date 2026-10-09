@@ -10,6 +10,11 @@ use RAN\WordPress\ManagedReleaseConfiguration;
 /** @extends AbstractPackageRepository<Plugin> */
 class PluginRepository extends AbstractPackageRepository {
 
+	/**
+	 * Read managed plugins keyed by identifier; substitutes may supply package lists.
+	 *
+	 * @return array<array-key, Package>
+	 */
 	public function all_booster_plugins() {
 		include_once ABSPATH . 'wp-admin/includes/plugin.php';
 

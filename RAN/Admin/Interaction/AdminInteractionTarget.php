@@ -35,6 +35,6 @@ enum AdminInteractionTarget: string {
 			throw new \InvalidArgumentException( 'Transporter migration targets require a Core-derived row instance.' );
 		}
 
-		return $instance;
+		return (string) $instance;
 	}
 }

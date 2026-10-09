@@ -171,6 +171,23 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		);
 	}
 
+	public function test_transporter_target_requires_a_complete_instance(): void {
+		$target   = AdminInteractionTarget::TRANSPORTER_MIGRATION_SOURCE;
+		$instance = str_repeat( 'a', 32 );
+		self::assertSame( 'transporter_migration_source_' . $instance, $target->key( $instance ) );
+		self::assertSame( '#ran-booster-transporter-migration-source-' . $instance, $target->selector( $instance ) );
+		foreach ( array( null, '', 'invalid', str_repeat( 'a', 31 ) ) as $invalid ) {
+			foreach ( array( 'key', 'selector' ) as $method ) {
+				try {
+					$target->$method( $invalid );
+					self::fail( 'Expected an invalid migration instance to be rejected.' );
+				} catch ( InvalidArgumentException $exception ) {
+					self::assertSame( 'Transporter migration targets require a Core-derived row instance.', $exception->getMessage() );
+				}
+			}
+		}
+	}
+
 	public function test_transporter_enhanced_success_returns_one_exact_row_fragment(): void {
 		$facade  = $this->facade();
 		$request = $this->transporter_request();

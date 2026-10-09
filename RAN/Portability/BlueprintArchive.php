@@ -28,7 +28,7 @@ final class BlueprintArchive {
 		try {
 			if ( true !== $zip->open( $path, ZipArchive::CREATE | ZipArchive::OVERWRITE )
 				|| ! $zip->addFromString( self::ENTRY, $blueprint->canonical_json() )
-				|| ( $encrypted && ( ! $zip->setPassword( $password ) || ! $zip->setEncryptionName( self::ENTRY, ZipArchive::EM_AES_256 ) ) )
+				|| ( null !== $password && ( ! $zip->setPassword( $password ) || ! $zip->setEncryptionName( self::ENTRY, ZipArchive::EM_AES_256 ) ) )
 				|| ! $zip->close()
 				|| ! is_file( $path ) || filesize( $path ) > self::MAX_BYTES ) {
 				throw new InvalidArgumentException( 'The portability archive could not be written.' );
@@ -83,6 +83,7 @@ final class BlueprintArchive {
 		}
 	}
 
+	/** @phpstan-assert-if-true string $password */
 	private static function valid_password( ?string $password ): bool {
 		return null !== $password && strlen( $password ) >= 20 && strlen( $password ) <= 256 && 1 === preg_match( '//u', $password ) && ! preg_match( '/[\x00-\x1F\x7F]/', $password );
 	}

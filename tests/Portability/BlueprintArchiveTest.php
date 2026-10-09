@@ -68,6 +68,7 @@ final class BlueprintArchiveTest extends TestCase {
 		foreach ( array(
 			array( new PackageBlueprint( array( $this->package() ) ), 'unneeded-password-value' ),
 			array( $this->credential_blueprint(), null ),
+			array( $this->credential_blueprint(), '' ),
 			array( $this->credential_blueprint(), 'too-short' ),
 			array( $this->credential_blueprint(), "valid-length-password\n" ),
 		) as [ $blueprint, $password ] ) {
@@ -95,7 +96,7 @@ final class BlueprintArchiveTest extends TestCase {
 		$archive = new BlueprintArchive();
 		$archive->write_to( $this->file, $this->credential_blueprint(), 'correct-horse-battery-staple' );
 
-		foreach ( array( null, 'wrong-password-value-long-enough' ) as $password ) {
+		foreach ( array( null, '', 'wrong-password-value-long-enough' ) as $password ) {
 			try {
 				$archive->read_from( $this->file, $password );
 				self::fail( 'Expected archive read failure.' );

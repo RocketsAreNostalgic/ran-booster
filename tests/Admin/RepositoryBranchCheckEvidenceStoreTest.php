@@ -219,6 +219,7 @@ final class InMemoryRepositoryBranchCheckEvidenceStore extends RepositoryBranchC
 final class BranchEvidencePackage extends AbstractPackage {
 
 	public function __construct( ?ManagedRepository $repository = null, private string $identifier = 'example/example.php' ) {
+		TestCase::assertNotNull( $repository );
 		$this->repository = $repository;
 	}
 

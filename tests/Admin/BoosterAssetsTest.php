@@ -59,6 +59,60 @@ final class BoosterAssetsTest extends TestCase {
 		);
 	}
 
+	public function test_unconfigured_locations_remain_null_after_asset_loading(): void {
+		$booster = new Booster();
+		self::assertNull( $booster->booster_path );
+		self::assertNull( $booster->booster_url );
+
+		$booster->load_scripts( 'ran-booster_page_ran-booster-extensions' );
+
+		self::assertNull( $booster->booster_path );
+		self::assertNull( $booster->booster_url );
+		self::assertSame( '/assets/ran-admin-shell.css', $GLOBALS['ran_booster_asset_test_registered_styles']['ran-booster-admin-shell']['source'] );
+		self::assertSame( '/assets/ran-booster-extension-details.js', $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-extension-details']['source'] );
+	}
+
+	/** @return list<array{string|null,string|null,string}> */
+	public static function asset_location_provider(): array {
+		return array(
+			array( null, null, '/' ),
+			array( '', '', '/' ),
+			array( '/missing-booster-location', 'https://assets.example.test/booster', 'https://assets.example.test/booster/' ),
+			array( '/missing-booster-location/', 'https://assets.example.test/booster/', 'https://assets.example.test/booster/' ),
+		);
+	}
+
+	#[DataProvider( 'asset_location_provider' )]
+	public function test_asset_loading_preserves_reassigned_locations( ?string $path, ?string $url, string $expected_url ): void {
+		$booster               = $this->booster();
+		$booster->booster_path = $path;
+		$booster->booster_url  = $url;
+
+		$booster->load_scripts( 'ran-booster_page_ran-booster-extensions' );
+
+		self::assertSame( $path, $booster->booster_path );
+		self::assertSame( $url, $booster->booster_url );
+		self::assertSame( $expected_url . 'assets/ran-admin-shell.css', $GLOBALS['ran_booster_asset_test_registered_styles']['ran-booster-admin-shell']['source'] );
+		self::assertSame( $expected_url . 'assets/ran-booster-extension-details.js', $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-extension-details']['source'] );
+		self::assertNull( $GLOBALS['ran_booster_asset_test_registered_styles']['ran-booster-admin-shell']['version'] );
+		self::assertNull( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-extension-details']['version'] );
+	}
+
+	/** @return list<array{string}> */
+	public static function invalid_asset_location_provider(): array {
+		return array( array( 'booster_path' ), array( 'booster_url' ) );
+	}
+
+	#[DataProvider( 'invalid_asset_location_provider' )]
+	public function test_invalid_location_arrays_are_rejected( string $property ): void {
+		$booster = $this->booster();
+		// Reflection preserves deliberate external misuse of these untyped public properties.
+		( new \ReflectionProperty( Booster::class, $property ) )->setValue( $booster, array( 'invalid-location' ) );
+
+		$this->expectException( \TypeError::class );
+		$booster->load_scripts( 'ran-booster_page_ran-booster-extensions' );
+	}
+
 	public function test_extensions_page_receives_the_common_and_native_modal_assets(): void {
 		$this->booster()->load_scripts( 'ran-booster_page_ran-booster-extensions' );
 

@@ -36,7 +36,11 @@ $ran_booster_policy_path = $ran_booster_arguments[1];
 
 try {
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Standalone CLI reads the exact lock/policy bytes before WordPress is loaded.
-	$ran_booster_lock = json_decode( file_get_contents( $ran_booster_lock_path ), true, 512, JSON_THROW_ON_ERROR );
+	$ran_booster_lock_bytes = file_get_contents( $ran_booster_lock_path );
+	if ( false === $ran_booster_lock_bytes ) {
+		throw new RuntimeException( 'Cannot read the lock file.' );
+	}
+	$ran_booster_lock = json_decode( $ran_booster_lock_bytes, true, 512, JSON_THROW_ON_ERROR );
 } catch ( Throwable $ran_booster_exception ) {
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Standalone CLI reports diagnostics to STDERR before WordPress is loaded.
 	fwrite( STDERR, "Runtime dependency lock is unreadable: {$ran_booster_exception->getMessage()}\n" );
@@ -45,7 +49,11 @@ try {
 
 try {
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Standalone CLI reads the exact lock/policy bytes before WordPress is loaded.
-	$ran_booster_policy = json_decode( file_get_contents( $ran_booster_policy_path ), true, 512, JSON_THROW_ON_ERROR );
+	$ran_booster_policy_bytes = file_get_contents( $ran_booster_policy_path );
+	if ( false === $ran_booster_policy_bytes ) {
+		throw new RuntimeException( 'Cannot read the packaging policy file.' );
+	}
+	$ran_booster_policy = json_decode( $ran_booster_policy_bytes, true, 512, JSON_THROW_ON_ERROR );
 } catch ( Throwable $ran_booster_exception ) {
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Standalone CLI reports diagnostics to STDERR before WordPress is loaded.
 	fwrite( STDERR, "Runtime packaging policy is unreadable: {$ran_booster_exception->getMessage()}\n" );

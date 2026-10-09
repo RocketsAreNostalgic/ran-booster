@@ -146,7 +146,10 @@ add_filter(
 			} else {
 				continue;
 			}
-			$encoded                           = null === $body ? '' : wp_json_encode( $body );
+			$encoded = null === $body ? '' : wp_json_encode( $body );
+			if ( ! is_string( $encoded ) ) {
+				throw new RuntimeException( 'The native lifecycle fixture response could not be encoded.' );
+			}
 			$ran_booster_counts['http_bytes'] += strlen( $encoded );
 			return array(
 				'body'     => $encoded,
@@ -217,7 +220,7 @@ foreach ( $ran_booster_items as $ran_booster_item ) {
 	}
 	$ran_booster_key    = $ran_booster_item['type'] . ':' . $ran_booster_item['identifier'];
 	$ran_booster_target = $targets[ $ran_booster_key ] ?? null;
-	if ( ! is_object( $ran_booster_target ) ) {
+	if ( ! is_object( $ran_booster_target ) || ! method_exists( $ran_booster_target, 'status' ) ) {
 		throw new RuntimeException( 'The installed Core target key is absent.' );
 	}
 	// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.

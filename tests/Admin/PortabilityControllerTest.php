@@ -439,6 +439,9 @@ final class PortabilityControllerTest extends TestCase {
 		$result = $this->apply_failure( LocalSecretStoreUnavailable::for_portability() );
 
 		self::assertSame( 'failed', $result['status'] );
+		if ( ! isset( $result['category'] ) ) {
+			self::fail( 'Expected the local secret-store failure category.' );
+		}
 		self::assertSame( 'local_secret_store_unavailable', $result['category'] );
 		self::assertStringContainsString( 'encrypted credential storage is unavailable', $result['message'] );
 		self::assertStringNotContainsString( 'repository access', $result['message'] );

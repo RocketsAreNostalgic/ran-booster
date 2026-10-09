@@ -94,7 +94,9 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		string $action,
 		array $request
 	): void {
-		$package              = EditBoundaryPackage::make( reset( $request ), 'temporarily-offline' );
+		$identifier = reset( $request );
+		self::assertIsString( $identifier );
+		$package              = EditBoundaryPackage::make( $identifier, 'temporarily-offline' );
 		$plugins              = new EditBoundaryPluginRepository( $package );
 		$themes               = new EditBoundaryThemeRepository( $package );
 		$submitted            = new ExternalFixtureProvider( 'gh' );

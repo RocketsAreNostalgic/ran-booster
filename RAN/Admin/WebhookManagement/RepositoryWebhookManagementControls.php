@@ -537,8 +537,8 @@ final class RepositoryWebhookManagementControls {
 	}
 
 	/**
-	 * @param list<array<string, mixed>> $sections
-	 * @return list<array<string, mixed>>
+	 * @param array<array-key, mixed> $sections
+	 * @return array<array-key, mixed>
 	 */
 	public function documentation_sections( array $sections, string $provider_code, string $provider_label ): array {
 		if ( ! $this->enabled || null === $this->controller->provider_metadata( $provider_code ) ) {

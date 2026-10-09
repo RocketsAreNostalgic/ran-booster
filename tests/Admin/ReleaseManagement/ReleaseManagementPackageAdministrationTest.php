@@ -110,7 +110,9 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-managed-release-browser-disabled="true"', $html );
 		self::assertStringNotContainsString( 'Published release status needs attention.', $html );
 		self::assertStringNotContainsString( 'Why this happened and how to fix it', $html );
-		preg_match( '/<ul class="ul-disc">(.*?)<\/ul>/s', $html, $list );
+		if ( 1 !== preg_match( '/<ul class="ul-disc">(.*?)<\/ul>/s', $html, $list ) ) {
+			self::fail( 'Expected the package administration list.' );
+		}
 		self::assertStringNotContainsString( 'example%2Fexample.php', $list[1] );
 		$choices = $controls->filter_source_choices( array( 'release_asset' => array() ), 'edit', 'plugin', $package, $package->settings_url() );
 		self::assertFalse( $choices['release_asset']['disabled'] );
@@ -247,7 +249,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 
 	private function set_conflict_result( string $code ): void {
 		$payload = \RAN\Admin\ReleaseManagement\wp_json_encode( array( $code, false, 'plugin', 'example/example.php', 'stable' ) );
-		$_GET    = array(
+		self::assertIsString( $payload );
+		$_GET = array(
 			'ran_booster_release_result'       => $code,
 			'ran_booster_release_success'      => '0',
 			'ran_booster_release_type'         => 'plugin',

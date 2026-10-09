@@ -58,11 +58,14 @@ final class PreparedArtifactTest extends TestCase {
 		$identity = PreparedArtifact::regular_file_identity( $path );
 		self::assertIsArray( $identity );
 
+		$digest = hash_file( 'sha256', $path );
+		self::assertIsString( $digest );
+
 		return new PreparedArtifact(
 			$path,
 			str_repeat( 'a', 40 ),
 			'1.2.3',
-			hash_file( 'sha256', $path ),
+			$digest,
 			$identity['device'],
 			$identity['inode'],
 			$identity['size'],

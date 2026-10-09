@@ -13,9 +13,12 @@ if ( false === $ran_booster_site || rtrim( ABSPATH, '/' ) !== $ran_booster_site
 	|| get_theme_root() !== $ran_booster_site . '/wp-content/themes'
 	|| 'http://localhost' !== get_option( 'siteurl' )
 	|| is_link( $ran_booster_site . '/.ran-booster-disposable-test-site' )
-	|| ! is_file( $ran_booster_site . '/.ran-booster-disposable-test-site' )
-	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
-	|| 'RAN Booster disposable test site' !== trim( file_get_contents( $ran_booster_site . '/.ran-booster-disposable-test-site' ) ) ) {
+	|| ! is_file( $ran_booster_site . '/.ran-booster-disposable-test-site' ) ) {
+	throw new RuntimeException( 'Native cleanup site admission failed.' );
+}
+// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
+$ran_booster_marker = file_get_contents( $ran_booster_site . '/.ran-booster-disposable-test-site' );
+if ( ! is_string( $ran_booster_marker ) || 'RAN Booster disposable test site' !== trim( $ran_booster_marker ) ) {
 	throw new RuntimeException( 'Native cleanup site admission failed.' );
 }
 foreach ( array( $ran_booster_site, WP_CONTENT_DIR, WP_PLUGIN_DIR, get_theme_root(), WP_PLUGIN_DIR . '/ran-booster' ) as $ran_booster_root ) {

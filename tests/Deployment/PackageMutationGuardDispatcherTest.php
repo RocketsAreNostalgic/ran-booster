@@ -295,7 +295,9 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			self::assertSame( 'ran-booster-' . $type . 's', $query['page'] ?? null );
 			self::assertSame( 'preserved-filter', $query['s'] ?? null );
 			self::assertSame( '1', $query['ran_booster_bulk_changed'] ?? null );
-			self::assertStringStartsWith( 'nonce-for-', (string) ( $query['_ran_booster_bulk_notice_nonce'] ?? '' ) );
+			$nonce = $query['_ran_booster_bulk_notice_nonce'] ?? '';
+			self::assertIsString( $nonce );
+			self::assertStringStartsWith( 'nonce-for-', $nonce );
 		}
 
 		self::assertSame( DeploymentPolicy::DISABLED, $package->get_deployment_policy() );

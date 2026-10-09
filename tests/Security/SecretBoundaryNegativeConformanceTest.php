@@ -16,6 +16,7 @@ use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\Secrets\SecretsFile;
 use ReflectionClass;
 use ReflectionMethod;
+use ReflectionIntersectionType;
 use ReflectionNamedType;
 use ReflectionParameter;
 use ReflectionType;
@@ -197,6 +198,21 @@ final class SecretBoundaryNegativeConformanceTest extends TestCase {
 		);
 	}
 
+	public function test_intersection_members_remain_visible_to_the_authority_guard(): void {
+		$signature = static fn ( SecretsFile&\Countable $value ): mixed => $value;
+		$type      = ( new \ReflectionFunction( $signature ) )->getParameters()[0]->getType();
+		self::assertSame( array( SecretsFile::class, \Countable::class ), $this->type_names( $type ) );
+	}
+
+	public function test_union_containing_an_intersection_rejects_forbidden_authority(): void {
+		$signature = static fn ( (SecretsFile&\Countable)|null $value ): mixed => $value;
+		$type      = ( new \ReflectionFunction( $signature ) )->getParameters()[0]->getType();
+		self::assertSame( array( SecretsFile::class, \Countable::class, 'null' ), $this->type_names( $type ) );
+		$this->expectException( \PHPUnit\Framework\AssertionFailedError::class );
+		$this->expectExceptionMessage( 'An ordinary add-on contract acquired a forbidden authority type.' );
+		$this->assert_type_is_safe( $type );
+	}
+
 	private function assert_type_is_safe( ?ReflectionType $type ): void {
 		foreach ( $this->type_names( $type ) as $name ) {
 			self::assertNotContains(
@@ -212,11 +228,14 @@ final class SecretBoundaryNegativeConformanceTest extends TestCase {
 		if ( $type instanceof ReflectionNamedType ) {
 			return array( $type->getName() );
 		}
-		if ( $type instanceof ReflectionUnionType ) {
-			return array_map(
-				static fn ( ReflectionNamedType $named ): string => $named->getName(),
-				$type->getTypes()
-			);
+		if ( $type instanceof ReflectionUnionType || $type instanceof ReflectionIntersectionType ) {
+			$names = array();
+			foreach ( $type->getTypes() as $member ) {
+				foreach ( $this->type_names( $member ) as $name ) {
+					$names[] = $name;
+				}
+			}
+			return $names;
 		}
 
 		return array();

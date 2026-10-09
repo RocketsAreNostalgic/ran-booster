@@ -68,9 +68,13 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		self::assertSame( 0600, fileperms( $this->capture_path ) & 0777 );
 		self::assertSame( 0600, fileperms( $this->capture_path . '.lock' ) & 0777 );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
-		self::assertStringStartsWith( "<?php exit; ?>\n", file_get_contents( $this->capture_path ) );
+		$bytes = file_get_contents( $this->capture_path );
+		self::assertIsString( $bytes );
+		self::assertStringStartsWith( "<?php exit; ?>\n", $bytes );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
-		self::assertStringContainsString( '"owner":"ran-booster"', file_get_contents( $this->capture_path ) );
+		$bytes = file_get_contents( $this->capture_path );
+		self::assertIsString( $bytes );
+		self::assertStringContainsString( '"owner":"ran-booster"', $bytes );
 
 		self::assertTrue( $capture->append( "[ran-booster] first\nline" ) );
 		$snapshot = $capture->snapshot();
@@ -267,7 +271,9 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		self::assertLessThanOrEqual( 262144, filesize( $this->capture_path ) );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
-		$lines = explode( "\n", file_get_contents( $this->capture_path ) );
+		$bytes = file_get_contents( $this->capture_path );
+		self::assertIsString( $bytes );
+		$lines = explode( "\n", $bytes );
 		array_shift( $lines );
 		array_shift( $lines );
 		foreach ( array_filter( $lines, static fn( string $line ): bool => '' !== $line ) as $line ) {

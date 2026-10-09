@@ -340,6 +340,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 	}
 
 	private function prove_archive_composition( object $provider ): void {
+		self::assertInstanceOf( \RAN\RepositoryProvider\RepositoryProvider::class, $provider );
 		$commit = '0123456789abcdef0123456789abcdef01234567';
 		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
 			array(
@@ -374,6 +375,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 	}
 
 	private function prove_external_release_limit( object $provider, string $extension ): void {
+		self::assertInstanceOf( RepositoryReleaseCandidateListing::class, $provider );
 		$registrar = ( new \ReflectionProperty( GitHubProvider::class, 'registrar' ) )->getValue( $provider );
 		self::assertInstanceOf( ReleaseUpdaterRegistrar::class, $registrar );
 		self::assertSame(
@@ -441,8 +443,8 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		$bootstrap = file_get_contents( dirname( __DIR__, 2 ) . '/ran-booster.php' );
 		self::assertIsString( $bootstrap );
 		$start = strpos( $bootstrap, 'if ( $ran_booster_self_update_policy->allows_native_discovery() )' );
-		$end   = strpos( $bootstrap, '$ran_booster_container->bind(', $start );
 		self::assertIsInt( $start );
+		$end = strpos( $bootstrap, '$ran_booster_container->bind(', $start );
 		self::assertIsInt( $end );
 		$self_update = substr( $bootstrap, $start, $end - $start );
 
@@ -596,7 +598,7 @@ final class Phase5DeliveryEvidenceReader implements AuthenticatedWebhookDelivery
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class Phase5BundledReleaseUpdater {
-	/** @var list<mixed>|null */
+	/** @var array<array-key, mixed>|null */
 	public ?array $release_arguments = null;
 
 	public function releases( mixed ...$arguments ): object {

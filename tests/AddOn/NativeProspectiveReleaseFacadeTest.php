@@ -117,7 +117,13 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( '2.0.0', $artifact->get_expected_version() );
 		self::assertSame(
 			hash( 'sha256', 'verified-release-archive' ),
-			$artifact->inspect( static fn ( string $owned_path ): string => hash_file( 'sha256', $owned_path ) )
+			$artifact->inspect(
+				static function ( string $owned_path ): string {
+					$digest = hash_file( 'sha256', $owned_path );
+					self::assertIsString( $digest );
+					return $digest;
+				}
+			)
 		);
 		self::assertTrue( $release->discard() );
 		self::assertFileExists( $path );
@@ -803,7 +809,10 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 'example.php', $plugins->adopted_configuration->metadata_file() );
 		self::assertSame( 'prerelease', $plugins->adopted_configuration->channel() );
 		self::assertSame( 'plugin', ProspectiveRepositoryProvider::$acquisition_input['package_type'] ?? null );
-		self::assertSame( 'owner/example', ProspectiveRepositoryProvider::$acquisition_input['repository']?->locator );
+		if ( ! isset( ProspectiveRepositoryProvider::$acquisition_input['repository'] ) ) {
+			self::fail( 'Expected the repository in the recorded release request.' );
+		}
+		self::assertSame( 'owner/example', ProspectiveRepositoryProvider::$acquisition_input['repository']->locator );
 		self::assertSame( '123456789', ProspectiveRepositoryProvider::$acquisition_input['repository']->provider_repository_id );
 		self::assertSame( '42', ProspectiveRepositoryProvider::$acquisition_input['release_id'] ?? null );
 		self::assertSame( 'v1.2.3', ProspectiveRepositoryProvider::$acquisition_input['tag'] ?? null );
@@ -883,7 +892,10 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 1, ProspectiveRepositoryProvider::$inspection_calls );
 		self::assertSame( 1, ProspectiveRepositoryProvider::$metadata_calls );
 		self::assertSame( 'plugin', ProspectiveRepositoryProvider::$inspection_input['package_type'] ?? null );
-		self::assertSame( 'owner/example', ProspectiveRepositoryProvider::$inspection_input['repository']?->locator );
+		if ( ! isset( ProspectiveRepositoryProvider::$inspection_input['repository'] ) ) {
+			self::fail( 'Expected the repository in the recorded release request.' );
+		}
+		self::assertSame( 'owner/example', ProspectiveRepositoryProvider::$inspection_input['repository']->locator );
 		self::assertSame( '123456789', ProspectiveRepositoryProvider::$inspection_input['repository']->provider_repository_id );
 		self::assertSame( '42', ProspectiveRepositoryProvider::$inspection_input['release_id'] ?? null );
 		self::assertSame( 'v1.2.3', ProspectiveRepositoryProvider::$inspection_input['tag'] ?? null );

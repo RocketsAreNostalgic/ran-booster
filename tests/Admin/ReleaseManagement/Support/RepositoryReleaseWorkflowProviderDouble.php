@@ -113,7 +113,7 @@ final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvide
 		unset( $status );
 		return $this->result( 'outcome', $credential_id ); }
 
-	/** @param array<string,string> $detail */
+	/** @param array{channel?: string, key?: string, confirmation?: string} $detail */
 	private function result( string $operation, ?string $credential_id, array $detail = array() ): RepositoryReleaseWorkflowResult {
 		$this->throw_if_needed();
 		if ( $this->throw_on_operation ) {

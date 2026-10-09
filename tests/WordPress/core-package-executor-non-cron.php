@@ -59,11 +59,15 @@ $ran_booster_identity = PreparedArtifact::regular_file_identity( $ran_booster_fi
 if ( null === $ran_booster_identity ) {
 	throw new RuntimeException( 'The non-cron fixture identity is unavailable.' );
 }
+$ran_booster_digest = hash_file( 'sha256', $ran_booster_fixture_path );
+if ( false === $ran_booster_digest ) {
+	throw new RuntimeException( 'The non-cron fixture digest is unavailable.' );
+}
 $ran_booster_artifact = new PreparedArtifact(
 	$ran_booster_fixture_path,
 	str_repeat( 'a', 40 ),
 	'1.0.0',
-	hash_file( 'sha256', $ran_booster_fixture_path ),
+	$ran_booster_digest,
 	$ran_booster_identity['device'],
 	$ran_booster_identity['inode'],
 	$ran_booster_identity['size'],

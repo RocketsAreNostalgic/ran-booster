@@ -563,7 +563,11 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 		if ( null === $identity ) {
 			throw new RuntimeException( 'The disposable artifact identity is unavailable.' );
 		}
-		$artifact          = new RAN\Deployment\PreparedArtifact( $path, str_repeat( 'a', 40 ), $version, hash_file( 'sha256', $path ), $identity['device'], $identity['inode'], $identity['size'], $identity['permissions'], $identity['links'] );
+		$digest = hash_file( 'sha256', $path );
+		if ( false === $digest ) {
+			throw new RuntimeException( 'The disposable artifact digest is unavailable.' );
+		}
+		$artifact          = new RAN\Deployment\PreparedArtifact( $path, str_repeat( 'a', 40 ), $version, $digest, $identity['device'], $identity['inode'], $identity['size'], $identity['permissions'], $identity['links'] );
 		$this->artifacts[] = $artifact;
 		return $artifact;
 	}

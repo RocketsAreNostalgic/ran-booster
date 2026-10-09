@@ -113,9 +113,12 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 			return array();
 		}
 		try {
-			$target  = $this->current_target( $provider_code, $repository_id, true );
+			$target = $this->current_target( $provider_code, $repository_id, true );
+			if ( null === $target ) {
+				return array();
+			}
 			$choices = array();
-			foreach ( null === $target ? array() : $this->secrets->webhook_profiles( $provider_code ) as $profile_id => $profile ) {
+			foreach ( $this->secrets->webhook_profiles( $provider_code ) as $profile_id => $profile ) {
 				if ( ! is_string( $profile_id ) || ! $this->valid_webhook_profile_id( $profile_id ) || ! is_array( $profile ) || 'file' !== ( $profile['source'] ?? null ) || ! empty( $profile['immutable'] ) || ! $this->applies_to( $target, $profile ) || ! is_string( $profile['label'] ?? null ) ) {
 					continue;
 				}

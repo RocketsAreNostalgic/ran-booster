@@ -118,6 +118,25 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		self::assertCount( 1, $secrets->profiles );
 	}
 
+	public function test_webhook_profile_choices_require_the_current_repository_target(): void {
+		$secrets                          = new FixedFacadeSecretsFile();
+		$profile_id                       = 'wh_' . str_repeat( 'a', 24 );
+		$secrets->profiles[ $profile_id ] = $secrets->profile( $profile_id, 1 ) + array( 'label' => 'Signing profile' );
+		$facade                           = $this->facade( $secrets, new FixedWebhookProvider() );
+
+		self::assertSame( array(), $facade->webhook_profile_choices( 'gh', '102' ) );
+		self::assertSame(
+			array(
+				array(
+					'id'    => $profile_id,
+					'label' => 'Signing profile',
+					'scope' => 'repository',
+				),
+			),
+			$facade->webhook_profile_choices( 'gh', '101' )
+		);
+	}
+
 	public function test_assessment_requires_a_saved_credential(): void {
 		$secrets  = new FixedFacadeSecretsFile();
 		$provider = new FixedWebhookProvider();
@@ -786,6 +805,7 @@ final class FixedThemeRepository extends ThemeRepository {
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class FixedFacadePackage extends AbstractPackage {
 	public function __construct( ?ManagedRepository $repository = null ) {
+		TestCase::assertNotNull( $repository );
 		$this->repository        = $repository;
 		$this->deployment_policy = DeploymentPolicy::MANUAL;
 	}

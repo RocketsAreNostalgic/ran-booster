@@ -112,7 +112,9 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		$this->seed_representative_document();
 		$this->calls->reset();
 
-		self::assertSame( 'file', $this->secrets->credential_material( 'alpha', 'alpha-credential' )['source'] );
+		$material = $this->secrets->credential_material( 'alpha', 'alpha-credential' );
+		self::assertNotNull( $material );
+		self::assertSame( 'file', $material['source'] );
 		self::assertSame( array( 'alpha:credential:normalize' => 1 ), $this->calls->counts() );
 		self::assertSame( 0, $this->calls->events_under_lock() );
 
@@ -138,7 +140,9 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		$this->seed_representative_document();
 		$this->calls->reset();
 
-		self::assertSame( 'alpha-credential', $this->secrets->credential_material( 'alpha' )['id'] );
+		$material = $this->secrets->credential_material( 'alpha' );
+		self::assertNotNull( $material );
+		self::assertSame( 'alpha-credential', $material['id'] );
 		self::assertSame(
 			array(
 				'alpha:credential:constants' => 1,
@@ -173,7 +177,9 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		);
 		$this->calls->reset();
 
-		self::assertSame( 'constant', $this->secrets->credential_material( 'alpha' )['source'] );
+		$material = $this->secrets->credential_material( 'alpha' );
+		self::assertNotNull( $material );
+		self::assertSame( 'constant', $material['source'] );
 		self::assertSame(
 			array(
 				'alpha:credential:constants' => 1,
@@ -296,7 +302,9 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		$this->secrets = $this->new_secrets( $constants, $this->policies );
 
 		$this->calls->reset();
-		self::assertSame( 'constant', $this->secrets->credential_material( 'alpha', SecretsFile::CONSTANT_PROFILE )['source'] );
+		$material = $this->secrets->credential_material( 'alpha', SecretsFile::CONSTANT_PROFILE );
+		self::assertNotNull( $material );
+		self::assertSame( 'constant', $material['source'] );
 		self::assertSame(
 			array(
 				'alpha:credential:constants' => 1,

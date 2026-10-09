@@ -211,9 +211,11 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			availability: new SecretsRuntimeAvailability( false, false )
 		);
 
+		$material = $secrets->credential_material( 'gh', SecretsFile::CONSTANT_PROFILE );
+		self::assertNotNull( $material );
 		self::assertSame(
 			'constant-secret-canary',
-			$secrets->credential_material( 'gh', SecretsFile::CONSTANT_PROFILE )['secret']
+			$material['secret']
 		);
 	}
 

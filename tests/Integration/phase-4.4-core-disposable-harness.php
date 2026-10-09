@@ -77,6 +77,9 @@ function ran_booster_phase44_launcher(): void {
 		$db = 'ran_booster_p44_' . random_int( 100000, 999999 );
 		// phpcs:ignore WordPress.DB.RestrictedFunctions.mysql_mysqli_init -- Standalone proof controls its isolated MySQL process before WordPress bootstrap.
 		$mysqli = mysqli_init();
+		if ( false === $mysqli ) {
+			throw new RuntimeException( 'Phase 4.4 could not initialize its isolated MySQL connection.' );
+		}
 		// phpcs:ignore WordPress.DB.RestrictedFunctions.mysql_mysqli_real_connect -- Standalone proof connects only to its private test socket before WordPress bootstrap.
 		mysqli_real_connect( $mysqli, null, 'root', '', null, 0, $socket );
 		$mysqli->query( 'CREATE DATABASE `' . $db . '`' );
@@ -209,7 +212,7 @@ function ran_booster_phase44_worker(): void {
 	$type   = getenv( 'RAN_BOOSTER_PHASE44_TYPE' );
 	$mode   = getenv( 'RAN_BOOSTER_PHASE44_MODE' );
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
-	if ( ! is_string( $root ) || ! is_string( $site ) || ! is_string( $marker ) || ! is_file( $marker ) || RAN_BOOSTER_P44_MARKER . "\n" !== file_get_contents( $marker ) || realpath( ABSPATH ) !== realpath( $site ) || ! in_array( $kind, array( 'native', 'prospective' ), true ) || ! in_array( $type, array( 'plugin', 'theme' ), true ) || ! in_array( $mode, array( 'success', 'failure' ), true ) ) {
+	if ( ! is_string( $root ) || ! is_string( $site ) || ! is_string( $marker ) || ! is_file( $marker ) || RAN_BOOSTER_P44_MARKER . "\n" !== file_get_contents( $marker ) || realpath( ABSPATH ) !== realpath( $site ) || ! in_array( $policy, array( 'manual', 'automatic' ), true ) || ! in_array( $kind, array( 'native', 'prospective' ), true ) || ! in_array( $type, array( 'plugin', 'theme' ), true ) || ! in_array( $mode, array( 'success', 'failure' ), true ) ) {
 		throw new RuntimeException( 'Phase 4.4 worker guard rejected its environment.' );
 	}
 	require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -663,7 +666,7 @@ function ran_booster_phase44_mysql_ready( string $socket ): void {
 			// phpcs:ignore WordPress.DB.RestrictedFunctions.mysql_mysqli_init -- Standalone proof controls its isolated MySQL process before WordPress bootstrap.
 			$m = mysqli_init();
 			// phpcs:ignore WordPress.DB.RestrictedFunctions.mysql_mysqli_real_connect -- Standalone proof connects only to its private test socket before WordPress bootstrap.
-			if ( mysqli_real_connect( $m, null, 'root', '', null, 0, $socket ) ) {
+			if ( false !== $m && mysqli_real_connect( $m, null, 'root', '', null, 0, $socket ) ) {
 				$m->close();
 				return;
 			}
@@ -674,7 +677,7 @@ function ran_booster_phase44_mysql_ready( string $socket ): void {
 /**
  * @param list<string> $cmd
  * @param array<string, string>|null $env
- * @return array{stdout: string|false, stderr: string|false}
+ * @return array{stdout: string, stderr: string}
  */
 function ran_booster_phase44_command( array $cmd, string $cwd, ?array $env = null ): array {
 	// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open -- Standalone proof owns an isolated child process and its pipes; no WordPress process wrapper exists.
@@ -703,7 +706,11 @@ function ran_booster_phase44_command( array $cmd, string $cwd, ?array $env = nul
 	if ( 0 !== $code ) {
 		// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 		throw new RuntimeException( 'Disposable command failed: ' . implode( ' ', $cmd ) . ' ' . substr( $out . "\n" . $err, 0, 4000 ) );
-	} return array(
+	}
+	if ( ! is_string( $out ) || ! is_string( $err ) ) {
+		throw new RuntimeException( 'Could not read disposable command output.' );
+	}
+	return array(
 		'stdout' => $out,
 		'stderr' => $err,
 	); }

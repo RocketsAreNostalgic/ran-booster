@@ -21,7 +21,12 @@ final class ReleaseManagementFixture {
 		return new ReleaseManagementControls(
 			$tracking,
 			$prospective,
-			$read_candidates ?? static fn ( string $type, array $repository, string $channel ): \RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult => $prospective->list_candidates( $type, $repository, $channel, '' ),
+			$read_candidates ?? static function ( string $type, array $repository, string $channel ) use ( $prospective ): \RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult {
+				if ( ! in_array( $channel, array( 'stable', 'prerelease' ), true ) ) {
+					\PHPUnit\Framework\Assert::fail( 'Release operations must validate the channel before invoking the reader.' );
+				}
+				return $prospective->list_candidates( $type, $repository, $channel, '' );
+			},
 			$tracking,
 			$source_guard
 		);

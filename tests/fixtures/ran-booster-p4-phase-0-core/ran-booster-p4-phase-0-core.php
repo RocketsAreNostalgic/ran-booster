@@ -261,6 +261,9 @@ final class AbilityCommand extends WP_CLI_Command {
 		if ( 0 === get_current_user_id() ) {
 			WP_CLI::error( 'An explicit WordPress user is required.' ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)
 		}
+		if ( ! is_string( $raw ) ) {
+			throw new \InvalidArgumentException( 'Input must be a JSON string or - for stdin.' );
+		}
 		if ( '-' === $raw ) {
 			$raw = (string) file_get_contents( 'php://stdin' );
 		}
@@ -271,6 +274,7 @@ final class AbilityCommand extends WP_CLI_Command {
 		$ability = wp_get_ability( $name );
 		if ( null === $ability ) {
 			WP_CLI::error( 'The requested fixture ability is unavailable.' ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)
+			return;
 		}
 		if ( array_key_exists( 'emit-warning', $assoc_args ) ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error -- Deliberate warning-isolation fixture.

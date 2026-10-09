@@ -616,7 +616,9 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 		$before = $active_secrets->credential_material( 'fixture', 'fixture_primary' );
 
 		$deactivated = SecretsFileTestFactory::create( $path, array(), ShippedSecretPolicyCatalog::create() );
-		self::assertSame( 'github-secret-canary', $deactivated->credential_material( 'gh', 'github_primary' )['secret'] );
+		$material    = $deactivated->credential_material( 'gh', 'github_primary' );
+		self::assertNotNull( $material );
+		self::assertSame( 'github-secret-canary', $material['secret'] );
 		$deactivated->save_credential(
 			'gh',
 			'github_primary',

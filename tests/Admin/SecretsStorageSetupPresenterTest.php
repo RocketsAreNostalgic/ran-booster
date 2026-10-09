@@ -253,6 +253,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 			)
 		);
 
+		self::assertNotNull( $payload['recovery'] );
 		self::assertTrue( $payload['recovery']['can_adopt'] );
 		self::assertFalse( $payload['recovery']['can_reset'] );
 		self::assertSame( $recovery_path, $payload['recovery']['candidate_path'] );
@@ -273,6 +274,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 				'token'          => null,
 			)
 		);
+		self::assertNotNull( $blocked['recovery'] );
 		self::assertFalse( $blocked['recovery']['can_adopt'] );
 		self::assertFalse( $blocked['recovery']['can_reset'] );
 		self::assertNull( $blocked['recovery']['candidate_path'] );
@@ -298,6 +300,7 @@ final class SecretsStorageSetupPresenterTest extends TestCase {
 				)
 			);
 
+			self::assertNotNull( $payload['recovery'] );
 			self::assertTrue( $payload['recovery']['can_reset'] );
 			self::assertFalse( $payload['recovery']['can_adopt'] );
 			self::assertSame( SecretsStorageProvisioner::RESET_CONFIRMATION, $payload['recovery']['reset_confirmation'] );

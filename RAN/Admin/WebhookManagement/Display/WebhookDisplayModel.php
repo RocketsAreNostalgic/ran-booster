@@ -11,7 +11,34 @@ use RAN\Admin\WebhookManagement\WebhookManagementAdminUrl;
 use RAN\Admin\WebhookManagement\Installation\InstallationRecord;
 use RAN\Admin\WebhookManagement\Installation\InstallationStore;
 
-/** Builds complete display-safe models without rendering or request access. */
+/**
+ * Builds complete display-safe models without rendering or request access.
+ *
+ * @phpstan-type WebhookPanel array{
+ *   disabled:bool,
+ *   unavailable_reason:?string,
+ *   webhook_profile_disabled:bool,
+ *   webhook_profile_placeholder:string,
+ *   credentials_url:string,
+ *   secrets_url:string,
+ *   form_action:string,
+ *   admin_action:string,
+ *   provider_code:string,
+ *   provider_label:string,
+ *   repository_id:string,
+ *   repository:string,
+ *   webhooks_url:?string,
+ *   return_url:string,
+ *   interaction_request:AdminInteractionRequest|null,
+ *   result:array{class:string,message:string}|null,
+ *   recovery_warning:?string,
+ *   management_credential_id:?string,
+ *   credential_choices:list<array{id:string,label:string}>,
+ *   webhook_profile_choices:list<array{id:string,label:string,scope:string}>,
+ *   operations:list<array{key:string,label:string,url:string,primary:bool,disabled:bool}>,
+ *   action_help:?string
+ * }
+ */
 final class WebhookDisplayModel {
 	/** @var array<string, string> */
 	private array $projected_statuses = array();
@@ -123,7 +150,7 @@ final class WebhookDisplayModel {
 
 	/**
 	 * @param array{hook_id:string,profile_id:string}|null $recovery
-	 * @return array<string, mixed>|null
+	 * @return WebhookPanel|null
 	 */
 	public function panel( string $provider_code, string $provider_label, string $repository_id, string $return_url, ?string $result_code, ?array $recovery, bool $can_manage, ?string $remediation = null, ?string $webhooks_url = null ): ?array {
 		if ( ! $can_manage || '' === trim( $repository_id ) ) {
@@ -222,7 +249,7 @@ final class WebhookDisplayModel {
 	}
 
 	/**
-	 * @return array<string, mixed>
+	 * @return WebhookPanel
 	 */
 	public function unavailable_panel( string $provider_code, string $provider_label, string $repository_id, string $repository, string $return_url, string $reason, ?string $webhooks_url = null ): array {
 		return array(

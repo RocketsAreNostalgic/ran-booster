@@ -49,7 +49,10 @@ $ran_booster_assert( array_key_exists( 'malformed', $ran_booster_probe ) && null
 $ran_booster_assert( array_key_exists( 'duplicate', $ran_booster_probe ) && null === $ran_booster_probe['duplicate'], 'Duplicate ability registration did not fail closed.' );
 
 $ran_booster_ability = wp_get_ability( Fixture\READ_ABILITY );
-$ran_booster_assert( $ran_booster_ability instanceof WP_Ability, 'The one-slash Core fixture ability is unavailable.' );
+++$ran_booster_assertions;
+if ( ! $ran_booster_ability instanceof WP_Ability ) {
+	throw new RuntimeException( 'The one-slash Core fixture ability is unavailable.' );
+}
 $ran_booster_assert( Fixture\CATEGORY === $ran_booster_ability->get_category(), 'The Core fixture ability lost category ownership.' );
 $ran_booster_assert( false === $ran_booster_ability->get_meta_item( 'show_in_rest' ), 'The Core fixture ability became REST-visible.' );
 $ran_booster_assert(
@@ -68,7 +71,11 @@ $ran_booster_invalid_input = $ran_booster_ability->execute(
 	)
 );
 $ran_booster_assert( is_wp_error( $ran_booster_invalid_input ) && 'ability_invalid_input' === $ran_booster_invalid_input->get_error_code(), 'Closed input validation failed.' );
-$ran_booster_invalid_output = wp_get_ability( Fixture\BAD_ABILITY )->execute( array( 'target' => 'valid' ) );
+$ran_booster_bad_ability = wp_get_ability( Fixture\BAD_ABILITY );
+if ( ! $ran_booster_bad_ability instanceof WP_Ability ) {
+	throw new RuntimeException( 'The invalid-output Core fixture ability is unavailable.' );
+}
+$ran_booster_invalid_output = $ran_booster_bad_ability->execute( array( 'target' => 'valid' ) );
 $ran_booster_assert( is_wp_error( $ran_booster_invalid_output ) && 'ability_invalid_output' === $ran_booster_invalid_output->get_error_code(), 'Output validation failed.' );
 
 wp_set_current_user( $ran_booster_subscriber_id );

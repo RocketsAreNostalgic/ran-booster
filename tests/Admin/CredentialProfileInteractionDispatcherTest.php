@@ -614,7 +614,9 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$interaction    = new CapturingProviderProfileInteraction();
 		$dashboard      = $this->createMock( Dashboard::class );
 		$profile_before = $this->secrets->credential_profiles( 'fixture' )['credential_existing'];
-		$secret_before  = $this->secrets->credential_material( 'fixture', 'credential_existing' )['secret'];
+		$material       = $this->secrets->credential_material( 'fixture', 'credential_existing' );
+		self::assertNotNull( $material );
+		$secret_before = $material['secret'];
 		$dashboard->expects( self::once() )->method( 'add_failure_message' );
 		$_GET['view']         = 'credentials';
 		$_POST['ran_booster'] = array(
@@ -639,7 +641,9 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 
 		self::assertSame( 'unexpected_failure', $response->kind );
 		self::assertSame( $profile_before, $this->secrets->credential_profiles( 'fixture' )['credential_existing'] );
-		self::assertSame( $secret_before, $this->secrets->credential_material( 'fixture', 'credential_existing' )['secret'] );
+		$material = $this->secrets->credential_material( 'fixture', 'credential_existing' );
+		self::assertNotNull( $material );
+		self::assertSame( $secret_before, $material['secret'] );
 	}
 
 	public function test_credential_configuration_change_invalidates_evidence_before_saving(): void {
@@ -683,7 +687,9 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$interaction    = new CapturingProviderProfileInteraction();
 		$dashboard      = $this->createMock( Dashboard::class );
 		$profile_before = $this->secrets->credential_profiles( 'fixture' )['credential_existing'];
-		$secret_before  = $this->secrets->credential_material( 'fixture', 'credential_existing' )['secret'];
+		$material       = $this->secrets->credential_material( 'fixture', 'credential_existing' );
+		self::assertNotNull( $material );
+		$secret_before = $material['secret'];
 		$dashboard->expects( self::once() )->method( 'add_failure_message' );
 		$_GET['view']         = 'credentials';
 		$_POST['ran_booster'] = array(
@@ -708,7 +714,9 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 
 		self::assertSame( 'unexpected_failure', $response->kind );
 		self::assertSame( $profile_before, $this->secrets->credential_profiles( 'fixture' )['credential_existing'] );
-		self::assertSame( $secret_before, $this->secrets->credential_material( 'fixture', 'credential_existing' )['secret'] );
+		$material = $this->secrets->credential_material( 'fixture', 'credential_existing' );
+		self::assertNotNull( $material );
+		self::assertSame( $secret_before, $material['secret'] );
 	}
 
 	public function test_credential_deletion_invalidates_evidence_only_after_removing_secret_material(): void {

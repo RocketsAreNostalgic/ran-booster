@@ -78,7 +78,7 @@ $ran_booster_assert( is_string( $ran_booster_source ) && ! str_contains( $ran_bo
 $ran_booster_updater_registration = is_string( $ran_booster_source ) ? strpos( $ran_booster_source, 'ReleaseUpdaterBootstrap::register' ) : false;
 $ran_booster_plugins_loaded       = is_string( $ran_booster_source ) ? strpos( $ran_booster_source, "'plugins_loaded'" ) : false;
 $ran_booster_assert( false !== $ran_booster_updater_registration, 'Bootstrap must register the shared release updater.' );
-$ran_booster_assert( ! str_contains( $ran_booster_source, 'GitHubReleaseUpdaterBootstrap' ), 'Bootstrap must remove the GitHub-specific updater facade.' );
+$ran_booster_assert( is_string( $ran_booster_source ) && ! str_contains( $ran_booster_source, 'GitHubReleaseUpdaterBootstrap' ), 'Bootstrap must remove the GitHub-specific updater facade.' );
 $ran_booster_assert(
 	false !== $ran_booster_plugins_loaded && $ran_booster_updater_registration < $ran_booster_plugins_loaded,
 	'The shared release updater must register before plugins_loaded.'

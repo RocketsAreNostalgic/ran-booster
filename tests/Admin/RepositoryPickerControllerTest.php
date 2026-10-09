@@ -113,6 +113,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertTrue( $result['success'] );
 		self::assertInstanceOf( RepositoryBrowseRequest::class, $provider->request );
 		self::assertSame( 'RocketsAreNostalgic', $provider->request->get_owner() );
+		self::assertNotNull( $provider->request );
 		self::assertNull( $provider->request->get_credential_id() );
 	}
 
@@ -153,6 +154,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		$result = $this->controller( $provider, array( 'Public_Profile' ) )->handle();
 
 		self::assertTrue( $result['success'] );
+		self::assertNotNull( $provider->request );
 		self::assertSame( 'Public_Profile', $provider->request->get_credential_id() );
 		self::assertSame( 'Public_Profile', $result['data']['public_lookup_profile_id'] );
 	}
@@ -189,6 +191,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		$result = $this->controller( $provider, array( 'Public_Profile' ) )->handle();
 
 		self::assertTrue( $result['success'] );
+		self::assertNotNull( $provider->request );
 		self::assertNull( $provider->request->get_credential_id() );
 		self::assertSame( '', $result['data']['public_lookup_profile_id'] );
 	}
@@ -265,6 +268,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertTrue( $result['success'] );
 		self::assertInstanceOf( RepositoryBrowseRequest::class, $provider->request );
 		self::assertSame( 'RocketsAreNostalgic', $provider->request->get_owner() );
+		self::assertNotNull( $provider->request );
 		self::assertSame( 'Public_Profile', $provider->request->get_credential_id() );
 		self::assertSame( 'Public_Profile', $result['data']['public_lookup_profile_id'] );
 	}

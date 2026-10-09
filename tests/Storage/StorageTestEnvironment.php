@@ -104,7 +104,7 @@ namespace {
 			global $wpdb;
 
 			$wpdb->schemas[] = (string) $sql;
-			if ( method_exists( $wpdb, 'install_schema' ) ) {
+			if ( is_object( $wpdb ) && method_exists( $wpdb, 'install_schema' ) ) {
 				$wpdb->install_schema( (string) $sql );
 			}
 

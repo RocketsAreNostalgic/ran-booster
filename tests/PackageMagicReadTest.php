@@ -100,23 +100,33 @@ final class PackageMagicReadTest extends TestCase {
 		}
 	}
 
-	public function test_renamed_header_backing_fields_use_exact_snake_case_fallbacks(): void {
-		foreach ( array(
-			Plugin::class => array( 'plugin_uri', 'author_uri', 'text_domain', 'domain_path', 'author_name' ),
-			Theme::class  => array( 'theme_uri', 'author_uri', 'text_domain', 'domain_path' ),
-		) as $class => $fields ) {
-			$reflection = new ReflectionClass( $class );
-			$package    = $reflection->newInstanceWithoutConstructor();
-			foreach ( $fields as $field ) {
-				$value = 'header-' . $field;
-				$reflection->getProperty( $field )->setValue( $package, $value );
-				// @phpstan-ignore property.protected, property.protected, property.protected, property.protected, property.protected, property.protected (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
-				self::assertSame( $value, $package->$field );
-				$old_field = lcfirst( str_replace( ' ', '', ucwords( str_replace( '_', ' ', $field ) ) ) );
-				self::assertNull( $package->$old_field );
-				// @phpstan-ignore property.notFound, property.notFound, property.notFound, property.notFound, property.notFound, property.notFound (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
-				self::assertNull( $package->{strtoupper( $field )} );
-			}
+	public function test_renamed_plugin_header_backing_fields_use_exact_snake_case_fallbacks(): void {
+		$reflection = new ReflectionClass( Plugin::class );
+		$package    = $reflection->newInstanceWithoutConstructor();
+		foreach ( array( 'plugin_uri', 'author_uri', 'text_domain', 'domain_path', 'author_name' ) as $field ) {
+			$value = 'header-' . $field;
+			$reflection->getProperty( $field )->setValue( $package, $value );
+			// @phpstan-ignore property.protected, property.protected, property.protected, property.protected, property.protected (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
+			self::assertSame( $value, $package->$field );
+			$old_field = lcfirst( str_replace( ' ', '', ucwords( str_replace( '_', ' ', $field ) ) ) );
+			self::assertNull( $package->$old_field );
+			// @phpstan-ignore property.notFound, property.notFound, property.notFound, property.notFound, property.notFound (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
+			self::assertNull( $package->{strtoupper( $field )} );
+		}
+	}
+
+	public function test_renamed_theme_header_backing_fields_use_exact_snake_case_fallbacks(): void {
+		$reflection = new ReflectionClass( Theme::class );
+		$package    = $reflection->newInstanceWithoutConstructor();
+		foreach ( array( 'theme_uri', 'author_uri', 'text_domain', 'domain_path' ) as $field ) {
+			$value = 'header-' . $field;
+			$reflection->getProperty( $field )->setValue( $package, $value );
+			// @phpstan-ignore property.protected, property.protected, property.protected, property.protected (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
+			self::assertSame( $value, $package->$field );
+			$old_field = lcfirst( str_replace( ' ', '', ucwords( str_replace( '_', ' ', $field ) ) ) );
+			self::assertNull( $package->$old_field );
+			// @phpstan-ignore property.notFound, property.notFound, property.notFound, property.notFound (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
+			self::assertNull( $package->{strtoupper( $field )} );
 		}
 	}
 

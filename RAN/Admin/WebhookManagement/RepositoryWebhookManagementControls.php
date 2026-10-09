@@ -14,7 +14,10 @@ use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryWebhookSettingsLink;
 
-/** @internal Core placement for providers offering the complete webhook-management capability. */
+/**
+ * @internal Core placement for providers offering the complete webhook-management capability.
+ * @phpstan-import-type WebhookPanel from WebhookDisplayModel
+ */
 final class RepositoryWebhookManagementControls {
 	private const ADMIN_STYLE_HANDLE = 'ran-booster-repository-webhook-management';
 
@@ -188,7 +191,7 @@ final class RepositoryWebhookManagementControls {
 		return true;
 	}
 
-	/** @return array<string,mixed>|null */
+	/** @return WebhookPanel|null */
 	private function repository_webhook_panel_model( string $provider_code, string $repository_id, string $return_url ): ?array {
 		$metadata = $this->supports_provider( $provider_code ) ? $this->controller->provider_metadata( $provider_code ) : null;
 		if ( ! $metadata instanceof ProviderMetadata ) {

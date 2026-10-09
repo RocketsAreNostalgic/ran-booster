@@ -7,24 +7,24 @@ namespace RAN\Tests\Support;
 /** Raw-row fixture for the production repository admission helper. */
 final class RepositorySourceGuardDatabase {
 
-	/** @var list<object> */
+	/** @var list<object{provider: string, provider_repository_id: string}> */
 	public array $rows            = array();
 	public string $last_error     = '';
 	public int $reads             = 0;
 	public string $prepared_query = '';
 
-	/** @return list<mixed> */
+	/** @return array<array-key, mixed> */
 	public function prepare( string $query, mixed ...$arguments ): array {
 		$this->prepared_query = $query;
 		return $arguments;
 	}
 
 	/**
-	 * @param list<mixed> $arguments
+	 * @param array<array-key, mixed> $arguments
 	 * @return list<object>
 	 */
 	public function get_results( array $arguments ): array {
 		++$this->reads;
-		return array_values( array_filter( $this->rows, static fn ( object $row ): bool => $row->provider === $arguments[1] && $row->provider_repository_id === $arguments[2] ) );
+		return array_values( array_filter( $this->rows, static fn ( $row ): bool => $row->provider === $arguments[1] && $row->provider_repository_id === $arguments[2] ) );
 	}
 }

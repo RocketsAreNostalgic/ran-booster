@@ -40,7 +40,9 @@ final class AdminTabRegistryTest extends TestCase {
 		self::assertSame( 'overview', $registry->get_default()->get_key() );
 		self::assertSame( 'onboarding.php', $registry->resolve( 'overview' )->get_view() );
 		self::assertSame( AdminTabKind::PROVIDER, $registry->resolve( 'bb' )->get_kind() );
-		self::assertTrue( $registry->resolve( 'bb' )->get_provider()->equals( 'bb' ) );
+		$provider = $registry->resolve( 'bb' )->get_provider();
+		self::assertNotNull( $provider );
+		self::assertTrue( $provider->equals( 'bb' ) );
 		self::assertSame( 'documentation.php', $registry->resolve( 'documentation' )->get_view() );
 		self::assertSame( 'portability.php', $registry->resolve( 'portability' )->get_view() );
 		self::assertSame( AdminTabKind::PAGE, $registry->resolve( 'documentation' )->get_kind() );

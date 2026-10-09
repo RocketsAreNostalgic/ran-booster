@@ -107,6 +107,7 @@ final class WordPressInstallationStore implements InstallationStore {
 		);
 	}
 
+	/** @return 'applied'|'conflict'|'failed'|'unchanged' */
 	private function write( InstallationRecord $record, ?InstallationRecord $expected ): string {
 		$key = $record->storage_key();
 		for ( $attempt = 0; $attempt < self::CAS_ATTEMPTS; ++$attempt ) {
@@ -136,6 +137,7 @@ final class WordPressInstallationStore implements InstallationStore {
 		return self::WRITE_FAILED;
 	}
 
+	/** @return 'applied'|'conflict'|'failed'|'unchanged' */
 	private function remove( string $provider_code, string $repository_id, ?InstallationRecord $expected ): string {
 		$key = InstallationRecord::key( $provider_code, $repository_id );
 		for ( $attempt = 0; $attempt < self::CAS_ATTEMPTS; ++$attempt ) {

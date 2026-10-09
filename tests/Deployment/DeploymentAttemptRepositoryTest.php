@@ -53,7 +53,9 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		self::assertSame( $attempt->get_request()->to_json(), $this->database->rows[0]['request_json'] );
 		self::assertSame( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', $this->database->queries[0] );
 		self::assertSame( 'START TRANSACTION', $this->database->queries[1] );
-		self::assertSame( 'COMMIT', $this->database->queries[ array_key_last( $this->database->queries ) ] );
+		$last_key = array_key_last( $this->database->queries );
+		self::assertNotNull( $last_key );
+		self::assertSame( 'COMMIT', $this->database->queries[ $last_key ] );
 		self::assertStringContainsString( "SET state = 'running' WHERE id = 1 AND state = 'queued'", implode( "\n", $this->database->queries ) );
 	}
 
@@ -123,7 +125,11 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 
 		self::assertSame( DeploymentState::RUNNING, $attempt->get_state() );
 		self::assertCount( 200, $this->database->rows );
-		self::assertSame( 7, min( array_column( $this->database->rows, 'id' ) ) );
+		$ids = array_column( $this->database->rows, 'id' );
+		if ( array() === $ids ) {
+			self::fail( 'Retained deployment rows must expose their IDs.' );
+		}
+		self::assertSame( 7, min( $ids ) );
 		self::assertStringContainsString(
 			"SELECT id FROM `wp_ran_booster_deployment_attempts` WHERE (state IN ('succeeded','failed') OR (state = 'needs_attention' AND resolved_at IS NOT NULL AND resolved_by IS NOT NULL)) ORDER BY created_at, id LIMIT 6 FOR UPDATE",
 			implode( "\n", $this->database->queries )
@@ -158,7 +164,9 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		}
 
 		self::assertSame( $before, $this->database->rows );
-		self::assertSame( 'ROLLBACK', $this->database->queries[ array_key_last( $this->database->queries ) ] );
+		$last_key = array_key_last( $this->database->queries );
+		self::assertNotNull( $last_key );
+		self::assertSame( 'ROLLBACK', $this->database->queries[ $last_key ] );
 	}
 
 	public function test_manual_batch_reserves_only_eligible_rows_and_never_prunes_protected_work(): void {
@@ -200,7 +208,9 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$this->repository->admit_webhook_batch( 'gh', 'delivery-empty', hash( 'sha256', 'delivery-empty' ), array() );
 
 		self::assertCount( 200, $this->database->rows );
-		self::assertSame( 'delivery', $this->database->rows[ array_key_last( $this->database->rows ) ]['package_type'] );
+		$last_key = array_key_last( $this->database->rows );
+		self::assertNotNull( $last_key );
+		self::assertSame( 'delivery', $this->database->rows[ $last_key ]['package_type'] );
 	}
 
 	public function test_replay_returns_before_capacity_accounting(): void {
@@ -236,7 +246,9 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			self::fail( 'A partially inserted capacity reservation must roll back.' );
 		} catch ( DeploymentStorageFailure ) {
 			self::assertSame( $before, $this->database->rows );
-			self::assertSame( 'ROLLBACK', $this->database->queries[ array_key_last( $this->database->queries ) ] );
+			$last_key = array_key_last( $this->database->queries );
+			self::assertNotNull( $last_key );
+			self::assertSame( 'ROLLBACK', $this->database->queries[ $last_key ] );
 		}
 	}
 
@@ -254,7 +266,9 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 				self::fail( 'Capacity pruning must roll back when its transaction fails.' );
 			} catch ( DeploymentStorageFailure $storage_failure ) {
 				self::assertSame( $before, $this->database->rows );
-				self::assertSame( 'ROLLBACK', $this->database->queries[ array_key_last( $this->database->queries ) ] );
+				$last_key = array_key_last( $this->database->queries );
+				self::assertNotNull( $last_key );
+				self::assertSame( 'ROLLBACK', $this->database->queries[ $last_key ] );
 			}
 		}
 	}
@@ -263,15 +277,21 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$this->repository = $this->repository_with_maximum( 250 );
 		$this->seed_attempts( array_fill( 0, 210, DeploymentState::SUCCEEDED->value ) );
 
-		$first  = $this->repository->recent_history( 100 );
-		$second = $this->repository->recent_history( 100, $first[ array_key_last( $first ) ]->get_id() );
-		$third  = $this->repository->recent_history( 100, $second[ array_key_last( $second ) ]->get_id() );
+		$first    = $this->repository->recent_history( 100 );
+		$last_key = array_key_last( $first );
+		self::assertNotNull( $last_key );
+		$second   = $this->repository->recent_history( 100, $first[ $last_key ]->get_id() );
+		$last_key = array_key_last( $second );
+		self::assertNotNull( $last_key );
+		$third = $this->repository->recent_history( 100, $second[ $last_key ]->get_id() );
 
 		self::assertCount( 100, $first );
 		self::assertCount( 100, $second );
 		self::assertCount( 10, $third );
 		self::assertSame( 210, $first[0]->get_id() );
-		self::assertSame( 1, $third[ array_key_last( $third ) ]->get_id() );
+		$last_key = array_key_last( $third );
+		self::assertNotNull( $last_key );
+		self::assertSame( 1, $third[ $last_key ]->get_id() );
 	}
 
 	public function test_unsupported_database_blocks_attempt_reads_and_admissions_before_table_access(): void {
@@ -328,7 +348,9 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		} catch ( DeploymentStorageFailure $failure ) {
 			self::assertSame( $active->get_correlation_id(), $failure->get_active_correlation_id() );
 			self::assertCount( 1, $this->database->rows );
-			self::assertSame( 'ROLLBACK', $this->database->queries[ array_key_last( $this->database->queries ) ] );
+			$last_key = array_key_last( $this->database->queries );
+			self::assertNotNull( $last_key );
+			self::assertSame( 'ROLLBACK', $this->database->queries[ $last_key ] );
 		}
 	}
 
@@ -358,7 +380,9 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 				self::fail( 'Manual admission and claim must fail atomically.' );
 			} catch ( DeploymentStorageFailure ) {
 				self::assertSame( array(), $this->database->rows );
-				self::assertSame( 'ROLLBACK', $this->database->queries[ array_key_last( $this->database->queries ) ] );
+				$last_key = array_key_last( $this->database->queries );
+				self::assertNotNull( $last_key );
+				self::assertSame( 'ROLLBACK', $this->database->queries[ $last_key ] );
 			}
 			$this->database->queries = array();
 		}
@@ -397,7 +421,9 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		);
 
 		self::assertSame( array( 'alpha', 'zeta' ), array_map( static fn ( DeploymentAttempt $attempt ): string => $attempt->get_request()->package_slug, $attempts ) );
-		self::assertSame( 'COMMIT', $this->database->queries[ array_key_last( $this->database->queries ) ] );
+		$last_key = array_key_last( $this->database->queries );
+		self::assertNotNull( $last_key );
+		self::assertSame( 'COMMIT', $this->database->queries[ $last_key ] );
 		// The integration gate exercises this ordering with two real connections whose session default is READ COMMITTED.
 		self::assertSame( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', $this->database->queries[0] );
 		self::assertSame( 'START TRANSACTION', $this->database->queries[1] );
@@ -417,7 +443,9 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		self::assertSame( array( 'manual', 'manual' ), array_column( $this->database->rows, 'source' ) );
 		self::assertSame( array( 'queued', 'queued' ), array_column( $this->database->rows, 'state' ) );
 		self::assertSame( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', $this->database->queries[0] );
-		self::assertSame( 'COMMIT', $this->database->queries[ array_key_last( $this->database->queries ) ] );
+		$last_key = array_key_last( $this->database->queries );
+		self::assertNotNull( $last_key );
+		self::assertSame( 'COMMIT', $this->database->queries[ $last_key ] );
 	}
 
 	public function test_manual_batch_reports_busy_and_admits_the_remaining_target(): void {
@@ -498,7 +526,9 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			self::fail( 'A partial manual batch must not survive.' );
 		} catch ( DeploymentStorageFailure ) {
 			self::assertSame( array(), $this->database->rows );
-			self::assertSame( 'ROLLBACK', $this->database->queries[ array_key_last( $this->database->queries ) ] );
+			$last_key = array_key_last( $this->database->queries );
+			self::assertNotNull( $last_key );
+			self::assertSame( 'ROLLBACK', $this->database->queries[ $last_key ] );
 		}
 	}
 
@@ -547,7 +577,9 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		} catch ( DeploymentStorageFailure $failure ) {
 			self::assertStringContainsString( 'different authenticated content', $failure->getMessage() );
 			self::assertCount( 1, $this->database->rows );
-			self::assertSame( 'ROLLBACK', $this->database->queries[ array_key_last( $this->database->queries ) ] );
+			$last_key = array_key_last( $this->database->queries );
+			self::assertNotNull( $last_key );
+			self::assertSame( 'ROLLBACK', $this->database->queries[ $last_key ] );
 		}
 	}
 
@@ -624,7 +656,9 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		self::assertSame( $queued->get_id(), $running->get_id() );
 		self::assertSame( DeploymentState::RUNNING, $running->get_state() );
 		self::assertSame( 'START TRANSACTION', $this->database->queries[0] );
-		self::assertSame( 'COMMIT', $this->database->queries[ array_key_last( $this->database->queries ) ] );
+		$last_key = array_key_last( $this->database->queries );
+		self::assertNotNull( $last_key );
+		self::assertSame( 'COMMIT', $this->database->queries[ $last_key ] );
 		self::assertStringNotContainsString( 'wp_options', implode( "\n", $this->database->queries ) );
 	}
 
@@ -649,7 +683,9 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			self::fail( 'A failed transition must roll back.' );
 		} catch ( DeploymentStorageFailure ) {
 			self::assertSame( 'queued', $this->database->rows[0]['state'] );
-			self::assertSame( 'ROLLBACK', $this->database->queries[ array_key_last( $this->database->queries ) ] );
+			$last_key = array_key_last( $this->database->queries );
+			self::assertNotNull( $last_key );
+			self::assertSame( 'ROLLBACK', $this->database->queries[ $last_key ] );
 		}
 	}
 

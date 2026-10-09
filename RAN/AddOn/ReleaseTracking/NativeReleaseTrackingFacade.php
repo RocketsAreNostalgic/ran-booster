@@ -1124,6 +1124,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		return new ManagedReleaseConfiguration( $package_root, $header_file, $channel );
 	}
 
+	/** @phpstan-assert-if-true 'stable'|'prerelease' $channel */
 	private function valid_channel( string $channel ): bool {
 		return in_array( $channel, array( 'stable', 'prerelease' ), true );
 	}

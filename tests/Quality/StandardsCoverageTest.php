@@ -176,6 +176,7 @@ final class StandardsCoverageTest extends TestCase {
 		self::assertTrue( $xml->loadXML( $source, LIBXML_NONET ) );
 		$xpath      = new \DOMXPath( $xml );
 		$exclusions = $xpath->query( '//rule/exclude-pattern | //rule/exclude' );
+		self::assertNotFalse( $exclusions );
 		self::assertCount( 1, $exclusions );
 		$entry = $exclusions->item( 0 );
 		self::assertInstanceOf( \DOMElement::class, $entry );
@@ -485,18 +486,25 @@ final class StandardsCoverageTest extends TestCase {
 	private function has_unreviewed_xml_selection( string $source ): bool {
 		$xml = new \DOMDocument();
 		self::assertTrue( $xml->loadXML( $source, LIBXML_NONET ) );
-		$xpath = new \DOMXPath( $xml );
-		if ( 0 !== $xpath->query( '//rule/include-pattern | //*[@phpcs-only or @phpcbf-only]' )->length ) {
+		$xpath     = new \DOMXPath( $xml );
+		$selection = $xpath->query( '//rule/include-pattern | //*[@phpcs-only or @phpcbf-only]' );
+		self::assertNotFalse( $selection );
+		if ( 0 !== $selection->length ) {
 			return true;
 		}
-		foreach ( $xpath->query( '//exclude-pattern' ) as $exclusion ) {
+		$nodes = $xpath->query( '//exclude-pattern' );
+		self::assertNotFalse( $nodes );
+		foreach ( $nodes as $exclusion ) {
 			self::assertInstanceOf( \DOMElement::class, $exclusion );
 			if ( $exclusion->hasAttributes() ) {
 				return true;
 			}
 		}
 		$root_exclusions = array();
-		foreach ( $xpath->query( '/ruleset/exclude-pattern' ) as $exclusion ) {
+		$nodes           = $xpath->query( '/ruleset/exclude-pattern' );
+		self::assertNotFalse( $nodes );
+		foreach ( $nodes as $exclusion ) {
+			self::assertInstanceOf( \DOMElement::class, $exclusion );
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM exposes textContent for inspecting the existing exclusion patterns.
 			$root_exclusions[] = $exclusion->textContent;
 		}
@@ -505,7 +513,9 @@ final class StandardsCoverageTest extends TestCase {
 			return true;
 		}
 		$configs = array();
-		foreach ( $xpath->query( '//config' ) as $config ) {
+		$nodes   = $xpath->query( '//config' );
+		self::assertNotFalse( $nodes );
+		foreach ( $nodes as $config ) {
 			self::assertInstanceOf( \DOMElement::class, $config );
 			$configs[] = $config->getAttribute( 'name' ) . ':' . $config->getAttribute( 'value' );
 		}
@@ -530,7 +540,9 @@ final class StandardsCoverageTest extends TestCase {
 		$ruleset = new \DOMDocument();
 		self::assertTrue( $ruleset->loadXML( $xml, LIBXML_NONET ) );
 		$arguments = array();
-		foreach ( ( new \DOMXPath( $ruleset ) )->query( '//arg' ) as $argument ) {
+		$nodes     = ( new \DOMXPath( $ruleset ) )->query( '//arg' );
+		self::assertNotFalse( $nodes );
+		foreach ( $nodes as $argument ) {
 			self::assertInstanceOf( \DOMElement::class, $argument );
 			$arguments[] = $argument->getAttribute( 'name' ) . ':' . $argument->getAttribute( 'value' );
 		}
@@ -574,7 +586,10 @@ final class StandardsCoverageTest extends TestCase {
 	private function has_disabled_severity( string $xml ): bool {
 		$ruleset = new \DOMDocument();
 		self::assertTrue( $ruleset->loadXML( $xml, LIBXML_NONET ) );
-		foreach ( ( new \DOMXPath( $ruleset ) )->query( '//rule/severity' ) as $severity ) {
+		$nodes = ( new \DOMXPath( $ruleset ) )->query( '//rule/severity' );
+		self::assertNotFalse( $nodes );
+		foreach ( $nodes as $severity ) {
+			self::assertInstanceOf( \DOMElement::class, $severity );
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOMNode exposes the native textContent property.
 			if ( ! preg_match( '/^[1-9][0-9]*$/D', trim( $severity->textContent ) ) || 5 > (int) $severity->textContent ) {
 				return true;

@@ -15,7 +15,7 @@ use ReflectionClass;
  * delegating every operation to the real copied updater package.
  */
 final class ReleaseUpdaterRegistrar {
-	/** @var list<mixed>|null */
+	/** @var array<array-key, mixed>|null */
 	private ?array $release_arguments = null;
 
 	public function __construct( private readonly object $inner ) {
@@ -35,7 +35,7 @@ final class ReleaseUpdaterRegistrar {
 		return $this->invoke( 'releases', $arguments );
 	}
 
-	/** @return list<mixed>|null */
+	/** @return array<array-key, mixed>|null */
 	public function release_arguments(): ?array {
 		return $this->release_arguments;
 	}
@@ -46,7 +46,7 @@ final class ReleaseUpdaterRegistrar {
 		return is_string( $file ) ? $file : '';
 	}
 
-	/** @param list<mixed> $arguments */
+	/** @param array<array-key, mixed> $arguments */
 	private function invoke( string $method, array $arguments ): object {
 		$callable = array( $this->inner, $method );
 		if ( ! is_callable( $callable ) ) {

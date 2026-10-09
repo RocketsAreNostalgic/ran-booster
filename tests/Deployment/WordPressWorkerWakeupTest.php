@@ -150,6 +150,7 @@ final class WordPressWorkerWakeupTest extends TestCase {
 		self::assertSame( 0, $wakeup->requests );
 	}
 
+	/** @return object{hook: string, timestamp: int, args: array<array-key, mixed>, schedule: false} */
 	private function event( string $hook, int $timestamp ): object {
 		return (object) array(
 			'hook'      => $hook,

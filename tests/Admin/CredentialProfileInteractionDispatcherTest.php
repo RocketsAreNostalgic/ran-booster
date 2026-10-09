@@ -433,9 +433,13 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		self::assertCount( 1, $profiles );
 		self::assertTrue( $profiles[0]['self_destruct'] );
 		self::assertSame( $expires_on, $profiles[0]['destroy_on'] );
+		$observation = $expiry_observations->get( 'fixture', $profiles[0]['id'] );
+		if ( ! array_key_exists( 'manual_expires_on', $observation ) ) {
+			self::fail( 'Expected manual_expires_on in the successful result.' );
+		}
 		self::assertSame(
 			$expires_on,
-			$expiry_observations->get( 'fixture', $profiles[0]['id'] )['manual_expires_on']
+			$observation['manual_expires_on']
 		);
 	}
 
@@ -521,6 +525,9 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 
 		self::assertSame( 'success', $response->kind );
 		$observation = $expiry_observations->get( 'fixture', 'credential_existing' );
+		if ( ! array_key_exists( 'provider_expires_at', $observation ) ) {
+			self::fail( 'Expected provider_expires_at in the successful result.' );
+		}
 		self::assertSame( '2026-09-10T12:00:00Z', $observation['provider_expires_at'] );
 		self::assertArrayNotHasKey( 'manual_expires_on', $observation );
 	}
@@ -1158,20 +1165,30 @@ final class CapturingProviderProfileInteraction {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Focused signed redirect fixture.
 		$query = parse_url( $url, PHP_URL_QUERY );
 		parse_str( is_string( $query ) ? $query : '', $args );
-		$return_url     = is_string( $args['ran_booster_interaction_return'] ?? null )
+		$return_url = is_string( $args['ran_booster_interaction_return'] ?? null )
 			? $args['ran_booster_interaction_return']
 			: '';
+		$operation  = $args['ran_booster_interaction_operation'] ?? '';
+		\PHPUnit\Framework\Assert::assertIsString( $operation );
+		$target = $args['ran_booster_interaction_target'] ?? '';
+		\PHPUnit\Framework\Assert::assertIsString( $target );
+		$error_region = $args['ran_booster_interaction_error_region'] ?? '';
+		\PHPUnit\Framework\Assert::assertIsString( $error_region );
+		$outcome = $args['ran_booster_interaction_outcome'] ?? '';
+		\PHPUnit\Framework\Assert::assertIsString( $outcome );
+		$message = $args['ran_booster_interaction_message'] ?? '';
+		\PHPUnit\Framework\Assert::assertIsString( $message );
 		$request        = new SignedAdminInteractionRequest(
-			(string) ( $args['ran_booster_interaction_operation'] ?? '' ),
-			(string) ( $args['ran_booster_interaction_target'] ?? '' ),
+			$operation,
+			$target,
 			ProviderProfileAdminController::TARGET_SELECTOR,
 			$return_url,
-			(string) ( $args['ran_booster_interaction_error_region'] ?? '' )
+			$error_region
 		);
 		$this->response = new CapturedProviderProfileResponse(
-			(string) ( $args['ran_booster_interaction_outcome'] ?? '' ),
+			$outcome,
 			$request,
-			(string) ( $args['ran_booster_interaction_message'] ?? '' )
+			$message
 		);
 	}
 }

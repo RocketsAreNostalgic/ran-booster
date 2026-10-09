@@ -56,7 +56,7 @@ use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 
 final class ManagedReleaseRuntimeTest extends TestCase {
 
-	/** @var array<string, object> Exact persistent rows represented by this test's packages. */
+	/** @var array<string, \stdClass> Exact persistent rows represented by this test's packages. */
 	private array $repository_rows = array();
 
 	private const NATIVE_PLUGIN = 'example/example.php';
@@ -3143,6 +3143,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 	private function repository_guard(): RepositorySourceGuard {
 		$database = new class( fn (): array => $this->repository_rows ) {
 			public string $last_error = '';
+			/** @param \Closure(): array<string, \stdClass> $rows */
 			public function __construct( private \Closure $rows ) {}
 			/** @return array<array-key, mixed> */
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassBeforeLastUsed -- The fixture implementation of prepare retains the production method contract; these inputs do not affect this controlled result.
@@ -3154,7 +3155,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			 * @return list<object>
 			 */
 			public function get_results( array $arguments ): array {
-				return array_values( array_filter( ( $this->rows )(), static fn ( object $row ): bool => $row->provider === $arguments[1] && $row->provider_repository_id === $arguments[2] ) );
+				return array_values( array_filter( ( $this->rows )(), static fn ( \stdClass $row ): bool => $row->provider === $arguments[1] && $row->provider_repository_id === $arguments[2] ) );
 			}
 		};
 

@@ -6,7 +6,7 @@ namespace RAN\Tests\Deployment;
 
 final class WordPressWorkerWakeupCron {
 
-	/** @var list<object> */
+	/** @var list<object{hook: string, timestamp: int, args: array<array-key, mixed>, schedule: false}> */
 	public static array $events             = array();
 	public static bool $schedule_succeeds   = true;
 	public static bool $unschedule_succeeds = true;
@@ -21,18 +21,19 @@ final class WordPressWorkerWakeupCron {
 
 	/**
 	 * @param array<array-key, mixed> $arguments
+	 * @return object{hook: string, timestamp: int, args: array<array-key, mixed>, schedule: false}|false
 	 */
 	public static function next( string $hook, array $arguments ): object|false {
 		$events = array_values(
 			array_filter(
 				self::$events,
-				static fn ( object $event ): bool => $event->hook === $hook && $event->args === $arguments
+				static fn ( $event ): bool => $event->hook === $hook && $event->args === $arguments
 			)
 		);
 		if ( array() === $events ) {
 			return false;
 		}
-		usort( $events, static fn ( object $left, object $right ): int => $left->timestamp <=> $right->timestamp );
+		usort( $events, static fn ( $left, $right ): int => $left->timestamp <=> $right->timestamp );
 
 		return $events[0];
 	}
@@ -64,7 +65,7 @@ final class WordPressWorkerWakeupCron {
 		self::$events = array_values(
 			array_filter(
 				self::$events,
-				static fn ( object $event ): bool => ! ( $event->timestamp === $timestamp && $event->hook === $hook && $event->args === $arguments )
+				static fn ( $event ): bool => ! ( $event->timestamp === $timestamp && $event->hook === $hook && $event->args === $arguments )
 			)
 		);
 
@@ -76,7 +77,7 @@ final class WordPressWorkerWakeupCron {
 			return false;
 		}
 		$before       = count( self::$events );
-		self::$events = array_values( array_filter( self::$events, static fn ( object $event ): bool => $event->hook !== $hook ) );
+		self::$events = array_values( array_filter( self::$events, static fn ( $event ): bool => $event->hook !== $hook ) );
 
 		return $before - count( self::$events );
 	}

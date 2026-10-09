@@ -63,7 +63,7 @@ $plugins               = $ran_booster_container->make( PluginRepository::class )
 $ran_booster_themes    = $ran_booster_container->make( ThemeRepository::class );
 $ran_booster_installed = array();
 
-$ran_booster_assert_result = static function ( object $ran_booster_result, string $code ): void {
+$ran_booster_assert_result = static function ( RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult $ran_booster_result, string $code ): void {
 	if ( ! $ran_booster_result->successful() || $code !== $ran_booster_result->code() ) {
 		// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 		throw new RuntimeException( 'Unexpected prospective release result: ' . $ran_booster_result->code() );

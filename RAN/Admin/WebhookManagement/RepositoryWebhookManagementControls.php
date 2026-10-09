@@ -188,7 +188,7 @@ final class RepositoryWebhookManagementControls {
 		return true;
 	}
 
-	/** @return array{repository:string,result:array{class:string,message:string}|null,...<string,mixed>}|null */
+	/** @return array<string,mixed>|null */
 	private function repository_webhook_panel_model( string $provider_code, string $repository_id, string $return_url ): ?array {
 		$metadata = $this->supports_provider( $provider_code ) ? $this->controller->provider_metadata( $provider_code ) : null;
 		if ( ! $metadata instanceof ProviderMetadata ) {

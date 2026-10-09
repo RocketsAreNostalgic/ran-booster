@@ -318,6 +318,7 @@ function ran_booster_phase44_worker(): void {
 	echo json_encode( $proof, JSON_UNESCAPED_SLASHES ) . PHP_EOL;
 }
 
+/** @return array<string, mixed> */
 function ran_booster_phase44_native( string $site, string $type, string $policy, string $mode ): array {
 	$slug = 'phase44-' . $type;
 	$id   = 'plugin' === $type ? $slug . '/' . $slug . '.php' : $slug;
@@ -458,7 +459,11 @@ function ran_booster_phase44_native( string $site, string $type, string $policy,
 	);
 }
 
-/** @param array{archive:string,mode:string,type:string} $fixture @param array<string,mixed> $args @return array<string,mixed>|null */
+/**
+ * @param array{archive:string,mode:string,type:string} $fixture
+ * @param array<string,mixed> $args
+ * @return array<string,mixed>|null
+ */
 function ran_booster_phase44_github_response( array $fixture, array $args, string $url ): ?array {
 	$locator = 'phase44-owner/phase44-' . $fixture['type'];
 	$tag     = 'v2.0.0';
@@ -511,6 +516,7 @@ function ran_booster_phase44_github_response( array $fixture, array $args, strin
 	);
 }
 
+/** @return array<string, mixed> */
 function ran_booster_phase44_prospective( string $root, string $site, string $type, string $mode ): array {
 	$package_root = 'ran-booster-p2-fixture-' . $type;
 	$archive      = ran_booster_phase44_archive( $site, $type, $package_root, '2.0.0', 'https://p2.invalid/fixtures/' . $type );
@@ -664,6 +670,11 @@ function ran_booster_phase44_mysql_ready( string $socket ): void {
 		} catch ( mysqli_sql_exception ) {
 		} usleep( 25000 );
 	} throw new RuntimeException( 'Isolated MySQL did not become ready.' ); }
+/**
+ * @param list<string> $cmd
+ * @param array<string, string>|null $env
+ * @return array{stdout: string|false, stderr: string|false}
+ */
 function ran_booster_phase44_command( array $cmd, string $cwd, ?array $env = null ): array {
 	// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open -- Standalone proof owns an isolated child process and its pipes; no WordPress process wrapper exists.
 	$p = proc_open(
@@ -695,6 +706,7 @@ function ran_booster_phase44_command( array $cmd, string $cwd, ?array $env = nul
 		'stdout' => $out,
 		'stderr' => $err,
 	); }
+/** @param list<string> $exclude */
 function ran_booster_phase44_copy_tree( string $source, string $target, array $exclude = array() ): void {
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 	if ( ! is_dir( $source ) || is_link( $source ) || ! mkdir( $target, 0700, true ) ) {

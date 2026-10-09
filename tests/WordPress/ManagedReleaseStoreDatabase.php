@@ -48,7 +48,10 @@ final class ManagedReleaseStoreDatabase {
 		return array( (object) $this->row );
 	}
 
-	/** @param array<string, mixed> $data @param array<string, mixed> $where */
+	/**
+	 * @param array<string, mixed> $data
+	 * @param array<string, mixed> $where
+	 */
 	public function update( string $table, array $data, array $where ): int {
 		$this->updates[] = array( $table, $data, $where );
 		foreach ( $where as $key => $value ) {

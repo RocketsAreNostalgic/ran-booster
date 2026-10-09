@@ -72,6 +72,7 @@ try {
 			return $result;
 		}
 
+		/** @param array<string, mixed> $data */
 		public function insert( string $table, array $data ): int|bool {
 			$result           = $this->database->insert( $table, $data );
 			$this->last_error = (string) $this->database->last_error;
@@ -79,6 +80,7 @@ try {
 			return $result;
 		}
 
+		/** @return array<array-key, mixed>|object|null */
 		public function get_results( string $query ): array|object|null {
 			if ( ! $this->barrier_reached && str_contains( $query, 'delivery_id' ) && str_contains( $query, 'FOR UPDATE' ) ) {
 				$this->barrier_reached = true;

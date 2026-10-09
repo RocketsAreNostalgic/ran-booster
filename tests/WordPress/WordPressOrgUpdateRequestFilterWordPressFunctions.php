@@ -9,6 +9,7 @@ function wp_json_encode( mixed $value ): string|false {
 	return json_encode( $value );
 }
 
+/** @return array{scheme?: string, host?: string, port?: int, user?: string, pass?: string, path?: string, query?: string, fragment?: string}|false */
 function wp_parse_url( string $url ): array|false {
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- This is the isolated test replacement for WordPress's parser.
 	return parse_url( $url );

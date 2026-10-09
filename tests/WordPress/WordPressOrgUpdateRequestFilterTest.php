@@ -87,6 +87,7 @@ final class WordPressOrgUpdateRequestFilterTest extends TestCase {
 		self::assertNotSame( $args, $result );
 	}
 
+	/** @return array<string, array{'plugins'|'themes', string}> */
 	public static function exact_update_endpoints(): array {
 		return array(
 			'plugin HTTPS'           => array( 'plugins', 'https://api.wordpress.org/plugins/update-check/1.1/' ),
@@ -104,6 +105,7 @@ final class WordPressOrgUpdateRequestFilterTest extends TestCase {
 		self::assertSame( $args, $this->filter_with_managed_records()->{$method}( $args, $url ) );
 	}
 
+	/** @return array<string, array{'plugins'|'themes', string}> */
 	public static function non_exact_update_endpoints(): array {
 		return array(
 			'endpoint prefix' => array( 'plugins', 'https://api.wordpress.org/plugins/update-check/1.1/extra' ),

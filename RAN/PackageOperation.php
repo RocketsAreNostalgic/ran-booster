@@ -199,6 +199,9 @@ final readonly class PackageOperation {
 		return 'update' === $this->operation || ( 'install' === $this->operation && ! $this->link_only );
 	}
 
+	/**
+	 * @phpstan-assert-if-true array{provider: string, provider_repository_id: string, repository: string, branch: string, credential_id: string, subdirectory: string, private: bool, package_slug: string, deployment_policy: DeploymentPolicy, source: PackageSource, source_revision: int} $this->expected_package
+	 */
 	public function has_expected_package(): bool {
 		return 11 === count( $this->expected_package ) && ! in_array( null, $this->expected_package, true );
 	}

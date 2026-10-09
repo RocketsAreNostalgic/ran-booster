@@ -270,10 +270,12 @@ final readonly class PackageOperationService {
 	}
 
 	private function matches_expected_package( PackageOperation $operation, Package $package ): bool {
+		if ( ! $operation->has_expected_package() ) {
+			return false;
+		}
 		$expected = $operation->expected_package;
 
-		return $operation->has_expected_package()
-			&& $package->get_provider_code() === $expected['provider']
+		return $package->get_provider_code() === $expected['provider']
 			&& hash_equals( (string) $package->get_provider_repository_id(), (string) $expected['provider_repository_id'] )
 			&& hash_equals( (string) $package->get_repository(), (string) $expected['repository'] )
 			&& hash_equals( (string) $package->get_branch(), (string) $expected['branch'] )

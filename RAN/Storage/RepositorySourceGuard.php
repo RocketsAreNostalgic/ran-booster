@@ -58,7 +58,7 @@ final class RepositorySourceGuard {
 	}
 
 	/**
-	 * @param list<object> $rows
+	 * @param array<array-key, object> $rows
 	 * @return array{allowed: bool, code: string, relationship_count: int, release_count: int, owner_type: ?int, owner_package: ?string, other_packages: list<array{type:int,identifier:string}>}
 	 */
 	public static function assess_rows(
@@ -98,6 +98,9 @@ final class RepositorySourceGuard {
 			}
 		}
 
+		// Every row survived the complete validation loop and its type was normalized.
+		/** @var array<array-key, object{type: 1|2, package: non-empty-string, source: 'branch'|'release_asset', provider: non-empty-string, provider_repository_id: non-empty-string}> $rows */
+		/** @var object{type: 1|2, package: non-empty-string, source: 'branch'|'release_asset', provider: non-empty-string, provider_repository_id: non-empty-string}|null $self */
 		$others = array();
 		foreach ( $rows as $row ) {
 			if ( $self_type !== $row->type || ! hash_equals( $self_package, $row->package ) ) {

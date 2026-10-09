@@ -866,7 +866,8 @@ class SecretsFile {
 	public function assert_managed_storage_deletable(): void {
 		$key = $this->load_key( false );
 
-		if ( ! is_string( $this->path ) || '' === $this->path ) {
+		$path = $this->path;
+		if ( ! is_string( $path ) || '' === $path ) {
 			if ( null === $key ) {
 				return;
 			}
@@ -878,7 +879,7 @@ class SecretsFile {
 		$lock_path = $this->lock_path();
 		$has_lock  = file_exists( $lock_path ) || is_link( $lock_path );
 		if ( ! $has_file && null === $key && ! $has_lock ) {
-			$directory = dirname( $this->path );
+			$directory = dirname( $path );
 			if ( file_exists( $directory ) || is_link( $directory ) ) {
 				$this->assert_configured_location();
 			}
@@ -930,7 +931,8 @@ class SecretsFile {
 
 		$key = $this->load_key( false );
 
-		if ( ! is_string( $this->path ) || '' === $this->path ) {
+		$path = $this->path;
+		if ( ! is_string( $path ) || '' === $path ) {
 			if ( null === $key ) {
 				return;
 			}
@@ -942,7 +944,7 @@ class SecretsFile {
 		$lock_path = $this->lock_path();
 		$has_lock  = file_exists( $lock_path ) || is_link( $lock_path );
 		if ( ! $has_file && null === $key && ! $has_lock ) {
-			$directory = dirname( $this->path );
+			$directory = dirname( $path );
 			if ( file_exists( $directory ) || is_link( $directory ) ) {
 				$this->assert_configured_location();
 			}
@@ -1892,6 +1894,7 @@ class SecretsFile {
 
 	/**
 	 * @template TResult
+	 * @param LOCK_EX|LOCK_SH $operation
 	 * @param callable(resource): TResult $callback
 	 * @return TResult
 	 */
@@ -1960,6 +1963,7 @@ class SecretsFile {
 		}
 	}
 
+	/** @phpstan-assert non-empty-string $this->path */
 	private function assert_configured_location(): void {
 		if ( ! is_string( $this->path ) || '' === $this->path ) {
 			throw $this->unavailable( 'The encrypted Booster secrets path is not configured.' );
@@ -2049,6 +2053,7 @@ class SecretsFile {
 		#[\SensitiveParameter] string $key
 	): void {
 		$this->assert_configured_location();
+		$path              = $this->path;
 		$previous_contents = $this->has_file() ? $this->read_bounded_file() : null;
 
 		try {
@@ -2059,14 +2064,14 @@ class SecretsFile {
 
 		$replacement_completed = false;
 		try {
-			$this->replace_ciphertext( $contents );
+			$this->replace_ciphertext( $path, $contents );
 			$replacement_completed = true;
-			clearstatcache( true, $this->path );
+			clearstatcache( true, $path );
 			$this->read_encrypted_document( $key );
 		} catch ( \Throwable $exception ) {
 			if ( $replacement_completed ) {
 				try {
-					$this->restore_previous_ciphertext( $previous_contents, $key );
+					$this->restore_previous_ciphertext( $path, $previous_contents, $key );
 				} catch ( \Throwable ) {
 					throw $this->unavailable( 'The failed Booster secrets update could not restore the previous encrypted file.' );
 				}
@@ -2076,8 +2081,8 @@ class SecretsFile {
 		}
 	}
 
-	private function replace_ciphertext( #[\SensitiveParameter] string $contents ): void {
-		$directory = dirname( $this->path );
+	private function replace_ciphertext( string $path, #[\SensitiveParameter] string $contents ): void {
+		$directory = dirname( $path );
 		$temporary = tempnam( $directory, '.ran-booster-' );
 		if ( false === $temporary ) {
 			throw $this->unavailable( 'Could not create a temporary encrypted Booster secrets file.' );
@@ -2119,7 +2124,7 @@ class SecretsFile {
 				fclose( $handle );
 			}
 
-			if ( ! $this->replace_file( $temporary, $this->path ) ) {
+			if ( ! $this->replace_file( $temporary, $path ) ) {
 				throw $this->unavailable( 'Could not replace the encrypted Booster secrets file.' );
 			}
 			$temporary = '';
@@ -2132,27 +2137,28 @@ class SecretsFile {
 	}
 
 	private function restore_previous_ciphertext(
+		string $path,
 		#[\SensitiveParameter] ?string $previous_contents,
 		#[\SensitiveParameter] string $key
 	): void {
 		if ( null !== $previous_contents ) {
-			$this->replace_ciphertext( $previous_contents );
-			clearstatcache( true, $this->path );
+			$this->replace_ciphertext( $path, $previous_contents );
+			clearstatcache( true, $path );
 			$this->read_encrypted_document( $key );
 			return;
 		}
 
-		$stat = lstat( $this->path );
+		$stat = lstat( $path );
 		if ( false === $stat
 			|| 0100000 !== ( $stat['mode'] & 0170000 )
 			|| 1 !== $stat['nlink']
 			|| ! $this->owned_by_process( $stat )
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Delete only the exact local storage entry after the surrounding native ownership, type and identity checks.
-			|| ! unlink( $this->path )
+			|| ! unlink( $path )
 		) {
 			throw $this->unavailable( 'Could not remove the failed encrypted Booster secrets file.' );
 		}
-		clearstatcache( true, $this->path );
+		clearstatcache( true, $path );
 	}
 
 	/** @param array<string, mixed> $document */

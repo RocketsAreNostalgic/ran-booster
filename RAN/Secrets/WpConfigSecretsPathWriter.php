@@ -500,7 +500,7 @@ class WpConfigSecretsPathWriter {
 
 	/**
 	 * @param array{contents: string, dev: int, ino: int, mode: int, uid: int, gid: int, nlink: int, size: int, mtime: int, ctime: int} $original
-	 * @param array<int|string, int> $replaced
+	 * @param array{dev: int, ino: int} $replaced
 	 */
 	private function attempt_rollback( string $path, array $original, array $replaced ): void {
 		try {

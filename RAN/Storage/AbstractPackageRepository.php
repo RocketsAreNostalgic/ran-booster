@@ -629,7 +629,7 @@ abstract class AbstractPackageRepository {
 		}
 	}
 
-	/** @return array{0: PackageModel, 1: array<string, mixed>} */
+	/** @return array{0: PackageModel<array{package: mixed}>, 1: array<string, mixed>} */
 	private function package_record( Package $package ): array {
 		$repository = $package->get_repository();
 		$model      = new PackageModel(

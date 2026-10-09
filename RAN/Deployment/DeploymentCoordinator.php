@@ -32,6 +32,8 @@ class DeploymentCoordinator {
 
 	private WordPressCorePackageExecutor $branch_executor;
 
+	private RepositorySourceGuard $source_guard;
+
 	public function __construct(
 		private DeploymentAttemptRepository $attempts,
 		private PluginRepository $plugins,
@@ -41,11 +43,11 @@ class DeploymentCoordinator {
 		private string $maintenance_path,
 		private WordPressUpdaterLock $updater_lock,
 		private ?DeploymentFailureNotifier $failure_notifier = null,
-		private ?RepositorySourceGuard $source_guard = null,
+		?RepositorySourceGuard $source_guard = null,
 		?WordPressCorePackageExecutor $branch_executor = null
 	) {
 		$this->branch_executor = $branch_executor ?? new WordPressCorePackageExecutor();
-		$this->source_guard  ??= new RepositorySourceGuard();
+		$this->source_guard    = $source_guard ?? new RepositorySourceGuard();
 		if ( '' === trim( $maintenance_path ) ) {
 			throw new RuntimeException( 'The WordPress maintenance path is invalid.' );
 		}
@@ -142,9 +144,11 @@ class DeploymentCoordinator {
 	}
 
 	private function assert_submitted_snapshot( PackageOperation $command, Package $package ): void {
+		if ( ! $command->has_expected_package() ) {
+			throw new RuntimeException( 'The managed package changed after this form was opened.' );
+		}
 		$expected = $command->expected_package;
-		if ( ! $command->has_expected_package()
-			|| $package->get_provider_code() !== $expected['provider']
+		if ( $package->get_provider_code() !== $expected['provider']
 			|| ! hash_equals( (string) $package->get_provider_repository_id(), (string) $expected['provider_repository_id'] )
 			|| ! hash_equals( (string) $package->get_repository(), (string) $expected['repository'] )
 			|| ! hash_equals( (string) $package->get_branch(), (string) $expected['branch'] )

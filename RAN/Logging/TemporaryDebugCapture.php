@@ -474,6 +474,11 @@ final class TemporaryDebugCapture {
 	 * @param array<string, mixed> $document
 	 */
 	private function write_document( array $document, bool $expected_existing ): void {
+		$path = $this->path;
+		if ( null === $path ) {
+			throw new RuntimeException( 'The Booster debug capture location is not available.' );
+		}
+
 		$contents = $this->encode_document( $document );
 		$size     = strlen( $contents );
 		while ( $size > self::MAX_FILE_BYTES && array() !== $document['entries'] ) {
@@ -485,7 +490,7 @@ final class TemporaryDebugCapture {
 			throw new RuntimeException( 'The Booster debug capture metadata exceeds its size limit.' );
 		}
 
-		$directory = dirname( $this->path );
+		$directory = dirname( $path );
 		$temporary = tempnam( $directory, '.ran-booster-debug-' );
 		if ( false === $temporary ) {
 			throw new RuntimeException( 'Could not create a temporary Booster debug capture.' );
@@ -520,7 +525,7 @@ final class TemporaryDebugCapture {
 			}
 
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- Same-directory native rename supplies the atomic replacement required by the verified local-file transaction.
-			if ( ! rename( $temporary, $this->path ) ) {
+			if ( ! rename( $temporary, $path ) ) {
 				throw new RuntimeException( 'Could not replace the Booster debug capture.' );
 			}
 
@@ -591,8 +596,13 @@ final class TemporaryDebugCapture {
 	 * Delete the capture after its caller validates the ownership marker.
 	 */
 	private function delete_owned_file(): void {
+		$path = $this->path;
+		if ( null === $path ) {
+			throw new RuntimeException( 'The Booster debug capture location is not available.' );
+		}
+
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Delete only the exact local storage entry after the surrounding native ownership, type and identity checks.
-		if ( is_link( $this->path ) || ! unlink( $this->path ) ) {
+		if ( is_link( $path ) || ! unlink( $path ) ) {
 			throw new RuntimeException( 'Could not delete the Booster debug capture.' );
 		}
 	}

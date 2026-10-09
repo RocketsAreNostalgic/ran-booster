@@ -572,6 +572,7 @@ final class ReleaseWorkflowPresenter {
 			&& $status->source_revision() === $record->source_revision();
 	}
 
+	/** @phpstan-assert-if-true =\RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus $record */
 	private function record_matches_package_status( ?\RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus $record, ReleaseTrackingStatus $status ): bool {
 		return $record instanceof \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus
 			&& $record->record_occupied()
@@ -614,38 +615,38 @@ final class ReleaseWorkflowPresenter {
 			'provider_workflow_url' => $state?->provider_workflow_url() ?? '',
 			'write_guidance'        => $write_guidance,
 		);
-		$reason = null === $provider
-			? __( 'This provider claims release workflow management but does not implement all required release capabilities. Update or correct the provider plugin; no operation is available.', 'ran-booster' )
-			: ( null === $state ? __( 'The provider could not supply local workflow status. Retry after checking the provider plugin.', 'ran-booster' ) : '' );
-		if ( '' === $reason && ! $status->eligible() ) {
+		$reason = null;
+		if ( null === $provider ) {
+			$reason = __( 'This provider claims release workflow management but does not implement all required release capabilities. Update or correct the provider plugin; no operation is available.', 'ran-booster' );
+		} elseif ( null === $state ) {
+			$reason = __( 'The provider could not supply local workflow status. Retry after checking the provider plugin.', 'ran-booster' );
+		} elseif ( ! $status->eligible() ) {
 			$reason = $this->workflow_unavailable_reason( $status );
-		}
-		if ( '' === $reason && ! $source_guard['allowed'] ) {
+		} elseif ( ! $source_guard['allowed'] ) {
 			$reason = 'repository_source_unavailable' === ( $source_guard['code'] ?? '' )
 				? __( 'Booster could not safely read this package\'s repository source relationship. Check package storage and retry.', 'ran-booster' )
 				: __( 'Releases require a repository used by only one managed package. Review the repository package list.', 'ran-booster' );
-		}
-		if ( '' === $reason && $state->record_occupied() && ! $this->record_matches_package_status( $state, $status ) ) {
+		} elseif ( $state->record_occupied() && ! $this->record_matches_package_status( $state, $status ) ) {
 			$reason = __( 'A workflow record belongs to a different package. Review the recorded repository state before setup.', 'ran-booster' );
 		}
 		$credentials = $state?->credential_choices() ?? array();
 		$channel     = 'stable';
 		$preview     = null;
-		if ( '' === $reason && '' !== $preview_key ) {
+		if ( null === $reason && null !== $provider && '' !== $preview_key ) {
 			$preview = $this->request_boundary( fn () => $provider->workflow_preview( ReleaseWorkflowProviderProjection::target( $status ), $preview_key ), null );
 			if ( null !== $preview && ( $preview->key() !== $preview_key || $preview->provider_code() !== $provider_code || $preview->repository_id() !== $status->provider_repository_id() ) ) {
 				$preview = null;
 			}
 		}
 		$forms = array( 'inspect' => $this->workflow_form( 'inspect', $status, '', '', $channel, $credentials, $anonymous ) );
-		if ( '' !== $reason || null === $forms['inspect'] ) {
-			$forms                           = $this->unavailable_workflow_view( $reason, anonymous_inspection: $anonymous )['forms'];
+		if ( null !== $reason || null === $forms['inspect'] ) {
+			$forms                           = $this->unavailable_workflow_view( $reason ?? '', anonymous_inspection: $anonymous )['forms'];
 			$forms['inspect']['credentials'] = $credentials;
 		}
 		if ( null !== $preview ) {
 			$forms['setup'] = $this->workflow_form( 'setup', $status, $preview_key, $preview->confirmation(), $preview->channel(), $credentials, $anonymous );
 		}
-		if ( '' === $reason && $this->record_matches_package_status( $state, $status ) ) {
+		if ( null === $reason && $this->record_matches_package_status( $state, $status ) ) {
 			$forms['outcome'] = $this->workflow_form( 'outcome', $status, credentials: $credentials, anonymous_inspection: $anonymous );
 		}
 		foreach ( $forms as &$form ) {
@@ -672,8 +673,8 @@ final class ReleaseWorkflowPresenter {
 			'correlation_reference'  => $reference,
 			'result_message'         => $message,
 			'result_remediation'     => $remediation,
-			'unavailable'            => '' !== $reason,
-			'unavailable_reason'     => $reason,
+			'unavailable'            => null !== $reason,
+			'unavailable_reason'     => $reason ?? '',
 			'preview'                => null === $preview ? null : $preview->summary() + array(
 				'kind'    => $preview->kind(),
 				'changes' => $preview->changed_paths(),
@@ -685,7 +686,7 @@ final class ReleaseWorkflowPresenter {
 				'kind'        => $state->observation_kind(),
 				'recorded_at' => $state->observed_at(),
 			) : null,
-			'automation_state'       => '' !== $reason ? 'blocked' : ( $this->record_matches_package_status( $state, $status ) ? 'setup_recorded' : ( null !== $preview ? 'preview' : 'ready' ) ),
+			'automation_state'       => null !== $reason ? 'blocked' : ( $this->record_matches_package_status( $state, $status ) ? 'setup_recorded' : ( null !== $preview ? 'preview' : 'ready' ) ),
 			'forms'                  => array_filter( $forms, 'is_array' ),
 		);
 	}

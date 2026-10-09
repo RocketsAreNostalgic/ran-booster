@@ -6,10 +6,14 @@ namespace RAN\RepositoryProvider;
 
 use InvalidArgumentException;
 
+/**
+ * @template-covariant TRepositoryId of string|null = string|null
+ */
 final readonly class RepositoryReference {
 	public string $locator;
 	public bool $private;
 
+	/** @param TRepositoryId $provider_repository_id */
 	public function __construct(
 		string $locator,
 		public ?string $provider_repository_id,
@@ -33,6 +37,7 @@ final readonly class RepositoryReference {
 	}
 
 
+	/** @return self<TRepositoryId> */
 	public function with_credential( ?string $credential_id ): self {
 		return new self(
 			$this->locator,

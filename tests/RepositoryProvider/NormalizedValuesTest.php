@@ -84,6 +84,19 @@ final class NormalizedValuesTest extends TestCase {
 		}
 	}
 
+	public function test_reference_credential_changes_preserve_optional_and_opaque_repository_identity(): void {
+		foreach ( array( null, 'fixture:group/subgroup/package' ) as $repository_id ) {
+			$reference = new RepositoryReference( 'group/subgroup/package', $repository_id, true, null );
+			$updated   = $reference->with_credential( 'credential-one' );
+
+			self::assertSame( $repository_id, $updated->provider_repository_id );
+			self::assertSame( $reference->locator, $updated->locator );
+			self::assertTrue( $updated->private );
+			self::assertSame( 'credential-one', $updated->credential_id );
+			self::assertNull( $reference->credential_id );
+		}
+	}
+
 	public function test_repository_contracts_keep_opaque_nested_locators_without_rewriting_provider_data(): void {
 		$request    = new RepositoryLookupRequest(
 			' group/subgroup/package '

@@ -68,6 +68,8 @@ class ManagedReleaseStore {
 			return false;
 		}
 
+		$this->lifecycle?->require_ready();
+
 		if ( false === $this->database->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
 			|| false === $this->database->query( 'START TRANSACTION' ) ) {
 			return false;
@@ -170,6 +172,8 @@ class ManagedReleaseStore {
 			|| ! in_array( $channel, array( 'stable', 'prerelease' ), true ) ) {
 			return false;
 		}
+
+		$this->lifecycle?->require_ready();
 
 		if ( false === $this->database->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
 			|| false === $this->database->query( 'START TRANSACTION' ) ) {

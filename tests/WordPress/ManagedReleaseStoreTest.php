@@ -8,9 +8,12 @@ require_once __DIR__ . '/ManagedReleaseRuntimeWordPressFunctions.php';
 require_once __DIR__ . '/ManagedReleaseStoreDatabase.php';
 require_once dirname( __DIR__ ) . '/Portability/WpPusherCoexistenceWordPressFunctions.php';
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\PackageSource;
 use RAN\Storage\Database;
+use RAN\Storage\DatabaseCompatibilityFailure;
+use RAN\Storage\DatabaseLifecycleFailure;
 use RAN\WordPress\ManagedReleaseConfiguration;
 use RAN\WordPress\ManagedReleaseRepositorySourceUnavailable;
 use RAN\WordPress\ManagedReleaseStore;
@@ -18,6 +21,53 @@ use RAN\WordPress\ManagedReleaseSubdirectoryNotSupported;
 use RuntimeException;
 
 final class ManagedReleaseStoreTest extends TestCase {
+
+	/** @return iterable<string, array{bool, RuntimeException}> */
+	public static function storage_failures(): iterable {
+		foreach ( array(
+			'transition' => false,
+			'channel'    => true,
+		) as $operation => $channel ) {
+			yield $operation . ' compatibility' => array( $channel, new DatabaseCompatibilityFailure( 'unsupported_version' ) );
+			yield $operation . ' lifecycle' => array( $channel, new DatabaseLifecycleFailure( 'schema_operation_failed' ) );
+		}
+	}
+
+	#[DataProvider( 'storage_failures' )]
+	public function test_unready_storage_rejects_mutation_before_transaction_commands( bool $channel, RuntimeException $failure ): void {
+		$database  = new ManagedReleaseStoreDatabase( array() );
+		$lifecycle = $this->createMock( Database::class );
+		$lifecycle->expects( self::once() )->method( 'require_ready' )->willThrowException( $failure );
+		$store = new ManagedReleaseStore( $database, $lifecycle );
+
+		try {
+			if ( $channel ) {
+				$store->change_channel( 'plugin', 'installed/example.php', 4, 'prerelease', 7 );
+			} else {
+				$store->transition( 'plugin', 'installed/example.php', PackageSource::RELEASE_ASSET, 4, PackageSource::BRANCH, null, 7 );
+			}
+			self::fail( 'Unready storage must reject the mutation.' );
+		} catch ( RuntimeException $caught ) {
+			self::assertSame( $failure, $caught );
+		}
+
+		self::assertSame( array(), $database->queries );
+		self::assertSame( 0, $database->reads );
+		self::assertSame( array(), $database->updates );
+	}
+
+	public function test_invalid_revision_does_not_prepare_storage_or_start_a_transaction(): void {
+		$database  = new ManagedReleaseStoreDatabase( array() );
+		$lifecycle = $this->createMock( Database::class );
+		$lifecycle->expects( self::never() )->method( 'require_ready' );
+		$store = new ManagedReleaseStore( $database, $lifecycle );
+
+		self::assertFalse( $store->transition( 'plugin', 'installed/example.php', PackageSource::RELEASE_ASSET, 0, PackageSource::BRANCH, null, 7 ) );
+		self::assertFalse( $store->change_channel( 'plugin', 'installed/example.php', 0, 'prerelease', 7 ) );
+		self::assertSame( array(), $database->queries );
+		self::assertSame( 0, $database->reads );
+		self::assertSame( array(), $database->updates );
+	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
@@ -57,7 +107,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 	}
 
 	public function test_exact_source_revision_cas_preserves_policy_and_verifies_the_write(): void {
-		$database  = new ManagedReleaseStoreDatabase(
+		$database        = new ManagedReleaseStoreDatabase(
 			array(
 				'type'                  => 1,
 				'package'               => 'installed/example.php',
@@ -70,8 +120,15 @@ final class ManagedReleaseStoreTest extends TestCase {
 				'release_configuration' => null,
 			)
 		);
-		$lifecycle = $this->createMock( Database::class );
-		$lifecycle->expects( self::exactly( 4 ) )->method( 'require_ready' );
+		$lifecycle       = $this->createMock( Database::class );
+		$readiness_calls = 0;
+		$lifecycle->expects( self::exactly( 5 ) )->method( 'require_ready' )->willReturnCallback(
+			static function () use ( $database, &$readiness_calls ): void {
+				if ( 0 === $readiness_calls++ ) {
+					self::assertSame( array(), $database->queries, 'Schema readiness must precede transaction commands.' );
+				}
+			}
+		);
 		$store         = new ManagedReleaseStore(
 			$database,
 			$lifecycle,
@@ -285,12 +342,12 @@ final class ManagedReleaseStoreTest extends TestCase {
 	}
 
 	public function test_same_source_channel_cas_preserves_release_identity_and_resets_automatic(): void {
-		$configuration = new ManagedReleaseConfiguration(
+		$configuration   = new ManagedReleaseConfiguration(
 			'canonical-example',
 			'example.php',
 			'prerelease'
 		);
-		$database      = new ManagedReleaseStoreDatabase(
+		$database        = new ManagedReleaseStoreDatabase(
 			array(
 				'type'                  => 1,
 				'package'               => 'installed/example.php',
@@ -303,8 +360,15 @@ final class ManagedReleaseStoreTest extends TestCase {
 				'release_configuration' => $configuration->to_json(),
 			)
 		);
-		$lifecycle     = $this->createMock( Database::class );
-		$lifecycle->expects( self::exactly( 3 ) )->method( 'require_ready' );
+		$lifecycle       = $this->createMock( Database::class );
+		$readiness_calls = 0;
+		$lifecycle->expects( self::exactly( 4 ) )->method( 'require_ready' )->willReturnCallback(
+			static function () use ( $database, &$readiness_calls ): void {
+				if ( 0 === $readiness_calls++ ) {
+					self::assertSame( array(), $database->queries, 'Schema readiness must precede transaction commands.' );
+				}
+			}
+		);
 		$store = new ManagedReleaseStore(
 			$database,
 			$lifecycle,

@@ -42,10 +42,16 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 		self::assertSame( EncryptedSecretsEnvelopeCodec::FORMAT, $decoded['format'] );
 		self::assertSame( EncryptedSecretsEnvelopeCodec::VERSION, $decoded['version'] );
 		self::assertSame( EncryptedSecretsEnvelopeCodec::ALGORITHM, $decoded['algorithm'] );
-		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode, WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
-		self::assertSame( base64_encode( base64_decode( $decoded['nonce'], true ) ), $decoded['nonce'] );
-		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode, WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
-		self::assertSame( base64_encode( base64_decode( $decoded['ciphertext'], true ) ), $decoded['ciphertext'] );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
+		$nonce = base64_decode( $decoded['nonce'], true );
+		self::assertIsString( $nonce );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Verify the canonical representation after successful decoding.
+		self::assertSame( base64_encode( $nonce ), $decoded['nonce'] );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
+		$ciphertext = base64_decode( $decoded['ciphertext'], true );
+		self::assertIsString( $ciphertext );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Verify the canonical representation after successful decoding.
+		self::assertSame( base64_encode( $ciphertext ), $decoded['ciphertext'] );
 	}
 
 	public function test_every_write_uses_afresh_nonce(): void {
@@ -158,7 +164,8 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 		$envelope = $codec->encrypt( self::PLAINTEXT, self::KEY );
 		$value    = json_decode( $envelope, true, 4, JSON_THROW_ON_ERROR );
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
-		$bytes    = base64_decode( $value['ciphertext'], true );
+		$bytes = base64_decode( $value['ciphertext'], true );
+		self::assertIsString( $bytes );
 		$bytes[0] = chr( ord( $bytes[0] ) ^ 1 );
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 		$value['ciphertext'] = base64_encode( $bytes );
@@ -193,7 +200,8 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 		$codec = new EncryptedSecretsEnvelopeCodec();
 		$value = json_decode( $codec->encrypt( self::PLAINTEXT, self::KEY ), true, 4, JSON_THROW_ON_ERROR );
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
-		$bytes            = base64_decode( $value[ $field ], true );
+		$bytes = base64_decode( $value[ $field ], true );
+		self::assertIsString( $bytes );
 		$offset           = $offset < 0 ? strlen( $bytes ) + $offset : $offset;
 		$bytes[ $offset ] = chr( ord( $bytes[ $offset ] ) ^ 1 );
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
@@ -219,8 +227,10 @@ final class EncryptedSecretsEnvelopeCodecTest extends TestCase {
 		$value    = json_decode( $envelope, true, 4, JSON_THROW_ON_ERROR );
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 		$nonce = base64_decode( $value['nonce'], true );
+		self::assertIsString( $nonce );
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Exercise the exact base64 representation of the encrypted envelope/key contract, including malformed inputs.
 		$ciphertext = base64_decode( $value['ciphertext'], true );
+		self::assertIsString( $ciphertext );
 
 		self::assertFalse(
 			sodium_crypto_aead_xchacha20poly1305_ietf_decrypt(

@@ -347,6 +347,7 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( 'Manage repository credentials', $html );
 		self::assertSame( 3, substr_count( $html, 'name="credential_decisions[0][action]"' ) );
 		self::assertSame( 1, preg_match( '/<fieldset class="ran-booster-portability__credential-row ran-booster-portability__credential-card"[\s\S]+?<\/fieldset>/', $html, $card ) );
+		self::assertTrue( array_key_exists( 0, $card ) );
 		self::assertSame( 1, substr_count( $card[0], 'value="import"' ) );
 		self::assertSame( 1, substr_count( $card[0], 'value="target"' ) );
 		self::assertSame( 1, substr_count( $card[0], 'value="leave"' ) );

@@ -331,10 +331,24 @@ final class BoosterAssetsTest extends TestCase {
 				'ran-booster-admin-shell' === $handle ? '/assets/' . $file : '/assets/ran-booster/' . $file,
 				$registered_style['source']
 			);
-			self::assertIsInt( $registered_style['version'] );
+			self::assertSame(
+				(string) filemtime( dirname( __DIR__, 2 ) . '/assets/' . ( 'ran-booster-admin-shell' === $handle ? $file : 'ran-booster/' . $file ) ),
+				$registered_style['version']
+			);
 			self::assertSame( null === $previous_handle ? array() : array( $previous_handle ), $registered_style['dependencies'] );
 			$previous_handle = $handle;
 		}
+	}
+
+	public function test_asset_versions_preserve_query_tokens_and_missing_file_fallback(): void {
+		$booster = $this->booster();
+		$version = new \ReflectionMethod( Booster::class, 'asset_version' );
+		$path    = dirname( __DIR__, 2 ) . '/assets/ran-booster.js';
+		$stamp   = filemtime( $path );
+
+		self::assertIsInt( $stamp );
+		self::assertSame( http_build_query( array( 'ver' => $stamp ) ), http_build_query( array( 'ver' => $version->invoke( $booster, $path ) ) ) );
+		self::assertNull( $version->invoke( $booster, $path . '.missing' ) );
 	}
 
 	public function test_documentation_tab_receives_top_level_and_page_specific_styles(): void {

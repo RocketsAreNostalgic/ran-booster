@@ -152,7 +152,7 @@ $ran_booster_clean_streams = static function () use ( &$ran_booster_streams, $ra
 	foreach ( $ran_booster_streams as $path ) {
 		$ran_booster_assert( ! file_exists( $path ) && ! is_link( $path ), 'Public updater retained an acquired ZIP.' ); }
 };
-$ran_booster_successful    = static function ( object $ran_booster_result, string $code ) use ( $ran_booster_assert ): void {
+$ran_booster_successful    = static function ( RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult $ran_booster_result, string $code ) use ( $ran_booster_assert ): void {
 	$ran_booster_assert( $ran_booster_result->successful() && $code === $ran_booster_result->code(), 'Public prospective result: ' . $ran_booster_result->code() . ', expected ' . $code );
 };
 try {

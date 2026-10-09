@@ -33,16 +33,17 @@ final class CoreContainer {
 	 * @return mixed Factories may return any value; reflected services are objects.
 	 */
 	public function make( $alias ) {
-		if ( isset( $this->services[ $alias ] ) && is_callable( $this->services[ $alias ] ) ) {
-			return call_user_func_array( $this->services[ $alias ], array( $this ) );
+		$concrete = $this->services[ $alias ] ?? null;
+		if ( is_callable( $concrete ) ) {
+			return call_user_func_array( $concrete, array( $this ) );
 		}
 
-		if ( isset( $this->services[ $alias ] ) && is_object( $this->services[ $alias ] ) ) {
-			return $this->services[ $alias ];
+		if ( is_object( $concrete ) ) {
+			return $concrete;
 		}
 
-		if ( isset( $this->services[ $alias ] ) && class_exists( $this->services[ $alias ] ) ) {
-			return $this->resolve( $this->services[ $alias ] );
+		if ( null !== $concrete && class_exists( $concrete ) ) {
+			return $this->resolve( $concrete );
 		}
 
 		return $this->resolve( $alias );

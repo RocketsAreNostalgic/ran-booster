@@ -471,12 +471,12 @@ class Booster {
 		$package_script_path = trailingslashit( $this->booster_path ) . 'assets/ran-booster-packages.js';
 
 		$repository_picker_script_path    = trailingslashit( $this->booster_path ) . 'assets/ran-booster-repository-picker.js';
-		$script_version                   = file_exists( $script_path ) ? filemtime( $script_path ) : null;
-		$secure_inputs_script_version     = file_exists( $secure_inputs_script_path ) ? filemtime( $secure_inputs_script_path ) : null;
-		$portability_script_version       = file_exists( $portability_script_path ) ? filemtime( $portability_script_path ) : null;
-		$enhanced_mutation_script_version = file_exists( $enhanced_mutation_script_path ) ? filemtime( $enhanced_mutation_script_path ) : null;
-		$package_script_version           = file_exists( $package_script_path ) ? filemtime( $package_script_path ) : null;
-		$repository_picker_script_version = file_exists( $repository_picker_script_path ) ? filemtime( $repository_picker_script_path ) : null;
+		$script_version                   = $this->asset_version( $script_path );
+		$secure_inputs_script_version     = $this->asset_version( $secure_inputs_script_path );
+		$portability_script_version       = $this->asset_version( $portability_script_path );
+		$enhanced_mutation_script_version = $this->asset_version( $enhanced_mutation_script_path );
+		$package_script_version           = $this->asset_version( $package_script_path );
+		$repository_picker_script_version = $this->asset_version( $repository_picker_script_path );
 		$script_dependencies              = array();
 		$requested_tab                    = null;
 		$is_transporter_page              = 'ran-booster_page_ran-booster-transporter' === $hook;
@@ -501,7 +501,7 @@ class Booster {
 		if ( $should_enqueue_htmx ) {
 
 			$htmx_path    = trailingslashit( $this->booster_path ) . 'assets/lib/htmx/htmx.min.js';
-			$htmx_version = file_exists( $htmx_path ) ? filemtime( $htmx_path ) : null;
+			$htmx_version = $this->asset_version( $htmx_path );
 
 			wp_register_script(
 				'ran-booster-htmx',
@@ -521,7 +521,7 @@ class Booster {
 			'ran-booster-admin-shell',
 			trailingslashit( $this->booster_url ) . 'assets/ran-admin-shell.css',
 			array(),
-			file_exists( $admin_shell_style_path ) ? filemtime( $admin_shell_style_path ) : null
+			$this->asset_version( $admin_shell_style_path )
 		);
 		wp_enqueue_style( 'ran-booster-admin-shell' );
 		$style_dependencies[] = 'ran-booster-admin-shell';
@@ -536,7 +536,7 @@ class Booster {
 				$style_handle,
 				trailingslashit( $this->booster_url ) . 'assets/ran-booster/' . $style_component,
 				$style_dependencies,
-				file_exists( $style_component_path ) ? filemtime( $style_component_path ) : null
+				$this->asset_version( $style_component_path )
 			);
 			$style_dependencies = array( $style_handle );
 		}
@@ -544,7 +544,7 @@ class Booster {
 		if ( 'ran-booster_page_ran-booster-extensions' === $hook ) {
 
 			$extension_details_path    = trailingslashit( $this->booster_path ) . 'assets/ran-booster-extension-details.js';
-			$extension_details_version = file_exists( $extension_details_path ) ? filemtime( $extension_details_path ) : null;
+			$extension_details_version = $this->asset_version( $extension_details_path );
 
 			wp_enqueue_style( 'thickbox' );
 			wp_enqueue_script( 'thickbox' );
@@ -602,7 +602,7 @@ class Booster {
 		if ( 'toplevel_page_ran-booster' === $hook || $is_transporter_page ) {
 
 			$onboarding_path    = trailingslashit( $this->booster_path ) . 'assets/ran-booster-onboarding.css';
-			$onboarding_version = file_exists( $onboarding_path ) ? filemtime( $onboarding_path ) : null;
+			$onboarding_version = $this->asset_version( $onboarding_path );
 
 			wp_register_style( 'ran-booster-onboarding', trailingslashit( $this->booster_url ) . 'assets/ran-booster-onboarding.css', array( 'ran-booster-styles' ), $onboarding_version );
 			wp_enqueue_style( 'ran-booster-onboarding' );
@@ -610,7 +610,7 @@ class Booster {
 			if ( 'documentation' === $requested_tab ) {
 
 				$documentation_path    = trailingslashit( $this->booster_path ) . 'assets/ran-booster-documentation.css';
-				$documentation_version = file_exists( $documentation_path ) ? filemtime( $documentation_path ) : null;
+				$documentation_version = $this->asset_version( $documentation_path );
 
 				wp_register_style( 'ran-booster-documentation', trailingslashit( $this->booster_url ) . 'assets/ran-booster-documentation.css', array( 'ran-booster-styles' ), $documentation_version );
 				wp_enqueue_style( 'ran-booster-documentation' );
@@ -745,7 +745,7 @@ class Booster {
 		}
 
 		$script_path    = trailingslashit( $this->booster_path ) . 'assets/credential-expiry-notice.js';
-		$script_version = file_exists( $script_path ) ? filemtime( $script_path ) : null;
+		$script_version = $this->asset_version( $script_path );
 		wp_register_script(
 			'ran-booster-credential-expiry-notice',
 			trailingslashit( $this->booster_url ) . 'assets/credential-expiry-notice.js',
@@ -779,7 +779,7 @@ class Booster {
 		}
 
 		$script_path    = trailingslashit( $this->booster_path ) . 'assets/background-deployment-failure-notice.js';
-		$script_version = file_exists( $script_path ) ? filemtime( $script_path ) : null;
+		$script_version = $this->asset_version( $script_path );
 		wp_register_script(
 			'ran-booster-background-deployment-failure-notice',
 			trailingslashit( $this->booster_url ) . 'assets/background-deployment-failure-notice.js',
@@ -797,6 +797,16 @@ class Booster {
 			)
 		);
 		wp_enqueue_script( 'ran-booster-background-deployment-failure-notice' );
+	}
+
+	/** Preserve WordPress's false/null fallbacks while supplying string cache tokens. */
+	private function asset_version( string $path ): string|false|null {
+		if ( ! file_exists( $path ) ) {
+			return null;
+		}
+
+		$modified = filemtime( $path );
+		return false === $modified ? false : (string) $modified;
 	}
 
 	/**

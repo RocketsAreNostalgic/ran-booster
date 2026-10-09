@@ -254,6 +254,7 @@ function ran_booster_phase44_worker(): void {
 			if ( 'https://phase44-network-guard.invalid/' === $url ) {
 				return new WP_Error( 'phase44_network_forbidden' );
 			}
+			/** @var array{archive: string, mode: string, type: string}|null $fixture Populated only by this worker's native phase. */
 			$fixture  = $GLOBALS['ran_booster_phase44_github_fixture'] ?? null;
 			$response = is_array( $fixture ) ? ran_booster_phase44_github_response( $fixture, $args, $url ) : null;
 			if ( is_array( $response ) ) {

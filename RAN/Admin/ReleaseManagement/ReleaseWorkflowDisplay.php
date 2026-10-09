@@ -17,7 +17,7 @@ final class ReleaseWorkflowDisplay {
 			: '<a href="' . esc_url( $url ) . '">' . esc_html__( 'Manage release workflow', 'ran-booster' ) . '</a>' );
 	}
 
-	/** @param array<string,mixed> $projection */
+	/** @param array{settings_label:string,lifecycle?:list<array{label:string,message:string,state:string}>,...<string,mixed>} $projection */
 
 	public function repository_section( array $projection ): string {
 		$settings_url = is_string( $projection['settings_url'] ?? null ) ? $projection['settings_url'] : '';

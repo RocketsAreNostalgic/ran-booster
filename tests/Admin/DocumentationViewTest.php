@@ -240,6 +240,9 @@ final class DocumentationViewTest extends TestCase {
 				$quick_start_links
 			)
 		);
+		if ( ! isset( $quick_start_links[0] ) ) {
+			self::fail( 'Expected the quick-start links in the rendered view.' );
+		}
 		self::assertSame( 2, substr_count( $quick_start_links[0], 'class="button"' ) );
 		self::assertStringNotContainsString( 'button-primary', $quick_start_links[0] );
 		self::assertLessThan( strpos( $html, 'Add private access only if needed.' ), strpos( $html, 'Install a package.' ) );

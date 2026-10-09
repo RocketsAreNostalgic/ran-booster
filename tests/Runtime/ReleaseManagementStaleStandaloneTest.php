@@ -88,7 +88,9 @@ final class ReleaseManagementStaleStandaloneTest extends TestCase {
 			1,
 			preg_match( "/define\\(\\s*'RAN_BOOSTER_ADDON_API_VERSION'\\s*,\\s*([0-9]+)\\s*\\)/", $bootstrap, $match )
 		);
-		self::assertArrayHasKey( 1, $match );
+		if ( ! isset( $match[1] ) ) {
+			self::fail( 'Expected the Core add-on API version.' );
+		}
 
 		define( 'RAN_BOOSTER_ADDON_API_VERSION', (int) $match[1] );
 	}

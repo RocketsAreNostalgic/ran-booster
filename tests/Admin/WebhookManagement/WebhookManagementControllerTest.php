@@ -1410,7 +1410,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		return new InstallationRecord( 'gh', '1234', 'owner/repository', '77', $management_credential_id, 'wh_0123456789abcdef01234567', 'repository', 1, 'created', $endpoint, $status, '2026-07-23T16:00:00Z', '2026-07-23T17:00:00Z' );
 	}
 
-	/** @param array<string, string>|null $configuration */
+	/** @param array{endpoint: string, events: string, content_type: string, active: string}|null $configuration */
 	private function operation_result( string $state = 'succeeded', string $code = 'configured_pending_delivery', ?string $hook_id = '77', bool $with_profile = true, ?array $configuration = null, string $provider_code = 'gh', string $remediation = 'Review the bounded operation result.', ?string $delivery = null ): RepositoryWebhookOperationResult {
 		$delivery ??= match ( $code ) {
 			'verified', 'ping_verified' => 'verified',
@@ -1643,9 +1643,10 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 	public function credential_choices( string $provider_code ): array {
 		return $this->credentials_available && hash_equals( $this->target_result->provider_code(), $provider_code ) ? array(
 			array(
-				'id'    => 'credential_1',
-				'label' => 'Temporary',
-				'kind'  => 'fine-grained',
+				'id'         => 'credential_1',
+				'label'      => 'Temporary',
+				'kind'       => 'fine-grained',
+				'destroy_on' => null,
 			),
 		) : array();
 	}

@@ -85,6 +85,9 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		$workflow = $this->workflow( 'quality.yml' );
 		$matches  = array();
 		self::assertSame( 1, preg_match( '/^  quality:\n(?:(?!^  [a-z]).)*?^        run: \|\n((?:^          .*\n|^\n)+)/ms', $workflow, $matches ) );
+		if ( ! isset( $matches[1] ) ) {
+			self::fail( 'Expected the terminal quality script.' );
+		}
 		$script = preg_replace( '/^          /m', '', $matches[1] );
 		self::assertIsString( $script );
 

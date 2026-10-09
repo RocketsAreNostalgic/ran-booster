@@ -171,7 +171,7 @@ final class ReleaseWorkflowPresenter {
 	/**
 	 * @param array<string,mixed> $row
 	 * @param array<string,mixed>|null $result
-	 * @return array<string,mixed>|null
+	 * @return array{settings_label:string,lifecycle:list<array{label:string,message:string,state:string}>,...<string,mixed>}|null
 	 */
 
 	public function repository_section_projection( array $row, string $return_url, string $preview_key, ?array $result ): ?array {

@@ -422,7 +422,7 @@ final class RAN_Booster_CoreUpdaterProof {
 			}
 
 			global $wp_filesystem;
-			if ( ! is_object( $wp_filesystem ) || ! $wp_filesystem->move( $source_root, $destination, false ) ) {
+			if ( ! is_object( $wp_filesystem ) || ! method_exists( $wp_filesystem, 'move' ) || ! $wp_filesystem->move( $source_root, $destination, false ) ) {
 				return new WP_Error( 'ran_booster_core_proof_source', 'The disposable source could not be selected.' );
 			}
 

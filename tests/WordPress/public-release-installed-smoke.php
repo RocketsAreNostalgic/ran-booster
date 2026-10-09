@@ -13,18 +13,19 @@ $ran_booster_assert       = static function ( bool $condition, string $message )
 };
 $ran_booster_site         = realpath( (string) getenv( 'RAN_BOOSTER_WORDPRESS_PATH' ) );
 $ran_booster_archive_root = realpath( (string) getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_ARCHIVE_ROOT' ) );
-$ran_booster_assert(
-	defined( 'WP_CLI' ) && WP_CLI && current_user_can( 'manage_options' )
+if ( ! ( defined( 'WP_CLI' ) && WP_CLI && current_user_can( 'manage_options' )
 	&& '1' === getenv( 'RAN_BOOSTER_RELEASE_CAPABILITY_TEST_DISPOSABLE' )
 	&& false !== $ran_booster_site && rtrim( ABSPATH, '/' ) === $ran_booster_site
 	&& WP_CONTENT_DIR === $ran_booster_site . '/wp-content' && WP_PLUGIN_DIR === $ran_booster_site . '/wp-content/plugins'
 	&& get_theme_root() === $ran_booster_site . '/wp-content/themes' && 'http://localhost' === get_option( 'siteurl' )
-	&& is_file( $ran_booster_site . '/.ran-booster-disposable-test-site' ) && ! is_link( $ran_booster_site . '/.ran-booster-disposable-test-site' )
-	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
-	&& 'RAN Booster disposable test site' === trim( file_get_contents( $ran_booster_site . '/.ran-booster-disposable-test-site' ) )
-	&& false !== $ran_booster_archive_root,
-	'Public release proof requires the exact marked CI site.'
-);
+	&& is_file( $ran_booster_site . '/.ran-booster-disposable-test-site' ) && ! is_link( $ran_booster_site . '/.ran-booster-disposable-test-site' ) ) ) {
+	throw new RuntimeException( 'Public release proof requires the exact marked CI site.' );
+}
+// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
+$ran_booster_marker = file_get_contents( $ran_booster_site . '/.ran-booster-disposable-test-site' );
+if ( ! is_string( $ran_booster_marker ) || 'RAN Booster disposable test site' !== trim( $ran_booster_marker ) || false === $ran_booster_archive_root ) {
+	throw new RuntimeException( 'Public release proof requires the exact marked CI site.' );
+}
 foreach ( array( $ran_booster_site, WP_CONTENT_DIR, WP_PLUGIN_DIR, get_theme_root(), WP_PLUGIN_DIR . '/ran-booster', $ran_booster_archive_root ) as $ran_booster_root ) {
 	$ran_booster_assert( ! is_link( $ran_booster_root ) && realpath( $ran_booster_root ) === $ran_booster_root, 'Public release proof refuses shared roots.' );
 }
@@ -130,10 +131,13 @@ $ran_booster_http = static function ( mixed $pre, array $args, string $url ) use
 			$body = wp_json_encode( array( $release ) );
 		} elseif ( $path === $base . '/releases/42' || $path === $base . '/releases/tags/v2.0.0' ) {
 			$body = wp_json_encode( $release );
-		} elseif ( str_starts_with( $path, $base . '/commits/' ) ) {
+		} elseif ( is_string( $path ) && str_starts_with( $path, $base . '/commits/' ) ) {
 			$body = wp_json_encode( array( 'sha' => str_repeat( 'a', 40 ) ) );
 		} else {
 			return new WP_Error( 'c4_route_invalid' ); }
+		if ( ! is_string( $body ) ) {
+			throw new RuntimeException( 'The public release fixture response could not be encoded.' );
+		}
 		$ran_booster_counts['http_bytes'] += strlen( $body );
 		return array(
 			'body'     => $body,

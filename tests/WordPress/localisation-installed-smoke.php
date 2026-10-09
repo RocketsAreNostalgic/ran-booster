@@ -80,13 +80,16 @@ foreach (
 	$ran_booster_expected_source = plugins_url( 'assets/' . $ran_booster_source_file, $ran_booster_plugin_file );
 	$ran_booster_translations    = $ran_booster_scripts->print_translations( $ran_booster_handle, false );
 
+	$ran_booster_encoded_translation = wp_json_encode( $ran_booster_expected_translation );
+
 	if ( ! $ran_booster_registered instanceof _WP_Dependency
 		|| $ran_booster_expected_source !== $ran_booster_registered->src
 		|| ! in_array( 'wp-i18n', $ran_booster_registered->deps, true )
 		|| 'ran-booster' !== $ran_booster_registered->textdomain
 		|| $ran_booster_plugin_languages !== $ran_booster_registered->translations_path
 		|| ! is_string( $ran_booster_translations )
-		|| ! str_contains( $ran_booster_translations, wp_json_encode( $ran_booster_expected_translation ) ) ) {
+		|| ! is_string( $ran_booster_encoded_translation )
+		|| ! str_contains( $ran_booster_translations, $ran_booster_encoded_translation ) ) {
 		throw new RuntimeException( sprintf( 'The %s script does not expose its expected installed Jed translation API.', esc_html( $ran_booster_handle ) ) );
 	}
 }

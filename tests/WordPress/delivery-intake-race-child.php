@@ -45,6 +45,7 @@ try {
 		public string $options;
 		private bool $barrier_reached = false;
 
+		/** @param wpdb $database The actual WordPress connection wrapped by this installed proof. */
 		public function __construct(
 			private object $database,
 			private string $ready_marker,
@@ -53,8 +54,14 @@ try {
 			$this->options = $database->options;
 		}
 
+		/** @param literal-string $query */
 		public function prepare( string $query, mixed ...$arguments ): string {
-			return $this->database->prepare( $query, ...$arguments );
+			$prepared = $this->database->prepare( $query, ...$arguments );
+			if ( ! is_string( $prepared ) ) {
+				throw new RuntimeException( 'The delivery-intake fixture query could not be prepared.' );
+			}
+
+			return $prepared;
 		}
 
 		public function db_server_info(): string {
@@ -80,8 +87,8 @@ try {
 			return $result;
 		}
 
-		/** @return array<array-key, mixed>|object|null */
-		public function get_results( string $query ): array|object|null {
+		/** @return array<array-key, mixed>|null */
+		public function get_results( string $query ): ?array {
 			if ( ! $this->barrier_reached && str_contains( $query, 'delivery_id' ) && str_contains( $query, 'FOR UPDATE' ) ) {
 				$this->barrier_reached = true;
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.

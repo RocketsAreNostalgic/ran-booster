@@ -485,6 +485,7 @@ final class NormalizedValuesTest extends TestCase {
 		);
 	}
 
+	/** @param class-string $class_name */
 	#[DataProvider( 'credential_free_data_transfer_objects' )]
 	public function test_data_transfer_objects_do_not_expose_raw_secret_or_token_fields( string $class_name ): void {
 		$properties = array_map(

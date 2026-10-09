@@ -35,15 +35,17 @@ final class WP_Filesystem_ran_booster_test extends WP_Filesystem_Direct {
 	}
 
 	private function stop_at_barrier(): void {
-		$barrier   = constant( 'RAN_BOOSTER_HARD_STOP_BARRIER' );
-		$temp_root = realpath( sys_get_temp_dir() );
-		$parent    = is_string( $barrier ) ? realpath( dirname( $barrier ) ) : false;
+		$barrier    = constant( 'RAN_BOOSTER_HARD_STOP_BARRIER' );
+		$temp_root  = realpath( sys_get_temp_dir() );
+		$parent     = is_string( $barrier ) ? realpath( dirname( $barrier ) ) : false;
+		$components = is_string( $barrier ) ? preg_split( '#[\\\\/]#', $barrier ) : false;
 		if ( ! is_string( $barrier )
 			|| '' === $barrier
 			|| false === $temp_root
 			|| false === $parent
 			|| preg_match( '/[[:cntrl:]]/', $barrier ) === 1
-			|| in_array( '..', preg_split( '#[\\\\/]#', $barrier ), true )
+			|| ! is_array( $components )
+			|| in_array( '..', $components, true )
 			|| ! str_starts_with( wp_normalize_path( $parent ), trailingslashit( wp_normalize_path( $temp_root ) ) )
 			|| ! hash_equals(
 				wp_normalize_path( $parent . DIRECTORY_SEPARATOR . basename( $barrier ) ),

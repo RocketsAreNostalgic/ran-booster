@@ -1043,10 +1043,18 @@ final class AdminAssetContractTest extends TestCase {
 
 	/** @return list<string> */
 	private function style_components(): array {
-		$component_list = ( new \ReflectionClass( Booster::class ) )->getReflectionConstant( 'ADMIN_STYLE_COMPONENTS' )?->getValue();
+		$constant = ( new \ReflectionClass( Booster::class ) )->getReflectionConstant( 'ADMIN_STYLE_COMPONENTS' );
+		self::assertNotFalse( $constant );
+		$component_list = $constant->getValue();
 
 		self::assertIsArray( $component_list );
 
+		if ( ! array_is_list( $component_list ) ) {
+			self::fail( 'Style components must be a list.' );
+		}
+		foreach ( $component_list as $component ) {
+			self::assertIsString( $component );
+		}
 		return $component_list;
 	}
 

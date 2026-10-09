@@ -23,6 +23,8 @@ final class ReleaseUpdaterBootstrapTest extends TestCase {
 
 		self::assertIsObject( $registrar ); // @phpstan-ignore staticMethod.alreadyNarrowedType (Runtime bootstrap acceptance asserts the actual loaded public registrar rather than relying on its declared return type.)
 		self::assertIsObject( $broker );
+		self::assertTrue( method_exists( $broker, 'protocol_version' ) );
+		self::assertTrue( method_exists( $broker, 'diagnostics' ) );
 		self::assertSame( 5, $broker->protocol_version() );
 		self::assertSame( 1, $broker->diagnostics()['candidate_count'] );
 	}

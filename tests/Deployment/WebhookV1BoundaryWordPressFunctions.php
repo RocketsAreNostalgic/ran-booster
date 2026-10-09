@@ -29,6 +29,7 @@ function update_option( string $option, mixed $value, bool|string|null $autoload
 	return true;
 }
 
+/** @param int<1, max> $depth */
 // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Exact WordPress function identity is required by this isolated boundary spy.
 function wp_json_encode( mixed $value, int $flags = 0, int $depth = 512 ): string|false {
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Isolated WordPress test double.

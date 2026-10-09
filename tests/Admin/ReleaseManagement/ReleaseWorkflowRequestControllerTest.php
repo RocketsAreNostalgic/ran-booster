@@ -39,7 +39,9 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 			$provider = $this->provider_for( $operation, $preview );
 			$url      = $this->controller( provider: $provider )->process_workflow_request( $this->request( $operation, $preview ) );
 			self::assertStringContainsString( 'ran_booster_release_workflow_result=workflow_' . $operation . '_complete', $url );
-			$call = $provider->calls[ array_key_last( $provider->calls ) ];
+			$last_key = array_key_last( $provider->calls );
+			self::assertNotNull( $last_key );
+			$call = $provider->calls[ $last_key ];
 			self::assertSame( $operation, $call['operation'] );
 			self::assertSame( 'credential_1', $call['credential_id'] );
 			self::assertSame( 'fixture', $provider->get_metadata()->code->value );

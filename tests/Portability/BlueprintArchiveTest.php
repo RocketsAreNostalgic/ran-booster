@@ -41,7 +41,9 @@ final class BlueprintArchiveTest extends TestCase {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- ZipArchive exposes the native numFiles property.
 		self::assertSame( 1, $zip->numFiles );
 		self::assertSame( BlueprintArchive::ENTRY, $zip->getNameIndex( 0 ) );
-		self::assertSame( ZipArchive::EM_NONE, $zip->statIndex( 0 )['encryption_method'] );
+		$entry = $zip->statIndex( 0 );
+		self::assertIsArray( $entry );
+		self::assertSame( ZipArchive::EM_NONE, $entry['encryption_method'] );
 		$zip->close();
 		self::assertSame( $blueprint->canonical_json(), $archive->read_from( $this->file, '' )->canonical_json() );
 	}
@@ -53,8 +55,10 @@ final class BlueprintArchiveTest extends TestCase {
 		$archive   = new BlueprintArchive();
 
 		$archive->write_to( $this->file, $blueprint, $password );
-		$zip = $this->open();
-		self::assertSame( ZipArchive::EM_AES_256, $zip->statIndex( 0 )['encryption_method'] );
+		$zip   = $this->open();
+		$entry = $zip->statIndex( 0 );
+		self::assertIsArray( $entry );
+		self::assertSame( ZipArchive::EM_AES_256, $entry['encryption_method'] );
 		$zip->close();
 		self::assertSame( $blueprint->canonical_json(), $archive->read_from( $this->file, $password )->canonical_json() );
 	}

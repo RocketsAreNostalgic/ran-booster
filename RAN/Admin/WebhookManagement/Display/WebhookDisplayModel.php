@@ -123,7 +123,7 @@ final class WebhookDisplayModel {
 
 	/**
 	 * @param array{hook_id:string,profile_id:string}|null $recovery
-	 * @return array<string, mixed>|null
+	 * @return array{repository:string,result:array{class:string,message:string}|null,...<string,mixed>}|null
 	 */
 	public function panel( string $provider_code, string $provider_label, string $repository_id, string $return_url, ?string $result_code, ?array $recovery, bool $can_manage, ?string $remediation = null, ?string $webhooks_url = null ): ?array {
 		if ( ! $can_manage || '' === trim( $repository_id ) ) {
@@ -222,7 +222,7 @@ final class WebhookDisplayModel {
 	}
 
 	/**
-	 * @return array<string, mixed>
+	 * @return array{repository:string,result:null,...<string,mixed>}
 	 */
 	public function unavailable_panel( string $provider_code, string $provider_label, string $repository_id, string $repository, string $return_url, string $reason, ?string $webhooks_url = null ): array {
 		return array(

@@ -45,6 +45,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		$result = ( new WpConfigSecretsPathWriter() )->write( $this->config_path, $this->sidecar_path );
 
 		self::assertSame( WpConfigPathWriteResult::STATUS_PENDING_VERIFICATION, $result->status() );
+		self::assertNotFalse( $result );
 		self::assertTrue( $result->requires_next_request_verification() );
 		self::assertSame( 0640, fileperms( $this->config_path ) & 0777 );
 		self::assertSame( fileowner( $this->config_path . '.ran-booster.lock' ), fileowner( $this->config_path ) );
@@ -136,6 +137,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		$written = (string) file_get_contents( $this->config_path );
 
+		self::assertNotFalse( $result );
 		self::assertTrue( $result->requires_next_request_verification() );
 		self::assertStringNotContainsString(
 			"define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '" . dirname( $this->sidecar_path ) . "' );",
@@ -371,7 +373,9 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertNotSame( $original, file_get_contents( $this->config_path ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
-		self::assertStringNotContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', file_get_contents( $this->config_path ) );
+		$written = file_get_contents( $this->config_path );
+		self::assertIsString( $written );
+		self::assertStringNotContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', $written );
 	}
 
 	public function test_removal_detects_aconcurrent_config_change_before_replacement(): void {
@@ -575,6 +579,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 
 		$result = $writer->write( $this->config_path, $this->sidecar_path );
 
+		self::assertNotFalse( $result );
 		self::assertTrue( $result->requires_next_request_verification() );
 		self::assertSame( 0640, fileperms( $this->config_path ) & 0777 );
 		self::assertSame( $owner, fileowner( $this->config_path ) );

@@ -290,6 +290,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 			)
 		);
 
+		self::assertNotNull( $provider->request );
 		self::assertSame( 'public_lookup', $provider->request->credential_id );
 		self::assertTrue( $provider->request->public_only );
 		self::assertSame( '', $result['credential_id'] );

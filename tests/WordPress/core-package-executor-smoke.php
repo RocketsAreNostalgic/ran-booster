@@ -627,7 +627,7 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 	private function assert_success( RAN\WordPress\CorePackageExecutionResult $result ): void {
 		if ( ! $result->is_successful() ) {
 			// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
-			throw new RuntimeException( 'WordPress core did not complete the disposable package operation: ' . $result->get_failure()->value );
+			throw new RuntimeException( 'WordPress core did not complete the disposable package operation: ' . ( $result->get_failure()->value ?? 'unknown_failure' ) );
 		}
 	}
 

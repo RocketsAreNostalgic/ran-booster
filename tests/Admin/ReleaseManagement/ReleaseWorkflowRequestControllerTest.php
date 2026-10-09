@@ -73,6 +73,7 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 		parse_str( (string) \RAN\Admin\ReleaseManagement\wp_parse_url( $url, PHP_URL_QUERY ), $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verifies the immediately preceding signed PRG result.
 		$result = $this->controller( provider: $provider )->requested_result();
 
+		self::assertNotNull( $result );
 		self::assertSame( 'workflow_remote_unavailable', $result['code'] );
 		self::assertSame( 'unexpected', $result['failure_stage'] );
 		self::assertSame( 'unexpected_runtime_failure', $result['diagnostic_code'] );

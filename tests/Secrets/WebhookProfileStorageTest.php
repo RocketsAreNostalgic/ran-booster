@@ -247,7 +247,23 @@ final class WebhookProfileStorageTest extends TestCase {
 				}
 
 				public function normalize_webhook( array $metadata, mixed $secret ): array {
-					return $metadata + array( 'secret' => $secret );
+					$result = $metadata + array( 'secret' => $secret );
+					if ( ! isset( $result['label'] ) || ! is_string( $result['label'] ) ) {
+						\PHPUnit\Framework\Assert::fail( 'Expected string label in the permissive scope fixture.' );
+					}
+					if ( ! isset( $result['scope'] ) || ! is_string( $result['scope'] ) ) {
+						\PHPUnit\Framework\Assert::fail( 'Expected string scope in the permissive scope fixture.' );
+					}
+					if ( ! isset( $result['target'] ) || ! is_string( $result['target'] ) ) {
+						\PHPUnit\Framework\Assert::fail( 'Expected string target in the permissive scope fixture.' );
+					}
+					if ( ! isset( $result['authority_id'] ) || ! is_string( $result['authority_id'] ) ) {
+						\PHPUnit\Framework\Assert::fail( 'Expected string authority_id in the permissive scope fixture.' );
+					}
+					if ( ! isset( $result['secret'] ) || ! is_string( $result['secret'] ) ) {
+						\PHPUnit\Framework\Assert::fail( 'Expected string secret in the permissive scope fixture.' );
+					}
+					return $result;
 				}
 
 				public function get_constant_names(): array {

@@ -30,6 +30,7 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 		);
 		$credential = $secrets->credential_material( 'gh', SecretsFile::CONSTANT_PROFILE );
 
+		self::assertNotNull( $credential );
 		self::assertSame( 'classic', $credential['kind'] );
 		self::assertSame( 'github_pat_existing-constant', $credential['secret'] );
 	}
@@ -67,7 +68,9 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 				null,
 				true
 			);
-			self::assertSame( 'ghp_' . str_repeat( 'a', 36 ), $secrets->credential_material( 'gh', $id )['secret'] );
+			$material = $secrets->credential_material( 'gh', $id );
+			self::assertNotNull( $material );
+			self::assertSame( 'ghp_' . str_repeat( 'a', 36 ), $material['secret'] );
 		} finally {
 			InMemorySiteKeyStore::reset( $path );
 			foreach ( array( $path, $path . '.lock' ) as $file ) {

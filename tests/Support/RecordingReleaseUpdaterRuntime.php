@@ -6,7 +6,7 @@ namespace RAN\Tests\Support;
 
 /** Records native-target registrar arguments for host composition tests. */
 final class RecordingReleaseUpdaterRuntime {
-	/** @var list<mixed> */
+	/** @var array<array-key, mixed> */
 	public array $arguments = array();
 
 	public function plugin( mixed ...$arguments ): object {

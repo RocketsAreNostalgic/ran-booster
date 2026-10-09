@@ -13,7 +13,7 @@ final class CredentialUsageDatabase {
 	/** @var list<object> */
 	public array $rows = array();
 
-	/** @var list<array{query: string, arguments: list<mixed>}> */
+	/** @var list<array{query: string, arguments: array<array-key, mixed>}> */
 	public array $prepared = array();
 
 	public function prepare( string $query, mixed ...$arguments ): string {

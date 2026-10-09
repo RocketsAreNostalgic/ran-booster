@@ -673,6 +673,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 
 		$result = $this->controller( provider: $provider )->requested_result();
 
+		self::assertNotNull( $result );
 		self::assertSame( 'Provider-specific workflow message.', $result['message'] );
 		self::assertSame( 'Provider-specific remediation.', $result['remediation'] );
 

@@ -231,9 +231,11 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		self::assertSame( 'failed', $retry['status'] );
 		self::assertSame( 'transferred_available', $retry['credential_state'] );
 		$target_id = $target_secrets->import_credentials_if_absent( $imported, $credential )[0];
+		$material  = $target_secrets->credential_material( 'gh', $target_id );
+		self::assertNotNull( $material );
 		self::assertSame(
 			self::CLASSIC_TOKEN,
-			$target_secrets->credential_material( 'gh', $target_id )['secret']
+			$material['secret']
 		);
 		self::assertSame( $target_id, $target_secrets->import_credentials_if_absent( $imported, $credential )[0] );
 		self::assertSame( array( $target_id ), array_keys( $target_secrets->credential_profiles( 'gh' ) ) );

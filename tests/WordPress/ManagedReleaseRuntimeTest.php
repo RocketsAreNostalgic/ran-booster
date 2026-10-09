@@ -1761,6 +1761,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$references                = array();
 		$nonce                     = $facade->nonce_action( 'preflight', 'plugin', 'example/example.php', 1, 'stable' );
 		$preflight                 = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+		self::assertNotNull( $preflight );
 		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $preflight->code() );
 		self::assertSame( array( 'public-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credential_id, $references ) );
 		self::assertNull( $packages['branch_public']->get_repository()->reference->credential_id );
@@ -1778,6 +1779,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$failure_mode->value         = 'typed';
 		$nonce                       = $facade->nonce_action( 'preflight', 'plugin', 'example/example.php', 1, 'stable' );
 		$preflight                   = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+		self::assertNotNull( $preflight );
 		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $preflight->code() );
 		self::assertSame( array( 'package-profile', 'public-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credential_id, $references ) );
 		self::assertSame( 'package-profile', $packages['branch_explicit']->get_repository()->reference->credential_id );
@@ -1825,6 +1827,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 		$preflight_nonce = $facade->nonce_action( 'preflight', 'plugin', 'example/example.php', 1, 'stable' );
 		$preflight       = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $preflight_nonce );
+		self::assertNotNull( $preflight );
 		self::assertSame( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $preflight->code() );
 		self::assertSame(
 			array( 'package-profile' ),
@@ -1933,34 +1936,40 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 		foreach ( array( 'release_id', 'tag', 'version', 'package_root', 'main_file' ) as $mode->value ) {
 			$result = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+			self::assertNotNull( $result );
 			self::assertSame( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $result->code(), $mode->value );
 			self::assertSame( 'release_identity_mismatch', $result->reason_code(), $mode->value );
 		}
 
 		$mode->value = 'channel';
 		$result      = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+		self::assertNotNull( $result );
 		self::assertSame( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $result->code() );
 		self::assertSame( 'invalid_release', $result->reason_code() );
 
 		$mode->value = 'none';
 		$result      = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+		self::assertNotNull( $result );
 		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $result->code() );
 		self::assertSame( 'no_releases', $result->reason_code() );
 
 		$mode->value = 'operational';
 		$result      = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+		self::assertNotNull( $result );
 		self::assertSame( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $result->code() );
 		self::assertSame( 'provider_unavailable', $result->reason_code() );
 		self::assertStringNotContainsString( 'token', $result->reason_code() );
 
 		$mode->value = 'hyphenated_stable';
 		$result      = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+		self::assertNotNull( $result );
 		self::assertSame( ReleaseTrackingPreflight::READY, $result->code() );
 		self::assertSame( '2026-08', $result->latest_version() );
 
 		$calls_before_budget = $inspection_calls;
 		$mode->value         = 'incompatible_budget';
 		$result              = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+		self::assertNotNull( $result );
 		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $result->code() );
 		self::assertSame( 'release_incompatible', $result->reason_code() );
 		self::assertSame( 2, $inspection_calls - $calls_before_budget );
@@ -2048,6 +2057,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$nonce  = $facade->nonce_action( 'preflight', 'plugin', 'example/example.php', 1, 'stable' );
 
 		$result = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+		self::assertNotNull( $result );
 
 		self::assertSame( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $result->code() );
 		self::assertSame( 'provider_unavailable', $result->reason_code() );
@@ -2099,6 +2109,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$nonce      = $facade->nonce_action( 'preflight', 'plugin', 'example/example.php', 1, 'stable' );
 
 		$result = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+		self::assertNotNull( $result );
 
 		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $result->code() );
 		self::assertSame( 'no_releases', $result->reason_code() );

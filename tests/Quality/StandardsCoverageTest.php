@@ -277,6 +277,7 @@ final class StandardsCoverageTest extends TestCase {
 		$runner->init();
 		$paths = array();
 		foreach ( new FileList( $runner->config, $runner->ruleset ) as $path => $file ) {
+			self::assertIsString( $path );
 			$paths[] = $path;
 		}
 		sort( $paths );

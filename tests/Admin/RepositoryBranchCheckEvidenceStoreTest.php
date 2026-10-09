@@ -18,7 +18,9 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 
 		$store->record( 'plugin', $package, 'profile-a', 'verified' );
 
-		self::assertSame( 'verified', $store->find( 'plugin', $package, 'profile-a' )['outcome'] );
+		$evidence = $store->find( 'plugin', $package, 'profile-a' );
+		self::assertNotNull( $evidence );
+		self::assertSame( 'verified', $evidence['outcome'] );
 		self::assertNull( $store->find( 'plugin', $package, 'profile-b' ) );
 
 		$store->bump_profile_generation( provider: 'gh', profile_id: 'profile-a' );
@@ -49,7 +51,9 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 		$fresh = $store->profile_fingerprint_for( $package, 'profile-a' );
 		$store->record( 'plugin', $package, 'profile-a', 'verified', $fresh );
 
-		self::assertSame( 'verified', $store->find( 'plugin', $package, 'profile-a' )['outcome'] );
+		$evidence = $store->find( 'plugin', $package, 'profile-a' );
+		self::assertNotNull( $evidence );
+		self::assertSame( 'verified', $evidence['outcome'] );
 	}
 
 	public function test_changed_source_revision_and_provider_generation_invalidate_evidence(): void {

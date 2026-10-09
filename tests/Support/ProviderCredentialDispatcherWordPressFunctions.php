@@ -47,7 +47,9 @@ if ( ! function_exists( __NAMESPACE__ . '\\sanitize_key' ) ) {
 
 if ( ! function_exists( __NAMESPACE__ . '\\sanitize_text_field' ) ) {
 	function sanitize_text_field( mixed $value ): string {
-		return trim( preg_replace( '/<[^>]*>/', '', (string) $value ) );
+		$text = preg_replace( '/<[^>]*>/', '', (string) $value );
+		\PHPUnit\Framework\Assert::assertIsString( $text );
+		return trim( $text );
 	}
 }
 

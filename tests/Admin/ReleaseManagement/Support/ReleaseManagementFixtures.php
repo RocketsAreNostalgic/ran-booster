@@ -78,6 +78,7 @@ final class ReleaseManagementFixture {
 			'filters',
 			'scripts',
 			'script_translations',
+			'translations',
 			'styles',
 			'localized',
 			'denied_capabilities',

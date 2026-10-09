@@ -9,7 +9,7 @@ use RuntimeException;
 function __( string $text, string $domain = 'default' ): string {
 	unset( $domain );
 
-	return $text;
+	return $GLOBALS['ran_booster_release_management_test_translations'][ $text ] ?? $text;
 }
 
 if ( ! function_exists( __NAMESPACE__ . '\\_x' ) ) {

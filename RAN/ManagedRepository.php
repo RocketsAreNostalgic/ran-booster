@@ -11,6 +11,7 @@ use RAN\RepositoryProvider\RepositoryReference;
 final readonly class ManagedRepository {
 
 	public ProviderCode $provider;
+	/** @var RepositoryReference<string> */
 	public RepositoryReference $reference;
 	public string $branch;
 

@@ -3011,7 +3011,7 @@ msgid "Manage credentials"
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:364
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:609
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:610
 msgid "Choose a saved credential that can manage release workflows and open pull requests. Its secret is never stored with this setup."
 msgstr ""
 
@@ -3408,59 +3408,59 @@ msgstr ""
 msgid "Release workflow — %s"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:596
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:597
 msgid "Booster could not confirm this package. Reload its settings and try again."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:618
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:620
 msgid "This provider claims release workflow management but does not implement all required release capabilities. Update or correct the provider plugin; no operation is available."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:619
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:622
 msgid "The provider could not supply local workflow status. Retry after checking the provider plugin."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:625
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:627
 msgid "Booster could not safely read this package's repository source relationship. Check package storage and retry."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:626
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:628
 msgid "Releases require a repository used by only one managed package. Review the repository package list."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:629
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:630
 msgid "A workflow record belongs to a different package. Review the recorded repository state before setup."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:729
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:730
 msgid "Open package settings for the required Update URI, add it to the package header, then deploy the corrected package."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:730
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:731
 msgid "This package Update URI must match the configured repository."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:731
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:732
 msgid "This repository provider cannot use published-release tracking."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:732
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:733
 msgid "The saved repository needs attention before a release workflow can be assessed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:733
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:734
 msgid "The installed package identity must match the configured repository."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:734
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:735
 msgid "Published releases require this package at the repository root; continue using Branch for a repository subdirectory."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:735
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:736
 msgid "This package already has its own release updater, so Booster cannot manage published releases as well."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:736
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:737
 msgid "Resolve Release readiness before assessing a workflow."
 msgstr ""
 

@@ -14,6 +14,7 @@ require_once __DIR__ . '/GitHub/Support/ThemeRepositoryDouble.php';
 require_once __DIR__ . '/../../Storage/StorageTestEnvironment.php';
 
 use PHPUnit\Framework\Attributes\Before;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\ReleaseManagement\ReleaseWorkflowControls;
 use RAN\Admin\ReleaseManagement\ReleaseWorkflowPresenter;
@@ -733,6 +734,87 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		}
 	}
 
+	/** @return list<array{string,bool}> */
+	public static function unavailable_workflow_provider(): array {
+		return array(
+			array( 'provider', false ),
+			array( 'status', false ),
+			array( 'eligibility', false ),
+			array( 'source_unavailable', false ),
+			array( 'source_conflict', false ),
+			array( 'record', false ),
+			array( 'provider', true ),
+			array( 'status', true ),
+			array( 'eligibility', true ),
+			array( 'source_unavailable', true ),
+			array( 'source_conflict', true ),
+		);
+	}
+
+	#[DataProvider( 'unavailable_workflow_provider' )]
+	public function test_empty_translations_cannot_enable_unavailable_workflows( string $failure, bool $competing_failure ): void {
+		$messages = array(
+			'provider'           => 'This provider claims release workflow management but does not implement all required release capabilities. Update or correct the provider plugin; no operation is available.',
+			'status'             => 'The provider could not supply local workflow status. Retry after checking the provider plugin.',
+			'eligibility'        => 'Open package settings for the required Update URI, add it to the package header, then deploy the corrected package.',
+			'source_unavailable' => 'Booster could not safely read this package\'s repository source relationship. Check package storage and retry.',
+			'source_conflict'    => 'Releases require a repository used by only one managed package. Review the repository package list.',
+			'record'             => 'A workflow record belongs to a different package. Review the recorded repository state before setup.',
+		);
+		$GLOBALS['ran_booster_release_management_test_translations'] = $competing_failure
+			? array( $messages[ $failure ] => '' )
+			: array_fill_keys( array_values( $messages ), '' );
+		$key                         = str_repeat( 'a', 32 );
+		$provider                    = new RepositoryReleaseWorkflowProviderDouble(
+			preview: new \RAN\RepositoryProvider\RepositoryReleaseWorkflowPreview(
+				$key,
+				'fixture',
+				'101',
+				'bootstrap',
+				'stable',
+				'example/example',
+				array(
+					'repository'      => 'example/example',
+					'default_branch'  => 'main',
+					'base_sha'        => str_repeat( 'b', 40 ),
+					'pack_version'    => '1.0.0',
+					'template_digest' => str_repeat( 'c', 64 ),
+				),
+				array()
+			),
+			status: 'record' === $failure || $competing_failure ? new \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus(
+				'fixture',
+				'101',
+				false,
+				true,
+				'https://fixture.example/pull/1',
+				'plugin',
+				'other/other.php',
+				3,
+				'bootstrap'
+			) : null
+		);
+		$provider->throw_on_workflow = 'status' === $failure;
+		$tracking                    = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( eligibility_code: 'eligibility' === $failure || ( $competing_failure && in_array( $failure, array( 'provider', 'status' ), true ) ) ? 'missing_update_uri' : 'eligible' ) );
+		$guard                       = 'source_unavailable' === $failure ? $this->unavailable_source_guard() : $this->source_guard( 'provider' === $failure ? 'partial' : 'fixture', 'source_conflict' === $failure || $competing_failure );
+		$presenter                   = $this->presenter( tracking: $tracking, provider: 'provider' === $failure ? new PartialRepositoryReleaseWorkflowProviderDouble() : $provider, source_guard: $guard );
+
+		try {
+			$view = ( new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'workflow_view_for' ) )->invoke( $presenter, 'plugin', 'example/example.php', 3, '', false, $key, 'stable' );
+
+			self::assertSame( array(), $provider->calls, 'Unavailable workflows must not read even an existing preview.' );
+			self::assertTrue( $view['unavailable'] );
+			self::assertSame( '', $view['unavailable_reason'] );
+			self::assertSame( 'blocked', $view['automation_state'] );
+			self::assertNull( $view['preview'] );
+			self::assertTrue( $view['forms']['inspect']['disabled'] );
+			self::assertArrayNotHasKey( 'setup', $view['forms'] );
+			self::assertArrayNotHasKey( 'outcome', $view['forms'] );
+		} finally {
+			unset( $GLOBALS['ran_booster_release_management_test_translations'] );
+		}
+	}
+
 	public function test_empty_provider_write_guidance_uses_the_core_fallback(): void {
 		$status    = new \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus(
 			'fixture',
@@ -807,9 +889,9 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		return $request;
 	}
 
-	private function source_guard( string $provider_code = 'fixture' ): RepositorySourceGuard {
-		$database  = new class( $provider_code ) { public string $last_error = '';
-			public function __construct( private string $provider_code ) {}
+	private function source_guard( string $provider_code = 'fixture', bool $conflict = false ): RepositorySourceGuard {
+		$database  = new class( $provider_code, $conflict ) { public string $last_error = '';
+			public function __construct( private string $provider_code, private bool $conflict ) {}
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of prepare retains the production method contract; these inputs do not affect this controlled result.
 			public function prepare( string $query, mixed ...$arguments ): string {
 				return $query;
@@ -817,7 +899,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 			/** @return list<object> */
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of get_results retains the production method contract; these inputs do not affect this controlled result.
 			public function get_results( string $query ): array {
-				return array(
+				$rows = array(
 					(object) array(
 						'type'                   => 1,
 						'package'                => 'example/example.php',
@@ -826,6 +908,12 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 						'provider_repository_id' => '101',
 					),
 				);
+				if ( $this->conflict ) {
+					$other          = clone $rows[0];
+					$other->package = 'other/other.php';
+					$rows[]         = $other;
+				}
+				return $rows;
 			} };
 		$lifecycle = new class() extends Database { public function require_ready(): void {} };
 		return new RepositorySourceGuard( $database, $lifecycle );

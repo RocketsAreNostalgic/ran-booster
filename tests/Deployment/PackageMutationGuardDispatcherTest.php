@@ -390,6 +390,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		$this->dispatcher( $dashboard )->dispatch_post_requests();
 	}
 
+	/** @param list<string> $capabilities */
 	#[DataProvider( 'package_action_capabilities' )]
 	public function test_each_package_action_uses_its_exact_capability_and_nonce( string $action, array $capabilities ): void {
 		$GLOBALS['ran_booster_test_nonce_valid'] = false;
@@ -409,6 +410,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		self::assertSame( array( $action ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
+	/** @param list<string> $capabilities */
 	#[DataProvider( 'package_action_capabilities' )]
 	public function test_each_package_action_fails_before_nonce_without_its_exact_capability( string $action, array $capabilities ): void {
 		$denied_capability = $capabilities[0];
@@ -438,6 +440,7 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		);
 	}
 
+	/** @param list<string> $expected_checks */
 	#[DataProvider( 'later_capability_denials' )]
 	public function test_later_delete_capabilities_independently_stop_before_nonce_and_mutation(
 		string $action,

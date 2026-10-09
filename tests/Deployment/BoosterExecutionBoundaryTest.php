@@ -97,6 +97,7 @@ final class ExecutionBoundaryWorker {
 	/** @param list<string> $calls */
 	// @phpstan-ignore property.onlyWritten (The caller reads this by-reference event buffer to verify exact execution ordering.)
 	public function __construct( private array &$calls ) {}
+	/** @return array{} */
 	public function run_once(): array {
 		$this->calls[] = 'worker';
 		return array(); }

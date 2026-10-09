@@ -456,6 +456,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 	}
 }
 
+/** @extends AbstractPackageRepository<Package> */
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class PersistenceFailureTestRepository extends AbstractPackageRepository {
 

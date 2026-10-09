@@ -122,10 +122,15 @@ final class PackageMagicReadTest extends TestCase {
 
 	public function test_overrides_and_unmapped_property_fallback_keep_their_precedence(): void {
 		$package = new class() extends AbstractPackage {
-			protected $version     = 'raw-version';
-			protected $raw         = 'raw-value';
-			protected $absent      = null;
-			protected $custom      = 'raw-custom';
+			/** @var string */
+			protected $version = 'raw-version';
+			/** @var string */
+			protected $raw = 'raw-value';
+			/** @var null */
+			protected $absent = null;
+			/** @var string */
+			protected $custom = 'raw-custom';
+			/** @var string */
 			protected $_identifier = 'raw-underscore-identifier'; // phpcs:ignore PSR2.Classes.PropertyDeclaration.Underscore -- Fixture proves existing underscore field fallback after getter migration.
 
 			public function get_identifier(): mixed {
@@ -174,6 +179,7 @@ final class PackageMagicReadTest extends TestCase {
 
 	public function test_getter_failure_propagates_without_exposing_the_backing_field(): void {
 		$package = new class() extends AbstractPackage {
+			/** @var string */
 			protected $version = 'private-backing-value';
 
 			public function get_identifier(): mixed {

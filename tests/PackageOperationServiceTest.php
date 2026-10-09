@@ -196,6 +196,7 @@ final class PackageOperationServiceTest extends TestCase {
 		}
 	}
 
+	/** @return list<array{string}> */
 	public static function conflicting_branch_operations(): array {
 		return array( array( 'install-plugin' ), array( 'install-theme' ), array( 'edit-plugin' ), array( 'edit-theme' ) );
 	}
@@ -1285,7 +1286,10 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertStringNotContainsString( 'ran_booster_manual_action_failed', $dashboard->messages[0]['message'] );
 	}
 
-	/** @param array<string, mixed> $overrides */
+	/**
+	 * @param array<string, mixed> $overrides
+	 * @return array<string, mixed>
+	 */
 	private function input( string $action, array $overrides = array() ): array {
 		$type = str_ends_with( $action, 'plugin' ) ? 'plugin' : 'theme';
 
@@ -1499,6 +1503,7 @@ final class OperationPluginRepository extends PluginRepository {
 		unset( $plugin );
 		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
 	}
+	/** @param string $file */
 	public function unlink( $file ): PackageMutationResult {
 		if ( null !== $this->unlink_failure ) {
 			throw $this->unlink_failure;
@@ -1549,6 +1554,7 @@ final class OperationThemeRepository extends ThemeRepository {
 		unset( $theme );
 		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
 	}
+	/** @param string $stylesheet */
 	public function unlink( $stylesheet ): PackageMutationResult {
 		$this->unlinked = (string) $stylesheet;
 		return PackageMutationResult::changed( PackageStorageOperation::DELETE );

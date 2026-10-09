@@ -530,6 +530,9 @@ final class PortabilityViewTest extends TestCase {
 
 	/**
 	 * @param array<int, array<string, mixed>> $rows Review rows.
+	 * @param list<array<string, mixed>>|null $export_rows Export rows.
+	 * @param list<array<string, mixed>> $export_credential_groups Credential groups.
+	 * @param list<array<string, mixed>> $credential_rows Credential review rows.
 	 */
 	private function render_view(
 		array $rows = array(),

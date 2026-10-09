@@ -26,6 +26,9 @@ function network_admin_url( string $path = '' ): string {
 	return 'https://example.test/wp-admin/network/' . ltrim( $path, '/' );
 }
 
+/**
+ * @param array<string, mixed>|string $arguments
+ */
 function add_query_arg( array|string $arguments, string $value_or_url, ?string $url = null ): string {
 	if ( is_string( $arguments ) ) {
 		$arguments = array( $arguments => $value_or_url );

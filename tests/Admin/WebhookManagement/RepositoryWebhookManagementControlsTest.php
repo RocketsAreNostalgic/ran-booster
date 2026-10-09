@@ -636,7 +636,10 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		return array_values( $positions );
 	}
 
-	/** @param array<string,bool> $enabled_operations @return array<string,mixed> */
+	/**
+	 * @param array<string,bool> $enabled_operations
+	 * @return array<string,mixed>
+	 */
 	private function webhook_panel_model( bool $recorded, bool $disabled, array $enabled_operations ): array {
 		$operations = array();
 		$labels     = array(

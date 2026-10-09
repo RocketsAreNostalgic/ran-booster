@@ -83,6 +83,7 @@ final class CredentialUsageReaderTest extends TestCase {
 		);
 	}
 
+	/** @param list<object> $rows Deliberately malformed database row properties. */
 	#[DataProvider( 'malformed_results' )]
 	public function test_malformed_database_results_fail_closed_without_leaking_values( mixed $count, array $rows ): void {
 		$database        = new CredentialUsageDatabase();

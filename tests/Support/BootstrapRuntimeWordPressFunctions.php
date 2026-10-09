@@ -76,12 +76,19 @@ function register_deactivation_hook( string $file, callable $callback ): void {
 	$GLOBALS['ran_booster_deactivation_callbacks'][ $file ] = $callback;
 }
 
+/**
+ * @param array<string, mixed> $arguments
+ */
 function register_rest_route( string $namespace, string $route, array $arguments ): bool { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound,Universal.NamingConventions.NoReservedKeywordParameterNames.namespaceFound,Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Preserve the WordPress signature; compact() reads namespace, route and arguments to record the route. The isolated bootstrap spy retains this WordPress-owned function name.
 	$GLOBALS['ran_booster_rest_routes'][] = compact( 'namespace', 'route', 'arguments' );
 
 	return true;
 }
 
+/**
+ * @param array<string, string> $headers
+ * @return array{version: string}
+ */
 // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- The isolated bootstrap spy retains this WordPress-owned function name.
 function get_file_data( string $file, array $headers, string $context = '' ): array {
 	unset( $file, $headers, $context );
@@ -111,6 +118,9 @@ function load_plugin_textdomain( string $domain, bool $deprecated = false, strin
 	return true;
 }
 
+/**
+ * @param array<array-key, mixed> $arguments
+ */
 // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- The isolated bootstrap spy retains this WordPress-owned function name.
 function wp_clear_scheduled_hook( string $hook, array $arguments = array() ): int {
 	$GLOBALS['ran_booster_cleared_cron_hooks'][] = array(

@@ -34,6 +34,7 @@ use RAN\Tests\RepositoryProvider\Support\InertWebhookPolicy;
 
 final class PackageRepositoryRequestResolverTest extends TestCase {
 
+	/** @param array<string, mixed> $input */
 	#[DataProvider( 'invalid_command_providers' )]
 	public function test_install_commands_require_an_exact_provider_code( array $input ): void {
 		$this->expectException( \InvalidArgumentException::class );

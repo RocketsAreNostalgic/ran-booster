@@ -11,6 +11,12 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 		public int $body_calls   = 0;
 		public int $header_calls = 0;
 
+		/**
+		 * @param array<string, mixed> $url_params
+		 * @param array<string, mixed> $merged_params
+		 * @param array<string, string> $headers
+		 * @param array<string, mixed> $query_params
+		 */
 		public function __construct(
 			private array $url_params,
 			private array $merged_params,
@@ -22,6 +28,7 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 		) {
 		}
 
+		/** @return array<string, mixed> */
 		public function get_url_params(): array {
 			return $this->url_params;
 		}
@@ -36,6 +43,7 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 			return $this->body;
 		}
 
+		/** @return array<string, string> */
 		public function get_headers(): array {
 			++$this->header_calls;
 
@@ -52,6 +60,7 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 			return $this->headers[ $name ] ?? $this->headers[ str_replace( '_', '-', $name ) ] ?? null;
 		}
 
+		/** @return array<string, mixed> */
 		public function get_query_params(): array {
 			return $this->query_params;
 		}
@@ -66,6 +75,10 @@ if ( ! class_exists( 'WP_REST_Response' ) ) {
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedClassFound, Generic.Files.OneObjectStructurePerFile.MultipleFound -- The isolated REST environment loads its native request and response doubles together. WordPress class identity is required by the host fixture contract.
 	class WP_REST_Response {
 
+		/**
+		 * @param array<string, mixed> $data
+		 * @param array<string, string> $headers
+		 */
 		public function __construct(
 			private array $data,
 			private int $status,
@@ -73,6 +86,7 @@ if ( ! class_exists( 'WP_REST_Response' ) ) {
 		) {
 		}
 
+		/** @return array<string, mixed> */
 		public function get_data(): array {
 			return $this->data;
 		}
@@ -81,6 +95,7 @@ if ( ! class_exists( 'WP_REST_Response' ) ) {
 			return $this->status;
 		}
 
+		/** @return array<string, string> */
 		public function get_headers(): array {
 			return $this->headers;
 		}

@@ -481,7 +481,10 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 		return 'nonce-for-prospective-release-' . $operation . '-' . $type;
 	}
 
-	/** @return array{release_id:string,tag:string,version:string,prerelease:bool,published_at:string,expected_asset_names:list<string>} */
+	/**
+	 * @param list<string> $expected_asset_names
+	 * @return array{release_id:string,tag:string,version:string,prerelease:bool,published_at:string,expected_asset_names:list<string>}
+	 */
 	private static function candidate(
 		string $release_id = '42',
 		string $version = '1.2.3',

@@ -614,6 +614,7 @@ final class DatabaseCapabilityProbeFailureConnection {
 		return '8.4.6';
 	}
 
+	/** @return never */
 	public function get_results( string $query ): array {
 		// The probe must contain and replace this test-only low-level detail.
 		throw new RuntimeException( $query . ' engine-probe-canary' );

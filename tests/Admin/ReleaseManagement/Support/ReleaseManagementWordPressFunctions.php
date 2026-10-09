@@ -141,6 +141,9 @@ function wp_nonce_url( string $actionurl, int|string $action = -1, string $name 
 	return add_query_arg( $name, wp_create_nonce( (string) $action ), $actionurl );
 }
 
+/**
+ * @param array<string, mixed>|string $key
+ */
 function add_query_arg( array|string $key, mixed $value = null, ?string $url = null ): string {
 	if ( is_array( $key ) ) {
 		$args = $key;
@@ -153,6 +156,9 @@ function add_query_arg( array|string $key, mixed $value = null, ?string $url = n
 	return $url . ( str_contains( $url, '?' ) ? '&' : '?' ) . http_build_query( $args, '', '&', PHP_QUERY_RFC3986 );
 }
 
+/**
+ * @return ($component is -1 ? array{scheme?: string, host?: string, port?: int, user?: string, pass?: string, path?: string, query?: string, fragment?: string}|false : int|string|false|null)
+ */
 function wp_parse_url( string $url, int $component = -1 ): array|int|string|null|false {
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- WordPress parser fixture.
 	return parse_url( $url, $component );

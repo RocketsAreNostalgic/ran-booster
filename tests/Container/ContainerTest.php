@@ -115,6 +115,7 @@ class UserManager {
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete dependency fixture stays beside the container reflection assertions.
 class UntypedDependency {
+	/** @param mixed $dependency Deliberately lacks a native type for the reflection failure test. */
 	public function __construct( public $dependency ) {
 	}
 }

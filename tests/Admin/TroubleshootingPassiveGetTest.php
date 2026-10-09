@@ -146,6 +146,7 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 		);
 	}
 
+	/** @param array<string, mixed> $query */
 	#[DataProvider( 'exact_request_provider' )]
 	public function test_passive_guard_matches_only_the_exact_get_request( ?string $method, array $query, bool $expected ): void {
 		if ( null === $method ) {
@@ -355,6 +356,7 @@ final class TrackingPluginRepository extends PluginRepository {
 	public function __construct() {
 	}
 
+	/** @return array{} */
 	public function all_booster_plugins() {
 		++$this->reads;
 

@@ -33,6 +33,9 @@ function add_submenu_page( string $parent_slug, string $page_title, string $menu
 	);
 }
 
+/**
+ * @return array<string, array<string, string>>
+ */
 function get_plugins(): array {
 	$failure = $GLOBALS['ran_booster_extensions_plugins_failure'] ?? null;
 	if ( $failure instanceof \Throwable ) {

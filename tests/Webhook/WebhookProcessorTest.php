@@ -448,6 +448,7 @@ final class WebhookProcessorTest extends TestCase {
 			/** @var array<string, array{scope: string, target: string, authority_id: string, secret: string}> */
 			private array $materials;
 
+			/** @param array<string, array{scope: string, target: string, authority_id: string, secret: string}>|null $materials */
 			public function __construct( ?array $materials = null ) {
 				parent::__construct( '/unused/processor-secrets.php', array() );
 				$this->materials = $materials ?? array(

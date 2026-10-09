@@ -528,7 +528,10 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertSame( 'Extension a été désactivée dans Booster, mais WordPress n’a pas pu la supprimer.', $dashboard->messages[0]['message'] );
 	}
 
-	/** @param array<string, string> $overrides */
+	/**
+	 * @param array<string, string> $overrides
+	 * @return array<string, string>
+	 */
 	private function input( array $overrides = array() ): array {
 		return array_merge(
 			array(
@@ -540,7 +543,10 @@ final class PackageRemovalServiceTest extends TestCase {
 		);
 	}
 
-	/** @param array<string, string> $overrides */
+	/**
+	 * @param array<string, string> $overrides
+	 * @return array<string, string>
+	 */
 	private function theme_input( array $overrides = array() ): array {
 		return array_merge(
 			array(
@@ -644,6 +650,7 @@ final class RemovalPluginRepository extends PluginRepository {
 		return $this->installed;
 	}
 
+	/** @param string $file */
 	public function unlink( $file ): PackageMutationResult {
 		unset( $file );
 		if ( $this->unlink_failure ) {
@@ -685,6 +692,7 @@ final class RemovalThemeRepository extends ThemeRepository {
 		return $this->installed;
 	}
 
+	/** @param string $stylesheet */
 	public function unlink( $stylesheet ): PackageMutationResult {
 		unset( $stylesheet );
 		$this->unlinked = true;

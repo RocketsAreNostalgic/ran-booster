@@ -1046,7 +1046,10 @@ final class PortabilityControllerTest extends TestCase {
 		return $method->invoke( $this->controller(), $failure );
 	}
 
-	/** @param array<string, mixed> $result @return array{status:string,message:string} */
+	/**
+	 * @param array<string, mixed> $result
+	 * @return array{status:string,message:string}
+	 */
 	private function deployment_result( array $result ): array {
 		$method = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'deployment_result' );
 

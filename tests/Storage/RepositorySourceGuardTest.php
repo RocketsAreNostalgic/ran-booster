@@ -16,6 +16,7 @@ require_once __DIR__ . '/StorageTestEnvironment.php';
 
 final class RepositorySourceGuardTest extends TestCase {
 
+	/** @param list<object> $rows */
 	#[DataProvider( 'truth_matrix' )]
 	public function test_assess_rows_enforces_the_exact_repository_source_shape( array $rows, PackageSource $proposed, bool $allowed, string $code, int $release_count ): void {
 		$result = RepositorySourceGuard::assess_rows( $rows, 'gh', 'R_1', 1, 'self/self.php', $proposed );

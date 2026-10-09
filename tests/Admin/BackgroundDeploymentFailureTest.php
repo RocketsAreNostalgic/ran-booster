@@ -167,6 +167,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 				public function __construct( private Plugin $plugin ) {
 				}
 
+				/** @return array<string, Plugin> */
 				public function all_booster_plugins(): array {
 					return array( $this->plugin->get_identifier() => $this->plugin );
 				}

@@ -429,6 +429,7 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 		return new RepositoryReleaseWorkflowProviderDouble( preview: $preview, status: $record );
 	}
 
+	/** @return array<string, string> */
 	private function request( string $operation, string $preview = '' ): array {
 		$request = array(
 			'workflow_operation'       => $operation,
@@ -456,8 +457,10 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of prepare retains the production method contract; these inputs do not affect this controlled result.
 			public function prepare( string $query, mixed ...$arguments ): string {
 				return $query;
+			}
+			/** @return list<object> */
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of get_results retains the production method contract; these inputs do not affect this controlled result.
-			} public function get_results( string $query ): array {
+			public function get_results( string $query ): array {
 				return array(
 					(object) array(
 						'type'                   => 1,

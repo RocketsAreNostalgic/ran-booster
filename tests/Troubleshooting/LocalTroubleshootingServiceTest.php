@@ -248,6 +248,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 			public function db_server_info(): string {
 				return '5.7.44';
 			}
+			/** @return never */
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of get_results retains the production method contract; these inputs do not affect this controlled result.
 			public function get_results( string $query ): array {
 				throw new \LogicException( 'An old server must fail before engine or custom-table reads.' );

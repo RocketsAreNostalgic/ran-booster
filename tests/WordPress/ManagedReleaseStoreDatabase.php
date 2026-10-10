@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace RAN\Tests\WordPress;
 
-final class ManagedReleaseStoreDatabase {
+final class ManagedReleaseStoreDatabase implements \RAN\Storage\ManagedReleaseWriteConnection {
 
 	public string $last_error = '';
 
 	public bool $source_guard_unavailable = false;
+
+	/** @var list<string> */
+	public array $queries = array();
+
+	public int $reads = 0;
 
 	/** @var list<array{0: string, 1: array<string, mixed>, 2: array<string, mixed>}> */
 	public array $updates = array();
@@ -34,13 +39,14 @@ final class ManagedReleaseStoreDatabase {
 	}
 
 	public function query( string $query ): int {
-		unset( $query );
+		$this->queries[] = $query;
 
 		return 1;
 	}
 
 	/** @return list<object> */
 	public function get_results( string $query ): array {
+		++$this->reads;
 		if ( $this->source_guard_unavailable && str_contains( $query, 'provider_repository_id' ) ) {
 			return array( (object) array( 'type' => 1 ) );
 		}

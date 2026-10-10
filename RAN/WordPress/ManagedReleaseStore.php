@@ -9,6 +9,8 @@ use RAN\Deployment\PackageMutationGuard;
 use RAN\PackageSubdirectory;
 use RAN\PackageSource;
 use RAN\Storage\Database;
+use RAN\Storage\SqlReadConnection;
+use RAN\Storage\ManagedReleaseWriteConnection;
 use RAN\Storage\RepositorySourceGuard;
 use RuntimeException;
 
@@ -68,8 +70,10 @@ class ManagedReleaseStore {
 			return false;
 		}
 
-		if ( false === $this->database->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
-			|| false === $this->database->query( 'START TRANSACTION' ) ) {
+		$database = $this->write_connection();
+
+		if ( false === $database->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
+			|| false === $database->query( 'START TRANSACTION' ) ) {
 			return false;
 		}
 		try {
@@ -81,7 +85,7 @@ class ManagedReleaseStore {
 				|| (int) ( $before->source_revision ?? 0 ) !== $expected_revision
 				|| ! is_string( $before->provider ?? null )
 				|| ! is_string( $before->provider_repository_id ?? null ) ) {
-				$wpdb = $this->database;
+				$wpdb = $database;
 				$wpdb->query( 'ROLLBACK' );
 				return false;
 			}
@@ -94,7 +98,7 @@ class ManagedReleaseStore {
 				true
 			);
 			if ( ! $assessment['allowed'] ) {
-				$this->database->query( 'ROLLBACK' );
+				$database->query( 'ROLLBACK' );
 				if ( 'repository_source_unavailable' === $assessment['code'] ) {
 					throw new ManagedReleaseRepositorySourceUnavailable( 'The repository source relationship is unavailable.' );
 				}
@@ -122,8 +126,8 @@ class ManagedReleaseStore {
 				'deployment_policy' => $policy,
 			);
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- This is the exact source-transition CAS boundary.
-			if ( 1 !== $this->database->update( ran_booster_table_name(), $data, $where ) ) {
-				$this->database->query( 'ROLLBACK' );
+			if ( 1 !== $database->update( ran_booster_table_name(), $data, $where ) ) {
+				$database->query( 'ROLLBACK' );
 				return false;
 			}
 
@@ -134,14 +138,14 @@ class ManagedReleaseStore {
 			&& ( $after->source_previous ?? null ) === $expected_source->value
 			&& ( $after->release_configuration ?? null ) === $data['release_configuration']
 				&& ( $after->deployment_policy ?? null ) === $next_policy;
-			if ( ! $verified || false === $this->database->query( 'COMMIT' ) ) {
-				$this->database->query( 'ROLLBACK' );
+			if ( ! $verified || false === $database->query( 'COMMIT' ) ) {
+				$database->query( 'ROLLBACK' );
 				return false;
 			}
 
 			return true;
 		} catch ( \Throwable $exception ) {
-			$this->database->query( 'ROLLBACK' );
+			$database->query( 'ROLLBACK' );
 			throw $exception;
 		}
 	}
@@ -171,8 +175,10 @@ class ManagedReleaseStore {
 			return false;
 		}
 
-		if ( false === $this->database->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
-			|| false === $this->database->query( 'START TRANSACTION' ) ) {
+		$database = $this->write_connection();
+
+		if ( false === $database->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
+			|| false === $database->query( 'START TRANSACTION' ) ) {
 			return false;
 		}
 		try {
@@ -191,7 +197,7 @@ class ManagedReleaseStore {
 					true
 				);
 			if ( ! $assessment['allowed'] ) {
-				$this->database->query( 'ROLLBACK' );
+				$database->query( 'ROLLBACK' );
 				if ( 'repository_source_unavailable' === $assessment['code'] ) {
 					throw new ManagedReleaseRepositorySourceUnavailable( 'The repository source relationship is unavailable.' );
 				}
@@ -202,12 +208,12 @@ class ManagedReleaseStore {
 			if ( PackageSource::RELEASE_ASSET->value !== ( $before->source ?? null )
 			|| (int) ( $before->source_revision ?? 0 ) !== $expected_revision
 			|| ! is_string( $before->release_configuration ?? null ) ) {
-				$this->database->query( 'ROLLBACK' );
+				$database->query( 'ROLLBACK' );
 				return false;
 			}
 			$current = ManagedReleaseConfiguration::from_json( $before->release_configuration );
 			if ( $channel === $current->channel() ) {
-				$this->database->query( 'ROLLBACK' );
+				$database->query( 'ROLLBACK' );
 				return false;
 			}
 			$next = new ManagedReleaseConfiguration(
@@ -236,8 +242,8 @@ class ManagedReleaseStore {
 				'release_configuration' => $current->to_json(),
 			);
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- This is the exact same-source configuration CAS boundary.
-			if ( 1 !== $this->database->update( ran_booster_table_name(), $data, $where ) ) {
-				$this->database->query( 'ROLLBACK' );
+			if ( 1 !== $database->update( ran_booster_table_name(), $data, $where ) ) {
+				$database->query( 'ROLLBACK' );
 				return false;
 			}
 
@@ -247,29 +253,29 @@ class ManagedReleaseStore {
 			&& (int) ( $after->source_revision ?? 0 ) === $expected_revision + 1
 			&& $next->to_json() === ( $after->release_configuration ?? null )
 			&& ( $after->deployment_policy ?? null ) === $next_policy;
-			if ( ! $verified || false === $this->database->query( 'COMMIT' ) ) {
-				$this->database->query( 'ROLLBACK' );
+			if ( ! $verified || false === $database->query( 'COMMIT' ) ) {
+				$database->query( 'ROLLBACK' );
 				return false;
 			}
 			return true;
 		} catch ( \Throwable $exception ) {
-			$this->database->query( 'ROLLBACK' );
+			$database->query( 'ROLLBACK' );
 			throw $exception;
 		}
 	}
 
 	private function row( string $type, string $identifier, bool $lock = false ): object {
 		$this->assert_identity( $type, $identifier );
-		$this->lifecycle?->require_ready();
-		$query = $this->database->prepare(
+		$database = $this->read_connection();
+		$query    = $database->prepare(
 			'SELECT * FROM %i WHERE type = %d AND package = %s LIMIT 2' . ( $lock ? ' FOR UPDATE' : '' ),
 			ran_booster_table_name(),
 			self::type_id( $type ),
 			$identifier
 		);
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery -- Prepared immediately above.
-		$rows  = $this->database->get_results( $query );
-		$error = property_exists( $this->database, 'last_error' ) ? trim( (string) $this->database->last_error ) : '';
+		$rows  = $database->get_results( $query );
+		$error = property_exists( $database, 'last_error' ) ? trim( (string) $database->last_error ) : '';
 		if ( '' !== $error || ! is_array( $rows ) || 1 !== count( $rows ) || ! is_object( $rows[0] ) ) {
 			throw new RuntimeException( 'The managed release package row is unavailable.' );
 		}
@@ -300,5 +306,25 @@ class ManagedReleaseStore {
 
 	private static function type_id( string $type ): int {
 		return 'plugin' === $type ? 1 : 2;
+	}
+
+	private function read_connection(): \wpdb|SqlReadConnection {
+		$this->lifecycle?->require_ready();
+		$database = $this->database;
+		if ( ! $database instanceof \wpdb && ! $database instanceof SqlReadConnection ) {
+			throw new RuntimeException( 'The managed release database is unavailable.' );
+		}
+
+		return $database;
+	}
+
+	private function write_connection(): \wpdb|ManagedReleaseWriteConnection {
+		$this->lifecycle?->require_ready();
+		$database = $this->database;
+		if ( ! $database instanceof \wpdb && ! $database instanceof ManagedReleaseWriteConnection ) {
+			throw new RuntimeException( 'The managed release database is unavailable.' );
+		}
+
+		return $database;
 	}
 }

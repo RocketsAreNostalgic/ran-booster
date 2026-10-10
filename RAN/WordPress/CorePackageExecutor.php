@@ -501,6 +501,10 @@ class CorePackageExecutor {
 			&& 'plugin_update_fatal_error_rollback_successful' === $result->get_error_code();
 	}
 
+	/**
+	 * @param 'install'|'update' $action Core operation.
+	 * @param ($action is 'install' ? null : object) $offer Update offer; installs use the archive directly.
+	 */
 	private function run_core_operation( string $action, string $type, string $archive_path, ?object $offer ): mixed {
 		if ( null !== $this->core_operation ) {
 			return ( $this->core_operation )( $action, $type, $archive_path, $offer );

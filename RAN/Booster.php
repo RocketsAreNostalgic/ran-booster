@@ -70,41 +70,41 @@ class Booster {
 
 	/** @return void */
 	public function init() {
-		add_action( 'admin_init', array( $this->service( \RAN\Admin\CredentialSelfDestructPurger::class ), 'purge' ), 1 );
+		add_action( 'admin_init', $this->service_callback( \RAN\Admin\CredentialSelfDestructPurger::class, 'purge' ), 1 );
 		add_action( 'admin_init', array( $this, 'maybe_upgrade_database' ) );
 		add_action( 'admin_init', array( $this, 'register_plugin_action_links' ) );
-		add_action( 'admin_init', array( $this->service( 'RAN\Dispatcher' ), 'dispatch_post_requests' ) );
+		add_action( 'admin_init', $this->service_callback( 'RAN\Dispatcher', 'dispatch_post_requests' ) );
 		add_action(
 			'wp_ajax_' . \RAN\Admin\RepositoryPickerController::AJAX_ACTION,
-			array( $this->service( 'RAN\Admin\RepositoryPickerController' ), 'handle' )
+			$this->service_callback( 'RAN\Admin\RepositoryPickerController', 'handle' )
 		);
 		add_action(
 			'wp_ajax_' . \RAN\Admin\DevelopmentSafetyNoticeController::AJAX_ACTION,
-			array( $this->service( \RAN\Admin\DevelopmentSafetyNoticeController::class ), 'handle' )
+			$this->service_callback( \RAN\Admin\DevelopmentSafetyNoticeController::class, 'handle' )
 		);
 		add_action(
 			'wp_ajax_' . \RAN\Admin\CredentialExpiryNoticeController::AJAX_ACTION,
-			array( $this->service( \RAN\Admin\CredentialExpiryNoticeController::class ), 'handle' )
+			$this->service_callback( \RAN\Admin\CredentialExpiryNoticeController::class, 'handle' )
 		);
 		add_action(
 			'wp_ajax_' . \RAN\Admin\DeploymentAdminController::AJAX_ACTION,
-			array( $this->service( \RAN\Admin\DeploymentAdminController::class ), 'handle' )
+			$this->service_callback( \RAN\Admin\DeploymentAdminController::class, 'handle' )
 		);
 		add_action(
 			'wp_ajax_' . \RAN\Admin\PackageUpdateProgressController::AJAX_ACTION,
-			array( $this->service( \RAN\Admin\PackageUpdateProgressController::class ), 'handle' )
+			$this->service_callback( \RAN\Admin\PackageUpdateProgressController::class, 'handle' )
 		);
 		add_action(
 			'wp_ajax_' . \RAN\Admin\PortabilityController::EXPORT_ACTION,
-			array( $this->service( \RAN\Admin\PortabilityController::class ), 'handle_export' )
+			$this->service_callback( \RAN\Admin\PortabilityController::class, 'handle_export' )
 		);
 		add_action(
 			'wp_ajax_' . \RAN\Admin\PortabilityController::PREVIEW_ACTION,
-			array( $this->service( \RAN\Admin\PortabilityController::class ), 'handle_preview' )
+			$this->service_callback( \RAN\Admin\PortabilityController::class, 'handle_preview' )
 		);
 		add_action(
 			'wp_ajax_' . \RAN\Admin\PortabilityController::APPLY_ACTION,
-			array( $this->service( \RAN\Admin\PortabilityController::class ), 'handle_apply' )
+			$this->service_callback( \RAN\Admin\PortabilityController::class, 'handle_apply' )
 		);
 		add_action( 'activate_plugin', array( WpPusherCoexistencePolicy::class, 'block_wp_pusher_activation' ) );
 		add_action( 'rest_api_init', array( $this, 'register_webhook_routes' ) );
@@ -120,19 +120,19 @@ class Booster {
 		add_action( 'admin_enqueue_scripts', array( $this, 'load_scripts' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'load_credential_expiry_notice_script' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'load_background_deployment_failure_notice_script' ) );
-		$expiry_notice = $this->service( \RAN\Admin\CredentialExpiryNotice::class );
-		add_action( 'admin_notices', array( $expiry_notice, 'render' ) );
-		add_action( 'network_admin_notices', array( $expiry_notice, 'render' ) );
-		$failure_notice = $this->service( \RAN\Admin\DeploymentAdminPresenter::class );
-		add_action( 'admin_notices', array( $failure_notice, 'render' ) );
-		add_action( 'network_admin_notices', array( $failure_notice, 'render' ) );
-		$runtime_notice = $this->service( \RAN\Admin\SecretsRuntimeAvailabilityNotice::class );
-		add_action( 'admin_notices', array( $runtime_notice, 'render' ) );
-		add_action( 'network_admin_notices', array( $runtime_notice, 'render' ) );
-		$database_notice = $this->service( \RAN\Admin\DatabaseCompatibilityNotice::class );
-		add_action( 'admin_notices', array( $database_notice, 'render' ) );
-		add_action( 'network_admin_notices', array( $database_notice, 'render' ) );
-		add_action( 'load-plugins.php', array( $this->service( \RAN\Admin\ManagedPluginFailureRows::class ), 'register' ) );
+		$expiry_notice = $this->service_callback( \RAN\Admin\CredentialExpiryNotice::class, 'render' );
+		add_action( 'admin_notices', $expiry_notice );
+		add_action( 'network_admin_notices', $expiry_notice );
+		$failure_notice = $this->service_callback( \RAN\Admin\DeploymentAdminPresenter::class, 'render' );
+		add_action( 'admin_notices', $failure_notice );
+		add_action( 'network_admin_notices', $failure_notice );
+		$runtime_notice = $this->service_callback( \RAN\Admin\SecretsRuntimeAvailabilityNotice::class, 'render' );
+		add_action( 'admin_notices', $runtime_notice );
+		add_action( 'network_admin_notices', $runtime_notice );
+		$database_notice = $this->service_callback( \RAN\Admin\DatabaseCompatibilityNotice::class, 'render' );
+		add_action( 'admin_notices', $database_notice );
+		add_action( 'network_admin_notices', $database_notice );
+		add_action( 'load-plugins.php', $this->service_callback( \RAN\Admin\ManagedPluginFailureRows::class, 'register' ) );
 	}
 
 	/** @return null */
@@ -217,12 +217,12 @@ class Booster {
 	/** @return void */
 	public function admin_menu() {
 		add_menu_page( $this->get_name(), $this->get_name(), 'manage_options', 'ran-booster', '', $this->get_menu_icon() );
-		add_submenu_page( 'ran-booster', $this->get_name(), __( 'Overview', 'ran-booster' ), 'manage_options', 'ran-booster', array( $this->service( 'RAN\Dashboard' ), 'get_index' ) );
-		add_submenu_page( 'ran-booster', __( 'Install Plugin', 'ran-booster' ), __( 'Install Plugin', 'ran-booster' ), 'manage_options', 'ran-booster-plugins-create', array( $this->service( 'RAN\Dashboard' ), 'get_plugins_create' ) );
-		add_submenu_page( 'ran-booster', __( 'Managed Plugins', 'ran-booster' ), __( 'Plugins', 'ran-booster' ), 'manage_options', 'ran-booster-plugins', array( $this->service( 'RAN\Dashboard' ), 'get_plugins' ) );
-		add_submenu_page( 'ran-booster', __( 'Install Theme', 'ran-booster' ), __( 'Install Theme', 'ran-booster' ), 'manage_options', 'ran-booster-themes-create', array( $this->service( 'RAN\Dashboard' ), 'get_themes_create' ) );
-		add_submenu_page( 'ran-booster', __( 'Managed Themes', 'ran-booster' ), __( 'Themes', 'ran-booster' ), 'manage_options', 'ran-booster-themes', array( $this->service( 'RAN\Dashboard' ), 'get_themes' ) );
-		add_submenu_page( 'ran-booster', __( 'Transporter', 'ran-booster' ), __( 'Transporter', 'ran-booster' ), 'manage_options', 'ran-booster-transporter', array( $this->service( 'RAN\Dashboard' ), 'get_transporter' ) );
+		add_submenu_page( 'ran-booster', $this->get_name(), __( 'Overview', 'ran-booster' ), 'manage_options', 'ran-booster', $this->service_callback( 'RAN\Dashboard', 'get_index' ) );
+		add_submenu_page( 'ran-booster', __( 'Install Plugin', 'ran-booster' ), __( 'Install Plugin', 'ran-booster' ), 'manage_options', 'ran-booster-plugins-create', $this->service_callback( 'RAN\Dashboard', 'get_plugins_create' ) );
+		add_submenu_page( 'ran-booster', __( 'Managed Plugins', 'ran-booster' ), __( 'Plugins', 'ran-booster' ), 'manage_options', 'ran-booster-plugins', $this->service_callback( 'RAN\Dashboard', 'get_plugins' ) );
+		add_submenu_page( 'ran-booster', __( 'Install Theme', 'ran-booster' ), __( 'Install Theme', 'ran-booster' ), 'manage_options', 'ran-booster-themes-create', $this->service_callback( 'RAN\Dashboard', 'get_themes_create' ) );
+		add_submenu_page( 'ran-booster', __( 'Managed Themes', 'ran-booster' ), __( 'Themes', 'ran-booster' ), 'manage_options', 'ran-booster-themes', $this->service_callback( 'RAN\Dashboard', 'get_themes' ) );
+		add_submenu_page( 'ran-booster', __( 'Transporter', 'ran-booster' ), __( 'Transporter', 'ran-booster' ), 'manage_options', 'ran-booster-transporter', $this->service_callback( 'RAN\Dashboard', 'get_transporter' ) );
 		add_submenu_page( 'ran-booster', __( 'Extensions', 'ran-booster' ), __( 'Extensions', 'ran-booster' ), 'manage_options', 'ran-booster-extensions', array( $this, 'render_extensions_page' ) );
 	}
 
@@ -815,5 +815,15 @@ class Booster {
 	 */
 	private function service( $alias ) {
 		return $this->container->make( $alias );
+	}
+
+	private function service_callback( string $alias, string $method ): callable {
+		$callback = array( $this->service( $alias ), $method );
+		if ( ! is_callable( $callback ) ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed internal diagnostic; escaping belongs at the output boundary.
+			throw new \LogicException( 'Core service does not provide a callable hook.' );
+		}
+
+		return $callback;
 	}
 }

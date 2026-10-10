@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Admin\ReleaseManagement;
 
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
+use RAN\Admin\PackageDisplayProjection;
 
 /** @internal Contributes release-specific state and actions to Core-owned package pages. */
 final class ReleaseManagementDisplay {
@@ -383,7 +384,7 @@ final class ReleaseManagementDisplay {
 		}
 	}
 
-	private function render_return_to_branch( object $package, ?string $nonce_action, string $operation_notice_html = '', bool $automatic_policy = false ): void {
+	private function render_return_to_branch( PackageDisplayProjection $package, ?string $nonce_action, string $operation_notice_html = '', bool $automatic_policy = false ): void {
 		$enabled = null !== $nonce_action && 'release_asset' === $package->source();
 		?>
 		<div class="ran-booster-release-return">
@@ -507,7 +508,7 @@ final class ReleaseManagementDisplay {
 		return 'unsupported_provider' !== $status->eligibility()->code();
 	}
 
-	private function render_release_track_settings( string $mode, bool $disabled, ?string $selected_channel, object $package, ?string $nonce_action, string $form_id ): void {
+	private function render_release_track_settings( string $mode, bool $disabled, ?string $selected_channel, PackageDisplayProjection $package, ?string $nonce_action, string $form_id ): void {
 		$has_mutation = ! $disabled && null !== $nonce_action;
 		?>
 		<form id="<?php echo esc_attr( $form_id ); ?>" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" class="<?php echo esc_attr( 'branch' === $mode ? 'ran-booster-release-switch-form' : 'ran-booster-release-channel-form' ); ?>"<?php echo 'branch' === $mode ? ' data-ran-booster-source-transition' : ''; ?><?php echo $has_mutation ? ' data-ran-booster-package-mutation' : ''; ?>>
@@ -794,7 +795,7 @@ final class ReleaseManagementDisplay {
 		return 'prerelease' === $this->normalize_release_channel( $channel ) ? __( 'Preview', 'ran-booster' ) : __( 'Stable', 'ran-booster' );
 	}
 
-	private function status_matches( ReleaseTrackingStatus $status, object $package ): bool {
+	private function status_matches( ReleaseTrackingStatus $status, PackageDisplayProjection $package ): bool {
 		return hash_equals( $package->type(), $status->type() )
 			&& hash_equals( $package->identifier(), $status->identifier() )
 			&& $package->source_revision() === $status->source_revision();
@@ -812,7 +813,7 @@ final class ReleaseManagementDisplay {
 		return $row;
 	}
 
-	private function admin_post_fields( string $operation, object $package, string $nonce ): void {
+	private function admin_post_fields( string $operation, PackageDisplayProjection $package, string $nonce ): void {
 		?>
 		<input type="hidden" name="action" value="<?php echo esc_attr( self::ADMIN_POST_ACTIONS[ $operation ] ); ?>">
 		<input type="hidden" name="_wpnonce" value="<?php echo esc_attr( $nonce ); ?>">
@@ -1056,16 +1057,14 @@ final class ReleaseManagementDisplay {
 			&& in_array( $eligibility->code(), array( 'missing_update_uri', 'mismatched_update_uri' ), true );
 	}
 
+	/** @phpstan-assert-if-true =PackageDisplayProjection $package */
 	private function is_projection( object $package ): bool {
-		foreach ( array( 'type', 'identifier', 'display_name', 'source', 'source_revision', 'settings_url' ) as $method ) {
-			if ( ! is_callable( array( $package, $method ) ) ) {
-				return false;
-			}
+		if ( ! $package instanceof PackageDisplayProjection ) {
+			return false;
 		}
 
 		return in_array( $package->type(), array( 'plugin', 'theme' ), true )
 			&& in_array( $package->source(), array( 'branch', 'release_asset' ), true )
-			&& is_string( $package->identifier() )
 			&& '' !== $package->identifier()
 			&& $package->source_revision() > 0;
 	}

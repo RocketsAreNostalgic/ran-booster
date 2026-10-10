@@ -44,6 +44,46 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		);
 	}
 
+	public function test_read_only_connection_cannot_start_a_deployment_transaction(): void {
+		$database   = new class( $this->database ) implements \RAN\Storage\SqlReadConnection {
+			public string $last_error = '';
+			public function __construct( private AttemptRepositoryDatabase $database ) {}
+			public function prepare( string $query, mixed ...$arguments ): string {
+				return $this->database->prepare( $query, ...$arguments );
+			}
+			/** @return list<object>|null */
+			public function get_results( string $query ): ?array {
+				return $this->database->get_results( $query );
+			}
+			public function query( string $query ): int|false {
+				return $this->database->query( $query );
+			}
+		};
+		$repository = new DeploymentAttemptRepository( $database, 'wp_attempts', database_lifecycle: $this->createStub( Database::class ) );
+		try {
+			$repository->claim_next();
+			self::fail( 'A reader must not begin a deployment transaction.' );
+		} catch ( DeploymentStorageFailure ) {
+			self::assertSame( array(), $this->database->queries );
+		}
+	}
+
+	public function test_undeclared_connection_is_rejected_after_lifecycle_readiness(): void {
+		$lifecycle = $this->createMock( Database::class );
+		$lifecycle->expects( self::once() )->method( 'require_ready' );
+		$database   = new class( $this->database ) {
+			public string $last_error = '';
+			public function __construct( private AttemptRepositoryDatabase $database ) {}
+			/** @param array<array-key, mixed> $arguments */
+			public function __call( string $method, array $arguments ): mixed {
+				return $this->database->{$method}( ...$arguments );
+			}
+		};
+		$repository = new DeploymentAttemptRepository( $database, 'wp_attempts', database_lifecycle: $lifecycle );
+		$this->expectException( DeploymentStorageFailure::class );
+		$repository->find_exact( 1 );
+	}
+
 	public function test_manual_admission_and_claim_are_one_atomic_transaction(): void {
 		$attempt = $this->manual( 'example' );
 

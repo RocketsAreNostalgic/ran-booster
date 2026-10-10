@@ -32,7 +32,7 @@ final class ThemeRepositoryDouble extends ThemeRepository {
 			throw new RuntimeException( 'missing-package' );
 		}
 
-		return new class( $this->provider_code, $this->source_revision, (string) $stylesheet, $this->repository_id, $this->repository, $this->is_private ) {
+		return new class( $this->provider_code, $this->source_revision, (string) $stylesheet, $this->repository_id, $this->repository, $this->is_private ) implements \RAN\RepositoryPackageIdentity {
 			public function __construct( private readonly string $provider_code, private readonly int $source_revision, private readonly string $identifier, private readonly string $repository_id, private readonly string $repository, private readonly bool $is_private ) {
 			}
 			public function get_identifier(): string {

@@ -8,6 +8,7 @@ use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use RAN\Logging\BoosterLogger;
 use RAN\PackageSource;
+use RAN\RepositoryPackageIdentity;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowTarget;
@@ -337,16 +338,16 @@ final class ReleaseWorkflowRequestController {
 		}
 	}
 
-	private function workflow_package( string $type, string $identifier, int $revision ): ?object {
+	private function workflow_package( string $type, string $identifier, int $revision ): ?RepositoryPackageIdentity {
 		$package = $this->request_boundary(
-			fn (): object => 'plugin' === $type ? $this->plugins->booster_plugin_from_file( $identifier ) : $this->themes->booster_theme_from_stylesheet( $identifier ),
+			fn (): RepositoryPackageIdentity => 'plugin' === $type ? $this->plugins->booster_plugin_from_file( $identifier ) : $this->themes->booster_theme_from_stylesheet( $identifier ),
 			null
 		);
 		return null !== $package && $revision === $package->get_source_revision()
 			&& is_string( $package->get_provider_repository_id() ) && '' !== $package->get_provider_repository_id() ? $package : null;
 	}
 
-	private function package_matches_status( object $package, ReleaseTrackingStatus $status ): bool {
+	private function package_matches_status( RepositoryPackageIdentity $package, ReleaseTrackingStatus $status ): bool {
 		return $status->provider_repository_id() === $package->get_provider_repository_id()
 			&& $status->source_revision() === $package->get_source_revision();
 	}

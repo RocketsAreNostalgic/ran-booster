@@ -162,7 +162,7 @@ final class WordPressWorkerWakeupTest extends TestCase {
 }
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
-final class WordPressWorkerWakeupDatabase {
+final class WordPressWorkerWakeupDatabase implements \RAN\Storage\SqlReadConnection {
 
 	public string $prefix     = 'wp_';
 	public string $last_error = '';

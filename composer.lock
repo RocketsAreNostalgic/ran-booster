@@ -1765,16 +1765,16 @@
         },
         {
             "name": "ran/coding-standards",
-            "version": "v1.0.1",
+            "version": "v1.0.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-coding-standards.git",
-                "reference": "0248066be3f4f9476ef7095d888657001488a3de"
+                "reference": "28f6e7c0a758c93503a0267696245a5540e002a5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-coding-standards/zipball/0248066be3f4f9476ef7095d888657001488a3de",
-                "reference": "0248066be3f4f9476ef7095d888657001488a3de",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-coding-standards/zipball/28f6e7c0a758c93503a0267696245a5540e002a5",
+                "reference": "28f6e7c0a758c93503a0267696245a5540e002a5",
                 "shasum": ""
             },
             "require": {
@@ -1787,7 +1787,8 @@
             "require-dev": {
                 "phpcompatibility/php-compatibility": "10.0.0-alpha2",
                 "phpcompatibility/phpcompatibility-paragonie": "2.0.0-alpha2",
-                "phpcompatibility/phpcompatibility-wp": "3.0.0-alpha2"
+                "phpcompatibility/phpcompatibility-wp": "3.0.0-alpha2",
+                "phpstan/phpstan": "^2.2.16"
             },
             "type": "phpcodesniffer-standard",
             "scripts": {
@@ -1802,8 +1803,19 @@
                 ],
                 "check": [
                     "@validate:strict",
+                    "@standards",
                     "@test",
-                    "@test:consumer-install"
+                    "@test:consumer-install",
+                    "@analyze"
+                ],
+                "analyze": [
+                    "phpstan analyse --configuration=phpstan.neon --no-progress"
+                ],
+                "standards": [
+                    "phpcs --standard=.phpcs.xml --report=summary"
+                ],
+                "standards:fix": [
+                    "phpcbf --standard=.phpcs.xml --report=summary"
                 ]
             },
             "license": [
@@ -1811,7 +1823,7 @@
             ],
             "description": "Shared PHP and WordPress coding standards for Rockets Are Nostalgic projects.",
             "homepage": "https://github.com/RocketsAreNostalgic/ran-coding-standards",
-            "time": "2026-10-03T20:17:13+00:00"
+            "time": "2026-10-10T00:33:47+00:00"
         },
         {
             "name": "sebastian/cli-parser",

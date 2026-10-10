@@ -35,6 +35,13 @@ final class CorePackageFilesystemBoundaryTest extends TestCase {
 			foreach ( array(
 				null,
 				false,
+				get_class(
+					new class() {
+						public static function move(): never {
+							throw new \LogicException( 'A class-string move must never execute.' );
+						}
+					}
+				),
 				new \stdClass(),
 				new class() {
 					protected function move(): never {

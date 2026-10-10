@@ -14,16 +14,16 @@
         "prepare": "husky"
   },
   "engines": {
-    "node": ">=24.11.0 <25",
+    "node": ">=24.21.0 <25",
     "pnpm": ">=11 <12"
   },
   "packageManager": "pnpm@11.7.0",
   "volta": {
-    "node": "24.11.0"
+    "node": "24.21.0"
   },
   "devDependencies": {
     "@babel/core": "7.29.7",
-    "@rocketsarenostalgic/quality-config": "github:RocketsAreNostalgic/ran-quality-config#2417caceb550819373a5e494a71acb547184b6d7",
+    "@rocketsarenostalgic/quality-config": "github:RocketsAreNostalgic/ran-quality-config#7faebe578c509e9265769314fd41bb1485b868b0",
     "@wordpress/eslint-plugin": "25.7.0",
     "@wordpress/prettier-config": "4.51.0",
     "@wordpress/stylelint-config": "26.1.0",

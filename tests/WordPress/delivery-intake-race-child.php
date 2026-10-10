@@ -40,7 +40,7 @@ $ran_booster_result      = array(
 );
 try {
 	global $wpdb;
-	$ran_booster_database = new class( $wpdb, $ran_booster_ready_marker, $ran_booster_release_marker ) {
+	$ran_booster_database = new class( $wpdb, $ran_booster_ready_marker, $ran_booster_release_marker ) implements \RAN\Storage\DeploymentWriteConnection {
 		public string $last_error = '';
 		public string $options;
 		private bool $barrier_reached = false;

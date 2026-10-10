@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Tests\WordPress;
 
-final class ManagedReleaseStoreDatabase {
+final class ManagedReleaseStoreDatabase implements \RAN\Storage\ManagedReleaseWriteConnection {
 
 	public string $last_error = '';
 

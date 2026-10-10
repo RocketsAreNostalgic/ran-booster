@@ -22,6 +22,31 @@ use RuntimeException;
 
 final class ManagedReleaseStoreTest extends TestCase {
 
+	public function test_read_only_connection_can_read_release_configuration_without_write_methods(): void {
+		$database = $this->createMock( \RAN\Storage\SqlReadConnection::class );
+		$database->expects( self::once() )->method( 'prepare' )->willReturn( 'prepared fixture query' );
+		$database->expects( self::once() )->method( 'get_results' )->with( 'prepared fixture query' )->willReturn( array( (object) array( 'release_configuration' => null ) ) );
+		$store = new ManagedReleaseStore( $database, $this->createStub( Database::class ) );
+		self::assertNull( $store->configuration( 'plugin', 'installed/example.php' ) );
+	}
+
+	public function test_read_only_connection_cannot_start_a_release_transaction(): void {
+		$database = $this->createStub( \RAN\Storage\SqlReadConnection::class );
+		$store    = new ManagedReleaseStore( $database, $this->createStub( Database::class ) );
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionMessage( 'The managed release database is unavailable.' );
+		$store->transition( 'plugin', 'installed/example.php', PackageSource::RELEASE_ASSET, 4, PackageSource::BRANCH, null, 7 );
+	}
+
+	public function test_undeclared_release_connection_is_rejected_after_lifecycle_readiness(): void {
+		$lifecycle = $this->createMock( Database::class );
+		$lifecycle->expects( self::once() )->method( 'require_ready' );
+		$store = new ManagedReleaseStore( new \stdClass(), $lifecycle );
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionMessage( 'The managed release database is unavailable.' );
+		$store->configuration( 'plugin', 'installed/example.php' );
+	}
+
 	/** @return iterable<string, array{bool, RuntimeException}> */
 	public static function storage_failures(): iterable {
 		foreach ( array(

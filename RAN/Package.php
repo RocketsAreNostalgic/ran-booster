@@ -6,7 +6,7 @@ namespace RAN; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonP
 
 use RAN\Deployment\DeploymentPolicy;
 
-interface Package {
+interface Package extends RepositoryPackageIdentity {
 	public function get_identifier(): mixed;
 
 	public function get_display_name(): string;
@@ -29,8 +29,6 @@ interface Package {
 
 	public function get_source(): PackageSource;
 
-	public function get_source_revision(): int;
-
 	public function set_source( PackageSource $source, int $revision ): void;
 
 
@@ -45,10 +43,6 @@ interface Package {
 	public function set_deployment_ref( ?string $deployment_ref ): void;
 
 	public function get_credential_id(): string;
-
-	public function get_provider_code(): ?string;
-
-	public function get_provider_repository_id(): ?string;
 
 	public function is_private(): mixed;
 

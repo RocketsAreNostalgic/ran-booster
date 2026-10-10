@@ -16,6 +16,13 @@ final class ContainerTest extends RANBoosterTestCase {
 		$this->container = new CoreContainer();
 	}
 
+	public function test_factory_results_remain_arbitrary_values(): void {
+		foreach ( array( null, false, 7, 'fixture', array( 'value' => 1 ) ) as $value ) {
+			$this->container->bind( 'arbitrary', static fn (): mixed => $value );
+			self::assertSame( $value, $this->container->make( 'arbitrary' ) );
+		}
+	}
+
 	public function test_untyped_parameter_still_receives_null(): void {
 		$result = $this->container->make( UntypedDependency::class );
 

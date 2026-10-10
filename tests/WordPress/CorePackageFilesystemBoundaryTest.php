@@ -17,6 +17,7 @@ final class CorePackageFilesystemBoundaryTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_source_selection_fails_closed_for_uncallable_moves_and_preserves_native_and_magic_dispatch(): void {
+		require dirname( __DIR__ ) . '/Support/WPError.php';
 		require __DIR__ . '/CorePackageFilesystemWordPressFunctions.php';
 		global $wp_filesystem;
 		$directory = sys_get_temp_dir() . '/ran-core-filesystem-' . bin2hex( random_bytes( 8 ) );

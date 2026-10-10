@@ -89,7 +89,7 @@ The current lock adopts `ran/coding-standards` v1.0.3 at
 `28f6e7c0a758c93503a0267696245a5540e002a5` through PR295. Its consumed rulesets
 and owned-method sniff retain the reviewed v1.0.1 behavior. The earlier v1.0.1
 adoption introduced the precise
-`WordPress.Security.EscapeOutput.ExceptionNotEscaped` exclusion recognizes that
+`WordPress.Security.EscapeOutput.ExceptionNotEscaped` exclusion, which recognizes that
 exceptions carry diagnostic values; actual output must still be escaped at its
 rendering boundary. Core removes 47 occurrences of that selector across 30
 non-shipped test PHP files (37 ignores, five disables and five enables), plus the

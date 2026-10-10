@@ -123,7 +123,7 @@ foreach ( array( $ran_booster_ready, $ran_booster_release, $ran_booster_result )
 	}
 }
 global $wpdb;
-$ran_booster_database = new class( $wpdb, $ran_booster_ready, $ran_booster_release ) {
+$ran_booster_database = new class( $wpdb, $ran_booster_ready, $ran_booster_release ) implements \RAN\Storage\ManagedReleaseWriteConnection {
 	public string $last_error = '';
 	public string $options;
 	public string $prefix;
@@ -138,6 +138,19 @@ $ran_booster_database = new class( $wpdb, $ran_booster_ready, $ran_booster_relea
 		return (string) $this->wpdb->db_server_info(); }
 	public function suppress_errors( bool $suppress = true ): bool {
 		return (bool) $this->wpdb->suppress_errors( $suppress ); }
+	public function prepare( string $query, mixed ...$arguments ): mixed {
+		return $this->__call( 'prepare', array( $query, ...$arguments ) );
+	}
+	public function query( string $query ): mixed {
+		return $this->__call( 'query', array( $query ) );
+	}
+	/**
+	 * @param array<string, mixed> $data
+	 * @param array<string, mixed> $where
+	 */
+	public function update( string $table, array $data, array $where ): mixed {
+		return $this->__call( 'update', array( $table, $data, $where ) );
+	}
 	/** @param array<array-key, mixed> $arguments */
 	public function __call( string $name, array $arguments ): mixed {
 		$value            = $this->wpdb->{$name}( ...$arguments );

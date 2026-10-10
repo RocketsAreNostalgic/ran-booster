@@ -27,7 +27,7 @@ namespace {
 namespace RAN\Tests\Deployment {
 
 	// phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- The fixture pairs WordPress function doubles with its database class for one isolated test environment.
-	final class AttemptRepositoryDatabase {
+	final class AttemptRepositoryDatabase implements \RAN\Storage\DeploymentWriteConnection {
 
 		public string $options    = 'wp_options';
 		public string $last_error = '';
@@ -76,7 +76,7 @@ namespace RAN\Tests\Deployment {
 		}
 
 		/** @param array<string, mixed> $data */
-		// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- Preserve the wpdb insert signature; this fixture owns one in-memory table.
+		// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- Preserve the wpdb insert signature; this fixture owns one in-memory table.
 		public function insert( string $table, array $data ): int|false {
 			++$this->insert_calls;
 			if ( $this->fail_insert || $this->insert_calls === $this->fail_insert_number ) {

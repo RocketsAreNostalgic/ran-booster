@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Tests\Admin\ReleaseManagement\Support;
 
-final readonly class PackageProjection {
+final readonly class PackageProjection implements \RAN\Admin\PackageDisplayProjection {
 	public function __construct(
 		private string $source_value = 'branch',
 		private string $type_value = 'plugin',

@@ -76,6 +76,37 @@ actual fallback/guard. Generated Admin Shell bytes are verified through
 not complete #167's naming, condition, exception or connected-contract work,
 and does not raise the analysis level or certify new dependency/host versions.
 
+## Native injection contracts
+
+Release administration accepts `PackageDisplayProjection` implementations,
+including standalone projections, and release workflow package lookup accepts
+`RepositoryPackageIdentity`. Production `Package` inherits that identity role.
+Objects with matching method names alone are no longer admitted at these
+boundaries. Native return types do not replace the existing source, revision,
+nonempty identity, capability or nonce checks.
+
+`DeploymentAttemptRepository` and `ManagedReleaseStore` accept real `wpdb`
+connections or explicitly implementing injected connections. Reads require
+`SqlReadConnection`; deployment mutations require `DeploymentWriteConnection`,
+and managed-release mutations require `ManagedReleaseWriteConnection`.
+Read-only connections need not implement mutation methods. Admission occurs
+at the existing operation boundary after lifecycle readiness, not in the
+constructor. The deployment error slot and all row/result validation remain
+required as before; a managed-release reader may omit its optional error slot.
+Magic dispatch alone no longer satisfies these native method contracts.
+
+This is a deliberate narrowing of accepted injected objects, not a claim that
+all structural database objects are `wpdb`. The separate `Database` capability
+probes and `RepositorySourceGuard` array-token fixtures retain their contracts.
+Do not add methods to those partial fixtures or coerce their query tokens merely
+to satisfy an unrelated connection role.
+
+Booster validates each resolved service-method callback before registering it
+with WordPress. Valid duck-typed and magic callbacks retain their original array
+identity and resolution count. Invalid callbacks now throw `LogicException`
+during registration. `CoreContainer::make()` itself still permits arbitrary
+factory results; it does not promise that a class-name key returns that class.
+
 ## Maintained development PHP and reviewed exception boundaries
 
 `composer analyze` invokes `scripts/analyze-development.php`, which discovers all

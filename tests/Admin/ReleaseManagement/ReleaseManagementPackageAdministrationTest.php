@@ -26,6 +26,52 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		ReleaseManagementFixture::reset_word_press();
 	}
 
+	public function test_unmarked_display_projection_is_rejected_before_reading_its_values(): void {
+		$package = new class() {
+			public int $reads = 0;
+			public function type(): string {
+				++$this->reads;
+				return 'plugin';
+			}
+			public function identifier(): string {
+				return 'example/example.php';
+			}
+			public function display_name(): string {
+				return 'Example';
+			}
+			public function source(): string {
+				return 'branch';
+			}
+			public function source_revision(): int {
+				return 3;
+			}
+			public function settings_url(): string {
+				return 'https://example.test/wp-admin/admin.php';
+			}
+		};
+		$display = new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay();
+		ob_start();
+		$display->render_settings( $package, null, $package->settings_url() );
+		$html = (string) ob_get_clean();
+
+		self::assertSame( 0, $package->reads );
+		self::assertSame( '', $html );
+	}
+
+	public function test_projection_protocol_does_not_replace_source_identity_validation(): void {
+		$display = new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay();
+		foreach ( array(
+			new PackageProjection( 'unknown' ),
+			new PackageProjection( 'branch', 'unknown' ),
+			new PackageProjection( 'branch', 'plugin', 0 ),
+		) as $package ) {
+			ob_start();
+			$display->render_settings( $package, null, $package->settings_url() );
+			$html = (string) ob_get_clean();
+			self::assertSame( '', $html );
+		}
+	}
+
 	public function test_branch_settings_render_one_core_owned_form_without_mutating(): void {
 		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
 		$controls = ReleaseManagementFixture::controls( $tracking );

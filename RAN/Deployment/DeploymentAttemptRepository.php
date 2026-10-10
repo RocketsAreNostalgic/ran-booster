@@ -11,6 +11,8 @@ use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidence;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Storage\Database;
+use RAN\Storage\SqlReadConnection;
+use RAN\Storage\DeploymentWriteConnection;
 use RAN\Storage\DatabaseCompatibilityFailure;
 use RAN\Storage\DatabaseLifecycleFailure;
 use Throwable;
@@ -36,12 +38,13 @@ final class DeploymentAttemptRepository {
 	/** @var callable(int): string */
 	private $random_bytes;
 	private Database $database_lifecycle;
+	private string $table_name;
 	/** @var array{valid: bool, maximum_rows: int, source: 'configured'|'default'}|null */
 	private ?array $retention_configuration = null;
 
 	public function __construct(
 		private ?object $database = null,
-		private ?string $table_name = null,
+		?string $table_name = null,
 		?callable $clock = null,
 		?callable $random_bytes = null,
 		?Database $database_lifecycle = null,
@@ -51,9 +54,7 @@ final class DeploymentAttemptRepository {
 			global $wpdb;
 			$this->database = $wpdb;
 		}
-		if ( null === $this->table_name ) {
-			$this->table_name = \RAN\Storage\Database::attempt_table_name();
-		}
+		$this->table_name         = $table_name ?? Database::attempt_table_name();
 		$this->clock              = $clock ?? static fn (): DateTimeImmutable => new DateTimeImmutable( 'now', wp_timezone() );
 		$this->random_bytes       = $random_bytes ?? static fn ( int $length ): string => random_bytes( $length );
 		$this->database_lifecycle = $database_lifecycle ?? new Database( $this->database );
@@ -102,7 +103,7 @@ final class DeploymentAttemptRepository {
 					)
 				);
 				$query  = $this->update_query( $queued->get_id(), DeploymentState::QUEUED, array( 'state' => DeploymentState::RUNNING->value ) );
-				if ( 1 !== $this->database->query( $query ) ) {
+				if ( 1 !== $this->write_connection()->query( $query ) ) {
 					throw DeploymentStorageFailure::unavailable();
 				}
 				$running = $this->require_exact( $queued->get_id() );
@@ -339,7 +340,7 @@ final class DeploymentAttemptRepository {
 			'finished_at'  => $this->time_string( $at ?? $this->now() ),
 		);
 		$query = $this->update_query( $id, DeploymentState::RUNNING, $data );
-		if ( 1 !== $this->database->query( $query ) ) {
+		if ( 1 !== $this->write_connection()->query( $query ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
 		$attempt = $this->require_exact( $id );
@@ -607,7 +608,7 @@ final class DeploymentAttemptRepository {
 					'outcome_code' => $outcome->get_code(),
 					'finished_at'  => $this->time_string( $at ?? $this->now() ),
 				);
-				if ( 1 !== $this->database->query( $this->update_query( $id, DeploymentState::RUNNING, $data ) ) ) {
+				if ( 1 !== $this->write_connection()->query( $this->update_query( $id, DeploymentState::RUNNING, $data ) ) ) {
 					throw DeploymentStorageFailure::unavailable();
 				}
 				$attempt = $this->require_exact( $id );
@@ -645,7 +646,7 @@ final class DeploymentAttemptRepository {
 					'resolved_at' => $this->time_string( $at ?? $this->now() ),
 					'resolved_by' => (string) $user_id,
 				);
-				if ( 1 !== $this->database->query( $this->update_query( $id, DeploymentState::NEEDS_ATTENTION, $data ) ) ) {
+				if ( 1 !== $this->write_connection()->query( $this->update_query( $id, DeploymentState::NEEDS_ATTENTION, $data ) ) ) {
 					throw DeploymentStorageFailure::unavailable();
 				}
 				$attempt = $this->require_exact( $id );
@@ -676,7 +677,7 @@ final class DeploymentAttemptRepository {
 		}
 		$queued = DeploymentAttempt::from_database( $rows[0] );
 		$query  = $this->update_query( $queued->get_id(), DeploymentState::QUEUED, array( 'state' => DeploymentState::RUNNING->value ) );
-		if ( 1 !== $this->database->query( $query ) ) {
+		if ( 1 !== $this->write_connection()->query( $query ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
 		$running = $this->require_exact( $queued->get_id() );
@@ -690,8 +691,9 @@ final class DeploymentAttemptRepository {
 
 	/** @param array<string, string|null> $data */
 	private function running_write( int $attempt_id, array $data ): DeploymentAttempt {
-		$id = $this->positive_id( $attempt_id );
-		if ( 1 !== $this->database->query( $this->update_query( $id, DeploymentState::RUNNING, $data ) ) ) {
+		$id    = $this->positive_id( $attempt_id );
+		$query = $this->update_query( $id, DeploymentState::RUNNING, $data );
+		if ( 1 !== $this->write_connection()->query( $query ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
 		$attempt = $this->require_exact( $id );
@@ -769,7 +771,7 @@ final class DeploymentAttemptRepository {
 	/** @param array<string, int|string|null> $data */
 	private function insert_and_read( array $data ): DeploymentAttempt {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- This is the deployment persistence boundary. Retain the promoted constructor or external DTO property contract.
-		if ( 1 !== $this->database->insert( $this->table_name, $data ) ) {
+		if ( 1 !== $this->write_connection()->insert( $this->table_name, $data ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
 		$query = $this->prepare( 'SELECT * FROM %i WHERE correlation_id = %s LIMIT 2', $this->table_name, $data['correlation_id'] );
@@ -809,7 +811,7 @@ final class DeploymentAttemptRepository {
 			'resolved_by'             => null,
 		);
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- This is the durable zero-target delivery acknowledgement. Retain the promoted constructor or external DTO property contract.
-		if ( 1 !== $this->database->insert( $this->table_name, $data ) ) {
+		if ( 1 !== $this->write_connection()->insert( $this->table_name, $data ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
 		$query = $this->prepare( 'SELECT * FROM %i WHERE correlation_id = %s LIMIT 2', $this->table_name, $data['correlation_id'] );
@@ -938,28 +940,28 @@ final class DeploymentAttemptRepository {
 			$this->table_name,
 			...array_values( $ids )
 		);
-		if ( count( $ids ) !== $this->database->query( $query ) ) {
+		if ( count( $ids ) !== $this->write_connection()->query( $query ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
 	}
 
 	private function transaction( callable $operation, bool $serializable = false ): mixed {
 		$this->require_storage_support();
-		if ( $serializable && false === $this->database->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' ) ) {
+		if ( $serializable && false === $this->write_connection()->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
-		if ( false === $this->database->query( 'START TRANSACTION' ) ) {
+		if ( false === $this->write_connection()->query( 'START TRANSACTION' ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
 		try {
 			$result = $operation();
-			if ( false === $this->database->query( 'COMMIT' ) ) {
+			if ( false === $this->write_connection()->query( 'COMMIT' ) ) {
 				throw DeploymentStorageFailure::transaction_commit_failed();
 			}
 
 			return $result;
 		} catch ( Throwable $exception ) {
-			$this->database->query( 'ROLLBACK' );
+			$this->write_connection()->query( 'ROLLBACK' );
 			throw $exception;
 		}
 	}
@@ -989,6 +991,7 @@ final class DeploymentAttemptRepository {
 
 	/** @return list<object> */
 	private function read_rows( string $query ): array {
+		$this->read_connection();
 		$this->database->last_error = '';
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Durable state cannot use object caching.
 		$rows = $this->database->get_results( $query );
@@ -1006,7 +1009,7 @@ final class DeploymentAttemptRepository {
 	private function prepare( string $query, mixed ...$arguments ): string {
 		$this->require_storage_support();
 
-		return $this->database->prepare( $query, ...$arguments );
+		return $this->read_connection()->prepare( $query, ...$arguments );
 	}
 
 	private function require_storage_support(): void {
@@ -1089,5 +1092,23 @@ final class DeploymentAttemptRepository {
 			|| preg_match( '/\b(?:authorization|bearer|token|secret|password|signature)\b\s*[:=]/i', $value ) === 1 ) {
 			throw DeploymentStorageFailure::invalid_record();
 		}
+	}
+
+	private function read_connection(): \wpdb|SqlReadConnection {
+		$database = $this->database;
+		if ( ! $database instanceof \wpdb && ! $database instanceof SqlReadConnection ) {
+			throw DeploymentStorageFailure::unavailable();
+		}
+
+		return $database;
+	}
+
+	private function write_connection(): \wpdb|DeploymentWriteConnection {
+		$database = $this->database;
+		if ( ! $database instanceof \wpdb && ! $database instanceof DeploymentWriteConnection ) {
+			throw DeploymentStorageFailure::unavailable();
+		}
+
+		return $database;
 	}
 }

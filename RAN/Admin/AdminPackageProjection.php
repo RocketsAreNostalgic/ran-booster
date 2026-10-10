@@ -9,7 +9,7 @@ use InvalidArgumentException;
 /**
  * Display-safe managed-package data exposed to trusted add-ons.
  */
-final readonly class AdminPackageProjection {
+final readonly class AdminPackageProjection implements PackageDisplayProjection {
 	private string $subdirectory;
 
 	public function __construct(

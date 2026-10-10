@@ -33,6 +33,53 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 	public function reset_word_press(): void {
 		ReleaseManagementFixture::reset_word_press(); }
 
+	public function test_unmarked_repository_identity_is_rejected_before_getters_or_provider_calls(): void {
+		$package    = new class() {
+			public int $reads = 0;
+			public function get_source_revision(): int {
+				++$this->reads;
+				return 3;
+			}
+			public function get_provider_code(): string {
+				return 'fixture';
+			}
+			public function get_provider_repository_id(): string {
+				return '101';
+			}
+		};
+		$plugins    = new class( $package ) extends \RAN\Storage\PluginRepository {
+			public function __construct( private object $package ) {}
+			/** @return object */
+			public function booster_plugin_from_file( $file ): object {
+				TestCase::assertIsString( $file );
+				return $this->package;
+			}
+		};
+		$themes     = new class( $package ) extends \RAN\Storage\ThemeRepository {
+			public function __construct( private object $package ) {}
+			/** @return object */
+			public function booster_theme_from_stylesheet( $stylesheet ): object {
+				TestCase::assertIsString( $stylesheet );
+				return $this->package;
+			}
+		};
+		$provider   = new RepositoryReleaseWorkflowProviderDouble();
+		$tracking   = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$providers  = new ProviderRegistry( array( $provider ) );
+		$controller = new ReleaseWorkflowRequestController( $tracking, $plugins, $themes, $providers, $this->source_guard() );
+		$presenter  = new \RAN\Admin\ReleaseManagement\ReleaseWorkflowPresenter( $tracking, $plugins, $themes, $providers, $controller, $this->source_guard() );
+		$lookup     = new \ReflectionMethod( $presenter, 'local_package' );
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			$request                  = $this->request( 'inspect' );
+			$request['expected_type'] = $type;
+			$url                      = $controller->process_workflow_request( $request );
+			self::assertStringContainsString( 'ran_booster_release_workflow_diagnostic=package_source_changed', $url );
+			self::assertSame( 0, $package->reads );
+			self::assertNull( $lookup->invoke( $presenter, $type, $request['expected_identifier'] ) );
+		}
+		self::assertSame( array(), $provider->calls );
+	}
+
 	public function test_non_git_hub_fixture_completes_all_three_operations_through_the_single_neutral_route(): void {
 		foreach ( array( 'inspect', 'setup', 'outcome' ) as $operation ) {
 			$preview  = ( 'setup' === $operation ) ? str_repeat( 'a', 32 ) : '';

@@ -2886,7 +2886,7 @@ final class DashboardNeedsAttentionCoordinator extends DeploymentCoordinator {
 }
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- The bounded database fake belongs to its production-controller test.
-final class DashboardActivityWpdb {
+final class DashboardActivityWpdb implements \RAN\Storage\SqlReadConnection {
 
 	/** @var list<array<string, mixed>> */
 	public array $rows = array();
@@ -2915,14 +2915,14 @@ final class DashboardActivityWpdb {
 		return $query;
 	}
 
-	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- The wpdb fixture retains the query call signature while returning the controlled database result.
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterface -- The wpdb fixture retains the query call signature while returning the controlled database result.
 	public function query( string $query ): int {
 		++$this->writes;
 		return 0;
 	}
 
 	/** @param array<string, mixed> $data */
-	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The wpdb fixture retains the insert call signature while returning the controlled database result.
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed -- The wpdb fixture retains the insert call signature while returning the controlled database result.
 	public function insert( string $table, array $data ): false {
 		++$this->writes;
 		return false;

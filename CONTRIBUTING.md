@@ -44,14 +44,25 @@ worlds remain separate processes as described below.
 
 ## Production PHP analysis coverage
 
-`composer analyze` is blocking PHPStan level 6. Its production profile defaults to the repository root, with root-relative
+`composer analyze` is blocking PHPStan level 7. Its production profile defaults to the repository root, with root-relative
 exclusions for development, dependencies and disposable output. New production
 roots enter automatically, including views and the immutable generated Admin Shell. At the #167 coverage checkpoint this is 345 shipped Core
 PHP files. Dependency `scanDirectories` supplies symbols; it is not direct
 analysis of dependency bodies. Tests and maintenance scripts retain syntax,
 standards and their behavioural gates, rather than being counted as production
-analysis coverage. Levels 7–8 remain separately scoped; this gate does not imply
+analysis coverage. Level 8 remains advisory and separately scoped; this gate does not imply
 maximum analysis depth or complete retained-exception acceptance.
+
+Three exact `property.notFound` allowances retain WordPress's mutable foreign
+update-transient contract: the response-channel assignment in
+`CorePackageExecutor::transient_filter()` and the two corresponding plugin/theme
+assignments in `tests/WordPress/core-updater-proof.php`. The existing object must
+retain its identity and supported magic accessors; declaring every object as
+`stdClass`, replacing it or adding an unrelated interface would change that
+contract. These allowances do not exempt any file or disable other diagnostics.
+Level 6 advisory runs can report them as unmatched because that lower level does
+not emit these findings; such a run is no longer the maintained enforcement
+profile. Keep unmatched-ignore reporting enabled.
 
 Analysis declarations follow the supported WordPress 7.0 floor. The direct
 `php-stubs/wordpress-stubs` constraint is `~7.0.0`: accept 7.0 patch declarations
@@ -91,11 +102,13 @@ connections or explicitly implementing injected connections. Reads require
 and managed-release mutations require `ManagedReleaseWriteConnection`.
 Read-only connections need not implement mutation methods. Admission occurs
 at the existing operation boundary after lifecycle readiness, not in the
-constructor. Deployment mutations retain their required error slot. Readers may
-omit the error slot; a declared slot is cleared before the query and read again
-afterwards through ordinary PHP property access, including magic accessors.
-Inaccessible declared slots still fail before querying. All row/result validation
-remains required.
+constructor. Error channels remain optional. Deployment reads clear a declared
+error slot before querying and read it afterwards through ordinary PHP property
+access; inaccessible declared slots still require working magic accessors. When
+no slot is declared, deployment reads use a callable `__get`/`__set` pair if
+present, rejecting incomplete pairs before querying. Managed-release reads
+inspect a declared error slot after querying without requiring or clearing it.
+All row/result validation remains required.
 Magic dispatch alone no longer satisfies these native method contracts.
 
 `CredentialUsageReader` requires `CredentialUsageConnection` for injected
@@ -151,7 +164,7 @@ access and native readonly errors. Focused tests cover those behaviors; nominal
 
 `composer analyze` invokes `scripts/analyze-development.php`, which discovers all
 PHP recursively under `scripts/` and `tests/`. It batches compatible test classes
-in one locked level-6 analyzer invocation and analyzes all remaining files
+in one locked level-7 analyzer invocation and analyzes all remaining files
 individually. `phpstan-development.neon` provides unit-test symbols;
 `phpstan-integration.neon` provides the separate installed WordPress/fixture
 symbol world. Both remain pathless: adding broad paths would reintroduce unrelated
@@ -297,7 +310,7 @@ existing positional calls; installed WordPress proof exercises the theme factory
 
 The inherited profile is WordPress-Extra plus PHPCompatibilityWP and the RAN
 syntax baseline, not every WordPress-Docs rule. Full PHPStan path coverage is
-enforced at level 6; it does not imply maximum analysis depth. The [standards scope inventory](docs/php-standards-coverage.md)
+enforced at level 7; it does not imply maximum analysis depth. The [standards scope inventory](docs/php-standards-coverage.md)
 records the remaining specific exclusions and their rationale. The former blanket
 exemptions in 29 test/harness files are removed; a token-aware guard rejects new
 whole-file or all-rule suppressions. Specific native/runtime fixture exceptions
@@ -310,7 +323,13 @@ reported and a local exception does not suppress the next declaration. Keep
 exceptions specific, justified and reviewable; do not add blanket exclusions to
 make the canonical command pass.
 
-The released `ran/coding-standards` v1.0.1 adopts a message-specific exclusion for
+Core locks `ran/coding-standards` v1.0.3 at
+`28f6e7c0a758c93503a0267696245a5540e002a5`. This development-only adoption
+retains the rulesets and owned-method sniff from v1.0.1; the newer release
+qualifies the shared package's own maintained PHP. Core's checks, exceptions and
+PHPStan enforcement remain independently controlled here.
+
+The v1.0.1 release introduced a message-specific exclusion for
 `WordPress.Security.EscapeOutput.ExceptionNotEscaped`: exception messages are
 diagnostic values, and escaping belongs at actual output boundaries. Core removes
 redundant test-only annotations and the characterization-path XML rule. Shipped

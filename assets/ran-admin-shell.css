@@ -58,6 +58,22 @@
 	object-fit: contain;
 }
 
+.ran-admin-shell__navigation {
+	background: rgba(0, 0, 0, 0.2);
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	padding-inline: 20px;
+}
+
+.ran-admin-shell__navigation a {
+	border-block-end: 3px solid transparent;
+	color: #fff;
+	display: block;
+	padding: 13px 10px 10px;
+	text-decoration: none;
+}
+
 .ran-admin-shell__title {
 	color: inherit;
 	font-size: clamp(24px, 3vw, 34px);
@@ -76,6 +92,13 @@
 	color: inherit;
 	text-decoration: underline;
 	text-underline-offset: 0.18em;
+}
+
+.ran-admin-shell__navigation a[aria-current="page"],
+.ran-admin-shell__navigation a:focus-visible,
+.ran-admin-shell__navigation a:hover {
+	border-block-end-color: currentcolor;
+	color: #fff;
 }
 
 .ran-admin-shell__strapline {
@@ -106,29 +129,6 @@
 	background: #fff;
 	border-color: #fff;
 	color: #17233b;
-}
-
-.ran-admin-shell__navigation {
-	background: rgba(0, 0, 0, 0.2);
-	display: flex;
-	flex-wrap: wrap;
-	gap: 4px;
-	padding-inline: 20px;
-}
-
-.ran-admin-shell__navigation a {
-	border-block-end: 3px solid transparent;
-	color: #fff;
-	display: block;
-	padding: 13px 10px 10px;
-	text-decoration: none;
-}
-
-.ran-admin-shell__navigation a[aria-current="page"],
-.ran-admin-shell__navigation a:focus-visible,
-.ran-admin-shell__navigation a:hover {
-	border-block-end-color: currentColor;
-	color: #fff;
 }
 
 .ran-admin-shell--name-only .ran-admin-shell__identity,

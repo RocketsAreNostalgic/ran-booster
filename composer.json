@@ -49,7 +49,7 @@
         "php": "^8.2",
         "ext-sodium": "*",
         "ext-zip": "*",
-        "ran/booster-github-provider": "1.0.0-beta.14",
+        "ran/booster-github-provider": "1.0.0-beta.15",
         "ran/updater-support": "1.0.0-beta.4",
         "ran/wp-branch-updater": "1.0.0-beta.9",
         "ran/wp-release-updater": "1.0.0-beta.9"

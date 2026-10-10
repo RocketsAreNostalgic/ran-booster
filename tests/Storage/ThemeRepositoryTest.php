@@ -14,6 +14,7 @@ final class ThemeRepositoryTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
+		$GLOBALS['ran_booster_theme_repository_test_reads']  = array();
 		$GLOBALS['ran_booster_theme_repository_test_themes'] = array(
 			'example-theme' => new class() {
 				public function exists(): bool {
@@ -47,6 +48,7 @@ final class ThemeRepositoryTest extends TestCase {
 		self::assertFalse( $repository->package_exists_for_test( '' ) );
 		self::assertFalse( $repository->package_exists_for_test( 'broken-theme' ) );
 		self::assertFalse( $repository->package_exists_for_test( 'not-a-theme' ) );
+		self::assertSame( array( 'example-theme', 'broken-theme', 'not-a-theme' ), $GLOBALS['ran_booster_theme_repository_test_reads'] );
 	}
 
 	public function test_missing_theme_slug_throws_instead_of_creating_an_invalid_theme_identity(): void {

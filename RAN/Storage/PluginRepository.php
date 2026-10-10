@@ -57,6 +57,7 @@ class PluginRepository extends AbstractPackageRepository {
 	 * @return Plugin
 	 */
 	public function from_slug( $slug ) {
+		/** @var array<string, array{Name:string,PluginURI:string,Version:string,Description:string,Author:string,AuthorURI:string,TextDomain:string,DomainPath:string,Network:bool,Title:string,AuthorName:string}> $plugins WordPress get_plugins() returns get_plugin_data() headers keyed by file. */
 		$plugins = get_plugins();
 
 		foreach ( $plugins as $file => $plugin_info ) {

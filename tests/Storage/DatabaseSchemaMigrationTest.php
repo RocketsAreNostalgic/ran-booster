@@ -40,6 +40,112 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		unset( $GLOBALS['ran_booster_storage_test_schema_unset'] );
 	}
 
+	public function test_partial_capability_connection_keeps_current_schema_readiness_but_cannot_install(): void {
+		global $ran_booster_storage_test_options;
+		$ran_booster_storage_test_options[ Database::VERSION_OPTION ] = Database::$booster_db_version;
+		$connection = new class() {
+			public int $schema_reads = 0;
+
+			public function db_server_info(): string {
+				return '8.4.6';
+			}
+
+			/** @param list<mixed> $arguments */
+			public function __call( string $name, array $arguments ): mixed {
+				if ( 'get_results' === $name && array( 'SHOW ENGINES' ) === $arguments ) {
+					return array(
+						(object) array(
+							'Engine'  => 'InnoDB',
+							'Support' => 'DEFAULT',
+						),
+					);
+				}
+				++$this->schema_reads;
+				throw new RuntimeException( 'schema-method-canary' );
+			}
+		};
+		$database   = new Database( $connection );
+		$database->require_ready();
+		self::assertTrue( $database->is_ready() );
+		try {
+			$database->install();
+			self::fail( 'Schema installation requires a declared schema connection.' );
+		} catch ( DatabaseLifecycleFailure $failure ) {
+			self::assertSame( 'schema_operation_failed', $failure->reason() );
+			self::assertStringNotContainsString( 'canary', $failure->getMessage() );
+		}
+		self::assertSame( 0, $connection->schema_reads );
+		self::assertSame( Database::$booster_db_version, $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+	}
+
+	public function test_schema_admission_does_not_replace_existing_version_rejection(): void {
+		global $ran_booster_storage_test_options;
+		$ran_booster_storage_test_options[ Database::VERSION_OPTION ] = '12.0';
+		$connection = new \RAN\Tests\Support\CredentialUsageDatabase();
+		try {
+			( new Database( $connection ) )->install();
+			self::fail( 'The stored unsupported version must be rejected first.' );
+		} catch ( DatabaseLifecycleFailure $failure ) {
+			self::assertSame( 'unsupported_old_schema', $failure->reason() );
+		}
+		self::assertSame( array(), $connection->prepared );
+	}
+
+	public function test_missing_engine_query_stays_a_cached_safe_capability_failure(): void {
+		$connection = new class() {
+			public int $identity_reads = 0;
+
+			public function db_server_info(): string {
+				++$this->identity_reads;
+				return '8.4.6';
+			}
+		};
+		$database   = new Database( $connection );
+		for ( $attempt = 0; $attempt < 2; ++$attempt ) {
+			try {
+				$database->require_supported();
+				self::fail( 'A missing mandatory engine read must fail closed.' );
+			} catch ( DatabaseCompatibilityFailure $failure ) {
+				self::assertSame( 'capability_probe_failed', $failure->reason() );
+			}
+		}
+		self::assertSame( 1, $connection->identity_reads );
+	}
+
+	public function test_optional_error_suppression_failures_preserve_probe_failure_and_restore_scope(): void {
+		foreach ( array( true, false ) as $fail_suppression ) {
+			$connection = new class( $fail_suppression ) {
+				public string $last_error = 'preserved-error';
+				/** @var list<bool> */
+				public array $suppression_calls = array();
+
+				public function __construct( private bool $fail_suppression ) {
+				}
+
+				public function suppress_errors( bool $suppress ): bool {
+					$this->suppression_calls[] = $suppress;
+					if ( $this->fail_suppression || ! $suppress ) {
+						throw new RuntimeException( 'suppression-canary' );
+					}
+					return false;
+				}
+
+				public function db_server_info(): never {
+					throw new RuntimeException( 'identity-canary' );
+				}
+			};
+			try {
+				( new Database( $connection ) )->require_supported();
+				self::fail( 'The failed probe must remain a safe capability failure.' );
+			} catch ( DatabaseCompatibilityFailure $failure ) {
+				self::assertSame( 'capability_probe_failed', $failure->reason() );
+				self::assertStringNotContainsString( 'canary', $failure->getMessage() );
+			}
+			self::assertSame( 'preserved-error', $connection->last_error );
+			self::assertSame( $fail_suppression ? array( true ) : array( true, false ), $connection->suppression_calls );
+		}
+	}
+
 	public function test_fresh_install_creates_and_verifies_only_the_current_tables(): void {
 		global $ran_booster_storage_test_options, $wpdb;
 

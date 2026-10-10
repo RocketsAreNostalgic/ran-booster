@@ -64,6 +64,31 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		);
 	}
 
+	public function test_unhydrated_package_retains_generic_provider_failure_without_lookup(): void {
+		$package              = new EditBoundaryPackage( 'fixture/fixture.php' );
+		$plugins              = new EditBoundaryPluginRepository( $package );
+		$themes               = new EditBoundaryThemeRepository( $package );
+		$submitted            = new ExternalFixtureProvider( 'gh' );
+		$providers            = new ProviderRegistry( array( $submitted ) );
+		$_POST['ran_booster'] = array(
+			'action'   => 'edit-plugin',
+			'file'     => 'fixture/fixture.php',
+			'provider' => 'gh',
+		);
+		$dashboard            = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' )->with(
+			self::callback(
+				static fn ( mixed $message ): bool => $message instanceof WP_Error
+				&& 'ran_booster_unavailable_package_provider' === $message->get_error_code()
+				&& 'Booster could not verify the managed package provider. No changes were made.' === $message->get_error_message()
+			),
+			self::isInstanceOf( \TypeError::class )
+		);
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
+		$this->dispatcher( $dashboard, $providers, $plugins, $themes )->dispatch_post_requests();
+		self::assertSame( 0, $submitted->get_client()->get_requests() );
+	}
+
 	/**
 	 * @return array<string, array{string, array<string, string>}>
 	 */

@@ -12,6 +12,27 @@ use RAN\Admin\ReleaseManagement\ReleaseWorkflowDisplay;
 use ReflectionMethod;
 
 final class ReleaseWorkflowDisplayTest extends TestCase {
+	public function test_partial_shared_projection_renders_without_offset_warnings(): void {
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Convert missing projection offsets into regression failures.
+		set_error_handler(
+			static function ( int $severity, string $message ): never {
+				throw new \ErrorException( $message, 0, $severity );
+			}
+		);
+		try {
+			$html = ( new ReleaseWorkflowDisplay() )->repository_section(
+				array(
+					'settings_url' => 'https://example.test/settings',
+					'shared'       => true,
+				)
+			);
+		} finally {
+			restore_error_handler();
+		}
+		self::assertStringContainsString( 'shared by 0 packages', $html );
+		self::assertStringContainsString( 'Published release lifecycle', $html );
+	}
+
 	public function test_repository_section_escapes_presenter_fields(): void {
 		$html = ( new ReleaseWorkflowDisplay() )->repository_section(
 			array(

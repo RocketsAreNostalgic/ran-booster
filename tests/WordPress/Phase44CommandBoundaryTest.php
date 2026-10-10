@@ -7,6 +7,44 @@ namespace RAN\Tests\WordPress;
 use PHPUnit\Framework\TestCase;
 
 final class Phase44CommandBoundaryTest extends TestCase {
+	public function test_native_target_uses_the_loaded_artifact_constructor_argument_order(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Inspect only the historical artifact construction expression without starting the disposable worker.
+		$source = file_get_contents( dirname( __DIR__ ) . '/Integration/phase-4.4-core-disposable-harness.php' );
+		self::assertIsString( $source );
+		$start = strpos( $source, '( new ReflectionClass( RAN\\BoosterGitHubProvider\\V1\\GitHubReleaseNativeTarget::class ) )' );
+		self::assertIsInt( $start );
+		$end = strpos( $source, ';', $start );
+		self::assertIsInt( $end );
+		$recorder    = new class() {
+			/** @var array<array-key, mixed> */
+			public array $arguments;
+
+			public function __construct( mixed ...$arguments ) {
+				$this->arguments = $arguments;
+			}
+		};
+		$expression  = str_replace(
+			array( 'RAN\\BoosterGitHubProvider\\V1\\GitHubReleaseNativeTarget::class', 'WP_PLUGIN_DIR', 'get_theme_root()' ),
+			array( '$recorder::class', '$plugin_root', '$theme_root' ),
+			substr( $source, $start, $end - $start )
+		);
+		$plugin_root = '/fixture/plugins';
+		$theme_root  = '/fixture/themes';
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			$slug   = 'phase44-' . $type;
+			$id     = 'plugin' === $type ? $slug . '/' . $slug . '.php' : $slug;
+			$policy = 'controlled-policy';
+			// phpcs:ignore Squiz.PHP.Eval.Discouraged -- Execute the actual nine-argument constructor expression against a recorder in place of the installed historical class.
+			$target = eval( 'return ' . $expression . ';' );
+			self::assertInstanceOf( $recorder::class, $target );
+			self::assertCount( 9, $target->arguments );
+			self::assertSame( array( $type, 'plugin' === $type ? $plugin_root . '/' . $id : $theme_root . '/' . $id . '/style.css', 'phase44-owner/' . $slug, '101', $slug, $id ), array_slice( $target->arguments, 0, 6 ) );
+			self::assertInstanceOf( \Closure::class, $target->arguments[6] );
+			self::assertSame( 'phase44-token', $target->arguments[6]() );
+			self::assertSame( array( 'stable', $policy ), array_slice( $target->arguments, 7 ) );
+		}
+	}
+
 	public function test_command_preserves_output_and_rejects_failed_reads(): void {
 		$command = $this->command( false );
 		self::assertSame(

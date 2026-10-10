@@ -142,13 +142,13 @@ class Database {
 
 	private function prepare_schema( bool $inspect_current_schema ): bool {
 		$this->require_supported();
-		$wpdb = $this->connection();
 
 		$installed_version = $this->installed_version();
 		if ( ! $inspect_current_schema && self::$booster_db_version === $installed_version ) {
 			return false;
 		}
 
+		$wpdb            = $this->schema_connection();
 		$package_table   = ran_booster_table_name();
 		$attempt_table   = self::attempt_table_name();
 		$charset_collate = $wpdb->get_charset_collate();
@@ -271,7 +271,7 @@ class Database {
 		array $expected_columns,
 		array $expected_indexes
 	): bool {
-		$wpdb = $this->connection();
+		$wpdb = $this->schema_connection();
 
 		$query            = $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table_name ) );
 		$wpdb->last_error = '';
@@ -314,7 +314,7 @@ class Database {
 	 * }
 	 */
 	private function inspect_table( string $table_name ): array {
-		$wpdb = $this->connection();
+		$wpdb = $this->schema_connection();
 
 		$status_query     = $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', $table_name );
 		$columns_query    = $wpdb->prepare( 'SHOW COLUMNS FROM %i', $table_name );
@@ -565,12 +565,14 @@ class Database {
 
 		$previous_error    = property_exists( $database, 'last_error' ) ? (string) $database->last_error : null;
 		$errors_suppressed = null;
+		$suppress_errors   = null;
 		if ( null !== $previous_error ) {
 			$database->last_error = '';
 		}
 		try {
 			if ( method_exists( $database, 'suppress_errors' ) ) {
-				$errors_suppressed = (bool) $database->suppress_errors( true );
+				$suppress_errors   = $database->suppress_errors( ... );
+				$errors_suppressed = (bool) $suppress_errors( true );
 			}
 
 			$server_info = $database->db_server_info();
@@ -587,7 +589,11 @@ class Database {
 			}
 
 			// Capability inspection must read the authoritative server engine list.
-			$engines = $database->get_results( 'SHOW ENGINES' );
+			$query_engines = array( $database, 'get_results' );
+			if ( ! is_callable( $query_engines ) ) {
+				throw new DatabaseCompatibilityFailure( 'capability_probe_failed' );
+			}
+			$engines = $query_engines( 'SHOW ENGINES' );
 			$error   = property_exists( $database, 'last_error' ) ? trim( (string) $database->last_error ) : '';
 			if ( ! is_array( $engines ) || '' !== $error ) {
 				throw new DatabaseCompatibilityFailure( 'innodb_unavailable' );
@@ -613,9 +619,9 @@ class Database {
 			if ( null !== $previous_error ) {
 				$database->last_error = $previous_error;
 			}
-			if ( null !== $errors_suppressed ) {
+			if ( null !== $errors_suppressed && null !== $suppress_errors ) {
 				try {
-					$database->suppress_errors( $errors_suppressed );
+					$suppress_errors( $errors_suppressed );
 				// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Restoring optional wpdb error display must not escape the safe-state probe.
 				} catch ( \Throwable ) {
 					// The compatibility result remains authoritative.
@@ -656,6 +662,15 @@ class Database {
 			'family'  => 'mysql',
 			'version' => $matches['version'],
 		);
+	}
+
+	private function schema_connection(): \wpdb|SchemaConnection {
+		$database = $this->connection();
+		if ( ! $database instanceof \wpdb && ! $database instanceof SchemaConnection ) {
+			throw new DatabaseLifecycleFailure( 'schema_operation_failed' );
+		}
+
+		return $database;
 	}
 
 	private function connection(): object {

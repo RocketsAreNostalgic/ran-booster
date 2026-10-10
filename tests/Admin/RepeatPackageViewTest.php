@@ -27,6 +27,25 @@ final class RepeatPackageViewTest extends TestCase {
 		unset( $GLOBALS['ran_booster_package_view_multisite'], $GLOBALS['ran_booster_dashboard_test_multisite'] );
 	}
 
+	public function test_incomplete_advanced_summary_projection_uses_plain_summary(): void {
+		foreach ( array( null, false, 17, array() ) as $heading ) {
+			$package_advanced_summary = 'Branch fallback';
+			$package_source           = array(
+				'advanced_summary_projection' => array(
+					'heading' => $heading,
+					'badges'  => array( array( 'label' => 'Release badge' ) ),
+					'status'  => 'Existing status',
+				),
+			);
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/advanced-source-settings.php';
+			$html = (string) ob_get_clean();
+			self::assertStringContainsString( 'Branch fallback', $html );
+			self::assertStringNotContainsString( 'ran-booster-advanced-source-summary__heading', $html );
+			self::assertStringNotContainsString( 'Release badge', $html );
+		}
+	}
+
 	/** @return list<array{PackagePagePresenter, bool, bool}> */
 	public static function create_view_matrix(): array {
 		return array(

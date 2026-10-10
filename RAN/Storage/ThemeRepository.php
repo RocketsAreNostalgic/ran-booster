@@ -50,7 +50,7 @@ class ThemeRepository extends AbstractPackageRepository {
 	 */
 	public function from_slug( $slug ) {
 		$wp_theme = wp_get_theme( $slug );
-		if ( ! $this->is_valid_theme( $wp_theme ) ) {
+		if ( ! $wp_theme->exists() || false !== $wp_theme->errors() ) {
 			throw $this->not_found_exception();
 		}
 
@@ -101,10 +101,10 @@ class ThemeRepository extends AbstractPackageRepository {
 	}
 
 	protected function package_exists( string $identifier ): bool {
-		return '' !== trim( $identifier ) && $this->is_valid_theme( wp_get_theme( $identifier ) );
-	}
-
-	private function is_valid_theme( object $theme ): bool {
+		if ( '' === trim( $identifier ) ) {
+			return false;
+		}
+		$theme = wp_get_theme( $identifier );
 		return $theme->exists() && false === $theme->errors();
 	}
 

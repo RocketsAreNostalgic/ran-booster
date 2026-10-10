@@ -332,7 +332,8 @@ class CorePackageExecutor {
 			}
 
 			global $wp_filesystem;
-			if ( ! is_object( $wp_filesystem ) || ! $wp_filesystem->move( $selected_source, $destination, false ) ) {
+			$move = array( $wp_filesystem, 'move' );
+			if ( ! is_callable( $move ) || ! $move( $selected_source, $destination, false ) ) {
 				return new WP_Error( 'ran_booster_invalid_package_source' );
 			}
 

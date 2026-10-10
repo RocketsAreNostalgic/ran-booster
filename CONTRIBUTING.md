@@ -95,11 +95,23 @@ constructor. The deployment error slot and all row/result validation remain
 required as before; a managed-release reader may omit its optional error slot.
 Magic dispatch alone no longer satisfies these native method contracts.
 
+`CredentialUsageReader` requires `CredentialUsageConnection` for injected
+connections, adding count reads to the SQL read role. This admission follows
+storage readiness and credential identity validation. Malformed counts, rows
+and query errors still fail closed; the connection's error slot remains optional.
+
 This is a deliberate narrowing of accepted injected objects, not a claim that
 all structural database objects are `wpdb`. The separate `Database` capability
 probes and `RepositorySourceGuard` array-token fixtures retain their contracts.
 Do not add methods to those partial fixtures or coerce their query tokens merely
 to satisfy an unrelated connection role.
+
+Package getters that permit an absent repository return null before hydration
+without emitting PHP warnings. The required `get_repository()` getter still
+throws `TypeError`, now with an explicit hydration message. Generic `PackageModel`
+inputs retain their nullable normalization. Only models constructed from validated
+`ManagedRepository` values carry the stronger producer identity annotations;
+opaque repository IDs remain unchanged, including any permitted whitespace.
 
 Booster validates each resolved service-method callback before registering it
 with WordPress. Valid duck-typed and magic callbacks retain their original array

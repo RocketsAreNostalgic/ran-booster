@@ -44,7 +44,7 @@ final class CredentialUsageReader {
 			global $wpdb;
 			$database = $wpdb;
 		}
-		if ( ! is_object( $database ) ) {
+		if ( ! $database instanceof \wpdb && ! $database instanceof CredentialUsageConnection ) {
 			throw new RuntimeException( 'Booster could not verify repository credential usage.' );
 		}
 		$table       = $this->table_name ?? ran_booster_table_name();

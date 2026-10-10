@@ -204,16 +204,17 @@ class Dashboard {
 				$admin_url . '?page=ran-booster-plugins-create',
 				$admin_url . '?page=ran-booster-themes-create'
 			);
-			if ( null !== $this->secrets_storage ) {
+			$secrets_storage    = $this->secrets_storage;
+			if ( null !== $secrets_storage ) {
 				$include_storage_details = current_user_can( 'manage_options' )
 					&& current_user_can( 'activate_plugins' );
 				$wordpress_root          = defined( 'ABSPATH' ) && is_string( constant( 'ABSPATH' ) )
 					? constant( 'ABSPATH' )
 					: '';
-				$result                  = $this->secrets_storage_result ?? $this->secrets_storage->status();
+				$result                  = $this->secrets_storage_result ?? $secrets_storage->status();
 				$this->log_secrets_storage_diagnostic( $result );
 				$recovery                              = $include_storage_details
-					? $this->secrets_storage->recovery_state( $result )
+					? $secrets_storage->recovery_state( $result )
 					: null;
 				$data['onboarding']['secrets_storage'] = ( new SecretsStorageSetupPresenter() )->build(
 					$result,

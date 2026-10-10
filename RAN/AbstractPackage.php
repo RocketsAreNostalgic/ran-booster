@@ -90,12 +90,13 @@ abstract class AbstractPackage implements Package {
 		$this->repository = $repository;
 	}
 
+	/** Require hydration here; optional repository getters remain nullable. */
 	public function get_repository(): ManagedRepository {
-		return $this->repository;
+		return $this->repository ?? throw new \TypeError( 'The package repository has not been hydrated.' );
 	}
 
 	public function get_branch(): mixed {
-		return $this->repository->branch;
+		return $this->repository?->branch;
 	}
 
 	public function get_deployment_ref(): ?string {
@@ -111,15 +112,15 @@ abstract class AbstractPackage implements Package {
 	}
 
 	public function get_provider_code(): ?string {
-		return $this->repository->provider->value;
+		return $this->repository?->provider->value;
 	}
 
 	public function get_provider_repository_id(): ?string {
-		return $this->repository->reference->provider_repository_id;
+		return $this->repository?->reference->provider_repository_id;
 	}
 
 	public function is_private(): mixed {
-		return $this->repository->reference->private;
+		return $this->repository?->reference->private;
 	}
 
 	public function get_private(): mixed {

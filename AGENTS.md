@@ -27,13 +27,13 @@ admin-shell parity, race/hard-stop/runtime proofs, frontend source globs and
 globals, asset tests, and release verification. Shared-package adoption must
 never remove or silently weaken those local guarantees.
 
-PHPStan level 7 directly covers all Core PHP shipped by `release-files.txt`,
+PHPStan level 8 directly covers all Core PHP shipped by `release-files.txt`,
 including views and asset entrypoints. `ProductionAnalysisCoverageTest` checks
 the effective roots/exclusions against that manifest. Preserve accurate
 caller-supplied view PHPDoc and the generated Admin Shell bytes; see
 `CONTRIBUTING.md` for coverage and remaining #167 acceptance boundaries.
 
-`composer analyze` also runs automatic level-7 analysis of all maintained
+`composer analyze` also runs automatic level-8 analysis of all maintained
 `scripts/` and `tests/` PHP. The development and installed-integration symbol
 profiles are pathless: the runner batches compatible test-owned classes and
 selects every other file individually. Source-derived declaration checks keep
@@ -49,7 +49,7 @@ exemptions, with immutable identity and their actual rejection tests protected b
 for their evidence and review trigger. No pending-file inventory or baseline
 remains. All other maintained PHP enters analysis automatically, including new
 production roots and split development files.
-Level 8 remains advisory. Exactly three occurrence-level `property.notFound`
+Levels 9 and 10 are outside this programme. Exactly three occurrence-level `property.notFound`
 allowances preserve arbitrary WordPress update-transient objects and their magic
 accessors: one response-channel assignment in `CorePackageExecutor` and two in
 `core-updater-proof.php`. Do not replace these objects or narrow them to `stdClass`.

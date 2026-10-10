@@ -211,6 +211,7 @@ final class RAN_Booster_CoreUpdaterProof {
 					$transient = new stdClass();
 				}
 				if ( ! isset( $transient->response ) || ! is_array( $transient->response ) ) {
+					// @phpstan-ignore property.notFound (Preserve the foreign transient object and its magic accessors when creating the WordPress response channel.)
 					$transient->response = array();
 				}
 				$transient->response[ $identifier ]           = $offer;
@@ -249,6 +250,7 @@ final class RAN_Booster_CoreUpdaterProof {
 					$transient = new stdClass();
 				}
 				if ( ! isset( $transient->response ) || ! is_array( $transient->response ) ) {
+					// @phpstan-ignore property.notFound (Preserve the foreign transient object and its magic accessors when creating the WordPress response channel.)
 					$transient->response = array();
 				}
 				$transient->response[ $slug ] = array(

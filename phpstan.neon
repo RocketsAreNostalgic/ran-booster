@@ -5,7 +5,7 @@ parameters:
 	tmpDir: vendor/.phpstan-cache/production
 	parallel:
 		maximumNumberOfProcesses: 1
-	level: 6
+	level: 7
 	treatPhpDocTypesAsCertain: false
 	paths:
 		- .

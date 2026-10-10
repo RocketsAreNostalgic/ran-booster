@@ -238,6 +238,7 @@ class CorePackageExecutor {
 				$transient = new \stdClass();
 			}
 			if ( ! isset( $transient->response ) || ! is_array( $transient->response ) ) {
+				// @phpstan-ignore property.notFound (Preserve the foreign transient object and its magic accessors when creating the WordPress response channel.)
 				$transient->response = array();
 			}
 			$transient->response[ $identifier ] = 'plugin' === $type ? $offer : (array) $offer;

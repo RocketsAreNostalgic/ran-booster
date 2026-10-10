@@ -95,6 +95,7 @@ final class BoosterServiceCallbackTest extends TestCase {
 		self::assertSame( 'admin_init', $registered['hook'] );
 		self::assertSame( 1, $registered['priority'] );
 		self::assertSame( 1, $registered['acceptedArgs'] );
+		self::assertIsCallable( $registered['callback'] );
 		( $registered['callback'] )();
 		self::assertSame( 1, $service->calls );
 	}

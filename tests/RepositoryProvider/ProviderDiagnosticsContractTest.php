@@ -112,7 +112,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 		self::assertSame( 'fixture:group/subgroup/package', $resolved['provider_repository_id'] );
 		self::assertSame( 'main', $resolved['branch'] );
 
-		$package_settings = ( new ProviderSettingsPresenter( $registry, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ) ) )
+		$package_settings = ( new ProviderSettingsPresenter( $registry, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), new \RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore(), new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore() ) )
 			->build_package_form( 'fixture' );
 		self::assertSame( 'fixture', $package_settings['default_provider'] );
 		self::assertSame( 'fixture', $package_settings['providers'][0]['code'] );

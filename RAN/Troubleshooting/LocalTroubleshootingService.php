@@ -554,11 +554,7 @@ class LocalTroubleshootingService {
 	}
 
 	protected function filesystem_modification_allowed(): bool {
-		if ( function_exists( 'wp_is_file_mod_allowed' ) ) {
-			return wp_is_file_mod_allowed( 'ran_booster_diagnostics' );
-		}
-
-		return ! ( defined( 'DISALLOW_FILE_MODS' ) && constant( 'DISALLOW_FILE_MODS' ) );
+		return wp_is_file_mod_allowed( 'ran_booster_diagnostics' );
 	}
 
 	protected function filesystem_method(): ?string {

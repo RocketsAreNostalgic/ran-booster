@@ -1022,7 +1022,7 @@ msgid "RAN Booster automatic deployment failed."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:59
-#: RAN/Dashboard.php:1101
+#: RAN/Dashboard.php:1097
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 

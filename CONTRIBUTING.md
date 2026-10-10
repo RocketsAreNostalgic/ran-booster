@@ -207,11 +207,12 @@ verified. Each installed lane still verifies the source and artifact identity;
 the final Quality job requires both repository and installed checks to succeed.
 Release candidates retain their separate install-readback path.
 
-The old 312-file pending inventory is removed. There are 363 analyzed development
-files and 345 production files at this candidate (708 directly analyzed of 710
-maintained PHP). Future root/split files enter automatically. The two exceptions
-below are proposed for independent review within the owner's explicit policy for
-files that genuinely cannot be analyzed; green CI alone does not approve them.
+The old 312-file pending inventory is removed. PR261 established 708 directly
+analyzed files out of 710 maintained PHP files; subsequent files enter analysis
+automatically. The two exact exceptions below were reviewed and owner accepted
+in [PR261](https://github.com/RocketsAreNostalgic/ran-booster/pull/261#issuecomment-6035893321)
+for fixtures that deliberately cannot be loaded. Green CI alone does not approve
+new exceptions.
 
 | Exact exemption | Evidence and disposition |
 | --- | --- |

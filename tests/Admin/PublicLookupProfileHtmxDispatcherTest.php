@@ -5,15 +5,18 @@ declare(strict_types=1);
 namespace RAN\Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Support/RepositoryAdminWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/ProviderProfileAdminControllerWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/WPError.php';
+require_once __DIR__ . '/CredentialExpiryWordPressFunctions.php';
 
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\PackageAdminController;
 use RAN\Admin\PackageRepositoryRequestResolver;
 use RAN\Admin\ProviderProfileAdminController;
-use RAN\Admin\CredentialExpiryObservationStore;
+use RAN\Admin\RepositoryBranchCheckEvidenceStore;
+use RAN\Tests\Support\InMemoryCredentialExpiryObservationStore;
 use RAN\Dashboard;
 use RAN\Dispatcher;
 use RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser;
@@ -33,9 +36,22 @@ use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 
 final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 	private HtmxPublicLookupTestController $controller;
+	private mixed $original_database;
+	private HtmxLookupEvidenceStore $evidence;
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
+		$this->original_database = $GLOBALS['wpdb'] ?? null;
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Install or restore the isolated test-owned database connection for the real advisory lock.
+		$GLOBALS['wpdb']           = new class() {
+			public string $options = 'wp_options';
+			public function prepare( string $query, string $name ): string {
+				return $query . $name;
+			}
+			public function get_var( string $query ): string {
+				return str_starts_with( $query, 'SELECT ' ) ? '1' : '0';
+			}
+		};
 		$_POST                     = array();
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$GLOBALS['ran_booster_test_capability_checks'] = array();
@@ -46,7 +62,9 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
-		$_POST = array();
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Install or restore the isolated test-owned database connection for the real advisory lock.
+		$GLOBALS['wpdb'] = $this->original_database;
+		$_POST           = array();
 		unset(
 			$_SERVER['REQUEST_METHOD'],
 			$_SERVER['HTTP_HX_REQUEST'],
@@ -74,6 +92,7 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 		$dispatcher->dispatch_post_requests();
 
 		self::assertSame( array(), $store->profiles );
+		self::assertSame( 1, $this->evidence->records['generation'] );
 		self::assertNull( $this->controller->response );
 		self::assertSame( array( 'manage_options' ), $GLOBALS['ran_booster_test_capability_checks'] );
 		self::assertSame( array( 'ran-booster-save-public-lookup-profile' ), $GLOBALS['ran_booster_test_nonce_checks'] );
@@ -137,6 +156,25 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 		}
 	}
 
+	public function test_missing_database_does_not_change_the_public_lookup_preference(): void {
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Install or restore the isolated test-owned database connection for the real advisory lock.
+		$GLOBALS['wpdb'] = null;
+		$store           = new InMemoryPublicRepositoryLookupProfileStore();
+		$store->profiles = array( 'fixture' => 'saved-profile' );
+		$dashboard       = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' );
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$dispatcher           = $this->dispatcher( $dashboard, $store );
+		$_POST['ran_booster'] = array(
+			'action'     => 'save-public-lookup-profile',
+			'provider'   => 'fixture',
+			'profile_id' => '',
+		);
+		$dispatcher->dispatch_post_requests();
+		self::assertSame( array( 'fixture' => 'saved-profile' ), $store->profiles );
+		self::assertSame( array(), $this->evidence->records );
+	}
+
 	private function dispatcher( Dashboard $dashboard, InMemoryPublicRepositoryLookupProfileStore $store ): Dispatcher {
 		$providers = new ProviderRegistry( array( $this->provider() ) );
 		$plugins   = new class() extends PluginRepository { public function __construct() {} };
@@ -145,6 +183,7 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 		$lock->expects( self::never() )->method( 'acquire' );
 		$lock->expects( self::never() )->method( 'release' );
 
+		$this->evidence   = new HtmxLookupEvidenceStore();
 		$this->controller = new HtmxPublicLookupTestController(
 			$dashboard,
 			$providers,
@@ -153,7 +192,8 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 			$lock,
 			new CredentialUsageReader(),
 			$store,
-			new CredentialExpiryObservationStore()
+			new InMemoryCredentialExpiryObservationStore(),
+			branch_check_evidence: $this->evidence
 		);
 
 		return new Dispatcher(
@@ -219,5 +259,18 @@ final class HtmxPublicLookupTestController extends ProviderProfileAdminControlle
 
 		// The test spy captures its fixed method arguments without output.
 		throw new HtmxPublicLookupResponse( $provider, $message, $error, $status );
+	}
+}
+
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Explicit option seam exercises the real evidence mutation lock through the controller.
+final class HtmxLookupEvidenceStore extends RepositoryBranchCheckEvidenceStore {
+	/** @var array<string, mixed> */
+	public array $records = array();
+	protected function read_option(): array {
+		return $this->records;
+	}
+	protected function write_option( array $records ): bool {
+		$this->records = $records;
+		return true;
 	}
 }

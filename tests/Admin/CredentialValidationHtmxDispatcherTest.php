@@ -14,8 +14,8 @@ use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\PackageAdminController;
 use RAN\Admin\PackageRepositoryRequestResolver;
 use RAN\Admin\ProviderProfileAdminController;
-use RAN\Admin\CredentialExpiryObservationStore;
-use RAN\Admin\PublicRepositoryLookupProfileStore;
+use RAN\Tests\Support\InMemoryCredentialExpiryObservationStore;
+use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 use RAN\Dashboard;
 use RAN\Dispatcher;
 use RAN\RepositoryProvider\CredentialValidationResult;
@@ -156,8 +156,8 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 			new ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
 			$lock,
 			new CredentialUsageReader(),
-			new PublicRepositoryLookupProfileStore(),
-			new CredentialExpiryObservationStore()
+			new InMemoryPublicRepositoryLookupProfileStore(),
+			new InMemoryCredentialExpiryObservationStore()
 		);
 
 		return new Dispatcher(

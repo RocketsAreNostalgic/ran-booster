@@ -94,10 +94,6 @@ class CredentialExpiryObservationStore {
 	 * @return array<string, mixed>
 	 */
 	protected function read_option(): array {
-		if ( ! function_exists( 'get_option' ) ) {
-			return array();
-		}
-
 		$value = get_option( self::OPTION_NAME, array() );
 
 		return is_array( $value ) ? $value : array();
@@ -107,10 +103,6 @@ class CredentialExpiryObservationStore {
 	 * @param array<string, mixed> $document Canonical option document.
 	 */
 	protected function write_option( array $document ): bool {
-		if ( ! function_exists( 'update_option' ) ) {
-			return false;
-		}
-
 		return update_option( self::OPTION_NAME, $document, false );
 	}
 

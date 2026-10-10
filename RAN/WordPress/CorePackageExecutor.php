@@ -29,7 +29,10 @@ class CorePackageExecutor {
 	 * @param callable(string, string, string, object|null): mixed|null $core_operation
 	 */
 	public function __construct( ?callable $core_operation = null ) {
-		$this->core_operation = null === $core_operation ? null : Closure::fromCallable( $core_operation );
+		$this->core_operation = null;
+		if ( null !== $core_operation ) {
+			$this->core_operation = Closure::fromCallable( $core_operation );
+		}
 	}
 
 	public function install_plugin(

@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.0-beta.33](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.32...v1.0.0-beta.33) (2026-10-10)
+
+
+### Bug Fixes
+
+* adopt Branch Updater beta.9 with installed consumer proof ([#270](https://github.com/RocketsAreNostalgic/ran-booster/issues/270)) ([37f2577](https://github.com/RocketsAreNostalgic/ran-booster/commit/37f2577bd2ea0a7770d7bcb93910eecde57fc4a8))
+* adopt GitHub Provider beta.15 ([#290](https://github.com/RocketsAreNostalgic/ran-booster/issues/290)) ([429f156](https://github.com/RocketsAreNostalgic/ran-booster/commit/429f1566ff99dfc0a449e311df9f26ba8e7bc03a))
+* complete database and nullable runtime contracts ([#293](https://github.com/RocketsAreNostalgic/ran-booster/issues/293)) ([0639906](https://github.com/RocketsAreNostalgic/ran-booster/commit/0639906e893fb617ca504342eb263544861d896f))
+* enforce storage readiness and native package contracts ([#288](https://github.com/RocketsAreNostalgic/ran-booster/issues/288)) ([db6478d](https://github.com/RocketsAreNostalgic/ran-booster/commit/db6478d2c52500803fca797f3e47a61b5a6e25bc))
+* establish package hydration and credential usage contracts ([#292](https://github.com/RocketsAreNostalgic/ran-booster/issues/292)) ([38cbf61](https://github.com/RocketsAreNostalgic/ran-booster/commit/38cbf615ad018e79c1e231ef14f9b235fb3ea285))
+* preserve workflow failures independently of translations ([#287](https://github.com/RocketsAreNostalgic/ran-booster/issues/287)) ([e247d41](https://github.com/RocketsAreNostalgic/ran-booster/commit/e247d4106e918d48fdb10e92beacc9862c8a30b1))
+
 ## [1.0.0-beta.32](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.31...v1.0.0-beta.32) (2026-10-08)
 
 

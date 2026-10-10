@@ -323,7 +323,13 @@ reported and a local exception does not suppress the next declaration. Keep
 exceptions specific, justified and reviewable; do not add blanket exclusions to
 make the canonical command pass.
 
-The released `ran/coding-standards` v1.0.1 adopts a message-specific exclusion for
+Core locks `ran/coding-standards` v1.0.3 at
+`28f6e7c0a758c93503a0267696245a5540e002a5`. This development-only adoption
+retains the rulesets and owned-method sniff from v1.0.1; the newer release
+qualifies the shared package's own maintained PHP. Core's checks, exceptions and
+PHPStan enforcement remain independently controlled here.
+
+The v1.0.1 release introduced a message-specific exclusion for
 `WordPress.Security.EscapeOutput.ExceptionNotEscaped`: exception messages are
 diagnostic values, and escaping belongs at actual output boundaries. Core removes
 redundant test-only annotations and the characterization-path XML rule. Shipped

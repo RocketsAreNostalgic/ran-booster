@@ -78,6 +78,9 @@ function get_transient( string $key ): mixed {
 
 function set_transient( string $key, mixed $value, int $expiration ): bool {
 	unset( $expiration );
+	if ( $GLOBALS['ran_booster_dashboard_test_transient_write_failure'] ?? false ) {
+		return false;
+	}
 	$GLOBALS['ran_booster_dashboard_test_transients'][ $key ] = $value;
 
 	return true;

@@ -1,8 +1,11 @@
 # PHP standards coverage — organisation #119
 
-This records the proposed standards tranche against Core main
-`e0f7046521ad3c3b8ab265721efa27b53360d806`. It is source qualification, not a
-release, installed acceptance claim or change to the supported APIs.
+Core standards and maintained-PHP coverage are delivered through PR261, PR262
+and the Level8 enforcement in PR296 on main
+`16127f8eb328efae2f0a5bfcb2100ff0f773034b`. Exact post-main Quality passed.
+The scoped security exceptions were [owner accepted in PR261](https://github.com/RocketsAreNostalgic/ran-booster/pull/261#issuecomment-6035893321); their current contracts and reopening triggers remain binding.
+The historical counts below describe the tranches that established these guards.
+This source acceptance does not establish UI, manual or Migrator acceptance.
 
 ## Effective contract
 
@@ -15,7 +18,7 @@ Direct coverage of shipped owned PHP is tested independently against the release
 manifest (345 files at the original checkpoint). Generated Admin Shell PHP is
 selected and remains immutable. Levels 9 and 10 are outside this programme. The three exact foreign
 update-transient property exceptions are documented in `CONTRIBUTING.md`; broader
-retained-exception acceptance remains separate work.
+changes to retained exceptions still require their own evidence and review.
 
 The default PHP selection covers root entrypoints, RAN, views, assets, scripts,
 tests and fixtures. Vendor, node_modules, Workbench and generated test/cache
@@ -82,8 +85,10 @@ contract evidence and reviewed disposition.
 
 ## Shared policy adoption after beta.31
 
-The current lock adopts `ran/coding-standards` v1.0.1 at
-`0248066be3f4f9476ef7095d888657001488a3de`. Its precise
+The current lock adopts `ran/coding-standards` v1.0.3 at
+`28f6e7c0a758c93503a0267696245a5540e002a5` through PR295. Its consumed rulesets
+and owned-method sniff retain the reviewed v1.0.1 behavior. The earlier v1.0.1
+adoption introduced the precise
 `WordPress.Security.EscapeOutput.ExceptionNotEscaped` exclusion recognizes that
 exceptions carry diagnostic values; actual output must still be escaped at its
 rendering boundary. Core removes 47 occurrences of that selector across 30
@@ -167,9 +172,10 @@ semantic acceptance of retained occurrences remains separate from passing guards
 
 ## Focused fragment and passive-query evidence
 
-Four existing exact security-diagnostic occurrences remain pending explicit owner
-disposition under #167/#65; the rationale and passing checks alone do not accept
-them. No runtime or public composition contract is changed by these tests.
+Four existing exact security-diagnostic occurrences were owner accepted under
+#167/#65 in PR261 comment6035893321, with the bounded contracts and reopening
+triggers recorded in comment6033998016. Passing checks alone did not establish
+that acceptance. No broader callback-output or passive-input exception is implied.
 
 - `RepositoryDetailRenderer::render()` emits the captured webhook fragment supplied
   by `views/provider.php` through Core `RepositoryWebhookManagementControls` and
@@ -203,8 +209,7 @@ matrix. Passing checks applies to that tree and the defined rules above. It does
 not mean maximum PHPStan depth, every possible WordPress sniff, absence of
 security defects or completed manual product acceptance.
 
-Organisation #120 retains the pre-1.0 compatibility-path review, including any
-uncertain fixture reachability; #121 retains Migrator helper naming; #122 retains
-development-tool/WordPress declaration alignment. The existing release pause,
-Core #181 and deferred onboarding/UI acceptance are unchanged. The open recovery
-documentation PR #225 is independent; preserve its checkpoint when integrating.
+Core #160 and organisation #120 own the separately reviewed bootstrap/test-guard
+cleanup and retained-path dispositions. Current release and ecosystem integration
+status belongs in organisation #65. Deferred UI/onboarding and Migrator manual
+acceptance remain separate; historical release proposals are not current gates.

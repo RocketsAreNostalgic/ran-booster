@@ -116,12 +116,6 @@ class RepositoryBranchCheckEvidenceStore {
 
 	/** @return array<array-key, mixed> */
 	protected function read_option(): array {
-		if ( ! function_exists( 'get_option' ) ) {
-			return array(
-				'records'    => array(),
-				'generation' => 0,
-			);
-		}
 		$value = get_option( self::OPTION_NAME, array() );
 		return is_array( $value ) ? $value : array(
 			'records'    => array(),
@@ -131,7 +125,7 @@ class RepositoryBranchCheckEvidenceStore {
 
 	/** @param array<string, mixed> $records */
 	protected function write_option( array $records ): bool {
-		return ! function_exists( 'update_option' ) || update_option( self::OPTION_NAME, $records, false );
+		return update_option( self::OPTION_NAME, $records, false );
 	}
 
 	/** @return array{records: array<array-key, mixed>, generation: int} */
@@ -146,8 +140,6 @@ class RepositoryBranchCheckEvidenceStore {
 	/** @param array<string, mixed> $all */
 	private function persist( array $all ): void {
 		if ( ! $this->write_option( $all )
-			&& function_exists( 'get_option' )
-			&& function_exists( 'update_option' )
 			&& $all !== $this->all()
 		) {
 			throw new RuntimeException( 'Booster could not save repository branch check evidence.' );
@@ -172,7 +164,7 @@ class RepositoryBranchCheckEvidenceStore {
 	protected function acquire_mutation_lock(): bool {
 		global $wpdb;
 		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'get_var' ) || ! method_exists( $wpdb, 'prepare' ) ) {
-			return true;
+			return false;
 		}
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Connection-local advisory lock serializes one option mutation.
 		$result = $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 5)', self::mutation_lock_name() ) );
@@ -183,7 +175,7 @@ class RepositoryBranchCheckEvidenceStore {
 	protected function release_mutation_lock(): bool {
 		global $wpdb;
 		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'get_var' ) || ! method_exists( $wpdb, 'prepare' ) ) {
-			return true;
+			return false;
 		}
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Connection-local advisory lock has no persistent cacheable state.
 		$result = $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', self::mutation_lock_name() ) );

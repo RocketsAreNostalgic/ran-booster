@@ -13,6 +13,51 @@ use RAN\Secrets\SecretsFile;
 
 final class CredentialSelfDestructPurgerTest extends TestCase {
 
+	public function test_purger_uses_the_evidence_lock_without_an_outer_updater_lock(): void {
+		$original = $GLOBALS['wpdb'] ?? null;
+		try {
+			$database = new class() {
+				public string $options = 'wp_options';
+				/** @var list<string> */
+				public array $queries = array();
+				public function prepare( string $query, string $name ): string {
+					return $query . $name;
+				}
+				public function get_var( string $query ): string {
+					$this->queries[] = $query;
+					return '1';
+				}
+			};
+			foreach ( array( $database, null ) as $connection ) {
+				// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Install or restore the isolated test-owned database connection for the real advisory lock.
+				$GLOBALS['wpdb']    = $connection;
+				$profiles           = new PurgerLookupProfiles();
+				$profiles->profiles = array( 'gh' => 'expired-profile' );
+				$evidence           = new class() extends RepositoryBranchCheckEvidenceStore {
+					/** @var array<string, mixed> */
+					public array $records = array();
+					protected function read_option(): array {
+						return $this->records;
+					}
+					protected function write_option( array $records ): bool {
+						$this->records = $records;
+						return true;
+					}
+				};
+				$purger             = new CredentialSelfDestructPurger( new PurgerSecretsFile( array( 'gh' => array( 'expired-profile' ) ) ), new PurgerObservations(), $profiles, $evidence );
+				$purger->purge();
+				self::assertNull( $profiles->get( 'gh' ) );
+				self::assertSame( null === $connection ? null : 2, $evidence->records['generation'] ?? null );
+			}
+			self::assertCount( 4, $database->queries );
+			self::assertStringStartsWith( 'SELECT GET_LOCK', $database->queries[0] );
+			self::assertStringStartsWith( 'SELECT RELEASE_LOCK', $database->queries[3] );
+		} finally {
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Install or restore the isolated test-owned database connection for the real advisory lock.
+			$GLOBALS['wpdb'] = $original;
+		}
+	}
+
 	public function test_purging_an_expired_credential_invalidates_its_branch_check_evidence(): void {
 		$profiles           = new PurgerLookupProfiles();
 		$profiles->profiles = array( 'gh' => 'expired-profile' );

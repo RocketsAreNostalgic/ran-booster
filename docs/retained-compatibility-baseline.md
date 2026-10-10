@@ -1,8 +1,43 @@
-# Retained compatibility baseline — 3 October 2026
+# Retained compatibility baseline
 
 This is the source audit and decision register for [organisation #120](https://github.com/RocketsAreNostalgic/.github/issues/120), [Core #160](https://github.com/RocketsAreNostalgic/ran-booster/issues/160) and parent [#158](https://github.com/RocketsAreNostalgic/ran-booster/issues/158). It records dispositions and the bounded signature cleanup below. It does not authorize releases, complete controlled-site readback or close those issues.
 
-## Current disposition checkpoint — 3 October 2026
+## Bootstrap cleanup — 10 October 2026
+
+This bounded follow-up starts from qualified main
+`16127f8eb328efae2f0a5bfcb2100ff0f773034b`. Ben authorized the deferred #160
+cleanup after the Level8 programme completed. The proposal preserves supported
+WordPress behavior and makes incomplete-host test setups explicit. It does not
+establish a supported-production defect or authorize site-data changes.
+
+| Surface | Proposed disposition and preserved contract |
+| --- | --- |
+| Public lookup preferences and credential-expiry observations | Call the bootstrapped WordPress option APIs directly. Existing protected read/write methods remain the test seams. Malformed option normalization, non-autoloaded writes, unchanged-value acceptance and changed-value readback failure remain. The managed-release preference callback is unchanged. |
+| Branch-check evidence | Call option APIs directly and always enforce failed-write readback. A missing or unusable database cannot acquire or release a mutation lock successfully. Keep structural database connections, real SQL/last-error checks and release in `finally`; add explicit lock behavior to test-owned fixtures. Direct purger and public-lookup generation mutations retain their own lock requirement. |
+| Dashboard cache | Use the bootstrapped transient APIs directly. A missing marker still causes fresh verification; cached verified status still requires matching stored evidence. Failed cache writes cannot manufacture evidence or eliminate the next fresh check. |
+| Local filesystem diagnostics | Delegate to the host's filtered `wp_is_file_mod_allowed( 'ran_booster_diagnostics' )` verdict. The existing protected seam remains. Unsupported missing-host policy reaches the existing failure/unavailable result instead of consulting an unfiltered constant fallback. Directory, symlink, private-marker and direct-filesystem checks remain. |
+
+These supported consumers run through the plugin's WordPress composition and
+admin routes after option APIs and the database are initialized, as traced below.
+Full bootstrap does not imply a universal outer updater lock: direct dashboard
+reads, the `admin_init` purger and public-lookup generation changes retain their
+separate evidence-store behavior. Test-only overrides must model the needed IO
+and locking explicitly; absent host APIs are not evidence of successful work.
+
+Other retained paths remain justified: lazy admin API loading, unavailable
+reporting, diagnostic directory observations, filtered policy, recovery, platform
+and schema checks, PreparedArtifact covariance and the current magic getters.
+No generic compatibility removal, nominal database narrowing, new production
+service, public seam, persistent state or dependency is introduced.
+
+PR233's legacy debug-reader removal is already delivered. Current four-key
+records remain supported; old records are rejected without silent migration or
+deletion. Closed #150's deployment prerequisites remain owner operations. UI,
+manual and Migrator acceptance and unknown private embeddings are not certified
+by this source cleanup. Exact candidate tests, reviews and delivery status belong
+in Core #160 and organisation #65/#120.
+
+## Historical disposition checkpoint — 3 October 2026
 
 This follow-up inspects Core `0145bb2f9be4866e46e109cb160ed788cbc25e53`,
 tree `bf2fb937d77e31bcdf9eb02450828abc1e6a66cc`. The earlier audit and

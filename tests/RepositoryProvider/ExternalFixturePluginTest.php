@@ -185,14 +185,14 @@ final class ExternalFixturePluginTest extends TestCase {
 			self::assertSame( 'fixture:' . hash( 'sha256', 'group/subgroup/package' ), $resolved['provider_repository_id'] );
 			self::assertSame( 'fixture-provider', $resolved['provider'] );
 
-			$settings = ( new ProviderSettingsPresenter( $registry, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ) ) )->build( 'fixture-provider' );
+			$settings = ( new ProviderSettingsPresenter( $registry, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), new \RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore(), new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore() ) )->build( 'fixture-provider' );
 			self::assertSame( 'fixture-provider', $settings['provider']['code'] );
 			self::assertArrayNotHasKey( 'webhook_assistance', $settings['provider'] );
 			self::assertFalse( $settings['provider']['capabilities']['browse'] );
 			self::assertFalse( $settings['provider']['capabilities']['credentialed_public_browse'] );
 			self::assertFalse( $settings['provider']['capabilities']['provider_default_public_lookup_profile'] );
 			self::assertTrue( $settings['provider']['capabilities']['webhooks'] );
-			$package_form     = ( new ProviderSettingsPresenter( $registry, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ) ) )->build_package_form( 'fixture-provider' );
+			$package_form     = ( new ProviderSettingsPresenter( $registry, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), new \RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore(), new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore() ) )->build_package_form( 'fixture-provider' );
 			$package_provider = array_column( $package_form['providers'], null, 'code' )['fixture-provider'];
 			self::assertSame( 'fixture-provider', $package_form['default_provider'] );
 			self::assertTrue( $package_provider['deploy'] );

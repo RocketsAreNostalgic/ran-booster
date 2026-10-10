@@ -46,10 +46,6 @@ class PublicRepositoryLookupProfileStore {
 	 * @return array<string, string>
 	 */
 	protected function read_option(): array {
-		if ( ! function_exists( 'get_option' ) ) {
-			return array();
-		}
-
 		$value = get_option( self::OPTION_NAME, array() );
 
 		return is_array( $value ) ? $value : array();
@@ -59,10 +55,6 @@ class PublicRepositoryLookupProfileStore {
 	 * @param array<string, string> $profiles Provider-to-profile mapping.
 	 */
 	protected function write_option( array $profiles ): bool {
-		if ( ! function_exists( 'update_option' ) ) {
-			return false;
-		}
-
 		return update_option( self::OPTION_NAME, $profiles, false );
 	}
 

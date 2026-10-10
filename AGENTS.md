@@ -31,7 +31,7 @@ PHPStan level 8 directly covers all Core PHP shipped by `release-files.txt`,
 including views and asset entrypoints. `ProductionAnalysisCoverageTest` checks
 the effective roots/exclusions against that manifest. Preserve accurate
 caller-supplied view PHPDoc and the generated Admin Shell bytes; see
-`CONTRIBUTING.md` for coverage and remaining #167 acceptance boundaries.
+`CONTRIBUTING.md` for coverage, accepted #167 boundaries and continuing safeguards.
 
 `composer analyze` also runs automatic level-8 analysis of all maintained
 `scripts/` and `tests/` PHP. The development and installed-integration symbol

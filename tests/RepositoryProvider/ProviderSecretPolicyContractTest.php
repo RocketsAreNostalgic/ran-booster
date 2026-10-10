@@ -205,7 +205,7 @@ final class ProviderSecretPolicyContractTest extends TestCase {
 				return $provider;
 			}
 		);
-		$settings = ( new ProviderSettingsPresenter( $registry, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ) ) )->build( 'fixture' );
+		$settings = ( new ProviderSettingsPresenter( $registry, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), new \RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore(), new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore() ) )->build( 'fixture' );
 
 		self::assertInstanceOf( ExternalFixtureProvider::class, $provider );
 		self::assertSame( array(), $settings['webhook_profiles'] );

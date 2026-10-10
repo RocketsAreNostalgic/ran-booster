@@ -716,6 +716,14 @@ final class RemovalBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenc
 		parent::clear( $type, $package );
 	}
 
+	protected function acquire_mutation_lock(): bool {
+		return true;
+	}
+
+	protected function release_mutation_lock(): bool {
+		return true;
+	}
+
 	protected function read_option(): array {
 		return $this->records;
 	}

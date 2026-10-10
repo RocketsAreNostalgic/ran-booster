@@ -1122,7 +1122,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 				$lookup,
 				$expiry_observations ?? new InMemoryCredentialExpiryObservationStore(),
 				$interaction->facade(),
-				$branch_check_evidence
+				$branch_check_evidence ?? $this->createStub( RepositoryBranchCheckEvidenceStore::class )
 			)
 		);
 	}

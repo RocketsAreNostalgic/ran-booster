@@ -12,6 +12,121 @@ use RAN\PackageSource;
 
 final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 
+	public function test_native_mutation_lock_preserves_structural_connections_and_sql_failures(): void {
+		$original = $GLOBALS['wpdb'] ?? null;
+		try {
+			$database = new class() {
+				public string $options    = 'wp_options';
+				public string $last_error = '';
+				/** @var list<array{string, string}> */
+				public array $queries      = array();
+				public mixed $result       = '1';
+				public bool $release_fails = false;
+				/** @return array{string, string} */
+				public function prepare( string $query, string $name ): array {
+					return array( $query, $name );
+				}
+				/** @param array{string, string} $query */
+				public function get_var( array $query ): mixed {
+					$this->queries[] = $query;
+					return $this->release_fails && str_contains( $query[0], 'RELEASE_LOCK' ) ? null : $this->result;
+				}
+			};
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Install or restore the isolated test-owned database connection for the real advisory lock.
+			$GLOBALS['wpdb'] = $database;
+			$store           = new NativeBranchEvidenceOptionStore();
+			$store->bump_provider_generation( 'gh' );
+			self::assertSame( 1, $store->records['generation'] );
+			self::assertSame( 'SELECT GET_LOCK(%s, 5)', $database->queries[0][0] );
+			self::assertSame( 'SELECT RELEASE_LOCK(%s)', $database->queries[1][0] );
+			self::assertSame( $database->queries[0][1], $database->queries[1][1] );
+			foreach ( array( null, '0', '1' ) as $result ) {
+				$database->result     = $result;
+				$database->last_error = '1' === $result ? 'SQL failure' : '';
+				try {
+					$store->bump_provider_generation( 'gh' );
+					self::fail( 'A failed SQL acquisition must not mutate evidence.' );
+				} catch ( \RuntimeException $failure ) {
+					self::assertSame( 'Booster could not coordinate repository branch check evidence.', $failure->getMessage() );
+				}
+				self::assertSame( 1, $store->records['generation'] );
+				self::assertFalse( $store->release_for_test() );
+			}
+			$database->result        = '1';
+			$database->last_error    = '';
+			$database->release_fails = true;
+			try {
+				$store->bump_provider_generation( 'gh' );
+				self::fail( 'Failed release must not claim successful coordination.' );
+			} catch ( \RuntimeException $failure ) {
+				self::assertSame( 'Booster could not release the repository branch check evidence lock.', $failure->getMessage() );
+			}
+			self::assertSame( 2, $store->records['generation'] );
+		} finally {
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Install or restore the isolated test-owned database connection for the real advisory lock.
+			$GLOBALS['wpdb'] = $original;
+		}
+	}
+
+	public function test_unusable_database_never_claims_acquisition_or_release(): void {
+		$original = $GLOBALS['wpdb'] ?? null;
+		try {
+			foreach ( array( null, new \stdClass(), new class() { public function prepare(): void {} } ) as $database ) {
+				// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Install or restore the isolated test-owned database connection for the real advisory lock.
+				$GLOBALS['wpdb'] = $database;
+				$store           = new NativeBranchEvidenceOptionStore();
+				self::assertFalse( $store->release_for_test() );
+				try {
+					$store->bump_profile_generation( 'gh', 'profile-a' );
+					self::fail( 'Missing host locking cannot report successful mutation.' );
+				} catch ( \RuntimeException $failure ) {
+					self::assertSame( 'Booster could not coordinate repository branch check evidence.', $failure->getMessage() );
+				}
+				self::assertSame( array(), $store->records );
+			}
+		} finally {
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Install or restore the isolated test-owned database connection for the real advisory lock.
+			$GLOBALS['wpdb'] = $original;
+		}
+	}
+
+	public function test_failed_write_uses_readback_and_always_releases_the_lock(): void {
+		$released = 0;
+		$store    = new class( $released ) extends RepositoryBranchCheckEvidenceStore {
+			/** @var array<string, mixed> */
+			public array $records      = array();
+			public bool $write_matches = false;
+			public function __construct( public int &$released ) {}
+			protected function read_option(): array {
+				return $this->records;
+			}
+			protected function write_option( array $records ): bool {
+				if ( $this->write_matches ) {
+					$this->records = $records;
+				}
+				return false;
+			}
+			protected function acquire_mutation_lock(): bool {
+				return true;
+			}
+			protected function release_mutation_lock(): bool {
+				++$this->released;
+				return true;
+			}
+		};
+		try {
+			$store->bump_provider_generation( 'gh' );
+			self::fail( 'Different readback must reject a failed write.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertSame( 'Booster could not save repository branch check evidence.', $failure->getMessage() );
+		}
+		self::assertSame( 1, $released );
+		$store->write_matches = true;
+		$store->bump_provider_generation( 'gh' );
+		self::assertSame( 1, $store->records['generation'] );
+		self::assertSame( 2, $released );
+	}
+
 	public function test_verified_evidence_is_returned_only_for_the_exact_current_target_and_profile_generation(): void {
 		$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
 		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
@@ -229,5 +344,21 @@ final class BranchEvidencePackage extends AbstractPackage {
 
 	protected function runtime_slug(): string {
 		return 'example';
+	}
+}
+
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Explicit option seam retains the real structural database lock methods.
+final class NativeBranchEvidenceOptionStore extends RepositoryBranchCheckEvidenceStore {
+	/** @var array<string, mixed> */
+	public array $records = array();
+	protected function read_option(): array {
+		return $this->records;
+	}
+	protected function write_option( array $records ): bool {
+		$this->records = $records;
+		return true;
+	}
+	public function release_for_test(): bool {
+		return $this->release_mutation_lock();
 	}
 }

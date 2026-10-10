@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0-beta.34](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.33...v1.0.0-beta.34) (2026-10-10)
+
+
+### Bug Fixes
+
+* require bootstrapped host contracts in Core administration ([#297](https://github.com/RocketsAreNostalgic/ran-booster/issues/297)) ([1461ece](https://github.com/RocketsAreNostalgic/ran-booster/commit/1461ecef362429f20c14bbefc32a77c612671291))
+
 ## [1.0.0-beta.33](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.32...v1.0.0-beta.33) (2026-10-10)
 
 

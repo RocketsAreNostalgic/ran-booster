@@ -98,6 +98,10 @@ final class SignedWebhookVerifierTest extends TestCase {
 			fn () => $this->verifier( $profiles )->verify( $this->request( '{}' ), new GitHubWebhookPolicy() )
 		);
 
+		$this->assert_authentication_failed(
+			fn () => $this->verifier( array( $this->profile() ) )->verify( $this->request( '{}' ), new GitHubWebhookPolicy() )
+		);
+
 		$invalid           = $this->profile();
 		$invalid['secret'] = 'too-short';
 		$this->assert_authentication_failed(
@@ -134,17 +138,8 @@ final class SignedWebhookVerifierTest extends TestCase {
 	/** @param array<int|string, array<string, mixed>>|null $profiles */
 	private function verifier( ?array $profiles = null ): SignedWebhookVerifier {
 		$profiles ??= array( 'profile-one' => $this->profile() );
-		$secrets    = new class( $profiles ) extends SecretsFile {
-			/** @param array<int|string, array<string, mixed>> $profiles */
-			public function __construct( private array $profiles ) {
-				parent::__construct( '/unused/signed-verifier-secrets.php', array() );
-			}
-
-			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of webhook_materials retains the production method contract; these inputs do not affect this controlled result.
-			public function webhook_materials( ProviderCode|string $provider ): array {
-				return $this->profiles;
-			}
-		};
+		$secrets    = $this->createMock( SecretsFile::class );
+		$secrets->method( 'webhook_materials' )->willReturn( $profiles );
 
 		return new SignedWebhookVerifier( $secrets );
 	}

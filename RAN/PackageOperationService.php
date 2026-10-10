@@ -184,7 +184,7 @@ final readonly class PackageOperationService {
 		}
 		$repository = $release_managed
 			? new ManagedRepository(
-				$existing->get_provider_code(),
+				$existing->get_provider_code() ?? throw new \TypeError( 'The release package provider is unavailable.' ),
 				(string) $existing->get_repository(),
 				(string) $existing->get_provider_repository_id(),
 				(string) $existing->get_branch(),

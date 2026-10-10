@@ -177,13 +177,18 @@ class Dashboard {
 		$selected_add_on      = '' === $requested_add_on_key || null === $this->admin_add_ons
 			? null
 			: $this->admin_add_ons->get( $requested_add_on_key );
-		$selected_tab         = null === $selected_add_on ? $this->admin_tabs->resolve( $requested_tab ) : null;
-		$selected_key         = null === $selected_add_on ? $selected_tab->get_key() : $selected_add_on->key();
-		$tabs                 = $this->tab_navigation( $selected_key );
-		$admin_url            = is_multisite()
+		$selected_tab         = null;
+		if ( null === $selected_add_on ) {
+			$selected_tab = $this->admin_tabs->resolve( $requested_tab );
+			$selected_key = $selected_tab->get_key();
+		} else {
+			$selected_key = $selected_add_on->key();
+		}
+		$tabs      = $this->tab_navigation( $selected_key );
+		$admin_url = is_multisite()
 			? network_admin_url( 'admin.php' )
 			: admin_url( 'admin.php' );
-		$data                 = array(
+		$data      = array(
 			'tab'  => $selected_key,
 			'tabs' => $tabs,
 		);
@@ -194,7 +199,7 @@ class Dashboard {
 				$admin_url . '?page=ran-booster&tab=' . rawurlencode( $selected_add_on->key() ),
 				is_multisite() ? 'network' : 'site'
 			);
-		} else {
+		} elseif ( null !== $selected_tab ) {
 			$data['tab_view'] = $selected_tab->get_view();
 		}
 
@@ -500,7 +505,7 @@ class Dashboard {
 	 */
 	private function render_package_page( PackagePagePresenter $package_view ) {
 		$type = $package_view->get_type();
-		$this->package_admin->add_success_notice( $this, $type );
+		( $this->package_admin ?? throw new \Error( 'The package administration controller is unavailable.' ) )->add_success_notice( $this, $type );
 		$this->add_bulk_package_notice( $type );
 
 		// Read-only package selection; mutations use separately nonce-protected forms.
@@ -690,7 +695,7 @@ class Dashboard {
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
 			return $this->database_unavailable_create( $package_view, $package_view->get_type() );
 		}
-		$success = $this->package_admin->add_success_notice( $this, $package_view->get_type() );
+		$success = ( $this->package_admin ?? throw new \Error( 'The package administration controller is unavailable.' ) )->add_success_notice( $this, $package_view->get_type() );
 
 		return $this->render(
 			'packages/create',
@@ -823,11 +828,11 @@ class Dashboard {
 	}
 
 	public function bulk_package_redirect( string $type, BulkPackageResult $result ): string {
-		return $this->package_admin->bulk_redirect( $type, $result, $this->package_list_query_arguments() );
+		return ( $this->package_admin ?? throw new \Error( 'The package administration controller is unavailable.' ) )->bulk_redirect( $type, $result, $this->package_list_query_arguments() );
 	}
 
 	private function add_bulk_package_notice( string $type ): void {
-		$this->package_admin->add_bulk_notice(
+		( $this->package_admin ?? throw new \Error( 'The package administration controller is unavailable.' ) )->add_bulk_notice(
 			$this,
 			$type,
 			function ( array $message, array $context ): void {

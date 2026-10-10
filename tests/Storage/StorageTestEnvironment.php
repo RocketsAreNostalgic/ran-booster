@@ -117,7 +117,7 @@ namespace {
 namespace RAN\Tests\Storage {
 
 	// phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- The fixture pairs WordPress function doubles with its database class for one isolated test environment.
-	final class StorageTestWpdb {
+	final class StorageTestWpdb extends \RAN\Storage\SchemaConnection {
 
 		public string $prefix      = 'wp_';
 		public string $base_prefix = 'wp_';

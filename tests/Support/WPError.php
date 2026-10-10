@@ -7,7 +7,7 @@ final class WP_Error {
 
 	public function __construct(
 		private string $code,
-		private string $message,
+		private string $message = '',
 		private mixed $data = null
 	) {
 	}

@@ -54,6 +54,9 @@ final class CoreContainer {
 	 * @return object
 	 */
 	private function resolve( $class_name ) {
+		if ( ! class_exists( $class_name ) && ! interface_exists( $class_name, false ) && ! trait_exists( $class_name, false ) ) {
+			throw new \ReflectionException( 'The requested Core service class does not exist.' );
+		}
 		$reflection  = new ReflectionClass( $class_name );
 		$constructor = $reflection->getConstructor();
 

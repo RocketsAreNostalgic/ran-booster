@@ -40,7 +40,7 @@ if ( '' === $package_advanced_summary_projection_heading
 	<summary>
 		<h3 class="ran-booster-section__title ran-booster-settings-disclosure__label"><?php esc_html_e( 'Advanced settings', 'ran-booster' ); ?></h3>
 		<small class="ran-booster-advanced-source-summary" data-ran-booster-advanced-source-summary>
-			<?php if ( null !== $package_advanced_summary_projection ) { ?>
+			<?php if ( null !== $package_advanced_summary_projection && null !== $package_advanced_summary_projection_heading ) { ?>
 				<span class="ran-booster-advanced-source-summary__heading"><?php echo esc_html( $package_advanced_summary_projection_heading ); ?></span>
 				<?php foreach ( $package_advanced_summary_projection_badges as $package_advanced_summary_projection_badge ) { ?>
 					<span class="ran-booster-advanced-source-summary__badge">

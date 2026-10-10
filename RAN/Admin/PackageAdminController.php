@@ -517,7 +517,7 @@ final class PackageAdminController {
 			if ( ! $package instanceof Package ) {
 				throw new RuntimeException( 'The managed package repository is unavailable.' );
 			}
-			$this->providers->get( $package->get_provider_code() );
+			$this->providers->get( $package->get_provider_code() ?? throw new \TypeError( 'The managed package provider is unavailable.' ) );
 			return $package;
 		} catch ( InvalidProviderCode | UnknownProvider $failure ) {
 			$message = __( 'This package cannot be edited until its stored repository provider is registered again.', 'ran-booster' );

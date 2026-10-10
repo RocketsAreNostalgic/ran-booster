@@ -29,6 +29,18 @@ final class ContainerTest extends RANBoosterTestCase {
 		self::assertNull( $result->dependency );
 	}
 
+	public function test_missing_service_retains_reflection_failure(): void {
+		$this->expectException( \ReflectionException::class );
+		$this->expectExceptionMessage( 'The requested Core service class does not exist.' );
+		$this->container->make( 'RAN\\MissingServiceForContainerTest' );
+	}
+
+	public function test_unbound_interface_retains_native_instantiation_failure(): void {
+		$this->expectException( \Error::class );
+		$this->expectExceptionMessage( 'Cannot instantiate interface' );
+		$this->container->make( UserRepository::class );
+	}
+
 	public function test_union_dependency_is_rejected_without_selecting_an_alternative(): void {
 		$this->expectException( \Error::class );
 		$this->expectExceptionMessage( 'Core container cannot resolve union or intersection constructor parameter types.' );

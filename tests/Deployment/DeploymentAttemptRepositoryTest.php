@@ -84,6 +84,193 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$repository->find_exact( 1 );
 	}
 
+	public function test_default_entropy_produces_the_required_correlation_identity(): void {
+		$this->repository = new DeploymentAttemptRepository(
+			$this->database,
+			'wp_ran_booster_deployment_attempts',
+			clock: static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-07-19 00:00:00 UTC' ),
+			database_lifecycle: $this->database_lifecycle
+		);
+
+		self::assertMatchesRegularExpression( '/^[a-f0-9]{32}$/D', $this->manual( 'example' )->get_correlation_id() );
+	}
+
+	public function test_read_connection_without_a_public_error_slot_does_not_gain_dynamic_state(): void {
+		$database   = new class() implements \RAN\Storage\SqlReadConnection {
+			public bool $fail = false;
+			public function prepare( string $query, mixed ...$arguments ): string {
+				return $query . count( $arguments );
+			}
+			/** @return array{}|false */
+			public function get_results( string $query ): array|false {
+				return $this->fail || '' === $query ? false : array();
+			}
+		};
+		$repository = new DeploymentAttemptRepository( $database, 'wp_attempts', database_lifecycle: $this->database_lifecycle );
+
+		self::assertNull( $repository->find_exact( 1 ) );
+		self::assertSame( array( 'fail' => false ), get_object_vars( $database ) );
+		$database->fail = true;
+		$this->expectException( DeploymentStorageFailure::class );
+		$repository->find_exact( 1 );
+	}
+
+	public function test_read_error_is_observed_after_the_query_even_when_rows_are_returned(): void {
+		$database   = new class() implements \RAN\Storage\SqlReadConnection {
+			public string $last_error = 'stale';
+			public function prepare( string $query, mixed ...$arguments ): string {
+				return $query . count( $arguments );
+			}
+			/** @return array{} */
+			public function get_results( string $query ): array {
+				TestCase::assertSame( '', $this->last_error );
+				$this->last_error = 'query-error-' . $query;
+				return array();
+			}
+		};
+		$repository = new DeploymentAttemptRepository( $database, 'wp_attempts', database_lifecycle: $this->database_lifecycle );
+
+		$this->expectException( DeploymentStorageFailure::class );
+		$repository->find_exact( 1 );
+	}
+
+	public function test_private_magic_error_channel_is_observed_after_the_query(): void {
+		$database   = new class() implements \RAN\Storage\SqlReadConnection {
+			private string $last_error = 'stale';
+			public int $queries        = 0;
+			public function __get( string $name ): string {
+				TestCase::assertSame( 'last_error', $name );
+				return $this->last_error;
+			}
+			public function __set( string $name, mixed $value ): void {
+				TestCase::assertSame( 'last_error', $name );
+				TestCase::assertIsString( $value );
+				$this->last_error = $value;
+			}
+			public function prepare( string $query, mixed ...$arguments ): string {
+				return $query . count( $arguments );
+			}
+			/** @return array{} */
+			public function get_results( string $query ): array {
+				TestCase::assertSame( '', $this->last_error );
+				++$this->queries;
+				$this->last_error = 'query-error-' . $query;
+				return array();
+			}
+		};
+		$repository = new DeploymentAttemptRepository( $database, 'wp_attempts', database_lifecycle: $this->database_lifecycle );
+
+		try {
+			$repository->find_exact( 1 );
+			self::fail( 'A magic-backed error channel must reject failed queries.' );
+		} catch ( DeploymentStorageFailure ) {
+			self::assertSame( 1, $database->queries );
+		}
+	}
+
+	public function test_pure_magic_error_channel_is_observed_after_the_query(): void {
+		$database   = new class() implements \RAN\Storage\SqlReadConnection {
+			/** @var array<string, string> */
+			private array $values = array( 'last_error' => 'stale' );
+			public int $queries   = 0;
+			public function __get( string $name ): string {
+				return $this->values[ $name ];
+			}
+			public function __set( string $name, mixed $value ): void {
+				TestCase::assertIsString( $value );
+				$this->values[ $name ] = $value;
+			}
+			public function prepare( string $query, mixed ...$arguments ): string {
+				return $query . count( $arguments );
+			}
+			/** @return array{} */
+			public function get_results( string $query ): array {
+				TestCase::assertSame( '', $this->values['last_error'] );
+				++$this->queries;
+				$this->values['last_error'] = 'query-error-' . $query;
+				return array();
+			}
+		};
+		$repository = new DeploymentAttemptRepository( $database, 'wp_attempts', database_lifecycle: $this->database_lifecycle );
+
+		try {
+			$repository->find_exact( 1 );
+			self::fail( 'A purely magic error channel must reject failed queries.' );
+		} catch ( DeploymentStorageFailure ) {
+			self::assertSame( 1, $database->queries );
+			self::assertSame( array( 'queries' => 1 ), get_object_vars( $database ) );
+		}
+	}
+
+	public function test_inaccessible_error_channel_fails_before_reading_rows(): void {
+		$database   = new class() implements \RAN\Storage\SqlReadConnection {
+			private string $last_error = 'stale';
+			public int $queries        = 0;
+			public function prepare( string $query, mixed ...$arguments ): string {
+				return $query . count( $arguments );
+			}
+			public function current_error(): string {
+				return $this->last_error;
+			}
+			/** @return array{} */
+			public function get_results( string $query ): array {
+				++$this->queries;
+				$this->last_error = $query;
+				return array();
+			}
+		};
+		$repository = new DeploymentAttemptRepository( $database, 'wp_attempts', database_lifecycle: $this->database_lifecycle );
+
+		try {
+			$repository->find_exact( 1 );
+			self::fail( 'An inaccessible declared error channel must fail closed.' );
+		} catch ( \Error ) {
+			self::assertSame( 0, $database->queries );
+			self::assertSame( 'stale', $database->current_error() );
+		}
+	}
+
+	public function test_partial_magic_error_channels_fail_before_reading_rows(): void {
+		foreach ( array(
+			new class() implements \RAN\Storage\SqlReadConnection {
+				public int $queries = 0;
+				public function __get( string $name ): string {
+					return 'query-error-' . $name;
+				}
+				public function prepare( string $query, mixed ...$arguments ): string {
+					return $query . count( $arguments );
+				}
+				/** @return array{} */
+				public function get_results( string $query ): array {
+					$this->queries += strlen( $query );
+					return array();
+				}
+			},
+			new class() implements \RAN\Storage\SqlReadConnection {
+				public int $queries = 0;
+				public function __set( string $name, mixed $value ): void {
+					TestCase::fail( 'An incomplete magic channel must not be reset: ' . $name . get_debug_type( $value ) );
+				}
+				public function prepare( string $query, mixed ...$arguments ): string {
+					return $query . count( $arguments );
+				}
+				/** @return array{} */
+				public function get_results( string $query ): array {
+					$this->queries += strlen( $query );
+					return array();
+				}
+			},
+		) as $database ) {
+			$repository = new DeploymentAttemptRepository( $database, 'wp_attempts', database_lifecycle: $this->database_lifecycle );
+			try {
+				$repository->find_exact( 1 );
+				self::fail( 'Incomplete magic error channels must fail closed.' );
+			} catch ( DeploymentStorageFailure ) {
+				self::assertSame( 0, $database->queries );
+			}
+		}
+	}
+
 	public function test_manual_admission_and_claim_are_one_atomic_transaction(): void {
 		$attempt = $this->manual( 'example' );
 

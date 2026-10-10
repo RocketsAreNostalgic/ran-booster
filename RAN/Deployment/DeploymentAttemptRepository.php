@@ -35,7 +35,7 @@ final class DeploymentAttemptRepository {
 
 	/** @var callable(): DateTimeImmutable */
 	private $clock;
-	/** @var callable(int): string */
+	/** @var callable(positive-int): string */
 	private $random_bytes;
 	private Database $database_lifecycle;
 	private string $table_name;
@@ -56,7 +56,7 @@ final class DeploymentAttemptRepository {
 		}
 		$this->table_name         = $table_name ?? Database::attempt_table_name();
 		$this->clock              = $clock ?? static fn (): DateTimeImmutable => new DateTimeImmutable( 'now', wp_timezone() );
-		$this->random_bytes       = $random_bytes ?? static fn ( int $length ): string => random_bytes( $length );
+		$this->random_bytes       = $random_bytes ?? random_bytes( ... );
 		$this->database_lifecycle = $database_lifecycle ?? new Database( $this->database );
 	}
 	public function admit_and_claim_manual(
@@ -991,11 +991,21 @@ final class DeploymentAttemptRepository {
 
 	/** @return list<object> */
 	private function read_rows( string $query ): array {
-		$this->read_connection();
-		$this->database->last_error = '';
+		$database   = $this->read_connection();
+		$read_error = static fn (): string => '';
+		if ( property_exists( $database, 'last_error' ) ) {
+			$read_error           = static fn (): string => (string) $database->last_error;
+			$database->last_error = '';
+		} elseif ( method_exists( $database, '__get' ) || method_exists( $database, '__set' ) ) {
+			if ( ! is_callable( array( $database, '__get' ) ) || ! is_callable( array( $database, '__set' ) ) ) {
+				throw DeploymentStorageFailure::unavailable();
+			}
+			$read_error = static fn (): string => (string) $database->__get( 'last_error' );
+			$database->__set( 'last_error', '' );
+		}
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Durable state cannot use object caching.
-		$rows = $this->database->get_results( $query );
-		if ( ! is_array( $rows ) || '' !== (string) $this->database->last_error ) {
+		$rows = $database->get_results( $query );
+		if ( ! is_array( $rows ) || '' !== $read_error() ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
 

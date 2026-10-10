@@ -29,7 +29,10 @@ class CorePackageExecutor {
 	 * @param callable(string, string, string, object|null): mixed|null $core_operation
 	 */
 	public function __construct( ?callable $core_operation = null ) {
-		$this->core_operation = null === $core_operation ? null : Closure::fromCallable( $core_operation );
+		$this->core_operation = null;
+		if ( null !== $core_operation ) {
+			$this->core_operation = Closure::fromCallable( $core_operation );
+		}
 	}
 
 	public function install_plugin(
@@ -332,7 +335,8 @@ class CorePackageExecutor {
 			}
 
 			global $wp_filesystem;
-			if ( ! is_object( $wp_filesystem ) || ! $wp_filesystem->move( $selected_source, $destination, false ) ) {
+			$move = array( $wp_filesystem, 'move' );
+			if ( ! is_object( $wp_filesystem ) || ! is_callable( $move ) || ! $move( $selected_source, $destination, false ) ) {
 				return new WP_Error( 'ran_booster_invalid_package_source' );
 			}
 

@@ -335,7 +335,8 @@ function ran_booster_phase44_native( string $site, string $type, string $policy,
 		'mode'    => $mode,
 		'type'    => $type,
 	);
-	$target                                        = new RAN\BoosterGitHubProvider\V1\GitHubReleaseNativeTarget( $type, 'plugin' === $type ? WP_PLUGIN_DIR . '/' . $id : get_theme_root() . '/' . $id . '/style.css', 'phase44-owner/' . $slug, '101', $slug, $id, static fn (): string => 'phase44-token', 'stable', $policy ); // @phpstan-ignore argument.type, argument.type (Historical beta27 artifact proof deliberately uses that artifact's native-target constructor; current Composer provider has a later contract.)
+	// Invoke the constructor loaded from the historical beta27 artifact, not the current Composer provider contract.
+	$target = ( new ReflectionClass( RAN\BoosterGitHubProvider\V1\GitHubReleaseNativeTarget::class ) )->newInstanceArgs( array( $type, 'plugin' === $type ? WP_PLUGIN_DIR . '/' . $id : get_theme_root() . '/' . $id . '/style.css', 'phase44-owner/' . $slug, '101', $slug, $id, static fn (): string => 'phase44-token', 'stable', $policy ) );
 	if ( ! $target->register() ) {
 		throw new RuntimeException( 'Installed Core target registration failed.' );
 	}

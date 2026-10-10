@@ -110,6 +110,44 @@ final class RepositorySourceGuardTest extends TestCase {
 		}
 	}
 
+	public function test_unavailable_structural_connection_fails_closed_after_lifecycle_readiness(): void {
+		$previous_database = $GLOBALS['wpdb'] ?? null;
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolate the absent WordPress connection; the original global is restored in finally.
+		$GLOBALS['wpdb'] = null;
+		try {
+			foreach ( array(
+				null,
+				new \stdClass(),
+				new class() {
+					public function prepare(): never {
+						throw new \LogicException( 'Incomplete connections must not prepare a query.' );
+					}
+				},
+				new class() {
+					public function get_results(): never {
+						throw new \LogicException( 'Incomplete connections must not read rows.' );
+					}
+				},
+			) as $database ) {
+				$lifecycle = $this->createMock( Database::class );
+				$lifecycle->expects( self::exactly( 2 ) )->method( 'require_ready' );
+				$guard  = new RepositorySourceGuard( $database, $lifecycle );
+				$result = $guard->assess( 'gh', 'R_1', 1, 'self/self.php', PackageSource::BRANCH );
+				self::assertFalse( $result['allowed'] );
+				self::assertSame( 'repository_source_unavailable', $result['code'] );
+				try {
+					$guard->assert_allowed( 'gh', 'R_1', 1, 'self/self.php', PackageSource::BRANCH );
+					self::fail( 'Unavailable connections must reject source admission.' );
+				} catch ( PackageStorageFailure $failure ) {
+					self::assertSame( 'ran_booster_storage_query_failed', $failure->get_diagnostic_id() );
+				}
+			}
+		} finally {
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the exact connection replaced by this missing-database regression.
+			$GLOBALS['wpdb'] = $previous_database;
+		}
+	}
+
 	public function test_assert_allowed_treats_database_read_failure_as_query_failure(): void {
 		$database             = new RepositorySourceGuardDatabase();
 		$database->last_error = 'database down';
@@ -152,6 +190,7 @@ final class RepositorySourceGuardTest extends TestCase {
 		$guard->assess( 'gh', 'Repository_ID', 1, 'self/self.php', PackageSource::BRANCH );
 
 		self::assertStringContainsString( 'BINARY provider_repository_id = BINARY %s', $database->prepared_query );
+		self::assertSame( 1, $database->reads );
 	}
 
 	public function test_conflict_projection_lists_other_packages_only_and_is_bounded(): void {

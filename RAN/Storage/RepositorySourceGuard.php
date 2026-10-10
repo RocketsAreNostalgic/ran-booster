@@ -41,15 +41,19 @@ final class RepositorySourceGuard {
 			return self::unavailable();
 		}
 		$this->lifecycle?->require_ready();
-		$query = $this->database->prepare(
+		$database = $this->database;
+		if ( ! is_object( $database ) || ! is_callable( array( $database, 'prepare' ) ) || ! is_callable( array( $database, 'get_results' ) ) ) {
+			return self::unavailable();
+		}
+		$query = $database->prepare(
 			'SELECT type, package, source, provider, provider_repository_id FROM %i WHERE provider = %s AND BINARY provider_repository_id = BINARY %s' . ( $lock ? ' FOR UPDATE' : '' ),
 			ran_booster_table_name(),
 			$provider,
 			$provider_repository_id
 		);
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery -- Prepared immediately above; exact raw storage rows are authoritative.
-		$rows  = $this->database->get_results( $query );
-		$error = property_exists( $this->database, 'last_error' ) ? trim( (string) $this->database->last_error ) : '';
+		$rows  = $database->get_results( $query );
+		$error = property_exists( $database, 'last_error' ) ? trim( (string) $database->last_error ) : '';
 		if ( '' !== $error || ! is_array( $rows ) || count( $rows ) !== count( array_filter( $rows, 'is_object' ) ) ) {
 			return self::unavailable();
 		}

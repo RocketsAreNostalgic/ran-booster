@@ -91,8 +91,11 @@ connections or explicitly implementing injected connections. Reads require
 and managed-release mutations require `ManagedReleaseWriteConnection`.
 Read-only connections need not implement mutation methods. Admission occurs
 at the existing operation boundary after lifecycle readiness, not in the
-constructor. The deployment error slot and all row/result validation remain
-required as before; a managed-release reader may omit its optional error slot.
+constructor. Deployment mutations retain their required error slot. Readers may
+omit the error slot; a declared slot is cleared before the query and read again
+afterwards through ordinary PHP property access, including magic accessors.
+Inaccessible declared slots still fail before querying. All row/result validation
+remains required.
 Magic dispatch alone no longer satisfies these native method contracts.
 
 `CredentialUsageReader` requires `CredentialUsageConnection` for injected
@@ -106,6 +109,19 @@ probes and `RepositorySourceGuard` array-token fixtures retain their contracts.
 Do not add methods to those partial fixtures or coerce their query tokens merely
 to satisfy an unrelated connection role.
 
+`Database` admits real `wpdb` or a native `SchemaConnection` for schema work.
+The abstract connection declares the six schema methods and writable public
+`last_error` state. Admission follows capability and installed-version checks:
+a supported partial capability fixture can still pass current-version readiness
+without implementing schema operations. Capability queries retain structural
+and magic dispatch, optional error suppression and restoration. This schema
+boundary deliberately rejects unmarked injected schema objects.
+
+`RepositorySourceGuard` retains structural connections and opaque query tokens;
+missing or non-callable query methods now produce its unavailable result after
+lifecycle readiness. The WordPress executor similarly rejects an unavailable
+filesystem move callback while retaining valid declared and magic callbacks.
+
 Package getters that permit an absent repository return null before hydration
 without emitting PHP warnings. The required `get_repository()` getter still
 throws `TypeError`, now with an explicit hydration message. Generic `PackageModel`
@@ -118,6 +134,18 @@ with WordPress. Valid duck-typed and magic callbacks retain their original array
 identity and resolution count. Invalid callbacks now throw `LogicException`
 during registration. `CoreContainer::make()` itself still permits arbitrary
 factory results; it does not promise that a class-name key returns that class.
+Missing reflected service names retain `ReflectionException`, with an explicit
+internal message; interface and trait instantiation retain their native errors.
+
+Malformed webhook materials use PHPUnit's controlled return facility, retaining
+numeric-key rejection tests. The historical beta27 worker constructs the class
+loaded from that artifact through reflection; focused tests preserve its nine
+ordered arguments without claiming the current Composer constructor contract.
+The historical installed proof still requires its own acceptance.
+
+WordPress transient response writes preserve arbitrary object identity, magic
+access and native readonly errors. Focused tests cover those behaviors; nominal
+`stdClass` narrowing or replacement would change the supported filter contract.
 
 ## Maintained development PHP and reviewed exception boundaries
 

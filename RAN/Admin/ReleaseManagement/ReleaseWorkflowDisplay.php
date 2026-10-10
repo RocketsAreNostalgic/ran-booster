@@ -17,7 +17,7 @@ final class ReleaseWorkflowDisplay {
 			: '<a href="' . esc_url( $url ) . '">' . esc_html__( 'Manage release workflow', 'ran-booster' ) . '</a>' );
 	}
 
-	/** @param array<string,mixed> $projection */
+	/** @param array{lifecycle?:list<array{label:string,message:string,state:string}>,...<string,mixed>} $projection */
 
 	public function repository_section( array $projection ): string {
 		$settings_url = is_string( $projection['settings_url'] ?? null ) ? $projection['settings_url'] : '';
@@ -25,7 +25,7 @@ final class ReleaseWorkflowDisplay {
 			. '<header class="ran-booster-settings-section__header ran-booster-repository-release-section__header">'
 			. '<h3 id="ran-booster-repository-release-heading">' . esc_html__( 'Release publishing', 'ran-booster' ) . '</h3>';
 		if ( '' !== $settings_url ) {
-			$html .= '<a href="' . esc_url( $settings_url ) . '">' . esc_html( (string) $projection['settings_label'] ) . '</a>';
+			$html .= '<a href="' . esc_url( $settings_url ) . '">' . esc_html( (string) ( $projection['settings_label'] ?? '' ) ) . '</a>';
 		}
 		$html .= '</header><div class="ran-booster-settings-section__body">';
 
@@ -35,9 +35,9 @@ final class ReleaseWorkflowDisplay {
 					sprintf(
 					/* translators: %d is the number of managed packages using this repository. */
 						__( 'Releases require a repository used by only one managed package. This repository is shared by %d packages.', 'ran-booster' ),
-						(int) $projection['relationship_count']
+						(int) ( $projection['relationship_count'] ?? 0 )
 					)
-				) . ' <a href="' . esc_url( (string) $projection['return_url'] ) . '">' . esc_html__( 'Status', 'ran-booster' ) . '</a></p></div>';
+				) . ' <a href="' . esc_url( (string) ( $projection['return_url'] ?? '' ) ) . '">' . esc_html__( 'Status', 'ran-booster' ) . '</a></p></div>';
 		} elseif ( true === ( $projection['conflicted'] ?? false ) ) {
 			$html .= '<div class="notice notice-warning inline"><p>' . esc_html__( 'Release workflow is unavailable until this repository uses one allowed package source.', 'ran-booster' );
 			foreach ( (array) ( $projection['conflict_packages'] ?? array() ) as $package ) {

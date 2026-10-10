@@ -13,7 +13,7 @@ and frontend ESLint/Prettier/Stylelint ancestry comes from
 The PHP standards dependency uses the released `ran/coding-standards` 1.x line;
 `composer.lock` binds v1.0.1 to
 `0248066be3f4f9476ef7095d888657001488a3de`. The frontend package remains locked
-to reviewed candidate `2417caceb550819373a5e494a71acb547184b6d7`; move it to a
+to reviewed candidate `7faebe578c509e9265769314fd41bb1485b868b0`; move it to a
 released version through a separate reviewed dependency change. Do not replace
 locked packages with floating, unreviewed state. The available opt-in
 `RANOwnedMethods` rule must be enabled only for audited naming cohorts under
@@ -142,7 +142,7 @@ rule exclusions retain only the parity-checked generated Admin Shell binding.
   WordPress Core owns installation, new targets remain inactive, and partial or
   uncertain outcomes never claim adoption.
 - The required development gates are `composer check` and `pnpm check`. `composer check` retains Core's i18n/generated-state, deterministic tests, Admin Shell, parser sweep, PHPCS/WPCS/PHPCompatibility, and blocking PHPStan evidence through the canonical `lint:syntax`, `standards`, and `analyze` commands. `standards:fix` is mutating and is never part of `check`. For runtime-affecting work, also run the focused WordPress/archive proof used by CI.
-- Booster requires Node 24.11.0 and the exact pnpm version pinned by
+- Booster requires Node 24.21.0 and the exact pnpm version pinned by
   `packageManager`.
   Before blaming a project check, confirm `command -v node`, `node --version`,
   `command -v pnpm`, and `pnpm --version`. The workspace is configured to fail

@@ -163,6 +163,8 @@ abstract class AbstractPackageRepository {
 		} catch ( InvalidArgumentException ) {
 			return $this->invalid_package_identity_result( PackageStorageOperation::UPDATE );
 		}
+		// ManagedRepository supplies validated non-empty identities that PackageModel preserves.
+		/** @var PackageModel<array{package: mixed, repository: string, branch: string, deployment_policy: mixed, subdirectory: mixed, private: bool, credential_id: string, provider: string, provider_repository_id: string|null}>&object{provider: non-empty-string, provider_repository_id: non-empty-string} $model */
 		if ( ! $this->package_exists( (string) $model->package ) ) {
 			return $this->invalid_package_identity_result( PackageStorageOperation::UPDATE );
 		}
@@ -629,7 +631,7 @@ abstract class AbstractPackageRepository {
 		}
 	}
 
-	/** @return array{0: PackageModel<array{package: mixed}>, 1: array<string, mixed>} */
+	/** @return array{0: PackageModel<array{package: mixed}>&object{provider: non-empty-string, provider_repository_id: non-empty-string}, 1: array<string, mixed>} */
 	private function package_record( Package $package ): array {
 		$repository = $package->get_repository();
 		$model      = new PackageModel(
@@ -647,6 +649,8 @@ abstract class AbstractPackageRepository {
 				'credential_id'          => $repository->reference->credential_id ?? '',
 			)
 		);
+		// ManagedRepository supplies validated non-empty identities that PackageModel preserves.
+		/** @var PackageModel<array{package: mixed, repository: string, branch: string, provider: string, provider_repository_id: string|null, private: bool, deployment_policy: mixed, source: mixed, source_revision: int, subdirectory: mixed, credential_id: string}>&object{provider: non-empty-string, provider_repository_id: non-empty-string} $model */
 		if ( ! $this->package_exists( (string) $model->package ) ) {
 			throw new InvalidArgumentException( 'The managed package identity is invalid.' );
 		}

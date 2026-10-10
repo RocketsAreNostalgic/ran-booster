@@ -16,6 +16,40 @@ use RuntimeException;
 
 final class PackageMagicReadTest extends TestCase {
 
+	public function test_unhydrated_optional_repository_getters_return_null_without_warnings(): void {
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Regression promotes unexpected unhydrated getter warnings to exceptions.
+		set_error_handler(
+			static function ( int $severity, string $message ): never {
+				throw new \ErrorException( $message, 0, $severity );
+			}
+		);
+		try {
+			foreach ( array( Plugin::class, Theme::class ) as $class ) {
+				$package = ( new ReflectionClass( $class ) )->newInstanceWithoutConstructor();
+				self::assertNull( $package->get_branch() );
+				self::assertNull( $package->get_provider_code() );
+				self::assertNull( $package->get_provider_repository_id() );
+				self::assertNull( $package->is_private() );
+				self::assertNull( $package->get_private() );
+				self::assertSame( '', $package->get_credential_id() );
+			}
+		} finally {
+			restore_error_handler();
+		}
+	}
+
+	public function test_unhydrated_required_repository_getter_retains_type_error(): void {
+		foreach ( array( Plugin::class, Theme::class ) as $class ) {
+			$package = ( new ReflectionClass( $class ) )->newInstanceWithoutConstructor();
+			try {
+				$package->get_repository();
+				self::fail( 'A required repository must reject an unhydrated package.' );
+			} catch ( \TypeError $exception ) {
+				self::assertNotSame( '', $exception->getMessage() );
+			}
+		}
+	}
+
 	public function test_plugin_factory_accepts_owned_named_arguments_with_unchanged_headers(): void {
 		$headers = array(
 			'Name'        => 'Example plugin',

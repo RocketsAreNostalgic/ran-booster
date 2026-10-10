@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Tests\Support;
 
-final class CredentialUsageDatabase {
+final class CredentialUsageDatabase implements \RAN\Storage\CredentialUsageConnection {
 	public string $last_error     = '';
 	public mixed $count           = '0';
 	public string $server_info    = '8.4.6';

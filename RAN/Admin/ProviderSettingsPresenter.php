@@ -36,6 +36,17 @@ use Throwable;
  * Builds a display-only provider settings payload.
  *
  * Secret-bearing records are deliberately never requested from the sidecar.
+ *
+ * @phpstan-type PackageCredential array{id: string, label: string, kind: string, kind_label: string, detail: string, source: string, configured: bool}
+ * @phpstan-type PackageProviderChoice array{
+ *   code: string, label: string, owner_label: string, repository_url_base: string,
+ *   credentials_url: string, available: bool, browse: bool, credentialed_public_browse: bool,
+ *   provider_default_public_lookup_profile: bool, deploy: bool, webhooks: bool,
+ *   default_credential_id: string, credential_kind_labels?: array<string, string>,
+ *   credential_profiles: list<PackageCredential>,
+ *   public_lookup: array{supports_default: bool, configured_id: string, configured_label: string, stale: bool}|null
+ * }
+ * @phpstan-type PackageProviderSettings array{default_provider: string, providers: list<PackageProviderChoice>}
  */
 final readonly class ProviderSettingsPresenter {
 	private const MAX_REPOSITORY_PACKAGE_SUMMARIES = 20;
@@ -169,7 +180,7 @@ final readonly class ProviderSettingsPresenter {
 	/**
 	 * Build provider and credential choices for package forms and the picker.
 	 *
-	 * @return array{default_provider: string, providers: list<array<string, mixed>>}
+	 * @return PackageProviderSettings
 	 */
 
 	public function build_package_form( ?string $default_provider = null ): array {
@@ -202,7 +213,7 @@ final readonly class ProviderSettingsPresenter {
 	 * identity remains visible and can become operational again if that provider
 	 * is registered later.
 	 *
-	 * @return array{default_provider: string, providers: list<array<string, mixed>>}
+	 * @return PackageProviderSettings
 	 */
 
 	public function build_existing_package_form( string $stored_provider ): array {
@@ -672,7 +683,7 @@ final readonly class ProviderSettingsPresenter {
 	}
 
 	/**
-	 * @param list<array<string, mixed>> $credentials Display-safe credential profiles.
+	 * @param list<PackageCredential> $credentials Display-safe credential profiles.
 	 */
 	private function default_credential_id( array $credentials ): string {
 		foreach ( $credentials as $credential ) {

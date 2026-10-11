@@ -178,8 +178,8 @@ msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:58
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:272
-#: RAN/Admin/PackagePagePresenter.php:284
-#: RAN/Admin/PackagePagePresenter.php:428
+#: RAN/Admin/PackagePagePresenter.php:296
+#: RAN/Admin/PackagePagePresenter.php:440
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:475
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:468
 #: views/packages/index.php:135
@@ -189,8 +189,8 @@ msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:59
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:272
-#: RAN/Admin/PackagePagePresenter.php:294
-#: RAN/Admin/PackagePagePresenter.php:429
+#: RAN/Admin/PackagePagePresenter.php:306
+#: RAN/Admin/PackagePagePresenter.php:441
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:405
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:474
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:125
@@ -245,7 +245,7 @@ msgid "Source"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:149
-#: views/packages/edit.php:356
+#: views/packages/edit.php:366
 #: views/packages/fields/deployment-policy.php:27
 #: views/packages/fields/deployment-policy.php:30
 #: views/packages/index.php:445
@@ -477,7 +477,7 @@ msgstr[1] ""
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:326
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:387
 #: views/documentation.php:255
-#: views/packages/edit.php:236
+#: views/packages/edit.php:246
 #: views/packages/index.php:102
 #: views/packages/index.php:141
 #: views/packages/index.php:381
@@ -489,7 +489,7 @@ msgstr ""
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:330
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:387
 #: views/documentation.php:254
-#: views/packages/edit.php:237
+#: views/packages/edit.php:247
 #: views/packages/index.php:101
 #: views/packages/index.php:142
 #: views/packages/index.php:383
@@ -502,8 +502,8 @@ msgstr ""
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:334
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:387
 #: views/documentation.php:253
-#: views/packages/edit.php:198
-#: views/packages/edit.php:235
+#: views/packages/edit.php:208
+#: views/packages/edit.php:245
 #: views/packages/index.php:100
 #: views/packages/index.php:143
 #: views/packages/index.php:382
@@ -1054,7 +1054,7 @@ msgstr ""
 #: RAN/Admin/PortabilityController.php:465
 #: RAN/Admin/PortabilityController.php:582
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:342
-#: RAN/Admin/ProviderSettingsPresenter.php:1491
+#: RAN/Admin/ProviderSettingsPresenter.php:1502
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
 #: views/portability.php:169
 #: views/portability.php:250
@@ -1067,7 +1067,7 @@ msgstr ""
 #: RAN/Admin/PortabilityController.php:465
 #: RAN/Admin/PortabilityController.php:582
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:342
-#: RAN/Admin/ProviderSettingsPresenter.php:1492
+#: RAN/Admin/ProviderSettingsPresenter.php:1503
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
 #: views/portability.php:169
 #: views/portability.php:250
@@ -1166,7 +1166,7 @@ msgid "Changed %1$d plugins to %2$s in WordPress. Already in that state: %3$d. S
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:453
-#: views/packages/edit.php:198
+#: views/packages/edit.php:208
 #: views/packages/index.php:441
 msgid "Enabled"
 msgstr ""
@@ -1350,44 +1350,44 @@ msgctxt "Managed package type plural label"
 msgid "Themes"
 msgstr ""
 
-#: RAN/Admin/PackagePagePresenter.php:285
+#: RAN/Admin/PackagePagePresenter.php:297
 #: views/packages/source-choices.php:27
 msgid "Deploy the saved branch manually or on a signed push."
 msgstr ""
 
-#: RAN/Admin/PackagePagePresenter.php:286
-#: RAN/Admin/PackagePagePresenter.php:296
+#: RAN/Admin/PackagePagePresenter.php:298
+#: RAN/Admin/PackagePagePresenter.php:308
 #: views/packages/source-choices.php:28
 msgid "Included with Booster"
 msgstr ""
 
-#: RAN/Admin/PackagePagePresenter.php:295
+#: RAN/Admin/PackagePagePresenter.php:307
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:128
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:186
 msgid "Install published releases through WordPress."
 msgstr ""
 
-#: RAN/Admin/PackagePagePresenter.php:381
+#: RAN/Admin/PackagePagePresenter.php:393
 #: views/packages/source-choices.php:47
 #: views/packages/source-choices.php:50
 msgid "Update source"
 msgstr ""
 
 #. translators: 1: source label, 2: branch.
-#: RAN/Admin/PackagePagePresenter.php:385
+#: RAN/Admin/PackagePagePresenter.php:397
 #, php-format
 msgid "%1$s · %2$s"
 msgstr ""
 
-#: RAN/Admin/PackagePagePresenter.php:389
-#: views/packages/edit.php:230
+#: RAN/Admin/PackagePagePresenter.php:401
+#: views/packages/edit.php:240
 #: views/packages/index.php:390
 #: assets/ran-booster-release-management.js:732
 msgid "provider default"
 msgstr ""
 
-#: RAN/Admin/PackagePagePresenter.php:440
-#: RAN/Admin/PackagePagePresenter.php:445
+#: RAN/Admin/PackagePagePresenter.php:452
+#: RAN/Admin/PackagePagePresenter.php:457
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:470
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:481
 #: views/extensions.php:11
@@ -1397,8 +1397,8 @@ msgid "Active"
 msgstr ""
 
 #. translators: 1: package type, 2: package display name.
-#: RAN/Admin/PackagePagePresenter.php:443
-#: RAN/Admin/PackagePagePresenter.php:449
+#: RAN/Admin/PackagePagePresenter.php:455
+#: RAN/Admin/PackagePagePresenter.php:461
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:478
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:795
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:137
@@ -1690,7 +1690,7 @@ msgid "Repository provider settings are unavailable."
 msgstr ""
 
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:30
-#: RAN/Admin/ProviderSettingsPresenter.php:1440
+#: RAN/Admin/ProviderSettingsPresenter.php:1451
 msgid "Owner"
 msgstr ""
 
@@ -1933,18 +1933,18 @@ msgid "No managed %s repositories are available yet. Install a package to add it
 msgstr ""
 
 #. translators: 1: repository provider name, 2: repository provider code.
-#: RAN/Admin/ProviderSettingsPresenter.php:1489
+#: RAN/Admin/ProviderSettingsPresenter.php:1500
 #, php-format
 msgid "The active %1$s provider can read every credential saved under provider code %2$s. Install and activate only providers you trust; Booster does not authenticate a third-party publisher."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1543
+#: RAN/Admin/ProviderSettingsPresenter.php:1554
 msgid "Account"
 msgstr ""
 
 #. translators: %d: number of packages using the credential.
-#: RAN/Admin/ProviderSettingsPresenter.php:1552
-#: RAN/Admin/ProviderSettingsPresenter.php:1602
+#: RAN/Admin/ProviderSettingsPresenter.php:1563
+#: RAN/Admin/ProviderSettingsPresenter.php:1613
 #: views/portability-review.php:56
 #, php-format
 msgctxt "Packages using a credential"
@@ -1954,30 +1954,30 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: Label shown when package usage cannot be determined.
-#: RAN/Admin/ProviderSettingsPresenter.php:1553
-#: RAN/Admin/ProviderSettingsPresenter.php:1602
+#: RAN/Admin/ProviderSettingsPresenter.php:1564
+#: RAN/Admin/ProviderSettingsPresenter.php:1613
 msgid "Usage unavailable"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1555
+#: RAN/Admin/ProviderSettingsPresenter.php:1566
 msgid "Stored · Validity checked on use"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1556
+#: RAN/Admin/ProviderSettingsPresenter.php:1567
 #: views/troubleshooting.php:43
 msgid "Not configured"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1606
+#: RAN/Admin/ProviderSettingsPresenter.php:1617
 msgid "Saved · Remote delivery not verified by Core"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1606
+#: RAN/Admin/ProviderSettingsPresenter.php:1617
 msgid "Local secret not configured"
 msgstr ""
 
 #. translators: %d is the number of managed packages that use the local secret.
-#: RAN/Admin/ProviderSettingsPresenter.php:1608
+#: RAN/Admin/ProviderSettingsPresenter.php:1619
 #, php-format
 msgid "Remove this local secret? %d managed package may be affected. Remote provider webhooks will not be removed."
 msgid_plural "Remove this local secret? %d managed packages may be affected. Remote provider webhooks will not be removed."
@@ -1985,20 +1985,20 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d is the number of managed packages that use the local secret.
-#: RAN/Admin/ProviderSettingsPresenter.php:1609
+#: RAN/Admin/ProviderSettingsPresenter.php:1620
 msgid "Remove this local secret? Remote provider webhooks will not be removed."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1685
+#: RAN/Admin/ProviderSettingsPresenter.php:1696
 msgid "Repository access needs attention"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1685
+#: RAN/Admin/ProviderSettingsPresenter.php:1696
 msgid "No credential saved"
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1685
+#: RAN/Admin/ProviderSettingsPresenter.php:1696
 #, php-format
 msgid "Ready · %d credential"
 msgid_plural "Ready · %d credentials"
@@ -2006,55 +2006,55 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1686
+#: RAN/Admin/ProviderSettingsPresenter.php:1697
 msgid "Restore encrypted credential storage before reviewing or changing saved repository access."
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1686
+#: RAN/Admin/ProviderSettingsPresenter.php:1697
 msgid "Review saved credentials that are incomplete, expired, or approaching expiry."
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1686
+#: RAN/Admin/ProviderSettingsPresenter.php:1697
 msgid "Public repositories remain available through anonymous lookup. Add a credential only for private access or steadier API limits."
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1686
+#: RAN/Admin/ProviderSettingsPresenter.php:1697
 msgid "Private repository access is available. Open credential management to validate, replace, or review usage."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1690
+#: RAN/Admin/ProviderSettingsPresenter.php:1701
 msgid "Webhook signing · Needs attention"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1690
+#: RAN/Admin/ProviderSettingsPresenter.php:1701
 msgid "Webhook signing · No secret saved"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1690
+#: RAN/Admin/ProviderSettingsPresenter.php:1701
 msgid "Webhook signing · Ready locally"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1691
+#: RAN/Admin/ProviderSettingsPresenter.php:1702
 msgid "Restore encrypted credential storage before Push-to-Deploy can verify signed deliveries."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1691
+#: RAN/Admin/ProviderSettingsPresenter.php:1702
 msgid "Review saved signing material whose configuration or managed-package usage could not be confirmed."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1691
+#: RAN/Admin/ProviderSettingsPresenter.php:1702
 msgid "Automatic branch deployments require local signing material before provider webhooks can be used safely."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1691
+#: RAN/Admin/ProviderSettingsPresenter.php:1702
 msgid "Add local signing material before configuring a provider webhook."
 msgstr ""
 
 #. translators: %d is the number of local secrets that can verify signed deliveries.
-#: RAN/Admin/ProviderSettingsPresenter.php:1691
+#: RAN/Admin/ProviderSettingsPresenter.php:1702
 #, php-format
 msgid "%d local secret can verify signed deliveries. This does not prove a matching remote webhook exists."
 msgid_plural "%d local secrets can verify signed deliveries. This does not prove matching remote webhooks exist."
@@ -2062,7 +2062,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: item count.
-#: RAN/Admin/ProviderSettingsPresenter.php:1750
+#: RAN/Admin/ProviderSettingsPresenter.php:1761
 #: views/packages/index.php:96
 #, php-format
 msgid "%d item"
@@ -2071,25 +2071,25 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: current page number, 2: total page count.
-#: RAN/Admin/ProviderSettingsPresenter.php:1751
+#: RAN/Admin/ProviderSettingsPresenter.php:1762
 #, php-format
 msgid "Page %1$d of %2$d"
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ProviderSettingsPresenter.php:1782
+#: RAN/Admin/ProviderSettingsPresenter.php:1793
 #, php-format
 msgid "Back to %s overview"
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ProviderSettingsPresenter.php:1783
+#: RAN/Admin/ProviderSettingsPresenter.php:1794
 #, php-format
 msgid "Manage saved credentials used for %s repository access."
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ProviderSettingsPresenter.php:1784
+#: RAN/Admin/ProviderSettingsPresenter.php:1795
 #, php-format
 msgid "Manage local signing material used to verify %s webhook deliveries."
 msgstr ""
@@ -6476,8 +6476,8 @@ msgid "Learn how Booster manages credentials and keys"
 msgstr ""
 
 #: views/packages/advanced-source-settings.php:7
-#: views/packages/create.php:81
-#: views/packages/edit.php:128
+#: views/packages/create.php:91
+#: views/packages/edit.php:138
 msgid "Branch · provider default"
 msgstr ""
 
@@ -6661,83 +6661,83 @@ msgid "Save settings and check"
 msgstr ""
 
 #. translators: %s is Managed Plugins or Managed Themes.
-#: views/packages/create.php:105
-#: views/packages/edit.php:241
-#: views/packages/edit.php:269
-#: views/packages/edit.php:329
+#: views/packages/create.php:115
+#: views/packages/edit.php:251
+#: views/packages/edit.php:279
+#: views/packages/edit.php:339
 #, php-format
 msgid "Back to Managed %s"
 msgstr ""
 
 #. translators: %s is Plugin or Theme.
-#: views/packages/create.php:106
+#: views/packages/create.php:116
 #, php-format
 msgid "Install New %s"
 msgstr ""
 
 #. translators: %s is Plugin or Theme.
-#: views/packages/create.php:107
+#: views/packages/create.php:117
 msgid "Identify the repository Booster should manage, then adjust source-specific settings when needed."
 msgstr ""
 
-#: views/packages/create.php:129
+#: views/packages/create.php:139
 msgid "Choose the repository and access Booster should use for this package."
 msgstr ""
 
-#: views/packages/create.php:136
-#: views/packages/edit.php:303
+#: views/packages/create.php:146
+#: views/packages/edit.php:313
 msgid "Package operation"
 msgstr ""
 
-#: views/packages/create.php:137
-#: views/packages/edit.php:304
+#: views/packages/create.php:147
+#: views/packages/edit.php:314
 msgid "Choose when Booster may update this package."
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/create.php:151
+#: views/packages/create.php:161
 #, php-format
 msgid "Link installed %s"
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/create.php:153
+#: views/packages/create.php:163
 #, php-format
 msgid "Let Booster manage an already installed %s instead of deploying it now."
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/create.php:154
+#: views/packages/create.php:164
 msgid "The installed folder name must match the repository package name."
 msgstr ""
 
-#: views/packages/create.php:158
+#: views/packages/create.php:168
 msgid "Installation actions"
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/create.php:160
+#: views/packages/create.php:170
 #, php-format
 msgid "Manage %s"
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/create.php:161
-#: views/packages/edit.php:268
-#: views/packages/edit.php:328
+#: views/packages/create.php:171
+#: views/packages/edit.php:278
+#: views/packages/edit.php:338
 #: views/packages/index.php:107
 #, php-format
 msgid "Install another %s"
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/create.php:163
+#: views/packages/create.php:173
 #, php-format
 msgid "Install %s"
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/create.php:164
+#: views/packages/create.php:174
 msgid "Install and add another"
 msgstr ""
 
@@ -6787,113 +6787,113 @@ msgstr ""
 msgid "Unlink and delete %s"
 msgstr ""
 
-#: views/packages/edit.php:210
+#: views/packages/edit.php:220
 msgid "Activate plugin"
 msgstr ""
 
-#: views/packages/edit.php:220
+#: views/packages/edit.php:230
 msgid "Enable theme"
 msgstr ""
 
-#: views/packages/edit.php:220
+#: views/packages/edit.php:230
 msgid "Activate theme"
 msgstr ""
 
-#: views/packages/edit.php:224
+#: views/packages/edit.php:234
 msgid "Save plugin settings"
 msgstr ""
 
-#: views/packages/edit.php:225
+#: views/packages/edit.php:235
 msgid "Save theme settings"
 msgstr ""
 
 #. translators: %s is the repository branch name.
-#: views/packages/edit.php:229
+#: views/packages/edit.php:239
 #: views/packages/index.php:389
 #: assets/ran-booster-release-management.js:730
 #, php-format,js-format
 msgid "Branch · %s"
 msgstr ""
 
-#: views/packages/edit.php:232
+#: views/packages/edit.php:242
 msgid "Unavailable update source"
 msgstr ""
 
-#: views/packages/edit.php:233
+#: views/packages/edit.php:243
 msgid "The update source provider is unavailable"
 msgstr ""
 
 #. translators: %s is the item being edited.
-#: views/packages/edit.php:242
+#: views/packages/edit.php:252
 #: assets/ran-booster-secure-inputs.js:926
 #, php-format,js-format
 msgid "Edit %s"
 msgstr ""
 
-#: views/packages/edit.php:246
+#: views/packages/edit.php:256
 msgid "Provider unavailable."
 msgstr ""
 
-#: views/packages/edit.php:246
+#: views/packages/edit.php:256
 msgid "This package remains linked but cannot be edited or deployed until its provider is registered again."
 msgstr ""
 
-#: views/packages/edit.php:248
+#: views/packages/edit.php:258
 #: views/portability-review.php:95
 #: views/portability.php:158
 msgid "Provider:"
 msgstr ""
 
-#: views/packages/edit.php:249
+#: views/packages/edit.php:259
 msgid "Repository:"
 msgstr ""
 
-#: views/packages/edit.php:250
+#: views/packages/edit.php:260
 msgid "Provider repository ID:"
 msgstr ""
 
-#: views/packages/edit.php:260
+#: views/packages/edit.php:270
 msgid "Update source unavailable"
 msgstr ""
 
-#: views/packages/edit.php:261
+#: views/packages/edit.php:271
 msgid "The package remains linked, but its update source controls require an add-on that is not currently available."
 msgstr ""
 
-#: views/packages/edit.php:265
+#: views/packages/edit.php:275
 msgid "Booster will not reinterpret this package as a branch deployment. Restore the update source add-on to manage updates or unlink the package."
 msgstr ""
 
-#: views/packages/edit.php:267
-#: views/packages/edit.php:326
+#: views/packages/edit.php:277
+#: views/packages/edit.php:336
 msgid "Package settings actions"
 msgstr ""
 
-#: views/packages/edit.php:295
+#: views/packages/edit.php:305
 msgid "The saved repository and access used by this package."
 msgstr ""
 
-#: views/packages/edit.php:314
+#: views/packages/edit.php:324
 msgid "Package operations"
 msgstr ""
 
-#: views/packages/edit.php:342
+#: views/packages/edit.php:352
 msgid "Package summary"
 msgstr ""
 
-#: views/packages/edit.php:344
+#: views/packages/edit.php:354
 msgid "Current source"
 msgstr ""
 
-#: views/packages/edit.php:358
+#: views/packages/edit.php:368
 msgid "Source changes reset Automatic to Manual"
 msgstr ""
 
-#: views/packages/edit.php:361
+#: views/packages/edit.php:371
 msgid "WordPress state"
 msgstr ""
 
-#: views/packages/edit.php:363
+#: views/packages/edit.php:373
 msgid "Independent of package source"
 msgstr ""
 
@@ -6910,22 +6910,22 @@ msgstr ""
 msgid "Leave blank to use the repository provider's default branch."
 msgstr ""
 
-#: views/packages/fields/credential.php:18
 #: views/packages/fields/credential.php:21
+#: views/packages/fields/credential.php:24
 #: views/provider.php:205
 #: views/provider.php:267
 msgid "Repository access"
 msgstr ""
 
-#: views/packages/fields/credential.php:25
+#: views/packages/fields/credential.php:28
 msgid "Default / public repository"
 msgstr ""
 
-#: views/packages/fields/credential.php:40
+#: views/packages/fields/credential.php:43
 msgid "Private repos require a PAT with appropriate access."
 msgstr ""
 
-#: views/packages/fields/credential.php:41
+#: views/packages/fields/credential.php:44
 msgid "Only install provider integrations you trust: an active provider can read its saved credentials. Booster does not authenticate a third-party publisher."
 msgstr ""
 

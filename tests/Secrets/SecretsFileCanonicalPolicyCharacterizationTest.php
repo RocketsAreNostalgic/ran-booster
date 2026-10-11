@@ -6,6 +6,7 @@ namespace RAN\Tests\Secrets;
 
 // Native temporary files exercise the authenticated encrypted-sidecar contract.
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\Portability\BlueprintCredential;
 use RAN\Portability\BlueprintPackage;
@@ -66,6 +67,103 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		}
 
 		parent::tearDown();
+	}
+
+	#[DataProvider( 'mutation_result_cases' )]
+	public function test_mutation_preserves_result_and_optional_write_flag( mixed $result, ?bool $write, bool $include_flag ): void {
+		$this->seed_representative_document();
+		$before = hash_file( 'sha256', $this->path );
+		$calls  = 0;
+		$mutate = new \ReflectionMethod( SecretsFile::class, 'mutate' );
+		$actual = $mutate->invoke(
+			$this->secrets,
+			static function ( array $document ) use ( $result, $write, $include_flag, &$calls ): array {
+				++$calls;
+				return $include_flag ? array( $document, $result, $write ) : array( $document, $result );
+			}
+		);
+
+		self::assertSame( $result, $actual );
+		self::assertSame( 1, $calls );
+		self::assertSame( ! $include_flag || true === $write, hash_file( 'sha256', $this->path ) !== $before );
+		self::assertTrue( $this->secrets->has_healthy_managed_storage() );
+	}
+
+	/** @return iterable<string, array{mixed, bool|null, bool}> */
+	public static function mutation_result_cases(): iterable {
+		foreach ( array(
+			'false'  => false,
+			'null'   => null,
+			'list'   => array( 'synthetic-id' ),
+			'scalar' => 'synthetic-id',
+		) as $name => $result ) {
+			yield $name . '-default-write' => array( $result, null, false );
+			yield $name . '-write' => array( $result, true, true );
+			yield $name . '-no-write' => array( $result, false, true );
+			// Reflection deliberately probes the old null-slot behavior beyond the private bool-only contract.
+			yield $name . '-null-write' => array( $result, null, true );
+		}
+	}
+
+	#[DataProvider( 'replacement_failure_cases' )]
+	public function test_failed_mutation_preserves_existing_storage_or_removes_the_new_key( bool $existing ): void {
+		if ( $existing ) {
+			$this->seed_representative_document();
+		}
+		$before = $existing ? hash_file( 'sha256', $this->path ) : null;
+		$failed = $this->getMockBuilder( SecretsFile::class )
+			->setConstructorArgs( array( $this->path, array(), $this->policies, $this->key_store, $this->codec ) )
+			->onlyMethods( array( 'replace_file' ) )
+			->getMock();
+		$failed->expects( self::once() )->method( 'replace_file' )->willReturn( false );
+
+		try {
+			$failed->save_credential( 'alpha', 'failed-credential', $this->credential_metadata( 'Failed credential' ), 'synthetic-failed-value' );
+			self::fail( 'A failed replacement must not return a credential ID.' );
+		} catch ( SecretsStorageUnavailable ) {
+			self::assertSame( $existing, is_file( $this->path ) );
+			self::assertSame( $existing, null !== $this->key_store->load( false ) );
+			if ( $existing ) {
+				self::assertSame( $before, hash_file( 'sha256', $this->path ) );
+				self::assertTrue( $this->secrets->has_healthy_managed_storage() );
+			}
+		}
+	}
+
+	public function test_failed_replacement_readback_restores_the_previous_ciphertext(): void {
+		$this->seed_representative_document();
+		$before       = hash_file( 'sha256', $this->path );
+		$replacements = 0;
+		$failed       = $this->getMockBuilder( SecretsFile::class )
+			->setConstructorArgs( array( $this->path, array(), $this->policies, $this->key_store, $this->codec ) )
+			->onlyMethods( array( 'replace_file' ) )
+			->getMock();
+		$failed->expects( self::exactly( 2 ) )->method( 'replace_file' )->willReturnCallback(
+			static function ( string $source, string $destination ) use ( &$replacements ): bool {
+				++$replacements;
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- Replace only disposable fixture ciphertext to exercise production readback rollback.
+				$replaced = rename( $source, $destination );
+				if ( $replaced && 1 === $replacements ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Corrupt only the newly replaced disposable fixture ciphertext before production readback.
+					self::assertNotFalse( file_put_contents( $destination, 'invalid synthetic envelope' ) );
+				}
+				return $replaced;
+			}
+		);
+
+		try {
+			$failed->save_credential( 'alpha', 'failed-credential', $this->credential_metadata( 'Failed credential' ), 'synthetic-failed-value' );
+			self::fail( 'A failed readback must not return a credential ID.' );
+		} catch ( SecretsStorageUnavailable ) {
+			self::assertSame( $before, hash_file( 'sha256', $this->path ) );
+			self::assertTrue( $this->secrets->has_healthy_managed_storage() );
+		}
+	}
+
+	/** @return iterable<string, array{bool}> */
+	public static function replacement_failure_cases(): iterable {
+		yield 'first write' => array( false );
+		yield 'replacement' => array( true );
 	}
 
 	public function test_structural_storage_reads_never_invoke_provider_policy(): void {

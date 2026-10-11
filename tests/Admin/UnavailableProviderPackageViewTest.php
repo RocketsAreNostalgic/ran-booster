@@ -592,6 +592,55 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Push-to-Deploy setting', $html );
 	}
 
+	public function test_credential_field_escapes_display_values_and_preserves_provider_selection(): void {
+		$provider_code          = 'fixture';
+		$selected_credential_id = 'profile"selected';
+		$provider_options       = array(
+			array(
+				'code'                => 'fixture',
+				'credential_profiles' => array(
+					array(
+						'id'         => $selected_credential_id,
+						'label'      => '<script>credential-label</script>',
+						'kind'       => 'api-key',
+						'kind_label' => 'API "key"',
+						'detail'     => 'tenant: <img src=x>',
+						'source'     => 'file',
+						'configured' => true,
+					),
+				),
+			),
+			array(
+				'code'                => 'other"provider',
+				'credential_profiles' => array(
+					array(
+						'id'         => 'other-profile',
+						'label'      => 'Other credential',
+						'kind'       => 'api-key',
+						'kind_label' => 'API key',
+						'detail'     => '',
+						'source'     => 'file',
+						'configured' => true,
+					),
+				),
+			),
+			array(
+				'code'                => 'unavailable',
+				'credential_profiles' => array(),
+			),
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/fields/credential.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '&lt;script&gt;credential-label&lt;/script&gt; — API &quot;key&quot; · tenant: &lt;img src=x&gt;', $html );
+		self::assertStringNotContainsString( '<script>', $html );
+		self::assertStringNotContainsString( '<img', $html );
+		self::assertMatchesRegularExpression( '/value="profile&quot;selected"[^>]*selected="selected"/', $html );
+		self::assertMatchesRegularExpression( '/value="other-profile"[^>]*data-provider="other&quot;provider"[^>]*disabled="disabled"[^>]*hidden/', $html );
+	}
+
 	/** @return array<string, mixed> */
 	private function provider_option( string $code, bool $available ): array {
 		return array(

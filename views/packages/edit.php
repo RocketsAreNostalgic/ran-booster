@@ -4,7 +4,17 @@
  * PackagePagePresenter projection passed through Dashboard::render().
  *
  * @var \RAN\Plugin|\RAN\Theme $package
- * @var array{default_provider: string, providers: list<array<string, mixed>>} $package_provider_settings
+ * @var array{
+ *   default_provider: string,
+ *   providers: list<array{
+ *     code: string, label: string, owner_label: string, repository_url_base: string,
+ *     credentials_url: string, available: bool, browse: bool, credentialed_public_browse: bool,
+ *     provider_default_public_lookup_profile: bool, deploy: bool, webhooks: bool,
+ *     default_credential_id: string, credential_kind_labels?: array<string, string>,
+ *     public_lookup: array{supports_default: bool, configured_id: string, configured_label: string, stale: bool}|null,
+ *     credential_profiles: list<array{id: string, label: string, kind: string, kind_label: string, detail: string, source: string, configured: bool}>
+ *   }>
+ * } $package_provider_settings
  * @var array<string, mixed> $package_source
  * @var \RAN\Admin\PackagePagePresenter $package_view
  */

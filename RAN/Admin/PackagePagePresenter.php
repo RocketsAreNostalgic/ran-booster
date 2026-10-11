@@ -115,9 +115,13 @@ final class PackagePagePresenter {
 	}
 
 	/**
-	 * @param array<string, mixed> $package_provider_settings
+	 * @template TProviderSettings of array<string, mixed>
+	 * @param TProviderSettings $package_provider_settings
 	 * @param array<string, mixed>|null $package_branch_readiness
-	 * @return array<string, mixed>
+	 * @return array{
+	 *   package_provider_settings: TProviderSettings, package_branch_readiness: array<string, mixed>|null,
+	 *   package: Package, package_view: self, package_extension_panels: list<string>, package_source: array<string, mixed>
+	 * }
 	 */
 	public function edit(
 		Package $package,
@@ -137,8 +141,12 @@ final class PackagePagePresenter {
 	}
 
 	/**
-	 * @param array<string, mixed> $package_provider_settings
-	 * @return array<string, mixed>
+	 * @template TProviderSettings of array<string, mixed>
+	 * @param TProviderSettings $package_provider_settings
+	 * @return array{
+	 *   package_provider_settings: TProviderSettings, package_view: self, explicit_provider: bool,
+	 *   open_repository_picker: bool, package_source: array<string, mixed>, managed_package_identifier: string|null
+	 * }
 	 */
 	public function create(
 		array $package_provider_settings,
@@ -159,8 +167,12 @@ final class PackagePagePresenter {
 	}
 
 	/**
-	 * @param array<string, mixed> $package_provider_settings
-	 * @return array<string, mixed>
+	 * @template TProviderSettings of array<string, mixed>
+	 * @param TProviderSettings $package_provider_settings
+	 * @return array{
+	 *   package_provider_settings: TProviderSettings, package_view: self, explicit_provider: bool,
+	 *   open_repository_picker: false, package_mutation_available: false
+	 * }
 	 */
 	public function unavailable_create( array $package_provider_settings, bool $explicit_provider ): array {
 		return array(

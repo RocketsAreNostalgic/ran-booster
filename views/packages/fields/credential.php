@@ -4,7 +4,10 @@
  * Inherited from the including package template.
  *
  * @var string $provider_code
- * @var list<array<string, mixed>> $provider_options
+ * @var list<array{
+ *   code: string,
+ *   credential_profiles: list<array{id: string, label: string, kind: string, kind_label: string, detail: string, source: string, configured: bool}>
+ * }> $provider_options
  * @var string $selected_credential_id
  */
 

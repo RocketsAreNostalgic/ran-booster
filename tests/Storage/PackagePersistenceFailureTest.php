@@ -58,6 +58,39 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		$storage->all_for_test();
 	}
 
+	public function test_inventory_rejects_invalid_privacy_after_a_valid_installed_row(): void {
+		global $wpdb;
+
+		$valid      = $this->stored_row();
+		$invalid    = array_replace(
+			$valid,
+			array(
+				'package' => 'other/other.php',
+				'private' => 2,
+			)
+		);
+		$wpdb->rows = array( $valid, $invalid );
+		$this->expectException( PackageStorageFailure::class );
+		try {
+			$this->storage()->all_for_test();
+		} finally {
+			self::assertSame( array(), $wpdb->updates );
+			self::assertSame( array(), $wpdb->deletes );
+		}
+	}
+
+	public function test_inventory_rejects_a_non_object_after_a_valid_row(): void {
+		global $wpdb;
+
+		$wpdb->forced_results = array( (object) $this->stored_row(), 'not-a-row' );
+		try {
+			$this->storage()->all_for_test();
+			self::fail( 'A valid first row must not hide a malformed later row.' );
+		} catch ( PackageStorageFailure $failure ) {
+			self::assertSame( 'ran_booster_storage_query_failed', $failure->get_diagnostic_id() );
+		}
+	}
+
 	public function test_unsupported_database_blocks_package_reads_and_writes_before_table_access(): void {
 		global $wpdb;
 

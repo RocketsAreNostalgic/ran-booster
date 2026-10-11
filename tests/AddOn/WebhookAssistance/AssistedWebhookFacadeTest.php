@@ -704,12 +704,16 @@ final class FixedFacadeSecretsFile extends SecretsFile {
 	public function credential_profiles( ProviderCode|string $provider ): array {
 		return array(
 			'profile_1' => array(
-				'id'         => 'profile_1',
-				'source'     => 'file',
-				'immutable'  => false,
-				'label'      => 'Fixture',
-				'kind'       => 'fine-grained',
-				'destroy_on' => null,
+				'id'            => 'profile_1',
+				'provider'      => 'gh',
+				'source'        => 'file',
+				'immutable'     => false,
+				'label'         => 'Fixture',
+				'kind'          => 'fine-grained',
+				'configuration' => array(),
+				'configured'    => true,
+				'self_destruct' => false,
+				'destroy_on'    => null,
 			),
 		);
 	}

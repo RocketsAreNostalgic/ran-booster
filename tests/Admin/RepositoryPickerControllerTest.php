@@ -592,8 +592,16 @@ final class RepositoryPickerControllerTest extends TestCase {
 		$profiles      = array();
 		foreach ( $profile_ids as $profile_id ) {
 			$profiles[ $profile_id ] = array(
-				'id'         => $profile_id,
-				'configured' => true,
+				'id'            => $profile_id,
+				'provider'      => $provider_code,
+				'label'         => 'Fixture credential',
+				'kind'          => 'fixture',
+				'configuration' => array(),
+				'source'        => 'file',
+				'immutable'     => false,
+				'configured'    => true,
+				'self_destruct' => false,
+				'destroy_on'    => null,
 			);
 		}
 
@@ -606,10 +614,11 @@ final class RepositoryPickerControllerTest extends TestCase {
 }
 
 
+/** @phpstan-import-type CredentialProfile from SecretsFile */
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused display-safe secrets fixture.
 final class RepositoryPickerSecretsFile extends SecretsFile {
 
-	/** @param array<string, array<string, array<string, mixed>>> $profiles */
+	/** @param array<string, array<string, CredentialProfile>> $profiles */
 	public function __construct( private array $profiles, private bool $storage_unavailable = false ) {
 	}
 

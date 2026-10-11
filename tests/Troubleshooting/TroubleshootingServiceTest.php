@@ -30,6 +30,13 @@ final class TroubleshootingServiceTest extends TestCase {
 			array(
 				'gh' => array(
 					'id'            => 'site-private',
+					'provider'      => 'gh',
+					'kind'          => 'fixture',
+					'source'        => 'file',
+					'immutable'     => false,
+					'configured'    => true,
+					'self_destruct' => false,
+					'destroy_on'    => null,
 					'label'         => 'Site private access',
 					'configuration' => array( 'account' => 'configuration-canary' ),
 					'secret'        => 'secret-canary',
@@ -336,9 +343,14 @@ class TroubleshootingLocalFixture extends LocalTroubleshootingService {
 	}
 }
 
+/**
+ * Deliberately includes an unexpected secret to test the independent display projection.
+ *
+ * @phpstan-type ProfileWithUnexpectedSecret array{id:string,provider:string,label:string,kind:string,configuration:array<array-key,mixed>,source:'file',immutable:false,configured:true,self_destruct:false,destroy_on:null,secret:string}
+ */
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
 final class TroubleshootingSecretsFixture extends SecretsFile {
-	/** @param array<string, array<string, mixed>> $profiles */
+	/** @param array<string, ProfileWithUnexpectedSecret> $profiles */
 	public function __construct( private array $profiles ) {
 		parent::__construct( '/unused/ran-booster-troubleshooting-secrets.php', array() );
 	}

@@ -30,6 +30,10 @@ use RuntimeException;
  *
  * @phpstan-type StoredCredential array{label:string,kind:string,configuration:array<array-key,mixed>,secret:string,self_destruct?:true,destroy_on?:string,provider_destroy_on?:string}
  * @phpstan-type StoredWebhook array{label:string,scope:string,target:string,authority_id:string,revision:positive-int,origin:'manual'|'assisted',secret:string}
+ * @phpstan-type SecretsDocument array{schema_version:2,credentials:array<string,array<string,StoredCredential>>,webhooks:array<string,array<string,StoredWebhook>>}
+ * @phpstan-type ConstantCredential array{id:'constant',provider:string,label:string,kind:string,configuration:array<array-key,mixed>,secret:string,source:'constant',immutable:true}
+ * @phpstan-type FileCredential array{id:string,provider:string,label:string,kind:string,configuration:array<array-key,mixed>,secret:string,source:'file',immutable:false,self_destruct:bool,destroy_on:string|null}
+ * @phpstan-type CredentialProfile array{id:string,provider:string,label:string,kind:string,configuration:array<array-key,mixed>,source:'constant'|'file',immutable:bool,configured:true,self_destruct:bool,destroy_on:string|null}
  */
 class SecretsFile {
 
@@ -328,7 +332,7 @@ class SecretsFile {
 	/**
 	 * Return display-safe credential profiles for one provider.
 	 *
-	 * @return array<string, array<string, mixed>>
+	 * @return array<string, CredentialProfile>
 	 */
 	public function credential_profiles( ProviderCode|string $provider ): array {
 		if ( ! $this->availability->is_available() ) {
@@ -1003,7 +1007,7 @@ class SecretsFile {
 		}
 	}
 
-	/** @return array<string, mixed>|null */
+	/** @return ConstantCredential|null */
 	private function constant_credential( string $provider, ProviderCredentialPolicy $policy ): ?array {
 		try {
 			$record = $policy->credential_from_constants( $this->declared_constants( $policy->get_constant_names() ) );
@@ -1033,8 +1037,8 @@ class SecretsFile {
 	}
 
 	/**
-	 * @param array<string, mixed> $record
-	 * @return array{id:'constant',provider:string,label:string,kind:string,configuration:array<array-key,mixed>,secret:string,source:'constant',immutable:true}
+	 * @param ConstantCredential $record
+	 * @return ConstantCredential
 	 */
 	private function runtime_constant_credential( string $provider, #[\SensitiveParameter] array $record ): array {
 		return array(
@@ -1086,8 +1090,8 @@ class SecretsFile {
 	}
 
 	/**
-	 * @param array<string, mixed> $record
-	 * @return array{id:string,provider:string,label:string,kind:string,configuration:array<array-key,mixed>,secret:string,source:'file',immutable:false,self_destruct:bool,destroy_on:string|null}
+	 * @param StoredCredential $record
+	 * @return FileCredential
 	 */
 	private function runtime_credential_record( string $provider, string $id, #[\SensitiveParameter] array $record ): array {
 		return array(
@@ -1191,7 +1195,7 @@ class SecretsFile {
 
 	/**
 	 * @param array<array-key, BlueprintCredential> $credentials
-	 * @return list<array{provider:string,id:string,record:array<string,mixed>}>
+	 * @return list<array{provider:string,id:string,record:StoredCredential}>
 	 */
 	private function portable_credential_records(
 		#[\SensitiveParameter] PackageBlueprint $blueprint,
@@ -1301,7 +1305,7 @@ class SecretsFile {
 		);
 	}
 
-	/** @param array<string, array<string, mixed>> $records */
+	/** @param array<string, StoredWebhook> $records */
 	private function assert_webhook_collection( array $records, bool $submitted = false ): void {
 		if ( count( $records ) > self::MAX_WEBHOOK_PROFILES ) {
 			if ( $submitted ) {
@@ -1340,7 +1344,9 @@ class SecretsFile {
 	}
 
 	/**
-	 * @param callable(array<string, mixed>): array{0: array<string, mixed>, 1: mixed, 2?: bool} $mutation Mutation callback.
+	 * @template TResult
+	 * @param callable(SecretsDocument): array{0: SecretsDocument, 1: TResult, 2?: bool} $mutation Mutation callback.
+	 * @return TResult
 	 */
 	private function mutate( #[\SensitiveParameter] callable $mutation ): mixed {
 		$this->assert_configured_location();
@@ -1349,10 +1355,12 @@ class SecretsFile {
 			LOCK_EX,
 			true,
 			function () use ( $mutation ): mixed {
-				$key                             = $this->load_key();
-				$has_file                        = $this->has_file();
-				$document                        = $this->document_for_locked_state( $key, $has_file );
-				list($document, $result, $write) = array_pad( $mutation( $document ), 3, true );
+				$key                     = $this->load_key();
+				$has_file                = $this->has_file();
+				$document                = $this->document_for_locked_state( $key, $has_file );
+				$mutation_result         = $mutation( $document );
+				list($document, $result) = $mutation_result;
+				$write                   = array_key_exists( 2, $mutation_result ) ? $mutation_result[2] : true;
 
 				if ( $write ) {
 					$document    = $this->validate_canonical_document( $document );
@@ -1379,14 +1387,17 @@ class SecretsFile {
 		);
 	}
 
-	/** @param array<string, mixed> $providers */
+	/**
+	 * @template TRecord
+	 * @param array<string, array<string, TRecord>> $providers
+	 */
 	private function remove_empty_provider( #[\SensitiveParameter] array &$providers, string $provider ): void {
 		if ( isset( $providers[ $provider ] ) && array() === $providers[ $provider ] ) {
 			unset( $providers[ $provider ] );
 		}
 	}
 
-	/** @return array<string, mixed> */
+	/** @return SecretsDocument */
 	private function file_document(): array {
 		$this->assert_available();
 		if ( ! $this->has_managed_material() ) {
@@ -1471,7 +1482,7 @@ class SecretsFile {
 	}
 
 	/**
-	 * @return array<string, mixed>
+	 * @return SecretsDocument
 	 */
 	private function document_for_locked_state( #[\SensitiveParameter] ?string $key, bool $has_file ): array {
 		if ( null === $key && ! $has_file ) {
@@ -1485,7 +1496,7 @@ class SecretsFile {
 		return $this->read_encrypted_document( $key );
 	}
 
-	/** @return array<string, mixed> */
+	/** @return SecretsDocument */
 	private function read_encrypted_document( #[\SensitiveParameter] string $key ): array {
 		$envelope = $this->read_bounded_file();
 		try {
@@ -1553,8 +1564,8 @@ class SecretsFile {
 	}
 
 	/**
-	 * @param array<string, mixed> $raw Raw sidecar document.
-	 * @return array<string, mixed>
+	 * @param array<array-key, mixed> $raw Raw sidecar document.
+	 * @return SecretsDocument
 	 */
 	private function validate_document( #[\SensitiveParameter] array $raw ): array {
 		$allowed = array(
@@ -1587,8 +1598,8 @@ class SecretsFile {
 	}
 
 	/**
-	 * @param array<string, mixed> $document Canonical document.
-	 * @return array<string, mixed>
+	 * @param array<array-key, mixed> $document Document to validate.
+	 * @return SecretsDocument
 	 */
 	private function validate_canonical_document( #[\SensitiveParameter] array $document ): array {
 		if ( isset( $document['schema_version'] ) && self::SCHEMA_VERSION !== $document['schema_version'] ) {
@@ -1616,24 +1627,27 @@ class SecretsFile {
 					$this->assert_writable_id( $id );
 					if ( self::CREDENTIALS === $collection ) {
 						$this->assert_only_keys( $record, array( 'label', 'kind', 'configuration', 'secret', 'self_destruct', 'destroy_on', 'provider_destroy_on' ), 'A provider credential contains unsupported fields.' );
-						$normalised[ $collection ][ $provider ][ $id ] = $this->validate_stored_credential( $record );
+						$normalised[ self::CREDENTIALS ][ $provider ][ $id ] = $this->validate_stored_credential( $record );
 					} else {
-						$normalised[ $collection ][ $provider ][ $id ] = $this->validate_stored_webhook( $record );
+						$normalised[ self::WEBHOOKS ][ $provider ][ $id ] = $this->validate_stored_webhook( $record );
 					}
 				}
-				ksort( $normalised[ $collection ][ $provider ], SORT_STRING );
 				if ( self::WEBHOOKS === $collection ) {
-					$this->assert_webhook_collection( $normalised[ $collection ][ $provider ] );
+					ksort( $normalised[ self::WEBHOOKS ][ $provider ], SORT_STRING );
+					$this->assert_webhook_collection( $normalised[ self::WEBHOOKS ][ $provider ] );
+				} else {
+					ksort( $normalised[ self::CREDENTIALS ][ $provider ], SORT_STRING );
 				}
 			}
-			ksort( $normalised[ $collection ], SORT_STRING );
 		}
+		ksort( $normalised[ self::CREDENTIALS ], SORT_STRING );
+		ksort( $normalised[ self::WEBHOOKS ], SORT_STRING );
 
 		return $normalised;
 	}
 
 	/**
-	 * @param array<string, mixed> $record
+	 * @param array<array-key, mixed> $record
 	 * @return StoredCredential
 	 */
 	private function validate_stored_credential( #[\SensitiveParameter] array $record ): array {
@@ -1679,7 +1693,7 @@ class SecretsFile {
 	}
 
 	/**
-	 * @param array<string, mixed> $record
+	 * @param array<array-key, mixed> $record
 	 * @return StoredWebhook
 	 */
 	private function validate_stored_webhook( #[\SensitiveParameter] array $record ): array {
@@ -1702,7 +1716,7 @@ class SecretsFile {
 	}
 
 	/**
-	 * @param array<string, mixed> $record
+	 * @param StoredCredential $record
 	 * @return StoredCredential
 	 */
 	private function revalidate_stored_credential( string $provider, #[\SensitiveParameter] array $record ): array {
@@ -1714,7 +1728,7 @@ class SecretsFile {
 		return $validated;
 	}
 
-	/** @param array<string, mixed> $document */
+	/** @param SecretsDocument $document */
 	private function assert_recovery_credential_fitness( #[\SensitiveParameter] array $document ): void {
 		foreach ( $document[ self::CREDENTIALS ] as $provider => $records ) {
 			$policy = $this->provider_policies->find_credential_policy( $provider );
@@ -1739,7 +1753,7 @@ class SecretsFile {
 	}
 
 	/**
-	 * @param array<string, mixed> $record
+	 * @param StoredWebhook $record
 	 * @return StoredWebhook
 	 */
 	private function revalidate_stored_webhook( string $provider, #[\SensitiveParameter] array $record ): array {
@@ -1751,7 +1765,7 @@ class SecretsFile {
 		return $validated;
 	}
 
-	/** @return array<string, mixed> */
+	/** @return SecretsDocument */
 	private function empty_document(): array {
 		return array(
 			'schema_version'  => self::SCHEMA_VERSION,
@@ -1840,7 +1854,7 @@ class SecretsFile {
 	}
 
 	/**
-	 * @param array<string, mixed> $record  Record to validate.
+	 * @param array<array-key, mixed> $record  Record to validate.
 	 * @param list<string>         $allowed Allowed keys.
 	 */
 	private function assert_only_keys(

@@ -945,6 +945,11 @@ final class DeploymentAttemptRepository {
 		}
 	}
 
+	/**
+	 * @template TResult
+	 * @param callable(): TResult $operation
+	 * @return TResult
+	 */
 	private function transaction( callable $operation, bool $serializable = false ): mixed {
 		$this->require_storage_support();
 		if ( $serializable && false === $this->write_connection()->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' ) ) {

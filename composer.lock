@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f8bc64d1bd02a1a7e2e011186488e727",
+    "content-hash": "b3f881af887c17d1e62e79f52ee01f01",
     "packages": [
         {
             "name": "ran/booster-github-provider",
-            "version": "dev-feature/activity-history-wave-one",
+            "version": "v1.0.0-beta.16",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider.git",
-                "reference": "137abc828845ba042f6d25c96de52f04d3f2d43a"
+                "reference": "d03865a815cb7d58bc9ed486f1054a7ef2ecf386"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-booster-github-provider/zipball/137abc828845ba042f6d25c96de52f04d3f2d43a",
-                "reference": "137abc828845ba042f6d25c96de52f04d3f2d43a",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-booster-github-provider/zipball/d03865a815cb7d58bc9ed486f1054a7ef2ecf386",
+                "reference": "d03865a815cb7d58bc9ed486f1054a7ef2ecf386",
                 "shasum": ""
             },
             "require": {
@@ -110,7 +110,7 @@
                 "security": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider/security/advisories/new",
                 "source": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider"
             },
-            "time": "2026-10-12T21:25:31+00:00"
+            "time": "2026-10-12T22:04:26+00:00"
         },
         {
             "name": "ran/updater-support",
@@ -321,16 +321,16 @@
         },
         {
             "name": "ran/wp-release-updater",
-            "version": "dev-feature/activity-history-wave-one",
+            "version": "v1.0.0-beta.10",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater.git",
-                "reference": "f34855e43c5e4a7f8c0ce85ac21edeb0b5e8fc0c"
+                "reference": "16b28307cd200e0338eb4de431ff75db234dcda9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/f34855e43c5e4a7f8c0ce85ac21edeb0b5e8fc0c",
-                "reference": "f34855e43c5e4a7f8c0ce85ac21edeb0b5e8fc0c",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/16b28307cd200e0338eb4de431ff75db234dcda9",
+                "reference": "16b28307cd200e0338eb4de431ff75db234dcda9",
                 "shasum": ""
             },
             "require": {
@@ -417,7 +417,7 @@
                 "security": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater/security/advisories/new",
                 "source": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater"
             },
-            "time": "2026-10-12T21:04:25+00:00"
+            "time": "2026-10-12T22:04:17+00:00"
         }
     ],
     "packages-dev": [
@@ -3144,30 +3144,15 @@
             "time": "2026-07-27T11:53:23+00:00"
         }
     ],
-    "aliases": [
-        {
-            "package": "ran/booster-github-provider",
-            "version": "dev-feature/activity-history-wave-one",
-            "alias": "1.0.0-beta.16",
-            "alias_normalized": "1.0.0.0-beta16"
-        },
-        {
-            "package": "ran/wp-release-updater",
-            "version": "dev-feature/activity-history-wave-one",
-            "alias": "1.0.0-beta.10",
-            "alias_normalized": "1.0.0.0-beta10"
-        }
-    ],
+    "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
         "phpcompatibility/php-compatibility": 15,
         "phpcompatibility/phpcompatibility-paragonie": 15,
         "phpcompatibility/phpcompatibility-wp": 15,
         "ran/admin-shell": 20,
-        "ran/booster-github-provider": 20,
         "ran/updater-support": 10,
-        "ran/wp-branch-updater": 10,
-        "ran/wp-release-updater": 20
+        "ran/wp-branch-updater": 10
     },
     "prefer-stable": true,
     "prefer-lowest": false,
@@ -3176,7 +3161,7 @@
         "ext-sodium": "*",
         "ext-zip": "*"
     },
-    "platform-dev": {},
+    "platform-dev": [],
     "platform-overrides": {
         "php": "8.2.0"
     },

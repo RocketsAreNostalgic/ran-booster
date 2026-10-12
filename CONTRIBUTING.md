@@ -50,8 +50,19 @@ roots enter automatically, including views and the immutable generated Admin She
 PHP files. Dependency `scanDirectories` supplies symbols; it is not direct
 analysis of dependency bodies. Tests and maintenance scripts retain syntax,
 standards and their behavioural gates, rather than being counted as production
-analysis coverage. Levels 9 and 10 are outside this programme; this gate does not imply
+analysis coverage. This gate does not imply
 maximum analysis depth or complete retained-exception acceptance.
+
+The ordinary PHPUnit suite also runs `TypeContractRegressionTest`
+through the locked PHPStan at Level 9, retaining `treatPhpDocTypesAsCertain: false`.
+They exercise actual transaction and secrets callback results, validated secrets
+documents and credential presenter forwarding with typed consumers. Deliberately
+invalid consumers prove that the analyzer rejects incompatible results and unsafe
+optional-field access. The fixtures are analyzed, not executed. These checks
+protect specific guarantees; they do not certify their containing files or every
+future feature as Level 9 compliant. Keep them alongside the behavioural tests
+when changing these contracts. Broad automatic Level 8 coverage is unchanged,
+and Level 10 remains diagnostic.
 
 Three exact `property.notFound` allowances retain WordPress's mutable foreign
 update-transient contract: the response-channel assignment in

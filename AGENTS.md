@@ -49,7 +49,12 @@ exemptions, with immutable identity and their actual rejection tests protected b
 for their evidence and review trigger. No pending-file inventory or baseline
 remains. All other maintained PHP enters analysis automatically, including new
 production roots and split development files.
-Levels 9 and 10 are outside this programme. Exactly three occurrence-level `property.notFound`
+Level 8 remains the default production and development gate. Focused PHPUnit
+contract tests also use the real locked analyzer at Level 9 to protect callback
+results, validated secrets shapes and credential presentation. They check named
+guarantees, not whole-file Level 9 compliance; new files still enter the broad
+Level 8 analysis automatically. Level 10 remains diagnostic.
+Exactly three occurrence-level `property.notFound`
 allowances preserve arbitrary WordPress update-transient objects and their magic
 accessors: one response-channel assignment in `CorePackageExecutor` and two in
 `core-updater-proof.php`. Do not replace these objects or narrow them to `stdClass`.

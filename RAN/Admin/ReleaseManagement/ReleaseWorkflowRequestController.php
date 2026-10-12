@@ -7,10 +7,16 @@ namespace RAN\Admin\ReleaseManagement;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use RAN\Logging\BoosterLogger;
+use RAN\Activity\ActivityStore;
+use RAN\Activity\ActivityRequest;
+use RAN\Activity\ProgressOnly;
+use RAN\Activity\RecordedActivityOperation;
+use RAN\Admin\RepositoryBranchCheckEvidenceStore;
+use RAN\Package;
 use RAN\PackageSource;
 use RAN\RepositoryPackageIdentity;
 use RAN\RepositoryProvider\ProviderRegistry;
-use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV4;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowTarget;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\RepositorySourceGuard;
@@ -43,7 +49,8 @@ final class ReleaseWorkflowRequestController {
 		private readonly PluginRepository $plugins,
 		private readonly ThemeRepository $themes,
 		private readonly ProviderRegistry $providers,
-		private readonly RepositorySourceGuard $source_guard
+		private readonly RepositorySourceGuard $source_guard,
+		private readonly ?ActivityStore $activity = null
 	) {}
 
 
@@ -90,6 +97,8 @@ final class ReleaseWorkflowRequestController {
 		$channel       = 'inspect' === $operation ? $this->release_channel_from( $request ) : '';
 		$outcome       = $this->workflow_result( $type, $identifier, 'workflow_invalid_request', false, '', 'request_validation', 'malformed_request' );
 		$exact         = false;
+		$activity_id   = null;
+		$progress      = null;
 		try {
 			do {
 				if ( ! in_array( $operation, array( 'inspect', 'setup', 'outcome' ), true )
@@ -116,6 +125,13 @@ final class ReleaseWorkflowRequestController {
 				if ( 1 !== wp_verify_nonce( $nonce, $this->workflow_nonce_action( $operation, $status, $preview_key ) ) ) {
 					$outcome['diagnostic_code'] = 'nonce_expired';
 					break;
+				}
+				if ( null !== $this->activity && $package instanceof Package ) {
+					$activity_id = $this->request_boundary(
+						fn (): ?int => $this->activity->begin( $provider_code, new ActivityRequest( 'workflow.' . $operation, $package->get_repository()->reference, $type, $identifier ), ( new RepositoryBranchCheckEvidenceStore() )->activity_context( $type, $package, 'workflow.assessment' ) ),
+						null
+					);
+					$progress    = new ProgressOnly( new RecordedActivityOperation( $this->activity, $activity_id ) );
 				}
 				$provider = $this->workflow_provider( $provider_code );
 				if ( null === $provider ) {
@@ -161,9 +177,9 @@ final class ReleaseWorkflowRequestController {
 					$provider_preflight = ReleaseWorkflowProviderProjection::preflight( $preflight );
 				}
 				$result = match ( $operation ) {
-					'inspect' => $provider->workflow_inspect( $provider_target, $channel, $provider_preflight ?? throw new \RuntimeException( 'Release workflow preflight projection is unavailable.' ), '' === $credential_id ? null : $credential_id ),
-					'setup' => $provider->workflow_setup( $provider_target, $preview_key, $confirmation, $provider_preflight ?? throw new \RuntimeException( 'Release workflow preflight projection is unavailable.' ), $credential_id ),
-					'outcome' => $provider->workflow_outcome( $provider_target, '' === $credential_id ? null : $credential_id ),
+					'inspect' => $provider->workflow_inspect( $provider_target, $channel, $provider_preflight ?? throw new \RuntimeException( 'Release workflow preflight projection is unavailable.' ), '' === $credential_id ? null : $credential_id, $progress ),
+					'setup' => $provider->workflow_setup( $provider_target, $preview_key, $confirmation, $provider_preflight ?? throw new \RuntimeException( 'Release workflow preflight projection is unavailable.' ), $credential_id, $progress ),
+					'outcome' => $provider->workflow_outcome( $provider_target, '' === $credential_id ? null : $credential_id, $progress ),
 				};
 				$outcome = $this->workflow_result( $type, $identifier, $result->workflow_code(), $result->successful(), $result->preview_key(), $result->failure_stage(), $result->diagnostic_code(), '' !== $result->correlation_reference(), $result->correlation_reference(), $result->message(), $result->remediation() );
 			} while ( false );
@@ -172,6 +188,32 @@ final class ReleaseWorkflowRequestController {
 		}
 		if ( ! $outcome['successful'] && '' === $outcome['correlation_reference'] && '' !== $outcome['failure_stage'] ) {
 			$outcome = $this->preserve_request_failure( $operation, $outcome, $provider_code );
+		}
+		if ( null !== $activity_id && null !== $this->activity ) {
+			$kind = match ( $outcome['code'] ) {
+				'workflow_release_automation_conflict' => 'existing_automation_detected',
+				'workflow_release_automation_present' => 'booster_setup_verified',
+				'workflow_inspected' => 'no_recognisable_automation',
+				default => '',
+			};
+			$this->request_boundary(
+				fn (): bool => $this->activity->complete(
+					$activity_id,
+					$outcome['successful'] ? 'succeeded' : 'failed',
+					$outcome['code'],
+					$outcome['message'],
+					$outcome['remediation'],
+					array(
+						'observation_kind'      => $kind,
+						'failure_stage'         => $outcome['failure_stage'],
+						'diagnostic_code'       => $outcome['diagnostic_code'],
+						'diagnostic_available'  => $outcome['diagnostic_available'],
+						'correlation_reference' => $outcome['correlation_reference'],
+					),
+					'' !== $kind ? 'established' : 'none'
+				),
+				false
+			);
 		}
 		$args = $this->result_query_arguments( $outcome, $channel, $revision, $provider_code, $repository_id );
 		if ( '' !== $outcome['preview_key'] ) {
@@ -367,11 +409,11 @@ final class ReleaseWorkflowRequestController {
 			&& hash_equals( $status->identifier(), $record->package_identifier() );
 	}
 
-	private function workflow_provider( string $provider_code ): ?RepositoryReleaseWorkflowManagementV3 {
+	private function workflow_provider( string $provider_code ): ?RepositoryReleaseWorkflowManagementV4 {
 		try {
-			$provider = $this->providers->require_capability( $provider_code, RepositoryReleaseWorkflowManagementV3::class );
+			$provider = $this->providers->require_capability( $provider_code, RepositoryReleaseWorkflowManagementV4::class );
 			$release  = $this->providers->get( $provider_code );
-			return 3 === $provider::RELEASE_WORKFLOW_API_VERSION
+			return 4 === $provider::RELEASE_WORKFLOW_API_VERSION
 				&& null !== ( ( $this->providers->metadata()[ $provider_code ] ?? null )->admin ?? null )
 				&& $release instanceof \RAN\RepositoryProvider\RepositoryReleaseMetadata
 				&& $release instanceof \RAN\RepositoryProvider\RepositoryReleaseCandidateListing

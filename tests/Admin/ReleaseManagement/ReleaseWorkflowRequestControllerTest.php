@@ -12,6 +12,8 @@ require_once __DIR__ . '/Support/PartialRepositoryReleaseWorkflowProviderDouble.
 require_once __DIR__ . '/GitHub/Support/PluginRepositoryDouble.php';
 require_once __DIR__ . '/GitHub/Support/ThemeRepositoryDouble.php';
 require_once __DIR__ . '/../../Storage/StorageTestEnvironment.php';
+require_once __DIR__ . '/../../Activity/ActivityConnection.php';
+require_once __DIR__ . '/../../Activity/ActivityWordPressFunctions.php';
 
 use PHPUnit\Framework\Attributes\Before;
 use PHPUnit\Framework\TestCase;
@@ -427,6 +429,97 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 		$this->controller( provider: $provider )->process_workflow_request( $this->request( 'outcome' ) );
 
 		self::assertSame( array(), $provider->calls );
+	}
+
+	public function test_workflow_activity_captures_authenticated_pre_provider_failure_and_rejects_forgery(): void {
+		[$controller, $presenter, $connection, $package] = $this->activity_fixture( new RepositoryReleaseWorkflowProviderDouble(), false );
+		$request             = $this->request( 'inspect' );
+		$request['_wpnonce'] = 'forged';
+		$controller->process_workflow_request( $request );
+		self::assertCount( 0, $connection->inserted );
+		$controller->process_workflow_request( $this->request( 'inspect' ) );
+		self::assertCount( 1, $connection->inserted );
+		self::assertSame( $package->get_adoption_token(), $connection->inserted[0]['adoption_token'] );
+		$completion = end( $connection->prepared );
+		self::assertIsArray( $completion );
+		self::assertSame( 'failed', $completion['args'][0] );
+		self::assertStringContainsString( 'provider_unavailable', (string) $completion['args'][4] );
+		self::assertSame( 'none', $completion['args'][5] );
+		$record                   = array(
+			'operation'    => 'workflow.inspect',
+			'reason'       => 'workflow_invalid_request',
+			'facts'        => $completion['args'][4],
+			'correlation'  => str_repeat( 'a', 32 ),
+			'completed_at' => '2026-10-12 12:00:00',
+		);
+		$connection->read_results = array( array( $record ), array(), array( $record ) );
+		$value                    = ( new \ReflectionMethod( $presenter, 'workflow_activity' ) )->invoke( $presenter, 'plugin', $package );
+		self::assertIsArray( $value );
+		self::assertTrue( $value['available'] );
+		self::assertNull( $value['observation'] );
+		self::assertSame( 'provider_unavailable', $value['failures'][0]['diagnostic_code'] );
+		self::assertSame( 'request_validation', $value['failures'][0]['failure_stage'] );
+	}
+
+	public function test_shared_workflow_observation_is_recorded_and_presented_without_provider_terminal_rights(): void {
+		$provider                                        = new RepositoryReleaseWorkflowProviderDouble( workflow_result: new \RAN\RepositoryProvider\RepositoryReleaseWorkflowResult( 'workflow_inspected', true ) );
+		[$controller, $presenter, $connection, $package] = $this->activity_fixture( $provider );
+		$controller->process_workflow_request( $this->request( 'inspect' ) );
+		self::assertNotNull( $provider->received_progress );
+		self::assertFalse( method_exists( $provider->received_progress, 'complete' ) );
+		self::assertInstanceOf( \RAN\Activity\ProgressOnly::class, $provider->received_progress );
+		$completion = end( $connection->prepared );
+		self::assertIsArray( $completion );
+		self::assertSame( 'established', $completion['args'][5] );
+		$observation              = array(
+			'effect'       => 'established',
+			'facts'        => $completion['args'][4],
+			'completed_at' => '2026-10-12 12:00:00',
+		);
+		$connection->read_results = array( array(), array( $observation ), array() );
+		$projection               = new \ReflectionMethod( $presenter, 'workflow_activity' );
+		$value                    = $projection->invoke( $presenter, 'plugin', $package );
+		self::assertIsArray( $value );
+		self::assertTrue( $value['available'] );
+		self::assertSame(
+			array(
+				'kind'        => 'no_recognisable_automation',
+				'recorded_at' => '2026-10-12T12:00:00Z',
+			),
+			$value['observation']
+		);
+		$summary_query = array_values( array_filter( $connection->prepared, static fn ( array $query ): bool => str_contains( $query['sql'], 'adoption_token = %s AND context = %s AND BINARY purpose = %s' ) ) );
+		self::assertSame( $package->get_adoption_token(), $summary_query[0]['args'][3] );
+		$package->set_source( \RAN\PackageSource::BRANCH, 4 );
+		$projection->invoke( $presenter, 'plugin', $package );
+		$changed_query = array_values( array_filter( $connection->prepared, static fn ( array $query ): bool => str_contains( $query['sql'], 'adoption_token = %s AND context = %s AND BINARY purpose = %s' ) ) );
+		self::assertNotSame( $summary_query[0]['args'][4], $changed_query[1]['args'][4] );
+	}
+
+	/** @return array{ReleaseWorkflowRequestController,\RAN\Admin\ReleaseManagement\ReleaseWorkflowPresenter,\RAN\Tests\Activity\ActivityConnection,\RAN\Plugin} */
+	private function activity_fixture( RepositoryReleaseWorkflowProviderDouble $provider, bool $registered = true ): array {
+		$package = new \RAN\Plugin();
+		( new \ReflectionProperty( $package, 'file' ) )->setValue( $package, 'example/example.php' );
+		$package->set_repository( new \RAN\ManagedRepository( 'fixture', 'example/example', '101', 'main' ) );
+		$package->set_source( \RAN\PackageSource::BRANCH, 3 );
+		$package->set_adoption_token( \RAN\AdoptionIdentity::create( 'fixture', '101' ) );
+		$plugins                                     = new class( $package ) extends \RAN\Storage\PluginRepository {
+			public function __construct( private \RAN\Plugin $package ) {}
+			public function booster_plugin_from_file( $file ): object {
+				unset( $file );
+				return $this->package;
+			}
+		};
+		$connection                                  = new \RAN\Tests\Activity\ActivityConnection();
+		$store                                       = new \RAN\Activity\ActivityStore( $connection );
+		$GLOBALS['ran_booster_activity_options']     = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$GLOBALS['ran_booster_storage_test_options'] = array();
+		$tracking                                    = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$providers                                   = new ProviderRegistry( $registered ? array( $provider ) : array() );
+		$themes                                      = new ThemeRepositoryDouble();
+		$controller                                  = new ReleaseWorkflowRequestController( $tracking, $plugins, $themes, $providers, $this->source_guard(), $store );
+		$presenter                                   = new \RAN\Admin\ReleaseManagement\ReleaseWorkflowPresenter( $tracking, $plugins, $themes, $providers, $controller, $this->source_guard(), $store );
+		return array( $controller, $presenter, $connection, $package );
 	}
 
 	private function controller( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $source_guard = null, ?ProviderRegistry $providers = null ): ReleaseWorkflowRequestController {

@@ -10,6 +10,8 @@ use RAN\Admin\RepositoryBranchCheckEvidenceStore;
 use RAN\ManagedRepository;
 use RAN\PackageSource;
 
+require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
+
 final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 
 	public function test_native_mutation_lock_preserves_structural_connections_and_sql_failures(): void {
@@ -161,7 +163,7 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 		$store->clear( 'plugin', $package );
 		$store->record( 'plugin', $package, 'profile-a', 'verified', $stale );
 
-		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ), token: 'gh:fixture:22222222-2222-4222-8222-222222222222' );
+		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ), token: 'gh:42:22222222-2222-4222-8222-222222222222' );
 		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
 
 		$fresh = $store->profile_fingerprint_for( $package, 'profile-a' );
@@ -203,6 +205,52 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 
 		self::assertNotNull( $store->find( 'plugin', $package, null ) );
 		self::assertNull( $store->find( 'plugin', $package, 'anonymous' ) );
+	}
+
+	public function test_confirmed_missing_path_replaces_positive_observation_across_later_uncertain_checks(): void {
+		$store    = new InMemoryRepositoryBranchCheckEvidenceStore();
+		$package  = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
+		$activity = new \RAN\Activity\ActivityStore( $store->database, 'test_activity' );
+		$capture  = $store->activity_context( 'plugin', $package, 'branch.check' );
+		self::assertNotNull( $capture['adoption_token'] );
+		foreach ( array( 'verified', 'subdirectory_unavailable', 'unable_to_check', 'subdirectory_unverified', 'provider_unavailable' ) as $outcome ) {
+			$store->record( 'plugin', $package, 'profile-a', $outcome );
+			$summary = $activity->summary( 'plugin', $capture['subject_identity'], $capture['adoption_token'], $capture['context'], 'branch.check' );
+			self::assertTrue( $summary['available'] );
+			self::assertSame( $outcome, $summary['latest']['reason'] ?? null );
+			self::assertSame( 'verified' === $outcome ? 'verified' : 'subdirectory_unavailable', $summary['observation']['reason'] ?? null );
+			self::assertSame( 'verified' === $outcome ? 'succeeded' : 'rejected', $summary['observation']['status'] ?? null );
+			self::assertSame( 'verified' === $outcome, null !== $store->find( 'plugin', $package, 'profile-a' ) );
+		}
+	}
+
+	public function test_optional_history_failures_never_restore_an_earlier_verified_badge(): void {
+		foreach ( array( 'fail_insert', 'fail_complete' ) as $failure ) {
+			$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
+			$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
+			$store->record( 'plugin', $package, 'profile-a', 'verified' );
+			self::assertNotNull( $store->find( 'plugin', $package, 'profile-a' ) );
+			$store->database->$failure = true;
+			$store->begin_check( 'plugin', $package, 'profile-a' );
+			self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
+			$store->record( 'plugin', $package, 'profile-a', 'verified' );
+			self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
+			self::assertSame( array(), $store->records['records'] );
+		}
+	}
+
+	public function test_check_start_freezes_context_before_credential_changes_and_retains_no_parallel_observation(): void {
+		$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
+		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
+		$store->begin_check( 'plugin', $package, 'profile-a' );
+		$store->bump_profile_generation( 'gh', 'profile-a' );
+		$store->record( 'plugin', $package, 'profile-a', 'verified' );
+		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
+		self::assertCount( 1, $store->database->records );
+		self::assertSame( 'verified', $store->database->records[1]['reason'] );
+		$records = $store->records['records'];
+		self::assertIsArray( $records );
+		self::assertSame( array( 'id', 'profile' ), array_keys( array_values( $records )[0] ) );
 	}
 
 	public function test_the_store_caps_distinct_package_records_at_two_hundred(): void {
@@ -295,13 +343,17 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 final class InMemoryRepositoryBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenceStore {
 
 	/** @var array<string, mixed> */
-	public array $records        = array();
+	public array $records = array();
+	public \RAN\Tests\Support\BranchActivityConnection $database;
 	public ?\Closure $after_read = null;
 	private \Closure $acquire_mutation_lock_callback;
 	private \Closure $release_mutation_lock_callback;
 
 	/** @param callable(): bool|null $acquire_mutation_lock @param callable(): bool|null $release_mutation_lock */
 	public function __construct( ?callable $acquire_mutation_lock = null, ?callable $release_mutation_lock = null ) {
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$this->database                          = new \RAN\Tests\Support\BranchActivityConnection();
+		parent::__construct( new \RAN\Activity\ActivityStore( $this->database, 'test_activity' ) );
 		$this->acquire_mutation_lock_callback = \Closure::fromCallable( $acquire_mutation_lock ?? static fn (): bool => true );
 		$this->release_mutation_lock_callback = \Closure::fromCallable( $release_mutation_lock ?? static fn (): bool => true );
 	}
@@ -334,7 +386,7 @@ final class InMemoryRepositoryBranchCheckEvidenceStore extends RepositoryBranchC
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Local fixtures keep the cache contract self-contained.
 final class BranchEvidencePackage extends AbstractPackage {
 
-	public function __construct( ?ManagedRepository $repository = null, private string $identifier = 'example/example.php', string $token = 'gh:fixture:11111111-1111-4111-8111-111111111111' ) {
+	public function __construct( ?ManagedRepository $repository = null, private string $identifier = 'example/example.php', string $token = 'gh:42:11111111-1111-4111-8111-111111111111' ) {
 		TestCase::assertNotNull( $repository );
 		$this->repository = $repository;
 		$this->set_adoption_token( $token );

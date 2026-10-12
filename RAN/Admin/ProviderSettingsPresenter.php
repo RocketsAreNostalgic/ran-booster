@@ -340,28 +340,35 @@ final readonly class ProviderSettingsPresenter {
 		if ( PackageSource::BRANCH !== $package->get_source() ) {
 			return 'unable_to_check';
 		}
+		$began               = false;
+		$profile_id          = null;
+		$profile_fingerprint = '';
 		try {
-			return $this->branch_check_lock->run(
-				fn (): string => $this->check_package_repository_branch_while_locked( $type, $package ),
+			$profile_id          = $this->effective_branch_check_profile( $package );
+			$profile_fingerprint = $this->branch_check_evidence->profile_fingerprint_for( $package, $profile_id );
+			$result              = $this->branch_check_lock->run(
+				function () use ( $type, $package, $profile_id, &$began ): string {
+					$progress = $this->branch_check_evidence->begin_check( $type, $package, $profile_id );
+					$began    = true;
+					return $this->check_package_repository_branch_while_locked( $package, $profile_id, $progress );
+				},
 				'Another package operation is in progress.',
 				'The package operation lock could not be released.'
 			);
 		} catch ( Throwable ) {
-			return 'unable_to_check';
+			$result = 'unable_to_check';
 		}
+		return $began ? $this->record_package_repository_branch_check( $type, $package, $profile_id, $result, $profile_fingerprint ) : 'unable_to_check';
 	}
 
 	/** @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable' */
-	private function check_package_repository_branch_while_locked( string $type, Package $package ): string {
-		$profile_id          = $this->effective_branch_check_profile( $package );
-		$profile_fingerprint = $this->branch_check_evidence->profile_fingerprint_for( $package, $profile_id );
-
+	private function check_package_repository_branch_while_locked( Package $package, ?string $profile_id, \RAN\Activity\ActivityProgress $progress ): string {
 		try {
 			$provider = $this->providers->get( (string) $package->get_provider_code() );
 		} catch ( UnknownProvider ) {
-			return $this->record_package_repository_branch_check( $type, $package, $profile_id, 'provider_unavailable', $profile_fingerprint );
+			return 'provider_unavailable';
 		} catch ( Throwable ) {
-			return $this->record_package_repository_branch_check( $type, $package, $profile_id, 'unable_to_check', $profile_fingerprint );
+			return 'unable_to_check';
 		}
 
 		$archive = null;
@@ -382,7 +389,7 @@ final readonly class ProviderSettingsPresenter {
 				);
 			}
 
-			$archive      = $provider->prepare_archive( new ArchiveRequest( $repository, (string) $package->get_branch() ) );
+			$archive      = $provider->prepare_archive( new ArchiveRequest( $repository, (string) $package->get_branch(), progress: $progress ) );
 			$resolved_ref = $archive->get_resolved_ref();
 			if ( '' !== trim( $resolved_ref )
 				&& strlen( $resolved_ref ) <= 191
@@ -418,7 +425,7 @@ final readonly class ProviderSettingsPresenter {
 			}
 		}
 
-		return $this->record_package_repository_branch_check( $type, $package, $profile_id, $result, $profile_fingerprint );
+		return $result;
 	}
 
 	/**

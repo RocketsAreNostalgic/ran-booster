@@ -6,6 +6,7 @@ namespace RAN\Admin;
 
 use RAN\Deployment\{DeploymentAttemptRepository, DeploymentStorageFailure};
 use RAN\Logging\BoosterLogger;
+use RAN\Activity\ActivityStore;
 use RAN\{Package, PackageSource};
 use RAN\Storage\{PluginRepository, ThemeRepository};
 use Throwable;
@@ -23,7 +24,8 @@ final class DeploymentAdminPresenter {
 		private ?BackgroundDeploymentFailureMonitor $monitor = null,
 		private ?DeploymentAttemptRepository $attempts = null,
 		private ?PluginRepository $plugins = null,
-		private ?ThemeRepository $themes = null
+		private ?ThemeRepository $themes = null,
+		private ?ActivityStore $activity_store = null
 	) {
 	}
 
@@ -142,6 +144,9 @@ final class DeploymentAdminPresenter {
 
 			return $base;
 		}
+		if ( null !== $this->activity_store ) {
+			return $this->shared_history( $base );
+		}
 		$before             = $this->query_value( 'before' );
 		$base['has_cursor'] = $this->query_has_key( 'before' );
 		if ( $base['has_cursor'] && ( null === $before || '' === $before ) ) {
@@ -170,8 +175,82 @@ final class DeploymentAdminPresenter {
 	}
 
 	/**
+	 * @param array<string, mixed> $base
+	 * @return array<string, mixed>
+	 */
+	private function shared_history( array $base ): array {
+		$base['has_cursor']  = $this->query_has_key( 'before' );
+		$base['filters']     = array();
+		$base['mixed_items'] = array();
+		try {
+			foreach ( array( 'provider', 'subject_type', 'subject_identity', 'operation', 'outcome' ) as $key ) {
+				$value = $this->query_value( 'activity_' . $key );
+				if ( $this->query_has_key( 'activity_' . $key ) && ( null === $value || strlen( $value ) > 255 || preg_match( '/[\x00-\x1F\x7F]/', $value ) ) ) {
+					throw new \InvalidArgumentException( 'Invalid activity filter.' );
+				}
+				if ( null !== $value && '' !== $value ) {
+					$base['filters'][ $key ] = $value;
+				}
+			}
+			ksort( $base['filters'], SORT_STRING );
+			$filter_key = hash( 'sha256', http_build_query( $base['filters'], '', '&', PHP_QUERY_RFC3986 ) );
+			$cursor     = null;
+			if ( $base['has_cursor'] ) {
+				$raw = $this->query_value( 'before' );
+				if ( null === $raw || 1 !== preg_match( '/\Av1\|([a-f0-9]{64})\|(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\|(activity|deployment)\|([1-9][0-9]*)\z/', $raw, $parts ) || null === $this->positive_integer( $parts[4] ) ) {
+					throw new \InvalidArgumentException( 'Invalid activity cursor.' );
+				}
+				$date = \DateTimeImmutable::createFromFormat( '!Y-m-d H:i:s', $parts[2] );
+				if ( false === $date || $date->format( 'Y-m-d H:i:s' ) !== $parts[2] ) {
+					throw new \InvalidArgumentException( 'Invalid activity cursor date.' );
+				}
+				$cursor = array(
+					'time'   => $parts[2],
+					'source' => $parts[3],
+					'id'     => (int) $parts[4],
+				);
+				if ( ! hash_equals( $filter_key, $parts[1] ) ) {
+					$cursor             = null;
+					$base['has_cursor'] = false;
+				}
+			}
+			$page = $this->activity_store?->activity_history( $base['filters'], $cursor, 26 );
+			if ( null === $page || ! $page['available'] || null === $this->attempts ) {
+				throw new \RuntimeException( 'Activity storage is unavailable.' );
+			}
+			$rows = array();
+			foreach ( $this->attempts->activity_history( $base['filters'], $cursor ) as $attempt ) {
+				$rows[] = array_merge( $attempt->safe_data(), array( 'record_source' => 'deployment' ) );
+			}
+			foreach ( $page['records'] as $record ) {
+				$rows[] = array_merge(
+					$record,
+					array(
+						'record_source'  => 'activity',
+						'created_at'     => $record['sort_at'],
+						'state'          => $record['status'],
+						'package_type'   => $record['subject_type'],
+						'package_slug'   => $record['subject_identity'],
+						'correlation_id' => $record['correlation'],
+					)
+				);
+			}
+			usort( $rows, static fn ( array $a, array $b ): int => array( $b['created_at'], $b['record_source'], $b['id'] ) <=> array( $a['created_at'], $a['record_source'], $a['id'] ) );
+			$base['mixed_items'] = array_slice( $rows, 0, 25 );
+			$last                = end( $base['mixed_items'] );
+			$base['next_cursor'] = count( $rows ) > 25 && false !== $last ? 'v1|' . $filter_key . '|' . $last['created_at'] . '|' . $last['record_source'] . '|' . $last['id'] : null;
+			$base['unavailable'] = false;
+		} catch ( Throwable $failure ) {
+			$this->log_read_failure( 'shared activity history unavailable', $failure, 'activity_history' );
+			$base['unavailable'] = true;
+			$base['mixed_items'] = array();
+		}
+		return $base;
+	}
+
+	/**
 	 * @param list<Package> $packages
-	 * @return array{items: array<array-key, array{latest: \RAN\Deployment\DeploymentAttempt|null, last_successful: \RAN\Deployment\DeploymentAttempt|null}>, unavailable: bool}
+	 * @return array{items: array<array-key, array{latest: \RAN\Deployment\DeploymentAttempt|null, last_successful: \RAN\Deployment\DeploymentAttempt|null, check?: array{available: bool, latest: array<string, int|string|null>|null, observation: array<string, int|string|null>|null}}>, unavailable: bool}
 	 */
 	public function package_activity( array $packages, string $type ): array {
 		if ( null === $this->attempts || count( $packages ) > 50 ) {
@@ -182,11 +261,22 @@ final class DeploymentAdminPresenter {
 			if ( ! $package instanceof Package || ! is_string( $package->get_identifier() ) ) {
 				return $this->package_activity_result();
 			}
-			if ( PackageSource::RELEASE_ASSET === $package->get_source() ) {
+			if ( PackageSource::RELEASE_ASSET === $package->get_source() && null === $this->activity_store ) {
 				continue;
 			}
 			try {
 				$items[ $package->get_identifier() ] = $this->attempts->package_activity_summary( $type, (string) $package->get_slug(), \RAN\AdoptionIdentity::of( $package ) );
+				if ( null !== $this->activity_store ) {
+					$purpose                                      = PackageSource::RELEASE_ASSET === $package->get_source() ? 'release.check' : 'branch.check';
+					$capture                                      = ( new RepositoryBranchCheckEvidenceStore() )->activity_context( $type, $package, $purpose );
+					$items[ $package->get_identifier() ]['check'] = null === $capture['adoption_token']
+						? array(
+							'available'   => true,
+							'latest'      => null,
+							'observation' => null,
+						)
+						: $this->activity_store->summary( $type, $capture['subject_identity'], $capture['adoption_token'], $capture['context'], $purpose );
+				}
 			} catch ( Throwable $failure ) {
 				$this->log_read_failure( 'package deployment activity unavailable', $failure, 'package_activity_summary', 'read-' . $type . '-package-activity' );
 				return $this->package_activity_result();
@@ -279,8 +369,8 @@ final class DeploymentAdminPresenter {
 	}
 
 	/**
-	 * @param array<array-key, array{latest: \RAN\Deployment\DeploymentAttempt|null, last_successful: \RAN\Deployment\DeploymentAttempt|null}> $items
-	 * @return array{items: array<array-key, array{latest: \RAN\Deployment\DeploymentAttempt|null, last_successful: \RAN\Deployment\DeploymentAttempt|null}>, unavailable: bool}
+	 * @param array<array-key, array{latest: \RAN\Deployment\DeploymentAttempt|null, last_successful: \RAN\Deployment\DeploymentAttempt|null, check?: array{available: bool, latest: array<string, int|string|null>|null, observation: array<string, int|string|null>|null}}> $items
+	 * @return array{items: array<array-key, array{latest: \RAN\Deployment\DeploymentAttempt|null, last_successful: \RAN\Deployment\DeploymentAttempt|null, check?: array{available: bool, latest: array<string, int|string|null>|null, observation: array<string, int|string|null>|null}}>, unavailable: bool}
 	 */
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- compact() reads items and unavailable to build the package activity result.
 	private function package_activity_result( array $items = array(), bool $unavailable = true ): array {

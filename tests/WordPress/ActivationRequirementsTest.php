@@ -67,6 +67,79 @@ final class ActivationRequirementsTest extends TestCase {
 		self::assertSame( 1, $wakeup->requests );
 	}
 
+	public function test_activity_schema_failure_does_not_block_activation_and_ready_schema_is_not_reinstalled(): void {
+		$activity  = new class() {
+			public int $installs = 0;
+			public bool $ready   = false;
+			public function available(): bool {
+				return $this->ready; }
+			public function install(): bool {
+				++$this->installs;
+				return false;
+			}
+		};
+		$container = new CoreContainer();
+		$container->bind( \RAN\Activity\ActivityStore::class, $activity );
+		$container->bind( Database::class, new ActivationRequirementsDatabase() );
+		$wakeup = new ActivationRequirementsWakeup();
+		$container->bind( WordPressWorkerWakeup::class, $wakeup );
+		$booster = new ActivationRequirementsBooster( $container, true, false );
+		$booster->activate();
+		$activity->ready = true;
+		$booster->activate();
+		self::assertSame( 1, $activity->installs );
+		self::assertSame( 2, $wakeup->requests );
+	}
+
+	public function test_retention_never_treats_an_inventory_failure_as_an_empty_site(): void {
+		$activity  = new class() {
+			public int $prunes        = 0;
+			public int|false $removed = 0;
+			public function available(): bool {
+				return true; }
+			/** @param array<array-key, mixed> $contexts */
+			public function prune( array $contexts ): int|false {
+				self::assert_empty_inventory( $contexts );
+				++$this->prunes;
+				return $this->removed;
+			}
+			/** @param array<array-key, mixed> $contexts */
+			private static function assert_empty_inventory( array $contexts ): void {
+				TestCase::assertSame( array(), $contexts );
+			}
+		};
+		$plugins   = new class() {
+			public bool $fail = true;
+			/** @return array<string, \RAN\Package> */
+			public function all_deployment_plugins(): array {
+				if ( $this->fail ) {
+					throw new \RuntimeException( 'Inventory read failed.' ); }
+				return array();
+			}
+		};
+		$container = new CoreContainer();
+		$container->bind( \RAN\Activity\ActivityStore::class, $activity );
+		$container->bind( \RAN\Storage\PluginRepository::class, $plugins );
+		$themes = $this->createMock( \RAN\Storage\ThemeRepository::class );
+		$themes->expects( self::exactly( 4 ) )->method( 'all_deployment_themes' )->willReturn( array() );
+		$container->bind( \RAN\Storage\ThemeRepository::class, $themes );
+		$booster = new Booster( $container );
+		$booster->prune_activity();
+		self::assertSame( 0, $activity->prunes );
+		$plugins->fail = false;
+		$booster->prune_activity();
+		self::assertSame( 1, $activity->prunes );
+		$activity->removed = 100;
+		$booster->prune_activity();
+		self::assertSame( 21, $activity->prunes );
+		$activity->removed = 7;
+		$booster->prune_activity();
+		self::assertSame( 22, $activity->prunes );
+		$activity->removed = false;
+		$booster->prune_activity();
+		self::assertSame( 23, $activity->prunes );
+	}
+
 	/** @return list<array{bool, bool, string}> */
 	public static function unsupported_environment_provider(): array {
 		return array(

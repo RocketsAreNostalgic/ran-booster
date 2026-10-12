@@ -205,10 +205,9 @@ final class PackageRemovalServiceTest extends TestCase {
 	}
 
 	public function test_optional_evidence_failure_does_not_block_removal_or_native_cleanup(): void {
-		$fixture               = $this->fixture();
-		$evidence              = new RemovalBranchCheckEvidenceStore();
-		$evidence->clear_fails = true;
-		$service               = new PackageRemovalService(
+		$fixture  = $this->fixture();
+		$evidence = new RemovalBranchCheckEvidenceStore();
+		$service  = new PackageRemovalService(
 			$fixture->plugins,
 			$fixture->themes,
 			$fixture->gateway,
@@ -217,6 +216,7 @@ final class PackageRemovalServiceTest extends TestCase {
 			$evidence
 		);
 		$evidence->record( 'plugin', $fixture->plugin, 'profile-a', 'verified' );
+		$evidence->clear_fails = true;
 
 		self::assertSame( 'unlinked', $service->execute( PackageOperation::from_input( 'unlink-plugin', $this->input() ) )->status );
 		self::assertTrue( $fixture->plugins->unlinked );
@@ -859,6 +859,12 @@ final class RemovalThemeRepository extends ThemeRepository {
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class RemovalBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenceStore {
+	public function __construct() {
+		require_once __DIR__ . '/Activity/ActivityWordPressFunctions.php';
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		parent::__construct( new \RAN\Activity\ActivityStore( new \RAN\Tests\Support\BranchActivityConnection(), 'test_activity' ) );
+	}
+
 
 	/** @var array<string, mixed> */
 	private array $records   = array();

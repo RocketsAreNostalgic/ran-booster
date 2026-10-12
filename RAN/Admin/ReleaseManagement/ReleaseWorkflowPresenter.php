@@ -7,10 +7,13 @@ namespace RAN\Admin\ReleaseManagement;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use RAN\Logging\BoosterLogger;
+use RAN\Activity\ActivityStore;
+use RAN\Admin\RepositoryBranchCheckEvidenceStore;
+use RAN\Package;
 use RAN\PackageSource;
 use RAN\RepositoryPackageIdentity;
 use RAN\RepositoryProvider\ProviderRegistry;
-use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV4;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\RepositorySourceGuard;
 use RAN\Storage\ThemeRepository;
@@ -29,7 +32,8 @@ final class ReleaseWorkflowPresenter {
 		private readonly ThemeRepository $themes,
 		private readonly ProviderRegistry $providers,
 		private readonly ReleaseWorkflowRequestController $requests,
-		?RepositorySourceGuard $source_guard = null
+		?RepositorySourceGuard $source_guard = null,
+		private readonly ?ActivityStore $activity = null
 	) {
 		$this->tracking = new ReleaseTrackingOperations( $releases );
 
@@ -491,7 +495,7 @@ final class ReleaseWorkflowPresenter {
 		$tone  = 'warning';
 		if ( $exact && $status instanceof ReleaseTrackingStatus ) {
 			$workflow_status  = $this->workflow_provider_status( $status );
-			$observation_kind = $workflow_status?->observation_kind() ?? '';
+			$observation_kind = $this->workflow_activity( $type, $package )['observation']['kind'] ?? '';
 			if ( $this->record_matches_status( $workflow_status, $status ) ) {
 				$value = __( 'Setup recorded', 'ran-booster' );
 				$tone  = 'pending';
@@ -665,6 +669,7 @@ final class ReleaseWorkflowPresenter {
 			}
 		}
 		unset( $form );
+		$activity = $this->workflow_activity( $type, $package );
 		return $extra + array(
 			'result_code'            => $code,
 			'result_successful'      => $successful,
@@ -682,11 +687,9 @@ final class ReleaseWorkflowPresenter {
 			),
 			'record'                 => $this->record_matches_package_status( $state, $status ) ? array( 'pull_request_url' => $state->pull_request_url() ) : null,
 			'legacy'                 => true === $state?->record_occupied() && ! $this->record_matches_package_status( $state, $status ) ? array( 'unsupported' => true ) : null,
-			'failure_history'        => $state?->failure_history() ?? array(),
-			'assessment_observation' => null !== $state && '' !== $state->observation_kind() ? array(
-				'kind'        => $state->observation_kind(),
-				'recorded_at' => $state->observed_at(),
-			) : null,
+			'failure_history'        => $activity['failures'],
+			'assessment_observation' => $activity['observation'],
+			'activity_available'     => $activity['available'],
 			'automation_state'       => null !== $reason ? 'blocked' : ( $this->record_matches_package_status( $state, $status ) ? 'setup_recorded' : ( null !== $preview ? 'preview' : 'ready' ) ),
 			'forms'                  => array_filter( $forms, 'is_array' ),
 		);
@@ -801,18 +804,84 @@ final class ReleaseWorkflowPresenter {
 		);
 	}
 
-	/** Resolve the exact provider capability, retaining unavailable-provider fallback. */
-	private function workflow_capability( string $provider_code ): ?RepositoryReleaseWorkflowManagementV3 {
+	/**
+	 * @return array{available:bool,observation:?array{kind:string,recorded_at:string},failures:list<array{operation:string,outcome_code:string,failure_stage:string,diagnostic_code:string,diagnostic_available:bool,correlation_reference:string,recorded_at:string}>}
+	 */
+	private function workflow_activity( string $type, ?RepositoryPackageIdentity $package ): array {
+		$empty = array(
+			'available'   => false,
+			'observation' => null,
+			'failures'    => array(),
+		);
+		if ( null === $this->activity || ! $package instanceof Package ) {
+			return $empty;
+		}
 		try {
-			return $this->providers->require_capability( $provider_code, RepositoryReleaseWorkflowManagementV3::class );
+			$capture = ( new RepositoryBranchCheckEvidenceStore() )->activity_context( $type, $package, 'workflow.assessment' );
+			if ( null === $capture['adoption_token'] ) {
+				return $empty;
+			}
+			$summary     = $this->activity->summary( $type, $capture['subject_identity'], $capture['adoption_token'], $capture['context'], 'workflow.assessment' );
+			$history     = $this->activity->history(
+				array(
+					'subject_type'     => $type,
+					'subject_identity' => $capture['subject_identity'],
+					'adoption_token'   => $capture['adoption_token'],
+					'context'          => $capture['context'],
+					'purpose'          => 'workflow.assessment',
+					'status'           => 'failed',
+				),
+				limit: 12
+			);
+			$observation = $summary['observation'];
+			$facts       = json_decode( (string) ( $observation['facts'] ?? '{}' ), true );
+			$kind        = is_array( $facts ) && is_string( $facts['observation_kind'] ?? null ) ? $facts['observation_kind'] : '';
+			$found       = 'established' === ( $observation['effect'] ?? '' ) && in_array( $kind, array( 'existing_automation_detected', 'booster_setup_verified', 'no_recognisable_automation' ), true );
+			$failures    = array();
+			foreach ( $history['records'] as $record ) {
+				$facts = json_decode( (string) ( $record['facts'] ?? '{}' ), true );
+				if ( ! is_array( $facts ) ) {
+					continue;
+				}
+				$operation = substr( (string) ( $record['operation'] ?? '' ), strlen( 'workflow.' ) );
+				if ( ! in_array( $operation, array( 'inspect', 'setup', 'outcome' ), true ) ) {
+					continue;
+				}
+				$failures[] = array(
+					'operation'             => $operation,
+					'outcome_code'          => (string) ( $record['reason'] ?? '' ),
+					'failure_stage'         => is_string( $facts['failure_stage'] ?? null ) ? $facts['failure_stage'] : '',
+					'diagnostic_code'       => is_string( $facts['diagnostic_code'] ?? null ) ? $facts['diagnostic_code'] : '',
+					'diagnostic_available'  => true === ( $facts['diagnostic_available'] ?? false ),
+					'correlation_reference' => is_string( $facts['correlation_reference'] ?? null ) && '' !== $facts['correlation_reference'] ? $facts['correlation_reference'] : (string) ( $record['correlation'] ?? '' ),
+					'recorded_at'           => str_replace( ' ', 'T', (string) ( $record['completed_at'] ?? '' ) ) . 'Z',
+				);
+			}
+			return array(
+				'available'   => $summary['available'] && $history['available'],
+				'observation' => $found ? array(
+					'kind'        => $kind,
+					'recorded_at' => str_replace( ' ', 'T', (string) ( $observation['completed_at'] ?? '' ) ) . 'Z',
+				) : null,
+				'failures'    => $failures,
+			);
+		} catch ( Throwable ) {
+			return $empty;
+		}
+	}
+
+	/** Resolve the exact provider capability, retaining unavailable-provider fallback. */
+	private function workflow_capability( string $provider_code ): ?RepositoryReleaseWorkflowManagementV4 {
+		try {
+			return $this->providers->require_capability( $provider_code, RepositoryReleaseWorkflowManagementV4::class );
 		} catch ( Throwable ) {
 			return null;
 		}
 	}
 
-	private function workflow_provider( string $provider_code ): ?RepositoryReleaseWorkflowManagementV3 {
+	private function workflow_provider( string $provider_code ): ?RepositoryReleaseWorkflowManagementV4 {
 		$provider = $this->workflow_capability( $provider_code );
-		return null !== $provider && 3 === $provider::RELEASE_WORKFLOW_API_VERSION && null !== ( ( $this->providers->metadata()[ $provider_code ] ?? null )->admin ?? null ) && $this->release_provider_supported( $provider_code ) ? $provider : null;
+		return null !== $provider && 4 === $provider::RELEASE_WORKFLOW_API_VERSION && null !== ( ( $this->providers->metadata()[ $provider_code ] ?? null )->admin ?? null ) && $this->release_provider_supported( $provider_code ) ? $provider : null;
 	}
 
 	private function release_provider_supported( string $provider_code ): bool {

@@ -238,6 +238,34 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertTrue( $lock->was_held_during( 'provider_access' ) );
 	}
 
+	public function test_branch_history_completes_only_after_cleanup_and_lock_release(): void {
+		foreach ( array( 'success', 'cleanup', 'release' ) as $failure ) {
+			$GLOBALS['ran_booster_dashboard_test_user_meta']            = array();
+			$GLOBALS['ran_booster_dashboard_test_transients']           = array();
+			$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
+			$provider                     = new DashboardBranchCheckProvider( cleanup_fails: 'cleanup' === $failure );
+			$evidence                     = new DashboardBranchCheckEvidenceStore();
+			$lock                         = new DashboardBranchCheckUpdaterLock();
+			$lock->release_fails          = 'release' === $failure;
+			$provider->on_provider_access = static function () use ( $evidence ): void {
+				self::assertSame( 'incomplete', $evidence->database->records[1]['status'] );
+			};
+			$dashboard                    = $this->dashboard( $this->throwing_secrets(), providers: new ProviderRegistry( array( $provider ) ), branch_check_evidence: $evidence, branch_check_lock: $lock );
+			$package                      = $this->managed_package( 'example/example.php', 'Example', 'repo-42', repository: 'owner/example', branch: 'main' );
+			$check                        = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
+			$_GET                         = array(
+				'ran_booster_repository_branch_check'  => '1',
+				'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ),
+			);
+			self::assertSame( 'success' === $failure ? 'verified' : 'unable_to_check', $check->invoke( $dashboard, $package, 'plugin' ) );
+			self::assertSame( 1, $provider->cleanup_calls );
+			self::assertSame( array( 'acquire', 'release:branch-check-lock' ), $lock->events );
+			self::assertSame( 'success' === $failure ? 'succeeded' : 'failed', $evidence->database->records[1]['status'] );
+			self::assertInstanceOf( \RAN\Activity\ActivityProgress::class, $provider->request?->progress );
+			self::assertNotInstanceOf( \RAN\Activity\ActivityOperation::class, $provider->request->progress );
+		}
+	}
+
 	public function test_repository_branch_check_does_not_reuse_verified_marker_after_its_exact_evidence_is_cleared(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$provider  = new DashboardBranchCheckProvider();
@@ -276,7 +304,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 
 		self::assertSame( 'unable_to_check', $check->invoke( $dashboard, $package, 'plugin' ) );
-		self::assertSame( 1, $provider->prepare_calls );
+		self::assertSame( 0, $provider->prepare_calls );
 	}
 
 	public function test_repository_branch_check_does_not_reuse_its_marker_after_credential_or_default_access_generation_changes(): void {
@@ -2547,6 +2575,82 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 0, $database->writes );
 	}
 
+	public function test_shared_activity_page_merges_same_time_sources_and_bounds_the_page(): void {
+		require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
+		$GLOBALS['ran_booster_activity_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ]     = '1';
+		$GLOBALS['ran_booster_storage_test_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ] = '1';
+		$database       = new DashboardActivityWpdb();
+		$database->rows = array( DashboardActivityWpdb::attempt( 1, 'succeeded' ), DashboardActivityWpdb::attempt( 2, 'failed' ) );
+		$time           = (string) $database->rows[0]['created_at'];
+		for ( $id = 26; $id > 0; --$id ) {
+			$database->activity_rows[] = array(
+				'id'               => $id,
+				'sort_at'          => $time,
+				'status'           => 'failed',
+				'subject_type'     => 'plugin',
+				'subject_identity' => 'example/example.php',
+				'correlation'      => str_repeat( 'a', 32 ),
+			);
+		}
+		$presenter = new DeploymentAdminPresenter( attempts: $this->deployment_attempts( $database ), activity_store: new \RAN\Activity\ActivityStore( $database, 'wp_ran_booster_activity' ) );
+		$page      = $presenter->activity();
+		self::assertFalse( $page['unavailable'] );
+		self::assertCount( 25, $page['mixed_items'] );
+		self::assertSame( 'deployment', $page['mixed_items'][0]['record_source'] );
+		self::assertSame( 2, $page['mixed_items'][0]['id'] );
+		self::assertSame( 'activity', $page['mixed_items'][2]['record_source'] );
+		self::assertSame( 'v1|' . hash( 'sha256', '' ) . '|' . $time . '|activity|4', $page['next_cursor'] );
+		$_GET  = array( 'before' => $page['next_cursor'] );
+		$older = $presenter->activity();
+		self::assertFalse( $older['unavailable'] );
+		self::assertSame( array( 3, 2, 1 ), array_column( $older['mixed_items'], 'id' ) );
+		self::assertNull( $older['next_cursor'] );
+		foreach ( array(
+			'activity_provider'         => 'bb',
+			'activity_subject_identity' => 'example/other.php',
+		) as $key => $value ) {
+			$_GET            = array(
+				'before' => $page['next_cursor'],
+				$key     => $value,
+			);
+			$database->reads = array();
+			$reset           = $presenter->activity();
+			self::assertFalse( $reset['unavailable'] );
+			self::assertFalse( $reset['has_cursor'] );
+			self::assertStringNotContainsString( 'sort_at <', implode( "\n", $database->reads ) );
+			self::assertStringNotContainsString( 'created_at <', implode( "\n", $database->reads ) );
+		}
+		$_GET = array( 'before' => str_replace( 'v1|', 'v2|', $page['next_cursor'] ) );
+		self::assertTrue( $presenter->activity()['unavailable'] );
+		self::assertSame( 0, $database->writes );
+		unset( $GLOBALS['ran_booster_storage_test_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ] );
+	}
+
+	public function test_deployment_history_filters_the_exact_installed_plugin_identifier(): void {
+		$database = new DashboardActivityWpdb();
+		foreach ( array( 'example/first.php', 'example/second.php' ) as $index => $identifier ) {
+			$row                 = DashboardActivityWpdb::attempt( $index + 1, 'succeeded' );
+			$row['request_json'] = ( new DeploymentRequest( 'org/example', null, false, 'main', 'example', null, \RAN\Deployment\DeploymentPolicy::AUTOMATIC, 1, installed_identifier: $identifier, adoption_token: 'gh:repository-1:123e4567-e89b-42d3-a456-426614174000' ) )->to_json();
+			$database->rows[]    = $row;
+		}
+		$records = $this->deployment_attempts( $database )->activity_history( array( 'subject_identity' => 'example/second.php' ), null );
+		self::assertCount( 1, $records );
+		self::assertSame( 'example/second.php', $records[0]->get_request()->installed_identifier );
+		self::assertStringNotContainsString( "`package_slug` = 'example/second.php'", implode( "\n", $database->reads ) );
+	}
+
+	public function test_shared_activity_does_not_present_a_partial_page_when_record_storage_is_unavailable(): void {
+		require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
+		$GLOBALS['ran_booster_activity_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ] = '0';
+		unset( $GLOBALS['ran_booster_storage_test_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ] );
+		$database       = new DashboardActivityWpdb();
+		$database->rows = array( DashboardActivityWpdb::attempt( 1, 'succeeded' ) );
+		$page           = ( new DeploymentAdminPresenter( attempts: $this->deployment_attempts( $database ), activity_store: new \RAN\Activity\ActivityStore( $database, 'wp_ran_booster_activity' ) ) )->activity();
+		self::assertTrue( $page['unavailable'] );
+		self::assertSame( array(), $page['mixed_items'] );
+		self::assertSame( array(), $database->reads );
+	}
+
 	public function test_attempt_detail_loads_only_the_requested_attempt(): void {
 		$attempt        = DashboardActivityWpdb::attempt( 1, 'succeeded' );
 		$database       = new DashboardActivityWpdb();
@@ -2911,10 +3015,12 @@ final class DashboardNeedsAttentionCoordinator extends DeploymentCoordinator {
 }
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- The bounded database fake belongs to its production-controller test.
-final class DashboardActivityWpdb implements \RAN\Storage\SqlReadConnection {
+final class DashboardActivityWpdb implements \RAN\Storage\DeploymentWriteConnection {
 
 	/** @var list<array<string, mixed>> */
 	public array $rows = array();
+	/** @var list<array<string, int|string|null>> */
+	public array $activity_rows = array();
 	/** @var list<string> */
 	public array $reads       = array();
 	public int $writes        = 0;
@@ -2956,6 +3062,13 @@ final class DashboardActivityWpdb implements \RAN\Storage\SqlReadConnection {
 	/** @return list<object> */
 	public function get_results( string $query ): array {
 		$this->reads[] = $query;
+		if ( str_contains( $query, 'FROM wp_ran_booster_activity ' ) ) {
+			$rows = $this->activity_rows;
+			if ( preg_match( '/sort_at = \'([^\']+)\' AND id < (\d+)/', $query, $boundary ) ) {
+				$rows = array_values( array_filter( $rows, static fn ( array $row ): bool => $row['sort_at'] < $boundary[1] || ( $row['sort_at'] === $boundary[1] && $row['id'] < (int) $boundary[2] ) ) );
+			}
+			return array_map( static fn ( array $row ): object => (object) $row, $rows );
+		}
 		if ( 'SHOW ENGINES' === $query ) {
 			return array(
 				(object) array(
@@ -2974,6 +3087,15 @@ final class DashboardActivityWpdb implements \RAN\Storage\SqlReadConnection {
 		}
 		if ( str_contains( $query, 'package_type IN' ) ) {
 			$rows = $this->rows;
+			if ( preg_match( '/AND `package_slug` = \'([^\']+)\'/', $query, $filter ) ) {
+				$rows = array_values( array_filter( $rows, static fn ( array $row ): bool => $row['package_slug'] === $filter[1] ) );
+			}
+			if ( preg_match( '/JSON_EXTRACT\(request_json, \'\$\.installed_identifier\'\)\) = \'([^\']+)\'/', $query, $filter ) ) {
+				$rows = array_values( array_filter( $rows, static fn ( array $row ): bool => DeploymentRequest::from_json( (string) $row['request_json'] )->installed_identifier === $filter[1] ) );
+			}
+			if ( preg_match( '/created_at < \'([^\']+)\'.*\(\'deployment\' < \'activity\'/', $query, $boundary ) ) {
+				$rows = array_values( array_filter( $rows, static fn ( array $row ): bool => $row['created_at'] < $boundary[1] ) );
+			}
 			if ( preg_match( '/AND id < (\\d+)/', $query, $matches ) === 1 ) {
 				$rows = array_values( array_filter( $rows, static fn ( array $row ): bool => (int) $row['id'] < (int) $matches[1] ) );
 			}
@@ -3164,6 +3286,7 @@ final class DashboardBranchCheckProviderWithoutPathInspector implements Reposito
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- The bounded database fake belongs to its production-controller test.
 final class DashboardBranchCheckUpdaterLock extends WordPressUpdaterLock {
+	public bool $release_fails = false;
 
 	/** @var list<string> */
 	public array $events               = array();
@@ -3181,7 +3304,7 @@ final class DashboardBranchCheckUpdaterLock extends WordPressUpdaterLock {
 		$this->events[] = 'release:' . $token;
 		$this->held     = false;
 
-		return 'branch-check-lock' === $token;
+		return ! $this->release_fails && 'branch-check-lock' === $token;
 	}
 
 	public function record_provider_access(): void {
@@ -3237,6 +3360,14 @@ final class DashboardUncredentialedBranchCheckProvider implements RepositoryProv
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- The bounded database fake belongs to its production-controller test.
 final class DashboardBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenceStore {
+	public \RAN\Tests\Support\BranchActivityConnection $database;
+
+	public function __construct() {
+		require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$this->database                          = new \RAN\Tests\Support\BranchActivityConnection();
+		parent::__construct( new \RAN\Activity\ActivityStore( $this->database, 'test_activity' ) );
+	}
 
 	/** @var array<string, mixed> */
 	private array $records = array();

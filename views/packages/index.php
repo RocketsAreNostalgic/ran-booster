@@ -269,9 +269,12 @@ echo esc_url(
 				? $package_extension_actions[ $package_identifier ]
 				: array();
 			$word_press_plugin_active  = $is_plugin_list && is_plugin_active( $package_identifier );
-			$package_activity_summary  = ! $release_managed && isset( $package_activity[ $package_identifier ] ) && is_array( $package_activity[ $package_identifier ] )
+			$package_activity_summary  = isset( $package_activity[ $package_identifier ] ) && is_array( $package_activity[ $package_identifier ] )
 				? $package_activity[ $package_identifier ]
 				: array();
+			$check_summary             = is_array( $package_activity_summary['check'] ?? null ) ? $package_activity_summary['check'] : null;
+			$latest_check              = is_array( $check_summary['latest'] ?? null ) ? $check_summary['latest'] : null;
+			$observed_check            = is_array( $check_summary['observation'] ?? null ) ? $check_summary['observation'] : null;
 			$latest_attempt            = $package_activity_summary['latest'] ?? null;
 			$last_successful_attempt   = $package_activity_summary['last_successful'] ?? null;
 			$latest_activity           = $latest_attempt instanceof \RAN\Deployment\DeploymentAttempt ? $latest_attempt->safe_data() : null;
@@ -511,6 +514,37 @@ echo esc_url(
 							<dt><?php esc_html_e( 'Access', 'ran-booster' ); ?></dt>
 							<dd><?php echo esc_html( $access_label ); ?></dd>
 						</div>
+
+						<?php if ( null !== $check_summary ) { ?>
+							<div>
+								<dt><?php esc_html_e( 'Last recorded check', 'ran-booster' ); ?></dt>
+								<dd>
+									<?php if ( ! $check_summary['available'] ) { ?>
+										<?php esc_html_e( 'Temporarily unavailable', 'ran-booster' ); ?>
+									<?php } elseif ( null !== $latest_check ) { ?>
+										<?php echo esc_html( (string) ( $latest_check['sort_at'] ?? '' ) ); ?> — <?php echo esc_html( \RAN\Admin\DeploymentOutcomeMessage::for_activity( (string) ( $latest_check['status'] ?? '' ), (string) ( $latest_check['reason'] ?? '' ), (string) ( $latest_check['message'] ?? '' ) ) ); ?>
+									<?php } else { ?>
+										<?php esc_html_e( 'No check recorded for the current settings', 'ran-booster' ); ?>
+									<?php } ?>
+									<a href="
+									<?php
+									echo esc_url(
+										add_query_arg(
+											array(
+												'activity_subject_type'     => $package_view->get_type(),
+												'activity_subject_identity' => $package_identifier,
+											),
+											$activity_detail_base_url
+										)
+									);
+									?>
+												"><?php esc_html_e( 'View activity', 'ran-booster' ); ?></a>
+								</dd>
+							</div>
+							<?php if ( null !== $observed_check && ( $observed_check['id'] ?? null ) !== ( $latest_check['id'] ?? null ) ) { ?>
+								<div><dt><?php esc_html_e( 'Last established result', 'ran-booster' ); ?></dt><dd><?php echo esc_html( (string) ( $observed_check['sort_at'] ?? '' ) . ' — ' . \RAN\Admin\DeploymentOutcomeMessage::for_activity( (string) ( $observed_check['status'] ?? '' ), (string) ( $observed_check['reason'] ?? '' ), (string) ( $observed_check['message'] ?? '' ) ) ); ?></dd></div>
+							<?php } ?>
+						<?php } ?>
 						<?php if ( ! $release_managed ) { ?>
 							<div>
 								<dt><?php esc_html_e( 'Last activity', 'ran-booster' ); ?></dt>

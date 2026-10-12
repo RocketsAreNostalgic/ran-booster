@@ -10,6 +10,10 @@ use Throwable;
 
 /** Adapts Booster's own selected updater handle without routing through a repository provider. */
 final class CoreSelfUpdateNativeTarget implements RepositoryReleaseNativeTarget {
+	public function matches_check_source( string $runtime_provider, string $repository_identity, string $channel ): bool {
+		return false;
+	}
+
 
 	private const NATIVE_STATUS_KEYS = array(
 		'candidate_header_version',

@@ -199,6 +199,20 @@ if ( ! is_array( $targets ) || count( $targets ) < count( $ran_booster_items ) )
 	throw new RuntimeException( 'The fresh installed request did not register every managed GitHub target.' );
 }
 
+$ran_booster_activity = $ran_booster_container->make( RAN\Activity\ActivityStore::class );
+if ( ! $ran_booster_activity->available() ) {
+	throw new RuntimeException( 'Installed activity schema was not activated.' );
+}
+$ran_booster_before_refresh = $ran_booster_activity->history( array( 'operation' => 'release.check' ) );
+foreach ( $targets as $ran_booster_target ) {
+	if ( $ran_booster_target instanceof RAN\RepositoryProvider\RepositoryReleaseNativeTarget ) {
+		$ran_booster_target->refresh();
+	}
+}
+if ( $ran_booster_before_refresh !== $ran_booster_activity->history( array( 'operation' => 'release.check' ) ) ) {
+	throw new RuntimeException( 'Refresh alone invented native check history.' );
+}
+
 require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
 require_once ABSPATH . 'wp-admin/includes/class-wp-automatic-updater.php';
 delete_site_transient( 'update_plugins' );
@@ -242,6 +256,19 @@ foreach ( $ran_booster_items as $ran_booster_item ) {
 				)
 			)
 		);
+	}
+	$ran_booster_history = $ran_booster_activity->history(
+		array(
+			'subject_type'     => $ran_booster_item['type'],
+			'subject_identity' => $ran_booster_item['identifier'],
+			'operation'        => 'release.check',
+		)
+	);
+	$ran_booster_check   = $ran_booster_history['records'][0] ?? null;
+	if ( ! $ran_booster_history['available'] || null === $ran_booster_check
+		|| 'succeeded' !== ( $ran_booster_check['status'] ?? null ) || 'update_available' !== ( $ran_booster_check['reason'] ?? null )
+		|| 'established' !== ( $ran_booster_check['effect'] ?? null ) || '' === ( $ran_booster_check['adoption_token'] ?? '' ) ) {
+		throw new RuntimeException( 'Actual installed native discovery did not record its managed check outcome.' );
 	}
 	++$ran_booster_active;
 }

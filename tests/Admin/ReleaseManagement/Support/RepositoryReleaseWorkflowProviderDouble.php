@@ -24,7 +24,7 @@ use RAN\RepositoryProvider\RepositoryReleaseInspector;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTarget;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
-use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV4;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowPreflight;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowPreview;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowResult;
@@ -32,12 +32,13 @@ use RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowTarget;
 use RuntimeException;
 
-final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvider, RepositoryReleaseWorkflowManagementV3, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseNativeTargets {
+final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvider, RepositoryReleaseWorkflowManagementV4, RepositoryReleaseMetadata, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseNativeTargets {
 	/** @var list<array{operation:string,credential_id:?string,channel?:string,key?:string,confirmation?:string}> */
-	public array $calls             = array();
-	public int $status_reads        = 0;
-	public bool $throw_on_workflow  = false;
-	public bool $throw_on_operation = false;
+	public array $calls                                       = array();
+	public int $status_reads                                  = 0;
+	public bool $throw_on_workflow                            = false;
+	public bool $throw_on_operation                           = false;
+	public ?\RAN\Activity\ActivityProgress $received_progress = null;
 
 	public function __construct( private readonly string $code = 'fixture', private readonly string $repository_id = '101', private readonly ?RepositoryReleaseWorkflowPreview $preview = null, private readonly ?RepositoryReleaseWorkflowStatus $status = null, private readonly ?RepositoryReleaseWorkflowResult $workflow_result = null, private readonly bool $admin_surface = true ) {}
 
@@ -96,11 +97,13 @@ final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvide
 			'key'           => $key,
 		);
 		return $this->preview; }
-	public function workflow_inspect( RepositoryReleaseWorkflowTarget $status, string $channel, RepositoryReleaseWorkflowPreflight $preflight, ?string $credential_id ): RepositoryReleaseWorkflowResult {
+	public function workflow_inspect( RepositoryReleaseWorkflowTarget $status, string $channel, RepositoryReleaseWorkflowPreflight $preflight, ?string $credential_id, ?\RAN\Activity\ActivityProgress $progress = null ): RepositoryReleaseWorkflowResult {
 		unset( $status, $preflight );
+		$this->received_progress = $progress;
+		$progress?->progress( 'workflow.inspecting' );
 		return $this->result( 'inspect', $credential_id, array( 'channel' => $channel ) ); }
-	public function workflow_setup( RepositoryReleaseWorkflowTarget $status, string $key, string $confirmation, RepositoryReleaseWorkflowPreflight $preflight, ?string $credential_id ): RepositoryReleaseWorkflowResult {
-		unset( $status, $preflight );
+	public function workflow_setup( RepositoryReleaseWorkflowTarget $status, string $key, string $confirmation, RepositoryReleaseWorkflowPreflight $preflight, ?string $credential_id, ?\RAN\Activity\ActivityProgress $progress = null ): RepositoryReleaseWorkflowResult {
+		unset( $status, $preflight, $progress );
 		return $this->result(
 			'setup',
 			$credential_id,
@@ -109,8 +112,8 @@ final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvide
 				'confirmation' => $confirmation,
 			)
 		); }
-	public function workflow_outcome( RepositoryReleaseWorkflowTarget $status, ?string $credential_id ): RepositoryReleaseWorkflowResult {
-		unset( $status );
+	public function workflow_outcome( RepositoryReleaseWorkflowTarget $status, ?string $credential_id, ?\RAN\Activity\ActivityProgress $progress = null ): RepositoryReleaseWorkflowResult {
+		unset( $status, $progress );
 		return $this->result( 'outcome', $credential_id ); }
 
 	/** @param array{channel?: string, key?: string, confirmation?: string} $detail */

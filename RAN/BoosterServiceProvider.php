@@ -151,6 +151,8 @@ final class BoosterServiceProvider {
 		);
 
 		$container->bind( Database::class, $database );
+		$activity = new \RAN\Activity\ActivityStore();
+		$container->bind( \RAN\Activity\ActivityStore::class, $activity );
 		$container->bind( AdminInteractionFacade::class, $admin_interaction );
 		$container->bind( CoreAdminInteractionFacade::class, $admin_interaction );
 		$container->bind(
@@ -236,7 +238,12 @@ final class BoosterServiceProvider {
 					->make( DeploymentAttemptRepository::class )
 					->latest_authenticated_delivery( $bound_code )
 			),
-			$provider_registration_context
+			$provider_registration_context,
+			static fn ( ProviderCode $code ): \RAN\Activity\ActivityReporter => new \RAN\Activity\BoundActivityReporter(
+				$activity,
+				(string) $code,
+				static fn ( \RAN\Activity\ActivityRequest $request ): ?array => self::capture_activity_context( $container, $code, $request )
+			)
 		);
 		$providers->register_with_credential_store(
 			'gh',
@@ -258,7 +265,8 @@ final class BoosterServiceProvider {
 				$container->make( ReleaseTrackingFacade::class ),
 				$container->make( PluginRepository::class ),
 				$container->make( ThemeRepository::class ),
-				$container->make( ProviderRegistry::class )
+				$container->make( ProviderRegistry::class ),
+				activity: $container->make( \RAN\Activity\ActivityStore::class )
 			)
 		);
 		$container->bind(
@@ -419,7 +427,8 @@ final class BoosterServiceProvider {
 			$release_store,
 			$container->make( WordPressUpdaterLock::class ),
 			$container->make( ProviderRegistry::class ),
-			bulk_forbidden_plugin_identifier: $self_plugin_identifier
+			bulk_forbidden_plugin_identifier: $self_plugin_identifier,
+			activity: $activity
 		);
 		$container->bind( ManagedReleaseTargetRegistrar::class, $release_registrar );
 		$release_facade = new NativeReleaseTrackingFacade(
@@ -460,5 +469,28 @@ final class BoosterServiceProvider {
 				new \RAN\Admin\ReleaseManagement\NativeManagedReleaseBrowser( $container->make( NativeReleaseTrackingFacade::class ) )
 			)
 		);
+	}
+	/** @return array{subject_type:string,subject_identity:string,adoption_token:?string,context:string,purpose:?string,provenance:string,actor?:int}|null */
+	private static function capture_activity_context( CoreContainer $container, ProviderCode $code, \RAN\Activity\ActivityRequest $request ): ?array {
+		if ( null !== $request->repository && null === $request->repository->provider_repository_id ) {
+			return null;
+		}
+		if ( null === $request->target_type ) {
+			return array(
+				'subject_type'     => null === $request->repository ? 'provider' : 'repository',
+				'subject_identity' => $request->repository->provider_repository_id ?? (string) $code,
+				'adoption_token'   => null,
+				'context'          => '',
+				'purpose'          => null,
+				'provenance'       => 'provider',
+			);
+		}
+		$package = 'plugin' === $request->target_type
+			? $container->make( PluginRepository::class )->booster_plugin_from_file( $request->target_identity )
+			: $container->make( ThemeRepository::class )->booster_theme_from_stylesheet( $request->target_identity );
+		if ( (string) $package->get_provider_code() !== (string) $code || $package->get_provider_repository_id() !== $request->repository?->provider_repository_id ) {
+			return null;
+		}
+		return $container->make( RepositoryBranchCheckEvidenceStore::class )->activity_context( $request->target_type, $package, 'branch.check' );
 	}
 }

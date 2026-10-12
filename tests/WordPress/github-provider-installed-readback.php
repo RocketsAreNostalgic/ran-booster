@@ -2,8 +2,8 @@
 
 // Executed by WP-CLI against the installed release ZIP in a disposable site.
 
-if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 14 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
-	throw new RuntimeException( 'The installed runtime does not expose Provider API 14.' );
+if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 15 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+	throw new RuntimeException( 'The installed runtime does not expose Provider API 15.' );
 }
 
 if ( 3 !== RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3::RELEASE_WORKFLOW_API_VERSION ) { // @phpstan-ignore notIdentical.alwaysFalse (Installed proof must verify the separately loaded release workflow API marker.)

@@ -87,6 +87,59 @@ final class ProviderCapabilityContractTest extends TestCase {
 		}
 	}
 
+	public function test_activity_reporter_is_bound_only_after_registration_and_remains_available_after_sealing(): void {
+		require_once dirname( __DIR__ ) . '/Activity/ActivityWordPressFunctions.php';
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$database                                = new \RAN\Tests\Activity\ActivityConnection();
+		$store                                   = new \RAN\Activity\ActivityStore( $database, 'test_activity' );
+		$calls                                   = array();
+		$registry                                = new ProviderRegistry(
+			activity_reporter_factory: static function ( ProviderCode $code ) use ( &$calls, $store ): \RAN\Activity\ActivityReporter {
+				$calls[] = $code->value;
+				return new \RAN\Activity\BoundActivityReporter(
+					$store,
+					$code->value,
+					static fn (): array => array(
+						'subject_type'     => 'plugin',
+						'subject_identity' => 'example/example.php',
+						'adoption_token'   => 'facet-fixture:42:11111111-1111-4111-8111-111111111111',
+						'context'          => 'host-resolved-source-and-access',
+						'purpose'          => 'branch.check',
+						'provenance'       => 'core',
+					)
+				);
+			}
+		);
+		try {
+			$registry->activity_reporter( 'facet-fixture' );
+			self::fail( 'Unaccepted providers must not acquire a reporter.' );
+		} catch ( \RAN\RepositoryProvider\UnknownProvider ) {
+			self::assertSame( array(), $calls );
+		}
+		$registry->register( $this->provider() );
+		$registry->seal();
+		$reporter  = $registry->activity_reporter( 'facet-fixture' );
+		$operation = $reporter->begin( new \RAN\Activity\ActivityRequest( 'facet-fixture.inspect', new \RAN\RepositoryProvider\RepositoryReference( 'owner/example', '42', false, null ), 'plugin', 'example/example.php' ) );
+		$operation->progress( 'resolving_revision' );
+		$operation->complete( 'succeeded', 'repository_inspected' );
+		self::assertSame( array( 'facet-fixture' ), $calls );
+		self::assertCount( 1, $database->inserted );
+		self::assertSame( 'facet-fixture', $database->inserted[0]['provider'] );
+		self::assertSame( 'provider', $database->inserted[0]['provenance'] );
+		self::assertNull( $database->inserted[0]['purpose'] );
+		self::assertSame( 'host-resolved-source-and-access', $database->inserted[0]['context'] );
+		$reporter->begin( new \RAN\Activity\ActivityRequest( 'facet-fixture.inspect', new \RAN\RepositoryProvider\RepositoryReference( 'owner/other', '99', false, null ), 'plugin', 'example/example.php' ) );
+		self::assertCount( 1, $database->inserted, 'A repository mismatch cannot receive managed identity.' );
+	}
+
+	public function test_registry_without_activity_storage_supplies_a_noop_operation(): void {
+		$registry  = new ProviderRegistry( array( $this->provider() ) );
+		$operation = $registry->activity_reporter( 'facet-fixture' )->begin( new \RAN\Activity\ActivityRequest( 'facet-fixture.inspect' ) );
+		$operation->progress( 'resolving_revision' );
+		$operation->complete( 'failed', 'repository_unavailable' );
+		self::assertInstanceOf( \RAN\Activity\ActivityOperation::class, $operation );
+	}
+
 	private function provider(): RepositoryProvider&ProviderOwnedCapability&SecondProviderOwnedCapability {
 		return new class() implements RepositoryProvider, ProviderOwnedCapability, SecondProviderOwnedCapability {
 			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;

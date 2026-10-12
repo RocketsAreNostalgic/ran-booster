@@ -19,7 +19,8 @@ final readonly class ArchiveRequest {
 	public function __construct(
 		public RepositoryReference $repository,
 		public string $ref,
-		?string $expected_branch = null
+		?string $expected_branch = null,
+		public ?\RAN\Activity\ActivityProgress $progress = null
 	) {
 		if ( '' === trim( $ref ) ) {
 			throw new InvalidArgumentException( 'Archive ref cannot be empty.' );

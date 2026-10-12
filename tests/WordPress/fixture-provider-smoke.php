@@ -2,8 +2,8 @@
 
 // Executed by WP-CLI inside a disposable WordPress installation.
 
-if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 14 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
-	throw new RuntimeException( 'Provider API 14 is unavailable.' );
+if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 15 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+	throw new RuntimeException( 'Provider API 15 is unavailable.' );
 }
 
 if ( defined( 'RAN_BOOSTER_LOGGING_API_VERSION' ) ) {

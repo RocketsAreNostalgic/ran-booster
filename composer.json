@@ -49,10 +49,10 @@
         "php": "^8.2",
         "ext-sodium": "*",
         "ext-zip": "*",
-        "ran/booster-github-provider": "1.0.0-beta.15",
+        "ran/booster-github-provider": "dev-feature/activity-history-wave-one#2e8fc83fd2ef13147d5ea35d7fcde1e12b73aa95 as 1.0.0-beta.16",
         "ran/updater-support": "1.0.0-beta.4",
         "ran/wp-branch-updater": "1.0.0-beta.9",
-        "ran/wp-release-updater": "1.0.0-beta.9"
+        "ran/wp-release-updater": "dev-feature/activity-history-wave-one#1ec42195700426566f1aaadcd8d0b63248687128 as 1.0.0-beta.10"
     },
     "extra": {
         "ran-updater-runtime-protocol": 5

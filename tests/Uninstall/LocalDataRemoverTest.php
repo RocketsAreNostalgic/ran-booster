@@ -58,6 +58,7 @@ final class LocalDataRemoverTest extends TestCase {
 		$GLOBALS['ran_booster_uninstall_transients']['unrelated_transient'] = 'preserved';
 		$GLOBALS['ran_booster_uninstall_options']                           = array(
 			Database::VERSION_OPTION                      => '5.0',
+			\RAN\Activity\ActivityStore::VERSION_OPTION   => '1',
 			CredentialExpiryObservationStore::OPTION_NAME => array( 'profiles' => array() ),
 			PublicRepositoryLookupProfileStore::OPTION_NAME => array( 'profiles' => array() ),
 			'ran_booster_release_deployments_assessment_observations' => array( array( 'kind' => 'existing_automation_detected' ) ),
@@ -70,8 +71,6 @@ final class LocalDataRemoverTest extends TestCase {
 		foreach (
 			array(
 				WorkflowAssistanceState::SETUP_OPTION,
-				WorkflowAssistanceState::ASSESSMENT_OPTION,
-				WorkflowAssistanceState::FAILURE_OPTION,
 			) as $provider_option
 		) {
 			$GLOBALS['ran_booster_uninstall_options'][ $provider_option ] = array( 'current-provider-state' );
@@ -80,6 +79,7 @@ final class LocalDataRemoverTest extends TestCase {
 		$this->database->tables    = array(
 			'wp_ran_booster_packages',
 			'wp_ran_booster_deployment_attempts',
+			'wp_ran_booster_activity',
 			'wp_ran_booster_rejected_admission_audit',
 			'wp_ran_booster_native_update_activity',
 			'wp_unrelated',

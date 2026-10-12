@@ -27,17 +27,22 @@ final class ProviderRegistry {
 	private ?\Closure $credential_store_factory;
 	private ?\Closure $delivery_evidence_reader_factory;
 	private ProviderRegistrationContext $registration_context;
+	/** @var \Closure(ProviderCode): \RAN\Activity\ActivityReporter|null */
+	private ?\Closure $activity_reporter_factory;
 
 	/**
 	 * @param iterable<RepositoryProvider> $providers Initial providers.
+	 * @param callable(ProviderCode): \RAN\Activity\ActivityReporter|null $activity_reporter_factory Bound optional reporting service.
 	 */
 	public function __construct(
 		iterable $providers = array(),
 		?ProviderSecretPolicyCatalog $secret_policies = null,
 		?callable $credential_store_factory = null,
 		?callable $delivery_evidence_reader_factory = null,
-		?ProviderRegistrationContext $registration_context = null
+		?ProviderRegistrationContext $registration_context = null,
+		?callable $activity_reporter_factory = null
 	) {
+		$this->activity_reporter_factory        = null === $activity_reporter_factory ? null : \Closure::fromCallable( $activity_reporter_factory );
 		$this->secret_policies                  = $secret_policies ?? new ProviderSecretPolicyCatalog();
 		$this->credential_store_factory         = null === $credential_store_factory
 			? null
@@ -54,6 +59,17 @@ final class ProviderRegistry {
 		}
 	}
 
+	/** Return a reporter bound to an accepted registration, including after sealing. */
+	public function activity_reporter( ProviderCode|string $code ): \RAN\Activity\ActivityReporter {
+		$this->assert_not_registering();
+		$code = $this->normalize_code( $code );
+		$this->get( $code );
+		if ( null !== $this->activity_reporter_factory ) {
+			return ( $this->activity_reporter_factory )( $code );
+		}
+		return new \RAN\Activity\BoundActivityReporter( new \RAN\Activity\ActivityStore(), (string) $code, static fn (): ?array => null );
+	}
+
 	/**
 	 * Register a credential-bearing provider with a read-only store restricted
 	 * to the requested provider code.
@@ -61,7 +77,7 @@ final class ProviderRegistry {
 	 * The factory must construct its aggregate locally without network or other
 	 * side effects. Registration remains atomic after the aggregate is returned.
 	 *
-	 * Provider API 13 factories must declare a non-variadic, by-value third
+	 * Provider API 15 factories must declare a non-variadic, by-value third
 	 * parameter typed exactly ProviderRegistrationContext. The registry validates
 	 * that callable contract before invoking the factory.
 	 *

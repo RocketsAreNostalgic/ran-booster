@@ -7,6 +7,39 @@ namespace RAN\Admin;
 /** Administrator-facing copy for the closed deployment outcome set. */
 final class DeploymentOutcomeMessage {
 
+	public static function for_activity( string $status, string $reason, string $message = '' ): string {
+		if ( 'incomplete' === $status ) {
+			return __( 'Completion not recorded', 'ran-booster' );
+		}
+		if ( '' !== $message ) {
+			return $message;
+		}
+		return match ( $reason ) {
+			'subdirectory_unavailable' => __( 'The configured package subdirectory could not be found or inspected in the repository archive.', 'ran-booster' ),
+			'subdirectory_unverified' => __( 'The configured repository subdirectory could not be verified.', 'ran-booster' ),
+			'unable_to_check' => __( 'The branch check could not complete. Review the package settings and try again.', 'ran-booster' ),
+			'provider_unavailable' => self::for_code( 'provider_unavailable' ),
+			'verified' => __( 'Repository branch and archive verified.', 'ran-booster' ),
+			'update_available' => __( 'A newer release is available.', 'ran-booster' ),
+			'no_candidates' => __( 'No release candidates were found.', 'ran-booster' ),
+			'no_newer_candidate' => __( 'No newer release was found.', 'ran-booster' ),
+			'candidate_rejected', 'candidate_not_eligible' => __( 'The release candidate is not eligible for installation.', 'ran-booster' ),
+			'policy_disabled', 'policy_forced_off' => __( 'Release checks are disabled by update policy.', 'ran-booster' ),
+			'discovery_not_admitted' => __( 'Release discovery could not start.', 'ran-booster' ),
+			'release_list_failed' => __( 'The available releases could not be retrieved.', 'ran-booster' ),
+			'runtime_identity_invalid' => __( 'The installed package identity could not be verified.', 'ran-booster' ),
+			'filesystem_unavailable' => __( 'The package filesystem is unavailable.', 'ran-booster' ),
+			'offer_token_unavailable' => __( 'The release offer could not be recorded.', 'ran-booster' ),
+			'candidate_invalid', 'candidate_inspection_failed', 'candidate_descriptor_mismatch', 'candidate_validation_failed' => __( 'The release candidate could not be verified.', 'ran-booster' ),
+			default => match ( $status ) {
+				'succeeded' => __( 'Check completed.', 'ran-booster' ),
+				'skipped' => __( 'Check skipped.', 'ran-booster' ),
+				'rejected' => __( 'Check rejected.', 'ran-booster' ),
+				default => __( 'Check could not complete.', 'ran-booster' ),
+			},
+		};
+	}
+
 	public static function for_code( string $code ): string {
 		return match ( $code ) {
 			'deployed'                       => __( 'WordPress completed and Booster verified the package deployment.', 'ran-booster' ),

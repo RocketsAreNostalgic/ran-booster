@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "635c378e204522fe555f32bb0e82bfe4",
+    "content-hash": "347bf4800f0702ad438f9b66a4198fb2",
     "packages": [
         {
             "name": "ran/booster-github-provider",
-            "version": "v1.0.0-beta.15",
+            "version": "dev-feature/activity-history-wave-one",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider.git",
-                "reference": "85f41be3b9cbd8ec97bcccb262c48a599522ed35"
+                "reference": "2e8fc83fd2ef13147d5ea35d7fcde1e12b73aa95"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-booster-github-provider/zipball/85f41be3b9cbd8ec97bcccb262c48a599522ed35",
-                "reference": "85f41be3b9cbd8ec97bcccb262c48a599522ed35",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-booster-github-provider/zipball/2e8fc83fd2ef13147d5ea35d7fcde1e12b73aa95",
+                "reference": "2e8fc83fd2ef13147d5ea35d7fcde1e12b73aa95",
                 "shasum": ""
             },
             "require": {
@@ -110,7 +110,7 @@
                 "security": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider/security/advisories/new",
                 "source": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider"
             },
-            "time": "2026-10-09T13:08:51+00:00"
+            "time": "2026-10-12T16:06:52+00:00"
         },
         {
             "name": "ran/updater-support",
@@ -321,16 +321,16 @@
         },
         {
             "name": "ran/wp-release-updater",
-            "version": "v1.0.0-beta.9",
+            "version": "dev-feature/activity-history-wave-one",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater.git",
-                "reference": "27889528442fc4e49ca060959218d5ec288c3055"
+                "reference": "1ec42195700426566f1aaadcd8d0b63248687128"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/27889528442fc4e49ca060959218d5ec288c3055",
-                "reference": "27889528442fc4e49ca060959218d5ec288c3055",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/1ec42195700426566f1aaadcd8d0b63248687128",
+                "reference": "1ec42195700426566f1aaadcd8d0b63248687128",
                 "shasum": ""
             },
             "require": {
@@ -352,7 +352,7 @@
             "type": "library",
             "autoload-dev": {
                 "psr-4": {
-                    "Tests\\": "tests/"
+                    "RAN\\WPReleaseUpdater\\V1\\Tests\\": "tests/"
                 }
             },
             "scripts": {
@@ -366,7 +366,9 @@
                     "@test"
                 ],
                 "analyze": [
-                    "phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=1G"
+                    "phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=1G",
+                    "phpstan analyse --configuration=phpstan-tools.neon --no-progress --memory-limit=1G",
+                    "php scripts/analyze-tests.php"
                 ],
                 "audit:composer": [
                     "composer audit --locked --no-interaction"
@@ -415,7 +417,7 @@
                 "security": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater/security/advisories/new",
                 "source": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater"
             },
-            "time": "2026-09-28T12:28:00+00:00"
+            "time": "2026-10-12T16:49:41+00:00"
         }
     ],
     "packages-dev": [
@@ -3142,17 +3144,30 @@
             "time": "2026-07-27T11:53:23+00:00"
         }
     ],
-    "aliases": [],
+    "aliases": [
+        {
+            "package": "ran/booster-github-provider",
+            "version": "dev-feature/activity-history-wave-one",
+            "alias": "1.0.0-beta.16",
+            "alias_normalized": "1.0.0.0-beta16"
+        },
+        {
+            "package": "ran/wp-release-updater",
+            "version": "dev-feature/activity-history-wave-one",
+            "alias": "1.0.0-beta.10",
+            "alias_normalized": "1.0.0.0-beta10"
+        }
+    ],
     "minimum-stability": "stable",
     "stability-flags": {
         "phpcompatibility/php-compatibility": 15,
         "phpcompatibility/phpcompatibility-paragonie": 15,
         "phpcompatibility/phpcompatibility-wp": 15,
         "ran/admin-shell": 20,
-        "ran/booster-github-provider": 10,
+        "ran/booster-github-provider": 20,
         "ran/updater-support": 10,
         "ran/wp-branch-updater": 10,
-        "ran/wp-release-updater": 10
+        "ran/wp-release-updater": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,

@@ -22,12 +22,13 @@ final class ReleaseWorkflowControls {
 		PluginRepository $plugins,
 		ThemeRepository $themes,
 		ProviderRegistry $providers,
-		?RepositorySourceGuard $source_guard = null
+		?RepositorySourceGuard $source_guard = null,
+		?\RAN\Activity\ActivityStore $activity = null
 	) {
 		$source_guard  ??= new RepositorySourceGuard();
 		$this->display   = new ReleaseWorkflowDisplay();
-		$this->requests  = new ReleaseWorkflowRequestController( $releases, $plugins, $themes, $providers, $source_guard );
-		$this->presenter = new ReleaseWorkflowPresenter( $releases, $plugins, $themes, $providers, $this->requests, $source_guard );
+		$this->requests  = new ReleaseWorkflowRequestController( $releases, $plugins, $themes, $providers, $source_guard, $activity );
+		$this->presenter = new ReleaseWorkflowPresenter( $releases, $plugins, $themes, $providers, $this->requests, $source_guard, $activity );
 	}
 
 	public function register(): void {

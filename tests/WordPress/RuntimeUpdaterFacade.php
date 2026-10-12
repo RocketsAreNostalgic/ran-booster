@@ -8,6 +8,10 @@ use RAN\RepositoryProvider\RepositoryReleaseNativeTarget;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargetStatus;
 
 final class RuntimeUpdaterFacade implements RepositoryReleaseNativeTarget {
+	public function matches_check_source( string $runtime_provider, string $repository_identity, string $channel ): bool {
+		return 'github' === $runtime_provider && '123456789' === $repository_identity && 'stable' === $channel;
+	}
+
 
 	private bool $registered            = false;
 	private bool $diagnostics_fail      = false;

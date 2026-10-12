@@ -43,6 +43,9 @@ final class ManagedReleaseTargetRegistrar {
 	/** @var array<string, array{authority: array<string, int|string>, automatic: bool, lock: ?string, restore: bool}> */
 	private array $native_updates = array();
 
+	/** @var array<string, int> */
+	private array $activity_checks = array();
+
 	public function __construct(
 		private PluginRepository $plugins,
 		private ThemeRepository $themes,
@@ -50,7 +53,8 @@ final class ManagedReleaseTargetRegistrar {
 		private WordPressUpdaterLock $updater_lock,
 		private ProviderRegistry $providers,
 		?RepositorySourceGuard $source_guard = null,
-		private readonly ?string $bulk_forbidden_plugin_identifier = null
+		private readonly ?string $bulk_forbidden_plugin_identifier = null,
+		private ?\RAN\Activity\ActivityStore $activity = null
 	) {
 		$this->source_guard = $source_guard ?? new RepositorySourceGuard();
 	}
@@ -64,6 +68,8 @@ final class ManagedReleaseTargetRegistrar {
 			return;
 		}
 		if ( function_exists( 'add_filter' ) ) {
+			add_action( 'ran_wp_release_updater_check_started_v1', array( $this, 'activity_check_started' ), 1 );
+			add_action( 'ran_wp_release_updater_check_completed_v1', array( $this, 'activity_check_completed' ), 1 );
 			add_filter( 'upgrader_pre_download', array( $this, 'authorize_native_download' ), PHP_INT_MIN, 4 );
 			add_filter( 'upgrader_pre_install', array( $this, 'fence_native_mutation' ), 1, 2 );
 			add_filter( 'site_transient_update_plugins', array( $this, 'suppress_unauthorized_plugin_offers' ), PHP_INT_MAX );
@@ -320,6 +326,91 @@ final class ManagedReleaseTargetRegistrar {
 			return;
 		}
 		$release();
+	}
+
+	/** @param array<string, mixed> $event Optional observational protocol; never update authority. */
+	public function activity_check_started( array $event ): void {
+		try {
+			if ( null === $this->activity || array_diff( array( 'check_id', 'network_id', 'blog_id', 'target_type', 'installed_identity', 'provider_code', 'repository_identity', 'channel', 'binding_hash' ), array_keys( $event ) ) || count( $event ) !== 9
+				|| ! is_string( $event['check_id'] ?? null ) || ! preg_match( '/\A[a-f0-9]{32}\z/', $event['check_id'] )
+				|| isset( $this->activity_checks[ $event['check_id'] ] )
+				|| ( $event['blog_id'] ?? null ) !== get_current_blog_id()
+				|| ( $event['network_id'] ?? null ) !== get_current_network_id()
+				|| ! in_array( $event['target_type'] ?? null, array( 'plugin', 'theme' ), true ) ) {
+				return;
+			}
+			foreach ( array(
+				'installed_identity'  => 255,
+				'provider_code'       => 32,
+				'repository_identity' => 191,
+				'channel'             => 16,
+				'binding_hash'        => 64,
+			) as $field => $limit ) {
+				if ( ! is_string( $event[ $field ] ?? null ) || '' === $event[ $field ] || strlen( $event[ $field ] ) > $limit || preg_match( '/[\x00-\x1F\x7F]/', $event[ $field ] ) ) {
+					return;
+				}
+			}
+			if ( 1 !== preg_match( '/\A[a-f0-9]{64}\z/', $event['binding_hash'] ) || ! in_array( $event['channel'], array( 'stable', 'prerelease' ), true ) ) {
+				return;
+			}
+			$type       = $event['target_type'];
+			$identifier = $event['installed_identity'];
+			$target     = $this->target( $type, $identifier );
+			$snapshot   = $this->native_authority_snapshot( $type, $identifier );
+			if ( null === $target || ! $snapshot['release'] || null === $snapshot['authority']
+				|| ( $this->registered_authorities[ self::key( $type, $identifier ) ] ?? null ) !== $snapshot['authority']
+				|| ! $this->native_target_is_active( $type, $identifier )
+				|| ! $target->matches_check_source( $event['provider_code'], $event['repository_identity'], $event['channel'] ) ) {
+				return;
+			}
+			$package       = 'plugin' === $type ? $this->plugins->booster_plugin_from_file( $identifier ) : $this->themes->booster_theme_from_stylesheet( $identifier );
+			$configuration = $this->store->configuration( $type, $identifier );
+			if ( null === $configuration || PackageSource::RELEASE_ASSET !== $package->get_source() || $this->authority( $package, $configuration ) !== $snapshot['authority'] ) {
+				return;
+			}
+			$capture = ( new \RAN\Admin\RepositoryBranchCheckEvidenceStore() )->activity_context( $type, $package, 'release.check' );
+			$id      = $this->activity->begin( (string) $package->get_provider_code(), new \RAN\Activity\ActivityRequest( 'release.check', $package->get_repository()->reference, $type, $identifier ), $capture );
+			if ( null !== $id ) {
+				$this->activity_checks[ $event['check_id'] ] = $id;
+			}
+		} catch ( Throwable ) {
+			// Missing reporting evidence cannot change native update execution.
+			return;
+		}
+	}
+
+	/** @param array<string, mixed> $event Completion uses only its captured begin identity. */
+	public function activity_check_completed( array $event ): void {
+		try {
+			$id = is_string( $event['check_id'] ?? null ) ? ( $this->activity_checks[ $event['check_id'] ] ?? null ) : null;
+			if ( null === $this->activity || null === $id || array_diff( array( 'check_id', 'status', 'reason', 'relationship', 'installed_version', 'candidate_version', 'offered_version', 'candidate_validation_code' ), array_keys( $event ) ) || count( $event ) !== 8 || ! is_string( $event['status'] ?? null ) || ! is_string( $event['reason'] ?? null ) ) {
+				return;
+			}
+			$expected = match ( $event['reason'] ) {
+				'update_available', 'no_candidates', 'no_newer_candidate' => 'succeeded',
+				'candidate_rejected', 'candidate_not_eligible' => 'rejected',
+				'policy_disabled', 'policy_forced_off', 'discovery_not_admitted' => 'skipped',
+				'unexpected_failure', 'runtime_identity_invalid', 'filesystem_unavailable', 'offer_token_unavailable', 'release_list_failed', 'candidate_invalid', 'candidate_inspection_failed', 'candidate_descriptor_mismatch', 'candidate_validation_failed' => 'failed',
+				default => null,
+			};
+			if ( null === $expected || $event['status'] !== $expected
+				|| ! in_array( $event['relationship'], array( null, 'newer', 'same', 'older', 'invalid' ), true )
+				|| ! in_array( $event['candidate_validation_code'], array( null, 'release_list_failed', 'candidate_list_invalid', 'candidate_invalid', 'candidate_not_newer', 'candidate_inspection_failed', 'candidate_descriptor_mismatch', 'candidate_validation_failed', 'archive_identity_verified' ), true ) ) {
+				return;
+			}
+			$facts = array();
+			foreach ( array( 'relationship', 'installed_version', 'candidate_version', 'offered_version', 'candidate_validation_code' ) as $field ) {
+				$value = $event[ $field ] ?? null;
+				if ( null !== $value && ( ! is_string( $value ) || strlen( $value ) > 64 || preg_match( '/[\x00-\x1F\x7F<>]/', $value ) ) ) {
+					return;
+				}
+				$facts[ $field ] = $value;
+			}
+			$this->activity->complete( $id, $event['status'], $event['reason'], facts: $facts, effect: 'succeeded' === $event['status'] ? 'established' : 'none' );
+		} catch ( Throwable ) {
+			// A malformed optional observation cannot affect the updater result.
+			return;
+		}
 	}
 
 	public function target( string $type, string $identifier ): ?RepositoryReleaseNativeTarget {

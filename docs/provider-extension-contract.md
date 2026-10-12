@@ -1,14 +1,8 @@
 # Provider extension contract
 
-> Provider API14 source integration: Core pins immutable GitHub Provider
-> `v1.0.0-beta.12` at `c90777b7a23b7e07244a94c7ccbf3c4faf4fdc2c` in its
-> package constraint and dependency lock. The earlier beta.11/API13 tuple is
-> historical. The corrected Core #224 merged tree passed native, archive and
-> installed WordPress/database qualification. Core publication and matching
-> Bitbucket/Migrator released-host certification remain pending; release work is paused.
-> See the [current recovery and landing record](beta31-naming-recovery.md#remaining-gates-and-landing-order).
+> Provider API15 reporting candidate. Qualify the coordinated Core/provider source set before publication; earlier API14 certification does not qualify this contract.
 
-RAN Booster Provider API 14 accepts trusted repository providers through its late
+RAN Booster Provider API 15 accepts trusted repository providers through its late
 registration action. A provider plugin attaches a callback from its main plugin
 file during normal plugin loading. Credential-bearing providers use one required
 three-argument factory contract:
@@ -18,7 +12,7 @@ add_action(
 	'ran_booster_register_providers',
 	static function ( \RAN\RepositoryProvider\ProviderRegistry $registry ): void {
 		if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-			|| 14 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+			|| 15 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
 			return;
 		}
 
@@ -41,11 +35,11 @@ add_action(
 ```
 
 Booster defines the integer `RAN_BOOSTER_PROVIDER_API_VERSION` marker before the
-registration action can run. The callback must check for exact Provider API 14.
+registration action can run. The callback must check for exact Provider API 15.
 `Requires Plugins: ran-booster` only tells WordPress about the package
 dependency; it does not replace this exact runtime marker check or make a
 mismatched provider contract safe.
-Provider API 14 publishes no logging facade, generic service resolver, Core
+Provider API 15 publishes no logging facade, generic service resolver, Core
 container, credential writer, sidecar path or database/deployment repository.
 Providers report bounded diagnostics and operation results. Core owns logging
 at its call boundaries and never supplies a logger to provider code.
@@ -83,7 +77,7 @@ returned provider uses the same requested code before atomic registration:
 A provider that retains the host artifact policy should retain the bounded
 supplier and invoke `maximum_artifact_bytes()` only when the relevant archive or
 release operation needs the ceiling, not while its registration factory is
-constructing the aggregate. Provider API 14 guarantees that the registration
+constructing the aggregate. Provider API 15 guarantees that the registration
 context is part of the credential-bearing factory contract; providers targeting
 API 14 must not feature-detect or fall back to the retired two-argument shape.
 The context remains bounded and does not create a generic dependency-injection
@@ -111,7 +105,7 @@ registration window.
 
 The current collision and same-vendor coexistence behavior is characterized in
 [Provider registration and coexistence](provider-registration-and-coexistence.md).
-Provider API 14 rejects an exact duplicate code but does not reserve vendor
+Provider API 15 rejects an exact duplicate code but does not reserve vendor
 aliases, identify two implementations of the same vendor, or merge their
 capabilities and state.
 
@@ -236,11 +230,11 @@ Deployment tabs and independently supported release consumption remain usable.
 Remote inspection requires an explicit action. Outcomes return to the exact
 repository Releases tab, with diagnostics inside its notice area.
 
-These optional workflow facets do not further widen Provider API 14's bounded
+These optional workflow facets do not further widen Provider API 15's bounded
 registration context and introduce no repository settings object or shared
 workflow storage.
 
-Provider API 14 completes the breaking snake_case method, parameter, property
+Provider API 15 completes the breaking snake_case method, parameter, property
 and DTO contract migration while retaining initial-only V3 behavior. Providers
 must check this exact marker before loading their implementation. API11, API12
 and API13 providers remain unregistered; there is no V2 compatibility shim.
@@ -387,7 +381,7 @@ archive into its private preflight file; WordPress receives only that verified
 local file. Providers remain responsible for any stricter origin, path and
 signed query policy required by their service.
 
-Provider API 14 owns two shared helpers for ordinary vendor implementations:
+Provider API 15 owns two shared helpers for ordinary vendor implementations:
 
 - `GitReferenceSyntax::is_valid_named_reference()` applies Core's bounded generic
   branch/ref syntax check without assuming a particular hosting vendor.
@@ -754,3 +748,59 @@ separate extension tree, exercise registration, browsing, archive composition
 and richer optional capabilities, prove configured artifact-limit parity, and
 verify that Booster self-update does not depend on the GitHub provider being
 active.
+
+## Durable activity reporting
+
+Provider API15 adds bounded activity reporting without changing the three-argument
+provider factory or scalar `ProviderRegistrationContext`.
+
+For Core-initiated work, `ArchiveRequest::$progress` and workflow V4's optional
+final `$progress` argument supply `RAN\Activity\ActivityProgress`. Report actual
+stages with `$progress?->progress( 'example.resolving_revision' )`, then return the
+existing domain result. Core owns completion after validation and cleanup. The
+handle exposes no terminal method; an archive prepared successfully is not a
+completed deployment.
+
+For work initiated by an accepted provider, obtain its bound reporter from the
+registration registry after registering it. Keep that reporter in the provider's
+own composition for later use; the registry also permits access after sealing.
+
+```php
+$reporter = $registry->activity_reporter( 'example' );
+$operation = $reporter->begin(
+    new \RAN\Activity\ActivityRequest(
+        operation: 'example.repository_inspect',
+        repository: $repository
+    )
+);
+$operation->progress( 'example.resolving_revision' );
+// Perform the domain operation and inspect its actual result.
+$operation->complete(
+    status: 'succeeded',
+    reason: 'example.repository_inspected'
+);
+```
+
+A repository-only request requires a stable provider repository ID and creates no
+managed-package association. A missing stable ID produces no record. To request one,
+supply both `target_type` (`plugin` or `theme`) and `target_identity` (the installed
+plugin file or theme stylesheet), alongside the repository reference. Core checks
+the provider and immutable repository identity and captures the adoption/source
+context at begin. Unknown or mismatched targets produce no record. Providers do
+not supply adoption tokens, actors, timestamps, protected observation purposes,
+or Core-verification provenance. Autonomous outcomes are provider-reported.
+
+Use stable namespaced codes and optional bounded developer-authored plain text.
+Never report remote bodies, exceptions, credentials, authenticated URLs, headers
+or HTML. Reporting failure must not change the domain result. Missing completion
+remains unconfirmed; progress is coalesced into the latest stage and terminal
+records cannot be reopened. Diagnostic logging remains separate.
+
+Core renders these records through Recent activity and package summaries.
+Providers neither write SQL nor supply table HTML. Ordinary history is retained
+for up to 30 days with a 2,000-record pruning target; Core-owned current observation
+slots are protected separately. Provider-defined operation codes do not allocate
+protected slots. Daily maintenance processes at most twenty batches of 100
+records and stops on storage failure. The target is not an instantaneous hard
+cap: missed maintenance or sustained input above cleanup throughput can leave
+a backlog; reads remain bounded independently.

@@ -165,6 +165,7 @@ final class PackageRemovalServiceTest extends TestCase {
 	public function test_confirmed_unlink_clears_branch_evidence_before_the_same_identity_can_be_reused(): void {
 		$fixture  = $this->fixture();
 		$evidence = new RemovalBranchCheckEvidenceStore();
+		$evidence->begin_check( 'plugin', $fixture->plugin, 'profile-a' );
 		$evidence->record( 'plugin', $fixture->plugin, 'profile-a', 'verified' );
 		$service = new PackageRemovalService(
 			$fixture->plugins,
@@ -192,6 +193,7 @@ final class PackageRemovalServiceTest extends TestCase {
 			new RemovalUpdaterLock(),
 			$evidence
 		);
+		$evidence->begin_check( 'plugin', $fixture->plugin, 'profile-a' );
 		$evidence->record( 'plugin', $fixture->plugin, 'profile-a', 'verified' );
 
 		try {
@@ -215,6 +217,7 @@ final class PackageRemovalServiceTest extends TestCase {
 			new RemovalUpdaterLock(),
 			$evidence
 		);
+		$evidence->begin_check( 'plugin', $fixture->plugin, 'profile-a' );
 		$evidence->record( 'plugin', $fixture->plugin, 'profile-a', 'verified' );
 		$evidence->clear_fails = true;
 
@@ -294,8 +297,10 @@ final class PackageRemovalServiceTest extends TestCase {
 				$other_type = 'plugin' === $type ? 'theme' : 'plugin';
 				$repository = 'plugin' === $type ? $fixture->plugins : $fixture->themes;
 				$evidence   = new RemovalBranchCheckEvidenceStore();
+				$evidence->begin_check( $type, $package, 'profile-a' );
 				$evidence->record( $type, $package, 'profile-a', 'verified' );
 				$observed_package = clone $package;
+				$evidence->begin_check( $other_type, $other, 'profile-a' );
 				$evidence->record( $other_type, $other, 'profile-a', 'verified' );
 				$evidence->clear_fails                   = $cleanup_failure;
 				$fixture->gateway->cleanup_fails         = $cleanup_failure;

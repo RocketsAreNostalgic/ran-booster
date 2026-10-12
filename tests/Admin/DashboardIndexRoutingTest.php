@@ -400,6 +400,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$evidence = new DashboardBranchCheckEvidenceStore();
 		$package  = $this->managed_package( 'provider-missing/example.php', 'Example', 'repo-42' );
+		$evidence->begin_check( 'plugin', $package, null );
 		$evidence->record( 'plugin', $package, null, 'verified' );
 		$dashboard = $this->dashboard(
 			$this->throwing_secrets(),

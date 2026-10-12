@@ -796,6 +796,14 @@ or HTML. Reporting failure must not change the domain result. Missing completion
 remains unconfirmed; progress is coalesced into the latest stage and terminal
 records cannot be reopened. Diagnostic logging remains separate.
 
+Branch verification remains a separate, bounded operational record in the existing
+option. A check captures its adoption, source and access context before work and
+replaces earlier verification with a per-check token. Completion may establish
+verification only while that token is still current, after archive cleanup and
+updater-lock release. Optional history failure does not suppress a fresh verified
+result; it also cannot restore verification for a failed, superseded or changed
+check. Old candidate fence-only records require a fresh check.
+
 Core renders these records through Recent activity and package summaries.
 Providers neither write SQL nor supply table HTML. Ordinary history is retained
 for up to 30 days with a 2,000-record pruning target; Core-owned current observation

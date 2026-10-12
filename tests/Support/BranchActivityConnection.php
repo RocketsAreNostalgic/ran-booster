@@ -12,6 +12,7 @@ final class BranchActivityConnection implements DeploymentWriteConnection {
 	public array $records = array();
 	/** @var array<string,list<mixed>> */
 	private array $arguments   = array();
+	public bool $fail_read     = false;
 	public bool $fail_insert   = false;
 	public bool $fail_complete = false;
 
@@ -47,6 +48,9 @@ final class BranchActivityConnection implements DeploymentWriteConnection {
 	}
 
 	public function get_results( string $query ): mixed {
+		if ( $this->fail_read ) {
+			throw new \RuntimeException( 'History read failed.' );
+		}
 		$args = $this->arguments[ $query ] ?? end( $this->arguments );
 		$args = is_array( $args ) ? $args : array();
 		if ( str_contains( $query, 'WHERE correlation =' ) ) {

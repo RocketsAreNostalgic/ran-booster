@@ -24,7 +24,7 @@ class RepositoryBranchCheckEvidenceStore {
 	private const MAX_RECORDS = 200;
 
 	private ?ActivityStore $activity = null;
-	/** @var array<string,array{id:?int,profile:string}> */
+	/** @var array<string,array{id:?int,profile:string,target:string,nonce:string}> */
 	private array $pending = array();
 
 	public function __construct( ?ActivityStore $activity = null ) {
@@ -37,15 +37,29 @@ class RepositoryBranchCheckEvidenceStore {
 
 	/** Clear the verification fence before optional reporting or remote work. */
 	public function begin_check( string $type, Package $package, ?string $profile_id ): ActivityProgress {
-		$key = $this->key( $type, $package );
-		$this->clear( $type, $package );
+		$key     = $this->key( $type, $package );
+		$nonce   = bin2hex( random_bytes( 16 ) );
+		$target  = $this->target_fingerprint( $package );
+		$profile = $this->profile_fingerprint( $package, $profile_id );
+		$this->mutate(
+			static function ( array $all ) use ( $key, $nonce ): array {
+				unset( $all['records'][ $key ] );
+				$all['records'][ $key ] = array( 'nonce' => $nonce );
+				if ( count( $all['records'] ) > self::MAX_RECORDS ) {
+					array_shift( $all['records'] );
+				}
+				return $all;
+			}
+		);
 		$this->pending[ $key ] = array(
 			'id'      => $this->activity_store()->begin(
 				(string) $package->get_provider_code(),
 				new ActivityRequest( 'branch.check', $package->get_repository()->reference, $type, (string) $package->get_identifier() ),
 				$this->activity_context( $type, $package, 'branch.check' )
 			),
-			'profile' => $this->profile_fingerprint( $package, $profile_id ),
+			'profile' => $profile,
+			'target'  => $target,
+			'nonce'   => $nonce,
 		);
 		return new ProgressOnly( new RecordedActivityOperation( $this->activity_store(), $this->pending[ $key ]['id'] ) );
 	}
@@ -71,54 +85,60 @@ class RepositoryBranchCheckEvidenceStore {
 	 * @return array{outcome: 'verified', checked_at: string}|null
 	 */
 	public function find( string $type, Package $package, ?string $profile_id ): ?array {
-		$fence = $this->all()['records'][ $this->key( $type, $package ) ] ?? null;
-		if ( ! is_array( $fence ) || ! is_int( $fence['id'] ?? null ) || ! is_string( $fence['profile'] ?? null )
-			|| ! hash_equals( $this->profile_fingerprint( $package, $profile_id ), $fence['profile'] ) ) {
-			return null;
-		}
-		$capture = $this->activity_context( $type, $package, 'branch.check' );
-		$summary = $this->activity_store()->summary( $type, (string) $package->get_identifier(), $capture['adoption_token'] ?? '', $capture['context'], 'branch.check' );
-		$record  = $summary['latest'];
-		if ( null === $record || (int) ( $record['id'] ?? 0 ) !== $fence['id'] || 'verified' !== ( $record['reason'] ?? null ) || ! is_string( $record['completed_at'] ?? null ) ) {
+		$record = $this->all()['records'][ $this->key( $type, $package ) ] ?? null;
+		if ( ! is_array( $record ) || 'verified' !== ( $record['outcome'] ?? null )
+			|| ! is_string( $record['nonce'] ?? null ) || 1 !== preg_match( '/\A[0-9a-f]{32}\z/', $record['nonce'] )
+			|| ! is_string( $record['checked_at'] ?? null ) || ! is_string( $record['target'] ?? null ) || ! is_string( $record['profile'] ?? null )
+			|| ! hash_equals( $this->target_fingerprint( $package ), $record['target'] )
+			|| ! hash_equals( $this->profile_fingerprint( $package, $profile_id ), $record['profile'] ) ) {
 			return null;
 		}
 		return array(
 			'outcome'    => 'verified',
-			'checked_at' => str_replace( ' ', 'T', $record['completed_at'] ) . 'Z',
+			'checked_at' => $record['checked_at'],
 		);
 	}
 
-	/** Complete shared history; the bounded option contains only a verification fence. */
+	/** Publish only the still-current check; optional history never grants verification. */
 	public function record( string $type, Package $package, ?string $profile_id, string $outcome, ?string $profile_fingerprint = null ): void {
 		$key = $this->key( $type, $package );
 		if ( ! isset( $this->pending[ $key ] ) ) {
-			$this->begin_check( $type, $package, $profile_id );
+			throw new RuntimeException( 'The repository branch check was not started.' );
 		}
 		$pending = $this->pending[ $key ];
+		unset( $profile_id ); // The pre-work capture remains authoritative.
 		unset( $this->pending[ $key ] );
-		$status = match ( $outcome ) {
-			'verified' => 'succeeded',
-			'subdirectory_unavailable' => 'rejected',
-			default => 'failed',
-		};
-		// A confirmed missing path replaces earlier positive evidence; uncertain checks do not.
-		$effect = in_array( $outcome, array( 'verified', 'subdirectory_unavailable' ), true ) ? 'established' : 'none';
-		if ( null === $pending['id'] || ! $this->activity_store()->complete( $pending['id'], $status, $outcome, effect: $effect ) ) {
-			return;
-		}
-		if ( 'verified' === $outcome ) {
+		try {
 			$this->mutate(
-				static function ( array $all ) use ( $key, $pending, $profile_fingerprint ): array {
-					$all['records'][ $key ] = array(
-						'id'      => $pending['id'],
-						'profile' => $profile_fingerprint ?? $pending['profile'],
-					);
-					if ( count( $all['records'] ) > self::MAX_RECORDS ) {
-						array_shift( $all['records'] );
+				static function ( array $all ) use ( $key, $pending, $outcome, $profile_fingerprint ): array {
+					$current = $all['records'][ $key ] ?? null;
+					if ( ! is_array( $current ) || ( $current['nonce'] ?? null ) !== $pending['nonce'] ) {
+						return $all;
+					}
+					unset( $all['records'][ $key ] );
+					if ( 'verified' === $outcome ) {
+						$all['records'][ $key ] = array(
+							'nonce'      => $pending['nonce'],
+							'outcome'    => 'verified',
+							'checked_at' => gmdate( 'Y-m-d\\TH:i:s\\Z' ),
+							'target'     => $pending['target'],
+							'profile'    => $profile_fingerprint ?? $pending['profile'],
+						);
 					}
 					return $all;
 				}
 			);
+		} catch ( \Throwable $failure ) {
+			$outcome = 'unable_to_check';
+			throw $failure;
+		} finally {
+			$status = match ( $outcome ) {
+				'verified' => 'succeeded',
+				'subdirectory_unavailable' => 'rejected',
+				default => 'failed',
+			};
+			$effect = in_array( $outcome, array( 'verified', 'subdirectory_unavailable' ), true ) ? 'established' : 'none';
+			$this->activity_store()->complete( $pending['id'], $status, $outcome, effect: $effect );
 		}
 	}
 
@@ -174,6 +194,12 @@ class RepositoryBranchCheckEvidenceStore {
 
 	/** @return array<array-key, mixed> */
 	protected function read_option(): array {
+		// Other requests may have mutated this option since this request first read it.
+		if ( function_exists( 'wp_cache_delete' ) ) {
+			wp_cache_delete( self::OPTION_NAME, 'options' );
+			wp_cache_delete( 'alloptions', 'options' );
+			wp_cache_delete( 'notoptions', 'options' );
+		}
 		$value = get_option( self::OPTION_NAME, array() );
 		return is_array( $value ) ? $value : array(
 			'records'    => array(),

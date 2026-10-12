@@ -41,7 +41,8 @@ final class DeploymentWorkerTest extends TestCase {
 			static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-07-19 00:00:00 UTC' ),
 			function ( int $length ): string {
 				return str_repeat( chr( $this->random_byte++ ), $length );
-			}
+			},
+			$this->createStub( \RAN\Storage\Database::class )
 		);
 		$this->coordinator = new WorkerCoordinator();
 	}
@@ -172,7 +173,9 @@ final class DeploymentWorkerTest extends TestCase {
 	}
 
 	private function request( string $slug ): DeploymentRequest {
-		return new DeploymentRequest( 'org/' . $slug, null, false, 'main', $slug, null, DeploymentPolicy::AUTOMATIC, 1 );
+		$token                               = 'gh:R_' . $slug . ':11111111-1111-4111-8111-111111111111';
+		$this->database->management[ $slug ] = $token;
+		return new DeploymentRequest( 'org/' . $slug, null, false, 'main', $slug, null, DeploymentPolicy::AUTOMATIC, 1, null, $slug, $token );
 	}
 }
 

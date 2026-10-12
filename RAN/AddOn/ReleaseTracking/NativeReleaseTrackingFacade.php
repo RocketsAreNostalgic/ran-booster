@@ -138,6 +138,11 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		int $source_revision,
 		string $channel = ''
 	): string {
+		return $this->nonce_scope( $operation, $type, $identifier, $source_revision, $channel, $this->package( $type, $identifier ) );
+	}
+
+	private function nonce_scope( string $operation, string $type, string $identifier, int $source_revision, string $channel, Package $package ): string {
+		$token     = \RAN\AdoptionIdentity::of( $package ) ?? throw new InvalidArgumentException( 'The adoption identity is unavailable.' );
 		$preflight = in_array( $operation, array( 'preflight', 'assessment_preflight', 'list_candidates', 'inspect_candidate' ), true );
 		if ( ! in_array( $operation, array( 'preflight', 'assessment_preflight', 'list_candidates', 'inspect_candidate', 'enable', 'refresh', 'change_channel', 'return_to_branch' ), true )
 			|| ! in_array( $type, array( 'plugin', 'theme' ), true )
@@ -149,7 +154,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			throw new InvalidArgumentException( 'The release tracking nonce scope is invalid.' );
 		}
 
-		$action = 'ran-booster-release-tracking-' . $operation . '-' . $type . '-' . $identifier . '-' . $source_revision;
+		$action = 'ran-booster-release-tracking-' . $operation . '-' . $type . '-' . $identifier . '-' . $source_revision . '-' . $token;
 
 		return $preflight ? $action . '-' . $channel : $action;
 	}
@@ -265,15 +270,15 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		string $channel,
 		string $nonce
 	): ?ReleaseTrackingPreflight {
+		$package = $this->authorized( 'preflight', $type, $identifier, $expected_source_revision, $nonce, $channel );
 		if ( ! RuntimeSupport::current()->allows_managed_operations()
 			|| ! $this->valid_channel( $channel )
 
-			|| ! $this->authorized( 'preflight', $type, $identifier, $expected_source_revision, $nonce, $channel ) ) {
+			|| null === $package ) {
 			return null;
 		}
 
 		try {
-			$package = $this->package( $type, $identifier );
 
 			return $this->branch_preflight(
 				$type,
@@ -296,15 +301,15 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		string $channel,
 		string $nonce
 	): ?ReleaseTrackingPreflight {
+		$package = $this->authorized( 'assessment_preflight', $type, $identifier, $expected_source_revision, $nonce, $channel );
 		if ( ! RuntimeSupport::current()->allows_managed_operations()
 			|| ! $this->valid_channel( $channel )
 
-			|| ! $this->authorized( 'assessment_preflight', $type, $identifier, $expected_source_revision, $nonce, $channel ) ) {
+			|| null === $package ) {
 			return null;
 		}
 
 		try {
-			$package = $this->package( $type, $identifier );
 			if ( true !== $this->release_source_available( $type, $package ) ) {
 				return null;
 			}
@@ -336,16 +341,17 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		string $channel,
 		string $nonce
 	): ?\RAN\RepositoryProvider\RepositoryReleaseCandidateList {
+		$package = $this->authorized( 'list_candidates', $type, $identifier, $expected_source_revision, $nonce, $channel );
 		if ( ! RuntimeSupport::current()->allows_managed_operations()
 			|| ! $this->valid_channel( $channel )
 
-			|| ! $this->authorized( 'list_candidates', $type, $identifier, $expected_source_revision, $nonce, $channel ) ) {
+			|| null === $package ) {
 			return null;
 		}
 
 		try {
 
-			$package = $this->managed_package_for_browser( $type, $identifier, $expected_source_revision );
+			$package = $this->managed_package_for_browser( $package, $expected_source_revision );
 			if ( null === $package ) {
 				return null;
 			}
@@ -375,19 +381,20 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		string $channel,
 		string $nonce
 	): ?ReleaseTrackingPreflight {
+		$package = $this->authorized( 'inspect_candidate', $type, $identifier, $expected_source_revision, $nonce, $channel );
 		if ( ! RuntimeSupport::current()->allows_managed_operations()
 
 			|| '' === $release_id
 			|| '' === $tag
 			|| ! $this->valid_channel( $channel )
 
-			|| ! $this->authorized( 'inspect_candidate', $type, $identifier, $expected_source_revision, $nonce, $channel ) ) {
+			|| null === $package ) {
 			return null;
 		}
 
 		try {
 
-			$package = $this->managed_package_for_browser( $type, $identifier, $expected_source_revision );
+			$package = $this->managed_package_for_browser( $package, $expected_source_revision );
 			if ( null === $package ) {
 				return null;
 			}
@@ -441,8 +448,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		}
 	}
 
-	private function managed_package_for_browser( string $type, string $identifier, int $revision ): ?Package {
-		$package = $this->package( $type, $identifier );
+	private function managed_package_for_browser( Package $package, int $revision ): ?Package {
 		if ( PackageSource::RELEASE_ASSET !== $package->get_source()
 			|| $revision !== $package->get_source_revision()
 			|| ! $this->release_source_supported( $package ) ) {
@@ -491,13 +497,13 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			);
 		}
 
+		$package = $this->authorized( 'enable', $type, $identifier, $expected_source_revision, $nonce );
 		if ( ! $this->valid_channel( $channel )
 
-			|| ! $this->authorized( 'enable', $type, $identifier, $expected_source_revision, $nonce ) ) {
+			|| null === $package ) {
 			return ReleaseTrackingResult::failed( 'forbidden', 'Release tracking could not be enabled.' );
 		}
 		try {
-			$package      = $this->package( $type, $identifier );
 			$availability = $this->release_source_available( $type, $package );
 			if ( false === $availability ) {
 				return ReleaseTrackingResult::failed( 'release_repository_conflict', 'Published releases require exclusive use of this provider repository.' );
@@ -544,8 +550,12 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			$conflict      = false;
 			$unavailable   = false;
 			$changed       = $this->mutate_with_updater_lock(
-				function () use ( $type, $identifier, $expected_source_revision, $configuration, &$incompatible, &$conflict, &$unavailable ): bool {
+				function () use ( $type, $identifier, $expected_source_revision, $configuration, $package, &$incompatible, &$conflict, &$unavailable ): bool {
+					$token   = \RAN\AdoptionIdentity::of( $package );
 					$package = $this->package( $type, $identifier );
+					if ( null === $token || \RAN\AdoptionIdentity::of( $package ) !== $token ) {
+						return false;
+					}
 					if ( ! $this->release_source_supported( $package ) ) {
 						$incompatible = true;
 
@@ -569,7 +579,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 						$expected_source_revision,
 						PackageSource::RELEASE_ASSET,
 						$configuration,
-						function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0
+						function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0,
+						$token
 					);
 					if ( $changed ) {
 						( $this->invalidate_native )( $type );
@@ -627,13 +638,13 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			);
 		}
 
+		$package = $this->authorized( 'change_channel', $type, $identifier, $expected_source_revision, $nonce );
 		if ( ! $this->valid_channel( $channel )
 
-			|| ! $this->authorized( 'change_channel', $type, $identifier, $expected_source_revision, $nonce ) ) {
+			|| null === $package ) {
 			return ReleaseTrackingResult::failed( 'forbidden', 'The release track could not be changed.' );
 		}
 		try {
-			$package = $this->package( $type, $identifier );
 			if ( ! $this->release_source_supported( $package ) ) {
 				return $this->subdirectory_not_supported();
 			}
@@ -650,8 +661,13 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			}
 			$incompatible = false;
 			$changed      = $this->mutate_with_updater_lock(
-				function () use ( $type, $identifier, $expected_source_revision, $channel, &$incompatible ): bool {
-					if ( ! $this->release_source_supported( $this->package( $type, $identifier ) ) ) {
+				function () use ( $type, $identifier, $expected_source_revision, $channel, $package, &$incompatible ): bool {
+					$token   = \RAN\AdoptionIdentity::of( $package );
+					$current = $this->package( $type, $identifier );
+					if ( null === $token || \RAN\AdoptionIdentity::of( $current ) !== $token ) {
+						return false;
+					}
+					if ( ! $this->release_source_supported( $current ) ) {
 						$incompatible = true;
 
 						return false;
@@ -661,7 +677,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 						$identifier,
 						$expected_source_revision,
 						$channel,
-						function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0
+						function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0,
+						$token
 					);
 					if ( $changed ) {
 						( $this->invalidate_native )( $type );
@@ -704,11 +721,11 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			);
 		}
 
-		if ( ! $this->authorized( 'refresh', $type, $identifier, $expected_source_revision, $nonce ) ) {
+		$package = $this->authorized( 'refresh', $type, $identifier, $expected_source_revision, $nonce );
+		if ( null === $package ) {
 			return ReleaseTrackingResult::failed( 'forbidden', 'Release tracking could not be refreshed.' );
 		}
 		try {
-			$package = $this->package( $type, $identifier );
 			if ( ! $this->release_source_supported( $package ) ) {
 				return $this->subdirectory_not_supported();
 			}
@@ -752,18 +769,22 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			);
 		}
 
-		if ( ! $this->authorized( 'return_to_branch', $type, $identifier, $expected_source_revision, $nonce ) ) {
+		$package = $this->authorized( 'return_to_branch', $type, $identifier, $expected_source_revision, $nonce );
+		if ( null === $package ) {
 			return ReleaseTrackingResult::failed( 'forbidden', 'The package source could not be changed.' );
 		}
 		try {
-			$package = $this->package( $type, $identifier );
 			if ( PackageSource::RELEASE_ASSET !== $package->get_source()
 
 				|| $expected_source_revision !== $package->get_source_revision() ) {
 				return ReleaseTrackingResult::failed( 'source_changed', self::SOURCE_CHANGED_MESSAGE );
 			}
 			$changed = $this->mutate_with_updater_lock(
-				function () use ( $type, $identifier, $expected_source_revision ): bool {
+				function () use ( $type, $identifier, $expected_source_revision, $package ): bool {
+					$token = \RAN\AdoptionIdentity::of( $package );
+					if ( null === $token || \RAN\AdoptionIdentity::of( $this->package( $type, $identifier ) ) !== $token ) {
+						return false;
+					}
 					return $this->store->transition(
 						$type,
 						$identifier,
@@ -771,7 +792,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 						$expected_source_revision,
 						PackageSource::BRANCH,
 						null,
-						function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0
+						function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0,
+						$token
 					);
 				}
 			);
@@ -1136,15 +1158,18 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		int $source_revision,
 		string $nonce,
 		string $channel = ''
-	): bool {
+	): ?Package {
 		try {
-			return ( $this->can_manage )( $type )
-				&& ( $this->verify_nonce )(
-					$nonce,
-					$this->nonce_action( $operation, $type, $identifier, $source_revision, $channel )
-				);
+			if ( ! RuntimeSupport::current()->allows_managed_operations() || ! ( $this->can_manage )( $type ) ) {
+				return null;
+			}
+			$package = $this->package( $type, $identifier );
+			return ( $this->verify_nonce )(
+				$nonce,
+				$this->nonce_scope( $operation, $type, $identifier, $source_revision, $channel, $package )
+			) ? $package : null;
 		} catch ( Throwable ) {
-			return false;
+			return null;
 		}
 	}
 

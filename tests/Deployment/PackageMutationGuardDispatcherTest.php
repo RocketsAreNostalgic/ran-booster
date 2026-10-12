@@ -197,14 +197,16 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 			$_SERVER['HTTP_HX_REQUEST'] = 'true';
 		}
 		$_POST['ran_booster'] = array(
-			'action'      => $action,
-			'bulk_action' => 'policy-disabled',
-			'identifiers' => array( $identifier ),
+			'action'          => $action,
+			'bulk_action'     => 'policy-disabled',
+			'identifiers'     => array( $identifier ),
+			'adoption_tokens' => array( hash( 'sha256', $identifier ) => 'fixture:R_fixture:11111111-1111-4111-8111-111111111111' ),
 		);
 		$package              = new class( $identifier ) extends AbstractPackage {
 			public function __construct( private readonly string $identifier = '' ) {
 				$this->set_installation_slug( str_contains( $identifier, '/' ) ? dirname( $identifier ) : $identifier );
 				$this->set_repository( new ManagedRepository( 'fixture', 'owner/repository', 'R_fixture', 'main' ) );
+				$this->set_adoption_token( 'fixture:R_fixture:11111111-1111-4111-8111-111111111111' );
 			}
 
 			public function get_identifier(): mixed {

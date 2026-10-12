@@ -13,11 +13,13 @@ if ( ! is_string( $mode ) || preg_match( '/^[a-f0-9]{24}$/D', (string) $ran_boos
 	throw new RuntimeException( 'The hard-stop control arguments are invalid.' );
 }
 global $wpdb;
-$ran_booster_booster      = require __DIR__ . '/core-container-fixture.php';
-$ran_booster_attempts     = $ran_booster_booster->make( RAN\Deployment\DeploymentAttemptRepository::class );
-$ran_booster_table        = RAN\Storage\Database::attempt_table_name();
-$ran_booster_manual_slug  = 'hard-stop-' . $ran_booster_phase . '-' . $ran_booster_run_id;
-$ran_booster_webhook_slug = 'hard-stop-webhook-' . $ran_booster_phase . '-' . $ran_booster_run_id;
+$ran_booster_booster            = require __DIR__ . '/core-container-fixture.php';
+$ran_booster_attempts           = $ran_booster_booster->make( RAN\Deployment\DeploymentAttemptRepository::class );
+$ran_booster_table              = RAN\Storage\Database::attempt_table_name();
+$ran_booster_manual_slug        = 'hard-stop-' . $ran_booster_phase . '-' . $ran_booster_run_id;
+$ran_booster_webhook_slug       = 'hard-stop-webhook-' . $ran_booster_phase . '-' . $ran_booster_run_id;
+$ran_booster_identifier         = $ran_booster_manual_slug . '/fixture.php';
+$ran_booster_webhook_identifier = $ran_booster_webhook_slug . '/fixture.php';
 
 if ( 'cleanup' === $mode ) {
 	$ran_booster_ids  = $wpdb->get_col( $wpdb->prepare( 'SELECT id FROM %i WHERE package_slug IN (%s, %s)', $ran_booster_table, $ran_booster_manual_slug, $ran_booster_webhook_slug ) );
@@ -26,6 +28,9 @@ if ( 'cleanup' === $mode ) {
 		$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE option_name = %s AND option_value = %s', $wpdb->options, 'auto_updater.lock', $ran_booster_core ) );
 	}
 	$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE package_slug IN (%s, %s)', $ran_booster_table, $ran_booster_manual_slug, $ran_booster_webhook_slug ) );
+	if ( false === $wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE package_type = 1 AND provider = %s AND package IN (%s, %s)', ran_booster_table_name(), 'gh', $ran_booster_identifier, $ran_booster_webhook_identifier ) ) ) {
+		throw new RuntimeException( 'The hard-stop management fixtures could not be removed.' );
+	}
 	return;
 }
 
@@ -34,8 +39,32 @@ if ( 'seed' === $mode ) {
 	if ( null !== $ran_booster_core ) {
 		throw new RuntimeException( 'The hard-stop proof requires the WordPress updater lock to be idle.' );
 	}
-	$ran_booster_request         = new DeploymentRequest( 'org/' . $ran_booster_manual_slug, null, false, 'main', $ran_booster_manual_slug, null, DeploymentPolicy::AUTOMATIC, null );
-	$ran_booster_webhook_request = new DeploymentRequest( 'org/' . $ran_booster_webhook_slug, null, false, 'main', $ran_booster_webhook_slug, null, DeploymentPolicy::AUTOMATIC, null );
+	// Synthetic installed identities exercise real admission and worker locks without changing package files.
+	$ran_booster_tokens = array();
+	foreach ( array(
+		$ran_booster_identifier         => 'first-',
+		$ran_booster_webhook_identifier => 'webhook-',
+	) as $ran_booster_installed => $ran_booster_repository_prefix ) {
+		$ran_booster_repository_id                    = $ran_booster_repository_prefix . $ran_booster_run_id;
+		$ran_booster_tokens[ $ran_booster_installed ] = RAN\AdoptionIdentity::create( 'gh', $ran_booster_repository_id );
+		if ( 1 !== $wpdb->insert(
+			ran_booster_table_name(),
+			array(
+				'package'                => $ran_booster_installed,
+				'package_type'           => 1,
+				'repository'             => 'org/' . dirname( $ran_booster_installed ),
+				'provider'               => 'gh',
+				'provider_repository_id' => $ran_booster_repository_id,
+				'private'                => 0,
+				'deployment_policy'      => 'automatic',
+				'adoption_token'         => $ran_booster_tokens[ $ran_booster_installed ],
+			)
+		) ) {
+			throw new RuntimeException( 'The hard-stop management fixture could not be seeded.' );
+		}
+	}
+	$ran_booster_request         = new DeploymentRequest( 'org/' . $ran_booster_manual_slug, null, false, 'main', $ran_booster_manual_slug, null, DeploymentPolicy::AUTOMATIC, null, installed_identifier: $ran_booster_identifier, adoption_token: $ran_booster_tokens[ $ran_booster_identifier ] );
+	$ran_booster_webhook_request = new DeploymentRequest( 'org/' . $ran_booster_webhook_slug, null, false, 'main', $ran_booster_webhook_slug, null, DeploymentPolicy::AUTOMATIC, null, installed_identifier: $ran_booster_webhook_identifier, adoption_token: $ran_booster_tokens[ $ran_booster_webhook_identifier ] );
 	$ran_booster_attempts->admit_webhook_batch(
 		'gh',
 		'hard-stop-delivery-' . $ran_booster_phase . '-' . $ran_booster_run_id,

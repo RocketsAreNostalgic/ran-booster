@@ -59,6 +59,80 @@ Booster's own update target has a separate installation-provenance gate. See
 marker, source-checkout protection, explicit override, runtime-only handoff,
 administrator messaging, and release proof.
 
+## Adoption identity and recovery
+
+Each managed plugin or theme has one immutable `adoption_token`, stored with
+its management row. Its canonical format is
+`provider:percent-encoded-repository-id:lowercase-UUIDv4`. The provider is the
+registered code (`gh` for GitHub.com and `bb` for Bitbucket Cloud); repository
+IDs are opaque, case-sensitive strings, not numbers. Percent encoding preserves
+embedded delimiters, spaces and Unicode bytes. The parser accepts only the
+serializer's exact encoding, bounded to 643 ASCII bytes. Supported hosted
+providers already scope repository identity to their authority. A provider
+serving several authorities must distinguish them in its stable repository
+identity or provider registration; mutable repository names cannot supply it.
+
+Different provider or repository identity requires stopping management and
+adopting again. Repository renames that preserve stable identity, branch and
+channel changes, credentials, policies and Branch/Release switches retain the
+whole token. Re-adoption always creates a new UUID. Existing source revisions,
+settings snapshots and access generations remain separate checks. The token is
+public identifying data, never a credential or authorization.
+
+Schema 14 adds one nullable management column through an explicit upgrade from
+the verified schema 13. The same atomic schema change renames the existing SQL
+discriminator from `type` to `package_type`, so already-running schema-13 writers
+cannot create tokenless rows after the upgrade. Core's PHP readers retain their
+existing `type` values. The upgrade initializes valid existing provider/repository
+identities without hydrating unrelated corrupt settings. Interrupted upgrades
+preserve already assigned tokens. After upgrade, reads never mint or repair a
+missing or malformed token. New installations and imports create identity only
+when adoption succeeds; prospective operations have no existing adoption.
+Blueprints do not export lifetime identity. Faithful database moves preserve
+stored identity; exact clones and restores also copy it and its associated work.
+There is no restore-proof invalidation promise.
+
+The **Recover management** links in package lists and Troubleshooting open an
+installed-target selector before managed inventory hydration. Confirmation
+binds the exact management row and installed plugin main file or theme
+`style.css`. Management-only removal accepts stable symlinked installations;
+confirmation also captures their link identity and resolved target. Link
+replacement or retargeting invalidates confirmation. Destructive removal keeps
+its separate filesystem safeguards. **Stop managing** preserves installed files,
+activation, package data, shared credentials and deployment history. It only removes the confirmed
+management record. Link that installed target again through the ordinary
+validated adoption flow; for releases, then enable release tracking. Prospective
+release installation is not the recovery route for retained installed files.
+Provider unavailability can prevent validated re-adoption, but does not by
+itself prevent local recovery.
+
+Recovery refuses an unknown source, damaged or absent token, provider/repository
+disagreement, ambiguous installed identity, unhealthy storage or changed
+confirmation. Legacy rows whose corrupt provider/repository fields could not
+be initialized also remain refused. Eligible settings corruption includes
+privacy, source revision, policy, subdirectory and release configuration. This
+is not database repair. Queued, running and unresolved target work blocks
+removal; unknown legacy target attribution also blocks it. The bounded check
+refuses more than 64 unresolved operations of the same package type rather than
+ignoring an unexamined operation. Independent filesystem writers do not honor
+WordPress's updater lock and remain outside its serialization guarantee.
+
+Removal holds the updater lock and locks the management row before inspecting
+attempts. Admission locks that same row before inserting work, so a request
+captured before removal cannot be admitted for its replacement. Individual and
+bulk commands, execution snapshots, release settings and native update authority
+retain the captured token. Tokenless legacy update requests remain readable
+history but cannot execute; they are not relabelled with today's adoption.
+
+Branch checks and current deployment summaries select the captured lifetime.
+Delayed old results remain historical and cannot restore verification or
+execution authority. Summary SQL selects a canonical token fragment before
+loading bounded candidates, then checks parsed equality; malformed candidates
+make the summary unavailable. Target-specific cache cleanup is best effort and
+does not make optional reporting storage a recovery dependency. New reporting
+consumers must capture lifetime alongside source/revision/access before work,
+retain departed-adoption history and leave repository-only activity unassociated.
+
 ## The short model
 
 There is one installer but three operational paths:

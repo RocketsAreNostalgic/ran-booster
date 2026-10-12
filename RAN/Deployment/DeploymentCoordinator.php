@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Deployment;
 
+use RAN\AdoptionIdentity;
 use RAN\Logging\BoosterLogger;
 use RAN\Package;
 use RAN\PackageArtifactLimit;
@@ -148,7 +149,8 @@ class DeploymentCoordinator {
 			throw new RuntimeException( 'The managed package changed after this form was opened.' );
 		}
 		$expected = $command->expected_package;
-		if ( $package->get_provider_code() !== $expected['provider']
+		if ( null === AdoptionIdentity::of( $package ) || AdoptionIdentity::of( $package ) !== $expected['adoption_token']
+			|| $package->get_provider_code() !== $expected['provider']
 			|| ! hash_equals( (string) $package->get_provider_repository_id(), (string) $expected['provider_repository_id'] )
 			|| ! hash_equals( (string) $package->get_repository(), (string) $expected['repository'] )
 			|| ! hash_equals( (string) $package->get_branch(), (string) $expected['branch'] )
@@ -368,7 +370,9 @@ class DeploymentCoordinator {
 			is_string( $package->get_subdirectory() ) ? $package->get_subdirectory() : null,
 			$package->get_deployment_policy(),
 			$user_id,
-			PackageArtifactLimit::resolve()
+			PackageArtifactLimit::resolve(),
+			(string) $package->get_identifier(),
+			AdoptionIdentity::of( $package ) ?? throw new RuntimeException( 'The adoption identity is unavailable.' )
 		);
 	}
 

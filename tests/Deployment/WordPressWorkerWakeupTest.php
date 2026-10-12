@@ -26,7 +26,7 @@ final class WordPressWorkerWakeupTest extends TestCase {
 		WordPressWorkerWakeupCron::reset();
 		$this->database = new WordPressWorkerWakeupDatabase();
 		$this->wakeup   = new WordPressWorkerWakeup(
-			new DeploymentAttemptRepository( $this->database, 'wp_ran_booster_deployment_attempts' )
+			new DeploymentAttemptRepository( $this->database, 'wp_ran_booster_deployment_attempts', database_lifecycle: $this->createStub( \RAN\Storage\Database::class ) )
 		);
 	}
 

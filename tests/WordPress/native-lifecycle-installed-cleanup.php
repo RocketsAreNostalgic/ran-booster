@@ -77,7 +77,7 @@ foreach ( $ran_booster_items as $ran_booster_item ) {
 		ran_booster_table_name(),
 		array(
 			'package'                => $ran_booster_identifier,
-			'type'                   => 'plugin' === $type ? 1 : 2,
+			'package_type'           => 'plugin' === $type ? 1 : 2,
 			'provider'               => 'gh',
 			'provider_repository_id' => (string) ( 940000 + $ran_booster_number ),
 			'repository'             => 'ran-booster-c4/' . $ran_booster_name,

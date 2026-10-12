@@ -31,7 +31,8 @@ final class PackageAdminController {
 		private ?ProviderRegistry $providers = null,
 		private ?DeploymentAdminPresenter $deployments = null,
 		private ?BulkPackageActionService $bulk_actions = null,
-		private ?PublicRepositoryLookupProfileStore $public_lookup_profiles = null
+		private ?PublicRepositoryLookupProfileStore $public_lookup_profiles = null,
+		private ?\RAN\PackageRemoval\PackageRemovalService $removals = null
 	) {
 	}
 
@@ -41,6 +42,9 @@ final class PackageAdminController {
 
 		if ( ! $post_request ) {
 			return false;
+		}
+		if ( in_array( $action, array( 'recover-plugin', 'recover-theme' ), true ) ) {
+			return $this->recover( $dashboard, $action, $request );
 		}
 		$capabilities = match ( $action ) {
 			'install-plugin' => array( 'install_plugins' ),
@@ -94,6 +98,45 @@ final class PackageAdminController {
 		}
 
 		return $dashboard->post_package_operation( $action, $request );
+	}
+
+	/** @param array<string, mixed> $request */
+	private function recover( Dashboard $dashboard, string $action, array $request ): bool|string {
+		$type = 'recover-plugin' === $action ? 'plugin' : 'theme';
+		if ( ! current_user_can( 'update_' . $type . 's' ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to manage this package.', 'ran-booster' ) );
+		}
+		try {
+			$fields = array();
+			foreach ( array( 'identifier', 'adoption_token', 'digest', 'installed_digest' ) as $field ) {
+				if ( ! is_string( $request[ $field ] ?? null ) || '' === $request[ $field ] ) {
+					throw new InvalidArgumentException( 'The recovery confirmation is incomplete.' );
+				}
+				$fields[ $field ] = wp_unslash( $request[ $field ] );
+			}
+			check_admin_referer( self::recovery_action( $type, $fields['identifier'], $fields['adoption_token'], $fields['digest'], $fields['installed_digest'] ) );
+			if ( '1' !== ( $request['confirm_package_removal'] ?? null ) ) {
+				throw new InvalidArgumentException( 'Confirm that Booster should stop managing this exact package.' );
+			}
+			( $this->removals ?? throw new LogicException( 'Recovery is unavailable.' ) )->recover( $type, $fields['identifier'], $fields['adoption_token'], $fields['digest'], $fields['installed_digest'] );
+			return add_query_arg(
+				array(
+					'page'                      => 'ran-booster-' . $type . 's-create',
+					'relink'                    => $fields['identifier'],
+					'ran_booster_result'        => 'unlink',
+					'ran_booster_package'       => $fields['identifier'],
+					'_ran_booster_notice_nonce' => wp_create_nonce( 'ran-booster-package-success|' . $type . '|unlink|' . $fields['identifier'] ),
+				),
+				is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' )
+			);
+		} catch ( Throwable $failure ) {
+			$dashboard->add_failure_message( new WP_Error( 'ran_booster_recovery_failed', __( 'Booster could not confirm safe recovery. Refresh this page and review the current management and operation state before trying again.', 'ran-booster' ) ), $failure, array( 'step' => 'package_recovery' ) );
+		}
+		return false;
+	}
+
+	public static function recovery_action( string $type, string $identifier, string $token, string $digest, string $installed_digest ): string {
+		return 'ran-booster-recover|' . hash( 'sha256', http_build_query( array( $type, $identifier, $token, $digest, $installed_digest ), '', '&', PHP_QUERY_RFC3986 ) );
 	}
 
 	/** @param array<string, mixed> $request */
@@ -646,7 +689,8 @@ final class PackageAdminController {
 	public static function repository_branch_check_action( Package $package, string $type ): string {
 		return 'ran-booster-repository-branch-check|'
 			. $type . '|' . (string) $package->get_identifier() . '|'
-			. $package->get_source()->value . '|' . $package->get_source_revision();
+			. $package->get_source()->value . '|' . $package->get_source_revision() . '|'
+			. ( \RAN\AdoptionIdentity::of( $package ) ?? throw new LogicException( 'The adoption identity is unavailable.' ) );
 	}
 
 	/** @param array<string, mixed> $request */

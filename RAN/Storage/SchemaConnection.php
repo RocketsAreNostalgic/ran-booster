@@ -9,12 +9,15 @@ abstract class SchemaConnection {
 
 	public string $last_error = '';
 
+	abstract public function query( string $query ): int|bool;
+
 	abstract public function get_charset_collate(): string;
 
 	abstract public function esc_like( string $value ): string;
 
 	abstract public function prepare( string $query, mixed ...$arguments ): mixed;
 
+	/** @phpstan-impure */
 	abstract public function get_var( string $query ): mixed;
 
 	abstract public function get_row( string $query ): mixed;

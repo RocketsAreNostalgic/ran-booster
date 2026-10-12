@@ -93,7 +93,8 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-09-14 00:00:00 UTC' ),
 			function ( int $length ): string {
 				return str_repeat( chr( $this->random_byte++ ), $length );
-			}
+			},
+			$this->createStub( \RAN\Storage\Database::class )
 		);
 		$this->plugins          = new ParityPluginRepository();
 		$this->themes           = new ParityThemeRepository();
@@ -412,7 +413,9 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 	}
 
 	private function running_update(): DeploymentAttempt {
-		$request = new DeploymentRequest(
+		$identifier                                = (string) $this->plugins->managed['fixture']->get_identifier();
+		$this->database->management[ $identifier ] = 'gh:R_example:11111111-1111-4111-8111-111111111111';
+		$request                                   = new DeploymentRequest(
 			'owner/example',
 			null,
 			false,
@@ -421,7 +424,9 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			null,
 			DeploymentPolicy::AUTOMATIC,
 			7,
-			self::MAXIMUM_ARTIFACT_BYTES
+			self::MAXIMUM_ARTIFACT_BYTES,
+			$identifier,
+			'gh:R_example:11111111-1111-4111-8111-111111111111'
 		);
 
 		return $this->attempts->admit_and_claim_manual(
@@ -462,7 +467,9 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 	}
 
 	private function running_webhook_update(): DeploymentAttempt {
-		$request = new DeploymentRequest(
+		$identifier                                = (string) $this->plugins->managed['fixture']->get_identifier();
+		$this->database->management[ $identifier ] = 'gh:R_example:11111111-1111-4111-8111-111111111111';
+		$request                                   = new DeploymentRequest(
 			'owner/example',
 			null,
 			false,
@@ -471,7 +478,9 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			null,
 			DeploymentPolicy::AUTOMATIC,
 			null,
-			self::MAXIMUM_ARTIFACT_BYTES
+			self::MAXIMUM_ARTIFACT_BYTES,
+			$identifier,
+			'gh:R_example:11111111-1111-4111-8111-111111111111'
 		);
 		$this->attempts->admit_webhook_batch(
 			'gh',
@@ -546,6 +555,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 				'AuthorName'  => '',
 			)
 		);
+		$plugin->set_adoption_token( 'gh:' . rawurlencode( $repository_id ) . ':11111111-1111-4111-8111-111111111111' );
 		$plugin->set_repository( new ManagedRepository( 'gh', $repository, $repository_id, 'main' ) );
 		$plugin->set_deployment_policy( $policy );
 		$plugin->set_source( PackageSource::BRANCH, 1 );

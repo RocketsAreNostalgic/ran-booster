@@ -1299,7 +1299,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$this->release_metadata_registry()
 		);
 
-		$expected_action = 'ran-booster-release-tracking-enable-plugin-example/example.php-1';
+		$expected_action = 'ran-booster-release-tracking-enable-plugin-example/example.php-1-gh:123456789:11111111-1111-4111-8111-111111111111';
 
 		$lock   = new RuntimeUpdaterLock();
 		$facade = $this->facade(
@@ -1452,7 +1452,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 		$plugin_nonce = $facade->nonce_action( 'preflight', 'plugin', 'example/example.php', 1, 'prerelease' );
 		$theme_nonce  = $facade->nonce_action( 'preflight', 'theme', 'example-theme', 1, 'stable' );
-		self::assertSame( 'ran-booster-release-tracking-preflight-plugin-example/example.php-1-prerelease', $plugin_nonce );
+		self::assertSame( 'ran-booster-release-tracking-preflight-plugin-example/example.php-1-gh:123456789:11111111-1111-4111-8111-111111111111-prerelease', $plugin_nonce );
 		self::assertTrue( $facade->preflight( 'plugin', 'example/example.php', 1, 'prerelease', $plugin_nonce )?->ready() );
 		self::assertTrue( $facade->preflight( 'theme', 'example-theme', 1, 'stable', $theme_nonce )?->ready() );
 
@@ -2140,7 +2140,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$providers
 		);
 		$registrar->reserve_core_self_update_target( $identifier );
-		$expected_action = 'ran-booster-release-tracking-enable-plugin-' . $identifier . '-1';
+		$expected_action = 'ran-booster-release-tracking-enable-plugin-' . $identifier . '-1-gh:123456789:11111111-1111-4111-8111-111111111111';
 		$facade          = $this->facade(
 			$plugins,
 			$themes,
@@ -2182,7 +2182,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			new RuntimeUpdaterLock(),
 			$this->release_metadata_registry( collision: true )
 		);
-		$expected_action = 'ran-booster-release-tracking-enable-plugin-example/example.php-1';
+		$expected_action = 'ran-booster-release-tracking-enable-plugin-example/example.php-1-gh:123456789:11111111-1111-4111-8111-111111111111';
 		$facade          = $this->facade(
 			$plugins,
 			$themes,
@@ -2694,7 +2694,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$facade = $this->nonce_facade();
 
 		self::assertSame(
-			'ran-booster-release-tracking-refresh-plugin-example/example.php-1',
+			'ran-booster-release-tracking-refresh-plugin-example/example.php-1-gh:123456789:11111111-1111-4111-8111-111111111111',
 			$facade->nonce_action( 'refresh', 'plugin', 'example/example.php', 1 )
 		);
 		self::assertNotSame(
@@ -2702,7 +2702,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$facade->nonce_action( 'refresh', 'plugin', 'example/example.php', 2 )
 		);
 		self::assertSame(
-			'ran-booster-release-tracking-change_channel-plugin-example/example.php-1',
+			'ran-booster-release-tracking-change_channel-plugin-example/example.php-1-gh:123456789:11111111-1111-4111-8111-111111111111',
 			$facade->nonce_action( 'change_channel', 'plugin', 'example/example.php', 1 )
 		);
 	}
@@ -2867,7 +2867,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 		$registrar->register();
 		$invalidated    = array();
-		$expected_nonce = 'ran-booster-release-tracking-change_channel-plugin-example/example.php-1';
+		$expected_nonce = 'ran-booster-release-tracking-change_channel-plugin-example/example.php-1-gh:123456789:11111111-1111-4111-8111-111111111111';
 		$lock           = new RuntimeUpdaterLock();
 		$facade         = $this->facade(
 			$plugins,
@@ -2905,6 +2905,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 					'expected_revision' => 1,
 					'channel'           => 'stable',
 					'user_id'           => $expected_user_id,
+					'adoption_token'    => 'gh:123456789:11111111-1111-4111-8111-111111111111',
 				),
 			),
 			$store->channel_changes
@@ -3030,10 +3031,101 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 0, $lock->acquires );
 	}
 
+	public function test_recreated_native_adoption_rejects_registration_and_pending_download_for_both_types(): void {
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			foreach ( array( false, true ) as $download_started ) {
+				$this->repository_rows = array();
+				$identifier            = 'plugin' === $type ? self::NATIVE_PLUGIN : 'example-theme';
+				$registered            = $this->package( $type, $identifier, 'example', DeploymentPolicy::MANUAL );
+				$replacement           = $this->package( $type, $identifier, 'example', DeploymentPolicy::MANUAL, uuid: '22222222-2222-4222-8222-222222222222' );
+				$live                  = $registered;
+				$plugins               = $this->createStub( PluginRepository::class );
+				$themes                = $this->createStub( ThemeRepository::class );
+				$plugins->method( 'all_deployment_plugins' )->willReturn( 'plugin' === $type ? array( $identifier => $registered ) : array() );
+				$themes->method( 'all_deployment_themes' )->willReturn( 'theme' === $type ? array( $identifier => $registered ) : array() );
+				$read = static function () use ( &$live ): Package {
+					return $live;
+				};
+				$plugins->method( 'booster_plugin_from_file' )->willReturnCallback( $read );
+				$themes->method( 'booster_theme_from_stylesheet' )->willReturnCallback( $read );
+				$store     = new RuntimeReleaseStore( array( $type . "\0" . $identifier => new ManagedReleaseConfiguration( 'example', 'plugin' === $type ? 'example.php' : 'style.css' ) ) );
+				$lock      = new RuntimeUpdaterLock();
+				$registrar = $this->registrar( $plugins, $themes, $store, $lock, $this->release_metadata_registry() );
+				$registrar->register();
+				$extra = array(
+					$type    => $identifier,
+					'action' => 'update',
+					'type'   => $type,
+				);
+				if ( $download_started ) {
+					self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), $extra ) );
+				}
+				$live = $replacement;
+				$this->assert_native_authority_error(
+					$download_started
+					? $registrar->fence_native_mutation( false, $extra )
+					: $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), $extra )
+				);
+				self::assertSame( $download_started ? 1 : 0, $lock->acquires );
+				self::assertSame( $download_started ? array( 'runtime-lock' ) : array(), $lock->releases );
+			}
+		}
+	}
+
+	public function test_recreated_adoption_rejects_old_release_settings_forms_and_replacement_during_authorization(): void {
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			foreach ( array( PackageSource::BRANCH, PackageSource::RELEASE_ASSET ) as $source ) {
+				foreach ( array( false, true ) as $replace_after_nonce ) {
+					$this->repository_rows = array();
+					$identifier            = 'plugin' === $type ? self::NATIVE_PLUGIN : 'example-theme';
+					$old                   = $this->package( $type, $identifier, 'example', DeploymentPolicy::MANUAL, source: $source );
+					$new                   = $this->package( $type, $identifier, 'example', DeploymentPolicy::MANUAL, source: $source, uuid: '22222222-2222-4222-8222-222222222222' );
+					$live                  = $old;
+					$plugins               = $this->createStub( PluginRepository::class );
+					$themes                = $this->createStub( ThemeRepository::class );
+					$read                  = static function () use ( &$live ): Package {
+						return $live;
+					};
+					$plugins->method( 'booster_plugin_from_file' )->willReturnCallback( $read );
+					$themes->method( 'booster_theme_from_stylesheet' )->willReturnCallback( $read );
+					$store     = new RuntimeReleaseStore( array( $type . "\0" . $identifier => new ManagedReleaseConfiguration( 'example', 'plugin' === $type ? 'example.php' : 'style.css' ) ) );
+					$lock      = new RuntimeUpdaterLock();
+					$providers = $this->release_metadata_registry();
+					$facade    = $this->facade(
+						$plugins,
+						$themes,
+						$store,
+						$this->registrar( $plugins, $themes, $store, $lock, $providers ),
+						$lock,
+						$providers,
+						static fn (): bool => true,
+						static function ( string $nonce, string $action ) use ( &$live, $new, $replace_after_nonce ): bool {
+							$valid = $nonce === $action;
+							if ( $valid && $replace_after_nonce ) {
+								$live = $new;
+							}
+							return $valid;
+						},
+						metadata_eligible: static fn (): bool => true
+					);
+					$operation = PackageSource::BRANCH === $source ? 'enable' : 'return_to_branch';
+					$nonce     = $facade->nonce_action( $operation, $type, $identifier, 1 );
+					$run       = static fn () => PackageSource::BRANCH === $source
+					? $facade->enable( $type, $identifier, 1, 'stable', $nonce )
+					: $facade->return_to_branch( $type, $identifier, 1, $nonce );
+					$live      = $replace_after_nonce ? $old : $new;
+					self::assertSame( $replace_after_nonce ? 'source_changed' : 'forbidden', $run()->code() );
+					self::assertSame( array(), $store->transitions );
+				}
+			}
+		}
+	}
+
 	private function nonce_facade(): NativeReleaseTrackingFacade {
 		$plugins = $this->createStub( PluginRepository::class );
-		$themes  = $this->createStub( ThemeRepository::class );
-		$store   = new RuntimeReleaseStore();
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL ) );
+		$themes = $this->createStub( ThemeRepository::class );
+		$store  = new RuntimeReleaseStore();
 
 		return $this->facade(
 			$plugins,
@@ -3185,9 +3277,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		int $source_revision = 1,
 		?string $subdirectory = null,
 		string $repository_id = '123456789',
-		?string $provider_repository_id = null
+		?string $provider_repository_id = null,
+		string $uuid = '11111111-1111-4111-8111-111111111111'
 	): Package {
-		$package = $this->createStub( Package::class );
+		$package = $this->createStub( \RAN\AbstractPackage::class );
+		$package->method( 'get_adoption_token' )->willReturn( $provider . ':' . rawurlencode( $provider_repository_id ?? $repository_id ) . ':' . $uuid );
 		$package->method( 'get_identifier' )->willReturn( $identifier );
 		$package->method( 'get_slug' )->willReturn( $slug );
 		$package->method( 'get_deployment_policy' )->willReturn( $policy );

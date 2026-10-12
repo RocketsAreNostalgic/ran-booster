@@ -21,21 +21,21 @@ if ( ! $ran_booster_container instanceof CoreContainer ) {
 
 $ran_booster_database = $ran_booster_container->make( Database::class );
 $ran_booster_database->require_supported();
-$ran_booster_database->install();
+( new Database() )->install();
 
 global $wpdb;
 $ran_booster_package_table = ran_booster_table_name();
 $ran_booster_attempt_table = Database::attempt_table_name();
 
-if ( '13.0' !== Database::$booster_db_version ) {
-	throw new RuntimeException( 'The database smoke requires the schema 13.0 lifecycle.' );
+if ( '14.0' !== Database::$booster_db_version ) {
+	throw new RuntimeException( 'The database smoke requires the schema 14.0 lifecycle.' );
 }
 
 $ran_booster_schema_seven_package = array(
 	'package'                => 'ran-booster-schema-seven-marker/ran-booster-schema-seven-marker.php',
 	'repository'             => 'example/schema-seven-marker',
 	'branch'                 => 'schema-seven',
-	'type'                   => 1,
+	'package_type'           => 1,
 	'deployment_policy'      => DeploymentPolicy::DISABLED->value,
 	'provider'               => 'gh',
 	'provider_repository_id' => 'schema-seven-marker',
@@ -140,6 +140,52 @@ try {
 		|| false === $wpdb->insert( $ran_booster_attempt_table, $ran_booster_schema_seven_attempt ) ) {
 		throw new RuntimeException( 'The database smoke could not seed hard-cut preservation rows.' );
 	}
+	// The disposable installation must have no unrelated management rows before changing its fixture schema.
+	if ( 1 !== (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', $ran_booster_package_table ) ) ) {
+		throw new RuntimeException( 'The migration proof refuses unrelated management records.' );
+	}
+	$ran_booster_legacy_before  = $ran_booster_fetch_row( $ran_booster_package_table, 'package', $ran_booster_schema_seven_package['package'] );
+	$ran_booster_history_before = $ran_booster_fetch_row( $ran_booster_attempt_table, 'correlation_id', $ran_booster_schema_seven_attempt['correlation_id'] );
+	if ( false === $wpdb->query( $wpdb->prepare( 'ALTER TABLE %i CHANGE COLUMN package_type type tinyint(3) unsigned NOT NULL, DROP COLUMN adoption_token', $ran_booster_package_table ) ) ) {
+		throw new RuntimeException( 'The exact predecessor schema could not be prepared.' );
+	}
+	$ran_booster_set_schema_version( '13.0' );
+	( new Database() )->install();
+	$ran_booster_migrated = $ran_booster_fetch_row( $ran_booster_package_table, 'package', $ran_booster_schema_seven_package['package'] );
+	$ran_booster_token    = $ran_booster_migrated['adoption_token'] ?? null;
+	if ( ! is_string( $ran_booster_token ) || ! \RAN\AdoptionIdentity::matches( $ran_booster_token, 'gh', 'schema-seven-marker' ) ) {
+		throw new RuntimeException( 'The predecessor record did not receive its first adoption identity.' );
+	}
+	unset( $ran_booster_legacy_before['adoption_token'], $ran_booster_migrated['adoption_token'] );
+	if ( $ran_booster_legacy_before !== $ran_booster_migrated
+		|| $ran_booster_history_before !== $ran_booster_fetch_row( $ran_booster_attempt_table, 'correlation_id', $ran_booster_schema_seven_attempt['correlation_id'] ) ) {
+		throw new RuntimeException( 'Migration changed legacy package settings or invented history identity.' );
+	}
+	// Resume the earlier schema14 candidate shape (type plus token) without reminting identities.
+	if ( false === $wpdb->query( $wpdb->prepare( 'ALTER TABLE %i CHANGE COLUMN package_type type tinyint(3) unsigned NOT NULL', $ran_booster_package_table ) ) ) {
+		throw new RuntimeException( 'The prior candidate schema could not be prepared.' );
+	}
+	$ran_booster_set_schema_version( '13.0' );
+	( new Database() )->install();
+	$ran_booster_prior_candidate = $ran_booster_fetch_row( $ran_booster_package_table, 'package', $ran_booster_schema_seven_package['package'] );
+	if ( ( $ran_booster_prior_candidate['adoption_token'] ?? null ) !== $ran_booster_token ) {
+		throw new RuntimeException( 'The prior candidate restart changed a stored adoption identity.' );
+	}
+	// Simulate a restart after DDL/backfill but before the version marker was committed.
+	$ran_booster_set_schema_version( '13.0' );
+	( new Database() )->install();
+	( new Database() )->install();
+	$ran_booster_restarted = $ran_booster_fetch_row( $ran_booster_package_table, 'package', $ran_booster_schema_seven_package['package'] );
+	if ( ( $ran_booster_restarted['adoption_token'] ?? null ) !== $ran_booster_token ) {
+		throw new RuntimeException( 'Migration restart or repeated installation reminted adoption identity.' );
+	}
+	if ( 1 !== $wpdb->update( $ran_booster_package_table, array( 'adoption_token' => null ), array( 'package' => $ran_booster_schema_seven_package['package'] ) ) ) {
+		throw new RuntimeException( 'The completed-migration corruption fixture could not be prepared.' );
+	}
+	( new Database() )->install();
+	if ( null !== ( $ran_booster_fetch_row( $ran_booster_package_table, 'package', $ran_booster_schema_seven_package['package'] )['adoption_token'] ?? null ) ) {
+		throw new RuntimeException( 'Completed migration silently regenerated corrupt identity.' );
+	}
 	$ran_booster_assert_rejected_version( '6.0', 'unsupported_old_schema' );
 	$ran_booster_assert_rejected_version( '7.0', 'unsupported_old_schema' );
 	$ran_booster_assert_rejected_version( '8.0', 'unsupported_old_schema' );
@@ -148,7 +194,7 @@ try {
 	$ran_booster_assert_rejected_version( '11.0', 'unsupported_old_schema' );
 	$ran_booster_assert_rejected_version( '12.0', 'unsupported_old_schema' );
 	$ran_booster_assert_rejected_version( '10.5', 'unknown_schema_version' );
-	$ran_booster_assert_rejected_version( '14.0', 'newer_schema' );
+	$ran_booster_assert_rejected_version( '15.0', 'newer_schema' );
 	$ran_booster_assert_rejected_version( 'not-a-version', 'malformed_schema_version' );
 
 	foreach ( array( $ran_booster_package_table, $ran_booster_attempt_table ) as $ran_booster_table ) {
@@ -194,7 +240,6 @@ try {
 	if ( DeploymentPolicy::DISABLED !== $ran_booster_stored->get_deployment_policy() ) {
 		throw new RuntimeException( 'The database smoke could not verify its package record.' );
 	}
-	$ran_booster_packages->unlink( $ran_booster_identifier )->require_success();
 
 	$ran_booster_attempts = $ran_booster_container->make( DeploymentAttemptRepository::class );
 	$ran_booster_request  = new DeploymentRequest(
@@ -205,7 +250,9 @@ try {
 		'ran-booster-database-smoke',
 		null,
 		DeploymentPolicy::DISABLED,
-		1
+		1,
+		adoption_token: $ran_booster_stored->get_adoption_token(),
+		installed_identifier: $ran_booster_identifier
 	);
 	$ran_booster_attempt  = $ran_booster_attempts->admit_and_claim_manual(
 		'update',

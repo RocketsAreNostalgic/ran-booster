@@ -78,6 +78,10 @@ $repository_placeholder = array() === $locator_examples
 	: implode( ' or ', $locator_examples );
 
 ?>
+<p><?php esc_html_e( 'Recover management without changing installed files:', 'ran-booster' ); ?>
+<a href="<?php echo esc_url( $admin_base . '?page=ran-booster-plugins&recovery=1' ); ?>"><?php esc_html_e( 'Plugins', 'ran-booster' ); ?></a> ·
+<a href="<?php echo esc_url( $admin_base . '?page=ran-booster-themes&recovery=1' ); ?>"><?php esc_html_e( 'Themes', 'ran-booster' ); ?></a></p>
+
 <section id="ran-booster-troubleshooting-diagnostics-region" class="ran-booster-page-shell ran-booster-panel ran-booster-troubleshooting" aria-labelledby="ran-booster-troubleshooting-heading">
 	<header class="ran-booster-page-shell__header ran-booster-troubleshooting__header">
 		<p class="ran-booster-eyebrow"><?php esc_html_e( 'Diagnostics', 'ran-booster' ); ?></p>

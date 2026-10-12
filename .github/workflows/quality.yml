@@ -643,6 +643,16 @@ jobs:
                 RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
             run: composer test:database-storage-smoke
 
+          - name: Prove delayed schema13 writer fencing
+            if: ${{ matrix.suite == 'critical' }}
+            env:
+                RAN_BOOSTER_RECOVERY_TEST_DISPOSABLE: '1'
+                RAN_BOOSTER_RECOVERY_TEST_URL: 'http://localhost'
+                RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
+            run: |
+                printf '%s\n' 'RAN Booster disposable test site' > build/wordpress/.ran-booster-disposable-test-site
+                bash tests/WordPress/adoption-migration-writer.sh
+
           - name: Prove normal managed-theme registration
             if: ${{ matrix.database == 'MySQL 8.4' }}
             env:
@@ -672,6 +682,14 @@ jobs:
             run: |
                 printf '%s\n' 'RAN Booster disposable test site' > build/wordpress/.ran-booster-disposable-test-site
                 composer test:release-capability-installed
+
+          - name: Prove installed corrupt-management recovery
+            if: ${{ matrix.suite == 'critical' }}
+            env:
+                RAN_BOOSTER_RECOVERY_TEST_DISPOSABLE: '1'
+                RAN_BOOSTER_RECOVERY_TEST_URL: 'http://localhost'
+                RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
+            run: bash tests/WordPress/adoption-recovery-smoke.sh
 
           - name: Prove native updater-lock election
             if: ${{ matrix.suite == 'critical' }}

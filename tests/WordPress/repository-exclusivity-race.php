@@ -47,22 +47,22 @@ if ( 'setup' === $action ) {
 	$wpdb->delete(
 		$ran_booster_table,
 		array(
-			'package' => $ran_booster_package,
-			'type'    => 1,
+			'package'      => $ran_booster_package,
+			'package_type' => 1,
 		)
 	);
 	$wpdb->delete(
 		$ran_booster_table,
 		array(
-			'package' => $ran_booster_theme,
-			'type'    => 2,
+			'package'      => $ran_booster_theme,
+			'package_type' => 2,
 		)
 	);
 	$wpdb->insert(
 		$ran_booster_table,
 		array(
 			'package'                => $ran_booster_package,
-			'type'                   => 1,
+			'package_type'           => 1,
 			'repository'             => 'example/exclusivity-fixture',
 			'branch'                 => 'main',
 			'provider'               => 'gh',
@@ -74,6 +74,7 @@ if ( 'setup' === $action ) {
 			'source_revision'        => 1,
 			'subdirectory'           => null,
 			'release_configuration'  => null,
+			'adoption_token'         => \RAN\AdoptionIdentity::create( 'gh', 'race-' . $ran_booster_run_id ),
 		)
 	);
 	return;
@@ -83,15 +84,15 @@ if ( 'cleanup' === $action ) {
 	$wpdb->delete(
 		$ran_booster_table,
 		array(
-			'package' => $ran_booster_package,
-			'type'    => 1,
+			'package'      => $ran_booster_package,
+			'package_type' => 1,
 		)
 	);
 	$wpdb->delete(
 		$ran_booster_table,
 		array(
-			'package' => $ran_booster_theme,
-			'type'    => 2,
+			'package'      => $ran_booster_theme,
+			'package_type' => 2,
 		)
 	);
 	// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Best-effort cleanup tolerates an already-removed disposable fixture or stopped child process. Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
@@ -182,7 +183,7 @@ $ran_booster_database = new class( $wpdb, $ran_booster_ready, $ran_booster_relea
 $wpdb           = $ran_booster_database;
 $ran_booster_ok = false;
 if ( 'release' === $action ) {
-	$ran_booster_ok = ( new ManagedReleaseStore( $ran_booster_database ) )->transition( 'plugin', $ran_booster_package, PackageSource::BRANCH, 1, PackageSource::RELEASE_ASSET, new ManagedReleaseConfiguration( 'exclusivity-root', 'exclusivity-root.php' ), 1 );
+	$ran_booster_ok = ( new ManagedReleaseStore( $ran_booster_database ) )->transition( 'plugin', $ran_booster_package, PackageSource::BRANCH, 1, PackageSource::RELEASE_ASSET, new ManagedReleaseConfiguration( 'exclusivity-root', 'exclusivity-root.php' ), 1, ( new \RAN\Storage\PluginRepository() )->booster_plugin_from_file( $ran_booster_package )->get_adoption_token() ?? '' );
 } else {
 	$ran_booster_wp_theme = wp_get_theme( $ran_booster_theme );
 	$ran_booster_managed  = Theme::from_wp_theme_object( wp_theme: $ran_booster_wp_theme );

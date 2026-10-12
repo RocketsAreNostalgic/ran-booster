@@ -130,7 +130,7 @@ final class DeploymentAdminPresenter {
 				$base['detail'] = null !== $detail && hash_equals( $detail->get_correlation_id(), $reference ) ? $detail : null;
 				if ( null !== $base['detail'] && 'restoration_uncertain' === $base['detail']->get_outcome()?->get_code() ) {
 					$data    = $base['detail']->safe_data();
-					$summary = $this->attempts->package_activity_summary( (string) $data['package_type'], (string) $data['package_slug'] );
+					$summary = $this->attempts->package_activity_summary( (string) $data['package_type'], (string) $data['package_slug'], $base['detail']->get_request()->adoption_token );
 					if ( null !== $summary['last_successful'] && $summary['last_successful']->get_id() > $base['detail']->get_id() ) {
 						$base['later_verified_attempt'] = $summary['last_successful'];
 					}
@@ -186,7 +186,7 @@ final class DeploymentAdminPresenter {
 				continue;
 			}
 			try {
-				$items[ $package->get_identifier() ] = $this->attempts->package_activity_summary( $type, (string) $package->get_slug() );
+				$items[ $package->get_identifier() ] = $this->attempts->package_activity_summary( $type, (string) $package->get_slug(), \RAN\AdoptionIdentity::of( $package ) );
 			} catch ( Throwable $failure ) {
 				$this->log_read_failure( 'package deployment activity unavailable', $failure, 'package_activity_summary', 'read-' . $type . '-package-activity' );
 				return $this->package_activity_result();

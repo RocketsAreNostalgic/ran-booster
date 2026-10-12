@@ -64,7 +64,8 @@ final class AdmittedBranchExecutionTest extends TestCase {
 			static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-09-12 12:00:00 UTC' ),
 			function ( int $length ): string {
 				return str_repeat( chr( $this->random_byte++ ), $length );
-			}
+			},
+			$this->createStub( \RAN\Storage\Database::class )
 		);
 		$this->plugins          = new BoundaryPluginRepository();
 		$this->themes           = new BoundaryThemeRepository();
@@ -204,7 +205,36 @@ final class AdmittedBranchExecutionTest extends TestCase {
 		self::assertSame( 1, $archive->cleanup_calls );
 	}
 
+	public function test_legacy_update_remains_readable_but_cannot_execute(): void {
+		$this->running_update();
+		$row                 = $this->database->rows[0];
+		$row['request_json'] = ( new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::AUTOMATIC, 7 ) )->to_json();
+		$legacy              = DeploymentAttempt::from_database( $row );
+		self::assertNull( $legacy->get_request()->adoption_token );
+		try {
+			$this->adapter( $legacy, new ProviderRegistry() )->declaration();
+			self::fail( 'Legacy update authority must not be reconstructed.' );
+		} catch ( AdmittedBranchStageFailure $failure ) {
+			self::assertSame( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED, $failure->outcome_code );
+		}
+	}
+
+	public function test_identical_replacement_is_rejected_after_admission(): void {
+		$attempt             = $this->running_update();
+		$row                 = $this->database->rows[0];
+		$row['request_json'] = str_replace( '11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222', (string) $row['request_json'] );
+		$old_lifetime        = DeploymentAttempt::from_database( $row );
+		try {
+			$this->adapter( $old_lifetime, new ProviderRegistry() )->declaration();
+			self::fail( 'An identical replacement must not accept the departed adoption request.' );
+		} catch ( AdmittedBranchStageFailure $failure ) {
+			self::assertSame( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED, $failure->outcome_code );
+			self::assertSame( DeploymentState::RUNNING, $attempt->get_state() );
+		}
+	}
+
 	private function running_update(): DeploymentAttempt {
+		$this->database->management['example/example.php'] = 'gh:R_example:11111111-1111-4111-8111-111111111111';
 		$request = new DeploymentRequest(
 			'owner/example',
 			null,
@@ -213,7 +243,10 @@ final class AdmittedBranchExecutionTest extends TestCase {
 			'example',
 			null,
 			DeploymentPolicy::AUTOMATIC,
-			7
+			7,
+			null,
+			'example/example.php',
+			'gh:R_example:11111111-1111-4111-8111-111111111111'
 		);
 
 		return $this->attempts->admit_and_claim_manual(
@@ -259,6 +292,7 @@ final class AdmittedBranchExecutionTest extends TestCase {
 				'AuthorName'  => '',
 			)
 		);
+		$plugin->set_adoption_token( 'gh:R_example:11111111-1111-4111-8111-111111111111' );
 		$plugin->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
 		$plugin->set_deployment_policy( DeploymentPolicy::AUTOMATIC );
 		return $plugin;

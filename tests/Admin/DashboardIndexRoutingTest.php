@@ -156,7 +156,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = false;
 		$_GET['_ran_booster_repository_branch_nonce']               = \RAN\wp_create_nonce(
-			'ran-booster-repository-branch-check|plugin|example/example.php|branch|1'
+			\RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' )
 		);
 		self::assertNull( $check->invoke( $dashboard, $package, 'plugin' ) );
 		self::assertSame( 0, $provider->prepare_calls );
@@ -180,7 +180,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
 			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce(
-				'ran-booster-repository-branch-check|plugin|example/example.php|branch|1'
+				\RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' )
 			),
 		);
 
@@ -208,7 +208,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$check     = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
-			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ),
 		);
 
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
@@ -230,7 +230,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$check                        = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
 		$_GET                         = array(
 			'ran_booster_repository_branch_check'  => '1',
-			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ),
 		);
 
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
@@ -251,7 +251,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$check     = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
-			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ),
 		);
 
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
@@ -272,7 +272,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$check     = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
-			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ),
 		);
 
 		self::assertSame( 'unable_to_check', $check->invoke( $dashboard, $package, 'plugin' ) );
@@ -295,7 +295,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$check            = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
 		$_GET             = array(
 			'ran_booster_repository_branch_check'  => '1',
-			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ),
 		);
 
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
@@ -320,7 +320,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$package   = $this->managed_package( 'example/example.php', 'Example', 'repo-42' );
 			$_GET      = array(
 				'ran_booster_repository_branch_check'  => '1',
-				'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+				'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ),
 			);
 			( new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' ) )->invoke( $dashboard, $package, 'plugin' );
 			$line = $capture->snapshot()['entries'][0]['line'];
@@ -357,7 +357,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$_GET             = array(
 			'ran_booster_repository_branch_check'  => '1',
 			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce(
-				'ran-booster-repository-branch-check|plugin|example/example.php|branch|1'
+				\RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' )
 			),
 		);
 
@@ -381,7 +381,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
 			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce(
-				'ran-booster-repository-branch-check|plugin|provider-missing/example.php|branch|1'
+				\RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' )
 			),
 		);
 
@@ -405,7 +405,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$_GET             = array(
 			'ran_booster_repository_branch_check'  => '1',
 			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce(
-				'ran-booster-repository-branch-check|plugin|no-capability/example.php|branch|1'
+				\RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' )
 			),
 		);
 
@@ -430,7 +430,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$_GET             = array(
 			'ran_booster_repository_branch_check'  => '1',
 			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce(
-				'ran-booster-repository-branch-check|plugin|example/example.php|branch|1'
+				\RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' )
 			),
 		);
 
@@ -446,7 +446,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$package   = $this->managed_package( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/example' );
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
-			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ),
 		);
 
 		self::assertSame( 'verified', ( new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' ) )->invoke( $dashboard, $package, 'plugin' ) );
@@ -461,7 +461,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$package   = $this->managed_package( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/missing' );
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
-			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ),
 		);
 
 		self::assertSame( 'subdirectory_unavailable', ( new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' ) )->invoke( $dashboard, $package, 'plugin' ) );
@@ -477,7 +477,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$check     = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
-			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ),
 		);
 
 		self::assertSame( 'subdirectory_unavailable', $check->invoke( $dashboard, $package, 'plugin' ) );
@@ -493,7 +493,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$package   = $this->managed_package( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/example' );
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
-			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ),
 		);
 
 		self::assertSame( 'subdirectory_unverified', ( new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' ) )->invoke( $dashboard, $package, 'plugin' ) );
@@ -509,7 +509,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$check     = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
-			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ),
 		);
 
 		self::assertSame( 'subdirectory_unverified', $check->invoke( $dashboard, $package, 'plugin' ) );
@@ -525,7 +525,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$package   = $this->managed_package( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/example' );
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
-			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( 'ran-booster-repository-branch-check|plugin|example/example.php|branch|1' ),
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ),
 		);
 
 		self::assertSame( 'subdirectory_unverified', ( new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' ) )->invoke( $dashboard, $package, 'plugin' ) );
@@ -544,7 +544,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$_GET      = array(
 			'ran_booster_repository_branch_check'  => '1',
 			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce(
-				'ran-booster-repository-branch-check|plugin|example/example.php|branch|1'
+				\RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' )
 			),
 		);
 
@@ -1998,6 +1998,26 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( array( $package ), $data['packages'] );
 	}
 
+	#[DataProvider( 'package_type_provider' )]
+	public function test_explicit_recovery_route_bypasses_inventory_and_selected_package_hydration( string $type ): void {
+		$GLOBALS['ran_booster_test_capabilities'][ 'update_' . $type . 's' ] = true;
+		$_GET    = array(
+			'recovery'        => '1',
+			'package'         => 'corrupt',
+			'recovery_target' => 'corrupt',
+		);
+		$plugins = $this->createMock( PluginRepository::class );
+		$plugins->expects( self::never() )->method( 'all_booster_plugins' );
+		$plugins->expects( self::never() )->method( 'booster_plugin_from_file' );
+		$themes = $this->createMock( ThemeRepository::class );
+		$themes->expects( self::never() )->method( 'all_booster_themes' );
+		$themes->expects( self::never() )->method( 'booster_theme_from_stylesheet' );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes );
+		$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
+		self::assertSame( 'packages/recovery', $result['view'] );
+		self::assertNull( $result['data']['recovery_confirmation'] );
+	}
+
 	#[DataProvider( 'package_storage_read_provider' )]
 	public function test_invalid_package_storage_renders_asafe_empty_index( string $type, bool $detail ): void {
 		if ( $detail ) {
@@ -2740,8 +2760,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 		bool $is_private = false,
 		?string $subdirectory = null
 	): Package {
-		$package = $this->createStub( Package::class );
+		$package = $this->createStub( \RAN\AbstractPackage::class );
 		$package->method( 'get_identifier' )->willReturn( $identifier );
+		$package->method( 'get_adoption_token' )->willReturn( $provider . ':' . rawurlencode( $provider_repository_id ) . ':11111111-1111-4111-8111-111111111111' );
 		$package->method( 'get_display_name' )->willReturn( $name );
 		$package->method( 'get_slug' )->willReturn( 'example' );
 		$package->method( 'get_provider_code' )->willReturn( $provider );

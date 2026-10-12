@@ -6,6 +6,7 @@ namespace RAN\Deployment;
 
 use InvalidArgumentException;
 use JsonException;
+use RAN\AdoptionIdentity;
 use RAN\PackageArtifactLimit;
 use RAN\PackageSubdirectory;
 
@@ -27,8 +28,18 @@ final readonly class DeploymentRequest {
 		public ?string $subdirectory,
 		public DeploymentPolicy $deployment_policy,
 		public ?int $initiating_user_id,
-		?int $maximum_artifact_bytes = null
+		?int $maximum_artifact_bytes = null,
+		public ?string $installed_identifier = null,
+		public ?string $adoption_token = null
 	) {
+		if ( ( null === $installed_identifier ) !== ( null === $adoption_token ) ) {
+			throw new InvalidArgumentException( 'The adoption snapshot is incomplete.' );
+		}
+		if ( null !== $adoption_token ) {
+			AdoptionIdentity::parse( $adoption_token );
+			self::assert_safe_text( (string) $installed_identifier, 255 );
+			self::assert_locator( (string) $installed_identifier );
+		}
 		self::assert_locator( $repository );
 		self::assert_credential_id( $credential_id );
 		self::assert_safe_text( $configured_branch, 255 );
@@ -45,9 +56,9 @@ final readonly class DeploymentRequest {
 		}
 	}
 
-	/** @return array{repository: string, credential_id: ?string, private: bool, configured_branch: string, package_slug: string, subdirectory: ?string, deployment_policy: string, initiating_user_id: ?int, maximum_artifact_bytes: int} */
+	/** @return array{repository: string, credential_id: ?string, private: bool, configured_branch: string, package_slug: string, subdirectory: ?string, deployment_policy: string, initiating_user_id: ?int, maximum_artifact_bytes: int, installed_identifier?: string, adoption_token?: string} */
 	public function to_array(): array {
-		return array(
+		$data = array(
 			'repository'             => $this->repository,
 			'credential_id'          => $this->credential_id,
 			'private'                => $this->is_private,
@@ -58,6 +69,11 @@ final readonly class DeploymentRequest {
 			'initiating_user_id'     => $this->initiating_user_id,
 			'maximum_artifact_bytes' => $this->maximum_artifact_bytes,
 		);
+		if ( null !== $this->adoption_token && null !== $this->installed_identifier ) {
+			$data['installed_identifier'] = $this->installed_identifier;
+			$data['adoption_token']       = $this->adoption_token;
+		}
+		return $data;
 	}
 
 	public function to_json(): string {
@@ -88,7 +104,11 @@ final readonly class DeploymentRequest {
 			'initiating_user_id',
 			'maximum_artifact_bytes',
 		);
-		$keys          = is_array( $data ) ? array_keys( $data ) : array();
+		if ( is_array( $data ) && array_key_exists( 'adoption_token', $data ) ) {
+			$expected_keys[] = 'installed_identifier';
+			$expected_keys[] = 'adoption_token';
+		}
+		$keys = is_array( $data ) ? array_keys( $data ) : array();
 		if ( $keys !== $expected_keys
 			|| ! is_array( $data )
 			|| ! is_string( $data['repository'] )
@@ -99,7 +119,8 @@ final readonly class DeploymentRequest {
 			|| ( null !== $data['subdirectory'] && ! is_string( $data['subdirectory'] ) )
 			|| ! is_string( $data['deployment_policy'] )
 			|| ( null !== $data['initiating_user_id'] && ! is_int( $data['initiating_user_id'] ) )
-			|| ! is_int( $data['maximum_artifact_bytes'] ) ) {
+			|| ! is_int( $data['maximum_artifact_bytes'] )
+			|| ( isset( $data['adoption_token'] ) && ( ! is_string( $data['adoption_token'] ) || ! is_string( $data['installed_identifier'] ?? null ) ) ) ) {
 			throw new InvalidArgumentException( 'The stored deployment request is invalid.' );
 		}
 
@@ -112,7 +133,9 @@ final readonly class DeploymentRequest {
 			$data['subdirectory'],
 			DeploymentPolicy::from_database( $data['deployment_policy'] ),
 			$data['initiating_user_id'],
-			$data['maximum_artifact_bytes']
+			$data['maximum_artifact_bytes'],
+			$data['installed_identifier'] ?? null,
+			$data['adoption_token'] ?? null
 		);
 		if ( ! hash_equals( $request->to_json(), $json ) ) {
 			throw new InvalidArgumentException( 'The stored deployment request is not canonical.' );

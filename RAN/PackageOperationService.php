@@ -192,6 +192,10 @@ final readonly class PackageOperationService {
 				'' === (string) $operation->credential_id ? null : $operation->credential_id
 			)
 			: $this->repository( $operation, $this->provider_repository_id_for_edit( $operation, $existing ) );
+		if ( $repository->provider->value !== $existing->get_provider_code()
+			|| $repository->reference->provider_repository_id !== $existing->get_provider_repository_id() ) {
+			throw new RuntimeException( 'Stop managing this package before adopting a different repository.' );
+		}
 		$this->source_guard->assert_allowed( $repository->provider->value, $repository->reference->provider_repository_id, 'plugin' === $operation->package_type ? 1 : 2, $identifier, $existing->get_source() );
 		$result = 'plugin' === $operation->package_type
 			? $this->plugins->edit_plugin( $identifier, $this->edit_input( $operation, $repository, $existing, $release_managed ) )
@@ -266,6 +270,7 @@ final readonly class PackageOperationService {
 			'provider_repository_id'   => $repository->reference->provider_repository_id,
 			'expected_source'          => $expected_source->value,
 			'expected_source_revision' => $expected_source_revision,
+			'expected_adoption_token'  => $operation->get_expected_adoption_token(),
 		);
 	}
 
@@ -275,7 +280,9 @@ final readonly class PackageOperationService {
 		}
 		$expected = $operation->expected_package;
 
-		return $package->get_provider_code() === $expected['provider']
+		return null !== AdoptionIdentity::of( $package )
+			&& AdoptionIdentity::of( $package ) === $expected['adoption_token']
+			&& $package->get_provider_code() === $expected['provider']
 			&& hash_equals( (string) $package->get_provider_repository_id(), (string) $expected['provider_repository_id'] )
 			&& hash_equals( (string) $package->get_repository(), (string) $expected['repository'] )
 			&& hash_equals( (string) $package->get_branch(), (string) $expected['branch'] )

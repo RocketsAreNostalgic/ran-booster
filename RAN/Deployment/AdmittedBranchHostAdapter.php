@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 namespace RAN\Deployment;
 
+use RAN\AdoptionIdentity;
 use RAN\ManagedRepository;
 use RAN\Package;
 use RAN\PackageSource;
@@ -79,13 +80,22 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		$request    = $this->attempt->get_request();
 		$identifier = null;
 
+		if ( 'install' === $data['operation'] && null !== $request->adoption_token ) {
+			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED );
+		}
 		if ( PackageSource::BRANCH->value !== ( $data['package_source'] ?? null ) ) {
 			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_RELEASE_SOURCE_BLOCKED );
 		}
 
 		if ( 'update' === $data['operation'] ) {
+			if ( null === $request->adoption_token || null === $request->installed_identifier ) {
+				$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED );
+			}
 			try {
-				$identifier = (string) $this->package_by_slug( (string) $data['package_type'], $request->package_slug )->get_identifier();
+				$identifier = $request->installed_identifier;
+				$this->assert_package_snapshot( $this->package_from_identifier( (string) $data['package_type'], $identifier ), $data, $request );
+			} catch ( AdmittedBranchStageFailure $failure ) {
+				throw $failure;
 			} catch ( PackageStorageFailure $failure ) {
 				$this->stage_package_storage_failure( $failure );
 			} catch ( Throwable ) {
@@ -592,7 +602,9 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	/** @param array<string, bool|int|string|null> $data */
 	private function assert_package_snapshot( Package $package, array $data, DeploymentRequest $request ): void {
-		if ( $package->get_provider_code() !== $data['provider']
+		if ( null === $request->adoption_token || AdoptionIdentity::of( $package ) !== $request->adoption_token
+			|| $package->get_identifier() !== $request->installed_identifier
+			|| $package->get_provider_code() !== $data['provider']
 			|| ! hash_equals( (string) $package->get_provider_repository_id(), (string) $data['provider_repository_id'] )
 			|| ! hash_equals( (string) $package->get_repository(), $request->repository )
 			|| ! hash_equals( (string) $package->get_branch(), $request->configured_branch )

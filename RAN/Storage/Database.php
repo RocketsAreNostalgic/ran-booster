@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace RAN\Storage;
 
 use RAN\Runtime\RuntimeSupport;
+use RAN\AdoptionIdentity;
 
 class Database {
 
-	public static string $booster_db_version = '13.0';
+	public static string $booster_db_version = '14.0';
 
 	public const VERSION_OPTION = 'ran_booster_db_version';
 
@@ -118,6 +119,16 @@ class Database {
 		$this->maybe_upgrade();
 	}
 
+	/** Recovery requires authoritative healthy tables and must never install or repair them. */
+	public function require_recovery_ready(): void {
+		$this->require_supported();
+		if ( self::$booster_db_version !== $this->installed_version() ) {
+			throw new DatabaseLifecycleFailure( 'incompatible_schema' );
+		}
+		$this->verify_table( ran_booster_table_name(), $this->package_columns(), $this->package_indexes() );
+		$this->verify_table( self::attempt_table_name(), $this->attempt_columns(), $this->attempt_indexes() );
+	}
+
 	/**
 	 * Read-only readiness status for passive diagnostics and administrator UI.
 	 *
@@ -165,6 +176,10 @@ class Database {
 			),
 		);
 
+		if ( '13.0' === $installed_version ) {
+			$this->migrate_adoption_identities( $package_table, $attempt_table );
+		}
+
 		$missing_tables = array();
 		foreach ( $tables as $table => $contract ) {
 			$missing_tables[ $table ] = $this->needs_current_table_creation(
@@ -199,6 +214,87 @@ class Database {
 		return true;
 	}
 
+	/** Upgrade only the exact supported predecessor, including interrupted DDL. */
+	private function migrate_adoption_identities( string $package_table, string $attempt_table ): void {
+		$wpdb = $this->schema_connection();
+		$this->verify_table( $attempt_table, $this->attempt_columns(), $this->attempt_indexes() );
+		$actual              = $this->inspect_table( $package_table );
+		$predecessor         = $this->package_columns();
+		$predecessor['type'] = $predecessor['package_type'];
+		unset( $predecessor['package_type'] );
+		ksort( $predecessor, SORT_STRING );
+		$without_token = $predecessor;
+		unset( $without_token['adoption_token'] );
+		$old_indexes                 = $this->package_indexes();
+		$old_indexes['package_type'] = array( true, array( 'type', 'package' ) );
+		if ( $actual['indexes'] === $old_indexes
+			&& in_array( $actual['columns'], array( $without_token, $predecessor ), true ) ) {
+			// Fence already-running schema-13 writers, which all name the mandatory type column.
+			// The token-bearing predecessor is an interrupted migration from the unpublished candidate.
+			$query = $actual['columns'] === $without_token
+				? $wpdb->prepare( 'ALTER TABLE %i CHANGE COLUMN type package_type tinyint(3) unsigned NOT NULL, ADD adoption_token varchar(643) DEFAULT NULL', $package_table )
+				: $wpdb->prepare( 'ALTER TABLE %i CHANGE COLUMN type package_type tinyint(3) unsigned NOT NULL', $package_table );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The exact predecessor table is validated above and its identifier is prepared.
+			if ( false === $wpdb->query( $query ) ) {
+				throw new DatabaseLifecycleFailure( 'identity_schema_write_failed' );
+			}
+		} elseif ( $actual['columns'] !== $this->package_columns() || $actual['indexes'] !== $this->package_indexes() ) {
+			throw new DatabaseLifecycleFailure( 'incompatible_schema' );
+		}
+		$this->verify_table( $package_table, $this->package_columns(), $this->package_indexes() );
+		if ( false === $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' ) || false === $wpdb->query( 'START TRANSACTION' ) ) {
+			throw new DatabaseLifecycleFailure( 'identity_transaction_failed' );
+		}
+		try {
+			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i ORDER BY id FOR UPDATE', $package_table ) );
+			if ( '' !== $wpdb->last_error || ! is_array( $rows ) ) {
+				throw new DatabaseLifecycleFailure( 'identity_read_failed' );
+			}
+			foreach ( $rows as $row ) {
+				if ( ! is_object( $row ) || ! property_exists( $row, 'adoption_token' ) ) {
+					throw new DatabaseLifecycleFailure( 'identity_read_failed' );
+				}
+				if ( null !== $row->adoption_token ) {
+					continue;
+				}
+				$provider = $row->provider ?? null;
+				$id       = $row->provider_repository_id ?? null;
+				if ( ! is_string( $provider ) || ! is_string( $id ) ) {
+					continue;
+				}
+				try {
+					$token = AdoptionIdentity::create( $provider, $id );
+				} catch ( \InvalidArgumentException ) {
+					continue;
+				}
+				$row_id = $row->id ?? null;
+				if ( ( ! is_int( $row_id ) && ! is_string( $row_id ) ) || 1 !== preg_match( '/\A[1-9][0-9]*\z/', (string) $row_id ) ) {
+					throw new DatabaseLifecycleFailure( 'identity_read_failed' );
+				}
+				$query = $wpdb->prepare( 'UPDATE %i SET adoption_token = %s WHERE id = %s AND adoption_token IS NULL AND BINARY provider = BINARY %s AND BINARY provider_repository_id = BINARY %s', $package_table, $token, (string) $row_id, $provider, $id );
+				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- All values are prepared immediately above; the row remains locked.
+				if ( 1 !== $wpdb->query( $query ) ) {
+					throw new DatabaseLifecycleFailure( 'identity_write_failed' );
+				}
+				$saved = $wpdb->get_var( $wpdb->prepare( 'SELECT adoption_token FROM %i WHERE id = %s', $package_table, (string) $row_id ) );
+				if ( $this->identity_read_failed() || $saved !== $token ) {
+					throw new DatabaseLifecycleFailure( 'identity_verification_failed' );
+				}
+			}
+			if ( false === $wpdb->query( 'COMMIT' ) ) {
+				throw new DatabaseLifecycleFailure( 'identity_commit_failed' );
+			}
+		} catch ( \Throwable $failure ) {
+			$wpdb->query( 'ROLLBACK' );
+			throw $failure;
+		}
+	}
+
+	/** @phpstan-impure */
+	private function identity_read_failed(): bool {
+		return '' !== $this->schema_connection()->last_error;
+	}
+
 	public static function attempt_table_name(): string {
 		global $wpdb;
 
@@ -211,7 +307,7 @@ class Database {
             package varchar(255) NOT NULL,
             repository varchar(512) NOT NULL,
             branch varchar(255) NOT NULL DEFAULT 'main',
-            type tinyint(3) unsigned NOT NULL,
+            package_type tinyint(3) unsigned NOT NULL,
             deployment_policy varchar(10) NOT NULL DEFAULT 'manual',
             source varchar(16) NOT NULL DEFAULT 'branch',
             source_revision bigint(20) unsigned NOT NULL DEFAULT '1',
@@ -220,12 +316,13 @@ class Database {
             source_changed_by bigint(20) unsigned DEFAULT NULL,
             provider varchar(32) NOT NULL,
             provider_repository_id varchar(191) NOT NULL,
+            adoption_token varchar(643) DEFAULT NULL,
             private tinyint(1) unsigned NOT NULL,
             credential_id varchar(64) DEFAULT NULL,
             subdirectory varchar(255) DEFAULT NULL,
             release_configuration text DEFAULT NULL,
             PRIMARY KEY  (id),
-            UNIQUE KEY package_type (type, package),
+            UNIQUE KEY package_type (package_type, package),
             KEY provider_identity (provider, provider_repository_id)
         ) ENGINE=InnoDB $charset_collate;";
 	}
@@ -432,7 +529,7 @@ class Database {
 			'package'                => $this->column( 'varchar(255)' ),
 			'repository'             => $this->column( 'varchar(512)' ),
 			'branch'                 => $this->column( 'varchar(255)', false, 'main' ),
-			'type'                   => $this->column( 'tinyint(3) unsigned' ),
+			'package_type'           => $this->column( 'tinyint(3) unsigned' ),
 			'deployment_policy'      => $this->column( 'varchar(10)', false, 'manual' ),
 			'source'                 => $this->column( 'varchar(16)', false, 'branch' ),
 			'source_revision'        => $this->column( 'bigint(20) unsigned', false, '1' ),
@@ -441,6 +538,7 @@ class Database {
 			'source_changed_by'      => $this->column( 'bigint(20) unsigned', true ),
 			'provider'               => $this->column( 'varchar(32)' ),
 			'provider_repository_id' => $this->column( 'varchar(191)' ),
+			'adoption_token'         => $this->column( 'varchar(643)', true ),
 			'private'                => $this->column( 'tinyint(1) unsigned' ),
 			'credential_id'          => $this->column( 'varchar(64)', true ),
 			'subdirectory'           => $this->column( 'varchar(255)', true ),
@@ -457,7 +555,7 @@ class Database {
 	private function package_indexes(): array {
 		return array(
 			'PRIMARY'           => array( true, array( 'id' ) ),
-			'package_type'      => array( true, array( 'type', 'package' ) ),
+			'package_type'      => array( true, array( 'package_type', 'package' ) ),
 			'provider_identity' => array( false, array( 'provider', 'provider_repository_id' ) ),
 		);
 	}
@@ -541,7 +639,7 @@ class Database {
 		if ( version_compare( $value, self::$booster_db_version, '>' ) ) {
 			throw new DatabaseLifecycleFailure( 'newer_schema' );
 		}
-		if ( self::$booster_db_version !== $value ) {
+		if ( self::$booster_db_version !== $value && '13.0' !== $value ) {
 			throw new DatabaseLifecycleFailure( 'unknown_schema_version' );
 		}
 

@@ -17,7 +17,7 @@ final readonly class PackageOperation {
 	private const TYPES      = array( 'plugin', 'theme' );
 
 	/**
-	 * @param array{}|array{source_revision: int}|array{
+	 * @param array{}|array{source_revision: int, adoption_token: string|null}|array{
 	 *     provider: string|null,
 	 *     provider_repository_id: string|null,
 	 *     repository: string|null,
@@ -28,6 +28,7 @@ final readonly class PackageOperation {
 	 *     package_slug: string|null,
 	 *     deployment_policy: DeploymentPolicy|null,
 	 *     source: PackageSource|null,
+	 *     adoption_token: string|null,
 	 *     source_revision: int|null
 	 * } $expected_package
 	 */
@@ -92,7 +93,10 @@ final readonly class PackageOperation {
 				null,
 				null,
 				null,
-				array( 'source_revision' => $expected_source_revision )
+				array(
+					'source_revision' => $expected_source_revision,
+					'adoption_token'  => self::expected_adoption_token( $input['expected_adoption_token'] ?? null ),
+				)
 			);
 		}
 
@@ -171,6 +175,8 @@ final readonly class PackageOperation {
 			|| ! is_string( $identifier )
 			|| '' === $identifier
 			|| $identifier !== $edit->identifier
+			|| null === $edit->get_expected_adoption_token()
+			|| AdoptionIdentity::of( $package ) !== $edit->get_expected_adoption_token()
 		) {
 			throw new InvalidArgumentException( 'The saved package cannot be reinstalled.' );
 		}
@@ -191,6 +197,7 @@ final readonly class PackageOperation {
 				'expected_deployment_policy'      => $package->get_deployment_policy()->value,
 				'expected_source'                 => $package->get_source()->value,
 				'expected_source_revision'        => (string) $package->get_source_revision(),
+				'expected_adoption_token'         => AdoptionIdentity::of( $package ),
 			)
 		);
 	}
@@ -200,16 +207,32 @@ final readonly class PackageOperation {
 	}
 
 	/**
-	 * @phpstan-assert-if-true array{provider: string, provider_repository_id: string, repository: string, branch: string, credential_id: string, subdirectory: string, private: bool, package_slug: string, deployment_policy: DeploymentPolicy, source: PackageSource, source_revision: int} $this->expected_package
+	 * @phpstan-assert-if-true array{provider: string, provider_repository_id: string, repository: string, branch: string, credential_id: string, subdirectory: string, private: bool, package_slug: string, deployment_policy: DeploymentPolicy, source: PackageSource, source_revision: int, adoption_token: string} $this->expected_package
 	 */
 	public function has_expected_package(): bool {
-		return 11 === count( $this->expected_package ) && ! in_array( null, $this->expected_package, true );
+		return 12 === count( $this->expected_package ) && ! in_array( null, $this->expected_package, true );
 	}
 
 	public function get_expected_source_revision(): ?int {
 		$revision = $this->expected_package['source_revision'] ?? null;
 
 		return is_int( $revision ) ? $revision : null;
+	}
+
+	public function get_expected_adoption_token(): ?string {
+		return $this->expected_package['adoption_token'] ?? null;
+	}
+
+	private static function expected_adoption_token( mixed $value ): ?string {
+		if ( ! is_string( $value ) ) {
+			return null;
+		}
+		try {
+			AdoptionIdentity::parse( $value );
+		} catch ( InvalidArgumentException ) {
+			return null;
+		}
+		return $value;
 	}
 
 	/** @return array{string, string}|null */
@@ -257,6 +280,7 @@ final readonly class PackageOperation {
 	 *     package_slug: string|null,
 	 *     deployment_policy: DeploymentPolicy|null,
 	 *     source: PackageSource|null,
+	 *     adoption_token: string|null,
 	 *     source_revision: int|null
 	 * }
 	 */
@@ -276,6 +300,7 @@ final readonly class PackageOperation {
 			'source'                 => isset( $input['expected_source'] ) && is_scalar( $input['expected_source'] )
 				? PackageSource::tryFrom( trim( (string) $input['expected_source'] ) )
 				: null,
+			'adoption_token'         => self::expected_adoption_token( $input['expected_adoption_token'] ?? null ),
 			'source_revision'        => self::expected_non_negative_int( $input['expected_source_revision'] ?? null ),
 		);
 	}

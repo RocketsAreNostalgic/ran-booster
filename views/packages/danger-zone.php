@@ -29,6 +29,7 @@ $delete_description = 'plugin' === $package_view->get_type()
 			<?php wp_nonce_field( $package_view->get_action( 'unlink' ) ); ?>
 			<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $package_view->get_action( 'unlink' ) ); ?>">
 			<input type="hidden" name="ran_booster[<?php echo esc_attr( $package_view->get_identifier_field() ); ?>]" value="<?php echo esc_attr( $identifier_value ); ?>">
+			<input type="hidden" name="ran_booster[expected_adoption_token]" value="<?php echo esc_attr( (string) \RAN\AdoptionIdentity::of( $package ) ); ?>">
 			<input type="hidden" name="ran_booster[expected_source_revision]" value="<?php echo esc_attr( (string) $package->get_source_revision() ); ?>">
 			<label for="<?php echo esc_attr( $unlink_checkbox_id ); ?>">
 				<input id="<?php echo esc_attr( $unlink_checkbox_id ); ?>" type="checkbox" name="ran_booster[confirm_package_removal]" value="1" required data-ran-booster-package-removal-confirm>
@@ -44,6 +45,7 @@ $delete_description = 'plugin' === $package_view->get_type()
 			<?php wp_nonce_field( $package_view->get_action( 'unlink-delete' ) ); ?>
 			<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $package_view->get_action( 'unlink-delete' ) ); ?>">
 			<input type="hidden" name="ran_booster[<?php echo esc_attr( $package_view->get_identifier_field() ); ?>]" value="<?php echo esc_attr( $identifier_value ); ?>">
+			<input type="hidden" name="ran_booster[expected_adoption_token]" value="<?php echo esc_attr( (string) \RAN\AdoptionIdentity::of( $package ) ); ?>">
 			<input type="hidden" name="ran_booster[expected_source_revision]" value="<?php echo esc_attr( (string) $package->get_source_revision() ); ?>">
 			<label for="<?php echo esc_attr( $delete_checkbox_id ); ?>">
 				<input id="<?php echo esc_attr( $delete_checkbox_id ); ?>" type="checkbox" name="ran_booster[confirm_package_removal]" value="1" required data-ran-booster-package-removal-confirm>

@@ -188,7 +188,7 @@ try {
 			$ran_booster_assert( ! $ran_booster_failed->successful() && $ran_booster_counts['zip'] === $ran_booster_before['zip'] + 2 && ! file_exists( $ran_booster_fixture['directory'] ) && ! is_link( $ran_booster_fixture['directory'] ), 'Post-acquisition failure mutated or reused inspection bytes.' );
 			global $wpdb;
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The table name comes from the trusted Core table helper; package and type values use placeholders.
-			$ran_booster_assert( '0' === (string) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . ran_booster_table_name() . ' WHERE package = %s AND type = %d', $ran_booster_identifier, 'plugin' === $type ? 1 : 2 ) ), 'Failed first install adopted a package record.' );
+			$ran_booster_assert( '0' === (string) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . ran_booster_table_name() . ' WHERE package = %s AND package_type = %d', $ran_booster_identifier, 'plugin' === $type ? 1 : 2 ) ), 'Failed first install adopted a package record.' );
 			// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Capture the expected fixture value before WordPress filters can mutate global test state.
 			$ran_booster_assert( $ran_booster_selected_theme === get_stylesheet() && ! ( 'plugin' === $type && is_plugin_active( $ran_booster_identifier ) ), 'Failed first install changed activation.' );
 			$ran_booster_clean_streams();

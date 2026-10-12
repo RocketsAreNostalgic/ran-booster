@@ -9,6 +9,7 @@ use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\PackageMutationGuard;
 use RAN\Logging\BoosterLogger;
 use RAN\Package;
+use RAN\AdoptionIdentity;
 use RAN\PackageOperation;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Storage\PluginRepository;
@@ -29,6 +30,73 @@ final readonly class PackageRemovalService {
 		private WordPressUpdaterLock $updater_lock,
 		private ?RepositoryBranchCheckEvidenceStore $branch_check_evidence = null
 	) {
+	}
+
+	/** @return array<string, string> */
+	public function recovery_targets( string $type ): array {
+		RuntimeSupport::assert_managed_operations_allowed();
+		return $this->wordpress->installed_targets( $type );
+	}
+
+	/** @return array{id:string,package:string,type:int,adoption_token:string,source:string,digest:string,installed_digest:string} */
+	public function recovery_confirmation( string $type, string $identifier ): array {
+		RuntimeSupport::assert_managed_operations_allowed();
+		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) ) {
+			throw new \InvalidArgumentException( 'The package type is invalid.' );
+		}
+		if ( 'plugin' === $type ) {
+			PackageMutationGuard::assert_plugin_file_allowed( $identifier );
+		}
+		$record                     = ( 'plugin' === $type ? $this->plugins : $this->themes )->recovery_record( $identifier );
+		$record['installed_digest'] = $this->wordpress->installed_fingerprint( $type, $identifier );
+		return $record;
+	}
+
+	public function recover( string $type, string $identifier, string $token, string $digest, string $installed_digest ): void {
+		RuntimeSupport::assert_managed_operations_allowed();
+		PackageMutationGuard::assert_admin_action_allowed( 'unlink-' . $type, array( 'file' => $identifier ) );
+		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) || null === $this->attempts ) {
+			throw new \RuntimeException( 'The recovery operation state is unavailable.' );
+		}
+		$this->updater_lock->run(
+			function () use ( $type, $identifier, $token, $digest, $installed_digest ): void {
+				$this->recover_locked( $type, $identifier, $token, $digest, $installed_digest );
+			}
+		);
+	}
+
+	private function recover_locked( string $type, string $identifier, string $token, string $digest, string $installed_digest, ?int $source_revision = null ): void {
+		( 'plugin' === $type ? $this->plugins : $this->themes )->recover_unlink(
+			$identifier,
+			$token,
+			$digest,
+			function () use ( $type, $identifier, $token, $installed_digest, $source_revision ): void {
+				if ( ! hash_equals( $installed_digest, $this->wordpress->installed_fingerprint( $type, $identifier ) ) ) {
+					throw new \RuntimeException( 'The installed target changed after confirmation.' );
+				}
+				if ( null !== $source_revision && $this->find( $type, $identifier )->get_source_revision() !== $source_revision ) {
+					throw new \RuntimeException( 'The managed source changed after confirmation.' );
+				}
+				if ( null === $this->attempts || $this->attempts->has_unresolved_target_attempt( $type, $identifier ) ) {
+					throw new \RuntimeException( 'Unresolved deployment work prevents recovery.' );
+				}
+				$this->clear_observations( $type, $identifier, $token );
+			}
+		)->require_success();
+	}
+
+	private function clear_observations( string $type, string $identifier, string $token ): void {
+		foreach ( array(
+			'branch_evidence' => fn () => $this->branch_check_evidence?->clear_identity( $type, $identifier, $token ),
+			'native_cache'    => fn () => $this->wordpress->invalidate_native_target( $type, $identifier ),
+		) as $step => $cleanup ) {
+			try {
+				$cleanup();
+			} catch ( Throwable $failure ) {
+				// Lifetime checks independently reject departed work; observation failures must not block recovery.
+				$this->log_failure( $failure, 'recovery_cleanup_' . $step );
+			}
+		}
 	}
 
 	public function execute( PackageOperation $operation ): PackageRemovalResult {
@@ -53,16 +121,16 @@ final readonly class PackageRemovalService {
 		$result = PackageRemovalResult::failed( 'management_state_uncertain' );
 		try {
 			$package = $this->find( $operation->package_type, $identifier );
-			if ( $package->get_source_revision() !== $operation->get_expected_source_revision() ) {
+			if ( null === $operation->get_expected_adoption_token()
+				|| AdoptionIdentity::of( $package ) !== $operation->get_expected_adoption_token()
+				|| $package->get_source_revision() !== $operation->get_expected_source_revision() ) {
 				$result = PackageRemovalResult::failed( 'stale' );
 			} elseif ( 'unlink' === $operation->operation ) {
-				$this->unlink( $operation->package_type, $identifier, $package );
+				$confirmation = $this->recovery_confirmation( $operation->package_type, $identifier );
+				$this->recover_locked( $operation->package_type, $identifier, $operation->get_expected_adoption_token(), $confirmation['digest'], $confirmation['installed_digest'], $operation->get_expected_source_revision() );
 				$result = PackageRemovalResult::unlinked();
-			} elseif ( null !== $this->attempts
-				&& $this->attempts->has_unresolved_package_attempt(
-					$operation->package_type,
-					(string) $package->get_slug()
-				) ) {
+			} elseif ( null === $this->attempts
+				|| $this->attempts->has_unresolved_target_attempt( $operation->package_type, $identifier ) ) {
 				$result = PackageRemovalResult::failed( 'operation_in_progress' );
 			} else {
 				$blocker = $this->deletion_blocker( $operation->package_type, $identifier );
@@ -187,12 +255,21 @@ final readonly class PackageRemovalService {
 	}
 
 	private function unlink( string $type, string $identifier, Package $package ): void {
-
-		$this->branch_check_evidence?->clear( $type, $package );
-		$result = 'plugin' === $type
-			? $this->plugins->unlink( $identifier )
-			: $this->themes->unlink( $identifier );
-		$result->require_success();
+		$token      = AdoptionIdentity::of( $package ) ?? throw new \RuntimeException( 'The adoption identity is unavailable.' );
+		$repository = 'plugin' === $type ? $this->plugins : $this->themes;
+		$record     = $repository->recovery_record( $identifier );
+		$repository->recover_unlink(
+			$identifier,
+			$token,
+			$record['digest'],
+			function () use ( $type, $identifier, $token ): void {
+				if ( $this->is_installed( $type, $identifier ) || null === $this->attempts
+				|| $this->attempts->has_unresolved_target_attempt( $type, $identifier ) ) {
+					throw new \RuntimeException( 'The deleted target or operation state could not be confirmed.' );
+				}
+				$this->clear_observations( $type, $identifier, $token );
+			}
+		)->require_success();
 	}
 
 	private function is_installed( string $type, string $identifier ): bool {

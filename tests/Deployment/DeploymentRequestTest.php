@@ -74,6 +74,28 @@ final class DeploymentRequestTest extends TestCase {
 		self::assertSame( $request->to_json(), DeploymentRequest::from_json( $request->to_json() )->to_json() );
 	}
 
+	public function test_bound_request_preserves_exact_lifetime_and_installed_identifier(): void {
+		$token    = 'gh:opaque%3A%2Fid:11111111-1111-4111-8111-111111111111';
+		$request  = new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::MANUAL, 1, null, 'example/main.php', $token );
+		$restored = DeploymentRequest::from_json( $request->to_json() );
+		self::assertSame( $token, $restored->adoption_token );
+		self::assertSame( 'example/main.php', $restored->installed_identifier );
+		self::assertNull( DeploymentRequest::from_json( $this->request()->to_json() )->adoption_token );
+	}
+
+	public function test_duplicate_lifetime_keys_are_not_canonical(): void {
+		$token   = 'gh:42:11111111-1111-4111-8111-111111111111';
+		$request = new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::MANUAL, 1, null, 'example/main.php', $token );
+		$json    = str_replace( '"adoption_token":', '"adoption_token":"' . $token . '","adoption_token":', $request->to_json() );
+		$this->expectException( InvalidArgumentException::class );
+		DeploymentRequest::from_json( $json );
+	}
+
+	public function test_token_without_exact_installed_target_is_rejected(): void {
+		$this->expectException( InvalidArgumentException::class );
+		new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::MANUAL, 1, null, null, 'gh:42:11111111-1111-4111-8111-111111111111' );
+	}
+
 	private function request(): DeploymentRequest {
 		return self::make();
 	}

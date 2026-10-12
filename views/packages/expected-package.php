@@ -19,4 +19,5 @@ defined( 'WPINC' ) || die;
 <input type="hidden" name="ran_booster[expected_package_slug]" value="<?php echo esc_attr( (string) $package->get_slug() ); ?>">
 <input type="hidden" name="ran_booster[expected_deployment_policy]" value="<?php echo esc_attr( $package->get_deployment_policy()->value ); ?>">
 <input type="hidden" name="ran_booster[expected_source]" value="<?php echo esc_attr( $package->get_source()->value ); ?>">
+<input type="hidden" name="ran_booster[expected_adoption_token]" value="<?php echo esc_attr( (string) \RAN\AdoptionIdentity::of( $package ) ); ?>">
 <input type="hidden" name="ran_booster[expected_source_revision]" value="<?php echo esc_attr( (string) $package->get_source_revision() ); ?>">

@@ -26,6 +26,7 @@ if ( ! defined( 'WPINC' ) ) {
 
 // The dispatcher verifies the action nonce before this template repopulates submitted values.
 
+$recovery_identifier   = isset( $recovery_identifier ) && is_string( $recovery_identifier ) ? $recovery_identifier : '';
 $provider_options      = $package_provider_settings['providers'];
 $default_provider_code = $package_provider_settings['default_provider'];
 // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
@@ -130,6 +131,12 @@ $managed_package_url        = '' === $managed_package_identifier
 			data-ran-booster-package-mutation-available="<?php echo esc_attr( $package_mutation_available ? '1' : '0' ); ?>"
 		>
 			<?php wp_nonce_field( $package_view->get_action( 'install' ) ); ?>
+			<?php if ( '' !== $recovery_identifier ) { ?>
+				<p><?php esc_html_e( 'Link this exact installed target. To restore published-release management, first link it, then enable release tracking in its settings.', 'ran-booster' ); ?> <code><?php echo esc_html( $recovery_identifier ); ?></code></p>
+				<input type="hidden" name="ran_booster[exact_identifier]" value="1">
+				<input type="hidden" name="ran_booster[dry-run]" value="1">
+				<input type="hidden" name="ran_booster[<?php echo esc_attr( $package_view->get_identifier_field() ); ?>]" value="<?php echo esc_attr( $recovery_identifier ); ?>">
+			<?php } ?>
 			<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $package_view->get_action( 'install' ) ); ?>">
 			<input type="hidden" name="ran_booster[provider_repository_id]" class="ran-booster-provider-repository-id-input" value="<?php echo esc_attr( $provider_repository_id ); ?>">
 			<input type="hidden" name="ran_booster[provider_repository_identity_source]" class="ran-booster-provider-repository-identity-source-input" value="<?php echo esc_attr( $provider_repository_identity_source ); ?>">
@@ -157,7 +164,7 @@ $managed_package_url        = '' === $managed_package_identifier
 							<div class="ran-booster-settings-fields">
 								<div class="ran-booster-settings-field ran-booster-settings-field--wide">
 									<label>
-										<input type="checkbox" name="ran_booster[dry-run]" <?php /* phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification. */ checked( isset( $_POST['ran_booster']['dry-run'] ) ); ?>>
+										<input type="checkbox" name="ran_booster[dry-run]" <?php /* phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification. */ checked( '' !== $recovery_identifier || isset( $_POST['ran_booster']['dry-run'] ) ); ?>>
 										<?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Link installed %s', 'ran-booster' ), $package_view->get_type() ) ); ?>
 									</label>
 									<p class="description"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Let Booster manage an already installed %s instead of deploying it now.', 'ran-booster' ), $package_view->get_type() ) ); ?></p>

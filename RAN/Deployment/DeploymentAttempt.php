@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Deployment;
 
 use InvalidArgumentException;
+use RAN\AdoptionIdentity;
 
 /** A validated projection of the 22-column deployment-attempt row. */
 final readonly class DeploymentAttempt {
@@ -65,6 +66,10 @@ final readonly class DeploymentAttempt {
 
 			if ( ( null === $delivery_id ) !== ( null === $delivery_digest ) || ( 'webhook' === $source ) !== ( null !== $delivery_id ) ) {
 				throw new InvalidArgumentException( 'The stored delivery identity is incomplete.' );
+			}
+			if ( null !== $request->adoption_token
+				&& ( 'install' === $operation || ! AdoptionIdentity::matches( $request->adoption_token, $provider, $provider_repository_id ) ) ) {
+				throw new InvalidArgumentException( 'The stored adoption identity is inconsistent.' );
 			}
 			if ( $request->package_slug !== $package_slug ) {
 				throw new InvalidArgumentException( 'The stored request identity is inconsistent.' );

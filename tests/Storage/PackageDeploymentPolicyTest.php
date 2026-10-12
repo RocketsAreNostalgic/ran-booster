@@ -256,12 +256,13 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 			'package'                => $identifier,
 			'repository'             => 'owner/' . dirname( $identifier ),
 			'branch'                 => 'main',
-			'type'                   => 1,
+			'package_type'           => 1,
 			'deployment_policy'      => $policy->value,
 			'source'                 => 'branch',
 			'source_revision'        => 1,
 			'provider'               => 'gh',
 			'provider_repository_id' => 'R_' . $id,
+			'adoption_token'         => 'gh:R_' . $id . ':12345678-1234-4234-8234-123456789abc',
 			'private'                => 0,
 			'credential_id'          => null,
 			'subdirectory'           => null,
@@ -273,7 +274,7 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 	 * @return array<string, mixed>
 	 */
 	private function snapshot( array $row ): array {
-		unset( $row['id'], $row['type'] );
+		unset( $row['id'], $row['package_type'] );
 
 		return $row;
 	}

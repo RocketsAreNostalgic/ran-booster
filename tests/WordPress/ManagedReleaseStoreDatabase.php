@@ -15,6 +15,8 @@ final class ManagedReleaseStoreDatabase implements \RAN\Storage\ManagedReleaseWr
 
 	public int $reads = 0;
 
+	public bool $replace_after_update = false;
+
 	/** @var list<array{0: string, 1: array<string, mixed>, 2: array<string, mixed>}> */
 	public array $updates = array();
 
@@ -22,6 +24,7 @@ final class ManagedReleaseStoreDatabase implements \RAN\Storage\ManagedReleaseWr
 	public function __construct( array $row ) {
 		$this->row = array_merge(
 			array(
+				'adoption_token'         => 'gh:fixture-repository:11111111-1111-4111-8111-111111111111',
 				'provider'               => 'gh',
 				'provider_repository_id' => 'fixture-repository',
 			),
@@ -51,7 +54,7 @@ final class ManagedReleaseStoreDatabase implements \RAN\Storage\ManagedReleaseWr
 			return array( (object) array( 'type' => 1 ) );
 		}
 
-		return array( (object) $this->row );
+		return array( (object) array_merge( $this->row, array( 'type' => $this->row['package_type'] ?? null ) ) );
 	}
 
 	/**
@@ -66,6 +69,9 @@ final class ManagedReleaseStoreDatabase implements \RAN\Storage\ManagedReleaseWr
 			}
 		}
 		$this->row = array_merge( $this->row, $data );
+		if ( $this->replace_after_update ) {
+			$this->row['adoption_token'] = 'gh:fixture-repository:22222222-2222-4222-8222-222222222222';
+		}
 
 		return 1;
 	}

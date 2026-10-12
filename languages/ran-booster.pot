@@ -2602,7 +2602,7 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:700
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:339
-#: RAN/Booster.php:734
+#: RAN/Booster.php:726
 #: views/attempts/index.php:43
 #: views/onboarding.php:28
 #: views/packages/branch-readiness.php:200
@@ -4438,62 +4438,62 @@ msgstr ""
 msgid "Manage with RAN Booster"
 msgstr ""
 
-#: RAN/Booster.php:730
+#: RAN/Booster.php:722
 #: views/attempts/index.php:38
 #: views/packages/index.php:61
 msgid "Queued"
 msgstr ""
 
-#: RAN/Booster.php:731
+#: RAN/Booster.php:723
 #: views/attempts/index.php:39
 #: views/packages/index.php:62
 msgid "Running"
 msgstr ""
 
-#: RAN/Booster.php:732
+#: RAN/Booster.php:724
 #: views/attempts/index.php:40
 #: views/packages/index.php:63
 msgid "Succeeded"
 msgstr ""
 
-#: RAN/Booster.php:733
+#: RAN/Booster.php:725
 #: views/attempts/index.php:42
 #: views/packages/index.php:64
 #: views/troubleshooting.php:42
 msgid "Failed"
 msgstr ""
 
-#: RAN/Booster.php:735
+#: RAN/Booster.php:727
 #: views/packages/index.php:323
 msgid "Reinstall queued"
 msgstr ""
 
-#: RAN/Booster.php:736
+#: RAN/Booster.php:728
 #: views/packages/index.php:325
 msgid "Reinstall in progress…"
 msgstr ""
 
-#: RAN/Booster.php:737
+#: RAN/Booster.php:729
 msgid "Package reinstalled."
 msgstr ""
 
-#: RAN/Booster.php:738
+#: RAN/Booster.php:730
 msgid "Package reinstall failed. Review deployment activity."
 msgstr ""
 
-#: RAN/Booster.php:739
+#: RAN/Booster.php:731
 msgid "Package reinstall needs attention. Review deployment activity before retrying."
 msgstr ""
 
-#: RAN/Booster.php:740
+#: RAN/Booster.php:732
 msgid "Live reinstall progress is unavailable. Refresh this page to check the latest state."
 msgstr ""
 
-#: RAN/Booster.php:741
+#: RAN/Booster.php:733
 msgid "Booster reinstalls are in progress. Queued: {queued}. Reinstalling: {running}. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster.php:742
+#: RAN/Booster.php:734
 msgid "Booster reinstalls have finished. Review the package statuses below. Skipped: {skipped}."
 msgstr ""
 

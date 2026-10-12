@@ -419,52 +419,44 @@ class Booster {
 
 	/** Optional history has its own schema version and cannot poison Core readiness. */
 	private function upgrade_activity(): void {
-		try {
-			$activity = $this->service( \RAN\Activity\ActivityStore::class );
-			if ( ! $activity->available() ) {
-				$activity->install();
-			}
-		} catch ( \Throwable $failure ) {
-			BoosterLogger::log_exception( 'optional activity setup unavailable', $failure, array( 'step' => 'activity_setup' ) );
+		$activity = $this->service( \RAN\Activity\ActivityStore::class );
+		if ( ! $activity->available() ) {
+			$activity->install();
 		}
 	}
 
 	/** Reuse WordPress's daily maintenance hook; never prune from a rendered history. */
 	public function prune_activity(): void {
-		try {
-			$activity = $this->service( \RAN\Activity\ActivityStore::class );
-			if ( ! $activity->available() ) {
-				return;
-			}
-			$plugins = $this->service( \RAN\Storage\PluginRepository::class )->all_deployment_plugins();
-			$themes  = $this->service( \RAN\Storage\ThemeRepository::class )->all_deployment_themes();
-			if ( ! is_array( $plugins ) || ! is_array( $themes ) ) {
-				return;
-			}
-			$contexts = array();
-			$evidence = null;
-			foreach ( array(
-				'plugin' => $plugins,
-				'theme'  => $themes,
-			) as $type => $packages ) {
-				foreach ( $packages as $package ) {
-					if ( ! $package instanceof Package || null === AdoptionIdentity::of( $package ) ) {
-						return;
-					}
-					$evidence ??= $this->service( \RAN\Admin\RepositoryBranchCheckEvidenceStore::class );
-					foreach ( array( 'branch.check', 'release.check', 'workflow.assessment' ) as $purpose ) {
-						$contexts[] = $evidence->activity_context( $type, $package, $purpose );
-					}
+		$activity = $this->service( \RAN\Activity\ActivityStore::class );
+		if ( ! $activity->available() ) {
+			return;
+		}
+		$plugins = $this->service( \RAN\Storage\PluginRepository::class )->all_deployment_plugins();
+		$themes  = $this->service( \RAN\Storage\ThemeRepository::class )->all_deployment_themes();
+		if ( ! is_array( $plugins ) || ! is_array( $themes ) ) {
+			return;
+		}
+		$contexts = array();
+		$evidence = null;
+		foreach ( array(
+			'plugin' => $plugins,
+			'theme'  => $themes,
+		) as $type => $packages ) {
+			foreach ( $packages as $package ) {
+				if ( ! $package instanceof Package || null === AdoptionIdentity::of( $package ) ) {
+					return;
+				}
+				$evidence ??= $this->service( \RAN\Admin\RepositoryBranchCheckEvidenceStore::class );
+				foreach ( array( 'branch.check', 'release.check', 'workflow.assessment' ) as $purpose ) {
+					$contexts[] = $evidence->activity_context( $type, $package, $purpose );
 				}
 			}
-			for ( $batch = 0; $batch < 20; ++$batch ) {
-				$removed = $activity->prune( $contexts );
-				if ( false === $removed || $removed < 100 ) {
-					break;
-				}
+		}
+		for ( $batch = 0; $batch < 20; ++$batch ) {
+			$removed = $activity->prune( $contexts );
+			if ( false === $removed || $removed < 100 ) {
+				break;
 			}
-		} catch ( \Throwable $failure ) {
-			BoosterLogger::log_exception( 'optional activity retention skipped', $failure, array( 'step' => 'activity_retention' ) );
 		}
 	}
 

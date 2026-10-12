@@ -3250,6 +3250,44 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertCount( $count, $connection->queries );
 	}
 
+	public function test_unmanaged_and_removed_targets_do_not_create_native_check_history(): void {
+		$package                                 = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
+		$connection                              = new \RAN\Tests\Activity\ActivityConnection();
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$removed                                 = false;
+		$reads                                   = 0;
+		[$registrar]                             = $this->native_plugin_registrar(
+			$package,
+			static function () use ( $package, &$removed, &$reads ): Package {
+				++$reads;
+				// @phpstan-ignore if.alwaysFalse (This callback runs again after the captured flag changes below.)
+				if ( $removed ) {
+					throw new \RAN\Storage\PluginNotFound();
+				}
+				return $package;
+			},
+			new \RAN\Activity\ActivityStore( $connection )
+		);
+		$event                                   = array(
+			'check_id'            => str_repeat( 'a', 32 ),
+			'network_id'          => 1,
+			'blog_id'             => 1,
+			'target_type'         => 'plugin',
+			'installed_identity'  => 'unmanaged/plugin.php',
+			'provider_code'       => 'github',
+			'repository_identity' => '123456789',
+			'channel'             => 'stable',
+			'binding_hash'        => str_repeat( 'b', 64 ),
+		);
+		$before                                  = $reads;
+		$registrar->activity_check_started( $event );
+		self::assertSame( $before, $reads );
+		$removed                     = true;
+		$event['installed_identity'] = self::NATIVE_PLUGIN;
+		$registrar->activity_check_started( $event );
+		self::assertSame( array(), $connection->inserted );
+	}
+
 	public function test_native_refresh_and_stale_registration_do_not_invent_check_history(): void {
 		$package                                     = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
 		$replacement                                 = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL, uuid: '22222222-2222-4222-8222-222222222222' );

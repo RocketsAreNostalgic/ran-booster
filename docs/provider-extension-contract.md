@@ -792,7 +792,12 @@ or Core-verification provenance. Autonomous outcomes are provider-reported.
 
 Use stable namespaced codes and optional bounded developer-authored plain text.
 Never report remote bodies, exceptions, credentials, authenticated URLs, headers
-or HTML. Reporting failure must not change the domain result. Missing completion
+or HTML. Unavailable storage, rejected reporting payloads and explicit database
+failure returns do not change the domain result. Unexpected exceptions from
+WordPress callbacks or storage adapters propagate out of the reporting API; they
+are not safe optional failures to suppress. Existing operation-wide error policy
+remains separate. Reporting does not run while an unexpected exception unwinds.
+Missing completion
 remains unconfirmed; progress is coalesced into the latest stage and terminal
 records cannot be reopened. Diagnostic logging remains separate.
 
@@ -800,7 +805,7 @@ Branch verification remains a separate, bounded operational record in the existi
 option. A check captures its adoption, source and access context before work and
 replaces earlier verification with a per-check token. Completion may establish
 verification only while that token is still current, after archive cleanup and
-updater-lock release. Optional history failure does not suppress a fresh verified
+updater-lock release. Ordinary optional history unavailability does not suppress a fresh verified
 result; it also cannot restore verification for a failed, superseded or changed
 check. Old candidate fence-only records require a fresh check.
 

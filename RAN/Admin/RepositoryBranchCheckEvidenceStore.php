@@ -108,38 +108,32 @@ class RepositoryBranchCheckEvidenceStore {
 		$pending = $this->pending[ $key ];
 		unset( $profile_id ); // The pre-work capture remains authoritative.
 		unset( $this->pending[ $key ] );
-		try {
-			$this->mutate(
-				static function ( array $all ) use ( $key, $pending, $outcome, $profile_fingerprint ): array {
-					$current = $all['records'][ $key ] ?? null;
-					if ( ! is_array( $current ) || ( $current['nonce'] ?? null ) !== $pending['nonce'] ) {
-						return $all;
-					}
-					unset( $all['records'][ $key ] );
-					if ( 'verified' === $outcome ) {
-						$all['records'][ $key ] = array(
-							'nonce'      => $pending['nonce'],
-							'outcome'    => 'verified',
-							'checked_at' => gmdate( 'Y-m-d\\TH:i:s\\Z' ),
-							'target'     => $pending['target'],
-							'profile'    => $profile_fingerprint ?? $pending['profile'],
-						);
-					}
+		$this->mutate(
+			static function ( array $all ) use ( $key, $pending, $outcome, $profile_fingerprint ): array {
+				$current = $all['records'][ $key ] ?? null;
+				if ( ! is_array( $current ) || ( $current['nonce'] ?? null ) !== $pending['nonce'] ) {
 					return $all;
 				}
-			);
-		} catch ( \Throwable $failure ) {
-			$outcome = 'unable_to_check';
-			throw $failure;
-		} finally {
-			$status = match ( $outcome ) {
-				'verified' => 'succeeded',
-				'subdirectory_unavailable' => 'rejected',
-				default => 'failed',
-			};
-			$effect = in_array( $outcome, array( 'verified', 'subdirectory_unavailable' ), true ) ? 'established' : 'none';
-			$this->activity_store()->complete( $pending['id'], $status, $outcome, effect: $effect );
-		}
+				unset( $all['records'][ $key ] );
+				if ( 'verified' === $outcome ) {
+					$all['records'][ $key ] = array(
+						'nonce'      => $pending['nonce'],
+						'outcome'    => 'verified',
+						'checked_at' => gmdate( 'Y-m-d\\TH:i:s\\Z' ),
+						'target'     => $pending['target'],
+						'profile'    => $profile_fingerprint ?? $pending['profile'],
+					);
+				}
+				return $all;
+			}
+		);
+		$status = match ( $outcome ) {
+			'verified' => 'succeeded',
+			'subdirectory_unavailable' => 'rejected',
+			default => 'failed',
+		};
+		$effect = in_array( $outcome, array( 'verified', 'subdirectory_unavailable' ), true ) ? 'established' : 'none';
+		$this->activity_store()->complete( $pending['id'], $status, $outcome, effect: $effect );
 	}
 
 	/** Clear evidence when this managed package lifecycle ends. */

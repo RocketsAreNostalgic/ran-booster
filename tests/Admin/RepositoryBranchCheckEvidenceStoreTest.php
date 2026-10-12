@@ -408,7 +408,7 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 		}
 		// The existing option mutation contract cannot roll back a completed write.
 		self::assertNotNull( $store->find( 'plugin', $package, 'profile-a' ) );
-		self::assertSame( 'unable_to_check', $store->database->records[1]['reason'] );
+		self::assertSame( 'incomplete', $store->database->records[1]['status'] );
 	}
 
 	public function test_completion_requires_a_pre_work_capture(): void {

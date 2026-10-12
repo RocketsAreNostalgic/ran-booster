@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Activity;
 
 use Closure;
-use Throwable;
 
 /** Core supplies the resolver after accepting provider registration. */
 final class BoundActivityReporter implements ActivityReporter {
@@ -15,18 +14,13 @@ final class BoundActivityReporter implements ActivityReporter {
 	}
 
 	public function begin( ActivityRequest $request ): ActivityOperation {
-		$id = null;
-		try {
-			$capture = ( $this->capture )( $request );
-			if ( null !== $capture ) {
-				// Provider-selected codes cannot allocate protected Core observation slots.
-				$capture['purpose']    = null;
-				$capture['provenance'] = 'provider';
-				$id                    = $this->store->begin( $this->provider, $request, $capture );
-			}
-		} catch ( Throwable ) {
-			// Optional reporting must not interrupt the provider's operation.
-			$id = null;
+		$id      = null;
+		$capture = ( $this->capture )( $request );
+		if ( null !== $capture ) {
+			// Provider-selected codes cannot allocate protected Core observation slots.
+			$capture['purpose']    = null;
+			$capture['provenance'] = 'provider';
+			$id                    = $this->store->begin( $this->provider, $request, $capture );
 		}
 		return new RecordedActivityOperation( $this->store, $id );
 	}

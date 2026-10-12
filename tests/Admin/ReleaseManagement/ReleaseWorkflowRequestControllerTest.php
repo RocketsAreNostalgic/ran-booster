@@ -431,6 +431,17 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 		self::assertSame( array(), $provider->calls );
 	}
 
+	public function test_unexpected_workflow_failure_keeps_the_started_activity_incomplete(): void {
+		$provider                     = new RepositoryReleaseWorkflowProviderDouble();
+		$provider->throw_on_operation = true;
+		[$controller, , $connection]  = $this->activity_fixture( $provider );
+		$url                          = $controller->process_workflow_request( $this->request( 'inspect' ) );
+		self::assertStringContainsString( 'workflow_remote_unavailable', $url );
+		self::assertCount( 1, $connection->inserted );
+		self::assertSame( 'incomplete', $connection->inserted[0]['status'] );
+		self::assertSame( array(), array_values( array_filter( $connection->queries, static fn ( string $query ): bool => str_contains( $query, 'SET status = ' ) ) ) );
+	}
+
 	public function test_workflow_activity_captures_authenticated_pre_provider_failure_and_rejects_forgery(): void {
 		[$controller, $presenter, $connection, $package] = $this->activity_fixture( new RepositoryReleaseWorkflowProviderDouble(), false );
 		$request             = $this->request( 'inspect' );

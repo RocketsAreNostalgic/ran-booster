@@ -127,10 +127,7 @@ final class ReleaseWorkflowRequestController {
 					break;
 				}
 				if ( null !== $this->activity && $package instanceof Package ) {
-					$activity_id = $this->request_boundary(
-						fn (): ?int => $this->activity->begin( $provider_code, new ActivityRequest( 'workflow.' . $operation, $package->get_repository()->reference, $type, $identifier ), ( new RepositoryBranchCheckEvidenceStore() )->activity_context( $type, $package, 'workflow.assessment' ) ),
-						null
-					);
+					$activity_id = $this->activity->begin( $provider_code, new ActivityRequest( 'workflow.' . $operation, $package->get_repository()->reference, $type, $identifier ), ( new RepositoryBranchCheckEvidenceStore() )->activity_context( $type, $package, 'workflow.assessment' ) );
 					$progress    = new ProgressOnly( new RecordedActivityOperation( $this->activity, $activity_id ) );
 				}
 				$provider = $this->workflow_provider( $provider_code );
@@ -184,7 +181,8 @@ final class ReleaseWorkflowRequestController {
 				$outcome = $this->workflow_result( $type, $identifier, $result->workflow_code(), $result->successful(), $result->preview_key(), $result->failure_stage(), $result->diagnostic_code(), '' !== $result->correlation_reference(), $result->correlation_reference(), $result->message(), $result->remediation() );
 			} while ( false );
 		} catch ( Throwable ) {
-			$outcome = $this->workflow_result( $type, $identifier, 'workflow_remote_unavailable', false, '', 'unexpected', 'unexpected_runtime_failure' );
+			$activity_id = null; // Do not dispatch reporting hooks after an unexpected failure.
+			$outcome     = $this->workflow_result( $type, $identifier, 'workflow_remote_unavailable', false, '', 'unexpected', 'unexpected_runtime_failure' );
 		}
 		if ( ! $outcome['successful'] && '' === $outcome['correlation_reference'] && '' !== $outcome['failure_stage'] ) {
 			$outcome = $this->preserve_request_failure( $operation, $outcome, $provider_code );
@@ -196,23 +194,20 @@ final class ReleaseWorkflowRequestController {
 				'workflow_inspected' => 'no_recognisable_automation',
 				default => '',
 			};
-			$this->request_boundary(
-				fn (): bool => $this->activity->complete(
-					$activity_id,
-					$outcome['successful'] ? 'succeeded' : 'failed',
-					$outcome['code'],
-					$outcome['message'],
-					$outcome['remediation'],
-					array(
-						'observation_kind'      => $kind,
-						'failure_stage'         => $outcome['failure_stage'],
-						'diagnostic_code'       => $outcome['diagnostic_code'],
-						'diagnostic_available'  => $outcome['diagnostic_available'],
-						'correlation_reference' => $outcome['correlation_reference'],
-					),
-					'' !== $kind ? 'established' : 'none'
+			$this->activity->complete(
+				$activity_id,
+				$outcome['successful'] ? 'succeeded' : 'failed',
+				$outcome['code'],
+				$outcome['message'],
+				$outcome['remediation'],
+				array(
+					'observation_kind'      => $kind,
+					'failure_stage'         => $outcome['failure_stage'],
+					'diagnostic_code'       => $outcome['diagnostic_code'],
+					'diagnostic_available'  => $outcome['diagnostic_available'],
+					'correlation_reference' => $outcome['correlation_reference'],
 				),
-				false
+				'' !== $kind ? 'established' : 'none'
 			);
 		}
 		$args = $this->result_query_arguments( $outcome, $channel, $revision, $provider_code, $repository_id );

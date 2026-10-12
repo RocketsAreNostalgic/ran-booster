@@ -73,7 +73,8 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		$plugins = $this->createMock( \RAN\Storage\PluginRepository::class );
 		$plugins->method( 'booster_plugin_from_file' )->with( 'example/example.php' )->willReturn( $package );
 		$container->bind( \RAN\Storage\PluginRepository::class, $plugins );
-		$token    = \RAN\AdoptionIdentity::create( 'gh', '123' );
+		$token = \RAN\AdoptionIdentity::create( 'gh', '123' );
+		$package->method( 'get_adoption_token' )->willReturn( $token );
 		$context  = array(
 			'subject_type'     => 'plugin',
 			'subject_identity' => 'example/example.php',

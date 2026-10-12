@@ -53,6 +53,44 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertSame( array(), $this->connection->queries );
 	}
 
+	public function test_unexpected_option_callback_exception_is_not_an_optional_failure(): void {
+		$failure                                        = new \RuntimeException( 'Unexpected option callback failure.' );
+		$GLOBALS['ran_booster_activity_option_failure'] = $failure;
+		try {
+			$this->store->begin( 'gh', self::request(), self::capture() );
+			self::fail( 'The callback exception must propagate.' );
+		} catch ( \RuntimeException $caught ) {
+			self::assertSame( $failure, $caught );
+		} finally {
+			unset( $GLOBALS['ran_booster_activity_option_failure'] );
+		}
+		self::assertSame( array(), $this->connection->inserted );
+	}
+
+	public function test_bound_capture_exception_propagates_without_returning_a_noop_operation(): void {
+		$reporter = new BoundActivityReporter(
+			$this->store,
+			'gh',
+			static function (): never {
+				throw new \RuntimeException( 'Unexpected capture failure.' );
+			}
+		);
+		$this->expectExceptionMessage( 'Unexpected capture failure.' );
+		$reporter->begin( self::request() );
+	}
+
+	public function test_missing_connection_and_malformed_rows_remain_unavailable(): void {
+		$store = new ActivityStore( new \stdClass() );
+		self::assertNull( $store->begin( 'gh', self::request(), self::capture() ) );
+		self::assertFalse( $store->install() );
+		self::assertFalse( $store->progress( 1, 'checking' ) );
+		self::assertFalse( $store->complete( 1, 'succeeded', 'checked' ) );
+		self::assertFalse( $store->activity_history()['available'] );
+		self::assertFalse( $store->prune( array() ) );
+		$this->connection->read_results = array( array( array( 'unsafe' => array() ) ) );
+		self::assertFalse( $this->store->activity_history()['available'] );
+	}
+
 	public function test_begin_captures_exact_lifetime_and_rejects_wrong_provider(): void {
 		$capture = self::capture();
 		self::assertSame( 1, $this->store->begin( 'gh', self::request(), $capture ) );

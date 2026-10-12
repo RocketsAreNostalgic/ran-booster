@@ -485,10 +485,14 @@ final class BoosterServiceProvider {
 				'provenance'       => 'provider',
 			);
 		}
-		$package = 'plugin' === $request->target_type
-			? $container->make( PluginRepository::class )->booster_plugin_from_file( $request->target_identity )
-			: $container->make( ThemeRepository::class )->booster_theme_from_stylesheet( $request->target_identity );
-		if ( (string) $package->get_provider_code() !== (string) $code || $package->get_provider_repository_id() !== $request->repository?->provider_repository_id ) {
+		try {
+			$package = 'plugin' === $request->target_type
+				? $container->make( PluginRepository::class )->booster_plugin_from_file( $request->target_identity )
+				: $container->make( ThemeRepository::class )->booster_theme_from_stylesheet( $request->target_identity );
+		} catch ( \RAN\Storage\PluginNotFound | \RAN\Storage\ThemeNotFound ) {
+			return null;
+		}
+		if ( null === \RAN\AdoptionIdentity::of( $package ) || (string) $package->get_provider_code() !== (string) $code || $package->get_provider_repository_id() !== $request->repository?->provider_repository_id ) {
 			return null;
 		}
 		return $container->make( RepositoryBranchCheckEvidenceStore::class )->activity_context( $request->target_type, $package, 'branch.check' );

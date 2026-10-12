@@ -813,61 +813,57 @@ final class ReleaseWorkflowPresenter {
 			'observation' => null,
 			'failures'    => array(),
 		);
-		if ( null === $this->activity || ! $package instanceof Package ) {
+		if ( null === $this->activity || ! $package instanceof Package || null === \RAN\AdoptionIdentity::of( $package ) ) {
 			return $empty;
 		}
-		try {
-			$capture = ( new RepositoryBranchCheckEvidenceStore() )->activity_context( $type, $package, 'workflow.assessment' );
-			if ( null === $capture['adoption_token'] ) {
-				return $empty;
-			}
-			$summary     = $this->activity->summary( $type, $capture['subject_identity'], $capture['adoption_token'], $capture['context'], 'workflow.assessment' );
-			$history     = $this->activity->activity_history(
-				array(
-					'subject_type'     => $type,
-					'subject_identity' => $capture['subject_identity'],
-					'adoption_token'   => $capture['adoption_token'],
-					'context'          => $capture['context'],
-					'purpose'          => 'workflow.assessment',
-					'status'           => 'failed',
-				),
-				limit: 12
-			);
-			$observation = $summary['observation'];
-			$facts       = json_decode( (string) ( $observation['facts'] ?? '{}' ), true );
-			$kind        = is_array( $facts ) && is_string( $facts['observation_kind'] ?? null ) ? $facts['observation_kind'] : '';
-			$found       = 'established' === ( $observation['effect'] ?? '' ) && in_array( $kind, array( 'existing_automation_detected', 'booster_setup_verified', 'no_recognisable_automation' ), true );
-			$failures    = array();
-			foreach ( $history['records'] as $record ) {
-				$facts = json_decode( (string) ( $record['facts'] ?? '{}' ), true );
-				if ( ! is_array( $facts ) ) {
-					continue;
-				}
-				$operation = substr( (string) ( $record['operation'] ?? '' ), strlen( 'workflow.' ) );
-				if ( ! in_array( $operation, array( 'inspect', 'setup', 'outcome' ), true ) ) {
-					continue;
-				}
-				$failures[] = array(
-					'operation'             => $operation,
-					'outcome_code'          => (string) ( $record['reason'] ?? '' ),
-					'failure_stage'         => is_string( $facts['failure_stage'] ?? null ) ? $facts['failure_stage'] : '',
-					'diagnostic_code'       => is_string( $facts['diagnostic_code'] ?? null ) ? $facts['diagnostic_code'] : '',
-					'diagnostic_available'  => true === ( $facts['diagnostic_available'] ?? false ),
-					'correlation_reference' => is_string( $facts['correlation_reference'] ?? null ) && '' !== $facts['correlation_reference'] ? $facts['correlation_reference'] : (string) ( $record['correlation'] ?? '' ),
-					'recorded_at'           => str_replace( ' ', 'T', (string) ( $record['completed_at'] ?? '' ) ) . 'Z',
-				);
-			}
-			return array(
-				'available'   => $summary['available'] && $history['available'],
-				'observation' => $found ? array(
-					'kind'        => $kind,
-					'recorded_at' => str_replace( ' ', 'T', (string) ( $observation['completed_at'] ?? '' ) ) . 'Z',
-				) : null,
-				'failures'    => $failures,
-			);
-		} catch ( Throwable ) {
+		$capture = ( new RepositoryBranchCheckEvidenceStore() )->activity_context( $type, $package, 'workflow.assessment' );
+		if ( null === $capture['adoption_token'] ) {
 			return $empty;
 		}
+		$summary     = $this->activity->summary( $type, $capture['subject_identity'], $capture['adoption_token'], $capture['context'], 'workflow.assessment' );
+		$history     = $this->activity->activity_history(
+			array(
+				'subject_type'     => $type,
+				'subject_identity' => $capture['subject_identity'],
+				'adoption_token'   => $capture['adoption_token'],
+				'context'          => $capture['context'],
+				'purpose'          => 'workflow.assessment',
+				'status'           => 'failed',
+			),
+			limit: 12
+		);
+		$observation = $summary['observation'];
+		$facts       = json_decode( (string) ( $observation['facts'] ?? '{}' ), true );
+		$kind        = is_array( $facts ) && is_string( $facts['observation_kind'] ?? null ) ? $facts['observation_kind'] : '';
+		$found       = 'established' === ( $observation['effect'] ?? '' ) && in_array( $kind, array( 'existing_automation_detected', 'booster_setup_verified', 'no_recognisable_automation' ), true );
+		$failures    = array();
+		foreach ( $history['records'] as $record ) {
+			$facts = json_decode( (string) ( $record['facts'] ?? '{}' ), true );
+			if ( ! is_array( $facts ) ) {
+				continue;
+			}
+			$operation = substr( (string) ( $record['operation'] ?? '' ), strlen( 'workflow.' ) );
+			if ( ! in_array( $operation, array( 'inspect', 'setup', 'outcome' ), true ) ) {
+				continue;
+			}
+			$failures[] = array(
+				'operation'             => $operation,
+				'outcome_code'          => (string) ( $record['reason'] ?? '' ),
+				'failure_stage'         => is_string( $facts['failure_stage'] ?? null ) ? $facts['failure_stage'] : '',
+				'diagnostic_code'       => is_string( $facts['diagnostic_code'] ?? null ) ? $facts['diagnostic_code'] : '',
+				'diagnostic_available'  => true === ( $facts['diagnostic_available'] ?? false ),
+				'correlation_reference' => is_string( $facts['correlation_reference'] ?? null ) && '' !== $facts['correlation_reference'] ? $facts['correlation_reference'] : (string) ( $record['correlation'] ?? '' ),
+				'recorded_at'           => str_replace( ' ', 'T', (string) ( $record['completed_at'] ?? '' ) ) . 'Z',
+			);
+		}
+		return array(
+			'available'   => $summary['available'] && $history['available'],
+			'observation' => $found ? array(
+				'kind'        => $kind,
+				'recorded_at' => str_replace( ' ', 'T', (string) ( $observation['completed_at'] ?? '' ) ) . 'Z',
+			) : null,
+			'failures'    => $failures,
+		);
 	}
 
 	/** Resolve the exact provider capability, retaining unavailable-provider fallback. */

@@ -16,6 +16,8 @@ use RAN\Storage\Database;
 use RAN\Storage\DatabaseCompatibilityFailure;
 use RAN\Storage\DatabaseLifecycleFailure;
 
+require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
+
 final class ActivationRequirementsTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
@@ -43,6 +45,7 @@ final class ActivationRequirementsTest extends TestCase {
 		$database                                        = null === $failure ? new ActivationRequirementsDatabase() : new FailingActivationDatabase( $failure );
 		$wakeup    = new ActivationRequirementsWakeup();
 		$container = new CoreContainer();
+		$container->bind( \RAN\Activity\ActivityStore::class, new \RAN\Activity\ActivityStore( new \stdClass() ) );
 		$container->bind( Database::class, $database );
 		$container->bind( WordPressWorkerWakeup::class, $wakeup );
 		$booster = new ActivationRequirementsBooster( $container, $sodium, $multisite );
@@ -58,6 +61,7 @@ final class ActivationRequirementsTest extends TestCase {
 		$database  = new ActivationRequirementsDatabase();
 		$wakeup    = new ActivationRequirementsWakeup();
 		$container = new CoreContainer();
+		$container->bind( \RAN\Activity\ActivityStore::class, new \RAN\Activity\ActivityStore( new \stdClass() ) );
 		$container->bind( Database::class, $database );
 		$container->bind( WordPressWorkerWakeup::class, $wakeup );
 		$booster = new ActivationRequirementsBooster( $container, true, false );
@@ -79,6 +83,7 @@ final class ActivationRequirementsTest extends TestCase {
 			}
 		};
 		$container = new CoreContainer();
+		$container->bind( \RAN\Activity\ActivityStore::class, new \RAN\Activity\ActivityStore( new \stdClass() ) );
 		$container->bind( \RAN\Activity\ActivityStore::class, $activity );
 		$container->bind( Database::class, new ActivationRequirementsDatabase() );
 		$wakeup = new ActivationRequirementsWakeup();
@@ -118,13 +123,19 @@ final class ActivationRequirementsTest extends TestCase {
 			}
 		};
 		$container = new CoreContainer();
+		$container->bind( \RAN\Activity\ActivityStore::class, new \RAN\Activity\ActivityStore( new \stdClass() ) );
 		$container->bind( \RAN\Activity\ActivityStore::class, $activity );
 		$container->bind( \RAN\Storage\PluginRepository::class, $plugins );
 		$themes = $this->createMock( \RAN\Storage\ThemeRepository::class );
 		$themes->expects( self::exactly( 4 ) )->method( 'all_deployment_themes' )->willReturn( array() );
 		$container->bind( \RAN\Storage\ThemeRepository::class, $themes );
 		$booster = new Booster( $container );
-		$booster->prune_activity();
+		try {
+			$booster->prune_activity();
+			self::fail( 'Unexpected inventory exceptions must propagate.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertSame( 'Inventory read failed.', $failure->getMessage() );
+		}
 		self::assertSame( 0, $activity->prunes );
 		$plugins->fail = false;
 		$booster->prune_activity();
@@ -153,7 +164,8 @@ final class ActivationRequirementsTest extends TestCase {
 		$database  = new ActivationRequirementsDatabase();
 		$wakeup    = new ActivationRequirementsWakeup();
 		$container = new CoreContainer();
-		$booster   = new ActivationRequirementsBooster( $container, $sodium, $multisite );
+		$container->bind( \RAN\Activity\ActivityStore::class, new \RAN\Activity\ActivityStore( new \stdClass() ) );
+		$booster = new ActivationRequirementsBooster( $container, $sodium, $multisite );
 		$container->bind( 'RAN\Storage\Database', $database );
 		$container->bind( WordPressWorkerWakeup::class, $wakeup );
 
@@ -183,7 +195,8 @@ final class ActivationRequirementsTest extends TestCase {
 		$database  = new FailingActivationDatabase( $failure );
 		$wakeup    = new ActivationRequirementsWakeup();
 		$container = new CoreContainer();
-		$booster   = new ActivationRequirementsBooster( $container, true, false );
+		$container->bind( \RAN\Activity\ActivityStore::class, new \RAN\Activity\ActivityStore( new \stdClass() ) );
+		$booster = new ActivationRequirementsBooster( $container, true, false );
 		$container->bind( Database::class, $database );
 		$container->bind( WordPressWorkerWakeup::class, $wakeup );
 
@@ -203,7 +216,8 @@ final class ActivationRequirementsTest extends TestCase {
 		$database                                        = new ActivationRequirementsDatabase();
 		$wakeup    = new ActivationRequirementsWakeup();
 		$container = new CoreContainer();
-		$booster   = new ActivationRequirementsBooster( $container, true, false );
+		$container->bind( \RAN\Activity\ActivityStore::class, new \RAN\Activity\ActivityStore( new \stdClass() ) );
+		$booster = new ActivationRequirementsBooster( $container, true, false );
 		$container->bind( 'RAN\Storage\Database', $database );
 		$container->bind( WordPressWorkerWakeup::class, $wakeup );
 

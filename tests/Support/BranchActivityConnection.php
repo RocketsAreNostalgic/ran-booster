@@ -49,7 +49,7 @@ final class BranchActivityConnection implements DeploymentWriteConnection {
 
 	public function get_results( string $query ): mixed {
 		if ( $this->fail_read ) {
-			throw new \RuntimeException( 'History read failed.' );
+			return false;
 		}
 		$args = $this->arguments[ $query ] ?? end( $this->arguments );
 		$args = is_array( $args ) ? $args : array();

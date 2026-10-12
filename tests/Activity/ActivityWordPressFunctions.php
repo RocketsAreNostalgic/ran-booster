@@ -6,6 +6,10 @@ namespace RAN\Activity;
 
 /** Test-local WordPress boundaries avoid altering unrelated test symbol worlds. */
 function get_option( string $name ): mixed {
+	$failure = $GLOBALS['ran_booster_activity_option_failure'] ?? null;
+	if ( $failure instanceof \Throwable ) {
+		throw $failure;
+	}
 	return $GLOBALS['ran_booster_activity_options'][ $name ] ?? false;
 }
 

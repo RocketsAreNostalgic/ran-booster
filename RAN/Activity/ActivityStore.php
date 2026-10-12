@@ -87,7 +87,7 @@ final class ActivityStore {
 		if ( null !== $token && ! AdoptionIdentity::matches( $token, $provider, $request->repository->provider_repository_id ?? '' ) ) {
 			return null;
 		}
-		$data        = array_merge(
+		$data = array_merge(
 			$capture,
 			array(
 				'provider'    => $provider,

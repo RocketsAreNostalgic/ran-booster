@@ -15,7 +15,6 @@ use Throwable;
 final class DeploymentAdminPresenter {
 
 	public const USER_META_KEY = '_ran_booster_background_failure_notice_fingerprint';
-	private const PAGE_SIZE    = 50;
 	private bool $rendered     = false;
 	/** @var list<array<string, int|string|null>>|null */
 	private ?array $failures = null;
@@ -144,34 +143,7 @@ final class DeploymentAdminPresenter {
 
 			return $base;
 		}
-		if ( null !== $this->activity_store ) {
-			return $this->shared_history( $base );
-		}
-		$before             = $this->query_value( 'before' );
-		$base['has_cursor'] = $this->query_has_key( 'before' );
-		if ( $base['has_cursor'] && ( null === $before || '' === $before ) ) {
-			$base['unavailable'] = true;
-			return $base;
-		}
-		try {
-			$before_id = null === $before ? null : $this->positive_integer( $before );
-			if ( $base['has_cursor'] && null === $before_id ) {
-				$base['unavailable'] = true;
-				return $base;
-			}
-			$items               = $this->attempts->recent_history( self::PAGE_SIZE + 1, $before_id );
-			$has_more            = count( $items ) > self::PAGE_SIZE;
-			$items               = $has_more ? array_slice( $items, 0, self::PAGE_SIZE ) : $items;
-			$last                = end( $items );
-			$base['items']       = $items;
-			$base['next_cursor'] = $has_more && false !== $last ? $last->get_id() : null;
-			$base['unavailable'] = false;
-		} catch ( Throwable $failure ) {
-			$this->log_read_failure( 'deployment activity history unavailable', $failure, 'deployment_activity_history' );
-			$base['unavailable'] = true;
-		}
-
-		return $base;
+		return $this->shared_history( $base );
 	}
 
 	/**
@@ -179,9 +151,9 @@ final class DeploymentAdminPresenter {
 	 * @return array<string, mixed>
 	 */
 	private function shared_history( array $base ): array {
-		$base['has_cursor']  = $this->query_has_key( 'before' );
-		$base['filters']     = array();
-		$base['mixed_items'] = array();
+		$base['has_cursor'] = $this->query_has_key( 'before' );
+		$base['filters']    = array();
+		$base['items']      = array();
 		try {
 			foreach ( array( 'provider', 'subject_type', 'subject_identity', 'operation', 'outcome' ) as $key ) {
 				$value = $this->query_value( 'activity_' . $key );
@@ -236,14 +208,14 @@ final class DeploymentAdminPresenter {
 				);
 			}
 			usort( $rows, static fn ( array $a, array $b ): int => array( $b['created_at'], $b['record_source'], $b['id'] ) <=> array( $a['created_at'], $a['record_source'], $a['id'] ) );
-			$base['mixed_items'] = array_slice( $rows, 0, 25 );
-			$last                = end( $base['mixed_items'] );
+			$base['items']       = array_slice( $rows, 0, 25 );
+			$last                = end( $base['items'] );
 			$base['next_cursor'] = count( $rows ) > 25 && false !== $last ? 'v1|' . $filter_key . '|' . $last['created_at'] . '|' . $last['record_source'] . '|' . $last['id'] : null;
 			$base['unavailable'] = false;
 		} catch ( Throwable $failure ) {
 			$this->log_read_failure( 'shared activity history unavailable', $failure, 'activity_history' );
 			$base['unavailable'] = true;
-			$base['mixed_items'] = array();
+			$base['items']       = array();
 		}
 		return $base;
 	}

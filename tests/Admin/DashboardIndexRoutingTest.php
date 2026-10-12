@@ -2346,7 +2346,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		)->get_index()['data']['deployment_activity'];
 
 		self::assertCount( 9, $data['items'] );
-		self::assertSame( 9, $data['items'][0]->get_id() );
+		self::assertSame( 9, $data['items'][0]['id'] );
 		self::assertNull( $data['next_cursor'] );
 		self::assertFalse( $data['has_cursor'] );
 	}
@@ -2424,7 +2424,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 	public function test_deployment_history_uses_lookahead_without_overlapping_pages(): void {
 		$database       = new DashboardActivityWpdb();
-		$database->rows = array_map( static fn ( int $id ): array => DashboardActivityWpdb::attempt( $id, 'succeeded' ), range( 1, 51 ) );
+		$database->rows = array_map( static fn ( int $id ): array => DashboardActivityWpdb::attempt( $id, 'succeeded' ), range( 1, 26 ) );
 		$attempts       = $this->deployment_attempts( $database );
 		$_GET           = array(
 			'tab'   => 'troubleshooting',
@@ -2433,16 +2433,16 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		$first_page = $this->dashboard( $this->throwing_secrets(), null, null, $attempts )->get_index()['data']['deployment_activity'];
 
-		self::assertCount( 50, $first_page['items'] );
-		self::assertSame( 51, $first_page['items'][0]->get_id() );
-		self::assertSame( 2, $first_page['items'][49]->get_id() );
-		self::assertSame( 2, $first_page['next_cursor'] );
+		self::assertCount( 25, $first_page['items'] );
+		self::assertSame( 26, $first_page['items'][0]['id'] );
+		self::assertSame( 2, $first_page['items'][24]['id'] );
+		self::assertSame( 'v1|' . hash( 'sha256', '' ) . '|2026-07-19 00:00:00|deployment|2', $first_page['next_cursor'] );
 
-		$_GET['before'] = '2';
+		$_GET['before'] = $first_page['next_cursor'];
 		$last_page      = $this->dashboard( $this->throwing_secrets(), null, null, $attempts )->get_index()['data']['deployment_activity'];
 
 		self::assertCount( 1, $last_page['items'] );
-		self::assertSame( 1, $last_page['items'][0]->get_id() );
+		self::assertSame( 1, $last_page['items'][0]['id'] );
 		self::assertNull( $last_page['next_cursor'] );
 		self::assertTrue( $last_page['has_cursor'] );
 	}
@@ -2453,7 +2453,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$_GET           = array(
 			'tab'    => 'troubleshooting',
 			'panel'  => 'deployment-activity',
-			'before' => '1',
+			'before' => 'v1|' . hash( 'sha256', '' ) . '|2026-07-19 00:00:00|deployment|1',
 		);
 
 		$data = $this->dashboard(
@@ -2555,7 +2555,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		foreach ( $cases as $query ) {
 			$database       = new DashboardActivityWpdb();
 			$database->rows = array( DashboardActivityWpdb::attempt( 1, 'succeeded' ) );
-			$presenter      = new DeploymentAdminPresenter( attempts: $this->deployment_attempts( $database ) );
+			$presenter      = new DeploymentAdminPresenter( attempts: $this->deployment_attempts( $database ), activity_store: $this->empty_activity_store() );
 			$_GET           = $query;
 			$data           = $presenter->activity();
 			$is_cursor      = array_key_exists( 'before', $query );
@@ -2595,15 +2595,15 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$presenter = new DeploymentAdminPresenter( attempts: $this->deployment_attempts( $database ), activity_store: new \RAN\Activity\ActivityStore( $database, 'wp_ran_booster_activity' ) );
 		$page      = $presenter->activity();
 		self::assertFalse( $page['unavailable'] );
-		self::assertCount( 25, $page['mixed_items'] );
-		self::assertSame( 'deployment', $page['mixed_items'][0]['record_source'] );
-		self::assertSame( 2, $page['mixed_items'][0]['id'] );
-		self::assertSame( 'activity', $page['mixed_items'][2]['record_source'] );
+		self::assertCount( 25, $page['items'] );
+		self::assertSame( 'deployment', $page['items'][0]['record_source'] );
+		self::assertSame( 2, $page['items'][0]['id'] );
+		self::assertSame( 'activity', $page['items'][2]['record_source'] );
 		self::assertSame( 'v1|' . hash( 'sha256', '' ) . '|' . $time . '|activity|4', $page['next_cursor'] );
 		$_GET  = array( 'before' => $page['next_cursor'] );
 		$older = $presenter->activity();
 		self::assertFalse( $older['unavailable'] );
-		self::assertSame( array( 3, 2, 1 ), array_column( $older['mixed_items'], 'id' ) );
+		self::assertSame( array( 3, 2, 1 ), array_column( $older['items'], 'id' ) );
 		self::assertNull( $older['next_cursor'] );
 		foreach ( array(
 			'activity_provider'         => 'bb',
@@ -2639,6 +2639,15 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringNotContainsString( "`package_slug` = 'example/second.php'", implode( "\n", $database->reads ) );
 	}
 
+	public function test_missing_activity_store_does_not_fall_back_to_deployment_only_history(): void {
+		$database       = new DashboardActivityWpdb();
+		$database->rows = array( DashboardActivityWpdb::attempt( 1, 'succeeded' ) );
+		$page           = ( new DeploymentAdminPresenter( attempts: $this->deployment_attempts( $database ) ) )->activity();
+		self::assertTrue( $page['unavailable'] );
+		self::assertSame( array(), $page['items'] );
+		self::assertSame( array(), $database->reads );
+	}
+
 	public function test_shared_activity_does_not_present_a_partial_page_when_record_storage_is_unavailable(): void {
 		require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
 		$GLOBALS['ran_booster_activity_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ] = '0';
@@ -2647,7 +2656,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$database->rows = array( DashboardActivityWpdb::attempt( 1, 'succeeded' ) );
 		$page           = ( new DeploymentAdminPresenter( attempts: $this->deployment_attempts( $database ), activity_store: new \RAN\Activity\ActivityStore( $database, 'wp_ran_booster_activity' ) ) )->activity();
 		self::assertTrue( $page['unavailable'] );
-		self::assertSame( array(), $page['mixed_items'] );
+		self::assertSame( array(), $page['items'] );
 		self::assertSame( array(), $database->reads );
 	}
 
@@ -2828,8 +2837,15 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$deployment_attempts,
 			$debug_capture,
 			null,
-			$admin_add_ons
+			$admin_add_ons,
+			activity: $this->empty_activity_store()
 		);
+	}
+
+	private function empty_activity_store(): \RAN\Activity\ActivityStore {
+		require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
+		$GLOBALS['ran_booster_activity_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ] = '1';
+		return new \RAN\Activity\ActivityStore( new DashboardActivityWpdb(), 'wp_ran_booster_activity' );
 	}
 
 	private function throwing_secrets(): SecretsFile {

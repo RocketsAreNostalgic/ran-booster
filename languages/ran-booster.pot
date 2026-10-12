@@ -230,8 +230,8 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:149
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:349
 #: views/attempts/detail.php:78
-#: views/attempts/index.php:73
-#: views/attempts/index.php:165
+#: views/attempts/index.php:63
+#: views/attempts/index.php:155
 #: views/portability-review.php:170
 #: views/portability-review.php:189
 #: views/portability.php:231
@@ -240,8 +240,8 @@ msgid "Package"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:149
-#: views/attempts/index.php:101
-#: views/attempts/index.php:140
+#: views/attempts/index.php:91
+#: views/attempts/index.php:130
 msgid "Source"
 msgstr ""
 
@@ -566,7 +566,7 @@ msgid "Review %s credentials"
 msgstr ""
 
 #: RAN/Admin/CredentialExpiryNotice.php:100
-#: RAN/Admin/DeploymentAdminPresenter.php:57
+#: RAN/Admin/DeploymentAdminPresenter.php:56
 #: RAN/Admin/ManagedPluginFailureRows.php:70
 msgid "Replace credential"
 msgstr ""
@@ -683,36 +683,36 @@ msgid "Retry is allowed. No package files or settings were changed."
 msgstr ""
 
 #. translators: %d is the number of managed packages with a current background deployment failure.
-#: RAN/Admin/DeploymentAdminPresenter.php:53
+#: RAN/Admin/DeploymentAdminPresenter.php:52
 #, php-format
 msgid "%d managed package needs attention."
 msgid_plural "%d managed packages need attention."
 msgstr[0] ""
 msgstr[1] ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:60
+#: RAN/Admin/DeploymentAdminPresenter.php:59
 msgid "RAN Booster automatic deployment failed:"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:63
+#: RAN/Admin/DeploymentAdminPresenter.php:62
 #: RAN/Admin/ManagedPluginFailureRows.php:68
 msgid "Review deployment"
 msgstr ""
 
 #. translators: 1: safe deployment result, 2: random support reference, 3: activity page URL.
-#: RAN/Admin/DeploymentAdminPresenter.php:76
+#: RAN/Admin/DeploymentAdminPresenter.php:75
 #, php-format
 msgid "%1$s Reference: <code>%2$s</code>. <a href=\"%3$s\">View deployment activity</a>."
 msgstr ""
 
 #. translators: 1: package type, 2: package slug, 3: activity record link.
-#: RAN/Admin/DeploymentAdminPresenter.php:95
+#: RAN/Admin/DeploymentAdminPresenter.php:94
 #, php-format
 msgid "Booster could not confirm how an earlier deployment of the %1$s %2$s ended, so it has paused retries. No deployment is currently running. <a href=\"%3$s\">Check the package and allow another attempt</a>."
 msgstr ""
 
 #. translators: 1: package type, 2: package slug, 3: deployment state, 4: activity record link.
-#: RAN/Admin/DeploymentAdminPresenter.php:98
+#: RAN/Admin/DeploymentAdminPresenter.php:97
 #, php-format
 msgid "Booster is already tracking the %1$s %2$s in state %3$s. <a href=\"%4$s\">Review this deployment activity record</a> before trying again."
 msgstr ""
@@ -2603,7 +2603,7 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:700
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:339
 #: RAN/Booster.php:734
-#: views/attempts/index.php:53
+#: views/attempts/index.php:43
 #: views/onboarding.php:28
 #: views/packages/branch-readiness.php:200
 #: views/packages/index.php:65
@@ -4247,7 +4247,7 @@ msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:499
 #: views/attempts/detail.php:51
-#: views/attempts/index.php:57
+#: views/attempts/index.php:47
 msgid "Repository webhook"
 msgstr ""
 
@@ -4439,25 +4439,25 @@ msgid "Manage with RAN Booster"
 msgstr ""
 
 #: RAN/Booster.php:730
-#: views/attempts/index.php:48
+#: views/attempts/index.php:38
 #: views/packages/index.php:61
 msgid "Queued"
 msgstr ""
 
 #: RAN/Booster.php:731
-#: views/attempts/index.php:49
+#: views/attempts/index.php:39
 #: views/packages/index.php:62
 msgid "Running"
 msgstr ""
 
 #: RAN/Booster.php:732
-#: views/attempts/index.php:50
+#: views/attempts/index.php:40
 #: views/packages/index.php:63
 msgid "Succeeded"
 msgstr ""
 
 #: RAN/Booster.php:733
-#: views/attempts/index.php:52
+#: views/attempts/index.php:42
 #: views/packages/index.php:64
 #: views/troubleshooting.php:42
 msgid "Failed"
@@ -5187,12 +5187,12 @@ msgid "RAN Booster uninstall stopped"
 msgstr ""
 
 #: views/attempts/detail.php:31
-#: views/attempts/index.php:119
+#: views/attempts/index.php:109
 msgid "Open theme settings"
 msgstr ""
 
 #: views/attempts/detail.php:32
-#: views/attempts/index.php:120
+#: views/attempts/index.php:110
 msgid "Open plugin settings"
 msgstr ""
 
@@ -5213,20 +5213,20 @@ msgid "That deployment record was not found."
 msgstr ""
 
 #: views/attempts/detail.php:50
-#: views/attempts/index.php:56
+#: views/attempts/index.php:46
 msgid "Manual administrator action"
 msgstr ""
 
 #: views/attempts/detail.php:54
-#: views/attempts/index.php:163
+#: views/attempts/index.php:153
 msgid "Failure reason"
 msgstr ""
 
 #: views/attempts/detail.php:55
-#: views/attempts/index.php:75
-#: views/attempts/index.php:103
-#: views/attempts/index.php:142
-#: views/attempts/index.php:163
+#: views/attempts/index.php:65
+#: views/attempts/index.php:93
+#: views/attempts/index.php:132
+#: views/attempts/index.php:153
 msgid "Outcome"
 msgstr ""
 
@@ -5257,8 +5257,8 @@ msgid "Checking the box only clears the retry block. It does not change the pack
 msgstr ""
 
 #: views/attempts/detail.php:72
+#: views/attempts/index.php:144
 #: views/attempts/index.php:154
-#: views/attempts/index.php:164
 msgid "Support reference"
 msgstr ""
 
@@ -5271,60 +5271,60 @@ msgid "State"
 msgstr ""
 
 #: views/attempts/detail.php:77
-#: views/attempts/index.php:166
+#: views/attempts/index.php:156
 msgid "Origin"
 msgstr ""
 
 #: views/attempts/detail.php:87
-#: views/attempts/index.php:71
+#: views/attempts/index.php:61
 #: views/packages/index.php:506
 #: views/troubleshooting.php:178
 msgid "Provider"
 msgstr ""
 
 #: views/attempts/detail.php:88
-#: views/attempts/index.php:167
+#: views/attempts/index.php:157
 msgid "Requested reference"
 msgstr ""
 
 #: views/attempts/detail.php:89
-#: views/attempts/index.php:168
+#: views/attempts/index.php:158
 msgid "Resolved reference"
 msgstr ""
 
 #: views/attempts/detail.php:89
-#: views/attempts/index.php:168
+#: views/attempts/index.php:158
 msgid "Not resolved"
 msgstr ""
 
 #: views/attempts/detail.php:90
-#: views/attempts/index.php:169
+#: views/attempts/index.php:159
 msgid "Mutation began"
 msgstr ""
 
 #: views/attempts/detail.php:90
-#: views/attempts/index.php:169
+#: views/attempts/index.php:159
 msgid "No"
 msgstr ""
 
 #: views/attempts/detail.php:91
-#: views/attempts/index.php:170
+#: views/attempts/index.php:160
 msgid "Finished"
 msgstr ""
 
 #: views/attempts/detail.php:91
-#: views/attempts/index.php:170
+#: views/attempts/index.php:160
 msgid "Not finished"
 msgstr ""
 
 #: views/attempts/detail.php:93
-#: views/attempts/index.php:172
+#: views/attempts/index.php:162
 msgid "Operator review"
 msgstr ""
 
 #. translators: 1: review date and time, 2: WordPress user ID.
 #: views/attempts/detail.php:93
-#: views/attempts/index.php:172
+#: views/attempts/index.php:162
 #, php-format
 msgid "Resolved %1$s by user #%2$d"
 msgstr ""
@@ -5346,123 +5346,123 @@ msgid "Allow retry and return to plugin settings"
 msgstr ""
 
 #: views/attempts/detail.php:122
-#: views/attempts/index.php:184
+#: views/attempts/index.php:174
 msgid "I have confirmed that the deployment worker has stopped."
 msgstr ""
 
 #: views/attempts/detail.php:123
-#: views/attempts/index.php:185
+#: views/attempts/index.php:175
 msgid "Reconcile stopped worker"
 msgstr ""
 
-#: views/attempts/index.php:51
+#: views/attempts/index.php:41
 msgid "Updated"
 msgstr ""
 
-#: views/attempts/index.php:62
-#: views/attempts/index.php:74
-#: views/attempts/index.php:102
-#: views/attempts/index.php:141
+#: views/attempts/index.php:52
+#: views/attempts/index.php:64
+#: views/attempts/index.php:92
+#: views/attempts/index.php:131
 #: views/troubleshooting.php:29
 msgid "Activity"
 msgstr ""
 
-#: views/attempts/index.php:63
+#: views/attempts/index.php:53
 msgid "Review recorded checks and deployments. Activity is recorded independently of diagnostic logging."
 msgstr ""
 
-#: views/attempts/index.php:72
+#: views/attempts/index.php:62
 msgid "Package type"
 msgstr ""
 
-#: views/attempts/index.php:80
+#: views/attempts/index.php:70
 msgid "Filter activity"
 msgstr ""
 
-#: views/attempts/index.php:86
+#: views/attempts/index.php:76
 msgid "Request deployment runner"
 msgstr ""
 
-#: views/attempts/index.php:90
+#: views/attempts/index.php:80
 msgid "Activity is temporarily unavailable."
 msgstr ""
 
-#: views/attempts/index.php:92
+#: views/attempts/index.php:82
 msgid "No older activity is available."
 msgstr ""
 
-#: views/attempts/index.php:93
+#: views/attempts/index.php:83
 msgid "View latest activity"
 msgstr ""
 
-#: views/attempts/index.php:95
+#: views/attempts/index.php:85
 msgid "No activity has been recorded yet."
 msgstr ""
 
-#: views/attempts/index.php:99
-#: views/attempts/index.php:130
+#: views/attempts/index.php:89
+#: views/attempts/index.php:120
 msgid "Time"
 msgstr ""
 
-#: views/attempts/index.php:100
-#: views/attempts/index.php:131
+#: views/attempts/index.php:90
+#: views/attempts/index.php:121
 msgid "Project"
 msgstr ""
 
-#: views/attempts/index.php:122
+#: views/attempts/index.php:112
 msgid "Branch check"
 msgstr ""
 
-#: views/attempts/index.php:123
+#: views/attempts/index.php:113
 msgid "Release check"
 msgstr ""
 
-#: views/attempts/index.php:124
+#: views/attempts/index.php:114
 msgid "Workflow assessment"
 msgstr ""
 
-#: views/attempts/index.php:140
+#: views/attempts/index.php:130
 msgid "Branch deployment"
 msgstr ""
 
-#: views/attempts/index.php:145
+#: views/attempts/index.php:135
 #: views/packages/index.php:557
 msgid "View details"
 msgstr ""
 
-#: views/attempts/index.php:148
+#: views/attempts/index.php:138
 msgid "Reported by"
 msgstr ""
 
-#: views/attempts/index.php:148
+#: views/attempts/index.php:138
 msgid "Recorded by Core"
 msgstr ""
 
-#: views/attempts/index.php:148
+#: views/attempts/index.php:138
 msgid "Provider-reported"
 msgstr ""
 
-#: views/attempts/index.php:151
+#: views/attempts/index.php:141
 msgid "Last recorded stage"
 msgstr ""
 
-#: views/attempts/index.php:152
+#: views/attempts/index.php:142
 msgid "Reason"
 msgstr ""
 
-#: views/attempts/index.php:153
+#: views/attempts/index.php:143
 msgid "Remediation"
 msgstr ""
 
-#: views/attempts/index.php:155
+#: views/attempts/index.php:145
 msgid "Completed (UTC)"
 msgstr ""
 
-#: views/attempts/index.php:175
+#: views/attempts/index.php:165
 msgid "Package settings"
 msgstr ""
 
-#: views/attempts/index.php:198
+#: views/attempts/index.php:188
 msgid "Load older activity"
 msgstr ""
 

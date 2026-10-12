@@ -822,7 +822,7 @@ final class ReleaseWorkflowPresenter {
 				return $empty;
 			}
 			$summary     = $this->activity->summary( $type, $capture['subject_identity'], $capture['adoption_token'], $capture['context'], 'workflow.assessment' );
-			$history     = $this->activity->history(
+			$history     = $this->activity->activity_history(
 				array(
 					'subject_type'     => $type,
 					'subject_identity' => $capture['subject_identity'],

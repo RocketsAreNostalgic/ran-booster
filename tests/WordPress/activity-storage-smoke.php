@@ -59,7 +59,7 @@ return static function ( wpdb $database ): void {
 		$changed = $store->summary( 'plugin', 'activity-proof/plugin.php', $capture['adoption_token'], 'source-2/access-1', 'release.check' );
 		$expect( $changed['available'] && null === $changed['observation'], 'source/access currentness' );
 		$query( $database->prepare( 'UPDATE %i SET sort_at = %s', $table, '2026-01-01 12:00:00' ) );
-		$page = $store->history(
+		$page = $store->activity_history(
 			array(
 				'provider'         => 'gh',
 				'subject_identity' => 'activity-proof/plugin.php',
@@ -67,16 +67,20 @@ return static function ( wpdb $database ): void {
 			null,
 			1
 		);
-		$expect( $page['available'] && null !== $page['next_cursor'] && (int) ( $page['records'][0]['id'] ?? 0 ) === $newer, 'timestamp ties page by stable ID' );
-		$next = $store->history(
+		$expect( $page['available'] && (int) ( $page['records'][0]['id'] ?? 0 ) === $newer, 'timestamp ties page by stable ID' );
+		$next = $store->activity_history(
 			array(
 				'provider'         => 'gh',
 				'subject_identity' => 'activity-proof/plugin.php',
 			),
-			$page['next_cursor'],
+			array(
+				'time'   => '2026-01-01 12:00:00',
+				'source' => 'activity',
+				'id'     => $newer,
+			),
 			1
 		);
-		$expect( $next['available'] && (int) ( $next['records'][0]['id'] ?? 0 ) === $older && null === $next['next_cursor'], 'cursor neither skips nor repeats' );
+		$expect( $next['available'] && (int) ( $next['records'][0]['id'] ?? 0 ) === $older, 'cursor neither skips nor repeats' );
 		$filtered = $store->activity_history( array( 'subject_identity' => 'another/plugin.php' ) );
 		$expect( $filtered['available'] && array() === $filtered['records'], 'package filter applies before paging' );
 
@@ -105,7 +109,7 @@ return static function ( wpdb $database ): void {
 		$expect( $raced, 'completion must interleave before actual deletion' );
 		$summary = $store->summary( 'plugin', 'activity-proof/plugin.php', $capture['adoption_token'], $capture['context'], 'release.check' );
 		$expect( (int) ( $summary['latest']['id'] ?? 0 ) === $latest && (int) ( $summary['observation']['id'] ?? 0 ) === $late, 'pruning preserves current attempt and concurrent observation' );
-		$expect( array() === $store->history()['records'], 'aged protected observations stay out of ordinary history' );
+		$expect( array() === $store->activity_history()['records'], 'aged protected observations stay out of ordinary history' );
 		$ordinary            = $capture;
 		$ordinary['purpose'] = null;
 		for ( $index = 0; $index < 2010; ++$index ) {

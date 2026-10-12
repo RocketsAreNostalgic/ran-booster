@@ -132,23 +132,29 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertStringContainsString( 'adoption_token = %s AND context = %s', $this->connection->queries[0] );
 	}
 
-	public function test_failed_source_and_invalid_cursor_do_not_advance_history(): void {
+	public function test_failed_source_and_invalid_boundary_return_unavailable(): void {
 		$this->connection->read_results = array( false );
 		self::assertSame(
 			array(
-				'available'   => false,
-				'records'     => array(),
-				'next_cursor' => null,
+				'available' => false,
+				'records'   => array(),
 			),
-			$this->store->history()
+			$this->store->activity_history()
 		);
-		self::assertFalse( $this->store->history( array(), 'invented-cursor' )['available'] );
+		self::assertFalse(
+			$this->store->activity_history(
+				array(),
+				array(
+					'time'   => 'invalid',
+					'source' => 'activity',
+					'id'     => 1,
+				)
+			)['available']
+		);
 	}
 	public function test_prune_is_bounded_and_rechecks_protection_and_terminal_state(): void {
 		$capture                        = self::capture();
 		$this->connection->read_results = array(
-			array( (object) array( 'id' => '40' ) ),
-			array( (object) array( 'id' => '35' ) ),
 			array(
 				(object) array(
 					'id'     => '1',
@@ -157,11 +163,12 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 			),
 		);
 		self::assertSame( 1, $this->store->prune( array( $capture ) ) );
-		self::assertStringContainsString( 'id NOT IN (0,40,35)', $this->connection->queries[2] );
-		self::assertStringContainsString( 'LIMIT 100', $this->connection->queries[2] );
-		self::assertStringContainsString( 'LIMIT 2000', $this->connection->queries[2] );
-		self::assertStringContainsString( 'AND status = %s AND id NOT IN', $this->connection->queries[3] );
-		self::assertStringContainsString( 'protected_activity', $this->connection->queries[3] );
+		self::assertStringContainsString( 'id NOT IN (SELECT retained_id', $this->connection->queries[0] );
+		self::assertCount( 2, $this->connection->queries );
+		self::assertStringContainsString( 'LIMIT 100', $this->connection->queries[0] );
+		self::assertStringContainsString( 'LIMIT 2000', $this->connection->queries[0] );
+		self::assertStringContainsString( 'AND status = %s AND id NOT IN', $this->connection->queries[1] );
+		self::assertStringContainsString( 'protected_activity', $this->connection->queries[1] );
 		self::assertContains( $capture['adoption_token'], $this->connection->prepared[0]['args'] );
 	}
 
@@ -176,6 +183,12 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		);
 		$this->connection->query_results = array( 0 );
 		self::assertSame( 0, $this->store->prune( array() ) );
+	}
+
+	public function test_prune_requires_its_own_schema_readiness(): void {
+		$GLOBALS['ran_booster_activity_options'] = array();
+		self::assertFalse( $this->store->prune( array( self::capture() ) ) );
+		self::assertSame( array(), $this->connection->queries );
 	}
 
 	public function test_prune_read_failure_leaves_records_untouched(): void {
@@ -195,26 +208,21 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertFalse( $this->store->available() );
 	}
 
-	public function test_history_cursor_binds_filters_and_page_boundary(): void {
-		$this->connection->read_results = array(
-			array(
-				(object) array(
-					'id'      => '9',
-					'sort_at' => '2026-10-12 17:00:00',
-				),
-				(object) array(
-					'id'      => '8',
-					'sort_at' => '2026-10-12 17:00:00',
-				),
-			),
+	public function test_internal_history_filters_preserve_exact_context_before_limit(): void {
+		$capture = self::capture();
+		$filters = array(
+			'adoption_token' => $capture['adoption_token'],
+			'context'        => str_repeat( 'a', 2048 ),
+			'purpose'        => 'workflow.assessment',
+			'status'         => 'failed',
 		);
-		$page                           = $this->store->history( array( 'provider' => 'gh' ), null, 1 );
-		self::assertTrue( $page['available'] );
-		self::assertCount( 1, $page['records'] );
-		self::assertNotNull( $page['next_cursor'] );
-		self::assertFalse( $this->store->history( array( 'provider' => 'bb' ), $page['next_cursor'] )['available'] );
-		self::assertTrue( $this->store->history( array( 'provider' => 'gh' ), $page['next_cursor'] )['available'] );
-		self::assertStringContainsString( 'id < %d', $this->connection->queries[1] );
+		self::assertTrue( $this->store->activity_history( $filters, limit: 12 )['available'] );
+		foreach ( $filters as $key => $value ) {
+			self::assertStringContainsString( 'BINARY ' . $key . ' = %s', $this->connection->queries[0] );
+		}
+		self::assertStringEndsWith( 'LIMIT 12', $this->connection->queries[0] );
+		self::assertFalse( $this->store->activity_history( array( 'invented' => 'value' ) )['available'] );
+		self::assertFalse( $this->store->activity_history( array( 'context' => str_repeat( 'a', 2049 ) ) )['available'] );
 	}
 
 	public function test_mixed_source_timestamp_tie_includes_activity_after_deployment(): void {

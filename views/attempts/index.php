@@ -8,22 +8,12 @@
  */
 
 use RAN\Admin\DeploymentOutcomeMessage;
-use RAN\Deployment\DeploymentAttempt;
 
 if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$items = array_map(
-	static fn ( DeploymentAttempt $attempt ): array => $attempt->safe_data(),
-	array_filter(
-		$deployment_activity['items'] ?? array(),
-		static fn ( mixed $item ): bool => $item instanceof DeploymentAttempt
-	)
-);
-if ( isset( $deployment_activity['mixed_items'] ) && is_array( $deployment_activity['mixed_items'] ) ) {
-	$items = $deployment_activity['mixed_items'];
-}
+$items       = is_array( $deployment_activity['items'] ?? null ) ? $deployment_activity['items'] : array();
 $filters     = is_array( $deployment_activity['filters'] ?? null ) ? $deployment_activity['filters'] : array();
 $unavailable = true === ( $deployment_activity['unavailable'] ?? false );
 $has_cursor  = true === ( $deployment_activity['has_cursor'] ?? false );

@@ -216,7 +216,7 @@ final class TroubleshootingViewTest extends TestCase {
 			'core'     => 'Recorded by Core',
 		) as $provenance => $expected_label ) {
 			$deployment_activity  = array(
-				'mixed_items' => array(
+				'items' => array(
 					array(
 						'record_source' => 'activity',
 						'provenance'    => $provenance,
@@ -262,7 +262,7 @@ final class TroubleshootingViewTest extends TestCase {
 			)
 		);
 		$deployment_activity  = array(
-			'items'                 => array( $attempt ),
+			'items'                 => array( $attempt->safe_data() ),
 			'unavailable'           => false,
 			'has_cursor'            => false,
 			'next_cursor'           => null,
@@ -323,7 +323,7 @@ final class TroubleshootingViewTest extends TestCase {
 			)
 		);
 		$deployment_activity  = array(
-			'items'                 => array( $attempt ),
+			'items'                 => array( $attempt->safe_data() ),
 			'unavailable'           => false,
 			'has_cursor'            => false,
 			'next_cursor'           => null,

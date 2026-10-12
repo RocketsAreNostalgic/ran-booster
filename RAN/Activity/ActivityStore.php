@@ -48,7 +48,6 @@ final class ActivityStore {
 				sort_at datetime NOT NULL, started_at datetime NOT NULL, completed_at datetime NULL,
 				provider varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
 				subject_type varchar(16) NOT NULL, subject_identity varbinary(255) NOT NULL,
-				subject_key char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
 				adoption_token varbinary(643) NULL, context varbinary(2048) NOT NULL,
 				context_key char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
 				operation varchar(96) NOT NULL, purpose varchar(32) NULL,
@@ -57,13 +56,13 @@ final class ActivityStore {
 				reason varchar(96) NOT NULL DEFAULT '', message text NOT NULL, remediation text NOT NULL,
 				facts text NOT NULL, effect varchar(16) NOT NULL DEFAULT 'none',
 				PRIMARY KEY (id), UNIQUE KEY correlation (correlation),
-				KEY history (sort_at,id), KEY subject_history (subject_key,sort_at,id),
+				KEY history (sort_at,id),
 				KEY summary (context_key,purpose,id)
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
 			if ( false === $this->connection()->query( $sql ) ) {
 				return false;
 			}
-			$this->rows( "SELECT id,correlation,sort_at,started_at,completed_at,provider,subject_type,subject_identity,subject_key,adoption_token,context,context_key,operation,purpose,provenance,actor,status,stage,reason,message,remediation,facts,effect FROM {$this->table} LIMIT 0" );
+			$this->rows( "SELECT id,correlation,sort_at,started_at,completed_at,provider,subject_type,subject_identity,adoption_token,context,context_key,operation,purpose,provenance,actor,status,stage,reason,message,remediation,facts,effect FROM {$this->table} LIMIT 0" );
 			update_option( self::VERSION_OPTION, '1', false );
 			return $this->available();
 		} catch ( Throwable ) {
@@ -94,7 +93,6 @@ final class ActivityStore {
 					'provider'    => $provider,
 					'operation'   => $request->operation,
 					'correlation' => $correlation,
-					'subject_key' => $this->subject_key( $capture['subject_type'], $capture['subject_identity'] ),
 					'context_key' => $this->context_key( $capture ),
 					'actor'       => $capture['actor'] ?? 0,
 					'started_at'  => gmdate( 'Y-m-d H:i:s' ),
@@ -181,59 +179,6 @@ final class ActivityStore {
 	}
 
 	/**
-	 * @param array<string,string> $filters Supported: subject_type, subject_identity, provider, operation, status.
-	 * @return array{available:bool,records:list<Record>,next_cursor:?string}
-	 */
-	public function history( array $filters = array(), ?string $cursor = null, int $limit = 25 ): array {
-		try {
-			if ( ! $this->available() || $limit < 1 || $limit > 100 ) {
-				throw new RuntimeException( 'Activity history is unavailable.' );
-			}
-			$where = array( $this->prepare( 'started_at >= %s', gmdate( 'Y-m-d H:i:s', time() - 30 * 86400 ) ) );
-			ksort( $filters );
-			foreach ( $filters as $key => $value ) {
-				if ( ! in_array( $key, array( 'subject_type', 'subject_identity', 'provider', 'operation', 'status', 'adoption_token', 'context', 'purpose' ), true ) || strlen( $value ) > 2048 ) {
-					throw new InvalidArgumentException( 'Invalid activity filter.' );
-				}
-				$where[] = $this->prepare( "BINARY $key = %s", $value );
-			}
-			$encoded_filters = wp_json_encode( $filters );
-			if ( false === $encoded_filters ) {
-				throw new InvalidArgumentException( 'Invalid activity filters.' );
-			}
-			$binding = hash( 'sha256', $encoded_filters );
-			if ( null !== $cursor ) {
-				$parts = explode( '|', $cursor );
-				if ( 4 !== count( $parts ) || '1' !== $parts[0] || $binding !== $parts[3]
-					|| 1 !== preg_match( '/\A\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\z/', $parts[1] )
-					|| ! ctype_digit( $parts[2] ) ) {
-					throw new InvalidArgumentException( 'Invalid activity cursor.' );
-				}
-				$where[] = $this->prepare( '(sort_at < %s OR (sort_at = %s AND id < %d))', $parts[1], $parts[1], (int) $parts[2] );
-			}
-			// Ordinary history is bounded independently of protected summary observations.
-			$where[] = "id IN (SELECT id FROM (SELECT id FROM {$this->table} ORDER BY id DESC LIMIT 2000) AS recent_activity)";
-			$sql     = "SELECT * FROM {$this->table} WHERE " . implode( ' AND ', $where ) . ' ORDER BY sort_at DESC,id DESC LIMIT ' . ( $limit + 1 );
-			$rows    = $this->rows( $sql );
-			$more    = count( $rows ) > $limit;
-			$rows    = array_slice( $rows, 0, $limit );
-			$last    = end( $rows );
-			$next    = $more && false !== $last ? '1|' . $last['sort_at'] . '|' . $last['id'] . '|' . $binding : null;
-			return array(
-				'available'   => true,
-				'records'     => $rows,
-				'next_cursor' => $next,
-			);
-		} catch ( Throwable ) {
-			return array(
-				'available'   => false,
-				'records'     => array(),
-				'next_cursor' => null,
-			);
-		}
-	}
-
-	/**
 	 * Bounded contributor to the existing presenter's merged deployment/activity history.
 	 * @param array<string,string> $filters
 	 * @param array{time:string,source:string,id:int}|null $before
@@ -247,7 +192,7 @@ final class ActivityStore {
 			$where = array( $this->prepare( 'started_at >= %s', gmdate( 'Y-m-d H:i:s', time() - 30 * 86400 ) ) );
 			foreach ( $filters as $key => $value ) {
 				$key = 'outcome' === $key ? 'status' : $key;
-				if ( ! in_array( $key, array( 'subject_type', 'subject_identity', 'provider', 'operation', 'status' ), true ) || strlen( $value ) > 255 ) {
+				if ( ! in_array( $key, array( 'subject_type', 'subject_identity', 'provider', 'operation', 'status', 'adoption_token', 'context', 'purpose' ), true ) || strlen( $value ) > 2048 ) {
 					throw new InvalidArgumentException( 'Invalid activity filter.' );
 				}
 				$where[] = $this->prepare( "BINARY $key = %s", $value );
@@ -313,29 +258,21 @@ final class ActivityStore {
 	 */
 	public function prune( array $current_contexts ): int|false {
 		try {
-			$protected = array();
-			$active    = array();
+			if ( ! $this->available() ) {
+				return false;
+			}
+			$active = array();
 			foreach ( $current_contexts as $capture ) {
 				$this->validate_capture( $capture );
 				if ( null === $capture['adoption_token'] || null === $capture['purpose'] ) {
 					continue;
 				}
 				$active[] = $this->prepare( '(context_key = %s AND BINARY subject_type = %s AND subject_identity = %s AND adoption_token = %s AND context = %s AND BINARY purpose = %s)', $this->context_key( $capture ), $capture['subject_type'], $capture['subject_identity'], $capture['adoption_token'], $capture['context'], $capture['purpose'] );
-				$summary  = $this->summary( $capture['subject_type'], $capture['subject_identity'], $capture['adoption_token'], $capture['context'], $capture['purpose'] );
-				if ( ! $summary['available'] ) {
-					return false;
-				}
-				foreach ( array( $summary['latest'], $summary['observation'] ) as $record ) {
-					if ( null !== $record ) {
-						$protected[] = (int) $record['id'];
-					}
-				}
 			}
 			$active_sql = empty( $active ) ? '0 = 1' : implode( ' OR ', $active );
 			// UNION materializes the same-table protection query on supported MySQL/MariaDB.
 			$protection = "SELECT retained_id FROM (SELECT MAX(id) retained_id FROM {$this->table} WHERE $active_sql GROUP BY context_key,purpose,subject_type,subject_identity,adoption_token,context UNION SELECT MAX(id) retained_id FROM {$this->table} WHERE ($active_sql) AND effect <> 'none' GROUP BY context_key,purpose,subject_type,subject_identity,adoption_token,context) AS protected_activity";
-			$excluded   = implode( ',', array_unique( array_merge( array( 0 ), $protected ) ) );
-			$rows       = $this->rows( $this->prepare( "SELECT id,status FROM {$this->table} WHERE id NOT IN ($excluded) AND (started_at < %s OR id NOT IN (SELECT id FROM (SELECT id FROM {$this->table} ORDER BY id DESC LIMIT 2000) AS retained)) ORDER BY id LIMIT 100", gmdate( 'Y-m-d H:i:s', time() - 30 * 86400 ) ) );
+			$rows       = $this->rows( $this->prepare( "SELECT id,status FROM {$this->table} WHERE id NOT IN ($protection) AND (started_at < %s OR id NOT IN (SELECT id FROM (SELECT id FROM {$this->table} ORDER BY id DESC LIMIT 2000) AS retained)) ORDER BY id LIMIT 100", gmdate( 'Y-m-d H:i:s', time() - 30 * 86400 ) ) );
 			$deleted    = 0;
 			foreach ( $rows as $row ) {
 				// Do not delete an incomplete row that acquired an observation after the snapshot.
@@ -387,10 +324,6 @@ final class ActivityStore {
 			throw new InvalidArgumentException( 'Invalid activity facts.' );
 		}
 		return $encoded;
-	}
-
-	private function subject_key( string $type, string $identity ): string {
-		return hash( 'sha256', $type . "\0" . $identity );
 	}
 
 	/** @param Capture $capture */

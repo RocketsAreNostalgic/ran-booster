@@ -642,6 +642,7 @@ final class ManagedReleaseTargetRegistrar {
 	/** @return array<string, int|string> */
 	private function authority( Package $package, ManagedReleaseConfiguration $configuration ): array {
 		return array(
+			'adoption_token'         => \RAN\AdoptionIdentity::of( $package ) ?? throw new \RuntimeException( 'The adoption identity is unavailable.' ),
 			'provider'               => (string) $package->get_provider_code(),
 			'source_revision'        => $package->get_source_revision(),
 			'provider_repository_id' => (string) $package->get_provider_repository_id(),

@@ -7,6 +7,11 @@ declare(strict_types=1);
 // phpcs:ignore Universal.Namespaces.DisallowCurlyBraceSyntax.Forbidden, Universal.Namespaces.DisallowDeclarationWithoutName.Forbidden -- Global namespace is required for the WordPress function doubles in this isolated fixture.
 namespace {
 	$GLOBALS['ran_booster_attempt_cache_deletes'] = array();
+	if ( ! function_exists( 'ran_booster_table_name' ) ) {
+		function ran_booster_table_name(): string {
+			return 'wp_ran_booster';
+		}
+	}
 
 	if ( ! function_exists( 'wp_cache_delete' ) ) {
 		/**
@@ -33,6 +38,8 @@ namespace RAN\Tests\Deployment {
 		public string $last_error = '';
 		/** @var array<int, array<string, mixed>> */
 		public array $rows = array();
+		/** @var array<string, string> Exact installed identifier to stored lifetime. */
+		public array $management = array();
 		/** @var array<string, string> */
 		public array $option_rows = array();
 		/** @var list<string> */
@@ -243,6 +250,15 @@ namespace RAN\Tests\Deployment {
 
 				return null;
 			}
+			if ( str_starts_with( $query, 'SELECT package, adoption_token' ) && preg_match( "/BINARY package = BINARY '([^']+)'/", $query, $match ) === 1 ) {
+				$identifier = stripslashes( $match[1] );
+				return isset( $this->management[ $identifier ] ) ? array(
+					(object) array(
+						'package'        => $identifier,
+						'adoption_token' => $this->management[ $identifier ],
+					),
+				) : array();
+			}
 			if ( str_contains( $query, 'COUNT(*) AS total' ) && str_contains( $query, 'GROUP BY state' ) ) {
 				$totals = array();
 				foreach ( $this->rows as $row ) {
@@ -274,6 +290,10 @@ namespace RAN\Tests\Deployment {
 							&& stripslashes( $matches[2] ) === $row['package_slug']
 					)
 				);
+				if ( preg_match( "/LOCATE\\(BINARY '((?:\\\\.|[^'])*)', BINARY latest\\.request_json\\)/", $query, $fragment_match ) === 1 ) {
+					$fragment = stripslashes( $fragment_match[1] );
+					$rows     = array_values( array_filter( $rows, static fn ( array $row ): bool => str_contains( (string) $row['request_json'], $fragment ) ) );
+				}
 				usort( $rows, static fn ( array $a, array $b ): int => $b['id'] <=> $a['id'] );
 				$selected = array();
 				if ( isset( $rows[0] ) ) {
@@ -335,6 +355,9 @@ namespace RAN\Tests\Deployment {
 			}
 			if ( str_contains( $query, "package_type IN ('plugin', 'theme')" ) ) {
 				$rows = array_filter( $rows, static fn ( array $row ): bool => in_array( $row['package_type'], array( 'plugin', 'theme' ), true ) );
+			}
+			if ( preg_match( "/package_type = '([^']+)'/", $query, $type_match ) === 1 ) {
+				$rows = array_filter( $rows, static fn ( array $row ): bool => stripslashes( $type_match[1] ) === $row['package_type'] );
 			}
 			if ( preg_match( "/package_type = '([^']+)' AND package_slug = '([^']+)'/", $query, $matches ) === 1 ) {
 				$rows = array_filter(

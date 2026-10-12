@@ -35,7 +35,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 		$store    = new ManagedReleaseStore( $database, $this->createStub( Database::class ) );
 		$this->expectException( RuntimeException::class );
 		$this->expectExceptionMessage( 'The managed release database is unavailable.' );
-		$store->transition( 'plugin', 'installed/example.php', PackageSource::RELEASE_ASSET, 4, PackageSource::BRANCH, null, 7 );
+		$store->transition( 'plugin', 'installed/example.php', PackageSource::RELEASE_ASSET, 4, PackageSource::BRANCH, null, 7, 'gh:fixture-repository:11111111-1111-4111-8111-111111111111' );
 	}
 
 	public function test_undeclared_release_connection_is_rejected_after_lifecycle_readiness(): void {
@@ -67,9 +67,9 @@ final class ManagedReleaseStoreTest extends TestCase {
 
 		try {
 			if ( $channel ) {
-				$store->change_channel( 'plugin', 'installed/example.php', 4, 'prerelease', 7 );
+				$store->change_channel( 'plugin', 'installed/example.php', 4, 'prerelease', 7, 'gh:fixture-repository:11111111-1111-4111-8111-111111111111' );
 			} else {
-				$store->transition( 'plugin', 'installed/example.php', PackageSource::RELEASE_ASSET, 4, PackageSource::BRANCH, null, 7 );
+				$store->transition( 'plugin', 'installed/example.php', PackageSource::RELEASE_ASSET, 4, PackageSource::BRANCH, null, 7, 'gh:fixture-repository:11111111-1111-4111-8111-111111111111' );
 			}
 			self::fail( 'Unready storage must reject the mutation.' );
 		} catch ( RuntimeException $caught ) {
@@ -87,8 +87,8 @@ final class ManagedReleaseStoreTest extends TestCase {
 		$lifecycle->expects( self::never() )->method( 'require_ready' );
 		$store = new ManagedReleaseStore( $database, $lifecycle );
 
-		self::assertFalse( $store->transition( 'plugin', 'installed/example.php', PackageSource::RELEASE_ASSET, 0, PackageSource::BRANCH, null, 7 ) );
-		self::assertFalse( $store->change_channel( 'plugin', 'installed/example.php', 0, 'prerelease', 7 ) );
+		self::assertFalse( $store->transition( 'plugin', 'installed/example.php', PackageSource::RELEASE_ASSET, 0, PackageSource::BRANCH, null, 7, 'gh:fixture-repository:11111111-1111-4111-8111-111111111111' ) );
+		self::assertFalse( $store->change_channel( 'plugin', 'installed/example.php', 0, 'prerelease', 7, 'gh:fixture-repository:11111111-1111-4111-8111-111111111111' ) );
 		self::assertSame( array(), $database->queries );
 		self::assertSame( 0, $database->reads );
 		self::assertSame( array(), $database->updates );
@@ -104,7 +104,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 
 		$database = new ManagedReleaseStoreDatabase(
 			array(
-				'type'                  => 1,
+				'package_type'          => 1,
 				'package'               => 'installed/example.php',
 				'source'                => 'branch',
 				'source_revision'       => 4,
@@ -122,7 +122,8 @@ final class ManagedReleaseStoreTest extends TestCase {
 				4,
 				PackageSource::RELEASE_ASSET,
 				new ManagedReleaseConfiguration( 'example', 'example.php' ),
-				7
+				7,
+				'gh:fixture-repository:11111111-1111-4111-8111-111111111111'
 			);
 			self::fail( 'Release configuration must remain unchanged during an active conflict.' );
 		} catch ( RuntimeException $failure ) {
@@ -134,7 +135,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 	public function test_exact_source_revision_cas_preserves_policy_and_verifies_the_write(): void {
 		$database        = new ManagedReleaseStoreDatabase(
 			array(
-				'type'                  => 1,
+				'package_type'          => 1,
 				'package'               => 'installed/example.php',
 				'source'                => 'branch',
 				'source_revision'       => 4,
@@ -169,12 +170,14 @@ final class ManagedReleaseStoreTest extends TestCase {
 				4,
 				PackageSource::RELEASE_ASSET,
 				$configuration,
-				7
+				7,
+				'gh:fixture-repository:11111111-1111-4111-8111-111111111111'
 			)
 		);
 		self::assertSame(
 			array(
-				'type'              => 1,
+				'adoption_token'    => 'gh:fixture-repository:11111111-1111-4111-8111-111111111111',
+				'package_type'      => 1,
 				'package'           => 'installed/example.php',
 				'source'            => 'branch',
 				'source_revision'   => 4,
@@ -195,7 +198,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 	public function test_stale_revision_does_not_write(): void {
 		$database = new ManagedReleaseStoreDatabase(
 			array(
-				'type'                  => 2,
+				'package_type'          => 2,
 				'package'               => 'example-theme',
 				'source'                => 'release_asset',
 				'source_revision'       => 3,
@@ -216,7 +219,8 @@ final class ManagedReleaseStoreTest extends TestCase {
 				2,
 				PackageSource::BRANCH,
 				null,
-				0
+				0,
+				'gh:fixture-repository:11111111-1111-4111-8111-111111111111'
 			)
 		);
 		self::assertSame( array(), $database->updates );
@@ -226,7 +230,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 	public function test_returning_to_branch_distinguishes_an_unavailable_repository_source_guard_from_stale_state(): void {
 		$database                           = new ManagedReleaseStoreDatabase(
 			array(
-				'type'                  => 1,
+				'package_type'          => 1,
 				'package'               => 'installed/example.php',
 				'source'                => 'release_asset',
 				'source_revision'       => 4,
@@ -245,7 +249,8 @@ final class ManagedReleaseStoreTest extends TestCase {
 				4,
 				PackageSource::BRANCH,
 				null,
-				7
+				7,
+				'gh:fixture-repository:11111111-1111-4111-8111-111111111111'
 			);
 			self::fail( 'An unavailable repository source guard must not be reported as a stale transition.' );
 		} catch ( ManagedReleaseRepositorySourceUnavailable $failure ) {
@@ -258,7 +263,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 	public function test_changing_release_channel_distinguishes_an_unavailable_repository_source_guard_from_stale_state(): void {
 		$database                           = new ManagedReleaseStoreDatabase(
 			array(
-				'type'                  => 1,
+				'package_type'          => 1,
 				'package'               => 'installed/example.php',
 				'source'                => 'release_asset',
 				'source_revision'       => 4,
@@ -270,7 +275,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 		$store                              = new ManagedReleaseStore( $database, $this->createStub( Database::class ) );
 
 		try {
-			$store->change_channel( 'plugin', 'installed/example.php', 4, 'prerelease', 7 );
+			$store->change_channel( 'plugin', 'installed/example.php', 4, 'prerelease', 7, 'gh:fixture-repository:11111111-1111-4111-8111-111111111111' );
 			self::fail( 'An unavailable repository source guard must not be reported as a stale channel change.' );
 		} catch ( ManagedReleaseRepositorySourceUnavailable $failure ) {
 			self::assertStringContainsString( 'repository source relationship', $failure->getMessage() );
@@ -282,7 +287,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 	public function test_release_transition_and_channel_change_reject_nested_rows_without_writing(): void {
 		$database = new ManagedReleaseStoreDatabase(
 			array(
-				'type'                  => 1,
+				'package_type'          => 1,
 				'package'               => 'installed/example.php',
 				'source'                => 'branch',
 				'source_revision'       => 4,
@@ -301,7 +306,8 @@ final class ManagedReleaseStoreTest extends TestCase {
 				4,
 				PackageSource::RELEASE_ASSET,
 				new ManagedReleaseConfiguration( 'example', 'example.php' ),
-				7
+				7,
+				'gh:fixture-repository:11111111-1111-4111-8111-111111111111'
 			);
 			self::fail( 'A release transition must reject a configured subdirectory.' );
 		} catch ( ManagedReleaseSubdirectoryNotSupported $failure ) {
@@ -312,7 +318,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 		$database->row['source']                = PackageSource::RELEASE_ASSET->value;
 		$database->row['release_configuration'] = ( new ManagedReleaseConfiguration( 'example', 'example.php' ) )->to_json();
 		try {
-			$store->change_channel( 'plugin', 'installed/example.php', 4, 'prerelease', 7 );
+			$store->change_channel( 'plugin', 'installed/example.php', 4, 'prerelease', 7, 'gh:fixture-repository:11111111-1111-4111-8111-111111111111' );
 			self::fail( 'A release channel change must reject a configured subdirectory.' );
 		} catch ( ManagedReleaseSubdirectoryNotSupported $failure ) {
 			self::assertStringContainsString( 'subdirectory is not supported', $failure->getMessage() );
@@ -333,7 +339,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 				list( $expected_source, $new_source, $configuration ) = $transition;
 				$database = new ManagedReleaseStoreDatabase(
 					array(
-						'type'                  => 1,
+						'package_type'          => 1,
 						'package'               => 'installed/example.php',
 						'source'                => $expected_source->value,
 						'source_revision'       => 4,
@@ -357,7 +363,8 @@ final class ManagedReleaseStoreTest extends TestCase {
 						4,
 						$new_source,
 						$configuration,
-						7
+						7,
+						'gh:fixture-repository:11111111-1111-4111-8111-111111111111'
 					)
 				);
 				self::assertSame( $expected_policy, $database->row['deployment_policy'] );
@@ -374,7 +381,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 		);
 		$database        = new ManagedReleaseStoreDatabase(
 			array(
-				'type'                  => 1,
+				'package_type'          => 1,
 				'package'               => 'installed/example.php',
 				'source'                => 'release_asset',
 				'source_revision'       => 4,
@@ -406,12 +413,14 @@ final class ManagedReleaseStoreTest extends TestCase {
 				'installed/example.php',
 				4,
 				'stable',
-				17
+				17,
+				'gh:fixture-repository:11111111-1111-4111-8111-111111111111'
 			)
 		);
 		self::assertSame(
 			array(
-				'type'                  => 1,
+				'adoption_token'        => 'gh:fixture-repository:11111111-1111-4111-8111-111111111111',
+				'package_type'          => 1,
 				'package'               => 'installed/example.php',
 				'source'                => 'release_asset',
 				'source_revision'       => 4,
@@ -443,7 +452,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 		) {
 			$database = new ManagedReleaseStoreDatabase(
 				array(
-					'type'                  => 1,
+					'package_type'          => 1,
 					'package'               => 'installed/example.php',
 					'source'                => 'release_asset',
 					'source_revision'       => 4,
@@ -459,10 +468,42 @@ final class ManagedReleaseStoreTest extends TestCase {
 					'installed/example.php',
 					$request[0],
 					$request[1],
-					7
+					7,
+					'gh:fixture-repository:11111111-1111-4111-8111-111111111111'
 				)
 			);
 			self::assertSame( array(), $database->updates );
+		}
+	}
+	public function test_adoption_binding_rejects_recreated_revision_and_changed_readback(): void {
+		$token = 'gh:fixture-repository:11111111-1111-4111-8111-111111111111';
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			foreach ( array( false, true ) as $change_channel ) {
+				foreach ( array( false, true ) as $readback_changed ) {
+					$configuration                  = new ManagedReleaseConfiguration( 'installed', 'plugin' === $type ? 'example.php' : 'style.css' );
+					$database                       = new ManagedReleaseStoreDatabase(
+						array(
+							'package_type'          => 'plugin' === $type ? 1 : 2,
+							'package'               => 'installed/example.php',
+							'source'                => 'release_asset',
+							'source_revision'       => 4,
+							'deployment_policy'     => 'manual',
+							'release_configuration' => $configuration->to_json(),
+							'adoption_token'        => $readback_changed ? $token : 'gh:fixture-repository:22222222-2222-4222-8222-222222222222',
+						)
+					);
+					$database->replace_after_update = $readback_changed;
+					$store                          = new ManagedReleaseStore( $database, $this->createStub( Database::class ) );
+					self::assertFalse(
+						$change_channel
+						? $store->change_channel( $type, 'installed/example.php', 4, 'prerelease', 1, $token )
+						: $store->transition( $type, 'installed/example.php', PackageSource::RELEASE_ASSET, 4, PackageSource::BRANCH, null, 1, $token )
+					);
+					self::assertCount( $readback_changed ? 1 : 0, $database->updates );
+					self::assertContains( 'ROLLBACK', $database->queries );
+					self::assertNotContains( 'COMMIT', $database->queries );
+				}
+			}
 		}
 	}
 }

@@ -196,6 +196,8 @@ class Dispatcher {
 				'unlink-theme',
 				'unlink-delete-plugin',
 				'unlink-delete-theme',
+				'recover-plugin',
+				'recover-theme',
 			);
 			if ( ! in_array( $action, $package_actions, true ) ) {
 				return;

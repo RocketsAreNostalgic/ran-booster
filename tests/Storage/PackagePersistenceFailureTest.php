@@ -166,9 +166,9 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		self::assertFalse( $storage->has_management_record_for_test( 'example/example.php' ) );
 
 		$wpdb->rows[] = array(
-			'id'      => 12,
-			'package' => 'example/example.php',
-			'type'    => 1,
+			'id'           => 12,
+			'package'      => 'example/example.php',
+			'package_type' => 1,
 		);
 		self::assertTrue( $storage->has_management_record_for_test( 'example/example.php' ) );
 
@@ -323,9 +323,9 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 
 		$storage      = $this->storage();
 		$wpdb->rows[] = array(
-			'id'      => 12,
-			'package' => 'example/example.php',
-			'type'    => 1,
+			'id'           => 12,
+			'package'      => 'example/example.php',
+			'package_type' => 1,
 		);
 
 		$wpdb->delete_result = false;
@@ -353,6 +353,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		$wpdb                                  = new StorageTestWpdb();
 		$wpdb->rows[]                          = $this->stored_row();
 		$wpdb->successful_reads_before_failure = 2;
+		$package->set_adoption_token( 'gh:repository-id:12345678-1234-4234-8234-123456789abc' );
 		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'next' ) );
 		$update_result = $storage->store_for_test( $package );
 		$this->assert_ambiguous_write( $update_result, PackageStorageOperation::UPDATE );
@@ -368,7 +369,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated database double.
 		$wpdb                                  = new StorageTestWpdb();
 		$wpdb->rows[]                          = $this->stored_row();
-		$wpdb->successful_reads_before_failure = 1;
+		$wpdb->successful_reads_before_failure = 2;
 		$edit_result                           = $storage->edit_for_test( 'example/example.php', $this->edit_input() );
 		$this->assert_ambiguous_write( $edit_result, PackageStorageOperation::UPDATE );
 
@@ -376,7 +377,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		$wpdb                                  = new StorageTestWpdb();
 		$wpdb->rows[]                          = $this->stored_row();
 		$wpdb->update_result                   = 0;
-		$wpdb->successful_reads_before_failure = 1;
+		$wpdb->successful_reads_before_failure = 2;
 		$zero_edit_result                      = $storage->edit_for_test( 'example/example.php', $this->edit_input() );
 		$this->assert_ambiguous_write( $zero_edit_result, PackageStorageOperation::UPDATE );
 
@@ -400,9 +401,9 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 
 		$storage      = $this->storage( false );
 		$wpdb->rows[] = array(
-			'id'      => 12,
-			'package' => 'missing/example.php',
-			'type'    => 1,
+			'id'           => 12,
+			'package'      => 'missing/example.php',
+			'package_type' => 1,
 		);
 
 		self::assertSame( array(), $storage->all_for_test() );
@@ -427,7 +428,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		return new PersistenceFailureTestRepository( $package_exists, $database );
 	}
 
-	private function package( string $identifier = 'example/example.php' ): Package {
+	private function package( string $identifier = 'example/example.php' ): AbstractPackage {
 		$package    = new class( $identifier ) extends AbstractPackage {
 
 			public function __construct( private readonly string $identifier = '' ) {
@@ -458,6 +459,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 			'credential_id'            => '',
 			'expected_source'          => 'branch',
 			'expected_source_revision' => 1,
+			'expected_adoption_token'  => 'gh:repository-id:12345678-1234-4234-8234-123456789abc',
 		);
 	}
 
@@ -476,9 +478,10 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 			'package'                => 'example/example.php',
 			'repository'             => 'owner/example',
 			'branch'                 => 'main',
-			'type'                   => 1,
+			'package_type'           => 1,
 			'provider'               => 'gh',
 			'provider_repository_id' => 'repository-id',
+			'adoption_token'         => 'gh:repository-id:12345678-1234-4234-8234-123456789abc',
 			'private'                => 0,
 			'deployment_policy'      => DeploymentPolicy::MANUAL->value,
 			'subdirectory'           => '',

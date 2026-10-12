@@ -9,6 +9,13 @@ namespace RAN\PackageRemoval;
  */
 interface PackageRemovalGateway {
 
+	/** @return array<string, string> Exact installed identifiers and names. */
+	public function installed_targets( string $type ): array;
+
+	public function installed_fingerprint( string $type, string $identifier ): string;
+
+	public function invalidate_native_target( string $type, string $identifier ): void;
+
 	public function plugin_is_active( string $identifier ): bool;
 
 	public function plugin_has_active_dependents( string $identifier ): bool;

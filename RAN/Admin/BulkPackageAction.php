@@ -21,11 +21,13 @@ final readonly class BulkPackageAction {
 
 	/**
 	 * @param list<string> $identifiers
+	 * @param array<string, string> $adoption_tokens
 	 */
 	private function __construct(
 		public string $package_type,
 		public string $operation,
-		public array $identifiers
+		public array $identifiers,
+		public array $adoption_tokens
 	) {
 	}
 
@@ -77,9 +79,19 @@ final readonly class BulkPackageAction {
 			}
 			$identifiers[ $identifier ] = true;
 		}
+		$tokens           = array();
+		$submitted_tokens = $input['adoption_tokens'] ?? null;
+		foreach ( array_keys( $identifiers ) as $identifier ) {
+			$token = is_array( $submitted_tokens ) ? ( $submitted_tokens[ hash( 'sha256', $identifier ) ] ?? null ) : null;
+			if ( ! is_string( $token ) ) {
+				throw new InvalidArgumentException( 'Refresh the managed package selection.' );
+			}
+			\RAN\AdoptionIdentity::parse( $token );
+			$tokens[ $identifier ] = $token;
+		}
 		ksort( $identifiers, SORT_STRING );
 
-		return new self( $package_type, $operation, array_keys( $identifiers ) );
+		return new self( $package_type, $operation, array_keys( $identifiers ), $tokens );
 	}
 
 	public function deployment_policy(): ?DeploymentPolicy {

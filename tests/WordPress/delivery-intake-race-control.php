@@ -14,18 +14,50 @@ if ( ! is_string( $mode ) || ! is_string( $ran_booster_run_id ) || preg_match( '
 }
 
 global $wpdb;
-$ran_booster_booster     = require __DIR__ . '/core-container-fixture.php';
-$ran_booster_repository  = $ran_booster_booster->make( RAN\Deployment\DeploymentAttemptRepository::class );
-$ran_booster_table       = RAN\Storage\Database::attempt_table_name();
-$ran_booster_provider    = 'fixture-provider';
-$ran_booster_delivery_id = 'delivery-intake-race-' . $ran_booster_run_id;
-$ran_booster_zero_id     = $ran_booster_delivery_id . '-zero';
-$ran_booster_digest      = hash( 'sha256', 'authenticated-body-' . $ran_booster_run_id );
+$ran_booster_booster        = require __DIR__ . '/core-container-fixture.php';
+$ran_booster_repository     = $ran_booster_booster->make( RAN\Deployment\DeploymentAttemptRepository::class );
+$ran_booster_table          = RAN\Storage\Database::attempt_table_name();
+$ran_booster_provider       = 'fixture-provider';
+$ran_booster_delivery_id    = 'delivery-intake-race-' . $ran_booster_run_id;
+$ran_booster_zero_id        = $ran_booster_delivery_id . '-zero';
+$ran_booster_digest         = hash( 'sha256', 'authenticated-body-' . $ran_booster_run_id );
+$ran_booster_identifier     = 'fixture-' . $ran_booster_run_id . '/fixture.php';
+$ran_booster_new_identifier = 'new-' . $ran_booster_run_id . '/fixture.php';
 
 if ( 'cleanup' === $mode ) {
 	$ran_booster_result = $wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE provider = %s AND delivery_id IN (%s, %s)', $ran_booster_table, $ran_booster_provider, $ran_booster_delivery_id, $ran_booster_zero_id ) );
 	if ( false === $ran_booster_result ) {
 		throw new RuntimeException( 'The delivery-intake race row could not be removed.' );
+	}
+	if ( false === $wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE package_type = 1 AND provider = %s AND package IN (%s, %s)', ran_booster_table_name(), $ran_booster_provider, $ran_booster_identifier, $ran_booster_new_identifier ) ) ) {
+		throw new RuntimeException( 'The delivery-intake management fixtures could not be removed.' );
+	}
+	return;
+}
+
+if ( 'seed' === $mode ) {
+	// Synthetic installed identities exercise real management-row admission locks without filesystem mutation.
+	foreach ( array(
+		$ran_booster_identifier     => 'fixture-repository-',
+		$ran_booster_new_identifier => 'new-repository-',
+	) as $ran_booster_installed => $ran_booster_repository_prefix ) {
+		$ran_booster_repository_id = $ran_booster_repository_prefix . $ran_booster_run_id;
+		if ( 1 !== $wpdb->insert(
+			ran_booster_table_name(),
+			array(
+				'package'                => $ran_booster_installed,
+				'package_type'           => 1,
+				'repository'             => 'group/subgroup/' . ( $ran_booster_identifier === $ran_booster_installed ? 'package-' : 'new-' ) . $ran_booster_run_id,
+				'provider'               => $ran_booster_provider,
+				'provider_repository_id' => $ran_booster_repository_id,
+				'private'                => 1,
+				'credential_id'          => 'race-credential',
+				'deployment_policy'      => 'automatic',
+				'adoption_token'         => RAN\AdoptionIdentity::create( $ran_booster_provider, $ran_booster_repository_id ),
+			)
+		) ) {
+			throw new RuntimeException( 'The delivery-intake management fixture could not be seeded.' );
+		}
 	}
 	return;
 }
@@ -82,7 +114,7 @@ if ( 'assert' === $mode ) {
 		throw new RuntimeException( 'The race did not persist exactly one immutable queued target.' );
 	}
 
-	$ran_booster_request     = new DeploymentRequest( 'group/subgroup/package-' . $ran_booster_run_id, 'race-credential', true, 'main', 'fixture-' . $ran_booster_run_id, null, DeploymentPolicy::AUTOMATIC, null );
+	$ran_booster_request     = new DeploymentRequest( 'group/subgroup/package-' . $ran_booster_run_id, 'race-credential', true, 'main', 'fixture-' . $ran_booster_run_id, null, DeploymentPolicy::AUTOMATIC, null, installed_identifier: $ran_booster_identifier, adoption_token: (string) $wpdb->get_var( $wpdb->prepare( 'SELECT adoption_token FROM %i WHERE package_type = 1 AND BINARY package = BINARY %s', ran_booster_table_name(), $ran_booster_identifier ) ) );
 	$ran_booster_target      = array(
 		'operation'               => 'update',
 		'package_type'            => 'plugin',
@@ -92,7 +124,7 @@ if ( 'assert' === $mode ) {
 		'package_source_revision' => 1,
 		'request'                 => $ran_booster_request,
 	);
-	$ran_booster_new_request = new DeploymentRequest( 'group/subgroup/new-' . $ran_booster_run_id, 'race-credential', true, 'main', 'new-' . $ran_booster_run_id, null, DeploymentPolicy::AUTOMATIC, null );
+	$ran_booster_new_request = new DeploymentRequest( 'group/subgroup/new-' . $ran_booster_run_id, 'race-credential', true, 'main', 'new-' . $ran_booster_run_id, null, DeploymentPolicy::AUTOMATIC, null, installed_identifier: $ran_booster_new_identifier, adoption_token: (string) $wpdb->get_var( $wpdb->prepare( 'SELECT adoption_token FROM %i WHERE package_type = 1 AND BINARY package = BINARY %s', ran_booster_table_name(), $ran_booster_new_identifier ) ) );
 	$ran_booster_new_target  = array(
 		'operation'               => 'update',
 		'package_type'            => 'plugin',

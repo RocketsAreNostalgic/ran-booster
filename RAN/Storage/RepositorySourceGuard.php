@@ -46,7 +46,7 @@ final class RepositorySourceGuard {
 			return self::unavailable();
 		}
 		$query = $database->prepare(
-			'SELECT type, package, source, provider, provider_repository_id FROM %i WHERE provider = %s AND BINARY provider_repository_id = BINARY %s' . ( $lock ? ' FOR UPDATE' : '' ),
+			'SELECT package_type AS type, package, source, provider, provider_repository_id FROM %i WHERE provider = %s AND BINARY provider_repository_id = BINARY %s' . ( $lock ? ' FOR UPDATE' : '' ),
 			ran_booster_table_name(),
 			$provider,
 			$provider_repository_id

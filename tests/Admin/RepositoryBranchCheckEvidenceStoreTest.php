@@ -161,6 +161,7 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 		$store->clear( 'plugin', $package );
 		$store->record( 'plugin', $package, 'profile-a', 'verified', $stale );
 
+		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ), token: 'gh:fixture:22222222-2222-4222-8222-222222222222' );
 		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
 
 		$fresh = $store->profile_fingerprint_for( $package, 'profile-a' );
@@ -333,9 +334,10 @@ final class InMemoryRepositoryBranchCheckEvidenceStore extends RepositoryBranchC
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Local fixtures keep the cache contract self-contained.
 final class BranchEvidencePackage extends AbstractPackage {
 
-	public function __construct( ?ManagedRepository $repository = null, private string $identifier = 'example/example.php' ) {
+	public function __construct( ?ManagedRepository $repository = null, private string $identifier = 'example/example.php', string $token = 'gh:fixture:11111111-1111-4111-8111-111111111111' ) {
 		TestCase::assertNotNull( $repository );
 		$this->repository = $repository;
+		$this->set_adoption_token( $token );
 	}
 
 	public function get_identifier(): mixed {

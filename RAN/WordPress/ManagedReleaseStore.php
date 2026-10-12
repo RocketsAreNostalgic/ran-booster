@@ -58,9 +58,11 @@ class ManagedReleaseStore {
 		int $expected_revision,
 		PackageSource $new_source,
 		?ManagedReleaseConfiguration $configuration,
-		int $user_id
+		int $user_id,
+		string $expected_adoption_token
 	): bool {
 		PackageMutationGuard::assert_package_mutation_allowed();
+		\RAN\AdoptionIdentity::parse( $expected_adoption_token );
 
 		$this->assert_identity( $type, $identifier );
 		if ( $expected_revision < 1 || PHP_INT_MAX === $expected_revision || $user_id < 0 || $expected_source === $new_source ) {
@@ -77,11 +79,12 @@ class ManagedReleaseStore {
 			return false;
 		}
 		try {
-			$before = $this->row( $type, $identifier, true );
+			$before = $this->row( $type, $identifier, true, $expected_adoption_token );
 			if ( PackageSource::RELEASE_ASSET === $new_source ) {
 				$this->assert_release_subdirectory( $before );
 			}
-			if ( ( $before->source ?? null ) !== $expected_source->value
+			if ( ( $before->adoption_token ?? null ) !== $expected_adoption_token
+				|| ( $before->source ?? null ) !== $expected_source->value
 				|| (int) ( $before->source_revision ?? 0 ) !== $expected_revision
 				|| ! is_string( $before->provider ?? null )
 				|| ! is_string( $before->provider_repository_id ?? null ) ) {
@@ -119,7 +122,8 @@ class ManagedReleaseStore {
 				'release_configuration' => $configuration?->to_json(),
 			);
 			$where       = array(
-				'type'              => self::type_id( $type ),
+				'adoption_token'    => $expected_adoption_token,
+				'package_type'      => self::type_id( $type ),
 				'package'           => $identifier,
 				'source'            => $expected_source->value,
 				'source_revision'   => $expected_revision,
@@ -131,9 +135,10 @@ class ManagedReleaseStore {
 				return false;
 			}
 
-			$after = $this->row( $type, $identifier, true );
+			$after = $this->row( $type, $identifier, true, $expected_adoption_token );
 
-			$verified = ( $after->source ?? null ) === $new_source->value
+			$verified = ( $after->adoption_token ?? null ) === $expected_adoption_token
+			&& ( $after->source ?? null ) === $new_source->value
 			&& (int) ( $after->source_revision ?? 0 ) === $expected_revision + 1
 			&& ( $after->source_previous ?? null ) === $expected_source->value
 			&& ( $after->release_configuration ?? null ) === $data['release_configuration']
@@ -163,9 +168,11 @@ class ManagedReleaseStore {
 		string $identifier,
 		int $expected_revision,
 		string $channel,
-		int $user_id
+		int $user_id,
+		string $expected_adoption_token
 	): bool {
 		PackageMutationGuard::assert_package_mutation_allowed();
+		\RAN\AdoptionIdentity::parse( $expected_adoption_token );
 
 		$this->assert_identity( $type, $identifier );
 		if ( $expected_revision < 1
@@ -182,7 +189,7 @@ class ManagedReleaseStore {
 			return false;
 		}
 		try {
-			$before     = $this->row( $type, $identifier, true );
+			$before     = $this->row( $type, $identifier, true, $expected_adoption_token );
 			$assessment = ! is_string( $before->provider ?? null ) || ! is_string( $before->provider_repository_id ?? null )
 				? array(
 					'allowed' => false,
@@ -205,7 +212,8 @@ class ManagedReleaseStore {
 				return false;
 			}
 			$this->assert_release_subdirectory( $before );
-			if ( PackageSource::RELEASE_ASSET->value !== ( $before->source ?? null )
+			if ( ( $before->adoption_token ?? null ) !== $expected_adoption_token
+				|| PackageSource::RELEASE_ASSET->value !== ( $before->source ?? null )
 			|| (int) ( $before->source_revision ?? 0 ) !== $expected_revision
 			|| ! is_string( $before->release_configuration ?? null ) ) {
 				$database->query( 'ROLLBACK' );
@@ -234,7 +242,8 @@ class ManagedReleaseStore {
 				'release_configuration' => $next->to_json(),
 			);
 			$where       = array(
-				'type'                  => self::type_id( $type ),
+				'adoption_token'        => $expected_adoption_token,
+				'package_type'          => self::type_id( $type ),
 				'package'               => $identifier,
 				'source'                => PackageSource::RELEASE_ASSET->value,
 				'source_revision'       => $expected_revision,
@@ -247,9 +256,10 @@ class ManagedReleaseStore {
 				return false;
 			}
 
-			$after = $this->row( $type, $identifier, true );
+			$after = $this->row( $type, $identifier, true, $expected_adoption_token );
 
-			$verified = PackageSource::RELEASE_ASSET->value === ( $after->source ?? null )
+			$verified = ( $after->adoption_token ?? null ) === $expected_adoption_token
+			&& PackageSource::RELEASE_ASSET->value === ( $after->source ?? null )
 			&& (int) ( $after->source_revision ?? 0 ) === $expected_revision + 1
 			&& $next->to_json() === ( $after->release_configuration ?? null )
 			&& ( $after->deployment_policy ?? null ) === $next_policy;
@@ -264,14 +274,14 @@ class ManagedReleaseStore {
 		}
 	}
 
-	private function row( string $type, string $identifier, bool $lock = false ): object {
+	private function row( string $type, string $identifier, bool $lock = false, ?string $token = null ): object {
 		$this->assert_identity( $type, $identifier );
 		$database = $this->read_connection();
 		$query    = $database->prepare(
-			'SELECT * FROM %i WHERE type = %d AND package = %s LIMIT 2' . ( $lock ? ' FOR UPDATE' : '' ),
-			ran_booster_table_name(),
-			self::type_id( $type ),
-			$identifier
+			'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d AND package = %s' . ( null !== $token ? ' AND BINARY adoption_token = BINARY %s' : '' ) . ' LIMIT 2' . ( $lock ? ' FOR UPDATE' : '' ),
+			...( null === $token
+				? array( ran_booster_table_name(), self::type_id( $type ), $identifier )
+				: array( ran_booster_table_name(), self::type_id( $type ), $identifier, $token ) )
 		);
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery -- Prepared immediately above.
 		$rows  = $database->get_results( $query );

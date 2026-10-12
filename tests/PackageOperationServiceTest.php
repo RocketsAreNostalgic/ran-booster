@@ -348,6 +348,31 @@ final class PackageOperationServiceTest extends TestCase {
 		}
 	}
 
+	public function test_repository_replacement_requires_a_new_adoption_before_any_write(): void {
+		$plugins = new OperationPluginRepository( $this->plugin() );
+		$service = $this->service( $plugins, new OperationThemeRepository( new OperationTheme( 'example' ) ), new OperationCoordinator() );
+		foreach ( array( array( 'gh', 'R_other' ), array( 'bb', 'R_example' ) ) as [$provider, $repository_id] ) {
+			try {
+				$service->execute(
+					PackageOperation::from_input(
+						'edit-plugin',
+						$this->input(
+							'edit-plugin',
+							array(
+								'provider'               => $provider,
+								'provider_repository_id' => $repository_id,
+							)
+						)
+					)
+				);
+				self::fail( 'A repository replacement must not edit the current adoption.' );
+			} catch ( \RuntimeException $failure ) {
+				self::assertStringContainsString( 'Stop managing', $failure->getMessage() );
+				self::assertSame( array(), $plugins->edited );
+			}
+		}
+	}
+
 	/** @return list<array{string}> */
 	public static function link_and_edit_actions(): array {
 		return array(
@@ -368,15 +393,27 @@ final class PackageOperationServiceTest extends TestCase {
 	public function test_edit_rejects_missing_malformed_and_stale_expected_snapshots_before_writing( string $action ): void {
 		foreach (
 			array(
-				'missing'   => static function ( array $input ): array {
+				'missing'            => static function ( array $input ): array {
 					unset( $input['expected_repository'] );
 					return $input;
 				},
-				'malformed' => static function ( array $input ): array {
+				'malformed'          => static function ( array $input ): array {
 					$input['expected_source_revision'] = '01';
 					return $input;
 				},
-				'stale'     => static function ( array $input ): array {
+				'missing_lifetime'   => static function ( array $input ): array {
+					unset( $input['expected_adoption_token'] );
+					return $input;
+				},
+				'malformed_lifetime' => static function ( array $input ): array {
+					$input['expected_adoption_token'] = 'gh:R_example:broken';
+					return $input;
+				},
+				'departed_lifetime'  => static function ( array $input ): array {
+					$input['expected_adoption_token'] = 'gh:R_example:22222222-2222-4222-8222-222222222222';
+					return $input;
+				},
+				'stale'              => static function ( array $input ): array {
 					$input['expected_branch'] = 'older-branch';
 					return $input;
 				},
@@ -455,7 +492,7 @@ final class PackageOperationServiceTest extends TestCase {
 	}
 
 	public function test_release_managed_package_retains_its_repository_identity_while_updating_access_and_policy(): void {
-		$plugin = $this->plugin();
+		$plugin = $this->plugin( 'example/example.php', 'R_release' );
 		$plugin->set_repository( new ManagedRepository( 'gh', 'owner/release', 'R_release', 'stable', true, 'old-access' ) );
 		$plugin->set_source( PackageSource::RELEASE_ASSET, 2 );
 		$plugins = new OperationPluginRepository( $plugin );
@@ -477,6 +514,7 @@ final class PackageOperationServiceTest extends TestCase {
 				'deployment_policy'               => DeploymentPolicy::AUTOMATIC->value,
 				'expected_provider'               => 'gh',
 				'expected_provider_repository_id' => 'R_release',
+				'expected_adoption_token'         => 'gh:R_release:11111111-1111-4111-8111-111111111111',
 				'expected_repository'             => 'owner/release',
 				'expected_branch'                 => 'stable',
 				'expected_credential_id'          => 'old-access',
@@ -504,7 +542,13 @@ final class PackageOperationServiceTest extends TestCase {
 			$service->execute(
 				PackageOperation::from_input(
 					'unlink-plugin',
-					$this->input( 'unlink-plugin', array( 'expected_source_revision' => '2' ) )
+					$this->input(
+						'unlink-plugin',
+						array(
+							'expected_source_revision' => '2',
+							'expected_adoption_token'  => 'gh:R_release:11111111-1111-4111-8111-111111111111',
+						)
+					)
 				)
 			)['status']
 		);
@@ -1323,6 +1367,7 @@ final class PackageOperationServiceTest extends TestCase {
 				'expected_deployment_policy'          => DeploymentPolicy::MANUAL->value,
 				'expected_source'                     => 'branch',
 				'expected_source_revision'            => '1',
+				'expected_adoption_token'             => 'gh:R_example:11111111-1111-4111-8111-111111111111',
 				'confirm_package_removal'             => '1',
 			),
 			$overrides,
@@ -1361,11 +1406,16 @@ final class PackageOperationServiceTest extends TestCase {
 			}
 		}
 
+		$attempt_connection = $this->createStub( \RAN\Storage\SqlReadConnection::class );
+		$attempt_connection->method( 'prepare' )->willReturn( 'fixture read' );
+		$attempt_connection->method( 'get_results' )->willReturn( array() );
+		$attempts = new \RAN\Deployment\DeploymentAttemptRepository( $attempt_connection, 'fixture_attempts', database_lifecycle: $this->createStub( Database::class ) );
+
 		return new PackageOperationService(
 			$plugins,
 			$themes,
 			$coordinator,
-			new PackageRemovalService( $plugins, $themes, new OperationRemovalGateway(), null, $updater_lock ),
+			new PackageRemovalService( $plugins, $themes, new OperationRemovalGateway(), $attempts, $updater_lock ),
 			$updater_lock,
 			new RepositorySourceGuard( $source_database, $this->createStub( Database::class ) )
 		);
@@ -1403,7 +1453,7 @@ final class PackageOperationServiceTest extends TestCase {
 		return $parameters;
 	}
 
-	private function plugin( string $file = 'example/example.php' ): Plugin {
+	private function plugin( string $file = 'example/example.php', string $repository_id = 'R_example' ): Plugin {
 		$plugin     = Plugin::from_wp_array(
 			$file,
 			array(
@@ -1420,8 +1470,9 @@ final class PackageOperationServiceTest extends TestCase {
 				'AuthorName'  => '',
 			)
 		);
-		$repository = new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' );
+		$repository = new ManagedRepository( 'gh', 'owner/example', $repository_id, 'main' );
 		$plugin->set_repository( $repository );
+		$plugin->set_adoption_token( 'gh:' . $repository_id . ':11111111-1111-4111-8111-111111111111' );
 
 		return $plugin;
 	}
@@ -1519,6 +1570,27 @@ final class OperationPluginRepository extends PluginRepository {
 		$this->unlinked = (string) $file;
 		return PackageMutationResult::changed( PackageStorageOperation::DELETE );
 	}
+	/** @return array{id:string,package:string,type:int,adoption_token:string,source:string,digest:string} */
+	public function recovery_record( string $identifier ): array {
+		return array(
+			'id'             => '1',
+			'package'        => $identifier,
+			'type'           => 1,
+			'adoption_token' => \RAN\AdoptionIdentity::of( $this->package ) ?? '',
+			'source'         => $this->package->get_source()->value,
+			'digest'         => hash( 'sha256', $identifier ),
+		);
+	}
+
+	/** @param callable():void $guard */
+	public function recover_unlink( string $identifier, string $expected_token, string $expected_record_digest, callable $guard ): PackageMutationResult {
+		if ( \RAN\AdoptionIdentity::of( $this->package ) !== $expected_token || hash( 'sha256', $identifier ) !== $expected_record_digest ) {
+			throw new \RuntimeException( 'The fixture rejected stale management.' );
+		}
+		$guard();
+		return $this->unlink( $identifier );
+	}
+
 	public function is_installed( string $identifier ): bool {
 		unset( $identifier );
 		return $this->installed;
@@ -1567,6 +1639,27 @@ final class OperationThemeRepository extends ThemeRepository {
 		$this->unlinked = (string) $stylesheet;
 		return PackageMutationResult::changed( PackageStorageOperation::DELETE );
 	}
+	/** @return array{id:string,package:string,type:int,adoption_token:string,source:string,digest:string} */
+	public function recovery_record( string $identifier ): array {
+		return array(
+			'id'             => '1',
+			'package'        => $identifier,
+			'type'           => 2,
+			'adoption_token' => \RAN\AdoptionIdentity::of( $this->package ) ?? '',
+			'source'         => $this->package->get_source()->value,
+			'digest'         => hash( 'sha256', $identifier ),
+		);
+	}
+
+	/** @param callable():void $guard */
+	public function recover_unlink( string $identifier, string $expected_token, string $expected_record_digest, callable $guard ): PackageMutationResult {
+		if ( \RAN\AdoptionIdentity::of( $this->package ) !== $expected_token || hash( 'sha256', $identifier ) !== $expected_record_digest ) {
+			throw new \RuntimeException( 'The fixture rejected stale management.' );
+		}
+		$guard();
+		return $this->unlink( $identifier );
+	}
+
 	public function is_installed( string $identifier ): bool {
 		unset( $identifier );
 		return $this->installed;
@@ -1577,12 +1670,23 @@ final class OperationThemeRepository extends ThemeRepository {
 final class OperationTheme extends Theme {
 	public function __construct( string $stylesheet = '' ) {
 		$this->stylesheet = $stylesheet;
-		$this->name       = 'Example';
+		$this->set_adoption_token( 'gh:R_example:11111111-1111-4111-8111-111111111111' );
+		$this->name = 'Example';
 	}
 }
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class OperationRemovalGateway implements PackageRemovalGateway {
+	public function installed_targets( string $type ): array {
+		return array( ( 'plugin' === $type ? 'example/example.php' : 'example' ) => 'Example' );
+	}
+	public function installed_fingerprint( string $type, string $identifier ): string {
+		return hash( 'sha256', $type . '|' . $identifier );
+	}
+	public function invalidate_native_target( string $type, string $identifier ): void {
+		unset( $type, $identifier );
+	}
+
 	public function plugin_is_active( string $identifier ): bool {
 		unset( $identifier );
 		return false;

@@ -1053,14 +1053,14 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 	}
 
 	public function test_package_activity_summary_reads_latest_and_last_success_in_one_bounded_query(): void {
-		$successful = $this->manual( 'example' );
+		$successful = $this->repository->admit_and_claim_manual( 'update', 'plugin', 'gh', 'R_example', $this->request( 'example' ), 'main', 'branch', 1 );
 		$this->repository->record_resolved_ref( $successful->get_id(), str_repeat( 'a', 40 ) );
 		$successful = $this->repository->finish( $successful->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED ) );
-		$failed     = $this->manual( 'example' );
+		$failed     = $this->repository->admit_and_claim_manual( 'update', 'plugin', 'gh', 'R_example', $this->request( 'example' ), 'main', 'branch', 1 );
 		$failed     = $this->repository->finish( $failed->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_PREFLIGHT_FAILED ) );
 
 		$this->database->queries = array();
-		$summary                 = $this->repository->package_activity_summary( 'plugin', 'example' );
+		$summary                 = $this->repository->package_activity_summary( 'plugin', 'example', 'gh:R_example:11111111-1111-4111-8111-111111111111' );
 
 		self::assertSame( $failed->get_id(), $summary['latest']?->get_id() );
 		self::assertSame( $successful->get_id(), $summary['last_successful']?->get_id() );
@@ -1072,7 +1072,62 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$this->database->fail_reads = true;
 
 		$this->expectException( DeploymentStorageFailure::class );
-		$this->repository->package_activity_summary( 'theme', 'example' );
+		$this->repository->package_activity_summary( 'theme', 'example', 'gh:R_example:11111111-1111-4111-8111-111111111111' );
+	}
+
+	public function test_departed_lifetime_history_cannot_become_current_summary(): void {
+		$this->seed_attempts(
+			array( 'succeeded', 'failed' ),
+			array(
+				1 => 'example',
+				2 => 'example',
+			)
+		);
+		$this->database->rows[1]['request_json'] = str_replace( '11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222', (string) $this->database->rows[1]['request_json'] );
+		$summary                                 = $this->repository->package_activity_summary( 'plugin', 'example', 'gh:R_example:11111111-1111-4111-8111-111111111111' );
+		self::assertSame( 1, $summary['latest']?->get_id() );
+		self::assertSame( 1, $summary['last_successful']?->get_id() );
+		self::assertCount( 2, $this->repository->recent_history() );
+	}
+
+	public function test_delayed_admission_cannot_bind_a_replacement_adoption(): void {
+		foreach ( array( 'manual', 'bulk', 'webhook' ) as $path ) {
+			$target                                = $this->manual_target( 'example' );
+			$webhook                               = $this->target( 'example' );
+			$this->database->management['example'] = 'gh:R_example:22222222-2222-4222-8222-222222222222';
+			try {
+				match ( $path ) {
+					'manual' => $this->repository->admit_and_claim_manual( 'update', 'plugin', 'gh', 'R_example', $target['request'], 'main', 'branch', 1 ),
+					'bulk' => $this->repository->admit_manual_batch( array( $target ) ),
+					default => $this->repository->admit_webhook_batch( 'gh', 'delayed', str_repeat( 'd', 64 ), array( $webhook ) ),
+				};
+				self::fail( 'An old lifetime was admitted.' );
+			} catch ( DeploymentStorageFailure ) {
+				self::assertSame( array(), $this->database->rows );
+				self::assertContains( 'ROLLBACK', $this->database->queries );
+			}
+		}
+	}
+
+	public function test_recovery_blocks_legacy_work_but_distinguishes_exact_current_targets(): void {
+		$this->webhook( 'other' );
+		self::assertFalse( $this->repository->has_unresolved_target_attempt( 'plugin', 'example' ) );
+		self::assertTrue( $this->repository->has_unresolved_target_attempt( 'plugin', 'other' ) );
+		$this->manual( 'legacy' );
+		self::assertTrue( $this->repository->has_unresolved_target_attempt( 'plugin', 'example' ) );
+	}
+
+	public function test_recovery_refuses_malformed_unresolved_attempts(): void {
+		$this->webhook( 'other' );
+		$this->database->rows[0]['request_json'] = '{}';
+		$this->expectException( DeploymentStorageFailure::class );
+		$this->repository->has_unresolved_target_attempt( 'plugin', 'example' );
+	}
+
+	public function test_recovery_refuses_more_than_sixty_four_unresolved_candidates(): void {
+		$this->seed_attempts( array_fill( 0, 65, 'queued' ) );
+		$this->expectException( DeploymentStorageFailure::class );
+		$this->repository->has_unresolved_target_attempt( 'plugin', 'example' );
 	}
 
 	private function repository_with_maximum(
@@ -1134,7 +1189,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 	}
 
 	private function manual( string $slug ): DeploymentAttempt {
-		return $this->repository->admit_and_claim_manual( 'install', 'plugin', 'gh', 'R_' . $slug, $this->request( $slug ), 'main', 'branch', 0 );
+		return $this->repository->admit_and_claim_manual( 'install', 'plugin', 'gh', 'R_' . $slug, $this->request( $slug, false ), 'main', 'branch', 0 );
 	}
 
 	private function webhook( string $slug ): DeploymentAttempt {
@@ -1172,7 +1227,9 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		);
 	}
 
-	private function request( string $slug ): DeploymentRequest {
-		return new DeploymentRequest( 'org/' . $slug, 'profile_1', true, 'main', $slug, null, DeploymentPolicy::AUTOMATIC, 1 );
+	private function request( string $slug, bool $bound = true ): DeploymentRequest {
+		$token                               = ( 'bitbucket' === $slug ? 'bb' : 'gh' ) . ':R_' . $slug . ':11111111-1111-4111-8111-111111111111';
+		$this->database->management[ $slug ] = $token;
+		return new DeploymentRequest( 'org/' . $slug, 'profile_1', true, 'main', $slug, null, DeploymentPolicy::AUTOMATIC, 1, null, $bound ? $slug : null, $bound ? $token : null );
 	}
 }

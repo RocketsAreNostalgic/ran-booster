@@ -171,7 +171,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		self::assertStringNotContainsString( 'release_discovery', $package_schema );
 		self::assertStringNotContainsString( 'status tinyint', $package_schema );
 		self::assertStringNotContainsString( 'ptd tinyint', $package_schema );
-		self::assertCount( 17, $wpdb->schema_tables['wp_ran_booster_packages']['columns'] );
+		self::assertCount( 18, $wpdb->schema_tables['wp_ran_booster_packages']['columns'] );
 		self::assertCount( 3, $wpdb->schema_tables['wp_ran_booster_packages']['indexes'] );
 
 		$attempt_schema = $wpdb->schemas[1];
@@ -187,7 +187,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		self::assertCount( 5, $wpdb->schema_tables['wp_ran_booster_deployment_attempts']['indexes'] );
 		self::assertStringContainsString( 'ENGINE=InnoDB', $attempt_schema );
 
-		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertSame( '14.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
 	}
 
 	/** @return list<array{string, bool}> */
@@ -294,7 +294,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		( new Database() )->install();
 		$attempt_schema = $wpdb->schema_tables['wp_ran_booster_deployment_attempts'];
 		unset( $wpdb->schema_tables['wp_ran_booster_packages'] );
-		$ran_booster_storage_test_options[ Database::VERSION_OPTION ] = '13.0';
+		$ran_booster_storage_test_options[ Database::VERSION_OPTION ] = '14.0';
 		$wpdb->schemas = array();
 		$wpdb->queries = array();
 
@@ -310,7 +310,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 
 		( new Database() )->install();
 		$wpdb->schemas = array();
-		$ran_booster_storage_test_options[ Database::VERSION_OPTION ] = '13.0';
+		$ran_booster_storage_test_options[ Database::VERSION_OPTION ] = '14.0';
 		$wpdb->successful_reads_before_failure                        = 0;
 		$database = new Database();
 
@@ -334,7 +334,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 
 		( new Database() )->install();
 
-		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertSame( '14.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
 		self::assertArrayHasKey( 'wp_ran_booster_rejected_admission_audit', $wpdb->schema_tables );
 		self::assertSame( array(), $wpdb->schemas );
 		self::assertSame( array(), $wpdb->queries );
@@ -387,7 +387,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 			'beta schema 11'     => array( '11.0', 'unsupported_old_schema' ),
 			'beta schema 12'     => array( '12.0', 'unsupported_old_schema' ),
 			'unknown transition' => array( '10.5', 'unknown_schema_version' ),
-			'newer'              => array( '14.0', 'newer_schema' ),
+			'newer'              => array( '15.0', 'newer_schema' ),
 			'wrong type'         => array( 5, 'malformed_schema_version' ),
 		);
 	}
@@ -437,7 +437,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 			self::assertSame( 'wrong_storage_engine', $failure->reason() );
 		}
 
-		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertSame( '14.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
 	}
 
 	public function test_changed_attempt_column_type_is_incompatible_and_preserved(): void {
@@ -517,7 +517,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 			),
 			$wpdb->rows
 		);
-		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertSame( '14.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
 		self::assertFalse( $database->is_ready() );
 	}
 
@@ -537,7 +537,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		}
 
 		self::assertSame( array(), $wpdb->schemas );
-		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertSame( '14.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
 	}
 
 	public function test_version_write_failure_is_cached_and_retryable_with_anew_lifecycle(): void {
@@ -566,7 +566,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		$ran_booster_storage_test_option_write_result = true;
 		( new Database() )->require_ready();
 
-		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertSame( '14.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
 	}
 
 	/** @return array<string, array{bool, string}> */
@@ -673,8 +673,179 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 
 		( new Database() )->install();
 
-		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertSame( '14.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
 		self::assertStringNotContainsString( 'wp_options', implode( "\n", $wpdb->queries ) );
+	}
+
+	public function test_exact_predecessor_backfills_valid_identity_without_hydration_and_preserves_history(): void {
+		global $wpdb, $ran_booster_storage_test_options;
+		$this->install_current_schema();
+		$table = ran_booster_table_name();
+		$this->restore_predecessor_type_column();
+		unset( $wpdb->schema_tables[ $table ]['columns']['adoption_token'], $wpdb->schema_tables[ $table ]['columnMetadata']['adoption_token'] );
+		$ran_booster_storage_test_options[ Database::VERSION_OPTION ] = '13.0';
+		$wpdb->rows = array(
+			array(
+				'id'                     => 1,
+				'type'                   => 1,
+				'package'                => 'example/example.php',
+				'provider'               => 'gh',
+				'provider_repository_id' => '001:opaque',
+				'private'                => 'broken',
+			),
+			array(
+				'id'                     => 2,
+				'type'                   => 2,
+				'package'                => 'theme',
+				'provider'               => 'INVALID',
+				'provider_repository_id' => '123',
+			),
+		);
+		( new Database() )->install();
+		self::assertSame( '14.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertTrue( \RAN\AdoptionIdentity::matches( (string) $wpdb->stored_rows()[0]['adoption_token'], 'gh', '001:opaque' ) );
+		self::assertNull( $wpdb->stored_rows()[1]['adoption_token'] );
+		self::assertContains( 'ALTER TABLE `wp_ran_booster_packages` CHANGE COLUMN type package_type tinyint(3) unsigned NOT NULL, ADD adoption_token varchar(643) DEFAULT NULL', $wpdb->queries );
+		self::assertSame( 1, $wpdb->stored_rows()[0]['package_type'] );
+		self::assertSame( 2, $wpdb->stored_rows()[1]['package_type'] );
+		self::assertSame( 'broken', $wpdb->stored_rows()[0]['private'] );
+		self::assertStringNotContainsString( 'UPDATE `wp_ran_booster_deployment_attempts`', implode( "\n", $wpdb->queries ) );
+	}
+
+	public function test_prior_candidate_interrupted_ddl_renames_without_reminting(): void {
+		global $wpdb, $ran_booster_storage_test_options;
+		$this->install_current_schema();
+		$this->restore_predecessor_type_column();
+		$ran_booster_storage_test_options[ Database::VERSION_OPTION ] = '13.0';
+		$token      = \RAN\AdoptionIdentity::create( 'gh', 'opaque' );
+		$wpdb->rows = array(
+			array(
+				'id'                     => 1,
+				'type'                   => 2,
+				'provider'               => 'gh',
+				'provider_repository_id' => 'opaque',
+				'adoption_token'         => $token,
+			),
+		);
+		( new Database() )->install();
+		self::assertSame( $token, $wpdb->stored_rows()[0]['adoption_token'] );
+		self::assertSame( 2, $wpdb->stored_rows()[0]['package_type'] );
+		self::assertArrayNotHasKey( 'type', $wpdb->stored_rows()[0] );
+		self::assertContains( 'ALTER TABLE `wp_ran_booster_packages` CHANGE COLUMN type package_type tinyint(3) unsigned NOT NULL', $wpdb->queries );
+		self::assertSame( array( 'package_type', 'package' ), $wpdb->schema_tables[ ran_booster_table_name() ]['indexes']['package_type']['columns'] );
+	}
+
+	public function test_impossible_renamed_predecessor_without_token_is_not_repaired(): void {
+		global $wpdb, $ran_booster_storage_test_options;
+		$this->install_current_schema();
+		$table = ran_booster_table_name();
+		unset( $wpdb->schema_tables[ $table ]['columns']['adoption_token'], $wpdb->schema_tables[ $table ]['columnMetadata']['adoption_token'] );
+		$ran_booster_storage_test_options[ Database::VERSION_OPTION ] = '13.0';
+		$queries = $wpdb->queries;
+		try {
+			( new Database() )->install();
+			self::fail( 'The atomic migration cannot produce a renamed column without its token column.' );
+		} catch ( DatabaseLifecycleFailure $failure ) {
+			self::assertSame( 'incompatible_schema', $failure->reason() );
+		}
+		self::assertSame( $queries, $wpdb->queries );
+		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+	}
+
+	public function test_unpublished_schema_fourteen_with_old_column_fails_inspection_without_repair(): void {
+		global $wpdb;
+		$this->install_current_schema();
+		$this->restore_predecessor_type_column();
+		$queries = $wpdb->queries;
+		$this->assert_incompatible_schema_fails_before_ddl( $wpdb );
+		self::assertSame( $queries, $wpdb->queries );
+	}
+
+	public function test_interrupted_ddl_and_failed_version_marker_preserve_already_assigned_identity(): void {
+		global $wpdb, $ran_booster_storage_test_options, $ran_booster_storage_test_option_apply_write, $ran_booster_storage_test_option_write_result;
+		$this->install_current_schema();
+		$ran_booster_storage_test_options[ Database::VERSION_OPTION ] = '13.0';
+		$wpdb->rows                                   = array(
+			array(
+				'id'                     => 1,
+				'provider'               => 'bb',
+				'provider_repository_id' => '{opaque}',
+				'adoption_token'         => null,
+			),
+		);
+		$ran_booster_storage_test_option_apply_write  = false;
+		$ran_booster_storage_test_option_write_result = false;
+		try {
+			( new Database() )->install();
+			self::fail( 'The failed schema marker must block readiness.' );
+		} catch ( DatabaseLifecycleFailure $failure ) {
+			self::assertSame( 'version_write_failed', $failure->reason() );
+		}
+		$token = $wpdb->stored_rows()[0]['adoption_token'];
+		self::assertIsString( $token );
+		$ran_booster_storage_test_option_apply_write  = true;
+		$ran_booster_storage_test_option_write_result = true;
+		( new Database() )->install();
+		self::assertSame( $token, $wpdb->stored_rows()[0]['adoption_token'] );
+		$wpdb->rows[0]['adoption_token'] = null;
+		( new Database() )->install();
+		self::assertNull( $wpdb->stored_rows()[0]['adoption_token'], 'Current schemas never silently remint a missing token.' );
+	}
+
+	public function test_identity_backfill_failure_rolls_back_and_keeps_previous_marker(): void {
+		global $wpdb, $ran_booster_storage_test_options;
+		$this->install_current_schema();
+		$ran_booster_storage_test_options[ Database::VERSION_OPTION ] = '13.0';
+		$wpdb->rows                   = array(
+			array(
+				'id'                     => 1,
+				'provider'               => 'gh',
+				'provider_repository_id' => '123',
+				'adoption_token'         => null,
+			),
+		);
+		$wpdb->query_failure_contains = 'COMMIT';
+		try {
+			( new Database() )->install();
+			self::fail( 'Failed identity commit must block readiness.' );
+		} catch ( DatabaseLifecycleFailure $failure ) {
+			self::assertSame( 'identity_commit_failed', $failure->reason() );
+		}
+		self::assertNull( $wpdb->stored_rows()[0]['adoption_token'] );
+		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+	}
+
+	public function test_recovery_readiness_never_migrates_or_repairs_tables(): void {
+		global $wpdb, $ran_booster_storage_test_options;
+		$this->install_current_schema();
+		$ran_booster_storage_test_options[ Database::VERSION_OPTION ] = '13.0';
+		$queries = $wpdb->queries;
+		try {
+			( new Database() )->require_recovery_ready();
+			self::fail( 'Recovery must not migrate an old database.' );
+		} catch ( DatabaseLifecycleFailure $failure ) {
+			self::assertSame( 'incompatible_schema', $failure->reason() );
+		}
+		self::assertSame( $queries, $wpdb->queries );
+		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		$ran_booster_storage_test_options[ Database::VERSION_OPTION ] = Database::$booster_db_version;
+		unset( $wpdb->schema_tables[ Database::attempt_table_name() ] );
+		try {
+			( new Database() )->require_recovery_ready();
+			self::fail( 'Recovery must not recreate a missing attempt table.' );
+		} catch ( DatabaseLifecycleFailure ) {
+			self::assertArrayNotHasKey( Database::attempt_table_name(), $wpdb->schema_tables );
+		}
+		self::assertSame( $queries, $wpdb->queries );
+	}
+
+	private function restore_predecessor_type_column(): void {
+		global $wpdb;
+		$table                           = &$wpdb->schema_tables[ ran_booster_table_name() ];
+		$table['columns']['type']        = $table['columns']['package_type'];
+		$table['columnMetadata']['type'] = $table['columnMetadata']['package_type'];
+		unset( $table['columns']['package_type'], $table['columnMetadata']['package_type'] );
+		$table['indexes']['package_type']['columns'] = array( 'type', 'package' );
 	}
 
 	private function install_current_schema(): void {
@@ -693,7 +864,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		}
 
 		self::assertSame( array(), $wpdb->schemas );
-		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertSame( '14.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
 	}
 }
 

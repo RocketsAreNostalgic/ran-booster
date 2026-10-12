@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Admin;
 
+use RAN\AdoptionIdentity;
 use RAN\Deployment\DeploymentCoordinator;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\DeploymentRequest;
@@ -108,7 +109,7 @@ final readonly class BulkPackageActionService {
 			}
 
 			try {
-				$this->find( 'plugin', $identifier );
+				$this->assert_lifetime( $action, $this->find( 'plugin', $identifier ) );
 			} catch ( BulkPackageActionFailure $failure ) {
 				$this->increment( $skipped, $failure->reason );
 				continue;
@@ -180,6 +181,7 @@ final readonly class BulkPackageActionService {
 				PackageMutationGuard::assert_plugin_file_allowed( $identifier );
 			}
 			$package = $this->find( $action->package_type, $identifier );
+				$this->assert_lifetime( $action, $package );
 			if ( DeploymentPolicy::DISABLED !== $policy ) {
 				$this->assert_ready(
 					$package,
@@ -209,6 +211,7 @@ final readonly class BulkPackageActionService {
 			}
 			try {
 				$package = $this->find( $action->package_type, $identifier );
+				$this->assert_lifetime( $action, $package );
 			} catch ( BulkPackageActionFailure $failure ) {
 				$this->increment( $skipped, $failure->reason );
 				continue;
@@ -237,7 +240,10 @@ final readonly class BulkPackageActionService {
 				(string) $package->get_slug(),
 				is_string( $package->get_subdirectory() ) ? $package->get_subdirectory() : null,
 				$package->get_deployment_policy(),
-				$user_id > 0 ? $user_id : null
+				$user_id > 0 ? $user_id : null,
+				null,
+				(string) $package->get_identifier(),
+				AdoptionIdentity::of( $package )
 			);
 			$targets[]     = array(
 				'package_type'            => $action->package_type,
@@ -265,6 +271,13 @@ final readonly class BulkPackageActionService {
 			$skipped,
 			$admission['runner_status']
 		);
+	}
+
+	private function assert_lifetime( BulkPackageAction $action, Package $package ): void {
+		$token = AdoptionIdentity::of( $package );
+		if ( null === $token || ( $action->adoption_tokens[ (string) $package->get_identifier() ] ?? null ) !== $token ) {
+			throw BulkPackageActionFailure::stale_selection();
+		}
 	}
 
 	private function find( string $package_type, string $identifier ): Package {
@@ -320,6 +333,7 @@ final readonly class BulkPackageActionService {
 			'subdirectory'           => $package->get_subdirectory(),
 			'source'                 => $package->get_source()->value,
 			'source_revision'        => $package->get_source_revision(),
+			'adoption_token'         => AdoptionIdentity::of( $package ),
 		);
 	}
 

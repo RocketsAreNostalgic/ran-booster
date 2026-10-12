@@ -41,15 +41,15 @@ $ran_booster_clean     = static function () use ( $ran_booster_table, $ran_boost
 	$wpdb->delete(
 		$ran_booster_table,
 		array(
-			'type'    => 1,
-			'package' => $ran_booster_root_id,
+			'package_type' => 1,
+			'package'      => $ran_booster_root_id,
 		)
 	);
 	$wpdb->delete(
 		$ran_booster_table,
 		array(
-			'type'    => 1,
-			'package' => $ran_booster_nested_id,
+			'package_type' => 1,
+			'package'      => $ran_booster_nested_id,
 		)
 	);
 	if ( is_dir( $ran_booster_root_dir ) && ! is_link( $ran_booster_root_dir ) ) {
@@ -122,9 +122,10 @@ $ran_booster_assert( $ran_booster_plugin_repository->unlink( $ran_booster_root_i
 $ran_booster_root->set_source( PackageSource::BRANCH, 1 );
 $ran_booster_assert( $ran_booster_plugin_repository->adopt( $ran_booster_root )->is_successful() && $ran_booster_plugin_repository->adopt( $ran_booster_nested )->is_successful(), 'root and nested Branch adoption both succeed' );
 $ran_booster_store = new ManagedReleaseStore();
-$ran_booster_assert( ! $ran_booster_store->transition( 'plugin', $ran_booster_root_id, PackageSource::BRANCH, 1, PackageSource::RELEASE_ASSET, new ManagedReleaseConfiguration( basename( $ran_booster_root_dir ), 'booster-fixture-plugin.php' ), 1 ), 'shared Branch repository refuses root Release transition' );
+$ran_booster_token = $ran_booster_plugin_repository->booster_plugin_from_file( $ran_booster_root_id )->get_adoption_token() ?? '';
+$ran_booster_assert( ! $ran_booster_store->transition( 'plugin', $ran_booster_root_id, PackageSource::BRANCH, 1, PackageSource::RELEASE_ASSET, new ManagedReleaseConfiguration( basename( $ran_booster_root_dir ), 'booster-fixture-plugin.php' ), 1, $ran_booster_token ), 'shared Branch repository refuses root Release transition' );
 $ran_booster_assert( $ran_booster_plugin_repository->unlink( $ran_booster_nested_id )->is_successful(), 'ordinary unlink removes nested Branch record' );
-$ran_booster_assert( $ran_booster_store->transition( 'plugin', $ran_booster_root_id, PackageSource::BRANCH, 1, PackageSource::RELEASE_ASSET, new ManagedReleaseConfiguration( basename( $ran_booster_root_dir ), 'booster-fixture-plugin.php' ), 1 ), 'sole root Branch transitions to Release' );
-$ran_booster_assert( $ran_booster_store->transition( 'plugin', $ran_booster_root_id, PackageSource::RELEASE_ASSET, 2, PackageSource::BRANCH, null, 1 ), 'sole root Release returns to Branch' );
+$ran_booster_assert( $ran_booster_store->transition( 'plugin', $ran_booster_root_id, PackageSource::BRANCH, 1, PackageSource::RELEASE_ASSET, new ManagedReleaseConfiguration( basename( $ran_booster_root_dir ), 'booster-fixture-plugin.php' ), 1, $ran_booster_token ), 'sole root Branch transitions to Release' );
+$ran_booster_assert( $ran_booster_store->transition( 'plugin', $ran_booster_root_id, PackageSource::RELEASE_ASSET, 2, PackageSource::BRANCH, null, 1, $ran_booster_token ), 'sole root Release returns to Branch' );
 $ran_booster_assert( hash_file( 'sha256', $ran_booster_root_dir . '/booster-fixture-plugin.php' ) === $ran_booster_root_hash, 'root fixture bytes remain unchanged' );
 $ran_booster_clean();

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Admin;
 
+use RAN\AdoptionIdentity;
 use RAN\Package;
 use RuntimeException;
 
@@ -64,17 +65,15 @@ class RepositoryBranchCheckEvidenceStore {
 
 	/** Clear evidence when this managed package lifecycle ends. */
 	public function clear( string $type, Package $package ): void {
+		$this->clear_identity( $type, (string) $package->get_identifier(), AdoptionIdentity::of( $package ) ?? throw new RuntimeException( 'The adoption identity is unavailable.' ) );
+	}
+
+	/** Remove only the departed adoption's evidence; credential generations are unchanged. */
+	public function clear_identity( string $type, string $identifier, string $token ): void {
+		AdoptionIdentity::parse( $token );
 		$this->mutate(
-			function ( array $all ) use ( $type, $package ): array {
-				unset( $all['records'][ $this->key( $type, $package ) ] );
-				if ( $all['generation'] >= PHP_INT_MAX ) {
-					$all['records']    = array();
-					$all['generation'] = 1;
-
-					return $all;
-				}
-				++$all['generation'];
-
+			static function ( array $all ) use ( $type, $identifier, $token ): array {
+				unset( $all['records'][ hash( 'sha256', $type . "\\0" . $identifier . "\\0" . $token ) ] );
 				return $all;
 			}
 		);
@@ -194,7 +193,7 @@ class RepositoryBranchCheckEvidenceStore {
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) || ! is_string( $package->get_identifier() ) ) {
 			throw new RuntimeException( 'Booster cannot save repository branch check evidence for this package.' );
 		}
-		return hash( 'sha256', $type . "\\0" . $package->get_identifier() );
+		return hash( 'sha256', $type . "\\0" . $package->get_identifier() . "\\0" . ( AdoptionIdentity::of( $package ) ?? throw new RuntimeException( 'The adoption identity is unavailable.' ) ) );
 	}
 
 	private function target_fingerprint( Package $package ): string {
@@ -204,6 +203,7 @@ class RepositoryBranchCheckEvidenceStore {
 			implode(
 				"\\0",
 				array(
+					AdoptionIdentity::of( $package ) ?? throw new RuntimeException( 'The adoption identity is unavailable.' ),
 					(string) $package->get_source()->value,
 					(string) $package->get_source_revision(),
 					(string) $package->get_provider_code(),

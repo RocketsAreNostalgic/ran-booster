@@ -53,6 +53,7 @@ trap cleanup EXIT INT TERM
 
 "$php_bin" "$wp_cli" plugin is-active ran-booster --path="$wordpress"
 "$php_bin" "$wp_cli" eval-file "$control" cleanup "$run_id" --path="$wordpress" >/dev/null
+"$php_bin" "$wp_cli" eval-file "$control" seed "$run_id" --path="$wordpress"
 cron_before="$("$php_bin" "$wp_cli" eval-file "$control" cron-state "$run_id" --path="$wordpress")"
 
 "$php_bin" "$wp_cli" eval-file "$child" a "$run_id" "$ready_a" "$release_marker" "$result_a" --path="$wordpress" >"$log_a" 2>&1 &

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace RAN\Storage;
 
 use InvalidArgumentException;
+use RAN\AdoptionIdentity;
+use RAN\AbstractPackage;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\ManagedRepository;
 use RAN\Package;
@@ -55,12 +57,113 @@ abstract class AbstractPackageRepository {
 		$result = $wpdb->delete(
 			ran_booster_table_name(),
 			array(
-				'package' => $model->package,
-				'type'    => $this->package_type(),
+				'package'      => $model->package,
+				'package_type' => $this->package_type(),
 			)
 		);
 
 		return $this->verify_package_deletion( $model->package, $result );
+	}
+
+	/** @return array{id:string,package:string,type:int,adoption_token:string,source:string,digest:string} */
+	public function recovery_record( string $identifier ): array {
+		$this->require_recovery_storage();
+		new PackageModel( array( 'package' => $identifier ) );
+		return $this->recovery_snapshot( $identifier, $this->package_rows( $identifier ) );
+	}
+
+	/**
+	 * The caller holds the updater lock; the guard checks installed identity and unresolved work.
+	 *
+	 * @param callable():void $guard Executed under the same row lock used by admission.
+	 */
+	public function recover_unlink( string $identifier, string $expected_token, string $expected_record_digest, callable $guard ): PackageMutationResult {
+		RuntimeSupport::assert_managed_operations_allowed();
+		global $wpdb;
+		$this->require_recovery_storage();
+		if ( false === $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' ) || false === $wpdb->query( 'START TRANSACTION' ) ) {
+			return $this->failure_result( PackageStorageFailure::transaction_unavailable() );
+		}
+		try {
+			$snapshot = $this->recovery_snapshot( $identifier, $this->locked_package_rows( $identifier ) );
+			if ( $snapshot['adoption_token'] !== $expected_token || ! hash_equals( $snapshot['digest'], $expected_record_digest ) ) {
+				$wpdb->query( 'ROLLBACK' );
+				return $this->delete_conflict_result();
+			}
+			$guard();
+			$query = $wpdb->prepare( 'DELETE FROM %i WHERE id = %s AND package_type = %d AND BINARY package = BINARY %s AND BINARY adoption_token = BINARY %s', ran_booster_table_name(), $snapshot['id'], $this->package_type(), $identifier, $expected_token );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- All exact-record values are prepared above and the record remains locked.
+			if ( 1 !== $wpdb->query( $query ) ) {
+				$wpdb->query( 'ROLLBACK' );
+				return $this->delete_failure_result();
+			}
+			$verified = $this->verify_package_deletion( $identifier, 1 );
+			if ( ! $verified->is_successful() || false === $wpdb->query( 'COMMIT' ) ) {
+				$wpdb->query( 'ROLLBACK' );
+				return $this->post_write_verification_failure( PackageStorageOperation::DELETE );
+			}
+			return $verified;
+		} catch ( Throwable $failure ) {
+			$wpdb->query( 'ROLLBACK' );
+			throw $failure;
+		}
+	}
+
+	/**
+	 * @param list<object> $rows Unhydrated authoritative rows.
+	 * @return array{id:string,package:string,type:int,adoption_token:string,source:string,digest:string}
+	 */
+	private function recovery_snapshot( string $identifier, array $rows ): array {
+		if ( 1 !== count( $rows ) ) {
+			throw PackageStorageFailure::duplicate_package_rows();
+		}
+		$row   = $rows[0];
+		$id    = $row->id ?? null;
+		$token = $this->row_adoption_token( $row );
+		if ( ( ! is_int( $id ) && ! is_string( $id ) ) || 1 !== preg_match( '/\A[1-9][0-9]*\z/', (string) $id )
+			|| ( $row->package ?? null ) !== $identifier
+			|| ! in_array( $row->type ?? null, array( $this->package_type(), (string) $this->package_type() ), true ) ) {
+			throw PackageStorageFailure::duplicate_package_rows();
+		}
+		$source = PackageSource::from_database( $row->source ?? null )->value;
+		$values = get_object_vars( $row );
+		ksort( $values, SORT_STRING );
+		$digest = hash_init( 'sha256' );
+		foreach ( $values as $field => $value ) {
+			if ( ! is_string( $value ) && ! is_int( $value ) && null !== $value ) {
+				throw PackageStorageFailure::query_failed();
+			}
+			$bytes = (string) $value;
+			hash_update( $digest, strlen( $field ) . ':' . $field . ':' . gettype( $value ) . ':' . strlen( $bytes ) . ':' . $bytes );
+		}
+		return array(
+			'id'             => (string) $id,
+			'package'        => $identifier,
+			'type'           => $this->package_type(),
+			'adoption_token' => $token,
+			'source'         => $source,
+			'digest'         => hash_final( $digest ),
+		);
+	}
+
+	private function require_recovery_storage(): void {
+		$this->database_lifecycle ??= new Database();
+		try {
+			$this->database_lifecycle->require_recovery_ready();
+		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
+			$failure = PackageStorageFailure::unsupported_database( PackageStorageOperation::DELETE );
+			throw $failure;
+		}
+	}
+
+	private function row_adoption_token( object $row ): string {
+		$token    = $row->adoption_token ?? null;
+		$provider = $row->provider ?? null;
+		$id       = $row->provider_repository_id ?? null;
+		if ( ! is_string( $token ) || ! is_string( $provider ) || ! is_string( $id ) || ! AdoptionIdentity::matches( $token, $provider, $id ) ) {
+			throw PackageStorageFailure::invalid_provider_identity();
+		}
+		return $token;
 	}
 
 	/**
@@ -86,33 +189,54 @@ abstract class AbstractPackageRepository {
 
 		$this->require_storage_support( PackageStorageOperation::UPDATE );
 		$revision = $package->get_source_revision();
-		if ( PHP_INT_MAX === $revision ) {
+		$token    = AdoptionIdentity::of( $package );
+		if ( null === $token || PHP_INT_MAX === $revision ) {
 			return $this->source_conflict_result();
 		}
 
-		$model  = new PackageModel( array( 'package' => (string) $package->get_identifier() ) );
-		$data   = array(
+		$model = new PackageModel( array( 'package' => (string) $package->get_identifier() ) );
+		$data  = array(
 			'deployment_policy' => DeploymentPolicy::DISABLED->value,
 			'source_revision'   => $revision + 1,
 		);
-		$result = $wpdb->update(
-			ran_booster_table_name(),
-			$data,
-			array(
-				'package'           => $model->package,
-				'type'              => $this->package_type(),
-				'source'            => $package->get_source()->value,
-				'source_revision'   => $revision,
-				'deployment_policy' => $package->get_deployment_policy()->value,
-			)
-		);
+		if ( false === $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' ) || false === $wpdb->query( 'START TRANSACTION' ) ) {
+			return $this->failure_result( PackageStorageFailure::transaction_unavailable() );
+		}
+		try {
+			$rows = $this->locked_package_rows( (string) $model->package );
+			if ( 1 !== count( $rows ) || ( $rows[0]->package ?? null ) !== $model->package || $this->row_adoption_token( $rows[0] ) !== $token ) {
+				$wpdb->query( 'ROLLBACK' );
+				return $this->source_conflict_result();
+			}
+			$result = $wpdb->update(
+				ran_booster_table_name(),
+				$data,
+				array(
+					'package'           => $model->package,
+					'package_type'      => $this->package_type(),
+					'source'            => $package->get_source()->value,
+					'source_revision'   => $revision,
+					'deployment_policy' => $package->get_deployment_policy()->value,
+					'adoption_token'    => $token,
+				)
+			);
 
-		return $this->verify_package_mutation(
-			(string) $model->package,
-			$data,
-			$result,
-			PackageStorageOperation::UPDATE
-		);
+			$verified = $this->verify_package_mutation(
+				(string) $model->package,
+				$data,
+				$result,
+				PackageStorageOperation::UPDATE
+			);
+
+			if ( ! $verified->is_successful() || false === $wpdb->query( 'COMMIT' ) ) {
+				$wpdb->query( 'ROLLBACK' );
+				return $verified->is_successful() ? $this->post_write_verification_failure( PackageStorageOperation::UPDATE ) : $verified;
+			}
+			return $verified;
+		} catch ( Throwable $failure ) {
+			$wpdb->query( 'ROLLBACK' );
+			throw $failure;
+		}
 	}
 
 	/**
@@ -187,7 +311,7 @@ abstract class AbstractPackageRepository {
 
 		$where = array(
 			'package'         => $model->package,
-			'type'            => $this->package_type(),
+			'package_type'    => $this->package_type(),
 			'source'          => $expected_source->source,
 			'source_revision' => $expected_source->source_revision,
 		);
@@ -213,7 +337,15 @@ abstract class AbstractPackageRepository {
 			return $this->failure_result( PackageStorageFailure::transaction_unavailable() );
 		}
 		try {
-			$assessment = ( new RepositorySourceGuard( $wpdb, $this->database_lifecycle ) )->assess(
+			$rows  = $this->locked_package_rows( $model->package );
+			$token = $input['expected_adoption_token'] ?? null;
+			if ( 1 !== count( $rows ) || ! is_string( $token ) || $this->row_adoption_token( $rows[0] ) !== $token
+				|| ( $rows[0]->package ?? null ) !== $model->package || ! AdoptionIdentity::matches( $token, $model->provider, $model->provider_repository_id ) ) {
+				$wpdb->query( 'ROLLBACK' );
+				return $this->source_conflict_result();
+			}
+			$where['adoption_token'] = $token;
+			$assessment              = ( new RepositorySourceGuard( $wpdb, $this->database_lifecycle ) )->assess(
 				$model->provider,
 				$model->provider_repository_id,
 				$this->package_type(),
@@ -266,6 +398,7 @@ abstract class AbstractPackageRepository {
 			if ( '' === (string) $model->package || isset( $normalized[ (string) $model->package ] ) ) {
 				throw new InvalidArgumentException( 'The bulk package selection is invalid.' );
 			}
+			AdoptionIdentity::parse( is_string( $snapshot['adoption_token'] ?? null ) ? $snapshot['adoption_token'] : '' );
 			$snapshot['package']                    = (string) $model->package;
 			$snapshot['deployment_policy']          = DeploymentPolicy::from_database(
 				is_string( $snapshot['deployment_policy'] ?? null )
@@ -293,7 +426,7 @@ abstract class AbstractPackageRepository {
 			$changed = 0;
 			foreach ( $normalized as $identifier => $snapshot ) {
 				$rows = $this->locked_package_rows( $identifier );
-				if ( 1 !== count( $rows ) || ! $this->row_matches( $rows[0], $snapshot ) ) {
+				if ( 1 !== count( $rows ) || $this->row_adoption_token( $rows[0] ) !== $snapshot['adoption_token'] || ! $this->row_matches( $rows[0], $snapshot ) ) {
 					throw PackageStorageFailure::duplicate_package_rows();
 				}
 				try {
@@ -314,8 +447,8 @@ abstract class AbstractPackageRepository {
 					ran_booster_table_name(),
 					array( 'deployment_policy' => $policy->value ),
 					array(
-						'package' => $identifier,
-						'type'    => $this->package_type(),
+						'package'      => $identifier,
+						'package_type' => $this->package_type(),
 					)
 				);
 				if ( 1 !== $result ) {
@@ -362,7 +495,7 @@ abstract class AbstractPackageRepository {
 
 		$row = $rows[0] ?? null;
 
-		if ( ! is_object( $row ) || ! $this->package_exists( $this->string_from_row( $row, 'package' ) ) ) {
+		if ( ! is_object( $row ) || ( $row->package ?? null ) !== $model->package || ! $this->package_exists( $this->string_from_row( $row, 'package' ) ) ) {
 			throw $this->not_found_exception();
 		}
 
@@ -382,8 +515,8 @@ abstract class AbstractPackageRepository {
 		}
 		$table_name = ran_booster_table_name();
 		$where      = array(
-			'package' => $model->package,
-			'type'    => $this->package_type(),
+			'package'      => $model->package,
+			'package_type' => $this->package_type(),
 		);
 		if ( false === $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
 			|| false === $wpdb->query( 'START TRANSACTION' ) ) {
@@ -402,13 +535,19 @@ abstract class AbstractPackageRepository {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->repository_source_result( $assessment, PackageStorageOperation::INSERT );
 			}
-			$existing_rows = $this->package_rows( $model->package );
+			$existing_rows = $this->locked_package_rows( $model->package );
 			if ( count( $existing_rows ) > 1 ) {
 				$wpdb->query( 'ROLLBACK' );
 				return PackageMutationResult::conflict( PackageStorageOperation::QUERY, 'ran_booster_storage_duplicate_package', __( 'Booster found conflicting package management records. No package changes were made.', 'ran-booster' ) );
 			}
 			if ( array() !== $existing_rows ) {
-				$stored_source = $this->source_model_from_row( $existing_rows[0] );
+				$token = $this->row_adoption_token( $existing_rows[0] );
+				if ( AdoptionIdentity::of( $package ) !== $token || ( $existing_rows[0]->package ?? null ) !== $model->package || ! AdoptionIdentity::matches( $token, $model->provider, $model->provider_repository_id ) ) {
+					$wpdb->query( 'ROLLBACK' );
+					return $this->source_conflict_result();
+				}
+				$where['adoption_token'] = $token;
+				$stored_source           = $this->source_model_from_row( $existing_rows[0] );
 				if ( PackageSource::BRANCH->value !== $stored_source->source || PackageSource::BRANCH !== $package->get_source() || $stored_source->source_revision !== $package->get_source_revision() || PHP_INT_MAX === $stored_source->source_revision ) {
 					$wpdb->query( 'ROLLBACK' );
 					return $this->source_conflict_result();
@@ -420,15 +559,20 @@ abstract class AbstractPackageRepository {
 				$result                   = $wpdb->update( $table_name, $data, $where );
 				$verified                 = $this->verify_package_mutation( $model->package, $data, $result, PackageStorageOperation::UPDATE );
 			} else {
-				$insert_data = array_merge(
+				if ( null !== AdoptionIdentity::of( $package ) ) {
+					$wpdb->query( 'ROLLBACK' );
+					return $this->adoption_conflict();
+				}
+				$data['adoption_token'] = AdoptionIdentity::create( $model->provider, $model->provider_repository_id );
+				$insert_data            = array_merge(
 					array(
-						'package' => $model->package,
-						'type'    => $this->package_type(),
+						'package'      => $model->package,
+						'package_type' => $this->package_type(),
 					),
 					$data
 				);
-				$result      = $wpdb->insert( $table_name, $insert_data );
-				$verified    = $this->verify_package_mutation( $model->package, $insert_data, $result, PackageStorageOperation::INSERT );
+				$result                 = $wpdb->insert( $table_name, $insert_data );
+				$verified               = $this->verify_package_mutation( $model->package, $insert_data, $result, PackageStorageOperation::INSERT );
 			}
 			if ( ! $verified->is_successful() ) {
 				$wpdb->query( 'ROLLBACK' );
@@ -437,6 +581,9 @@ abstract class AbstractPackageRepository {
 			if ( false === $wpdb->query( 'COMMIT' ) ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->post_write_verification_failure( $verified->get_operation() );
+			}
+			if ( $package instanceof AbstractPackage && is_string( $data['adoption_token'] ?? null ) ) {
+				$package->set_adoption_token( $data['adoption_token'] );
 			}
 			return $verified;
 		} catch ( Throwable ) {
@@ -489,14 +636,19 @@ abstract class AbstractPackageRepository {
 				return $this->failure_result( $failure );
 			}
 
-			$insert_data = array_merge(
+			if ( null !== AdoptionIdentity::of( $package ) ) {
+				$wpdb->query( 'ROLLBACK' );
+				return $this->adoption_conflict();
+			}
+			$data['adoption_token'] = AdoptionIdentity::create( $model->provider, $model->provider_repository_id );
+			$insert_data            = array_merge(
 				array(
-					'package' => $model->package,
-					'type'    => $this->package_type(),
+					'package'      => $model->package,
+					'package_type' => $this->package_type(),
 				),
 				$data
 			);
-			$result      = $wpdb->insert( ran_booster_table_name(), $insert_data );
+			$result                 = $wpdb->insert( ran_booster_table_name(), $insert_data );
 			if ( false === $result || 0 === $result ) {
 				try {
 					if ( array() !== $this->package_rows( $model->package ) ) {
@@ -522,6 +674,9 @@ abstract class AbstractPackageRepository {
 			if ( false === $wpdb->query( 'COMMIT' ) ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->post_write_verification_failure( PackageStorageOperation::INSERT );
+			}
+			if ( $package instanceof AbstractPackage && is_string( $data['adoption_token'] ?? null ) ) {
+				$package->set_adoption_token( $data['adoption_token'] );
 			}
 			return $verified;
 		} catch ( Throwable $exception ) {
@@ -586,10 +741,15 @@ abstract class AbstractPackageRepository {
 				return $this->failure_result( $failure );
 			}
 
-			$insert_data = array_merge(
+			if ( null !== AdoptionIdentity::of( $package ) ) {
+				$wpdb->query( 'ROLLBACK' );
+				return $this->adoption_conflict();
+			}
+			$data['adoption_token'] = AdoptionIdentity::create( $model->provider, $model->provider_repository_id );
+			$insert_data            = array_merge(
 				array(
 					'package'               => $model->package,
-					'type'                  => $this->package_type(),
+					'package_type'          => $this->package_type(),
 					'source_previous'       => null,
 					'source_changed_at'     => current_time( 'mysql', true ),
 					'source_changed_by'     => $user_id > 0 ? $user_id : null,
@@ -597,7 +757,7 @@ abstract class AbstractPackageRepository {
 				),
 				$data
 			);
-			$result      = $wpdb->insert( ran_booster_table_name(), $insert_data );
+			$result                 = $wpdb->insert( ran_booster_table_name(), $insert_data );
 			if ( false === $result || 0 === $result ) {
 				$wpdb->query( 'ROLLBACK' );
 				try {
@@ -623,6 +783,9 @@ abstract class AbstractPackageRepository {
 			if ( false === $wpdb->query( 'COMMIT' ) ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->post_write_verification_failure( PackageStorageOperation::INSERT );
+			}
+			if ( $package instanceof AbstractPackage && is_string( $data['adoption_token'] ?? null ) ) {
+				$package->set_adoption_token( $data['adoption_token'] );
 			}
 			return $verified;
 		} catch ( Throwable $exception ) {
@@ -709,21 +872,21 @@ abstract class AbstractPackageRepository {
 		$this->require_storage_support( PackageStorageOperation::QUERY );
 		if ( null !== $identifier ) {
 			$query = $wpdb->prepare(
-				'SELECT * FROM %i WHERE type = %d AND package = %s',
+				'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d AND package = %s',
 				ran_booster_table_name(),
 				$this->package_type(),
 				$identifier
 			);
 		} elseif ( null !== $source ) {
 			$query = $wpdb->prepare(
-				'SELECT * FROM %i WHERE type = %d AND source = %s',
+				'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d AND source = %s',
 				ran_booster_table_name(),
 				$this->package_type(),
 				$source->value
 			);
 		} else {
 			$query = $wpdb->prepare(
-				'SELECT * FROM %i WHERE type = %d',
+				'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d',
 				ran_booster_table_name(),
 				$this->package_type()
 			);
@@ -755,7 +918,7 @@ abstract class AbstractPackageRepository {
 
 		$this->require_storage_support( PackageStorageOperation::QUERY );
 		$query = $wpdb->prepare(
-			'SELECT * FROM %i WHERE type = %d AND package = %s FOR UPDATE',
+			'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d AND package = %s FOR UPDATE',
 			ran_booster_table_name(),
 			$this->package_type(),
 			$identifier
@@ -929,6 +1092,10 @@ abstract class AbstractPackageRepository {
 	private function hydrate_package( object $row ): Package {
 		$identifier = $this->string_from_row( $row, 'package' );
 		$package    = $this->package_from_installation( $identifier );
+		if ( ! $package instanceof AbstractPackage ) {
+			throw PackageStorageFailure::invalid_provider_identity();
+		}
+		$package->set_adoption_token( $this->row_adoption_token( $row ) );
 		$provider   = $this->string_from_row( $row, 'provider' );
 		$handle     = $this->string_from_row( $row, 'repository' );
 		$credential = $this->string_from_row( $row, 'credential_id' );

@@ -203,7 +203,8 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 			1,
 			\RAN\PackageSource::RELEASE_ASSET,
 			$this->blank( \RAN\WordPress\ManagedReleaseConfiguration::class ),
-			1
+			1,
+			'gh:fixture:11111111-1111-4111-8111-111111111111'
 		);
 	}
 

@@ -107,6 +107,19 @@ $policy_labels = array(
 	<a class="page-title-action" href="<?php echo esc_url( $install_another_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
 <?php } ?>
 
+<p><a href="
+<?php
+echo esc_url(
+	add_query_arg(
+		array(
+			'page'     => $package_view->get_page_slug(),
+			'recovery' => '1',
+		),
+		$package_admin_url
+	)
+);
+?>
+"><?php esc_html_e( 'Recover package management', 'ran-booster' ); ?></a></p>
 <div class="ran-booster-package-intro">
 	<p class="description">
 		<?php esc_html_e( 'Review package health, deploy saved branches and hand published releases to WordPress.', 'ran-booster' ); ?>
@@ -427,6 +440,7 @@ $policy_labels = array(
 			<th scope="row" rowspan="2" class="check-column">
 				<?php $package_checkbox_id = 'ran-booster-select-' . $package_view->get_type() . '-' . $package_row_number; ?>
 				<input id="<?php echo esc_attr( $package_checkbox_id ); ?>" type="checkbox" name="ran_booster[identifiers][]" value="<?php echo esc_attr( $package_identifier ); ?>" form="<?php echo esc_attr( $bulk_form_id ); ?>" data-ran-booster-package-checkbox data-ran-booster-branch-reinstall-eligible="<?php echo esc_attr( ( ! $release_managed && ! $update_needs_attention ) ? '1' : '0' ); ?>">
+				<input type="hidden" name="ran_booster[adoption_tokens][<?php echo esc_attr( hash( 'sha256', $package_identifier ) ); ?>]" value="<?php echo esc_attr( \RAN\AdoptionIdentity::of( $package ) ?? '' ); ?>" form="<?php echo esc_attr( $bulk_form_id ); ?>">
 				<label class="screen-reader-text" for="<?php echo esc_attr( $package_checkbox_id ); ?>"><?php echo esc_html( sprintf( /* translators: %s is a package name. */ __( 'Select %s', 'ran-booster' ), $package->name ) ); ?></label>
 			</th>
 			<td class="column-primary ran-booster-package-row__identity">

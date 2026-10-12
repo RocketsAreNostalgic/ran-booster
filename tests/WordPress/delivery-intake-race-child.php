@@ -22,7 +22,10 @@ $ran_booster_provider    = 'fixture-provider';
 $ran_booster_delivery_id = 'delivery-intake-race-' . $ran_booster_run_id;
 $ran_booster_digest      = hash( 'sha256', 'authenticated-body-' . $ran_booster_run_id );
 $ran_booster_slug        = 'fixture-' . $ran_booster_run_id;
-$ran_booster_request     = new DeploymentRequest(
+global $wpdb;
+$ran_booster_identifier = $ran_booster_slug . '/fixture.php';
+$ran_booster_token      = $wpdb->get_var( $wpdb->prepare( 'SELECT adoption_token FROM %i WHERE package_type = 1 AND BINARY package = BINARY %s', ran_booster_table_name(), $ran_booster_identifier ) );
+$ran_booster_request    = new DeploymentRequest(
 	'group/subgroup/package-' . $ran_booster_run_id,
 	'race-credential',
 	true,
@@ -30,9 +33,11 @@ $ran_booster_request     = new DeploymentRequest(
 	$ran_booster_slug,
 	null,
 	DeploymentPolicy::AUTOMATIC,
-	null
+	null,
+	installed_identifier: $ran_booster_identifier,
+	adoption_token: is_string( $ran_booster_token ) ? $ran_booster_token : ''
 );
-$ran_booster_result      = array(
+$ran_booster_result     = array(
 	'label'          => $ran_booster_label,
 	'status'         => 'loser',
 	'attempt_id'     => null,
@@ -89,7 +94,8 @@ try {
 
 		/** @return array<array-key, mixed>|null */
 		public function get_results( string $query ): ?array {
-			if ( ! $this->barrier_reached && str_contains( $query, 'delivery_id' ) && str_contains( $query, 'FOR UPDATE' ) ) {
+			// Both workers pause before acquiring the management-row lock, then genuinely contend on that lock.
+			if ( ! $this->barrier_reached && str_contains( $query, 'SELECT package, adoption_token' ) && str_contains( $query, 'FOR UPDATE' ) ) {
 				$this->barrier_reached = true;
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 				$ready = fopen( $this->ready_marker, 'x' );

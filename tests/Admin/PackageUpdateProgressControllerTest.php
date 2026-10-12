@@ -33,7 +33,8 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 			$this->database,
 			'wp_ran_booster_deployment_attempts',
 			static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-07-23 00:00:00 UTC' ),
-			static fn ( int $length ): string => str_repeat( "\x01", $length )
+			static fn ( int $length ): string => str_repeat( "\x01", $length ),
+			$this->createStub( \RAN\Storage\Database::class )
 		);
 	}
 
@@ -134,6 +135,7 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 	}
 
 	private function queued_attempt(): DeploymentAttempt {
+		$this->database->management['example/example.php'] = 'gh:R_example:11111111-1111-4111-8111-111111111111';
 		$request = new DeploymentRequest(
 			'owner/example',
 			null,
@@ -142,7 +144,10 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 			'example',
 			null,
 			DeploymentPolicy::MANUAL,
-			7
+			7,
+			null,
+			'example/example.php',
+			'gh:R_example:11111111-1111-4111-8111-111111111111'
 		);
 
 		return $this->repository->admit_manual_batch(

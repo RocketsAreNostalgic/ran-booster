@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Tests;
 
 require_once __DIR__ . '/Support/PackageOperationWordPressFunctions.php';
+require_once __DIR__ . '/Deployment/AttemptRepositoryDatabase.php';
 require_once __DIR__ . '/Support/PackageOperationGlobalWordPressFunctions.php';
 require_once __DIR__ . '/Support/RepositoryAdminWordPressFunctions.php';
 require_once __DIR__ . '/Support/WPError.php';
@@ -48,6 +49,64 @@ final class PackageRemovalServiceTest extends TestCase {
 			$GLOBALS['ran_booster_package_mutation_guard_multisite'],
 			$GLOBALS['ran_booster_repository_admin_translations']
 		);
+	}
+
+	public function test_recovery_bypasses_corrupt_hydration_for_each_source_and_type(): void {
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			foreach ( array( PackageSource::BRANCH, PackageSource::RELEASE_ASSET ) as $source ) {
+				$fixture    = $this->fixture();
+				$package    = 'plugin' === $type ? $fixture->plugin : $fixture->theme;
+				$repository = 'plugin' === $type ? $fixture->plugins : $fixture->themes;
+				$identifier = (string) $package->get_identifier();
+				$package->set_source( $source, 7 );
+				$repository->hydrate_fails = true;
+				$confirmation              = $fixture->service->recovery_confirmation( $type, $identifier );
+				$fixture->service->recover( $type, $identifier, $confirmation['adoption_token'], $confirmation['digest'], $confirmation['installed_digest'] );
+				self::assertTrue( $repository->unlinked );
+				self::assertTrue( $repository->installed );
+				self::assertSame( array(), $fixture->gateway->events );
+				self::assertSame( array( $type . ':' . $identifier ), $fixture->gateway->invalidated );
+			}
+		}
+	}
+
+	public function test_recovery_rejects_changed_installed_target_and_record(): void {
+		foreach ( array( 'installed', 'record', 'lifetime' ) as $change ) {
+			$fixture      = $this->fixture();
+			$confirmation = $fixture->service->recovery_confirmation( 'plugin', 'example/example.php' );
+			if ( 'installed' === $change ) {
+				$fixture->gateway->fingerprint = 'replaced';
+			} elseif ( 'record' === $change ) {
+				$fixture->plugins->record_digest = 'changed';
+			} else {
+				$fixture->plugins->replacement_token = 'gh:R_example:22222222-2222-4222-8222-222222222222';
+			}
+			try {
+				$fixture->service->recover( 'plugin', 'example/example.php', $confirmation['adoption_token'], $confirmation['digest'], $confirmation['installed_digest'] );
+				self::fail( 'A changed confirmation target must be rejected.' );
+			} catch ( \RuntimeException ) {
+				self::assertFalse( $fixture->plugins->unlinked );
+				self::assertSame( array(), $fixture->gateway->invalidated );
+			}
+		}
+	}
+
+	public function test_recovery_rejects_uncertain_work_storage_and_releases_lock(): void {
+		$fixture              = $this->fixture();
+		$database             = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
+		$database->fail_reads = true;
+		$attempts             = $this->attempts( $database );
+		$lock                 = new RemovalUpdaterLock();
+		$service              = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $attempts, $lock );
+		$confirmation         = $service->recovery_confirmation( 'plugin', 'example/example.php' );
+		try {
+			$service->recover( 'plugin', 'example/example.php', $confirmation['adoption_token'], $confirmation['digest'], $confirmation['installed_digest'] );
+			self::fail( 'Unresolved target work must prevent recovery.' );
+		} catch ( \RuntimeException ) {
+			self::assertFalse( $fixture->plugins->unlinked );
+			self::assertNotEmpty( $database->queries );
+			self::assertSame( array( 'acquire', 'release:fixture-lock' ), $lock->events );
+		}
 	}
 
 	public function test_removal_requires_exact_confirmation_and_source_revision(): void {
@@ -111,7 +170,7 @@ final class PackageRemovalServiceTest extends TestCase {
 			$fixture->plugins,
 			$fixture->themes,
 			$fixture->gateway,
-			null,
+			$this->attempts(),
 			new RemovalUpdaterLock(),
 			$evidence
 		);
@@ -121,7 +180,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertNull( $evidence->find( 'plugin', $fixture->plugin, 'profile-a' ) );
 	}
 
-	public function test_failed_unlink_invalidates_branch_evidence(): void {
+	public function test_failed_unlink_conservatively_invalidates_branch_evidence(): void {
 		$fixture                          = $this->fixture();
 		$evidence                         = new RemovalBranchCheckEvidenceStore();
 		$fixture->plugins->unlink_failure = true;
@@ -129,7 +188,7 @@ final class PackageRemovalServiceTest extends TestCase {
 			$fixture->plugins,
 			$fixture->themes,
 			$fixture->gateway,
-			null,
+			$this->attempts(),
 			new RemovalUpdaterLock(),
 			$evidence
 		);
@@ -145,7 +204,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertNull( $evidence->find( 'plugin', $fixture->plugin, 'profile-a' ) );
 	}
 
-	public function test_failed_branch_evidence_clear_leaves_package_management_and_evidence_untouched(): void {
+	public function test_optional_evidence_failure_does_not_block_removal_or_native_cleanup(): void {
 		$fixture               = $this->fixture();
 		$evidence              = new RemovalBranchCheckEvidenceStore();
 		$evidence->clear_fails = true;
@@ -153,20 +212,16 @@ final class PackageRemovalServiceTest extends TestCase {
 			$fixture->plugins,
 			$fixture->themes,
 			$fixture->gateway,
-			null,
+			$this->attempts(),
 			new RemovalUpdaterLock(),
 			$evidence
 		);
 		$evidence->record( 'plugin', $fixture->plugin, 'profile-a', 'verified' );
 
-		try {
-			$service->execute( PackageOperation::from_input( 'unlink-plugin', $this->input() ) );
-			self::fail( 'Failed branch evidence clear should not unlink the package.' );
-		} catch ( \RuntimeException $failure ) {
-			self::assertSame( 'Fixture evidence clear failed.', $failure->getMessage() );
-		}
-		self::assertFalse( $fixture->plugins->unlinked );
+		self::assertSame( 'unlinked', $service->execute( PackageOperation::from_input( 'unlink-plugin', $this->input() ) )->status );
+		self::assertTrue( $fixture->plugins->unlinked );
 		self::assertNotNull( $evidence->find( 'plugin', $fixture->plugin, 'profile-a' ) );
+		self::assertSame( array( 'plugin:example/example.php' ), $fixture->gateway->invalidated );
 	}
 
 	public function test_confirmed_unlink_uses_the_shared_updater_lock(): void {
@@ -176,7 +231,7 @@ final class PackageRemovalServiceTest extends TestCase {
 			$fixture->plugins,
 			$fixture->themes,
 			$fixture->gateway,
-			null,
+			$this->attempts(),
 			$lock
 		);
 
@@ -196,7 +251,7 @@ final class PackageRemovalServiceTest extends TestCase {
 			$fixture->plugins,
 			$fixture->themes,
 			$fixture->gateway,
-			null,
+			$this->attempts(),
 			$lock
 		);
 
@@ -217,7 +272,7 @@ final class PackageRemovalServiceTest extends TestCase {
 			$fixture->plugins,
 			$fixture->themes,
 			$fixture->gateway,
-			null,
+			$this->attempts(),
 			$lock
 		);
 
@@ -228,6 +283,48 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertSame( 'failed', $result->status );
 		self::assertSame( 'operation_lock_failed', $result->outcome_code );
 		self::assertTrue( $fixture->plugins->unlinked );
+	}
+
+	public function test_destructive_removal_cleans_only_target_observations_without_blocking_on_cleanup_failure(): void {
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			foreach ( array( false, true ) as $cleanup_failure ) {
+				$fixture    = $this->fixture();
+				$package    = 'plugin' === $type ? $fixture->plugin : $fixture->theme;
+				$other      = 'plugin' === $type ? $fixture->theme : $fixture->plugin;
+				$other_type = 'plugin' === $type ? 'theme' : 'plugin';
+				$repository = 'plugin' === $type ? $fixture->plugins : $fixture->themes;
+				$evidence   = new RemovalBranchCheckEvidenceStore();
+				$evidence->record( $type, $package, 'profile-a', 'verified' );
+				$observed_package = clone $package;
+				$evidence->record( $other_type, $other, 'profile-a', 'verified' );
+				$evidence->clear_fails                   = $cleanup_failure;
+				$fixture->gateway->cleanup_fails         = $cleanup_failure;
+				$fixture->gateway->{ $type . '_delete' } = static function () use ( $repository ): bool {
+					$repository->installed = false;
+					return true;
+				};
+				$service                                 = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $this->attempts(), new RemovalUpdaterLock(), $evidence );
+				$input                                   = 'plugin' === $type ? $this->input() : $this->theme_input();
+				self::assertSame( 'deleted', $service->execute( PackageOperation::from_input( 'unlink-delete-' . $type, $input ) )->status );
+				self::assertTrue( $repository->unlinked );
+				self::assertSame( array( $type . ':' . $package->get_identifier() ), $fixture->gateway->invalidated );
+				self::assertNotNull( $evidence->find( $other_type, $other, 'profile-a' ) );
+				if ( ! $cleanup_failure ) {
+					self::assertNull( $evidence->find( $type, $observed_package, 'profile-a' ) );
+				}
+			}
+		}
+	}
+
+	public function test_management_only_unlink_does_not_apply_destructive_path_restrictions(): void {
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			$fixture                            = $this->fixture();
+			$fixture->gateway->plugin_safe_path = false;
+			$fixture->gateway->theme_safe_path  = false;
+			$input                              = 'plugin' === $type ? $this->input() : $this->theme_input();
+			self::assertSame( 'unlinked', $fixture->service->execute( PackageOperation::from_input( 'unlink-' . $type, $input ) )->status );
+			self::assertSame( array(), $fixture->gateway->events );
+		}
 	}
 
 	public function test_plugin_is_disabled_deactivated_uninstalled_deleted_then_unlinked(): void {
@@ -263,7 +360,7 @@ final class PackageRemovalServiceTest extends TestCase {
 			$fixture->plugins,
 			$fixture->themes,
 			$fixture->gateway,
-			null,
+			$this->attempts(),
 			$lock
 		);
 
@@ -283,7 +380,7 @@ final class PackageRemovalServiceTest extends TestCase {
 			$fixture->plugins,
 			$fixture->themes,
 			$fixture->gateway,
-			null,
+			$this->attempts(),
 			$lock
 		);
 
@@ -537,6 +634,7 @@ final class PackageRemovalServiceTest extends TestCase {
 			array(
 				'file'                     => 'example/example.php',
 				'expected_source_revision' => '7',
+				'expected_adoption_token'  => 'gh:R_example:11111111-1111-4111-8111-111111111111',
 				'confirm_package_removal'  => '1',
 			),
 			$overrides
@@ -552,10 +650,15 @@ final class PackageRemovalServiceTest extends TestCase {
 			array(
 				'stylesheet'               => 'example',
 				'expected_source_revision' => '7',
+				'expected_adoption_token'  => 'gh:R_example:11111111-1111-4111-8111-111111111111',
 				'confirm_package_removal'  => '1',
 			),
 			$overrides
 		);
+	}
+
+	private function attempts( ?\RAN\Tests\Deployment\AttemptRepositoryDatabase $database = null ): \RAN\Deployment\DeploymentAttemptRepository {
+		return new \RAN\Deployment\DeploymentAttemptRepository( $database ?? new \RAN\Tests\Deployment\AttemptRepositoryDatabase(), 'wp_ran_booster_attempts', database_lifecycle: $this->createStub( \RAN\Storage\Database::class ) );
 	}
 
 	private function fixture(): RemovalFixture {
@@ -565,6 +668,7 @@ final class PackageRemovalServiceTest extends TestCase {
 			$package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
 			$package->set_deployment_policy( DeploymentPolicy::MANUAL );
 			$package->set_source( PackageSource::BRANCH, 7 );
+			$package->set_adoption_token( 'gh:R_example:11111111-1111-4111-8111-111111111111' );
 		}
 		$plugins = new RemovalPluginRepository( $plugin );
 		$themes  = new RemovalThemeRepository( $theme );
@@ -576,7 +680,7 @@ final class PackageRemovalServiceTest extends TestCase {
 			$plugins,
 			$themes,
 			$gateway,
-			new PackageRemovalService( $plugins, $themes, $gateway, null, new RemovalUpdaterLock() )
+			new PackageRemovalService( $plugins, $themes, $gateway, $this->attempts(), new RemovalUpdaterLock() )
 		);
 	}
 }
@@ -626,6 +730,29 @@ final class RemovalTheme extends Theme {
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class RemovalPluginRepository extends PluginRepository {
+	public bool $hydrate_fails        = false;
+	public string $record_digest      = 'record';
+	public ?string $replacement_token = null;
+	/** @return array{id:string,package:string,type:int,adoption_token:string,source:string,digest:string} */
+	public function recovery_record( string $identifier ): array {
+		return array(
+			'id'             => '1',
+			'package'        => $identifier,
+			'type'           => 1,
+			'adoption_token' => (string) $this->package->get_adoption_token(),
+			'source'         => $this->package->get_source()->value,
+			'digest'         => $this->record_digest,
+		);
+	}
+	public function recover_unlink( string $identifier, string $expected_token, string $expected_record_digest, callable $guard ): PackageMutationResult {
+		$stored_token = $this->replacement_token ?? $this->package->get_adoption_token();
+		if ( $expected_token !== $stored_token || $expected_record_digest !== $this->record_digest ) {
+			throw new \RuntimeException( 'The management record changed.' );
+		}
+		$guard();
+		return $this->unlink( $identifier );
+	}
+
 	public bool $installed      = true;
 	public bool $unlinked       = false;
 	public bool $unlink_failure = false;
@@ -635,6 +762,9 @@ final class RemovalPluginRepository extends PluginRepository {
 
 	public function booster_plugin_from_file( $file ) {
 		unset( $file );
+		if ( $this->hydrate_fails ) {
+			throw new \RuntimeException( 'Corrupt package hydration.' );
+		}
 		return $this->package;
 	}
 
@@ -669,6 +799,29 @@ final class RemovalPluginRepository extends PluginRepository {
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class RemovalThemeRepository extends ThemeRepository {
+	public bool $hydrate_fails        = false;
+	public string $record_digest      = 'record';
+	public ?string $replacement_token = null;
+	/** @return array{id:string,package:string,type:int,adoption_token:string,source:string,digest:string} */
+	public function recovery_record( string $identifier ): array {
+		return array(
+			'id'             => '1',
+			'package'        => $identifier,
+			'type'           => 2,
+			'adoption_token' => (string) $this->package->get_adoption_token(),
+			'source'         => $this->package->get_source()->value,
+			'digest'         => $this->record_digest,
+		);
+	}
+	public function recover_unlink( string $identifier, string $expected_token, string $expected_record_digest, callable $guard ): PackageMutationResult {
+		$stored_token = $this->replacement_token ?? $this->package->get_adoption_token();
+		if ( $expected_token !== $stored_token || $expected_record_digest !== $this->record_digest ) {
+			throw new \RuntimeException( 'The management record changed.' );
+		}
+		$guard();
+		return $this->unlink( $identifier );
+	}
+
 	public bool $installed = true;
 	public bool $unlinked  = false;
 
@@ -677,6 +830,9 @@ final class RemovalThemeRepository extends ThemeRepository {
 
 	public function booster_theme_from_stylesheet( $stylesheet ) {
 		unset( $stylesheet );
+		if ( $this->hydrate_fails ) {
+			throw new \RuntimeException( 'Corrupt package hydration.' );
+		}
 		return $this->package;
 	}
 
@@ -708,12 +864,12 @@ final class RemovalBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenc
 	private array $records   = array();
 	public bool $clear_fails = false;
 
-	public function clear( string $type, \RAN\Package $package ): void {
+	public function clear_identity( string $type, string $identifier, string $token ): void {
 		if ( $this->clear_fails ) {
 			throw new \RuntimeException( 'Fixture evidence clear failed.' );
 		}
 
-		parent::clear( $type, $package );
+		parent::clear_identity( $type, $identifier, $token );
 	}
 
 	protected function acquire_mutation_lock(): bool {
@@ -736,6 +892,23 @@ final class RemovalBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenc
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class RemovalGateway implements PackageRemovalGateway {
+	public string $fingerprint = 'installed';
+	public bool $cleanup_fails = false;
+	/** @var list<string> */
+	public array $invalidated = array();
+	public function installed_targets( string $type ): array {
+		return array( 'plugin' === $type ? 'example/example.php' : 'example' => 'Example' );
+	}
+	public function installed_fingerprint( string $type, string $identifier ): string {
+		unset( $type, $identifier );
+		return $this->fingerprint;
+	}
+	public function invalidate_native_target( string $type, string $identifier ): void {
+		$this->invalidated[] = $type . ':' . $identifier;
+		if ( $this->cleanup_fails ) {
+			throw new \RuntimeException( 'Fixture native cleanup failure.' );
+		}
+	}
 	public bool $plugin_active             = false;
 	public bool $plugin_active_dependents  = false;
 	public bool $plugin_shared_directory   = false;

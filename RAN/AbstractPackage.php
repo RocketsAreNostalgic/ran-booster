@@ -18,10 +18,23 @@ abstract class AbstractPackage implements Package {
 	protected DeploymentPolicy $deployment_policy = DeploymentPolicy::MANUAL;
 	protected PackageSource $source               = PackageSource::BRANCH;
 	protected int $source_revision                = 1;
+	private ?string $adoption_token               = null;
 	/** @var string|null Normalized relative path, or no subdirectory. */
 	protected $subdirectory;
 	protected ?string $deployment_ref    = null;
 	protected ?string $installation_slug = null;
+
+	public function get_adoption_token(): ?string {
+		return $this->adoption_token;
+	}
+
+	public function set_adoption_token( string $token ): void {
+		AdoptionIdentity::parse( $token );
+		if ( null !== $this->adoption_token && $this->adoption_token !== $token ) {
+			throw new \InvalidArgumentException( 'An adoption identity cannot be replaced.' );
+		}
+		$this->adoption_token = $token;
+	}
 
 	public function get_version(): string {
 		return (string) ( $this->version ?? '' );

@@ -38,7 +38,8 @@ final class RuntimeReleaseStore extends ManagedReleaseStore {
 		int $expected_revision,
 		PackageSource $new_source,
 		?ManagedReleaseConfiguration $configuration,
-		int $user_id
+		int $user_id,
+		string $expected_adoption_token
 	): bool {
 		if ( null !== $this->transition_failure ) {
 			throw $this->transition_failure;
@@ -51,6 +52,7 @@ final class RuntimeReleaseStore extends ManagedReleaseStore {
 			'new_source'        => $new_source,
 			'configuration'     => $configuration,
 			'user_id'           => $user_id,
+			'adoption_token'    => $expected_adoption_token,
 		);
 
 		return true;
@@ -61,7 +63,8 @@ final class RuntimeReleaseStore extends ManagedReleaseStore {
 		string $identifier,
 		int $expected_revision,
 		string $channel,
-		int $user_id
+		int $user_id,
+		string $expected_adoption_token
 	): bool {
 		if ( null !== $this->channel_change_failure ) {
 			throw $this->channel_change_failure;
@@ -72,6 +75,7 @@ final class RuntimeReleaseStore extends ManagedReleaseStore {
 			'expected_revision' => $expected_revision,
 			'channel'           => $channel,
 			'user_id'           => $user_id,
+			'adoption_token'    => $expected_adoption_token,
 		);
 
 		return true;

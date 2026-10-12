@@ -145,6 +145,11 @@ What administrators should watch for:
   confirming the process has stopped.
 - Troubleshooting provides bounded, on-demand diagnostics; nothing persists
   raw webhook bodies, headers, or credentials.
+- **Recover management** remains reachable from Troubleshooting when managed
+  inventory cannot load. It confirms the installed target and eligible corrupt
+  record, then stops management without deleting files or package data.
+  Re-adoption creates a new lifetime; stale forms and work cannot act on it.
+  Damaged identity, ambiguous targets and unresolved operations are refused.
 
 The [package update orchestration guide](docs/package-update-orchestration.md)
 maps every trigger and handoff, and the

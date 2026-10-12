@@ -116,7 +116,8 @@ class Dashboard {
 		?AdminAddOnRegistry $admin_add_ons = null,
 		?RepositoryWebhookManagementControls $webhook_management = null,
 		?CoreSelfUpdateDevelopmentNotice $core_self_update_development_notice = null,
-		?ReleaseWorkflowControls $release_workflow = null
+		?ReleaseWorkflowControls $release_workflow = null,
+		private ?\RAN\PackageRemoval\PackageRemovalService $removals = null
 	) {
 		$this->db      = $db;
 		$this->plugins = $plugins;
@@ -135,7 +136,7 @@ class Dashboard {
 			themes: $themes
 		);
 
-		$this->package_admin = new PackageAdminController( $package_operations, deployments: $this->deployment_admin );
+		$this->package_admin = new PackageAdminController( $package_operations, deployments: $this->deployment_admin, removals: $this->removals );
 		$this->plugin_pages  = PackagePagePresenter::plugin();
 		$this->theme_pages   = PackagePagePresenter::theme();
 
@@ -505,6 +506,10 @@ class Dashboard {
 	 */
 	private function render_package_page( PackagePagePresenter $package_view ) {
 		$type = $package_view->get_type();
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only recovery navigation; mutations verify exact confirmation nonces.
+		if ( '1' === ( $_GET['recovery'] ?? null ) ) {
+			return $this->render_recovery( $package_view );
+		}
 		( $this->package_admin ?? throw new \Error( 'The package administration controller is unavailable.' ) )->add_success_notice( $this, $type );
 		$this->add_bulk_package_notice( $type );
 
@@ -551,6 +556,36 @@ class Dashboard {
 		}
 
 		return $this->render( 'packages/index', $this->package_index_data( $packages, $package_view ) );
+	}
+
+	private function render_recovery( PackagePagePresenter $package_view ): mixed {
+		$type = $package_view->get_type();
+		if ( ! current_user_can( 'update_' . $type . 's' ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to manage these packages.', 'ran-booster' ) );
+		}
+		$this->package_admin?->add_success_notice( $this, $type );
+		$targets      = array();
+		$confirmation = null;
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only exact target selection; POST verifies the full confirmation nonce.
+		$identifier = isset( $_GET['recovery_target'] ) && is_string( $_GET['recovery_target'] ) ? wp_unslash( $_GET['recovery_target'] ) : '';
+		try {
+			$removals = $this->removals ?? throw new LogicException( 'Recovery is unavailable.' );
+			$targets  = $removals->recovery_targets( $type );
+			if ( '' !== $identifier ) {
+				$confirmation = $removals->recovery_confirmation( $type, $identifier );
+			}
+		} catch ( Throwable $failure ) {
+			$this->add_failure_message( new WP_Error( 'ran_booster_recovery_unavailable', __( 'Booster cannot offer removal for this selection. The installed target, management identity, or storage could not be verified. No recovery action is available until that uncertainty is resolved.', 'ran-booster' ) ), $failure, array( 'step' => 'package_recovery_confirmation' ) );
+		}
+		return $this->render(
+			'packages/recovery',
+			array(
+				'package_view'          => $package_view,
+				'recovery_targets'      => $targets,
+				'recovery_confirmation' => $confirmation,
+				'recovery_identifier'   => $identifier,
+			)
+		);
 	}
 
 	/** @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|null */
@@ -693,15 +728,20 @@ class Dashboard {
 		}
 		$success = ( $this->package_admin ?? throw new \Error( 'The package administration controller is unavailable.' ) )->add_success_notice( $this, $package_view->get_type() );
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only installed-target prefill; normal adoption validates the target and nonce.
+		$relink = isset( $_GET['relink'] ) && is_string( $_GET['relink'] ) ? wp_unslash( $_GET['relink'] ) : '';
 		return $this->render(
 			'packages/create',
-			$package_view->create(
-				$this->provider_settings->build_package_form( $this->requested_provider() ),
-				$this->has_requested_provider(),
-				$this->requested_open_picker(),
-				$this->requested_package_source_view(),
-				in_array( $success['operation'] ?? null, array( 'install', 'already-managed' ), true ) ? $success['identifier'] : null,
-				$this->requested_advanced_settings_open()
+			array_merge(
+				array( 'recovery_identifier' => $relink ),
+				$package_view->create(
+					$this->provider_settings->build_package_form( $this->requested_provider() ),
+					$this->has_requested_provider(),
+					$this->requested_open_picker(),
+					$this->requested_package_source_view(),
+					in_array( $success['operation'] ?? null, array( 'install', 'already-managed' ), true ) ? $success['identifier'] : null,
+					$this->requested_advanced_settings_open()
+				)
 			)
 		);
 	}

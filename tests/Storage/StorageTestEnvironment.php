@@ -176,6 +176,13 @@ namespace RAN\Tests\Storage {
 		/** @var list<mixed>|null */
 		public ?array $forced_results = null;
 
+		/**
+		 * @return list<array<string,mixed>>
+		 */
+		public function stored_rows(): array {
+			return $this->rows;
+		}
+
 		public function get_charset_collate(): string {
 			return 'DEFAULT CHARACTER SET utf8mb4';
 		}
@@ -226,6 +233,30 @@ namespace RAN\Tests\Storage {
 			if ( 1 === preg_match( '/^ALTER TABLE `([^`]+)`\s+(.+)$/s', $query, $matches )
 				&& isset( $this->schema_tables[ $matches[1] ] )
 			) {
+				if ( str_contains( $matches[2], 'ADD adoption_token varchar(643) DEFAULT NULL' ) ) {
+					$this->schema_tables[ $matches[1] ]['columns']['adoption_token']        = 'varchar(643)';
+					$this->schema_tables[ $matches[1] ]['columnMetadata']['adoption_token'] = array(
+						'nullable' => true,
+						'default'  => null,
+						'extra'    => '',
+					);
+					foreach ( $this->rows as &$row ) {
+						$row['adoption_token'] = null;
+					}
+					unset( $row );
+				}
+				if ( str_starts_with( $matches[2], 'CHANGE COLUMN type package_type tinyint(3) unsigned NOT NULL' ) ) {
+					$table                                   = &$this->schema_tables[ $matches[1] ];
+					$table['columns']['package_type']        = $table['columns']['type'];
+					$table['columnMetadata']['package_type'] = $table['columnMetadata']['type'];
+					unset( $table['columns']['type'], $table['columnMetadata']['type'] );
+					$table['indexes']['package_type']['columns'] = array( 'package_type', 'package' );
+					foreach ( $this->rows as &$row ) {
+						$row['package_type'] = $row['type'];
+						unset( $row['type'] );
+					}
+					unset( $row, $table );
+				}
 				preg_match_all( '/DROP INDEX ([a-z][a-z0-9_]*)/i', $matches[2], $index_matches );
 				foreach ( $index_matches[1] as $index ) {
 					unset( $this->schema_tables[ $matches[1] ]['indexes'][ $index ] );
@@ -261,12 +292,44 @@ namespace RAN\Tests\Storage {
 
 				return 1;
 			}
+			if ( 1 === preg_match( "/^UPDATE `[^`]+` SET adoption_token = '([^']+)' WHERE id = '([0-9]+)' AND adoption_token IS NULL AND BINARY provider = BINARY '([^']+)' AND BINARY provider_repository_id = BINARY '([^']+)'$/", $query, $matches ) ) {
+				return $this->update(
+					'wp_ran_booster_packages',
+					array( 'adoption_token' => stripslashes( $matches[1] ) ),
+					array(
+						'id'                     => $matches[2],
+						'adoption_token'         => null,
+						'provider'               => stripslashes( $matches[3] ),
+						'provider_repository_id' => stripslashes( $matches[4] ),
+					)
+				);
+			}
+			if ( 1 === preg_match( "/^DELETE FROM `[^`]+` WHERE id = '([0-9]+)' AND package_type = ([12]) AND BINARY package = BINARY '([^']+)' AND BINARY adoption_token = BINARY '([^']+)'$/", $query, $matches ) ) {
+				return $this->delete(
+					'wp_ran_booster_packages',
+					array(
+						'id'             => $matches[1],
+						'package_type'   => $matches[2],
+						'package'        => stripslashes( $matches[3] ),
+						'adoption_token' => stripslashes( $matches[4] ),
+					)
+				);
+			}
 			return 0;
 		}
 
 		public function get_var( string $query ): int|string|null {
 			if ( $this->read_failure ) {
 				$this->last_error = 'database details must not escape';
+				return null;
+			}
+
+			if ( 1 === preg_match( "/^SELECT adoption_token FROM `[^`]+` WHERE id = '([0-9]+)'$/", $query, $matches ) ) {
+				foreach ( $this->rows as $row ) {
+					if ( (string) ( $row['id'] ?? '' ) === $matches[1] ) {
+						return is_string( $row['adoption_token'] ?? null ) ? $row['adoption_token'] : null;
+					}
+				}
 				return null;
 			}
 
@@ -290,7 +353,7 @@ namespace RAN\Tests\Storage {
 			return count(
 				array_filter(
 					$this->rows,
-					static fn ( array $row ): bool => (int) ( $row['type'] ?? 0 ) === (int) $matches[1]
+					static fn ( array $row ): bool => (int) ( $row['package_type'] ?? 0 ) === (int) $matches[1]
 						&& (string) ( $row['package'] ?? '' ) === stripslashes( $matches[2] )
 				)
 			);
@@ -433,6 +496,9 @@ namespace RAN\Tests\Storage {
 			}
 
 			if ( null !== $this->row ) {
+				if ( str_contains( $query, 'package_type AS type' ) && property_exists( $this->row, 'package_type' ) ) {
+					return array( (object) array_merge( get_object_vars( $this->row ), array( 'type' => $this->row->package_type ) ) );
+				}
 				return array( $this->row );
 			}
 
@@ -452,7 +518,7 @@ namespace RAN\Tests\Storage {
 					}
 
 					if ( preg_match( '/type = (\d+)/', $query, $type_matches ) === 1
-						&& (int) ( $row['type'] ?? 0 ) !== (int) $type_matches[1]
+						&& (int) ( $row['package_type'] ?? 0 ) !== (int) $type_matches[1]
 					) {
 						return false;
 					}
@@ -479,7 +545,17 @@ namespace RAN\Tests\Storage {
 				}
 			);
 
-			return array_values( array_map( static fn ( array $row ): object => (object) $row, $rows ) );
+			return array_values(
+				array_map(
+					static function ( array $row ) use ( $query ): object {
+						if ( str_contains( $query, 'package_type AS type' ) ) {
+							$row['type'] = $row['package_type'] ?? null;
+						}
+						return (object) $row;
+					},
+					$rows
+				)
+			);
 		}
 
 		public function install_schema( string $sql ): void {

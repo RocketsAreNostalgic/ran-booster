@@ -72,7 +72,7 @@ final class CredentialUsageReader {
 		}
 
 		$detail_query = $database->prepare(
-			'SELECT type, package FROM %i' . $where . ' ORDER BY type ASC, package ASC, id ASC LIMIT %d',
+			'SELECT package_type AS type, package FROM %i' . $where . ' ORDER BY package_type ASC, package ASC, id ASC LIMIT %d',
 			$table,
 			$provider_code->value,
 			$credential_id,

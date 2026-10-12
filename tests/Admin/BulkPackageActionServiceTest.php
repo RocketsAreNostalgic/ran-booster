@@ -96,7 +96,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		);
 
 		$result = $this->service( $plugins )->execute(
-			BulkPackageAction::from_input(
+			self::action(
 				package_type: 'plugin',
 				input: array(
 					'bulk_action' => BulkPackageAction::ACTIVATE_PLUGINS,
@@ -135,7 +135,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$GLOBALS['ran_booster_repository_admin_capabilities']['activate_plugin'] = false;
 
 		$result = $this->service( $plugins )->execute(
-			BulkPackageAction::from_input(
+			self::action(
 				'plugin',
 				array(
 					'bulk_action' => BulkPackageAction::ACTIVATE_PLUGINS,
@@ -160,7 +160,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$GLOBALS['ran_booster_bulk_activation_errors_with_active_state']   = array( 'noisy/noisy.php' );
 
 		$result = $this->service( $plugins )->execute(
-			BulkPackageAction::from_input(
+			self::action(
 				'plugin',
 				array(
 					'bulk_action' => BulkPackageAction::ACTIVATE_PLUGINS,
@@ -182,7 +182,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$GLOBALS['ran_booster_repository_admin_capabilities']['deactivate_plugin'] = false;
 
 		$result = $this->service( $plugins )->execute(
-			BulkPackageAction::from_input(
+			self::action(
 				'plugin',
 				array(
 					'bulk_action' => BulkPackageAction::DEACTIVATE_PLUGINS,
@@ -215,7 +215,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$GLOBALS['ran_booster_bulk_plugins_with_active_dependents'] = array( 'required/required.php' );
 
 		$result = $this->service( $plugins )->execute(
-			BulkPackageAction::from_input(
+			self::action(
 				'plugin',
 				array(
 					'bulk_action' => BulkPackageAction::DEACTIVATE_PLUGINS,
@@ -251,7 +251,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$plugins = new BulkActionPluginRepository( array( 'example/example.php' => $plugin ) );
 
 		$result = $this->service( $plugins )->execute(
-			BulkPackageAction::from_input(
+			self::action(
 				'plugin',
 				array(
 					'bulk_action' => 'policy-disabled',
@@ -263,7 +263,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		self::assertSame( 1, $result->changed );
 		self::assertSame( DeploymentPolicy::DISABLED, $plugins->policy );
 		self::assertSame( 'missing-provider', $plugins->snapshots[0]['provider'] );
-		self::assertSame( array( 'package', 'repository', 'branch', 'deployment_policy', 'provider', 'provider_repository_id', 'private', 'credential_id', 'subdirectory', 'source', 'source_revision' ), array_keys( $plugins->snapshots[0] ) );
+		self::assertSame( array( 'package', 'repository', 'branch', 'deployment_policy', 'provider', 'provider_repository_id', 'private', 'credential_id', 'subdirectory', 'source', 'source_revision', 'adoption_token' ), array_keys( $plugins->snapshots[0] ) );
 	}
 
 	public function test_manual_and_automatic_policy_fail_atomically_when_readiness_is_unavailable(): void {
@@ -272,7 +272,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 
 		try {
 			$this->service( $plugins, true )->execute(
-				BulkPackageAction::from_input(
+				self::action(
 					'plugin',
 					array(
 						'bulk_action' => 'policy-manual',
@@ -290,7 +290,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$plugins->packages['public/public.php'] = $public;
 		try {
 			$this->service( $plugins, true )->execute(
-				BulkPackageAction::from_input(
+				self::action(
 					'plugin',
 					array(
 						'bulk_action' => 'policy-automatic',
@@ -310,7 +310,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$plugins = new BulkActionPluginRepository( array( 'release/release.php' => $release ) );
 
 		$result = $this->service( $plugins, true )->execute(
-			BulkPackageAction::from_input(
+			self::action(
 				'plugin',
 				array(
 					'bulk_action' => 'policy-automatic',
@@ -344,7 +344,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		);
 
 		$result = $this->service( $plugins, true, $coordinator )->execute(
-			BulkPackageAction::from_input(
+			self::action(
 				'plugin',
 				array(
 					'bulk_action' => 'queue-update',
@@ -384,7 +384,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$coordinator = new BulkActionCoordinator();
 
 		$result = $this->service( $plugins, true, $coordinator )->execute(
-			BulkPackageAction::from_input(
+			self::action(
 				'plugin',
 				array(
 					'bulk_action' => 'queue-update',
@@ -415,7 +415,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$coordinator = new BulkActionCoordinator();
 
 		$result = $this->service( $plugins, false, $coordinator )->execute(
-			BulkPackageAction::from_input(
+			self::action(
 				'plugin',
 				array(
 					'bulk_action' => 'queue-update',
@@ -431,7 +431,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 	public function test_deployment_requests_reject_duplicate_identifiers(): void {
 		$identifiers = array( 'example/example.php', 'example/example.php' );
 		try {
-			BulkPackageAction::from_input(
+			self::action(
 				'plugin',
 				array(
 					'bulk_action' => BulkPackageAction::QUEUE_UPDATE,
@@ -448,7 +448,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$accepted = array_map( static fn ( int $index ): string => "package-$index/package-$index.php", range( 1, 20 ) );
 		$rejected = array_map( static fn ( int $index ): string => "package-$index/package-$index.php", range( 1, 21 ) );
 		foreach ( array( BulkPackageAction::QUEUE_UPDATE, BulkPackageAction::POLICY_DISABLED ) as $operation ) {
-			$action = BulkPackageAction::from_input(
+			$action = self::action(
 				'plugin',
 				array(
 					'bulk_action' => $operation,
@@ -458,7 +458,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 			self::assertCount( 20, $action->identifiers );
 
 			try {
-				BulkPackageAction::from_input(
+				self::action(
 					'plugin',
 					array(
 						'bulk_action' => $operation,
@@ -476,7 +476,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$accepted = array_map( static fn ( int $index ): string => "package-$index/package-$index.php", range( 1, 200 ) );
 		$rejected = array_map( static fn ( int $index ): string => "package-$index/package-$index.php", range( 1, 201 ) );
 		foreach ( BulkPackageAction::plugin_activation_operations() as $operation ) {
-			$action = BulkPackageAction::from_input(
+			$action = self::action(
 				'plugin',
 				array(
 					'bulk_action' => $operation,
@@ -486,7 +486,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 			self::assertCount( 200, $action->identifiers );
 
 			try {
-				BulkPackageAction::from_input(
+				self::action(
 					'plugin',
 					array(
 						'bulk_action' => $operation,
@@ -512,7 +512,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 			) as [$package_type, $identifier]
 		) {
 			try {
-				BulkPackageAction::from_input(
+				self::action(
 					$package_type,
 					array(
 						'bulk_action' => 'queue-update',
@@ -526,10 +526,93 @@ final class BulkPackageActionServiceTest extends TestCase {
 		}
 	}
 
+	public function test_bracketed_plugin_and_theme_identifiers_survive_form_parsing(): void {
+		$token = 'fixture:R_example:11111111-1111-4111-8111-111111111111';
+		foreach ( array(
+			'plugin' => 'example/a[b].php',
+			'theme'  => 'a[b]',
+		) as $type => $identifier ) {
+			$action = $this->parsed_form_action(
+				$type,
+				$identifier,
+				array(
+					'ran_booster[adoption_tokens][' . hash( 'sha256', $identifier ) . ']' => $token,
+					'ran_booster[adoption_tokens][' . hash( 'sha256', 'unselected' ) . ']' => 'unselected-value',
+				)
+			);
+			self::assertSame( array( $identifier ), $action->identifiers );
+			self::assertSame( array( $identifier => $token ), $action->adoption_tokens );
+		}
+	}
+
+	public function test_form_parsing_rejects_missing_wrong_raw_and_nested_token_keys(): void {
+		$identifier = 'example/a[b].php';
+		$token      = 'fixture:R_example:11111111-1111-4111-8111-111111111111';
+		foreach ( array(
+			array(),
+			array( 'ran_booster[adoption_tokens][' . hash( 'sha256', 'other/other.php' ) . ']' => $token ),
+			array( 'ran_booster[adoption_tokens][' . $identifier . ']' => $token ),
+			array( 'ran_booster[adoption_tokens][' . hash( 'sha256', $identifier ) . '][injected]' => $token ),
+		) as $fields ) {
+			try {
+				$this->parsed_form_action( 'plugin', $identifier, $fields );
+				self::fail( 'A selected target needs its exact scalar lifetime token field.' );
+			} catch ( \InvalidArgumentException ) {
+				$this->addToAssertionCount( 1 );
+			}
+		}
+	}
+
+	public function test_bracket_safe_form_transport_does_not_authorize_a_stale_lifetime(): void {
+		$identifier = 'example/a[b].php';
+		$package    = BulkActionPackage::make( $identifier, 'fixture' );
+		$plugins    = new BulkActionPluginRepository( array( $identifier => $package ) );
+		$stale      = 'fixture:R_example:22222222-2222-4222-8222-222222222222';
+		$action     = $this->parsed_form_action(
+			'plugin',
+			$identifier,
+			array(
+				'ran_booster[adoption_tokens][' . hash( 'sha256', $identifier ) . ']' => $stale,
+			)
+		);
+		self::assertSame( $stale, $action->adoption_tokens[ $identifier ] );
+		try {
+			$this->service( $plugins )->execute( $action );
+			self::fail( 'Transport encoding must not replace exact adoption comparison.' );
+		} catch ( \RAN\Admin\BulkPackageActionFailure $failure ) {
+			self::assertSame( 'stale', $failure->reason );
+			self::assertSame( array(), $plugins->snapshots );
+			self::assertNull( $plugins->policy );
+		}
+	}
+
+	/** @param array<string, string> $token_fields */
+	private function parsed_form_action( string $type, string $identifier, array $token_fields ): BulkPackageAction {
+		$fields = array(
+			'ran_booster[bulk_action]'   => BulkPackageAction::POLICY_DISABLED,
+			'ran_booster[identifiers][]' => $identifier,
+		) + $token_fields;
+		parse_str( http_build_query( $fields, '', '&', PHP_QUERY_RFC3986 ), $request );
+		self::assertArrayHasKey( 'ran_booster', $request );
+		self::assertIsArray( $request['ran_booster'] );
+		return BulkPackageAction::from_input( $type, $request['ran_booster'] );
+	}
+
+	/** @param array<string, mixed> $input */
+	private static function action( string $package_type, array $input ): BulkPackageAction {
+		$tokens = array();
+		foreach ( is_array( $input['identifiers'] ?? null ) ? $input['identifiers'] : array() as $identifier ) {
+			if ( is_string( $identifier ) ) {
+				$tokens[ hash( 'sha256', $identifier ) ] = BulkActionPackage::$tokens[ $identifier ] ?? 'fixture:R_fixture:11111111-1111-4111-8111-111111111111';
+			}
+		}
+		return BulkPackageAction::from_input( $package_type, $input + array( 'adoption_tokens' => $tokens ) );
+	}
+
 	/** @param array<string, mixed> $input */
 	private function expect_invalid_bulk_action( string $package_type, array $input ): void {
 		try {
-			BulkPackageAction::from_input( $package_type, $input );
+			self::action( $package_type, $input );
 			self::fail( 'The invalid bulk action should have been rejected.' );
 		} catch ( \InvalidArgumentException ) {
 			$this->addToAssertionCount( 1 );
@@ -542,7 +625,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$coordinator = new BulkActionCoordinator();
 
 		$result = $this->service( $plugins, true, $coordinator )->execute(
-			BulkPackageAction::from_input(
+			self::action(
 				'plugin',
 				array(
 					'bulk_action' => 'queue-update',
@@ -578,7 +661,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$service            = $this->service( $plugins, true, $coordinator );
 
 		$policy     = $service->execute(
-			BulkPackageAction::from_input(
+			self::action(
 				'plugin',
 				array(
 					'bulk_action' => 'policy-disabled',
@@ -587,7 +670,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 			)
 		);
 		$activation = $service->execute(
-			BulkPackageAction::from_input(
+			self::action(
 				'plugin',
 				array(
 					'bulk_action' => BulkPackageAction::ACTIVATE_PLUGINS,
@@ -596,7 +679,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 			)
 		);
 		$queue      = $service->execute(
-			BulkPackageAction::from_input(
+			self::action(
 				'plugin',
 				array(
 					'bulk_action' => BulkPackageAction::QUEUE_UPDATE,
@@ -623,7 +706,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$this->updater_lock = $lock;
 
 		$result = $this->service( $plugins )->execute(
-			BulkPackageAction::from_input(
+			self::action(
 				'plugin',
 				array(
 					'bulk_action' => 'policy-disabled',
@@ -646,7 +729,7 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$this->updater_lock = $lock;
 
 		$result = $this->service( $plugins )->execute(
-			BulkPackageAction::from_input(
+			self::action(
 				'plugin',
 				array(
 					'bulk_action' => 'policy-disabled',
@@ -683,6 +766,8 @@ final class BulkPackageActionServiceTest extends TestCase {
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused service fixtures stay beside the contract tests.
 final class BulkActionPackage extends AbstractPackage {
+	/** @var array<string, string> */
+	public static array $tokens = array();
 
 	public function __construct( private readonly string $identifier = '' ) {
 	}
@@ -706,6 +791,9 @@ final class BulkActionPackage extends AbstractPackage {
 			)
 		);
 
+		$token = $provider . ':R_' . rawurlencode( dirname( $identifier ) ) . ':11111111-1111-4111-8111-111111111111';
+		$package->set_adoption_token( $token );
+		self::$tokens[ $identifier ] = $token;
 		return $package;
 	}
 

@@ -3151,8 +3151,10 @@
         "phpcompatibility/phpcompatibility-paragonie": 15,
         "phpcompatibility/phpcompatibility-wp": 15,
         "ran/admin-shell": 20,
+        "ran/booster-github-provider": 10,
         "ran/updater-support": 10,
-        "ran/wp-branch-updater": 10
+        "ran/wp-branch-updater": 10,
+        "ran/wp-release-updater": 10
     },
     "prefer-stable": true,
     "prefer-lowest": false,

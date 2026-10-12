@@ -210,6 +210,23 @@ final class PackageDeploymentPolicyTest extends RANBoosterTestCase {
 		}
 	}
 
+	public function test_locked_policy_read_rejects_a_non_object_after_a_valid_row_without_writing(): void {
+		global $wpdb;
+
+		$row                  = $this->stored_row( 1, 'alpha/alpha.php', DeploymentPolicy::MANUAL );
+		$wpdb->rows           = array( $row );
+		$wpdb->forced_results = array( (object) $row, 'not-a-row' );
+		try {
+			$this->storage()->set_policies_for_test( array( $this->snapshot( $row ) ), DeploymentPolicy::DISABLED );
+			self::fail( 'A malformed locked result must abort before policy writes.' );
+		} catch ( PackageStorageFailure $failure ) {
+			self::assertSame( 'ran_booster_storage_query_failed', $failure->get_diagnostic_id() );
+		}
+		self::assertSame( array(), $wpdb->updates );
+		self::assertSame( 'manual', $wpdb->rows[0]['deployment_policy'] );
+		self::assertContains( 'ROLLBACK', $wpdb->queries );
+	}
+
 	private function storage(): DeploymentPolicyTestRepository {
 		$lifecycle = new class() extends Database {
 			public function require_ready(): void {

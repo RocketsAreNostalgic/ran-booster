@@ -732,11 +732,19 @@ abstract class AbstractPackageRepository {
 		$rows  = $wpdb->get_results( $query );
 		$error = property_exists( $wpdb, 'last_error' ) ? trim( (string) $wpdb->last_error ) : '';
 
-		if ( '' !== $error || ! is_array( $rows ) || count( $rows ) !== count( array_filter( $rows, 'is_object' ) ) ) {
+		if ( '' !== $error || ! is_array( $rows ) ) {
 			throw PackageStorageFailure::query_failed();
 		}
 
-		return array_values( $rows );
+		$validated = array();
+		foreach ( $rows as $row ) {
+			if ( ! is_object( $row ) ) {
+				throw PackageStorageFailure::query_failed();
+			}
+			$validated[] = $row;
+		}
+
+		return $validated;
 	}
 
 	/**
@@ -756,11 +764,19 @@ abstract class AbstractPackageRepository {
 		$rows  = $wpdb->get_results( $query );
 		$error = property_exists( $wpdb, 'last_error' ) ? trim( (string) $wpdb->last_error ) : '';
 
-		if ( '' !== $error || ! is_array( $rows ) || count( $rows ) !== count( array_filter( $rows, 'is_object' ) ) ) {
+		if ( '' !== $error || ! is_array( $rows ) ) {
 			throw PackageStorageFailure::query_failed();
 		}
 
-		return array_values( $rows );
+		$validated = array();
+		foreach ( $rows as $row ) {
+			if ( ! is_object( $row ) ) {
+				throw PackageStorageFailure::query_failed();
+			}
+			$validated[] = $row;
+		}
+
+		return $validated;
 	}
 
 	/**
@@ -917,12 +933,13 @@ abstract class AbstractPackageRepository {
 		$handle     = $this->string_from_row( $row, 'repository' );
 		$credential = $this->string_from_row( $row, 'credential_id' );
 		try {
+			$privacy    = new PackageModel( array( 'private' => $this->value_from_row( $row, 'private' ) ) );
 			$repository = new ManagedRepository(
 				$provider,
 				$handle,
 				$this->string_from_row( $row, 'provider_repository_id' ),
 				$this->string_from_row( $row, 'branch' ),
-				(bool) $this->value_from_row( $row, 'private', false ),
+				(bool) $privacy->private,
 				'' === $credential ? null : $credential
 			);
 		} catch ( InvalidArgumentException ) {

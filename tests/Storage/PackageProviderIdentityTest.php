@@ -74,6 +74,33 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		self::assertSame( 2, $hydrated->get_source_revision() );
 	}
 
+	public function test_stored_privacy_uses_the_same_canonical_values_as_package_writes(): void {
+		global $wpdb;
+
+		$storage = $this->storage();
+		$package = $this->package( 'example/example.php' );
+		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'repository-id', 'main' ) );
+		$storage->store_for_test( $package );
+		$row = $wpdb->rows[0];
+
+		foreach ( array( false, 0, '0', ' 0 ', true, 1, '1', ' 1 ' ) as $value ) {
+			$wpdb->row = (object) array_replace( $row, array( 'private' => $value ) );
+			self::assertSame( in_array( $value, array( true, 1, '1', ' 1 ' ), true ), $storage->find_for_test( 'example/example.php' )->is_private() );
+		}
+
+		foreach ( array( array( 'private' => 2 ), array( 'private' => '255' ), array( 'private' => null ), array() ) as $privacy ) {
+			$without_privacy = $row;
+			unset( $without_privacy['private'] );
+			$wpdb->row = (object) array_merge( $without_privacy, $privacy );
+			try {
+				$storage->find_for_test( 'example/example.php' );
+				self::fail( 'Invalid stored privacy must not hydrate a managed package.' );
+			} catch ( PackageStorageFailure $failure ) {
+				self::assertSame( 'ran_booster_storage_invalid_provider_identity', $failure->get_diagnostic_id() );
+			}
+		}
+	}
+
 	public function test_release_source_and_revision_hydrate_without_branch_fallback(): void {
 		global $wpdb;
 

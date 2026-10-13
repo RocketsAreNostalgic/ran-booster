@@ -151,7 +151,7 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 
 		self::assertSame( 'local.deployment_attempts.retention_configuration_invalid', $payload['results'][3]->code );
 		self::assertSame( ProviderDiagnosticResult::WARNING, $payload['results'][3]->status );
-		self::assertStringContainsString( '200-row default', $payload['results'][3]->message );
+		self::assertStringContainsString( 'default for that setting', $payload['results'][3]->message );
 		self::assertStringContainsString( '200 through 100000', $payload['results'][3]->remediation );
 	}
 

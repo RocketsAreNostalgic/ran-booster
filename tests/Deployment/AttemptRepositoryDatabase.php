@@ -197,6 +197,19 @@ namespace RAN\Tests\Deployment {
 
 				return 0;
 			}
+			if ( preg_match( "/^DELETE FROM `[^`]+` WHERE \\(state IN \\('succeeded','failed'\\) OR \\(state = 'needs_attention' AND resolved_at IS NOT NULL AND resolved_by IS NOT NULL\\)\\) AND created_at < '([^']+)' ORDER BY created_at, id LIMIT 100$/", $query, $matches ) === 1 ) {
+				$cutoff = stripslashes( $matches[1] );
+				$aged   = array_filter(
+					$this->rows,
+					static fn ( array $row ): bool => $row['created_at'] < $cutoff
+						&& ( in_array( $row['state'], array( 'succeeded', 'failed' ), true )
+							|| ( 'needs_attention' === $row['state'] && null !== ( $row['resolved_at'] ?? null ) && null !== ( $row['resolved_by'] ?? null ) ) )
+				);
+				usort( $aged, static fn ( array $a, array $b ): int => array( $a['created_at'], $a['id'] ) <=> array( $b['created_at'], $b['id'] ) );
+				$ids        = array_column( array_slice( $aged, 0, 100 ), 'id' );
+				$this->rows = array_values( array_filter( $this->rows, static fn ( array $row ): bool => ! in_array( $row['id'], $ids, true ) ) );
+				return count( $ids );
+			}
 			if ( preg_match( "/^DELETE FROM `[^`]+` WHERE id IN \\(([\\d, ]+)\\) AND \\(state IN \\('succeeded','failed'\\) OR \\(state = 'needs_attention' AND resolved_at IS NOT NULL AND resolved_by IS NOT NULL\\)\\)$/", $query, $matches ) === 1 ) {
 				$ids     = array_map( 'intval', explode( ',', $matches[1] ) );
 				$deleted = 0;

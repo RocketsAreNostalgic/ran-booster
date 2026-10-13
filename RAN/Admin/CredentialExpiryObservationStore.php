@@ -23,14 +23,14 @@ class CredentialExpiryObservationStore {
 		$this->require_provider_id( $provider );
 		$this->require_profile_id( $profile_id );
 
-		return $this->all()[ $provider ][ $profile_id ] ?? array();
+		return $this->all( $this->read_option() )[ $provider ][ $profile_id ] ?? array();
 	}
 
 	/**
 	 * @return array<string, array<string, array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string}>>
 	 */
 	public function observations(): array {
-		return $this->all();
+		return $this->all( $this->read_option() );
 	}
 
 	public function set_manual_expiry( string $provider, string $profile_id, ?string $expires_on ): void {
@@ -40,17 +40,7 @@ class CredentialExpiryObservationStore {
 			$this->require_date( $expires_on );
 		}
 
-		$profiles = $this->all();
-		$record   = $profiles[ $provider ][ $profile_id ] ?? array();
-
-		if ( null === $expires_on ) {
-			unset( $record['manual_expires_on'] );
-		} else {
-			$record['manual_expires_on'] = $expires_on;
-		}
-
-		$this->replace_record( $profiles, $provider, $profile_id, $record );
-		$this->persist( $profiles );
+		$this->mutate( $provider, $profile_id, array( 'manual_expires_on' => $expires_on ) );
 	}
 
 	public function record_provider_expiry(
@@ -63,55 +53,69 @@ class CredentialExpiryObservationStore {
 		$this->require_profile_id( $profile_id );
 		$this->require_utc_timestamp( $checked_at );
 
-		$profiles                      = $this->all();
-		$record                        = $profiles[ $provider ][ $profile_id ] ?? array();
-		$record['provider_checked_at'] = $checked_at;
-		if ( $report->is_known() ) {
-
-			$record['provider_expires_at'] = (string) $report->expires_at;
-		} else {
-			unset( $record['provider_expires_at'] );
-		}
-
-		$this->replace_record( $profiles, $provider, $profile_id, $record );
-		$this->persist( $profiles );
+		$this->mutate(
+			$provider,
+			$profile_id,
+			array(
+				'provider_checked_at' => $checked_at,
+				'provider_expires_at' => $report->is_known() ? (string) $report->expires_at : null,
+			)
+		);
 	}
 
 	public function clear( string $provider, string $profile_id ): void {
 		$this->require_provider_id( $provider );
 		$this->require_profile_id( $profile_id );
 
-		$profiles = $this->all();
-		unset( $profiles[ $provider ][ $profile_id ] );
-		if ( array() === ( $profiles[ $provider ] ?? array() ) ) {
-			unset( $profiles[ $provider ] );
+		$this->mutate( $provider, $profile_id, null );
+	}
+
+	protected function read_option( bool $fresh = false ): mixed {
+		if ( $fresh ) {
+			wp_cache_delete( self::OPTION_NAME, 'options' );
+			wp_cache_delete( 'alloptions', 'options' );
+			wp_cache_delete( 'notoptions', 'options' );
 		}
-
-		$this->persist( $profiles );
+		return get_option( self::OPTION_NAME, null );
 	}
 
-	/**
-	 * @return array<string, mixed>
-	 */
-	protected function read_option(): array {
-		$value = get_option( self::OPTION_NAME, array() );
-
-		return is_array( $value ) ? $value : array();
-	}
-
-	/**
-	 * @param array<string, mixed> $document Canonical option document.
-	 */
-	protected function write_option( array $document ): bool {
-		return update_option( self::OPTION_NAME, $document, false );
+	/** @param array<string, mixed> $replacement Canonical option document. */
+	protected function write_option( mixed $expected, array $replacement ): bool {
+		global $wpdb;
+		try {
+			if ( null === $expected ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- INSERT IGNORE admits only the first writer; never replace a concurrently created option.
+				$inserted = $wpdb->query(
+					$wpdb->prepare(
+						"INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'off')",
+						self::OPTION_NAME,
+						maybe_serialize( $replacement )
+					)
+				);
+				return 1 === $inserted && '' === trim( (string) $wpdb->last_error );
+			}
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Compare the exact option snapshot so concurrent entry updates cannot overwrite one another.
+			$updated = $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE {$wpdb->options} SET option_value = %s, autoload = 'off' WHERE option_name = %s AND BINARY option_value = BINARY %s",
+					maybe_serialize( $replacement ),
+					self::OPTION_NAME,
+					maybe_serialize( $expected )
+				)
+			);
+			return 1 === $updated && '' === trim( (string) $wpdb->last_error );
+		} finally {
+			wp_cache_delete( self::OPTION_NAME, 'options' );
+			wp_cache_delete( 'alloptions', 'options' );
+			wp_cache_delete( 'notoptions', 'options' );
+		}
 	}
 
 	/**
 	 * @return array<string, array<string, array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string}>>
 	 */
-	private function all(): array {
-		$document = $this->read_option();
-		if ( self::SCHEMA_VERSION !== ( $document['version'] ?? null )
+	private function all( mixed $document ): array {
+		if ( ! is_array( $document ) || self::SCHEMA_VERSION !== ( $document['version'] ?? null )
 			|| ! is_array( $document['profiles'] ?? null )
 		) {
 			return array();
@@ -195,23 +199,34 @@ class CredentialExpiryObservationStore {
 		$profiles[ $provider ][ $profile_id ] = $record;
 	}
 
-	/**
-	 * @param array<string, array<string, array<string, string>>> $profiles
-	 */
-	private function persist( array $profiles ): void {
-		ksort( $profiles );
-		foreach ( $profiles as &$provider_profiles ) {
-			ksort( $provider_profiles );
+	/** @param array<string, string|null>|null $patch Fields to replace, or null to clear the record. */
+	private function mutate( string $provider, string $profile_id, ?array $patch ): void {
+		for ( $attempt = 0; $attempt < 5; ++$attempt ) {
+			$expected = $this->read_option( true );
+			$profiles = $this->all( $expected );
+			$record   = null === $patch ? array() : ( $profiles[ $provider ][ $profile_id ] ?? array() );
+			foreach ( $patch ?? array() as $field => $value ) {
+				if ( null === $value ) {
+					unset( $record[ $field ] );
+				} else {
+					$record[ $field ] = $value;
+				}
+			}
+			$this->replace_record( $profiles, $provider, $profile_id, $record );
+			ksort( $profiles );
+			foreach ( $profiles as &$provider_profiles ) {
+				ksort( $provider_profiles );
+			}
+			unset( $provider_profiles );
+			$document = array(
+				'version'  => self::SCHEMA_VERSION,
+				'profiles' => $profiles,
+			);
+			if ( $expected === $document || $this->write_option( $expected, $document ) ) {
+				return;
+			}
 		}
-		unset( $provider_profiles );
-
-		$document = array(
-			'version'  => self::SCHEMA_VERSION,
-			'profiles' => $profiles,
-		);
-		if ( ! $this->write_option( $document ) && $document !== $this->read_option() ) {
-			throw new RuntimeException( 'Booster could not save credential expiry information.' );
-		}
+		throw new RuntimeException( 'Booster could not save credential expiry information.' );
 	}
 
 	private function require_provider_id( string $provider ): void {

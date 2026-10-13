@@ -21,6 +21,34 @@ final class ActivityConnection implements DeploymentWriteConnection {
 	/** @var list<string> */
 	public array $insert_tables = array();
 	public bool $fail_insert    = false;
+	public string|null $engine  = 'InnoDB';
+	/** @var list<array{index_name:string,non_unique:int,columns:string,prefixes:int}>|null */
+	public ?array $indexes = array(
+		array(
+			'index_name' => 'PRIMARY',
+			'non_unique' => 0,
+			'columns'    => 'id',
+			'prefixes'   => 0,
+		),
+		array(
+			'index_name' => 'correlation',
+			'non_unique' => 0,
+			'columns'    => 'correlation',
+			'prefixes'   => 0,
+		),
+		array(
+			'index_name' => 'history',
+			'non_unique' => 1,
+			'columns'    => 'sort_at,id',
+			'prefixes'   => 0,
+		),
+		array(
+			'index_name' => 'summary',
+			'non_unique' => 1,
+			'columns'    => 'context_key,purpose,id',
+			'prefixes'   => 0,
+		),
+	);
 
 	public function prepare( string $query, mixed ...$arguments ): mixed {
 		$this->prepared[] = array(
@@ -32,6 +60,12 @@ final class ActivityConnection implements DeploymentWriteConnection {
 
 	public function get_results( string $query ): mixed {
 		$this->queries[] = $query;
+		if ( str_contains( $query, 'information_schema.TABLES' ) ) {
+			return array( (object) array( 'engine' => $this->engine ) );
+		}
+		if ( str_contains( $query, 'information_schema.STATISTICS' ) ) {
+			return null === $this->indexes ? false : array_map( static fn ( array $row ): object => (object) $row, $this->indexes );
+		}
 		if ( str_starts_with( $query, 'SELECT id FROM ' ) && str_contains( $query, 'correlation =' ) ) {
 			return array( (object) array( 'id' => count( $this->inserted ) ) );
 		}

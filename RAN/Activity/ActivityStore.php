@@ -11,7 +11,7 @@ use RAN\RepositoryProvider\ProviderDiagnosticResult;
 use RAN\Storage\DeploymentWriteConnection;
 
 /**
- * Optional history, deliberately outside package and deployment readiness.
+ * Durable reporting; deployment writes join the journal's database transaction.
  *
  * @phpstan-type Capture array{subject_type:string,subject_identity:string,adoption_token:?string,context:string,purpose:?string,provenance:string,actor?:int}
  * @phpstan-type Record array<string, int|string|null>
@@ -60,7 +60,7 @@ final class ActivityStore {
 			return false;
 		}
 		$columns = $this->rows( "SELECT id,correlation,sort_at,started_at,completed_at,provider,subject_type,subject_identity,adoption_token,context,context_key,operation,purpose,provenance,actor,status,stage,reason,message,remediation,facts,effect FROM {$this->table} LIMIT 0" );
-		if ( null === $columns ) {
+		if ( null === $columns || ! $this->transactional_storage() ) {
 			return false;
 		}
 		update_option( self::VERSION_OPTION, '1', false );
@@ -71,16 +71,38 @@ final class ActivityStore {
 		return '1' === get_option( self::VERSION_OPTION );
 	}
 
+	/** @return array{valid:bool,maximum_rows:int,maximum_days:int,source:'configured'|'default'} */
+	public static function retention_policy( mixed $rows = null, mixed $days = null ): array {
+		$configured = null !== $rows || null !== $days || defined( 'RAN_BOOSTER_HISTORY_ROWS' ) || defined( 'RAN_BOOSTER_HISTORY_DAYS' );
+		$rows     ??= defined( 'RAN_BOOSTER_HISTORY_ROWS' ) ? constant( 'RAN_BOOSTER_HISTORY_ROWS' ) : 2000;
+		$days     ??= defined( 'RAN_BOOSTER_HISTORY_DAYS' ) ? constant( 'RAN_BOOSTER_HISTORY_DAYS' ) : 30;
+		$valid_rows = is_int( $rows ) && $rows >= 200 && $rows <= 100000;
+		$valid_days = is_int( $days ) && $days >= 1 && $days <= 365;
+		return array(
+			'valid'        => $valid_rows && $valid_days,
+			'maximum_rows' => $valid_rows ? $rows : 2000,
+			'maximum_days' => $valid_days ? $days : 30,
+			'source'       => $configured ? 'configured' : 'default',
+		);
+	}
+
 	/** @param Capture $capture */
-	public function begin( string $provider, ActivityRequest $request, array $capture ): ?int {
+	public function begin( string $provider, ActivityRequest $request, array $capture, ?string $correlation = null ): ?int {
 		if ( ! $this->available() ) {
 			return null;
 		}
+		$coupled = null !== $correlation;
 		try {
 			ProviderCode::parse( $provider );
 			$this->validate_capture( $capture );
-			$correlation = bin2hex( random_bytes( 16 ) );
+			$correlation ??= bin2hex( random_bytes( 16 ) );
+			if ( 1 !== preg_match( '/\A[a-f0-9]{32}\z/', $correlation ) ) {
+				return null;
+			}
 		} catch ( InvalidArgumentException | \Random\RandomException ) {
+			return null;
+		}
+		if ( $coupled && ! $this->transactional_storage() ) {
 			return null;
 		}
 		$token = $capture['adoption_token'];
@@ -113,7 +135,7 @@ final class ActivityStore {
 	public function progress( ?int $id, string $code, string $message = '' ): bool {
 		try {
 			$this->validate_text( $code, $message );
-		} catch ( InvalidArgumentException ) {
+		} catch ( InvalidArgumentException | \ValueError ) {
 			return false;
 		}
 		if ( null === $id ) {
@@ -129,8 +151,43 @@ final class ActivityStore {
 		);
 	}
 
+	/** @param array<string, scalar|null> $facts */
+	public function progress_by_correlation( string $correlation, string $code, string $message = '', array $facts = array() ): bool {
+		try {
+			$this->validate_text( $code, $message );
+			$encoded = $this->encode_facts( $facts );
+		} catch ( InvalidArgumentException | \ValueError ) {
+			return false;
+		}
+		if ( 1 !== preg_match( '/\A[a-f0-9]{32}\z/', $correlation ) || ! $this->transactional_storage() ) {
+			return false;
+		}
+		return 1 === $this->query(
+			$this->prepare(
+				"UPDATE {$this->table} SET stage = %s, message = %s, facts = %s WHERE correlation = %s AND status = 'incomplete'",
+				$code,
+				$message,
+				$encoded,
+				$correlation
+			)
+		);
+	}
+
 	/** @param array<string, scalar|null> $facts Core-normalized observation fields, never arbitrary provider payloads. */
 	public function complete( ?int $id, string $status, string $reason, string $message = '', string $remediation = '', array $facts = array(), string $effect = 'none' ): bool {
+		return $this->complete_record( $id, null, $status, $reason, $message, $remediation, $facts, $effect );
+	}
+
+	/** @param array<string, scalar|null> $facts */
+	public function complete_by_correlation( string $correlation, string $status, string $reason, string $message = '', string $remediation = '', array $facts = array(), string $effect = 'none' ): bool {
+		if ( 1 !== preg_match( '/\A[a-f0-9]{32}\z/', $correlation ) || ! $this->transactional_storage() ) {
+			return false;
+		}
+		return $this->complete_record( null, $correlation, $status, $reason, $message, $remediation, $facts, $effect );
+	}
+
+	/** @param array<string, scalar|null> $facts */
+	private function complete_record( ?int $id, ?string $correlation, string $status, string $reason, string $message, string $remediation, array $facts, string $effect ): bool {
 		try {
 			$this->validate_text( $reason, $message, $remediation );
 			$encoded = $this->encode_facts( $facts );
@@ -141,12 +198,14 @@ final class ActivityStore {
 			|| ! in_array( $effect, array( 'none', 'established', 'invalidated' ), true ) ) {
 			return false;
 		}
-		if ( null === $id ) {
+		if ( null === $id && null === $correlation ) {
 			return false;
 		}
+		$where  = null !== $id ? 'id = %d' : 'correlation = %s';
+		$value  = $id ?? $correlation;
 		$result = $this->query(
 			$this->prepare(
-				"UPDATE {$this->table} SET status = %s, reason = %s, message = %s, remediation = %s, facts = %s, effect = %s, completed_at = %s WHERE id = %d AND status = 'incomplete'",
+				"UPDATE {$this->table} SET status = %s, reason = %s, message = %s, remediation = %s, facts = %s, effect = %s, completed_at = %s WHERE $where AND status = 'incomplete'",
 				$status,
 				$reason,
 				$message,
@@ -154,7 +213,7 @@ final class ActivityStore {
 				$encoded,
 				$effect,
 				gmdate( 'Y-m-d H:i:s' ),
-				$id
+				$value
 			)
 		);
 		if ( 1 === $result ) {
@@ -163,7 +222,7 @@ final class ActivityStore {
 		if ( 0 !== $result ) {
 			return false;
 		}
-		$rows     = $this->rows( $this->prepare( "SELECT status,reason,message,remediation,facts,effect FROM {$this->table} WHERE id = %d", $id ) );
+		$rows     = $this->rows( $this->prepare( "SELECT status,reason,message,remediation,facts,effect FROM {$this->table} WHERE $where", $value ) );
 		$expected = array(
 			'status'      => $status,
 			'reason'      => $reason,
@@ -176,7 +235,7 @@ final class ActivityStore {
 	}
 
 	/**
-	 * Bounded contributor to the existing presenter's merged deployment/activity history.
+	 * Bounded history source, including protected unresolved deployment reports.
 	 * @param array<string,string> $filters
 	 * @param array{time:string,source:string,id:int}|null $before
 	 * @return array{available:bool,records:list<Record>}
@@ -189,13 +248,19 @@ final class ActivityStore {
 		if ( ! $this->available() || $limit < 1 || $limit > 101 ) {
 			return $unavailable;
 		}
-		$where = array( $this->prepare( 'started_at >= %s', gmdate( 'Y-m-d H:i:s', time() - 30 * 86400 ) ) );
+		$retention         = self::retention_policy();
+		$maximum_rows      = $retention['maximum_rows'];
+		$deployment_safety = $this->deployment_safety_sql();
+		$where             = array( $this->prepare( "(started_at >= %s OR $deployment_safety)", gmdate( 'Y-m-d H:i:s', time() - $retention['maximum_days'] * 86400 ) ) );
 		foreach ( $filters as $key => $value ) {
-			$key = 'outcome' === $key ? 'status' : $key;
+			$outcome_filter = 'outcome' === $key;
+			$key            = $outcome_filter ? 'status' : $key;
 			if ( ! in_array( $key, array( 'subject_type', 'subject_identity', 'provider', 'operation', 'status', 'adoption_token', 'context', 'purpose' ), true ) || strlen( $value ) > 2048 ) {
 				return $unavailable;
 			}
-			$where[] = $this->prepare( "BINARY $key = %s", $value );
+			$where[] = $outcome_filter
+				? $this->prepare( "(BINARY status = %s OR BINARY JSON_UNQUOTE(JSON_EXTRACT(facts, '$.deployment_state')) = %s)", $value, $value )
+				: $this->prepare( "BINARY $key = %s", $value );
 		}
 		if ( null !== $before ) {
 			if ( ! in_array( $before['source'], array( 'activity', 'deployment' ), true ) || $before['id'] < 1
@@ -209,7 +274,7 @@ final class ActivityStore {
 		if ( in_array( null, $where, true ) ) {
 			return $unavailable;
 		}
-		$where[] = "id IN (SELECT id FROM (SELECT id FROM {$this->table} ORDER BY id DESC LIMIT 2000) AS recent_activity)";
+		$where[] = "(id IN (SELECT id FROM (SELECT id FROM {$this->table} ORDER BY id DESC LIMIT $maximum_rows) AS recent_activity) OR $deployment_safety)";
 		$records = $this->rows( "SELECT * FROM {$this->table} WHERE " . implode( ' AND ', $where ) . ' ORDER BY sort_at DESC,id DESC LIMIT ' . $limit );
 		return array(
 			'available' => null !== $records,
@@ -281,21 +346,62 @@ final class ActivityStore {
 		}
 		$active_sql = empty( $active ) ? '0 = 1' : implode( ' OR ', $active );
 		// UNION materializes the same-table protection query on supported MySQL/MariaDB.
-		$protection = "SELECT retained_id FROM (SELECT MAX(id) retained_id FROM {$this->table} WHERE $active_sql GROUP BY context_key,purpose,subject_type,subject_identity,adoption_token,context UNION SELECT MAX(id) retained_id FROM {$this->table} WHERE ($active_sql) AND effect <> 'none' GROUP BY context_key,purpose,subject_type,subject_identity,adoption_token,context) AS protected_activity";
-		$rows       = $this->rows( $this->prepare( "SELECT id,status FROM {$this->table} WHERE id NOT IN ($protection) AND (started_at < %s OR id NOT IN (SELECT id FROM (SELECT id FROM {$this->table} ORDER BY id DESC LIMIT 2000) AS retained)) ORDER BY id LIMIT 100", gmdate( 'Y-m-d H:i:s', time() - 30 * 86400 ) ) );
+		$protection        = "SELECT retained_id FROM (SELECT MAX(id) retained_id FROM {$this->table} WHERE $active_sql GROUP BY context_key,purpose,subject_type,subject_identity,adoption_token,context UNION SELECT MAX(id) retained_id FROM {$this->table} WHERE ($active_sql) AND effect <> 'none' GROUP BY context_key,purpose,subject_type,subject_identity,adoption_token,context) AS protected_activity";
+		$retention         = self::retention_policy();
+		$maximum_rows      = $retention['maximum_rows'];
+		$deployment_safety = $this->deployment_safety_sql();
+		$rows              = $this->rows( $this->prepare( "SELECT id,status FROM {$this->table} WHERE id NOT IN ($protection) AND NOT ($deployment_safety) AND (started_at < %s OR id NOT IN (SELECT id FROM (SELECT id FROM {$this->table} ORDER BY id DESC LIMIT $maximum_rows) AS retained)) ORDER BY id LIMIT 100", gmdate( 'Y-m-d H:i:s', time() - $retention['maximum_days'] * 86400 ) ) );
 		if ( null === $rows ) {
 			return false;
 		}
-		$deleted = 0;
+		if ( array() === $rows ) {
+			return 0;
+		}
+		$candidates = array();
 		foreach ( $rows as $row ) {
-			// Do not delete an incomplete row that acquired an observation after the snapshot.
-			$result = $this->query( $this->prepare( "DELETE FROM {$this->table} WHERE id = %d AND status = %s AND id NOT IN ($protection)", (int) $row['id'], $row['status'] ) );
-			if ( ! is_int( $result ) || $result < 0 ) {
+			$candidates[] = $this->prepare( '(id = %d AND status = %s)', (int) $row['id'], $row['status'] );
+		}
+		if ( in_array( null, $candidates, true ) ) {
+			return false;
+		}
+		// Recheck each snapshot status and current protection in one bounded deletion.
+		$selected = implode( ' OR ', $candidates );
+		$result   = $this->query( "DELETE FROM {$this->table} WHERE ($selected) AND id NOT IN ($protection) AND NOT ($deployment_safety)" );
+		return is_int( $result ) && $result >= 0 ? $result : false;
+	}
+
+	private function deployment_safety_sql(): string {
+		$state = "JSON_UNQUOTE(JSON_EXTRACT(facts, '$.deployment_state'))";
+		return "(JSON_EXTRACT(facts, '$.deployment_attempt_id') IS NOT NULL AND ($state IN ('queued','running') OR ($state = 'needs_attention' AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(facts, '$.deployment_resolved_at')), 'null') = 'null')))";
+	}
+
+	/** Coupled callers hold a transaction: the first read pins engine and indexes until it ends. */
+	private function transactional_storage(): bool {
+		if ( null === $this->rows( "SELECT id FROM {$this->table} WHERE id = 0" ) ) {
+			return false;
+		}
+		$rows = $this->rows( $this->prepare( 'SELECT ENGINE AS engine FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND BINARY TABLE_NAME = %s', $this->table ) );
+		if ( 1 !== count( $rows ?? array() ) || ! is_string( $rows[0]['engine'] ?? null ) || 0 !== strcasecmp( 'InnoDB', $rows[0]['engine'] ) ) {
+			return false;
+		}
+		$indexes  = $this->rows( $this->prepare( 'SELECT INDEX_NAME AS index_name, NON_UNIQUE AS non_unique, GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS columns, SUM(SUB_PART IS NOT NULL) AS prefixes FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND BINARY TABLE_NAME = %s GROUP BY INDEX_NAME, NON_UNIQUE', $this->table ) );
+		$required = array(
+			'PRIMARY'     => array( '0', 'id' ),
+			'correlation' => array( '0', 'correlation' ),
+			'history'     => array( '1', 'sort_at,id' ),
+			'summary'     => array( '1', 'context_key,purpose,id' ),
+		);
+		foreach ( $indexes ?? array() as $index ) {
+			$name = $index['index_name'] ?? '';
+			if ( ! isset( $required[ $name ] ) ) {
+				continue;
+			}
+			if ( (string) ( $index['non_unique'] ?? '' ) !== $required[ $name ][0] || ( $index['columns'] ?? null ) !== $required[ $name ][1] || '0' !== (string) ( $index['prefixes'] ?? '' ) ) {
 				return false;
 			}
-			$deleted += $result;
+			unset( $required[ $name ] );
 		}
-		return $deleted;
+		return array() === $required;
 	}
 
 	/** @param Capture $capture */
@@ -332,6 +438,16 @@ final class ActivityStore {
 				'webhook_persistence' => in_array( $value, array( 'partial', 'unconfirmed', 'confirmed', 'not_confirmed' ), true ),
 				'diagnostic_passed', 'diagnostic_warning', 'diagnostic_failed', 'diagnostic_not_configured' => is_int( $value ) && $value >= 0 && $value <= 8,
 				'partial_reason' => in_array( $value, array( null, 'local_incomplete', 'deadline_exhausted', 'remote_calls_exhausted', 'provider_unavailable', 'provider_results_invalid', 'result_limit_exhausted' ), true ),
+				'deployment_attempt_id' => is_int( $value ) && $value > 0,
+				'deployment_source' => in_array( $value, array( 'manual', 'webhook' ), true ),
+				'deployment_package_slug' => is_string( $value ) && '' !== $value && strlen( $value ) <= 191 && 1 === preg_match( '//u', $value ) && ! preg_match( '/[\x00-\x1F\x7F]/', $value ),
+				'deployment_state' => in_array( $value, array( 'queued', 'running', 'succeeded', 'failed', 'needs_attention' ), true ),
+				'deployment_requested_ref' => null === $value || ( is_string( $value ) && strlen( $value ) <= 255 && 1 === preg_match( '//u', $value ) && ! preg_match( '/[\x00-\x1F\x7F]/', $value ) && ! preg_match( '/(?:https?:\/\/|[A-Za-z][A-Za-z0-9+.-]*:\/\/)[^\s]*@|\b(?:authorization|bearer|token|secret|password|signature)\b\s*[:=]/i', $value ) ),
+				'deployment_resolved_ref' => null === $value || ( is_string( $value ) && strlen( $value ) <= 191 && 1 === preg_match( '//u', $value ) && ! preg_match( '/[\x00-\x1F\x7F]/', $value ) && ! preg_match( '/(?:https?:\/\/|[A-Za-z][A-Za-z0-9+.-]*:\/\/)[^\s]*@|\b(?:authorization|bearer|token|secret|password|signature)\b\s*[:=]/i', $value ) ),
+				'deployment_mutation_started_at', 'deployment_finished_at' => null === $value || ( is_string( $value ) && 1 === preg_match( '/\A\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\z/', $value ) ),
+				'deployment_resolved_at' => null === $value || ( is_string( $value ) && 1 === preg_match( '/\A\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\z/', $value ) ),
+				'deployment_resolved_by' => null === $value || ( is_int( $value ) && $value > 0 ),
+				'deployment_outcome' => null === $value || ( is_string( $value ) && 1 === preg_match( '/\A[a-z][a-z0-9_]{0,63}\z/', $value ) ),
 				default => null,
 			};
 			if ( null !== $valid ) {

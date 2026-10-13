@@ -5,26 +5,34 @@ declare(strict_types=1);
 use RAN\Activity\ActivityRequest;
 use RAN\Activity\ActivityStore;
 use RAN\AdoptionIdentity;
+use RAN\Deployment\DeploymentAttemptRepository;
+use RAN\Deployment\DeploymentOutcome;
+use RAN\Deployment\DeploymentPolicy;
+use RAN\Deployment\DeploymentRequest;
+use RAN\Deployment\DeploymentState;
+use RAN\Deployment\DeploymentStorageFailure;
 use RAN\RepositoryProvider\RepositoryReference;
+use RAN\Storage\Database;
 
 // Exercise optional reporting SQL on the existing installed-archive database matrix.
 return static function ( wpdb $database ): void {
 	if ( ! defined( 'DB_USER' ) || ! defined( 'DB_PASSWORD' ) || ! defined( 'DB_NAME' ) || ! defined( 'DB_HOST' ) ) {
 		throw new RuntimeException( 'The activity SQL proof requires installed WordPress database configuration.' );
 	}
-	$table   = $database->prefix . 'ran_activity_smoke_' . bin2hex( random_bytes( 6 ) );
-	$version = get_option( ActivityStore::VERSION_OPTION );
-	$store   = new ActivityStore( $database, $table );
-	$other   = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
-	$second  = new ActivityStore( $other, $table );
-	$expect  = static function ( bool $condition, string $reason ): void {
+	$table         = $database->prefix . 'ran_activity_smoke_' . bin2hex( random_bytes( 6 ) );
+	$journal_table = $table . '_attempts';
+	$version       = get_option( ActivityStore::VERSION_OPTION );
+	$store         = new ActivityStore( $database, $table );
+	$other         = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+	$second        = new ActivityStore( $other, $table );
+	$expect        = static function ( bool $condition, string $reason ): void {
 		if ( ! $condition ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed developer-authored proof failure, not rendered HTML.
 			throw new RuntimeException( 'Activity SQL proof: ' . $reason );
 		}
 	};
-	$request = new ActivityRequest( 'release.check', new RepositoryReference( 'ran/activity-proof', 'activity-proof', false, null ), 'plugin', 'activity-proof/plugin.php' );
-	$capture = array(
+	$request       = new ActivityRequest( 'release.check', new RepositoryReference( 'ran/activity-proof', 'activity-proof', false, null ), 'plugin', 'activity-proof/plugin.php' );
+	$capture       = array(
 		'subject_type'     => 'plugin',
 		'subject_identity' => 'activity-proof/plugin.php',
 		'adoption_token'   => AdoptionIdentity::create( 'gh', 'activity-proof' ),
@@ -32,7 +40,7 @@ return static function ( wpdb $database ): void {
 		'purpose'          => 'release.check',
 		'provenance'       => 'core',
 	);
-	$query   = static function ( ?string $sql ) use ( $database ): void {
+	$query         = static function ( ?string $sql ) use ( $database ): void {
 		if ( null === $sql || false === $database->query( $sql ) ) {
 			throw new RuntimeException( 'Activity SQL fixture mutation failed.' );
 		}
@@ -85,6 +93,10 @@ return static function ( wpdb $database ): void {
 		$expect( $filtered['available'] && array() === $filtered['records'], 'package filter applies before paging' );
 
 		// The incomplete older operation gains an observation between selection and deletion.
+		$ordinary            = $capture;
+		$ordinary['purpose'] = null;
+		$discard             = $store->begin( 'gh', $request, $ordinary );
+		$expect( null !== $discard, 'ordinary pruning race candidate' );
 		$late   = $store->begin( 'gh', $request, $capture );
 		$latest = $store->begin( 'gh', $request, $capture );
 		$expect( null !== $late && null !== $latest, 'pruning race fixture admission' );
@@ -107,6 +119,7 @@ return static function ( wpdb $database ): void {
 			remove_filter( 'query', $race );
 		}
 		$expect( $raced, 'completion must interleave before actual deletion' );
+		$expect( null === $database->get_var( $database->prepare( 'SELECT id FROM %i WHERE id = %d', $table, $discard ) ), 'the same batch deletes an unchanged candidate' );
 		$summary = $store->summary( 'plugin', 'activity-proof/plugin.php', $capture['adoption_token'], $capture['context'], 'release.check' );
 		$expect( (int) ( $summary['latest']['id'] ?? 0 ) === $latest && (int) ( $summary['observation']['id'] ?? 0 ) === $late, 'pruning preserves current attempt and concurrent observation' );
 		$expect( array() === $store->activity_history()['records'], 'aged protected observations stay out of ordinary history' );
@@ -122,7 +135,186 @@ return static function ( wpdb $database ): void {
 		$expect( (int) ( $summary['latest']['id'] ?? 0 ) === $latest && (int) ( $summary['observation']['id'] ?? 0 ) === $late, 'ordinary writes do not evict protected summaries' );
 		$expect( false !== $store->prune( array() ), 'departed context pruning' );
 		$expect( null === $store->summary( 'plugin', 'activity-proof/plugin.php', $capture['adoption_token'], $capture['context'], 'release.check' )['latest'], 'departed pins lose protection' );
+
+		// The live table definition must remain stable until a coupled transaction ends.
+		$raced = false;
+		$race  = static function ( string $sql ) use ( $table, $other, &$raced, $expect ): string {
+			if ( $raced || ! str_contains( $sql, 'information_schema.TABLES' ) || ! str_contains( $sql, $table ) ) {
+				return $sql;
+			}
+			$raced  = true;
+			$errors = $other->suppress_errors( true );
+			try {
+				$expect( false !== $other->query( 'SET SESSION lock_wait_timeout = 1' ), 'metadata race timeout' );
+				$conversion = $other->prepare( 'ALTER TABLE %i ENGINE=MyISAM', $table );
+				$expect( null !== $conversion && false === $other->query( $conversion ), 'engine conversion blocked by active transaction' );
+				$drop_index = $other->prepare( 'ALTER TABLE %i DROP INDEX correlation', $table );
+				$expect( null !== $drop_index && false === $other->query( $drop_index ), 'identity index removal blocked by active transaction' );
+			} finally {
+				$other->suppress_errors( $errors );
+			}
+			return $sql;
+		};
+		add_filter( 'query', $race );
+		$query( 'START TRANSACTION' );
+		try {
+			$expect( null !== $store->begin( 'gh', $request, $capture, str_repeat( 'c', 32 ) ), 'coupled InnoDB admission' );
+			$expect( $raced, 'engine conversion interleaves before verification and insert' );
+		} finally {
+			remove_filter( 'query', $race );
+			$query( 'ROLLBACK' );
+		}
+
+		$query( $database->prepare( 'CREATE TABLE %i LIKE %i', $journal_table, Database::attempt_table_name() ) );
+		$journal = new DeploymentAttemptRepository( $database, $journal_table, activity: $store );
+		$deploy  = new DeploymentRequest( 'ran/activity-proof', null, false, 'main', 'activity-proof', null, DeploymentPolicy::MANUAL, 1 );
+		$before  = (int) $database->get_var( $database->prepare( 'SELECT COUNT(*) FROM %i', $table ) );
+		$query( $database->prepare( 'ALTER TABLE %i ENGINE=MyISAM', $table ) );
+		$expect( ! $store->install(), 'installation rejects an existing nontransactional table' );
+		try {
+			$journal->admit_and_claim_manual( 'install', 'plugin', 'gh', 'activity-proof', $deploy, 'main', 'branch', 1 );
+			throw new RuntimeException( 'A nontransactional Activity table admitted a deployment.' );
+		} catch ( DeploymentStorageFailure ) {
+			$expect( 0 === (int) $database->get_var( $database->prepare( 'SELECT COUNT(*) FROM %i', $journal_table ) ), 'rejected admission rolls back journal' );
+			$expect( $before === (int) $database->get_var( $database->prepare( 'SELECT COUNT(*) FROM %i', $table ) ), 'rejected admission leaves no orphan report' );
+		}
+		$query( $database->prepare( 'ALTER TABLE %i ENGINE=InnoDB', $table ) );
+		foreach ( array( '', ', ADD KEY correlation (correlation)', ', ADD UNIQUE KEY correlation (correlation,id)', ', ADD UNIQUE KEY correlation (correlation(31))' ) as $replacement ) {
+			$query( $database->prepare( 'ALTER TABLE %i DROP INDEX correlation', $table ) . $replacement );
+			$expect( ! $store->install(), 'installation rejects missing or weakened unique correlation' );
+			try {
+				$journal->admit_and_claim_manual( 'install', 'plugin', 'gh', 'activity-proof', $deploy, 'main', 'branch', 1 );
+				throw new RuntimeException( 'An incompatible identity index admitted a deployment.' );
+			} catch ( DeploymentStorageFailure ) {
+				$expect( 0 === (int) $database->get_var( $database->prepare( 'SELECT COUNT(*) FROM %i', $journal_table ) ), 'incompatible index rolls back journal' );
+				$expect( $before === (int) $database->get_var( $database->prepare( 'SELECT COUNT(*) FROM %i', $table ) ), 'incompatible index leaves no orphan report' );
+			}
+			if ( '' !== $replacement ) {
+				$query( $database->prepare( 'ALTER TABLE %i DROP INDEX correlation', $table ) );
+			}
+			$query( $database->prepare( 'ALTER TABLE %i ADD UNIQUE KEY correlation (correlation)', $table ) );
+		}
+		$expect( $store->install(), 'compatible existing schema verifies after restoration' );
+		$attempt = $journal->admit_and_claim_manual( 'install', 'plugin', 'gh', 'activity-proof', $deploy, 'main', 'branch', 1 );
+		$query( $database->prepare( 'ALTER TABLE %i ENGINE=MyISAM', $table ) );
+		foreach ( array(
+			static fn () => $journal->mark_mutation_started( $attempt->get_id() ),
+			static fn () => $journal->finish( $attempt->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED ) ),
+		) as $operation ) {
+			try {
+				$operation();
+				throw new RuntimeException( 'A nontransactional Activity table changed a deployment.' );
+			} catch ( DeploymentStorageFailure ) {
+				$expect( DeploymentState::RUNNING === $journal->find_exact( $attempt->get_id() )?->get_state(), 'rejected transition rolls back journal' );
+			}
+		}
+		$expect( 'incomplete' === $database->get_var( $database->prepare( 'SELECT status FROM %i WHERE correlation = %s', $table, $attempt->get_correlation_id() ) ), 'rejected transitions cannot complete the report' );
+		$query( $database->prepare( 'ALTER TABLE %i ENGINE=InnoDB', $table ) );
+		$journal->finish( $attempt->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED ) );
+		$expect( 'succeeded' === $database->get_var( $database->prepare( 'SELECT status FROM %i WHERE correlation = %s', $table, $attempt->get_correlation_id() ) ), 'restored InnoDB permits atomic completion' );
+		// Fixed fixture measurements, not live-site latency guarantees or performance gates.
+		$digits  = '(SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9)';
+		$numbers = "(SELECT a.n + 10*b.n + 100*c.n + 1000*d.n AS n FROM $digits a CROSS JOIN $digits b CROSS JOIN $digits c CROSS JOIN $digits d)";
+		foreach ( array( 2000, 10000 ) as $size ) {
+			$query( $database->prepare( 'DELETE FROM %i', $table ) );
+			$query( $database->prepare( 'DELETE FROM %i', $journal_table ) );
+			// Ten equally represented packages; oldest half is past the ordinary age target.
+			$query(
+				$database->prepare(
+					"INSERT INTO %i (correlation,sort_at,started_at,completed_at,provider,subject_type,subject_identity,adoption_token,context,context_key,operation,purpose,provenance,actor,status,message,remediation,facts,effect)
+		        SELECT LPAD(HEX(n+1),32,'0'), NOW(), IF(n < %d,NOW()-INTERVAL 40 DAY,NOW()),NOW(),'gh','plugin',CONCAT('proof-',MOD(n,10),'/plugin.php'),%s,'source-1/access-1',SHA2(CONCAT('plugin',CHAR(0),CONCAT('proof-',MOD(n,10),'/plugin.php'),CHAR(0),%s,CHAR(0),'source-1/access-1'),256),'release.check','release.check','core',1,'succeeded','','','{}',IF(MOD(n,3)=0,'established','none') FROM $numbers numbers WHERE n < %d",
+					$table,
+					intdiv( $size, 2 ),
+					$capture['adoption_token'],
+					$capture['adoption_token'],
+					$size
+				)
+			);
+			$request_json = wp_json_encode( array( 'adoption_token' => $capture['adoption_token'] ) );
+			$expect( is_string( $request_json ), 'measurement JSON' );
+			$query(
+				$database->prepare(
+					"INSERT INTO %i (correlation_id,source,operation,package_type,package_slug,package_source,package_source_revision,provider,provider_repository_id,requested_ref,state,request_json,created_at,finished_at)
+		        SELECT LPAD(HEX(n+1),32,'0'),'manual','update','plugin',CONCAT('proof-',MOD(n,10)),'branch',1,'gh','activity-proof','main',IF(MOD(n,3)=0,'succeeded','failed'),%s,NOW(),NOW() FROM $numbers numbers WHERE n < %d",
+					$journal_table,
+					$request_json,
+					$size
+				)
+			);
+			$measure = static function ( string $label, callable $operation ) use ( $database, $size ): void {
+				$before = $database->num_queries;
+				$start  = hrtime( true );
+				$operation();
+				$milliseconds = ( hrtime( true ) - $start ) / 1000000;
+				// Fixed diagnostic output; no threshold and no live-site performance claim.
+				echo 'Activity storage measurement ' . wp_json_encode(
+					array(
+						'rows'         => $size,
+						'operation'    => $label,
+						'queries'      => $database->num_queries - $before,
+						'milliseconds' => round( $milliseconds, 3 ),
+					)
+				) . "\n";
+			};
+			$measure(
+				'filtered_history',
+				static function () use ( $store, $expect ): void {
+					$expect(
+						$store->activity_history(
+							array(
+								'subject_identity' => 'proof-0/plugin.php',
+								'outcome'          => 'succeeded',
+							)
+						)['available'],
+						'measurement history available'
+					);
+				}
+			);
+			$contexts = array();
+			for ( $package = 0; $package < 10; ++$package ) {
+				$context                     = $capture;
+				$context['subject_identity'] = 'proof-' . $package . '/plugin.php';
+				$contexts[]                  = $context;
+			}
+			$measure(
+				'ten_activity_summaries',
+				static function () use ( $store, $contexts, $expect ): void {
+					foreach ( $contexts as $context ) {
+						$expect( $store->summary( 'plugin', $context['subject_identity'], $context['adoption_token'], $context['context'], 'release.check' )['available'], 'measurement summary available' );
+					}
+				}
+			);
+			$measure(
+				'journal_locking_count',
+				static function () use ( $database, $journal_table, $query, $expect, $size ): void {
+					$query( 'START TRANSACTION' );
+					try {
+						$expect( $size === (int) $database->get_var( $database->prepare( 'SELECT COUNT(*) FROM %i FOR UPDATE', $journal_table ) ), 'measurement journal count' );
+					} finally {
+						$query( 'ROLLBACK' );
+					}
+				}
+			);
+			$measure(
+				'ten_journal_adoption_summaries_sql',
+				static function () use ( $database, $journal_table, $capture, $expect ): void {
+					for ( $package = 0; $package < 10; ++$package ) {
+						$fragment = '"adoption_token":"' . $capture['adoption_token'] . '"';
+						$sql      = $database->prepare( "SELECT * FROM %i AS attempts WHERE attempts.id = (SELECT MAX(latest.id) FROM %i AS latest WHERE latest.package_type = 'plugin' AND latest.package_slug = %s AND LOCATE(BINARY %s, BINARY latest.request_json) > 0) OR attempts.id = (SELECT MAX(success.id) FROM %i AS success WHERE success.package_type = 'plugin' AND success.package_slug = %s AND success.state = 'succeeded' AND LOCATE(BINARY %s, BINARY success.request_json) > 0) ORDER BY attempts.id DESC LIMIT 2", $journal_table, $journal_table, 'proof-' . $package, $fragment, $journal_table, 'proof-' . $package, $fragment );
+						$rows     = $database->get_results( $sql );
+						$expect( is_array( $rows ) && count( $rows ) > 0 && '' === $database->last_error, 'measurement journal summary SQL' );
+					}
+				}
+			);
+			$measure(
+				'one_retention_batch',
+				static function () use ( $store, $contexts, $expect ): void {
+					$expect( 100 === $store->prune( $contexts ), 'measurement bounded retention batch' );
+				}
+			);
+		}
 	} finally {
+		$query( $database->prepare( 'DROP TABLE IF EXISTS %i', $journal_table ) );
 		$query( $database->prepare( 'DROP TABLE IF EXISTS %i', $table ) );
 		if ( false === $version ) {
 			delete_option( ActivityStore::VERSION_OPTION );

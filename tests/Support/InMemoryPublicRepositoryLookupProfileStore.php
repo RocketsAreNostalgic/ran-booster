@@ -11,20 +11,30 @@ final class InMemoryPublicRepositoryLookupProfileStore extends PublicRepositoryL
 	/** @var array<string, mixed> */
 	public array $profiles = array();
 
+	public ?\Closure $before_write = null;
+
+	/** @var array<string, mixed>|null */
+	public ?array $stale_read = null;
+
 	public bool $fail_writes = false;
 
 	/**
 	 * @return array<string, mixed>
 	 */
-	protected function read_option(): array {
-		return $this->profiles;
+	protected function read_option( bool $fresh = false ): array {
+		return ! $fresh && null !== $this->stale_read ? $this->stale_read : $this->profiles;
 	}
 
 	/**
 	 * @param array<string, string> $profiles Provider-to-profile mapping.
 	 */
-	protected function write_option( array $profiles ): bool {
-		if ( $this->fail_writes ) {
+	protected function write_option( mixed $expected, array $profiles ): bool {
+		if ( null !== $this->before_write ) {
+			$callback           = $this->before_write;
+			$this->before_write = null;
+			$callback();
+		}
+		if ( $this->fail_writes || $expected !== $this->profiles ) {
 			return false;
 		}
 

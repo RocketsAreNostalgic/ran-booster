@@ -99,6 +99,78 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertCount( 1, $this->connection->inserted );
 	}
 
+	public function test_deployment_lifecycle_can_reuse_its_correlation_for_atomic_updates(): void {
+		$correlation = str_repeat( 'a', 32 );
+		self::assertSame( 1, $this->store->begin( 'gh', self::request(), self::capture(), $correlation ) );
+		self::assertSame( $correlation, $this->connection->inserted[0]['correlation'] );
+		self::assertTrue( $this->store->progress_by_correlation( $correlation, 'deployment.running', facts: array( 'deployment_requested_ref' => str_repeat( 'x', 255 ) ) ) );
+		$query = end( $this->connection->queries );
+		self::assertIsString( $query );
+		self::assertStringContainsString( 'WHERE correlation = %s AND status = \'incomplete\'', $query );
+		self::assertTrue( $this->store->complete_by_correlation( $correlation, 'succeeded', 'deployed', 'deployed' ) );
+		$query = end( $this->connection->queries );
+		self::assertIsString( $query );
+		self::assertStringContainsString( 'WHERE correlation = %s AND status = \'incomplete\'', $query );
+	}
+
+	public function test_coupled_writes_reject_nontransactional_or_unknown_engines_before_mutation(): void {
+		foreach ( array( 'MyISAM', 'MEMORY', null ) as $engine ) {
+			$this->connection->engine = $engine;
+			$correlation              = str_repeat( 'b', 32 );
+			self::assertNull( $this->store->begin( 'gh', self::request(), self::capture(), $correlation ) );
+			self::assertFalse( $this->store->progress_by_correlation( $correlation, 'deployment.running' ) );
+			self::assertFalse( $this->store->complete_by_correlation( $correlation, 'succeeded', 'deployed' ) );
+		}
+		self::assertSame( array(), $this->connection->inserted );
+		self::assertStringNotContainsString( 'UPDATE ', implode( "\n", $this->connection->queries ) );
+	}
+
+	public function test_coupled_admission_rejects_failed_table_inspection_before_insert(): void {
+		$this->connection->read_results = array( false );
+		self::assertNull( $this->store->begin( 'gh', self::request(), self::capture(), str_repeat( 'b', 32 ) ) );
+		self::assertSame( array(), $this->connection->inserted );
+	}
+
+	public function test_install_and_coupled_writes_reject_missing_or_weakened_indexes(): void {
+		$indexes = $this->connection->indexes;
+		self::assertNotNull( $indexes );
+		self::assertArrayHasKey( 1, $indexes );
+		$invalid    = array( null, array(), array_slice( $indexes, 1 ) );
+		$changed    = $indexes;
+		$changed[1] = array(
+			'index_name' => 'correlation',
+			'non_unique' => 1,
+			'columns'    => 'correlation',
+			'prefixes'   => 0,
+		);
+		$invalid[]  = $changed;
+		$changed    = $indexes;
+		$changed[1] = array(
+			'index_name' => 'correlation',
+			'non_unique' => 0,
+			'columns'    => 'correlation,id',
+			'prefixes'   => 0,
+		);
+		$invalid[]  = $changed;
+		$changed    = $indexes;
+		$changed[1] = array(
+			'index_name' => 'correlation',
+			'non_unique' => 0,
+			'columns'    => 'correlation',
+			'prefixes'   => 1,
+		);
+		$invalid[]  = $changed;
+		foreach ( $invalid as $index_rows ) {
+			$this->connection->indexes = $index_rows;
+			self::assertFalse( $this->store->install() );
+			self::assertNull( $this->store->begin( 'gh', self::request(), self::capture(), str_repeat( 'd', 32 ) ) );
+			self::assertFalse( $this->store->progress_by_correlation( str_repeat( 'd', 32 ), 'deployment.running' ) );
+			self::assertFalse( $this->store->complete_by_correlation( str_repeat( 'd', 32 ), 'succeeded', 'deployed' ) );
+		}
+		self::assertSame( array(), $this->connection->inserted );
+		self::assertStringNotContainsString( 'UPDATE ', implode( "\n", $this->connection->queries ) );
+	}
+
 	public function test_provider_cannot_allocate_protected_purpose_and_progress_has_no_complete(): void {
 		$reporter  = new BoundActivityReporter( $this->store, 'gh', static fn (): array => self::capture() );
 		$operation = $reporter->begin( self::request() );
@@ -255,7 +327,7 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertCount( 2, $this->connection->queries );
 		self::assertStringContainsString( 'LIMIT 100', $this->connection->queries[0] );
 		self::assertStringContainsString( 'LIMIT 2000', $this->connection->queries[0] );
-		self::assertStringContainsString( 'AND status = %s AND id NOT IN', $this->connection->queries[1] );
+		self::assertStringContainsString( 'AND status = %s)) AND id NOT IN', $this->connection->queries[1] );
 		self::assertStringContainsString( 'protected_activity', $this->connection->queries[1] );
 		self::assertContains( $capture['adoption_token'], $this->connection->prepared[0]['args'] );
 	}
@@ -273,6 +345,27 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertSame( 0, $this->store->prune( array() ) );
 	}
 
+	public function test_prune_batches_candidates_without_dropping_snapshot_or_live_protection(): void {
+		$this->connection->read_results  = array(
+			array(
+				(object) array(
+					'id'     => '1',
+					'status' => 'incomplete',
+				),
+				(object) array(
+					'id'     => '2',
+					'status' => 'failed',
+				),
+			),
+		);
+		$this->connection->query_results = array( 1 );
+		self::assertSame( 1, $this->store->prune( array() ) );
+		self::assertCount( 2, $this->connection->queries );
+		self::assertStringContainsString( 'WHERE ((id = %d AND status = %s) OR (id = %d AND status = %s)) AND id NOT IN', $this->connection->queries[1] );
+		self::assertStringContainsString( 'protected_activity', $this->connection->queries[1] );
+		self::assertStringContainsString( "'needs_attention'", $this->connection->queries[1] );
+	}
+
 	public function test_prune_requires_its_own_schema_readiness(): void {
 		$GLOBALS['ran_booster_activity_options'] = array();
 		self::assertFalse( $this->store->prune( array( self::capture() ) ) );
@@ -284,6 +377,15 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertFalse( $this->store->prune( array( self::capture() ) ) );
 		self::assertCount( 1, $this->connection->queries );
 		self::assertStringStartsWith( 'SELECT', $this->connection->queries[0] );
+	}
+
+	public function test_prune_preserves_unresolved_deployment_rows(): void {
+		self::assertSame( 0, $this->store->prune( array() ) );
+		self::assertStringContainsString( "JSON_UNQUOTE(JSON_EXTRACT(facts, '$.deployment_state'))", $this->connection->queries[0] );
+		self::assertStringContainsString( "'needs_attention'", $this->connection->queries[0] );
+		self::assertStringContainsString( "JSON_EXTRACT(facts, '$.deployment_attempt_id') IS NOT NULL", $this->connection->queries[0] );
+		self::assertStringContainsString( "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(facts, '$.deployment_resolved_at')), 'null') = 'null'", $this->connection->queries[0] );
+		self::assertStringContainsString( 'AND NOT (', $this->connection->queries[0] );
 	}
 
 	public function test_install_refuses_future_schema_and_missing_columns(): void {
@@ -308,9 +410,43 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		foreach ( $filters as $key => $value ) {
 			self::assertStringContainsString( 'BINARY ' . $key . ' = %s', $this->connection->queries[0] );
 		}
+		self::assertStringContainsString( "JSON_UNQUOTE(JSON_EXTRACT(facts, '$.deployment_state'))", $this->connection->queries[0] );
+		self::assertStringContainsString( "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(facts, '$.deployment_resolved_at')), 'null') = 'null'", $this->connection->queries[0] );
+		self::assertStringContainsString( 'OR (', $this->connection->queries[0] );
 		self::assertStringEndsWith( 'LIMIT 12', $this->connection->queries[0] );
 		self::assertFalse( $this->store->activity_history( array( 'invented' => 'value' ) )['available'] );
 		self::assertFalse( $this->store->activity_history( array( 'context' => str_repeat( 'a', 2049 ) ) )['available'] );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_shared_retention_settings_apply_to_both_stores_and_activity_queries(): void {
+		define( 'RAN_BOOSTER_HISTORY_ROWS', 350 );
+		define( 'RAN_BOOSTER_HISTORY_DAYS', 7 );
+		$policy = ActivityStore::retention_policy();
+		self::assertSame( 350, $policy['maximum_rows'] );
+		self::assertSame( 7, $policy['maximum_days'] );
+		$journal = new \RAN\Deployment\DeploymentAttemptRepository( $this->connection, 'wp_attempts' );
+		self::assertSame( 350, $journal->retention_configuration_status()['maximum_rows'] );
+		self::assertTrue( $this->store->activity_history()['available'] );
+		self::assertSame( 0, $this->store->prune( array() ) );
+		foreach ( $this->connection->queries as $query ) {
+			self::assertStringContainsString( 'LIMIT 350', $query );
+		}
+		self::assertSame( gmdate( 'Y-m-d H:i:s', time() - 7 * 86400 ), $this->connection->prepared[0]['args'][0] );
+	}
+
+	public function test_invalid_shared_retention_settings_use_bounded_defaults(): void {
+		foreach ( array( 199, 100001, '250', 250.0, true ) as $invalid ) {
+			$policy = ActivityStore::retention_policy( $invalid );
+			self::assertFalse( $policy['valid'] );
+			self::assertSame( 2000, $policy['maximum_rows'] );
+		}
+		foreach ( array( 0, 366, '7', 7.0, true ) as $invalid ) {
+			$policy = ActivityStore::retention_policy( days: $invalid );
+			self::assertFalse( $policy['valid'] );
+			self::assertSame( 30, $policy['maximum_days'] );
+		}
 	}
 
 	public function test_mixed_source_timestamp_tie_includes_activity_after_deployment(): void {

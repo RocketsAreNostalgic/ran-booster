@@ -15,11 +15,13 @@ use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\DeploymentRequest;
 use RAN\Deployment\DeploymentState;
 use RAN\Deployment\DeploymentStorageFailure;
+use RAN\Activity\ActivityStore;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\Storage\Database;
 use RAN\Storage\DatabaseLifecycleFailure;
 
 require_once __DIR__ . '/AttemptRepositoryDatabase.php';
+require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
 
 final class DeploymentAttemptRepositoryTest extends TestCase {
 
@@ -40,7 +42,8 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			function ( int $length ): string {
 				return str_repeat( chr( $this->random_byte++ ), $length );
 			},
-			$this->database_lifecycle
+			$this->database_lifecycle,
+			configured_max_attempt_rows: 200
 		);
 	}
 
@@ -93,6 +96,25 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		);
 
 		self::assertMatchesRegularExpression( '/^[a-f0-9]{32}$/D', $this->manual( 'example' )->get_correlation_id() );
+	}
+
+	public function test_missing_activity_storage_rolls_back_deployment_admission(): void {
+		$GLOBALS['ran_booster_activity_options'] = array();
+		$this->repository                        = new DeploymentAttemptRepository(
+			$this->database,
+			'wp_ran_booster_deployment_attempts',
+			static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-07-19 00:00:00 UTC' ),
+			fn ( int $length ): string => str_repeat( chr( $this->random_byte++ ), $length ),
+			$this->database_lifecycle,
+			activity: new ActivityStore( $this->database, 'wp_ran_booster_activity' )
+		);
+		try {
+			$this->manual( 'example' );
+			self::fail( 'Admission must not commit without its Activity record.' );
+		} catch ( DeploymentStorageFailure ) {
+			self::assertSame( array(), $this->database->rows );
+			self::assertContains( 'ROLLBACK', $this->database->queries );
+		}
 	}
 
 	public function test_read_connection_without_a_public_error_slot_does_not_gain_dynamic_state(): void {
@@ -297,21 +319,21 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		self::assertFalse( $this->repository->has_unresolved_package_attempt( 'plugin', 'example' ) );
 	}
 
-	public function test_attempt_row_limit_configuration_defaults_and_only_accepts_canonical_raised_integers(): void {
+	public function test_shared_row_limit_configuration_defaults_and_only_accepts_bounded_integers(): void {
 		self::assertSame(
 			array(
 				'valid'        => true,
-				'maximum_rows' => 200,
+				'maximum_rows' => 2000,
 				'source'       => 'default',
 			),
-			$this->repository->retention_configuration_status()
+			$this->repository_with_maximum()->retention_configuration_status()
 		);
 
 		foreach ( array( 199, 100001, '250', 250.0, true ) as $invalid ) {
 			self::assertSame(
 				array(
 					'valid'        => false,
-					'maximum_rows' => 200,
+					'maximum_rows' => 2000,
 					'source'       => 'configured',
 				),
 				$this->repository_with_maximum( $invalid )->retention_configuration_status()
@@ -333,7 +355,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_wp_config_constant_raises_the_attempt_row_limit(): void {
-		define( 'RAN_BOOSTER_MAX_ATTEMPT_ROWS', 350 );
+		define( 'RAN_BOOSTER_HISTORY_ROWS', 350 );
 
 		self::assertSame(
 			array(
@@ -369,7 +391,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$this->manual( 'fills-capacity' );
 
 		self::assertCount( 200, $this->database->rows );
-		self::assertStringNotContainsString( 'DELETE FROM', implode( "\n", $this->database->queries ) );
+		self::assertStringNotContainsString( 'WHERE id IN', implode( "\n", $this->database->queries ) );
 		$this->database->queries = array();
 
 		$this->manual( 'requires-pruning' );
@@ -394,6 +416,26 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$last_key = array_key_last( $this->database->queries );
 		self::assertNotNull( $last_key );
 		self::assertSame( 'ROLLBACK', $this->database->queries[ $last_key ] );
+	}
+
+	public function test_age_pruning_is_bounded_and_preserves_active_work_under_capacity(): void {
+		$this->seed_attempts( array_fill( 0, 101, DeploymentState::SUCCEEDED->value ) );
+		$this->seed_attempts( array( DeploymentState::QUEUED->value, DeploymentState::SUCCEEDED->value ), array(), 102 );
+		foreach ( $this->database->rows as &$row ) {
+			if ( 103 !== $row['id'] ) {
+				$row['created_at'] = '2026-06-01 00:00:00';
+			}
+		}
+		unset( $row );
+		$this->manual( 'first' );
+		self::assertCount( 4, $this->database->rows );
+		self::assertContains( 101, array_column( $this->database->rows, 'id' ) );
+		self::assertContains( 102, array_column( $this->database->rows, 'id' ) );
+		self::assertContains( 103, array_column( $this->database->rows, 'id' ) );
+		$this->manual( 'second' );
+		self::assertCount( 4, $this->database->rows );
+		self::assertNotContains( 101, array_column( $this->database->rows, 'id' ) );
+		self::assertContains( 102, array_column( $this->database->rows, 'id' ) );
 	}
 
 	public function test_manual_batch_reserves_only_eligible_rows_and_never_prunes_protected_work(): void {

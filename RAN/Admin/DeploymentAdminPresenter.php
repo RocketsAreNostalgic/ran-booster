@@ -191,26 +191,44 @@ final class DeploymentAdminPresenter {
 				throw new \RuntimeException( 'Activity storage is unavailable.' );
 			}
 			$rows = array();
-			foreach ( $this->attempts->activity_history( $base['filters'], $cursor ) as $attempt ) {
-				$rows[] = array_merge( $attempt->safe_data(), array( 'record_source' => 'deployment' ) );
-			}
 			foreach ( $page['records'] as $record ) {
-				$rows[] = array_merge(
+				$facts       = is_string( $record['facts'] ?? null ) ? json_decode( $record['facts'], true ) : null;
+				$attempt_id  = is_array( $facts ) && is_int( $facts['deployment_attempt_id'] ?? null ) ? $facts['deployment_attempt_id'] : null;
+				$state       = is_array( $facts ) && in_array( $facts['deployment_state'] ?? null, array( 'queued', 'running', 'succeeded', 'failed', 'needs_attention' ), true ) ? $facts['deployment_state'] : $record['status'];
+				$source      = is_array( $facts ) && in_array( $facts['deployment_source'] ?? null, array( 'manual', 'webhook' ), true ) ? $facts['deployment_source'] : null;
+				$slug        = is_array( $facts ) && is_string( $facts['deployment_package_slug'] ?? null ) && '' !== $facts['deployment_package_slug'] && strlen( $facts['deployment_package_slug'] ) <= 191 && 1 === preg_match( '//u', $facts['deployment_package_slug'] ) && ! preg_match( '/[\x00-\x1F\x7F]/', $facts['deployment_package_slug'] ) ? $facts['deployment_package_slug'] : $record['subject_identity'];
+				$requested   = is_array( $facts ) && is_string( $facts['deployment_requested_ref'] ?? null ) && strlen( $facts['deployment_requested_ref'] ) <= 255 && 1 === preg_match( '//u', $facts['deployment_requested_ref'] ) && ! preg_match( '/[\x00-\x1F\x7F]/', $facts['deployment_requested_ref'] ) ? $facts['deployment_requested_ref'] : null;
+				$resolved    = is_array( $facts ) && is_string( $facts['deployment_resolved_ref'] ?? null ) && strlen( $facts['deployment_resolved_ref'] ) <= 191 && 1 === preg_match( '//u', $facts['deployment_resolved_ref'] ) && ! preg_match( '/[\x00-\x1F\x7F]/', $facts['deployment_resolved_ref'] ) ? $facts['deployment_resolved_ref'] : null;
+				$mutation    = is_array( $facts ) && is_string( $facts['deployment_mutation_started_at'] ?? null ) && 1 === preg_match( '/\A\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\z/', $facts['deployment_mutation_started_at'] ) ? $facts['deployment_mutation_started_at'] : null;
+				$finished    = is_array( $facts ) && is_string( $facts['deployment_finished_at'] ?? null ) && 1 === preg_match( '/\A\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\z/', $facts['deployment_finished_at'] ) ? $facts['deployment_finished_at'] : ( $record['completed_at'] ?? null );
+				$outcome     = is_array( $facts ) && is_string( $facts['deployment_outcome'] ?? null ) && 1 === preg_match( '/\A[a-z][a-z0-9_]{0,63}\z/', $facts['deployment_outcome'] ) ? $facts['deployment_outcome'] : ( $record['reason'] ?? null );
+				$resolved_at = is_array( $facts ) && is_string( $facts['deployment_resolved_at'] ?? null ) && 1 === preg_match( '/\A\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\z/', $facts['deployment_resolved_at'] ) ? $facts['deployment_resolved_at'] : null;
+				$resolved_by = is_array( $facts ) && is_int( $facts['deployment_resolved_by'] ?? null ) && $facts['deployment_resolved_by'] > 0 ? $facts['deployment_resolved_by'] : null;
+				$rows[]      = array_merge(
 					$record,
 					array(
-						'record_source'  => 'activity',
-						'created_at'     => $record['sort_at'],
-						'state'          => $record['status'],
-						'package_type'   => $record['subject_type'],
-						'package_slug'   => $record['subject_identity'],
-						'correlation_id' => $record['correlation'],
+						'record_source'       => null === $attempt_id ? 'activity' : 'deployment',
+						'activity_record_id'  => $record['id'],
+						'created_at'          => $record['sort_at'],
+						'state'               => $state,
+						'package_type'        => $record['subject_type'],
+						'package_slug'        => $slug,
+						'correlation_id'      => $record['correlation'],
+						'id'                  => $attempt_id ?? $record['id'],
+						'source'              => $source,
+						'requested_ref'       => $requested,
+						'resolved_ref'        => $resolved,
+						'mutation_started_at' => $mutation,
+						'finished_at'         => $finished,
+						'outcome_code'        => $outcome,
+						'resolved_at'         => $resolved_at,
+						'resolved_by'         => $resolved_by,
 					)
 				);
 			}
-			usort( $rows, static fn ( array $a, array $b ): int => array( $b['created_at'], $b['record_source'], $b['id'] ) <=> array( $a['created_at'], $a['record_source'], $a['id'] ) );
 			$base['items']       = array_slice( $rows, 0, 25 );
 			$last                = end( $base['items'] );
-			$base['next_cursor'] = count( $rows ) > 25 && false !== $last ? 'v1|' . $filter_key . '|' . $last['created_at'] . '|' . $last['record_source'] . '|' . $last['id'] : null;
+			$base['next_cursor'] = count( $page['records'] ) > 25 && false !== $last ? 'v1|' . $filter_key . '|' . $last['created_at'] . '|activity|' . $last['activity_record_id'] : null;
 			$base['unavailable'] = false;
 		} catch ( Throwable $failure ) {
 			$this->log_read_failure( 'shared activity history unavailable', $failure, 'activity_history' );

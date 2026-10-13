@@ -24,6 +24,8 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		'tests/RepositoryProvider/GitHubExternalExtensionParityTest.php',
 		'tests/RepositoryProvider/Support/ShippedSecretPolicyCatalog.php',
 		'tests/Runtime/ReleaseManagementCutoverBootstrapTest.php',
+		// The isolated fixture contract consumes the shipped browser to reject invented HTTP response shapes.
+		'tests/ScenarioFixturePluginTest.php',
 		'tests/Webhook/SignedWebhookVerifierTest.php',
 		'tests/Webhook/WebhookProcessorTest.php',
 		'tests/WordPress/ManagedReleaseRuntimeTest.php',

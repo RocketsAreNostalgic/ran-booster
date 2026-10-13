@@ -24,6 +24,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class TroubleshootingViewTest extends TestCase {
 
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
 	public function test_journal_outcomes_translate_when_rendered(): void {
 		foreach ( array(
 			'diagnostics.partial'                   => 'Diagnostics returned a partial report.',

@@ -17,7 +17,7 @@ final class ScenarioFixturePluginTest extends TestCase {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override.
 	protected function setUp(): void {
 		$_SERVER['REQUEST_METHOD'] = 'POST';
-		require __DIR__ . '/Support/ScenarioFixtureWordPressError.php';
+		require __DIR__ . '/Support/WPError.php';
 		require __DIR__ . '/Support/ScenarioFixtureWordPressFunctions.php';
 		$this->directory = sys_get_temp_dir() . '/ran-booster-scenario-' . bin2hex( random_bytes( 8 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Private disposable test directory.

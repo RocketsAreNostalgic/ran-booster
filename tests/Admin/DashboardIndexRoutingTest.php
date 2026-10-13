@@ -1533,7 +1533,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertTrue( $data['package_source']['unavailable'] );
 	}
 
-	public function test_release_package_retains_current_branch_readiness_without_provider_operations(): void {
+	/** @return list<array{bool}> */
+	public static function retained_readiness_sidecar_provider(): array {
+		return array( array( false ), array( true ) );
+	}
+
+	#[DataProvider( 'retained_readiness_sidecar_provider' )]
+	public function test_release_package_retains_current_branch_readiness_without_provider_operations( bool $secrets_unavailable ): void {
 		$package  = $this->managed_package(
 			'release/release.php',
 			'Release Package',
@@ -1544,6 +1550,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'owner/repository'
 		);
 		$plugins  = new class( $package ) extends PluginRepository {
+			public int $inventory_reads = 0;
+
 			public function __construct( private Package $package ) {
 			}
 
@@ -1559,10 +1567,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_plugins retains the production method contract; these inputs do not affect this controlled result.
 			public function all_deployment_plugins( ?\RAN\PackageSource $source = null ): array {
+				++$this->inventory_reads;
 				return array( 'release/release.php' => $this->package );
 			}
 		};
 		$themes   = new class() extends ThemeRepository {
+			public int $inventory_reads = 0;
+
 			public function __construct() {
 			}
 
@@ -1572,11 +1583,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_themes retains the production method contract; these inputs do not affect this controlled result.
 			public function all_deployment_themes( ?\RAN\PackageSource $source = null ): array {
+				++$this->inventory_reads;
 				return array();
 			}
 		};
-		$secrets  = new class() extends SecretsFile {
-			public function __construct() {
+		$secrets  = new class( $secrets_unavailable ) extends SecretsFile {
+			public function __construct( private bool $unavailable ) {
 				parent::__construct( '/unused/test-secrets.php', array() );
 			}
 
@@ -1585,6 +1597,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of webhook_profiles retains the production method contract; these inputs do not affect this controlled result.
 			public function webhook_profiles( ProviderCode|string $provider ): array {
+				if ( $this->unavailable ) {
+					throw new RuntimeException( 'Controlled sidecar failure.' );
+				}
 				return array(
 					'webhook-profile' => array(
 						'scope'        => 'repository',
@@ -1611,7 +1626,6 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertInstanceOf( \RAN\RepositoryProvider\WebhookNormalizer::class, $provider );
 		self::assertInstanceOf( RepositoryProvider::class, $provider );
 		$evaluator = new WebhookAssistanceReadinessEvaluator( $plugins, $themes, $secrets, new ReadyDashboardDatabase(), static fn (): bool => true );
-		self::assertSame( 'ready', $evaluator->evaluate( 'gh', rest_url( 'ran-booster/v1/webhooks/gh' ) )->to_array()['site']['status'] );
 		$dashboard = $this->dashboard(
 			$secrets,
 			plugins: $plugins,
@@ -1630,9 +1644,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertIsArray( $readiness );
 		self::assertArrayHasKey( 'retained', $readiness );
 		self::assertTrue( $readiness['retained'] );
-		self::assertSame( 'ready', $readiness['site']['status'] );
+		self::assertSame( $secrets_unavailable ? 'blocked' : 'ready', $readiness['site']['status'] );
 		self::assertSame( '101', $readiness['repository']['repository_id'] );
-		self::assertSame( 'repository', $readiness['repository']['local_secret_coverage'] );
+		self::assertSame( $secrets_unavailable ? 'unknown' : 'repository', $readiness['repository']['local_secret_coverage'] );
+		self::assertSame( 1, $plugins->inventory_reads, 'The receiver projection is the only inventory reader needed by this package page.' );
+		self::assertSame( 1, $themes->inventory_reads );
 	}
 
 	public function test_troubleshooting_results_render_only_in_the_same_dashboard_request(): void {

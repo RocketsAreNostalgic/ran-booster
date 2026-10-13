@@ -481,7 +481,6 @@ final readonly class ProviderSettingsPresenter {
 	 *   repository_id: string,
 	 *   repository: string,
 	 *   local_secret_coverage: string,
-	 *   branch_package_references: list<string>,
 	 *   provider_webhooks_url: string
 	 * }|null
 	 */
@@ -517,17 +516,13 @@ final readonly class ProviderSettingsPresenter {
 			$available = false;
 		}
 
-		$branch_consumers = $this->branch_consumers( $provider_code, $repository_id, $repository );
-
 		return array(
-			'available'                 => $available,
-			'provider_code'             => $provider_code,
-			'repository_id'             => $repository_id,
-			'repository'                => $repository,
-			'local_secret_coverage'     => $coverage,
-			'branch_evidence_available' => $branch_consumers['available'],
-			'branch_package_references' => $branch_consumers['references'],
-			'provider_webhooks_url'     => $provider_webhooks_url,
+			'available'             => $available,
+			'provider_code'         => $provider_code,
+			'repository_id'         => $repository_id,
+			'repository'            => $repository,
+			'local_secret_coverage' => $coverage,
+			'provider_webhooks_url' => $provider_webhooks_url,
 		);
 	}
 
@@ -1074,51 +1069,6 @@ final readonly class ProviderSettingsPresenter {
 		unset( $repository );
 
 		return $provider_repositories;
-	}
-
-	/** @return array{available: bool, references: list<string>} */
-	private function branch_consumers( string $provider_code, string $repository_id, string $repository ): array {
-		if ( null === $this->plugins || null === $this->themes ) {
-			return array(
-				'available'  => false,
-				'references' => array(),
-			);
-		}
-
-		try {
-			$packages = array_merge(
-				$this->plugins->all_deployment_plugins(),
-				$this->themes->all_deployment_themes()
-			);
-		} catch ( Throwable ) {
-			return array(
-				'available'  => false,
-				'references' => array(),
-			);
-		}
-
-		$references = array();
-		foreach ( $packages as $package ) {
-			if ( ! $package instanceof Package
-				|| PackageSource::BRANCH !== $package->get_source()
-				|| $provider_code !== $package->get_provider_code() ) {
-				continue;
-			}
-			$package_id = (string) ( $package->get_provider_repository_id() ?? '' );
-			if ( ( '' !== $package_id && hash_equals( $repository_id, $package_id ) )
-				|| 0 === strcasecmp( trim( $repository, '/' ), trim( (string) $package->get_repository(), '/' ) )
-			) {
-				$references[] = (string) $package->get_identifier();
-			}
-		}
-
-		$references = array_values( array_unique( $references ) );
-		sort( $references, SORT_STRING );
-
-		return array(
-			'available'  => true,
-			'references' => $references,
-		);
 	}
 
 	/** @param array<string, array<string, mixed>> $profiles */

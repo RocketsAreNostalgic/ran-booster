@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.0.0-beta.35](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.34...v1.0.0-beta.35) (2026-10-13)
+
+
+### Features
+
+* add durable shared activity history and package check summaries ([#307](https://github.com/RocketsAreNostalgic/ran-booster/issues/307)) ([7ee4c7a](https://github.com/RocketsAreNostalgic/ran-booster/commit/7ee4c7aaaf6292e821ecb858782d40e5109c314f))
+* adoption lifetime identity and safe corrupt-management recovery ([#305](https://github.com/RocketsAreNostalgic/ran-booster/issues/305)) ([ef5a9c1](https://github.com/RocketsAreNostalgic/ran-booster/commit/ef5a9c10fc89528116d034d38f186dadf2c9b5a4))
+* record webhook credential and diagnostic outcomes ([#308](https://github.com/RocketsAreNostalgic/ran-booster/issues/308)) ([24d37f8](https://github.com/RocketsAreNostalgic/ran-booster/commit/24d37f83076b975aa668360c662ea711227c46d4))
+* report deployments through Activity API ([#309](https://github.com/RocketsAreNostalgic/ran-booster/issues/309)) ([9394a7d](https://github.com/RocketsAreNostalgic/ran-booster/commit/9394a7d5357a1b979a7261659eb914070d301372))
+
+
+### Bug Fixes
+
+* **storage:** validate persisted privacy and clarify row checks ([#303](https://github.com/RocketsAreNostalgic/ran-booster/issues/303)) ([890a8a8](https://github.com/RocketsAreNostalgic/ran-booster/commit/890a8a8e186da595040acd6966c6d1a6979be2cd))
+
 ## [1.0.0-beta.34](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.33...v1.0.0-beta.34) (2026-10-10)
 
 

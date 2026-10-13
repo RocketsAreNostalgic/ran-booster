@@ -17,7 +17,7 @@ final class CredentialValidationProvider implements RepositoryProvider, Credenti
 	/** @var list<string> */
 	public array $validated_ids = array();
 
-	public function __construct( private CredentialValidationResult $result ) {
+	public function __construct( private CredentialValidationResult $result, private ?\Closure $on_validate = null ) {
 	}
 
 	public function get_metadata(): ProviderMetadata {
@@ -31,6 +31,9 @@ final class CredentialValidationProvider implements RepositoryProvider, Credenti
 
 	public function validate_credential( string $credential_id ): CredentialValidationResult {
 		$this->validated_ids[] = $credential_id;
+		if ( null !== $this->on_validate ) {
+			( $this->on_validate )();
+		}
 
 		return $this->result;
 	}

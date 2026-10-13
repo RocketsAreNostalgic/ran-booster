@@ -27,7 +27,8 @@ class ProviderProfileAdminController {
 		private PublicRepositoryLookupProfileStore $public_lookup_profiles,
 		private CredentialExpiryObservationStore $expiry_observations,
 		private ?CoreAdminInteractionFacade $interaction = null,
-		?RepositoryBranchCheckEvidenceStore $branch_check_evidence = null
+		?RepositoryBranchCheckEvidenceStore $branch_check_evidence = null,
+		private ?\RAN\Activity\ActivityStore $activity = null
 	) {
 
 		$this->branch_check_evidence = $branch_check_evidence ?? new RepositoryBranchCheckEvidenceStore();
@@ -67,11 +68,13 @@ class ProviderProfileAdminController {
 	/** @param array<string, mixed> $request Untrusted request fields, validated before use. */
 	public function manage_credential_validation( array $request, bool $htmx_request ): void {
 		$this->authorize( 'ran-booster-save-secrets' );
-		$provider = null;
-		$id       = null;
-		$message  = null;
-		$error    = null;
-		$status   = 200;
+		$provider    = null;
+		$id          = null;
+		$message     = null;
+		$error       = null;
+		$status      = 200;
+		$activity_id = null;
+		$result      = null;
 		try {
 			$provider = $this->provider_code( $request );
 			$id       = $this->profile_id( $request );
@@ -83,7 +86,9 @@ class ProviderProfileAdminController {
 			} catch ( UnsupportedProviderCapability ) {
 				throw new CredentialRequestException( __( 'Credential validation is unavailable for this repository provider.', 'ran-booster' ) );
 			}
-			$result = $validator->validate_credential( $id );
+			$activity_id = $this->begin_credential_activity( $provider, $id );
+			$result      = $validator->validate_credential( $id );
+			$this->complete_credential_activity( $activity_id, $result );
 			if ( $result->is_valid() ) {
 				if ( null !== $result->expiry ) {
 
@@ -126,6 +131,43 @@ class ProviderProfileAdminController {
 		if ( $htmx_request && $provider instanceof ProviderCode && is_string( $id ) ) {
 			$this->respond_to_htmx_credential_validation( $id, $message, $error, $status );
 		}
+	}
+
+	private function begin_credential_activity( ProviderCode $provider, string $id ): ?int {
+		return $this->activity?->begin(
+			$provider->value,
+			new \RAN\Activity\ActivityRequest( 'credential.validate' ),
+			array(
+				'subject_type'     => 'provider',
+				'subject_identity' => $provider->value,
+				'adoption_token'   => null,
+				'context'          => $this->branch_check_evidence->credential_context( $provider->value, $id ),
+				'purpose'          => null,
+				'provenance'       => 'core',
+				'actor'            => get_current_user_id(),
+			)
+		);
+	}
+
+	/** Record validation evidence only; this does not claim expiry settings were saved. */
+	private function complete_credential_activity( ?int $id, ?\RAN\RepositoryProvider\CredentialValidationResult $result ): void {
+		if ( null === $id ) {
+			return;
+		}
+		$status = match ( $result?->reason ) {
+			'valid' => 'succeeded',
+			'invalid' => 'rejected',
+			default => 'failed',
+		};
+		$this->activity?->complete(
+			$id,
+			$status,
+			'credential.' . ( $result->reason ?? 'validation_failed' ),
+			facts: array(
+				'expiry_state' => null === $result?->expiry ? 'not_reported' : ( $result->expiry->is_known() ? 'known' : 'unknown' ),
+				'expires_at'   => $result?->expiry?->expires_at,
+			)
+		);
 	}
 
 	/** @param array<string, mixed> $request Untrusted request fields, validated before use. */

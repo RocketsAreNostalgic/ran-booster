@@ -817,3 +817,12 @@ protected slots. Daily maintenance processes at most twenty batches of 100
 records and stops on storage failure. The target is not an instantaneous hard
 cap: missed maintenance or sustained input above cleanup throughput can leave
 a backlog; reads remain bounded independently.
+
+Core also records credential validation, webhook management and diagnostic runs.
+Credential history describes the validator's reported expiry (not reported,
+unknown or a known UTC date); it does not claim the credential or expiry was
+saved. Webhook outcomes follow the final local compare-and-swap, with partial
+remote/local results stated explicitly; a test request does not verify delivery.
+Diagnostic history contains only bounded status counts and partial-run reasons,
+not diagnostic messages or credentials. Expanded activity details show these
+safe facts. The existing operational stores and debug capture remain separate.

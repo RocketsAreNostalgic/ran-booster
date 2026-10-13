@@ -15,6 +15,15 @@ final class DeploymentOutcomeMessage {
 			return $message;
 		}
 		return match ( $reason ) {
+			'diagnostics.partial' => __( 'Diagnostics returned a partial report.', 'ran-booster' ),
+			'diagnostics.passed' => __( 'Diagnostics passed.', 'ran-booster' ),
+			'diagnostics.failed' => __( 'Diagnostics reported failures.', 'ran-booster' ),
+			'diagnostics.warning' => __( 'Diagnostics reported warnings.', 'ran-booster' ),
+			'diagnostics.not_configured' => __( 'Diagnostics found missing configuration.', 'ran-booster' ),
+			'webhook.operation_succeeded' => __( 'Webhook operation completed.', 'ran-booster' ),
+			'webhook.operation_failed' => __( 'Webhook operation failed.', 'ran-booster' ),
+			'webhook.remote_unconfirmed' => __( 'The remote webhook outcome is unconfirmed.', 'ran-booster' ),
+			'webhook.local_persistence_conflict', 'webhook.local_persistence_unconfirmed' => __( 'Remote webhook work completed; local persistence is unconfirmed.', 'ran-booster' ),
 			'subdirectory_unavailable' => __( 'The configured package subdirectory could not be found or inspected in the repository archive.', 'ran-booster' ),
 			'subdirectory_unverified' => __( 'The configured repository subdirectory could not be verified.', 'ran-booster' ),
 			'unable_to_check' => __( 'The branch check could not complete. Review the package settings and try again.', 'ran-booster' ),
@@ -38,6 +47,44 @@ final class DeploymentOutcomeMessage {
 				default => __( 'Check could not complete.', 'ran-booster' ),
 			},
 		};
+	}
+
+	/** @return array<string, string> Closed, display-safe observation details. */
+	public static function activity_facts( mixed $encoded ): array {
+		$facts = is_string( $encoded ) && strlen( $encoded ) <= 4096 ? json_decode( $encoded, true ) : null;
+		if ( ! is_array( $facts ) ) {
+			return array();
+		}
+		$details = array();
+		foreach ( array(
+			'diagnostic_passed'         => array( __( 'Diagnostics passed', 'ran-booster' ), 'count' ),
+			'diagnostic_warning'        => array( __( 'Diagnostic warnings', 'ran-booster' ), 'count' ),
+			'diagnostic_failed'         => array( __( 'Diagnostics failed', 'ran-booster' ), 'count' ),
+			'diagnostic_not_configured' => array( __( 'Diagnostics not configured', 'ran-booster' ), 'count' ),
+			'expiry_state'              => array( __( 'Credential expiry', 'ran-booster' ), array( 'not_reported', 'unknown', 'known' ) ),
+			'expires_at'                => array( __( 'Credential expires (UTC)', 'ran-booster' ), 'date' ),
+			'webhook_state'             => array( __( 'Webhook operation', 'ran-booster' ), array( 'succeeded', 'partial', 'ambiguous', 'failed' ) ),
+			'webhook_delivery'          => array( __( 'Webhook delivery', 'ran-booster' ), array( 'configured_pending_delivery', 'verified', 'unverified', 'unknown', 'absent' ) ),
+			'webhook_persistence'       => array( __( 'Webhook local record', 'ran-booster' ), array( 'partial', 'unconfirmed', 'confirmed', 'not_confirmed' ) ),
+			'webhook_local_code'        => array( __( 'Webhook local result code', 'ran-booster' ), 'code' ),
+			'partial_reason'            => array( __( 'Diagnostic partial-result reason', 'ran-booster' ), array( 'local_incomplete', 'deadline_exhausted', 'remote_calls_exhausted', 'provider_unavailable', 'provider_results_invalid', 'result_limit_exhausted' ) ),
+		) as $key => [ $label, $allowed ] ) {
+			$value = $facts[ $key ] ?? null;
+			$date  = 'date' === $allowed && is_string( $value ) && 1 === preg_match( '/\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\z/', $value ) ? \DateTimeImmutable::createFromFormat( '!Y-m-d\TH:i:s\Z', $value ) : false;
+			if ( ( 'count' === $allowed && is_int( $value ) && $value >= 0 && $value <= 8 )
+				|| ( 'date' === $allowed && is_string( $value ) && $date instanceof \DateTimeImmutable && $date->format( 'Y-m-d\TH:i:s\Z' ) === $value && 'known' === ( $facts['expiry_state'] ?? null ) )
+				|| ( 'code' === $allowed && is_string( $value ) && 1 === preg_match( '/\A[a-z0-9][a-z0-9_.-]{0,95}\z/', $value ) )
+				|| ( is_array( $allowed ) && is_string( $value ) && in_array( $value, $allowed, true ) ) ) {
+				$details[ $label ] = match ( $value ) {
+					'unknown' => __( 'Unknown', 'ran-booster' ), 'known' => __( 'Known', 'ran-booster' ), 'not_reported' => __( 'Not reported', 'ran-booster' ),
+					'succeeded' => __( 'Completed', 'ran-booster' ), 'failed' => __( 'Failed', 'ran-booster' ), 'partial' => __( 'Partially completed', 'ran-booster' ), 'ambiguous' => __( 'Outcome uncertain', 'ran-booster' ),
+					'configured_pending_delivery' => __( 'Configured; delivery not yet verified', 'ran-booster' ), 'verified' => __( 'Verified', 'ran-booster' ), 'unverified' => __( 'Not verified', 'ran-booster' ), 'absent' => __( 'Absent', 'ran-booster' ),
+					'confirmed' => __( 'Confirmed', 'ran-booster' ), 'unconfirmed', 'not_confirmed' => __( 'Not confirmed', 'ran-booster' ),
+					default => (string) $value,
+				};
+			}
+		}
+		return $details;
 	}
 
 	public static function for_code( string $code ): string {

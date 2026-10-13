@@ -147,6 +147,9 @@ $origin_labels = array(
 									?>
 									<div><dt><?php echo esc_html( $label ); ?></dt><dd><?php echo esc_html( (string) ( $item[ $key ] ?? '' ) ); ?></dd></div>
 								<?php } ?>
+								<?php foreach ( DeploymentOutcomeMessage::activity_facts( $item['facts'] ?? null ) as $fact_label => $fact_value ) { ?>
+									<div><dt><?php echo esc_html( $fact_label ); ?></dt><dd><?php echo esc_html( $fact_value ); ?></dd></div>
+								<?php } ?>
 							</dl>
 						<?php } else { ?>
 						<dl class="ran-booster-activity__details">

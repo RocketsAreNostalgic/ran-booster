@@ -300,7 +300,11 @@ class RepositoryBranchCheckEvidenceStore {
 	}
 
 	private function profile_fingerprint( Package $package, ?string $profile_id ): string {
-		$provider  = (string) $package->get_provider_code();
+		return $this->credential_context( (string) $package->get_provider_code(), $profile_id );
+	}
+
+	/** Non-secret profile identity and current access generation for observational capture. */
+	public function credential_context( string $provider, ?string $profile_id ): string {
 		$anonymous = null === $profile_id || '' === $profile_id;
 		$profile   = $anonymous ? 'anonymous:' : 'profile:' . $profile_id;
 		$all       = $this->all();

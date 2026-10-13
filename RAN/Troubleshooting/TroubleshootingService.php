@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace RAN\Troubleshooting;
 
 use Closure;
+use RAN\Activity\ActivityRequest;
+use RAN\Activity\ActivityStore;
 use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderDiagnosticBudgetExceeded;
@@ -36,7 +38,8 @@ final class TroubleshootingService {
 		private readonly ProviderRegistry $providers,
 		private readonly ?Closure $clock = null,
 		private readonly ?SecretsFile $secrets = null,
-		private readonly ?CoreSelfUpdateStatus $core_self_update = null
+		private readonly ?CoreSelfUpdateStatus $core_self_update = null,
+		private readonly ?ActivityStore $activity = null
 	) {
 	}
 
@@ -67,6 +70,79 @@ final class TroubleshootingService {
 	 */
 
 	public function diagnose( string $provider, ?string $credential_id, ?string $repository ): array {
+		$id       = null;
+		$resolved = null;
+		if ( null !== $this->activity ) {
+			try {
+				$resolved = $this->providers->metadata()[ ProviderCode::parse( $provider )->value ] ?? null;
+			} catch ( \InvalidArgumentException ) {
+				$resolved = null;
+			}
+		}
+		if ( null !== $this->activity && null !== $resolved ) {
+			$code = $resolved->code->value;
+			$id   = $this->activity->begin(
+				$code,
+				new ActivityRequest( 'diagnostics.run' ),
+				array(
+					'subject_type'     => 'provider',
+					'subject_identity' => $code,
+					'adoption_token'   => null,
+					'context'          => '',
+					'purpose'          => null,
+					'provenance'       => 'core',
+					'actor'            => function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0,
+				)
+			);
+		}
+		$payload = $this->run_diagnostics( $provider, $credential_id, $repository );
+		$this->record_outcome( $id, $payload );
+		return $payload;
+	}
+
+	/** @param array<string,mixed> $payload */
+	private function record_outcome( ?int $id, array $payload ): void {
+		if ( null === $this->activity || null === $id ) {
+			return;
+		}
+		$counts = array(
+			'pass'           => 0,
+			'warning'        => 0,
+			'fail'           => 0,
+			'not_configured' => 0,
+		);
+		foreach ( is_array( $payload['results'] ?? null ) ? $payload['results'] : array() as $result ) {
+			$status = is_array( $result ) ? $result['status'] ?? null : null;
+			if ( is_string( $status ) && isset( $counts[ $status ] ) ) {
+				++$counts[ $status ];
+			}
+		}
+		$partial           = is_string( $payload['partial_reason'] ?? null ) ? $payload['partial_reason'] : null;
+		[$status, $reason] = match ( true ) {
+			null !== $partial => array( 'failed', 'diagnostics.partial' ),
+			$counts['fail'] > 0 => array( 'failed', 'diagnostics.failed' ),
+			$counts['warning'] > 0 => array( 'rejected', 'diagnostics.warning' ),
+			$counts['not_configured'] > 0 => array( 'skipped', 'diagnostics.not_configured' ),
+			default => array( 'succeeded', 'diagnostics.passed' ),
+		};
+		$this->activity->complete(
+			$id,
+			$status,
+			$reason,
+			'',
+			'',
+			array(
+				'diagnostic_passed'         => $counts['pass'],
+				'diagnostic_warning'        => $counts['warning'],
+				'diagnostic_failed'         => $counts['fail'],
+				'diagnostic_not_configured' => $counts['not_configured'],
+				'partial_reason'            => $partial,
+			)
+		);
+	}
+
+	/** @return array<string,mixed> */
+	private function run_diagnostics( string $provider, ?string $credential_id, ?string $repository ): array {
 		$input_invalid = false;
 		try {
 			$request = new ProviderDiagnosticRequest(

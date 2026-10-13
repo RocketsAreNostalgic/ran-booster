@@ -171,12 +171,16 @@ Booster runs one sequential package mutation at a time and records one of five
 states: queued, running, succeeded, failed or needs attention. It uses
 WordPress core's updater and temporary-backup behavior, but does not provide a
 custom rollback, automatic retry, recovery graph or recurring worker schedule.
-Deployment history is capped at 200 rows. Booster prunes only the oldest
-successful or failed rows when admitting new work and never prunes queued,
-running or needs-attention rows. `RAN_BOOSTER_MAX_ATTEMPT_ROWS` may raise the
-ceiling to a canonical integer no greater than 100000; invalid or lower values
-use 200 and appear in Troubleshooting. The 100-row activity-page read bound and
-Load more pagination remain independent.
+Activity reports and the deployment journal share an ordinary-history policy
+of 30 days and 2,000 rows by default. In `wp-config.php`, sites may set
+`RAN_BOOSTER_HISTORY_ROWS` to an integer from 200 through 100000 and
+`RAN_BOOSTER_HISTORY_DAYS` to an integer from 1 through 365. Invalid values use
+their respective defaults and appear in Troubleshooting. The former
+`RAN_BOOSTER_MAX_ATTEMPT_ROWS` setting is retired and has no effect.
+Bounded pruning protects queued, running and unresolved needs-attention work,
+and current Activity observations. Retention targets can therefore be exceeded;
+the journal refuses new work when safe capacity is unavailable. Activity pages
+display at most 25 records, with Load older activity pagination.
 
 Provider deployments download the whole repository ZIP, even when a package
 subdirectory is selected. The target-site default is 50 MiB compressed and

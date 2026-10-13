@@ -300,4 +300,10 @@ if ( ! is_callable( $ran_booster_activity_proof ) ) {
 }
 $ran_booster_activity_proof( $wpdb );
 
+$ran_booster_option_proof = require __DIR__ . '/option-concurrency-smoke.php';
+if ( ! is_callable( $ran_booster_option_proof ) ) {
+	throw new RuntimeException( 'The option concurrency proof is unavailable.' );
+}
+$ran_booster_option_proof( $wpdb );
+
 WP_CLI::success( 'RAN Booster database storage smoke passed on ' . $wpdb->db_server_info() . '.' ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)

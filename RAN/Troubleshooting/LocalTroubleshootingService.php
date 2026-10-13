@@ -212,16 +212,16 @@ class LocalTroubleshootingService {
 			return new ProviderDiagnosticResult(
 				ProviderDiagnosticResult::FAILED,
 				'local.deployment_attempts.retention_unavailable',
-				'Booster could not validate the deployment-history row limit.',
-				'Check RAN_BOOSTER_MAX_ATTEMPT_ROWS in wp-config.php, then run diagnostics again.'
+				'Booster could not validate the shared history retention settings.',
+				'Check RAN_BOOSTER_HISTORY_ROWS and RAN_BOOSTER_HISTORY_DAYS in wp-config.php, then run diagnostics again.'
 			);
 		}
 		if ( ! $retention['valid'] ) {
 			return new ProviderDiagnosticResult(
 				ProviderDiagnosticResult::WARNING,
 				'local.deployment_attempts.retention_configuration_invalid',
-				'The deployment-history row limit is invalid, so Booster is using the safe 200-row default.',
-				'Set RAN_BOOSTER_MAX_ATTEMPT_ROWS to an integer from 200 through 100000, then run diagnostics again.'
+				'A history retention setting is invalid, so Booster is using the default for that setting.',
+				'Set RAN_BOOSTER_HISTORY_ROWS to an integer from 200 through 100000 and RAN_BOOSTER_HISTORY_DAYS from 1 through 365, then run diagnostics again.'
 			);
 		}
 

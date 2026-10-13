@@ -219,7 +219,8 @@ final class BoosterServiceProvider {
 					Database::attempt_table_name(),
 					null,
 					null,
-					$container->make( Database::class )
+					$container->make( Database::class ),
+					activity: $container->make( \RAN\Activity\ActivityStore::class )
 				);
 			}
 		);

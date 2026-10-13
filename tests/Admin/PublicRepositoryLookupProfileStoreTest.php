@@ -10,6 +10,37 @@ use RuntimeException;
 
 final class PublicRepositoryLookupProfileStoreTest extends TestCase {
 
+	public function test_stale_matching_snapshot_does_not_skip_a_required_write(): void {
+		$store = new InMemoryPublicRepositoryLookupProfileStore();
+		$store->set( 'gh', 'public-profile' );
+		$store->stale_read     = $store->profiles;
+		$store->profiles['gh'] = 'other-profile';
+		$store->set( 'gh', 'public-profile' );
+		$store->stale_read = null;
+		self::assertSame( 'public-profile', $store->get( 'gh' ) );
+	}
+
+	public function test_clear_preserves_concurrent_other_provider(): void {
+		$store = new InMemoryPublicRepositoryLookupProfileStore();
+		$store->set( 'gh', 'public-profile' );
+		$store->before_write = static function () use ( $store ): void {
+			$store->set( 'bb', 'other-profile' );
+		};
+		$store->set( 'gh', null );
+		self::assertNull( $store->get( 'gh' ) );
+		self::assertSame( 'other-profile', $store->get( 'bb' ) );
+	}
+
+	public function test_concurrent_other_provider_is_preserved(): void {
+		$store               = new InMemoryPublicRepositoryLookupProfileStore();
+		$store->before_write = static function () use ( $store ): void {
+			$store->set( 'bb', 'other-profile' );
+		};
+		$store->set( 'gh', 'public-profile' );
+		self::assertSame( 'other-profile', $store->get( 'bb' ) );
+		self::assertSame( 'public-profile', $store->get( 'gh' ) );
+	}
+
 	public function test_changed_and_unchanged_writes_preserve_then_clear_the_preference(): void {
 		$store = new InMemoryPublicRepositoryLookupProfileStore();
 		$store->set( 'gh', 'public-profile' );

@@ -2346,8 +2346,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$this->deployment_attempts( $database )
 		)->get_index()['data']['deployment_activity'];
 
-		self::assertCount( 9, $data['items'] );
-		self::assertSame( 9, $data['items'][0]['id'] );
+		self::assertSame( array(), $data['items'] );
 		self::assertNull( $data['next_cursor'] );
 		self::assertFalse( $data['has_cursor'] );
 	}
@@ -2418,7 +2417,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		)->get_index()['data']['deployment_activity'];
 
 		self::assertFalse( $data['unavailable'] );
-		self::assertCount( 1, $data['items'] );
+		self::assertSame( array(), $data['items'] );
 		self::assertArrayNotHasKey( 'example', $data['package_settings_urls']['plugin'] );
 		self::assertSame( array(), $data['package_settings_urls']['theme'] );
 	}
@@ -2434,16 +2433,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		$first_page = $this->dashboard( $this->throwing_secrets(), null, null, $attempts )->get_index()['data']['deployment_activity'];
 
-		self::assertCount( 25, $first_page['items'] );
-		self::assertSame( 26, $first_page['items'][0]['id'] );
-		self::assertSame( 2, $first_page['items'][24]['id'] );
-		self::assertSame( 'v1|' . hash( 'sha256', '' ) . '|2026-07-19 00:00:00|deployment|2', $first_page['next_cursor'] );
+		self::assertSame( array(), $first_page['items'] );
+		self::assertNull( $first_page['next_cursor'] );
 
 		$_GET['before'] = $first_page['next_cursor'];
 		$last_page      = $this->dashboard( $this->throwing_secrets(), null, null, $attempts )->get_index()['data']['deployment_activity'];
 
-		self::assertCount( 1, $last_page['items'] );
-		self::assertSame( 1, $last_page['items'][0]['id'] );
+		self::assertSame( array(), $last_page['items'] );
 		self::assertNull( $last_page['next_cursor'] );
 		self::assertTrue( $last_page['has_cursor'] );
 	}
@@ -2571,12 +2567,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 		// The same available repository must really service a valid passive history query.
 		$_GET = array();
 		$data = $presenter->activity();
-		self::assertCount( 1, $data['items'] );
-		self::assertNotEmpty( $database->reads );
+		self::assertSame( array(), $data['items'] );
+		self::assertSame( array(), $database->reads );
 		self::assertSame( 0, $database->writes );
 	}
 
-	public function test_shared_activity_page_merges_same_time_sources_and_bounds_the_page(): void {
+	public function test_shared_activity_page_uses_the_activity_store_and_bounds_the_page(): void {
 		require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
 		$GLOBALS['ran_booster_activity_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ]     = '1';
 		$GLOBALS['ran_booster_storage_test_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ] = '1';
@@ -2593,18 +2589,42 @@ final class DashboardIndexRoutingTest extends TestCase {
 				'correlation'      => str_repeat( 'a', 32 ),
 			);
 		}
-		$presenter = new DeploymentAdminPresenter( attempts: $this->deployment_attempts( $database ), activity_store: new \RAN\Activity\ActivityStore( $database, 'wp_ran_booster_activity' ) );
+		$requested_ref = str_repeat( 'r', 255 );
+		$facts         = wp_json_encode(
+			array(
+				'deployment_attempt_id'    => 42,
+				'deployment_package_slug'  => 'example',
+				'deployment_source'        => 'webhook',
+				'deployment_state'         => 'running',
+				'deployment_requested_ref' => $requested_ref,
+				'deployment_resolved_at'   => '2026-10-12 18:00:00',
+				'deployment_resolved_by'   => 7,
+			)
+		);
+		self::assertIsString( $facts );
+		$database->activity_rows[0]['facts'] = $facts;
+		$plugins                             = $this->createStub( PluginRepository::class );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'example/example.php' => $this->managed_package( 'example/example.php', 'Example Plugin', 'repository-1' ) ) );
+		$presenter = new DeploymentAdminPresenter( attempts: $this->deployment_attempts( $database ), plugins: $plugins, activity_store: new \RAN\Activity\ActivityStore( $database, 'wp_ran_booster_activity' ) );
 		$page      = $presenter->activity();
 		self::assertFalse( $page['unavailable'] );
 		self::assertCount( 25, $page['items'] );
 		self::assertSame( 'deployment', $page['items'][0]['record_source'] );
-		self::assertSame( 2, $page['items'][0]['id'] );
-		self::assertSame( 'activity', $page['items'][2]['record_source'] );
-		self::assertSame( 'v1|' . hash( 'sha256', '' ) . '|' . $time . '|activity|4', $page['next_cursor'] );
+		self::assertSame( 42, $page['items'][0]['id'] );
+		self::assertSame( 'example', $page['items'][0]['package_slug'] );
+		self::assertSame( 'example/example.php', $page['items'][0]['subject_identity'] );
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php', $page['package_settings_urls']['plugin']['example'] );
+		self::assertSame( 'webhook', $page['items'][0]['source'] );
+		self::assertSame( 'running', $page['items'][0]['state'] );
+		self::assertSame( $requested_ref, $page['items'][0]['requested_ref'] );
+		self::assertSame( '2026-10-12 18:00:00', $page['items'][0]['resolved_at'] );
+		self::assertSame( 7, $page['items'][0]['resolved_by'] );
+		self::assertSame( 'v1|' . hash( 'sha256', '' ) . '|' . $time . '|activity|2', $page['next_cursor'] );
+		self::assertStringNotContainsString( 'package_type IN', implode( "\n", $database->reads ) );
 		$_GET  = array( 'before' => $page['next_cursor'] );
 		$older = $presenter->activity();
 		self::assertFalse( $older['unavailable'] );
-		self::assertSame( array( 3, 2, 1 ), array_column( $older['items'], 'id' ) );
+		self::assertSame( array( 1 ), array_column( $older['items'], 'id' ) );
 		self::assertNull( $older['next_cursor'] );
 		foreach ( array(
 			'activity_provider'         => 'bb',

@@ -158,19 +158,20 @@ model and day-to-day webhook operations.
 
 ### Deployment history retention
 
-By default, Booster retains at most 200 deployment-attempt rows. When admitting
-new work it prunes only the oldest successful, failed, or operator-resolved
-needs-attention rows. Queued, running, and unresolved needs-attention rows are
-never pruned; if those rows exhaust capacity, new work fails safely until an
-operator resolves it. A site that needs more history may raise the ceiling with
-a canonical integer from 200 through 100000:
+Booster uses the same ordinary-history policy for Activity reports and the
+operational deployment journal: 30 days and 2,000 rows by default. Sites may set
+bounded integer overrides in `wp-config.php`:
 
 ```php
-define( 'RAN_BOOSTER_MAX_ATTEMPT_ROWS', 500 );
+define( 'RAN_BOOSTER_HISTORY_ROWS', 5000 ); // 200 through 100000.
+define( 'RAN_BOOSTER_HISTORY_DAYS', 60 );   // 1 through 365.
 ```
 
-An invalid or lower value falls back to 200 and is reported by Troubleshooting.
-Deployment activity remains cursor-paginated with at most 100 rows per request.
+Invalid settings use their defaults and appear in Troubleshooting. Queued,
+running, and unresolved needs-attention records are protected. The journal can
+refuse new work when protected records exhaust capacity; resolving attention
+never invents a successful deployment. Activity pages render at most 25 rows.
+The old `RAN_BOOSTER_MAX_ATTEMPT_ROWS` setting is retired for clean-start rollout.
 
 ### Repository archive limits
 

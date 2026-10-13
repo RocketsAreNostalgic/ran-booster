@@ -96,26 +96,24 @@ final attempt state.
 
 ## Deployment history retention
 
-The attempt table has a 200-row default ceiling. Admission transactions prune
-only the minimum number of oldest `succeeded`, `failed`, or operator-resolved
-`needs_attention` rows, ordered by creation time and then ID. `queued`,
-`running`, and unresolved `needs_attention` rows are protected. If protected
-rows leave insufficient capacity for a complete single, batch, or zero-target
-webhook admission, that admission rolls back without deleting or partially
-inserting rows.
+The journal and Activity reports share the ordinary-history settings:
+`RAN_BOOSTER_HISTORY_ROWS` defaults to 2000 (integer 200–100000), and
+`RAN_BOOSTER_HISTORY_DAYS` defaults to 30 (integer 1–365). Invalid values use
+the corresponding defaults and appear in Troubleshooting. The former
+`RAN_BOOSTER_MAX_ATTEMPT_ROWS` setting is retired; no historical rows are imported.
 
-Operators may raise the ceiling with a canonical integer from 200 through
-100000:
+Admission prunes at most 100 aged successful, failed or operator-resolved rows,
+then removes only the oldest eligible rows needed to reserve its complete batch
+within the row ceiling. Queued, running and unresolved needs-attention rows are
+protected. If those records leave insufficient room, the admission rolls back
+without partial insertion or deletion. Replay memory is bounded by retained
+webhook rows; expected-head validation still rejects stale deployments after
+an old delivery record is pruned.
 
-```php
-define( 'RAN_BOOSTER_MAX_ATTEMPT_ROWS', 500 );
-```
-
-An invalid or lower value uses 200 and appears in Troubleshooting. Delivery
-replay memory is bounded by retained webhook rows; expected-head validation
-continues to reject stale deployments after an old delivery record is pruned.
-History reads remain limited to 100 rows per request and use the existing
-cursor-based Load more pagination.
+The Activity list reads the reporting store; explicit deployment details and
+recovery actions read the operational journal. Both use the shared policy with
+separate safety exceptions and maintenance batches. Different row populations
+mean equal settings do not guarantee identical retained membership.
 
 ## Repository archive limits
 

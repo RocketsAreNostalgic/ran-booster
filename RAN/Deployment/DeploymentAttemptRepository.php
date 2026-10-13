@@ -6,6 +6,8 @@ namespace RAN\Deployment;
 
 use DateTimeImmutable;
 use DateTimeInterface;
+use RAN\Activity\ActivityRequest;
+use RAN\Activity\ActivityStore;
 use RAN\AdoptionIdentity;
 use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidence;
@@ -26,7 +28,7 @@ use Throwable;
  */
 final class DeploymentAttemptRepository {
 
-	public const DEFAULT_MAX_ATTEMPT_ROWS = 200;
+	public const DEFAULT_MAX_ATTEMPT_ROWS = 2000;
 	public const MAX_ATTEMPT_ROWS         = 100000;
 
 	private const MAX_HISTORY         = 100;
@@ -49,7 +51,8 @@ final class DeploymentAttemptRepository {
 		?callable $clock = null,
 		?callable $random_bytes = null,
 		?Database $database_lifecycle = null,
-		private mixed $configured_max_attempt_rows = null
+		private mixed $configured_max_attempt_rows = null,
+		private ?ActivityStore $activity = null
 	) {
 		if ( null === $this->database ) {
 			global $wpdb;
@@ -112,6 +115,7 @@ final class DeploymentAttemptRepository {
 				if ( DeploymentState::RUNNING !== $running->get_state() ) {
 					throw DeploymentStorageFailure::inconsistent();
 				}
+				$this->record_activity_start( $running, 'deployment.running' );
 				BoosterLogger::log( 'attempt queued and claimed (manual)', $running->log_context() + array( 'transition' => 'queued->running' ) );
 
 				return $running;
@@ -196,6 +200,7 @@ final class DeploymentAttemptRepository {
 							null
 						)
 					);
+					$this->record_activity_start( $attempts[ array_key_last( $attempts ) ], 'deployment.queued' );
 				}
 
 				return array(
@@ -305,6 +310,7 @@ final class DeploymentAttemptRepository {
 							$delivery_digest
 						)
 					);
+					$this->record_activity_start( $attempts[ array_key_last( $attempts ) ], 'deployment.queued' );
 				}
 				foreach ( $attempts as $attempt ) {
 					BoosterLogger::log( 'attempt queued (webhook)', $attempt->log_context() + array( 'transition' => 'new->queued' ) );
@@ -341,27 +347,30 @@ final class DeploymentAttemptRepository {
 	}
 	public function finish( int $attempt_id, DeploymentOutcome $outcome, ?DateTimeInterface $at = null ): DeploymentAttempt {
 		RuntimeSupport::assert_managed_operations_allowed();
-		$id    = $this->positive_id( $attempt_id );
-		$data  = array(
-			'state'        => $outcome->get_state()->value,
-			'outcome_code' => $outcome->get_code(),
-			'finished_at'  => $this->time_string( $at ?? $this->now() ),
+		$id = $this->positive_id( $attempt_id );
+		return $this->transaction(
+			function () use ( $id, $outcome, $at ): DeploymentAttempt {
+				$data = array(
+					'state'        => $outcome->get_state()->value,
+					'outcome_code' => $outcome->get_code(),
+					'finished_at'  => $this->time_string( $at ?? $this->now() ),
+				);
+				if ( 1 !== $this->write_connection()->query( $this->update_query( $id, DeploymentState::RUNNING, $data ) ) ) {
+					throw DeploymentStorageFailure::unavailable();
+				}
+				$attempt = $this->require_exact( $id );
+				$this->assert_attempt_data( $attempt, $data );
+				$this->record_activity_outcome( $attempt, $outcome );
+				BoosterLogger::log(
+					'attempt finished',
+					$attempt->log_context() + array(
+						'transition'   => 'running->' . $outcome->get_state()->value,
+						'outcome_code' => $outcome->get_code(),
+					)
+				);
+				return $attempt;
+			}
 		);
-		$query = $this->update_query( $id, DeploymentState::RUNNING, $data );
-		if ( 1 !== $this->write_connection()->query( $query ) ) {
-			throw DeploymentStorageFailure::unavailable();
-		}
-		$attempt = $this->require_exact( $id );
-		$this->assert_attempt_data( $attempt, $data );
-		BoosterLogger::log(
-			'attempt finished',
-			$attempt->log_context() + array(
-				'transition'   => 'running->' . $outcome->get_state()->value,
-				'outcome_code' => $outcome->get_code(),
-			)
-		);
-
-		return $attempt;
 	}
 	public function find_exact( int $attempt_id ): ?DeploymentAttempt {
 		$query = $this->prepare( 'SELECT * FROM %i WHERE id = %d LIMIT 2', $this->table_name, $this->positive_id( $attempt_id ) );
@@ -512,22 +521,11 @@ final class DeploymentAttemptRepository {
 		if ( null !== $this->retention_configuration ) {
 			return $this->retention_configuration;
 		}
-		$value  = $this->configured_max_attempt_rows;
-		$source = 'configured';
-		if ( null === $value && ! defined( 'RAN_BOOSTER_MAX_ATTEMPT_ROWS' ) ) {
-			$source = 'default';
-			$value  = self::DEFAULT_MAX_ATTEMPT_ROWS;
-		} elseif ( null === $value ) {
-			$value = constant( 'RAN_BOOSTER_MAX_ATTEMPT_ROWS' );
-		}
-		$valid = is_int( $value )
-			&& $value >= self::DEFAULT_MAX_ATTEMPT_ROWS
-			&& $value <= self::MAX_ATTEMPT_ROWS;
-
+		$policy                        = ActivityStore::retention_policy( $this->configured_max_attempt_rows );
 		$this->retention_configuration = array(
-			'valid'        => $valid,
-			'maximum_rows' => $valid ? $value : self::DEFAULT_MAX_ATTEMPT_ROWS,
-			'source'       => $source,
+			'valid'        => $policy['valid'],
+			'maximum_rows' => $policy['maximum_rows'],
+			'source'       => $policy['source'],
 		);
 
 		return $this->retention_configuration;
@@ -662,6 +660,7 @@ final class DeploymentAttemptRepository {
 				}
 				$attempt = $this->require_exact( $id );
 				$this->assert_attempt_data( $attempt, $data );
+				$this->record_activity_outcome( $attempt, $outcome );
 				BoosterLogger::log(
 					'attempt reconciled as stopped',
 					$attempt->log_context() + array(
@@ -703,6 +702,7 @@ final class DeploymentAttemptRepository {
 				if ( ! hash_equals( $correlation_id, $attempt->get_correlation_id() ) || $attempt->requires_operator_resolution() ) {
 					throw DeploymentStorageFailure::inconsistent();
 				}
+				$this->require_activity_progress( $attempt, 'deployment.operator_reviewed' );
 				BoosterLogger::log(
 					'attempt operator resolution recorded',
 					$attempt->log_context() + array(
@@ -733,6 +733,7 @@ final class DeploymentAttemptRepository {
 		if ( DeploymentState::RUNNING !== $running->get_state() ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
+		$this->require_activity_progress( $running, 'deployment.running' );
 		BoosterLogger::log( 'attempt claimed from queue', $running->log_context() + array( 'transition' => 'queued->running' ) );
 
 		return $running;
@@ -740,20 +741,97 @@ final class DeploymentAttemptRepository {
 
 	/** @param array<string, string|null> $data */
 	private function running_write( int $attempt_id, array $data ): DeploymentAttempt {
-		$id    = $this->positive_id( $attempt_id );
-		$query = $this->update_query( $id, DeploymentState::RUNNING, $data );
-		if ( 1 !== $this->write_connection()->query( $query ) ) {
+		$id = $this->positive_id( $attempt_id );
+		return $this->transaction(
+			function () use ( $id, $data ): DeploymentAttempt {
+				if ( 1 !== $this->write_connection()->query( $this->update_query( $id, DeploymentState::RUNNING, $data ) ) ) {
+					throw DeploymentStorageFailure::unavailable();
+				}
+				$attempt = $this->require_exact( $id );
+				$safe    = $attempt->safe_data();
+				foreach ( $data as $key => $value ) {
+					if ( (string) ( $safe[ $key ] ?? '' ) !== (string) $value ) {
+						throw DeploymentStorageFailure::inconsistent();
+					}
+				}
+				$this->require_activity_progress( $attempt, isset( $data['resolved_ref'] ) ? 'deployment.reference_resolved' : 'deployment.mutating' );
+				return $attempt;
+			}
+		);
+	}
+
+	private function record_activity_start( DeploymentAttempt $attempt, string $stage ): void {
+		if ( null === $this->activity ) {
+			return;
+		}
+		$data    = $attempt->safe_data();
+		$request = $attempt->get_request();
+		if ( ! is_string( $data['provider'] ) || ! is_string( $data['provider_repository_id'] ) || ! in_array( $data['package_type'], array( 'plugin', 'theme' ), true ) || ! is_string( $data['operation'] ) || ! is_string( $data['correlation_id'] ) ) {
+			throw DeploymentStorageFailure::inconsistent();
+		}
+		$repo    = new \RAN\RepositoryProvider\RepositoryReference( $request->repository, $data['provider_repository_id'], $request->is_private, $request->credential_id );
+		$target  = $request->installed_identifier ?? $request->package_slug;
+		$capture = array(
+			'subject_type'     => $data['package_type'],
+			'subject_identity' => $target,
+			'adoption_token'   => $request->adoption_token,
+			'context'          => '',
+			'purpose'          => null,
+			'provenance'       => 'core',
+			'actor'            => $request->initiating_user_id ?? 0,
+		);
+		$id      = $this->activity->begin( $data['provider'], new ActivityRequest( $data['operation'], $repo, $data['package_type'], $target ), $capture, $data['correlation_id'] );
+		if ( null === $id || ! $this->activity->progress_by_correlation( $data['correlation_id'], $stage, '', $this->activity_facts( $attempt ) ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
-		$attempt = $this->require_exact( $id );
-		$safe    = $attempt->safe_data();
-		foreach ( $data as $key => $value ) {
-			if ( (string) ( $safe[ $key ] ?? '' ) !== (string) $value ) {
-				throw DeploymentStorageFailure::inconsistent();
+	}
+
+	private function require_activity_progress( DeploymentAttempt $attempt, string $stage ): void {
+		if ( null !== $this->activity ) {
+			$correlation = $attempt->safe_data()['correlation_id'];
+			if ( ! is_string( $correlation ) || ! $this->activity->progress_by_correlation( $correlation, $stage, '', $this->activity_facts( $attempt ) ) ) {
+				throw DeploymentStorageFailure::unavailable();
 			}
 		}
+	}
 
-		return $attempt;
+	private function record_activity_outcome( DeploymentAttempt $attempt, DeploymentOutcome $outcome ): void {
+		if ( null === $this->activity ) {
+			return;
+		}
+		$data = $attempt->safe_data();
+		if ( DeploymentState::NEEDS_ATTENTION === $outcome->get_state() ) {
+			$this->require_activity_progress( $attempt, 'deployment.needs_attention' );
+			return;
+		}
+		if ( ! is_string( $data['correlation_id'] ) ) {
+			throw DeploymentStorageFailure::inconsistent();
+		}
+		$status = DeploymentState::SUCCEEDED === $outcome->get_state() ? 'succeeded' : 'failed';
+		if ( ! $this->activity->complete_by_correlation( $data['correlation_id'], $status, $outcome->get_code(), $outcome->get_code(), facts: $this->activity_facts( $attempt ) ) ) {
+			throw DeploymentStorageFailure::unavailable();
+		}
+	}
+
+	/** @return array{deployment_attempt_id:int, deployment_package_slug:string, deployment_source:'manual'|'webhook', deployment_state:string, deployment_requested_ref:string, deployment_resolved_ref:?string, deployment_mutation_started_at:?string, deployment_finished_at:?string, deployment_outcome:?string, deployment_resolved_at:?string, deployment_resolved_by:?int} */
+	private function activity_facts( DeploymentAttempt $attempt ): array {
+		$data = $attempt->safe_data();
+		if ( ! is_int( $data['id'] ) || ! is_string( $data['package_slug'] ) || ! in_array( $data['source'], array( 'manual', 'webhook' ), true ) || ! is_string( $data['state'] ) || ! is_string( $data['requested_ref'] ) || ( null !== $data['resolved_ref'] && ! is_string( $data['resolved_ref'] ) ) || ( null !== $data['mutation_started_at'] && ! is_string( $data['mutation_started_at'] ) ) || ( null !== $data['finished_at'] && ! is_string( $data['finished_at'] ) ) || ( null !== $data['outcome_code'] && ! is_string( $data['outcome_code'] ) ) || ( null !== $data['resolved_at'] && ! is_string( $data['resolved_at'] ) ) || ( null !== $data['resolved_by'] && ! is_int( $data['resolved_by'] ) ) ) {
+			throw DeploymentStorageFailure::inconsistent();
+		}
+		return array(
+			'deployment_attempt_id'          => $data['id'],
+			'deployment_package_slug'        => $data['package_slug'],
+			'deployment_source'              => $data['source'],
+			'deployment_state'               => $data['state'],
+			'deployment_requested_ref'       => $data['requested_ref'],
+			'deployment_resolved_ref'        => $data['resolved_ref'],
+			'deployment_mutation_started_at' => $data['mutation_started_at'],
+			'deployment_finished_at'         => $data['finished_at'],
+			'deployment_outcome'             => $data['outcome_code'],
+			'deployment_resolved_at'         => $data['resolved_at'],
+			'deployment_resolved_by'         => $data['resolved_by'],
+		);
 	}
 
 	/** @param array<string, string|null> $data */
@@ -991,6 +1069,17 @@ final class DeploymentAttemptRepository {
 		}
 		if ( $incoming_rows < 0 || $incoming_rows > self::MAX_WEBHOOK_TARGETS ) {
 			throw DeploymentStorageFailure::invalid_record();
+		}
+		$policy = ActivityStore::retention_policy( $this->configured_max_attempt_rows );
+		$aged   = $this->write_connection()->query(
+			$this->prepare(
+				"DELETE FROM %i WHERE (state IN ('succeeded','failed') OR (state = 'needs_attention' AND resolved_at IS NOT NULL AND resolved_by IS NOT NULL)) AND created_at < %s ORDER BY created_at, id LIMIT 100",
+				$this->table_name,
+				$this->time_string( $this->now()->sub( new \DateInterval( 'P' . $policy['maximum_days'] . 'D' ) ) )
+			)
+		);
+		if ( ! is_int( $aged ) || $aged < 0 || $aged > 100 ) {
+			throw DeploymentStorageFailure::unavailable();
 		}
 
 		$count_rows = $this->read_rows(

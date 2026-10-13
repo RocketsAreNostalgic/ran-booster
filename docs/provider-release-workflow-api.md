@@ -1,33 +1,27 @@
 # Provider release-workflow capability
 
-> Provider API14 source integration: Core pins immutable GitHub Provider
-> `v1.0.0-beta.12` at `c90777b7a23b7e07244a94c7ccbf3c4faf4fdc2c` in its
-> package constraint and dependency lock. The earlier beta.11/API13 tuple is
-> historical. The corrected Core #224 merged tree passed native, archive and
-> installed WordPress/database qualification. Core publication and matching
-> Bitbucket/Migrator released-host certification remain pending; release work is paused.
-> See the [current recovery and landing record](beta31-naming-recovery.md#remaining-gates-and-landing-order).
+> Provider API15 / workflow V4 reporting candidate. Qualify the coordinated Core/provider source set before publication.
 
-Provider API 14 keeps release-workflow setup as an optional, separately versioned
+Provider API 15 keeps release-workflow setup as an optional, separately versioned
 provider facet. The base provider registration seam does not change when this
 facet evolves.
 
 ## Initial-only contract
 
-`RepositoryReleaseWorkflowManagementV3` is the only release-workflow management
-facet in the v1 baseline and retains `RELEASE_WORKFLOW_API_VERSION = 3`.
+`RepositoryReleaseWorkflowManagementV4` is the only release-workflow management
+facet in the v1 baseline and retains `RELEASE_WORKFLOW_API_VERSION = 4`.
 
 The earlier Core-bound `RepositoryReleaseWorkflowManagement` API 1 facet was
 removed before 1.0 after the maintained-repository audit found no current
 consumer. It is not a compatibility contract for v1.
 
-## API 3 provider-neutral contract
+## API 4 provider-neutral contract
 
-`RepositoryReleaseWorkflowManagementV3` is a `ProviderCapability` whose method
+`RepositoryReleaseWorkflowManagementV4` is a `ProviderCapability` whose method
 signatures accept only provider-neutral workflow inputs. Loading the facet does
 not load Core release-tracking parameter types into an external provider runtime.
 
-API 3 keeps the fixed workflow operation shape while accepting only
+API 4 keeps the fixed workflow operation shape while accepting only
 provider-neutral inputs:
 
 - `RepositoryReleaseWorkflowTarget` contains only the package type, installed
@@ -39,31 +33,32 @@ provider-neutral inputs:
 
 The target's expected Update URI may be empty. When present, it must be an HTTPS
 URL with a host and no userinfo. Ordinary release tracking may retain a
-non-HTTPS canonical Update URI, but Core cannot project that value into an API 3
+non-HTTPS canonical Update URI, but Core cannot project that value into an API 4
 target, so that provider/package is not eligible for current workflow-helper
 calls until its expected Update URI satisfies the stricter workflow boundary.
 
 Those values expose no Core release-tracking facade, storage object, package
 model, credential material, callback or service resolver. Core constructs fresh
-API 3 values at the provider call boundary. Provider-owned workflow status,
+API 4 values at the provider call boundary. Provider-owned workflow status,
 preview and result outputs remain bounded. Preview accepts only initial
 `bootstrap` setup on `stable`; its summary no longer contains old/new template
 tags. The five methods are `workflow_status`, `workflow_preview`,
 `workflow_inspect`, `workflow_setup` and `workflow_outcome`. Update operations
 are rejected before provider, credential or preflight access.
 
-The helper resolves `RepositoryReleaseWorkflowManagementV3` directly.
-The production lock selects immutable GitHub Provider `v1.0.0-beta.12`
-(`c90777b7a23b7e07244a94c7ccbf3c4faf4fdc2c`), which implements V3 and preserves
-a valid bootstrap record's operation across source revisions. Core requires a
-`bootstrap` operation before exposing or invoking outcomes. The historical
-beta.8 composition (`556f19923f6564f1bbd5cecee089d6b136afc5cd`) passed repository
-quality, archive verification and the four supported WordPress/database jobs
-on merged Core #177. Those results do not qualify this new lock; see the
-[current recovery and landing record](beta31-naming-recovery.md#remaining-gates-and-landing-order).
-Installed candidate proof does not establish an immutable API14 Core release.
+The helper resolves `RepositoryReleaseWorkflowManagementV4` directly.
+The provider returns operational setup/PR state, credential choices and safe links.
+Core enriches it with durable assessment and failure history. An assessment is
+established only by a recognized result; an unrelated failed attempt does not
+erase it. Currentness includes the captured adoption and source/access context.
 
-The API 3 facet still requires the same five release-consumption capabilities on
+`workflow_inspect`, `workflow_setup` and `workflow_outcome` accept an optional
+final `?RAN\Activity\ActivityProgress $progress = null`. Providers report actual
+stages and return their existing `RepositoryReleaseWorkflowResult`; Core owns
+terminal recording. Setup claims, previews and pull-request records remain
+provider-owned operational state. See [activity usage](provider-extension-contract.md#durable-activity-reporting).
+
+The API 4 facet still requires the same five release-consumption capabilities on
 the registered provider aggregate: `RepositoryReleaseMetadata`,
 `RepositoryReleaseCandidateListing`, `RepositoryReleaseInspector`,
 `RepositoryReleaseAcquirer` and `RepositoryReleaseNativeTargets`. Current Core
@@ -71,9 +66,9 @@ workflow-helper controls and calls also require that aggregate's
 `ProviderMetadata` to expose non-null `ProviderAdminMetadata`. Admin metadata
 remains optional for ordinary provider registration and other capabilities.
 
-## Provider API 14 compatibility boundary
+## Provider API 15 compatibility boundary
 
-Provider API 14 completes snake_case naming of owned methods, parameters,
+Provider API 15 completes snake_case naming of owned methods, parameters,
 properties and DTO accessors while retaining initial-only workflow V3. API 11
 promised V2 and is no longer advertised by Core. External providers must check
 the exact outer API marker before loading their implementation. API11, API12

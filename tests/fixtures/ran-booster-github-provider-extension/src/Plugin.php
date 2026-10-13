@@ -46,6 +46,6 @@ final class Plugin {
 	private static function has_compatible_core(): bool {
 		return ( ! defined( 'RAN_BOOSTER_RUNTIME_MODE' ) || 'single_site_supported' === RAN_BOOSTER_RUNTIME_MODE )
 			&& defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' )
-			&& 14 === RAN_BOOSTER_PROVIDER_API_VERSION;
+			&& 15 === RAN_BOOSTER_PROVIDER_API_VERSION;
 	}
 }

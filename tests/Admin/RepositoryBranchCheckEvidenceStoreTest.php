@@ -10,6 +10,8 @@ use RAN\Admin\RepositoryBranchCheckEvidenceStore;
 use RAN\ManagedRepository;
 use RAN\PackageSource;
 
+require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
+
 final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 
 	public function test_native_mutation_lock_preserves_structural_connections_and_sql_failures(): void {
@@ -131,6 +133,7 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 		$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
 		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
 
+		$store->begin_check( 'plugin', $package, 'profile-a' );
 		$store->record( 'plugin', $package, 'profile-a', 'verified' );
 
 		$evidence = $store->find( 'plugin', $package, 'profile-a' );
@@ -146,7 +149,9 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 		$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
 		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
 
+		$store->begin_check( 'plugin', $package, 'profile-a' );
 		$store->record( 'plugin', $package, 'profile-a', 'verified' );
+		$store->begin_check( 'plugin', $package, 'profile-a' );
 		$store->record( 'plugin', $package, 'profile-a', 'unable_to_check' );
 
 		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
@@ -158,13 +163,15 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
 		$stale   = $store->profile_fingerprint_for( $package, 'profile-a' );
 
+		$store->begin_check( 'plugin', $package, 'profile-a' );
 		$store->clear( 'plugin', $package );
 		$store->record( 'plugin', $package, 'profile-a', 'verified', $stale );
 
-		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ), token: 'gh:fixture:22222222-2222-4222-8222-222222222222' );
+		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ), token: 'gh:42:22222222-2222-4222-8222-222222222222' );
 		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
 
 		$fresh = $store->profile_fingerprint_for( $package, 'profile-a' );
+		$store->begin_check( 'plugin', $package, 'profile-a' );
 		$store->record( 'plugin', $package, 'profile-a', 'verified', $fresh );
 
 		$evidence = $store->find( 'plugin', $package, 'profile-a' );
@@ -175,10 +182,12 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 	public function test_changed_source_revision_and_provider_generation_invalidate_evidence(): void {
 		$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
 		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
+		$store->begin_check( 'plugin', $package, 'profile-a' );
 		$store->record( 'plugin', $package, 'profile-a', 'verified' );
 		$package->set_source( PackageSource::BRANCH, 2 );
 		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
 
+		$store->begin_check( 'plugin', $package, 'profile-a' );
 		$store->record( 'plugin', $package, 'profile-a', 'verified' );
 		$store->bump_provider_generation( 'gh' );
 		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
@@ -190,6 +199,7 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 		$profile = $store->profile_fingerprint_for( $package, 'profile-a' );
 
 		$store->bump_profile_generation( 'gh', 'profile-a' );
+		$store->begin_check( 'plugin', $package, 'profile-a' );
 		$store->record( 'plugin', $package, 'profile-a', 'verified', $profile );
 
 		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
@@ -199,15 +209,68 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 		$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
 		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
 
+		$store->begin_check( 'plugin', $package, null );
 		$store->record( 'plugin', $package, null, 'verified' );
 
 		self::assertNotNull( $store->find( 'plugin', $package, null ) );
 		self::assertNull( $store->find( 'plugin', $package, 'anonymous' ) );
 	}
 
+	public function test_confirmed_missing_path_replaces_positive_observation_across_later_uncertain_checks(): void {
+		$store    = new InMemoryRepositoryBranchCheckEvidenceStore();
+		$package  = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
+		$activity = new \RAN\Activity\ActivityStore( $store->database, 'test_activity' );
+		$capture  = $store->activity_context( 'plugin', $package, 'branch.check' );
+		self::assertNotNull( $capture['adoption_token'] );
+		foreach ( array( 'verified', 'subdirectory_unavailable', 'unable_to_check', 'subdirectory_unverified', 'provider_unavailable' ) as $outcome ) {
+			$store->begin_check( 'plugin', $package, 'profile-a' );
+			$store->record( 'plugin', $package, 'profile-a', $outcome );
+			$summary = $activity->summary( 'plugin', $capture['subject_identity'], $capture['adoption_token'], $capture['context'], 'branch.check' );
+			self::assertTrue( $summary['available'] );
+			self::assertSame( $outcome, $summary['latest']['reason'] ?? null );
+			self::assertSame( 'verified' === $outcome ? 'verified' : 'subdirectory_unavailable', $summary['observation']['reason'] ?? null );
+			self::assertSame( 'verified' === $outcome ? 'succeeded' : 'rejected', $summary['observation']['status'] ?? null );
+			self::assertSame( 'verified' === $outcome, null !== $store->find( 'plugin', $package, 'profile-a' ) );
+		}
+	}
+
+	public function test_optional_history_failures_do_not_suppress_fresh_verification(): void {
+		foreach ( array( 'fail_insert', 'fail_complete', 'fail_read' ) as $failure ) {
+			$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
+			$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
+			$store->begin_check( 'plugin', $package, 'profile-a' );
+			$store->record( 'plugin', $package, 'profile-a', 'verified' );
+			self::assertNotNull( $store->find( 'plugin', $package, 'profile-a' ) );
+			$store->database->$failure = true;
+			$store->begin_check( 'plugin', $package, 'profile-a' );
+			self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
+			$store->record( 'plugin', $package, 'profile-a', 'verified' );
+			self::assertNotNull( $store->find( 'plugin', $package, 'profile-a' ) );
+			$store->begin_check( 'plugin', $package, 'profile-a' );
+			$store->record( 'plugin', $package, 'profile-a', 'unable_to_check' );
+			self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
+		}
+	}
+
+	public function test_check_start_freezes_context_before_credential_changes_for_operational_verification(): void {
+		$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
+		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
+		$store->begin_check( 'plugin', $package, 'profile-a' );
+		$store->bump_profile_generation( 'gh', 'profile-a' );
+		$store->record( 'plugin', $package, 'profile-a', 'verified' );
+		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
+		self::assertCount( 1, $store->database->records );
+		self::assertSame( 'verified', $store->database->records[1]['reason'] );
+		$records = $store->records['records'];
+		self::assertIsArray( $records );
+		self::assertSame( array( 'nonce', 'outcome', 'checked_at', 'target', 'profile' ), array_keys( array_values( $records )[0] ) );
+	}
+
 	public function test_the_store_caps_distinct_package_records_at_two_hundred(): void {
 		$store = new InMemoryRepositoryBranchCheckEvidenceStore();
 		for ( $index = 0; $index < 201; ++$index ) {
+			$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ), 'example/' . $index . '.php' );
+			$store->begin_check( 'plugin', $package, 'profile-a' );
 			$store->record(
 				'plugin',
 				new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ), 'example/' . $index . '.php' ),
@@ -231,10 +294,10 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 	}
 
 	public function test_mutation_lock_prevents_astale_record_from_undoing_aqueued_generation_bump(): void {
-		$locked            = false;
-		$queued            = false;
-		$store             = null;
-		$acquire           = static function () use ( &$locked, &$queued ): bool {
+		$locked  = false;
+		$queued  = false;
+		$store   = null;
+		$acquire = static function () use ( &$locked, &$queued ): bool {
 			if ( $locked ) {
 				$queued = true;
 				return false;
@@ -243,7 +306,7 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 
 			return true;
 		};
-		$release           = static function () use ( &$locked, &$queued, &$store ): bool {
+		$release = static function () use ( &$locked, &$queued, &$store ): bool {
 			$locked = false;
 			// @phpstan-ignore instanceof.alwaysFalse, booleanAnd.alwaysFalse (This by-reference callback executes after the store is assigned below.)
 			if ( $queued && $store instanceof InMemoryRepositoryBranchCheckEvidenceStore ) {
@@ -253,9 +316,10 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 
 			return true;
 		};
-		$store             = new InMemoryRepositoryBranchCheckEvidenceStore( $acquire, $release );
-		$package           = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
-		$profile           = $store->profile_fingerprint_for( $package, 'profile-a' );
+		$store   = new InMemoryRepositoryBranchCheckEvidenceStore( $acquire, $release );
+		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
+		$profile = $store->profile_fingerprint_for( $package, 'profile-a' );
+		$store->begin_check( 'plugin', $package, 'profile-a' );
 		$store->after_read = static function () use ( $store ): void {
 			try {
 				$store->bump_profile_generation( 'gh', 'profile-a' );
@@ -269,6 +333,98 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 		self::assertFalse( $locked );
 		self::assertFalse( $queued );
 		self::assertSame( 1, $store->records['generation'] );
+		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
+	}
+
+	public function test_late_completion_cannot_replace_a_newer_pending_completed_or_failed_check(): void {
+		foreach ( array( null, 'verified', 'unable_to_check' ) as $newer_outcome ) {
+			$older          = new InMemoryRepositoryBranchCheckEvidenceStore();
+			$newer          = new InMemoryRepositoryBranchCheckEvidenceStore();
+			$newer->records =& $older->records;
+			$package        = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
+			$older->begin_check( 'plugin', $package, 'profile-a' );
+			$newer->begin_check( 'plugin', $package, 'profile-a' );
+			if ( null !== $newer_outcome ) {
+				$newer->record( 'plugin', $package, 'profile-a', $newer_outcome );
+			}
+			$before = $newer->records;
+			$older->record( 'plugin', $package, 'profile-a', 'verified' );
+			self::assertSame( $before, $newer->records );
+			self::assertSame( 'verified' === $newer_outcome, null !== $older->find( 'plugin', $package, 'profile-a' ) );
+			self::assertSame( 'verified', $older->database->records[1]['reason'] );
+		}
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_cached_older_nonce_is_discarded_before_completion_comparison(): void {
+		require_once __DIR__ . '/BranchEvidenceCacheWordPressFunctions.php';
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$store                                   = new class(new \RAN\Activity\ActivityStore( new \RAN\Tests\Support\BranchActivityConnection(), 'test_activity' )) extends RepositoryBranchCheckEvidenceStore {
+			protected function acquire_mutation_lock(): bool {
+				return true; }
+			protected function release_mutation_lock(): bool {
+				return true; }
+			protected function write_option( array $records ): bool {
+				$GLOBALS['ran_booster_branch_database'][ self::OPTION_NAME ] = $records;
+				return true;
+			}
+		};
+		$package                                 = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
+		$store->begin_check( 'plugin', $package, 'profile-a' );
+		$older = $GLOBALS['ran_booster_branch_database'][ RepositoryBranchCheckEvidenceStore::OPTION_NAME ];
+		self::assertIsArray( $older );
+		$newer = $older;
+		self::assertIsArray( $newer['records'] );
+		$key = array_key_first( $newer['records'] );
+		self::assertNotNull( $key );
+		$newer['records'][ $key ] = array( 'nonce' => str_repeat( 'b', 32 ) );
+		$GLOBALS['ran_booster_branch_database'][ RepositoryBranchCheckEvidenceStore::OPTION_NAME ] = $newer;
+		$GLOBALS['ran_booster_branch_cache'][ RepositoryBranchCheckEvidenceStore::OPTION_NAME ]    = $older;
+		$GLOBALS['ran_booster_branch_cache_deletes'] = array();
+		$store->record( 'plugin', $package, 'profile-a', 'verified' );
+		self::assertSame( $newer, $GLOBALS['ran_booster_branch_database'][ RepositoryBranchCheckEvidenceStore::OPTION_NAME ] );
+		self::assertContains( array( RepositoryBranchCheckEvidenceStore::OPTION_NAME, 'options' ), $GLOBALS['ran_booster_branch_cache_deletes'] );
+		self::assertContains( array( 'alloptions', 'options' ), $GLOBALS['ran_booster_branch_cache_deletes'] );
+		self::assertContains( array( 'notoptions', 'options' ), $GLOBALS['ran_booster_branch_cache_deletes'] );
+		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
+	}
+
+	public function test_option_lock_release_failure_reports_failure_after_the_durable_write(): void {
+		$release = true;
+		$store   = new InMemoryRepositoryBranchCheckEvidenceStore(
+			release_mutation_lock: static function () use ( &$release ): bool {
+				return $release;
+			}
+		);
+		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
+		$store->begin_check( 'plugin', $package, 'profile-a' );
+		$release = false;
+		try {
+			$store->record( 'plugin', $package, 'profile-a', 'verified' );
+			self::fail( 'The failed lock release must be reported.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertSame( 'Booster could not release the repository branch check evidence lock.', $failure->getMessage() );
+		}
+		// The existing option mutation contract cannot roll back a completed write.
+		self::assertNotNull( $store->find( 'plugin', $package, 'profile-a' ) );
+		self::assertSame( 'incomplete', $store->database->records[1]['status'] );
+	}
+
+	public function test_completion_requires_a_pre_work_capture(): void {
+		$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
+		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
+		$this->expectException( \RuntimeException::class );
+		$this->expectExceptionMessage( 'The repository branch check was not started.' );
+		$store->record( 'plugin', $package, 'profile-a', 'verified' );
+	}
+
+	public function test_source_change_during_check_does_not_verify_the_replacement_source(): void {
+		$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
+		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
+		$store->begin_check( 'plugin', $package, 'profile-a' );
+		$package->set_source( PackageSource::BRANCH, 2 );
+		$store->record( 'plugin', $package, 'profile-a', 'verified' );
 		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
 	}
 
@@ -295,13 +451,17 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 final class InMemoryRepositoryBranchCheckEvidenceStore extends RepositoryBranchCheckEvidenceStore {
 
 	/** @var array<string, mixed> */
-	public array $records        = array();
+	public array $records = array();
+	public \RAN\Tests\Support\BranchActivityConnection $database;
 	public ?\Closure $after_read = null;
 	private \Closure $acquire_mutation_lock_callback;
 	private \Closure $release_mutation_lock_callback;
 
 	/** @param callable(): bool|null $acquire_mutation_lock @param callable(): bool|null $release_mutation_lock */
 	public function __construct( ?callable $acquire_mutation_lock = null, ?callable $release_mutation_lock = null ) {
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$this->database                          = new \RAN\Tests\Support\BranchActivityConnection();
+		parent::__construct( new \RAN\Activity\ActivityStore( $this->database, 'test_activity' ) );
 		$this->acquire_mutation_lock_callback = \Closure::fromCallable( $acquire_mutation_lock ?? static fn (): bool => true );
 		$this->release_mutation_lock_callback = \Closure::fromCallable( $release_mutation_lock ?? static fn (): bool => true );
 	}
@@ -334,7 +494,7 @@ final class InMemoryRepositoryBranchCheckEvidenceStore extends RepositoryBranchC
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Local fixtures keep the cache contract self-contained.
 final class BranchEvidencePackage extends AbstractPackage {
 
-	public function __construct( ?ManagedRepository $repository = null, private string $identifier = 'example/example.php', string $token = 'gh:fixture:11111111-1111-4111-8111-111111111111' ) {
+	public function __construct( ?ManagedRepository $repository = null, private string $identifier = 'example/example.php', string $token = 'gh:42:11111111-1111-4111-8111-111111111111' ) {
 		TestCase::assertNotNull( $repository );
 		$this->repository = $repository;
 		$this->set_adoption_token( $token );

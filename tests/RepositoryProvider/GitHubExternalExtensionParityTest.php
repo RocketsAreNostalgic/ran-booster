@@ -36,7 +36,7 @@ use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
 use RAN\RepositoryProvider\RepositoryReleaseInspector;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
-use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV4;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowTarget;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
@@ -49,10 +49,10 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_v3_status_rejects_historical_update_evidence_without_rewriting_it(): void {
+	public function test_v4_status_ignores_retired_history_and_rejects_old_setup_records_without_rewriting(): void {
 		require dirname( __DIR__ ) . '/Runtime/Support/GitHubWorkflowAssistanceWordPressFunctions.php';
 		$provider = GitHubProvider::create( new Phase5CredentialStore(), new Phase5DeliveryEvidenceReader(), new Phase5BundledReleaseUpdater() );
-		self::assertInstanceOf( RepositoryReleaseWorkflowManagementV3::class, $provider );
+		self::assertInstanceOf( RepositoryReleaseWorkflowManagementV4::class, $provider );
 		$target  = new RepositoryReleaseWorkflowTarget( 'plugin', 'example/example.php', 3, '123456789' );
 		$current = array(
 			'operation'             => 'inspect',
@@ -69,7 +69,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		);
 		$option  = 'ran_booster_github_provider_release_workflow_failure_history';
 		$GLOBALS['ran_booster_release_deployments_test_options'] = array( $option => array( $current ) );
-		self::assertCount( 1, $provider->workflow_status( $target )->failure_history() );
+		self::assertSame( array(), $provider->workflow_status( $target )->failure_history() );
 		$GLOBALS['ran_booster_release_deployments_test_options']['ran_booster_github_provider_release_workflow_setup_records'] = array(
 			'123456789' => array(
 				'schema_version' => 2,
@@ -109,7 +109,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		require_once dirname( __DIR__ ) . '/Admin/ReleaseManagement/GitHub/Support/ThemeRepositoryDouble.php';
 
 		$provider = GitHubProvider::create( new Phase5CredentialStore(), new Phase5DeliveryEvidenceReader(), new Phase5BundledReleaseUpdater() );
-		self::assertInstanceOf( \RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3::class, $provider );
+		self::assertInstanceOf( \RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV4::class, $provider );
 		$status     = \RAN\Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture::status();
 		$tracking   = new \RAN\Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble( $status );
 		$plugins    = new \RAN\Tests\Admin\ReleaseManagement\GitHub\Support\PluginRepositoryDouble();
@@ -180,7 +180,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_released_git_hub_package_composes_as_aphysically_separate_external_plugin(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 15 );
 		define( 'RAN_BOOSTER_RUNTIME_MODE', 'single_site_supported' );
 		$GLOBALS['ran_booster_external_fixture_actions'] = array();
 
@@ -224,7 +224,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 					RepositoryReleaseInspector::class,
 					RepositoryReleaseAcquirer::class,
 					RepositoryReleaseNativeTargets::class,
-					RepositoryReleaseWorkflowManagementV3::class,
+					RepositoryReleaseWorkflowManagementV4::class,
 				) as $capability
 			) {
 				self::assertSame( $provider, $registry->require_capability( 'gh', $capability ), $capability );

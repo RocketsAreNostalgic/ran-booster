@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace RAN\Admin;
 
 use RAN\AdoptionIdentity;
+use RAN\Activity\ActivityStore;
+use RAN\Activity\ActivityRequest;
+use RAN\Activity\ActivityProgress;
+use RAN\Activity\RecordedActivityOperation;
+use RAN\Activity\ProgressOnly;
 use RAN\Package;
 use RuntimeException;
 
@@ -18,49 +23,117 @@ class RepositoryBranchCheckEvidenceStore {
 
 	private const MAX_RECORDS = 200;
 
+	private ?ActivityStore $activity = null;
+	/** @var array<string,array{id:?int,profile:string,target:string,nonce:string}> */
+	private array $pending = array();
+
+	public function __construct( ?ActivityStore $activity = null ) {
+		$this->activity = $activity;
+	}
+
+	private function activity_store(): ActivityStore {
+		return $this->activity ??= new ActivityStore();
+	}
+
+	/** Clear the verification fence before optional reporting or remote work. */
+	public function begin_check( string $type, Package $package, ?string $profile_id ): ActivityProgress {
+		$key     = $this->key( $type, $package );
+		$nonce   = bin2hex( random_bytes( 16 ) );
+		$target  = $this->target_fingerprint( $package );
+		$profile = $this->profile_fingerprint( $package, $profile_id );
+		$this->mutate(
+			static function ( array $all ) use ( $key, $nonce ): array {
+				unset( $all['records'][ $key ] );
+				$all['records'][ $key ] = array( 'nonce' => $nonce );
+				if ( count( $all['records'] ) > self::MAX_RECORDS ) {
+					array_shift( $all['records'] );
+				}
+				return $all;
+			}
+		);
+		$this->pending[ $key ] = array(
+			'id'      => $this->activity_store()->begin(
+				(string) $package->get_provider_code(),
+				new ActivityRequest( 'branch.check', $package->get_repository()->reference, $type, (string) $package->get_identifier() ),
+				$this->activity_context( $type, $package, 'branch.check' )
+			),
+			'profile' => $profile,
+			'target'  => $target,
+			'nonce'   => $nonce,
+		);
+		return new ProgressOnly( new RecordedActivityOperation( $this->activity_store(), $this->pending[ $key ]['id'] ) );
+	}
+
+	/**
+	 * Freeze the same source and credential-generation binding used by checks.
+	 *
+	 * @return array{subject_type: string, subject_identity: string, adoption_token: ?string, context: string, purpose: string, provenance: string, actor: int}
+	 */
+	public function activity_context( string $type, Package $package, string $purpose ): array {
+		return array(
+			'subject_type'     => $type,
+			'subject_identity' => (string) $package->get_identifier(),
+			'adoption_token'   => AdoptionIdentity::of( $package ),
+			'context'          => hash( 'sha256', $this->target_fingerprint( $package ) . ':' . $this->all()['generation'] ),
+			'purpose'          => $purpose,
+			'provenance'       => 'core',
+			'actor'            => function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0,
+		);
+	}
+
 	/**
 	 * @return array{outcome: 'verified', checked_at: string}|null
 	 */
 	public function find( string $type, Package $package, ?string $profile_id ): ?array {
 		$record = $this->all()['records'][ $this->key( $type, $package ) ] ?? null;
-		if ( ! is_array( $record )
-			|| 'verified' !== ( $record['outcome'] ?? null )
-			|| ! is_string( $record['checked_at'] ?? null )
-			|| ! is_string( $record['target'] ?? null )
-			|| ! is_string( $record['profile'] ?? null )
+		if ( ! is_array( $record ) || 'verified' !== ( $record['outcome'] ?? null )
+			|| ! is_string( $record['nonce'] ?? null ) || 1 !== preg_match( '/\A[0-9a-f]{32}\z/', $record['nonce'] )
+			|| ! is_string( $record['checked_at'] ?? null ) || ! is_string( $record['target'] ?? null ) || ! is_string( $record['profile'] ?? null )
 			|| ! hash_equals( $this->target_fingerprint( $package ), $record['target'] )
-			|| ! hash_equals( $this->profile_fingerprint( $package, $profile_id ), $record['profile'] )
-		) {
+			|| ! hash_equals( $this->profile_fingerprint( $package, $profile_id ), $record['profile'] ) ) {
 			return null;
 		}
-
 		return array(
 			'outcome'    => 'verified',
 			'checked_at' => $record['checked_at'],
 		);
 	}
 
-	/** Record verified evidence or clear any earlier record after a failed check. */
+	/** Publish only the still-current check; optional history never grants verification. */
 	public function record( string $type, Package $package, ?string $profile_id, string $outcome, ?string $profile_fingerprint = null ): void {
+		$key = $this->key( $type, $package );
+		if ( ! isset( $this->pending[ $key ] ) ) {
+			throw new RuntimeException( 'The repository branch check was not started.' );
+		}
+		$pending = $this->pending[ $key ];
+		unset( $profile_id ); // The pre-work capture remains authoritative.
+		unset( $this->pending[ $key ] );
 		$this->mutate(
-			function ( array $all ) use ( $type, $package, $profile_id, $outcome, $profile_fingerprint ): array {
-				$key = $this->key( $type, $package );
+			static function ( array $all ) use ( $key, $pending, $outcome, $profile_fingerprint ): array {
+				$current = $all['records'][ $key ] ?? null;
+				if ( ! is_array( $current ) || ( $current['nonce'] ?? null ) !== $pending['nonce'] ) {
+					return $all;
+				}
 				unset( $all['records'][ $key ] );
 				if ( 'verified' === $outcome ) {
 					$all['records'][ $key ] = array(
+						'nonce'      => $pending['nonce'],
 						'outcome'    => 'verified',
 						'checked_at' => gmdate( 'Y-m-d\\TH:i:s\\Z' ),
-						'target'     => $this->target_fingerprint( $package ),
-						'profile'    => $profile_fingerprint ?? $this->profile_fingerprint( $package, $profile_id ),
+						'target'     => $pending['target'],
+						'profile'    => $profile_fingerprint ?? $pending['profile'],
 					);
-					if ( count( $all['records'] ) > self::MAX_RECORDS ) {
-						array_shift( $all['records'] );
-					}
 				}
-
 				return $all;
 			}
 		);
+		$status = match ( $outcome ) {
+			'verified' => 'succeeded',
+			'subdirectory_unavailable' => 'rejected',
+			default => 'failed',
+		};
+		$effect = in_array( $outcome, array( 'verified', 'subdirectory_unavailable' ), true ) ? 'established' : 'none';
+		$this->activity_store()->complete( $pending['id'], $status, $outcome, effect: $effect );
 	}
 
 	/** Clear evidence when this managed package lifecycle ends. */
@@ -115,6 +188,12 @@ class RepositoryBranchCheckEvidenceStore {
 
 	/** @return array<array-key, mixed> */
 	protected function read_option(): array {
+		// Other requests may have mutated this option since this request first read it.
+		if ( function_exists( 'wp_cache_delete' ) ) {
+			wp_cache_delete( self::OPTION_NAME, 'options' );
+			wp_cache_delete( 'alloptions', 'options' );
+			wp_cache_delete( 'notoptions', 'options' );
+		}
 		$value = get_option( self::OPTION_NAME, array() );
 		return is_array( $value ) ? $value : array(
 			'records'    => array(),

@@ -355,7 +355,7 @@ final class ExtensionsPageTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_api_two_host_does_not_claim_compatibility_with_api_three_migrator(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 15 );
 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
 		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
 		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 3 );
@@ -387,7 +387,7 @@ final class ExtensionsPageTest extends TestCase {
 	}
 
 	private function define_apis_compatible_with_existing_extension_catalogue(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 15 );
 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
 		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 3 );
 		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 3 );

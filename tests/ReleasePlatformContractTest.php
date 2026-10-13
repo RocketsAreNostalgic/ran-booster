@@ -346,7 +346,7 @@ final class ReleasePlatformContractTest extends TestCase {
 		$script = $this->read_text( dirname( __DIR__ ) . '/scripts/verify-release.sh' );
 
 		foreach ( array(
-			"define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );",
+			"define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 15 );",
 			"define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );",
 			"define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 3 );",
 			"define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', PortabilityFacade::API_VERSION );",

@@ -8,22 +8,19 @@
  */
 
 use RAN\Admin\DeploymentOutcomeMessage;
-use RAN\Deployment\DeploymentAttempt;
 
 if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$items         = array_map(
-	static fn ( DeploymentAttempt $attempt ): array => $attempt->safe_data(),
-	array_filter(
-		$deployment_activity['items'] ?? array(),
-		static fn ( mixed $item ): bool => $item instanceof DeploymentAttempt
-	)
-);
-$unavailable   = true === ( $deployment_activity['unavailable'] ?? false );
-$has_cursor    = true === ( $deployment_activity['has_cursor'] ?? false );
-$base_url      = $troubleshooting_base . '&panel=activity';
+$items       = is_array( $deployment_activity['items'] ?? null ) ? $deployment_activity['items'] : array();
+$filters     = is_array( $deployment_activity['filters'] ?? null ) ? $deployment_activity['filters'] : array();
+$unavailable = true === ( $deployment_activity['unavailable'] ?? false );
+$has_cursor  = true === ( $deployment_activity['has_cursor'] ?? false );
+$base_url    = $troubleshooting_base . '&panel=activity';
+foreach ( $filters as $key => $value ) {
+	$base_url = add_query_arg( 'activity_' . $key, $value, $base_url );
+}
 $settings_urls = is_array( $deployment_activity['package_settings_urls'] ?? null )
 	? $deployment_activity['package_settings_urls']
 	: array();
@@ -53,8 +50,25 @@ $origin_labels = array(
 <section class="ran-booster-activity" aria-labelledby="ran-booster-activity-heading">
 	<header class="ran-booster-activity__header">
 		<h3 id="ran-booster-activity-heading"><?php esc_html_e( 'Activity', 'ran-booster' ); ?></h3>
-		<p><?php esc_html_e( 'Review recent branch deployments.', 'ran-booster' ); ?></p>
+		<p><?php esc_html_e( 'Review recorded checks and deployments. Activity is recorded independently of diagnostic logging.', 'ran-booster' ); ?></p>
 	</header>
+	<form method="get">
+		<input type="hidden" name="page" value="ran-booster">
+		<input type="hidden" name="tab" value="troubleshooting">
+		<input type="hidden" name="panel" value="activity">
+		<?php
+		foreach ( array(
+			'provider'         => __( 'Provider', 'ran-booster' ),
+			'subject_type'     => __( 'Package type', 'ran-booster' ),
+			'subject_identity' => __( 'Package', 'ran-booster' ),
+			'operation'        => __( 'Activity', 'ran-booster' ),
+			'outcome'          => __( 'Outcome', 'ran-booster' ),
+		) as $key => $label ) {
+			?>
+			<label><?php echo esc_html( $label ); ?> <input type="text" name="<?php echo esc_attr( 'activity_' . $key ); ?>" value="<?php echo esc_attr( (string) ( $filters[ $key ] ?? '' ) ); ?>"></label>
+		<?php } ?>
+		<button type="submit" class="button"><?php esc_html_e( 'Filter activity', 'ran-booster' ); ?></button>
+	</form>
 	<?php if ( $has_queued ) { ?>
 		<form method="post">
 			<?php wp_nonce_field( 'ran-booster-request-deployment-runner' ); ?>
@@ -81,8 +95,11 @@ $origin_labels = array(
 			<ul class="ran-booster-attempt-list">
 			<?php
 			foreach ( $items as $item ) {
+				$recorded_check         = 'activity' === ( $item['record_source'] ?? '' );
 				$state                  = (string) ( $item['state'] ?? '' );
-				$summary                = DeploymentOutcomeMessage::for_code( (string) ( $item['outcome_code'] ?? 'pending' ) );
+				$summary                = $recorded_check
+					? DeploymentOutcomeMessage::for_activity( $state, (string) ( $item['reason'] ?? '' ), (string) ( $item['message'] ?? '' ) )
+					: DeploymentOutcomeMessage::for_code( (string) ( $item['outcome_code'] ?? 'pending' ) );
 				$project_label          = (string) ( $item['package_slug'] ?? '' );
 				$package_type           = (string) ( $item['package_type'] ?? '' );
 				$package_settings_url   = is_string( $settings_urls[ $package_type ][ $project_label ] ?? null )
@@ -91,7 +108,12 @@ $origin_labels = array(
 				$package_settings_label = 'theme' === $package_type
 					? __( 'Open theme settings', 'ran-booster' )
 					: __( 'Open plugin settings', 'ran-booster' );
-				$activity_label         = ucfirst( (string) ( $item['operation'] ?? '' ) );
+				$activity_label         = match ( $item['operation'] ?? '' ) {
+					'branch.check' => __( 'Branch check', 'ran-booster' ),
+					'release.check' => __( 'Release check', 'ran-booster' ),
+					'workflow.assessment' => __( 'Workflow assessment', 'ran-booster' ),
+					default => ucfirst( str_replace( array( '.', '_' ), ' ', (string) ( $item['operation'] ?? '' ) ) ),
+				};
 				?>
 				<li class="ran-booster-attempt-row">
 					<div class="ran-booster-attempt-row__summary" role="row">
@@ -105,12 +127,28 @@ $origin_labels = array(
 						} else {
 							?>
 							<?php echo esc_html( $project_label ); ?><?php } ?></span>
-						<span role="cell" data-label="<?php esc_attr_e( 'Source', 'ran-booster' ); ?>"><span class="ran-booster-badge ran-booster-badge--neutral"><?php esc_html_e( 'Branch deployment', 'ran-booster' ); ?></span></span>
+						<span role="cell" data-label="<?php esc_attr_e( 'Source', 'ran-booster' ); ?>"><span class="ran-booster-badge ran-booster-badge--neutral"><?php echo esc_html( $recorded_check ? (string) ( $item['provider'] ?? '' ) : __( 'Branch deployment', 'ran-booster' ) ); ?></span></span>
 						<span role="cell" data-label="<?php esc_attr_e( 'Activity', 'ran-booster' ); ?>"><?php echo esc_html( $activity_label ); ?></span>
-						<span role="cell" data-label="<?php esc_attr_e( 'Outcome', 'ran-booster' ); ?>"><span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $state_tones[ $state ] ?? 'neutral' ); ?> ran-booster-deployment-state ran-booster-deployment-state--<?php echo esc_attr( $state ); ?>"><?php echo esc_html( $state_labels[ $state ] ?? $state ); ?></span></span>
+						<span role="cell" data-label="<?php esc_attr_e( 'Outcome', 'ran-booster' ); ?>"><span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $state_tones[ $state ] ?? 'neutral' ); ?> ran-booster-deployment-state ran-booster-deployment-state--<?php echo esc_attr( $state ); ?>"><?php echo esc_html( $recorded_check ? $summary : ( $state_labels[ $state ] ?? $state ) ); ?></span></span>
 					</div>
 					<details class="ran-booster-attempt-row__details">
 						<summary><?php esc_html_e( 'View details', 'ran-booster' ); ?></summary>
+						<?php if ( $recorded_check ) { ?>
+							<dl class="ran-booster-activity__details">
+								<div><dt><?php esc_html_e( 'Reported by', 'ran-booster' ); ?></dt><dd><?php echo esc_html( 'core' === ( $item['provenance'] ?? '' ) ? __( 'Recorded by Core', 'ran-booster' ) : __( 'Provider-reported', 'ran-booster' ) ); ?></dd></div>
+								<?php
+								foreach ( array(
+									'stage'        => __( 'Last recorded stage', 'ran-booster' ),
+									'reason'       => __( 'Reason', 'ran-booster' ),
+									'remediation'  => __( 'Remediation', 'ran-booster' ),
+									'correlation'  => __( 'Support reference', 'ran-booster' ),
+									'completed_at' => __( 'Completed (UTC)', 'ran-booster' ),
+								) as $key => $label ) {
+									?>
+									<div><dt><?php echo esc_html( $label ); ?></dt><dd><?php echo esc_html( (string) ( $item[ $key ] ?? '' ) ); ?></dd></div>
+								<?php } ?>
+							</dl>
+						<?php } else { ?>
 						<dl class="ran-booster-activity__details">
 							<div><dt><?php echo esc_html( in_array( $state, array( 'failed', 'needs_attention' ), true ) ? __( 'Failure reason', 'ran-booster' ) : __( 'Outcome', 'ran-booster' ) ); ?></dt><dd><?php echo esc_html( $summary ); ?></dd></div>
 							<div><dt><?php esc_html_e( 'Support reference', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( (string) ( $item['correlation_id'] ?? '' ) ); ?></code></dd></div>
@@ -127,7 +165,7 @@ $origin_labels = array(
 								<div><dt><?php esc_html_e( 'Package settings', 'ran-booster' ); ?></dt><dd><a href="<?php echo esc_url( $package_settings_url ); ?>"><?php echo esc_html( $package_settings_label ); ?></a></dd></div>
 							<?php } ?>
 						</dl>
-						<?php if ( 'running' === $state ) { ?>
+							<?php if ( 'running' === $state ) { ?>
 							<form method="post" action="">
 								<?php wp_nonce_field( 'ran-booster-reconcile-deployment-worker' ); ?>
 								<input type="hidden" name="ran_booster[action]" value="reconcile-deployment-worker">
@@ -136,6 +174,7 @@ $origin_labels = array(
 								<p><label><input type="checkbox" name="ran_booster[confirm_stopped]" value="1" required> <?php esc_html_e( 'I have confirmed that the deployment worker has stopped.', 'ran-booster' ); ?></label></p>
 								<button type="submit" class="button"><?php esc_html_e( 'Reconcile stopped worker', 'ran-booster' ); ?></button>
 							</form>
+						<?php } ?>
 						<?php } ?>
 					</details>
 				</li>
@@ -146,5 +185,5 @@ $origin_labels = array(
 	<?php
 	if ( null !== $next ) {
 		?>
-		<p><a class="button" href="<?php echo esc_url( $base_url . '&before=' . rawurlencode( $next ) ); ?>"><?php esc_html_e( 'Older activity', 'ran-booster' ); ?></a></p><?php } ?>
+		<p><a class="button" href="<?php echo esc_url( $base_url . '&before=' . rawurlencode( $next ) ); ?>"><?php esc_html_e( 'Load older activity', 'ran-booster' ); ?></a></p><?php } ?>
 </section>

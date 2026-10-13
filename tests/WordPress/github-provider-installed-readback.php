@@ -2,12 +2,12 @@
 
 // Executed by WP-CLI against the installed release ZIP in a disposable site.
 
-if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 14 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
-	throw new RuntimeException( 'The installed runtime does not expose Provider API 14.' );
+if ( ! defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) || 15 !== RAN_BOOSTER_PROVIDER_API_VERSION ) {
+	throw new RuntimeException( 'The installed runtime does not expose Provider API 15.' );
 }
 
-if ( 3 !== RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3::RELEASE_WORKFLOW_API_VERSION ) { // @phpstan-ignore notIdentical.alwaysFalse (Installed proof must verify the separately loaded release workflow API marker.)
-	throw new RuntimeException( 'The installed runtime does not expose release workflow API 3.' );
+if ( 4 !== RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV4::RELEASE_WORKFLOW_API_VERSION ) { // @phpstan-ignore notIdentical.alwaysFalse (Installed proof must verify the separately loaded release workflow API marker.)
+	throw new RuntimeException( 'The installed runtime does not expose release workflow API 4.' );
 }
 
 $ran_booster_plugin_root = realpath( WP_PLUGIN_DIR . '/ran-booster' );
@@ -61,7 +61,7 @@ foreach (
 		RAN\RepositoryProvider\RepositoryReleaseInspector::class,
 		RAN\RepositoryProvider\RepositoryReleaseMetadata::class,
 		RAN\RepositoryProvider\RepositoryReleaseNativeTargets::class,
-		RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3::class,
+		RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV4::class,
 	) as $ran_booster_capability
 ) {
 	if ( $ran_booster_provider !== $ran_booster_registry->require_capability( 'gh', $ran_booster_capability ) ) {

@@ -430,7 +430,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( 'release_workflow', $rows['101']['details'][0]['category'] );
 	}
 
-	public function test_repository_projection_uses_the_same_benign_existing_workflow_observation_as_the_repository_panel(): void {
+	public function test_repository_projection_does_not_trust_unbound_provider_observations(): void {
 		$status   = new \RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus(
 			'fixture',
 			'101',
@@ -464,8 +464,8 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 			'https://example.test/repositories'
 		);
 
-		self::assertSame( 'Existing workflow found', $rows['101']['details'][0]['value'] );
-		self::assertSame( 'info', $rows['101']['details'][0]['tone'] );
+		self::assertSame( 'Ready to assess', $rows['101']['details'][0]['value'] );
+		self::assertSame( 'ok', $rows['101']['details'][0]['tone'] );
 	}
 
 	public function test_repository_projection_marks_a_repository_relationship_conflict_as_blocked(): void {

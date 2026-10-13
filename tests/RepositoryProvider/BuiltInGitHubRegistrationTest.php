@@ -45,6 +45,51 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class BuiltInGitHubRegistrationTest extends TestCase {
 
+	public function test_activity_resolver_keeps_provider_repository_and_managed_subjects_distinct(): void {
+		$container = new CoreContainer();
+		$runtime   = new Booster( $container );
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Core composition requires the WordPress table prefix.
+		$GLOBALS['wpdb'] = new class() {
+			public string $prefix = 'wp_';
+		};
+		( new BoosterServiceProvider() )->register( $container, $runtime, new \stdClass(), 'ran-booster.php' );
+		$reporter = $container->make( ProviderRegistry::class )->activity_reporter( 'gh' );
+		$capture  = ( new \ReflectionProperty( \RAN\Activity\BoundActivityReporter::class, 'capture' ) )->getValue( $reporter );
+		self::assertInstanceOf( \Closure::class, $capture );
+		$provider = $capture( new \RAN\Activity\ActivityRequest( 'gh.inspect' ) );
+		self::assertSame( 'provider', $provider['subject_type'] );
+		self::assertSame( 'gh', $provider['subject_identity'] );
+		self::assertNull( $provider['adoption_token'] );
+		$repository = new \RAN\RepositoryProvider\RepositoryReference( 'owner/example', '123', false, null );
+		$unmanaged  = $capture( new \RAN\Activity\ActivityRequest( 'gh.inspect', $repository ) );
+		self::assertSame( 'repository', $unmanaged['subject_type'] );
+		self::assertSame( '123', $unmanaged['subject_identity'] );
+		self::assertNull( $unmanaged['adoption_token'] );
+		self::assertNull( $capture( new \RAN\Activity\ActivityRequest( 'gh.inspect', new \RAN\RepositoryProvider\RepositoryReference( 'owner/unresolved', null, false, null ) ) ) );
+
+		$package = $this->createMock( \RAN\Plugin::class );
+		$package->method( 'get_provider_code' )->willReturn( 'gh' );
+		$package->method( 'get_provider_repository_id' )->willReturn( '123' );
+		$plugins = $this->createMock( \RAN\Storage\PluginRepository::class );
+		$plugins->method( 'booster_plugin_from_file' )->with( 'example/example.php' )->willReturn( $package );
+		$container->bind( \RAN\Storage\PluginRepository::class, $plugins );
+		$token = \RAN\AdoptionIdentity::create( 'gh', '123' );
+		$package->method( 'get_adoption_token' )->willReturn( $token );
+		$context  = array(
+			'subject_type'     => 'plugin',
+			'subject_identity' => 'example/example.php',
+			'adoption_token'   => $token,
+			'context'          => 'source-and-access',
+			'purpose'          => 'branch.check',
+			'provenance'       => 'core',
+		);
+		$evidence = $this->createMock( \RAN\Admin\RepositoryBranchCheckEvidenceStore::class );
+		$evidence->expects( self::once() )->method( 'activity_context' )->with( 'plugin', $package, 'branch.check' )->willReturn( $context );
+		$container->bind( \RAN\Admin\RepositoryBranchCheckEvidenceStore::class, $evidence );
+		self::assertSame( $context, $capture( new \RAN\Activity\ActivityRequest( 'gh.inspect', $repository, 'plugin', 'example/example.php' ) ) );
+		self::assertNull( $capture( new \RAN\Activity\ActivityRequest( 'gh.inspect', new \RAN\RepositoryProvider\RepositoryReference( 'owner/other', '124', false, null ), 'plugin', 'example/example.php' ) ) );
+	}
+
 	public function test_core_registers_the_bundled_git_hub_aggregate_without_reading_credentials(): void {
 		$secrets   = null;
 		$container = new CoreContainer();

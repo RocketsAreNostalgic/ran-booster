@@ -72,6 +72,7 @@ class Booster {
 	public function init() {
 		add_action( 'admin_init', $this->service_callback( \RAN\Admin\CredentialSelfDestructPurger::class, 'purge' ), 1 );
 		add_action( 'admin_init', array( $this, 'maybe_upgrade_database' ) );
+		add_action( 'wp_scheduled_delete', array( $this, 'prune_activity' ) );
 		add_action( 'admin_init', array( $this, 'register_plugin_action_links' ) );
 		add_action( 'admin_init', $this->service_callback( 'RAN\Dispatcher', 'dispatch_post_requests' ) );
 		add_action(
@@ -174,6 +175,7 @@ class Booster {
 			);
 		}
 
+		$this->upgrade_activity();
 		$this->service( WordPressWorkerWakeup::class )->request();
 
 		return null;
@@ -285,7 +287,7 @@ class Booster {
 				'image'         => 'bitbucket-cloud.svg',
 				'availability'  => __( 'Free', 'ran-booster' ),
 				'required_apis' => array(
-					'RAN_BOOSTER_PROVIDER_API_VERSION' => 14,
+					'RAN_BOOSTER_PROVIDER_API_VERSION' => 15,
 					'RAN_BOOSTER_ADDON_API_VERSION'    => 17,
 				),
 				'docs_url'      => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket#readme',
@@ -411,6 +413,50 @@ class Booster {
 		// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- The persistent notice reports the active safe state.
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
 			// An active plugin stays active but enters the storage-safe state.
+		}
+		$this->upgrade_activity();
+	}
+
+	/** Optional history has its own schema version and cannot poison Core readiness. */
+	private function upgrade_activity(): void {
+		$activity = $this->service( \RAN\Activity\ActivityStore::class );
+		if ( ! $activity->available() ) {
+			$activity->install();
+		}
+	}
+
+	/** Reuse WordPress's daily maintenance hook; never prune from a rendered history. */
+	public function prune_activity(): void {
+		$activity = $this->service( \RAN\Activity\ActivityStore::class );
+		if ( ! $activity->available() ) {
+			return;
+		}
+		$plugins = $this->service( \RAN\Storage\PluginRepository::class )->all_deployment_plugins();
+		$themes  = $this->service( \RAN\Storage\ThemeRepository::class )->all_deployment_themes();
+		if ( ! is_array( $plugins ) || ! is_array( $themes ) ) {
+			return;
+		}
+		$contexts = array();
+		$evidence = null;
+		foreach ( array(
+			'plugin' => $plugins,
+			'theme'  => $themes,
+		) as $type => $packages ) {
+			foreach ( $packages as $package ) {
+				if ( ! $package instanceof Package || null === AdoptionIdentity::of( $package ) ) {
+					return;
+				}
+				$evidence ??= $this->service( \RAN\Admin\RepositoryBranchCheckEvidenceStore::class );
+				foreach ( array( 'branch.check', 'release.check', 'workflow.assessment' ) as $purpose ) {
+					$contexts[] = $evidence->activity_context( $type, $package, $purpose );
+				}
+			}
+		}
+		for ( $batch = 0; $batch < 20; ++$batch ) {
+			$removed = $activity->prune( $contexts );
+			if ( false === $removed || $removed < 100 ) {
+				break;
+			}
 		}
 	}
 

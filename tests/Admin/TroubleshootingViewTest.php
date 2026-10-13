@@ -199,6 +199,42 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'install a verified release ZIP manually', $html );
 	}
 
+	public function test_check_outcomes_have_domain_labels_instead_of_machine_codes(): void {
+		self::assertSame( 'No newer release was found.', \RAN\Admin\DeploymentOutcomeMessage::for_activity( 'succeeded', 'no_newer_candidate' ) );
+		self::assertSame( 'Repository branch and archive verified.', \RAN\Admin\DeploymentOutcomeMessage::for_activity( 'succeeded', 'verified' ) );
+		self::assertSame( 'Completion not recorded', \RAN\Admin\DeploymentOutcomeMessage::for_activity( 'incomplete', '', 'Resolving revision.' ) );
+		self::assertSame( 'Check could not complete.', \RAN\Admin\DeploymentOutcomeMessage::for_activity( 'failed', 'unknown_vendor_code' ) );
+		self::assertStringContainsString( 'configured package subdirectory', \RAN\Admin\DeploymentOutcomeMessage::for_activity( 'failed', 'subdirectory_unavailable' ) );
+		self::assertSame( 'The configured repository subdirectory could not be verified.', \RAN\Admin\DeploymentOutcomeMessage::for_activity( 'failed', 'subdirectory_unverified' ) );
+		self::assertStringContainsString( 'Review the package settings', \RAN\Admin\DeploymentOutcomeMessage::for_activity( 'failed', 'unable_to_check' ) );
+		self::assertSame( \RAN\Admin\DeploymentOutcomeMessage::for_code( 'provider_unavailable' ), \RAN\Admin\DeploymentOutcomeMessage::for_activity( 'failed', 'provider_unavailable' ) );
+	}
+
+	public function test_activity_distinguishes_provider_reports_from_core_records(): void {
+		foreach ( array(
+			'provider' => 'Provider-reported',
+			'core'     => 'Recorded by Core',
+		) as $provenance => $expected_label ) {
+			$deployment_activity  = array(
+				'items' => array(
+					array(
+						'record_source' => 'activity',
+						'provenance'    => $provenance,
+						'state'         => 'succeeded',
+						'message'       => 'Repository inspected.',
+						'operation'     => 'gh.inspect',
+					),
+				),
+			);
+			$troubleshooting_base = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
+			$html = (string) ob_get_clean();
+			self::assertStringContainsString( '<dt>Reported by</dt><dd>' . $expected_label . '</dd>', $html );
+			self::assertStringNotContainsString( 'Reconcile stopped worker', $html );
+		}
+	}
+
 	public function test_deployment_activity_shows_the_recorded_failure_reason(): void {
 		$attempt              = DeploymentAttempt::from_database(
 			array(
@@ -226,7 +262,7 @@ final class TroubleshootingViewTest extends TestCase {
 			)
 		);
 		$deployment_activity  = array(
-			'items'                 => array( $attempt ),
+			'items'                 => array( $attempt->safe_data() ),
 			'unavailable'           => false,
 			'has_cursor'            => false,
 			'next_cursor'           => null,
@@ -251,7 +287,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'data-label="Source"', $html );
 		self::assertStringContainsString( 'data-label="Activity"', $html );
 		self::assertStringContainsString( 'data-label="Outcome"', $html );
-		self::assertStringContainsString( 'Review recent branch deployments.', $html );
+		self::assertStringContainsString( 'Review recorded checks and deployments.', $html );
 		self::assertStringNotContainsString( 'Published release', $html );
 		self::assertStringContainsString( '<dl class="ran-booster-activity__details">', $html );
 		self::assertStringContainsString( '<dt>Failure reason</dt><dd>The repository provider rate limit was reached.', $html );
@@ -287,7 +323,7 @@ final class TroubleshootingViewTest extends TestCase {
 			)
 		);
 		$deployment_activity  = array(
-			'items'                 => array( $attempt ),
+			'items'                 => array( $attempt->safe_data() ),
 			'unavailable'           => false,
 			'has_cursor'            => false,
 			'next_cursor'           => null,

@@ -56,3 +56,17 @@ if ( ! function_exists( 'add_filter' ) ) {
 		return add_action( $hook, $callback, $priority, $accepted_args );
 	}
 }
+
+if ( ! function_exists( 'get_current_blog_id' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress site identity must retain its host function name.
+	function get_current_blog_id(): int {
+		return 1;
+	}
+}
+
+if ( ! function_exists( 'get_current_network_id' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress network identity must retain its host function name.
+	function get_current_network_id(): int {
+		return 1;
+	}
+}

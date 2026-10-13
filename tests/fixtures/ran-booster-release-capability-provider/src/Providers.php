@@ -228,6 +228,10 @@ final class ReleaseProvider extends BaseProvider implements RepositoryReleaseMet
 		unset( $package_type, $repository, $metadata_file, $package_root, $installed_identifier, $channel, $deployment_policy );
 
 		return new class() implements RepositoryReleaseNativeTarget {
+			public function matches_check_source( string $runtime_provider, string $repository_identity, string $channel ): bool {
+				return false;
+			}
+
 			public function register(): bool {
 				return true;
 			}

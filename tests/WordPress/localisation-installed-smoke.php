@@ -36,7 +36,7 @@ if ( ! is_string( $ran_booster_expected_root ) || false === $ran_booster_wordpre
 }
 foreach (
 	array(
-		'RAN_BOOSTER_PROVIDER_API_VERSION'          => 14,
+		'RAN_BOOSTER_PROVIDER_API_VERSION'          => 15,
 		'RAN_BOOSTER_ADDON_API_VERSION'             => 17,
 		'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION' => 3,
 		'RAN_BOOSTER_PORTABILITY_API_VERSION'       => 3,

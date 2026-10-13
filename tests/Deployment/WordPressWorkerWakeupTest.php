@@ -16,6 +16,8 @@ use RAN\Deployment\WordPressWorkerWakeup;
 use RAN\Internal\CoreContainer;
 use RAN\Logging\TemporaryDebugCapture;
 
+require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
+
 final class WordPressWorkerWakeupTest extends TestCase {
 
 	private WordPressWorkerWakeupDatabase $database;
@@ -83,6 +85,8 @@ final class WordPressWorkerWakeupTest extends TestCase {
 		$booster   = new Booster( $container );
 		$container->bind( 'RAN\Storage\Database', $schema );
 		$container->bind( WordPressWorkerWakeup::class, $wakeup );
+
+		$container->bind( \RAN\Activity\ActivityStore::class, new \RAN\Activity\ActivityStore( new \stdClass() ) );
 
 		$booster->activate();
 		self::assertSame( 1, $schema->installs );

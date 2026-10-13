@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "635c378e204522fe555f32bb0e82bfe4",
+    "content-hash": "b3f881af887c17d1e62e79f52ee01f01",
     "packages": [
         {
             "name": "ran/booster-github-provider",
-            "version": "v1.0.0-beta.15",
+            "version": "v1.0.0-beta.16",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider.git",
-                "reference": "85f41be3b9cbd8ec97bcccb262c48a599522ed35"
+                "reference": "d03865a815cb7d58bc9ed486f1054a7ef2ecf386"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-booster-github-provider/zipball/85f41be3b9cbd8ec97bcccb262c48a599522ed35",
-                "reference": "85f41be3b9cbd8ec97bcccb262c48a599522ed35",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-booster-github-provider/zipball/d03865a815cb7d58bc9ed486f1054a7ef2ecf386",
+                "reference": "d03865a815cb7d58bc9ed486f1054a7ef2ecf386",
                 "shasum": ""
             },
             "require": {
@@ -110,7 +110,7 @@
                 "security": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider/security/advisories/new",
                 "source": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider"
             },
-            "time": "2026-10-09T13:08:51+00:00"
+            "time": "2026-10-12T22:04:26+00:00"
         },
         {
             "name": "ran/updater-support",
@@ -321,16 +321,16 @@
         },
         {
             "name": "ran/wp-release-updater",
-            "version": "v1.0.0-beta.9",
+            "version": "v1.0.0-beta.10",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater.git",
-                "reference": "27889528442fc4e49ca060959218d5ec288c3055"
+                "reference": "16b28307cd200e0338eb4de431ff75db234dcda9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/27889528442fc4e49ca060959218d5ec288c3055",
-                "reference": "27889528442fc4e49ca060959218d5ec288c3055",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/16b28307cd200e0338eb4de431ff75db234dcda9",
+                "reference": "16b28307cd200e0338eb4de431ff75db234dcda9",
                 "shasum": ""
             },
             "require": {
@@ -352,7 +352,7 @@
             "type": "library",
             "autoload-dev": {
                 "psr-4": {
-                    "Tests\\": "tests/"
+                    "RAN\\WPReleaseUpdater\\V1\\Tests\\": "tests/"
                 }
             },
             "scripts": {
@@ -366,7 +366,9 @@
                     "@test"
                 ],
                 "analyze": [
-                    "phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=1G"
+                    "phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=1G",
+                    "phpstan analyse --configuration=phpstan-tools.neon --no-progress --memory-limit=1G",
+                    "php scripts/analyze-tests.php"
                 ],
                 "audit:composer": [
                     "composer audit --locked --no-interaction"
@@ -415,7 +417,7 @@
                 "security": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater/security/advisories/new",
                 "source": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater"
             },
-            "time": "2026-09-28T12:28:00+00:00"
+            "time": "2026-10-12T22:04:17+00:00"
         }
     ],
     "packages-dev": [
@@ -3161,7 +3163,7 @@
         "ext-sodium": "*",
         "ext-zip": "*"
     },
-    "platform-dev": {},
+    "platform-dev": [],
     "platform-overrides": {
         "php": "8.2.0"
     },

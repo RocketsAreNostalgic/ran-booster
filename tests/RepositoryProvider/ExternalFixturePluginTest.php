@@ -46,7 +46,7 @@ final class ExternalFixturePluginTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_presenter_suppresses_management_presentation_for_apartial_capability_provider(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 15 );
 		$this->load_fixture_plugin();
 		list( $registry, , $path ) = $this->registry();
 
@@ -115,7 +115,7 @@ final class ExternalFixturePluginTest extends TestCase {
 	public function test_plugin_loaded_before_the_api_marker_registers_on_the_later_hook(): void {
 		$this->load_fixture_plugin();
 		self::assertFalse( defined( 'RAN_BOOSTER_PROVIDER_API_VERSION' ) );
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 15 );
 
 		list( $registry, , $path ) = $this->registry();
 		$this->run_registration_hook( $registry );
@@ -127,7 +127,7 @@ final class ExternalFixturePluginTest extends TestCase {
 		#[RunInSeparateProcess]
 		#[PreserveGlobalState( false )]
 	public function test_plugin_loaded_after_the_api_marker_exercises_the_complete_provider_contract(): void {
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 15 );
 		$this->load_fixture_plugin();
 		list( $registry, $secrets, $path ) = $this->registry();
 
@@ -354,8 +354,10 @@ final class ExternalFixturePluginTest extends TestCase {
 		return array(
 			'older'    => array( 10 ),
 			'api_11'   => array( 11 ),
-			'previous' => array( 12 ),
-			'future'   => array( 15 ),
+			'api_12'   => array( 12 ),
+			'api_13'   => array( 13 ),
+			'previous' => array( 14 ),
+			'future'   => array( 16 ),
 		);
 	}
 

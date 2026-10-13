@@ -23,11 +23,11 @@ final class ProviderApiLifecycleTest extends TestCase {
 		require_once dirname( __DIR__ ) . '/Support/ExternalFixturePluginWordPressFunctions.php';
 		$GLOBALS['ran_booster_external_fixture_actions'] = array();
 		if ( $core_first ) {
-			define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
+			define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 15 );
 		}
 		require dirname( __DIR__ ) . '/fixtures/provider-api' . $provider_api . '-registration/provider.php';
 		if ( ! $core_first ) {
-			define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
+			define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 15 );
 		}
 		$registry  = new ProviderRegistry();
 		$callbacks = $GLOBALS['ran_booster_external_fixture_actions']['ran_booster_register_providers'];
@@ -55,7 +55,7 @@ final class ProviderApiLifecycleTest extends TestCase {
 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 1 );
 
 		$this->expectException( LogicException::class );
-		$this->expectExceptionMessage( 'RAN Booster Provider API 14 conflicts with an existing API version marker.' );
+		$this->expectExceptionMessage( 'RAN Booster Provider API 15 conflicts with an existing API version marker.' );
 
 		require dirname( __DIR__, 2 ) . '/ran-booster.php';
 	}
@@ -75,7 +75,9 @@ final class ProviderApiLifecycleTest extends TestCase {
 		$parameters = $registry->getConstructor()?->getParameters() ?? array();
 
 		self::assertFalse( $registry->hasMethod( 'logging' ) );
-		self::assertCount( 5, $parameters );
+		self::assertCount( 6, $parameters );
+		self::assertSame( 'activity_reporter_factory', $parameters[5]->getName() );
+		self::assertTrue( $parameters[5]->isOptional() );
 		self::assertSame( 'registration_context', $parameters[4]->getName() );
 		self::assertTrue( $parameters[4]->isOptional() );
 		self::assertTrue( $parameters[4]->allowsNull() );

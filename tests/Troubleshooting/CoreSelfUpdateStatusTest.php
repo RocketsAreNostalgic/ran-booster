@@ -20,6 +20,11 @@ final class CoreSelfUpdateStatusTest extends TestCase {
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		$policy = CoreSelfUpdatePolicy::detect( $directory . '/ran-booster.php', '1.2.3' );
 		$target = new class() implements RepositoryReleaseNativeTarget {
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The public native-target signature is required; this self-update double never matches managed history.
+			public function matches_check_source( string $runtime_provider, string $repository_identity, string $channel ): bool {
+				return false;
+			}
+
 			public function register(): bool {
 				return true;
 			}
@@ -59,6 +64,11 @@ final class CoreSelfUpdateStatusTest extends TestCase {
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		$policy = CoreSelfUpdatePolicy::detect( $directory . '/ran-booster.php', '1.2.3' );
 		$target = new class() implements RepositoryReleaseNativeTarget {
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The public native-target signature is required; this self-update double never matches managed history.
+			public function matches_check_source( string $runtime_provider, string $repository_identity, string $channel ): bool {
+				return false;
+			}
+
 			public function register(): bool {
 				return true;
 			}
@@ -103,6 +113,11 @@ final class CoreSelfUpdateStatusTest extends TestCase {
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		$policy = CoreSelfUpdatePolicy::detect( $directory . '/ran-booster.php', '1.2.3' );
 		$target = new class() implements RepositoryReleaseNativeTarget {
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The public native-target signature is required; this self-update double never matches managed history.
+			public function matches_check_source( string $runtime_provider, string $repository_identity, string $channel ): bool {
+				return false;
+			}
+
 			public function register(): bool {
 				return true;
 			}

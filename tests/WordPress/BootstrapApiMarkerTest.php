@@ -13,7 +13,7 @@ final class BootstrapApiMarkerTest extends TestCase {
 	/** @return iterable<string, array{string, mixed, string}> */
 	public static function conflicting_marker_provider(): iterable {
 		foreach ( array(
-			'PROVIDER'          => 14,
+			'PROVIDER'          => 15,
 			'ADDON'             => 17,
 			'ADMIN_INTERACTION' => 3,
 			'PORTABILITY'       => 3,
@@ -56,7 +56,7 @@ final class BootstrapApiMarkerTest extends TestCase {
 		define( 'WPINC', 'wp-includes' );
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'ABSPATH', dirname( __DIR__ ) . '/fixtures/wordpress/' );
-		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 14 );
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 15 );
 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
 		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 3 );
 

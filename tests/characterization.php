@@ -71,7 +71,7 @@ $ran_booster_assert( DeploymentState::NEEDS_ATTENTION === $ran_booster_unsafe->g
 $ran_booster_source = file_get_contents( dirname( __DIR__ ) . '/ran-booster.php' );
 $ran_booster_assert( is_string( $ran_booster_source ) && ! str_contains( $ran_booster_source, 'WorkerCliCommand' ), 'Bootstrap must not expose a second executor.' );
 $ran_booster_assert( is_string( $ran_booster_source ) && ! str_contains( $ran_booster_source, 'ActionHandlerProvider' ), 'Bootstrap must not restore the inherited action bus.' );
-$ran_booster_assert( is_string( $ran_booster_source ) && str_contains( $ran_booster_source, "RAN_BOOSTER_PROVIDER_API_VERSION', 14" ), 'Provider API 14 must remain explicit.' );
+$ran_booster_assert( is_string( $ran_booster_source ) && str_contains( $ran_booster_source, "RAN_BOOSTER_PROVIDER_API_VERSION', 15" ), 'Provider API 15 must remain explicit.' );
 $ran_booster_assert( is_string( $ran_booster_source ) && str_contains( $ran_booster_source, "RAN_BOOSTER_ADDON_API_VERSION', 17" ), 'Add-on API 17 must remain explicit.' );
 $ran_booster_assert( is_string( $ran_booster_source ) && ! str_contains( $ran_booster_source, 'RAN_BOOSTER_WEBHOOK_CLEANUP_API_VERSION' ), 'The removed Webhook Cleanup marker must stay absent.' );
 $ran_booster_assert( is_string( $ran_booster_source ) && ! str_contains( $ran_booster_source, 'RAN_BOOSTER_LOGGING_API_VERSION' ), 'The removed Logging API marker must stay absent.' );

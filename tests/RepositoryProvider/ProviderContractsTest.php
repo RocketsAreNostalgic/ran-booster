@@ -49,9 +49,16 @@ final class ProviderContractsTest extends TestCase {
 		);
 		self::assertSame( RepositoryReference::class, (string) $factory->getParameters()[1]->getType() );
 		self::assertSame(
-			array( 'register', 'status', 'refresh' ),
+			array( 'matches_check_source', 'register', 'status', 'refresh' ),
 			get_class_methods( RepositoryReleaseNativeTarget::class )
 		);
+	}
+
+	public function test_native_check_source_matcher_preserves_named_scalar_contract(): void {
+		$method = new \ReflectionMethod( RepositoryReleaseNativeTarget::class, 'matches_check_source' );
+		self::assertSame( 'bool', (string) $method->getReturnType() );
+		self::assertSame( array( 'runtime_provider', 'repository_identity', 'channel' ), array_map( static fn ( \ReflectionParameter $parameter ): string => $parameter->getName(), $method->getParameters() ) );
+		self::assertSame( array( 'string', 'string', 'string' ), array_map( static fn ( \ReflectionParameter $parameter ): string => (string) $parameter->getType(), $method->getParameters() ) );
 	}
 
 	public function test_release_native_target_status_is_bounded_and_contains_no_generic_payload(): void {

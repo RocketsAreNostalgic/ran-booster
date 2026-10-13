@@ -29,6 +29,7 @@ class LocalDataRemover {
 
 	private const OPTION_NAMES = array(
 		Database::VERSION_OPTION,
+		\RAN\Activity\ActivityStore::VERSION_OPTION,
 		CredentialExpiryObservationStore::OPTION_NAME,
 		PublicRepositoryLookupProfileStore::OPTION_NAME,
 		RepositoryBranchCheckEvidenceStore::OPTION_NAME,
@@ -162,6 +163,7 @@ class LocalDataRemover {
 			array(
 				$this->verified_table_prefix . 'ran_booster_packages',
 				$this->verified_table_prefix . 'ran_booster_deployment_attempts',
+				$this->verified_table_prefix . \RAN\Activity\ActivityStore::TABLE_SUFFIX,
 			) as $table
 		) {
 			$query = $this->database->prepare( 'DROP TABLE IF EXISTS %i', $table );

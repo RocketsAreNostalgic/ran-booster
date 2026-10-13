@@ -7,6 +7,9 @@ namespace RAN\Tests\WordPress;
 require_once __DIR__ . '/ManagedReleaseRuntimeWordPressFunctions.php';
 require_once __DIR__ . '/RuntimeReleaseStore.php';
 require_once __DIR__ . '/RuntimeUpdaterFacade.php';
+require_once __DIR__ . '/../Activity/ActivityConnection.php';
+require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
+require_once __DIR__ . '/../Storage/StorageTestEnvironment.php';
 require_once __DIR__ . '/RuntimeReleaseProvider.php';
 require_once __DIR__ . '/../Support/WPError.php';
 require_once __DIR__ . '/../Support/WordPressUpgraderSkins.php';
@@ -383,9 +386,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertNull( $registrar->target( 'theme', 'example-theme' ) );
 		self::assertSame( 'repository_read_failed', $registrar->failure_code( 'plugin', 'unavailable/unavailable.php' ) );
 		self::assertSame( 'repository_release_owner_exists', $registrar->failure_code( 'theme', 'example-theme' ) );
-		self::assertCount( 5, $GLOBALS['ran_booster_runtime_actions'] );
+		self::assertCount( 7, $GLOBALS['ran_booster_runtime_actions'] );
 		self::assertSame(
 			array(
+				'ran_wp_release_updater_check_started_v1',
+				'ran_wp_release_updater_check_completed_v1',
 				'upgrader_pre_download',
 				'upgrader_pre_install',
 				'site_transient_update_plugins',
@@ -3188,13 +3193,134 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		return $registry;
 	}
 
+	public function test_native_check_envelopes_capture_before_work_and_reject_foreign_or_malformed_reports(): void {
+		$package                                     = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
+		$connection                                  = new \RAN\Tests\Activity\ActivityConnection();
+		$activity                                    = new \RAN\Activity\ActivityStore( $connection );
+		$GLOBALS['ran_booster_storage_test_options'] = array();
+		$GLOBALS['ran_booster_activity_options']     = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		[$registrar]                                 = $this->native_plugin_registrar( $package, activity: $activity );
+		self::assertNotNull( $registrar->target( 'plugin', self::NATIVE_PLUGIN ) );
+		$context = ( new \RAN\Admin\RepositoryBranchCheckEvidenceStore() )->activity_context( 'plugin', $package, 'release.check' );
+		self::assertNotNull( $context['adoption_token'] );
+		$started = array(
+			'check_id'            => str_repeat( 'a', 32 ),
+			'network_id'          => 1,
+			'blog_id'             => 1,
+			'target_type'         => 'plugin',
+			'installed_identity'  => self::NATIVE_PLUGIN,
+			'provider_code'       => 'github',
+			'repository_identity' => '123456789',
+			'channel'             => 'stable',
+			'binding_hash'        => str_repeat( 'b', 64 ),
+		);
+		foreach ( array( array( 'blog_id' => 2 ), array( 'repository_identity' => 'foreign' ), array( 'channel' => 'prerelease' ), array( 'binding_hash' => 'bad' ) ) as $wrong ) {
+			$registrar->activity_check_started( array_replace( $started, $wrong ) );
+		}
+		self::assertCount( 0, $connection->inserted );
+		$registrar->activity_check_started( $started );
+		$registrar->activity_check_started( $started );
+		self::assertCount( 1, $connection->inserted );
+		self::assertSame( \RAN\AdoptionIdentity::of( $package ), $connection->inserted[0]['adoption_token'] );
+		$completed = array(
+			'check_id'                  => $started['check_id'],
+			'status'                    => 'succeeded',
+			'reason'                    => 'candidate_rejected',
+			'relationship'              => 'newer',
+			'installed_version'         => '1.0.0',
+			'candidate_version'         => '2.0.0',
+			'offered_version'           => null,
+			'candidate_validation_code' => 'candidate_validation_failed',
+		);
+		$count     = count( $connection->queries );
+		$registrar->activity_check_completed( $completed );
+		self::assertCount( $count, $connection->queries );
+		$completed['status'] = 'rejected';
+		$registrar->activity_check_completed( $completed );
+		$completion = end( $connection->prepared );
+		self::assertIsArray( $completion );
+		self::assertSame( 'rejected', $completion['args'][0] );
+		self::assertSame( 'none', $completion['args'][5] );
+		self::assertSame( 1, $completion['args'][7] );
+		$missing = $completed;
+		unset( $missing['offered_version'] );
+		$missing['extra'] = null;
+		$count            = count( $connection->queries );
+		$registrar->activity_check_completed( $missing );
+		self::assertCount( $count, $connection->queries );
+	}
+
+	public function test_unmanaged_and_removed_targets_do_not_create_native_check_history(): void {
+		$package                                 = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
+		$connection                              = new \RAN\Tests\Activity\ActivityConnection();
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$removed                                 = false;
+		$reads                                   = 0;
+		[$registrar]                             = $this->native_plugin_registrar(
+			$package,
+			static function () use ( $package, &$removed, &$reads ): Package {
+				++$reads;
+				// @phpstan-ignore if.alwaysFalse (This callback runs again after the captured flag changes below.)
+				if ( $removed ) {
+					throw new \RAN\Storage\PluginNotFound();
+				}
+				return $package;
+			},
+			new \RAN\Activity\ActivityStore( $connection )
+		);
+		$event                                   = array(
+			'check_id'            => str_repeat( 'a', 32 ),
+			'network_id'          => 1,
+			'blog_id'             => 1,
+			'target_type'         => 'plugin',
+			'installed_identity'  => 'unmanaged/plugin.php',
+			'provider_code'       => 'github',
+			'repository_identity' => '123456789',
+			'channel'             => 'stable',
+			'binding_hash'        => str_repeat( 'b', 64 ),
+		);
+		$before                                  = $reads;
+		$registrar->activity_check_started( $event );
+		self::assertSame( $before, $reads );
+		$removed                     = true;
+		$event['installed_identity'] = self::NATIVE_PLUGIN;
+		$registrar->activity_check_started( $event );
+		self::assertSame( array(), $connection->inserted );
+	}
+
+	public function test_native_refresh_and_stale_registration_do_not_invent_check_history(): void {
+		$package                                     = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
+		$replacement                                 = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL, uuid: '22222222-2222-4222-8222-222222222222' );
+		$connection                                  = new \RAN\Tests\Activity\ActivityConnection();
+		$activity                                    = new \RAN\Activity\ActivityStore( $connection );
+		$GLOBALS['ran_booster_storage_test_options'] = array();
+		$GLOBALS['ran_booster_activity_options']     = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		[$registrar, , $target]                      = $this->native_plugin_registrar( $package, $replacement, $activity );
+		$target->refresh();
+		$registrar->activity_check_started(
+			array(
+				'check_id'            => str_repeat( 'a', 32 ),
+				'network_id'          => 1,
+				'blog_id'             => 1,
+				'target_type'         => 'plugin',
+				'installed_identity'  => self::NATIVE_PLUGIN,
+				'provider_code'       => 'github',
+				'repository_identity' => '123456789',
+				'channel'             => 'stable',
+				'binding_hash'        => str_repeat( 'b', 64 ),
+			)
+		);
+		self::assertSame( array(), $connection->inserted );
+	}
+
 	/**
 	 * @param Package|callable(): Package|null $live
 	 * @return array{ManagedReleaseTargetRegistrar, RuntimeUpdaterLock, RuntimeUpdaterFacade}
 	 */
 	private function native_plugin_registrar(
 		Package $registered,
-		Package|callable|null $live = null
+		Package|callable|null $live = null,
+		?\RAN\Activity\ActivityStore $activity = null
 	): array {
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'all_deployment_plugins' )->willReturn( array( self::NATIVE_PLUGIN => $registered ) );
@@ -3223,7 +3349,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 					return $facade;
 				}
-			)
+			),
+			activity: $activity
 		);
 		$registrar->register();
 

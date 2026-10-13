@@ -13,7 +13,7 @@ use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\RepositoryDescriptor;
 use RAN\RepositoryProvider\RepositoryLookupRequest;
 use RAN\RepositoryProvider\RepositoryProvider;
-use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV3;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowManagementV4;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowPreflight;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowPreview;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowResult;
@@ -22,7 +22,7 @@ use RAN\RepositoryProvider\RepositoryReleaseWorkflowTarget;
 use RuntimeException;
 
 /** Deliberately lacks the five release-consumption capabilities required by Core. */
-final class PartialRepositoryReleaseWorkflowProviderDouble implements RepositoryProvider, RepositoryReleaseWorkflowManagementV3 {
+final class PartialRepositoryReleaseWorkflowProviderDouble implements RepositoryProvider, RepositoryReleaseWorkflowManagementV4 {
 	public function get_metadata(): ProviderMetadata {
 		return new ProviderMetadata( ProviderCode::parse( 'partial' ), 'Partial workflow fixture', 'https://partial.example/', 'Owner' ); }
 	public function get_provider_diagnostics(): ProviderDiagnostics {
@@ -40,13 +40,13 @@ final class PartialRepositoryReleaseWorkflowProviderDouble implements Repository
 	public function workflow_preview( RepositoryReleaseWorkflowTarget $status, string $key ): ?RepositoryReleaseWorkflowPreview {
 		unset( $status, $key );
 		return null; }
-	public function workflow_inspect( RepositoryReleaseWorkflowTarget $status, string $channel, RepositoryReleaseWorkflowPreflight $preflight, ?string $credential_id ): RepositoryReleaseWorkflowResult {
-		unset( $status, $channel, $preflight, $credential_id );
+	public function workflow_inspect( RepositoryReleaseWorkflowTarget $status, string $channel, RepositoryReleaseWorkflowPreflight $preflight, ?string $credential_id, ?\RAN\Activity\ActivityProgress $progress = null ): RepositoryReleaseWorkflowResult {
+		unset( $status, $channel, $preflight, $credential_id, $progress );
 		return new RepositoryReleaseWorkflowResult( 'workflow_partial', false ); }
-	public function workflow_setup( RepositoryReleaseWorkflowTarget $status, string $key, string $confirmation, RepositoryReleaseWorkflowPreflight $preflight, ?string $credential_id ): RepositoryReleaseWorkflowResult {
-		unset( $status, $key, $confirmation, $preflight, $credential_id );
+	public function workflow_setup( RepositoryReleaseWorkflowTarget $status, string $key, string $confirmation, RepositoryReleaseWorkflowPreflight $preflight, ?string $credential_id, ?\RAN\Activity\ActivityProgress $progress = null ): RepositoryReleaseWorkflowResult {
+		unset( $status, $key, $confirmation, $preflight, $credential_id, $progress );
 		return new RepositoryReleaseWorkflowResult( 'workflow_partial', false ); }
-	public function workflow_outcome( RepositoryReleaseWorkflowTarget $status, ?string $credential_id ): RepositoryReleaseWorkflowResult {
-		unset( $status, $credential_id );
+	public function workflow_outcome( RepositoryReleaseWorkflowTarget $status, ?string $credential_id, ?\RAN\Activity\ActivityProgress $progress = null ): RepositoryReleaseWorkflowResult {
+		unset( $status, $credential_id, $progress );
 		return new RepositoryReleaseWorkflowResult( 'workflow_partial', false ); }
 }

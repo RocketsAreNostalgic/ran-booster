@@ -117,7 +117,8 @@ class Dashboard {
 		?RepositoryWebhookManagementControls $webhook_management = null,
 		?CoreSelfUpdateDevelopmentNotice $core_self_update_development_notice = null,
 		?ReleaseWorkflowControls $release_workflow = null,
-		private ?\RAN\PackageRemoval\PackageRemovalService $removals = null
+		private ?\RAN\PackageRemoval\PackageRemovalService $removals = null,
+		?\RAN\Activity\ActivityStore $activity = null
 	) {
 		$this->db      = $db;
 		$this->plugins = $plugins;
@@ -133,7 +134,8 @@ class Dashboard {
 		$this->deployment_admin       = new DeploymentAdminPresenter(
 			attempts: $deployment_attempts,
 			plugins: $plugins,
-			themes: $themes
+			themes: $themes,
+			activity_store: $activity
 		);
 
 		$this->package_admin = new PackageAdminController( $package_operations, deployments: $this->deployment_admin, removals: $this->removals );

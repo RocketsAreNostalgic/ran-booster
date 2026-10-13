@@ -264,6 +264,17 @@ try {
 		'branch',
 		1
 	);
+	$ran_booster_activity = $ran_booster_attempts->activity_history(
+		array(
+			'subject_type'     => 'plugin',
+			'subject_identity' => $ran_booster_identifier,
+		),
+		null
+	);
+	if ( 1 !== count( $ran_booster_activity ) || $ran_booster_attempt->get_id() !== $ran_booster_activity[0]->get_id()
+		|| array() !== $ran_booster_attempts->activity_history( array( 'subject_identity' => 'ran-booster-database-smoke/another.php' ), null ) ) {
+		throw new RuntimeException( 'Activity package filtering must use the exact installed identifier rather than the directory slug.' );
+	}
 	$ran_booster_finished = $ran_booster_attempts->finish( $ran_booster_attempt->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_NO_CHANGE ) );
 	if ( $ran_booster_finished->get_id() !== $ran_booster_attempts->find_exact( $ran_booster_attempt->get_id() )?->get_id() ) {
 		throw new RuntimeException( 'The database smoke could not verify its attempt record.' );
@@ -282,5 +293,11 @@ try {
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Removes only the empty disposable CI fixture directory.
 	is_dir( $ran_booster_directory ) && rmdir( $ran_booster_directory );
 }
+
+$ran_booster_activity_proof = require __DIR__ . '/activity-storage-smoke.php';
+if ( ! is_callable( $ran_booster_activity_proof ) ) {
+	throw new RuntimeException( 'The activity SQL proof is unavailable.' );
+}
+$ran_booster_activity_proof( $wpdb );
 
 WP_CLI::success( 'RAN Booster database storage smoke passed on ' . $wpdb->db_server_info() . '.' ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)

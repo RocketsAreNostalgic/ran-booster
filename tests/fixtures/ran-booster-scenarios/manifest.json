@@ -1,0 +1,13 @@
+{
+  "name": "ran-booster-scenarios",
+  "fixture_version": "0.1.0",
+  "core_version": "1.0.0-beta.35",
+  "core_commit": "5743df3af0a33c35839aec0bb369a72d084b3d7a",
+  "provider_api": 15,
+  "addon_api": 17,
+  "admin_interaction_api": 3,
+  "environment_types": ["local", "development"],
+  "enable_constant": "RAN_BOOSTER_SCENARIOS_DISPOSABLE",
+  "repositories": ["ran-booster-scenarios/scenario-plugin", "ran-booster-scenarios/scenario-theme"],
+  "scope": "Controlled repository and release responses for notices, offer eligibility and cross-request reporting. Only bundled harmless archives are served; real remote publishing is not simulated."
+}

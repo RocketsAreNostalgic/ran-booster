@@ -63,7 +63,10 @@
         "i18n:check": "bash scripts/make-pot.sh --check",
         "i18n:fixture": "bash scripts/make-test-i18n-fixture.sh",
         "i18n:fixture:check": "bash scripts/make-test-i18n-fixture.sh --check",
-        "test:unit": "phpunit --configuration phpunit.xml --fail-on-phpunit-deprecation",
+        "test:unit": [
+            "python3 scripts/build-scenario-fixture.py",
+            "phpunit --configuration phpunit.xml --fail-on-phpunit-deprecation"
+        ],
         "test:published-template-pack": "bash tests/published-template-pack.sh",
         "analyze": [
             "phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=2G -vv",

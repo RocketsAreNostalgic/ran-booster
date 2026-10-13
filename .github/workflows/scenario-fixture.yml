@@ -1,0 +1,41 @@
+name: Scenario fixture artifact
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tests/fixtures/ran-booster-scenarios/**'
+      - 'scripts/build-scenario-fixture.py'
+      - '.github/workflows/scenario-fixture.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tests/fixtures/ran-booster-scenarios/**'
+      - 'scripts/build-scenario-fixture.py'
+      - '.github/workflows/scenario-fixture.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Build twice and compare exact bytes
+        run: |
+          python3 scripts/build-scenario-fixture.py --output build/first
+          python3 scripts/build-scenario-fixture.py --output build/second
+          diff -r build/first build/second
+          cd build/first
+          sha256sum --check *.sha256
+      - name: Upload separate test-only plugin and checksum
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: booster-scenario-fixture-${{ github.sha }}
+          path: build/first/*
+          if-no-files-found: error
+          retention-days: 30

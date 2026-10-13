@@ -80,13 +80,6 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		$request    = $this->attempt->get_request();
 		$identifier = null;
 
-		if ( 'install' === $data['operation'] && null !== $request->adoption_token ) {
-			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED );
-		}
-		if ( PackageSource::BRANCH->value !== ( $data['package_source'] ?? null ) ) {
-			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_RELEASE_SOURCE_BLOCKED );
-		}
-
 		if ( 'update' === $data['operation'] ) {
 			if ( null === $request->adoption_token || null === $request->installed_identifier ) {
 				$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED );
@@ -99,9 +92,6 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			} catch ( PackageStorageFailure $failure ) {
 				$this->stage_package_storage_failure( $failure );
 			} catch ( Throwable ) {
-				$this->stage( DeploymentOutcome::CODE_POLICY_BLOCKED );
-			}
-			if ( '' === $identifier ) {
 				$this->stage( DeploymentOutcome::CODE_POLICY_BLOCKED );
 			}
 			if ( 'plugin' === $data['package_type'] && ! str_contains( $identifier, '/' ) ) {
@@ -270,9 +260,6 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		$request = $this->attempt->get_request();
 
 		try {
-			if ( PackageSource::BRANCH->value !== ( $data['package_source'] ?? null ) ) {
-				$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_RELEASE_SOURCE_BLOCKED );
-			}
 			if ( 'install' === $data['operation'] ) {
 				if ( 'plugin' === $data['package_type'] && 'ran-booster' === $request->package_slug ) {
 					$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_SELF_UPDATE_BLOCKED );

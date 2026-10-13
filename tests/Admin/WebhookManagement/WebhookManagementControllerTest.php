@@ -36,7 +36,154 @@ if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', dirname( __DIR__, 2 ) . '/fixtures/wordpress/' );
 }
 
+require_once __DIR__ . '/../../Activity/ActivityConnection.php';
+require_once __DIR__ . '/../../Activity/ActivityWordPressFunctions.php';
+
 final class WebhookManagementControllerTest extends TestCase {
+	public function test_activity_finishes_after_cas_and_preserves_remote_success_local_conflict(): void {
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$connection                              = new \RAN\Tests\Activity\ActivityConnection();
+		$gateway                                 = $this->gateway();
+		$gateway->result                         = $this->operation_result();
+		$store                                   = new OperationStoreFixture();
+		$current                                 = $this->record();
+		$store->before_conditional_write         = static function ( OperationStoreFixture $interleaved ) use ( $current, $connection ): void {
+			self::assertCount( 1, $connection->inserted );
+			self::assertSame( 'repository', $connection->inserted[0]['subject_type'] );
+			self::assertSame( 'gh:1234', $connection->inserted[0]['subject_identity'] );
+			self::assertNull( $connection->inserted[0]['adoption_token'] );
+			self::assertSame( array(), array_filter( $connection->prepared, static fn ( array $query ): bool => str_starts_with( $query['sql'], 'UPDATE ' ) ) );
+			$interleaved->record = $current;
+		};
+		$result                                  = ( new WebhookOperationCoordinator( $gateway, $store, new \RAN\Activity\ActivityStore( $connection ) ) )->execute( 'setup', 'gh', '1234', 'credential_1', null, 'valid' );
+		self::assertSame( 'record_conflict', $result['code'] );
+		self::assertSame( $current, $store->record );
+		$query = end( $connection->prepared );
+		self::assertIsArray( $query );
+		$terminal = $query['args'];
+		self::assertSame( 'failed', $terminal[0] );
+		self::assertSame( 'webhook.local_persistence_conflict', $terminal[1] );
+		self::assertSame( '', $terminal[2] );
+		self::assertIsString( $terminal[4] );
+		self::assertJsonStringEqualsJsonString( '{"webhook_state":"succeeded","webhook_delivery":"configured_pending_delivery","webhook_persistence":"partial","webhook_local_code":"record_conflict"}', $terminal[4] );
+		self::assertSame( 'none', $terminal[5] );
+	}
+
+	public function test_activity_ping_is_a_request_not_verified_delivery(): void {
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$connection                              = new \RAN\Tests\Activity\ActivityConnection();
+		$gateway                                 = $this->gateway();
+		$gateway->result                         = $this->operation_result( 'succeeded', 'ping_verified', '77' );
+		$store                                   = new OperationStoreFixture();
+		$store->record                           = $this->record();
+		$result                                  = ( new WebhookOperationCoordinator( $gateway, $store, new \RAN\Activity\ActivityStore( $connection ) ) )->execute( 'test', 'gh', '1234', 'credential_1', null, 'valid' );
+		self::assertSame( 'ping_requested', $result['code'] );
+		self::assertSame( 'needs_verification', $store->record->status() );
+		$query = end( $connection->prepared );
+		self::assertIsArray( $query );
+		$terminal = $query['args'];
+		self::assertSame( 'succeeded', $terminal[0] );
+		self::assertSame( 'webhook.operation_succeeded', $terminal[1] );
+		self::assertIsString( $terminal[4] );
+		self::assertJsonStringEqualsJsonString( '{"webhook_state":"succeeded","webhook_delivery":"unverified","webhook_persistence":"confirmed","webhook_local_code":"ping_requested"}', $terminal[4] );
+		self::assertSame( 'none', $terminal[5] );
+	}
+
+	public function test_rejected_nonce_does_not_create_activity(): void {
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$connection                              = new \RAN\Tests\Activity\ActivityConnection();
+		$this->controller( activity: new \RAN\Activity\ActivityStore( $connection ) )->handle_admin_post( $this->request(), 'invalid' );
+		self::assertSame( array(), $connection->inserted );
+	}
+
+	public function test_partial_remote_outcome_is_recorded_as_unconfirmed_after_local_write(): void {
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$connection                              = new \RAN\Tests\Activity\ActivityConnection();
+		$gateway                                 = $this->createMock( WebhookAssistanceFacade::class );
+		$gateway->method( 'target' )->willReturn( $this->target() );
+		$remote = $this->operation_result( 'ambiguous', 'setup_response_invalid', null );
+		$gateway->expects( self::once() )->method( 'setup' )->willReturnCallback(
+			static function () use ( $connection, $remote ): RepositoryWebhookOperationResult {
+				self::assertCount( 1, $connection->inserted );
+				return $remote;
+			}
+		);
+		$store  = new OperationStoreFixture();
+		$result = ( new WebhookOperationCoordinator( $gateway, $store, new \RAN\Activity\ActivityStore( $connection ) ) )->execute( 'setup', 'gh', '1234', 'credential_1', null, 'valid' );
+		self::assertFalse( $result['successful'] );
+		self::assertNotEmpty( $connection->prepared );
+		$query = end( $connection->prepared );
+		self::assertIsArray( $query );
+		$terminal = $query['args'];
+		self::assertSame( 'failed', $terminal[0] );
+		self::assertSame( 'webhook.remote_unconfirmed', $terminal[1] );
+		self::assertSame( '', $terminal[2] );
+		self::assertIsString( $terminal[4] );
+		self::assertStringContainsString( '"webhook_persistence":"unconfirmed"', $terminal[4] );
+		self::assertSame( 'none', $terminal[5] );
+	}
+
+	public function test_every_valid_provider_code_shape_still_completes_activity(): void {
+		foreach ( array( str_repeat( 'a', 96 ), 'provider__failed', 'remote-', '404' ) as $code ) {
+			$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+			$connection                              = new \RAN\Tests\Activity\ActivityConnection();
+			$gateway                                 = $this->gateway();
+			$gateway->result                         = $this->operation_result( 'failed', $code );
+			$store                                   = new OperationStoreFixture();
+			$result                                  = ( new WebhookOperationCoordinator( $gateway, $store, new \RAN\Activity\ActivityStore( $connection ) ) )->execute( 'setup', 'gh', '1234', 'credential_1', null, 'valid' );
+			self::assertSame( $code, $result['code'] );
+			$query = end( $connection->prepared );
+			self::assertIsArray( $query );
+			self::assertStringStartsWith( 'UPDATE ', $query['sql'] );
+			self::assertContains( $query['sql'], $connection->queries );
+			self::assertSame( 'webhook.operation_failed', $query['args'][1] );
+			self::assertIsString( $query['args'][4] );
+			self::assertStringContainsString( '"webhook_local_code":"' . $code . '"', $query['args'][4] );
+		}
+	}
+
+	public function test_verified_webhook_check_persists_reason_without_display_copy(): void {
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$connection                              = new \RAN\Tests\Activity\ActivityConnection();
+		$gateway                                 = $this->gateway();
+		$gateway->result                         = $this->operation_result( 'succeeded', 'verified' );
+		$store                                   = new OperationStoreFixture();
+		$store->record                           = $this->record();
+		( new WebhookOperationCoordinator( $gateway, $store, new \RAN\Activity\ActivityStore( $connection ) ) )->execute( 'check', 'gh', '1234', 'credential_1', null, 'valid' );
+		$query = end( $connection->prepared );
+		self::assertIsArray( $query );
+		self::assertSame( 'webhook.operation_succeeded', $query['args'][1] );
+		self::assertSame( '', $query['args'][2] );
+	}
+
+	public function test_remote_exception_leaves_activity_incomplete_without_unwind_reporting(): void {
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$connection                              = new \RAN\Tests\Activity\ActivityConnection();
+		$gateway                                 = $this->createMock( WebhookAssistanceFacade::class );
+		$gateway->method( 'target' )->willReturn( $this->target() );
+		$gateway->expects( self::once() )->method( 'setup' )->willThrowException( new \RuntimeException( 'private remote response' ) );
+		$store  = new OperationStoreFixture();
+		$result = ( new WebhookOperationCoordinator( $gateway, $store, new \RAN\Activity\ActivityStore( $connection ) ) )->execute( 'setup', 'gh', '1234', 'credential_1', null, 'valid' );
+		self::assertSame( 'operation_failed', $result['code'] );
+		self::assertNull( $store->record );
+		self::assertSame( 'incomplete', $connection->inserted[0]['status'] );
+		self::assertSame( array(), array_values( array_filter( $connection->queries, static fn ( string $query ): bool => str_starts_with( $query, 'UPDATE ' ) ) ) );
+	}
+
+	public function test_optional_activity_storage_failure_does_not_change_setup(): void {
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$connection                              = new \RAN\Tests\Activity\ActivityConnection();
+		$connection->fail_insert                 = true;
+		$gateway                                 = $this->gateway();
+		$gateway->result                         = $this->operation_result();
+		$store                                   = new OperationStoreFixture();
+		$result                                  = ( new WebhookOperationCoordinator( $gateway, $store, new \RAN\Activity\ActivityStore( $connection ) ) )->execute( 'setup', 'gh', '1234', 'credential_1', null, 'valid' );
+		self::assertTrue( $result['successful'] );
+		self::assertNotNull( $store->record );
+		self::assertSame( array(), $connection->inserted );
+	}
+
+
 	public function test_malformed_and_missing_query_globals_cannot_supply_panel_feedback(): void {
 		$original = $GLOBALS['_GET'] ?? null;
 		try {
@@ -1468,11 +1615,11 @@ final class WebhookManagementControllerTest extends TestCase {
 		return (string) ob_get_clean();
 	}
 
-	private function controller( ?OperationGatewayFixture $gateway = null, ?OperationStoreFixture $store = null, ?AdminInteractionFacade $admin_interaction = null, string $provider_code = 'gh', string $provider_label = 'GitHub', ?ManagedPackageWebhookAuthorityResolver $authorities = null ): WebhookManagementController {
+	private function controller( ?OperationGatewayFixture $gateway = null, ?OperationStoreFixture $store = null, ?AdminInteractionFacade $admin_interaction = null, string $provider_code = 'gh', string $provider_label = 'GitHub', ?ManagedPackageWebhookAuthorityResolver $authorities = null, ?\RAN\Activity\ActivityStore $activity = null ): WebhookManagementController {
 		$gateway  ??= $this->gateway();
 		$store    ??= new OperationStoreFixture();
 		$controller = new WebhookManagementController(
-			new WebhookOperationCoordinator( $gateway, $store ),
+			new WebhookOperationCoordinator( $gateway, $store, $activity ),
 			$this->display( $gateway, $store ),
 			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( $provider_code, $provider_label ) ) ),
 			$authorities ?? $this->package_authorities( array( 'example/example.php' => array( $provider_code, '1234' ) ) ),

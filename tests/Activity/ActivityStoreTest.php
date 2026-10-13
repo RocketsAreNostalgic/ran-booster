@@ -127,6 +127,56 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertFalse( $this->store->complete( null, 'succeeded', 'checked', '', '', array( 'response' => 'raw response' ) ) );
 	}
 
+	public function test_phase_two_facts_reject_invalid_dates_counts_and_state_before_sql(): void {
+		foreach ( array(
+			array(
+				'expiry_state' => 'known',
+				'expires_at'   => '2026-02-30T00:00:00Z',
+			),
+			array(
+				'expiry_state' => 'unknown',
+				'expires_at'   => '2026-12-01T00:00:00Z',
+			),
+			array(
+				'expiry_state' => 'known',
+				'expires_at'   => null,
+			),
+			array( 'diagnostic_passed' => 9 ),
+			array( 'diagnostic_failed' => '1' ),
+			array( 'partial_reason' => 'Authorization: secret' ),
+			array( 'webhook_persistence' => 'rolled_back' ),
+		) as $facts ) {
+			self::assertFalse( $this->store->complete( 1, 'succeeded', 'checked', facts: $facts ) );
+		}
+		self::assertSame( array(), $this->connection->queries );
+		self::assertTrue(
+			$this->store->complete(
+				1,
+				'succeeded',
+				'checked',
+				facts: array(
+					'expiry_state' => 'known',
+					'expires_at'   => '2028-02-29T00:00:00Z',
+				)
+			)
+		);
+	}
+
+	public function test_null_byte_expiry_is_rejected_before_sql(): void {
+		self::assertFalse(
+			$this->store->complete(
+				1,
+				'succeeded',
+				'credential.valid',
+				facts: array(
+					'expiry_state' => 'known',
+					'expires_at'   => "2027-01-01T00:00:00Z\0",
+				)
+			)
+		);
+		self::assertSame( array(), $this->connection->queries );
+	}
+
 	public function test_terminal_compare_and_set_duplicate_and_conflicting_completion(): void {
 		self::assertTrue( $this->store->complete( 1, 'succeeded', 'no_candidates' ) );
 		self::assertStringContainsString( "AND status = 'incomplete'", $this->connection->queries[0] );

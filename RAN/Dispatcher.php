@@ -61,7 +61,8 @@ class Dispatcher {
 		?CredentialExpiryObservationStore $expiry_observations = null,
 		?SecretsStorageProvisioner $secrets_storage = null,
 		?DeploymentAttemptRepository $deployment_attempts = null,
-		?ProviderProfileAdminController $provider_profile_interaction = null
+		?ProviderProfileAdminController $provider_profile_interaction = null,
+		?\RAN\Activity\ActivityStore $activity = null
 	) {
 		$this->dashboard = $dashboard;
 
@@ -79,7 +80,8 @@ class Dispatcher {
 			$updater_lock,
 			$credential_usage ?? new CredentialUsageReader(),
 			$public_lookup_profiles ?? new PublicRepositoryLookupProfileStore(),
-			$expiry_observations ?? new CredentialExpiryObservationStore()
+			$expiry_observations ?? new CredentialExpiryObservationStore(),
+			activity: $activity
 		);
 		$this->deployment_admin  = new DeploymentAdminController(
 			$dashboard,

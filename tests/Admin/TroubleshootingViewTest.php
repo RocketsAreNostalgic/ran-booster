@@ -24,6 +24,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class TroubleshootingViewTest extends TestCase {
 
+	public function test_journal_outcomes_translate_when_rendered(): void {
+		foreach ( array(
+			'diagnostics.partial'                   => 'Diagnostics returned a partial report.',
+			'diagnostics.passed'                    => 'Diagnostics passed.',
+			'diagnostics.failed'                    => 'Diagnostics reported failures.',
+			'diagnostics.warning'                   => 'Diagnostics reported warnings.',
+			'diagnostics.not_configured'            => 'Diagnostics found missing configuration.',
+			'webhook.operation_succeeded'           => 'Webhook operation completed.',
+			'webhook.operation_failed'              => 'Webhook operation failed.',
+			'webhook.remote_unconfirmed'            => 'The remote webhook outcome is unconfirmed.',
+			'webhook.local_persistence_conflict'    => 'Remote webhook work completed; local persistence is unconfirmed.',
+			'webhook.local_persistence_unconfirmed' => 'Remote webhook work completed; local persistence is unconfirmed.',
+		) as $reason => $source ) {
+			self::assertSame( $source, \RAN\Admin\DeploymentOutcomeMessage::for_activity( 'failed', $reason ) );
+			$GLOBALS['ran_booster_admin_test_translations']['ran-booster'][ $source ] = 'Résultat traduit';
+			self::assertSame( 'Résultat traduit', \RAN\Admin\DeploymentOutcomeMessage::for_activity( 'failed', $reason ) );
+			unset( $GLOBALS['ran_booster_admin_test_translations']['ran-booster'][ $source ] );
+		}
+	}
+
 	/**
 	 * @param array<string,mixed> $data
 	 * @return array<string,mixed>
@@ -208,6 +228,50 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertSame( 'The configured repository subdirectory could not be verified.', \RAN\Admin\DeploymentOutcomeMessage::for_activity( 'failed', 'subdirectory_unverified' ) );
 		self::assertStringContainsString( 'Review the package settings', \RAN\Admin\DeploymentOutcomeMessage::for_activity( 'failed', 'unable_to_check' ) );
 		self::assertSame( \RAN\Admin\DeploymentOutcomeMessage::for_code( 'provider_unavailable' ), \RAN\Admin\DeploymentOutcomeMessage::for_activity( 'failed', 'provider_unavailable' ) );
+	}
+
+	public function test_activity_renders_only_closed_observation_facts(): void {
+		$deployment_activity  = array(
+			'items' => array(
+				array(
+					'record_source' => 'activity',
+					'state'         => 'failed',
+					'operation'     => 'core.diagnostics',
+					'facts'         => '{"diagnostic_passed":3,"diagnostic_warning":1,"diagnostic_failed":2,"diagnostic_not_configured":0,"partial_reason":"deadline_exhausted","expiry_state":"unknown","expires_at":null,"webhook_state":"partial","webhook_delivery":"configured_pending_delivery","webhook_persistence":"not_confirmed","webhook_local_code":"write_failed","authorization":"Bearer private-token","message":"<script>private</script>"}',
+				),
+			),
+		);
+		$troubleshooting_base = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
+		$html = (string) ob_get_clean();
+		foreach ( array(
+			'Diagnostics passed'               => '3',
+			'Diagnostic warnings'              => '1',
+			'Diagnostics failed'               => '2',
+			'Diagnostics not configured'       => '0',
+			'Credential expiry'                => 'Unknown',
+			'Webhook operation'                => 'Partially completed',
+			'Webhook delivery'                 => 'Configured; delivery not yet verified',
+			'Webhook local record'             => 'Not confirmed',
+			'Diagnostic partial-result reason' => 'deadline_exhausted',
+		) as $expected_key => $expected_value ) {
+			self::assertStringContainsString( '<dt>' . $expected_key . '</dt><dd>' . $expected_value . '</dd>', $html );
+		}
+		self::assertStringNotContainsString( 'private-token', $html );
+		self::assertStringNotContainsString( '<script>', $html );
+		self::assertStringNotContainsString( 'Credential expires (UTC)', $html );
+		self::assertSame( array(), \RAN\Admin\DeploymentOutcomeMessage::activity_facts( '{"diagnostic_failed":99,"expiry_state":"<script>","webhook_local_code":["private-token"]}' ) );
+		self::assertSame( array( 'Webhook local result code' => '404' ), \RAN\Admin\DeploymentOutcomeMessage::activity_facts( '{"webhook_local_code":"404"}' ) );
+		self::assertSame( array( 'Credential expiry' => 'Known' ), \RAN\Admin\DeploymentOutcomeMessage::activity_facts( '{"expiry_state":"known","expires_at":"2026-01-01T00:00:00Z\\u0000"}' ) );
+		self::assertSame( array(), \RAN\Admin\DeploymentOutcomeMessage::activity_facts( '{invalid' ) );
+		self::assertSame(
+			array(
+				'Credential expiry'        => 'Known',
+				'Credential expires (UTC)' => '2026-11-01T12:00:00Z',
+			),
+			\RAN\Admin\DeploymentOutcomeMessage::activity_facts( '{"expiry_state":"known","expires_at":"2026-11-01T12:00:00Z"}' )
+		);
 	}
 
 	public function test_activity_distinguishes_provider_reports_from_core_records(): void {

@@ -35,7 +35,8 @@ final class RepositoryWebhookManagementControls {
 		private readonly ProviderRegistry $providers,
 		private readonly string $plugin_path,
 		private readonly string $plugin_url,
-		ManagedPackageWebhookAuthorityResolver $authorities
+		ManagedPackageWebhookAuthorityResolver $authorities,
+		?\RAN\Activity\ActivityStore $activity = null
 	) {
 		$this->assistance         = $facade;
 		$this->authorities        = $authorities;
@@ -43,7 +44,7 @@ final class RepositoryWebhookManagementControls {
 		$this->installation_store = $store;
 		$this->display            = new WebhookDisplayModel( $facade, $store );
 		$this->controller         = new WebhookManagementController(
-			new WebhookOperationCoordinator( $facade, $store ),
+			new WebhookOperationCoordinator( $facade, $store, activity: $activity ),
 			$this->display,
 			$providers,
 			$authorities

@@ -134,7 +134,7 @@ final class ActivityStore {
 		try {
 			$this->validate_text( $reason, $message, $remediation );
 			$encoded = $this->encode_facts( $facts );
-		} catch ( InvalidArgumentException ) {
+		} catch ( InvalidArgumentException | \ValueError ) {
 			return false;
 		}
 		if ( ! in_array( $status, array( 'succeeded', 'failed', 'rejected', 'skipped' ), true )
@@ -323,10 +323,30 @@ final class ActivityStore {
 	/** @param array<string,scalar|null> $facts */
 	private function encode_facts( array $facts ): string {
 		foreach ( $facts as $key => $value ) {
-			if ( ! in_array( $key, array( 'installed_version', 'candidate_version', 'offered_version', 'relationship', 'candidate_validation_code', 'assessment', 'revision', 'observation_kind', 'failure_stage', 'diagnostic_code', 'diagnostic_available', 'correlation_reference' ), true )
+			$expiry = 'expires_at' === $key && is_string( $value ) ? \DateTimeImmutable::createFromFormat( '!Y-m-d\TH:i:s\Z', $value ) : false;
+			$valid  = match ( $key ) {
+				'expiry_state' => in_array( $value, array( 'not_reported', 'unknown', 'known' ), true ),
+				'expires_at' => null === $value || ( is_string( $value ) && $expiry instanceof \DateTimeImmutable && $expiry->format( 'Y-m-d\TH:i:s\Z' ) === $value ),
+				'webhook_state' => in_array( $value, array( 'succeeded', 'partial', 'ambiguous', 'failed' ), true ),
+				'webhook_delivery' => in_array( $value, array( 'configured_pending_delivery', 'verified', 'unverified', 'unknown', 'absent' ), true ),
+				'webhook_persistence' => in_array( $value, array( 'partial', 'unconfirmed', 'confirmed', 'not_confirmed' ), true ),
+				'diagnostic_passed', 'diagnostic_warning', 'diagnostic_failed', 'diagnostic_not_configured' => is_int( $value ) && $value >= 0 && $value <= 8,
+				'partial_reason' => in_array( $value, array( null, 'local_incomplete', 'deadline_exhausted', 'remote_calls_exhausted', 'provider_unavailable', 'provider_results_invalid', 'result_limit_exhausted' ), true ),
+				default => null,
+			};
+			if ( null !== $valid ) {
+				if ( ! $valid ) {
+					throw new InvalidArgumentException( 'Invalid activity facts.' );
+				}
+				continue;
+			}
+			if ( ! in_array( $key, array( 'installed_version', 'candidate_version', 'offered_version', 'relationship', 'candidate_validation_code', 'assessment', 'revision', 'observation_kind', 'failure_stage', 'diagnostic_code', 'diagnostic_available', 'correlation_reference', 'webhook_local_code' ), true )
 				|| ( null !== $value && ! ( 'diagnostic_available' === $key && is_bool( $value ) ) && ( ! is_string( $value ) || strlen( $value ) > 96 || preg_match( '/[^A-Za-z0-9_.+\/-]/', $value ) ) ) ) {
 				throw new InvalidArgumentException( 'Invalid activity facts.' );
 			}
+		}
+		if ( isset( $facts['expiry_state'] ) && ( ! array_key_exists( 'expires_at', $facts ) || ( 'known' === $facts['expiry_state'] ) !== is_string( $facts['expires_at'] ) ) ) {
+			throw new InvalidArgumentException( 'Invalid expiry observation.' );
 		}
 		ksort( $facts );
 		$encoded = wp_json_encode( $facts );

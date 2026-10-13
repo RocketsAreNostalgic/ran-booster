@@ -286,7 +286,8 @@ final class BoosterServiceProvider {
 			new ManagedPackageWebhookAuthorityResolver(
 				$container->make( PluginRepository::class ),
 				$container->make( ThemeRepository::class )
-			)
+			),
+			activity: $activity
 		);
 		$container->bind( RepositoryWebhookManagementControls::class, $webhook_controls );
 		$expiry_reminders = new CredentialExpiryReminder(
@@ -391,7 +392,8 @@ final class BoosterServiceProvider {
 					$container->make( ProviderRegistry::class ),
 					null,
 					$container->make( SecretsFile::class ),
-					$container->make( \RAN\Troubleshooting\CoreSelfUpdateStatus::class )
+					$container->make( \RAN\Troubleshooting\CoreSelfUpdateStatus::class ),
+					activity: $container->make( \RAN\Activity\ActivityStore::class )
 				);
 			}
 		);

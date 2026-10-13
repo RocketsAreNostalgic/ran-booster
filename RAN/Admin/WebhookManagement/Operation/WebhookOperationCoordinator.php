@@ -15,7 +15,8 @@ use RAN\RepositoryProvider\RepositoryWebhookOperationResult;
 final class WebhookOperationCoordinator {
 	public function __construct(
 		private readonly WebhookAssistanceFacade $facade,
-		private readonly InstallationStore $records
+		private readonly InstallationStore $records,
+		private readonly ?\RAN\Activity\ActivityStore $activity = null
 	) {
 	}
 
@@ -69,6 +70,7 @@ final class WebhookOperationCoordinator {
 			}
 		}
 
+		$activity_id = $this->begin_activity( $operation, $target );
 		try {
 			$result = match ( $operation ) {
 				'setup'       => $this->facade->setup( $target, $credential_id, $nonce, $selected_profile_id ),
@@ -81,7 +83,61 @@ final class WebhookOperationCoordinator {
 			return $this->outcome( 'operation_failed' );
 		}
 
-		return $this->apply_result( $operation, $target, $record, $credential_id, $result );
+		$outcome = $this->apply_result( $operation, $target, $record, $credential_id, $result );
+		$this->complete_activity( $activity_id, $operation, $outcome['code'], $outcome['successful'], $result );
+		return $outcome;
+	}
+
+	private function begin_activity( string $operation, AssistanceTarget $target ): ?int {
+		return $this->activity?->begin(
+			$target->provider_code(),
+			new \RAN\Activity\ActivityRequest( 'webhook.' . $operation ),
+			array(
+				'subject_type'     => 'repository',
+				'subject_identity' => $target->provider_code() . ':' . $target->repository_id(),
+				'adoption_token'   => null,
+				'context'          => hash( 'sha256', $target->repository() . "\0" . $target->endpoint() ),
+				'purpose'          => null,
+				'provenance'       => 'core',
+				'actor'            => function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0,
+			)
+		);
+	}
+
+	/** Record remote observation and final local result, never installation authority. */
+	private function complete_activity( ?int $id, string $operation, string $code, bool $successful, ?RepositoryWebhookOperationResult $remote ): void {
+		if ( null === $this->activity || null === $id ) {
+			return;
+		}
+		$projection = $remote?->to_array();
+		$state      = $projection['state'] ?? 'ambiguous';
+		$delivery   = $projection['delivery'] ?? 'unknown';
+		$uncertain  = in_array( $code, array( 'record_conflict', 'record_update_failed', 'record_retained', 'recovery_record_failed', 'orphaned', 'local_persistence_unconfirmed', 'operation_failed' ), true );
+		$status     = $successful || ( 'test' === $operation && 'ping_requested' === $code ) ? 'succeeded' : 'failed';
+		if ( in_array( $state, array( 'partial', 'ambiguous' ), true ) || ( 'succeeded' === $state && $uncertain ) ) {
+			$status = 'failed';
+		}
+		// A ping response never proves an authenticated delivery reached Core.
+		if ( 'test' === $operation && 'verified' === $delivery ) {
+			$delivery = 'unverified';
+		}
+		$persistence = 'succeeded' === $state && $uncertain ? 'partial' : ( in_array( $state, array( 'partial', 'ambiguous' ), true ) ? 'unconfirmed' : ( 'succeeded' === $status ? 'confirmed' : 'not_confirmed' ) );
+		$this->activity->complete(
+			$id,
+			$status,
+			match ( true ) {
+				'unconfirmed' === $persistence => 'webhook.remote_unconfirmed',
+				'record_conflict' === $code => 'webhook.local_persistence_conflict',
+				'partial' === $persistence => 'webhook.local_persistence_unconfirmed',
+				default => 'webhook.operation_' . $status,
+			},
+			facts: array(
+				'webhook_state'       => $state,
+				'webhook_delivery'    => $delivery,
+				'webhook_persistence' => $persistence,
+				'webhook_local_code'  => $code,
+			)
+		);
 	}
 
 	/**

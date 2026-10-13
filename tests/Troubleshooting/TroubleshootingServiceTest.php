@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace RAN\Tests\Troubleshooting;
 
 use Closure;
+use RAN\Activity\ActivityStore;
+use RAN\Tests\Activity\ActivityConnection;
 use PHPUnit\Framework\TestCase;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderDiagnosticRequest;
@@ -21,7 +23,164 @@ use RAN\Secrets\SecretsFile;
 use RAN\Troubleshooting\LocalTroubleshootingService;
 use RAN\Troubleshooting\TroubleshootingService;
 
+require_once dirname( __DIR__ ) . '/Activity/ActivityConnection.php';
+require_once dirname( __DIR__ ) . '/Activity/ActivityWordPressFunctions.php';
+
 final class TroubleshootingServiceTest extends TestCase {
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_activity_captures_actor_before_provider_work(): void {
+		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
+		$connection                                       = new ActivityConnection();
+		$GLOBALS['ran_booster_activity_options']          = array( ActivityStore::VERSION_OPTION => '1' );
+		$GLOBALS['ran_booster_package_operation_user_id'] = 17;
+		$provider = new TroubleshootingProviderFixture(
+			'gh',
+			static function (): array {
+				$GLOBALS['ran_booster_package_operation_user_id'] = 29;
+				return array();
+			}
+		);
+		$service  = new TroubleshootingService( new TroubleshootingLocalFixture( $this->local_results() ), new ProviderRegistry( array( $provider ) ), activity: new ActivityStore( $connection ) );
+		$service->diagnose( 'gh', null, null );
+		self::assertSame( 17, $connection->inserted[0]['actor'] );
+		self::assertSame( 29, get_current_user_id() );
+	}
+
+	public function test_activity_uses_registered_metadata_without_calling_provider_again(): void {
+		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
+		$connection                              = new ActivityConnection();
+		$provider                                = new TroubleshootingProviderFixture( 'gh', static fn (): array => array() );
+		$registry                                = new ProviderRegistry( array( $provider ) );
+		$provider->reject_metadata               = true;
+		$service                                 = new TroubleshootingService( new TroubleshootingLocalFixture( $this->local_results() ), $registry, activity: new ActivityStore( $connection ) );
+		$payload                                 = $service->diagnose( 'gh', null, null );
+		self::assertFalse( $payload['partial'] );
+		self::assertSame( 1, $provider->runs );
+		self::assertSame( 'gh', $connection->inserted[0]['provider'] );
+		self::assertSame( 'gh', $connection->inserted[0]['subject_identity'] );
+		unset( $GLOBALS['ran_booster_activity_options'] );
+	}
+
+	public function test_activity_records_status_counts_without_locator_credentials_or_exception(): void {
+		$connection                              = new ActivityConnection();
+		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
+		$provider                                = new TroubleshootingProviderFixture(
+			'gh',
+			static fn (): array => array(
+				new ProviderDiagnosticResult( 'warning', 'gh.warning', 'Configuration needs attention.', 'Review configuration.' ),
+				new ProviderDiagnosticResult( 'not_configured', 'gh.missing', 'Not configured.', 'Configure the provider.' ),
+				new ProviderDiagnosticResult( 'fail', 'gh.failed', 'Remote check failed.', 'Try again.', new \RuntimeException( 'private-exception-canary' ) ),
+			)
+		);
+		$service                                 = new TroubleshootingService( new TroubleshootingLocalFixture( $this->local_results() ), new ProviderRegistry( array( $provider ) ), activity: new ActivityStore( $connection ) );
+		$payload                                 = $service->diagnose( 'gh', 'credential-canary', 'private-owner/private-repository' );
+		self::assertCount( 8, $payload['results'] );
+		self::assertFalse( $payload['partial'] );
+		self::assertSame( 1, $provider->runs );
+		self::assertCount( 1, $connection->inserted );
+		self::assertSame( 'provider', $connection->inserted[0]['subject_type'] );
+		self::assertNull( $connection->inserted[0]['adoption_token'] );
+		$writes = array_values( array_filter( $connection->prepared, static fn ( array $query ): bool => str_starts_with( $query['sql'], 'UPDATE ' ) ) );
+		self::assertCount( 1, $writes );
+		self::assertSame( 'failed', $writes[0]['args'][0] );
+		self::assertSame( 'diagnostics.failed', $writes[0]['args'][1] );
+		self::assertSame(
+			array(
+				'diagnostic_failed'         => 1,
+				'diagnostic_not_configured' => 1,
+				'diagnostic_passed'         => 5,
+				'diagnostic_warning'        => 1,
+				'partial_reason'            => null,
+			),
+			json_decode( (string) $writes[0]['args'][4], true, flags: JSON_THROW_ON_ERROR )
+		);
+		$recorded = json_encode( array( $connection->prepared, $connection->inserted ), JSON_THROW_ON_ERROR ); // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Inspect every persisted scalar in a WordPress-free privacy regression.
+		foreach ( array( 'private-exception-canary', 'credential-canary', 'private-owner/private-repository', 'Remote check failed.' ) as $canary ) {
+			self::assertStringNotContainsString( $canary, $recorded );
+		}
+		unset( $GLOBALS['ran_booster_activity_options'] );
+	}
+
+	public function test_partial_and_failed_storage_leave_diagnostic_budget_and_payload_unchanged(): void {
+		$connection                              = new ActivityConnection();
+		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
+		$provider                                = new TroubleshootingProviderFixture(
+			'gh',
+			static function ( ProviderDiagnosticRequest $request ): array {
+				for ( $index = 0; $index < 6; ++$index ) {
+					$request->claim_remote_call();
+				}
+				return array();
+			}
+		);
+		$service                                 = new TroubleshootingService( new TroubleshootingLocalFixture( $this->local_results() ), new ProviderRegistry( array( $provider ) ), activity: new ActivityStore( $connection ) );
+		$payload                                 = $service->diagnose( 'gh', null, null );
+		self::assertSame( 'remote_calls_exhausted', $payload['partial_reason'] );
+		$writes = array_values( array_filter( $connection->prepared, static fn ( array $query ): bool => str_starts_with( $query['sql'], 'UPDATE ' ) ) );
+		self::assertSame( 'diagnostics.partial', $writes[0]['args'][1] );
+		self::assertStringContainsString( 'remote_calls_exhausted', (string) $writes[0]['args'][4] );
+		$connection->fail_insert = true;
+		self::assertSame( $payload, $service->diagnose( 'gh', null, null ) );
+		self::assertSame( 2, $provider->runs );
+		unset( $GLOBALS['ran_booster_activity_options'] );
+	}
+
+	public function test_warning_and_not_configured_remain_distinct_from_passed(): void {
+		foreach ( array(
+			'pass'           => array( 'succeeded', 'diagnostics.passed' ),
+			'warning'        => array( 'rejected', 'diagnostics.warning' ),
+			'not_configured' => array( 'skipped', 'diagnostics.not_configured' ),
+		) as $result_status => $expected ) {
+			$connection                              = new ActivityConnection();
+			$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
+			$provider                                = new TroubleshootingProviderFixture( 'gh', static fn (): array => array( new ProviderDiagnosticResult( $result_status, 'gh.check', 'The check completed.', 'Review configuration.' ) ) );
+			$service                                 = new TroubleshootingService( new TroubleshootingLocalFixture( $this->local_results() ), new ProviderRegistry( array( $provider ) ), activity: new ActivityStore( $connection ) );
+			$service->diagnose( 'gh', null, null );
+			$writes = array_values( array_filter( $connection->prepared, static fn ( array $query ): bool => str_starts_with( $query['sql'], 'UPDATE ' ) ) );
+			self::assertSame( $expected, array_slice( $writes[0]['args'], 0, 2 ) );
+			self::assertSame( '', $writes[0]['args'][2] );
+		}
+		unset( $GLOBALS['ran_booster_activity_options'] );
+	}
+
+	public function test_passive_form_and_unexpected_failure_preserve_execution_boundary(): void {
+		$connection                              = new ActivityConnection();
+		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
+		$exception                               = new \RuntimeException( 'unexpected-private-canary' );
+		$local                                   = new TroubleshootingLocalFixture(
+			$this->local_results(),
+			on_run: static function () use ( $exception ): void {
+				throw $exception;
+			}
+		);
+		$provider                                = new TroubleshootingProviderFixture( 'gh', static fn (): array => array() );
+		$service                                 = new TroubleshootingService( $local, new ProviderRegistry( array( $provider ) ), activity: new ActivityStore( $connection ) );
+		self::assertFalse( $service->form_payload()['ran'] );
+		self::assertCount( 0, $connection->inserted );
+		try {
+			$service->diagnose( 'gh', null, null );
+			self::fail( 'Existing diagnostic exception must propagate.' );
+		} catch ( \RuntimeException $caught ) {
+			self::assertSame( $exception, $caught );
+		}
+		$writes = array_values( array_filter( $connection->prepared, static fn ( array $query ): bool => str_starts_with( $query['sql'], 'UPDATE ' ) ) );
+		self::assertSame( array(), $writes );
+		self::assertSame( 'incomplete', $connection->inserted[0]['status'] );
+		self::assertSame( 0, $provider->runs );
+		unset( $GLOBALS['ran_booster_activity_options'] );
+	}
+
+	public function test_missing_provider_with_activity_still_returns_local_diagnostics(): void {
+		$connection                              = new ActivityConnection();
+		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
+		$service                                 = new TroubleshootingService( new TroubleshootingLocalFixture( $this->local_results() ), new ProviderRegistry(), activity: new ActivityStore( $connection ) );
+		$payload                                 = $service->diagnose( 'unknown-provider', null, null );
+		self::assertSame( 'provider_unavailable', $payload['partial_reason'] );
+		self::assertNotEmpty( $payload['results'] );
+		self::assertSame( array(), $connection->inserted );
+	}
 
 	public function test_form_payload_uses_safe_credential_labels_without_running_local_or_provider_checks(): void {
 		$local    = new TroubleshootingLocalFixture( $this->local_results() );
@@ -368,12 +527,16 @@ final class TroubleshootingSecretsFixture extends SecretsFile {
 class TroubleshootingProviderFixture implements RepositoryProvider {
 	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
 
-	public int $runs = 0;
+	public int $runs             = 0;
+	public bool $reject_metadata = false;
 
 	public function __construct( protected string $code, private Closure $diagnose ) {
 	}
 
 	public function get_metadata(): ProviderMetadata {
+		if ( $this->reject_metadata ) {
+			throw new \RuntimeException( 'Metadata callback must not run after registration.' );
+		}
 		return new ProviderMetadata( ProviderCode::parse( $this->code ), 'GitHub fixture', 'https://example.test/', 'Owner' );
 	}
 

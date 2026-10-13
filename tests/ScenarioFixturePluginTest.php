@@ -93,6 +93,36 @@ final class ScenarioFixturePluginTest extends TestCase {
 		}
 	}
 
+	public function test_provider_faults_remain_confined_to_selected_known_read_routes(): void {
+		$this->enable();
+		foreach ( array(
+			'unavailable'  => 503,
+			'denied'       => 403,
+			'rate-limited' => 429,
+		) as $scenario => $status ) {
+			$this->submit(
+				array(
+					'operation' => 'select',
+					'scenario'  => $scenario,
+					'target'    => 'theme',
+				)
+			);
+			$known = $this->request( 'scenario-theme' );
+			self::assertIsArray( $known );
+			self::assertSame( $status, $known['response']['code'] );
+			foreach ( array(
+				'https://api.github.com/repos/ran-booster-scenarios/scenario-plugin/releases/latest',
+				'https://api.github.com/repositories/940001',
+				'https://api.github.com/repos/ran-booster-scenarios/unknown/releases/latest',
+				'https://api.github.com/repos/ran-booster-scenarios/scenario-theme/hooks',
+				'https://api.github.com/orgs/ran-booster-scenarios/hooks',
+			) as $url ) {
+				$this->assert_blocked( ran_booster_scenarios_http( false, array(), $url ) );
+			}
+			$this->assert_blocked( ran_booster_scenarios_http( false, array( 'method' => 'POST' ), 'https://api.github.com/repos/ran-booster-scenarios/scenario-theme/releases' ) );
+		}
+	}
+
 	public function test_each_release_scenario_matches_its_observable_provider_outcome(): void {
 		$this->enable();
 		foreach ( array( 'scenario-plugin', 'scenario-theme' ) as $target ) {
@@ -356,6 +386,34 @@ final class ScenarioFixturePluginTest extends TestCase {
 		$response = ran_booster_scenarios_http( false, array(), 'https://api.github.com/orgs/ran-booster-scenarios/repos?type=public&per_page=30&page=2&sort=full_name' );
 		self::assertIsArray( $response );
 		self::assertSame( array(), json_decode( $response['body'], true, 512, JSON_THROW_ON_ERROR ) );
+	}
+
+	public function test_real_bundled_release_service_inspects_both_fixture_archives(): void {
+		$this->enable();
+		$this->select( 'immutable' );
+		$loader = require dirname( __DIR__ ) . '/vendor/autoload.php';
+		self::assertInstanceOf( \Composer\Autoload\ClassLoader::class, $loader );
+		$loader->addPsr4( 'RAN\\WPReleaseUpdater\\V1\\', dirname( __DIR__ ) . '/vendor/ran/wp-release-updater/src/' );
+		foreach ( array(
+			'plugin' => 940001,
+			'theme'  => 940002,
+		) as $type => $identity ) {
+			$service = new \RAN\WPReleaseUpdater\V1\Provider\GitHub\GitHubReleaseService(
+				array(
+					'canonical_repository_locator' => 'ran-booster-scenarios/scenario-' . $type,
+					'canonical_update_uri'         => 'https://github.com/ran-booster-scenarios/scenario-' . $type,
+					'php_runtime_version'          => PHP_VERSION,
+					'maximum_artifact_bytes'       => 2000000,
+					'release_channel'              => 'stable',
+					'stable_repository_identity'   => (string) $identity,
+					'target_type'                  => $type,
+					'wordpress_runtime_version'    => '7.0',
+				)
+			);
+			self::assertCount( 1, $service->list()['candidates'] );
+			$inspection = $service->inspect_prospective( (string) ( $identity + 100 ), 'v2.0.0' );
+			self::assertMatchesRegularExpression( '/^v2:[0-9a-f]{64}$/', $inspection->fingerprint_value() );
+		}
 	}
 
 	private function assert_blocked( mixed $response ): void {

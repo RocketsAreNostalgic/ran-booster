@@ -149,6 +149,40 @@ function ran_booster_scenarios_http( mixed $pre, array $args, string $url ): mix
 	}
 	$scenario = ran_booster_scenarios_catalog()[ $state['scenario'] ];
 	$mode     = 1 === $state['stage'] && '' !== $scenario['next'] ? $scenario['next'] : $scenario['initial'];
+
+	$repositories = array(
+		'scenario-plugin' => 940001,
+		'scenario-theme'  => 940002,
+	);
+	// Fault scenarios obey the same exact target and read-only endpoint boundary as successful scenarios.
+	$allowed = in_array( $path, array( '/users/ran-booster-scenarios', '/orgs/ran-booster-scenarios/repos' ), true );
+	foreach ( $repositories as $slug => $repository_id ) {
+		if ( 'both' !== $state['target'] && 'scenario-' . $state['target'] !== $slug ) {
+			continue;
+		}
+		$base    = '/repos/ran-booster-scenarios/' . $slug;
+		$allowed = $allowed || in_array(
+			$path,
+			array(
+				$base,
+				'/repositories/' . $repository_id,
+				$base . '/commits/main',
+				$base . '/commits/v2.0.0',
+				$base . '/commits/' . str_repeat( 'a', 40 ),
+				$base . '/branches/main',
+				$base . '/zipball/' . str_repeat( 'a', 40 ),
+				$base . '/releases/assets/' . ( $repository_id + 200 ),
+				$base . '/releases',
+				$base . '/releases/latest',
+				$base . '/releases/tags/v2.0.0',
+				$base . '/releases/' . ( $repository_id + 100 ),
+			),
+			true
+		);
+	}
+	if ( ! $allowed ) {
+		return $blocked;
+	}
 	if ( in_array( $mode, array( 'unavailable', 'denied', 'rate-limited' ), true ) ) {
 		$codes = array(
 			'unavailable'  => 503,
@@ -164,10 +198,6 @@ function ran_booster_scenarios_http( mixed $pre, array $args, string $url ): mix
 			) : array()
 		);
 	}
-	$repositories = array(
-		'scenario-plugin' => 940001,
-		'scenario-theme'  => 940002,
-	);
 	if ( '/users/ran-booster-scenarios' === $path ) {
 		return ran_booster_scenarios_response(
 			array(

@@ -133,3 +133,14 @@ function wp_remote_retrieve_body( array $response ): string {
 function wp_remote_retrieve_header( array $response, string $header ): string {
 	return $response['headers'][ strtolower( $header ) ] ?? '';
 }
+
+/** @param array<string, mixed> $args */
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Connect the real updater's safe HTTP boundary to the same controlled fixture.
+function wp_safe_remote_get( string $url, array $args ): mixed {
+	return wp_remote_get( $url, $args );
+}
+
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Preserve WordPress temp-file semantics without network access.
+function wp_tempnam( string $name ): string|false {
+	return tempnam( sys_get_temp_dir(), 'ran-scenario-' . basename( $name ) );
+}

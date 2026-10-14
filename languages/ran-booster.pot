@@ -1277,8 +1277,8 @@ msgstr ""
 #: RAN/Admin/PackageAdminController.php:347
 #: RAN/Admin/PackageAdminController.php:367
 #: RAN/Admin/PortabilityController.php:297
-#: RAN/Admin/PortabilityController.php:468
-#: RAN/Admin/PortabilityController.php:588
+#: RAN/Admin/PortabilityController.php:469
+#: RAN/Admin/PortabilityController.php:589
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:342
 #: RAN/Admin/ProviderSettingsPresenter.php:1509
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
@@ -1290,8 +1290,8 @@ msgstr ""
 #: RAN/Admin/PackageAdminController.php:347
 #: RAN/Admin/PackageAdminController.php:367
 #: RAN/Admin/PortabilityController.php:297
-#: RAN/Admin/PortabilityController.php:468
-#: RAN/Admin/PortabilityController.php:588
+#: RAN/Admin/PortabilityController.php:469
+#: RAN/Admin/PortabilityController.php:589
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:342
 #: RAN/Admin/ProviderSettingsPresenter.php:1510
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
@@ -1732,11 +1732,11 @@ msgstr ""
 msgid "Transporter Blueprint export cannot include: %s. Deselect those packages and try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:509
+#: RAN/Admin/PortabilityController.php:510
 msgid "Target encrypted credential storage is unavailable. Configure secure storage, then review and apply this row again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:518
+#: RAN/Admin/PortabilityController.php:519
 #: RAN/Portability/PortabilityApplicationService.php:247
 msgid "Booster could not apply this package. Review the Transporter Blueprint again and check repository access."
 msgstr ""

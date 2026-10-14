@@ -416,7 +416,8 @@ final readonly class PortabilityController {
 			$canonical = is_int( $index ) ? (string) $index : $index;
 			if ( ! ctype_digit( $canonical ) || (string) (int) $canonical !== $canonical
 				|| (int) $canonical >= PackageBlueprint::MAX_PACKAGES
-				|| ! is_string( $value ) || ( '' !== $value && 1 !== preg_match( '/\A[A-Za-z0-9_-]{3,64}\z/', wp_unslash( $value ) ) ) ) {
+				|| ! is_string( $value ) || SecretsFile::CONSTANT_PROFILE === wp_unslash( $value )
+				|| ( '' !== $value && 1 !== preg_match( '/\A[A-Za-z0-9_-]{3,64}\z/', wp_unslash( $value ) ) ) ) {
 				throw new InvalidArgumentException();
 			}
 			if ( '' !== $value ) {

@@ -181,7 +181,11 @@ final readonly class BlueprintRepositoryVerifier {
 		);
 		$repository_private = $descriptor->private;
 		$matches            = $descriptor->provider->equals( $provider )
+			&& $descriptor->credential_id === $credential_id
 			&& hash_equals( $package->provider_repository_id, $descriptor->provider_repository_id );
+		if ( $matches && $descriptor->private && null === $credential_id ) {
+			return new BlueprintPlanItem( $package, TargetPackageAction::BLOCKED, TargetPackageReason::CREDENTIAL_REQUIRED );
+		}
 
 		return $matches
 			? $item

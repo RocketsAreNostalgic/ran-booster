@@ -203,7 +203,7 @@ final class PortabilityControllerTest extends TestCase {
 			$method->invoke( $this->controller() )
 		);
 
-		foreach ( array( 'not-an-array', array( '01' => 'profile' ), array( 128 => 'profile' ), array( 0 => array( 'profile' ) ), array( 0 => '<profile>' ), array( 0 => str_repeat( 'x', 65 ) ) ) as $invalid ) {
+		foreach ( array( 'not-an-array', array( '01' => 'profile' ), array( 128 => 'profile' ), array( 0 => array( 'profile' ) ), array( 0 => '<profile>' ), array( 0 => SecretsFile::CONSTANT_PROFILE ), array( 0 => str_repeat( 'x', 65 ) ) ) as $invalid ) {
 			$_POST['target_credentials'] = $invalid;
 			try {
 				$method->invoke( $this->controller() );
@@ -669,7 +669,7 @@ final class PortabilityControllerTest extends TestCase {
 
 	#[DataProvider( 'repository_privacy_and_presence' )]
 	public function test_package_only_saved_choice_survives_preview_and_public_apply( bool $is_private, bool $installed ): void {
-		$profiles = array(
+		$profiles                                  = array(
 			'saved-profile' => array(
 				'id'            => 'saved-profile',
 				'provider'      => 'gh',
@@ -683,7 +683,17 @@ final class PortabilityControllerTest extends TestCase {
 				'destroy_on'    => null,
 			),
 		);
-		$secrets  = $this->createStub( SecretsFile::class );
+		$profiles[ SecretsFile::CONSTANT_PROFILE ] = array_replace(
+			$profiles['saved-profile'],
+			array(
+				'id'        => SecretsFile::CONSTANT_PROFILE,
+				'source'    => 'constant',
+				'immutable' => true,
+			)
+		);
+		$provider_credential_ids                   = array();
+		$reported_credential_id                    = 'saved-profile';
+		$secrets                                   = $this->createStub( SecretsFile::class );
 		$secrets->method( 'credential_profiles' )->willReturnCallback(
 			static function () use ( &$profiles ): array {
 				return $profiles;
@@ -696,11 +706,12 @@ final class PortabilityControllerTest extends TestCase {
 		$provider->method( 'get_credential_policy' )->willReturn( $policy );
 		$provider->method( 'get_metadata' )->willReturn( new \RAN\RepositoryProvider\ProviderMetadata( \RAN\RepositoryProvider\ProviderCode::parse( 'gh' ), 'GitHub', 'https://example.test/', 'Owner', new \RAN\RepositoryProvider\Admin\ProviderAdminMetadata( array( new \RAN\RepositoryProvider\Admin\CredentialKindMetadata( 'classic', 'Classic PAT', 'Token' ) ), array() ) ) );
 		$provider->method( 'resolve_repository' )->willReturnCallback(
-			static function ( \RAN\RepositoryProvider\RepositoryLookupRequest $request ) use ( $is_private ): \RAN\RepositoryProvider\RepositoryDescriptor {
+			static function ( \RAN\RepositoryProvider\RepositoryLookupRequest $request ) use ( $is_private, &$reported_credential_id, &$provider_credential_ids ): \RAN\RepositoryProvider\RepositoryDescriptor {
+				$provider_credential_ids[] = $request->credential_id;
 				if ( null === $request->credential_id ) {
 					throw new RuntimeException( 'Repository access failed.', 404 );
 				}
-				return new \RAN\RepositoryProvider\RepositoryDescriptor( \RAN\RepositoryProvider\ProviderCode::parse( 'gh' ), 'owner/example', 'example', 'repository-id', $is_private, 'main', $request->credential_id );
+				return new \RAN\RepositoryProvider\RepositoryDescriptor( \RAN\RepositoryProvider\ProviderCode::parse( 'gh' ), 'owner/example', 'example', 'repository-id', $is_private, 'main', $reported_credential_id );
 			}
 		);
 		$registry = new ProviderRegistry( array( $provider ) );
@@ -750,6 +761,17 @@ final class PortabilityControllerTest extends TestCase {
 		$file        = $this->blueprint_archive( $blueprint );
 		$this->set_uploaded_blueprint( $file );
 		try {
+			$_POST['row']                = '0';
+			$_POST['review_action']      = $installed ? 'adopt' : 'install';
+			$_POST['adopt']              = $installed ? '1' : '0';
+			$_POST['target_credentials'] = array( 0 => SecretsFile::CONSTANT_PROFILE );
+			$constant_preview            = $controller->handle_preview();
+			self::assertFalse( $constant_preview['success'] );
+			self::assertSame( 400, $constant_preview['status'] );
+			$constant_apply = $controller->handle_apply();
+			self::assertSame( 'failed', $constant_apply['data']['status'] );
+			self::assertSame( array(), $provider_credential_ids );
+			unset( $_POST['target_credentials'] );
 			$initial = $controller->handle_preview();
 			self::assertTrue( $initial['success'] );
 			self::assertStringContainsString( 'data-portability-action="blocked"', $initial['data']['html'] );
@@ -759,9 +781,15 @@ final class PortabilityControllerTest extends TestCase {
 			$html                        = $controller->handle_preview();
 			self::assertTrue( $html['success'] );
 			self::assertStringContainsString( '<option value="saved-profile" selected="selected">Saved &lt;PAT&gt;</option>', $html['data']['html'] );
-			$_POST['row']           = '0';
-			$_POST['review_action'] = $installed ? 'adopt' : 'install';
-			$_POST['adopt']         = $installed ? '1' : '0';
+			foreach ( array( 'other-profile', null ) as $reported_credential_id ) {
+				$mismatch_preview = $controller->handle_preview();
+				self::assertTrue( $mismatch_preview['success'] );
+				self::assertStringContainsString( 'data-portability-action="blocked"', $mismatch_preview['data']['html'] );
+				$mismatch_apply = $controller->handle_apply();
+				self::assertSame( 'skipped', $mismatch_apply['data']['status'] );
+				self::assertSame( array( 'saved-profile', 'saved-profile' ), array_slice( $provider_credential_ids, -2 ) );
+			}
+			$reported_credential_id = 'saved-profile';
 			$result                 = $controller->handle_apply();
 			self::assertTrue( $result['success'] );
 			self::assertSame( $installed ? 'adopted' : 'installed', $result['data']['status'] );

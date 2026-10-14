@@ -301,6 +301,98 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		self::assertSame( array(), $provider->credential_ids );
 	}
 
+	#[DataProvider( 'descriptor_credential_mismatches' )]
+	public function test_each_selected_credential_source_requires_the_exact_descriptor_identity( string $source, ?string $reported_id ): void {
+		[$verifier, $provider, $secrets] = $this->verifier( 0, 'repository-id' );
+		$secrets->save_credential(
+			'gh',
+			'target-pat',
+			array(
+				'label'         => 'Target PAT',
+				'kind'          => 'classic',
+				'configuration' => array(),
+			),
+			self::CLASSIC_TOKEN
+		);
+		$provider->reported_credential_id = $reported_id;
+		if ( 'candidate' === $source ) {
+			$result = $verifier->resolve_candidate( new \RAN\AddOn\Portability\PortabilityCandidate( 'plugin', 'example/example.php', 'Example', 'gh', 'owner/repository', 'main', null, 'target-pat' ) );
+			self::assertNull( $result['package'] );
+			self::assertNull( $result['private'] );
+			self::assertSame( TargetPackageReason::REPOSITORY_IDENTITY_MISMATCH, $result['reason'] );
+		} else {
+			$result = $verifier->verify( $this->install_item(), 'package' === $source ? null : $this->credential(), 'import' === $source ? BlueprintCredentialAction::IMPORT : ( 'target' === $source ? BlueprintCredentialAction::TARGET : null ), 'import' === $source ? null : 'target-pat' );
+			self::assertSame( TargetPackageAction::BLOCKED, $result->action );
+			self::assertSame( TargetPackageReason::REPOSITORY_IDENTITY_MISMATCH, $result->reason );
+		}
+		self::assertCount( 1, $provider->credential_ids );
+		self::assertNotNull( $provider->credential_ids[0] );
+		if ( 'import' === $source ) {
+			self::assertNotNull( $provider->temporary_credential_id );
+			self::assertNull( $secrets->credential_material( 'gh', $provider->temporary_credential_id ) );
+		} else {
+			self::assertSame( array( 'target-pat' ), $provider->credential_ids );
+		}
+		self::assertSame( array( 'target-pat' ), array_keys( $secrets->credential_profiles( 'gh' ) ) );
+	}
+
+	/** @return iterable<string, array{string,string|null}> */
+	public static function descriptor_credential_mismatches(): iterable {
+		foreach ( array( 'package', 'target', 'import', 'candidate' ) as $source ) {
+			foreach ( array(
+				'missing'      => null,
+				'other'        => 'other-profile',
+				'case changed' => 'TARGET-PAT',
+			) as $label => $id ) {
+				yield $source . ': ' . $label => array( $source, $id );
+			}
+		}
+	}
+
+	public function test_anonymous_lookup_cannot_accept_a_credentialed_or_private_descriptor(): void {
+		[$verifier, $provider]            = $this->verifier( 0, 'repository-id' );
+		$provider->reported_credential_id = 'target-pat';
+		self::assertSame( TargetPackageReason::REPOSITORY_IDENTITY_MISMATCH, $verifier->verify( $this->install_item() )->reason );
+		self::assertSame( array( null ), $provider->credential_ids );
+
+		[$private_verifier, $private_provider] = $this->verifier( 0, 'repository-id', true );
+		self::assertSame( TargetPackageReason::CREDENTIAL_REQUIRED, $private_verifier->verify( $this->install_item() )->reason );
+		self::assertSame( array( null ), $private_provider->credential_ids );
+	}
+
+	public function test_public_candidate_retains_existing_constant_profile_support(): void {
+		$secrets = $this->createStub( SecretsFile::class );
+		$secrets->method( 'credential_profiles' )->willReturn(
+			array(
+				SecretsFile::CONSTANT_PROFILE => array(
+					'id'            => SecretsFile::CONSTANT_PROFILE,
+					'provider'      => 'gh',
+					'label'         => 'Configured credential',
+					'kind'          => 'classic',
+					'configuration' => array(),
+					'source'        => 'constant',
+					'immutable'     => true,
+					'configured'    => true,
+					'self_destruct' => false,
+					'destroy_on'    => null,
+				),
+			)
+		);
+		$provider = $this->createMock( \RAN\RepositoryProvider\RepositoryProvider::class );
+		$provider->method( 'get_metadata' )->willReturn( new \RAN\RepositoryProvider\ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://example.test/', 'Owner' ) );
+		$provider->expects( self::once() )->method( 'resolve_repository' )->willReturnCallback(
+			static function ( \RAN\RepositoryProvider\RepositoryLookupRequest $request ): \RAN\RepositoryProvider\RepositoryDescriptor {
+				self::assertSame( SecretsFile::CONSTANT_PROFILE, $request->credential_id );
+				return new \RAN\RepositoryProvider\RepositoryDescriptor( ProviderCode::parse( 'gh' ), 'owner/repository', 'example', 'repository-id', true, 'main', $request->credential_id );
+			}
+		);
+		$verifier = new BlueprintRepositoryVerifier( new ProviderRegistry( array( $provider ) ), $secrets );
+		$result   = $verifier->resolve_candidate( new \RAN\AddOn\Portability\PortabilityCandidate( 'plugin', 'example/example.php', 'Example', 'gh', 'owner/repository', 'main', null, SecretsFile::CONSTANT_PROFILE ) );
+		self::assertNotNull( $result['package'] );
+		self::assertTrue( $result['private'] );
+		self::assertSame( TargetPackageReason::NONE, $result['reason'] );
+	}
+
 	public function test_inactive_provider_blocks_transferred_material_and_cleans_the_temporary_profile(): void {
 		$catalog = new ProviderSecretPolicyCatalog();
 		$catalog->register( ProviderCode::parse( 'gh' ), new GitHubCredentialPolicy(), null );

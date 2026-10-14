@@ -94,7 +94,7 @@ final class RepositoryWebhookManagementControls {
 		$context = $this->controller->panel_context();
 		$model   = $this->display->panel( $authority['provider_code'], $metadata->label, $authority['repository_id'], $return_url, $context['result'], $context['recovery'], true, $context['remediation'] );
 		if ( null === $model ) {
-			$this->render_unavailable_package_webhook_setup( $this->package_webhook_unavailable_reason( $authority['provider_code'], $authority['repository_id'], $package->identifier() ) );
+			$this->render_unavailable_package_webhook_setup( $this->repository_webhook_unavailable_reason( $authority['provider_code'], $authority['repository_id'], $package->identifier() ) );
 			return;
 		}
 
@@ -111,40 +111,6 @@ final class RepositoryWebhookManagementControls {
 		<?php
 	}
 
-	/** Explain a failed local readiness projection without probing a provider. */
-	private function package_webhook_unavailable_reason( string $provider_code, string $repository_id, string $package_identifier ): string {
-		$messages = array(
-			'callback_requires_public_https'  => __( 'This site needs a public HTTPS URL before a provider can deliver webhooks. Local receivers cannot be reached remotely.', 'ran-booster' ),
-			'database_unavailable'            => __( 'Webhook setup is unavailable because Booster database storage is unavailable.', 'ran-booster' ),
-			'secrets_storage_unavailable'     => __( 'Webhook setup is unavailable because encrypted signing-secret storage is unavailable.', 'ran-booster' ),
-			'managed_packages_unavailable'    => __( 'Webhook setup is unavailable because Booster could not read managed packages.', 'ran-booster' ),
-			'repository_identity_unavailable' => __( 'Webhook setup is unavailable because this repository has no stable provider identity.', 'ran-booster' ),
-			'repository_identity_conflict'    => __( 'Webhook setup is unavailable because managed packages disagree about this repository identity.', 'ran-booster' ),
-			'repository_locator_invalid'      => __( 'Webhook setup is unavailable because the saved repository address is invalid.', 'ran-booster' ),
-		);
-		try {
-			$readiness = $this->assistance->readiness( $provider_code )->to_array();
-			$codes     = $readiness['site']['reason_codes'] ?? array();
-			foreach ( $readiness['repositories'] ?? array() as $repository ) {
-				if ( ! is_array( $repository ) ) {
-					continue;
-				}
-				$references = is_array( $repository['package_references'] ?? null ) ? $repository['package_references'] : array();
-				if ( ( $repository['repository_id'] ?? null ) === $repository_id || in_array( $package_identifier, $references, true ) ) {
-					$codes = array_merge( $codes, is_array( $repository['reason_codes'] ?? null ) ? $repository['reason_codes'] : array() );
-				}
-			}
-			foreach ( $codes as $code ) {
-				if ( is_string( $code ) && isset( $messages[ $code ] ) ) {
-					return $messages[ $code ];
-				}
-			}
-		} catch ( \Throwable ) {
-			return __( 'Webhook setup is unavailable until Booster can confirm this managed repository.', 'ran-booster' );
-		}
-
-		return __( 'Webhook setup is unavailable until Booster can confirm this managed repository.', 'ran-booster' );
-	}
 
 	private function render_unavailable_package_webhook_setup( string $reason ): void {
 		?>
@@ -295,7 +261,8 @@ final class RepositoryWebhookManagementControls {
 		}
 	}
 
-	private function repository_webhook_unavailable_reason( string $provider_code, string $repository_id ): string {
+	/** Explain a failed local readiness projection without probing a provider. */
+	private function repository_webhook_unavailable_reason( string $provider_code, string $repository_id, ?string $package_identifier = null ): string {
 		$messages = array(
 			'callback_requires_public_https'  => __( 'This site needs a public HTTPS URL before a provider can deliver webhooks. Local receivers cannot be reached remotely.', 'ran-booster' ),
 			'database_unavailable'            => __( 'Webhook setup is unavailable because Booster database storage is unavailable.', 'ran-booster' ),
@@ -309,7 +276,11 @@ final class RepositoryWebhookManagementControls {
 			$readiness = $this->assistance->readiness( $provider_code )->to_array();
 			$codes     = $readiness['site']['reason_codes'] ?? array();
 			foreach ( $readiness['repositories'] ?? array() as $repository ) {
-				if ( is_array( $repository ) && ( $repository['repository_id'] ?? null ) === $repository_id ) {
+				if ( ! is_array( $repository ) ) {
+					continue;
+				}
+				$references = is_array( $repository['package_references'] ?? null ) ? $repository['package_references'] : array();
+				if ( ( $repository['repository_id'] ?? null ) === $repository_id || ( null !== $package_identifier && in_array( $package_identifier, $references, true ) ) ) {
 					$codes = array_merge( $codes, is_array( $repository['reason_codes'] ?? null ) ? $repository['reason_codes'] : array() );
 				}
 			}

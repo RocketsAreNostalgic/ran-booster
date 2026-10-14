@@ -1708,7 +1708,9 @@ test('package-only HTMX picker reuses credential refresh instead of starting a c
 		state.listeners.get('form:submit')({ preventDefault() {} });
 		await tick();
 		const picker = state.rows()[0].targetCredential;
+		assert.equal(state.apply.disabled, false);
 		state.listeners.get('root:change')({ target: picker });
+		assert.equal(state.apply.disabled, true);
 		await tick();
 		assert.equal(state.forms.length, 1);
 		assert.equal(picker.getAttribute('hx-post'), '/admin-ajax.php');

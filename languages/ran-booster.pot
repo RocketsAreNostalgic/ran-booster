@@ -3220,7 +3220,7 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:351
 #: RAN/Admin/WebhookManagement/views/panel.php:34
 #: views/portability-review.php:128
-#: views/portability-review.php:203
+#: views/portability-review.php:205
 msgid "Choose a saved credential"
 msgstr ""
 
@@ -7826,13 +7826,13 @@ msgid "Connect these packages to a credential already stored on this site."
 msgstr ""
 
 #: views/portability-review.php:126
-#: views/portability-review.php:200
+#: views/portability-review.php:202
 #: views/troubleshooting.php:192
 msgid "Saved credential"
 msgstr ""
 
 #: views/portability-review.php:137
-#: views/portability-review.php:214
+#: views/portability-review.php:216
 msgid "No saved credentials are available for this provider."
 msgstr ""
 
@@ -7849,7 +7849,7 @@ msgid "No credential choice is needed because every affected package will remain
 msgstr ""
 
 #: views/portability-review.php:157
-#: views/portability-review.php:217
+#: views/portability-review.php:219
 msgid "Manage repository credentials"
 msgstr ""
 
@@ -7887,11 +7887,11 @@ msgstr ""
 msgid "Choose a Transporter Blueprint to review its packages."
 msgstr ""
 
-#: views/portability-review.php:205
+#: views/portability-review.php:207
 msgid "Previously selected credential is unavailable. Choose another credential."
 msgstr ""
 
-#: views/portability-review.php:224
+#: views/portability-review.php:226
 msgid "Import credential only"
 msgstr ""
 
@@ -8189,7 +8189,7 @@ msgid "No changes selected."
 msgstr ""
 
 #: views/portability.php:296
-#: assets/ran-booster-portability.js:1049
+#: assets/ran-booster-portability.js:1051
 msgid "Applying…"
 msgstr ""
 
@@ -9073,15 +9073,15 @@ msgstr ""
 msgid "Transporter Blueprint reviewed."
 msgstr ""
 
-#: assets/ran-booster-portability.js:1084
+#: assets/ran-booster-portability.js:1086
 msgid "Package apply failed."
 msgstr ""
 
-#: assets/ran-booster-portability.js:1105
+#: assets/ran-booster-portability.js:1107
 msgid "Package apply failed. Review the blueprint again."
 msgstr ""
 
-#: assets/ran-booster-portability.js:1119
+#: assets/ran-booster-portability.js:1121
 msgid "All selected Transporter Blueprint changes were applied."
 msgstr ""
 

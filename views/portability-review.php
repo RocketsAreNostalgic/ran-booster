@@ -194,7 +194,9 @@ $has_credential_decisions    = array() !== array_filter(
 						<?php
 						$target_credential_id = 'ran-booster-portability-target-' . $row_index;
 						$selected_target_id   = (string) ( $row['credential']['selected_id'] ?? '' );
-						$target_choices       = is_array( $row['credential']['choices'] ?? null ) ? array_slice( $row['credential']['choices'], 0, 50 ) : array();
+						$target_choices       = is_array( $row['credential']['choices'] ?? null ) ? array_values( array_filter( $row['credential']['choices'], 'is_array' ) ) : array();
+						usort( $target_choices, static fn( array $left, array $right ): int => ( ( $right['id'] ?? null ) === $selected_target_id ) <=> ( ( $left['id'] ?? null ) === $selected_target_id ) );
+						$target_choices = array_slice( $target_choices, 0, 50 );
 						?>
 						<div class="ran-booster-portability__credential-target">
 							<label for="<?php echo esc_attr( $target_credential_id ); ?>"><?php esc_html_e( 'Saved credential', 'ran-booster' ); ?></label>

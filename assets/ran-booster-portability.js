@@ -1002,6 +1002,8 @@
 				return;
 			}
 			if (event.target.matches('[data-portability-target-credential]')) {
+				reviewConfirmed = false;
+				updateSelectionControls();
 				if (
 					!window.htmx ||
 					!event.target.matches(

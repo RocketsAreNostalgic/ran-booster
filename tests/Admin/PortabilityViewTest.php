@@ -293,6 +293,19 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( '<option value="saved-profile" selected="selected">Saved &lt;PAT&gt;</option>', $html );
 		self::assertStringContainsString( 'Manage repository credentials', $html );
 
+		$row['credential']['choices']     = array_map(
+			static fn( int $index ): array => array(
+				'id'    => 'profile-' . $index,
+				'label' => 'Profile ' . $index,
+			),
+			range( 0, 60 )
+		);
+		$row['credential']['selected_id'] = 'profile-60';
+		$html                             = $this->render_view( array( $row ) );
+		self::assertStringContainsString( '<option value="profile-60" selected="selected">Profile 60</option>', $html );
+		self::assertStringNotContainsString( 'Previously selected credential is unavailable.', $html );
+		self::assertSame( 50, substr_count( $html, '<option value="profile-' ) );
+
 		unset( $row['credential']['selected_id'] );
 		self::assertStringNotContainsString( 'selected="selected"', $this->render_view( array( $row ) ) );
 

@@ -746,22 +746,37 @@ final class PortabilityControllerTest extends TestCase {
 		$application = new PortabilityApplicationService( new BlueprintReviewer( $plugins, $themes ), new BlueprintRepositoryVerifier( $registry, $secrets ), $operations, $secrets );
 		$controller  = new PortabilityController( ( new ReflectionClass( ManagedPackageBlueprintExporter::class ) )->newInstanceWithoutConstructor(), new BlueprintArchive(), $application, new ProviderSettingsPresenter( $registry, $secrets, new \RAN\Storage\CredentialUsageReader(), new \RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore(), new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore() ) );
 		$blueprint   = new PackageBlueprint( array( new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', 'main', null ) ) );
-		$review      = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'review_blueprint' );
-		$initial     = $review->invoke( $controller, $blueprint, array(), array() );
-		self::assertStringContainsString( 'data-portability-action="blocked"', $initial );
-		self::assertStringContainsString( 'data-portability-target-credential', $initial );
-		self::assertStringNotContainsString( 'selected="selected"', $initial );
-		$html = $review->invoke( $controller, $blueprint, array(), array( 0 => 'saved-profile' ) );
-		self::assertStringContainsString( '<option value="saved-profile" selected="selected">Saved &lt;PAT&gt;</option>', $html );
-		$result = $application->apply( $blueprint, 0, $installed ? 'adopt' : 'install', array(), 'saved-profile', $installed, true );
-		self::assertSame( $installed ? 'adopted' : 'installed', $result['status'] );
-		self::assertSame( 'target_selected', $result['credential_state'] );
-		$profiles = array();
-		$stale    = $application->apply( $blueprint, 0, $installed ? 'adopt' : 'install', array(), 'saved-profile', $installed, true );
-		self::assertSame( 'skipped', $stale['status'] );
-		$stale_html = $review->invoke( $controller, $blueprint, array(), array( 0 => 'saved-profile' ) );
-		self::assertStringContainsString( 'value="saved-profile" selected>Previously selected credential is unavailable.', $stale_html );
-		self::assertStringContainsString( 'data-portability-action="blocked"', $stale_html );
+		$file        = $this->blueprint_archive( $blueprint );
+		$this->set_uploaded_blueprint( $file );
+		try {
+			$initial = $controller->handle_preview();
+			self::assertTrue( $initial['success'] );
+			self::assertStringContainsString( 'data-portability-action="blocked"', $initial['data']['html'] );
+			self::assertStringContainsString( 'data-portability-target-credential', $initial['data']['html'] );
+			self::assertStringNotContainsString( 'selected="selected"', $initial['data']['html'] );
+			$_POST['target_credentials'] = array( 0 => 'saved-profile' );
+			$html                        = $controller->handle_preview();
+			self::assertTrue( $html['success'] );
+			self::assertStringContainsString( '<option value="saved-profile" selected="selected">Saved &lt;PAT&gt;</option>', $html['data']['html'] );
+			$_POST['row']           = '0';
+			$_POST['review_action'] = $installed ? 'adopt' : 'install';
+			$_POST['adopt']         = $installed ? '1' : '0';
+			$result                 = $controller->handle_apply();
+			self::assertTrue( $result['success'] );
+			self::assertSame( $installed ? 'adopted' : 'installed', $result['data']['status'] );
+			self::assertSame( 'target_selected', $result['data']['credential_state'] );
+			$profiles = array();
+			$stale    = $controller->handle_apply();
+			self::assertTrue( $stale['success'] );
+			self::assertSame( 'skipped', $stale['data']['status'] );
+			$stale_html = $controller->handle_preview();
+			self::assertTrue( $stale_html['success'] );
+			self::assertStringContainsString( 'value="saved-profile" selected>Previously selected credential is unavailable.', $stale_html['data']['html'] );
+			self::assertStringContainsString( 'data-portability-action="blocked"', $stale_html['data']['html'] );
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Removes only this test's generated Blueprint upload.
+			unlink( $file );
+		}
 	}
 
 	/** @return iterable<string, array{bool,bool}> */

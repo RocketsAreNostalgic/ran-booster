@@ -52,7 +52,10 @@ final class ProviderRepositoryRowsNormalizer {
 				'admin.php'
 			);
 		}
-		$counts                       = $this->counts( $managed['repositories'] );
+		$automatic_count = 0;
+		foreach ( $managed['repositories'] as $repository ) {
+			$automatic_count += (int) ( $repository['automatic_count'] ?? 0 );
+		}
 		$shared_label                 = sprintf( /* translators: %s is the repository owner label. */ __( '%s secret', 'ran-booster' ), $owner_label );
 		$webhook_label                = sprintf( /* translators: %s is the repository provider name. */ __( '%s webhooks', 'ran-booster' ), $provider_label );
 		$model                        = $this->project(
@@ -119,7 +122,7 @@ final class ProviderRepositoryRowsNormalizer {
 			'webhook_operations_url'              => admin_url( 'admin.php?page=ran-booster&tab=documentation#ran-booster-push-to-deploy' ),
 			'install_plugin_url'                  => admin_url( 'admin.php?page=ran-booster-plugins-create&provider=' . rawurlencode( $provider_code ) ),
 			'install_theme_url'                   => admin_url( 'admin.php?page=ran-booster-themes-create&provider=' . rawurlencode( $provider_code ) ),
-			'automaticPackageCount'               => $counts['automatic'],
+			'automaticPackageCount'               => $automatic_count,
 			'requested_repository_id'             => $model['requested_id'],
 			'repository_view'                     => $repository_view,
 			'repository_view_urls'                => $repository_view_urls,
@@ -130,7 +133,7 @@ final class ProviderRepositoryRowsNormalizer {
 			'repository_row_count_label'          => sprintf( /* translators: %d is the number of repositories shown. */ _nx( '%d repository shown', '%d repositories shown', count( $model['rows'] ), 'Provider table repository count', 'ran-booster' ), count( $model['rows'] ) ),
 			'selected_repository_row'             => $model['selected'],
 			'activity_url'                        => admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ),
-		) + $this->copy( $provider_label, is_array( $provider['webhook_setup'] ?? null ) ? $provider['webhook_setup'] : null, $counts, $shared_label );
+		) + $this->copy( $provider_label, is_array( $provider['webhook_setup'] ?? null ) ? $provider['webhook_setup'] : null );
 	}
 
 	/**
@@ -957,25 +960,6 @@ final class ProviderRepositoryRowsNormalizer {
 		);
 	}
 
-	/**
-	 * @param list<mixed> $repositories Inventory entries before row projection.
-	 * @return array{repositories:int,packages:int,automatic:int}
-	 */
-	private function counts( array $repositories ): array {
-		$packages  = 0;
-		$automatic = 0;
-		foreach ( $repositories as $repository ) {
-			$packages  += (int) ( $repository['package_count'] ?? 0 );
-			$automatic += (int) ( $repository['automatic_count'] ?? 0 );
-		}
-
-		return array(
-			'repositories' => count( $repositories ),
-			'packages'     => $packages,
-			'automatic'    => $automatic,
-		);
-	}
-
 	/** @return array{by_id:array<array-key,array<string,mixed>>,by_repository:array<string,array<string,mixed>>} */
 	private function readiness_indexes( mixed $candidates, string $provider_code ): array {
 		$by_id         = array();
@@ -1018,21 +1002,11 @@ final class ProviderRepositoryRowsNormalizer {
 
 	/**
 	 * @param array<string,mixed>|null $setup Provider webhook setup metadata.
-	 * @param array{repositories:int,packages:int,automatic:int} $counts
 	 * @return array<string,string>
 	 */
-	private function copy( string $label, ?array $setup, array $counts, string $shared_secret_label ): array {
-		$automatic_label = 0 < $counts['automatic']
-			? sprintf( /* translators: %d is the number of packages with Automatic updates. */ _n( '%d package is Automatic', '%d packages are Automatic', $counts['automatic'], 'ran-booster' ), $counts['automatic'] )
-			: __( 'None set to Automatic', 'ran-booster' );
-
+	private function copy( string $label, ?array $setup ): array {
 		return array(
-			'providerPushDescription'        => sprintf( /* translators: %s is the repository provider name. */ __( '%s push webhooks can trigger managed branch deployments whose Updates setting is Automatic.', 'ran-booster' ), $label ),
-			'automaticPackageLabel'          => $automatic_label,
-			'managedPackageDescription'      => sprintf( /* translators: 1: number of repositories, 2: number of managed packages. */ _n( '%1$d repository contains %2$d managed package.', '%1$d repositories contain %2$d managed packages.', $counts['repositories'], 'ran-booster' ), $counts['repositories'], $counts['packages'] ),
 			'provider_instructions_label'    => sprintf( /* translators: %s is the repository provider name. */ __( 'Open %s instructions', 'ran-booster' ), $label ),
-			'secretChoiceDescription'        => sprintf( /* translators: %s is the shared secret label. */ __( 'Use a saved %s or create a repository-scoped secret when isolation is required.', 'ran-booster' ), strtolower( $shared_secret_label ) ),
-			'createProviderWebhookLabel'     => sprintf( /* translators: %s is the repository provider name. */ __( 'Create the %s webhook', 'ran-booster' ), $label ),
 			'manual_setup_description'       => null === $setup ? '' : sprintf( /* translators: 1: repository provider name, 2: provider webhook settings location. */ __( 'In %1$s, go to %2$s and create the remote webhook.', 'ran-booster' ), $label, $setup['location'] ),
 			'repository_webhook_description' => sprintf(
 				/* translators: %s is the repository provider name. */

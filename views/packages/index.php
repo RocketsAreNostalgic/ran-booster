@@ -292,7 +292,7 @@ echo esc_url(
 				? $last_successful_activity['finished_at']
 				: '';
 			$installed_version         = $package->get_version();
-			$credential_profiles       = is_array( $package_provider['credentials'] ?? null ) ? $package_provider['credentials'] : array();
+			$credential_profiles       = is_array( $package_provider['credential_profiles'] ?? null ) ? $package_provider['credential_profiles'] : array();
 			$credentials_by_id         = array_column( $credential_profiles, null, 'id' );
 			$stored_credential_id      = $package->get_credential_id();
 			$effective_credential_id   = '' !== $stored_credential_id

@@ -8,7 +8,6 @@ use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\AdminTab;
-use RAN\Admin\AdminTabKind;
 use RAN\Admin\AdminTabRegistry;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
 use RAN\RepositoryProvider\Admin\ProviderNavigationPlacement;
@@ -37,15 +36,15 @@ final class AdminTabRegistryTest extends TestCase {
 			array( 'Overview', 'GitHub', 'Bitbucket', 'Transporter', 'Documentation', 'Troubleshooting' ),
 			array_map( static fn ( AdminTab $tab ): string => $tab->get_label(), $registry->all() )
 		);
-		self::assertSame( 'overview', $registry->get_default()->get_key() );
+		self::assertSame( 'overview', $registry->resolve( null )->get_key() );
 		self::assertSame( 'onboarding.php', $registry->resolve( 'overview' )->get_view() );
-		self::assertSame( AdminTabKind::PROVIDER, $registry->resolve( 'bb' )->get_kind() );
+		self::assertTrue( $registry->resolve( 'bb' )->is_provider() );
 		$provider = $registry->resolve( 'bb' )->get_provider();
 		self::assertNotNull( $provider );
 		self::assertTrue( $provider->equals( 'bb' ) );
 		self::assertSame( 'documentation.php', $registry->resolve( 'documentation' )->get_view() );
 		self::assertSame( 'portability.php', $registry->resolve( 'portability' )->get_view() );
-		self::assertSame( AdminTabKind::PAGE, $registry->resolve( 'documentation' )->get_kind() );
+		self::assertFalse( $registry->resolve( 'documentation' )->is_provider() );
 	}
 
 	public function test_provider_tabs_use_deterministic_host_order_instead_of_registration_order(): void {
@@ -103,7 +102,7 @@ final class AdminTabRegistryTest extends TestCase {
 			array( 'overview', 'portability', 'documentation', 'troubleshooting' ),
 			array_map( static fn ( AdminTab $tab ): string => $tab->get_key(), $registry->all() )
 		);
-		self::assertSame( 'overview', $registry->get_default()->get_key() );
+		self::assertSame( 'overview', $registry->resolve( null )->get_key() );
 	}
 
 	public function test_page_definitions_reject_views_outside_the_allowlist(): void {

@@ -15,6 +15,7 @@ parameters:
 		- tests/fixtures
 		- vendor/ran/wp-release-updater/src
 	scanFiles:
+		- tests/WordPress/disposable-management-cleanup.php
 		- ran-booster.php
 		- tests/WordPress/WordPressOrgUpdateRequestFilterWordPressFunctions.php
 		- scripts/analysis-stubs/WpCliCommand.php

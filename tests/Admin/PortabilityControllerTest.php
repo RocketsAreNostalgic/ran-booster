@@ -568,7 +568,7 @@ final class PortabilityControllerTest extends TestCase {
 		$item      = new BlueprintPlanItem( $package, TargetPackageAction::MANAGED, TargetPackageReason::ALREADY_MANAGED );
 		$method    = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'apply_item' );
 
-		$result = $method->invoke( $this->application(), $blueprint, $item, null, null, null, null, false, false );
+		$result = $method->invoke( $this->application(), $blueprint, $item, null, null, null, null );
 
 		self::assertSame(
 			array(
@@ -598,7 +598,7 @@ final class PortabilityControllerTest extends TestCase {
 		);
 		$method      = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'apply_item' );
 
-		$result = $method->invoke( $application, $blueprint, $item, $credential, 'import', null, null, true, true );
+		$result = $method->invoke( $application, $blueprint, $item, $credential, 'import', null, null );
 
 		self::assertSame( 'skipped', $result['status'] );
 		self::assertSame( 'none', $result['credential_state'] );

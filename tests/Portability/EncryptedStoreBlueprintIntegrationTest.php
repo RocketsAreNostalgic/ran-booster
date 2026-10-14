@@ -218,10 +218,10 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		self::assertFileExists( $this->target_path );
 		self::assertNotNull( $target_key_store->load( false ) );
 
-		$result      = $apply_item->invoke( $application, $imported, $preview, $credential, 'import', null, false, true, true );
+		$result      = $apply_item->invoke( $application, $imported, $preview, $credential, 'import', null, false );
 		$second_item = new BlueprintPlanItem( $imported->packages[1], TargetPackageAction::INSTALL, TargetPackageReason::NONE );
-		$second      = $apply_item->invoke( $application, $imported, $second_item, $credential, 'import', null, false, true, true );
-		$retry       = $apply_item->invoke( $application, $imported, $preview, $credential, 'import', null, false, true, true );
+		$second      = $apply_item->invoke( $application, $imported, $second_item, $credential, 'import', null, false );
+		$retry       = $apply_item->invoke( $application, $imported, $preview, $credential, 'import', null, false );
 
 		self::assertSame( 'failed', $result['status'] );
 		self::assertSame( 'transferred_available', $result['credential_state'] );

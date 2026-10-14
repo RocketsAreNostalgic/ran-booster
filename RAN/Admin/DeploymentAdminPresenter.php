@@ -16,8 +16,6 @@ final class DeploymentAdminPresenter {
 
 	public const USER_META_KEY = '_ran_booster_background_failure_notice_fingerprint';
 	private bool $rendered     = false;
-	/** @var list<array<string, int|string|null>>|null */
-	private ?array $failures = null;
 
 	public function __construct(
 		private ?BackgroundDeploymentFailureMonitor $monitor = null,
@@ -32,7 +30,7 @@ final class DeploymentAdminPresenter {
 		if ( ! current_user_can( 'manage_options' ) || null === $this->monitor ) {
 			return false;
 		}
-		$fingerprint = $this->monitor->fingerprint( $this->snapshot() );
+		$fingerprint = $this->monitor->fingerprint();
 		$user_id     = get_current_user_id();
 
 		return null !== $fingerprint && $user_id > 0
@@ -44,7 +42,7 @@ final class DeploymentAdminPresenter {
 			return;
 		}
 		$this->rendered = true;
-		$failures       = $this->snapshot();
+		$failures       = $this->monitor?->failures() ?? array();
 		$primary        = $failures[0];
 		$count          = count( $failures );
 		$summary        = sprintf(
@@ -276,11 +274,6 @@ final class DeploymentAdminPresenter {
 		return $this->package_activity_result( $items, false );
 	}
 
-	/** @return list<array<string, int|string|null>> */
-	private function snapshot(): array {
-		return $this->failures ??= $this->monitor?->failures() ?? array();
-	}
-
 	/** @param array<string, int|string|null> $failure */
 	private function activity_url( array $failure ): string {
 		return admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity&attempt=' . rawurlencode( (string) $failure['attempt_id'] ) . '&reference=' . rawurlencode( (string) $failure['correlation_id'] ) );
@@ -367,11 +360,10 @@ final class DeploymentAdminPresenter {
 		return compact( 'items', 'unavailable' );
 	}
 
-	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- compact() reads step and operation for the exception logging context.
-	private function log_read_failure( string $message, Throwable $failure, string $step, ?string $operation = null, mixed $attempt_id_input = null ): void {
-		$source     = 'admin';
-		$attempt_id = $attempt_id_input;
-		$context    = array_filter( compact( 'source', 'step', 'operation', 'attempt_id' ), static fn ( mixed $value ): bool => null !== $value );
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- compact() reads step and operation for the exception logging context.
+	private function log_read_failure( string $message, Throwable $failure, string $step, ?string $operation = null ): void {
+		$source  = 'admin';
+		$context = array_filter( compact( 'source', 'step', 'operation' ), static fn ( mixed $value ): bool => null !== $value );
 		BoosterLogger::log_exception( $message, $failure, $context );
 	}
 }

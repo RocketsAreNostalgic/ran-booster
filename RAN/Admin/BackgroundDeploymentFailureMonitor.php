@@ -91,7 +91,6 @@ final class BackgroundDeploymentFailureMonitor {
 				'credential_id'  => $request->credential_id,
 				'state'          => $attempt->get_state()->value,
 				'outcome_code'   => (string) $data['outcome_code'],
-				'finished_at'    => (string) $data['finished_at'],
 			);
 		}
 
@@ -111,9 +110,8 @@ final class BackgroundDeploymentFailureMonitor {
 		return null;
 	}
 
-	/** @param list<array<string, int|string|null>>|null $failures */
-	public function fingerprint( ?array $failures = null ): ?string {
-		$failures ??= $this->failures();
+	public function fingerprint(): ?string {
+		$failures = $this->failures();
 		if ( array() === $failures ) {
 			return null;
 		}

@@ -584,7 +584,6 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/Admin/BulkPackageAction.php`, `RAN/Admin/BulkPackageActionFailure.php`,
 `RAN/Admin/BulkPackageResult.php`, `RAN/Admin/BulkPackageActionService.php`,
 `RAN/Secrets/SecretsStorageProvisioningResult.php`,
-`RAN/Secrets/WpConfigPathWriteResult.php`,
 `RAN/Secrets/SecretsStorageUnavailable.php`,
 `RAN/Secrets/SecretsRuntimeAvailability.php`,
 `RAN/Webhook/SignedWebhookVerifier.php`, `RAN/Webhook/WebhookController.php`,

@@ -26,10 +26,8 @@ class WpConfigSecretsPathWriter {
 	private const LOCK_SUFFIX                    = '.ran-booster.lock';
 	private const TEMP_PREFIX                    = '.ran-booster-wp-config-';
 
-	public function write( string $config_path, string $sidecar_path ): WpConfigPathWriteResult {
+	public function write( string $config_path, string $sidecar_path ): void {
 		$this->edit( $config_path, $sidecar_path, false, null );
-
-		return new WpConfigPathWriteResult();
 	}
 
 	/**
@@ -39,7 +37,7 @@ class WpConfigSecretsPathWriter {
 		string $config_path,
 		string $current_sidecar_path,
 		string $replacement_sidecar_path
-	): WpConfigPathWriteResult|false {
+	): bool {
 		if ( $current_sidecar_path === $replacement_sidecar_path ) {
 			$this->fail( 'sidecar_path_unchanged', 'The encrypted secrets path is already configured.' );
 		}
@@ -48,7 +46,7 @@ class WpConfigSecretsPathWriter {
 			return false;
 		}
 
-		return new WpConfigPathWriteResult();
+		return true;
 	}
 
 	/**

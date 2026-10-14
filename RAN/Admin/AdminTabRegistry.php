@@ -46,10 +46,6 @@ final class AdminTabRegistry {
 		return $this->tabs[ $requested_key ] ?? $this->tabs[ $this->default_key ];
 	}
 
-	public function get_default(): AdminTab {
-		return $this->tabs[ $this->default_key ];
-	}
-
 	private function add( AdminTab $tab ): void {
 		if ( isset( $this->tabs[ $tab->get_key() ] ) ) {
 			throw new InvalidArgumentException( 'Admin tab keys must be unique.' );

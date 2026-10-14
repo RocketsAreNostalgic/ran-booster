@@ -59,8 +59,10 @@ foreach ( array( 'plugin', 'theme' ) as $ran_booster_archive_type ) {
 $ran_booster_container = require __DIR__ . '/core-container-fixture.php';
 $ran_booster_facade    = $ran_booster_container->make( ProspectiveReleaseFacade::class );
 // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
-$plugins               = $ran_booster_container->make( PluginRepository::class );
-$ran_booster_themes    = $ran_booster_container->make( ThemeRepository::class );
+$plugins            = $ran_booster_container->make( PluginRepository::class );
+$ran_booster_themes = $ran_booster_container->make( ThemeRepository::class );
+require_once __DIR__ . '/disposable-management-cleanup.php';
+
 $ran_booster_installed = array();
 
 $ran_booster_assert_result = static function ( RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult $ran_booster_result, string $code ): void {
@@ -144,13 +146,13 @@ try {
 	// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
 	foreach ( $ran_booster_cleanup ? array_reverse( $ran_booster_installed, true ) : array() as $type => $ran_booster_identifier ) {
 		if ( 'plugin' === $type ) {
-			$plugins->unlink( $ran_booster_identifier )->require_success();
+			ran_booster_cleanup_fixture_management( $plugins, $ran_booster_identifier );
 			if ( is_plugin_active( $ran_booster_identifier ) ) {
 				deactivate_plugins( $ran_booster_identifier, true );
 			}
 			$ran_booster_result = delete_plugins( array( $ran_booster_identifier ) );
 		} else {
-			$ran_booster_themes->unlink( $ran_booster_identifier )->require_success();
+			ran_booster_cleanup_fixture_management( $ran_booster_themes, $ran_booster_identifier );
 			$ran_booster_result = delete_theme( $ran_booster_identifier );
 		}
 		if ( is_wp_error( $ran_booster_result ) || false === $ran_booster_result ) {

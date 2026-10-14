@@ -37,8 +37,10 @@ $ran_booster_assert( ! defined( 'FS_METHOD' ) && ! isset( $wp_filesystem ), 'Pub
 $ran_booster_container = require __DIR__ . '/core-container-fixture.php';
 $ran_booster_facade    = $ran_booster_container->make( ProspectiveReleaseFacade::class );
 // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
-$plugins                    = $ran_booster_container->make( PluginRepository::class );
-$ran_booster_themes         = $ran_booster_container->make( ThemeRepository::class );
+$plugins            = $ran_booster_container->make( PluginRepository::class );
+$ran_booster_themes = $ran_booster_container->make( ThemeRepository::class );
+require_once __DIR__ . '/disposable-management-cleanup.php';
+
 $ran_booster_counts         = array(
 	'http'       => 0,
 	'http_bytes' => 0,
@@ -210,7 +212,7 @@ try {
 		$ran_booster_identifier = 'plugin' === $type ? $ran_booster_fixture['slug'] . '/' . $ran_booster_fixture['metadata'] : $ran_booster_fixture['slug'];
 		$ran_booster_assert( ! is_link( $ran_booster_fixture['directory'] ), 'Prospective cleanup refuses a replaced target.' );
 		if ( is_dir( $ran_booster_fixture['directory'] ) ) {
-			( 'plugin' === $type ? $plugins : $ran_booster_themes )->unlink( $ran_booster_identifier )->require_success();
+			ran_booster_cleanup_fixture_management( 'plugin' === $type ? $plugins : $ran_booster_themes, $ran_booster_identifier );
 			$ran_booster_removed = 'plugin' === $type ? delete_plugins( array( $ran_booster_identifier ) ) : delete_theme( $ran_booster_identifier );
 			$ran_booster_assert( ! is_wp_error( $ran_booster_removed ) && false !== $ran_booster_removed && ! file_exists( $ran_booster_fixture['directory'] ), 'Prospective fixture cleanup failed.' );
 		}

@@ -117,7 +117,7 @@ It contains `basis`, `observed_identity`, and `declarations`.
   source package. `selection` MUST exist. A branch observation MUST contain the
   matching selected commit; a release observation MUST contain the matching
   selected artifact digest. Commit equality alone does not bind release bytes.
-  Any additionally supplied version/commit facts MUST also agree with selection.
+  Any additionally supplied facts MUST agree with counterparts present in selection; other observations require their own evidence.
   This is a submitted claim, not imported verification.
 - `observed_identity` may contain `version`, `commit`, `artifact_sha256` when
   supported by evidence; unsupported facts MUST be omitted, not guessed.
@@ -133,6 +133,13 @@ upper compatibility bounds. Missing declarations are not proof of compatibility.
 Requirement observations on moving sources MUST NOT be presented as guaranteed
 requirements of the package eventually resolved. A version match alone does not
 establish that observation describes identical bytes.
+
+On export, an unreadable or unnormalizable declaration MUST be omitted and
+reported as malformed/unsupported in the separate export report. It MUST NOT
+be converted to `null` (not declared), nor prevent an otherwise valid
+configuration export solely because that optional observation is unavailable.
+On import, a supplied observation that violates the schema is document-invalid;
+exporter omission is not a license for readers to silently ignore malformed data.
 
 The destination compares these facts locally without downloading every archive
 merely for basic review. An incompatibility tied to a selected package yields
@@ -255,6 +262,11 @@ not itself prove encryption or approval; that is an archive/transport admission
 rule. Agent read/review starts credential-free. Preserve constant-backed and
 self-destruct export exclusions, explicit provider verification and target-local
 profile handling. Do not copy source credential IDs or lifecycle assumptions.
+Every credential association MUST resolve to an existing package with the same
+provider. A package MUST NOT receive two carried credential associations, and
+duplicate credential material is invalid. Preserve current nested configuration
+limits (depth 4, 128 nodes, 16 entries per container, 512-byte string values and
+64-byte map keys). Never log credential-bearing document or validation payloads.
 
 Export V2 only. If inexpensive, a new reader strictly validates original V1
 shape/canonical bytes and normalizes it at the boundary to branch records with
@@ -299,6 +311,7 @@ are fictional. `branch.json`, `pinned-branch.json`, `release.json`,
 | Installed headers need PHP 8.2; destination 8.1; unpinned source | Warn observation mismatch/uncertain future requirements; resolve actual package before installation |
 | Selected package declares PHP 8.2; destination 8.1 | Basic installation recommendation blocked; selected package revalidated if later resolved on a changed environment |
 | Requirements absent | Not supplied; no compatibility guarantee; normal final validation |
+| Installed header minimum cannot be normalized | Omit that observation, report malformed/unsupported; configuration export remains possible |
 | Exact commit unavailable or current branch advanced | Acquire historical commit only if supported; otherwise block, no latest fallback |
 | Exact release same version but changed digest | Reject changed selection; no version-only match |
 | Destination PHP differs from source | Rebuild local inspection token; portable selection remains unchanged |

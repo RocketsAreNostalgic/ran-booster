@@ -1563,7 +1563,7 @@ final class OperationPluginRepository extends PluginRepository {
 		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
 	}
 	/** @param string $file */
-	public function unlink( $file ): PackageMutationResult {
+	public function record_recovery_unlink( $file ): PackageMutationResult {
 		if ( null !== $this->unlink_failure ) {
 			throw $this->unlink_failure;
 		}
@@ -1588,7 +1588,7 @@ final class OperationPluginRepository extends PluginRepository {
 			throw new \RuntimeException( 'The fixture rejected stale management.' );
 		}
 		$guard();
-		return $this->unlink( $identifier );
+		return $this->record_recovery_unlink( $identifier );
 	}
 
 	public function is_installed( string $identifier ): bool {
@@ -1635,7 +1635,7 @@ final class OperationThemeRepository extends ThemeRepository {
 		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
 	}
 	/** @param string $stylesheet */
-	public function unlink( $stylesheet ): PackageMutationResult {
+	public function record_recovery_unlink( $stylesheet ): PackageMutationResult {
 		$this->unlinked = (string) $stylesheet;
 		return PackageMutationResult::changed( PackageStorageOperation::DELETE );
 	}
@@ -1657,7 +1657,7 @@ final class OperationThemeRepository extends ThemeRepository {
 			throw new \RuntimeException( 'The fixture rejected stale management.' );
 		}
 		$guard();
-		return $this->unlink( $identifier );
+		return $this->record_recovery_unlink( $identifier );
 	}
 
 	public function is_installed( string $identifier ): bool {

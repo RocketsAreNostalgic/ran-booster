@@ -52,6 +52,81 @@ require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class PortabilityControllerTest extends TestCase {
 
+	public function test_saved_credential_choices_consume_the_real_provider_projection(): void {
+		$profiles = array(
+			array(
+				'id'            => 'saved_one',
+				'label'         => 'Saved <one>',
+				'kind'          => 'api-key',
+				'configuration' => array( 'tenant' => 'configuration-canary' ),
+				'source'        => 'file',
+				'configured'    => true,
+			),
+			array(
+				'id'            => 'constant_two',
+				'label'         => 'Constant profile',
+				'kind'          => 'api-key',
+				'configuration' => array(),
+				'source'        => 'constant',
+				'configured'    => true,
+			),
+		);
+		$secrets  = $this->createMock( SecretsFile::class );
+		$secrets->method( 'credential_profiles' )->willReturn( $profiles );
+		$secrets->expects( self::never() )->method( 'credential_material' );
+		$settings   = new ProviderSettingsPresenter(
+			new ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'fixture' ) ) ),
+			$secrets,
+			new \RAN\Storage\CredentialUsageReader( new \RAN\Tests\Support\CredentialUsageDatabase(), 'wp_ran_booster_packages' ),
+			new \RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore(),
+			new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore()
+		);
+		$reflection = new ReflectionClass( PortabilityController::class );
+		$controller = $this->controller();
+		$reflection->getProperty( 'provider_settings' )->setValue( $controller, $settings );
+		$choices = $reflection->getMethod( 'credential_choices' );
+		self::assertSame( array( 'saved_one' ), array_column( $choices->invoke( $controller, 'fixture' ), 'id' ) );
+		self::assertSame( array(), $choices->invoke( $controller, 'other-provider' ) );
+
+		$package   = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'fixture', 'source-id', 'owner/example', 'main', null );
+		$blueprint = new PackageBlueprint(
+			array( $package ),
+			array(
+				new BlueprintCredential(
+					'fixture',
+					'Imported',
+					'api-key',
+					array(),
+					'synthetic-secret-canary',
+					array(
+						array(
+							'type'       => 'plugin',
+							'identifier' => 'example/example.php',
+						),
+					)
+				),
+			)
+		);
+		$rows      = $reflection->getMethod( 'credential_rows' )->invoke(
+			$controller,
+			$blueprint,
+			array(
+				array(
+					'action'    => BlueprintCredentialAction::TARGET,
+					'target_id' => 'saved_one',
+				),
+			),
+			array()
+		);
+		self::assertSame( array( 'saved_one' ), array_column( $rows[0]['target_choices'], 'id' ) );
+		$html = $reflection->getMethod( 'render_review' )->invoke( $controller, array(), $rows );
+		self::assertStringContainsString( 'value="saved_one" selected=', $html );
+		self::assertStringContainsString( 'Saved &lt;one&gt;', $html );
+		foreach ( array( 'constant_two', 'configuration-canary', 'synthetic-secret-canary', 'No saved credentials are available' ) as $excluded ) {
+			self::assertStringNotContainsString( $excluded, $html );
+		}
+	}
+
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		parent::setUp();

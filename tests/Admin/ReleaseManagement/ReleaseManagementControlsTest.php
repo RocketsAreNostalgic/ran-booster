@@ -285,7 +285,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 		}
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Direct local fallback-view conformance read.
-		$fallback = file_get_contents( dirname( __DIR__, 3 ) . '/views/packages/source-choices.php' );
+		$fallback = file_get_contents( dirname( __DIR__, 3 ) . '/RAN/Admin/PackagePagePresenter.php' );
 		self::assertIsString( $fallback );
 		self::assertStringContainsString( "'heading'           => __( 'Releases', 'ran-booster' )", $fallback );
 		self::assertStringContainsString( 'Provider capability required', $fallback );

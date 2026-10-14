@@ -581,4 +581,6 @@ if ( null !== $ran_booster_failure ) {
 	throw $ran_booster_failure;
 }
 
+require __DIR__ . '/updater-lock-installed-smoke.php';
+
 WP_CLI::success( 'WordPress-core updater proof passed: local installs, one-item updates, activation, same-version bytes, downgrade-shaped replacement, restoration after a simulated fatal-scrape response, unrelated-package isolation and exact hook cleanup.' ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)

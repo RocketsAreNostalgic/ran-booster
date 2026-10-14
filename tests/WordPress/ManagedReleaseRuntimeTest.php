@@ -1147,6 +1147,24 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 0, $lock->acquires );
 	}
 
+	public function test_automatic_native_update_rejects_a_missing_or_replaced_outer_token_without_releasing_it(): void {
+		$package                               = $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::AUTOMATIC );
+		$GLOBALS['ran_booster_runtime_action'] = 'wp_maybe_auto_update';
+		foreach ( array( null, 'replacement-outer-lock' ) as $replacement ) {
+			[ $registrar, $lock ] = $this->native_plugin_registrar( $package );
+			$upgrader             = (object) array( 'skin' => new \Automatic_Upgrader_Skin() );
+			self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', $upgrader, self::NATIVE_EXTRA ) );
+			$lock->token = $replacement;
+			$blocked     = $registrar->fence_native_mutation( false, self::NATIVE_EXTRA );
+			self::assertInstanceOf( \WP_Error::class, $blocked );
+			self::assertSame( 'ran_booster_native_update_authority_changed', $blocked->get_error_code() );
+			self::assertSame( 2, $lock->token_reads );
+			self::assertSame( 0, $lock->acquires );
+			self::assertSame( array(), $lock->releases );
+			self::assertSame( $replacement, $lock->token );
+		}
+	}
+
 	public function test_ajax_updater_skin_is_not_classified_as_an_automatic_update(): void {
 		[ $registrar, $lock ] = $this->native_plugin_registrar(
 			$this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL )

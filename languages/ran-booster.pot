@@ -1737,7 +1737,7 @@ msgid "Target encrypted credential storage is unavailable. Configure secure stor
 msgstr ""
 
 #: RAN/Admin/PortabilityController.php:498
-#: RAN/Portability/PortabilityApplicationService.php:245
+#: RAN/Portability/PortabilityApplicationService.php:235
 msgid "Booster could not apply this package. Review the Transporter Blueprint again and check repository access."
 msgstr ""
 
@@ -4700,51 +4700,49 @@ msgstr ""
 msgid "This package is already managed with the exact disabled configuration."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:145
-#: RAN/Portability/PortabilityApplicationService.php:167
+#: RAN/Portability/PortabilityApplicationService.php:144
+#: RAN/Portability/PortabilityApplicationService.php:166
 msgid "This package changed since review. Review the Transporter Blueprint again."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:148
+#: RAN/Portability/PortabilityApplicationService.php:147
 msgid "This package was left unchanged by the repository credential decision."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:154
-#: RAN/Portability/PortabilityApplicationService.php:211
+#: RAN/Portability/PortabilityApplicationService.php:153
 msgid "You do not have permission to apply this package type."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:157
-#: RAN/Portability/PortabilityApplicationService.php:214
+#: RAN/Portability/PortabilityApplicationService.php:156
 msgid "This installed package was not selected for adoption."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:188
+#: RAN/Portability/PortabilityApplicationService.php:185
 msgid "This package is already managed."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:196
+#: RAN/Portability/PortabilityApplicationService.php:193
 msgid "The repository credential is available on this site. The managed package settings were not changed."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:202
+#: RAN/Portability/PortabilityApplicationService.php:199
 msgid "Booster could not import this repository credential. Review the Transporter Blueprint again and check repository access."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:208
+#: RAN/Portability/PortabilityApplicationService.php:205
 msgid "This package changed or cannot be applied. Review the Transporter Blueprint again."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:232
+#: RAN/Portability/PortabilityApplicationService.php:222
 msgid "Adopted: deployment disabled"
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:338
+#: RAN/Portability/PortabilityApplicationService.php:328
 msgid "Package installed and managed by Booster with deployment disabled. Re-enable deployment deliberately when this site is ready."
 msgstr ""
 
 #. translators: 1: safe deployment failure reason, 2: random support reference.
-#: RAN/Portability/PortabilityApplicationService.php:350
+#: RAN/Portability/PortabilityApplicationService.php:340
 #, php-format
 msgid "%1$s Reference: %2$s."
 msgstr ""

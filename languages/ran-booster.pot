@@ -394,26 +394,26 @@ msgid "Theme settings"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:301
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:562
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:615
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:561
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:612
 msgid "Recorded hook status"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:302
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:310
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:563
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:596
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:562
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:595
 msgid "Managed hook not yet set"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:305
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:570
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:621
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:569
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:618
 msgid "Observation"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:306
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:571
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:570
 msgid "No historical observation"
 msgstr ""
 
@@ -422,13 +422,13 @@ msgid "Recorded hook profile"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:313
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:600
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:645
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:599
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:642
 msgid "Last checked"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:314
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:601
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:600
 msgid "Never"
 msgstr ""
 
@@ -1983,7 +1983,7 @@ msgstr ""
 
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:367
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:389
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:739
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:736
 msgid "Repository secret"
 msgstr ""
 
@@ -3843,8 +3843,8 @@ msgid "Recorded signing secret is unavailable"
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:200
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:595
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:636
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:594
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:633
 msgid "Recorded signing secret"
 msgstr ""
 
@@ -3862,7 +3862,7 @@ msgid "Update webhook"
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:234
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:662
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:659
 msgid "Test webhook"
 msgstr ""
 
@@ -4086,131 +4086,131 @@ msgstr ""
 msgid "Managed actions are unavailable. Inspect and remove the recorded hook manually if necessary."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:571
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:622
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:570
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:619
 msgid "Historical only; not live readiness or a signed delivery"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:579
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:578
 msgid "Current local warning"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:590
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:627
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:589
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:624
 #: RAN/Admin/WebhookManagement/views/panel.php:31
 msgid "Management credential"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:591
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:590
 msgid "Webhook has not been managed yet"
 msgstr ""
 
 #. translators: %s: saved credential profile ID.
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:630
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:627
 #, php-format
 msgid "Last managed with saved credential profile %s; current availability was not checked."
 msgstr ""
 
 #. translators: %s: signing secret profile ID.
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:639
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:636
 #, php-format
 msgid "Recorded signing secret profile %s; current availability was not checked."
 msgstr ""
 
 #. translators: %s: repository provider name.
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:661
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:658
 #, php-format
 msgid "Set up in %s"
 msgstr ""
 
 #. translators: %s: repository provider name.
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:671
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:668
 #, php-format
 msgid "Update %s webhook"
 msgstr ""
 
 #. translators: %s: repository provider name.
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:674
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:671
 #, php-format
 msgid "Check %s"
 msgstr ""
 
 #. translators: %s: repository provider name.
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:676
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:673
 #, php-format
 msgid "Test %s webhook"
 msgstr ""
 
 #. translators: %s: repository provider name.
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:679
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:676
 #, php-format
 msgid "Remove from %s"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:706
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:703
 msgid "No managed hook recorded"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:707
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:704
 msgid "Configured at last check"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:708
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:705
 msgid "Signing secret changed; webhook update required"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:709
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:706
 msgid "Secret needs attention"
 msgstr ""
 
 #. translators: %s: webhook status label.
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:712
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:709
 #, php-format
 msgid "Needs attention: %s at last check"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:713
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:710
 msgid "Configuration drift"
 msgstr ""
 
 #. translators: %s: signing secret profile ID.
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:727
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:724
 #, php-format
 msgid "Recorded signing secret profile %s is unavailable."
 msgstr ""
 
 #. translators: %s: current signing secret profile label.
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:735
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:732
 #, php-format
 msgid "%s; current local profile metadata is available."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:739
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:736
 msgid "Owner-shared secret"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:740
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:737
 msgid "created for this hook"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:740
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:737
 msgid "reused from Booster"
 msgstr ""
 
 #. translators: 1: signing secret scope, 2: signing secret source.
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:743
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:740
 #, php-format
 msgid "%1$s; %2$s"
 msgstr ""
 
 #. translators: %s: current saved credential profile label.
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:752
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:749
 #, php-format
 msgid "Last managed with %s; provider authority has not been revalidated."
 msgstr ""
 
 #. translators: %s: saved credential profile ID.
-#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:763
+#: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:760
 #, php-format
 msgid "Previously used saved credential profile %s is unavailable."
 msgstr ""

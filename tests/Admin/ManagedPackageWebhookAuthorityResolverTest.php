@@ -8,9 +8,6 @@ use PHPUnit\Framework\TestCase;
 use RAN\AbstractPackage;
 use RAN\Admin\CredentialRequestException;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
-use RAN\Admin\WebhookManagement\Display\WebhookHistory;
-use RAN\Admin\WebhookManagement\Installation\InstallationRecord;
-use RAN\Admin\WebhookManagement\Installation\InstallationStore;
 use RAN\ManagedRepository;
 use RAN\PackageSource;
 use RAN\RepositoryProvider\ProviderCode;
@@ -130,41 +127,31 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 		}
 	}
 
-	public function test_exact_plugin_and_theme_history_reads_use_only_their_exact_repository_lookups(): void {
-		$plugin  = AuthorityPackage::make( 'plugin/example.php', 'owner/example', 'gh', 'repository-42' );
-		$theme   = AuthorityPackage::make( 'example-theme', 'owner/theme', 'gh', 'repository-43' );
-		$history = new WebhookHistory(
-			new ManagedPackageWebhookAuthorityResolver(
-				new ExactAuthorityPluginRepository( array( 'plugin/example.php' => $plugin ) ),
-				new ExactAuthorityThemeRepository( array( 'example-theme' => $theme ) )
-			),
-			new AuthorityInstallationStore(
-				array(
-					'repository-42' => $this->record( 'repository-42' ),
-					'repository-43' => $this->record( 'repository-43' ),
-				)
-			)
+	public function test_exact_plugin_and_theme_authority_reads_use_only_their_exact_repository_lookups(): void {
+		$plugin   = AuthorityPackage::make( 'plugin/example.php', 'owner/example', 'gh', 'repository-42' );
+		$theme    = AuthorityPackage::make( 'example-theme', 'owner/theme', 'gh', 'repository-43' );
+		$resolver = new ManagedPackageWebhookAuthorityResolver(
+			new ExactAuthorityPluginRepository( array( 'plugin/example.php' => $plugin ) ),
+			new ExactAuthorityThemeRepository( array( 'example-theme' => $theme ) )
 		);
-
 		self::assertSame(
 			array(
-				'provider_code'           => 'gh',
-				'repository_id'           => 'repository-42',
-				'recorded_status'         => 'needs_verification',
-				'checked_at'              => '2026-08-20T01:02:03Z',
-				'current_local_condition' => null,
-				'historical_not_live'     => true,
+				'provider_code' => 'gh',
+				'repository_id' => 'repository-42',
 			),
-			$history->for_package( 'plugin', 'plugin/example.php' )?->to_array()
+			$resolver->for_package( 'plugin', 'plugin/example.php' )
 		);
-		self::assertSame( 'repository-43', $history->for_package( 'theme', 'example-theme' )?->to_array()['repository_id'] );
-		self::assertNull( $history->for_package( 'plugin', 'missing/plugin.php' ) );
-		self::assertNull( $history->for_package( 'other', 'example-theme' ) );
+		self::assertSame(
+			array(
+				'provider_code' => 'gh',
+				'repository_id' => 'repository-43',
+			),
+			$resolver->for_package( 'theme', 'example-theme' )
+		);
+		self::assertNull( $resolver->for_package( 'plugin', 'missing/plugin.php' ) );
+		self::assertNull( $resolver->for_package( 'other', 'example-theme' ) );
 	}
 
-	private function record( string $repository_id ): InstallationRecord {
-		return new InstallationRecord( 'gh', $repository_id, 'owner/example', '77', 'credential_1', 'wh_0123456789abcdef01234567', 'repository', 1, 'created', 'https://hooks.example.test/webhook', 'needs_verification', '2026-08-20T01:02:03Z', '2026-08-20T01:02:03Z' );
-	}
 
 	/**
 	 * @param list<AuthorityPackage> $plugins
@@ -278,28 +265,6 @@ final class ExactAuthorityThemeRepository extends ThemeRepository {
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_themes retains the production method contract; these inputs do not affect this controlled result.
 	public function all_deployment_themes( ?\RAN\PackageSource $source = null ): array {
 		throw new \LogicException( 'History must not scan theme collections.' );
-	}
-}
-
-// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused authority fixtures stay beside their tests.
-final class AuthorityInstallationStore implements InstallationStore {
-	/** @param array<string, InstallationRecord> $records */
-	public function __construct( private readonly array $records ) {}
-
-	public function all(): array {
-		throw new \LogicException( 'Exact history reads must not scan installation records.' );
-	}
-
-	public function find( string $provider_code, string $repository_id ): ?InstallationRecord {
-		return 'gh' === $provider_code ? ( $this->records[ $repository_id ] ?? null ) : null;
-	}
-
-	public function save_if_current( InstallationRecord $record, ?InstallationRecord $expected ): string {
-		throw new \LogicException( 'History is read-only.' );
-	}
-
-	public function delete_if_current( string $provider_code, string $repository_id, ?InstallationRecord $expected ): string {
-		throw new \LogicException( 'History is read-only.' );
 	}
 }
 

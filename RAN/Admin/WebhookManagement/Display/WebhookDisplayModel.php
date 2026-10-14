@@ -555,25 +555,24 @@ final class WebhookDisplayModel {
 
 	/** @return list<array{key:string,label:string,value:string,tone?:string,recorded?:bool,state?:string,datetime?:string}> */
 	private function history_details( string $status_code, ?InstallationRecord $record ): array {
-		$history = null === $record ? null : WebhookHistory::from_record( $record )->to_array();
 		$details = array(
 			array(
 				'key'      => 'core:webhook-recorded-status',
 				'label'    => __( 'Recorded hook status', 'ran-booster' ),
-				'value'    => null === $history ? __( 'Managed hook not yet set', 'ran-booster' ) : $this->historical_status_label( $history['recorded_status'] ),
-				'tone'     => null === $history ? 'warning' : $this->historical_status_tone( $history['recorded_status'] ),
-				'recorded' => null !== $history,
+				'value'    => null === $record ? __( 'Managed hook not yet set', 'ran-booster' ) : $this->historical_status_label( $record->status() ),
+				'tone'     => null === $record ? 'warning' : $this->historical_status_tone( $record->status() ),
+				'recorded' => null !== $record,
 				'state'    => $status_code,
 			),
 			array(
 				'key'   => 'core:webhook-observation',
 				'label' => __( 'Observation', 'ran-booster' ),
-				'value' => null === $history ? __( 'No historical observation', 'ran-booster' ) : __( 'Historical only; not live readiness or a signed delivery', 'ran-booster' ),
+				'value' => null === $record ? __( 'No historical observation', 'ran-booster' ) : __( 'Historical only; not live readiness or a signed delivery', 'ran-booster' ),
 				'tone'  => 'neutral',
 			),
 		);
 
-		if ( null !== $history && $status_code !== $history['recorded_status'] ) {
+		if ( null !== $record && $status_code !== $record->status() ) {
 			$details[] = array(
 				'key'   => 'core:webhook-current-warning',
 				'label' => __( 'Current local warning', 'ran-booster' ),
@@ -598,8 +597,8 @@ final class WebhookDisplayModel {
 				array(
 					'key'      => 'core:webhook-last-checked',
 					'label'    => __( 'Last checked', 'ran-booster' ),
-					'value'    => null === $history ? __( 'Never', 'ran-booster' ) : $history['checked_at'],
-					'datetime' => null === $history ? '' : $history['checked_at'],
+					'value'    => null === $record ? __( 'Never', 'ran-booster' ) : $record->checked_at(),
+					'datetime' => null === $record ? '' : $record->checked_at(),
 				),
 			)
 		);
@@ -607,14 +606,12 @@ final class WebhookDisplayModel {
 
 	/** @return list<array<string, string>> */
 	private function historical_details( InstallationRecord $record ): array {
-		$history = WebhookHistory::from_record( $record )->to_array();
-
 		return array(
 			array(
 				'key'   => 'core:webhook-recorded-status',
 				'label' => __( 'Recorded hook status', 'ran-booster' ),
-				'value' => $this->historical_status_label( $history['recorded_status'] ),
-				'tone'  => $this->historical_status_tone( $history['recorded_status'] ),
+				'value' => $this->historical_status_label( $record->status() ),
+				'tone'  => $this->historical_status_tone( $record->status() ),
 			),
 			array(
 				'key'   => 'core:webhook-observation',
@@ -643,8 +640,8 @@ final class WebhookDisplayModel {
 			array(
 				'key'      => 'core:webhook-last-checked',
 				'label'    => __( 'Last checked', 'ran-booster' ),
-				'value'    => $history['checked_at'],
-				'datetime' => $history['checked_at'],
+				'value'    => $record->checked_at(),
+				'datetime' => $record->checked_at(),
 			),
 		);
 	}

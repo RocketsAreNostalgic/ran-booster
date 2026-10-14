@@ -1,5 +1,6 @@
 <?php
 
+use RAN\Activity\ActivityStore;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentOutcome;
 use RAN\Deployment\DeploymentPolicy;
@@ -224,6 +225,7 @@ $wpdb->delete(
 	)
 );
 
+$ran_booster_attempt = null;
 try {
 	$ran_booster_contents = "<?php\n/**\n * Plugin Name: RAN Booster Database Smoke\n * Version: 1.0.0\n */\n";
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable CI fixture in the isolated WordPress checkout.
@@ -241,8 +243,8 @@ try {
 		throw new RuntimeException( 'The database smoke could not verify its package record.' );
 	}
 
-	$ran_booster_attempts = $ran_booster_container->make( DeploymentAttemptRepository::class );
-	$ran_booster_request  = new DeploymentRequest(
+	$ran_booster_attempts       = $ran_booster_container->make( DeploymentAttemptRepository::class );
+	$ran_booster_request        = new DeploymentRequest(
 		'example/database-smoke',
 		null,
 		false,
@@ -254,7 +256,7 @@ try {
 		adoption_token: $ran_booster_stored->get_adoption_token(),
 		installed_identifier: $ran_booster_identifier
 	);
-	$ran_booster_attempt  = $ran_booster_attempts->admit_and_claim_manual(
+	$ran_booster_attempt        = $ran_booster_attempts->admit_and_claim_manual(
 		'update',
 		'plugin',
 		'gh',
@@ -264,15 +266,22 @@ try {
 		'branch',
 		1
 	);
-	$ran_booster_activity = $ran_booster_attempts->activity_history(
+	$ran_booster_activity_store = $ran_booster_container->make( ActivityStore::class );
+	$ran_booster_activity       = $ran_booster_activity_store->activity_history(
 		array(
 			'subject_type'     => 'plugin',
 			'subject_identity' => $ran_booster_identifier,
 		),
 		null
 	);
-	if ( 1 !== count( $ran_booster_activity ) || $ran_booster_attempt->get_id() !== $ran_booster_activity[0]->get_id()
-		|| array() !== $ran_booster_attempts->activity_history( array( 'subject_identity' => 'ran-booster-database-smoke/another.php' ), null ) ) {
+	$ran_booster_activity_facts = json_decode( (string) ( $ran_booster_activity['records'][0]['facts'] ?? '' ), true );
+	$ran_booster_other_activity = $ran_booster_activity_store->activity_history( array( 'subject_identity' => 'ran-booster-database-smoke/another.php' ) );
+	$ran_booster_case_activity  = $ran_booster_activity_store->activity_history( array( 'subject_identity' => strtoupper( $ran_booster_identifier ) ) );
+	if ( ! $ran_booster_activity['available'] || 1 !== count( $ran_booster_activity['records'] )
+		|| $ran_booster_identifier !== $ran_booster_activity['records'][0]['subject_identity']
+		|| ! is_array( $ran_booster_activity_facts ) || $ran_booster_attempt->get_id() !== ( $ran_booster_activity_facts['deployment_attempt_id'] ?? null )
+		|| ! $ran_booster_other_activity['available'] || array() !== $ran_booster_other_activity['records']
+		|| ! $ran_booster_case_activity['available'] || array() !== $ran_booster_case_activity['records'] ) {
 		throw new RuntimeException( 'Activity package filtering must use the exact installed identifier rather than the directory slug.' );
 	}
 	$ran_booster_finished = $ran_booster_attempts->finish( $ran_booster_attempt->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_NO_CHANGE ) );
@@ -280,6 +289,9 @@ try {
 		throw new RuntimeException( 'The database smoke could not verify its attempt record.' );
 	}
 } finally {
+	if ( null !== $ran_booster_attempt ) {
+		$wpdb->delete( $wpdb->prefix . ActivityStore::TABLE_SUFFIX, array( 'correlation' => $ran_booster_attempt->get_correlation_id() ) );
+	}
 	$wpdb->delete( $ran_booster_package_table, array( 'package' => $ran_booster_identifier ) );
 	$wpdb->delete(
 		$ran_booster_attempt_table,

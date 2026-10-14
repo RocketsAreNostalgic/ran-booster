@@ -16,6 +16,8 @@ The format is not a site backup, package registry, approval authority, persisten
 update lock, dependency solver or fleet transaction. Database content, uploads,
 activation state, source-site deployment policy, hooks, worker state and local
 management tokens are not transported as instructions.
+Display names are presentation only; differing labels do not create management
+or package-identity conflicts.
 
 The same domain export and review logic SHOULD serve the dashboard and future
 WordPress Abilities. MCP transport belongs to the WordPress MCP Adapter, not a
@@ -237,8 +239,13 @@ does not identify a release artifact. Source history may be unavailable.
 
 Exact export MUST return per-entry missing/uncertain evidence in a separate
 report. It MUST NOT label an unpinned entry reproducible. A partial proposed
-Blueprint can be returned with explicit incomplete status; a user can separately
-choose configuration-only export. Do not downgrade export mode silently.
+Blueprint can be returned as a draft with explicit incomplete status, but MUST
+NOT become a transport-ready exact archive until the operator explicitly accepts
+the identified reduced subset. That accepted subset becomes the new requested
+set; the exporter must explain that the original set was not reproduced. This
+avoids losing omission warnings when the separate report is not transported.
+A user can separately choose configuration-only export. Do not downgrade export
+mode or silently truncate a reproducible archive.
 
 Two distinct claims are possible: a known package selection can recreate the
 selected deployment; proving a copy of current installed files additionally
@@ -321,6 +328,7 @@ are fictional. `branch.json`, `pinned-branch.json`, `release.json`,
 | Package B requires A; A omitted but active locally | Report dependency satisfied locally without fetching A |
 | A selected but not yet installed/active | Planned dependency, not activation-ready |
 | Equal version headers but unknown artifact/files | Unknown equality; no reproduction claim |
+| One identity unknown during exact export | Incomplete draft/report; no transport-ready exact archive without explicit acceptance of a newly scoped subset |
 | Recovery block or target changes after review | Block/re-review through existing policy; never auto-retry uncertainty |
 | One package fails among several selected | Per-entry outcomes; requested-set incomplete, no rollback/atomicity claim |
 | Valid V1 archive | Strict legacy validation then small normalization if delivered |

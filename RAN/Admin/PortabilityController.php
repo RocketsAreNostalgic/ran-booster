@@ -517,8 +517,8 @@ final readonly class PortabilityController {
 	private function credential_choices( string $provider ): array {
 
 		foreach ( $this->provider_settings->build_package_list() as $candidate ) {
-			if ( ( $candidate['code'] ?? null ) === $provider && is_array( $candidate['credentials'] ?? null ) ) {
-				return array_values( array_filter( $candidate['credentials'], static fn ( array $credential ): bool => 'file' === ( $credential['source'] ?? null ) ) );
+			if ( ( $candidate['code'] ?? null ) === $provider && is_array( $candidate['credential_profiles'] ?? null ) ) {
+				return array_values( array_filter( $candidate['credential_profiles'], static fn ( array $credential ): bool => 'file' === ( $credential['source'] ?? null ) ) );
 			}
 		}
 
@@ -607,7 +607,7 @@ final readonly class PortabilityController {
 				'unchanged_count'   => $unchanged_count,
 				'action'            => $decision['action']->value ?? null,
 				'target_id'         => $decision['target_id'] ?? null,
-				'target_choices'    => array_values( array_filter( $provider['credentials'] ?? array(), static fn ( array $candidate ): bool => 'file' === ( $candidate['source'] ?? null ) ) ),
+				'target_choices'    => array_values( array_filter( $provider['credential_profiles'] ?? array(), static fn ( array $candidate ): bool => 'file' === ( $candidate['source'] ?? null ) ) ),
 				'settings_url'      => admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $credential->provider ) . '&view=credentials' ),
 			);
 		}

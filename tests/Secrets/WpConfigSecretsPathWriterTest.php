@@ -10,12 +10,10 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\Secrets\WpConfigPathWriteException;
-use RAN\Secrets\WpConfigPathWriteResult;
 use RAN\Secrets\WpConfigSecretsPathWriter;
 
 #[CoversClass( WpConfigSecretsPathWriter::class )]
 #[CoversClass( WpConfigPathWriteException::class )]
-#[CoversClass( WpConfigPathWriteResult::class )]
 final class WpConfigSecretsPathWriterTest extends TestCase {
 
 	private string $directory;
@@ -42,11 +40,8 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->config_path, 0640 ) );
 
-		$result = ( new WpConfigSecretsPathWriter() )->write( $this->config_path, $this->sidecar_path );
+		( new WpConfigSecretsPathWriter() )->write( $this->config_path, $this->sidecar_path );
 
-		self::assertSame( WpConfigPathWriteResult::STATUS_PENDING_VERIFICATION, $result->status() );
-		self::assertNotFalse( $result );
-		self::assertTrue( $result->requires_next_request_verification() );
 		self::assertSame( 0640, fileperms( $this->config_path ) & 0777 );
 		self::assertSame( fileowner( $this->config_path . '.ran-booster.lock' ), fileowner( $this->config_path ) );
 		self::assertSame( 0600, fileperms( $this->config_path . '.ran-booster.lock' ) & 0777 );
@@ -134,11 +129,10 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		$group = filegroup( $this->config_path );
 
 		$result = $writer->retarget_owned_definition( $this->config_path, $this->sidecar_path, $replacement );
+		self::assertTrue( $result );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		$written = (string) file_get_contents( $this->config_path );
 
-		self::assertNotFalse( $result );
-		self::assertTrue( $result->requires_next_request_verification() );
 		self::assertStringNotContainsString(
 			"define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '" . dirname( $this->sidecar_path ) . "' );",
 			$written
@@ -577,10 +571,8 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 			}
 		};
 
-		$result = $writer->write( $this->config_path, $this->sidecar_path );
+		$writer->write( $this->config_path, $this->sidecar_path );
 
-		self::assertNotFalse( $result );
-		self::assertTrue( $result->requires_next_request_verification() );
 		self::assertSame( 0640, fileperms( $this->config_path ) & 0777 );
 		self::assertSame( $owner, fileowner( $this->config_path ) );
 		self::assertSame( $group, filegroup( $this->config_path ) );

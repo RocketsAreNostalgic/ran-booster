@@ -166,7 +166,7 @@ class SecretsStorageProvisioner {
 		}
 
 		try {
-			$result = $this->write_configuration( $config, $candidate );
+			$this->write_configuration( $config, $candidate );
 		} catch ( WpConfigPathWriteException $exception ) {
 			return SecretsStorageProvisioningResult::manual_required(
 				$this->stable_code( $exception->reason(), 'wp_config_write_failed' ),
@@ -177,14 +177,6 @@ class SecretsStorageProvisioner {
 			return SecretsStorageProvisioningResult::manual_required(
 				'wp_config_write_failed',
 				__( 'The WordPress configuration could not be updated safely.', 'ran-booster' ),
-				$candidate
-			);
-		}
-
-		if ( ! $result->requires_next_request_verification() ) {
-			return SecretsStorageProvisioningResult::manual_required(
-				'wp_config_verification_unavailable',
-				__( 'Booster could not require a fresh WordPress configuration check.', 'ran-booster' ),
 				$candidate
 			);
 		}
@@ -385,7 +377,7 @@ class SecretsStorageProvisioner {
 			return $this->recovery_failure( $current, 'recovery_write_failed', __( 'The recoverable storage path could not be adopted safely.', 'ran-booster' ) );
 		}
 
-		return false !== $result && $result->requires_next_request_verification()
+		return $result
 			? SecretsStorageProvisioningResult::pending_verification( $offer['candidate_path'] )
 			: $this->recovery_failure( $current, 'wp_config_verification_unavailable', __( 'Booster could not require a fresh WordPress configuration check.', 'ran-booster' ) );
 	}
@@ -418,15 +410,15 @@ class SecretsStorageProvisioner {
 		return $this->probe->probe( $candidate );
 	}
 
-	protected function write_configuration( string $config, string $candidate ): WpConfigPathWriteResult {
-		return $this->writer->write( $config, $candidate );
+	protected function write_configuration( string $config, string $candidate ): void {
+		$this->writer->write( $config, $candidate );
 	}
 
 	protected function retarget_configuration(
 		string $config,
 		string $current,
 		string $replacement
-	): WpConfigPathWriteResult|false {
+	): bool {
 		return $this->writer->retarget_owned_definition( $config, $current, $replacement );
 	}
 

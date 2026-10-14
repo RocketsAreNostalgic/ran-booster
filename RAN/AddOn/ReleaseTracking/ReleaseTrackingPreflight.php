@@ -22,17 +22,17 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 	public const RELEASE_ARCHIVE_UNREADABLE = 'release_archive_unreadable';
 
 	public function __construct(
-		private string $code,
+		string $code,
 		private string $package_root,
 		private string $latest_version = '',
 		private string $release_url = '',
 		private string $release_tag = '',
 		private string $package_header_version = '',
 		private string $version_relationship = '',
-		private string $reason_code = ''
+		string $reason_code = ''
 	) {
 		if ( ! in_array(
-			$this->code,
+			$code,
 			array(
 				self::READY,
 				self::RELEASE_UNAVAILABLE,
@@ -56,7 +56,7 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 
 			|| ! in_array( $this->version_relationship, array( '', 'newer', 'same', 'older', 'invalid' ), true )
 
-			|| ( '' !== $this->reason_code && ! in_array( $this->reason_code, self::reason_codes(), true ) )
+			|| ( '' !== $reason_code && ! in_array( $reason_code, self::reason_codes(), true ) )
 
 			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $this->release_tag . $this->package_header_version )
 
@@ -64,15 +64,11 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 			throw new InvalidArgumentException( 'Release tracking preflight is invalid.' );
 		}
 
-		parent::__construct( $this->code, $this->reason_code );
-	}
-
-	public function code(): string {
-		return $this->code;
+		parent::__construct( $code, $reason_code );
 	}
 
 	public function ready(): bool {
-		return self::READY === $this->code;
+		return self::READY === $this->code();
 	}
 
 
@@ -109,15 +105,6 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 	public function version_relationship(): string {
 
 		return $this->version_relationship;
-	}
-
-	/**
-	 * Return a bounded machine-readable cause without provider response data.
-	 */
-
-	public function reason_code(): string {
-
-		return $this->reason_code;
 	}
 
 	/** @return list<string> */

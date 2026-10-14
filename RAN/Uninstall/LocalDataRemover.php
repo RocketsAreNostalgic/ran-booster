@@ -346,24 +346,12 @@ class LocalDataRemover {
 	}
 
 	private function remove_directory_if_empty( string $directory ): void {
-		if ( ! is_dir( $directory ) || is_link( $directory ) ) {
+		if ( ! $this->assert_directory_removal_safe( $directory ) ) {
 			return;
 		}
 
-		$contents = scandir( $directory );
-		if ( array( '.', '..' ) !== $contents ) {
-			return;
-		}
-
-		$stat = lstat( $directory );
-		if ( false === $stat
-			|| 0040000 !== ( $stat['mode'] & 0170000 )
-			|| 0700 !== ( $stat['mode'] & 0777 )
-			|| ! function_exists( 'posix_geteuid' )
-			|| posix_geteuid() !== $stat['uid']
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only the native directory proven empty, process-owned and mode 0700 by the preceding checks.
-			|| ! rmdir( $directory )
-		) {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only the native directory freshly proven empty, process-owned and mode 0700.
+		if ( ! rmdir( $directory ) ) {
 			throw new RuntimeException( 'An empty Booster storage directory could not be removed safely.' );
 		}
 	}
@@ -380,13 +368,13 @@ class LocalDataRemover {
 		$this->assert_directory_removal_safe( dirname( dirname( $automatic_path ) ) );
 	}
 
-	private function assert_directory_removal_safe( string $directory ): void {
+	private function assert_directory_removal_safe( string $directory ): bool {
 		if ( ! is_dir( $directory ) || is_link( $directory ) ) {
-			return;
+			return false;
 		}
 
 		if ( array( '.', '..' ) !== scandir( $directory ) ) {
-			return;
+			return false;
 		}
 
 		$stat = lstat( $directory );
@@ -398,6 +386,8 @@ class LocalDataRemover {
 		) {
 			throw new RuntimeException( 'An empty Booster storage directory could not be removed safely.' );
 		}
+
+		return true;
 	}
 
 	private function canonical_directory( string $path ): ?string {

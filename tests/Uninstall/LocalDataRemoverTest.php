@@ -7,6 +7,7 @@ namespace RAN\Tests\Uninstall;
 // Native fixture operations prove the WP-CLI config-path fallback.
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
@@ -454,6 +455,89 @@ final class LocalDataRemoverTest extends TestCase {
 			}
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
 			rmdir( $root );
+		}
+	}
+
+	/** @return array<string, array{string}> */
+	public static function unsafe_directory_cases(): array {
+		return array(
+			'empty site fails before mutations'       => array( 'preflight' ),
+			'site becomes empty during cleanup'       => array( 'site' ),
+			'parent becomes empty after site removal' => array( 'base' ),
+			'safe site loses private permissions'     => array( 'changed' ),
+		);
+	}
+
+	#[DataProvider( 'unsafe_directory_cases' )]
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_unsafe_empty_directories_stop_at_their_current_cleanup_boundary( string $phase ): void {
+		$this->setUp();
+		$root    = (string) realpath( sys_get_temp_dir() ) . '/ran-booster-uninstall-safety-' . bin2hex( random_bytes( 6 ) );
+		$base    = $root . '/.ran-booster';
+		$site    = $base . '/site-fingerprint';
+		$marker  = $site . '/retained-until-cleanup';
+		$sidecar = $site . '/secrets.json';
+		$unsafe  = 'base' === $phase ? $base : $site;
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create only this randomized disposable native filesystem fixture.
+		self::assertTrue( mkdir( $site, 0700, true ) );
+
+		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Exercise rejection of an empty directory that is not private.
+			self::assertTrue( chmod( $unsafe, 'changed' === $phase ? 0700 : 0755 ) );
+			if ( 'site' === $phase ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Make the disposable directory ineligible until the existing secrets-deletion phase.
+				self::assertNotFalse( file_put_contents( $marker, '' ) );
+			}
+			clearstatcache();
+			$secrets = $this->createMock( SecretsFile::class );
+			$secrets->method( 'path' )->willReturn( $sidecar );
+			$secrets->expects( 'preflight' === $phase ? self::never() : self::once() )
+				->method( 'delete_managed_storage' )
+				->willReturnCallback(
+					static function () use ( $marker, $site, $phase ): void {
+						if ( is_file( $marker ) ) {
+							// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Model managed-file deletion using only this fixture-owned marker.
+							self::assertTrue( unlink( $marker ) );
+						}
+						if ( 'changed' === $phase ) {
+							// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Change fixture permissions after preflight to prove removal rechecks current metadata.
+							self::assertTrue( chmod( $site, 0755 ) );
+						}
+						clearstatcache();
+					}
+				);
+			$remover = new TestableLocalDataRemover(
+				$secrets,
+				new TemporaryDebugCapture( null ),
+				$this->createStub( WpConfigSecretsPathWriter::class ),
+				$this->database,
+				$root . '/wp-config.php',
+				$sidecar
+			);
+
+			try {
+				$remover->remove();
+				self::fail( 'Unsafe empty automatic storage must stop cleanup.' );
+			} catch ( RuntimeException $failure ) {
+				self::assertSame( 'An empty Booster storage directory could not be removed safely.', $failure->getMessage() );
+			}
+
+			self::assertDirectoryExists( $base );
+			self::assertSame( 'base' !== $phase, is_dir( $site ) );
+			self::assertSame( 'preflight' === $phase, in_array( 'wp_ran_booster_packages', $this->database->tables, true ) );
+			self::assertSame( 'preflight' === $phase, isset( $GLOBALS['ran_booster_uninstall_cron'][ WordPressWorkerWakeup::HOOK ] ) );
+		} finally {
+			if ( is_file( $marker ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only the fixture-owned marker after failure.
+				unlink( $marker );
+			}
+			foreach ( array( $site, $base, $root ) as $directory ) {
+				if ( is_dir( $directory ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only the disposable directories created by this test.
+					rmdir( $directory );
+				}
+			}
 		}
 	}
 

@@ -1488,8 +1488,8 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'data-credential-delete-modal', $html );
 		self::assertStringContainsString( 'aria-describedby="ran-booster-delete-access-modal-description"', $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="delete-access-profile"', $html );
-		self::assertStringContainsString( 'data-ran-booster-interaction-operation="core:save-access-profile"', $html );
-		self::assertStringContainsString( 'data-ran-booster-interaction-operation="core:delete-access-profile"', $html );
+		self::assertStringContainsString( 'hx-vals="{&quot;ran_booster_interaction[operation]&quot;:&quot;core:save-access-profile&quot;,&quot;ran_booster_interaction[target]&quot;:&quot;core_provider_profiles&quot;}"', $html );
+		self::assertStringContainsString( 'hx-vals="{&quot;ran_booster_interaction[operation]&quot;:&quot;core:delete-access-profile&quot;,&quot;ran_booster_interaction[target]&quot;:&quot;core_provider_profiles&quot;}"', $html );
 		self::assertSame( 2, substr_count( $html, 'hx-target="#ran-booster-provider-profile-region"' ) );
 		self::assertSame( 2, substr_count( $html, 'hx-select="#ran-booster-provider-profile-region"' ) );
 		self::assertStringContainsString( 'data-ran-booster-error-target="#ran-booster-access-profile-error"', $html );
@@ -1751,8 +1751,8 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Owner · workspace', $html );
 		self::assertStringContainsString( '>2 packages</td>', $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="delete-webhook-profile"', $html );
-		self::assertStringContainsString( 'data-ran-booster-interaction-operation="core:save-webhook-profile"', $html );
-		self::assertStringContainsString( 'data-ran-booster-interaction-operation="core:delete-webhook-profile"', $html );
+		self::assertStringContainsString( 'hx-vals="{&quot;ran_booster_interaction[operation]&quot;:&quot;core:save-webhook-profile&quot;,&quot;ran_booster_interaction[target]&quot;:&quot;core_provider_profiles&quot;}"', $html );
+		self::assertStringContainsString( 'hx-vals="{&quot;ran_booster_interaction[operation]&quot;:&quot;core:delete-webhook-profile&quot;,&quot;ran_booster_interaction[target]&quot;:&quot;core_provider_profiles&quot;}"', $html );
 		self::assertSame( 3, substr_count( $html, 'hx-target="#ran-booster-provider-profile-region"' ) );
 		self::assertSame( 3, substr_count( $html, 'hx-select="#ran-booster-provider-profile-region"' ) );
 		self::assertStringContainsString( 'data-ran-booster-error-target="#ran-booster-webhook-profile-error"', $html );

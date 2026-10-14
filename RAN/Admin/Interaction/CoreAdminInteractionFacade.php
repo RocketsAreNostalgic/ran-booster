@@ -68,15 +68,14 @@ final class CoreAdminInteractionFacade implements
 		}
 
 		$attributes = array(
-			'data-ran-booster-enhanced-mutation'     => '',
-			'data-ran-booster-error-target'          => '#' . $signed_request->error_region_id,
-			'data-ran-booster-interaction-operation' => $signed_request->operation,
-			'hx-post'                                => wp_make_link_relative( admin_url( 'admin-post.php' ) ),
-			'hx-target'                              => $signed_request->target_selector,
-			'hx-select'                              => $signed_request->target_selector,
-			'hx-swap'                                => 'outerHTML transition:true show:none',
-			'hx-sync'                                => 'this:drop',
-			'hx-vals'                                => $values,
+			'data-ran-booster-enhanced-mutation' => '',
+			'data-ran-booster-error-target'      => '#' . $signed_request->error_region_id,
+			'hx-post'                            => wp_make_link_relative( admin_url( 'admin-post.php' ) ),
+			'hx-target'                          => $signed_request->target_selector,
+			'hx-select'                          => $signed_request->target_selector,
+			'hx-swap'                            => 'outerHTML transition:true show:none',
+			'hx-sync'                            => 'this:drop',
+			'hx-vals'                            => $values,
 		);
 
 		foreach ( $attributes as $name => $value ) {

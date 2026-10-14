@@ -45,7 +45,7 @@ if ( $has_credential_settings ) {
 				<h2 id="ran-booster-access-modal-title" class="ran-booster-dialog__title"><?php esc_html_e( 'Add repository credential', 'ran-booster' ); ?></h2>
 				<button type="button" class="ran-booster-dialog__close ran-booster-close-credential-modal" aria-label="<?php esc_attr_e( 'Close', 'ran-booster' ); ?>"><span aria-hidden="true">&times;</span></button>
 			</div>
-			<form method="post" action="" class="ran-booster-credential-modal__form" autocomplete="off" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-access-profile-error" data-ran-booster-interaction-operation="core:save-access-profile" hx-post="" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop" hx-vals="<?php echo esc_attr( $provider_profile_interaction_values( 'save-access-profile' ) ); ?>">
+			<form method="post" action="" class="ran-booster-credential-modal__form" autocomplete="off" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-access-profile-error" hx-post="" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop" hx-vals="<?php echo esc_attr( $provider_profile_interaction_values( 'save-access-profile' ) ); ?>">
 				<?php wp_nonce_field( 'ran-booster-save-secrets' ); ?>
 					<input type="hidden" name="ran_booster[action]" value="save-access-profile">
 					<input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider['code'] ); ?>">
@@ -105,7 +105,7 @@ if ( $has_credential_settings ) {
 				<h2 id="ran-booster-delete-access-modal-title" class="ran-booster-dialog__title"><?php esc_html_e( 'Delete repository credential?', 'ran-booster' ); ?></h2>
 				<button type="button" class="ran-booster-dialog__close ran-booster-close-credential-modal" aria-label="<?php esc_attr_e( 'Close', 'ran-booster' ); ?>"><span aria-hidden="true">&times;</span></button>
 			</div>
-			<form method="post" action="" class="ran-booster-credential-modal__form" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-delete-access-profile-error" data-ran-booster-interaction-operation="core:delete-access-profile" hx-post="" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop" hx-vals="<?php echo esc_attr( $provider_profile_interaction_values( 'delete-access-profile' ) ); ?>">
+			<form method="post" action="" class="ran-booster-credential-modal__form" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-delete-access-profile-error" hx-post="" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop" hx-vals="<?php echo esc_attr( $provider_profile_interaction_values( 'delete-access-profile' ) ); ?>">
 				<?php wp_nonce_field( 'ran-booster-save-secrets' ); ?>
 				<input type="hidden" name="ran_booster[action]" value="delete-access-profile">
 				<input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider['code'] ); ?>">
@@ -148,7 +148,7 @@ if ( $has_webhook_settings ) {
 				<h2 id="ran-booster-webhook-modal-title" class="ran-booster-dialog__title"><?php esc_html_e( 'Add Push-to-Deploy secret', 'ran-booster' ); ?></h2>
 				<button type="button" class="ran-booster-dialog__close ran-booster-close-credential-modal" aria-label="<?php esc_attr_e( 'Close', 'ran-booster' ); ?>"><span aria-hidden="true">&times;</span></button>
 			</div>
-			<form method="post" action="" class="ran-booster-credential-modal__form" autocomplete="off" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-webhook-profile-error" data-ran-booster-interaction-operation="core:save-webhook-profile" hx-post="" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop" hx-vals="<?php echo esc_attr( $provider_profile_interaction_values( 'save-webhook-profile' ) ); ?>">
+			<form method="post" action="" class="ran-booster-credential-modal__form" autocomplete="off" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-webhook-profile-error" hx-post="" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop" hx-vals="<?php echo esc_attr( $provider_profile_interaction_values( 'save-webhook-profile' ) ); ?>">
 				<?php wp_nonce_field( 'ran-booster-save-secrets' ); ?>
 				<input type="hidden" name="ran_booster[action]" value="save-webhook-profile">
 				<input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider['code'] ); ?>">

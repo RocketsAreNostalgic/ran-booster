@@ -45,6 +45,68 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class BuiltInGitHubRegistrationTest extends TestCase {
 
+	public function test_core_composition_preserves_fresh_services_shared_stores_and_late_dependencies(): void {
+		$container = new CoreContainer();
+		$runtime   = new Booster( $container );
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Core composition requires the WordPress table prefix.
+		$GLOBALS['wpdb'] = new class() {
+			public string $prefix = 'wp_';
+		};
+		( new BoosterServiceProvider() )->register( $container, $runtime, new \stdClass(), 'ran-booster.php' );
+
+		foreach ( array(
+			\RAN\Admin\CredentialSelfDestructPurger::class,
+			\RAN\Portability\ManagedPackageBlueprintExporter::class,
+			\RAN\Portability\BlueprintReviewer::class,
+			\RAN\Portability\BlueprintRepositoryVerifier::class,
+			\RAN\Admin\PackageUpdateProgressController::class,
+			\RAN\Deployment\WordPressWorkerWakeup::class,
+			\RAN\Deployment\DeploymentWorker::class,
+			\RAN\Admin\BulkPackageActionService::class,
+			\RAN\Portability\PortabilityApplicationService::class,
+			\RAN\Admin\PortabilityController::class,
+		) as $type ) {
+			$first = $container->make( $type );
+			self::assertInstanceOf( $type, $first );
+			self::assertNotSame( $first, $container->make( $type ), $type );
+		}
+
+		$purger = $container->make( \RAN\Admin\CredentialSelfDestructPurger::class );
+		self::assertInstanceOf( \RAN\Admin\CredentialSelfDestructPurger::class, $purger );
+		$secrets_property = new \ReflectionProperty( $purger, 'secrets' );
+		self::assertSame( $container->make( SecretsFile::class ), $secrets_property->getValue( $purger ) );
+		$progress = $container->make( \RAN\Admin\PackageUpdateProgressController::class );
+		$wakeup   = $container->make( \RAN\Deployment\WordPressWorkerWakeup::class );
+		self::assertInstanceOf( \RAN\Admin\PackageUpdateProgressController::class, $progress );
+		self::assertInstanceOf( \RAN\Deployment\WordPressWorkerWakeup::class, $wakeup );
+		self::assertNotSame( ( new \ReflectionProperty( $progress, 'attempts' ) )->getValue( $progress ), ( new \ReflectionProperty( $wakeup, 'attempts' ) )->getValue( $wakeup ) );
+
+		$replacement = new SecretsFile( '/unused/composition-test.php' );
+		$container->bind( SecretsFile::class, $replacement );
+		$changed = $container->make( \RAN\Admin\CredentialSelfDestructPurger::class );
+		self::assertInstanceOf( \RAN\Admin\CredentialSelfDestructPurger::class, $changed );
+		self::assertSame( $replacement, $secrets_property->getValue( $changed ) );
+		self::assertNotSame( $replacement, $secrets_property->getValue( $purger ) );
+
+		$resolved = array();
+		foreach ( array( \RAN\Storage\PluginRepository::class, \RAN\Storage\ThemeRepository::class ) as $type ) {
+			$container->bind(
+				$type,
+				static function () use ( $type, &$resolved ): never {
+					$resolved[] = $type;
+					throw new \RuntimeException( 'Composition dependency unavailable: ' . $type );
+				}
+			);
+		}
+		try {
+			$container->make( \RAN\Portability\BlueprintReviewer::class );
+			self::fail( 'A dependency construction failure must propagate.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertSame( 'Composition dependency unavailable: ' . \RAN\Storage\PluginRepository::class, $failure->getMessage() );
+			self::assertSame( array( \RAN\Storage\PluginRepository::class ), $resolved );
+		}
+	}
+
 	public function test_activity_resolver_keeps_provider_repository_and_managed_subjects_distinct(): void {
 		$container = new CoreContainer();
 		$runtime   = new Booster( $container );

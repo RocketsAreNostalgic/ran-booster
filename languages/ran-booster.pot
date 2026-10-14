@@ -4623,7 +4623,7 @@ msgstr ""
 msgid "Booster reinstalls have finished. Review the package statuses below. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/BoosterServiceProvider.php:144
+#: RAN/BoosterServiceProvider.php:136
 msgid "Booster could not validate the credentials sidecar."
 msgstr ""
 

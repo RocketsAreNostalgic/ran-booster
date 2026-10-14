@@ -17,20 +17,15 @@ use RAN\Admin\Interaction\CoreAdminInteractionFacade;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceReadinessEvaluator;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentCoordinator;
-use RAN\Deployment\DeploymentWorker;
 use RAN\Deployment\WordPressWorkerWakeup;
 use RAN\Logging\BoosterLogger;
 use RAN\Logging\TemporaryDebugCapture;
-use RAN\Admin\PortabilityController;
 use RAN\Admin\PackageRepositoryRequestResolver;
-use RAN\Admin\PackageUpdateProgressController;
 use RAN\Admin\ProviderSettingsPresenter;
-use RAN\Admin\BulkPackageActionService;
 use RAN\Admin\CredentialExpiryObservationStore;
 use RAN\Admin\CredentialExpiryNotice;
 use RAN\Admin\CredentialExpiryNoticeController;
 use RAN\Admin\CredentialExpiryReminder;
-use RAN\Admin\CredentialSelfDestructPurger;
 use RAN\Admin\RepositoryBranchCheckEvidenceStore;
 use RAN\Admin\PublicRepositoryLookupProfileStore;
 use RAN\Admin\BackgroundDeploymentFailureEmail;
@@ -55,9 +50,6 @@ use RAN\Secrets\SecretsRuntimeAvailability;
 use RAN\Secrets\SecretsStorageProvisioner;
 use RAN\Secrets\SecretsStorageUnavailable;
 use RAN\Portability\BlueprintArchive;
-use RAN\Portability\BlueprintRepositoryVerifier;
-use RAN\Portability\BlueprintReviewer;
-use RAN\Portability\ManagedPackageBlueprintExporter;
 use RAN\Portability\PortabilityApplicationService;
 use RAN\PackageRemoval\PackageRemovalGateway;
 use RAN\PackageRemoval\PackageRemovalService;
@@ -175,38 +167,7 @@ final class BoosterServiceProvider {
 		$container->bind( DatabaseCompatibilityNotice::class, new DatabaseCompatibilityNotice( $database ) );
 		$container->bind( TemporaryDebugCapture::class, $debug_capture );
 		$container->bind( CredentialExpiryObservationStore::class, $expiry_observations );
-		$container->bind(
-			CredentialSelfDestructPurger::class,
-			static fn ( CoreContainer $container ): CredentialSelfDestructPurger => new CredentialSelfDestructPurger(
-				$container->make( SecretsFile::class ),
-				$container->make( CredentialExpiryObservationStore::class ),
-				$container->make( PublicRepositoryLookupProfileStore::class ),
-				$container->make( RepositoryBranchCheckEvidenceStore::class )
-			)
-		);
-		$container->bind(
-			ManagedPackageBlueprintExporter::class,
-			static fn ( CoreContainer $container ): ManagedPackageBlueprintExporter => new ManagedPackageBlueprintExporter(
-				$container->make( PluginRepository::class ),
-				$container->make( ThemeRepository::class ),
-				$container->make( SecretsFile::class )
-			)
-		);
 		$container->bind( BlueprintArchive::class, new BlueprintArchive() );
-		$container->bind(
-			BlueprintReviewer::class,
-			static fn ( CoreContainer $container ): BlueprintReviewer => new BlueprintReviewer(
-				$container->make( PluginRepository::class ),
-				$container->make( ThemeRepository::class )
-			)
-		);
-		$container->bind(
-			BlueprintRepositoryVerifier::class,
-			static fn ( CoreContainer $container ): BlueprintRepositoryVerifier => new BlueprintRepositoryVerifier(
-				$container->make( ProviderRegistry::class ),
-				$container->make( SecretsFile::class )
-			)
-		);
 		$container->bind( CredentialUsageReader::class, new CredentialUsageReader( null, null, $database ) );
 		$container->bind( SignedWebhookVerifier::class, new SignedWebhookVerifier( $secrets ) );
 		$container->bind(
@@ -312,20 +273,8 @@ final class BoosterServiceProvider {
 				$background_failure_monitor
 			)
 		);
-		$container->bind(
-			PackageUpdateProgressController::class,
-			static fn ( CoreContainer $container ): PackageUpdateProgressController => new PackageUpdateProgressController(
-				$container->make( DeploymentAttemptRepository::class )
-			)
-		);
 		$container->bind( CorePackageExecutor::class, new CorePackageExecutor() );
 		$container->bind( WordPressUpdaterLock::class, new WordPressUpdaterLock() );
-		$container->bind(
-			WordPressWorkerWakeup::class,
-			static fn ( CoreContainer $container ): WordPressWorkerWakeup => new WordPressWorkerWakeup(
-				$container->make( DeploymentAttemptRepository::class )
-			)
-		);
 		$container->bind(
 			DeploymentCoordinator::class,
 			static function ( CoreContainer $container ): DeploymentCoordinator {
@@ -340,14 +289,6 @@ final class BoosterServiceProvider {
 					$container->make( BackgroundDeploymentFailureEmail::class )
 				);
 			}
-		);
-		$container->bind(
-			DeploymentWorker::class,
-			static fn ( CoreContainer $container ): DeploymentWorker => new DeploymentWorker(
-				$container->make( DeploymentAttemptRepository::class ),
-				$container->make( DeploymentCoordinator::class ),
-				$container->make( WordPressWorkerWakeup::class )
-			)
 		);
 		$container->bind(
 			PackageRemovalGateway::class,
@@ -375,17 +316,6 @@ final class BoosterServiceProvider {
 			)
 		);
 		$container->bind(
-			BulkPackageActionService::class,
-			static fn ( CoreContainer $container ): BulkPackageActionService => new BulkPackageActionService(
-				$container->make( PluginRepository::class ),
-				$container->make( ThemeRepository::class ),
-				$container->make( ProviderRegistry::class ),
-				$container->make( SecretsFile::class ),
-				$container->make( DeploymentCoordinator::class ),
-				$container->make( WordPressUpdaterLock::class )
-			)
-		);
-		$container->bind(
 			TroubleshootingService::class,
 			static function ( CoreContainer $container ): TroubleshootingService {
 				return new TroubleshootingService(
@@ -399,27 +329,9 @@ final class BoosterServiceProvider {
 			}
 		);
 		$container->bind(
-			PortabilityApplicationService::class,
-			static fn ( CoreContainer $container ): PortabilityApplicationService => new PortabilityApplicationService(
-				$container->make( BlueprintReviewer::class ),
-				$container->make( BlueprintRepositoryVerifier::class ),
-				$container->make( PackageOperationService::class ),
-				$container->make( SecretsFile::class )
-			)
-		);
-		$container->bind(
 			PortabilityFacade::class,
 			static fn ( CoreContainer $container ): PortabilityFacade => new NativePortabilityFacade(
 				$container->make( PortabilityApplicationService::class )
-			)
-		);
-		$container->bind(
-			PortabilityController::class,
-			static fn ( CoreContainer $container ): PortabilityController => new PortabilityController(
-				$container->make( ManagedPackageBlueprintExporter::class ),
-				$container->make( BlueprintArchive::class ),
-				$container->make( PortabilityApplicationService::class ),
-				$container->make( ProviderSettingsPresenter::class )
 			)
 		);
 		$release_store = new ManagedReleaseStore( null, $database );

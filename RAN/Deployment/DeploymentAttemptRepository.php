@@ -92,31 +92,23 @@ final class DeploymentAttemptRepository {
 				}
 
 				$this->reserve_capacity( 1 );
-				$queued = $this->insert_and_read(
-					$this->row_data(
-						'manual',
-						$operation,
-						$package_type,
-						$provider,
-						$provider_repository_id,
-						$request,
-						$requested_ref,
-						$package_source,
-						$package_source_revision,
-						null,
-						null
-					)
+				$data          = $this->row_data(
+					'manual',
+					$operation,
+					$package_type,
+					$provider,
+					$provider_repository_id,
+					$request,
+					$requested_ref,
+					$package_source,
+					$package_source_revision,
+					null,
+					null
 				);
-				$query  = $this->update_query( $queued->get_id(), DeploymentState::QUEUED, array( 'state' => DeploymentState::RUNNING->value ) );
-				if ( 1 !== $this->write_connection()->query( $query ) ) {
-					throw DeploymentStorageFailure::unavailable();
-				}
-				$running = $this->require_exact( $queued->get_id() );
-				if ( DeploymentState::RUNNING !== $running->get_state() ) {
-					throw DeploymentStorageFailure::inconsistent();
-				}
+				$data['state'] = DeploymentState::RUNNING->value;
+				$running       = $this->insert_and_read( $data );
 				$this->record_activity_start( $running, 'deployment.running' );
-				BoosterLogger::log( 'attempt queued and claimed (manual)', $running->log_context() + array( 'transition' => 'queued->running' ) );
+				BoosterLogger::log( 'attempt admitted (manual)', $running->log_context() + array( 'transition' => 'new->running' ) );
 
 				return $running;
 			},

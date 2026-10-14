@@ -500,10 +500,10 @@ final class WebhookProcessorTest extends TestCase {
 	}
 
 	/**
-	 * @param 'accepted'|'duplicate'|'conflict' $status
+	 * @param 'accepted'|'duplicate' $status
 	 * @param 'scheduled'|'already_scheduled'|'unavailable'|'not_required' $runner_status
 	 * @return array{
-	 *     status: 'accepted'|'duplicate'|'conflict',
+	 *     status: 'accepted'|'duplicate',
 	 *     correlation_id: string,
 	 *     accepted_targets: int,
 	 *     runner_status: 'scheduled'|'already_scheduled'|'unavailable'|'not_required'

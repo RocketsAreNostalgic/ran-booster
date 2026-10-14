@@ -79,6 +79,22 @@ final class DeploymentAttemptTest extends TestCase {
 		}
 	}
 
+	public function test_non_branch_source_is_rejected_before_attempt_construction(): void {
+		$row                   = $this->row();
+		$row['package_source'] = 'release_asset';
+
+		$this->expectException( DeploymentStorageFailure::class );
+		DeploymentAttempt::from_database( $row );
+	}
+
+	public function test_install_cannot_carry_existing_adoption_authority(): void {
+		$row                 = $this->row();
+		$row['request_json'] = ( new DeploymentRequest( 'group/package', null, false, 'main', 'example', null, DeploymentPolicy::MANUAL, 1, null, 'example/example.php', 'gh:R_123:11111111-1111-4111-8111-111111111111' ) )->to_json();
+
+		$this->expectException( DeploymentStorageFailure::class );
+		DeploymentAttempt::from_database( $row );
+	}
+
 	/** @return array<string, mixed> */
 	private function row(): array {
 		$request = new DeploymentRequest( 'group/package', null, false, 'main', 'example', null, DeploymentPolicy::MANUAL, 1 );

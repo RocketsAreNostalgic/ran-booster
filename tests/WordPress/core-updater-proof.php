@@ -275,9 +275,6 @@ final class RAN_Booster_CoreUpdaterProof {
 		string $expected_identifier,
 		bool $simulated_fatal_scrape
 	): void {
-		// Keep the one-item proof isolated from a version-check-triggered background sweep.
-		$prevent_sweep = static fn ( bool $disabled ): bool => $disabled || doing_action( 'wp_maybe_auto_update' );
-
 		$source_filter = $this->source_selection_filter( $slug );
 		$archive_path  = (string) ( $offer->package ?? '' );
 		$vcs_filter    = $this->vcs_filter( $type, $expected_identifier );
@@ -310,7 +307,6 @@ final class RAN_Booster_CoreUpdaterProof {
 			throw new RuntimeException( 'The disposable VCS exception is not limited to the target package context.' );
 		}
 
-		add_filter( 'automatic_updater_disabled', $prevent_sweep, PHP_INT_MAX, 1 );
 		add_filter( $transient_hook, $transient_filter, 10, 1 );
 		add_filter( 'upgrader_pre_download', $pre_download, 10, 4 );
 		add_filter( 'upgrader_source_selection', $source_filter, 10, 3 );
@@ -322,7 +318,6 @@ final class RAN_Booster_CoreUpdaterProof {
 		try {
 			$result = ( new WP_Automatic_Updater() )->update( $type, $offer );
 		} finally {
-			remove_filter( 'automatic_updater_disabled', $prevent_sweep, PHP_INT_MAX );
 			remove_filter( $transient_hook, $transient_filter, 10 );
 			remove_filter( 'upgrader_pre_download', $pre_download, 10 );
 			remove_filter( 'upgrader_source_selection', $source_filter, 10 );
@@ -359,7 +354,6 @@ final class RAN_Booster_CoreUpdaterProof {
 		}
 		foreach (
 			array(
-				'automatic_updater_disabled'        => $prevent_sweep,
 				$transient_hook                     => $transient_filter,
 				'upgrader_pre_download'             => $pre_download,
 				'upgrader_source_selection'         => $source_filter,
@@ -571,14 +565,23 @@ final class RAN_Booster_CoreUpdaterProof {
 $ran_booster_proof   = new RAN_Booster_CoreUpdaterProof( bin2hex( random_bytes( 6 ) ) );
 $ran_booster_failure = null;
 
+// Keep local installs and one-item updates isolated from version-check-triggered sweeps.
+$ran_booster_prevent_sweep = static fn ( bool $disabled ): bool => $disabled || doing_action( 'wp_maybe_auto_update' );
+add_filter( 'automatic_updater_disabled', $ran_booster_prevent_sweep, PHP_INT_MAX, 1 );
+
 try {
 	$ran_booster_proof->run();
 } catch ( Throwable $caught ) {
 	$ran_booster_failure = $caught;
+} finally {
+	remove_filter( 'automatic_updater_disabled', $ran_booster_prevent_sweep, PHP_INT_MAX );
 }
 
 try {
 	$ran_booster_proof->cleanup();
+	if ( null === $ran_booster_failure && false !== has_filter( 'automatic_updater_disabled', $ran_booster_prevent_sweep ) ) {
+		throw new RuntimeException( 'The disposable automatic-updater sweep filter was not removed.' );
+	}
 } catch ( Throwable $cleanup_failure ) {
 	$ran_booster_failure = $cleanup_failure;
 }

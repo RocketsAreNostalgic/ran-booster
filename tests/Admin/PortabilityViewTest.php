@@ -272,6 +272,53 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringNotContainsString( 'credential-secret-canary', $html );
 	}
 
+	public function test_package_only_credentials_are_explicit_and_survive_a_successful_review(): void {
+		$row               = $this->row( 'Private package', 'private/package.php', 'install', 'Ready' );
+		$row['credential'] = array(
+			'choices'      => array(
+				array(
+					'id'     => 'saved-profile',
+					'label'  => 'Saved <PAT>',
+					'source' => 'file',
+				),
+			),
+			'selected_id'  => 'saved-profile',
+			'settings_url' => 'https://example.test/settings',
+		);
+
+		$html = $this->render_view( array( $row ) );
+		self::assertStringContainsString( 'for="ran-booster-portability-target-0"', $html );
+		self::assertStringContainsString( 'name="target_credentials[0]" data-portability-target-credential data-portability-row="0"', $html );
+		self::assertStringContainsString( '<option value="">Choose a saved credential</option>', $html );
+		self::assertStringContainsString( '<option value="saved-profile" selected="selected">Saved &lt;PAT&gt;</option>', $html );
+		self::assertStringContainsString( 'Manage repository credentials', $html );
+
+		$row['credential']['choices']     = array_map(
+			static fn( int $index ): array => array(
+				'id'    => 'profile-' . $index,
+				'label' => 'Profile ' . $index,
+			),
+			range( 0, 60 )
+		);
+		$row['credential']['selected_id'] = 'profile-60';
+		$html                             = $this->render_view( array( $row ) );
+		self::assertStringContainsString( '<option value="profile-60" selected="selected">Profile 60</option>', $html );
+		self::assertStringNotContainsString( 'Previously selected credential is unavailable.', $html );
+		self::assertSame( 50, substr_count( $html, '<option value="profile-' ) );
+
+		unset( $row['credential']['selected_id'] );
+		self::assertStringNotContainsString( 'selected="selected"', $this->render_view( array( $row ) ) );
+
+		$row['credential']['choices'] = array();
+		$html                         = $this->render_view( array( $row ) );
+		self::assertStringContainsString( 'No saved credentials are available for this provider.', $html );
+		self::assertStringContainsString( 'Manage repository credentials', $html );
+		self::assertStringNotContainsString( 'data-portability-target-credential', $html );
+
+		$row['credential_ordinal'] = 0;
+		self::assertStringNotContainsString( 'No saved credentials are available for this provider.', $this->render_view( array( $row ) ) );
+	}
+
 	public function test_export_shows_empty_and_unavailable_states_without_an_enabled_download(): void {
 		$empty = $this->render_view( array(), array() );
 
@@ -303,7 +350,6 @@ final class PortabilityViewTest extends TestCase {
 					'kind_label'        => 'Classic personal access token',
 					'decision_required' => true,
 					'proposed_count'    => 1,
-					'unchanged_count'   => 1,
 					'packages'          => array(
 						array(
 							'name' => 'Private package',
@@ -354,7 +400,7 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringNotContainsString( ' checked=', $card[0] );
 		self::assertSame( 3, substr_count( $card[0], 'data-portability-credential-refresh' ) );
 		self::assertSame( 3, substr_count( $card[0], 'hx-trigger="change delay:150ms"' ) );
-		self::assertSame( 3, substr_count( $card[0], 'hx-include="[data-portability-preview], [data-portability-credential-action]:checked, [data-portability-credential-target]:not(:disabled)"' ) );
+		self::assertSame( 3, substr_count( $card[0], 'hx-include="[data-portability-preview], [data-portability-credential-action]:checked, [data-portability-credential-target]:not(:disabled), [data-portability-target-credential]"' ) );
 		self::assertSame( 3, substr_count( $card[0], 'hx-encoding="multipart/form-data"' ) );
 		self::assertSame( 3, substr_count( $card[0], 'hx-target="#ran-booster-portability-package-review"' ) );
 		self::assertSame( 3, substr_count( $card[0], 'hx-select="#ran-booster-portability-package-review"' ) );
@@ -382,7 +428,6 @@ final class PortabilityViewTest extends TestCase {
 					'decision_required' => false,
 					'proposed_count'    => 0,
 					'recovery_count'    => 0,
-					'unchanged_count'   => 1,
 					'packages'          => array(
 						array(
 							'name' => 'Protected Theme',
@@ -426,7 +471,6 @@ final class PortabilityViewTest extends TestCase {
 					'decision_required' => true,
 					'proposed_count'    => 0,
 					'recovery_count'    => 1,
-					'unchanged_count'   => 1,
 					'packages'          => array(
 						array(
 							'name' => 'Managed <Plugin>',

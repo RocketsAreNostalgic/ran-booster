@@ -46,6 +46,8 @@ use RuntimeException;
 use RAN\Tests\Portability\TemporaryCredentialProvider;
 
 require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
+require_once __DIR__ . '/../Support/PackageOperationGlobalWordPressFunctions.php';
+require_once __DIR__ . '/../Support/PackageOperationWordPressFunctions.php';
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class PortabilityControllerTest extends TestCase {
@@ -57,6 +59,7 @@ final class PortabilityControllerTest extends TestCase {
 		$_FILES = array();
 		$_POST  = array();
 		unset( $GLOBALS['ran_booster_repository_admin_allowed'] );
+		unset( $GLOBALS['ran_booster_repository_admin_nonce_valid'] );
 		unset( $GLOBALS['ran_booster_repository_admin_capabilities'] );
 		unset( $GLOBALS['ran_booster_repository_admin_uploaded_files'] );
 		unset( $GLOBALS['ran_booster_repository_admin_file_read'] );
@@ -69,6 +72,7 @@ final class PortabilityControllerTest extends TestCase {
 		$_FILES = array();
 		$_POST  = array();
 		unset( $GLOBALS['ran_booster_repository_admin_allowed'] );
+		unset( $GLOBALS['ran_booster_repository_admin_nonce_valid'] );
 		unset( $GLOBALS['ran_booster_repository_admin_capabilities'] );
 		unset( $GLOBALS['ran_booster_repository_admin_uploaded_files'] );
 		unset( $GLOBALS['ran_booster_repository_admin_file_read'] );
@@ -93,6 +97,16 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertFalse( $result['success'] );
 		self::assertSame( 400, $result['status'] );
 		self::assertSame( 'Choose a valid Transporter Blueprint ZIP to review.', $result['data']['message'] );
+	}
+
+	public function test_preview_rejects_an_invalid_nonce_before_reading_an_upload(): void {
+		$GLOBALS['ran_booster_repository_admin_nonce_valid'] = false;
+		$this->set_uploaded_blueprint( '/not-readable' );
+
+		$result = $this->controller()->handle_preview();
+
+		self::assertFalse( $result['success'] );
+		self::assertSame( 403, $result['status'] );
 	}
 
 	public function test_apply_rejects_unauthorised_requests_before_reading_an_upload(): void {
@@ -186,24 +200,30 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertNull( $method->invoke( $this->controller() ) );
 	}
 
-	public function test_target_credential_ids_keep_numeric_key_and_value_validation(): void {
-		$_POST['target_credentials'] = array(
-			0         => 'saved-profile',
-			'01'      => 'second-profile',
-			'invalid' => 'ignored',
-			128       => 'out-of-range',
-			2         => array( 'malformed' ),
-			3         => str_repeat( 'x', 129 ),
-		);
+	public function test_target_credential_ids_accept_only_explicit_canonical_choices(): void {
 		$method                      = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'target_credential_ids' );
-
+		$_POST['target_credentials'] = array(
+			0   => 'saved-profile',
+			127 => 'last-profile',
+			2   => '',
+		);
 		self::assertSame(
 			array(
-				0 => 'saved-profile',
-				1 => 'second-profile',
+				0   => 'saved-profile',
+				127 => 'last-profile',
 			),
 			$method->invoke( $this->controller() )
 		);
+
+		foreach ( array( 'not-an-array', array( '01' => 'profile' ), array( 128 => 'profile' ), array( 0 => array( 'profile' ) ), array( 0 => '<profile>' ), array( 0 => SecretsFile::CONSTANT_PROFILE ), array( 0 => str_repeat( 'x', 65 ) ) ) as $invalid ) {
+			$_POST['target_credentials'] = $invalid;
+			try {
+				$method->invoke( $this->controller() );
+				self::fail( 'Malformed explicit credentials must not silently become anonymous access.' );
+			} catch ( InvalidArgumentException ) {
+				$this->addToAssertionCount( 1 );
+			}
+		}
 	}
 
 	public function test_credential_decision_parser_accepts_only_the_closed_ordinal_shape(): void {
@@ -451,16 +471,18 @@ final class PortabilityControllerTest extends TestCase {
 		$secrets   = new PortabilityReadinessSpySecretsFile( false );
 		$blueprint = new PackageBlueprint( array( $this->blueprint_package() ) );
 		$file      = $this->blueprint_archive( $blueprint );
+		$this->set_uploaded_blueprint( $file );
 
 		try {
-			$html = $this->preview_controller( $secrets )->preview_file( $file );
+			$result = $this->preview_controller( $secrets )->handle_preview();
 		} finally {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test temporary file is outside WordPress media handling.
 			unlink( $file );
 		}
 
 		self::assertSame( 0, $secrets->readiness_checks );
-		self::assertStringContainsString( 'Ready to migrate; all checks passed.', $html );
+		self::assertTrue( $result['success'] );
+		self::assertStringContainsString( 'Ready to migrate; all checks passed.', $result['data']['html'] );
 	}
 
 	public function test_credential_preview_reports_unavailable_target_storage_without_persistence(): void {
@@ -485,19 +507,45 @@ final class PortabilityControllerTest extends TestCase {
 			)
 		);
 		$file      = $this->blueprint_archive( $blueprint, 'correct-horse-battery-staple' );
+		$this->set_uploaded_blueprint( $file );
+		$_POST['password'] = 'correct-horse-battery-staple';
 
 		try {
-			$html = $this->preview_controller( $secrets )->preview_file( $file, 'correct-horse-battery-staple' );
+			$result = $this->preview_controller( $secrets )->handle_preview();
 		} finally {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test temporary file is outside WordPress media handling.
 			unlink( $file );
 		}
 
 		self::assertSame( 0, $secrets->readiness_checks );
+		self::assertTrue( $result['success'] );
+		$html = $result['data']['html'];
+		self::assertSame( 0, $secrets->import_calls );
 		self::assertStringContainsString( 'Repository credentials', $html );
 		self::assertStringContainsString( 'name="credential_decisions[0][action]" value="import"', $html );
 		self::assertStringNotContainsString( 'value="import" data-portability-credential-action aria-describedby="ran-booster-portability-credential-description-0" checked', $html );
 		self::assertStringNotContainsString( 'sentinel-portability-token', $html );
+	}
+
+	public function test_credential_upload_with_wrong_password_does_not_disclose_or_persist_secrets(): void {
+		$secrets = new PortabilityReadinessSpySecretsFile( false );
+		$file    = $this->blueprint_archive( $this->credential_blueprint(), 'correct-horse-battery-staple' );
+		$this->set_uploaded_blueprint( $file );
+		$_POST['password'] = 'wrong-password-value';
+
+		try {
+			$result = $this->preview_controller( $secrets )->handle_preview();
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test temporary file is outside WordPress media handling.
+			unlink( $file );
+		}
+
+		self::assertFalse( $result['success'] );
+		self::assertSame( 400, $result['status'] );
+		self::assertSame( 0, $secrets->readiness_checks );
+		self::assertSame( 0, $secrets->import_calls );
+		self::assertStringNotContainsString( 'sentinel-portability-token', (string) wp_json_encode( $result ) );
+		self::assertStringNotContainsString( 'wrong-password-value', (string) wp_json_encode( $result ) );
 	}
 
 	public function test_credential_projection_offers_recovery_for_associated_managed_packages(): void {
@@ -537,16 +585,13 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertTrue( $rows[0]['decision_required'] );
 		self::assertSame( 0, $rows[0]['proposed_count'] );
 		self::assertSame( 1, $rows[0]['recovery_count'] );
-		self::assertSame( 2, $rows[0]['unchanged_count'] );
 		self::assertSame(
 			array(
 				array(
-					'row'  => 0,
 					'name' => 'Managed <Plugin>',
 					'type' => 'Plugin',
 				),
 				array(
-					'row'  => 1,
 					'name' => 'Protected Theme',
 					'type' => 'Theme',
 				),
@@ -560,6 +605,20 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertStringNotContainsString( 'configuration-canary', $projection );
 		self::assertStringNotContainsString( 'managed-source-id-canary', $projection );
 		self::assertStringNotContainsString( 'protected-source-id-canary', $projection );
+		$render = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'render_review' );
+		$html   = $render->invoke( $this->controller(), array(), $rows );
+		self::assertStringContainsString( 'Used by 2 packages; credential recovery is available for 1 managed package', $html );
+		self::assertStringContainsString( 'Managed &lt;Plugin&gt;', $html );
+		self::assertStringContainsString( 'Protected Theme', $html );
+
+		$items[0] = new BlueprintPlanItem( $managed, TargetPackageAction::PROTECTED, TargetPackageReason::MANAGEMENT_CONFLICT );
+		$rows     = $method->invoke( $this->preview_controller( new PortabilityReadinessSpySecretsFile( true ) ), $blueprint, array(), $items );
+		self::assertFalse( $rows[0]['decision_required'] );
+		self::assertSame( 0, $rows[0]['proposed_count'] );
+		self::assertSame( 0, $rows[0]['recovery_count'] );
+		$html = $render->invoke( $this->controller(), array(), $rows );
+		self::assertStringContainsString( 'Used by 2 packages; all unchanged', $html );
+		self::assertStringNotContainsString( 'name="credential_decisions[0][action]"', $html );
 	}
 
 	public function test_apply_recognises_amanaged_package_without_mutation(): void {
@@ -568,7 +627,7 @@ final class PortabilityControllerTest extends TestCase {
 		$item      = new BlueprintPlanItem( $package, TargetPackageAction::MANAGED, TargetPackageReason::ALREADY_MANAGED );
 		$method    = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'apply_item' );
 
-		$result = $method->invoke( $this->application(), $blueprint, $item, null, null, null, null, false, false );
+		$result = $method->invoke( $this->application(), $blueprint, $item, null, null, null, null );
 
 		self::assertSame(
 			array(
@@ -598,7 +657,7 @@ final class PortabilityControllerTest extends TestCase {
 		);
 		$method      = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'apply_item' );
 
-		$result = $method->invoke( $application, $blueprint, $item, $credential, 'import', null, null, true, true );
+		$result = $method->invoke( $application, $blueprint, $item, $credential, 'import', null, null );
 
 		self::assertSame( 'skipped', $result['status'] );
 		self::assertSame( 'none', $result['credential_state'] );
@@ -657,6 +716,155 @@ final class PortabilityControllerTest extends TestCase {
 	public static function package_type_provider(): iterable {
 		yield 'plugin' => array( 'plugin', 'example/example.php' );
 		yield 'theme' => array( 'theme', 'example-theme' );
+	}
+
+	#[DataProvider( 'repository_privacy_and_presence' )]
+	public function test_package_only_saved_choice_survives_preview_and_public_apply( bool $is_private, bool $installed ): void {
+		$profiles                                  = array(
+			'saved-profile' => array(
+				'id'            => 'saved-profile',
+				'provider'      => 'gh',
+				'label'         => 'Saved <PAT>',
+				'kind'          => 'classic',
+				'configuration' => array(),
+				'source'        => 'file',
+				'immutable'     => false,
+				'configured'    => true,
+				'self_destruct' => false,
+				'destroy_on'    => null,
+			),
+		);
+		$profiles[ SecretsFile::CONSTANT_PROFILE ] = array_replace(
+			$profiles['saved-profile'],
+			array(
+				'id'        => SecretsFile::CONSTANT_PROFILE,
+				'source'    => 'constant',
+				'immutable' => true,
+			)
+		);
+		$provider_credential_ids                   = array();
+		$reported_credential_id                    = 'saved-profile';
+		$secrets                                   = $this->createStub( SecretsFile::class );
+		$secrets->method( 'credential_profiles' )->willReturnCallback(
+			static function () use ( &$profiles ): array {
+				return $profiles;
+			}
+		);
+		$provider = $this->createStubForIntersectionOfInterfaces( array( \RAN\RepositoryProvider\RepositoryProvider::class, \RAN\RepositoryProvider\ProviderCredentialPolicySupplier::class ) );
+		self::assertInstanceOf( \RAN\RepositoryProvider\RepositoryProvider::class, $provider );
+		$policy = $this->createStub( \RAN\RepositoryProvider\ProviderCredentialPolicy::class );
+		$policy->method( 'get_provider' )->willReturn( \RAN\RepositoryProvider\ProviderCode::parse( 'gh' ) );
+		$provider->method( 'get_credential_policy' )->willReturn( $policy );
+		$provider->method( 'get_metadata' )->willReturn( new \RAN\RepositoryProvider\ProviderMetadata( \RAN\RepositoryProvider\ProviderCode::parse( 'gh' ), 'GitHub', 'https://example.test/', 'Owner', new \RAN\RepositoryProvider\Admin\ProviderAdminMetadata( array( new \RAN\RepositoryProvider\Admin\CredentialKindMetadata( 'classic', 'Classic PAT', 'Token' ) ), array() ) ) );
+		$provider->method( 'resolve_repository' )->willReturnCallback(
+			static function ( \RAN\RepositoryProvider\RepositoryLookupRequest $request ) use ( $is_private, &$reported_credential_id, &$provider_credential_ids ): \RAN\RepositoryProvider\RepositoryDescriptor {
+				$provider_credential_ids[] = $request->credential_id;
+				if ( null === $request->credential_id ) {
+					throw new RuntimeException( 'Repository access failed.', 404 );
+				}
+				return new \RAN\RepositoryProvider\RepositoryDescriptor( \RAN\RepositoryProvider\ProviderCode::parse( 'gh' ), 'owner/example', 'example', 'repository-id', $is_private, 'main', $reported_credential_id );
+			}
+		);
+		$registry = new ProviderRegistry( array( $provider ) );
+		$plugins  = $this->createStub( PluginRepository::class );
+		$plugins->method( 'is_installed' )->willReturn( $installed );
+		$plugins->method( 'has_management_record' )->willReturn( false );
+		$themes = $this->createStub( ThemeRepository::class );
+		$target = $this->managed_plugin( DeploymentPolicy::DISABLED, is_private: $is_private, credential_id: 'saved-profile' );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $target );
+		$plugins->method( 'from_slug' )->willReturn( $target );
+		$plugins->method( 'installed_plugin_from_file' )->willReturn( $target );
+		$plugins->method( 'adopt' )->willReturnCallback(
+			static function ( Plugin $package ) use ( $is_private ): PackageMutationResult {
+				self::assertSame( 'saved-profile', $package->get_credential_id() );
+				self::assertSame( $is_private, $package->is_private() );
+				self::assertSame( DeploymentPolicy::DISABLED, $package->get_deployment_policy() );
+				return PackageMutationResult::changed( PackageStorageOperation::INSERT );
+			}
+		);
+		$coordinator = $this->createMock( \RAN\Deployment\DeploymentCoordinator::class );
+		$coordinator->expects( $installed ? self::never() : self::once() )->method( 'execute_manual' )->willReturnCallback(
+			static function ( \RAN\PackageOperation $operation ) use ( $is_private ): array {
+				self::assertSame( 'saved-profile', $operation->credential_id );
+				self::assertSame( $is_private, $operation->is_private );
+				self::assertSame( DeploymentPolicy::DISABLED, $operation->deployment_policy );
+				self::assertFalse( $operation->link_only );
+				self::assertSame( 'gh', $operation->provider_code );
+				self::assertSame( 'repository-id', $operation->provider_repository_id );
+				self::assertSame( 'owner/example', $operation->repository );
+				self::assertSame( 'main', $operation->branch );
+				self::assertNull( $operation->subdirectory );
+				return array(
+					'status'         => 'succeeded',
+					'correlation_id' => str_repeat( 'a', 32 ),
+					'outcome_code'   => DeploymentOutcome::CODE_DEPLOYED,
+				);
+			}
+		);
+		$lock = $this->createStub( \RAN\WordPress\WordPressUpdaterLock::class );
+		$lock->method( 'acquire' )->willReturn( 'test-lock' );
+		$lock->method( 'release' )->willReturn( true );
+		$operations = new PackageOperationService( $plugins, $themes, $coordinator, ( new ReflectionClass( \RAN\PackageRemoval\PackageRemovalService::class ) )->newInstanceWithoutConstructor(), $lock, new \RAN\Storage\RepositorySourceGuard( new \RAN\Tests\Support\RepositorySourceGuardDatabase(), $this->createStub( \RAN\Storage\Database::class ) ) );
+
+		$application = new PortabilityApplicationService( new BlueprintReviewer( $plugins, $themes ), new BlueprintRepositoryVerifier( $registry, $secrets ), $operations, $secrets );
+		$controller  = new PortabilityController( ( new ReflectionClass( ManagedPackageBlueprintExporter::class ) )->newInstanceWithoutConstructor(), new BlueprintArchive(), $application, new ProviderSettingsPresenter( $registry, $secrets, new \RAN\Storage\CredentialUsageReader(), new \RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore(), new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore() ) );
+		$blueprint   = new PackageBlueprint( array( new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', 'main', null ) ) );
+		$file        = $this->blueprint_archive( $blueprint );
+		$this->set_uploaded_blueprint( $file );
+		try {
+			$_POST['row']                = '0';
+			$_POST['review_action']      = $installed ? 'adopt' : 'install';
+			$_POST['adopt']              = $installed ? '1' : '0';
+			$_POST['target_credentials'] = array( 0 => SecretsFile::CONSTANT_PROFILE );
+			$constant_preview            = $controller->handle_preview();
+			self::assertFalse( $constant_preview['success'] );
+			self::assertSame( 400, $constant_preview['status'] );
+			$constant_apply = $controller->handle_apply();
+			self::assertSame( 'failed', $constant_apply['data']['status'] );
+			self::assertSame( array(), $provider_credential_ids );
+			unset( $_POST['target_credentials'] );
+			$initial = $controller->handle_preview();
+			self::assertTrue( $initial['success'] );
+			self::assertStringContainsString( 'data-portability-action="blocked"', $initial['data']['html'] );
+			self::assertStringContainsString( 'data-portability-target-credential', $initial['data']['html'] );
+			self::assertStringNotContainsString( 'selected="selected"', $initial['data']['html'] );
+			$_POST['target_credentials'] = array( 0 => 'saved-profile' );
+			$html                        = $controller->handle_preview();
+			self::assertTrue( $html['success'] );
+			self::assertStringContainsString( '<option value="saved-profile" selected="selected">Saved &lt;PAT&gt;</option>', $html['data']['html'] );
+			foreach ( array( 'other-profile', null ) as $reported_credential_id ) {
+				$mismatch_preview = $controller->handle_preview();
+				self::assertTrue( $mismatch_preview['success'] );
+				self::assertStringContainsString( 'data-portability-action="blocked"', $mismatch_preview['data']['html'] );
+				$mismatch_apply = $controller->handle_apply();
+				self::assertSame( 'skipped', $mismatch_apply['data']['status'] );
+				self::assertSame( array( 'saved-profile', 'saved-profile' ), array_slice( $provider_credential_ids, -2 ) );
+			}
+			$reported_credential_id = 'saved-profile';
+			$result                 = $controller->handle_apply();
+			self::assertTrue( $result['success'] );
+			self::assertSame( $installed ? 'adopted' : 'installed', $result['data']['status'] );
+			self::assertSame( 'target_selected', $result['data']['credential_state'] );
+			$profiles = array();
+			$stale    = $controller->handle_apply();
+			self::assertTrue( $stale['success'] );
+			self::assertSame( 'skipped', $stale['data']['status'] );
+			$stale_html = $controller->handle_preview();
+			self::assertTrue( $stale_html['success'] );
+			self::assertStringContainsString( 'value="saved-profile" selected>Previously selected credential is unavailable.', $stale_html['data']['html'] );
+			self::assertStringContainsString( 'data-portability-action="blocked"', $stale_html['data']['html'] );
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Removes only this test's generated Blueprint upload.
+			unlink( $file );
+		}
+	}
+
+	/** @return iterable<string, array{bool,bool}> */
+	public static function repository_privacy_and_presence(): iterable {
+		yield 'public installation' => array( false, false );
+		yield 'private installation' => array( true, false );
+		yield 'public adoption' => array( false, true );
+		yield 'private adoption' => array( true, true );
 	}
 
 	public function test_public_repository_input_keeps_its_credential_association(): void {
@@ -1077,6 +1285,7 @@ final class PortabilityControllerTest extends TestCase {
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused readiness spy belongs with controller behavior tests.
 final class PortabilityReadinessSpySecretsFile extends SecretsFile {
 	public int $readiness_checks = 0;
+	public int $import_calls     = 0;
 
 	public function __construct( private readonly bool $ready ) {
 		parent::__construct( null, array(), new ProviderSecretPolicyCatalog() );
@@ -1087,5 +1296,12 @@ final class PortabilityReadinessSpySecretsFile extends SecretsFile {
 		if ( ! $this->ready ) {
 			throw new RuntimeException( 'Test target storage is unavailable.' );
 		}
+	}
+
+	/** @return list<string> */
+	public function import_credentials_if_absent( #[\SensitiveParameter] PackageBlueprint $blueprint, #[\SensitiveParameter] BlueprintCredential ...$credentials ): array {
+		++$this->import_calls;
+
+		return parent::import_credentials_if_absent( $blueprint, ...$credentials );
 	}
 }

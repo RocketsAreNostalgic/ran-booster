@@ -197,19 +197,6 @@ final readonly class PortabilityController {
 	 * @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $credential_decisions
 	 * @param array<int, string> $target_credential_ids
 	 */
-
-	public function preview_file( string $path, ?string $password = null, array $credential_decisions = array(), array $target_credential_ids = array() ): string {
-		RuntimeSupport::assert_managed_operations_allowed();
-
-		$blueprint = $this->archive->read_from( $path, $password );
-
-		return $this->review_blueprint( $blueprint, $credential_decisions, $target_credential_ids );
-	}
-
-	/**
-	 * @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $credential_decisions
-	 * @param array<int, string> $target_credential_ids
-	 */
 	private function review_blueprint( PackageBlueprint $blueprint, array $credential_decisions, array $target_credential_ids ): string {
 		$items = $this->application->review( $blueprint, $credential_decisions, $target_credential_ids );
 		$rows  = array();
@@ -405,20 +392,24 @@ final readonly class PortabilityController {
 
 	/** @return array<int, string> */
 	private function target_credential_ids(): array {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Called only from the nonce-guarded Preview handler.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Called only from nonce-guarded Preview and Apply handlers.
 		$input = $_POST['target_credentials'] ?? array();
-		if ( ! is_array( $input ) ) {
-			return array();
+		if ( ! is_array( $input ) || count( $input ) > PackageBlueprint::MAX_PACKAGES ) {
+			throw new InvalidArgumentException();
 		}
 
 		$ids = array();
 		foreach ( $input as $index => $value ) {
-			if ( ( ! is_int( $index ) && ! ctype_digit( $index ) )
-				|| (int) $index > PackageBlueprint::MAX_PACKAGES - 1
-				|| ! is_string( $value ) || strlen( $value ) > 128 ) {
-				continue;
+			$canonical = is_int( $index ) ? (string) $index : $index;
+			if ( ! ctype_digit( $canonical ) || (string) (int) $canonical !== $canonical
+				|| (int) $canonical >= PackageBlueprint::MAX_PACKAGES
+				|| ! is_string( $value ) || SecretsFile::CONSTANT_PROFILE === wp_unslash( $value )
+				|| ( '' !== $value && 1 !== preg_match( '/\A[A-Za-z0-9_-]{3,64}\z/', wp_unslash( $value ) ) ) ) {
+				throw new InvalidArgumentException();
 			}
-			$ids[ (int) $index ] = sanitize_text_field( wp_unslash( $value ) );
+			if ( '' !== $value ) {
+				$ids[ (int) $index ] = wp_unslash( $value );
+			}
 		}
 
 		return $ids;
@@ -464,7 +455,6 @@ final readonly class PortabilityController {
 			'identifier' => $item->package->identifier,
 			'type'       => 'plugin' === $item->package->type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' ),
 			'action'     => $item->action->value,
-			'category'   => $item->reason->value,
 			'reason'     => $item->reason->message(),
 		);
 		if ( null !== $credential_ordinal ) {
@@ -474,11 +464,14 @@ final readonly class PortabilityController {
 			$row['credential_recovery'] = true;
 		}
 
-		if ( null === $credential_ordinal && TargetPackageReason::CREDENTIAL_REQUIRED === $item->reason ) {
+		if ( null === $credential_ordinal
+			&& ( TargetPackageReason::CREDENTIAL_REQUIRED === $item->reason
+				|| ( null !== $selected_credential_id && '' !== $selected_credential_id
+					&& in_array( $item->action, array( TargetPackageAction::INSTALL, TargetPackageAction::ADOPT, TargetPackageAction::BLOCKED ), true ) ) ) ) {
 			$row['credential'] = array(
 				'choices'      => $this->credential_choices( $item->package->provider ),
 				'selected_id'  => $selected_credential_id,
-				'settings_url' => admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $item->package->provider ) ),
+				'settings_url' => admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $item->package->provider ) . '&view=credentials' ),
 			);
 		}
 
@@ -560,12 +553,11 @@ final readonly class PortabilityController {
 		}
 		$rows = array();
 		foreach ( $blueprint->credentials as $ordinal => $credential ) {
-			$provider        = $providers[ $credential->provider ] ?? array();
-			$kind_labels     = is_array( $provider['credential_kind_labels'] ?? null ) ? $provider['credential_kind_labels'] : array();
-			$packages        = array();
-			$proposed_count  = 0;
-			$recovery_count  = 0;
-			$unchanged_count = 0;
+			$provider       = $providers[ $credential->provider ] ?? array();
+			$kind_labels    = is_array( $provider['credential_kind_labels'] ?? null ) ? $provider['credential_kind_labels'] : array();
+			$packages       = array();
+			$proposed_count = 0;
+			$recovery_count = 0;
 			foreach ( $blueprint->packages as $package_row => $package ) {
 				if ( in_array(
 					array(
@@ -576,8 +568,6 @@ final readonly class PortabilityController {
 					true
 				) ) {
 					$projected  = array(
-						'row'  => $package_row,
-
 						'name' => $package->display_name,
 						'type' => 'plugin' === $package->type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' ),
 					);
@@ -585,10 +575,7 @@ final readonly class PortabilityController {
 					$action     = $items[ $package_row ]->action->value ?? null;
 					if ( 'managed' === $action ) {
 						++$recovery_count;
-						++$unchanged_count;
-					} elseif ( 'protected' === $action ) {
-						++$unchanged_count;
-					} else {
+					} elseif ( 'protected' !== $action ) {
 						++$proposed_count;
 					}
 				}
@@ -604,7 +591,6 @@ final readonly class PortabilityController {
 				'decision_required' => 0 < $proposed_count || 0 < $recovery_count,
 				'proposed_count'    => $proposed_count,
 				'recovery_count'    => $recovery_count,
-				'unchanged_count'   => $unchanged_count,
 				'action'            => $decision['action']->value ?? null,
 				'target_id'         => $decision['target_id'] ?? null,
 				'target_choices'    => array_values( array_filter( $provider['credentials'] ?? array(), static fn ( array $candidate ): bool => 'file' === ( $candidate['source'] ?? null ) ) ),

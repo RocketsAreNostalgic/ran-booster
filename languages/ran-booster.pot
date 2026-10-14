@@ -235,7 +235,7 @@ msgstr ""
 #: views/portability-review.php:170
 #: views/portability-review.php:189
 #: views/portability.php:231
-#: assets/ran-booster-portability.js:689
+#: assets/ran-booster-portability.js:695
 msgid "Package"
 msgstr ""
 
@@ -880,7 +880,7 @@ msgstr ""
 #: RAN/Admin/DeploymentOutcomeMessage.php:79
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:241
 #: views/troubleshooting.php:266
-#: assets/ran-booster-portability.js:693
+#: assets/ran-booster-portability.js:699
 msgid "Unknown"
 msgstr ""
 
@@ -1276,9 +1276,9 @@ msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:347
 #: RAN/Admin/PackageAdminController.php:367
-#: RAN/Admin/PortabilityController.php:297
-#: RAN/Admin/PortabilityController.php:465
-#: RAN/Admin/PortabilityController.php:582
+#: RAN/Admin/PortabilityController.php:284
+#: RAN/Admin/PortabilityController.php:456
+#: RAN/Admin/PortabilityController.php:572
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:342
 #: RAN/Admin/ProviderSettingsPresenter.php:1509
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
@@ -1289,9 +1289,9 @@ msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:347
 #: RAN/Admin/PackageAdminController.php:367
-#: RAN/Admin/PortabilityController.php:297
-#: RAN/Admin/PortabilityController.php:465
-#: RAN/Admin/PortabilityController.php:582
+#: RAN/Admin/PortabilityController.php:284
+#: RAN/Admin/PortabilityController.php:456
+#: RAN/Admin/PortabilityController.php:572
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:342
 #: RAN/Admin/ProviderSettingsPresenter.php:1510
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
@@ -1710,34 +1710,34 @@ msgstr ""
 msgid "Choose the same Transporter Blueprint and package row to apply."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:280
+#: RAN/Admin/PortabilityController.php:267
 #: views/portability.php:215
 msgid "Choose a Transporter Blueprint password before exporting credentials."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:283
+#: RAN/Admin/PortabilityController.php:270
 #: views/portability.php:215
 msgid "The Transporter Blueprint passwords do not match. Nothing was exported."
 msgstr ""
 
 #. translators: 1: managed package type, such as Plugin. 2: managed package display name.
-#: RAN/Admin/PortabilityController.php:293
+#: RAN/Admin/PortabilityController.php:280
 #, php-format
 msgid "%1$s “%2$s” manages its own updates and cannot also be managed by Booster"
 msgstr ""
 
 #. translators: %s: semicolon-separated list of selected packages that cannot be exported.
-#: RAN/Admin/PortabilityController.php:306
+#: RAN/Admin/PortabilityController.php:293
 #, php-format
 msgid "Transporter Blueprint export cannot include: %s. Deselect those packages and try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:503
+#: RAN/Admin/PortabilityController.php:496
 msgid "Target encrypted credential storage is unavailable. Configure secure storage, then review and apply this row again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:512
-#: RAN/Portability/PortabilityApplicationService.php:245
+#: RAN/Admin/PortabilityController.php:505
+#: RAN/Portability/PortabilityApplicationService.php:237
 msgid "Booster could not apply this package. Review the Transporter Blueprint again and check repository access."
 msgstr ""
 
@@ -3220,6 +3220,7 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:351
 #: RAN/Admin/WebhookManagement/views/panel.php:34
 #: views/portability-review.php:128
+#: views/portability-review.php:205
 msgid "Choose a saved credential"
 msgstr ""
 
@@ -4700,51 +4701,49 @@ msgstr ""
 msgid "This package is already managed with the exact disabled configuration."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:145
-#: RAN/Portability/PortabilityApplicationService.php:167
+#: RAN/Portability/PortabilityApplicationService.php:144
+#: RAN/Portability/PortabilityApplicationService.php:166
 msgid "This package changed since review. Review the Transporter Blueprint again."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:148
+#: RAN/Portability/PortabilityApplicationService.php:147
 msgid "This package was left unchanged by the repository credential decision."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:154
-#: RAN/Portability/PortabilityApplicationService.php:211
+#: RAN/Portability/PortabilityApplicationService.php:153
 msgid "You do not have permission to apply this package type."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:157
-#: RAN/Portability/PortabilityApplicationService.php:214
+#: RAN/Portability/PortabilityApplicationService.php:156
 msgid "This installed package was not selected for adoption."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:188
+#: RAN/Portability/PortabilityApplicationService.php:187
 msgid "This package is already managed."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:196
+#: RAN/Portability/PortabilityApplicationService.php:195
 msgid "The repository credential is available on this site. The managed package settings were not changed."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:202
+#: RAN/Portability/PortabilityApplicationService.php:201
 msgid "Booster could not import this repository credential. Review the Transporter Blueprint again and check repository access."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:208
+#: RAN/Portability/PortabilityApplicationService.php:207
 msgid "This package changed or cannot be applied. Review the Transporter Blueprint again."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:232
+#: RAN/Portability/PortabilityApplicationService.php:224
 msgid "Adopted: deployment disabled"
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:338
+#: RAN/Portability/PortabilityApplicationService.php:330
 msgid "Package installed and managed by Booster with deployment disabled. Re-enable deployment deliberately when this site is ready."
 msgstr ""
 
 #. translators: 1: safe deployment failure reason, 2: random support reference.
-#: RAN/Portability/PortabilityApplicationService.php:350
+#: RAN/Portability/PortabilityApplicationService.php:342
 #, php-format
 msgid "%1$s Reference: %2$s."
 msgstr ""
@@ -7824,11 +7823,13 @@ msgid "Connect these packages to a credential already stored on this site."
 msgstr ""
 
 #: views/portability-review.php:126
+#: views/portability-review.php:202
 #: views/troubleshooting.php:192
 msgid "Saved credential"
 msgstr ""
 
 #: views/portability-review.php:137
+#: views/portability-review.php:216
 msgid "No saved credentials are available for this provider."
 msgstr ""
 
@@ -7845,6 +7846,7 @@ msgid "No credential choice is needed because every affected package will remain
 msgstr ""
 
 #: views/portability-review.php:157
+#: views/portability-review.php:219
 msgid "Manage repository credentials"
 msgstr ""
 
@@ -7882,7 +7884,11 @@ msgstr ""
 msgid "Choose a Transporter Blueprint to review its packages."
 msgstr ""
 
-#: views/portability-review.php:195
+#: views/portability-review.php:207
+msgid "Previously selected credential is unavailable. Choose another credential."
+msgstr ""
+
+#: views/portability-review.php:226
 msgid "Import credential only"
 msgstr ""
 
@@ -8175,12 +8181,12 @@ msgid "Eligible package changes and credential-only recovery rows are applied in
 msgstr ""
 
 #: views/portability.php:295
-#: assets/ran-booster-portability.js:587
+#: assets/ran-booster-portability.js:593
 msgid "No changes selected."
 msgstr ""
 
 #: views/portability.php:296
-#: assets/ran-booster-portability.js:1019
+#: assets/ran-booster-portability.js:1051
 msgid "Applying…"
 msgstr ""
 
@@ -8988,7 +8994,7 @@ msgid "Transporter Blueprint download started."
 msgstr ""
 
 #. translators: %d: number of managed package changes.
-#: assets/ran-booster-portability.js:595
+#: assets/ran-booster-portability.js:601
 #, js-format
 msgid "%d package change"
 msgid_plural "%d package changes"
@@ -8996,7 +9002,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of repository credentials to import.
-#: assets/ran-booster-portability.js:605
+#: assets/ran-booster-portability.js:611
 #, js-format
 msgid "%d repository credential"
 msgid_plural "%d repository credentials"
@@ -9004,7 +9010,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of saved credentials to use.
-#: assets/ran-booster-portability.js:615
+#: assets/ran-booster-portability.js:621
 #, js-format
 msgid "%d saved credential"
 msgid_plural "%d saved credentials"
@@ -9012,67 +9018,67 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: package changes, 2: repository credentials to import, 3: saved credentials to use.
-#: assets/ran-booster-portability.js:626
+#: assets/ran-booster-portability.js:632
 #, js-format
 msgid "Apply %1$s, import %2$s and use %3$s."
 msgstr ""
 
-#: assets/ran-booster-portability.js:636
+#: assets/ran-booster-portability.js:642
 msgid "Deployment will remain Disabled."
 msgstr ""
 
-#: assets/ran-booster-portability.js:637
+#: assets/ran-booster-portability.js:643
 msgid "Managed package settings will remain unchanged."
 msgstr ""
 
-#: assets/ran-booster-portability.js:642
+#: assets/ran-booster-portability.js:648
 msgid "Credential permissions have not been assessed."
 msgstr ""
 
 #. translators: 1: package type, 2: package name.
-#: assets/ran-booster-portability.js:698
+#: assets/ran-booster-portability.js:704
 #, js-format
 msgid "%1$s “%2$s”"
 msgstr ""
 
-#: assets/ran-booster-portability.js:707
+#: assets/ran-booster-portability.js:713
 msgid "Package result unavailable."
 msgstr ""
 
-#: assets/ran-booster-portability.js:714
+#: assets/ran-booster-portability.js:720
 msgid "Transferred credential is available on this site."
 msgstr ""
 
-#: assets/ran-booster-portability.js:718
+#: assets/ran-booster-portability.js:724
 msgid "Selected saved credential was verified for this repository."
 msgstr ""
 
-#: assets/ran-booster-portability.js:722
+#: assets/ran-booster-portability.js:728
 msgid "Repository credential was not made available on this site."
 msgstr ""
 
-#: assets/ran-booster-portability.js:765
+#: assets/ran-booster-portability.js:774
 msgid "Reviewing blueprint…"
 msgstr ""
 
-#: assets/ran-booster-portability.js:783
-#: assets/ran-booster-portability.js:826
+#: assets/ran-booster-portability.js:792
+#: assets/ran-booster-portability.js:838
 msgid "Unable to review this blueprint."
 msgstr ""
 
-#: assets/ran-booster-portability.js:818
+#: assets/ran-booster-portability.js:827
 msgid "Transporter Blueprint reviewed."
 msgstr ""
 
-#: assets/ran-booster-portability.js:1054
+#: assets/ran-booster-portability.js:1086
 msgid "Package apply failed."
 msgstr ""
 
-#: assets/ran-booster-portability.js:1075
+#: assets/ran-booster-portability.js:1107
 msgid "Package apply failed. Review the blueprint again."
 msgstr ""
 
-#: assets/ran-booster-portability.js:1089
+#: assets/ran-booster-portability.js:1121
 msgid "All selected Transporter Blueprint changes were applied."
 msgstr ""
 

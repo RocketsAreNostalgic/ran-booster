@@ -137,10 +137,11 @@ final readonly class PackageRemovalService {
 				if ( null !== $blocker ) {
 					$result = PackageRemovalResult::failed( $blocker );
 				} else {
+					$absent = $this->wordpress->deletion_postcondition( $operation->package_type, $identifier );
 					$this->disable( $package );
 					$result = 'plugin' === $operation->package_type
-						? $this->delete_plugin( $identifier, $package )
-						: $this->delete_theme( $identifier, $package );
+						? $this->delete_plugin( $identifier, $package, $absent )
+						: $this->delete_theme( $identifier, $package, $absent );
 				}
 			}
 		} catch ( Throwable $failure ) {
@@ -163,7 +164,8 @@ final readonly class PackageRemovalService {
 		return $result;
 	}
 
-	private function delete_plugin( string $identifier, Package $package ): PackageRemovalResult {
+	/** @param \Closure(): bool $absent */
+	private function delete_plugin( string $identifier, Package $package, \Closure $absent ): PackageRemovalResult {
 		if ( $this->wordpress->plugin_is_active( $identifier ) ) {
 			try {
 				$this->wordpress->deactivate_plugin( $identifier );
@@ -179,23 +181,27 @@ final readonly class PackageRemovalService {
 			'plugin',
 			$identifier,
 			$package,
-			fn (): bool => $this->wordpress->delete_plugin( $identifier )
+			fn (): bool => $this->wordpress->delete_plugin( $identifier ),
+			$absent
 		);
 	}
 
-	private function delete_theme( string $stylesheet, Package $package ): PackageRemovalResult {
+	/** @param \Closure(): bool $absent */
+	private function delete_theme( string $stylesheet, Package $package, \Closure $absent ): PackageRemovalResult {
 		return $this->delete_files(
 			'theme',
 			$stylesheet,
 			$package,
-			fn (): bool => $this->wordpress->delete_theme( $stylesheet )
+			fn (): bool => $this->wordpress->delete_theme( $stylesheet ),
+			$absent
 		);
 	}
 
 	/**
 	 * @param callable(): bool $delete
+	 * @param \Closure(): bool $absent
 	 */
-	private function delete_files( string $type, string $identifier, Package $package, callable $delete ): PackageRemovalResult {
+	private function delete_files( string $type, string $identifier, Package $package, callable $delete, \Closure $absent ): PackageRemovalResult {
 		$reported_success = false;
 		try {
 			$reported_success = $delete();
@@ -203,12 +209,12 @@ final readonly class PackageRemovalService {
 			$this->log_failure( $failure, $type . '_deletion' );
 		}
 
-		if ( $this->is_installed( $type, $identifier ) ) {
+		if ( ! $absent() ) {
 			return PackageRemovalResult::failed( $reported_success ? 'files_still_present' : 'deletion_failed' );
 		}
 
 		try {
-			$this->unlink( $type, $identifier, $package );
+			$this->unlink( $type, $identifier, $package, $absent );
 		} catch ( Throwable $failure ) {
 			$this->log_failure( $failure, 'management_unlink_after_deletion' );
 
@@ -254,7 +260,8 @@ final readonly class PackageRemovalService {
 			: $this->themes->booster_theme_from_stylesheet( $identifier );
 	}
 
-	private function unlink( string $type, string $identifier, Package $package ): void {
+	/** @param \Closure(): bool $absent */
+	private function unlink( string $type, string $identifier, Package $package, \Closure $absent ): void {
 		$token      = AdoptionIdentity::of( $package ) ?? throw new \RuntimeException( 'The adoption identity is unavailable.' );
 		$repository = 'plugin' === $type ? $this->plugins : $this->themes;
 		$record     = $repository->recovery_record( $identifier );
@@ -262,8 +269,8 @@ final readonly class PackageRemovalService {
 			$identifier,
 			$token,
 			$record['digest'],
-			function () use ( $type, $identifier, $token ): void {
-				if ( $this->is_installed( $type, $identifier ) || null === $this->attempts
+			function () use ( $type, $identifier, $token, $absent ): void {
+				if ( ! $absent() || null === $this->attempts
 				|| $this->attempts->has_unresolved_target_attempt( $type, $identifier ) ) {
 					throw new \RuntimeException( 'The deleted target or operation state could not be confirmed.' );
 				}
@@ -272,11 +279,6 @@ final readonly class PackageRemovalService {
 		)->require_success();
 	}
 
-	private function is_installed( string $type, string $identifier ): bool {
-		return 'plugin' === $type
-			? $this->plugins->is_installed( $identifier )
-			: $this->themes->is_installed( $identifier );
-	}
 
 	private function log_failure( Throwable $failure, string $step ): void {
 		BoosterLogger::log_exception(

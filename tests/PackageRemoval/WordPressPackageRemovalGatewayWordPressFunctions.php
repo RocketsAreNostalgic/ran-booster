@@ -57,3 +57,19 @@ function get_theme_root( string $stylesheet ): string {
 function wp_clean_themes_cache( bool $clear_update_cache = true ): void {
 	$GLOBALS['ran_booster_package_removal_gateway_events'][] = array( 'clean_themes', $clear_update_cache );
 }
+
+function wp_get_theme( string $stylesheet ): \RAN\Tests\PackageRemoval\InstalledThemeFixture {
+	return $GLOBALS['ran_booster_cached_theme_targets'][ $stylesheet ] ??= new \RAN\Tests\PackageRemoval\InstalledThemeFixture( $stylesheet );
+}
+
+function delete_theme( string $stylesheet ): mixed {
+	$GLOBALS['ran_booster_package_removal_gateway_events'][] = array( 'delete_theme', $stylesheet );
+	if ( $GLOBALS['ran_booster_theme_files_removed'] ?? false ) {
+		$GLOBALS['ran_booster_removed_theme_targets'][ $stylesheet ] = true;
+	}
+	$result = $GLOBALS['ran_booster_package_removal_gateway_result'] ?? false;
+	if ( $result instanceof \Throwable ) {
+		throw $result;
+	}
+	return $result;
+}

@@ -67,7 +67,7 @@ class Dashboard {
 
 	private ProviderSettingsPresenter $provider_settings;
 	private TroubleshootingService $troubleshooting;
-	/** @var array<string, mixed>|null */
+	/** @var (array<string, mixed>&array{results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null})|null */
 	private ?array $troubleshooting_payload = null;
 
 	private ?AdminTabRegistry $admin_tabs;
@@ -452,7 +452,7 @@ class Dashboard {
 		}
 
 		foreach ( $results as $result ) {
-			if ( ! is_array( $result ) || 'pass' !== ( $result['status'] ?? null ) ) {
+			if ( 'pass' !== $result['status'] ) {
 				return false;
 			}
 		}

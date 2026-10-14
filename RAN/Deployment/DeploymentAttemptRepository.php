@@ -549,35 +549,6 @@ final class DeploymentAttemptRepository {
 	}
 
 	/**
-	 * Read a bounded deployment contribution to the shared activity page.
-	 *
-	 * @param array<string, string> $filters
-	 * @param array{time: string, source: string, id: int}|null $cursor
-	 * @return list<DeploymentAttempt>
-	 */
-	public function activity_history( array $filters, ?array $cursor, int $limit = 26 ): array {
-		$query = $this->prepare( "SELECT * FROM %i WHERE package_type IN ('plugin', 'theme')", $this->table_name );
-		foreach ( array(
-			'provider'     => 'provider',
-			'subject_type' => 'package_type',
-			'operation'    => 'operation',
-			'outcome'      => 'state',
-		) as $key => $column ) {
-			if ( isset( $filters[ $key ] ) ) {
-				$query .= $this->prepare( ' AND %i = %s', $column, $filters[ $key ] );
-			}
-		}
-		if ( isset( $filters['subject_identity'] ) ) {
-			$query .= $this->prepare( " AND BINARY JSON_UNQUOTE(JSON_EXTRACT(request_json, '$.installed_identifier')) = %s", $filters['subject_identity'] );
-		}
-		if ( null !== $cursor ) {
-			$query .= $this->prepare( " AND (created_at < %s OR (created_at = %s AND ('deployment' < %s OR ('deployment' = %s AND id < %d))))", $cursor['time'], $cursor['time'], $cursor['source'], $cursor['source'], $cursor['id'] );
-		}
-		$query .= $this->prepare( ' ORDER BY created_at DESC, id DESC LIMIT %d', $this->history_limit( $limit ) );
-		return array_map( array( DeploymentAttempt::class, 'from_database' ), $this->read_rows( $query ) );
-	}
-
-	/**
 	 * Read the newest attempt and newest successful attempt for one package.
 	 *
 	 * The two scalar subqueries keep this to one bounded database read even when

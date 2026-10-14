@@ -529,28 +529,10 @@ final readonly class ProviderSettingsPresenter {
 	/**
 	 * Build the provider capability summary used by managed-package lists.
 	 *
-	 * @return list<array{code: string, label: string, available: bool, deploy: bool, default_credential_id: string, credential_kind_labels: array<string,string>, credentials: list<array{id: string, label: string, source: string}>}>
+	 * @return list<PackageProviderChoice>
 	 */
 	public function build_package_list(): array {
-		return array_map(
-			static fn ( array $provider ): array => array(
-				'code'                   => $provider['code'],
-				'label'                  => $provider['label'],
-				'available'              => $provider['available'],
-				'deploy'                 => $provider['deploy'],
-				'default_credential_id'  => $provider['default_credential_id'],
-				'credential_kind_labels' => $provider['credential_kind_labels'],
-				'credentials'            => array_map(
-					static fn ( array $credential ): array => array(
-						'id'     => $credential['id'],
-						'label'  => $credential['label'],
-						'source' => $credential['source'],
-					),
-					$provider['credential_profiles']
-				),
-			),
-			$this->package_providers()
-		);
+		return $this->package_providers();
 	}
 
 	/**
@@ -735,23 +717,14 @@ final readonly class ProviderSettingsPresenter {
 	 * @return array{configured_id: string, stale: bool}|null
 	 */
 	private function public_lookup_profile( RepositoryProvider $provider, string $provider_code, array $credentials ): ?array {
-		if ( ! $provider instanceof CredentialedPublicRepositoryBrowser
-			|| ! $provider->get_public_repository_browse_metadata()->supports_provider_default_profile ) {
+		$lookup = $this->package_public_lookup( $provider, $provider_code, $credentials );
+		if ( null === $lookup || ! $lookup['supports_default'] ) {
 			return null;
 		}
 
-		$configured_id = $this->public_lookup_profiles->get( $provider_code ) ?? '';
-		$eligible_ids  = array_column(
-			array_filter(
-				$credentials,
-				static fn ( array $profile ): bool => true === $profile['configured']
-			),
-			'id'
-		);
-
 		return array(
-			'configured_id' => $configured_id,
-			'stale'         => '' !== $configured_id && ! in_array( $configured_id, $eligible_ids, true ),
+			'configured_id' => $lookup['configured_id'],
+			'stale'         => $lookup['stale'],
 		);
 	}
 

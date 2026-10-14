@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Support/PackageViewWordPressFunctions.php';
+require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Admin/Component/AdminActionRenderer.php';
 
 use PHPUnit\Framework\TestCase;
@@ -28,6 +29,76 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$_GET  = array();
 		$_POST = array();
 		unset( $GLOBALS['ran_booster_bulk_active_plugins'] );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_list_uses_presented_credentials_without_exposing_configuration_or_secrets(): void {
+		$provider = new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'temporarily-offline' );
+		$registry = new \RAN\RepositoryProvider\ProviderRegistry( array( $provider ) );
+		foreach ( array(
+			array( array(), '', 'Private; credential missing' ),
+			array( array( 'file' ), '', 'Private via Label &lt;0&gt;' ),
+			array( array( 'file', 'file' ), '', 'Private; credential missing' ),
+			array( array( 'file', 'file' ), 'profile_1', 'Private via Label &lt;1&gt;' ),
+			array( array( 'file', 'constant' ), '', 'Private via Label &lt;1&gt;' ),
+			array( array( 'constant' ), 'missing', 'Private; credential missing' ),
+		) as list( $sources, $selected, $expected ) ) {
+			$profiles = array();
+			foreach ( $sources as $index => $source ) {
+				$profiles[] = array(
+					'id'            => 'profile_' . $index,
+					'label'         => 'Label <' . $index . '>',
+					'kind'          => 'api-key',
+					'configuration' => array( 'tenant' => 'configuration-canary' ),
+					'source'        => $source,
+					'configured'    => true,
+				);
+			}
+			$secrets = $this->createMock( \RAN\Secrets\SecretsFile::class );
+			$secrets->expects( self::once() )->method( 'credential_profiles' )->with( 'temporarily-offline' )->willReturn( $profiles );
+			$secrets->expects( self::never() )->method( 'credential_material' );
+			$settings          = new \RAN\Admin\ProviderSettingsPresenter(
+				$registry,
+				$secrets,
+				new \RAN\Storage\CredentialUsageReader( new \RAN\Tests\Support\CredentialUsageDatabase(), 'wp_ran_booster_packages' ),
+				new \RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore(),
+				new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore()
+			);
+			$package_providers = $settings->build_package_list();
+			$packages          = array( $this->package( true, $selected ) );
+			$package_view      = PackagePagePresenter::plugin();
+			$captured          = array();
+			foreach ( array( 'ran_booster_admin_package_management_rows', 'ran_booster_admin_package_management_actions' ) as $hook ) {
+				$GLOBALS['ran_booster_admin_view_filters'][ $hook ] = array(
+					static function ( array $value, mixed ...$arguments ) use ( &$captured ): array {
+						$captured[] = array( $value, $arguments );
+						return $value;
+					},
+				);
+			}
+			$package_view->index(
+				$packages,
+				$package_providers,
+				array(
+					'search'   => '',
+					'provider' => '',
+					'source'   => '',
+					'policy'   => '',
+				),
+				new \RAN\Admin\DeploymentAdminPresenter()
+			);
+			self::assertCount( 2, $captured );
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Inspect all callback object properties for leakage; this test never deserializes data.
+			self::assertStringNotContainsString( 'configuration-canary', serialize( $captured ) );
+			unset( $GLOBALS['ran_booster_admin_view_filters']['ran_booster_admin_package_management_rows'], $GLOBALS['ran_booster_admin_view_filters']['ran_booster_admin_package_management_actions'] );
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+			$html = (string) ob_get_clean();
+			self::assertStringContainsString( $expected, $html );
+			self::assertStringNotContainsString( 'configuration-canary', $html );
+			self::assertStringNotContainsString( '<0>', $html );
+		}
 	}
 
 	public function test_edit_view_preserves_unknown_provider_identity_and_keeps_confirmed_removal_available(): void {
@@ -665,7 +736,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 			'available'             => true,
 			'deploy'                => true,
 			'default_credential_id' => '',
-			'credentials'           => array(
+			'credential_profiles'   => array(
 				array(
 					'id'     => 'agency_profile',
 					'label'  => 'Agency deployment credential',

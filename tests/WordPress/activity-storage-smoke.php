@@ -195,7 +195,75 @@ return static function ( wpdb $database ): void {
 			$query( $database->prepare( 'ALTER TABLE %i ADD UNIQUE KEY correlation (correlation)', $table ) );
 		}
 		$expect( $store->install(), 'compatible existing schema verifies after restoration' );
-		$attempt = $journal->admit_and_claim_manual( 'install', 'plugin', 'gh', 'activity-proof', $deploy, 'main', 'branch', 1 );
+		// A changed initial fence or rejected Activity progress must roll back both stores.
+		foreach ( array( 'fence', 'progress', 'commit' ) as $failure ) {
+			$injected = false;
+			$inject   = static function ( string $sql ) use ( $database, $journal_table, $table, $failure, &$injected, $query ): string {
+				if ( ! $injected && 'fence' === $failure && str_starts_with( $sql, "SELECT * FROM `$journal_table` WHERE correlation_id = " ) ) {
+					$injected = true;
+					$query( $database->prepare( 'UPDATE %i SET mutation_started_at = %s', $journal_table, '2026-07-19 00:00:01' ) );
+				}
+				if ( ! $injected && 'progress' === $failure && str_starts_with( $sql, "UPDATE $table SET stage = " ) ) {
+					$injected = true;
+					return $sql . ' AND 1 = 0';
+				}
+				if ( ! $injected && 'commit' === $failure && 'COMMIT' === $sql ) {
+					$injected = true;
+					return 'INVALID MANUAL ADMISSION COMMIT';
+				}
+				return $sql;
+			};
+			$errors   = $database->suppress_errors( true );
+			add_filter( 'query', $inject );
+			try {
+				$journal->admit_and_claim_manual( 'install', 'plugin', 'gh', 'activity-proof', $deploy, 'main', 'branch', 1 );
+				throw new RuntimeException( 'Corrupt admission or failed coupled reporting committed.' );
+			} catch ( DeploymentStorageFailure $caught ) {
+				$expect( $injected, 'manual admission failure injection reached its boundary' );
+				if ( 'fence' === $failure ) {
+					$expect( DeploymentStorageFailure::inconsistent()->getMessage() === $caught->getMessage(), 'changed fence fails exact row verification' );
+				}
+			} finally {
+				remove_filter( 'query', $inject );
+				$database->suppress_errors( $errors );
+			}
+			$expect( 0 === (int) $database->get_var( $database->prepare( 'SELECT COUNT(*) FROM %i', $journal_table ) ), 'failed immediate admission rolls back journal' );
+			$expect( $before === (int) $database->get_var( $database->prepare( 'SELECT COUNT(*) FROM %i', $table ) ), 'failed immediate admission rolls back Activity' );
+		}
+
+		$admission_sql = array();
+		$observe       = static function ( string $sql ) use ( &$admission_sql ): string {
+			$admission_sql[] = $sql;
+			return $sql;
+		};
+		add_filter( 'query', $observe );
+		try {
+			$attempt = $journal->admit_and_claim_manual( 'install', 'plugin', 'gh', 'activity-proof', $deploy, 'main', 'branch', 1 );
+		} finally {
+			remove_filter( 'query', $observe );
+		}
+		$expect( 1 === count( array_filter( $admission_sql, static fn ( string $sql ): bool => str_starts_with( $sql, "SELECT * FROM `$journal_table` WHERE correlation_id = " ) ) ), 'immediate admission reads its complete inserted row once' );
+		$expect( array() === array_filter( $admission_sql, static fn ( string $sql ): bool => str_starts_with( $sql, "UPDATE `$journal_table`" ) ), 'immediate admission needs no queued claim update' );
+		$expect( DeploymentState::RUNNING === $attempt->get_state() && null === $attempt->safe_data()['mutation_started_at'], 'immediate admission starts running before mutation' );
+		$report = $database->get_row( $database->prepare( 'SELECT * FROM %i WHERE correlation = %s', $table, $attempt->get_correlation_id() ), ARRAY_A );
+		$expect( is_array( $report ) && 'incomplete' === $report['status'] && 'deployment.running' === $report['stage'], 'manual Activity starts at the running stage' );
+		$facts = is_array( $report ) && is_string( $report['facts'] ) ? json_decode( $report['facts'], true ) : null;
+		$expect(
+			array(
+				'deployment_attempt_id'          => $attempt->get_id(),
+				'deployment_finished_at'         => null,
+				'deployment_mutation_started_at' => null,
+				'deployment_outcome'             => null,
+				'deployment_package_slug'        => 'activity-proof',
+				'deployment_requested_ref'       => 'main',
+				'deployment_resolved_at'         => null,
+				'deployment_resolved_by'         => null,
+				'deployment_resolved_ref'        => null,
+				'deployment_source'              => 'manual',
+				'deployment_state'               => 'running',
+			) === $facts,
+			'manual Activity carries the complete admitted facts'
+		);
 		$query( $database->prepare( 'ALTER TABLE %i ENGINE=MyISAM', $table ) );
 		foreach ( array(
 			static fn () => $journal->mark_mutation_started( $attempt->get_id() ),

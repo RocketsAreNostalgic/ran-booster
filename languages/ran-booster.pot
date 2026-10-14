@@ -1505,7 +1505,7 @@ msgstr ""
 #. translators: %s: package type, such as Plugin or Theme.
 #: RAN/Admin/PackageAdminController.php:779
 #, php-format
-msgid "%s files were deleted, but Booster could not verify removal of its management record."
+msgid "%s removal could not be verified. Review its files and Booster management before retrying."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.

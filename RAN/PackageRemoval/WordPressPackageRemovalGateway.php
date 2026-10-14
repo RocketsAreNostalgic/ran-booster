@@ -61,6 +61,67 @@ final class WordPressPackageRemovalGateway implements PackageRemovalGateway {
 		return hash( 'sha256', http_build_query( array( $type, $identifier, $path, (string) $stat['dev'], (string) $stat['ino'], $hash, $links ), '', '&', PHP_QUERY_RFC3986 ) );
 	}
 
+	/** @return \Closure(): bool */
+	public function deletion_postcondition( string $type, string $identifier ): \Closure {
+		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) ) {
+			throw new \InvalidArgumentException( 'The package type is invalid.' );
+		}
+		$relative = 'plugin' === $type && '.' !== dirname( $identifier ) ? dirname( $identifier ) : $identifier;
+		$root     = 'plugin' === $type ? WP_PLUGIN_DIR : get_theme_root( $identifier );
+		if ( ! $this->bounded_installed_path( $root, $relative ) ) {
+			throw new \RuntimeException( 'The exact deletion target is unsafe.' );
+		}
+		$root     = realpath( $root );
+		$identity = false !== $root ? stat( $root ) : false;
+		if ( false === $root || false === $identity ) {
+			throw new \RuntimeException( 'The deletion root identity is unavailable.' );
+		}
+		$target = $root . DIRECTORY_SEPARATOR . $relative;
+		$parent = dirname( $target );
+		$name   = basename( $target );
+		clearstatcache( true, $parent );
+		if ( is_link( $parent ) || realpath( $parent ) !== $parent ) {
+			throw new \RuntimeException( 'The deletion parent is unsafe.' );
+		}
+		$parent_identity = stat( $parent );
+		if ( false === $parent_identity ) {
+			throw new \RuntimeException( 'The deletion parent identity is unavailable.' );
+		}
+		$initial_entries = scandir( $parent );
+		if ( false === $initial_entries || ! in_array( $name, $initial_entries, true ) ) {
+			throw new \RuntimeException( 'The exact deletion target spelling could not be confirmed.' );
+		}
+		$identities = array(
+			$root   => $identity,
+			$parent => $parent_identity,
+		);
+		return static function () use ( $parent, $name, $target, $identities ): bool {
+			$entries = array();
+			// Verify the frozen parent both before and after its fresh enumeration.
+			for ( $pass = 0; $pass < 2; ++$pass ) {
+				foreach ( $identities as $directory => $identity ) {
+					clearstatcache( true, $directory );
+					if ( is_link( $directory ) || realpath( $directory ) !== $directory ) {
+						throw new \RuntimeException( 'The deletion root changed or is unavailable.' );
+					}
+					$current = stat( $directory );
+					if ( false === $current
+						|| $current['dev'] !== $identity['dev'] || $current['ino'] !== $identity['ino'] ) {
+						throw new \RuntimeException( 'The deletion root changed or is unavailable.' );
+					}
+				}
+				if ( 0 === $pass ) {
+					$entries = scandir( $parent );
+					if ( false === $entries ) {
+						throw new \RuntimeException( 'The deletion root could not be enumerated.' );
+					}
+				}
+			}
+			clearstatcache( true, $target );
+			return ! in_array( $name, $entries, true ) && ! file_exists( $target ) && ! is_link( $target );
+		};
+	}
+
 	public function invalidate_native_target( string $type, string $identifier ): void {
 		$name  = 'plugin' === $type ? 'update_plugins' : 'update_themes';
 		$value = get_site_transient( $name );
@@ -157,7 +218,12 @@ final class WordPressPackageRemovalGateway implements PackageRemovalGateway {
 	public function delete_theme( string $stylesheet ): bool {
 		$this->load_theme_functions();
 
-		return true === delete_theme( $stylesheet );
+		$theme = wp_get_theme( $stylesheet );
+		try {
+			return true === delete_theme( $stylesheet );
+		} finally {
+			$theme->cache_delete();
+		}
 	}
 
 	private function load_plugin_functions(): void {

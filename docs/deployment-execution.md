@@ -383,3 +383,15 @@ or signed URL is included in the notice or email.
 - [Package update orchestration](package-update-orchestration.md)
 - [Provider extension contract](provider-extension-contract.md)
 - [Custom git vendor setup](custom-git-vendors.md)
+
+
+## Incomplete package deletion
+
+Booster checks the exact physical deletion target, including the whole directory
+for a directory plugin or theme. Missing metadata is not complete deletion.
+If files remain, management stays Disabled. If metadata has gone, restore the
+genuine package files and metadata before requesting a fresh existing management
+recovery confirmation; the installed-target check cannot confirm a partial
+package with no recognizable metadata. Do not invent headers or reuse an old
+confirmation. Uncertain file or management state does not report successful
+removal.

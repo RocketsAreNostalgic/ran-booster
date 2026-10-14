@@ -51,6 +51,44 @@ final class PackageRemovalServiceTest extends TestCase {
 		);
 	}
 
+	public function test_deletion_uses_physical_target_absence_instead_of_installed_metadata(): void {
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			foreach ( array( 'partial', 'gone-false', 'gone-throw', 'replacement', 'capture-failure', 'observation-failure' ) as $state ) {
+				$fixture                                 = $this->fixture();
+				$repository                              = 'plugin' === $type ? $fixture->plugins : $fixture->themes;
+				$presence_reads                          = 0;
+				$fixture->gateway->capture_fails         = 'capture-failure' === $state;
+				$fixture->gateway->physical_presence     = static function ( string $type ) use ( $state, &$presence_reads ): bool {
+					unset( $type );
+					++$presence_reads;
+					if ( 'observation-failure' === $state ) {
+						throw new \RuntimeException( 'Physical root observation unavailable.' );
+					}
+					return 'partial' === $state || ( 'replacement' === $state && $presence_reads > 1 );
+				};
+				$fixture->gateway->{ $type . '_delete' } = static function () use ( $repository, $state ): bool {
+					// Metadata disappears in partial deletion, but can stay cached after full deletion.
+					$repository->installed = 'partial' !== $state;
+					if ( 'gone-throw' === $state ) {
+						throw new \RuntimeException( 'Native hook threw after physical deletion.' );
+					}
+					return 'gone-false' !== $state;
+				};
+				$input                                   = 'plugin' === $type ? $this->input() : $this->theme_input();
+				$result                                  = $fixture->service->execute( PackageOperation::from_input( 'unlink-delete-' . $type, $input ) );
+				self::assertSame(
+					match ( $state ) {
+					'partial' => 'files_still_present',
+					'replacement', 'capture-failure', 'observation-failure' => 'management_state_uncertain',
+					default => '' },
+					$result->outcome_code
+				);
+				self::assertSame( in_array( $state, array( 'gone-false', 'gone-throw' ), true ), $repository->unlinked );
+				self::assertSame( 'capture-failure' === $state ? DeploymentPolicy::MANUAL : DeploymentPolicy::DISABLED, ( 'plugin' === $type ? $fixture->plugin : $fixture->theme )->get_deployment_policy() );
+			}
+		}
+	}
+
 	public function test_recovery_bypasses_corrupt_hydration_for_each_source_and_type(): void {
 		foreach ( array( 'plugin', 'theme' ) as $type ) {
 			foreach ( array( PackageSource::BRANCH, PackageSource::RELEASE_ASSET ) as $source ) {
@@ -675,9 +713,10 @@ final class PackageRemovalServiceTest extends TestCase {
 			$package->set_source( PackageSource::BRANCH, 7 );
 			$package->set_adoption_token( 'gh:R_example:11111111-1111-4111-8111-111111111111' );
 		}
-		$plugins = new RemovalPluginRepository( $plugin );
-		$themes  = new RemovalThemeRepository( $theme );
-		$gateway = new RemovalGateway();
+		$plugins                    = new RemovalPluginRepository( $plugin );
+		$themes                     = new RemovalThemeRepository( $theme );
+		$gateway                    = new RemovalGateway();
+		$gateway->physical_presence = static fn ( string $type ): bool => 'plugin' === $type ? $plugins->installed : $themes->installed;
 
 		return new RemovalFixture(
 			$plugin,
@@ -913,6 +952,17 @@ final class RemovalGateway implements PackageRemovalGateway {
 	public function installed_fingerprint( string $type, string $identifier ): string {
 		unset( $type, $identifier );
 		return $this->fingerprint;
+	}
+	/** @var \Closure(string): bool|null */
+	public ?\Closure $physical_presence = null;
+	public bool $capture_fails          = false;
+	/** @return \Closure(): bool */
+	public function deletion_postcondition( string $type, string $identifier ): \Closure {
+		unset( $identifier );
+		if ( $this->capture_fails ) {
+			throw new \RuntimeException( 'Physical capture unavailable.' );
+		}
+		return fn (): bool => null !== $this->physical_presence && ! ( $this->physical_presence )( $type );
 	}
 	public function invalidate_native_target( string $type, string $identifier ): void {
 		$this->invalidated[] = $type . ':' . $identifier;

@@ -1683,6 +1683,11 @@ final class OperationRemovalGateway implements PackageRemovalGateway {
 	public function installed_fingerprint( string $type, string $identifier ): string {
 		return hash( 'sha256', $type . '|' . $identifier );
 	}
+	/** @return \Closure(): bool */
+	public function deletion_postcondition( string $type, string $identifier ): \Closure {
+		unset( $type, $identifier );
+		return static fn (): bool => true;
+	}
 	public function invalidate_native_target( string $type, string $identifier ): void {
 		unset( $type, $identifier );
 	}

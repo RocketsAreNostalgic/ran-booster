@@ -139,7 +139,6 @@ $repository_placeholder = array() === $locator_examples
 				__( 'Policy reason', 'ran-booster' )    => $self_update_reason,
 				__( 'Updater state', 'ran-booster' )    => $updater_state,
 				__( 'Updater code', 'ran-booster' )     => $core_self_update['updater_code'] ?? null,
-				__( 'Selected runtime', 'ran-booster' ) => $core_self_update['selected_version'] ?? null,
 				__( 'Offered version', 'ran-booster' )  => $core_self_update['offered_version'] ?? null,
 				__( 'Last check (UTC)', 'ran-booster' ) => is_int( $core_self_update['last_check'] ?? null )
 					? gmdate( 'c', $core_self_update['last_check'] )

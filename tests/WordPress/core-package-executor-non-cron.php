@@ -5,7 +5,6 @@ declare(strict_types=1);
 // A separate process proves that protected non-cron requests can reach core.
 
 use RAN\Deployment\PreparedArtifact;
-use RAN\WordPress\CorePackageExecutionFailure;
 use RAN\WordPress\CorePackageExecutor;
 
 $ran_booster_wordpress_path = getenv( 'RAN_BOOSTER_WORDPRESS_PATH' );
@@ -24,6 +23,9 @@ require_once dirname( __DIR__, 2 ) . '/RAN/Runtime/RuntimeSupport.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/WordPress/CorePackageExecutionFailure.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/WordPress/CorePackageExecutionResult.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/WordPress/CorePackageExecutor.php';
+
+require_once rtrim( $ran_booster_wordpress_path, '/\\' ) . '/wp-content/plugins/ran-booster/vendor/autoload.php';
+require_once __DIR__ . '/CorePackageSmokeArtifact.php';
 
 // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 function wp_doing_cron(): bool {
@@ -83,13 +85,20 @@ $ran_booster_executor = new CorePackageExecutor(
 	}
 );
 
+$ran_booster_branch_executor = new RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor(
+	static function ( string $action, string $type ) use ( &$ran_booster_calls ): bool {
+		$ran_booster_calls[] = array( $action, $type );
+		return false;
+	}
+);
+
 try {
-	$ran_booster_result = $ran_booster_executor->update_plugin( $ran_booster_artifact, 'example', null, 'example/example.php' );
-	if ( CorePackageExecutionFailure::WORDPRESS_REFUSED !== $ran_booster_result->get_failure() ) {
+	$ran_booster_result = $ran_booster_branch_executor->update_plugin( new RAN\Tests\WordPress\CorePackageSmokeArtifact( $ran_booster_artifact ), 'example', null, 'example/example.php' );
+	if ( 'wordpress_refused' !== $ran_booster_result->get_failure()?->value ) {
 		throw new RuntimeException( 'The non-cron update did not return the core operation result.' );
 	}
 	$ran_booster_result = $ran_booster_executor->install_plugin( $ran_booster_artifact, 'example', null );
-	if ( CorePackageExecutionFailure::WORDPRESS_REFUSED !== $ran_booster_result->get_failure() ) {
+	if ( 'wordpress_refused' !== $ran_booster_result->get_failure()?->value ) {
 		throw new RuntimeException( 'The non-cron install did not return the core operation result.' );
 	}
 	if ( array( array( 'update', 'plugin' ), array( 'install', 'plugin' ) ) !== $ran_booster_calls ) {

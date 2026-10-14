@@ -64,9 +64,8 @@ future feature as Level 9 compliant. Keep them alongside the behavioural tests
 when changing these contracts. Broad automatic Level 8 coverage is unchanged,
 and Level 10 remains diagnostic.
 
-Three exact `property.notFound` allowances retain WordPress's mutable foreign
-update-transient contract: the response-channel assignment in
-`CorePackageExecutor::transient_filter()` and the two corresponding plugin/theme
+Two exact `property.notFound` allowances retain WordPress's mutable foreign
+update-transient contract: the plugin/theme
 assignments in `tests/WordPress/core-updater-proof.php`. The existing object must
 retain its identity and supported magic accessors; declaring every object as
 `stdClass`, replacing it or adding an unrelated interface would change that

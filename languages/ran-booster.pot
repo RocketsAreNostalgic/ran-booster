@@ -8189,7 +8189,7 @@ msgid "No changes selected."
 msgstr ""
 
 #: views/portability.php:296
-#: assets/ran-booster-portability.js:1048
+#: assets/ran-booster-portability.js:1049
 msgid "Applying…"
 msgstr ""
 
@@ -9073,15 +9073,15 @@ msgstr ""
 msgid "Transporter Blueprint reviewed."
 msgstr ""
 
-#: assets/ran-booster-portability.js:1083
+#: assets/ran-booster-portability.js:1084
 msgid "Package apply failed."
 msgstr ""
 
-#: assets/ran-booster-portability.js:1104
+#: assets/ran-booster-portability.js:1105
 msgid "Package apply failed. Review the blueprint again."
 msgstr ""
 
-#: assets/ran-booster-portability.js:1118
+#: assets/ran-booster-portability.js:1119
 msgid "All selected Transporter Blueprint changes were applied."
 msgstr ""
 

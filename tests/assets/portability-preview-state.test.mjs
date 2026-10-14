@@ -499,7 +499,12 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 				return currentRows;
 			}
 			if (selector === '[data-portability-credential-refresh]') {
-				return credentialRefreshControls;
+				return [
+					...credentialRefreshControls,
+					...currentRows
+						.map((item) => item.targetCredential)
+						.filter(Boolean),
+				];
 			}
 			if (
 				selector ===
@@ -561,6 +566,9 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 							)?.[1] || '',
 						getAttribute(name) {
 							return attributes.get(name) ?? null;
+						},
+						setAttribute(name, attributeValue) {
+							attributes.set(name, attributeValue);
 						},
 						matches(selector) {
 							return (
@@ -1703,6 +1711,19 @@ test('package-only HTMX picker reuses credential refresh instead of starting a c
 		state.listeners.get('root:change')({ target: picker });
 		await tick();
 		assert.equal(state.forms.length, 1);
+		assert.equal(picker.getAttribute('hx-post'), '/admin-ajax.php');
+		const detail = { xhr: { abort() {} }, requestConfig: { elt: picker } };
+		state.listeners.get('root:htmx:beforeRequest')({ detail });
+		state.review.innerHTML = ready;
+		assert.equal(
+			state.rows()[0].targetCredential.getAttribute('hx-post'),
+			null
+		);
+		state.listeners.get('root:htmx:afterSwap')({ detail });
+		assert.equal(
+			state.rows()[0].targetCredential.getAttribute('hx-post'),
+			'/admin-ajax.php'
+		);
 		assert.match(ready, /hx-sync="\[data-portability-preview\]:replace"/);
 		assert.match(
 			ready,

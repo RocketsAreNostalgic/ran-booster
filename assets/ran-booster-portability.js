@@ -872,6 +872,7 @@
 			) {
 				return;
 			}
+			prepareCredentialRefresh();
 			reviewConfirmed = true;
 			if (results) {
 				results.replaceChildren();

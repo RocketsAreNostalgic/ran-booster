@@ -171,7 +171,7 @@ final class WebhookDisplayModel {
 		$record                   = $this->records->find( $provider_code, $repository_id );
 		$status                   = null === $record ? null : $this->projected_status( $record );
 		$credentials              = $this->credential_choices( $provider_code );
-		$operations               = null === $recovery ? $this->available_operations( $target, $record, $status, $provider_label, array() !== $credentials ) : array();
+		$operations               = null === $recovery ? $this->available_operations( $target, $record, $status, array() !== $credentials ) : array();
 		$operation_models         = $this->operation_models( $operations, $provider_code, $repository_id );
 
 		$help = null;
@@ -223,7 +223,7 @@ final class WebhookDisplayModel {
 	}
 
 	/**
-	 * @param array<string,string> $available
+	 * @param array<string,true> $available
 	 * @return list<array{key:string,label:string,url:string,primary:bool,disabled:bool}>
 	 */
 	private function operation_models( array $available, string $provider_code, string $repository_id ): array {
@@ -649,34 +649,25 @@ final class WebhookDisplayModel {
 		);
 	}
 
-	/** @return array<string, string> */
-	private function available_operations( AssistanceTarget $target, ?InstallationRecord $record, ?string $status, string $provider_label, bool $has_credential ): array {
+	/** @return array<string, true> */
+	private function available_operations( AssistanceTarget $target, ?InstallationRecord $record, ?string $status, bool $has_credential ): array {
 		if ( ! $has_credential ) {
 			return array();
 		}
 		if ( null === $record ) {
-			/* translators: %s: repository provider name. */
-			return array(
-				/* translators: %s: repository provider name. */
-				'setup'         => sprintf( __( 'Set up in %s', 'ran-booster' ), $provider_label ),
-				'disabled:test' => __( 'Test webhook', 'ran-booster' ),
-			);
+			return array( 'setup' => true );
 		}
 		if ( $record->requires_hook_identification() ) {
 			return array();
 		}
 		$operations = array();
 		if ( in_array( $status, array( 'profile_revision_stale', 'configuration_drift', 'local_profile_missing' ), true ) || ( 'needs_verification' !== $status && ! hash_equals( $record->endpoint(), $target->endpoint() ) ) ) {
-			/* translators: %s: repository provider name. */
-			$operations['reconfigure'] = sprintf( __( 'Update %s webhook', 'ran-booster' ), $provider_label );
+			$operations['reconfigure'] = true;
 		}
-		/* translators: %s: repository provider name. */
-		$operations['check'] = sprintf( __( 'Check %s', 'ran-booster' ), $provider_label );
-		/* translators: %s: repository provider name. */
-		$operations['test'] = sprintf( __( 'Test %s webhook', 'ran-booster' ), $provider_label );
+		$operations['check'] = true;
+		$operations['test']  = true;
 		if ( ! in_array( $status, array( 'local_profile_missing', 'remote_missing', 'removal_pending' ), true ) ) {
-			/* translators: %s: repository provider name. */
-			$operations['remove'] = sprintf( __( 'Remove from %s', 'ran-booster' ), $provider_label );
+			$operations['remove'] = true;
 		}
 
 		return $operations;

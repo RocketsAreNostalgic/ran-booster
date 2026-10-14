@@ -7,8 +7,12 @@ namespace RAN\Tests\Admin\WebhookManagement\Display;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\WebhookManagement\Display\WebhookDisplayModel;
 use ReflectionClass;
+use RAN\AddOn\WebhookAssistance\AssistanceTarget;
+use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
+use RAN\Admin\WebhookManagement\Installation\InstallationStore;
 
 require_once __DIR__ . '/WebhookDisplayModelWordPressFunctions.php';
+require_once dirname( __DIR__, 3 ) . '/Support/PackageViewWordPressFunctions.php';
 
 final class WebhookDisplayModelTest extends TestCase {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override requires this method name.
@@ -61,6 +65,52 @@ final class WebhookDisplayModelTest extends TestCase {
 
 		self::assertSame( 'Le resultat de l operation webhook doit etre verifie dans l etat enregistre.', $this->display()->notice( 'unknown_result' ) );
 		self::assertSame( $remediation, $this->display()->notice( 'unknown_result', null, $remediation ) );
+	}
+
+	public function test_new_installation_keeps_all_fixed_controls_but_only_allows_setup_with_credentials(): void {
+		$GLOBALS['ran_booster_webhook_display_test_translations']['ran-booster'] = array(
+			'Set up webhook' => 'Configurer le webhook',
+		);
+		foreach ( array( false, true ) as $has_credential ) {
+			$facade = $this->createMock( WebhookAssistanceFacade::class );
+			$facade->method( 'target' )->willReturn(
+				new AssistanceTarget(
+					'fixture-provider',
+					'1234',
+					'owner/example',
+					'Example',
+					array( 'example/example.php' ),
+					array(
+						'automatic' => 0,
+						'manual'    => 1,
+						'disabled'  => 0,
+					),
+					'https://example.test/webhook'
+				)
+			);
+			$facade->method( 'credential_choices' )->willReturn(
+				$has_credential ? array(
+					array(
+						'id'         => 'credential-1',
+						'label'      => 'Saved credential',
+						'kind'       => 'token',
+						'destroy_on' => null,
+					),
+				) : array()
+			);
+			$store = $this->createMock( InstallationStore::class );
+			$store->method( 'find' )->willReturn( null );
+			$display = new WebhookDisplayModel( $facade, $store );
+			$panel   = $display->panel( 'fixture-provider', 'Fixture Forge', '1234', 'https://example.test/settings', null, null, true );
+
+			self::assertNotNull( $panel );
+			self::assertSame( array( 'setup', 'check', 'reconfigure', 'test', 'remove' ), array_column( $panel['operations'], 'key' ) );
+			self::assertSame( array( ! $has_credential, true, true, true, true ), array_column( $panel['operations'], 'disabled' ) );
+			self::assertSame( 'Configurer le webhook', $panel['operations'][0]['label'] );
+			foreach ( $panel['operations'] as $operation ) {
+				self::assertStringContainsString( 'nonce-for-' . hash( 'sha256', 'ran_booster_repository_webhook_' . $operation['key'] . '_fixture-provider_1234' ), $operation['url'] );
+			}
+		}
 	}
 
 	private function display(): WebhookDisplayModel {

@@ -171,8 +171,8 @@ msgstr ""
 #: views/extensions.php:138
 #: views/provider.php:348
 #: views/provider.php:368
-#: views/troubleshooting.php:238
-#: views/troubleshooting.php:266
+#: views/troubleshooting.php:237
+#: views/troubleshooting.php:265
 msgid "Status"
 msgstr ""
 
@@ -877,7 +877,7 @@ msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:79
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:241
-#: views/troubleshooting.php:266
+#: views/troubleshooting.php:265
 #: assets/ran-booster-portability.js:699
 msgid "Unknown"
 msgstr ""
@@ -5327,7 +5327,7 @@ msgstr ""
 #: views/attempts/detail.php:87
 #: views/attempts/index.php:61
 #: views/packages/index.php:506
-#: views/troubleshooting.php:178
+#: views/troubleshooting.php:177
 msgid "Provider"
 msgstr ""
 
@@ -6384,8 +6384,8 @@ msgid "with your version of Booster"
 msgstr ""
 
 #: views/extensions.php:112
-#: views/troubleshooting.php:240
-#: views/troubleshooting.php:268
+#: views/troubleshooting.php:239
+#: views/troubleshooting.php:267
 msgid "Details"
 msgstr ""
 
@@ -7741,7 +7741,7 @@ msgstr ""
 
 #: views/portability-review.php:126
 #: views/portability-review.php:202
-#: views/troubleshooting.php:192
+#: views/troubleshooting.php:191
 msgid "Saved credential"
 msgstr ""
 
@@ -8761,101 +8761,97 @@ msgid "Updater code"
 msgstr ""
 
 #: views/troubleshooting.php:142
-msgid "Selected runtime"
-msgstr ""
-
-#: views/troubleshooting.php:143
 msgid "Offered version"
 msgstr ""
 
-#: views/troubleshooting.php:144
+#: views/troubleshooting.php:143
 msgid "Last check (UTC)"
 msgstr ""
 
-#: views/troubleshooting.php:147
+#: views/troubleshooting.php:146
 msgid "Next check (UTC)"
 msgstr ""
 
-#: views/troubleshooting.php:150
+#: views/troubleshooting.php:149
 msgid "Marker version"
 msgstr ""
 
-#: views/troubleshooting.php:151
+#: views/troubleshooting.php:150
 msgid "Marker commit"
 msgstr ""
 
-#: views/troubleshooting.php:155
+#: views/troubleshooting.php:154
 msgid "Core updates"
 msgstr ""
 
-#: views/troubleshooting.php:158
+#: views/troubleshooting.php:157
 msgid "Technical details"
 msgstr ""
 
-#: views/troubleshooting.php:186
+#: views/troubleshooting.php:185
 msgid "Start with a provider to run a general health check. The optional fields below check only credential and repository access; they do not scope Push-to-Deploy delivery results."
 msgstr ""
 
-#: views/troubleshooting.php:189
+#: views/troubleshooting.php:188
 msgid "Check credential or repository access (optional)"
 msgstr ""
 
-#: views/troubleshooting.php:192
-#: views/troubleshooting.php:217
+#: views/troubleshooting.php:191
+#: views/troubleshooting.php:216
 msgid "(optional)"
 msgstr ""
 
-#: views/troubleshooting.php:194
+#: views/troubleshooting.php:193
 msgid "No saved credential (check public access)"
 msgstr ""
 
-#: views/troubleshooting.php:213
+#: views/troubleshooting.php:212
 msgid "Choose a saved credential only to check private-repository access. This is a credential reference, not the credential secret; Booster never displays the credential secret here."
 msgstr ""
 
-#: views/troubleshooting.php:214
+#: views/troubleshooting.php:213
 msgid "The active provider can read every credential saved under its provider code, not only the selected diagnostic profile. Booster does not authenticate a third-party publisher."
 msgstr ""
 
-#: views/troubleshooting.php:217
+#: views/troubleshooting.php:216
 msgid "Repository"
 msgstr ""
 
-#: views/troubleshooting.php:219
+#: views/troubleshooting.php:218
 msgid "Enter a repository only when diagnosing a particular access issue. Without a saved credential, Booster checks whether it is publicly available."
 msgstr ""
 
-#: views/troubleshooting.php:224
+#: views/troubleshooting.php:223
 msgid "The full check makes temporary local marker files and up to five provider requests. Markers are removed immediately. Booster does not install packages, trigger webhooks or save a report."
 msgstr ""
 
-#: views/troubleshooting.php:225
+#: views/troubleshooting.php:224
 msgid "Run full diagnostics"
 msgstr ""
 
-#: views/troubleshooting.php:231
+#: views/troubleshooting.php:230
 msgid "Diagnostics finished with partial results."
 msgstr ""
 
-#: views/troubleshooting.php:236
+#: views/troubleshooting.php:235
 msgid "RAN Booster diagnostic results"
 msgstr ""
 
-#: views/troubleshooting.php:239
-#: views/troubleshooting.php:267
+#: views/troubleshooting.php:238
+#: views/troubleshooting.php:266
 msgid "Check"
 msgstr ""
 
-#: views/troubleshooting.php:241
-#: views/troubleshooting.php:269
+#: views/troubleshooting.php:240
+#: views/troubleshooting.php:268
 msgid "Action"
 msgstr ""
 
-#: views/troubleshooting.php:277
+#: views/troubleshooting.php:276
 msgid "Support report"
 msgstr ""
 
-#: views/troubleshooting.php:279
+#: views/troubleshooting.php:278
 msgid "This report contains only the safe, displayed result fields. Review it before sharing."
 msgstr ""
 

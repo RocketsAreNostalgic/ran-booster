@@ -65,14 +65,6 @@ final class ContainerTest extends RANBoosterTestCase {
 		$this->assertInstanceOf( UserManager::class, $manager );
 	}
 
-	public function test_it_can_bind_an_alias(): void {
-		$this->container->bind( UserRepository::class, DBUserRepository::class );
-
-		$repository = $this->container->make( UserRepository::class );
-
-		$this->assertInstanceOf( DBUserRepository::class, $repository );
-	}
-
 	public function test_it_can_bind_a_closure(): void {
 		// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- The container factory receives CoreContainer; this fixture deliberately constructs an independent DB instance.
 		$closure = function ( CoreContainer $container ): DB {

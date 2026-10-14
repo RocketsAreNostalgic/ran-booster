@@ -83,6 +83,19 @@ final class DeploymentRequestTest extends TestCase {
 		self::assertNull( DeploymentRequest::from_json( $this->request()->to_json() )->adoption_token );
 	}
 
+	public function test_bound_empty_installed_identifier_is_rejected_at_construction(): void {
+		$this->expectException( InvalidArgumentException::class );
+		new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::MANUAL, 1, null, '', 'gh:42:11111111-1111-4111-8111-111111111111' );
+	}
+
+	public function test_bound_empty_installed_identifier_is_rejected_from_stored_json(): void {
+		$request = new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::MANUAL, 1, null, 'example/main.php', 'gh:42:11111111-1111-4111-8111-111111111111' );
+		$json    = str_replace( '"installed_identifier":"example/main.php"', '"installed_identifier":""', $request->to_json() );
+
+		$this->expectException( InvalidArgumentException::class );
+		DeploymentRequest::from_json( $json );
+	}
+
 	public function test_duplicate_lifetime_keys_are_not_canonical(): void {
 		$token   = 'gh:42:11111111-1111-4111-8111-111111111111';
 		$request = new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::MANUAL, 1, null, 'example/main.php', $token );

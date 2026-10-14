@@ -381,10 +381,6 @@ final class WebhookDisplayModel {
 			: ( $this->is_successful_result( $code ) ? 'notice-success' : 'notice-error' );
 	}
 
-	public function can_respond_inline_to_failure( string $code ): bool {
-		return in_array( $code, array( 'forbidden', 'invalid_request', 'invalid_token', 'operation_unauthorized', 'repository_identity_unconfirmed', 'operation_busy', 'setup_failed', 'setup_compensated', 'assessment_insufficient', 'assessment_stale', 'assessment_unsupported', 'assessment_unavailable' ), true );
-	}
-
 	/** @return array{callback_url:string,repositories:array<string,array{eligible:bool}>}|null */
 	private function readiness( string $provider_code ): ?array {
 		try {

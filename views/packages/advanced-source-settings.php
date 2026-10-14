@@ -1,5 +1,11 @@
 <?php // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Included view bindings are supplied by the caller; declarations and hooks still require prefixes.
 
+/**
+ * Normalized shape supplied by PackagePagePresenter through the package template.
+ *
+ * @var array{advanced_summary_projection?: array{heading: string, badges: list<array{label: string}>, status: string}|null}|null $package_source
+ */
+
 defined( 'WPINC' ) || die;
 
 $package_advanced_summary                    = isset( $package_advanced_summary ) && is_string( $package_advanced_summary )
@@ -9,27 +15,17 @@ $package_advanced_open                       = isset( $package_advanced_open ) &
 $package_advanced_body                       = isset( $package_advanced_body ) && is_string( $package_advanced_body )
 	? $package_advanced_body
 	: '';
-$package_advanced_summary_projection         = isset( $package_source ) && is_array( $package_source['advanced_summary_projection'] ?? null )
-	? $package_source['advanced_summary_projection']
-	: null;
-$package_advanced_summary_projection_heading = null === $package_advanced_summary_projection || ! is_string( $package_advanced_summary_projection['heading'] ?? null )
-	? null
-	: (string) $package_advanced_summary_projection['heading'];
+$package_advanced_summary_projection         = $package_source['advanced_summary_projection'] ?? null;
+$package_advanced_summary_projection_heading = $package_advanced_summary_projection['heading'] ?? null;
 $package_advanced_summary_projection_badges  = array();
-if ( is_array( $package_advanced_summary_projection['badges'] ?? null ) ) {
-	foreach ( $package_advanced_summary_projection['badges'] as $package_advanced_summary_projection_badge ) {
-		if ( is_array( $package_advanced_summary_projection_badge )
-			&& is_string( $package_advanced_summary_projection_badge['label'] ?? null )
-			&& '' !== trim( (string) $package_advanced_summary_projection_badge['label'] ) ) {
-			$package_advanced_summary_projection_badges[] = array(
-				'label' => trim( (string) $package_advanced_summary_projection_badge['label'] ),
-			);
-		}
+foreach ( $package_advanced_summary_projection['badges'] ?? array() as $package_advanced_summary_projection_badge ) {
+	if ( '' !== trim( $package_advanced_summary_projection_badge['label'] ) ) {
+		$package_advanced_summary_projection_badges[] = array(
+			'label' => trim( $package_advanced_summary_projection_badge['label'] ),
+		);
 	}
 }
-$package_advanced_summary_projection_status = is_string( $package_advanced_summary_projection['status'] ?? null )
-	? trim( (string) $package_advanced_summary_projection['status'] )
-	: '';
+$package_advanced_summary_projection_status = trim( $package_advanced_summary_projection['status'] ?? '' );
 if ( '' === $package_advanced_summary_projection_heading
 	|| ( 0 === count( $package_advanced_summary_projection_badges ) && '' === $package_advanced_summary_projection_status ) ) {
 	$package_advanced_summary_projection = null;

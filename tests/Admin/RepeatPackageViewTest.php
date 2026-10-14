@@ -27,11 +27,11 @@ final class RepeatPackageViewTest extends TestCase {
 		unset( $GLOBALS['ran_booster_package_view_multisite'], $GLOBALS['ran_booster_dashboard_test_multisite'] );
 	}
 
-	public function test_incomplete_advanced_summary_projection_uses_plain_summary(): void {
-		foreach ( array( null, false, 17, array() ) as $heading ) {
+	public function test_empty_advanced_summary_projection_uses_plain_summary(): void {
+		foreach ( array( null, '' ) as $heading ) {
 			$package_advanced_summary = 'Branch fallback';
 			$package_source           = array(
-				'advanced_summary_projection' => array(
+				'advanced_summary_projection' => null === $heading ? null : array(
 					'heading' => $heading,
 					'badges'  => array( array( 'label' => 'Release badge' ) ),
 					'status'  => 'Existing status',

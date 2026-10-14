@@ -6746,13 +6746,13 @@ msgstr ""
 msgid "Learn how Booster manages credentials and keys"
 msgstr ""
 
-#: views/packages/advanced-source-settings.php:7
+#: views/packages/advanced-source-settings.php:13
 #: views/packages/create.php:92
 #: views/packages/edit.php:138
 msgid "Branch · provider default"
 msgstr ""
 
-#: views/packages/advanced-source-settings.php:41
+#: views/packages/advanced-source-settings.php:37
 msgid "Advanced settings"
 msgstr ""
 

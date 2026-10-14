@@ -47,24 +47,6 @@ abstract class AbstractPackageRepository {
 		return $packages;
 	}
 
-	public function unlink( mixed $identifier ): PackageMutationResult {
-		RuntimeSupport::assert_managed_operations_allowed();
-
-		global $wpdb;
-
-		$this->require_storage_support( PackageStorageOperation::DELETE );
-		$model  = new PackageModel( array( 'package' => $identifier ) );
-		$result = $wpdb->delete(
-			ran_booster_table_name(),
-			array(
-				'package'      => $model->package,
-				'package_type' => $this->package_type(),
-			)
-		);
-
-		return $this->verify_package_deletion( $model->package, $result );
-	}
-
 	/** @return array{id:string,package:string,type:int,adoption_token:string,source:string,digest:string} */
 	public function recovery_record( string $identifier ): array {
 		$this->require_recovery_storage();
@@ -172,6 +154,8 @@ abstract class AbstractPackageRepository {
 	 * This intentionally does not hydrate or clean the row. Callers that need
 	 * the managed package must still use their type-specific reader so malformed
 	 * and duplicate records remain distinguishable.
+	 *
+	 * @phpstan-impure
 	 */
 	public function has_management_record( mixed $identifier ): bool {
 		$model = new PackageModel( array( 'package' => $identifier ) );

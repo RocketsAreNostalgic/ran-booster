@@ -232,7 +232,14 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 
 	public function test_lowest_storage_and_attempt_mutation_seams_reject_direct_calls(): void {
 		$entry_points = array(
-			static fn (): mixed => ( new PluginRepository() )->unlink( 'example/example.php' ),
+			static fn (): mixed => ( new PluginRepository() )->recover_unlink(
+				'example/example.php',
+				'gh:repository-id:12345678-1234-4234-8234-123456789abc',
+				'unused-digest',
+				static function (): void {
+				self::fail( 'Unsupported runtime reached the storage guard.' );
+				}
+			),
 			fn (): mixed => $this->blank( DeploymentAttemptRepository::class )->claim_next(),
 			function (): void {
 				$this->blank( Database::class )->maybe_upgrade();

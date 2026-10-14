@@ -755,7 +755,7 @@ final class RemovalPluginRepository extends PluginRepository {
 			throw new \RuntimeException( 'The management record changed.' );
 		}
 		$guard();
-		return $this->unlink( $identifier );
+		return $this->record_recovery_unlink( $identifier );
 	}
 
 	public bool $installed      = true;
@@ -786,7 +786,7 @@ final class RemovalPluginRepository extends PluginRepository {
 	}
 
 	/** @param string $file */
-	public function unlink( $file ): PackageMutationResult {
+	public function record_recovery_unlink( $file ): PackageMutationResult {
 		unset( $file );
 		if ( $this->unlink_failure ) {
 			return PackageMutationResult::failed(
@@ -824,7 +824,7 @@ final class RemovalThemeRepository extends ThemeRepository {
 			throw new \RuntimeException( 'The management record changed.' );
 		}
 		$guard();
-		return $this->unlink( $identifier );
+		return $this->record_recovery_unlink( $identifier );
 	}
 
 	public bool $installed = true;
@@ -854,7 +854,7 @@ final class RemovalThemeRepository extends ThemeRepository {
 	}
 
 	/** @param string $stylesheet */
-	public function unlink( $stylesheet ): PackageMutationResult {
+	public function record_recovery_unlink( $stylesheet ): PackageMutationResult {
 		unset( $stylesheet );
 		$this->unlinked = true;
 

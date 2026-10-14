@@ -2663,17 +2663,27 @@ final class DashboardIndexRoutingTest extends TestCase {
 		unset( $GLOBALS['ran_booster_storage_test_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ] );
 	}
 
-	public function test_deployment_history_filters_the_exact_installed_plugin_identifier(): void {
+	public function test_activity_history_filters_the_exact_installed_plugin_identifier(): void {
+		require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
+		$GLOBALS['ran_booster_activity_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ] = '1';
 		$database = new DashboardActivityWpdb();
-		foreach ( array( 'example/first.php', 'example/second.php' ) as $index => $identifier ) {
-			$row                 = DashboardActivityWpdb::attempt( $index + 1, 'succeeded' );
-			$row['request_json'] = ( new DeploymentRequest( 'org/example', null, false, 'main', 'example', null, \RAN\Deployment\DeploymentPolicy::AUTOMATIC, 1, installed_identifier: $identifier, adoption_token: 'gh:repository-1:123e4567-e89b-42d3-a456-426614174000' ) )->to_json();
-			$database->rows[]    = $row;
+		foreach ( array( 'example/first.php', 'example/second.php', 'example/Second.php' ) as $index => $identifier ) {
+			$database->activity_rows[] = array(
+				'id'               => $index + 1,
+				'sort_at'          => '2026-10-12 17:00:00',
+				'status'           => 'succeeded',
+				'subject_type'     => 'plugin',
+				'subject_identity' => $identifier,
+				'correlation'      => str_repeat( 'a', 32 ),
+			);
 		}
-		$records = $this->deployment_attempts( $database )->activity_history( array( 'subject_identity' => 'example/second.php' ), null );
-		self::assertCount( 1, $records );
-		self::assertSame( 'example/second.php', $records[0]->get_request()->installed_identifier );
-		self::assertStringNotContainsString( "`package_slug` = 'example/second.php'", implode( "\n", $database->reads ) );
+		$_GET = array( 'activity_subject_identity' => 'example/second.php' );
+		$page = ( new DeploymentAdminPresenter( attempts: $this->deployment_attempts( $database ), activity_store: new \RAN\Activity\ActivityStore( $database, 'wp_ran_booster_activity' ) ) )->activity();
+		self::assertFalse( $page['unavailable'] );
+		self::assertCount( 1, $page['items'] );
+		self::assertSame( 'example/second.php', $page['items'][0]['subject_identity'] );
+		self::assertStringContainsString( "BINARY subject_identity = 'example/second.php'", implode( "\n", $database->reads ) );
+		self::assertStringNotContainsString( 'package_type IN', implode( "\n", $database->reads ) );
 	}
 
 	public function test_missing_activity_store_does_not_fall_back_to_deployment_only_history(): void {
@@ -3117,6 +3127,9 @@ final class DashboardActivityWpdb implements \RAN\Storage\DeploymentWriteConnect
 		$this->reads[] = $query;
 		if ( str_contains( $query, 'FROM wp_ran_booster_activity ' ) ) {
 			$rows = $this->activity_rows;
+			if ( preg_match( "/BINARY subject_identity = '([^']+)'/", $query, $filter ) ) {
+				$rows = array_values( array_filter( $rows, static fn ( array $row ): bool => $row['subject_identity'] === $filter[1] ) );
+			}
 			if ( preg_match( '/sort_at = \'([^\']+)\' AND id < (\d+)/', $query, $boundary ) ) {
 				$rows = array_values( array_filter( $rows, static fn ( array $row ): bool => $row['sort_at'] < $boundary[1] || ( $row['sort_at'] === $boundary[1] && $row['id'] < (int) $boundary[2] ) ) );
 			}

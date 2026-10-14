@@ -386,14 +386,12 @@ resolver, durable deployment request and tests. Method enforcement includes
 enforcement remains at 166 files. The `resolve()` null-only `legacyNull`
 parameter, constants, integer bounds and failure message remain unchanged.
 
-The internal webhook-history cohort uses `WebhookHistory::for_package()`,
-`WebhookHistory::from_record()` and `WebhookHistoryView::to_array()` throughout
-its owned callers and tests. Method enforcement includes both history classes,
-expanding the scope from 170 to 172 files; variable enforcement is unchanged by
-this cohort. Constructor/promoted parameter names and serialized history keys
-remain intact. The separate authority resolver's `forPackage()` and foreign
-readiness `toArray()` contracts retain their existing names. Historical records
-remain observations, not live readiness or restored update authority.
+Webhook history presentation reads `InstallationRecord` directly. The redundant
+internal `WebhookHistory` and `WebhookHistoryView` types were removed under #360;
+no additional history representation or persisted schema was introduced.
+Historical records remain observations, not live readiness or restored update
+authority. Exact package authority stays with
+`ManagedPackageWebhookAuthorityResolver::for_package()`.
 
 
 The internal-variable cohort adds variable enforcement for Booster,
@@ -454,7 +452,7 @@ Validation expressions and error messages, hook names, metadata keys and rendere
 HTML remain unchanged. Connected callers use snake_case methods without aliases.
 
 The webhook InstallationRecord cohort migrates 17 methods and their connected
-calls in WordPressInstallationStore, WebhookOperationCoordinator, WebhookHistory,
+calls in WordPressInstallationStore, WebhookOperationCoordinator,
 WebhookDisplayModel and RepositoryWebhookManagementControls. Schema 4, serialized
 keys, storage identity, profile revisions, the unknown-hook sentinel, immutable
 copies, validation/errors and rendered output are unchanged; no aliases are added.

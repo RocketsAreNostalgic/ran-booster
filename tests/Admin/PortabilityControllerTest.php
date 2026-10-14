@@ -46,6 +46,8 @@ use RuntimeException;
 use RAN\Tests\Portability\TemporaryCredentialProvider;
 
 require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
+require_once __DIR__ . '/../Support/PackageOperationGlobalWordPressFunctions.php';
+require_once __DIR__ . '/../Support/PackageOperationWordPressFunctions.php';
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class PortabilityControllerTest extends TestCase {
@@ -186,24 +188,30 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertNull( $method->invoke( $this->controller() ) );
 	}
 
-	public function test_target_credential_ids_keep_numeric_key_and_value_validation(): void {
-		$_POST['target_credentials'] = array(
-			0         => 'saved-profile',
-			'01'      => 'second-profile',
-			'invalid' => 'ignored',
-			128       => 'out-of-range',
-			2         => array( 'malformed' ),
-			3         => str_repeat( 'x', 129 ),
-		);
+	public function test_target_credential_ids_accept_only_explicit_canonical_choices(): void {
 		$method                      = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'target_credential_ids' );
-
+		$_POST['target_credentials'] = array(
+			0   => 'saved-profile',
+			127 => 'last-profile',
+			2   => '',
+		);
 		self::assertSame(
 			array(
-				0 => 'saved-profile',
-				1 => 'second-profile',
+				0   => 'saved-profile',
+				127 => 'last-profile',
 			),
 			$method->invoke( $this->controller() )
 		);
+
+		foreach ( array( 'not-an-array', array( '01' => 'profile' ), array( 128 => 'profile' ), array( 0 => array( 'profile' ) ), array( 0 => '<profile>' ), array( 0 => str_repeat( 'x', 65 ) ) ) as $invalid ) {
+			$_POST['target_credentials'] = $invalid;
+			try {
+				$method->invoke( $this->controller() );
+				self::fail( 'Malformed explicit credentials must not silently become anonymous access.' );
+			} catch ( InvalidArgumentException ) {
+				$this->addToAssertionCount( 1 );
+			}
+		}
 	}
 
 	public function test_credential_decision_parser_accepts_only_the_closed_ordinal_shape(): void {
@@ -657,6 +665,111 @@ final class PortabilityControllerTest extends TestCase {
 	public static function package_type_provider(): iterable {
 		yield 'plugin' => array( 'plugin', 'example/example.php' );
 		yield 'theme' => array( 'theme', 'example-theme' );
+	}
+
+	#[DataProvider( 'repository_privacy_and_presence' )]
+	public function test_package_only_saved_choice_survives_preview_and_public_apply( bool $is_private, bool $installed ): void {
+		$profiles = array(
+			'saved-profile' => array(
+				'id'            => 'saved-profile',
+				'provider'      => 'gh',
+				'label'         => 'Saved <PAT>',
+				'kind'          => 'classic',
+				'configuration' => array(),
+				'source'        => 'file',
+				'immutable'     => false,
+				'configured'    => true,
+				'self_destruct' => false,
+				'destroy_on'    => null,
+			),
+		);
+		$secrets  = $this->createStub( SecretsFile::class );
+		$secrets->method( 'credential_profiles' )->willReturnCallback(
+			static function () use ( &$profiles ): array {
+				return $profiles;
+			}
+		);
+		$provider = $this->createStubForIntersectionOfInterfaces( array( \RAN\RepositoryProvider\RepositoryProvider::class, \RAN\RepositoryProvider\ProviderCredentialPolicySupplier::class ) );
+		$policy   = $this->createStub( \RAN\RepositoryProvider\ProviderCredentialPolicy::class );
+		$policy->method( 'get_provider' )->willReturn( \RAN\RepositoryProvider\ProviderCode::parse( 'gh' ) );
+		$provider->method( 'get_credential_policy' )->willReturn( $policy );
+		$provider->method( 'get_metadata' )->willReturn( new \RAN\RepositoryProvider\ProviderMetadata( \RAN\RepositoryProvider\ProviderCode::parse( 'gh' ), 'GitHub', 'https://example.test/', 'Owner', new \RAN\RepositoryProvider\Admin\ProviderAdminMetadata( array( new \RAN\RepositoryProvider\Admin\CredentialKindMetadata( 'classic', 'Classic PAT', 'Token' ) ), array() ) ) );
+		$provider->method( 'resolve_repository' )->willReturnCallback(
+			static function ( \RAN\RepositoryProvider\RepositoryLookupRequest $request ) use ( $is_private ): \RAN\RepositoryProvider\RepositoryDescriptor {
+				if ( null === $request->credential_id ) {
+					throw new RuntimeException( 'Repository access failed.', 404 );
+				}
+				return new \RAN\RepositoryProvider\RepositoryDescriptor( \RAN\RepositoryProvider\ProviderCode::parse( 'gh' ), 'owner/example', 'example', 'repository-id', $is_private, 'main', $request->credential_id );
+			}
+		);
+		$registry = new ProviderRegistry( array( $provider ) );
+		$plugins  = $this->createStub( PluginRepository::class );
+		$plugins->method( 'is_installed' )->willReturn( $installed );
+		$plugins->method( 'has_management_record' )->willReturn( false );
+		$themes = $this->createStub( ThemeRepository::class );
+		$target = $this->managed_plugin( DeploymentPolicy::DISABLED, is_private: $is_private, credential_id: 'saved-profile' );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $target );
+		$plugins->method( 'from_slug' )->willReturn( $target );
+		$plugins->method( 'installed_plugin_from_file' )->willReturn( $target );
+		$plugins->method( 'adopt' )->willReturnCallback(
+			static function ( Plugin $package ) use ( $is_private ): PackageMutationResult {
+				self::assertSame( 'saved-profile', $package->get_credential_id() );
+				self::assertSame( $is_private, $package->is_private() );
+				self::assertSame( DeploymentPolicy::DISABLED, $package->get_deployment_policy() );
+				return PackageMutationResult::changed( PackageStorageOperation::INSERT );
+			}
+		);
+		$coordinator = $this->createMock( \RAN\Deployment\DeploymentCoordinator::class );
+		$coordinator->expects( $installed ? self::never() : self::once() )->method( 'execute_manual' )->willReturnCallback(
+			static function ( \RAN\PackageOperation $operation ) use ( $is_private ): array {
+				self::assertSame( 'saved-profile', $operation->credential_id );
+				self::assertSame( $is_private, $operation->is_private );
+				self::assertSame( DeploymentPolicy::DISABLED, $operation->deployment_policy );
+				self::assertFalse( $operation->link_only );
+				self::assertSame( 'gh', $operation->provider_code );
+				self::assertSame( 'repository-id', $operation->provider_repository_id );
+				self::assertSame( 'owner/example', $operation->repository );
+				self::assertSame( 'main', $operation->branch );
+				self::assertNull( $operation->subdirectory );
+				return array(
+					'status'         => 'succeeded',
+					'correlation_id' => str_repeat( 'a', 32 ),
+					'outcome_code'   => DeploymentOutcome::CODE_DEPLOYED,
+				);
+			}
+		);
+		$lock = $this->createStub( \RAN\WordPress\WordPressUpdaterLock::class );
+		$lock->method( 'acquire' )->willReturn( 'test-lock' );
+		$lock->method( 'release' )->willReturn( true );
+		$operations = new PackageOperationService( $plugins, $themes, $coordinator, ( new ReflectionClass( \RAN\PackageRemoval\PackageRemovalService::class ) )->newInstanceWithoutConstructor(), $lock, new \RAN\Storage\RepositorySourceGuard( new \RAN\Tests\Support\RepositorySourceGuardDatabase(), $this->createStub( \RAN\Storage\Database::class ) ) );
+
+		$application = new PortabilityApplicationService( new BlueprintReviewer( $plugins, $themes ), new BlueprintRepositoryVerifier( $registry, $secrets ), $operations, $secrets );
+		$controller  = new PortabilityController( ( new ReflectionClass( ManagedPackageBlueprintExporter::class ) )->newInstanceWithoutConstructor(), new BlueprintArchive(), $application, new ProviderSettingsPresenter( $registry, $secrets, new \RAN\Storage\CredentialUsageReader(), new \RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore(), new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore() ) );
+		$blueprint   = new PackageBlueprint( array( new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', 'main', null ) ) );
+		$review      = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'review_blueprint' );
+		$initial     = $review->invoke( $controller, $blueprint, array(), array() );
+		self::assertStringContainsString( 'data-portability-action="blocked"', $initial );
+		self::assertStringContainsString( 'data-portability-target-credential', $initial );
+		self::assertStringNotContainsString( 'selected="selected"', $initial );
+		$html = $review->invoke( $controller, $blueprint, array(), array( 0 => 'saved-profile' ) );
+		self::assertStringContainsString( '<option value="saved-profile" selected="selected">Saved &lt;PAT&gt;</option>', $html );
+		$result = $application->apply( $blueprint, 0, $installed ? 'adopt' : 'install', array(), 'saved-profile', $installed, true );
+		self::assertSame( $installed ? 'adopted' : 'installed', $result['status'] );
+		self::assertSame( 'target_selected', $result['credential_state'] );
+		$profiles = array();
+		$stale    = $application->apply( $blueprint, 0, $installed ? 'adopt' : 'install', array(), 'saved-profile', $installed, true );
+		self::assertSame( 'skipped', $stale['status'] );
+		$stale_html = $review->invoke( $controller, $blueprint, array(), array( 0 => 'saved-profile' ) );
+		self::assertStringContainsString( 'value="saved-profile" selected>Previously selected credential is unavailable.', $stale_html );
+		self::assertStringContainsString( 'data-portability-action="blocked"', $stale_html );
+	}
+
+	/** @return iterable<string, array{bool,bool}> */
+	public static function repository_privacy_and_presence(): iterable {
+		yield 'public installation' => array( false, false );
+		yield 'private installation' => array( true, false );
+		yield 'public adoption' => array( false, true );
+		yield 'private adoption' => array( true, true );
 	}
 
 	public function test_public_repository_input_keeps_its_credential_association(): void {

@@ -111,7 +111,7 @@ $has_credential_decisions    = array() !== array_filter(
 				<div class="ran-booster-portability__credential-actions">
 					<div class="ran-booster-portability__credential-action">
 						<label>
-							<input type="radio" name="credential_decisions[<?php echo esc_attr( (string) $ordinal ); ?>][action]" value="import" data-portability-credential-action data-portability-credential-refresh aria-describedby="<?php echo esc_attr( $description_id ); ?>" hx-trigger="change delay:150ms" hx-include="[data-portability-preview], [data-portability-credential-action]:checked, [data-portability-credential-target]:not(:disabled)" hx-encoding="multipart/form-data" hx-target="#ran-booster-portability-package-review" hx-select="#ran-booster-portability-package-review" hx-swap="outerHTML show:none" hx-sync="[data-portability-preview]:replace" hx-indicator="#ran-booster-portability-review-progress"<?php checked( 'import', $credential_action ); ?>>
+							<input type="radio" name="credential_decisions[<?php echo esc_attr( (string) $ordinal ); ?>][action]" value="import" data-portability-credential-action data-portability-credential-refresh aria-describedby="<?php echo esc_attr( $description_id ); ?>" hx-trigger="change delay:150ms" hx-include="[data-portability-preview], [data-portability-credential-action]:checked, [data-portability-credential-target]:not(:disabled), [data-portability-target-credential]" hx-encoding="multipart/form-data" hx-target="#ran-booster-portability-package-review" hx-select="#ran-booster-portability-package-review" hx-swap="outerHTML show:none" hx-sync="[data-portability-preview]:replace" hx-indicator="#ran-booster-portability-review-progress"<?php checked( 'import', $credential_action ); ?>>
 							<span><strong><?php esc_html_e( 'Import this credential', 'ran-booster' ); ?></strong><span class="description"><?php esc_html_e( 'Add the protected credential from this Blueprint to this site.', 'ran-booster' ); ?></span></span>
 						</label>
 					</div>
@@ -124,7 +124,7 @@ $has_credential_decisions    = array() !== array_filter(
 						<?php if ( array() !== $target_choices ) : ?>
 							<div class="ran-booster-portability__credential-target">
 								<label for="<?php echo esc_attr( $target_id ); ?>"><?php esc_html_e( 'Saved credential', 'ran-booster' ); ?></label>
-								<select id="<?php echo esc_attr( $target_id ); ?>" name="credential_decisions[<?php echo esc_attr( (string) $ordinal ); ?>][target_id]" data-portability-credential-target data-portability-credential-refresh hx-trigger="change delay:150ms" hx-include="[data-portability-preview], [data-portability-credential-action]:checked, [data-portability-credential-target]:not(:disabled)" hx-encoding="multipart/form-data" hx-target="#ran-booster-portability-package-review" hx-select="#ran-booster-portability-package-review" hx-swap="outerHTML show:none" hx-sync="[data-portability-preview]:replace" hx-indicator="#ran-booster-portability-review-progress"<?php disabled( 'target' !== $credential_action ); ?>>
+								<select id="<?php echo esc_attr( $target_id ); ?>" name="credential_decisions[<?php echo esc_attr( (string) $ordinal ); ?>][target_id]" data-portability-credential-target data-portability-credential-refresh hx-trigger="change delay:150ms" hx-include="[data-portability-preview], [data-portability-credential-action]:checked, [data-portability-credential-target]:not(:disabled), [data-portability-target-credential]" hx-encoding="multipart/form-data" hx-target="#ran-booster-portability-package-review" hx-select="#ran-booster-portability-package-review" hx-swap="outerHTML show:none" hx-sync="[data-portability-preview]:replace" hx-indicator="#ran-booster-portability-review-progress"<?php disabled( 'target' !== $credential_action ); ?>>
 									<option value=""><?php esc_html_e( 'Choose a saved credential', 'ran-booster' ); ?></option>
 									<?php foreach ( $target_choices as $choice ) : ?>
 										<?php if ( is_array( $choice ) ) : ?>
@@ -140,7 +140,7 @@ $has_credential_decisions    = array() !== array_filter(
 					<?php endif; ?>
 					<div class="ran-booster-portability__credential-action">
 						<label>
-							<input type="radio" name="credential_decisions[<?php echo esc_attr( (string) $ordinal ); ?>][action]" value="leave" data-portability-credential-action data-portability-credential-refresh aria-describedby="<?php echo esc_attr( $description_id ); ?>" hx-trigger="change delay:150ms" hx-include="[data-portability-preview], [data-portability-credential-action]:checked, [data-portability-credential-target]:not(:disabled)" hx-encoding="multipart/form-data" hx-target="#ran-booster-portability-package-review" hx-select="#ran-booster-portability-package-review" hx-swap="outerHTML show:none" hx-sync="[data-portability-preview]:replace" hx-indicator="#ran-booster-portability-review-progress"<?php checked( 'leave', $credential_action ); ?>>
+							<input type="radio" name="credential_decisions[<?php echo esc_attr( (string) $ordinal ); ?>][action]" value="leave" data-portability-credential-action data-portability-credential-refresh aria-describedby="<?php echo esc_attr( $description_id ); ?>" hx-trigger="change delay:150ms" hx-include="[data-portability-preview], [data-portability-credential-action]:checked, [data-portability-credential-target]:not(:disabled), [data-portability-target-credential]" hx-encoding="multipart/form-data" hx-target="#ran-booster-portability-package-review" hx-select="#ran-booster-portability-package-review" hx-swap="outerHTML show:none" hx-sync="[data-portability-preview]:replace" hx-indicator="#ran-booster-portability-review-progress"<?php checked( 'leave', $credential_action ); ?>>
 							<span><strong><?php esc_html_e( 'Leave unchanged', 'ran-booster' ); ?></strong><span class="description"><?php esc_html_e( 'Do not install, adopt or import this repository credential.', 'ran-booster' ); ?></span></span>
 						</label>
 					</div>
@@ -189,7 +189,36 @@ $has_credential_decisions    = array() !== array_filter(
 					data-portability-credential-ordinal="<?php echo esc_attr( (string) $credential_ordinal ); ?>"<?php endif; ?> data-portability-package-name="<?php echo esc_attr( $package_name ); ?>" data-portability-package-type="<?php echo esc_attr( (string) ( $row['type'] ?? __( 'Package', 'ran-booster' ) ) ); ?>" data-portability-package-identifier="<?php echo esc_attr( (string) ( $row['identifier'] ?? '' ) ); ?>">
 					<td><strong><?php echo esc_html( $row['name'] ?? '' ); ?></strong><code><?php echo esc_html( $row['identifier'] ?? '' ); ?></code></td>
 					<td><?php echo esc_html( $row['type'] ?? '' ); ?></td>
-					<td><span class="ran-booster-portability__status ran-booster-portability__status--<?php echo esc_attr( $review_action ); ?>"><?php echo esc_html( $portability_action_labels[ $review_action ][0] ); ?></span><span class="ran-booster-portability__status-detail"><?php echo esc_html( $row['reason'] ?? '' ); ?></span></td>
+					<td><span class="ran-booster-portability__status ran-booster-portability__status--<?php echo esc_attr( $review_action ); ?>"><?php echo esc_html( $portability_action_labels[ $review_action ][0] ); ?></span><span class="ran-booster-portability__status-detail"><?php echo esc_html( $row['reason'] ?? '' ); ?></span>
+					<?php if ( null === $credential_ordinal && is_array( $row['credential'] ?? null ) ) : ?>
+						<?php
+						$target_credential_id = 'ran-booster-portability-target-' . $row_index;
+						$selected_target_id   = (string) ( $row['credential']['selected_id'] ?? '' );
+						$target_choices       = is_array( $row['credential']['choices'] ?? null ) ? array_slice( $row['credential']['choices'], 0, 50 ) : array();
+						?>
+						<div class="ran-booster-portability__credential-target">
+							<label for="<?php echo esc_attr( $target_credential_id ); ?>"><?php esc_html_e( 'Saved credential', 'ran-booster' ); ?></label>
+							<?php if ( array() !== $target_choices || '' !== $selected_target_id ) : ?>
+								<select id="<?php echo esc_attr( $target_credential_id ); ?>" name="target_credentials[<?php echo esc_attr( (string) $row_index ); ?>]" data-portability-target-credential data-portability-row="<?php echo esc_attr( (string) $row_index ); ?>" data-portability-credential-refresh hx-trigger="change delay:150ms" hx-include="[data-portability-preview], [data-portability-credential-action]:checked, [data-portability-credential-target]:not(:disabled), [data-portability-target-credential]" hx-encoding="multipart/form-data" hx-target="#ran-booster-portability-package-review" hx-select="#ran-booster-portability-package-review" hx-swap="outerHTML show:none" hx-sync="[data-portability-preview]:replace" hx-indicator="#ran-booster-portability-review-progress">
+									<option value=""><?php esc_html_e( 'Choose a saved credential', 'ran-booster' ); ?></option>
+									<?php if ( '' !== $selected_target_id && ! in_array( $selected_target_id, array_column( $target_choices, 'id' ), true ) ) : ?>
+										<option value="<?php echo esc_attr( $selected_target_id ); ?>" selected><?php esc_html_e( 'Previously selected credential is unavailable. Choose another credential.', 'ran-booster' ); ?></option>
+									<?php endif; ?>
+									<?php foreach ( $target_choices as $choice ) : ?>
+										<?php if ( is_array( $choice ) ) : ?>
+											<option value="<?php echo esc_attr( (string) ( $choice['id'] ?? '' ) ); ?>"<?php selected( $selected_target_id, (string) ( $choice['id'] ?? '' ) ); ?>><?php echo esc_html( (string) ( $choice['label'] ?? '' ) ); ?></option>
+										<?php endif; ?>
+									<?php endforeach; ?>
+								</select>
+							<?php else : ?>
+								<p class="description ran-booster-portability__credential-unavailable"><?php esc_html_e( 'No saved credentials are available for this provider.', 'ran-booster' ); ?></p>
+							<?php endif; ?>
+							<?php if ( ! empty( $row['credential']['settings_url'] ) ) : ?>
+								<a href="<?php echo esc_url( $row['credential']['settings_url'] ); ?>"><?php esc_html_e( 'Manage repository credentials', 'ran-booster' ); ?></a>
+							<?php endif; ?>
+						</div>
+					<?php endif; ?>
+					</td>
 					<td>
 					<?php if ( true === ( $row['credential_recovery'] ?? false ) ) : ?>
 						<label class="ran-booster-portability__apply-choice"><input type="checkbox" data-portability-select value="<?php echo esc_attr( (string) $row_index ); ?>" checked> <?php esc_html_e( 'Import credential only', 'ran-booster' ); ?></label>

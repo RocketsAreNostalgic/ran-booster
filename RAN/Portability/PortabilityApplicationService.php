@@ -169,7 +169,9 @@ final readonly class PortabilityApplicationService {
 			);
 		}
 
-		return $this->apply_item( $blueprint, $item, $credential, $credential_action?->value, $target_credential_id, $repository_private, $adopt, $can_install );
+		$source = $credential_action?->value ?? ( null !== $target_credential_id && '' !== $target_credential_id ? 'target' : null );
+
+		return $this->apply_item( $blueprint, $item, $credential, $source, $target_credential_id, $repository_private, $adopt, $can_install );
 	}
 
 	/** @return array{status:string,message:string,credential_state:string} */

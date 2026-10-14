@@ -576,6 +576,12 @@
 					} else if (action === 'target') {
 						targets.add(ordinal);
 					}
+					const savedCredential = row?.querySelector(
+						'[data-portability-target-credential]'
+					)?.value;
+					if (savedCredential) {
+						targets.add('package:' + savedCredential);
+					}
 				});
 				const packageChanges = selectedRowElements.filter(
 					(row) =>
@@ -757,6 +763,9 @@
 			rememberSelections();
 			const data = new FormData(form);
 			appendCredentialDecisions(data);
+			const supersededRefresh = credentialRefreshXhr;
+			credentialRefreshXhr = null;
+			supersededRefresh?.abort();
 			const generation = ++previewGeneration;
 			if (showButtonBusy) {
 				setPreviewBusy(true);
@@ -819,6 +828,9 @@
 					);
 				}
 			} catch (error) {
+				if (generation !== previewGeneration) {
+					return;
+				}
 				reviewConfirmed = false;
 				showMessage(
 					error instanceof Error
@@ -839,9 +851,19 @@
 				return;
 			}
 			credentialRefreshXhr = event.detail.xhr;
+			++previewGeneration;
+			setPreviewBusy(false);
 			rememberSelections();
 			showReviewError(false);
 			setReviewBusy(true);
+		});
+		root.addEventListener('htmx:beforeSwap', function (event) {
+			if (
+				handlesCredentialRefresh(event) &&
+				!isLatestCredentialRefresh(event)
+			) {
+				event.detail.shouldSwap = false;
+			}
 		});
 		root.addEventListener('htmx:afterSwap', function (event) {
 			if (
@@ -979,7 +1001,14 @@
 				return;
 			}
 			if (event.target.matches('[data-portability-target-credential]')) {
-				preview();
+				if (
+					!window.htmx ||
+					!event.target.matches(
+						'[data-portability-credential-refresh]'
+					)
+				) {
+					preview();
+				}
 			}
 			if (event.target.matches('[data-portability-select-all]')) {
 				actionableRows().forEach(function (row) {

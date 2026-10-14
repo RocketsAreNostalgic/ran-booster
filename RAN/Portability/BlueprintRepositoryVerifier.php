@@ -127,7 +127,10 @@ final readonly class BlueprintRepositoryVerifier {
 			}
 		}
 
-		if ( $this->has_target_credential( $item->package->provider, $target_credential_id ) ) {
+		if ( null !== $target_credential_id && '' !== $target_credential_id ) {
+			if ( ! $this->has_target_credential( $item->package->provider, $target_credential_id ) ) {
+				return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::CREDENTIAL_REQUIRED );
+			}
 			try {
 				return $this->verified_item( $item, $target_credential_id, $repository_private );
 			} catch ( Throwable $failure ) {

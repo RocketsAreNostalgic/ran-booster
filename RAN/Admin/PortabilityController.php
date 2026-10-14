@@ -405,20 +405,23 @@ final readonly class PortabilityController {
 
 	/** @return array<int, string> */
 	private function target_credential_ids(): array {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Called only from the nonce-guarded Preview handler.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Called only from nonce-guarded Preview and Apply handlers.
 		$input = $_POST['target_credentials'] ?? array();
-		if ( ! is_array( $input ) ) {
-			return array();
+		if ( ! is_array( $input ) || count( $input ) > PackageBlueprint::MAX_PACKAGES ) {
+			throw new InvalidArgumentException();
 		}
 
 		$ids = array();
 		foreach ( $input as $index => $value ) {
-			if ( ( ! is_int( $index ) && ! ctype_digit( $index ) )
-				|| (int) $index > PackageBlueprint::MAX_PACKAGES - 1
-				|| ! is_string( $value ) || strlen( $value ) > 128 ) {
-				continue;
+			$canonical = is_int( $index ) ? (string) $index : $index;
+			if ( ! ctype_digit( $canonical ) || (string) (int) $canonical !== $canonical
+				|| (int) $canonical >= PackageBlueprint::MAX_PACKAGES
+				|| ! is_string( $value ) || ( '' !== $value && 1 !== preg_match( '/\A[A-Za-z0-9_-]{3,64}\z/', wp_unslash( $value ) ) ) ) {
+				throw new InvalidArgumentException();
 			}
-			$ids[ (int) $index ] = sanitize_text_field( wp_unslash( $value ) );
+			if ( '' !== $value ) {
+				$ids[ (int) $index ] = wp_unslash( $value );
+			}
 		}
 
 		return $ids;
@@ -474,11 +477,14 @@ final readonly class PortabilityController {
 			$row['credential_recovery'] = true;
 		}
 
-		if ( null === $credential_ordinal && TargetPackageReason::CREDENTIAL_REQUIRED === $item->reason ) {
+		if ( null === $credential_ordinal
+			&& ( TargetPackageReason::CREDENTIAL_REQUIRED === $item->reason
+				|| ( null !== $selected_credential_id && '' !== $selected_credential_id
+					&& in_array( $item->action, array( TargetPackageAction::INSTALL, TargetPackageAction::ADOPT, TargetPackageAction::BLOCKED ), true ) ) ) ) {
 			$row['credential'] = array(
 				'choices'      => $this->credential_choices( $item->package->provider ),
 				'selected_id'  => $selected_credential_id,
-				'settings_url' => admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $item->package->provider ) ),
+				'settings_url' => admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $item->package->provider ) . '&view=credentials' ),
 			);
 		}
 

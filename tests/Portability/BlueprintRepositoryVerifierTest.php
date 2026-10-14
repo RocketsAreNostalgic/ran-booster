@@ -165,6 +165,16 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		self::assertSame( array(), $provider->credential_ids );
 	}
 
+	public function test_package_only_missing_target_choice_never_falls_back_to_anonymous_access(): void {
+		[$verifier, $provider] = $this->verifier( 0, 'repository-id' );
+
+		$result = $verifier->verify( $this->install_item(), null, null, 'deleted-profile' );
+
+		self::assertSame( TargetPackageAction::BLOCKED, $result->action );
+		self::assertSame( TargetPackageReason::CREDENTIAL_REQUIRED, $result->reason );
+		self::assertSame( array(), $provider->credential_ids );
+	}
+
 	public function test_it_does_not_resolve_managed_or_protected_rows(): void {
 		[$verifier, $provider] = $this->verifier( 502, 'repository-id' );
 		$managed               = new BlueprintPlanItem( $this->package(), TargetPackageAction::MANAGED, TargetPackageReason::ALREADY_MANAGED );
@@ -284,6 +294,10 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 
 		self::assertSame( TargetPackageAction::BLOCKED, $result->action );
 		self::assertSame( TargetPackageReason::CREDENTIAL_REQUIRED, $result->reason );
+		self::assertSame( array(), $provider->credential_ids );
+
+		$package_only = ( new BlueprintRepositoryVerifier( $registry, $secrets ) )->verify( $this->install_item(), null, null, 'wrong-provider-profile' );
+		self::assertSame( TargetPackageReason::CREDENTIAL_REQUIRED, $package_only->reason );
 		self::assertSame( array(), $provider->credential_ids );
 	}
 

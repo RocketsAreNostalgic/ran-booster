@@ -565,14 +565,23 @@ final class RAN_Booster_CoreUpdaterProof {
 $ran_booster_proof   = new RAN_Booster_CoreUpdaterProof( bin2hex( random_bytes( 6 ) ) );
 $ran_booster_failure = null;
 
+// Keep local installs and one-item updates isolated from version-check-triggered sweeps.
+$ran_booster_prevent_sweep = static fn ( bool $disabled ): bool => $disabled || doing_action( 'wp_maybe_auto_update' );
+add_filter( 'automatic_updater_disabled', $ran_booster_prevent_sweep, PHP_INT_MAX, 1 );
+
 try {
 	$ran_booster_proof->run();
 } catch ( Throwable $caught ) {
 	$ran_booster_failure = $caught;
+} finally {
+	remove_filter( 'automatic_updater_disabled', $ran_booster_prevent_sweep, PHP_INT_MAX );
 }
 
 try {
 	$ran_booster_proof->cleanup();
+	if ( null === $ran_booster_failure && false !== has_filter( 'automatic_updater_disabled', $ran_booster_prevent_sweep ) ) {
+		throw new RuntimeException( 'The disposable automatic-updater sweep filter was not removed.' );
+	}
 } catch ( Throwable $cleanup_failure ) {
 	$ran_booster_failure = $cleanup_failure;
 }

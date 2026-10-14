@@ -274,11 +274,12 @@ try {
 		),
 		null
 	);
-	$ran_booster_activity_facts = json_decode( (string) ( $ran_booster_activity['records'][0]['facts'] ?? '' ), true );
+	$ran_booster_records        = array_values( array_filter( $ran_booster_activity['records'], static fn ( array $record ): bool => $record['correlation'] === $ran_booster_attempt->get_correlation_id() ) );
+	$ran_booster_activity_facts = json_decode( (string) ( $ran_booster_records[0]['facts'] ?? '' ), true );
 	$ran_booster_other_activity = $ran_booster_activity_store->activity_history( array( 'subject_identity' => 'ran-booster-database-smoke/another.php' ) );
 	$ran_booster_case_activity  = $ran_booster_activity_store->activity_history( array( 'subject_identity' => strtoupper( $ran_booster_identifier ) ) );
-	if ( ! $ran_booster_activity['available'] || 1 !== count( $ran_booster_activity['records'] )
-		|| $ran_booster_identifier !== $ran_booster_activity['records'][0]['subject_identity']
+	if ( ! $ran_booster_activity['available'] || 1 !== count( $ran_booster_records )
+		|| $ran_booster_identifier !== $ran_booster_records[0]['subject_identity']
 		|| ! is_array( $ran_booster_activity_facts ) || $ran_booster_attempt->get_id() !== ( $ran_booster_activity_facts['deployment_attempt_id'] ?? null )
 		|| ! $ran_booster_other_activity['available'] || array() !== $ran_booster_other_activity['records']
 		|| ! $ran_booster_case_activity['available'] || array() !== $ran_booster_case_activity['records'] ) {

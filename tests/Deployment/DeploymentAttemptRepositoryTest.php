@@ -305,7 +305,12 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$last_key = array_key_last( $this->database->queries );
 		self::assertNotNull( $last_key );
 		self::assertSame( 'COMMIT', $this->database->queries[ $last_key ] );
-		self::assertStringContainsString( "SET state = 'running' WHERE id = 1 AND state = 'queued'", implode( "\n", $this->database->queries ) );
+		self::assertSame( 'running', $this->database->rows[0]['state'] );
+		self::assertNull( $this->database->rows[0]['mutation_started_at'] );
+		// The active-attempt read and the inserted-row readback remain; no claim reread is needed.
+		self::assertCount( 2, array_filter( $this->database->queries, static fn ( string $query ): bool => str_starts_with( $query, 'SELECT * FROM' ) ) );
+		self::assertCount( 1, array_filter( $this->database->queries, static fn ( string $query ): bool => str_contains( $query, 'WHERE correlation_id =' ) ) );
+		self::assertStringNotContainsString( 'UPDATE ', implode( "\n", $this->database->queries ) );
 	}
 
 	public function test_unresolved_package_attempt_read_tracks_the_removal_contention_boundary(): void {
@@ -639,21 +644,33 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$this->manual( 'readback-failure' );
 	}
 
-	public function test_manual_claim_or_commit_failure_rolls_back_the_admission(): void {
-		foreach ( array( 'claim', 'commit' ) as $failure ) {
-			$this->database->zero_query_contains = 'claim' === $failure ? "SET state = 'running'" : null;
-			$this->database->fail_commit         = 'commit' === $failure;
+	public function test_manual_commit_failure_rolls_back_the_admission(): void {
+		$this->database->fail_commit = true;
 
+		try {
+			$this->manual( 'commit-failure' );
+			self::fail( 'Manual admission must fail atomically.' );
+		} catch ( DeploymentStorageFailure ) {
+			self::assertSame( array(), $this->database->rows );
+			self::assertSame( 'ROLLBACK', end( $this->database->queries ) );
+		}
+	}
+
+	public function test_manual_readback_rejects_a_valid_but_unexpected_state_or_mutation_fence(): void {
+		foreach ( array(
+			'state'               => 'queued',
+			'mutation_started_at' => '2026-07-19 00:00:01',
+		) as $column => $value ) {
+			$this->database->tamper_insert_column = $column;
+			$this->database->tamper_insert_value  = $value;
 			try {
-				$this->manual( $failure . '-failure' );
-				self::fail( 'Manual admission and claim must fail atomically.' );
-			} catch ( DeploymentStorageFailure ) {
+				$this->manual( 'corrupt-insert' );
+				self::fail( 'The initial running row must match every admitted field.' );
+			} catch ( DeploymentStorageFailure $failure ) {
+				self::assertSame( DeploymentStorageFailure::inconsistent()->getMessage(), $failure->getMessage() );
 				self::assertSame( array(), $this->database->rows );
-				$last_key = array_key_last( $this->database->queries );
-				self::assertNotNull( $last_key );
-				self::assertSame( 'ROLLBACK', $this->database->queries[ $last_key ] );
+				self::assertSame( 'ROLLBACK', end( $this->database->queries ) );
 			}
-			$this->database->queries = array();
 		}
 	}
 

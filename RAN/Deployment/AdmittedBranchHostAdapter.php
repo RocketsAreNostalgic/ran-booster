@@ -24,7 +24,6 @@ use RAN\Storage\ThemeRepository;
 use RAN\WordPress\WordPressUpdaterLock;
 use RAN\WPBranchUpdater\V1\Archive\ArchiveOffer;
 use RAN\WPBranchUpdater\V1\Archive\PreparedArchive;
-use RAN\WPBranchUpdater\V1\Archive\PreparedArchiveArtifact;
 use RAN\WPBranchUpdater\V1\Contract\AdmittedArchiveSource;
 use RAN\WPBranchUpdater\V1\Contract\AdmittedAttemptJournal;
 use RAN\WPBranchUpdater\V1\Contract\AdmittedBranchArtifact;
@@ -218,25 +217,23 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 		$artifact = null;
 		try {
-			$artifact = new PreparedArchiveArtifact(
-				PreparedArchive::download_and_validate(
-					$offer,
-					$deployment,
-					$this->archive_directory(),
-					$maximum_artifact_bytes
-				)
+			$artifact = PreparedArchive::download_and_validate(
+				$offer,
+				$deployment,
+				$this->archive_directory(),
+				$maximum_artifact_bytes
 			);
 			$this->assert_artifact_capacity( $artifact, $deployment );
 			return $artifact;
 		} catch ( AdmittedBranchStageFailure $failure ) {
 			$this->cleanup_provider_archive( $provider_archive );
-			if ( $artifact instanceof PreparedArchiveArtifact ) {
+			if ( $artifact instanceof PreparedArchive ) {
 				$this->cleanup_artifact_after_host_failure( $artifact );
 			}
 			throw $failure;
 		} catch ( Throwable ) {
 			$this->cleanup_provider_archive( $provider_archive );
-			if ( $artifact instanceof PreparedArchiveArtifact ) {
+			if ( $artifact instanceof PreparedArchive ) {
 				$this->cleanup_artifact_after_host_failure( $artifact );
 			}
 			$this->stage( DeploymentOutcome::CODE_ARCHIVE_INTEGRITY_FAILED );
@@ -355,7 +352,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	public function preflight( BranchDeploymentDeclaration $deployment, AdmittedBranchArtifact $artifact ): void {
 		$this->assert_declaration( $deployment );
-		if ( ! $artifact instanceof PreparedArchiveArtifact ) {
+		if ( ! $artifact instanceof PreparedArchive ) {
 			throw new RuntimeException( 'The admitted branch artifact is not a prepared package archive.' );
 		}
 		$artifact->assert_unchanged();
@@ -363,21 +360,20 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	public function execute( BranchDeploymentDeclaration $deployment, ?array $baseline, AdmittedBranchArtifact $artifact ): CorePackageExecutionResult {
 		$this->assert_declaration( $deployment );
-		if ( ! $artifact instanceof PreparedArchiveArtifact ) {
+		if ( ! $artifact instanceof PreparedArchive ) {
 			throw new RuntimeException( 'The admitted branch artifact is not a prepared package archive.' );
 		}
-		$archive = $artifact->archive();
 		if ( 'install' === $deployment->operation ) {
 			return 'plugin' === $deployment->package_type
-				? $this->executor->install_plugin( $archive, $deployment->slug, $deployment->subdirectory )
-				: $this->executor->install_theme( $archive, $deployment->slug, $deployment->subdirectory );
+				? $this->executor->install_plugin( $artifact, $deployment->slug, $deployment->subdirectory )
+				: $this->executor->install_theme( $artifact, $deployment->slug, $deployment->subdirectory );
 		}
 		if ( null === $baseline ) {
 			throw new RuntimeException( 'The managed package baseline is unavailable.' );
 		}
 		return 'plugin' === $deployment->package_type
-			? $this->executor->update_plugin( $archive, $deployment->slug, $deployment->subdirectory, $baseline['identifier'] )
-			: $this->executor->update_theme( $archive, $deployment->slug, $deployment->subdirectory, $baseline['identifier'] );
+			? $this->executor->update_plugin( $artifact, $deployment->slug, $deployment->subdirectory, $baseline['identifier'] )
+			: $this->executor->update_theme( $artifact, $deployment->slug, $deployment->subdirectory, $baseline['identifier'] );
 	}
 
 	public function run( callable $operation ): mixed {
@@ -488,8 +484,8 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 	}
 
-	private function assert_artifact_capacity( PreparedArchiveArtifact $artifact, BranchDeploymentDeclaration $deployment ): void {
-		$expanded = $artifact->archive()->expanded_bytes();
+	private function assert_artifact_capacity( PreparedArchive $artifact, BranchDeploymentDeclaration $deployment ): void {
+		$expanded = $artifact->expanded_bytes();
 		$overhead = intdiv( $expanded, 10 ) + ( 0 === $expanded % 10 ? 0 : 1 );
 		if ( $expanded > intdiv( PHP_INT_MAX - $overhead, 2 ) ) {
 			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_DISK_SPACE_LOW );
@@ -502,7 +498,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 	}
 
-	private function cleanup_artifact_after_host_failure( PreparedArchiveArtifact $artifact ): void {
+	private function cleanup_artifact_after_host_failure( PreparedArchive $artifact ): void {
 		try {
 			$artifact->cleanup();
 		} catch ( Throwable ) {

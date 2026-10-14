@@ -12,7 +12,6 @@ use RAN\Deployment\AdmittedBranchHostAdapter;
 use RAN\Deployment\DeploymentOutcome;
 use RAN\WPBranchUpdater\V1\Archive\ArchiveOffer;
 use RAN\WPBranchUpdater\V1\Archive\PreparedArchive;
-use RAN\WPBranchUpdater\V1\Archive\PreparedArchiveArtifact;
 use RAN\WPBranchUpdater\V1\Runtime\AdmittedBranchStageFailure;
 use RAN\WPBranchUpdater\V1\Runtime\BranchDeploymentDeclaration;
 use ReflectionClass;
@@ -54,7 +53,7 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		$source = file_get_contents( __DIR__ . '/../../RAN/Deployment/AdmittedBranchHostAdapter.php' );
 		self::assertIsString( $source );
-		self::assertStringContainsString( '$artifact->archive()->expanded_bytes()', $source );
+		self::assertStringContainsString( '$artifact->expanded_bytes()', $source );
 		self::assertStringNotContainsString( 'EXPANDED_RATIO', $source );
 		self::assertStringNotContainsString( 'private function expanded_bytes', $source );
 		self::assertStringNotContainsString( '->statIndex(', $source );
@@ -62,7 +61,7 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 
 	public function test_host_capacity_accepts_exactly_two_copies_plus_ten_percent_overhead(): void {
 		list( $artifact, $deployment )                   = $this->prepared_artifact();
-		$expanded                                        = $artifact->archive()->expanded_bytes();
+		$expanded                                        = $artifact->expanded_bytes();
 		$required                                        = ( $expanded * 2 ) + intdiv( $expanded + 9, 10 );
 		$GLOBALS['ran_booster_admitted_disk_free_space'] = array(
 			WP_CONTENT_DIR => $required,
@@ -79,7 +78,7 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 
 	public function test_host_capacity_maps_insufficient_destination_space_to_existing_outcome(): void {
 		list( $artifact, $deployment )                   = $this->prepared_artifact();
-		$expanded                                        = $artifact->archive()->expanded_bytes();
+		$expanded                                        = $artifact->expanded_bytes();
 		$required                                        = ( $expanded * 2 ) + intdiv( $expanded + 9, 10 );
 		$GLOBALS['ran_booster_admitted_disk_free_space'] = array(
 			WP_CONTENT_DIR => $required,
@@ -96,7 +95,7 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 		}
 	}
 
-	/** @return array{PreparedArchiveArtifact,BranchDeploymentDeclaration} */
+	/** @return array{PreparedArchive,BranchDeploymentDeclaration} */
 	private function prepared_artifact(): array {
 		$source = tempnam( sys_get_temp_dir(), 'ran-booster-capacity-source-' );
 		if ( false === $source ) {
@@ -140,14 +139,12 @@ final class AdmittedBranchHostAdapterCapacityTest extends TestCase {
 		);
 
 		return array(
-			new PreparedArchiveArtifact(
-				PreparedArchive::download_and_validate( $offer, $deployment, $directory, 1048576 )
-			),
+			PreparedArchive::download_and_validate( $offer, $deployment, $directory, 1048576 ),
 			$deployment,
 		);
 	}
 
-	private function invoke_capacity_check( PreparedArchiveArtifact $artifact, BranchDeploymentDeclaration $deployment ): void {
+	private function invoke_capacity_check( PreparedArchive $artifact, BranchDeploymentDeclaration $deployment ): void {
 		$adapter = ( new ReflectionClass( AdmittedBranchHostAdapter::class ) )->newInstanceWithoutConstructor();
 		$method  = new ReflectionMethod( AdmittedBranchHostAdapter::class, 'assert_artifact_capacity' );
 		$method->invoke( $adapter, $artifact, $deployment );

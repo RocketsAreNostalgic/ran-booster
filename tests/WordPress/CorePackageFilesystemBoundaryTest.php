@@ -26,7 +26,7 @@ final class CorePackageFilesystemBoundaryTest extends TestCase {
 		self::assertTrue( mkdir( $source, 0700, true ) );
 		try {
 			$method = new ReflectionMethod( CorePackageExecutor::class, 'source_selection_filter' );
-			$filter = $method->invoke( new CorePackageExecutor(), 'target-plugin', null, 'plugin', 'install', null );
+			$filter = $method->invoke( new CorePackageExecutor(), 'target-plugin', null, 'plugin' );
 			self::assertInstanceOf( Closure::class, $filter );
 			$extra = array(
 				'type'   => 'plugin',

@@ -84,8 +84,6 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		$results    = array(
 			$executor->install_plugin( $artifact, 'example', null ),
 			$executor->install_theme( $artifact, 'example', null ),
-			$executor->update_plugin( $artifact, 'example', null, 'example/example.php' ),
-			$executor->update_theme( $artifact, 'example', null, 'example' ),
 		);
 
 		foreach ( $results as $result ) {

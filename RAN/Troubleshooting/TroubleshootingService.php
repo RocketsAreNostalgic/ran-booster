@@ -45,7 +45,7 @@ final class TroubleshootingService {
 	/**
 	 * Build the read-only GET payload from provider metadata and safe credential labels.
 	 *
-	 * @return array<string, mixed>&array{results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null}
+	 * @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>}
 	 */
 
 	public function form_payload(): array {
@@ -65,7 +65,7 @@ final class TroubleshootingService {
 	/**
 	 * Run local checks and exactly one selected provider in the current request.
 	 *
-	 * @return array<string, mixed>&array{results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null}
+	 * @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>}
 	 */
 
 	public function diagnose( string $provider, ?string $credential_id, ?string $repository ): array {
@@ -139,7 +139,7 @@ final class TroubleshootingService {
 		);
 	}
 
-	/** @return array<string, mixed>&array{results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null} */
+	/** @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>} */
 	private function run_diagnostics( string $provider, ?string $credential_id, ?string $repository ): array {
 		$input_invalid = false;
 		try {
@@ -395,7 +395,7 @@ final class TroubleshootingService {
 	/**
 	 * @param list<ProviderDiagnosticResult> $results
 	 * @param array<string, string>           $providers
-	 * @return array<string, mixed>&array{results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null}
+	 * @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>}
 	 */
 	private function payload(
 		string $provider,

@@ -16,7 +16,7 @@ use WP_Error;
  * Install one immutable prospective package through WordPress core.
  *
  * Provider work, persistence, locking, cleanup and postcondition policy belong
- * to the deployment runner. This class owns only the scoped WordPress call.
+ * to the caller. This class owns only the scoped WordPress call.
  */
 class CorePackageExecutor {
 

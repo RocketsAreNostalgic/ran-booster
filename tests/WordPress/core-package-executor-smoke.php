@@ -29,7 +29,8 @@ foreach ( $ran_booster_executor_source as $ran_booster_class => $ran_booster_rel
 	require_once $ran_booster_source_path;
 }
 
-require_once WP_PLUGIN_DIR . '/ran-booster/vendor/autoload.php';
+require_once WP_PLUGIN_DIR . '/ran-booster/RAN/WordPress/BranchUpdaterBootstrap.php';
+RAN\WordPress\BranchUpdaterBootstrap::register();
 require_once __DIR__ . '/CorePackageSmokeArtifact.php';
 
 require_once ABSPATH . 'wp-admin/includes/file.php';

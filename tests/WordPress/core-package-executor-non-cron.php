@@ -24,7 +24,8 @@ require_once dirname( __DIR__, 2 ) . '/RAN/WordPress/CorePackageExecutionFailure
 require_once dirname( __DIR__, 2 ) . '/RAN/WordPress/CorePackageExecutionResult.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/WordPress/CorePackageExecutor.php';
 
-require_once rtrim( $ran_booster_wordpress_path, '/\\' ) . '/wp-content/plugins/ran-booster/vendor/autoload.php';
+require_once rtrim( $ran_booster_wordpress_path, '/\\' ) . '/wp-content/plugins/ran-booster/RAN/WordPress/BranchUpdaterBootstrap.php';
+RAN\WordPress\BranchUpdaterBootstrap::register();
 require_once __DIR__ . '/CorePackageSmokeArtifact.php';
 
 // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.

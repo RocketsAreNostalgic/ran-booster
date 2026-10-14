@@ -18,7 +18,7 @@ $package_activity_payload     = isset( $package_activity ) && is_array( $package
 $package_activity_unavailable = true === ( $package_activity_payload['unavailable'] ?? false );
 $package_activity             = isset( $package_activity_payload['items'] ) && is_array( $package_activity_payload['items'] )
 	? $package_activity_payload['items']
-	: $package_activity_payload;
+	: array();
 $package_extension_rows       = isset( $package_extension_rows ) && is_array( $package_extension_rows )
 	? $package_extension_rows
 	: array();

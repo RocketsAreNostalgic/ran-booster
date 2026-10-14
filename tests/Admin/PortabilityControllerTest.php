@@ -690,7 +690,8 @@ final class PortabilityControllerTest extends TestCase {
 			}
 		);
 		$provider = $this->createStubForIntersectionOfInterfaces( array( \RAN\RepositoryProvider\RepositoryProvider::class, \RAN\RepositoryProvider\ProviderCredentialPolicySupplier::class ) );
-		$policy   = $this->createStub( \RAN\RepositoryProvider\ProviderCredentialPolicy::class );
+		self::assertInstanceOf( \RAN\RepositoryProvider\RepositoryProvider::class, $provider );
+		$policy = $this->createStub( \RAN\RepositoryProvider\ProviderCredentialPolicy::class );
 		$policy->method( 'get_provider' )->willReturn( \RAN\RepositoryProvider\ProviderCode::parse( 'gh' ) );
 		$provider->method( 'get_credential_policy' )->willReturn( $policy );
 		$provider->method( 'get_metadata' )->willReturn( new \RAN\RepositoryProvider\ProviderMetadata( \RAN\RepositoryProvider\ProviderCode::parse( 'gh' ), 'GitHub', 'https://example.test/', 'Owner', new \RAN\RepositoryProvider\Admin\ProviderAdminMetadata( array( new \RAN\RepositoryProvider\Admin\CredentialKindMetadata( 'classic', 'Classic PAT', 'Token' ) ), array() ) ) );

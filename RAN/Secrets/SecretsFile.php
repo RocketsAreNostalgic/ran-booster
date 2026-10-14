@@ -390,14 +390,10 @@ class SecretsFile {
 		if ( null !== $id && '' !== trim( $id ) ) {
 			$id = trim( $id );
 			if ( self::CONSTANT_PROFILE === $id ) {
-				$constant = $this->constant_credential(
+				return $this->constant_credential(
 					$provider_code,
 					$this->provider_policies->credential_policy( $provider )
 				);
-
-				return null === $constant
-					? null
-					: $this->runtime_constant_credential( $provider_code, $constant );
 			}
 			if ( isset( $this->temporary_credentials[ $provider_code ][ $id ] ) ) {
 				return $this->temporary_credentials[ $provider_code ][ $id ];
@@ -1024,23 +1020,6 @@ class SecretsFile {
 			$record['secret'] ?? null
 		);
 
-		return array(
-			'id'            => self::CONSTANT_PROFILE,
-			'provider'      => $provider,
-			'label'         => $record['label'],
-			'kind'          => $record['kind'],
-			'configuration' => $record['configuration'],
-			'secret'        => $record['secret'],
-			'source'        => 'constant',
-			'immutable'     => true,
-		);
-	}
-
-	/**
-	 * @param ConstantCredential $record
-	 * @return ConstantCredential
-	 */
-	private function runtime_constant_credential( string $provider, #[\SensitiveParameter] array $record ): array {
 		return array(
 			'id'            => self::CONSTANT_PROFILE,
 			'provider'      => $provider,

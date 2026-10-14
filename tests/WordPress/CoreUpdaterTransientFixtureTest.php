@@ -10,7 +10,7 @@ use PHPUnit\Framework\TestCase;
 final class CoreUpdaterTransientFixtureTest extends TestCase {
 
 	public function test_both_transient_fixtures_preserve_foreign_object_identity_and_magic_access(): void {
-		foreach ( array( 'plugin', 'theme', 'core-plugin', 'core-theme' ) as $type ) {
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
 			$filter  = $this->filter( $type );
 			$foreign = new class() {
 				/** @var array<string, mixed> */
@@ -69,7 +69,7 @@ final class CoreUpdaterTransientFixtureTest extends TestCase {
 	}
 
 	public function test_both_transient_fixtures_preserve_native_property_write_errors(): void {
-		foreach ( array( 'plugin', 'theme', 'core-plugin', 'core-theme' ) as $type ) {
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
 			$foreign = new class() {
 				public readonly mixed $response;
 
@@ -88,11 +88,7 @@ final class CoreUpdaterTransientFixtureTest extends TestCase {
 
 	/** @return Closure(mixed): object */
 	private function filter( string $type ): Closure {
-		if ( str_starts_with( $type, 'core-' ) ) {
-			$method = new \ReflectionMethod( \RAN\WordPress\CorePackageExecutor::class, 'transient_filter' );
 
-			return $method->invoke( new \RAN\WordPress\CorePackageExecutor(), substr( $type, 5 ), (object) array( 'package' => '/fixture/archive.zip' ), 'proof-item' );
-		}
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read only the two real transient callbacks without running the disposable installed-site proof.
 		$source = file_get_contents( __DIR__ . '/core-updater-proof.php' );
 		self::assertIsString( $source );

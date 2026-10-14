@@ -13,21 +13,6 @@ use Throwable;
 final class DocumentationHookRenderer {
 
 	/**
-	 * Render structured add-on documentation sections.
-	 *
-	 * @param non-empty-string $filter_hook
-	 */
-	public function render_sections(
-		string $filter_hook,
-		string $documentation_url,
-		string $scope,
-		?string $provider_code = null
-	): void {
-
-		$this->render_prepared_sections( $this->prepare_sections( $filter_hook, $documentation_url, $scope, $provider_code ) );
-	}
-
-	/**
 	 * Resolve structured add-on documentation sections once, before output.
 	 *
 	 * @param non-empty-string $filter_hook

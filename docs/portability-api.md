@@ -123,7 +123,8 @@ source reads, source fingerprints, UI, and exact conditional source cleanup.
 Core never loads source-plugin code or receives source storage identifiers.
 
 The supported WP Pusher migration is implemented by the separate, removable
-RAN Booster WP Pusher Migrator plugin. Its bounded Overview and Transporter UI
+[RAN Booster WP Pusher Migrator](https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator#readme)
+plugin. Its bounded Overview and Transporter UI
 uses the migration presentation hooks
 documented in the [admin composition contract](admin-composition-contract.md);
 those hooks do not expand this adoption-only API.
@@ -141,20 +142,23 @@ The safe operator sequence is:
 4. Resolve any cleanup-pending row while WP Pusher remains inactive. Progress is
    reconstructed from the live source row and exact Booster target; there is no
    migration session or rollback that re-enables either deployment authority.
-5. Only after no source rows remain, separately confirm deletion of known
-   non-license WP Pusher options and, separately, the exact empty package table
-   if desired.
-6. Remove remote Push-to-Deploy webhooks at their provider. The bridge does not
-   know or delete remote hooks.
-7. Review the retained WP Pusher license key, then use the normal WordPress
-   Plugins screen for any plugin-file deletion. The bridge does not run WP
-   Pusher's uninstall routine or contact its license service.
-8. Deactivate and delete the migrator when the migration and chosen cleanup are
-   complete. Migrated packages remain managed by Core.
+5. Only after no source rows remain, review WP Pusher's uninstall effects and,
+   if desired, delete it through the normal WordPress Installed Plugins screen.
+   WP Pusher's own uninstaller removes its settings and package table and
+   attempts to revoke this site's license activation. This is a separate
+   operator action; the bridge does not perform it.
+6. Confirm the site's activation is gone in the WP Pusher dashboard. Revoke the
+   site manually there if it remains.
+7. Review and remove any WP Pusher Push-to-Deploy webhooks at their provider
+   separately. The bridge does not know or delete remote hooks.
+8. Verify the migrated packages, then deactivate and delete the migrator.
+   Migrated packages remain managed by Core.
 
 Review, cancellation, bridge deactivation, and bridge deletion remove no source
-data. Post-migration cleanup preserves the WP Pusher license key, unknown
-options, and plugin files unless the administrator handles them separately.
+data. Beyond exact verified source-row deletion, the bridge leaves WP Pusher's
+settings (including its license key and unknown options), package table, and
+plugin files untouched. It does not run WP Pusher's uninstall routine or contact
+its license service.
 
 ## Recovery from live truth
 

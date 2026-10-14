@@ -134,6 +134,7 @@ function rowFixture(id, state = 'queued', packageSource = 'branch') {
 function environment(rows, responses) {
 	const timers = [];
 	const events = [];
+	const requests = [];
 	let request = 0;
 	const summary = element({
 		'data-queued': String(rows.length),
@@ -211,8 +212,13 @@ function environment(rows, responses) {
 		setTimeout(callback) {
 			timers.push(callback);
 		},
-		async fetch() {
+		async fetch(_url, options) {
+			const body = new URLSearchParams(options.body);
+			requests.push(body);
 			const response = responses[request++];
+			if (typeof response === 'function') {
+				return response(body);
+			}
 			if (response instanceof Error) {
 				throw response;
 			}
@@ -240,7 +246,15 @@ function environment(rows, responses) {
 		},
 	};
 
-	return { document, events, summary, summaryMessage, timers, window };
+	return {
+		document,
+		events,
+		requests,
+		summary,
+		summaryMessage,
+		timers,
+		window,
+	};
 }
 
 async function runTimer(timers) {
@@ -426,6 +440,209 @@ test('branch reinstall requires explicit overwrite confirmation', () => {
 			'Reinstall from the saved branch and overwrite local changes?',
 		]);
 	} finally {
+		delete globalThis.window;
+	}
+});
+
+function boundedProgressResponse(body, state = 'succeeded') {
+	const references = Array.from(body.entries()).filter(([key]) =>
+		key.startsWith('attempts[')
+	);
+	const items = Object.fromEntries(
+		references.map(([key, reference]) => {
+			const id = key.slice(9, -1);
+			return [id, { attempt_id: Number(id), reference, state }];
+		})
+	);
+	return {
+		ok: references.length <= 20,
+		async json() {
+			return { success: references.length <= 20, data: { items } };
+		},
+	};
+}
+
+for (const count of [20, 21, 50]) {
+	test(`progress polling covers ${count} rows in requests of at most 20`, async () => {
+		const rows = Array.from({ length: count }, (_, i) => rowFixture(i + 1));
+		const fixture = environment(
+			rows,
+			Array(3).fill(boundedProgressResponse)
+		);
+		globalThis.document = fixture.document;
+		globalThis.window = fixture.window;
+		try {
+			loadFunction('initPackageUpdateProgress')();
+			await runTimer(fixture.timers);
+			const requested = fixture.requests.flatMap((body) =>
+				Array.from(body.keys()).filter((key) =>
+					key.startsWith('attempts[')
+				)
+			);
+			assert.deepEqual(
+				requested,
+				rows.map((_, i) => `attempts[${i + 1}]`)
+			);
+			assert.ok(fixture.requests.every((body) => body.size - 3 <= 20));
+			assert.equal(fixture.events.length, count);
+			assert.equal(fixture.timers.length, 0);
+		} finally {
+			delete globalThis.document;
+			delete globalThis.window;
+		}
+	});
+}
+
+test('a later chunk failure retains earlier success and stops before remaining chunks', async () => {
+	const rows = Array.from({ length: 50 }, (_, i) => rowFixture(i + 1));
+	const fixture = environment(rows, [
+		boundedProgressResponse,
+		new Error('offline'),
+		new Error('offline'),
+		new Error('offline'),
+	]);
+	globalThis.document = fixture.document;
+	globalThis.window = fixture.window;
+	try {
+		loadFunction('initPackageUpdateProgress')();
+		for (let i = 0; i < 3; i++) {
+			await runTimer(fixture.timers);
+		}
+		assert.equal(fixture.requests.length, 4);
+		assert.ok(
+			fixture.requests
+				.slice(1)
+				.every(
+					(body) =>
+						body.has('attempts[21]') && !body.has('attempts[41]')
+				)
+		);
+		assert.equal(fixture.events.length, 20);
+		assert.ok(
+			rows
+				.slice(0, 20)
+				.every(
+					(row) => row.message.textContent === 'Package reinstalled.'
+				)
+		);
+		assert.ok(
+			rows
+				.slice(20)
+				.every(
+					(row) =>
+						row.message.textContent ===
+							'Refresh to check progress.' && row.button.disabled
+				)
+		);
+		assert.equal(
+			fixture.summary.classList.contains('notice-warning'),
+			true
+		);
+		assert.equal(fixture.timers.length, 0);
+	} finally {
+		delete globalThis.document;
+		delete globalThis.window;
+	}
+});
+
+test('pending successful chunks do not reset repeated later-chunk failures', async () => {
+	const rows = Array.from({ length: 21 }, (_, i) => rowFixture(i + 1));
+	const pending = (body) => boundedProgressResponse(body, 'running');
+	const unavailable = () => ({
+		ok: false,
+		json: async () => ({ success: false }),
+	});
+	const fixture = environment(rows, [
+		pending,
+		unavailable,
+		pending,
+		unavailable,
+		pending,
+		unavailable,
+	]);
+	globalThis.document = fixture.document;
+	globalThis.window = fixture.window;
+	try {
+		loadFunction('initPackageUpdateProgress')();
+		for (let i = 0; i < 3; i++) {
+			await runTimer(fixture.timers);
+		}
+		assert.equal(fixture.requests.length, 6);
+		assert.equal(fixture.events.length, 0);
+		assert.equal(fixture.timers.length, 0);
+		assert.ok(
+			rows.every(
+				(row) =>
+					row.message.textContent === 'Refresh to check progress.'
+			)
+		);
+	} finally {
+		delete globalThis.document;
+		delete globalThis.window;
+	}
+});
+
+test('hidden time consumes no poll budget and one visible poll covers every chunk', async () => {
+	const rows = Array.from({ length: 50 }, (_, i) => rowFixture(i + 1));
+	const pending = (body) => boundedProgressResponse(body, 'running');
+	const fixture = environment(rows, Array(3).fill(pending));
+	fixture.window.ranBoosterPackageProgress.maxPolls = 1;
+	globalThis.document = fixture.document;
+	globalThis.window = fixture.window;
+	try {
+		loadFunction('initPackageUpdateProgress')();
+		fixture.document.hidden = true;
+		await runTimer(fixture.timers);
+		assert.equal(fixture.requests.length, 0);
+		fixture.document.hidden = false;
+		await runTimer(fixture.timers);
+		assert.equal(fixture.requests.length, 3);
+		assert.equal(fixture.timers.length, 0);
+		assert.equal(fixture.events.length, 0);
+		assert.ok(
+			rows.every(
+				(row) =>
+					row.message.textContent === 'Refresh to check progress.'
+			)
+		);
+	} finally {
+		delete globalThis.document;
+		delete globalThis.window;
+	}
+});
+
+test('chunk responses cannot complete a row with a different correlation reference', async () => {
+	const rows = Array.from({ length: 21 }, (_, i) => rowFixture(i + 1));
+	const mismatched = (body) => {
+		const result = boundedProgressResponse(body);
+		const json = result.json;
+		result.json = async () => {
+			const payload = await json();
+			Object.values(payload.data.items).forEach((item) => {
+				item.reference = 'f'.repeat(32);
+			});
+			return payload;
+		};
+		return result;
+	};
+	const fixture = environment(rows, [
+		boundedProgressResponse,
+		mismatched,
+		boundedProgressResponse,
+	]);
+	globalThis.document = fixture.document;
+	globalThis.window = fixture.window;
+	try {
+		loadFunction('initPackageUpdateProgress')();
+		await runTimer(fixture.timers);
+		assert.equal(fixture.events.length, 20);
+		assert.equal(rows[20].row.getAttribute('data-attempt-state'), 'queued');
+		await runTimer(fixture.timers);
+		assert.equal(fixture.events.length, 21);
+		assert.equal(fixture.requests[2].size - 3, 1);
+		assert.equal(fixture.timers.length, 0);
+	} finally {
+		delete globalThis.document;
 		delete globalThis.window;
 	}
 });

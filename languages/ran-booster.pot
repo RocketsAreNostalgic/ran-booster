@@ -1276,9 +1276,9 @@ msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:347
 #: RAN/Admin/PackageAdminController.php:367
-#: RAN/Admin/PortabilityController.php:297
-#: RAN/Admin/PortabilityController.php:465
-#: RAN/Admin/PortabilityController.php:582
+#: RAN/Admin/PortabilityController.php:284
+#: RAN/Admin/PortabilityController.php:452
+#: RAN/Admin/PortabilityController.php:565
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:342
 #: RAN/Admin/ProviderSettingsPresenter.php:1509
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
@@ -1289,9 +1289,9 @@ msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:347
 #: RAN/Admin/PackageAdminController.php:367
-#: RAN/Admin/PortabilityController.php:297
-#: RAN/Admin/PortabilityController.php:465
-#: RAN/Admin/PortabilityController.php:582
+#: RAN/Admin/PortabilityController.php:284
+#: RAN/Admin/PortabilityController.php:452
+#: RAN/Admin/PortabilityController.php:565
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:342
 #: RAN/Admin/ProviderSettingsPresenter.php:1510
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
@@ -1710,33 +1710,33 @@ msgstr ""
 msgid "Choose the same Transporter Blueprint and package row to apply."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:280
+#: RAN/Admin/PortabilityController.php:267
 #: views/portability.php:215
 msgid "Choose a Transporter Blueprint password before exporting credentials."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:283
+#: RAN/Admin/PortabilityController.php:270
 #: views/portability.php:215
 msgid "The Transporter Blueprint passwords do not match. Nothing was exported."
 msgstr ""
 
 #. translators: 1: managed package type, such as Plugin. 2: managed package display name.
-#: RAN/Admin/PortabilityController.php:293
+#: RAN/Admin/PortabilityController.php:280
 #, php-format
 msgid "%1$s “%2$s” manages its own updates and cannot also be managed by Booster"
 msgstr ""
 
 #. translators: %s: semicolon-separated list of selected packages that cannot be exported.
-#: RAN/Admin/PortabilityController.php:306
+#: RAN/Admin/PortabilityController.php:293
 #, php-format
 msgid "Transporter Blueprint export cannot include: %s. Deselect those packages and try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:503
+#: RAN/Admin/PortabilityController.php:489
 msgid "Target encrypted credential storage is unavailable. Configure secure storage, then review and apply this row again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:512
+#: RAN/Admin/PortabilityController.php:498
 #: RAN/Portability/PortabilityApplicationService.php:245
 msgid "Booster could not apply this package. Review the Transporter Blueprint again and check repository access."
 msgstr ""

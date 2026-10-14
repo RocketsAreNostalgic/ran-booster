@@ -303,7 +303,6 @@ final class PortabilityViewTest extends TestCase {
 					'kind_label'        => 'Classic personal access token',
 					'decision_required' => true,
 					'proposed_count'    => 1,
-					'unchanged_count'   => 1,
 					'packages'          => array(
 						array(
 							'name' => 'Private package',
@@ -382,7 +381,6 @@ final class PortabilityViewTest extends TestCase {
 					'decision_required' => false,
 					'proposed_count'    => 0,
 					'recovery_count'    => 0,
-					'unchanged_count'   => 1,
 					'packages'          => array(
 						array(
 							'name' => 'Protected Theme',
@@ -426,7 +424,6 @@ final class PortabilityViewTest extends TestCase {
 					'decision_required' => true,
 					'proposed_count'    => 0,
 					'recovery_count'    => 1,
-					'unchanged_count'   => 1,
 					'packages'          => array(
 						array(
 							'name' => 'Managed <Plugin>',

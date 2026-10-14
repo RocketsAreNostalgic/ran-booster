@@ -221,7 +221,6 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 				static fn (): mixed => $controller->handle_export(),
 				static fn (): mixed => $controller->handle_preview(),
 				static fn (): mixed => $controller->handle_apply(),
-				static fn (): mixed => $controller->preview_file( '/not-readable' ),
 			) as $entry_point
 		) {
 			try {

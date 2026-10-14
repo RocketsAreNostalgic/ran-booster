@@ -197,19 +197,6 @@ final readonly class PortabilityController {
 	 * @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $credential_decisions
 	 * @param array<int, string> $target_credential_ids
 	 */
-
-	public function preview_file( string $path, ?string $password = null, array $credential_decisions = array(), array $target_credential_ids = array() ): string {
-		RuntimeSupport::assert_managed_operations_allowed();
-
-		$blueprint = $this->archive->read_from( $path, $password );
-
-		return $this->review_blueprint( $blueprint, $credential_decisions, $target_credential_ids );
-	}
-
-	/**
-	 * @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $credential_decisions
-	 * @param array<int, string> $target_credential_ids
-	 */
 	private function review_blueprint( PackageBlueprint $blueprint, array $credential_decisions, array $target_credential_ids ): string {
 		$items = $this->application->review( $blueprint, $credential_decisions, $target_credential_ids );
 		$rows  = array();
@@ -464,7 +451,6 @@ final readonly class PortabilityController {
 			'identifier' => $item->package->identifier,
 			'type'       => 'plugin' === $item->package->type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' ),
 			'action'     => $item->action->value,
-			'category'   => $item->reason->value,
 			'reason'     => $item->reason->message(),
 		);
 		if ( null !== $credential_ordinal ) {
@@ -560,12 +546,11 @@ final readonly class PortabilityController {
 		}
 		$rows = array();
 		foreach ( $blueprint->credentials as $ordinal => $credential ) {
-			$provider        = $providers[ $credential->provider ] ?? array();
-			$kind_labels     = is_array( $provider['credential_kind_labels'] ?? null ) ? $provider['credential_kind_labels'] : array();
-			$packages        = array();
-			$proposed_count  = 0;
-			$recovery_count  = 0;
-			$unchanged_count = 0;
+			$provider       = $providers[ $credential->provider ] ?? array();
+			$kind_labels    = is_array( $provider['credential_kind_labels'] ?? null ) ? $provider['credential_kind_labels'] : array();
+			$packages       = array();
+			$proposed_count = 0;
+			$recovery_count = 0;
 			foreach ( $blueprint->packages as $package_row => $package ) {
 				if ( in_array(
 					array(
@@ -576,8 +561,6 @@ final readonly class PortabilityController {
 					true
 				) ) {
 					$projected  = array(
-						'row'  => $package_row,
-
 						'name' => $package->display_name,
 						'type' => 'plugin' === $package->type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' ),
 					);
@@ -585,10 +568,7 @@ final readonly class PortabilityController {
 					$action     = $items[ $package_row ]->action->value ?? null;
 					if ( 'managed' === $action ) {
 						++$recovery_count;
-						++$unchanged_count;
-					} elseif ( 'protected' === $action ) {
-						++$unchanged_count;
-					} else {
+					} elseif ( 'protected' !== $action ) {
 						++$proposed_count;
 					}
 				}
@@ -604,7 +584,6 @@ final readonly class PortabilityController {
 				'decision_required' => 0 < $proposed_count || 0 < $recovery_count,
 				'proposed_count'    => $proposed_count,
 				'recovery_count'    => $recovery_count,
-				'unchanged_count'   => $unchanged_count,
 				'action'            => $decision['action']->value ?? null,
 				'target_id'         => $decision['target_id'] ?? null,
 				'target_choices'    => array_values( array_filter( $provider['credentials'] ?? array(), static fn ( array $candidate ): bool => 'file' === ( $candidate['source'] ?? null ) ) ),

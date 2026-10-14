@@ -229,7 +229,7 @@ msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:149
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:349
-#: views/attempts/detail.php:78
+#: views/attempts/detail.php:84
 #: views/attempts/index.php:63
 #: views/attempts/index.php:158
 #: views/portability-review.php:170
@@ -4339,7 +4339,7 @@ msgid "Signing secret"
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:471
-#: views/attempts/detail.php:51
+#: views/attempts/detail.php:57
 #: views/attempts/index.php:47
 msgid "Repository webhook"
 msgstr ""
@@ -5272,43 +5272,43 @@ msgstr ""
 msgid "RAN Booster uninstall stopped"
 msgstr ""
 
-#: views/attempts/detail.php:31
+#: views/attempts/detail.php:37
 #: views/attempts/index.php:109
 msgid "Open theme settings"
 msgstr ""
 
-#: views/attempts/detail.php:32
+#: views/attempts/detail.php:38
 #: views/attempts/index.php:110
 msgid "Open plugin settings"
 msgstr ""
 
-#: views/attempts/detail.php:36
+#: views/attempts/detail.php:42
 msgid "Back to Activity"
 msgstr ""
 
-#: views/attempts/detail.php:42
+#: views/attempts/detail.php:48
 msgid "Deployment activity details"
 msgstr ""
 
-#: views/attempts/detail.php:44
+#: views/attempts/detail.php:50
 msgid "Deployment activity is temporarily unavailable."
 msgstr ""
 
-#: views/attempts/detail.php:46
+#: views/attempts/detail.php:52
 msgid "That deployment record was not found."
 msgstr ""
 
-#: views/attempts/detail.php:50
+#: views/attempts/detail.php:56
 #: views/attempts/index.php:46
 msgid "Manual administrator action"
 msgstr ""
 
-#: views/attempts/detail.php:54
+#: views/attempts/detail.php:60
 #: views/attempts/index.php:156
 msgid "Failure reason"
 msgstr ""
 
-#: views/attempts/detail.php:55
+#: views/attempts/detail.php:61
 #: views/attempts/index.php:65
 #: views/attempts/index.php:93
 #: views/attempts/index.php:132
@@ -5316,127 +5316,127 @@ msgstr ""
 msgid "Outcome"
 msgstr ""
 
-#: views/attempts/detail.php:57
+#: views/attempts/detail.php:63
 msgid "This operation has not reached a recorded outcome."
 msgstr ""
 
-#: views/attempts/detail.php:60
+#: views/attempts/detail.php:66
 msgid "Before you retry"
 msgstr ""
 
-#: views/attempts/detail.php:61
+#: views/attempts/detail.php:67
 msgid "WordPress reported that it changed this package, but Booster could not confirm the final result. The package may already contain the requested update."
 msgstr ""
 
 #. translators: 1: later verified deployment date, 2: later deployment ID.
-#: views/attempts/detail.php:64
+#: views/attempts/detail.php:70
 #, php-format
 msgid "Booster verified a later deployment on %1$s (activity #%2$d), so the package has since reached a known state."
 msgstr ""
 
-#: views/attempts/detail.php:66
+#: views/attempts/detail.php:72
 msgid "Check that the package is present, has the expected version and activation state, and that the site is not in maintenance mode."
 msgstr ""
 
-#: views/attempts/detail.php:68
+#: views/attempts/detail.php:74
 msgid "Checking the box only clears the retry block. It does not change the package or prove what happened before."
 msgstr ""
 
-#: views/attempts/detail.php:72
+#: views/attempts/detail.php:78
 #: views/attempts/index.php:144
 #: views/attempts/index.php:157
 msgid "Support reference"
 msgstr ""
 
-#: views/attempts/detail.php:74
+#: views/attempts/detail.php:80
 msgid "Provider request ID"
 msgstr ""
 
-#: views/attempts/detail.php:76
+#: views/attempts/detail.php:82
 msgid "State"
 msgstr ""
 
-#: views/attempts/detail.php:77
+#: views/attempts/detail.php:83
 #: views/attempts/index.php:159
 msgid "Origin"
 msgstr ""
 
-#: views/attempts/detail.php:87
+#: views/attempts/detail.php:93
 #: views/attempts/index.php:61
 #: views/packages/index.php:506
 #: views/troubleshooting.php:178
 msgid "Provider"
 msgstr ""
 
-#: views/attempts/detail.php:88
+#: views/attempts/detail.php:94
 #: views/attempts/index.php:160
 msgid "Requested reference"
 msgstr ""
 
-#: views/attempts/detail.php:89
+#: views/attempts/detail.php:95
 #: views/attempts/index.php:161
 msgid "Resolved reference"
 msgstr ""
 
-#: views/attempts/detail.php:89
+#: views/attempts/detail.php:95
 #: views/attempts/index.php:161
 msgid "Not resolved"
 msgstr ""
 
-#: views/attempts/detail.php:90
+#: views/attempts/detail.php:96
 #: views/attempts/index.php:162
 msgid "Mutation began"
 msgstr ""
 
-#: views/attempts/detail.php:90
+#: views/attempts/detail.php:96
 #: views/attempts/index.php:162
 msgid "No"
 msgstr ""
 
-#: views/attempts/detail.php:91
+#: views/attempts/detail.php:97
 #: views/attempts/index.php:163
 msgid "Finished"
 msgstr ""
 
-#: views/attempts/detail.php:91
+#: views/attempts/detail.php:97
 #: views/attempts/index.php:163
 msgid "Not finished"
 msgstr ""
 
-#: views/attempts/detail.php:93
+#: views/attempts/detail.php:99
 #: views/attempts/index.php:165
 msgid "Operator review"
 msgstr ""
 
 #. translators: 1: review date and time, 2: WordPress user ID.
-#: views/attempts/detail.php:93
+#: views/attempts/detail.php:99
 #: views/attempts/index.php:165
 #, php-format
 msgid "Resolved %1$s by user #%2$d"
 msgstr ""
 
-#: views/attempts/detail.php:102
+#: views/attempts/detail.php:108
 msgid "I have checked the package's current state and want to allow another deployment."
 msgstr ""
 
-#: views/attempts/detail.php:106
+#: views/attempts/detail.php:112
 msgid "Allow retry"
 msgstr ""
 
-#: views/attempts/detail.php:108
+#: views/attempts/detail.php:114
 msgid "Allow retry and return to theme settings"
 msgstr ""
 
-#: views/attempts/detail.php:110
+#: views/attempts/detail.php:116
 msgid "Allow retry and return to plugin settings"
 msgstr ""
 
-#: views/attempts/detail.php:122
+#: views/attempts/detail.php:128
 #: views/attempts/index.php:177
 msgid "I have confirmed that the deployment worker has stopped."
 msgstr ""
 
-#: views/attempts/detail.php:123
+#: views/attempts/detail.php:129
 #: views/attempts/index.php:178
 msgid "Reconcile stopped worker"
 msgstr ""

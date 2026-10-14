@@ -57,6 +57,7 @@ final class PortabilityControllerTest extends TestCase {
 		$_FILES = array();
 		$_POST  = array();
 		unset( $GLOBALS['ran_booster_repository_admin_allowed'] );
+		unset( $GLOBALS['ran_booster_repository_admin_nonce_valid'] );
 		unset( $GLOBALS['ran_booster_repository_admin_capabilities'] );
 		unset( $GLOBALS['ran_booster_repository_admin_uploaded_files'] );
 		unset( $GLOBALS['ran_booster_repository_admin_file_read'] );
@@ -69,6 +70,7 @@ final class PortabilityControllerTest extends TestCase {
 		$_FILES = array();
 		$_POST  = array();
 		unset( $GLOBALS['ran_booster_repository_admin_allowed'] );
+		unset( $GLOBALS['ran_booster_repository_admin_nonce_valid'] );
 		unset( $GLOBALS['ran_booster_repository_admin_capabilities'] );
 		unset( $GLOBALS['ran_booster_repository_admin_uploaded_files'] );
 		unset( $GLOBALS['ran_booster_repository_admin_file_read'] );
@@ -93,6 +95,16 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertFalse( $result['success'] );
 		self::assertSame( 400, $result['status'] );
 		self::assertSame( 'Choose a valid Transporter Blueprint ZIP to review.', $result['data']['message'] );
+	}
+
+	public function test_preview_rejects_an_invalid_nonce_before_reading_an_upload(): void {
+		$GLOBALS['ran_booster_repository_admin_nonce_valid'] = false;
+		$this->set_uploaded_blueprint( '/not-readable' );
+
+		$result = $this->controller()->handle_preview();
+
+		self::assertFalse( $result['success'] );
+		self::assertSame( 403, $result['status'] );
 	}
 
 	public function test_apply_rejects_unauthorised_requests_before_reading_an_upload(): void {
@@ -451,16 +463,18 @@ final class PortabilityControllerTest extends TestCase {
 		$secrets   = new PortabilityReadinessSpySecretsFile( false );
 		$blueprint = new PackageBlueprint( array( $this->blueprint_package() ) );
 		$file      = $this->blueprint_archive( $blueprint );
+		$this->set_uploaded_blueprint( $file );
 
 		try {
-			$html = $this->preview_controller( $secrets )->preview_file( $file );
+			$result = $this->preview_controller( $secrets )->handle_preview();
 		} finally {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test temporary file is outside WordPress media handling.
 			unlink( $file );
 		}
 
 		self::assertSame( 0, $secrets->readiness_checks );
-		self::assertStringContainsString( 'Ready to migrate; all checks passed.', $html );
+		self::assertTrue( $result['success'] );
+		self::assertStringContainsString( 'Ready to migrate; all checks passed.', $result['data']['html'] );
 	}
 
 	public function test_credential_preview_reports_unavailable_target_storage_without_persistence(): void {
@@ -485,19 +499,45 @@ final class PortabilityControllerTest extends TestCase {
 			)
 		);
 		$file      = $this->blueprint_archive( $blueprint, 'correct-horse-battery-staple' );
+		$this->set_uploaded_blueprint( $file );
+		$_POST['password'] = 'correct-horse-battery-staple';
 
 		try {
-			$html = $this->preview_controller( $secrets )->preview_file( $file, 'correct-horse-battery-staple' );
+			$result = $this->preview_controller( $secrets )->handle_preview();
 		} finally {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test temporary file is outside WordPress media handling.
 			unlink( $file );
 		}
 
 		self::assertSame( 0, $secrets->readiness_checks );
+		self::assertTrue( $result['success'] );
+		$html = $result['data']['html'];
+		self::assertSame( 0, $secrets->import_calls );
 		self::assertStringContainsString( 'Repository credentials', $html );
 		self::assertStringContainsString( 'name="credential_decisions[0][action]" value="import"', $html );
 		self::assertStringNotContainsString( 'value="import" data-portability-credential-action aria-describedby="ran-booster-portability-credential-description-0" checked', $html );
 		self::assertStringNotContainsString( 'sentinel-portability-token', $html );
+	}
+
+	public function test_credential_upload_with_wrong_password_does_not_disclose_or_persist_secrets(): void {
+		$secrets = new PortabilityReadinessSpySecretsFile( false );
+		$file    = $this->blueprint_archive( $this->credential_blueprint(), 'correct-horse-battery-staple' );
+		$this->set_uploaded_blueprint( $file );
+		$_POST['password'] = 'wrong-password-value';
+
+		try {
+			$result = $this->preview_controller( $secrets )->handle_preview();
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test temporary file is outside WordPress media handling.
+			unlink( $file );
+		}
+
+		self::assertFalse( $result['success'] );
+		self::assertSame( 400, $result['status'] );
+		self::assertSame( 0, $secrets->readiness_checks );
+		self::assertSame( 0, $secrets->import_calls );
+		self::assertStringNotContainsString( 'sentinel-portability-token', (string) wp_json_encode( $result ) );
+		self::assertStringNotContainsString( 'wrong-password-value', (string) wp_json_encode( $result ) );
 	}
 
 	public function test_credential_projection_offers_recovery_for_associated_managed_packages(): void {
@@ -537,16 +577,13 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertTrue( $rows[0]['decision_required'] );
 		self::assertSame( 0, $rows[0]['proposed_count'] );
 		self::assertSame( 1, $rows[0]['recovery_count'] );
-		self::assertSame( 2, $rows[0]['unchanged_count'] );
 		self::assertSame(
 			array(
 				array(
-					'row'  => 0,
 					'name' => 'Managed <Plugin>',
 					'type' => 'Plugin',
 				),
 				array(
-					'row'  => 1,
 					'name' => 'Protected Theme',
 					'type' => 'Theme',
 				),
@@ -560,6 +597,20 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertStringNotContainsString( 'configuration-canary', $projection );
 		self::assertStringNotContainsString( 'managed-source-id-canary', $projection );
 		self::assertStringNotContainsString( 'protected-source-id-canary', $projection );
+		$render = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'render_review' );
+		$html   = $render->invoke( $this->controller(), array(), $rows );
+		self::assertStringContainsString( 'Used by 2 packages; credential recovery is available for 1 managed package', $html );
+		self::assertStringContainsString( 'Managed &lt;Plugin&gt;', $html );
+		self::assertStringContainsString( 'Protected Theme', $html );
+
+		$items[0] = new BlueprintPlanItem( $managed, TargetPackageAction::PROTECTED, TargetPackageReason::MANAGEMENT_CONFLICT );
+		$rows     = $method->invoke( $this->preview_controller( new PortabilityReadinessSpySecretsFile( true ) ), $blueprint, array(), $items );
+		self::assertFalse( $rows[0]['decision_required'] );
+		self::assertSame( 0, $rows[0]['proposed_count'] );
+		self::assertSame( 0, $rows[0]['recovery_count'] );
+		$html = $render->invoke( $this->controller(), array(), $rows );
+		self::assertStringContainsString( 'Used by 2 packages; all unchanged', $html );
+		self::assertStringNotContainsString( 'name="credential_decisions[0][action]"', $html );
 	}
 
 	public function test_apply_recognises_amanaged_package_without_mutation(): void {
@@ -1077,6 +1128,7 @@ final class PortabilityControllerTest extends TestCase {
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused readiness spy belongs with controller behavior tests.
 final class PortabilityReadinessSpySecretsFile extends SecretsFile {
 	public int $readiness_checks = 0;
+	public int $import_calls     = 0;
 
 	public function __construct( private readonly bool $ready ) {
 		parent::__construct( null, array(), new ProviderSecretPolicyCatalog() );
@@ -1087,5 +1139,12 @@ final class PortabilityReadinessSpySecretsFile extends SecretsFile {
 		if ( ! $this->ready ) {
 			throw new RuntimeException( 'Test target storage is unavailable.' );
 		}
+	}
+
+	/** @return list<string> */
+	public function import_credentials_if_absent( #[\SensitiveParameter] PackageBlueprint $blueprint, #[\SensitiveParameter] BlueprintCredential ...$credentials ): array {
+		++$this->import_calls;
+
+		return parent::import_credentials_if_absent( $blueprint, ...$credentials );
 	}
 }

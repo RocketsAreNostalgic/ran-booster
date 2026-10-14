@@ -178,19 +178,18 @@ msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:58
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:272
-#: RAN/Admin/PackagePagePresenter.php:296
-#: RAN/Admin/PackagePagePresenter.php:440
+#: RAN/Admin/PackagePagePresenter.php:277
+#: RAN/Admin/PackagePagePresenter.php:447
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:475
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:468
 #: views/packages/index.php:148
-#: views/packages/source-choices.php:26
 msgid "Branch"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:59
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:272
-#: RAN/Admin/PackagePagePresenter.php:306
-#: RAN/Admin/PackagePagePresenter.php:441
+#: RAN/Admin/PackagePagePresenter.php:287
+#: RAN/Admin/PackagePagePresenter.php:448
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:405
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:474
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:125
@@ -201,7 +200,6 @@ msgstr ""
 #: views/packages/index.php:149
 #: views/packages/index.php:332
 #: views/packages/index.php:402
-#: views/packages/source-choices.php:35
 #: assets/ran-booster-release-management.js:805
 #: assets/ran-booster-release-management.js:811
 msgid "Releases"
@@ -1576,55 +1574,61 @@ msgctxt "Managed package type plural label"
 msgid "Themes"
 msgstr ""
 
-#: RAN/Admin/PackagePagePresenter.php:297
-#: views/packages/source-choices.php:27
+#: RAN/Admin/PackagePagePresenter.php:278
 msgid "Deploy the saved branch manually or on a signed push."
 msgstr ""
 
-#: RAN/Admin/PackagePagePresenter.php:298
-#: RAN/Admin/PackagePagePresenter.php:308
-#: views/packages/source-choices.php:28
+#: RAN/Admin/PackagePagePresenter.php:279
+#: RAN/Admin/PackagePagePresenter.php:291
 msgid "Included with Booster"
 msgstr ""
 
-#: RAN/Admin/PackagePagePresenter.php:307
+#: RAN/Admin/PackagePagePresenter.php:289
+msgid "Install verified packages from a supported provider's published releases."
+msgstr ""
+
+#: RAN/Admin/PackagePagePresenter.php:290
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:128
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:186
 msgid "Install published releases through WordPress."
 msgstr ""
 
-#: RAN/Admin/PackagePagePresenter.php:393
-#: views/packages/source-choices.php:47
-#: views/packages/source-choices.php:50
+#: RAN/Admin/PackagePagePresenter.php:291
+msgid "Provider capability required"
+msgstr ""
+
+#: RAN/Admin/PackagePagePresenter.php:400
+#: views/packages/source-choices.php:28
+#: views/packages/source-choices.php:31
 msgid "Update source"
 msgstr ""
 
 #. translators: 1: source label, 2: branch.
-#: RAN/Admin/PackagePagePresenter.php:397
+#: RAN/Admin/PackagePagePresenter.php:404
 #, php-format
 msgid "%1$s · %2$s"
 msgstr ""
 
-#: RAN/Admin/PackagePagePresenter.php:401
+#: RAN/Admin/PackagePagePresenter.php:408
 #: views/packages/edit.php:240
 #: views/packages/index.php:406
 #: assets/ran-booster-release-management.js:732
 msgid "provider default"
 msgstr ""
 
-#: RAN/Admin/PackagePagePresenter.php:452
-#: RAN/Admin/PackagePagePresenter.php:457
+#: RAN/Admin/PackagePagePresenter.php:459
+#: RAN/Admin/PackagePagePresenter.php:464
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:470
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:481
 #: views/extensions.php:11
 #: views/extensions.php:50
-#: views/packages/source-choices.php:99
+#: views/packages/source-choices.php:80
 msgid "Active"
 msgstr ""
 
 #. translators: 1: package type, 2: package display name.
-#: RAN/Admin/PackagePagePresenter.php:455
-#: RAN/Admin/PackagePagePresenter.php:461
+#: RAN/Admin/PackagePagePresenter.php:462
+#: RAN/Admin/PackagePagePresenter.php:468
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:478
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:795
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:137
@@ -7672,26 +7676,18 @@ msgid "Repository configuration"
 msgstr ""
 
 #: views/packages/source-choices.php:36
-msgid "Install verified packages from a supported provider's published releases."
-msgstr ""
-
-#: views/packages/source-choices.php:37
-msgid "Provider capability required"
-msgstr ""
-
-#: views/packages/source-choices.php:55
 msgid "Viewing settings does not change the update source."
 msgstr ""
 
-#: views/packages/source-choices.php:56
+#: views/packages/source-choices.php:37
 msgid "Choose an update source. Selecting it does not install the package."
 msgstr ""
 
-#: views/packages/source-choices.php:61
+#: views/packages/source-choices.php:42
 msgid "Choose a repository before configuring its update source."
 msgstr ""
 
-#: views/packages/source-choices.php:64
+#: views/packages/source-choices.php:45
 msgid "Update source settings"
 msgstr ""
 

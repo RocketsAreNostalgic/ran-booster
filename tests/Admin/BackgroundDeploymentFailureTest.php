@@ -116,6 +116,9 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		$monitor              = $this->monitor();
 		$notice               = new DeploymentAdminPresenter( $monitor );
 
+		self::assertTrue( $notice->should_render() );
+		$this->database->rows = array();
+
 		ob_start();
 		$notice->render();
 		$notice->render();
@@ -138,6 +141,17 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		ob_start();
 		( new DeploymentAdminPresenter( $monitor ) )->render();
 		self::assertSame( '', (string) ob_get_clean() );
+	}
+
+	public function test_notice_keeps_unavailable_history_stable_until_the_next_request(): void {
+		$this->database->rows       = array( $this->row( 1, 'affected', 'affected', 'webhook', DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED ) );
+		$this->database->fail_reads = true;
+		$notice                     = new DeploymentAdminPresenter( $this->monitor() );
+
+		self::assertFalse( $notice->should_render() );
+		$this->database->fail_reads = false;
+		self::assertFalse( $notice->should_render() );
+		self::assertTrue( ( new DeploymentAdminPresenter( $this->monitor() ) )->should_render() );
 	}
 
 	public function test_dismissal_rejects_unauthorized_invalid_nonce_and_persistence_failure(): void {

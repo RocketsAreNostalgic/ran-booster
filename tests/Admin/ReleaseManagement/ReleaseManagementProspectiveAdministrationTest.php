@@ -131,6 +131,24 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 		);
 		self::assertSame( array( 'inspect', 'plugin', $prospective->calls[0][2], 'release:opaque/042', 'v1.2.3-rc.1', 'prerelease', $this->nonce( 'inspect', 'plugin' ) ), $prospective->calls[1] );
 		self::assertSame( array( 'install', 'plugin', $prospective->calls[0][2], 'release:opaque/042', 'v1.2.3-rc.1', $fingerprint, 'prerelease', $this->nonce( 'install', 'plugin' ), null ), $prospective->calls[2] );
+
+		$expectation                        = array(
+			'provider_code'              => 'gh',
+			'selection_generation'       => 4,
+			'implementation_fingerprint' => str_repeat( 'a', 64 ),
+		);
+		$inspection                         = $prospective->results['inspect']->data();
+		$inspection['provider_expectation'] = $expectation;
+		$prospective->results['inspect']    = ProspectiveReleaseResult::success( 'release_ready', $inspection );
+		$inspect                            = $controls->process_prospective_request( 'inspect', $request );
+		self::assertTrue( $inspect['successful'] );
+		self::assertSame( $expectation, $inspect['data']['provider_expectation'] );
+
+		$inspection['provider_expectation'] = 'invalid-context';
+		$prospective->results['inspect']    = ProspectiveReleaseResult::success( 'release_ready', $inspection );
+		$inspect                            = $controls->process_prospective_request( 'inspect', $request );
+		self::assertFalse( $inspect['successful'] );
+		self::assertArrayNotHasKey( 'install_nonce', $inspect['data'] );
 	}
 
 	public function test_prospective_pane_carries_type_and_install_script_suppresses_branch_dispatcher(): void {

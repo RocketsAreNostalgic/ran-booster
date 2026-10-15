@@ -659,6 +659,90 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		}
 	}
 
+	public function test_staging_authority_or_policy_change_refuses_native_begin(): void {
+		foreach ( array( 'source_revision', 'disabled' ) as $change ) {
+			$first                = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
+			$changed              = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', 'disabled' === $change ? DeploymentPolicy::DISABLED : DeploymentPolicy::MANUAL, source_revision: 'source_revision' === $change ? 2 : 1 );
+			$current              = $first;
+			[ $registrar, $lock ] = $this->native_plugin_registrar(
+				$first,
+				static function () use ( &$current ): Package {
+					return $current;
+				}
+			);
+			self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
+			self::assertFalse( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ) );
+			$current = $changed;
+			try {
+				$registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
+				self::fail( 'Staging changed captured authority.' );
+			} catch ( \RuntimeException ) {
+				self::assertNotNull( $this->native_selection_store );
+				self::assertArrayNotHasKey( 'native_mutation', $this->native_selection_store->read() );
+				self::assertSame( array(), $lock->releases );
+			}
+		}
+	}
+
+	public function test_staging_mutation_guard_change_refuses_native_begin(): void {
+		[ $registrar, $lock ] = $this->native_plugin_registrar( $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL ) );
+		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
+		self::assertFalse( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ) );
+		$GLOBALS['ran_booster_wp_pusher_active_plugins'] = array( 'wppusher/wppusher.php' );
+		try {
+			$registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
+			self::fail( 'Revoked mutation permission admitted.' );
+		} catch ( \RuntimeException ) {
+			self::assertNotNull( $this->native_selection_store );
+			self::assertArrayNotHasKey( 'native_mutation', $this->native_selection_store->read() );
+			self::assertSame( array(), $lock->releases );
+		}
+	}
+
+	public function test_staging_target_unavailability_refuses_native_begin(): void {
+		[ $registrar, $lock, $target ] = $this->native_plugin_registrar( $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL ) );
+		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
+		self::assertFalse( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ) );
+		$target->fail_diagnostics();
+		try {
+			$registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
+			self::fail( 'Unavailable target admitted.' );
+		} catch ( \RuntimeException ) {
+			self::assertNotNull( $this->native_selection_store );
+			self::assertArrayNotHasKey( 'native_mutation', $this->native_selection_store->read() );
+			self::assertSame( array(), $lock->releases );
+		}
+	}
+
+	public function test_final_authority_read_cannot_replace_lock_then_admit_native_mutation(): void {
+		$package              = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
+		$race                 = new class() {
+			public bool $after_staging       = false;
+			public ?RuntimeUpdaterLock $lock = null;
+		};
+		[ $registrar, $lock ] = $this->native_plugin_registrar(
+			$package,
+			static function () use ( $package, $race ): Package {
+				if ( $race->after_staging && null !== $race->lock ) {
+					$race->lock->token = 'changed-lock';
+				}
+				return $package;
+			}
+		);
+		$race->lock           = $lock;
+		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
+		self::assertFalse( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ) );
+		$race->after_staging = true;
+		try {
+			$registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
+			self::fail( 'Foreign authority read replaced the lock.' );
+		} catch ( \RuntimeException ) {
+			self::assertNotNull( $this->native_selection_store );
+			self::assertArrayNotHasKey( 'native_mutation', $this->native_selection_store->read() );
+			self::assertSame( array(), $lock->releases );
+		}
+	}
+
 	public function test_native_update_rejects_authority_change_and_releases_manual_lock(): void {
 		$first                = $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL );
 		$changed              = $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL, source_revision: 2 );

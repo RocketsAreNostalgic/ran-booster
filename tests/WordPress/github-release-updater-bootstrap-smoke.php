@@ -67,7 +67,7 @@ $ran_booster_broker    = $GLOBALS['ran_wp_release_updater_v1_broker'] ?? null;
 
 $ran_booster_assert( is_object( $ran_booster_broker ), 'The release updater broker must register before plugins_loaded.' );
 $ran_booster_assert( is_object( $ran_booster_registrar ), 'The release updater must return its public registrar.' ); // @phpstan-ignore function.alreadyNarrowedType (Runtime acceptance proof retains the observed loaded value check rather than relying on analyzer assumptions.)
-$ran_booster_assert( 5 === $ran_booster_broker->protocol_version(), 'The public registrar must use Protocol 5.' );
+$ran_booster_assert( 6 === $ran_booster_broker->protocol_version(), 'The public registrar must use Protocol 6.' );
 
 $ran_booster_core_updater = ( new RAN\WordPress\ManagedReleaseUpdaterRegistrar( $ran_booster_registrar ) )->plugin(
 	'github',

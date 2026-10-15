@@ -796,7 +796,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 				),
 			);
 		};
-		$result                        = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce' );
+		$result                        = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce', $this->expectation_for( $this->repository_request() ) );
 		self::assertSame( 'release_repository_conflict', $result->code() );
 		self::assertSame( 0, $executor->install_calls );
 		self::assertSame( 0, $plugins->adoption_calls );
@@ -816,7 +816,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$this->acquisition->on_handoff = static function () use ( $plugins ): void {
 			$plugins->installed = true;
 		};
-		$result                        = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce' );
+		$result                        = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce', $this->expectation_for( $this->repository_request() ) );
 		self::assertSame( 'package_already_exists', $result->code() );
 		self::assertSame( 0, $executor->install_calls );
 		self::assertSame( 0, $plugins->adoption_calls );

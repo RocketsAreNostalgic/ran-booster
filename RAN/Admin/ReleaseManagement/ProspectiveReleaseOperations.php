@@ -123,8 +123,10 @@ final class ProspectiveReleaseOperations {
 		}
 
 		if ( 'inspect' === $operation && $successful ) {
-			$expectation                  = $result->data()['provider_expectation'] ?? null;
-			$expectation                  = 'gh' === $repository['provider'] ? \RAN\RepositoryProvider\GitHubProviderSelection::normalize_expectation( $expectation ) : null;
+			$expectation = $result->data()['provider_expectation'] ?? null;
+			if ( null !== $expectation && ! is_array( $expectation ) ) {
+				return $outcome( 'operation_failed', false );
+			}
 			$data['provider_expectation'] = $expectation;
 			$data['install_nonce']        = wp_create_nonce( $this->nonce_action( 'install', $type, $expectation ) );
 		}

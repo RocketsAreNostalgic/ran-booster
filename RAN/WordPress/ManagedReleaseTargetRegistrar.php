@@ -297,6 +297,15 @@ final class ManagedReleaseTargetRegistrar {
 		if ( null === $pending || 'gh' !== $pending['authority']['provider'] || null === $pending['lock'] ) {
 			throw new \RuntimeException( 'GitHub native lock ownership is unavailable.' );
 		}
+		if ( $pending['lock'] !== $this->updater_lock->current_token()
+			|| ( $pending['automatic'] && ( ! function_exists( 'doing_action' ) || ! doing_action( 'wp_maybe_auto_update' ) ) ) ) {
+			throw new \RuntimeException( 'GitHub native authority is unavailable.' );
+		}
+		$snapshot = $this->native_authority_snapshot( $type, $identity );
+		if ( ! $snapshot['release'] || $pending['authority'] !== $snapshot['authority'] || ! $this->native_target_is_active( $type, $identity ) ) {
+			throw new \RuntimeException( 'The managed release authority changed after staging.' );
+		}
+		PackageMutationGuard::assert_package_mutation_allowed();
 		$owner = $this->github_selection->begin_native_mutation( $type, $identity, fn (): bool => $pending['lock'] === $this->updater_lock->current_token() );
 		$this->native_updates[ self::key( $type, $identity ) ]['native_owner'] = $owner;
 		return $owner;

@@ -18,6 +18,7 @@ require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Deployment/AttemptRepositoryDatabase.php';
 
 final class PackageUpdateProgressControllerTest extends TestCase {
+	use \RAN\Tests\Support\QueuedSelectionFixture;
 
 	private AttemptRepositoryDatabase $database;
 	private DeploymentAttemptRepository $repository;
@@ -34,7 +35,8 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 			'wp_ran_booster_deployment_attempts',
 			static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-07-23 00:00:00 UTC' ),
 			static fn ( int $length ): string => str_repeat( "\x01", $length ),
-			$this->createStub( \RAN\Storage\Database::class )
+			$this->createStub( \RAN\Storage\Database::class ),
+			selection: $this->queued_selection( $this->database )
 		);
 	}
 
@@ -135,7 +137,19 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 	}
 
 	private function queued_attempt(): DeploymentAttempt {
-		$this->database->management['example/example.php'] = 'gh:R_example:11111111-1111-4111-8111-111111111111';
+		$this->database->management['example/example.php']      = 'gh:R_example:11111111-1111-4111-8111-111111111111';
+		$this->database->management_rows['example/example.php'] = array(
+			'provider'               => 'gh',
+			'provider_repository_id' => 'R_example',
+			'repository'             => 'owner/example',
+			'branch'                 => 'main',
+			'private'                => 0,
+			'credential_id'          => null,
+			'subdirectory'           => null,
+			'deployment_policy'      => DeploymentPolicy::MANUAL->value,
+			'source'                 => 'branch',
+			'source_revision'        => 1,
+		);
 		$request = new DeploymentRequest(
 			'owner/example',
 			null,

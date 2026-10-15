@@ -330,6 +330,7 @@ final class DeploymentAttemptRepository {
 	public function claim_next(): ?DeploymentAttempt {
 		RuntimeSupport::assert_managed_operations_allowed();
 		$this->require_storage_support();
+		$this->write_connection();
 		$hints = $this->read_rows( $this->prepare( "SELECT * FROM %i WHERE state = 'queued' ORDER BY created_at, id", $this->table_name ) );
 		foreach ( $hints as $hint ) {
 			$queued  = DeploymentAttempt::from_database( $hint );

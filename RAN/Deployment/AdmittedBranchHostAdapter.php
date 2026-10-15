@@ -76,6 +76,9 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	/** Construct the immutable package declaration from Booster's admitted snapshot. */
 	public function declaration(): BranchDeploymentDeclaration {
+		if ( null === $this->attempt->safe_data()['mutation_started_at'] ) {
+			$this->assert_provider_current();
+		}
 		$data       = $this->attempt->safe_data();
 		$request    = $this->attempt->get_request();
 		$identifier = null;

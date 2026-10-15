@@ -47,6 +47,8 @@ use RuntimeException;
 use RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 final class AdmittedBranchExecutionTest extends TestCase {
+	use \RAN\Tests\Support\QueuedSelectionFixture;
+
 	private AttemptRepositoryDatabase $database;
 	private DeploymentAttemptRepository $attempts;
 	private BoundaryPluginRepository $plugins;
@@ -65,7 +67,8 @@ final class AdmittedBranchExecutionTest extends TestCase {
 			function ( int $length ): string {
 				return str_repeat( chr( $this->random_byte++ ), $length );
 			},
-			$this->createStub( \RAN\Storage\Database::class )
+			$this->createStub( \RAN\Storage\Database::class ),
+			selection: $this->queued_selection( $this->database )
 		);
 		$this->plugins          = new BoundaryPluginRepository();
 		$this->themes           = new BoundaryThemeRepository();
@@ -234,7 +237,19 @@ final class AdmittedBranchExecutionTest extends TestCase {
 	}
 
 	private function running_update(): DeploymentAttempt {
-		$this->database->management['example/example.php'] = 'gh:R_example:11111111-1111-4111-8111-111111111111';
+		$this->database->management['example/example.php']      = 'gh:R_example:11111111-1111-4111-8111-111111111111';
+		$this->database->management_rows['example/example.php'] = array(
+			'provider'               => 'gh',
+			'provider_repository_id' => 'R_example',
+			'repository'             => 'owner/example',
+			'branch'                 => 'main',
+			'private'                => 0,
+			'credential_id'          => null,
+			'subdirectory'           => null,
+			'deployment_policy'      => DeploymentPolicy::AUTOMATIC->value,
+			'source'                 => 'branch',
+			'source_revision'        => 1,
+		);
 		$request = new DeploymentRequest(
 			'owner/example',
 			null,

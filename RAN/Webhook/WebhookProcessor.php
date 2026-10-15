@@ -89,9 +89,10 @@ final readonly class WebhookProcessor {
 				$status,
 				$this->rejection_message( $status )
 			);
-		} catch ( InvalidProviderCode | UnknownProvider ) {
-			return $this->response( 404, 'Webhook provider not found.' );
-		} catch ( UnsupportedProviderCapability ) {
+		} catch ( InvalidProviderCode | UnknownProvider | UnsupportedProviderCapability ) {
+			if ( ! $this->available( $provider ) ) {
+				return $this->response( 503, 'Webhook processing is temporarily unavailable.' );
+			}
 			return $this->response( 404, 'Webhook provider not found.' );
 		} catch ( DeploymentStorageFailure $failure ) {
 			if ( ! $this->available( $provider ) ) {
@@ -105,6 +106,9 @@ final readonly class WebhookProcessor {
 				? $this->response( 503, 'Webhook processing is temporarily unavailable.' )
 				: $this->response( 500, 'Webhook processing failed.' );
 		} catch ( InvalidArgumentException ) {
+			if ( ! $this->available( $provider ) ) {
+				return $this->response( 503, 'Webhook processing is temporarily unavailable.' );
+			}
 			return $this->response( 400, 'Invalid webhook request.' );
 		} catch ( Throwable ) {
 			if ( ! $this->available( $provider ) ) {

@@ -18,8 +18,9 @@ require_once dirname( __DIR__ ) . '/Deployment/AttemptRepositoryDatabase.php';
 /** Actual same-connection provider selection for deployment and webhook fixtures. */
 trait QueuedSelectionFixture {
 	private function queued_selection( \RAN\Tests\Deployment\AttemptRepositoryDatabase $db, ?ProviderRegistry $registry = null, bool $signing = true ): GitHubProviderSelection {
-		$db->selection->active_bytes             = 'a:1:{i:0;s:9:"index.php";}';
-		$declaration                  = new GitHubReplacementDeclaration(
+		$queries                     = $db->queries;
+		$db->selection->active_bytes = 'a:1:{i:0;s:9:"index.php";}';
+		$declaration                 = new GitHubReplacementDeclaration(
 			array(
 				'plugin_basename'        => 'index.php',
 				'implementation_id'      => 'queued-test',
@@ -30,7 +31,7 @@ trait QueuedSelectionFixture {
 				'facets'                 => array(),
 			)
 		);
-		$store = new GitHubSelectionStore( $db, 'wp_options' );
+		$store                       = new GitHubSelectionStore( $db, 'wp_options' );
 		$store->initialize_bundled( $declaration );
 		$selection = new GitHubProviderSelection( $store, dirname( __DIR__ ) . '/WordPress/fixtures/ran-booster-managed-active', $declaration );
 		$provider  = $this->createMock( RepositoryProvider::class );
@@ -40,6 +41,7 @@ trait QueuedSelectionFixture {
 		$selection->bind_registry( $registry );
 		$selection->complete_collection();
 		$registry->seal();
+		$db->queries = $queries;
 		return $selection;
 	}
 }

@@ -29,6 +29,7 @@ use RAN\Storage\PluginRepository;
 use RAN\Tests\Deployment\AttemptRepositoryDatabase;
 
 final class BackgroundDeploymentFailureTest extends TestCase {
+	use \RAN\Tests\Support\QueuedSelectionFixture;
 
 	private AttemptRepositoryDatabase $database;
 	private DeploymentAttemptRepository $attempts;
@@ -41,7 +42,8 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		$this->attempts = new DeploymentAttemptRepository(
 			$this->database,
 			'wp_ran_booster_deployment_attempts',
-			database_lifecycle: $this->createStub( Database::class )
+			database_lifecycle: $this->createStub( Database::class ),
+			selection: $this->queued_selection( $this->database )
 		);
 
 		$GLOBALS['ran_booster_repository_admin_allowed']               = true;

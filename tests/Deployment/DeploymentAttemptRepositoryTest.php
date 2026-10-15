@@ -24,6 +24,7 @@ require_once __DIR__ . '/AttemptRepositoryDatabase.php';
 require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
 
 final class DeploymentAttemptRepositoryTest extends TestCase {
+	use \RAN\Tests\Support\QueuedSelectionFixture;
 
 	private AttemptRepositoryDatabase $database;
 	private DeploymentAttemptRepository $repository;
@@ -43,7 +44,8 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 				return str_repeat( chr( $this->random_byte++ ), $length );
 			},
 			$this->database_lifecycle,
-			configured_max_attempt_rows: 200
+			configured_max_attempt_rows: 200,
+			selection: $this->queued_selection( $this->database )
 		);
 	}
 
@@ -92,7 +94,8 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			$this->database,
 			'wp_ran_booster_deployment_attempts',
 			clock: static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-07-19 00:00:00 UTC' ),
-			database_lifecycle: $this->database_lifecycle
+			database_lifecycle: $this->database_lifecycle,
+			selection: $this->queued_selection( $this->database )
 		);
 
 		self::assertMatchesRegularExpression( '/^[a-f0-9]{32}$/D', $this->manual( 'example' )->get_correlation_id() );
@@ -106,7 +109,8 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-07-19 00:00:00 UTC' ),
 			fn ( int $length ): string => str_repeat( chr( $this->random_byte++ ), $length ),
 			$this->database_lifecycle,
-			activity: new ActivityStore( $this->database, 'wp_ran_booster_activity' )
+			activity: new ActivityStore( $this->database, 'wp_ran_booster_activity' ),
+			selection: $this->queued_selection( $this->database )
 		);
 		try {
 			$this->manual( 'example' );
@@ -307,8 +311,8 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		self::assertSame( 'COMMIT', $this->database->queries[ $last_key ] );
 		self::assertSame( 'running', $this->database->rows[0]['state'] );
 		self::assertNull( $this->database->rows[0]['mutation_started_at'] );
-		// The active-attempt read and the inserted-row readback remain; no claim reread is needed.
-		self::assertCount( 2, array_filter( $this->database->queries, static fn ( string $query ): bool => str_starts_with( $query, 'SELECT * FROM' ) ) );
+		// The locked management scan, active-attempt read and inserted-row readback remain.
+		self::assertCount( 3, array_filter( $this->database->queries, static fn ( string $query ): bool => str_starts_with( $query, 'SELECT * FROM' ) ) );
 		self::assertCount( 1, array_filter( $this->database->queries, static fn ( string $query ): bool => str_contains( $query, 'WHERE correlation_id =' ) ) );
 		self::assertStringNotContainsString( 'UPDATE ', implode( "\n", $this->database->queries ) );
 	}
@@ -941,7 +945,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		self::assertNotNull( $running );
 		self::assertSame( $queued->get_id(), $running->get_id() );
 		self::assertSame( DeploymentState::RUNNING, $running->get_state() );
-		self::assertSame( 'START TRANSACTION', $this->database->queries[0] );
+		self::assertContains( 'START TRANSACTION', $this->database->queries );
 		$last_key = array_key_last( $this->database->queries );
 		self::assertNotNull( $last_key );
 		self::assertSame( 'COMMIT', $this->database->queries[ $last_key ] );
@@ -982,6 +986,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$finished = $this->repository->finish( $running->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED ) );
 
 		self::assertSame( str_repeat( 'a', 40 ), $resolved->safe_data()['resolved_ref'] );
+		self::assertInstanceOf( DeploymentAttempt::class, $fenced );
 		self::assertNotNull( $fenced->safe_data()['mutation_started_at'] );
 		self::assertSame( DeploymentState::SUCCEEDED, $finished->get_state() );
 		self::assertSame( 'deployed', $finished->get_outcome()?->get_code() );
@@ -1201,7 +1206,8 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 				return str_repeat( chr( $this->random_byte++ ), $length );
 			},
 			$database_lifecycle ?? $this->database_lifecycle,
-			$maximum_rows
+			$maximum_rows,
+			selection: $this->queued_selection( $this->database )
 		);
 	}
 
@@ -1287,8 +1293,22 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 	}
 
 	private function request( string $slug, bool $bound = true ): DeploymentRequest {
-		$token                               = ( 'bitbucket' === $slug ? 'bb' : 'gh' ) . ':R_' . $slug . ':11111111-1111-4111-8111-111111111111';
-		$this->database->management[ $slug ] = $token;
+		$token = ( 'bitbucket' === $slug ? 'bb' : 'gh' ) . ':R_' . $slug . ':11111111-1111-4111-8111-111111111111';
+		if ( $bound ) {
+			$this->database->management[ $slug ]      = $token;
+			$this->database->management_rows[ $slug ] = array(
+				'provider'               => ( 'bitbucket' === $slug ? 'bb' : 'gh' ),
+				'provider_repository_id' => 'R_' . $slug,
+				'repository'             => 'org/' . $slug,
+				'branch'                 => 'main',
+				'private'                => 1,
+				'credential_id'          => 'profile_1',
+				'subdirectory'           => null,
+				'deployment_policy'      => DeploymentPolicy::AUTOMATIC->value,
+				'source'                 => 'branch',
+				'source_revision'        => 1,
+			);
+		}
 		return new DeploymentRequest( 'org/' . $slug, 'profile_1', true, 'main', $slug, null, DeploymentPolicy::AUTOMATIC, 1, null, $bound ? $slug : null, $bound ? $token : null );
 	}
 }

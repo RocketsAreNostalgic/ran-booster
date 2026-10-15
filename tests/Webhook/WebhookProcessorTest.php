@@ -99,6 +99,38 @@ final class WebhookProcessorTest extends TestCase {
 		self::assertSame( 503, $response->get_status() );
 	}
 
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'callback_failure_provider' )]
+	public function test_callback_failure_reports_current_availability( Throwable $failure, bool $revoke, int $expected ): void {
+		$registry  = new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe() ) ) );
+		$db        = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
+		$selection = $this->queued_selection( $db, $registry );
+		$secrets   = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::never() )->method( 'webhook_materials' );
+		$spy       = new WebhookProcessorCoordinatorSpy();
+		$processor = new WebhookProcessor( $registry, new WebhookProcessorCoordinator( null, $spy ), new SignedWebhookVerifier( $secrets ), $selection );
+		$response  = $processor->handle(
+			'gh',
+			static function () use ( $db, $failure, $revoke ): array {
+				if ( $revoke ) {
+					$db->selection->active_bytes = 'a:0:{}';
+				}
+				throw $failure;
+			}
+		);
+		self::assertSame( $expected, $response->get_status() );
+		self::assertSame( 0, $spy->calls );
+	}
+
+	/** @return iterable<string,array{Throwable,bool,int}> */
+	public static function callback_failure_provider(): iterable {
+		foreach ( array( false, true ) as $revoke ) {
+			$label = $revoke ? 'revoked' : 'available';
+			yield $label . '-invalid-input' => array( new \InvalidArgumentException( 'test' ), $revoke, $revoke ? 503 : 400 );
+			yield $label . '-unknown-provider' => array( \RAN\RepositoryProvider\UnknownProvider::for_code(), $revoke, $revoke ? 503 : 404 );
+			yield $label . '-unsupported-capability' => array( \RAN\RepositoryProvider\UnsupportedProviderCapability::for_provider(), $revoke, $revoke ? 503 : 404 );
+		}
+	}
+
 	public function test_authorization_callback_revocation_refuses_before_admission(): void {
 		$db     = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
 		$policy = $this->createMock( ProviderWebhookPolicy::class );

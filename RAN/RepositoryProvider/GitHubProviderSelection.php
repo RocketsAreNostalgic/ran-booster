@@ -129,6 +129,10 @@ final class GitHubProviderSelection {
 				return 'provider_selection_changed';
 			}
 			$marker = $state['native_mutation'] ?? null;
+			if ( is_array( $marker ) && 'plugin' === $type ) {
+				$marker['installed_identity'] = explode( '/', $marker['installed_identity'] )[0];
+				$identity                     = explode( '/', $identity )[0];
+			}
 			if ( ! $this->operation_allowed() || ( is_array( $marker ) && $marker['target_type'] === $type && $marker['installed_identity'] === $identity ) ) {
 				return 'provider_unavailable';
 			}

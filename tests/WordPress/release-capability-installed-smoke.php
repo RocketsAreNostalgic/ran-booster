@@ -43,6 +43,9 @@ if ( ! is_string( $ran_booster_expected_root ) || false === $ran_booster_wordpre
 	|| ! is_string( $ran_booster_archive_root ) || false === realpath( $ran_booster_archive_root ) ) {
 	throw new RuntimeException( 'The installed release-capability smoke requires the exact disposable site and fixture.' );
 }
+$ran_booster_redirect_proof = require __DIR__ . '/archive-redirect-installed-proof.php';
+$ran_booster_redirect_proof( $ran_booster_archive_root );
+
 foreach ( $ran_booster_expected_targets as $ran_booster_target ) {
 	if ( is_link( $ran_booster_target ) || file_exists( $ran_booster_target ) ) {
 		throw new RuntimeException( 'A disposable release-capability target already exists.' );

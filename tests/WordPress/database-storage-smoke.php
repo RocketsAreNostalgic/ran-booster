@@ -319,4 +319,10 @@ if ( ! is_callable( $ran_booster_option_proof ) ) {
 }
 $ran_booster_option_proof( $wpdb );
 
+$ran_booster_selection_proof = require __DIR__ . '/github-selection-storage-smoke.php';
+if ( ! is_callable( $ran_booster_selection_proof ) ) {
+	throw new RuntimeException( 'The GitHub selection SQL proof is unavailable.' );
+}
+$ran_booster_selection_proof( $wpdb );
+
 WP_CLI::success( 'RAN Booster database storage smoke passed on ' . $wpdb->db_server_info() . '.' ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)

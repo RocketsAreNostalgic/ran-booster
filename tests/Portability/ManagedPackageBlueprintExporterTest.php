@@ -65,6 +65,26 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		self::assertSame( array(), $blueprint->credentials );
 	}
 
+	public function test_package_only_export_never_consults_paused_github_credential_authority(): void {
+		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id' );
+		$plugins = $this->createStub( PluginRepository::class );
+		$themes  = $this->createStub( ThemeRepository::class );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
+		$calls     = 0;
+		$secrets   = new SecretsFile(
+			constants: array(),
+			github_credential_access: static function () use ( &$calls ): bool {
+				++$calls;
+				return false;
+			}
+		);
+		$blueprint = ( new ManagedPackageBlueprintExporter( $plugins, $themes, $secrets ) )->export();
+		self::assertSame( array( 'plugin/example.php' ), array_column( $blueprint->packages, 'identifier' ) );
+		self::assertSame( array(), $blueprint->credentials );
+		self::assertSame( 0, $calls );
+	}
+
 	public function test_lifecycle_safe_state_blocks_export_through_the_package_storage_reader(): void {
 		$lifecycle = $this->createStub( Database::class );
 		$lifecycle->method( 'require_ready' )->willThrowException( new DatabaseLifecycleFailure( 'schema_operation_failed' ) );

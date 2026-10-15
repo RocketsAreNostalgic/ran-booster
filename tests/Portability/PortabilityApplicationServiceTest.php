@@ -70,23 +70,6 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		foreach ( array(
 			new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', '', null, new \RAN\WordPress\ManagedReleaseConfiguration( 'example', 'example.php' ) ),
 			new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', 'main', null, null, array( 'commit' => str_repeat( 'a', 40 ) ) ),
-			new BlueprintPackage(
-				'plugin',
-				'example/example.php',
-				'Example',
-				'gh',
-				'repository-id',
-				'owner/repository',
-				'main',
-				null,
-				null,
-				null,
-				array(
-					'basis'             => 'installed_headers',
-					'observed_identity' => array(),
-					'declarations'      => array(),
-				)
-			),
 		) as $package ) {
 			$blueprint = new PackageBlueprint( array( $package ) );
 			$item      = $service->review( $blueprint )[0];
@@ -95,6 +78,56 @@ final class PortabilityApplicationServiceTest extends TestCase {
 				self::assertSame( 'skipped', $service->apply( $blueprint, 0, $forged_action, array(), null, true, true )['status'] );
 			}
 		}
+	}
+
+	public function test_selected_repository_conflict_refuses_before_any_local_or_provider_probe(): void {
+		$plugins  = $this->createMock( PluginRepository::class );
+		$themes   = $this->createMock( ThemeRepository::class );
+		$provider = $this->provider();
+		$plugins->expects( self::never() )->method( 'is_installed' );
+		$themes->expects( self::never() )->method( 'is_installed' );
+		$provider->expects( self::never() )->method( 'resolve_repository' );
+		$branch  = $this->package();
+		$release = new BlueprintPackage( 'plugin', 'release/release.php', 'Release', $branch->provider, $branch->provider_repository_id, $branch->repository, '', null, new \RAN\WordPress\ManagedReleaseConfiguration( 'release', 'release.php' ) );
+		$service = $this->service( $plugins, $themes, $provider );
+		$result  = $service->apply( new PackageBlueprint( array( $branch, $release ) ), 0, 'install', array(), null, true, true, array( 0, 1 ) );
+		self::assertSame( 'skipped', $result['status'] );
+		self::assertStringContainsString( 'selected packages conflict', $result['message'] );
+	}
+
+	public function test_unselected_release_does_not_block_branch_and_changed_selection_is_rechecked(): void {
+		$plugins = $this->createMock( PluginRepository::class );
+		$plugins->expects( self::once() )->method( 'is_installed' )->willReturn( false );
+		$plugins->expects( self::once() )->method( 'has_management_record' )->willReturn( false );
+		$provider = $this->provider();
+		$provider->expects( self::never() )->method( 'resolve_repository' );
+		$branch    = $this->package();
+		$release   = new BlueprintPackage( 'plugin', 'release/release.php', 'Release', $branch->provider, $branch->provider_repository_id, $branch->repository, '', null, new \RAN\WordPress\ManagedReleaseConfiguration( 'release', 'release.php' ) );
+		$blueprint = new PackageBlueprint( array( $branch, $release ) );
+		$service   = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider );
+		self::assertSame( 'failed', $service->apply( $blueprint, 0, 'install', array(), null, false, false, array( 0 ) )['status'] );
+		self::assertSame( 'skipped', $service->apply( $blueprint, 0, 'install', array(), null, false, true, array( 0, 1 ) )['status'] );
+	}
+
+	#[DataProvider( 'invalid_selections' )]
+	public function test_invalid_selection_refuses_before_local_or_provider_access( array $selection ): void {
+		$plugins = $this->createMock( PluginRepository::class );
+		$plugins->expects( self::never() )->method( 'is_installed' );
+		$provider = $this->provider();
+		$provider->expects( self::never() )->method( 'resolve_repository' );
+		$this->expectException( InvalidArgumentException::class );
+		$this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider )->apply( new PackageBlueprint( array( $this->package() ) ), 0, 'install', array(), null, true, true, $selection );
+	}
+
+	/** @return iterable<string,array{array<int,mixed>}> */
+	public static function invalid_selections(): iterable {
+		yield 'empty' => array( array() );
+		yield 'missing current row' => array( array( 1 ) );
+		yield 'duplicate' => array( array( 0, 0 ) );
+		yield 'unknown row' => array( array( 0, 1 ) );
+		yield 'negative' => array( array( 0, -1 ) );
+		yield 'string' => array( array( 0, '0' ) );
+		yield 'non-list' => array( array( 1 => 0 ) );
 	}
 
 	#[DataProvider( 'package_counts' )]

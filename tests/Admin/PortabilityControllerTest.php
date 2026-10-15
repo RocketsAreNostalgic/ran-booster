@@ -135,6 +135,72 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertStringNotContainsString( '<img src=x>', $html );
 	}
 
+	public function test_requirement_reports_show_uncertainty_conflicts_and_escape_dependencies(): void {
+		$render = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'render_review' );
+		$html   = $render->invoke(
+			$this->controller(),
+			array(
+				array(
+					'action'              => 'blocked',
+					'repository_conflict' => true,
+					'requirements'        => array(
+						'basis'        => 'installed_headers',
+						'checks'       => array(
+							'requires_php'       => 'failed',
+							'requires_wordpress' => 'not_supplied',
+						),
+						'dependencies' => array(
+							'<script>parent</script>' => 'missing',
+							'included'                => 'selected',
+						),
+					),
+				),
+			),
+			array(),
+			array(
+				'requires_php' => array(
+					'minimum'      => '99.0',
+					'declared'     => 1,
+					'not_declared' => 0,
+					'missing'      => 1,
+				),
+			)
+		);
+		self::assertStringContainsString( 'before checkbox selection', $html );
+		self::assertStringContainsString( 'PHP minimum: 99.0', $html );
+		self::assertStringContainsString( 'missing observations: 1', $html );
+		self::assertStringContainsString( 'Declared minimum not met', $html );
+		self::assertStringContainsString( 'Observation not supplied', $html );
+		self::assertStringContainsString( 'requested package may differ', $html );
+		self::assertStringContainsString( 'conflicting sources', $html );
+		self::assertStringContainsString( 'installation and activation are not verified', $html );
+		self::assertStringContainsString( '&lt;script&gt;parent&lt;/script&gt;', $html );
+		self::assertStringNotContainsString( '<script>', $html );
+	}
+
+	public function test_selected_row_input_is_bounded_and_strictly_typed(): void {
+		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'selected_rows' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Snapshot of test-owned request data restored after parser controls.
+		$previous = $_POST;
+		try {
+			$_POST = array();
+			self::assertNull( $method->invoke( $this->controller() ) );
+			$_POST = array( 'selected_rows' => array( '0', '127' ) );
+			self::assertSame( array( 0, 127 ), $method->invoke( $this->controller() ) );
+			foreach ( array( array(), array( '128' ), array( '-1' ), array( '01' ), array( 0 ), array( '0' => array() ), '0' ) as $invalid ) {
+				$_POST = array( 'selected_rows' => $invalid );
+				try {
+					$method->invoke( $this->controller() );
+					self::fail( 'Invalid row selection was accepted.' );
+				} catch ( InvalidArgumentException ) {
+					self::assertTrue( true );
+				}
+			}
+		} finally {
+			$_POST = $previous;
+		}
+	}
+
 	public function test_saved_credential_choices_consume_the_real_provider_projection(): void {
 		$profiles = array(
 			array(

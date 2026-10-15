@@ -10,6 +10,7 @@ use RAN\WordPress\ManagedReleaseStore;
 use RAN\Storage\PackageStorageFailure;
 use RAN\Storage\PluginNotFound;
 use RAN\Storage\PluginRepository;
+use RAN\Storage\RepositorySourceGuard;
 use RAN\Storage\ThemeNotFound;
 use RAN\Storage\ThemeRepository;
 
@@ -28,9 +29,50 @@ final readonly class BlueprintReviewer {
 		return array_map( fn ( BlueprintPackage $package ): BlueprintPlanItem => $this->review_package( $package ), $blueprint->packages );
 	}
 
+	/**
+	 * Assess only the supplied subset; no omitted entry reserves a repository.
+	 * Destination management and provider identity still require fresh checks.
+	 *
+	 * @return array<int, true> Conflicting package indexes.
+	 */
+	public function repository_conflicts( PackageBlueprint $blueprint ): array {
+		$groups    = array();
+		$releases  = array();
+		$conflicts = array();
+		foreach ( $blueprint->packages as $index => $package ) {
+			$key                      = $package->provider . "\0" . $package->provider_repository_id;
+			$groups[ $key ][ $index ] = (object) array(
+				'type'                   => 'plugin' === $package->type ? 1 : 2,
+				'package'                => $package->identifier,
+				'source'                 => null === $package->release_configuration ? PackageSource::BRANCH->value : PackageSource::RELEASE_ASSET->value,
+				'provider'               => $package->provider,
+				'provider_repository_id' => $package->provider_repository_id,
+			);
+			if ( null !== $package->release_configuration ) {
+				$releases[ $key ] = $package;
+			}
+		}
+		foreach ( $releases as $key => $release ) {
+			$assessment = RepositorySourceGuard::assess_rows(
+				$groups[ $key ],
+				$release->provider,
+				$release->provider_repository_id,
+				'plugin' === $release->type ? 1 : 2,
+				$release->identifier,
+				PackageSource::RELEASE_ASSET
+			);
+			if ( in_array( $assessment['code'], array( 'repository_source_conflict', 'repository_release_owner_exists' ), true ) ) {
+				foreach ( $groups[ $key ] as $index => $unused ) {
+					$conflicts[ $index ] = true;
+				}
+			}
+		}
+		return $conflicts;
+	}
+
 	public function review_package( BlueprintPackage $blueprint, ?Package &$managed_package = null ): BlueprintPlanItem {
 		$managed_package = null;
-		if ( null !== $blueprint->release_configuration || null !== $blueprint->selection || null !== $blueprint->requirements ) {
+		if ( null !== $blueprint->release_configuration || null !== $blueprint->selection ) {
 			return new BlueprintPlanItem( $blueprint, TargetPackageAction::BLOCKED, TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION );
 		}
 		return $this->review_local_package( $blueprint, $managed_package );

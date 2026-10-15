@@ -14,11 +14,27 @@ use RAN\Secrets\SecretsFile;
 use Throwable;
 
 /** Verifies package changes and explicit managed-row credential recovery. */
-final readonly class BlueprintRepositoryVerifier {
+final class BlueprintRepositoryVerifier {
+
+	/** @var array<string, array{id:string,private:bool}>|null */
+	private ?array $observations = null;
+
+	/** @var array<string, true> */
+	private array $limited_scopes = array();
+
+	private float $preview_started = 0.0;
+
+	/** A new, non-persistent observation lifetime; ordinary verification stays fresh. */
+	public function for_preview(): self {
+		$preview                  = new self( $this->providers, $this->secrets );
+		$preview->observations    = array();
+		$preview->preview_started = hrtime( true ) / 1e9;
+		return $preview;
+	}
 
 	public function __construct(
-		private ProviderRegistry $providers,
-		private SecretsFile $secrets
+		private readonly ProviderRegistry $providers,
+		private readonly SecretsFile $secrets
 	) {
 	}
 
@@ -174,19 +190,58 @@ final readonly class BlueprintRepositoryVerifier {
 
 	/** @param-out bool $repository_private */
 	private function verified_item( BlueprintPlanItem $item, ?string $credential_id, ?bool &$repository_private ): BlueprintPlanItem {
-		$package            = $item->package;
-		$provider           = ProviderCode::parse( $package->provider );
-		$descriptor         = $this->providers->get( $provider )->resolve_repository(
-			new RepositoryLookupRequest( $package->repository, $credential_id )
-		);
-		$repository_private = $descriptor->private;
-		$matches            = $descriptor->provider->equals( $provider )
-			&& $descriptor->credential_id === $credential_id
-			&& hash_equals( $package->provider_repository_id, $descriptor->provider_repository_id );
-		if ( $matches && $descriptor->private && null === $credential_id ) {
+		$package  = $item->package;
+		$provider = ProviderCode::parse( $package->provider );
+		$adapter  = $this->providers->get( $provider );
+		$scope    = null;
+		$key      = null;
+		if ( null !== $this->observations ) {
+			$material = null === $credential_id ? null : $this->secrets->credential_material( $provider, $credential_id );
+			if ( null !== $credential_id && null === $material ) {
+				return new BlueprintPlanItem( $package, TargetPackageAction::BLOCKED, TargetPackageReason::CREDENTIAL_REQUIRED );
+			}
+			// Temporary IDs are generated per row. Only validated, identical material
+			// may share an observation; saved IDs remain part of their exact scope.
+			if ( null !== $material && 'temporary' === ( $material['source'] ?? null ) ) {
+				unset( $material['id'] );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Fail closed on non-encodable material; WordPress recovery must not alter credential identity.
+			$scope = hash( 'sha256', json_encode( array( spl_object_id( $adapter ), $package->provider, $material ), JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION ) );
+			$key   = hash( 'sha256', $scope . ':' . $package->repository );
+			if ( isset( $this->limited_scopes[ $scope ] ) ) {
+				return new BlueprintPlanItem( $package, TargetPackageAction::BLOCKED, TargetPackageReason::PREVIEW_RATE_LIMITED );
+			}
+		}
+		$observation = null === $key ? null : ( $this->observations[ $key ] ?? null );
+		if ( null === $observation ) {
+			if ( null !== $this->observations && hrtime( true ) / 1e9 - $this->preview_started >= 8.0 ) {
+				return new BlueprintPlanItem( $package, TargetPackageAction::BLOCKED, TargetPackageReason::PREVIEW_BUDGET_EXHAUSTED );
+			}
+			try {
+				$descriptor = $adapter->resolve_repository( new RepositoryLookupRequest( $package->repository, $credential_id ) );
+			} catch ( Throwable $failure ) {
+				if ( null !== $scope && 429 === $failure->getCode() ) {
+					$this->limited_scopes[ $scope ] = true;
+				}
+				throw $failure;
+			}
+			$repository_private = $descriptor->private;
+			if ( ! $descriptor->provider->equals( $provider ) || $descriptor->credential_id !== $credential_id ) {
+				return new BlueprintPlanItem( $package, TargetPackageAction::BLOCKED, TargetPackageReason::REPOSITORY_IDENTITY_MISMATCH );
+			}
+			$observation = array(
+				'id'      => $descriptor->provider_repository_id,
+				'private' => $descriptor->private,
+			);
+		}
+		$repository_private = $observation['private'];
+		$matches            = hash_equals( $package->provider_repository_id, $observation['id'] );
+		if ( $matches && $repository_private && null === $credential_id ) {
 			return new BlueprintPlanItem( $package, TargetPackageAction::BLOCKED, TargetPackageReason::CREDENTIAL_REQUIRED );
 		}
-
+		if ( $matches && null !== $key ) {
+			$this->observations[ $key ] = $observation;
+		}
 		return $matches
 			? $item
 			: new BlueprintPlanItem( $package, TargetPackageAction::BLOCKED, TargetPackageReason::REPOSITORY_IDENTITY_MISMATCH );

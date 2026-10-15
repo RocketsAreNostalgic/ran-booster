@@ -19,8 +19,15 @@ enum TargetPackageReason: string {
 	case PROVIDER_UNAVAILABLE             = 'provider_unavailable';
 	case PROVIDER_TEMPORARILY_UNAVAILABLE = 'provider_temporarily_unavailable';
 
+	case PREVIEW_RATE_LIMITED            = 'preview_rate_limited';
+	case PREVIEW_BUDGET_EXHAUSTED        = 'preview_budget_exhausted';
+	case UNSUPPORTED_BLUEPRINT_OPERATION = 'unsupported_blueprint_operation';
+
 	public function message(): string {
 		return match ( $this ) {
+			self::PREVIEW_RATE_LIMITED => __( 'Not checked: this credential scope was rate limited during this preview. Review again later.', 'ran-booster' ),
+			self::PREVIEW_BUDGET_EXHAUSTED => __( 'Not checked: this preview reached its time budget. Review again before applying.', 'ran-booster' ),
+			self::UNSUPPORTED_BLUEPRINT_OPERATION => __( 'This Blueprint record is valid, but its source, selection or requirements are not supported for application yet.', 'ran-booster' ),
 			self::NONE => __( 'Ready to migrate; all checks passed.', 'ran-booster' ),
 			self::ALREADY_MANAGED => __( 'Managed by Booster', 'ran-booster' ),
 			self::MANAGEMENT_CONFLICT => __( 'Existing Booster management differs, so this package is protected.', 'ran-booster' ),

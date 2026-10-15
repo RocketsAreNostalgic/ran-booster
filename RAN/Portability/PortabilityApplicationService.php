@@ -37,6 +37,7 @@ final readonly class PortabilityApplicationService {
 	public function review( PackageBlueprint $blueprint, array $credential_decisions = array(), array $target_credential_ids = array() ): array {
 		$items    = $this->reviewer->review( $blueprint );
 		$verified = array();
+		$verifier = $this->verifier->for_preview();
 
 		foreach ( $items as $index => $item ) {
 			$ordinal    = null;
@@ -49,7 +50,7 @@ final readonly class PortabilityApplicationService {
 					TargetPackageAction::BLOCKED,
 					TargetPackageReason::LOCAL_SECRET_STORE_UNAVAILABLE
 				)
-				: $this->verifier->verify(
+				: $verifier->verify(
 					$item,
 					$credential,
 					$action,
@@ -134,7 +135,10 @@ final readonly class PortabilityApplicationService {
 		if ( ! $package instanceof BlueprintPackage ) {
 			throw new InvalidArgumentException();
 		}
-		$item                 = $this->reviewer->review_package( $package );
+		$item = $this->reviewer->review_package( $package );
+		if ( TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION === $item->reason ) {
+			return $this->result( 'skipped', $item->reason->message() );
+		}
 		$ordinal              = null;
 		$credential           = $this->credential_for( $blueprint, $item, $ordinal );
 		$decision             = null === $ordinal ? null : ( $credential_decisions[ $ordinal ] ?? null );

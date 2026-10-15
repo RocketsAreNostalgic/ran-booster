@@ -7,19 +7,21 @@ namespace RAN\Portability;
 use InvalidArgumentException;
 use JsonException;
 
-final readonly class PackageBlueprint {
+final class PackageBlueprint {
 
 	public const FORMAT          = 'ran-booster-package-blueprint';
-	public const VERSION         = 1;
+	public const VERSION         = 2;
 	public const MAX_BYTES       = 262144;
 	public const MAX_PACKAGES    = 128;
 	public const MAX_CREDENTIALS = 128;
 
 	/** @var list<BlueprintPackage> */
-	public array $packages;
+	public readonly array $packages;
 
 	/** @var list<BlueprintCredential> */
-	public array $credentials;
+	public readonly array $credentials;
+
+	private ?string $imported_artifact_identity = null;
 
 	/**
 	 * @param array<array-key, mixed> $packages
@@ -77,48 +79,108 @@ final readonly class PackageBlueprint {
 		} catch ( JsonException ) {
 			throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
 		}
-		if ( ! is_array( $data ) || array_keys( $data ) !== array( 'format', 'version', 'packages', 'credentials' ) || self::FORMAT !== $data['format'] || self::VERSION !== $data['version'] || ! is_array( $data['packages'] ) || ! array_is_list( $data['packages'] ) || ! is_array( $data['credentials'] ) || ! array_is_list( $data['credentials'] ) ) {
+		if ( ! is_array( $data ) || ( count( $data ) !== 4 || array_diff( array( 'format', 'version', 'packages', 'credentials' ), array_keys( $data ) ) ) || self::FORMAT !== $data['format'] || ! in_array( $data['version'], array( 1, self::VERSION ), true ) || ! is_array( $data['packages'] ) || ! array_is_list( $data['packages'] ) || ! is_array( $data['credentials'] ) || ! array_is_list( $data['credentials'] ) ) {
 			throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
 		}
+		$legacy      = 1 === $data['version'];
 		$credentials = array();
 		foreach ( $data['credentials'] as $record ) {
 			if ( ! is_array( $record ) ) {
 				throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
 			}
+			if ( ! $legacy ) {
+				$keys = array( 'provider', 'label', 'kind', 'configuration', 'secret', 'packages' );
+				if ( count( $record ) !== count( $keys ) || array_diff( $keys, array_keys( $record ) ) || ! is_array( $record['packages'] ) ) {
+					throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
+				}
+				$record = array_replace( array_fill_keys( $keys, null ), $record );
+				foreach ( $record['packages'] as &$identity ) {
+					if ( ! is_array( $identity ) || count( $identity ) !== 2 || ! isset( $identity['type'], $identity['identifier'] ) ) {
+						throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
+					}
+					$identity = array(
+						'type'       => $identity['type'],
+						'identifier' => $identity['identifier'],
+					);
+				}
+				unset( $identity );
+			}
 			$credentials[] = BlueprintCredential::from_array( $record );
 		}
 		$blueprint = new self(
 			array_map(
-				static fn( mixed $record ): BlueprintPackage => is_array( $record ) ? BlueprintPackage::from_array( $record ) : throw new InvalidArgumentException( 'The portability blueprint is invalid.' ),
+				static function ( mixed $record ) use ( $legacy ): BlueprintPackage {
+					if ( ! is_array( $record ) ) {
+						throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
+					}
+					if ( $legacy ) {
+						if ( array_keys( $record ) !== array( 'type', 'identifier', 'display_name', 'provider', 'provider_repository_id', 'repository', 'branch', 'subdirectory' ) ) {
+							throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
+						}
+						$record['source'] = array(
+							'kind'         => 'branch',
+							'branch'       => $record['branch'],
+							'subdirectory' => $record['subdirectory'],
+						);
+						unset( $record['branch'], $record['subdirectory'] );
+					}
+					return BlueprintPackage::from_array( $record );
+				},
 				$data['packages']
 			),
 			$credentials
 		);
 
-		if ( ! hash_equals( $blueprint->canonical_json(), $json ) ) {
+		if ( ! hash_equals( $blueprint->encode( $legacy ), $json ) ) {
 			throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
 		}
+		$blueprint->imported_artifact_identity = hash( 'sha256', $json );
 
 		return $blueprint;
 	}
 
 	public function canonical_json(): string {
+		return $this->encode( false );
+	}
+
+	public function artifact_identity(): string {
+		// Normalizing an imported V1 document must not change its target credential IDs.
+		return $this->imported_artifact_identity ?? hash( 'sha256', $this->canonical_json() );
+	}
+
+	private function encode( bool $legacy ): string {
 		$packages    = $this->packages;
 		$credentials = $this->credentials;
 		usort( $packages, static fn( BlueprintPackage $left, BlueprintPackage $right ): int => array( $left->type, $left->identifier ) <=> array( $right->type, $right->identifier ) );
 		usort( $credentials, static fn( BlueprintCredential $left, BlueprintCredential $right ): int => $left->to_array() <=> $right->to_array() );
+		$records = array_map( static fn( BlueprintPackage $package ): array => $package->to_array(), $packages );
+		foreach ( $records as $index => &$record ) {
+			if ( null !== $packages[ $index ]->requirements ) {
+				foreach ( array( 'observed_identity', 'declarations' ) as $key ) {
+					if ( array() === $packages[ $index ]->requirements[ $key ] ) {
+						$record['requirements'][ $key ] = (object) array();
+					}
+				}
+			}
+		}
+		unset( $record );
+		if ( $legacy ) {
+			foreach ( $records as $index => &$record ) {
+				unset( $record['source'] );
+				$record['branch']       = $packages[ $index ]->branch;
+				$record['subdirectory'] = $packages[ $index ]->subdirectory;
+			}
+			unset( $record );
+		}
+		$document = array(
+			'format'      => self::FORMAT,
+			'version'     => $legacy ? 1 : self::VERSION,
+			'packages'    => $records,
+			'credentials' => array_map( static fn( BlueprintCredential $credential ): array => $credential->to_array(), $credentials ),
+		);
 		try {
-			// The core is deliberately WordPress-independent so it can be unit tested without bootstrapping WordPress.
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Canonical blueprint identity requires native throwing JSON encoding with exact unescaped bytes, including outside WordPress.
-			$json = json_encode(
-				array(
-					'format'      => self::FORMAT,
-					'version'     => self::VERSION,
-					'packages'    => array_map( static fn( BlueprintPackage $package ): array => $package->to_array(), $packages ),
-					'credentials' => array_map( static fn( BlueprintCredential $credential ): array => $credential->to_array(), $credentials ),
-				),
-				JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
-			);
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Canonical archive identity requires native throwing JSON encoding outside WordPress.
+			$json = json_encode( $legacy ? $document : self::sort_keys( $document ), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 			if ( strlen( $json ) > self::MAX_BYTES ) {
 				throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
 			}
@@ -127,5 +189,19 @@ final readonly class PackageBlueprint {
 		} catch ( JsonException ) {
 			throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
 		}
+	}
+
+	private static function sort_keys( mixed $value ): mixed {
+		if ( ! is_array( $value ) ) {
+			return $value;
+		}
+		foreach ( $value as &$item ) {
+			$item = self::sort_keys( $item );
+		}
+		unset( $item );
+		if ( ! array_is_list( $value ) ) {
+			ksort( $value, SORT_STRING );
+		}
+		return $value;
 	}
 }

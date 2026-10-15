@@ -85,6 +85,7 @@ final class BlueprintReviewerTest extends TestCase {
 
 	private function managed_package( string $provider_repository_id ): Package {
 		$package = $this->createStub( Package::class );
+		$package->method( 'get_source' )->willReturn( \RAN\PackageSource::BRANCH );
 		$package->method( 'get_identifier' )->willReturn( 'example/example.php' );
 		$package->method( 'get_display_name' )->willReturn( 'Example' );
 		$package->method( 'get_provider_code' )->willReturn( 'gh' );

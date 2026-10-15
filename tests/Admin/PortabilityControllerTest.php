@@ -20,7 +20,6 @@ use RAN\Plugin;
 use RAN\Portability\BlueprintArchive;
 use RAN\Portability\BlueprintCredential;
 use RAN\Portability\BlueprintCredentialAction;
-use RAN\Portability\BlueprintExportPackageFailure;
 use RAN\Portability\BlueprintPackage;
 use RAN\Portability\BlueprintPlanItem;
 use RAN\Portability\BlueprintRepositoryVerifier;
@@ -31,7 +30,6 @@ use RAN\Portability\PackageBlueprint;
 use RAN\Portability\PortabilityApplicationService;
 use RAN\Portability\TargetPackageAction;
 use RAN\Portability\TargetPackageReason;
-use RAN\Portability\UnsupportedBlueprintPackages;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
 use RAN\Secrets\SecretsFile;
@@ -176,7 +174,15 @@ final class PortabilityControllerTest extends TestCase {
 		$plugins->method( 'has_management_record' )->willReturn( false );
 		$themes            = $this->createStub( ThemeRepository::class );
 		$authority_secrets = $this->createStub( SecretsFile::class );
-		$authority_reads   = 0;
+		$authority_secrets->method( 'credential_material' )->willReturnCallback(
+			static fn ( \RAN\RepositoryProvider\ProviderCode|string $provider, string $id ): array => array(
+				'id'       => $id,
+				'provider' => (string) $provider,
+				'kind'     => 'api-key',
+				'secret'   => 'synthetic-preview-material',
+			)
+		);
+		$authority_reads = 0;
 		$authority_secrets->method( 'credential_profiles' )->willReturnCallback(
 			static function ( string $provider ) use ( &$profiles, &$authority_reads ): array {
 				++$authority_reads;
@@ -929,6 +935,14 @@ final class PortabilityControllerTest extends TestCase {
 		$provider_credential_ids                   = array();
 		$reported_credential_id                    = 'saved-profile';
 		$secrets                                   = $this->createStub( SecretsFile::class );
+		$secrets->method( 'credential_material' )->willReturnCallback(
+			static fn ( \RAN\RepositoryProvider\ProviderCode|string $provider, string $id ): array => array(
+				'id'       => $id,
+				'provider' => (string) $provider,
+				'kind'     => 'classic',
+				'secret'   => 'synthetic-preview-material',
+			)
+		);
 		$secrets->method( 'credential_profiles' )->willReturnCallback(
 			static function () use ( &$profiles ): array {
 				return $profiles;
@@ -1135,22 +1149,6 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertSame( $expected, $method->invoke( $this->controller(), $include_credentials, $password, $confirmation ) );
 	}
 
-	public function test_release_managed_export_failure_names_every_affected_package_and_its_limitation(): void {
-		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'export_validation_failure_message' );
-
-		self::assertSame(
-			'Transporter Blueprint export cannot include: Plugin “RAN GitHub Updater Dummy” manages its own updates and cannot also be managed by Booster; Theme “Example Theme” manages its own updates and cannot also be managed by Booster. Deselect those packages and try again.',
-			$method->invoke(
-				$this->controller(),
-				new UnsupportedBlueprintPackages(
-					array(
-						new BlueprintExportPackageFailure( 'plugin', 'RAN GitHub Updater Dummy', BlueprintExportPackageFailure::PUBLISHED_RELEASES ),
-						new BlueprintExportPackageFailure( 'theme', 'Example Theme', BlueprintExportPackageFailure::PUBLISHED_RELEASES ),
-					)
-				)
-			)
-		);
-	}
 
 	public function test_inline_export_failure_returns_the_specific_message_as_json(): void {
 		$_POST['response_format'] = 'json';
@@ -1159,10 +1157,10 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertSame(
 			array(
 				'success' => false,
-				'data'    => array( 'message' => 'Plugin “RAN GitHub Updater Dummy” manages its own updates and cannot also be managed by Booster.' ),
+				'data'    => array( 'message' => 'The selected package configuration is invalid.' ),
 				'status'  => 400,
 			),
-			$method->invoke( $this->controller(), 'Plugin “RAN GitHub Updater Dummy” manages its own updates and cannot also be managed by Booster.', 400 )
+			$method->invoke( $this->controller(), 'The selected package configuration is invalid.', 400 )
 		);
 	}
 

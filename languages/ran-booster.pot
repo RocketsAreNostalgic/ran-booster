@@ -1278,7 +1278,7 @@ msgstr ""
 #: RAN/Admin/PortabilityController.php:465
 #: RAN/Admin/PortabilityController.php:586
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:345
-#: RAN/Admin/ProviderSettingsPresenter.php:1432
+#: RAN/Admin/ProviderSettingsPresenter.php:1435
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
 #: views/portability.php:169
 #: views/portability.php:250
@@ -1291,7 +1291,7 @@ msgstr ""
 #: RAN/Admin/PortabilityController.php:465
 #: RAN/Admin/PortabilityController.php:586
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:345
-#: RAN/Admin/ProviderSettingsPresenter.php:1433
+#: RAN/Admin/ProviderSettingsPresenter.php:1436
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
 #: views/portability.php:169
 #: views/portability.php:250
@@ -1920,7 +1920,7 @@ msgid "Repository provider settings are unavailable."
 msgstr ""
 
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:30
-#: RAN/Admin/ProviderSettingsPresenter.php:1381
+#: RAN/Admin/ProviderSettingsPresenter.php:1384
 msgid "Owner"
 msgstr ""
 
@@ -2124,18 +2124,18 @@ msgid "No managed %s repositories are available yet. Install a package to add it
 msgstr ""
 
 #. translators: 1: repository provider name, 2: repository provider code.
-#: RAN/Admin/ProviderSettingsPresenter.php:1430
+#: RAN/Admin/ProviderSettingsPresenter.php:1433
 #, php-format
 msgid "The active %1$s provider can read every credential saved under provider code %2$s. Install and activate only providers you trust; Booster does not authenticate a third-party publisher."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1484
+#: RAN/Admin/ProviderSettingsPresenter.php:1487
 msgid "Account"
 msgstr ""
 
 #. translators: %d: number of packages using the credential.
-#: RAN/Admin/ProviderSettingsPresenter.php:1493
-#: RAN/Admin/ProviderSettingsPresenter.php:1543
+#: RAN/Admin/ProviderSettingsPresenter.php:1496
+#: RAN/Admin/ProviderSettingsPresenter.php:1546
 #: views/portability-review.php:56
 #, php-format
 msgctxt "Packages using a credential"
@@ -2145,30 +2145,30 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: Label shown when package usage cannot be determined.
-#: RAN/Admin/ProviderSettingsPresenter.php:1494
-#: RAN/Admin/ProviderSettingsPresenter.php:1543
+#: RAN/Admin/ProviderSettingsPresenter.php:1497
+#: RAN/Admin/ProviderSettingsPresenter.php:1546
 msgid "Usage unavailable"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1496
+#: RAN/Admin/ProviderSettingsPresenter.php:1499
 msgid "Stored · Validity checked on use"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1497
+#: RAN/Admin/ProviderSettingsPresenter.php:1500
 #: views/troubleshooting.php:43
 msgid "Not configured"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1547
+#: RAN/Admin/ProviderSettingsPresenter.php:1550
 msgid "Saved · Remote delivery not verified by Core"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1547
+#: RAN/Admin/ProviderSettingsPresenter.php:1550
 msgid "Local secret not configured"
 msgstr ""
 
 #. translators: %d is the number of managed packages that use the local secret.
-#: RAN/Admin/ProviderSettingsPresenter.php:1549
+#: RAN/Admin/ProviderSettingsPresenter.php:1552
 #, php-format
 msgid "Remove this local secret? %d managed package may be affected. Remote provider webhooks will not be removed."
 msgid_plural "Remove this local secret? %d managed packages may be affected. Remote provider webhooks will not be removed."
@@ -2176,20 +2176,20 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d is the number of managed packages that use the local secret.
-#: RAN/Admin/ProviderSettingsPresenter.php:1550
+#: RAN/Admin/ProviderSettingsPresenter.php:1553
 msgid "Remove this local secret? Remote provider webhooks will not be removed."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1626
+#: RAN/Admin/ProviderSettingsPresenter.php:1629
 msgid "Repository access needs attention"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1626
+#: RAN/Admin/ProviderSettingsPresenter.php:1629
 msgid "No credential saved"
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1626
+#: RAN/Admin/ProviderSettingsPresenter.php:1629
 #, php-format
 msgid "Ready · %d credential"
 msgid_plural "Ready · %d credentials"
@@ -2197,55 +2197,55 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1627
+#: RAN/Admin/ProviderSettingsPresenter.php:1630
 msgid "Restore encrypted credential storage before reviewing or changing saved repository access."
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1627
+#: RAN/Admin/ProviderSettingsPresenter.php:1630
 msgid "Review saved credentials that are incomplete, expired, or approaching expiry."
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1627
+#: RAN/Admin/ProviderSettingsPresenter.php:1630
 msgid "Public repositories remain available through anonymous lookup. Add a credential only for private access or steadier API limits."
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1627
+#: RAN/Admin/ProviderSettingsPresenter.php:1630
 msgid "Private repository access is available. Open credential management to validate, replace, or review usage."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1631
+#: RAN/Admin/ProviderSettingsPresenter.php:1634
 msgid "Webhook signing · Needs attention"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1631
+#: RAN/Admin/ProviderSettingsPresenter.php:1634
 msgid "Webhook signing · No secret saved"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1631
+#: RAN/Admin/ProviderSettingsPresenter.php:1634
 msgid "Webhook signing · Ready locally"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1632
+#: RAN/Admin/ProviderSettingsPresenter.php:1635
 msgid "Restore encrypted credential storage before Push-to-Deploy can verify signed deliveries."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1632
+#: RAN/Admin/ProviderSettingsPresenter.php:1635
 msgid "Review saved signing material whose configuration or managed-package usage could not be confirmed."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1632
+#: RAN/Admin/ProviderSettingsPresenter.php:1635
 msgid "Automatic branch deployments require local signing material before provider webhooks can be used safely."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1632
+#: RAN/Admin/ProviderSettingsPresenter.php:1635
 msgid "Add local signing material before configuring a provider webhook."
 msgstr ""
 
 #. translators: %d is the number of local secrets that can verify signed deliveries.
-#: RAN/Admin/ProviderSettingsPresenter.php:1632
+#: RAN/Admin/ProviderSettingsPresenter.php:1635
 #, php-format
 msgid "%d local secret can verify signed deliveries. This does not prove a matching remote webhook exists."
 msgid_plural "%d local secrets can verify signed deliveries. This does not prove matching remote webhooks exist."
@@ -2253,7 +2253,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: item count.
-#: RAN/Admin/ProviderSettingsPresenter.php:1691
+#: RAN/Admin/ProviderSettingsPresenter.php:1694
 #: views/packages/index.php:96
 #, php-format
 msgid "%d item"
@@ -2262,25 +2262,25 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: current page number, 2: total page count.
-#: RAN/Admin/ProviderSettingsPresenter.php:1692
+#: RAN/Admin/ProviderSettingsPresenter.php:1695
 #, php-format
 msgid "Page %1$d of %2$d"
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ProviderSettingsPresenter.php:1723
+#: RAN/Admin/ProviderSettingsPresenter.php:1726
 #, php-format
 msgid "Back to %s overview"
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ProviderSettingsPresenter.php:1724
+#: RAN/Admin/ProviderSettingsPresenter.php:1727
 #, php-format
 msgid "Manage saved credentials used for %s repository access."
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ProviderSettingsPresenter.php:1725
+#: RAN/Admin/ProviderSettingsPresenter.php:1728
 #, php-format
 msgid "Manage local signing material used to verify %s webhook deliveries."
 msgstr ""

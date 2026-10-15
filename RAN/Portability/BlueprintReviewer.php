@@ -27,9 +27,12 @@ final readonly class BlueprintReviewer {
 
 	public function review_package( BlueprintPackage $blueprint, ?Package &$managed_package = null ): BlueprintPlanItem {
 		$managed_package = null;
-		$repository      = 'plugin' === $blueprint->type ? $this->plugins : $this->themes;
-		$installed       = $repository->is_installed( $blueprint->identifier );
-		$managed         = $repository->has_management_record( $blueprint->identifier );
+		if ( null !== $blueprint->release_configuration || null !== $blueprint->selection || null !== $blueprint->requirements ) {
+			return new BlueprintPlanItem( $blueprint, TargetPackageAction::BLOCKED, TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION );
+		}
+		$repository = 'plugin' === $blueprint->type ? $this->plugins : $this->themes;
+		$installed  = $repository->is_installed( $blueprint->identifier );
+		$managed    = $repository->has_management_record( $blueprint->identifier );
 
 		if ( ! $installed ) {
 			return new BlueprintPlanItem(
@@ -67,6 +70,9 @@ final readonly class BlueprintReviewer {
 	}
 
 	private function managed_result( BlueprintPackage $blueprint, Package $package ): BlueprintPlanItem {
+		if ( \RAN\PackageSource::BRANCH !== $package->get_source() ) {
+			return new BlueprintPlanItem( $blueprint, TargetPackageAction::PROTECTED, TargetPackageReason::MANAGEMENT_CONFLICT );
+		}
 		$matches = $blueprint->same_management_as( BlueprintPackage::from_managed_package( $blueprint->type, $package ) );
 
 		return new BlueprintPlanItem(

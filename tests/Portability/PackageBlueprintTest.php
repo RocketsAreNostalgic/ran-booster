@@ -16,13 +16,13 @@ use RAN\Portability\PackageBlueprint;
 #[CoversClass( BlueprintCredential::class )]
 final class PackageBlueprintTest extends TestCase {
 
-	public function test_canonical_json_uses_the_exact_v1_schema_and_sorts_packages(): void {
+	public function test_canonical_json_uses_the_exact_v2_schema_and_sorts_packages(): void {
 		$blueprint = new PackageBlueprint( array( $this->package( 'theme', 'example-theme', 'Example Theme' ), $this->package() ) );
 
 		$json = $blueprint->canonical_json();
 
 		self::assertSame( $json, PackageBlueprint::from_json( $json )->canonical_json() );
-		self::assertSame( array( 'format', 'version', 'packages', 'credentials' ), array_keys( json_decode( $json, true, flags: JSON_THROW_ON_ERROR ) ) );
+		self::assertSame( array( 'credentials', 'format', 'packages', 'version' ), array_keys( json_decode( $json, true, flags: JSON_THROW_ON_ERROR ) ) );
 		self::assertStringContainsString( '"credentials":[]', $json );
 		self::assertLessThan( strpos( $json, '"type":"theme"' ), strpos( $json, '"type":"plugin"' ) );
 		self::assertStringContainsString( '"display_name":"Example Plugin"', $json );
@@ -211,7 +211,7 @@ final class PackageBlueprintTest extends TestCase {
 		}
 
 		$json = ( new PackageBlueprint( array( $this->package() ) ) )->canonical_json();
-		$json = str_replace( '"version":1,', '"version":1,"created_at":"2026-07-20T00:00:00Z",', $json );
+		$json = str_replace( '"version":2', '"version":2,"created_at":"2026-07-20T00:00:00Z"', $json );
 		$this->expectException( InvalidArgumentException::class );
 		PackageBlueprint::from_json( $json );
 	}
@@ -332,7 +332,7 @@ final class PackageBlueprintTest extends TestCase {
 		$json    = ( new PackageBlueprint( array( $this->package() ) ) )->canonical_json();
 		$invalid = array(
 			str_replace( '"format":"ran-booster-package-blueprint"', '"format":"invalid","format":"ran-booster-package-blueprint"', $json ),
-			str_replace( '{"format":"ran-booster-package-blueprint","version":1', '{"version":1,"format":"ran-booster-package-blueprint"', $json ),
+			str_replace( '{"credentials":[],"format":"ran-booster-package-blueprint"', '{"format":"ran-booster-package-blueprint","credentials":[]', $json ),
 		);
 		foreach ( $invalid as $candidate ) {
 			try {
@@ -389,6 +389,151 @@ final class PackageBlueprintTest extends TestCase {
 				self::addToAssertionCount( 1 );
 			}
 		}
+	}
+
+	public function test_original_v1_bytes_normalize_to_one_v2_branch_model(): void {
+		$legacy    = '{"format":"ran-booster-package-blueprint","version":1,"packages":[{"type":"plugin","identifier":"example/example.php","display_name":"Example Plugin","provider":"gh","provider_repository_id":"123","repository":"owner/repository","branch":"main","subdirectory":null}],"credentials":[]}';
+		$blueprint = PackageBlueprint::from_json( $legacy );
+		self::assertSame( $this->package()->to_array(), $blueprint->packages[0]->to_array() );
+		self::assertStringContainsString( '"version":2', $blueprint->canonical_json() );
+		foreach ( array(
+			str_replace( '"version":1', '"version":2', $legacy ),
+			str_replace( '"branch":"main"', '"branch":""', $legacy ),
+			str_replace( '"subdirectory":null', '"subdirectory":null,"selection":null', $legacy ),
+			str_replace( '"branch":"main","subdirectory":null', '"subdirectory":null,"branch":"main"', $legacy ),
+			$legacy . "\n",
+		) as $invalid ) {
+			try {
+				PackageBlueprint::from_json( $invalid );
+				self::fail( 'Malformed legacy input was accepted.' );
+			} catch ( InvalidArgumentException ) {
+				self::addToAssertionCount( 1 );
+			}
+		}
+	}
+
+	public function test_mixed_sources_separate_tracking_selection_and_observations(): void {
+		$release                 = $this->release_record();
+		$release['requirements'] = array(
+			'basis'             => 'selected_package',
+			'observed_identity' => array(
+				'artifact_sha256' => str_repeat( 'b', 64 ),
+				'version'         => '1.2.3',
+			),
+			'declarations'      => array(
+				'requires_php'       => '8.2',
+				'requires_wordpress' => null,
+				'requires_plugins'   => array( 'example' ),
+			),
+		);
+		$package                 = BlueprintPackage::from_array( $release );
+		$blueprint               = new PackageBlueprint( array( $this->package(), $package ) );
+		$roundtrip               = PackageBlueprint::from_json( $blueprint->canonical_json() );
+		self::assertSame( $blueprint->canonical_json(), $roundtrip->canonical_json() );
+		self::assertSame( 'prerelease', $package->release_configuration?->channel() );
+		self::assertSame( '', $package->branch );
+		unset( $release['selection'], $release['requirements'] );
+		self::assertTrue( $package->same_management_as( BlueprintPackage::from_array( $release ) ) );
+		$release['source']['channel'] = 'stable';
+		self::assertFalse( $package->same_management_as( BlueprintPackage::from_array( $release ) ) );
+	}
+
+	public function test_v2_rejects_source_and_selected_identity_contradictions(): void {
+		$valid   = $this->release_record();
+		$invalid = array();
+		foreach ( array(
+			array( 'kind' => 'unknown' ),
+			array( 'branch' => 'main' ),
+			array( 'metadata_file' => 'wrong.php' ),
+			array( 'package_root' => 'wrong' ),
+			array( 'channel' => 'latest' ),
+		) as $change ) {
+			$candidate           = $valid;
+			$candidate['source'] = array_merge( $candidate['source'], $change );
+			$invalid[]           = $candidate;
+		}
+		foreach ( array( null, array( 'commit' => str_repeat( 'a', 40 ) ), array_merge( $valid['selection'], array( 'artifact_size' => 0 ) ), array_merge( $valid['selection'], array( 'fingerprint' => 'local-authority' ) ) ) as $selection ) {
+			$candidate              = $valid;
+			$candidate['selection'] = $selection;
+			$invalid[]              = $candidate;
+		}
+		foreach ( array(
+			array(
+				'basis'             => 'selected_package',
+				'observed_identity' => array( 'commit' => str_repeat( 'a', 40 ) ),
+				'declarations'      => array(),
+			),
+			array(
+				'basis'             => 'selected_package',
+				'observed_identity' => array( 'artifact_sha256' => str_repeat( 'c', 64 ) ),
+				'declarations'      => array(),
+			),
+			array(
+				'basis'             => 'installed_headers',
+				'observed_identity' => array(),
+				'declarations'      => array( 'parent_theme' => 'parent' ),
+			),
+			array(
+				'basis'             => 'installed_headers',
+				'observed_identity' => array(),
+				'declarations'      => array( 'requires_php' => '>=8.2' ),
+			),
+			array(
+				'basis'             => 'installed_headers',
+				'observed_identity' => array(),
+				'declarations'      => array( 'requires_plugins' => array( 'same', 'same' ) ),
+			),
+		) as $requirements ) {
+			$candidate                 = $valid;
+			$candidate['requirements'] = $requirements;
+			$invalid[]                 = $candidate;
+		}
+		foreach ( $invalid as $candidate ) {
+			try {
+				BlueprintPackage::from_array( $candidate );
+				self::fail( 'Contradictory V2 record was accepted.' );
+			} catch ( InvalidArgumentException ) {
+				self::addToAssertionCount( 1 );
+			}
+		}
+	}
+
+	public function test_branch_selection_and_empty_observations_roundtrip_without_claiming_identity(): void {
+		$record                 = $this->package()->to_array();
+		$record['selection']    = array( 'commit' => str_repeat( 'a', 64 ) );
+		$record['requirements'] = array(
+			'basis'             => 'installed_headers',
+			'observed_identity' => array(),
+			'declarations'      => array(),
+		);
+		$json                   = ( new PackageBlueprint( array( BlueprintPackage::from_array( $record ) ) ) )->canonical_json();
+		self::assertStringContainsString( '"declarations":{}', $json );
+		self::assertStringContainsString( '"observed_identity":{}', $json );
+		self::assertSame( $json, PackageBlueprint::from_json( $json )->canonical_json() );
+		$record['requirements']['basis'] = 'selected_package';
+		$this->expectException( InvalidArgumentException::class );
+		BlueprintPackage::from_array( $record );
+	}
+
+	/** @return array<string, mixed> */
+	private function release_record(): array {
+		$record              = $this->package( identifier: 'release/release.php' )->to_array();
+		$record['source']    = array(
+			'kind'          => 'release_asset',
+			'channel'       => 'prerelease',
+			'package_root'  => 'release',
+			'metadata_file' => 'release.php',
+		);
+		$record['selection'] = array(
+			'release_id'      => '123',
+			'tag'             => 'v1.2.3',
+			'version'         => '1.2.3',
+			'commit'          => str_repeat( 'a', 40 ),
+			'artifact_id'     => '456',
+			'artifact_sha256' => str_repeat( 'b', 64 ),
+			'artifact_size'   => 100,
+		);
+		return $record;
 	}
 
 	private function package( string $type = 'plugin', string $identifier = 'example/example.php', string $display_name = 'Example Plugin' ): BlueprintPackage {

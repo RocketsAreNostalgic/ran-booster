@@ -19,8 +19,11 @@ enum TargetPackageReason: string {
 	case PROVIDER_UNAVAILABLE             = 'provider_unavailable';
 	case PROVIDER_TEMPORARILY_UNAVAILABLE = 'provider_temporarily_unavailable';
 
+	case UNSUPPORTED_BLUEPRINT_OPERATION  = 'unsupported_blueprint_operation';
+
 	public function message(): string {
 		return match ( $this ) {
+			self::UNSUPPORTED_BLUEPRINT_OPERATION => __( 'This Blueprint record is valid, but its source, selection or requirements are not supported for application yet.', 'ran-booster' ),
 			self::NONE => __( 'Ready to migrate; all checks passed.', 'ran-booster' ),
 			self::ALREADY_MANAGED => __( 'Managed by Booster', 'ran-booster' ),
 			self::MANAGEMENT_CONFLICT => __( 'Existing Booster management differs, so this package is protected.', 'ran-booster' ),

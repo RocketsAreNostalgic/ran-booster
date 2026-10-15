@@ -139,8 +139,8 @@ final class BlueprintArchiveTest extends TestCase {
 
 	public function test_unknown_blueprint_version_fails_without_rewriting_the_archive(): void {
 		$json = str_replace(
-			'"version":1',
-			'"version":2',
+			'"version":' . PackageBlueprint::VERSION,
+			'"version":' . ( PackageBlueprint::VERSION + 1 ),
 			( new PackageBlueprint( array( $this->package() ) ) )->canonical_json()
 		);
 		$this->write_raw( $json, ZipArchive::EM_NONE, null );
@@ -151,6 +151,24 @@ final class BlueprintArchiveTest extends TestCase {
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Test-only immutable archive evidence.
 		self::assertSame( $before, file_get_contents( $this->file ) );
+	}
+
+	public function test_original_v1_archives_normalize_without_relaxing_encryption_or_shape(): void {
+		$this->require_aes();
+		$legacy  = '{"format":"ran-booster-package-blueprint","version":1,"packages":[{"type":"plugin","identifier":"example/example.php","display_name":"Example","provider":"gh","provider_repository_id":"123","repository":"owner/repository","branch":"main","subdirectory":null}],"credentials":[]}';
+		$archive = new BlueprintArchive();
+		$this->write_raw( $legacy, ZipArchive::EM_NONE, null );
+		self::assertSame( 'main', $archive->read_from( $this->file, null )->packages[0]->branch );
+		$credential  = '{"provider":"gh","label":"Token","kind":"classic","configuration":{},"secret":"legacy-canary","packages":[{"type":"plugin","identifier":"example/example.php"}]}';
+		$with_secret = str_replace( '"credentials":[]', '"credentials":[' . $credential . ']', $legacy );
+		$this->write_raw( $with_secret, ZipArchive::EM_AES_256, 'correct-horse-battery-staple' );
+		$parsed = $archive->read_from( $this->file, 'correct-horse-battery-staple' );
+		self::assertCount( 1, $parsed->credentials );
+		self::assertStringContainsString( '"version":2', $parsed->canonical_json() );
+		$this->write_raw( $with_secret, ZipArchive::EM_NONE, null );
+		$this->assert_invalid( fn() => $archive->read_from( $this->file, null ) );
+		$this->write_raw( str_replace( '"branch":"main"', '"branch":null', $legacy ), ZipArchive::EM_NONE, null );
+		$this->assert_invalid( fn() => $archive->read_from( $this->file, null ) );
 	}
 
 	public function test_rejects_oversized_and_tampered_archives(): void {

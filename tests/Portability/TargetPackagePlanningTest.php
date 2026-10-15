@@ -36,6 +36,7 @@ final class TargetPackagePlanningTest extends TestCase {
 				'destination_conflict',
 				'provider_unavailable',
 				'provider_temporarily_unavailable',
+				'unsupported_blueprint_operation',
 			),
 			array_column( TargetPackageReason::cases(), 'value' )
 		);

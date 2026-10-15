@@ -134,7 +134,10 @@ final readonly class PortabilityApplicationService {
 		if ( ! $package instanceof BlueprintPackage ) {
 			throw new InvalidArgumentException();
 		}
-		$item                 = $this->reviewer->review_package( $package );
+		$item = $this->reviewer->review_package( $package );
+		if ( TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION === $item->reason ) {
+			return $this->result( 'skipped', $item->reason->message() );
+		}
 		$ordinal              = null;
 		$credential           = $this->credential_for( $blueprint, $item, $ordinal );
 		$decision             = null === $ordinal ? null : ( $credential_decisions[ $ordinal ] ?? null );

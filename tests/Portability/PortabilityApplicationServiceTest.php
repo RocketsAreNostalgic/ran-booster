@@ -38,6 +38,44 @@ require_once __DIR__ . '/../Runtime/RuntimeSupportWordPressFunctions.php';
 
 final class PortabilityApplicationServiceTest extends TestCase {
 
+	public function test_new_format_fields_cannot_be_ignored_by_branch_application(): void {
+		$plugins  = $this->createMock( PluginRepository::class );
+		$themes   = $this->createMock( ThemeRepository::class );
+		$provider = $this->provider();
+		$plugins->expects( self::never() )->method( 'is_installed' );
+		$themes->expects( self::never() )->method( 'is_installed' );
+		$provider->expects( self::never() )->method( 'resolve_repository' );
+		$service = $this->service( $plugins, $themes, $provider );
+		foreach ( array(
+			new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', '', null, new \RAN\WordPress\ManagedReleaseConfiguration( 'example', 'example.php' ) ),
+			new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', 'main', null, null, array( 'commit' => str_repeat( 'a', 40 ) ) ),
+			new BlueprintPackage(
+				'plugin',
+				'example/example.php',
+				'Example',
+				'gh',
+				'repository-id',
+				'owner/repository',
+				'main',
+				null,
+				null,
+				null,
+				array(
+					'basis'             => 'installed_headers',
+					'observed_identity' => array(),
+					'declarations'      => array(),
+				)
+			),
+		) as $package ) {
+			$blueprint = new PackageBlueprint( array( $package ) );
+			$item      = $service->review( $blueprint )[0];
+			self::assertSame( 'unsupported_blueprint_operation', $item->reason->value );
+			foreach ( array( 'install', 'adopt', 'managed', 'blocked' ) as $forged_action ) {
+				self::assertSame( 'skipped', $service->apply( $blueprint, 0, $forged_action, array(), null, true, true )['status'] );
+			}
+		}
+	}
+
 	#[DataProvider( 'package_counts' )]
 	public function test_sequential_apply_classifies_each_selected_package_once( int $count ): void {
 		$plugins  = $this->createMock( PluginRepository::class );

@@ -22,6 +22,7 @@ final readonly class BlueprintPlanItem {
 				TargetPackageReason::MALFORMED_MANAGEMENT,
 			),
 			TargetPackageAction::BLOCKED => array(
+				TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION,
 				TargetPackageReason::CREDENTIAL_REQUIRED,
 				TargetPackageReason::LOCAL_SECRET_STORE_UNAVAILABLE,
 				TargetPackageReason::REPOSITORY_ACCESS_FAILED,

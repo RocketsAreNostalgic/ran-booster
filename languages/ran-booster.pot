@@ -1741,7 +1741,7 @@ msgid "Target encrypted credential storage is unavailable. Configure secure stor
 msgstr ""
 
 #: RAN/Admin/PortabilityController.php:515
-#: RAN/Portability/PortabilityApplicationService.php:237
+#: RAN/Portability/PortabilityApplicationService.php:238
 msgid "Booster could not apply this package. Review the Transporter Blueprint again and check repository access."
 msgstr ""
 
@@ -4618,106 +4618,114 @@ msgstr ""
 msgid "Diagnostics completed successfully."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:77
+#: RAN/Portability/PortabilityApplicationService.php:78
 msgid "The package changed since review. Review it again before applying."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:85
+#: RAN/Portability/PortabilityApplicationService.php:86
 msgid "This package is already managed with the exact disabled configuration."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:144
-#: RAN/Portability/PortabilityApplicationService.php:166
+#: RAN/Portability/PortabilityApplicationService.php:145
+#: RAN/Portability/PortabilityApplicationService.php:167
 msgid "This package changed since review. Review the Transporter Blueprint again."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:147
+#: RAN/Portability/PortabilityApplicationService.php:148
 msgid "This package was left unchanged by the repository credential decision."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:153
+#: RAN/Portability/PortabilityApplicationService.php:154
 msgid "You do not have permission to apply this package type."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:156
+#: RAN/Portability/PortabilityApplicationService.php:157
 msgid "This installed package was not selected for adoption."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:187
+#: RAN/Portability/PortabilityApplicationService.php:188
 msgid "This package is already managed."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:195
+#: RAN/Portability/PortabilityApplicationService.php:196
 msgid "The repository credential is available on this site. The managed package settings were not changed."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:201
+#: RAN/Portability/PortabilityApplicationService.php:202
 msgid "Booster could not import this repository credential. Review the Transporter Blueprint again and check repository access."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:207
+#: RAN/Portability/PortabilityApplicationService.php:208
 msgid "This package changed or cannot be applied. Review the Transporter Blueprint again."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:224
+#: RAN/Portability/PortabilityApplicationService.php:225
 msgid "Adopted: deployment disabled"
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:330
+#: RAN/Portability/PortabilityApplicationService.php:331
 msgid "Package installed and managed by Booster with deployment disabled. Re-enable deployment deliberately when this site is ready."
 msgstr ""
 
 #. translators: 1: safe deployment failure reason, 2: random support reference.
-#: RAN/Portability/PortabilityApplicationService.php:342
+#: RAN/Portability/PortabilityApplicationService.php:343
 #, php-format
 msgid "%1$s Reference: %2$s."
 msgstr ""
 
-#: RAN/Portability/TargetPackageReason.php:24
-msgid "Ready to migrate; all checks passed."
-msgstr ""
-
-#: RAN/Portability/TargetPackageReason.php:25
-msgid "Managed by Booster"
-msgstr ""
-
-#: RAN/Portability/TargetPackageReason.php:26
-msgid "Existing Booster management differs, so this package is protected."
-msgstr ""
-
 #: RAN/Portability/TargetPackageReason.php:27
-msgid "A stale Booster management record exists, so this package is protected."
+msgid "Not checked: this credential scope was rate limited during this preview. Review again later."
 msgstr ""
 
 #: RAN/Portability/TargetPackageReason.php:28
-msgid "Booster could not safely read existing management, so this package is protected."
+msgid "Not checked: this preview reached its time budget. Review again before applying."
 msgstr ""
 
 #: RAN/Portability/TargetPackageReason.php:29
-msgid "Repository access needs a target credential."
+msgid "Ready to migrate; all checks passed."
 msgstr ""
 
 #: RAN/Portability/TargetPackageReason.php:30
-msgid "Target encrypted credential storage is unavailable. Configure secure storage before applying this credential-bearing row."
+msgid "Managed by Booster"
 msgstr ""
 
 #: RAN/Portability/TargetPackageReason.php:31
-msgid "Booster could not confirm repository access."
+msgid "Existing Booster management differs, so this package is protected."
 msgstr ""
 
 #: RAN/Portability/TargetPackageReason.php:32
-msgid "The repository does not match this Transporter Blueprint."
+msgid "A stale Booster management record exists, so this package is protected."
 msgstr ""
 
 #: RAN/Portability/TargetPackageReason.php:33
-msgid "The destination package conflicts with this Transporter Blueprint."
+msgid "Booster could not safely read existing management, so this package is protected."
 msgstr ""
 
 #: RAN/Portability/TargetPackageReason.php:34
-msgid "This repository provider is not available on the target."
+msgid "Repository access needs a target credential."
 msgstr ""
 
 #: RAN/Portability/TargetPackageReason.php:35
+msgid "Target encrypted credential storage is unavailable. Configure secure storage before applying this credential-bearing row."
+msgstr ""
+
+#: RAN/Portability/TargetPackageReason.php:36
+msgid "Booster could not confirm repository access."
+msgstr ""
+
+#: RAN/Portability/TargetPackageReason.php:37
+msgid "The repository does not match this Transporter Blueprint."
+msgstr ""
+
+#: RAN/Portability/TargetPackageReason.php:38
+msgid "The destination package conflicts with this Transporter Blueprint."
+msgstr ""
+
+#: RAN/Portability/TargetPackageReason.php:39
+msgid "This repository provider is not available on the target."
+msgstr ""
+
+#: RAN/Portability/TargetPackageReason.php:40
 msgid "The repository provider is temporarily unavailable."
 msgstr ""
 

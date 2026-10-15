@@ -176,7 +176,15 @@ final class PortabilityControllerTest extends TestCase {
 		$plugins->method( 'has_management_record' )->willReturn( false );
 		$themes            = $this->createStub( ThemeRepository::class );
 		$authority_secrets = $this->createStub( SecretsFile::class );
-		$authority_reads   = 0;
+		$authority_secrets->method( 'credential_material' )->willReturnCallback(
+			static fn ( \RAN\RepositoryProvider\ProviderCode|string $provider, string $id ): array => array(
+				'id'       => $id,
+				'provider' => (string) $provider,
+				'kind'     => 'api-key',
+				'secret'   => 'synthetic-preview-material',
+			)
+		);
+		$authority_reads = 0;
 		$authority_secrets->method( 'credential_profiles' )->willReturnCallback(
 			static function ( string $provider ) use ( &$profiles, &$authority_reads ): array {
 				++$authority_reads;
@@ -929,6 +937,14 @@ final class PortabilityControllerTest extends TestCase {
 		$provider_credential_ids                   = array();
 		$reported_credential_id                    = 'saved-profile';
 		$secrets                                   = $this->createStub( SecretsFile::class );
+		$secrets->method( 'credential_material' )->willReturnCallback(
+			static fn ( \RAN\RepositoryProvider\ProviderCode|string $provider, string $id ): array => array(
+				'id'       => $id,
+				'provider' => (string) $provider,
+				'kind'     => 'classic',
+				'secret'   => 'synthetic-preview-material',
+			)
+		);
 		$secrets->method( 'credential_profiles' )->willReturnCallback(
 			static function () use ( &$profiles ): array {
 				return $profiles;

@@ -116,6 +116,20 @@ The reasons are fixed by `TargetPackageReason` and are intentionally closed and
 non-secret. They tell the operator why a row was classified a certain way
 without exposing credential material or upstream payloads.
 
+Within one preview, identical successful repository observations may be reused
+for the same provider instance, exact locator and credential material. Saved
+profile identities remain distinct; temporary imported profiles share only
+when their validated material is identical. Every row still checks its stable
+repository identity and privacy. Another preview and every Apply resolve fresh.
+
+A preview stops starting remote calls after eight elapsed seconds. An in-flight
+provider call may finish later; this is not an eight-second response guarantee.
+Remaining uncached rows report `preview_budget_exhausted` and are not selectable.
+A provider rate limit stops only its exact credential scope for that preview;
+subsequent rows report `preview_rate_limited`. Repository-specific 403/404 errors
+do not suppress other repositories. Completed rows remain useful partial results;
+no failure or observation survives the preview. Review again to check skipped rows.
+
 Install and adopt rows are selectable in the review. Apply still sends one
 request per selected row, and every request reparses the artifact and recomputes
 the current action. The browser selection is convenience only; it is never

@@ -38,6 +38,27 @@ require_once __DIR__ . '/../Runtime/RuntimeSupportWordPressFunctions.php';
 
 final class PortabilityApplicationServiceTest extends TestCase {
 
+	public function test_each_service_preview_owns_one_observation_lifetime(): void {
+		$plugins  = $this->createStub( PluginRepository::class );
+		$themes   = $this->createStub( ThemeRepository::class );
+		$provider = $this->provider();
+		$plugins->method( 'is_installed' )->willReturn( false );
+		$plugins->method( 'has_management_record' )->willReturn( false );
+		$provider->expects( self::exactly( 2 ) )->method( 'resolve_repository' )->willReturn( $this->descriptor() );
+		$service  = $this->service( $plugins, $themes, $provider );
+		$packages = array();
+		for ( $row = 0; $row < 128; ++$row ) {
+			$packages[] = $this->package( 'example-' . $row . '/example.php' );
+		}
+		$blueprint = new PackageBlueprint( $packages );
+		foreach ( array( $service->review( $blueprint ), $service->review( $blueprint ) ) as $review ) {
+			self::assertCount( 128, $review );
+			foreach ( $review as $item ) {
+				self::assertSame( \RAN\Portability\TargetPackageAction::INSTALL, $item->action );
+			}
+		}
+	}
+
 	#[DataProvider( 'package_counts' )]
 	public function test_sequential_apply_classifies_each_selected_package_once( int $count ): void {
 		$plugins  = $this->createMock( PluginRepository::class );

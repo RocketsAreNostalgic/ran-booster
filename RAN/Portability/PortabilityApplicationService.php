@@ -37,6 +37,7 @@ final readonly class PortabilityApplicationService {
 	public function review( PackageBlueprint $blueprint, array $credential_decisions = array(), array $target_credential_ids = array() ): array {
 		$items    = $this->reviewer->review( $blueprint );
 		$verified = array();
+		$verifier = $this->verifier->for_preview();
 
 		foreach ( $items as $index => $item ) {
 			$ordinal    = null;
@@ -49,7 +50,7 @@ final readonly class PortabilityApplicationService {
 					TargetPackageAction::BLOCKED,
 					TargetPackageReason::LOCAL_SECRET_STORE_UNAVAILABLE
 				)
-				: $this->verifier->verify(
+				: $verifier->verify(
 					$item,
 					$credential,
 					$action,

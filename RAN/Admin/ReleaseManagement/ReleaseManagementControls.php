@@ -388,9 +388,9 @@ final class ReleaseManagementControls {
 			fn (): array => array(
 				'providers' => $this->prospective_operations->supported_provider_codes( $type ),
 				'nonces'    => array(
-					'listCandidates' => $this->prospective_operations->nonce_action( 'list_candidates', $type ),
-					'inspect'        => $this->prospective_operations->nonce_action( 'inspect', $type ),
-					'install'        => $this->prospective_operations->nonce_action( 'install', $type ),
+					'listCandidates' => $this->prospective_operations->nonce_action( 'list_candidates', $type, null ),
+					'inspect'        => $this->prospective_operations->nonce_action( 'inspect', $type, null ),
+					'install'        => '',
 				),
 			),
 			null
@@ -423,7 +423,7 @@ final class ReleaseManagementControls {
 				'nonces'             => array(
 					'listCandidates' => wp_create_nonce( $nonce_actions['listCandidates'] ),
 					'inspect'        => wp_create_nonce( $nonce_actions['inspect'] ),
-					'install'        => wp_create_nonce( $nonce_actions['install'] ),
+					'install'        => '',
 				),
 			)
 		);
@@ -611,7 +611,22 @@ final class ReleaseManagementControls {
 		if ( ! current_user_can( 'manage_options' ) || ! current_user_can( 'plugin' === $type ? 'install_plugins' : 'install_themes' ) ) {
 			return $this->prospective_outcome( $type, 'forbidden' );
 		}
-		$nonce_action = $this->request_boundary( fn (): string => $this->prospective_operations->nonce_action( $operation, $type ), null );
+		$expectation = null;
+		if ( 'install' === $operation ) {
+			$raw = $request['provider_expectation'] ?? null;
+			if ( ! is_string( $raw ) || strlen( $raw ) > 512 ) {
+				return $fallback;
+			}
+			try {
+				$expectation = json_decode( wp_unslash( $raw ), true, 4, JSON_THROW_ON_ERROR );
+			} catch ( \JsonException ) {
+				return $fallback;
+			}
+			if ( null !== $expectation && ! is_array( $expectation ) ) {
+				return $fallback;
+			}
+		}
+		$nonce_action = $this->request_boundary( fn (): string => $this->prospective_operations->nonce_action( $operation, $type, $expectation ), null );
 		if ( null === $nonce_action || '' === $nonce_action ) {
 			return $this->prospective_outcome( $type, 'service_unavailable' );
 		}
@@ -628,7 +643,7 @@ final class ReleaseManagementControls {
 		$channel     = array_key_exists( 'release_channel', $request ) ? $this->release_channel_from( $request ) : 'stable';
 
 		return $this->request_boundary(
-			fn (): array => 'list_candidates' === $operation ? $this->prospective_operations->list_candidates( $type, $repository, $channel ) : $this->prospective_operations->execute( $operation, $type, $repository, $release_id, $tag, $fingerprint, $channel, $nonce ),
+			fn (): array => 'list_candidates' === $operation ? $this->prospective_operations->list_candidates( $type, $repository, $channel ) : $this->prospective_operations->execute( $operation, $type, $repository, $release_id, $tag, $fingerprint, $channel, $nonce, $expectation ),
 			$this->prospective_outcome( $type, 'service_unavailable' )
 		);
 	}
@@ -843,9 +858,9 @@ final class ReleaseManagementControls {
 		return $this->request_boundary(
 			fn (): array => array(
 				'providers'       => $this->prospective_operations->supported_provider_codes( $type ),
-				'list_candidates' => wp_create_nonce( $this->prospective_operations->nonce_action( 'list_candidates', $type ) ),
-				'inspect'         => wp_create_nonce( $this->prospective_operations->nonce_action( 'inspect', $type ) ),
-				'install'         => wp_create_nonce( $this->prospective_operations->nonce_action( 'install', $type ) ),
+				'list_candidates' => wp_create_nonce( $this->prospective_operations->nonce_action( 'list_candidates', $type, null ) ),
+				'inspect'         => wp_create_nonce( $this->prospective_operations->nonce_action( 'inspect', $type, null ) ),
+				'install'         => '',
 			),
 			array()
 		);

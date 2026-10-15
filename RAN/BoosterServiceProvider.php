@@ -42,6 +42,9 @@ use RAN\Admin\ReleaseManagement\ReleaseManagementControls;
 use RAN\Admin\ReleaseManagement\ReleaseWorkflowControls;
 use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\RepositoryProvider\GitHubProviderSelection;
+use RAN\RepositoryProvider\GitHubReplacementDeclaration;
+use RAN\Storage\GitHubSelectionStore;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
@@ -70,19 +73,25 @@ use RAN\WordPress\WordPressUpdaterLock;
 final class BoosterServiceProvider {
 	private readonly ?\Closure $secrets_factory;
 
-	/** @param callable(ProviderSecretPolicyCatalog): SecretsFile|null $secrets_factory */
+	/** @param callable(ProviderSecretPolicyCatalog, callable): SecretsFile|null $secrets_factory */
 	public function __construct( ?callable $secrets_factory = null ) {
 		$this->secrets_factory = null === $secrets_factory ? null : \Closure::fromCallable( $secrets_factory );
 	}
 
 	/** @internal Core bootstrap composition only. */
 	public function register( CoreContainer $container, Booster $runtime, object $release_updater, string $self_plugin_identifier ): void {
-		$database        = new Database();
+		global $wpdb;
+		$bundled          = new GitHubReplacementDeclaration( array_merge( array( 'plugin_basename' => $self_plugin_identifier ), GitHubProvider::compatibility_contract() ) );
+		$database         = new Database( null, $bundled );
+		$selection_store  = new GitHubSelectionStore( $wpdb, $wpdb->options );
+		$github_selection = new GitHubProviderSelection( $selection_store, WP_PLUGIN_DIR, $bundled );
+		$container->bind( GitHubProviderSelection::class, $github_selection );
+		$container->bind( GitHubSelectionStore::class, $selection_store );
 		$secrets_runtime = new SecretsRuntimeAvailability();
 		$secret_policies = new ProviderSecretPolicyCatalog();
 		$secrets         = null === $this->secrets_factory
-			? new SecretsFile( provider_policies: $secret_policies, availability: $secrets_runtime )
-			: ( $this->secrets_factory )( $secret_policies );
+			? new SecretsFile( provider_policies: $secret_policies, availability: $secrets_runtime, github_credential_access: $github_selection->credential_access_allowed( ... ) )
+			: ( $this->secrets_factory )( $secret_policies, $github_selection->credential_access_allowed( ... ) );
 		if ( ! $secrets instanceof SecretsFile ) {
 			throw new \LogicException( 'The Booster secrets factory must return a SecretsFile.' );
 		}
@@ -205,11 +214,10 @@ final class BoosterServiceProvider {
 				$activity,
 				(string) $code,
 				static fn ( \RAN\Activity\ActivityRequest $request ): ?array => self::capture_activity_context( $container, $code, $request )
-			)
-		);
-		$providers->register_with_credential_store(
-			'gh',
-			static fn (
+			),
+			github_selection_guard: $github_selection->registry_selection( ... ),
+			github_candidates: $github_selection->candidates(),
+			bundled_github_factory: static fn (
 				ProviderCredentialStore $credentials,
 				\RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
 				\RAN\RepositoryProvider\ProviderRegistrationContext $registration_context
@@ -217,9 +225,13 @@ final class BoosterServiceProvider {
 				$credentials,
 				$delivery_evidence,
 				$release_registrar,
-				static fn (): int => $registration_context->maximum_artifact_bytes()
+				static fn (): int => $registration_context->maximum_artifact_bytes(),
+				$registration_context->operation_allowed( ... ),
+				static fn ( string $type, string $identity ): string => $container->make( ManagedReleaseTargetRegistrar::class )->begin_provider_native_mutation( $type, $identity ),
+				static fn ( string $owner, string $type, string $identity, string $outcome ) => $container->make( ManagedReleaseTargetRegistrar::class )->complete_provider_native_mutation( $owner, $type, $identity, $outcome )
 			)
 		);
+		$github_selection->bind_registry( $providers );
 		$container->bind( ProviderRegistry::class, $providers );
 		$container->bind(
 			ReleaseWorkflowControls::class,
@@ -342,6 +354,7 @@ final class BoosterServiceProvider {
 			$release_store,
 			$container->make( WordPressUpdaterLock::class ),
 			$container->make( ProviderRegistry::class ),
+			$github_selection,
 			bulk_forbidden_plugin_identifier: $self_plugin_identifier,
 			activity: $activity
 		);
@@ -365,6 +378,7 @@ final class BoosterServiceProvider {
 			$container->make( ThemeRepository::class ),
 			$container->make( WordPressUpdaterLock::class ),
 			$container->make( ProviderRegistry::class ),
+			$github_selection,
 			source_guard: new \RAN\Storage\RepositorySourceGuard( null, $database )
 		);
 		$container->bind( NativeProspectiveReleaseFacade::class, $prospective_facade );

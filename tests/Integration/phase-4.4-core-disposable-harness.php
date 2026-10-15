@@ -534,11 +534,11 @@ function ran_booster_phase44_prospective( string $root, string $site, string $ty
 		'credential_id' => '',
 		'branch'        => 'main',
 	);
-	$list      = $facade->list_candidates( $type, $request, 'stable', wp_create_nonce( $facade->nonce_action( 'list_candidates', $type ) ) );
+	$list      = $facade->list_candidates( $type, $request, 'stable', wp_create_nonce( $facade->nonce_action( 'list_candidates', $type, null ) ) );
 	if ( ! $list->successful() ) {
 		throw new RuntimeException( 'Prospective listing failed.' );
 	}
-	$inspection = $facade->inspect( $type, $request, '42', 'v2.0.0', 'stable', wp_create_nonce( $facade->nonce_action( 'inspect', $type ) ) );
+	$inspection = $facade->inspect( $type, $request, '42', 'v2.0.0', 'stable', wp_create_nonce( $facade->nonce_action( 'inspect', $type, null ) ) );
 	if ( ! $inspection->successful() ) {
 		throw new RuntimeException( 'Prospective inspection failed.' );
 	}
@@ -569,7 +569,7 @@ function ran_booster_phase44_prospective( string $root, string $site, string $ty
 		add_filter( 'upgrader_source_selection', $veto, 5, 4 );
 	}
 	try {
-		$result = $facade->install( $type, $request, '42', 'v2.0.0', $fingerprint, 'stable', wp_create_nonce( $facade->nonce_action( 'install', $type ) ) );
+		$result = $facade->install( $type, $request, '42', 'v2.0.0', $fingerprint, 'stable', wp_create_nonce( $facade->nonce_action( 'install', $type, null ) ), null );
 	} finally {
 		if ( isset( $veto ) ) {
 			remove_filter( 'upgrader_source_selection', $veto, 5 );

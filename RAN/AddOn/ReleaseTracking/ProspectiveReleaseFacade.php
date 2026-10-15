@@ -9,9 +9,10 @@ namespace RAN\AddOn\ReleaseTracking;
  */
 interface ProspectiveReleaseFacade {
 
-	public const API_VERSION = 8;
+	public const API_VERSION = 9;
 
-	public function nonce_action( string $operation, string $type ): string;
+	/** @param array<string,mixed>|null $provider_expectation */
+	public function nonce_action( string $operation, string $type, ?array $provider_expectation ): string;
 
 	/**
 	 * Return the bounded provider codes supporting the complete prospective workflow.
@@ -48,9 +49,9 @@ interface ProspectiveReleaseFacade {
 		string $nonce
 	): ProspectiveReleaseResult;
 
-	/**
-	 * @param array<string, mixed>  $repository_request
+	/** @param array<string,mixed> $repository_request
 	 * @param 'stable'|'prerelease' $channel
+	 * @param array<string,mixed>|null $provider_expectation
 	 */
 	public function install(
 		string $type,
@@ -59,6 +60,7 @@ interface ProspectiveReleaseFacade {
 		string $tag,
 		string $expected_fingerprint,
 		string $channel,
-		string $nonce
+		string $nonce,
+		?array $provider_expectation
 	): ProspectiveReleaseResult;
 }

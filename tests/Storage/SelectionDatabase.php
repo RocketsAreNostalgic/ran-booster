@@ -11,16 +11,54 @@ final class SelectionDatabase extends SchemaConnection {
 	/** @var list<object{option_name:string, option_value:string, autoload:string}&\stdClass> */
 	public array $rows = array();
 	/** @var list<string> */
-	public array $queries         = array();
-	public string $engine         = 'InnoDB';
-	public bool $unique           = true;
-	public bool $prefix           = false;
-	public bool $fail_write       = false;
-	public bool $corrupt_readback = false;
+	public array $queries          = array();
+	public string $engine          = 'InnoDB';
+	public bool $unique            = true;
+	public bool $prefix            = false;
+	public bool $fail_write        = false;
+	public bool $corrupt_readback  = false;
+	public bool $fail_commit       = false;
+	public bool $commit_applied    = false;
+	public bool $throw_commit      = false;
+	public bool $fail_rollback     = false;
+	public bool $throw_rollback    = false;
+	public ?string $boundary_error = null;
+	/** @var list<object{option_name:string, option_value:string, autoload:string}&\stdClass>|null */
+	public ?array $transaction_rows = null;
 
 	public function query( string $query ): int|bool {
 		$this->queries[] = $query;
-		$data            = $this->decode( $query );
+		if ( $this->boundary_error === $query ) {
+			$this->last_error = 'boundary failed';
+		}
+		if ( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' === $query ) {
+			return null === $this->transaction_rows;
+		}
+		if ( 'START TRANSACTION' === $query ) {
+			$this->transaction_rows = array_map( static fn ( object $row ): object => clone $row, $this->rows );
+			return true;
+		}
+		if ( 'COMMIT' === $query ) {
+			if ( ( ! $this->fail_commit && ! $this->throw_commit ) || $this->commit_applied ) {
+				$this->transaction_rows = null;
+			}
+			if ( $this->throw_commit ) {
+				throw new \RuntimeException( 'commit threw' );
+			}
+			return ! $this->fail_commit;
+		}
+		if ( 'ROLLBACK' === $query ) {
+			if ( $this->throw_rollback ) {
+				throw new \RuntimeException( 'rollback threw' );
+			}
+			if ( $this->fail_rollback ) {
+				return false;
+			}
+			$this->rows             = $this->transaction_rows ?? $this->rows;
+			$this->transaction_rows = null;
+			return true;
+		}
+		$data = $this->decode( $query );
 		if ( str_starts_with( $data[0], 'INSERT' ) ) {
 			$result = 0;
 			if ( array() === $this->rows ) {

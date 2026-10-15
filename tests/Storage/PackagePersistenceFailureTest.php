@@ -12,6 +12,8 @@ use RAN\Package;
 use RAN\PackageSource;
 use RAN\Storage\AbstractPackageRepository;
 use RAN\Storage\Database;
+use RAN\BoosterGitHubProvider\V1\GitHubProvider;
+use RAN\RepositoryProvider\GitHubReplacementDeclaration;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use RAN\Storage\DatabaseLifecycleFailure;
@@ -29,6 +31,12 @@ require_once dirname( __DIR__ ) . '/WordPress/disposable-management-cleanup.php'
 
 final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 
+	private function install_fixture(): void {
+		$GLOBALS['ran_booster_storage_test_options'][ Database::VERSION_OPTION ] = false;
+		$declaration = new GitHubReplacementDeclaration( array_merge( array( 'plugin_basename' => 'ran-booster/ran-booster.php' ), GitHubProvider::compatibility_contract() ) );
+		( new Database( bundled_declaration: $declaration ) )->install();
+	}
+
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		global $ran_booster_storage_test_options, $wpdb;
@@ -45,7 +53,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 				// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Focused WordPress database test double.
 				$GLOBALS['wpdb'] = new StorageTestWpdb();
 				$wpdb            = $GLOBALS['wpdb'];
-				( new Database() )->install();
+				$this->install_fixture();
 				$id         = 1 === $type ? 'fixture/fixture.php' : 'fixture';
 				$row        = array(
 					'id'                     => 1,
@@ -407,7 +415,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 
 	public function test_guarded_delete_failure_and_unverified_delete_cannot_report_success(): void {
 		global $wpdb;
-		( new Database() )->install();
+		$this->install_fixture();
 		$storage    = $this->storage();
 		$wpdb->rows = array( $this->stored_row() );
 		$snapshot   = $storage->recovery_record( 'example/example.php' );
@@ -485,7 +493,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated database double.
 		$wpdb         = new StorageTestWpdb();
 		$wpdb->rows[] = $this->stored_row();
-		( new Database() )->install();
+		$this->install_fixture();
 		$storage       = $this->storage();
 		$snapshot      = $storage->recovery_record( 'example/example.php' );
 		$delete_result = $storage->recover_unlink(
@@ -502,7 +510,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Reset the focused WordPress database test double.
 		$wpdb         = new StorageTestWpdb();
 		$wpdb->rows[] = $this->stored_row();
-		( new Database() )->install();
+		$this->install_fixture();
 		$storage             = $this->storage();
 		$snapshot            = $storage->recovery_record( 'example/example.php' );
 		$wpdb->delete_result = 0;

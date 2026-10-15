@@ -17,6 +17,8 @@ use RAN\Storage\GitHubSelectionStore;
 final class GitHubProviderSelection {
 	/** @var array<string, mixed>|null */
 	private ?array $state = null;
+	/** @var array<string, array{selection_generation:int,owner_tag:string,target_type:string,installed_identity:string,phase:string}> */
+	private array $native_owners = array();
 	/** @var list<string> */
 	private array $active = array();
 	/** @var array<string, GitHubReplacementDeclaration|null> */
@@ -124,7 +126,7 @@ final class GitHubProviderSelection {
 			}
 			$state  = $this->store->read( true );
 			$active = $this->store->active_plugins();
-			if ( $state !== $this->state || $active !== $this->active || 'approved' !== $state['approval'] || ! is_array( $state['declaration'] ) || ! is_int( $state['selection_generation'] ) ) {
+			if ( $this->selection_identity( $state ) !== $this->selection_identity( $this->state ) || $active !== $this->active || 'approved' !== $state['approval'] || ! is_array( $state['declaration'] ) || ! is_int( $state['selection_generation'] ) ) {
 				return null;
 			}
 			$candidates = $this->discover( $active );
@@ -154,6 +156,75 @@ final class GitHubProviderSelection {
 		} catch ( \Throwable ) {
 			return null;
 		}
+	}
+
+	/**
+	 * @param array<string,mixed> $state
+	 * @return array<string,mixed>
+	 */
+	private function selection_identity( array $state ): array {
+		unset( $state['native_mutation'] );
+		return $state;
+	}
+
+	/** @param callable():bool $owns_lock Exact captured updater ownership, never acquisition. */
+	public function begin_native_mutation( string $type, string $identity, callable $owns_lock ): string {
+		$marker                                      = $this->store->native_mutation_transaction(
+			function () use ( $type, $identity, $owns_lock ): array {
+				$state = $this->store->read( true );
+				if ( isset( $state['native_mutation'] ) || ! $this->owns_native_lock( $owns_lock ) || ! $this->operation_allowed() || ! is_int( $state['selection_generation'] ) ) {
+						throw new \RuntimeException( 'GitHub native mutation is unavailable.' );
+				}
+				$marker                  = array(
+					'selection_generation' => $state['selection_generation'],
+					'owner_tag'            => bin2hex( random_bytes( 16 ) ),
+					'target_type'          => $type,
+					'installed_identity'   => $identity,
+					'phase'                => 'started',
+				);
+				$next                    = $state;
+				$next['native_mutation'] = $marker;
+				if ( ! $this->owns_native_lock( $owns_lock ) || ! $this->store->compare_and_swap( $state, $next ) ) {
+					throw new \RuntimeException( 'GitHub native mutation changed.' );
+				}
+				return $marker;
+			}
+		);
+		$this->native_owners[ $marker['owner_tag'] ] = $marker;
+		return $marker['owner_tag'];
+	}
+
+	/**
+	 * @param callable():bool $owns_lock
+	 * @phpstan-impure The captured lock can change between current reads.
+	 */
+	private function owns_native_lock( callable $owns_lock ): bool {
+		return true === $owns_lock();
+	}
+
+	/** Captured completion survives guard loss and revocation; it never restores approval. */
+	public function complete_native_mutation( string $owner, string $type, string $identity, string $outcome ): void {
+		$marker = $this->native_owners[ $owner ] ?? null;
+		if ( null === $marker || $marker['target_type'] !== $type || $marker['installed_identity'] !== $identity || ! in_array( $outcome, array( 'verified_success', 'uncertain' ), true ) ) {
+			throw new \RuntimeException( 'GitHub native completion owner changed.' );
+		}
+		unset( $this->native_owners[ $owner ] );
+		if ( 'uncertain' === $outcome ) {
+			return;
+		}
+		$this->store->native_mutation_transaction(
+			function () use ( $marker ): void {
+				$state = $this->store->read( true );
+				if ( ( $state['native_mutation'] ?? null ) !== $marker ) {
+						throw new \RuntimeException( 'GitHub native completion owner changed.' );
+				}
+				$next = $state;
+				unset( $next['native_mutation'] );
+				if ( ! $this->store->compare_and_swap( $state, $next ) ) {
+					throw new \RuntimeException( 'GitHub native completion changed.' );
+				}
+			}
+		);
 	}
 
 	/** @param array{kind:mixed,configuration:mixed}|null $metadata */

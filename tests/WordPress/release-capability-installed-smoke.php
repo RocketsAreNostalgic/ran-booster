@@ -88,7 +88,7 @@ try {
 			$type,
 			$ran_booster_request,
 			'stable',
-			wp_create_nonce( $ran_booster_facade->nonce_action( 'list_candidates', $type ) )
+			wp_create_nonce( $ran_booster_facade->nonce_action( 'list_candidates', $type, null ) )
 		);
 		$ran_booster_assert_result( $ran_booster_list, 'release_candidates_available' );
 		$ran_booster_candidate = $ran_booster_list->data()['candidates'][0] ?? null;
@@ -107,7 +107,7 @@ try {
 			'42',
 			'v2.0.0',
 			'stable',
-			wp_create_nonce( $ran_booster_facade->nonce_action( 'inspect', $type ) )
+			wp_create_nonce( $ran_booster_facade->nonce_action( 'inspect', $type, null ) )
 		);
 		$ran_booster_assert_result( $ran_booster_inspection, 'release_ready' );
 		$ran_booster_evidence = $ran_booster_inspection->data();
@@ -122,7 +122,8 @@ try {
 			'v2.0.0',
 			$ran_booster_evidence['fingerprint'],
 			'stable',
-			wp_create_nonce( $ran_booster_facade->nonce_action( 'install', $type ) )
+			wp_create_nonce( $ran_booster_facade->nonce_action( 'install', $type, null ) ),
+			null
 		);
 		$ran_booster_assert_result( $ran_booster_result, 'installed' );
 

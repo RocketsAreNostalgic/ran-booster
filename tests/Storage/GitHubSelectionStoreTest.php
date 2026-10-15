@@ -187,4 +187,68 @@ final class GitHubSelectionStoreTest extends TestCase {
 		$this->expectException( DatabaseLifecycleFailure::class );
 		$store->compare_and_swap( $initial, $next );
 	}
+	public function test_thrown_commit_pauses_request_regardless_of_database_outcome(): void {
+		foreach ( array( false, true ) as $applied ) {
+			$db                           = new SelectionDatabase();
+			$store                        = new GitHubSelectionStore( $db, 'wp_options' );
+			$old                          = $store->initialize_bundled( $this->declaration() );
+			$next                         = $old;
+			$next['selection_generation'] = 1;
+			$db->throw_commit             = true;
+			$db->commit_applied           = $applied;
+			try {
+				$store->native_mutation_transaction( fn (): bool => $store->compare_and_swap( $old, $next ) );
+				self::fail( 'Thrown commit reported success.' );
+			} catch ( \RuntimeException $failure ) {
+				self::assertSame( 'commit threw', $failure->getMessage() );
+			}
+			self::assertSame( $applied ? $next : $old, $store->read() );
+			$db->throw_commit = false;
+			$this->assert_paused( $store, $db );
+		}
+	}
+
+	public function test_rollback_failure_preserves_original_error_and_pauses_request(): void {
+		foreach ( array( 'false', 'throw', 'last_error' ) as $mode ) {
+			$db                 = new SelectionDatabase();
+			$store              = new GitHubSelectionStore( $db, 'wp_options' );
+			$db->fail_rollback  = 'false' === $mode;
+			$db->throw_rollback = 'throw' === $mode;
+			$db->boundary_error = 'last_error' === $mode ? 'ROLLBACK' : null;
+			try {
+				$store->native_mutation_transaction( static fn (): never => throw new \RuntimeException( 'original' ) );
+			} catch ( \RuntimeException $failure ) {
+				self::assertSame( 'original', $failure->getMessage() );
+			}
+			$this->assert_paused( $store, $db );
+		}
+	}
+
+	public function test_transaction_boundaries_clear_stale_errors_and_reject_new_errors(): void {
+		$db             = new SelectionDatabase();
+		$store          = new GitHubSelectionStore( $db, 'wp_options' );
+		$db->last_error = 'prior query';
+		self::assertSame( 'success', $store->native_mutation_transaction( static fn (): string => 'success' ) );
+		foreach ( array( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', 'START TRANSACTION', 'COMMIT' ) as $statement ) {
+			$db                 = new SelectionDatabase();
+			$store              = new GitHubSelectionStore( $db, 'wp_options' );
+			$db->boundary_error = $statement;
+			try {
+				$store->native_mutation_transaction( static fn (): string => 'never returned' );
+				self::fail( $statement );
+			} catch ( DatabaseLifecycleFailure ) {
+				self::assertContains( $statement, $db->queries );
+			}
+		}
+	}
+
+	private function assert_paused( GitHubSelectionStore $store, SelectionDatabase $db ): void {
+		$queries = $db->queries;
+		try {
+			$store->native_mutation_transaction( static fn (): bool => true );
+			self::fail( 'Uncertain connection reused.' );
+		} catch ( DatabaseLifecycleFailure ) {
+			self::assertSame( $queries, $db->queries );
+		}
+	}
 }

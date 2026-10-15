@@ -49,10 +49,8 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		$container = new CoreContainer();
 		$runtime   = new Booster( $container );
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Core composition requires the WordPress table prefix.
-		$GLOBALS['wpdb'] = new class() {
-			public string $prefix = 'wp_';
-		};
-		( new BoosterServiceProvider() )->register( $container, $runtime, new \stdClass(), 'ran-booster.php' );
+		$GLOBALS['wpdb'] = new \RAN\Tests\RepositoryProvider\HostSelectionDatabase();
+		( new BoosterServiceProvider() )->register( $container, $runtime, ( require dirname( __DIR__, 2 ) . '/vendor/ran/wp-release-updater/bootstrap.php' ), $GLOBALS['wpdb']->basename );
 
 		foreach ( array(
 			\RAN\Admin\CredentialSelfDestructPurger::class,
@@ -70,6 +68,27 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 			self::assertInstanceOf( $type, $first );
 			self::assertNotSame( $first, $container->make( $type ), $type );
 		}
+
+		$selection = $container->make( \RAN\RepositoryProvider\GitHubProviderSelection::class );
+		$registry  = $container->make( ProviderRegistry::class );
+		$secrets   = $container->make( SecretsFile::class );
+		foreach ( array( array( $registry, 'github_selection_guard' ), array( $secrets, 'github_credential_access' ) ) as $binding ) {
+			$guard = ( new \ReflectionProperty( $binding[0], $binding[1] ) )->getValue( $binding[0] );
+			self::assertInstanceOf( \Closure::class, $guard );
+			self::assertSame( $selection, ( new \ReflectionFunction( $guard ) )->getClosureThis() );
+		}
+		$verifier           = $container->make( \RAN\Portability\BlueprintRepositoryVerifier::class );
+		$selection_property = new \ReflectionProperty( $verifier, 'selection' );
+		self::assertSame( $selection, $selection_property->getValue( $verifier ) );
+		self::assertSame( $selection, $selection_property->getValue( $verifier->for_preview() ) );
+		self::assertSame( $secrets, ( new \ReflectionProperty( $verifier, 'secrets' ) )->getValue( $verifier ) );
+		self::assertSame( $registry, ( new \ReflectionProperty( $verifier, 'providers' ) )->getValue( $verifier ) );
+		$controller  = $container->make( \RAN\Admin\PortabilityController::class );
+		$application = ( new \ReflectionProperty( $controller, 'application' ) )->getValue( $controller );
+		self::assertInstanceOf( \RAN\Portability\PortabilityApplicationService::class, $application );
+		$consumer_verifier = ( new \ReflectionProperty( $application, 'verifier' ) )->getValue( $application );
+		self::assertInstanceOf( \RAN\Portability\BlueprintRepositoryVerifier::class, $consumer_verifier );
+		self::assertSame( $selection, $selection_property->getValue( $consumer_verifier ) );
 
 		$purger = $container->make( \RAN\Admin\CredentialSelfDestructPurger::class );
 		self::assertInstanceOf( \RAN\Admin\CredentialSelfDestructPurger::class, $purger );
@@ -111,10 +130,10 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		$container = new CoreContainer();
 		$runtime   = new Booster( $container );
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Core composition requires the WordPress table prefix.
-		$GLOBALS['wpdb'] = new class() {
-			public string $prefix = 'wp_';
-		};
-		( new BoosterServiceProvider() )->register( $container, $runtime, new \stdClass(), 'ran-booster.php' );
+		$GLOBALS['wpdb'] = new \RAN\Tests\RepositoryProvider\HostSelectionDatabase();
+		( new BoosterServiceProvider() )->register( $container, $runtime, ( require dirname( __DIR__, 2 ) . '/vendor/ran/wp-release-updater/bootstrap.php' ), $GLOBALS['wpdb']->basename );
+		$container->make( \RAN\RepositoryProvider\GitHubProviderSelection::class )->complete_collection();
+		$container->make( ProviderRegistry::class )->seal();
 		$reporter = $container->make( ProviderRegistry::class )->activity_reporter( 'gh' );
 		$capture  = ( new \ReflectionProperty( \RAN\Activity\BoundActivityReporter::class, 'capture' ) )->getValue( $reporter );
 		self::assertInstanceOf( \Closure::class, $capture );
@@ -157,19 +176,23 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		$container = new CoreContainer();
 		$runtime   = new Booster( $container );
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Core composition requires the WordPress table prefix.
-		$GLOBALS['wpdb'] = new class() {
-			public string $prefix = 'wp_';
-		};
+		$GLOBALS['wpdb'] = new \RAN\Tests\RepositoryProvider\HostSelectionDatabase();
 
 		( new BoosterServiceProvider(
-			static function ( ProviderSecretPolicyCatalog $policies ) use ( &$secrets ): RegistrationTrackingSecretsFile {
-				$secrets = new RegistrationTrackingSecretsFile( $policies );
+			static function ( ProviderSecretPolicyCatalog $policies, callable $guard ) use ( &$secrets ): RegistrationTrackingSecretsFile {
+				$secrets = new RegistrationTrackingSecretsFile( $policies, $guard );
 
 				return $secrets;
 			}
-		) )->register( $container, $runtime, new \stdClass(), 'ran-booster.php' );
+		) )->register( $container, $runtime, ( require dirname( __DIR__, 2 ) . '/vendor/ran/wp-release-updater/bootstrap.php' ), $GLOBALS['wpdb']->basename );
 
 		self::assertInstanceOf( RegistrationTrackingSecretsFile::class, $secrets );
+		self::assertSame( array(), $container->make( ProviderRegistry::class )->all() );
+		self::assertSame( 0, $secrets->credential_stores_issued );
+		self::assertSame( 0, $secrets->credential_store->reads );
+		self::assertNull( $container->make( \RAN\RepositoryProvider\GitHubProviderSelection::class )->expectation() );
+		$container->make( \RAN\RepositoryProvider\GitHubProviderSelection::class )->complete_collection();
+		$container->make( ProviderRegistry::class )->seal();
 		$provider = $container->make( ProviderRegistry::class )->get( 'gh' );
 		$metadata = $provider->get_metadata();
 
@@ -215,12 +238,12 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		$container = new CoreContainer();
 		$runtime   = new Booster( $container );
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Core composition requires the WordPress table prefix.
-		$GLOBALS['wpdb'] = new class() {
-			public string $prefix = 'wp_';
-		};
+		$GLOBALS['wpdb'] = new \RAN\Tests\RepositoryProvider\HostSelectionDatabase();
 
-		( new BoosterServiceProvider() )->register( $container, $runtime, new \stdClass(), 'ran-booster.php' );
+		( new BoosterServiceProvider() )->register( $container, $runtime, ( require dirname( __DIR__, 2 ) . '/vendor/ran/wp-release-updater/bootstrap.php' ), $GLOBALS['wpdb']->basename );
 
+		$container->make( \RAN\RepositoryProvider\GitHubProviderSelection::class )->complete_collection();
+		$container->make( ProviderRegistry::class )->seal();
 		$provider                = $container->make( ProviderRegistry::class )->get( 'gh' );
 		$artifact_limit_supplier = ( new \ReflectionProperty( GitHubProvider::class, 'maximum_artifact_bytes' ) )->getValue( $provider );
 
@@ -236,12 +259,12 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		$container = new CoreContainer();
 		$runtime   = new Booster( $container );
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Core composition requires the WordPress table prefix.
-		$GLOBALS['wpdb'] = new class() {
-			public string $prefix = 'wp_';
-		};
+		$GLOBALS['wpdb'] = new \RAN\Tests\RepositoryProvider\HostSelectionDatabase();
 
-		( new BoosterServiceProvider() )->register( $container, $runtime, new \stdClass(), 'ran-booster.php' );
+		( new BoosterServiceProvider() )->register( $container, $runtime, ( require dirname( __DIR__, 2 ) . '/vendor/ran/wp-release-updater/bootstrap.php' ), $GLOBALS['wpdb']->basename );
 
+		$container->make( \RAN\RepositoryProvider\GitHubProviderSelection::class )->complete_collection();
+		$container->make( ProviderRegistry::class )->seal();
 		$provider                = $container->make( ProviderRegistry::class )->get( 'gh' );
 		$artifact_limit_supplier = ( new \ReflectionProperty( GitHubProvider::class, 'maximum_artifact_bytes' ) )->getValue( $provider );
 
@@ -258,8 +281,8 @@ final class RegistrationTrackingSecretsFile extends SecretsFile {
 	public int $credential_stores_issued = 0;
 	public RegistrationTrackingCredentialStore $credential_store;
 
-	public function __construct( ProviderSecretPolicyCatalog $policies ) {
-		parent::__construct( '/unused/github-registration-secrets.php', array(), $policies );
+	public function __construct( ProviderSecretPolicyCatalog $policies, callable $guard ) {
+		parent::__construct( '/unused/github-registration-secrets.php', array(), $policies, github_credential_access: $guard );
 		$this->credential_store = new RegistrationTrackingCredentialStore();
 	}
 

@@ -28,7 +28,6 @@ use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Logging\BoosterLogger;
 use RAN\Logging\TemporaryDebugCapture;
-use RAN\Portability\BlueprintPackage;
 use RAN\Secrets\SecretsStorageProvisioner;
 use RAN\Secrets\SecretsStorageProvisioningResult;
 use RAN\Storage\Database;
@@ -400,21 +399,21 @@ class Dashboard {
 				if ( ! $package instanceof Package ) {
 					throw new \UnexpectedValueException();
 				}
-				$blueprint     = BlueprintPackage::from_managed_package( $type, $package );
+				$provider      = (string) $package->get_provider_code();
 				$index         = count( $rows );
 				$rows[]        = array(
 
-					'name'       => $blueprint->display_name,
-					'identifier' => $blueprint->identifier,
-					'type'       => $blueprint->type,
+					'name'       => $package->get_display_name(),
+					'identifier' => (string) $package->get_identifier(),
+					'type'       => $type,
 				);
 				$credential_id = $package->get_credential_id();
-				if ( '' !== $blueprint->provider && '' !== $credential_id ) {
-					$credentials[ $blueprint->provider ][ $credential_id ][] = array(
+				if ( '' !== $provider && '' !== $credential_id ) {
+					$credentials[ $provider ][ $credential_id ][] = array(
 						'index' => $index,
 
-						'name'  => $blueprint->display_name,
-						'type'  => $blueprint->type,
+						'name'  => $package->get_display_name(),
+						'type'  => $type,
 					);
 				}
 			}

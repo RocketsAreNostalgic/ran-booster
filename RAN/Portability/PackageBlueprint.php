@@ -7,7 +7,7 @@ namespace RAN\Portability;
 use InvalidArgumentException;
 use JsonException;
 
-final readonly class PackageBlueprint {
+final class PackageBlueprint {
 
 	public const FORMAT          = 'ran-booster-package-blueprint';
 	public const VERSION         = 2;
@@ -16,10 +16,12 @@ final readonly class PackageBlueprint {
 	public const MAX_CREDENTIALS = 128;
 
 	/** @var list<BlueprintPackage> */
-	public array $packages;
+	public readonly array $packages;
 
 	/** @var list<BlueprintCredential> */
-	public array $credentials;
+	public readonly array $credentials;
+
+	private ?string $imported_artifact_identity = null;
 
 	/**
 	 * @param array<array-key, mixed> $packages
@@ -132,12 +134,18 @@ final readonly class PackageBlueprint {
 		if ( ! hash_equals( $blueprint->encode( $legacy ), $json ) ) {
 			throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
 		}
+		$blueprint->imported_artifact_identity = hash( 'sha256', $json );
 
 		return $blueprint;
 	}
 
 	public function canonical_json(): string {
 		return $this->encode( false );
+	}
+
+	public function artifact_identity(): string {
+		// Normalizing an imported V1 document must not change its target credential IDs.
+		return $this->imported_artifact_identity ?? hash( 'sha256', $this->canonical_json() );
 	}
 
 	private function encode( bool $legacy ): string {

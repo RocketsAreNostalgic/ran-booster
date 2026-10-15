@@ -574,6 +574,25 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		self::assertSame( 0, $this->calls->events_under_lock() );
 	}
 
+	public function test_v1_retry_reuses_the_existing_pre_normalization_credential_id(): void {
+		$legacy      = '{"format":"ran-booster-package-blueprint","version":1,"packages":[{"type":"plugin","identifier":"fixture/fixture.php","display_name":"Fixture","provider":"alpha","provider_repository_id":"fixture-repository-id","repository":"fixture/repository","branch":"main","subdirectory":null}],"credentials":[{"provider":"alpha","label":"Portable credential","kind":"api-key","configuration":{"tenant":"fixture"},"secret":"synthetic-portable-value","packages":[{"type":"plugin","identifier":"fixture/fixture.php"}]}]}';
+		$expected_id = 'portable_b2d7585c1a4d059295f406fbedb6797a9d749300558f92ec50add5c';
+		// Seed the exact profile ID produced by the original V1 import algorithm.
+		$this->secrets->save_credential(
+			'alpha',
+			$expected_id,
+			$this->credential_metadata( 'Portable credential' ),
+			'synthetic-portable-value'
+		);
+		$before = hash_file( 'sha256', $this->path );
+		foreach ( array( 1, 2 ) as $attempt ) {
+			$blueprint = PackageBlueprint::from_json( $legacy );
+			self::assertSame( array( $expected_id ), $this->secrets->import_credentials_if_absent( $blueprint, $blueprint->credentials[0] ), 'Retry ' . $attempt );
+			self::assertSame( $before, hash_file( 'sha256', $this->path ) );
+			self::assertCount( 1, $this->secrets->credential_profiles( 'alpha' ) );
+		}
+	}
+
 	public function test_tampered_and_authenticated_non_canonical_documents_fail_before_policy(): void {
 		$this->seed_representative_document();
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.

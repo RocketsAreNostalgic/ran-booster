@@ -396,6 +396,11 @@ final class PackageBlueprintTest extends TestCase {
 		$blueprint = PackageBlueprint::from_json( $legacy );
 		self::assertSame( $this->package()->to_array(), $blueprint->packages[0]->to_array() );
 		self::assertStringContainsString( '"version":2', $blueprint->canonical_json() );
+		self::assertSame( hash( 'sha256', $legacy ), $blueprint->artifact_identity() );
+		$exported = PackageBlueprint::from_json( $blueprint->canonical_json() );
+		self::assertSame( hash( 'sha256', $blueprint->canonical_json() ), $exported->artifact_identity() );
+		self::assertNotSame( $blueprint->artifact_identity(), $exported->artifact_identity() );
+		self::assertSame( $exported->artifact_identity(), ( new PackageBlueprint( $blueprint->packages ) )->artifact_identity() );
 		foreach ( array(
 			str_replace( '"version":1', '"version":2', $legacy ),
 			str_replace( '"branch":"main"', '"branch":""', $legacy ),

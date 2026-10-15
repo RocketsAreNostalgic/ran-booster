@@ -1180,7 +1180,7 @@ class SecretsFile {
 		#[\SensitiveParameter] PackageBlueprint $blueprint,
 		#[\SensitiveParameter] array $credentials
 	): array {
-		$artifact_identity = hash( 'sha256', $blueprint->canonical_json() );
+		$artifact_identity = $blueprint->artifact_identity();
 		$records           = array();
 
 		foreach ( $credentials as $credential ) {

@@ -20,6 +20,49 @@ final class GitHubSelectionStore {
 	public function __construct( private \wpdb|SchemaConnection $connection, private string $table ) {
 	}
 
+	/**
+	 * Authoritative current read: option filters and object caches are not authority.
+	 * Only WordPress's bounded serialized list of plugin basenames is accepted.
+	 *
+	 * @return list<string>
+	 */
+	public function active_plugins(): array {
+		( new Database( $this->connection ) )->require_selection_storage( $this->table );
+		$this->connection->last_error = '';
+		$query                        = $this->connection->prepare( 'SELECT option_name, option_value FROM %i WHERE option_name = %s LIMIT 2 FOR UPDATE', $this->table, 'active_plugins' );
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared current read bypasses REPEATABLE READ snapshots as well as WordPress caches.
+		$rows = $this->connection->get_results( $query );
+		if ( $this->read_failed() || ! is_array( $rows ) || 1 !== count( $rows ) || ! is_object( $rows[0] ) || 'active_plugins' !== ( $rows[0]->option_name ?? null ) || ! is_string( $rows[0]->option_value ?? null ) ) {
+			throw new DatabaseLifecycleFailure( 'active_plugins_read_failed' );
+		}
+		$bytes = $rows[0]->option_value;
+		if ( strlen( $bytes ) > 262144 || ! preg_match( '/\Aa:(0|[1-9][0-9]{0,3}):\{/', $bytes, $match ) || (int) $match[1] > 1024 ) {
+			throw new DatabaseLifecycleFailure( 'active_plugins_invalid' );
+		}
+		$count   = (int) $match[1];
+		$offset  = strlen( $match[0] );
+		$plugins = array();
+		for ( $index = 0; $index < $count; ++$index ) {
+			if ( ! preg_match( '/\Gi:' . $index . ';s:([1-9][0-9]{0,2}):"/', $bytes, $item, 0, $offset ) || (int) $item[1] > 191 ) {
+				throw new DatabaseLifecycleFailure( 'active_plugins_invalid' );
+			}
+			$offset  += strlen( $item[0] );
+			$length   = (int) $item[1];
+			$basename = substr( $bytes, $offset, $length );
+			$offset  += $length;
+			if ( ! preg_match( '/\A(?:[a-zA-Z0-9][a-zA-Z0-9_.-]*\/)?[a-zA-Z0-9][a-zA-Z0-9_.-]*\.php\z/D', $basename ) || '";' !== substr( $bytes, $offset, 2 ) || in_array( $basename, $plugins, true ) ) {
+				throw new DatabaseLifecycleFailure( 'active_plugins_invalid' );
+			}
+			$offset   += 2;
+			$plugins[] = $basename;
+		}
+		if ( '}' !== substr( $bytes, $offset ) ) {
+			throw new DatabaseLifecycleFailure( 'active_plugins_invalid' );
+		}
+		sort( $plugins, SORT_STRING );
+		return $plugins;
+	}
+
 	/** @return array<string, mixed> */
 	public function read( bool $for_update = false ): array {
 		( new Database( $this->connection ) )->require_selection_storage( $this->table );

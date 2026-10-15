@@ -6,6 +6,7 @@ namespace RAN\Secrets;
 
 use RAN\Portability\BlueprintCredential;
 use RAN\Portability\PackageBlueprint;
+use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\RepositoryProvider\InvalidCredentialInput;
 use RAN\RepositoryProvider\InvalidProviderCode;
 use RAN\RepositoryProvider\InvalidWebhookInput;
@@ -334,6 +335,57 @@ class SecretsFile {
 				return true;
 			}
 		);
+	}
+
+	/**
+	 * Read retained GitHub adoption metadata for Core, even while GH is paused.
+	 *
+	 * This host-only read invokes no provider policy or operation callback and is
+	 * deliberately absent from ProviderCredentialStore. Unknown configuration
+	 * stays opaque. Destroyed records remain visible but cannot count as reuse.
+	 * Storage failures throw rather than claiming an empty inventory.
+	 *
+	 * @return array<string, array{id:string,label:string,kind:string,format:string|null,configuration:array{owner:string}|null,source:'constant'|'file',self_destruct:bool,destroy_on:string|null,destroyed:bool}>
+	 */
+	public function github_adoption_inventory(): array {
+		$document = $this->file_document();
+		$profiles = array();
+		foreach ( $document[ self::CREDENTIALS ]['gh'] ?? array() as $id => $record ) {
+			$format          = GitHubProviderSelection::credential_format( $record );
+			$owner           = $record['configuration']['owner'] ?? null;
+			$profiles[ $id ] = array(
+				'id'            => $id,
+				'label'         => $record['label'],
+				'kind'          => $record['kind'],
+				'format'        => $format,
+				'configuration' => null !== $format && is_string( $owner ) ? array( 'owner' => $owner ) : null,
+				'source'        => 'file',
+				'self_destruct' => $record['self_destruct'] ?? false,
+				'destroy_on'    => $this->credential_destroy_on( $record ),
+				'destroyed'     => $this->credential_destroyed( $record ),
+			);
+		}
+		$constant = $this->raw_constant_value( 'RAN_BOOSTER_GITHUB_TOKEN' );
+		if ( is_string( $constant ) && '' !== trim( $constant ) ) {
+			$profiles[ self::CONSTANT_PROFILE ] = array(
+				'id'            => self::CONSTANT_PROFILE,
+				'label'         => 'Deployment configuration',
+				'kind'          => 'classic',
+				'format'        => GitHubProviderSelection::credential_format(
+					array(
+						'kind'          => 'classic',
+						'configuration' => array( 'owner' => '' ),
+					)
+				),
+				'configuration' => array( 'owner' => '' ),
+				'source'        => 'constant',
+				'self_destruct' => false,
+				'destroy_on'    => null,
+				'destroyed'     => false,
+			);
+		}
+		ksort( $profiles, SORT_STRING );
+		return $profiles;
 	}
 
 	/**

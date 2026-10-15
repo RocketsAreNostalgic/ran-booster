@@ -9,6 +9,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\ManagedRepository;
 use RAN\Package;
+use RAN\PackageSource;
+use RAN\WordPress\ManagedReleaseConfiguration;
+use RAN\WordPress\ManagedReleaseStore;
 use RAN\Portability\BlueprintPackage;
 use RAN\Portability\BlueprintReviewer;
 use RAN\Portability\PackageBlueprint;
@@ -44,7 +47,7 @@ final class BlueprintReviewerTest extends TestCase {
 					'duplicate' === $failure ? PackageStorageFailure::duplicate_package_rows() : PackageStorageFailure::invalid_provider_identity()
 				);
 			} else {
-				$plugins->expects( self::once() )->method( 'booster_plugin_from_file' )->willReturn( $this->managed_package( $managed_repository_id ?? '' ) );
+				$plugins->expects( self::once() )->method( 'booster_plugin_from_file' )->willReturn( $this->managed_package( $managed_repository_id ?? 'repository-id' ) );
 			}
 		}
 
@@ -79,13 +82,124 @@ final class BlueprintReviewerTest extends TestCase {
 		( new BlueprintReviewer( $plugins, $themes ) )->review( new PackageBlueprint( array( $package ) ) );
 	}
 
+	#[DataProvider( 'local_states' )]
+	public function test_local_comparison_preserves_protected_and_unknown_states(
+		bool $installed,
+		bool $managed,
+		?string $managed_repository_id,
+		?string $failure,
+		TargetPackageAction $action,
+		TargetPackageReason $reason
+	): void {
+		$plugins = $this->createMock( PluginRepository::class );
+		$plugins->method( 'is_installed' )->willReturn( $installed );
+		$plugins->method( 'has_management_record' )->willReturn( $managed );
+		if ( null !== $failure ) {
+			$plugins->method( 'booster_plugin_from_file' )->willThrowException( 'duplicate' === $failure ? PackageStorageFailure::duplicate_package_rows() : PackageStorageFailure::invalid_provider_identity() );
+		} else {
+			$plugins->method( 'booster_plugin_from_file' )->willReturn( $this->managed_package( $managed_repository_id ?? 'repository-id' ) );
+		}
+		$report = ( new BlueprintReviewer( $plugins, $this->createStub( ThemeRepository::class ) ) )->compare_local( $this->blueprint_package() );
+		$state  = match ( $action ) {
+			TargetPackageAction::INSTALL => 'absent',
+			TargetPackageAction::ADOPT => 'unmanaged',
+			TargetPackageAction::MANAGED => 'matching',
+			default => null === $failure && TargetPackageReason::MANAGEMENT_CONFLICT === $reason ? 'different' : 'unavailable',
+		};
+		self::assertSame( $state, $report['state'] );
+		self::assertSame( 'unknown', $report['installed_equality'] );
+		self::assertSame( 'not_checked', $report['source_access'] );
+		self::assertSame( 'not_checked', $report['package_inspection'] );
+		self::assertArrayNotHasKey( 'display_name', $report['requested'] );
+		self::assertArrayNotHasKey( 'provider_expectation', $report );
+		if ( 'different' === $state ) {
+			self::assertSame( array( 'provider_repository_id' ), $report['differences'] );
+		}
+	}
+
+	public function test_release_comparison_is_local_and_does_not_enable_execution(): void {
+		$plugins = $this->createMock( PluginRepository::class );
+		$plugins->expects( self::once() )->method( 'is_installed' )->willReturn( true );
+		$plugins->expects( self::once() )->method( 'has_management_record' )->willReturn( true );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $this->managed_package( 'repository-id', PackageSource::RELEASE_ASSET ) );
+		$release = new ManagedReleaseConfiguration( 'example', 'example.php' );
+		$store   = $this->createMock( ManagedReleaseStore::class );
+		$store->expects( self::once() )->method( 'configuration' )->with( 'plugin', 'example/example.php' )->willReturn( $release );
+		$package  = new BlueprintPackage( 'plugin', 'example/example.php', 'Different display name', 'gh', 'repository-id', 'owner/repository', '', null, $release );
+		$reviewer = new BlueprintReviewer( $plugins, $this->createStub( ThemeRepository::class ), $store );
+		self::assertSame( TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION, $reviewer->review_package( $package )->reason );
+		$report = $reviewer->compare_local( $package );
+		self::assertSame( 'matching', $report['state'] );
+		self::assertSame( array(), $report['differences'] );
+		self::assertSame( $report['requested'], $report['current'] );
+		self::assertSame( 'unknown', $report['installed_equality'] );
+	}
+
+	#[DataProvider( 'release_configuration_states' )]
+	public function test_release_configuration_is_not_guessed( string $mode, string $state ): void {
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'is_installed' )->willReturn( true );
+		$plugins->method( 'has_management_record' )->willReturn( true );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $this->managed_package( 'repository-id', PackageSource::RELEASE_ASSET ) );
+		$store = $this->createStub( ManagedReleaseStore::class );
+		if ( 'malformed' === $mode ) {
+			$store->method( 'configuration' )->willThrowException( new \RuntimeException( 'malformed' ) );
+		} else {
+			$store->method( 'configuration' )->willReturn( 'missing' === $mode ? null : new ManagedReleaseConfiguration( 'example', 'example.php' ) );
+		}
+		$report = ( new BlueprintReviewer( $plugins, $this->createStub( ThemeRepository::class ), $store ) )->compare_local( $this->blueprint_package() );
+		self::assertSame( $state, $report['state'] );
+		self::assertSame( 'different' === $state ? array( 'source' ) : array(), $report['differences'] );
+		if ( 'unavailable' === $state ) {
+			self::assertNull( $report['current'] );
+		}
+	}
+
+	/** @return iterable<string,array{string,string}> */
+	public static function release_configuration_states(): iterable {
+		yield 'release versus branch' => array( 'valid', 'different' );
+		yield 'missing configuration' => array( 'missing', 'unavailable' );
+		yield 'malformed configuration' => array( 'malformed', 'unavailable' );
+	}
+
+	public function test_selection_and_observed_version_do_not_claim_installed_equality(): void {
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'is_installed' )->willReturn( true );
+		$plugins->method( 'has_management_record' )->willReturn( true );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $this->managed_package( 'repository-id' ) );
+		$record                 = $this->blueprint_package()->to_array();
+		$record['selection']    = array( 'commit' => str_repeat( 'a', 40 ) );
+		$record['requirements'] = array(
+			'basis'             => 'installed_headers',
+			'observed_identity' => array( 'version' => '1.0.0' ),
+			'declarations'      => array(),
+		);
+		$report                 = ( new BlueprintReviewer( $plugins, $this->createStub( ThemeRepository::class ) ) )->compare_local( BlueprintPackage::from_array( $record ) );
+		self::assertSame( 'matching', $report['state'] );
+		self::assertSame( 'unknown', $report['installed_equality'] );
+		self::assertArrayNotHasKey( 'selection', $report['requested'] );
+		self::assertArrayNotHasKey( 'requirements', $report['requested'] );
+	}
+
+	public function test_theme_comparison_reads_fresh_local_management(): void {
+		$plugins = $this->createMock( PluginRepository::class );
+		$plugins->expects( self::never() )->method( 'is_installed' );
+		$themes = $this->createMock( ThemeRepository::class );
+		$themes->expects( self::exactly( 2 ) )->method( 'is_installed' )->with( 'example' )->willReturn( false, true );
+		$themes->expects( self::exactly( 2 ) )->method( 'has_management_record' )->with( 'example' )->willReturn( false );
+		$package  = new BlueprintPackage( 'theme', 'example', 'Example', 'gh', 'repository-id', 'owner/repository', 'main', null );
+		$reviewer = new BlueprintReviewer( $plugins, $themes );
+		self::assertSame( 'absent', $reviewer->compare_local( $package )['state'] );
+		self::assertSame( 'unmanaged', $reviewer->compare_local( $package )['state'] );
+	}
+
 	private function blueprint_package(): BlueprintPackage {
 		return new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', 'main', null );
 	}
 
-	private function managed_package( string $provider_repository_id ): Package {
+	private function managed_package( string $provider_repository_id, PackageSource $source = PackageSource::BRANCH ): Package {
 		$package = $this->createStub( Package::class );
-		$package->method( 'get_source' )->willReturn( \RAN\PackageSource::BRANCH );
+		$package->method( 'get_source' )->willReturn( $source );
 		$package->method( 'get_identifier' )->willReturn( 'example/example.php' );
 		$package->method( 'get_display_name' )->willReturn( 'Example' );
 		$package->method( 'get_provider_code' )->willReturn( 'gh' );

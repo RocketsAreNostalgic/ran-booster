@@ -29,6 +29,11 @@ final readonly class PortabilityApplicationService {
 	) {
 	}
 
+	/** @return array{state:string,current:?array<string,mixed>,requested:array<string,mixed>,differences:list<string>,installed_equality:string,source_access:string,package_inspection:string} */
+	public function compare_local( BlueprintPackage $package ): array {
+		return $this->reviewer->compare_local( $package );
+	}
+
 	/**
 	 * @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $credential_decisions
 	 * @param array<int, string> $target_credential_ids

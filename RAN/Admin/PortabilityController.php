@@ -205,7 +205,7 @@ final readonly class PortabilityController {
 
 		foreach ( $items as $index => $item ) {
 			$credential_ordinal = $this->credential_ordinal_for_package( $blueprint, $item->package );
-			$rows[]             = $this->row(
+			$row                = $this->row(
 				$item,
 				$credential_ordinal,
 				$target_credential_ids[ $index ] ?? null,
@@ -214,6 +214,8 @@ final readonly class PortabilityController {
 					&& TargetPackageAction::MANAGED === $item->action,
 				$provider_list
 			);
+			$row['comparison']  = $this->application->compare_local( $item->package );
+			$rows[]             = $row;
 		}
 
 		return $this->render_review( $rows, array() === $blueprint->credentials ? array() : $this->credential_rows( $blueprint, $credential_decisions, $items, $provider_list ) );

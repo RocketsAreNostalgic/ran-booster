@@ -341,3 +341,19 @@ Use the following mapping when a Transporter operation fails:
 - [Deployment execution](deployment-execution.md)
 - [Provider extension contract](provider-extension-contract.md)
 - [Custom git vendor setup](custom-git-vendors.md)
+
+### Local management comparison
+
+The package review also compares requested management configuration with this
+site's current branch or release configuration. It distinguishes absent,
+unmanaged, matching, different and unavailable configuration, and names the
+changed configuration fields. Display names and carried selection or requirement
+observations do not change management equality. Missing or unreadable release
+configuration remains unavailable rather than being guessed.
+
+These local observations do not authorize installation or reconciliation and do
+not replace the existing action checks. Installed file equality remains unknown,
+even when configuration or version labels match. Source access and package
+inspection are not checked by the local comparison; the existing operational
+review remains separate. No credentials or provider calls are needed for these
+observations, and they carry no Apply expectation.

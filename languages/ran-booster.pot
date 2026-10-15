@@ -1274,11 +1274,10 @@ msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:347
 #: RAN/Admin/PackageAdminController.php:367
-#: RAN/Admin/PortabilityController.php:290
-#: RAN/Admin/PortabilityController.php:465
-#: RAN/Admin/PortabilityController.php:586
+#: RAN/Admin/PortabilityController.php:441
+#: RAN/Admin/PortabilityController.php:562
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:345
-#: RAN/Admin/ProviderSettingsPresenter.php:1432
+#: RAN/Admin/ProviderSettingsPresenter.php:1435
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
 #: views/portability.php:169
 #: views/portability.php:250
@@ -1287,11 +1286,10 @@ msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:347
 #: RAN/Admin/PackageAdminController.php:367
-#: RAN/Admin/PortabilityController.php:290
-#: RAN/Admin/PortabilityController.php:465
-#: RAN/Admin/PortabilityController.php:586
+#: RAN/Admin/PortabilityController.php:441
+#: RAN/Admin/PortabilityController.php:562
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:345
-#: RAN/Admin/ProviderSettingsPresenter.php:1433
+#: RAN/Admin/ProviderSettingsPresenter.php:1436
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
 #: views/portability.php:169
 #: views/portability.php:250
@@ -1664,84 +1662,72 @@ msgstr ""
 msgid "Package update progress is temporarily unavailable."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:52
+#: RAN/Admin/PortabilityController.php:50
 msgid "Your Transporter export session expired. Reload the page and try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:58
-#: RAN/Admin/PortabilityController.php:77
+#: RAN/Admin/PortabilityController.php:56
+#: RAN/Admin/PortabilityController.php:74
 msgid "The selected packages or repository credentials changed or are invalid. Reload this page and try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:71
+#: RAN/Admin/PortabilityController.php:69
 msgid "Encrypted credential storage is unavailable, so Booster did not export credentials."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:79
+#: RAN/Admin/PortabilityController.php:76
 msgid "Booster could not read the managed package selection. Please try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:92
+#: RAN/Admin/PortabilityController.php:89
 msgid "Booster could not create the Transporter Blueprint ZIP. Please try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:103
+#: RAN/Admin/PortabilityController.php:100
 msgid "Booster could not read the Transporter Blueprint ZIP. Please try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:139
+#: RAN/Admin/PortabilityController.php:136
 msgid "Your Transporter review session expired. Reload the page and try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:145
+#: RAN/Admin/PortabilityController.php:142
 msgid "Choose a valid Transporter Blueprint ZIP to review."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:153
-#: RAN/Admin/PortabilityController.php:186
+#: RAN/Admin/PortabilityController.php:150
+#: RAN/Admin/PortabilityController.php:183
 msgid "The repository credential decisions are invalid. Review the Transporter Blueprint again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:159
+#: RAN/Admin/PortabilityController.php:156
 msgid "Booster could not read this Transporter Blueprint. If it includes credentials, enter its ZIP password and try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:167
+#: RAN/Admin/PortabilityController.php:164
 msgid "Your Transporter apply session expired. Reload the page and try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:173
+#: RAN/Admin/PortabilityController.php:170
 msgid "Choose the same Transporter Blueprint and package row to apply."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:273
+#: RAN/Admin/PortabilityController.php:270
 #: views/portability.php:215
 msgid "Choose a Transporter Blueprint password before exporting credentials."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:276
+#: RAN/Admin/PortabilityController.php:273
 #: views/portability.php:215
 msgid "The Transporter Blueprint passwords do not match. Nothing was exported."
 msgstr ""
 
-#. translators: 1: managed package type, such as Plugin. 2: managed package display name.
-#: RAN/Admin/PortabilityController.php:286
-#, php-format
-msgid "%1$s “%2$s” manages its own updates and cannot also be managed by Booster"
-msgstr ""
-
-#. translators: %s: semicolon-separated list of selected packages that cannot be exported.
-#: RAN/Admin/PortabilityController.php:299
-#, php-format
-msgid "Transporter Blueprint export cannot include: %s. Deselect those packages and try again."
-msgstr ""
-
-#: RAN/Admin/PortabilityController.php:506
+#: RAN/Admin/PortabilityController.php:482
 msgid "Target encrypted credential storage is unavailable. Configure secure storage, then review and apply this row again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:515
-#: RAN/Portability/PortabilityApplicationService.php:237
+#: RAN/Admin/PortabilityController.php:491
+#: RAN/Portability/PortabilityApplicationService.php:241
 msgid "Booster could not apply this package. Review the Transporter Blueprint again and check repository access."
 msgstr ""
 
@@ -1920,7 +1906,7 @@ msgid "Repository provider settings are unavailable."
 msgstr ""
 
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:30
-#: RAN/Admin/ProviderSettingsPresenter.php:1381
+#: RAN/Admin/ProviderSettingsPresenter.php:1384
 msgid "Owner"
 msgstr ""
 
@@ -2124,18 +2110,18 @@ msgid "No managed %s repositories are available yet. Install a package to add it
 msgstr ""
 
 #. translators: 1: repository provider name, 2: repository provider code.
-#: RAN/Admin/ProviderSettingsPresenter.php:1430
+#: RAN/Admin/ProviderSettingsPresenter.php:1433
 #, php-format
 msgid "The active %1$s provider can read every credential saved under provider code %2$s. Install and activate only providers you trust; Booster does not authenticate a third-party publisher."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1484
+#: RAN/Admin/ProviderSettingsPresenter.php:1487
 msgid "Account"
 msgstr ""
 
 #. translators: %d: number of packages using the credential.
-#: RAN/Admin/ProviderSettingsPresenter.php:1493
-#: RAN/Admin/ProviderSettingsPresenter.php:1543
+#: RAN/Admin/ProviderSettingsPresenter.php:1496
+#: RAN/Admin/ProviderSettingsPresenter.php:1546
 #: views/portability-review.php:56
 #, php-format
 msgctxt "Packages using a credential"
@@ -2145,30 +2131,30 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: Label shown when package usage cannot be determined.
-#: RAN/Admin/ProviderSettingsPresenter.php:1494
-#: RAN/Admin/ProviderSettingsPresenter.php:1543
+#: RAN/Admin/ProviderSettingsPresenter.php:1497
+#: RAN/Admin/ProviderSettingsPresenter.php:1546
 msgid "Usage unavailable"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1496
+#: RAN/Admin/ProviderSettingsPresenter.php:1499
 msgid "Stored · Validity checked on use"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1497
+#: RAN/Admin/ProviderSettingsPresenter.php:1500
 #: views/troubleshooting.php:43
 msgid "Not configured"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1547
+#: RAN/Admin/ProviderSettingsPresenter.php:1550
 msgid "Saved · Remote delivery not verified by Core"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1547
+#: RAN/Admin/ProviderSettingsPresenter.php:1550
 msgid "Local secret not configured"
 msgstr ""
 
 #. translators: %d is the number of managed packages that use the local secret.
-#: RAN/Admin/ProviderSettingsPresenter.php:1549
+#: RAN/Admin/ProviderSettingsPresenter.php:1552
 #, php-format
 msgid "Remove this local secret? %d managed package may be affected. Remote provider webhooks will not be removed."
 msgid_plural "Remove this local secret? %d managed packages may be affected. Remote provider webhooks will not be removed."
@@ -2176,20 +2162,20 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d is the number of managed packages that use the local secret.
-#: RAN/Admin/ProviderSettingsPresenter.php:1550
+#: RAN/Admin/ProviderSettingsPresenter.php:1553
 msgid "Remove this local secret? Remote provider webhooks will not be removed."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1626
+#: RAN/Admin/ProviderSettingsPresenter.php:1629
 msgid "Repository access needs attention"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1626
+#: RAN/Admin/ProviderSettingsPresenter.php:1629
 msgid "No credential saved"
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1626
+#: RAN/Admin/ProviderSettingsPresenter.php:1629
 #, php-format
 msgid "Ready · %d credential"
 msgid_plural "Ready · %d credentials"
@@ -2197,55 +2183,55 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1627
+#: RAN/Admin/ProviderSettingsPresenter.php:1630
 msgid "Restore encrypted credential storage before reviewing or changing saved repository access."
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1627
+#: RAN/Admin/ProviderSettingsPresenter.php:1630
 msgid "Review saved credentials that are incomplete, expired, or approaching expiry."
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1627
+#: RAN/Admin/ProviderSettingsPresenter.php:1630
 msgid "Public repositories remain available through anonymous lookup. Add a credential only for private access or steadier API limits."
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1627
+#: RAN/Admin/ProviderSettingsPresenter.php:1630
 msgid "Private repository access is available. Open credential management to validate, replace, or review usage."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1631
+#: RAN/Admin/ProviderSettingsPresenter.php:1634
 msgid "Webhook signing · Needs attention"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1631
+#: RAN/Admin/ProviderSettingsPresenter.php:1634
 msgid "Webhook signing · No secret saved"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1631
+#: RAN/Admin/ProviderSettingsPresenter.php:1634
 msgid "Webhook signing · Ready locally"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1632
+#: RAN/Admin/ProviderSettingsPresenter.php:1635
 msgid "Restore encrypted credential storage before Push-to-Deploy can verify signed deliveries."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1632
+#: RAN/Admin/ProviderSettingsPresenter.php:1635
 msgid "Review saved signing material whose configuration or managed-package usage could not be confirmed."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1632
+#: RAN/Admin/ProviderSettingsPresenter.php:1635
 msgid "Automatic branch deployments require local signing material before provider webhooks can be used safely."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1632
+#: RAN/Admin/ProviderSettingsPresenter.php:1635
 msgid "Add local signing material before configuring a provider webhook."
 msgstr ""
 
 #. translators: %d is the number of local secrets that can verify signed deliveries.
-#: RAN/Admin/ProviderSettingsPresenter.php:1632
+#: RAN/Admin/ProviderSettingsPresenter.php:1635
 #, php-format
 msgid "%d local secret can verify signed deliveries. This does not prove a matching remote webhook exists."
 msgid_plural "%d local secrets can verify signed deliveries. This does not prove matching remote webhooks exist."
@@ -2253,7 +2239,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: item count.
-#: RAN/Admin/ProviderSettingsPresenter.php:1691
+#: RAN/Admin/ProviderSettingsPresenter.php:1694
 #: views/packages/index.php:96
 #, php-format
 msgid "%d item"
@@ -2262,25 +2248,25 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: current page number, 2: total page count.
-#: RAN/Admin/ProviderSettingsPresenter.php:1692
+#: RAN/Admin/ProviderSettingsPresenter.php:1695
 #, php-format
 msgid "Page %1$d of %2$d"
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ProviderSettingsPresenter.php:1723
+#: RAN/Admin/ProviderSettingsPresenter.php:1726
 #, php-format
 msgid "Back to %s overview"
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ProviderSettingsPresenter.php:1724
+#: RAN/Admin/ProviderSettingsPresenter.php:1727
 #, php-format
 msgid "Manage saved credentials used for %s repository access."
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ProviderSettingsPresenter.php:1725
+#: RAN/Admin/ProviderSettingsPresenter.php:1728
 #, php-format
 msgid "Manage local signing material used to verify %s webhook deliveries."
 msgstr ""
@@ -4618,106 +4604,118 @@ msgstr ""
 msgid "Diagnostics completed successfully."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:77
+#: RAN/Portability/PortabilityApplicationService.php:78
 msgid "The package changed since review. Review it again before applying."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:85
+#: RAN/Portability/PortabilityApplicationService.php:86
 msgid "This package is already managed with the exact disabled configuration."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:144
-#: RAN/Portability/PortabilityApplicationService.php:166
+#: RAN/Portability/PortabilityApplicationService.php:148
+#: RAN/Portability/PortabilityApplicationService.php:170
 msgid "This package changed since review. Review the Transporter Blueprint again."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:147
+#: RAN/Portability/PortabilityApplicationService.php:151
 msgid "This package was left unchanged by the repository credential decision."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:153
+#: RAN/Portability/PortabilityApplicationService.php:157
 msgid "You do not have permission to apply this package type."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:156
+#: RAN/Portability/PortabilityApplicationService.php:160
 msgid "This installed package was not selected for adoption."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:187
+#: RAN/Portability/PortabilityApplicationService.php:191
 msgid "This package is already managed."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:195
+#: RAN/Portability/PortabilityApplicationService.php:199
 msgid "The repository credential is available on this site. The managed package settings were not changed."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:201
+#: RAN/Portability/PortabilityApplicationService.php:205
 msgid "Booster could not import this repository credential. Review the Transporter Blueprint again and check repository access."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:207
+#: RAN/Portability/PortabilityApplicationService.php:211
 msgid "This package changed or cannot be applied. Review the Transporter Blueprint again."
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:224
+#: RAN/Portability/PortabilityApplicationService.php:228
 msgid "Adopted: deployment disabled"
 msgstr ""
 
-#: RAN/Portability/PortabilityApplicationService.php:330
+#: RAN/Portability/PortabilityApplicationService.php:334
 msgid "Package installed and managed by Booster with deployment disabled. Re-enable deployment deliberately when this site is ready."
 msgstr ""
 
 #. translators: 1: safe deployment failure reason, 2: random support reference.
-#: RAN/Portability/PortabilityApplicationService.php:342
+#: RAN/Portability/PortabilityApplicationService.php:346
 #, php-format
 msgid "%1$s Reference: %2$s."
 msgstr ""
 
-#: RAN/Portability/TargetPackageReason.php:24
-msgid "Ready to migrate; all checks passed."
-msgstr ""
-
-#: RAN/Portability/TargetPackageReason.php:25
-msgid "Managed by Booster"
-msgstr ""
-
-#: RAN/Portability/TargetPackageReason.php:26
-msgid "Existing Booster management differs, so this package is protected."
-msgstr ""
-
-#: RAN/Portability/TargetPackageReason.php:27
-msgid "A stale Booster management record exists, so this package is protected."
-msgstr ""
-
 #: RAN/Portability/TargetPackageReason.php:28
-msgid "Booster could not safely read existing management, so this package is protected."
+msgid "Not checked: this credential scope was rate limited during this preview. Review again later."
 msgstr ""
 
 #: RAN/Portability/TargetPackageReason.php:29
-msgid "Repository access needs a target credential."
+msgid "Not checked: this preview reached its time budget. Review again before applying."
 msgstr ""
 
 #: RAN/Portability/TargetPackageReason.php:30
-msgid "Target encrypted credential storage is unavailable. Configure secure storage before applying this credential-bearing row."
+msgid "This Blueprint record is valid, but its source, selection or requirements are not supported for application yet."
 msgstr ""
 
 #: RAN/Portability/TargetPackageReason.php:31
-msgid "Booster could not confirm repository access."
+msgid "Ready to migrate; all checks passed."
 msgstr ""
 
 #: RAN/Portability/TargetPackageReason.php:32
-msgid "The repository does not match this Transporter Blueprint."
+msgid "Managed by Booster"
 msgstr ""
 
 #: RAN/Portability/TargetPackageReason.php:33
-msgid "The destination package conflicts with this Transporter Blueprint."
+msgid "Existing Booster management differs, so this package is protected."
 msgstr ""
 
 #: RAN/Portability/TargetPackageReason.php:34
-msgid "This repository provider is not available on the target."
+msgid "A stale Booster management record exists, so this package is protected."
 msgstr ""
 
 #: RAN/Portability/TargetPackageReason.php:35
+msgid "Booster could not safely read existing management, so this package is protected."
+msgstr ""
+
+#: RAN/Portability/TargetPackageReason.php:36
+msgid "Repository access needs a target credential."
+msgstr ""
+
+#: RAN/Portability/TargetPackageReason.php:37
+msgid "Target encrypted credential storage is unavailable. Configure secure storage before applying this credential-bearing row."
+msgstr ""
+
+#: RAN/Portability/TargetPackageReason.php:38
+msgid "Booster could not confirm repository access."
+msgstr ""
+
+#: RAN/Portability/TargetPackageReason.php:39
+msgid "The repository does not match this Transporter Blueprint."
+msgstr ""
+
+#: RAN/Portability/TargetPackageReason.php:40
+msgid "The destination package conflicts with this Transporter Blueprint."
+msgstr ""
+
+#: RAN/Portability/TargetPackageReason.php:41
+msgid "This repository provider is not available on the target."
+msgstr ""
+
+#: RAN/Portability/TargetPackageReason.php:42
 msgid "The repository provider is temporarily unavailable."
 msgstr ""
 

@@ -8,7 +8,6 @@ use InvalidArgumentException;
 use RAN\Logging\BoosterLogger;
 use RAN\Portability\BlueprintArchive;
 use RAN\Portability\BlueprintCredentialAction;
-use RAN\Portability\BlueprintExportPackageFailure;
 use RAN\Portability\BlueprintPackage;
 use RAN\Portability\BlueprintPlanItem;
 use RAN\Portability\LocalSecretStoreUnavailable;
@@ -17,7 +16,6 @@ use RAN\Portability\PackageBlueprint;
 use RAN\Portability\PortabilityApplicationService;
 use RAN\Portability\TargetPackageAction;
 use RAN\Portability\TargetPackageReason;
-use RAN\Portability\UnsupportedBlueprintPackages;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\PackageStorageFailure;
@@ -71,8 +69,7 @@ final readonly class PortabilityController {
 			return $this->export_failure( __( 'Encrypted credential storage is unavailable, so Booster did not export credentials.', 'ran-booster' ), 409 );
 		} catch ( PackageStorageFailure $failure ) {
 			return $this->export_failure( $failure->getMessage(), $failure->is_database_unsupported() ? 503 : 500 );
-		} catch ( UnsupportedBlueprintPackages $failure ) {
-			return $this->export_failure( $this->export_validation_failure_message( $failure ), 400 );
+
 		} catch ( InvalidArgumentException ) {
 			return $this->export_failure( __( 'The selected packages or repository credentials changed or are invalid. Reload this page and try again.', 'ran-booster' ), 400 );
 		} catch ( Throwable ) {
@@ -279,27 +276,6 @@ final readonly class PortabilityController {
 		return null;
 	}
 
-	private function export_validation_failure_message( UnsupportedBlueprintPackages $failure ): string {
-		$items = array_map(
-			function ( BlueprintExportPackageFailure $package_failure ): string {
-				/* translators: 1: managed package type, such as Plugin. 2: managed package display name. */
-				$message = __( '%1$s “%2$s” manages its own updates and cannot also be managed by Booster', 'ran-booster' );
-
-				return sprintf(
-					$message,
-					'plugin' === $package_failure->type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' ),
-					$package_failure->display_name
-				);
-			},
-			$failure->failures
-		);
-
-		return sprintf(
-			/* translators: %s: semicolon-separated list of selected packages that cannot be exported. */
-			__( 'Transporter Blueprint export cannot include: %s. Deselect those packages and try again.', 'ran-booster' ),
-			implode( '; ', $items )
-		);
-	}
 
 	/** @return array{tmp_name:string}|null */
 	private function uploaded_blueprint(): ?array {

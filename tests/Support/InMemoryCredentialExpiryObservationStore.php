@@ -16,11 +16,14 @@ final class InMemoryCredentialExpiryObservationStore extends CredentialExpiryObs
 	/** @var array<string, mixed>|null */
 	public ?array $stale_read = null;
 
+	public int $read_count = 0;
+
 	public bool $fail_writes   = false;
 	public bool $last_autoload = true;
 
 	/** @return array<string, mixed> */
 	protected function read_option( bool $fresh = false ): array {
+		++$this->read_count;
 		return ! $fresh && null !== $this->stale_read ? $this->stale_read : $this->document;
 	}
 

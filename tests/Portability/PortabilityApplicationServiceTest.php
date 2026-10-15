@@ -38,6 +38,65 @@ require_once __DIR__ . '/../Runtime/RuntimeSupportWordPressFunctions.php';
 
 final class PortabilityApplicationServiceTest extends TestCase {
 
+	public function test_each_service_preview_owns_one_observation_lifetime(): void {
+		$plugins  = $this->createStub( PluginRepository::class );
+		$themes   = $this->createStub( ThemeRepository::class );
+		$provider = $this->provider();
+		$plugins->method( 'is_installed' )->willReturn( false );
+		$plugins->method( 'has_management_record' )->willReturn( false );
+		$provider->expects( self::exactly( 2 ) )->method( 'resolve_repository' )->willReturn( $this->descriptor() );
+		$service  = $this->service( $plugins, $themes, $provider );
+		$packages = array();
+		for ( $row = 0; $row < 128; ++$row ) {
+			$packages[] = $this->package( 'example-' . $row . '/example.php' );
+		}
+		$blueprint = new PackageBlueprint( $packages );
+		foreach ( array( $service->review( $blueprint ), $service->review( $blueprint ) ) as $review ) {
+			self::assertCount( 128, $review );
+			foreach ( $review as $item ) {
+				self::assertSame( \RAN\Portability\TargetPackageAction::INSTALL, $item->action );
+			}
+		}
+	}
+
+	public function test_new_format_fields_cannot_be_ignored_by_branch_application(): void {
+		$plugins  = $this->createMock( PluginRepository::class );
+		$themes   = $this->createMock( ThemeRepository::class );
+		$provider = $this->provider();
+		$plugins->expects( self::never() )->method( 'is_installed' );
+		$themes->expects( self::never() )->method( 'is_installed' );
+		$provider->expects( self::never() )->method( 'resolve_repository' );
+		$service = $this->service( $plugins, $themes, $provider );
+		foreach ( array(
+			new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', '', null, new \RAN\WordPress\ManagedReleaseConfiguration( 'example', 'example.php' ) ),
+			new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', 'main', null, null, array( 'commit' => str_repeat( 'a', 40 ) ) ),
+			new BlueprintPackage(
+				'plugin',
+				'example/example.php',
+				'Example',
+				'gh',
+				'repository-id',
+				'owner/repository',
+				'main',
+				null,
+				null,
+				null,
+				array(
+					'basis'             => 'installed_headers',
+					'observed_identity' => array(),
+					'declarations'      => array(),
+				)
+			),
+		) as $package ) {
+			$blueprint = new PackageBlueprint( array( $package ) );
+			$item      = $service->review( $blueprint )[0];
+			self::assertSame( 'unsupported_blueprint_operation', $item->reason->value );
+			foreach ( array( 'install', 'adopt', 'managed', 'blocked' ) as $forged_action ) {
+				self::assertSame( 'skipped', $service->apply( $blueprint, 0, $forged_action, array(), null, true, true )['status'] );
+			}
+		}
+	}
+
 	#[DataProvider( 'package_counts' )]
 	public function test_sequential_apply_classifies_each_selected_package_once( int $count ): void {
 		$plugins  = $this->createMock( PluginRepository::class );

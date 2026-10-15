@@ -1,11 +1,11 @@
 # Transporter Blueprint guide
 
-This guide documents the current Transporter Blueprint V1 implementation in
+This guide documents the current Transporter Blueprint V2 format and bounded implementation in
 RAN Booster. It is based on the classes in `RAN/Portability/` and describes how
 the code classifies, verifies, and moves package blueprints and optional
 credential briefcases.
 
-Blueprint V1 is the uploaded or exported ZIP contract. It is distinct from the
+Blueprint V2 is the exported ZIP contract; valid canonical V1 archives are normalized at the input boundary. It is distinct from the
 request-local [Portability API 3](portability-api.md), which lets a trusted
 source bridge review and adopt one already-installed package without an archive
 or credential transfer.
@@ -52,7 +52,7 @@ and local self-destruct state before building the archive. A stale, forged, or
 newly ineligible credential selection rejects the export rather than silently
 falling back to package-only. Zero accepted credentials produces the ordinary
 package-only Blueprint and ignores any password. The archive format does not
-change; a subset is already a valid version 1 blueprint.
+change; a subset is a valid version 2 blueprint.
 
 The codebase currently treats Transporter as a strict single-site feature. The
 mutation guard rejects multisite before deployment work proceeds.
@@ -79,7 +79,7 @@ read so the submitted bytes must match the computed encoding.
 
 `BlueprintPackage` is the package record. It stores the package type,
 identifier, display name, provider, provider repository identity, repository
-locator, branch, and optional subdirectory. Validation is strict: the provider
+locator and source-specific tracking configuration. Branch records carry branch and optional subdirectory; release records carry channel, package root and metadata filename. Validation is strict: the provider
 code must parse, the repository locator must be acceptable to the provider
 layer, and the subdirectory must already be normalized.
 
@@ -98,6 +98,30 @@ without any lifecycle assurance.
 JSON-only archive and an encrypted AES-256 variant when the runtime can prove
 that the ZipArchive AES-256 API is available.
 
+## Current delivery boundary
+
+Configuration export includes mixed branch and release packages using their actual
+managed settings. Missing release configuration rejects the export; no package
+is silently omitted. Export does not claim installed artifact equality or
+populate exact selections from a remote latest release. Requirements observation
+export, exact export and destination comparison reports remain separate work.
+
+The reader validates source-aware V2 records, exact selections and attributed
+requirements. This first runtime slice deliberately blocks applying release
+records or records carrying selection/requirements with
+`unsupported_blueprint_operation`. It does not ignore those fields and run the
+old branch handler. Existing unpinned branch operations retain their fresh checks.
+Release installation/adoption, exact acquisition, requirements comparison and
+explicit reconciliation require their separately qualified operations.
+
+V2 object keys are recursively sorted for canonical JSON. Valid V1 input must
+first satisfy its original shape and canonical bytes; it enters the same model
+as an unpinned branch record without observations. The repository locator uses
+the existing provider-neutral 512-byte bound, retaining valid V1 identities;
+the earlier draft schema's 255-byte proposal must be aligned before it can serve
+as a runtime-conformance schema. Format validation does not establish provider
+access, installation eligibility or current installed equality.
+
 ## How the blueprint is reviewed
 
 `BlueprintReviewer` classifies each package against the local site before any
@@ -115,6 +139,20 @@ The actions are:
 The reasons are fixed by `TargetPackageReason` and are intentionally closed and
 non-secret. They tell the operator why a row was classified a certain way
 without exposing credential material or upstream payloads.
+
+Within one preview, identical successful repository observations may be reused
+for the same provider instance, exact locator and credential material. Saved
+profile identities remain distinct; temporary imported profiles share only
+when their validated material is identical. Every row still checks its stable
+repository identity and privacy. Another preview and every Apply resolve fresh.
+
+A preview stops starting remote calls after eight elapsed seconds. An in-flight
+provider call may finish later; this is not an eight-second response guarantee.
+Remaining uncached rows report `preview_budget_exhausted` and are not selectable.
+A provider rate limit stops only its exact credential scope for that preview;
+subsequent rows report `preview_rate_limited`. Repository-specific 403/404 errors
+do not suppress other repositories. Completed rows remain useful partial results;
+no failure or observation survives the preview. Review again to check skipped rows.
 
 Install and adopt rows are selectable in the review. Apply still sends one
 request per selected row, and every request reparses the artifact and recomputes
@@ -189,7 +227,7 @@ inside the archive is `blueprint.json`.
 computed output exactly. The current format is:
 
 - format: `ran-booster-package-blueprint`
-- version: `1`
+- version: `2`
 - packages: a list of package records
 - credentials: a list of encrypted credential records when the briefcase option
   is used
@@ -202,8 +240,9 @@ The package record fields are:
 - `provider`
 - `provider_repository_id`
 - `repository`
-- `branch`
-- `subdirectory`
+- `source`: explicit `branch` or `release_asset` configuration
+- optional `selection`: exact initial source/artifact identity
+- optional `requirements`: attributed declaration observations
 
 The credential record fields are:
 

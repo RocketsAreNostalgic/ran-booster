@@ -137,6 +137,7 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		self::assertNull( $target_key_store->load() );
 
 		$managed_package = $this->createStub( Package::class );
+		$managed_package->method( 'get_source' )->willReturn( PackageSource::BRANCH );
 		$managed_package->method( 'get_identifier' )->willReturn( $imported->packages[0]->identifier );
 		$managed_package->method( 'get_display_name' )->willReturn( $imported->packages[0]->display_name );
 		$managed_package->method( 'get_provider_code' )->willReturn( $imported->packages[0]->provider );

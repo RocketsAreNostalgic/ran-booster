@@ -218,7 +218,7 @@ final class AdmittedBranchExecutionTest extends TestCase {
 			$this->adapter( $legacy, new ProviderRegistry() )->declaration();
 			self::fail( 'Legacy update authority must not be reconstructed.' );
 		} catch ( AdmittedBranchStageFailure $failure ) {
-			self::assertSame( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED, $failure->outcome_code );
+			self::assertSame( DeploymentOutcome::CODE_PROVIDER_SELECTION_CHANGED, $failure->outcome_code );
 		}
 	}
 

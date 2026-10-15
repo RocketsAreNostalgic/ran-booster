@@ -187,15 +187,17 @@ final class PortabilityControllerTest extends TestCase {
 			self::assertNull( $method->invoke( $this->controller() ) );
 			$_POST = array( 'selected_rows' => array( '0', '127' ) );
 			self::assertSame( array( 0, 127 ), $method->invoke( $this->controller() ) );
+			$refused = 0;
 			foreach ( array( array(), array( '128' ), array( '-1' ), array( '01' ), array( 0 ), array( '0' => array() ), '0' ) as $invalid ) {
 				$_POST = array( 'selected_rows' => $invalid );
 				try {
 					$method->invoke( $this->controller() );
 					self::fail( 'Invalid row selection was accepted.' );
 				} catch ( InvalidArgumentException ) {
-					self::assertTrue( true );
+					++$refused;
 				}
 			}
+			self::assertSame( 7, $refused );
 		} finally {
 			$_POST = $previous;
 		}

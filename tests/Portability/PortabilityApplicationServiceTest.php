@@ -109,6 +109,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		self::assertSame( 'skipped', $service->apply( $blueprint, 0, 'install', array(), null, false, true, array( 0, 1 ) )['status'] );
 	}
 
+	/** @param array<int,mixed> $selection */
 	#[DataProvider( 'invalid_selections' )]
 	public function test_invalid_selection_refuses_before_local_or_provider_access( array $selection ): void {
 		$plugins = $this->createMock( PluginRepository::class );

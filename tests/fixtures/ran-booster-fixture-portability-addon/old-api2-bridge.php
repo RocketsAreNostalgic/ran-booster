@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: RAN Booster Fixture Portability Add-on
- * Description: Test-only Portability API 2 consumer fixture.
+ * Description: Test-only obsolete Portability API 2 admission gate fixture.
  * Version: 0.0.0
  * Requires PHP: 8.2
  * License: GPL-2.0-only
@@ -34,7 +34,7 @@ add_action(
 						'main'
 					);
 					$review    = $portability->review( $candidate, 'fixture-review-nonce' );
-					$apply     = $portability->apply( $candidate, $review->fingerprint, 'fixture-apply-nonce' );
+					$apply     = $portability->apply( $candidate, $review->fingerprint, 'fixture-apply-nonce', null );
 
 					$GLOBALS['ran_booster_fixture_portability_results'] = array( $review, $apply );
 				}

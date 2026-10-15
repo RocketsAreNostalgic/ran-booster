@@ -280,7 +280,6 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		$secrets  = SecretsFileTestFactory::create( $this->path, array(), $catalog );
 		$provider = new TemporaryCredentialProvider( $secrets->credentials_for( 'gh' ), 404, 'repository-id' );
 		$registry = new ProviderRegistry( array( $provider ), $catalog );
-		$registry;
 		$catalog->register( ProviderCode::parse( 'bb' ), new TemporaryProviderCredentialPolicy( ProviderCode::parse( 'bb' ) ), null );
 		$secrets->save_credential(
 			'bb',
@@ -649,7 +648,6 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 			$accepted_secret
 		);
 		$registry = new ProviderRegistry( array( $provider ), $catalog );
-		$registry;
 
 		return array( new BlueprintRepositoryVerifier( $registry, $secrets, GitHubSelectionTestFixture::bind( $registry ) ), $provider, $secrets );
 	}

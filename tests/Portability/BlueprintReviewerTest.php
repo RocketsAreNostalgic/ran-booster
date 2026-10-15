@@ -193,6 +193,87 @@ final class BlueprintReviewerTest extends TestCase {
 		self::assertSame( 'unmanaged', $reviewer->compare_local( $package )['state'] );
 	}
 
+	public function test_installed_header_observations_do_not_block_ordinary_branch_review(): void {
+		$plugins = $this->createMock( PluginRepository::class );
+		$plugins->expects( self::once() )->method( 'is_installed' )->willReturn( false );
+		$plugins->expects( self::once() )->method( 'has_management_record' )->willReturn( false );
+		$record                 = $this->blueprint_package()->to_array();
+		$record['requirements'] = array(
+			'basis'             => 'installed_headers',
+			'observed_identity' => array( 'version' => '1.0.0' ),
+			'declarations'      => array( 'requires_php' => '99.0' ),
+		);
+		$reviewer               = new BlueprintReviewer( $plugins, $this->createStub( ThemeRepository::class ) );
+		$item                   = $reviewer->review_package( BlueprintPackage::from_array( $record ) );
+		self::assertSame( TargetPackageAction::INSTALL, $item->action );
+		self::assertSame( TargetPackageReason::NONE, $item->reason );
+		$record['selection'] = array( 'commit' => str_repeat( 'a', 40 ) );
+		self::assertSame( TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION, $reviewer->review_package( BlueprintPackage::from_array( $record ) )->reason );
+	}
+
+	#[DataProvider( 'selected_repository_groups' )]
+	public function test_selected_repository_conflicts_use_existing_source_exclusivity(
+		bool $first_release,
+		bool $second_release,
+		string $second_provider,
+		string $second_id,
+		string $second_locator,
+		bool $conflict
+	): void {
+		$plugins = $this->createMock( PluginRepository::class );
+		$plugins->expects( self::never() )->method( 'is_installed' );
+		$plugins->expects( self::never() )->method( 'has_management_record' );
+		$themes = $this->createMock( ThemeRepository::class );
+		$themes->expects( self::never() )->method( 'is_installed' );
+		$themes->expects( self::never() )->method( 'has_management_record' );
+		$packages = array(
+			new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', $first_release ? '' : 'main', $first_release ? null : 'plugins/example', $first_release ? new ManagedReleaseConfiguration( 'example', 'example.php' ) : null ),
+			new BlueprintPackage( 'theme', 'theme', 'Theme', $second_provider, $second_id, $second_locator, $second_release ? '' : 'main', $second_release ? null : 'themes/theme', $second_release ? new ManagedReleaseConfiguration( 'theme', 'style.css' ) : null ),
+		);
+		$reviewer = new BlueprintReviewer( $plugins, $themes );
+		self::assertSame(
+			$conflict ? array(
+				0 => true,
+				1 => true,
+			) : array(),
+			$reviewer->repository_conflicts( new PackageBlueprint( $packages ) )
+		);
+		self::assertSame( array(), $reviewer->repository_conflicts( new PackageBlueprint( array( $packages[0] ) ) ) );
+		self::assertSame( array(), $reviewer->repository_conflicts( new PackageBlueprint( array( $packages[1] ) ) ) );
+	}
+
+	/** @return iterable<string,array{bool,bool,string,string,string,bool}> */
+	public static function selected_repository_groups(): iterable {
+		yield 'multiple branch subdirectories remain legal' => array( false, false, 'gh', 'repository-id', 'owner/repository', false );
+		yield 'branch then release conflicts' => array( false, true, 'gh', 'repository-id', 'owner/repository', true );
+		yield 'release then branch conflicts' => array( true, false, 'gh', 'repository-id', 'owner/repository', true );
+		yield 'two releases conflict' => array( true, true, 'gh', 'repository-id', 'owner/repository', true );
+		yield 'provider identity is scoped' => array( true, true, 'bb', 'repository-id', 'owner/repository', false );
+		yield 'stable identity survives locator rename' => array( false, true, 'gh', 'repository-id', 'renamed/repository', true );
+		yield 'different stable IDs are not silently unified by locator' => array( false, true, 'gh', 'different-id', 'owner/repository', false );
+		yield 'stable IDs are case sensitive' => array( false, true, 'gh', 'Repository-id', 'owner/repository', false );
+	}
+
+	public function test_maximum_selected_set_reports_only_conflicting_groups_and_recomputes_after_subset_change(): void {
+		$packages = array();
+		for ( $index = 0; $index < PackageBlueprint::MAX_PACKAGES; ++$index ) {
+			$slug       = 'package-' . $index;
+			$release    = 127 === $index;
+			$packages[] = new BlueprintPackage( 'plugin', $slug . '/plugin.php', $slug, 'gh', 126 <= $index ? 'shared-id' : 'repository-' . $index, 'owner/' . $slug, $release ? '' : 'main', null, $release ? new ManagedReleaseConfiguration( $slug, 'plugin.php' ) : null );
+		}
+		$reviewer = new BlueprintReviewer( $this->createStub( PluginRepository::class ), $this->createStub( ThemeRepository::class ) );
+		self::assertSame(
+			array(
+				126 => true,
+				127 => true,
+			),
+			$reviewer->repository_conflicts( new PackageBlueprint( $packages ) )
+		);
+		array_pop( $packages );
+		self::assertSame( array(), $reviewer->repository_conflicts( new PackageBlueprint( $packages ) ) );
+		self::assertSame( array(), $reviewer->repository_conflicts( new PackageBlueprint( array() ) ) );
+	}
+
 	private function blueprint_package(): BlueprintPackage {
 		return new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', 'main', null );
 	}

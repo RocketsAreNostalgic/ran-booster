@@ -18,7 +18,11 @@ use RAN\Secrets\SecretsFile;
 use RAN\Theme;
 use Throwable;
 
-/** Canonical review and Apply behavior shared by Transporter adapters. */
+/**
+ * Canonical review and Apply behavior shared by Transporter adapters.
+ *
+ * @phpstan-import-type RequirementsReport from BlueprintRequirements
+ */
 final readonly class PortabilityApplicationService {
 
 	public function __construct(
@@ -32,6 +36,14 @@ final readonly class PortabilityApplicationService {
 	/** @return array{state:string,current:?array<string,mixed>,requested:array<string,mixed>,differences:list<string>,installed_equality:string,source_access:string,package_inspection:string} */
 	public function compare_local( BlueprintPackage $package ): array {
 		return $this->reviewer->compare_local( $package );
+	}
+
+	/** @return array{requirements:RequirementsReport,repository_conflicts:array<int,true>} */
+	public function local_report( PackageBlueprint $blueprint ): array {
+		return array(
+			'requirements'         => ( new BlueprintRequirements() )->assess( $blueprint ),
+			'repository_conflicts' => $this->reviewer->repository_conflicts( $blueprint ),
+		);
 	}
 
 	/**
@@ -125,6 +137,7 @@ final readonly class PortabilityApplicationService {
 
 	/**
 	 * @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $credential_decisions
+	 * @param array<array-key,mixed>|null $selected_rows Untrusted request selection, validated before local reads.
 	 * @return array{status:string,message:string,credential_state:string}
 	 */
 	public function apply(
@@ -134,11 +147,27 @@ final readonly class PortabilityApplicationService {
 		array $credential_decisions,
 		?string $target_credential_id,
 		bool $adopt,
-		bool $can_install
+		bool $can_install,
+		?array $selected_rows = null
 	): array {
 		$package = $blueprint->packages[ $row ] ?? null;
 		if ( ! $package instanceof BlueprintPackage ) {
 			throw new InvalidArgumentException();
+		}
+		$selected_rows ??= array( $row );
+		if ( ! array_is_list( $selected_rows ) || array() === $selected_rows
+			|| count( $selected_rows ) > PackageBlueprint::MAX_PACKAGES || ! in_array( $row, $selected_rows, true ) ) {
+			throw new InvalidArgumentException( 'The selected package rows are invalid.' );
+		}
+		$selected = array();
+		foreach ( $selected_rows as $selected_row ) {
+			if ( ! is_int( $selected_row ) || isset( $selected[ $selected_row ] ) || ! isset( $blueprint->packages[ $selected_row ] ) ) {
+				throw new InvalidArgumentException( 'The selected package rows are invalid.' );
+			}
+			$selected[ $selected_row ] = $blueprint->packages[ $selected_row ];
+		}
+		if ( array() !== $this->reviewer->repository_conflicts( new PackageBlueprint( array_values( $selected ) ) ) ) {
+			return $this->result( 'skipped', __( 'The selected packages conflict: a repository can supply multiple branch packages or one release package, but not both. Select a compatible subset and review again.', 'ran-booster' ) );
 		}
 		$item = $this->reviewer->review_package( $package );
 		if ( TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION === $item->reason ) {

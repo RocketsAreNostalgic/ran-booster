@@ -1036,10 +1036,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( array( false, false, false, false, false, false, true ), array_column( $data['tabs'], 'active' ) );
 	}
 
-	public function test_portability_builds_display_safe_rows_from_the_non_cleaning_inventory(): void {
+	#[DataProvider( 'portability_source_provider' )]
+	public function test_portability_builds_display_safe_rows_from_the_non_cleaning_inventory( \RAN\PackageSource $source ): void {
 		$_GET['tab'] = 'portability';
 		$plugin      = $this->managed_package( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id' );
-		$theme       = $this->managed_package( 'example-theme', 'Example Theme', 'theme-repository-id' );
+		$theme       = $this->managed_package( 'example-theme', 'Example Theme', 'theme-repository-id', $source );
 		$plugins     = $this->createStub( PluginRepository::class );
 		$themes      = $this->createStub( ThemeRepository::class );
 		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
@@ -1074,6 +1075,74 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 		self::assertSame( array(), $data['portability_export_credential_groups'] );
 		self::assertFalse( $data['portability_export_credentials_unavailable'] );
+	}
+
+	/** @return list<array{\RAN\PackageSource}> */
+	public static function portability_source_provider(): array {
+		return array(
+			array( \RAN\PackageSource::BRANCH ),
+			array( \RAN\PackageSource::RELEASE_ASSET ),
+		);
+	}
+
+	public function test_portability_lists_mixed_sources_without_requiring_release_export_configuration(): void {
+		$_GET['tab'] = 'portability';
+		$plugins     = $this->createMock( PluginRepository::class );
+		$themes      = $this->createMock( ThemeRepository::class );
+		$plugins->expects( self::never() )->method( 'all_booster_plugins' );
+		$themes->expects( self::never() )->method( 'all_booster_themes' );
+		$plugins->expects( self::once() )->method( 'all_deployment_plugins' )->willReturn(
+			array(
+				$this->managed_package( 'branch/branch.php', 'Branch Plugin', 'branch-repository' ),
+				$this->managed_package( 'release/release.php', 'Release Plugin', 'release-repository', \RAN\PackageSource::RELEASE_ASSET, credential_id: 'shared-profile' ),
+			)
+		);
+		$themes->expects( self::once() )->method( 'all_deployment_themes' )->willReturn(
+			array( $this->managed_package( 'release-theme', 'Release Theme', 'theme-repository', \RAN\PackageSource::RELEASE_ASSET, credential_id: 'shared-profile' ) )
+		);
+		$dashboard  = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes );
+		$projection = new ReflectionMethod( Dashboard::class, 'portability_export_data' );
+		$data       = $projection->invoke( $dashboard );
+
+		self::assertSame(
+			array(
+				array(
+					'name'       => 'Branch Plugin',
+					'identifier' => 'branch/branch.php',
+					'type'       => 'plugin',
+				),
+				array(
+					'name'       => 'Release Plugin',
+					'identifier' => 'release/release.php',
+					'type'       => 'plugin',
+				),
+				array(
+					'name'       => 'Release Theme',
+					'identifier' => 'release-theme',
+					'type'       => 'theme',
+				),
+			),
+			$data['rows']
+		);
+		self::assertSame(
+			array(
+				'gh' => array(
+					'shared-profile' => array(
+						array(
+							'index' => 1,
+							'name'  => 'Release Plugin',
+							'type'  => 'plugin',
+						),
+						array(
+							'index' => 2,
+							'name'  => 'Release Theme',
+							'type'  => 'theme',
+						),
+					),
+				),
+			),
+			$data['credentials']
+		);
 	}
 
 	public function test_native_transporter_route_forces_the_canonical_tab_without_mutating_the_request(): void {

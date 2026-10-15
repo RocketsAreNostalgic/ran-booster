@@ -13,7 +13,11 @@ use RAN\Package;
 use RAN\PackageSource;
 use RAN\Portability\LocalSecretStoreUnavailable;
 use RAN\Portability\ManagedPackageBlueprintExporter;
-use RAN\Portability\UnsupportedBlueprintPackages;
+use RAN\Portability\PackageBlueprint;
+use RAN\Portability\BlueprintPackage;
+use RAN\WordPress\ManagedReleaseConfiguration;
+use RAN\WordPress\ManagedReleaseStore;
+use RAN\Internal\CoreContainer;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
 use RAN\Secrets\SecretsFile;
 use RAN\Secrets\SecretsRuntimeAvailability;
@@ -102,35 +106,98 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		}
 	}
 
-	public function test_blueprint_v1_rejects_release_managed_packages_instead_of_converting_them_to_branch(): void {
+	public function test_mixed_configuration_export_preserves_sources_and_has_no_exact_identity_claim(): void {
+		$branch  = $this->package( 'branch/example.php', 'branch', 'branch-repository-id' );
+		$release = $this->package( 'plugin/example.php', 'plugin', 'plugin-repository-id', source: PackageSource::RELEASE_ASSET );
+		$theme   = $this->package( 'example-theme', 'example-theme', 'theme-repository-id', source: PackageSource::RELEASE_ASSET );
+		$plugins = $this->createStub( PluginRepository::class );
+		$themes  = $this->createStub( ThemeRepository::class );
+		$plugins->method( 'all_deployment_plugins' )->willReturn(
+			array(
+				'branch/example.php' => $branch,
+				'plugin/example.php' => $release,
+			)
+		);
+		$themes->method( 'all_deployment_themes' )->willReturn( array( 'example-theme' => $theme ) );
+		$store = $this->createMock( ManagedReleaseStore::class );
+		$store->expects( self::exactly( 2 ) )->method( 'configuration' )->willReturnCallback(
+			static function ( string $type, string $identifier ): ManagedReleaseConfiguration {
+				self::assertSame( 'plugin' === $type ? 'plugin/example.php' : 'example-theme', $identifier );
+				return 'plugin' === $type ? new ManagedReleaseConfiguration( 'plugin', 'example.php', 'prerelease' ) : new ManagedReleaseConfiguration( 'example-theme', 'style.css' );
+			}
+		);
+		$store->expects( self::never() )->method( 'transition' );
+		$store->expects( self::never() )->method( 'change_channel' );
+		$container = new CoreContainer();
+		$container->bind( PluginRepository::class, $plugins );
+		$container->bind( ThemeRepository::class, $themes );
+		$container->bind( SecretsFile::class, new SecretsFile( null, array() ) );
+		$container->bind( ManagedReleaseStore::class, $store );
+		$exporter = $container->make( ManagedPackageBlueprintExporter::class );
+		self::assertInstanceOf( ManagedPackageBlueprintExporter::class, $exporter );
+		$blueprint = $exporter->export();
+		self::assertCount( 3, $blueprint->packages );
+		self::assertSame( 'main', $blueprint->packages[0]->branch );
+		self::assertSame( 'prerelease', $blueprint->packages[1]->release_configuration?->channel() );
+		self::assertSame( 'style.css', $blueprint->packages[2]->release_configuration?->metadata_file() );
+		foreach ( $blueprint->packages as $record ) {
+			self::assertNull( $record->selection );
+			self::assertNull( $record->requirements );
+		}
+		$json = $blueprint->canonical_json();
+		self::assertSame( $json, PackageBlueprint::from_json( $json )->canonical_json() );
+	}
+
+	public function test_missing_release_configuration_rejects_export_instead_of_omitting_or_converting(): void {
 		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id', source: PackageSource::RELEASE_ASSET );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
 		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
 		$themes->method( 'all_deployment_themes' )->willReturn( array() );
-
-		try {
-			( new ManagedPackageBlueprintExporter( $plugins, $themes, new SecretsFile( null, array() ) ) )->export();
-			self::fail( 'Release-managed packages must not be converted to branch packages.' );
-		} catch ( UnsupportedBlueprintPackages $failure ) {
-			self::assertSame( 'The selected packages are unavailable to the current Blueprint format.', $failure->getMessage() );
-			self::assertSame( 'Plugin Example', $failure->failures[0]->display_name );
-		}
+		$store = $this->createMock( ManagedReleaseStore::class );
+		$store->expects( self::once() )->method( 'configuration' )->with( 'plugin', 'plugin/example.php' )->willReturn( null );
+		$this->expectExceptionMessage( 'The managed package source configuration is unavailable.' );
+		( new ManagedPackageBlueprintExporter( $plugins, $themes, new SecretsFile( null, array() ), $store ) )->export();
 	}
 
-	public function test_blueprint_v1_reports_every_selected_unsupported_package_before_rejecting_the_export(): void {
-		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id', source: PackageSource::RELEASE_ASSET );
+	public function test_omitted_release_does_not_read_configuration_and_store_errors_do_not_fallback(): void {
+		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id' );
 		$theme   = $this->package( 'example-theme', 'example-theme', 'theme-repository-id', source: PackageSource::RELEASE_ASSET );
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
 		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
 		$themes->method( 'all_deployment_themes' )->willReturn( array( 'example-theme' => $theme ) );
+		$store = $this->createMock( ManagedReleaseStore::class );
+		$store->expects( self::once() )->method( 'configuration' )->with( 'theme', 'example-theme' )->willThrowException( new \RuntimeException( 'Malformed stored release configuration.' ) );
+		$exporter = new ManagedPackageBlueprintExporter( $plugins, $themes, new SecretsFile( null, array() ), $store );
+		self::assertCount(
+			1,
+			$exporter->export(
+				array(),
+				array(
+					array(
+						'type'       => 'plugin',
+						'identifier' => 'plugin/example.php',
+					),
+				)
+			)->packages
+		);
+		$this->expectExceptionMessage( 'Malformed stored release configuration.' );
+		$exporter->export();
+	}
 
-		try {
-			( new ManagedPackageBlueprintExporter( $plugins, $themes, new SecretsFile( null, array() ) ) )->export();
-			self::fail( 'Every selected unsupported package must block an all-or-nothing Blueprint export.' );
-		} catch ( UnsupportedBlueprintPackages $failure ) {
-			self::assertSame( array( 'Plugin Example', 'Example Theme' ), array_column( $failure->failures, 'display_name' ) );
+	public function test_managed_factory_refuses_fabricated_source_or_mismatched_release_identity(): void {
+		foreach ( array(
+			array( PackageSource::BRANCH, new ManagedReleaseConfiguration( 'plugin', 'example.php' ) ),
+			array( PackageSource::RELEASE_ASSET, null ),
+			array( PackageSource::RELEASE_ASSET, new ManagedReleaseConfiguration( 'other', 'example.php' ) ),
+		) as [$source, $configuration] ) {
+			try {
+				BlueprintPackage::from_managed_package( 'plugin', $this->package( 'plugin/example.php', 'plugin', 'repository-id', source: $source ), $configuration );
+				self::fail( 'Invalid source configuration was accepted.' );
+			} catch ( InvalidArgumentException ) {
+				self::addToAssertionCount( 1 );
+			}
 		}
 	}
 
@@ -174,9 +241,11 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 
 	public function test_it_exports_one_file_credential_only_when_explicitly_requested(): void {
 		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id', false );
-		$theme   = $this->package( 'example-theme', 'example-theme', 'theme-repository-id' );
+		$theme   = $this->package( 'example-theme', 'example-theme', 'theme-repository-id', source: PackageSource::RELEASE_ASSET );
 		$plugins = $this->createMock( PluginRepository::class );
 		$themes  = $this->createMock( ThemeRepository::class );
+		$store   = $this->createMock( ManagedReleaseStore::class );
+		$store->expects( self::once() )->method( 'configuration' )->with( 'theme', 'example-theme' )->willReturn( new ManagedReleaseConfiguration( 'example-theme', 'style.css' ) );
 		$path    = sys_get_temp_dir() . '/ran-booster-exporter-' . bin2hex( random_bytes( 8 ) ) . '.php';
 		$secrets = SecretsFileTestFactory::create( $path, array(), ShippedSecretPolicyCatalog::create() );
 		try {
@@ -194,7 +263,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 			$plugins->expects( self::once() )->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
 			$themes->expects( self::once() )->method( 'all_deployment_themes' )->willReturn( array( 'example-theme' => $theme ) );
 
-			$blueprint = ( new ManagedPackageBlueprintExporter( $plugins, $themes, $secrets ) )->export( array( 'gh' => array( 'credential-id-canary' ) ) );
+			$blueprint = ( new ManagedPackageBlueprintExporter( $plugins, $themes, $secrets, $store ) )->export( array( 'gh' => array( 'credential-id-canary' ) ) );
 
 			self::assertCount( 1, $blueprint->credentials );
 			self::assertSame( 'secret-canary', $blueprint->credentials[0]->secret );

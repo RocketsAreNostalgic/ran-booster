@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0-beta.36](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.35...v1.0.0-beta.36) (2026-10-15)
+
+
+### Features
+
+* **core:** integrate qualified Booster simplifications ([#393](https://github.com/RocketsAreNostalgic/ran-booster/issues/393)) ([a3ae152](https://github.com/RocketsAreNostalgic/ran-booster/commit/a3ae15265fa0ffe482786872a259e2441df571d0))
+
 ## [1.0.0-beta.35](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.34...v1.0.0-beta.35) (2026-10-13)
 
 

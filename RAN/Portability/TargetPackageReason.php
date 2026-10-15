@@ -19,7 +19,7 @@ enum TargetPackageReason: string {
 	case PROVIDER_UNAVAILABLE             = 'provider_unavailable';
 	case PROVIDER_TEMPORARILY_UNAVAILABLE = 'provider_temporarily_unavailable';
 
-	case UNSUPPORTED_BLUEPRINT_OPERATION  = 'unsupported_blueprint_operation';
+	case UNSUPPORTED_BLUEPRINT_OPERATION = 'unsupported_blueprint_operation';
 
 	public function message(): string {
 		return match ( $this ) {

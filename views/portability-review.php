@@ -28,6 +28,15 @@ $portability_configuration_labels = array(
 	'package_root'           => __( 'Package folder', 'ran-booster' ),
 	'metadata_file'          => __( 'Metadata file', 'ran-booster' ),
 );
+$portability_selection_labels     = array(
+	'commit'          => __( 'Commit', 'ran-booster' ),
+	'release_id'      => __( 'Release identity', 'ran-booster' ),
+	'tag'             => __( 'Release tag', 'ran-booster' ),
+	'version'         => __( 'Version', 'ran-booster' ),
+	'artifact_id'     => __( 'Artifact identity', 'ran-booster' ),
+	'artifact_sha256' => __( 'Artifact SHA-256', 'ran-booster' ),
+	'artifact_size'   => __( 'Artifact size (bytes)', 'ran-booster' ),
+);
 $portability_requirement_labels   = array(
 	'requires_php'       => __( 'PHP minimum', 'ran-booster' ),
 	'requires_wordpress' => __( 'WordPress minimum', 'ran-booster' ),
@@ -287,6 +296,21 @@ $has_credential_decisions         = array() !== array_filter(
 						<?php $comparison = $row['comparison']; ?>
 						<p><?php echo esc_html( $portability_comparison_labels[ $comparison['state'] ] ?? $portability_comparison_labels['unavailable'] ); ?></p>
 						<p class="description"><?php esc_html_e( 'Whether the installed code matches is unknown. This local comparison does not check repository access or inspect package files.', 'ran-booster' ); ?></p>
+						<?php if ( is_array( $comparison['requested_selection'] ?? null ) ) : ?>
+							<details>
+								<summary><?php esc_html_e( 'Requested initial selection', 'ran-booster' ); ?></summary>
+								<p><?php esc_html_e( 'These are requested identities, not verified installed code or a permanent update lock.', 'ran-booster' ); ?></p>
+								<ul>
+								<?php foreach ( $portability_selection_labels as $field => $label ) : ?>
+									<?php if ( isset( $comparison['requested_selection'][ $field ] ) ) : ?>
+										<li><?php echo esc_html( $label ); ?>: <code><?php echo esc_html( (string) $comparison['requested_selection'][ $field ] ); ?></code></li>
+									<?php endif; ?>
+								<?php endforeach; ?>
+								</ul>
+							</details>
+						<?php else : ?>
+							<p class="description"><?php esc_html_e( 'No exact initial selection was supplied. The current branch head or newest eligible release remains unresolved by this local comparison.', 'ran-booster' ); ?></p>
+						<?php endif; ?>
 						<?php if ( 'different' === $comparison['state'] ) : ?>
 							<details>
 								<summary><?php esc_html_e( 'Configuration differences', 'ran-booster' ); ?></summary>

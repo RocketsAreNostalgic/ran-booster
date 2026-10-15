@@ -122,18 +122,19 @@ final readonly class BlueprintReviewer {
 	/**
 	 * Local configuration observations only; this does not authorize an action.
 	 *
-	 * @return array{state:string,current:?array<string,mixed>,requested:array<string,mixed>,differences:list<string>,installed_equality:string,source_access:string,package_inspection:string}
+	 * @return array{state:string,current:?array<string,mixed>,requested:array<string,mixed>,differences:list<string>,requested_selection:?array<string,mixed>,installed_equality:string,source_access:string,package_inspection:string}
 	 */
 	public function compare_local( BlueprintPackage $blueprint ): array {
 		$managed = null;
 		$result  = array(
-			'state'              => 'unavailable',
-			'current'            => null,
-			'requested'          => self::configuration( $blueprint ),
-			'differences'        => array(),
-			'installed_equality' => 'unknown',
-			'source_access'      => 'not_checked',
-			'package_inspection' => 'not_checked',
+			'state'               => 'unavailable',
+			'current'             => null,
+			'requested'           => self::configuration( $blueprint ),
+			'differences'         => array(),
+			'requested_selection' => $blueprint->selection,
+			'installed_equality'  => 'unknown',
+			'source_access'       => 'not_checked',
+			'package_inspection'  => 'not_checked',
 		);
 		try {
 			$item = $this->review_local_package( $blueprint, $managed );

@@ -1166,7 +1166,7 @@ final readonly class ProviderSettingsPresenter {
 	 *   usage: array{available: bool, total: int|null, packages: list<array{type: string, identifier: string, installed: bool, edit_url: string|null}>}
 	 * }>
 	 */
-	private function credential_profiles( string $provider, ProviderAdminMetadata $admin, bool $include_usage = false ): array {
+	private function credential_profiles( string $provider, ProviderAdminMetadata $admin, bool $include_details = false ): array {
 
 		if ( array() === $admin->credential_kinds ) {
 			return array();
@@ -1191,7 +1191,7 @@ final readonly class ProviderSettingsPresenter {
 				'total'     => null,
 				'packages'  => array(),
 			);
-			if ( $include_usage ) {
+			if ( $include_details ) {
 				try {
 
 					$usage = array( 'available' => true ) + $this->credential_usage->read( $provider, $id );
@@ -1199,12 +1199,15 @@ final readonly class ProviderSettingsPresenter {
 					$usage['available'] = false;
 				}
 			}
-			$immutable = ! empty( $profile['immutable'] );
-			$source    = is_string( $profile['source'] ?? null ) ? $profile['source'] : 'file';
-			try {
-				$expiry_observation = $this->expiry_observations->get( $provider, $id );
-			} catch ( RuntimeException ) {
-				$expiry_observation = array();
+			$immutable          = ! empty( $profile['immutable'] );
+			$source             = is_string( $profile['source'] ?? null ) ? $profile['source'] : 'file';
+			$expiry_observation = array();
+			if ( $include_details ) {
+				try {
+					$expiry_observation = $this->expiry_observations->get( $provider, $id );
+				} catch ( RuntimeException ) {
+					$expiry_observation = array();
+				}
 			}
 			$profiles[] = array(
 				'id'            => $id,
@@ -1219,7 +1222,7 @@ final readonly class ProviderSettingsPresenter {
 				'self_destruct' => ! empty( $profile['self_destruct'] ),
 				'destroy_on'    => is_string( $profile['destroy_on'] ?? null ) ? $profile['destroy_on'] : null,
 				'expiry'        => $expiry_observation,
-				'expiry_status' => $this->expiry_reminders->status( $provider, $profile ),
+				'expiry_status' => $include_details ? $this->expiry_reminders->status( $provider, $profile ) : array(),
 				'usage'         => array(
 					'available' => $usage['available'],
 					'total'     => $usage['total'],

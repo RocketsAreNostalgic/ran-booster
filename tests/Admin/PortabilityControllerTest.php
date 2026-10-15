@@ -85,8 +85,8 @@ final class PortabilityControllerTest extends TestCase {
 		$controller = $this->controller();
 		$reflection->getProperty( 'provider_settings' )->setValue( $controller, $settings );
 		$choices = $reflection->getMethod( 'credential_choices' );
-		self::assertSame( array( 'saved_one' ), array_column( $choices->invoke( $controller, 'fixture' ), 'id' ) );
-		self::assertSame( array(), $choices->invoke( $controller, 'other-provider' ) );
+		self::assertSame( array( 'saved_one' ), array_column( $choices->invoke( $controller, 'fixture', $settings->build_package_list() ), 'id' ) );
+		self::assertSame( array(), $choices->invoke( $controller, 'other-provider', $settings->build_package_list() ) );
 
 		$package   = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'fixture', 'source-id', 'owner/example', 'main', null );
 		$blueprint = new PackageBlueprint(
@@ -125,6 +125,115 @@ final class PortabilityControllerTest extends TestCase {
 		foreach ( array( 'constant_two', 'configuration-canary', 'synthetic-secret-canary', 'No saved credentials are available' ) as $excluded ) {
 			self::assertStringNotContainsString( $excluded, $html );
 		}
+	}
+
+
+	public function test_review_reuses_display_choices_across_rows_and_refreshes_on_the_next_review(): void {
+		$profiles        = array(
+			array(
+				'id'            => 'saved',
+				'label'         => 'Saved',
+				'kind'          => 'api-key',
+				'configuration' => array(),
+				'source'        => 'file',
+				'configured'    => true,
+			),
+			array(
+				'id'            => 'constant',
+				'label'         => 'Constant',
+				'kind'          => 'api-key',
+				'configuration' => array(),
+				'source'        => 'constant',
+				'configured'    => true,
+			),
+		);
+		$reads           = array();
+		$display_secrets = $this->createMock( SecretsFile::class );
+		$display_secrets->method( 'credential_profiles' )->willReturnCallback(
+			static function ( string $provider ) use ( &$profiles, &$reads ): array {
+				$reads[] = $provider;
+				return array_map( static fn ( array $profile ): array => array_replace( $profile, array( 'id' => $provider . '-' . $profile['id'] ) ), $profiles );
+			}
+		);
+		$display_secrets->expects( self::never() )->method( 'credential_material' );
+		$provider_store = $this->createStub( \RAN\RepositoryProvider\ProviderCredentialStore::class );
+		$provider_store->method( 'credential_material' )->willReturn( array( 'kind' => 'api-key' ) );
+		$registry = new ProviderRegistry(
+			array(
+				new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'fixture', $provider_store ),
+				new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'second', $provider_store ),
+			)
+		);
+		$settings = new ProviderSettingsPresenter(
+			$registry,
+			$display_secrets,
+			new \RAN\Storage\CredentialUsageReader( new \RAN\Tests\Support\CredentialUsageDatabase(), 'wp_ran_booster_packages' ),
+			new \RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore(),
+			new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore()
+		);
+		$plugins  = $this->createStub( PluginRepository::class );
+		$plugins->method( 'is_installed' )->willReturn( false );
+		$plugins->method( 'has_management_record' )->willReturn( false );
+		$themes            = $this->createStub( ThemeRepository::class );
+		$authority_secrets = $this->createStub( SecretsFile::class );
+		$authority_reads   = 0;
+		$authority_secrets->method( 'credential_profiles' )->willReturnCallback(
+			static function ( string $provider ) use ( &$profiles, &$authority_reads ): array {
+				++$authority_reads;
+				return array_column( array_map( static fn ( array $profile ): array => array_replace( $profile, array( 'id' => $provider . '-' . $profile['id'] ) ), $profiles ), null, 'id' );
+			}
+		);
+		$application = new PortabilityApplicationService(
+			new BlueprintReviewer( $plugins, $themes ),
+			new BlueprintRepositoryVerifier( $registry, $authority_secrets ),
+			( new ReflectionClass( PackageOperationService::class ) )->newInstanceWithoutConstructor(),
+			$authority_secrets
+		);
+		$controller  = new PortabilityController( ( new ReflectionClass( ManagedPackageBlueprintExporter::class ) )->newInstanceWithoutConstructor(), new BlueprintArchive(), $application, $settings );
+		$packages    = array();
+		$selected    = array();
+		for ( $index = 0; $index < 128; ++$index ) {
+			$provider           = 0 === $index % 2 ? 'fixture' : 'second';
+			$packages[]         = new BlueprintPackage( 'plugin', 'example-' . $index . '/plugin.php', 'Example', $provider, 'fixture:owner/example', 'owner/example', 'main', null );
+			$selected[ $index ] = $provider . '-saved';
+		}
+		$blueprint = new PackageBlueprint(
+			$packages,
+			array(
+				new BlueprintCredential(
+					'second',
+					'Imported',
+					'api-key',
+					array(),
+					'synthetic-secret',
+					array(
+						array(
+							'type'       => 'plugin',
+							'identifier' => 'example-127/plugin.php',
+						),
+					)
+				),
+			)
+		);
+		$review    = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'review_blueprint' );
+		$html      = $review->invoke( $controller, $blueprint, array(), $selected );
+		self::assertSame( array( 'fixture', 'second' ), $reads );
+		self::assertSame( 127, $authority_reads, 'Display reuse must not collapse per-row authority checks.' );
+		self::assertSame( 127, substr_count( $html, 'data-portability-action="install"' ) );
+		self::assertSame( 64, substr_count( $html, '<option value="fixture-saved" selected="selected">Saved</option>' ) );
+		self::assertSame( 63, substr_count( $html, '<option value="second-saved" selected="selected">Saved</option>' ) );
+		self::assertStringContainsString( 'value="second-saved"', $html );
+		self::assertStringNotContainsString( 'fixture-constant', $html );
+		self::assertStringNotContainsString( 'second-constant', $html );
+		$profiles = array();
+		$html     = $review->invoke( $controller, $blueprint, array(), $selected );
+		self::assertSame( array( 'fixture', 'second', 'fixture', 'second' ), $reads );
+		self::assertSame( 254, $authority_reads );
+		self::assertSame( 127, substr_count( $html, 'Previously selected credential is unavailable.' ) );
+		self::assertStringContainsString( 'No saved credentials are available', $html );
+		$reads = array();
+		$review->invoke( $controller, new PackageBlueprint( $packages ), array(), array() );
+		self::assertSame( array(), $reads, 'A review without credential pickers must not build display choices.' );
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.

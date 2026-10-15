@@ -1274,9 +1274,9 @@ msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:347
 #: RAN/Admin/PackageAdminController.php:367
-#: RAN/Admin/PortabilityController.php:284
-#: RAN/Admin/PortabilityController.php:456
-#: RAN/Admin/PortabilityController.php:572
+#: RAN/Admin/PortabilityController.php:290
+#: RAN/Admin/PortabilityController.php:465
+#: RAN/Admin/PortabilityController.php:586
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:345
 #: RAN/Admin/ProviderSettingsPresenter.php:1432
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
@@ -1287,9 +1287,9 @@ msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:347
 #: RAN/Admin/PackageAdminController.php:367
-#: RAN/Admin/PortabilityController.php:284
-#: RAN/Admin/PortabilityController.php:456
-#: RAN/Admin/PortabilityController.php:572
+#: RAN/Admin/PortabilityController.php:290
+#: RAN/Admin/PortabilityController.php:465
+#: RAN/Admin/PortabilityController.php:586
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:345
 #: RAN/Admin/ProviderSettingsPresenter.php:1433
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
@@ -1664,83 +1664,83 @@ msgstr ""
 msgid "Package update progress is temporarily unavailable."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:48
+#: RAN/Admin/PortabilityController.php:52
 msgid "Your Transporter export session expired. Reload the page and try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:54
-#: RAN/Admin/PortabilityController.php:73
+#: RAN/Admin/PortabilityController.php:58
+#: RAN/Admin/PortabilityController.php:77
 msgid "The selected packages or repository credentials changed or are invalid. Reload this page and try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:67
+#: RAN/Admin/PortabilityController.php:71
 msgid "Encrypted credential storage is unavailable, so Booster did not export credentials."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:75
+#: RAN/Admin/PortabilityController.php:79
 msgid "Booster could not read the managed package selection. Please try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:88
+#: RAN/Admin/PortabilityController.php:92
 msgid "Booster could not create the Transporter Blueprint ZIP. Please try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:99
+#: RAN/Admin/PortabilityController.php:103
 msgid "Booster could not read the Transporter Blueprint ZIP. Please try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:135
+#: RAN/Admin/PortabilityController.php:139
 msgid "Your Transporter review session expired. Reload the page and try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:141
+#: RAN/Admin/PortabilityController.php:145
 msgid "Choose a valid Transporter Blueprint ZIP to review."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:149
-#: RAN/Admin/PortabilityController.php:182
+#: RAN/Admin/PortabilityController.php:153
+#: RAN/Admin/PortabilityController.php:186
 msgid "The repository credential decisions are invalid. Review the Transporter Blueprint again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:155
+#: RAN/Admin/PortabilityController.php:159
 msgid "Booster could not read this Transporter Blueprint. If it includes credentials, enter its ZIP password and try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:163
+#: RAN/Admin/PortabilityController.php:167
 msgid "Your Transporter apply session expired. Reload the page and try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:169
+#: RAN/Admin/PortabilityController.php:173
 msgid "Choose the same Transporter Blueprint and package row to apply."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:267
+#: RAN/Admin/PortabilityController.php:273
 #: views/portability.php:215
 msgid "Choose a Transporter Blueprint password before exporting credentials."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:270
+#: RAN/Admin/PortabilityController.php:276
 #: views/portability.php:215
 msgid "The Transporter Blueprint passwords do not match. Nothing was exported."
 msgstr ""
 
 #. translators: 1: managed package type, such as Plugin. 2: managed package display name.
-#: RAN/Admin/PortabilityController.php:280
+#: RAN/Admin/PortabilityController.php:286
 #, php-format
 msgid "%1$s “%2$s” manages its own updates and cannot also be managed by Booster"
 msgstr ""
 
 #. translators: %s: semicolon-separated list of selected packages that cannot be exported.
-#: RAN/Admin/PortabilityController.php:293
+#: RAN/Admin/PortabilityController.php:299
 #, php-format
 msgid "Transporter Blueprint export cannot include: %s. Deselect those packages and try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:496
+#: RAN/Admin/PortabilityController.php:506
 msgid "Target encrypted credential storage is unavailable. Configure secure storage, then review and apply this row again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:505
+#: RAN/Admin/PortabilityController.php:515
 #: RAN/Portability/PortabilityApplicationService.php:237
 msgid "Booster could not apply this package. Review the Transporter Blueprint again and check repository access."
 msgstr ""

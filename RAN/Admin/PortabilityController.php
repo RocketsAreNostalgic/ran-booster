@@ -23,7 +23,11 @@ use RAN\Secrets\SecretsFile;
 use RAN\Storage\PackageStorageFailure;
 use Throwable;
 
-/** Narrow administrator boundary for live portability export and review. */
+/**
+ * Narrow administrator boundary for live portability export and review.
+ *
+ * @phpstan-import-type PackageProviderChoice from ProviderSettingsPresenter
+ */
 final readonly class PortabilityController {
 
 	public const EXPORT_ACTION        = 'ran_booster_export_blueprint';
@@ -198,8 +202,9 @@ final readonly class PortabilityController {
 	 * @param array<int, string> $target_credential_ids
 	 */
 	private function review_blueprint( PackageBlueprint $blueprint, array $credential_decisions, array $target_credential_ids ): string {
-		$items = $this->application->review( $blueprint, $credential_decisions, $target_credential_ids );
-		$rows  = array();
+		$items         = $this->application->review( $blueprint, $credential_decisions, $target_credential_ids );
+		$rows          = array();
+		$provider_list = null;
 
 		foreach ( $items as $index => $item ) {
 			$credential_ordinal = $this->credential_ordinal_for_package( $blueprint, $item->package );
@@ -209,11 +214,12 @@ final readonly class PortabilityController {
 				$target_credential_ids[ $index ] ?? null,
 				null !== $credential_ordinal
 					&& BlueprintCredentialAction::IMPORT === ( $credential_decisions[ $credential_ordinal ]['action'] ?? null )
-					&& TargetPackageAction::MANAGED === $item->action
+					&& TargetPackageAction::MANAGED === $item->action,
+				$provider_list
 			);
 		}
 
-		return $this->render_review( $rows, array() === $blueprint->credentials ? array() : $this->credential_rows( $blueprint, $credential_decisions, $items ) );
+		return $this->render_review( $rows, array() === $blueprint->credentials ? array() : $this->credential_rows( $blueprint, $credential_decisions, $items, $provider_list ) );
 	}
 
 	private function preview_success( string $html ): mixed {
@@ -448,8 +454,11 @@ final readonly class PortabilityController {
 		return $decisions;
 	}
 
-	/** @return array<string, mixed> */
-	private function row( BlueprintPlanItem $item, ?int $credential_ordinal = null, ?string $selected_credential_id = null, bool $credential_recovery = false ): array {
+	/**
+	 * @param list<PackageProviderChoice>|null $provider_list
+	 * @return array<string, mixed>
+	 */
+	private function row( BlueprintPlanItem $item, ?int $credential_ordinal = null, ?string $selected_credential_id = null, bool $credential_recovery = false, ?array &$provider_list = null ): array {
 		$row = array(
 			'name'       => $item->package->display_name,
 			'identifier' => $item->package->identifier,
@@ -468,8 +477,9 @@ final readonly class PortabilityController {
 			&& ( TargetPackageReason::CREDENTIAL_REQUIRED === $item->reason
 				|| ( null !== $selected_credential_id && '' !== $selected_credential_id
 					&& in_array( $item->action, array( TargetPackageAction::INSTALL, TargetPackageAction::ADOPT, TargetPackageAction::BLOCKED ), true ) ) ) ) {
+			$provider_list   ??= $this->provider_settings->build_package_list();
 			$row['credential'] = array(
-				'choices'      => $this->credential_choices( $item->package->provider ),
+				'choices'      => $this->credential_choices( $item->package->provider, $provider_list ),
 				'selected_id'  => $selected_credential_id,
 				'settings_url' => admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $item->package->provider ) . '&view=credentials' ),
 			);
@@ -506,10 +516,13 @@ final readonly class PortabilityController {
 		);
 	}
 
-	/** @return list<array{id:string,label:string,source:string}> */
-	private function credential_choices( string $provider ): array {
+	/**
+	 * @param list<PackageProviderChoice> $provider_list
+	 * @return list<array{id:string,label:string,source:string}>
+	 */
+	private function credential_choices( string $provider, array $provider_list ): array {
 
-		foreach ( $this->provider_settings->build_package_list() as $candidate ) {
+		foreach ( $provider_list as $candidate ) {
 			if ( ( $candidate['code'] ?? null ) === $provider && is_array( $candidate['credential_profiles'] ?? null ) ) {
 				return array_values( array_filter( $candidate['credential_profiles'], static fn ( array $credential ): bool => 'file' === ( $credential['source'] ?? null ) ) );
 			}
@@ -536,13 +549,14 @@ final readonly class PortabilityController {
 	/**
 	 * @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $decisions
 	 * @param list<BlueprintPlanItem> $items
+	 * @param list<PackageProviderChoice>|null $provider_list
 	 * @return list<array<string, mixed>>
 	 */
-	private function credential_rows( PackageBlueprint $blueprint, array $decisions, array $items ): array {
+	private function credential_rows( PackageBlueprint $blueprint, array $decisions, array $items, ?array $provider_list = null ): array {
 		$providers = array();
 		try {
 
-			$provider_list = $this->provider_settings->build_package_list();
+			$provider_list ??= $this->provider_settings->build_package_list();
 		} catch ( Throwable ) {
 			$provider_list = array();
 		}

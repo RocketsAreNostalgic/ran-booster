@@ -50,6 +50,159 @@ require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class PortabilityControllerTest extends TestCase {
 
+	public function test_mixed_preview_compares_release_configuration_without_enabling_apply(): void {
+		$release = new BlueprintPackage( 'plugin', 'release/release.php', 'Release', 'gh', 'release-id', 'owner/release', '', null, new \RAN\WordPress\ManagedReleaseConfiguration( 'release', 'release.php', 'stable' ) );
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::never() )->method( 'credential_material' );
+		$secrets->expects( self::never() )->method( 'assert_managed_storage_ready' );
+		$provider = null;
+		$review   = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'review_blueprint' );
+		$html     = $review->invoke( $this->preview_controller( $secrets, false, 'plugin', $provider ), new PackageBlueprint( array( $this->blueprint_package(), $release ) ), array(), array() );
+
+		self::assertSame( 2, substr_count( $html, 'Package is not installed.' ) );
+		self::assertSame( 2, substr_count( $html, 'Whether the installed code matches is unknown.' ) );
+		self::assertStringContainsString( 'data-portability-row="1" data-portability-action="blocked"', $html );
+		self::assertStringContainsString( 'does not check repository access or inspect package files', $html );
+		self::assertNotNull( $provider );
+		self::assertSame( array( null ), $provider->credential_ids );
+	}
+
+	public function test_release_preview_displays_different_local_branch_configuration(): void {
+		$release = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', '', null, new \RAN\WordPress\ManagedReleaseConfiguration( 'example', 'example.php', 'stable' ) );
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'is_installed' )->willReturn( true );
+		$plugins->method( 'has_management_record' )->willReturn( true );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $this->managed_plugin( DeploymentPolicy::DISABLED, branch: 'old<branch>' ) );
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::never() )->method( 'credential_material' );
+		$controller = new PortabilityController(
+			( new ReflectionClass( ManagedPackageBlueprintExporter::class ) )->newInstanceWithoutConstructor(),
+			new BlueprintArchive(),
+			new PortabilityApplicationService(
+				new BlueprintReviewer( $plugins, $this->createStub( ThemeRepository::class ) ),
+				new BlueprintRepositoryVerifier( new ProviderRegistry(), $secrets ),
+				( new ReflectionClass( PackageOperationService::class ) )->newInstanceWithoutConstructor(),
+				$secrets
+			),
+			( new ReflectionClass( ProviderSettingsPresenter::class ) )->newInstanceWithoutConstructor()
+		);
+		$review     = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'review_blueprint' );
+		$html       = $review->invoke( $controller, new PackageBlueprint( array( $release ) ), array(), array() );
+
+		self::assertStringContainsString( 'Local configuration differs from this Blueprint.', $html );
+		self::assertStringContainsString( 'old&lt;branch&gt;', $html );
+		self::assertStringContainsString( 'Release asset', $html );
+		self::assertStringContainsString( 'Release channel', $html );
+		self::assertStringContainsString( 'Cannot apply', $html );
+	}
+
+	public function test_comparison_details_escape_current_and_requested_configuration(): void {
+		$render = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'render_review' );
+		$html   = $render->invoke(
+			$this->controller(),
+			array(
+				array(
+					'action'     => 'blocked',
+					'comparison' => array(
+						'state'       => 'different',
+						'differences' => array( 'repository', 'source' ),
+						'current'     => array(
+							'repository' => '<script>current</script>',
+							'source'     => array(
+								'kind'   => 'branch',
+								'branch' => 'old',
+							),
+						),
+						'requested'   => array(
+							'repository' => '<img src=x>',
+							'source'     => array(
+								'kind'    => 'release_asset',
+								'channel' => 'stable',
+							),
+						),
+					),
+				),
+			)
+		);
+
+		self::assertStringContainsString( 'Local configuration differs from this Blueprint.', $html );
+		self::assertStringContainsString( 'Current configuration', $html );
+		self::assertStringContainsString( 'Requested configuration', $html );
+		self::assertStringContainsString( '&lt;script&gt;current&lt;/script&gt;', $html );
+		self::assertStringContainsString( '&lt;img src=x&gt;', $html );
+		self::assertStringContainsString( 'Release channel', $html );
+		self::assertStringNotContainsString( '<script>', $html );
+		self::assertStringNotContainsString( '<img src=x>', $html );
+	}
+
+	public function test_requirement_reports_show_uncertainty_conflicts_and_escape_dependencies(): void {
+		$render = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'render_review' );
+		$html   = $render->invoke(
+			$this->controller(),
+			array(
+				array(
+					'action'              => 'blocked',
+					'repository_conflict' => true,
+					'requirements'        => array(
+						'basis'        => 'installed_headers',
+						'checks'       => array(
+							'requires_php'       => 'failed',
+							'requires_wordpress' => 'not_supplied',
+						),
+						'dependencies' => array(
+							'<script>parent</script>' => 'missing',
+							'included'                => 'selected',
+						),
+					),
+				),
+			),
+			array(),
+			array(
+				'requires_php' => array(
+					'minimum'      => '99.0',
+					'declared'     => 1,
+					'not_declared' => 0,
+					'missing'      => 1,
+				),
+			)
+		);
+		self::assertStringContainsString( 'before checkbox selection', $html );
+		self::assertStringContainsString( 'PHP minimum: 99.0', $html );
+		self::assertStringContainsString( 'missing observations: 1', $html );
+		self::assertStringContainsString( 'Declared minimum not met', $html );
+		self::assertStringContainsString( 'Observation not supplied', $html );
+		self::assertStringContainsString( 'requested package may differ', $html );
+		self::assertStringContainsString( 'conflicting sources', $html );
+		self::assertStringContainsString( 'installation and activation are not verified', $html );
+		self::assertStringContainsString( '&lt;script&gt;parent&lt;/script&gt;', $html );
+		self::assertStringNotContainsString( '<script>', $html );
+	}
+
+	public function test_selected_row_input_is_bounded_and_strictly_typed(): void {
+		$method = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'selected_rows' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Snapshot of test-owned request data restored after parser controls.
+		$previous = $_POST;
+		try {
+			$_POST = array();
+			self::assertNull( $method->invoke( $this->controller() ) );
+			$_POST = array( 'selected_rows' => array( '0', '127' ) );
+			self::assertSame( array( 0, 127 ), $method->invoke( $this->controller() ) );
+			$refused = 0;
+			foreach ( array( array(), array( '128' ), array( '-1' ), array( '01' ), array( 0 ), array( '0' => array() ), '0' ) as $invalid ) {
+				$_POST = array( 'selected_rows' => $invalid );
+				try {
+					$method->invoke( $this->controller() );
+					self::fail( 'Invalid row selection was accepted.' );
+				} catch ( InvalidArgumentException ) {
+					++$refused;
+				}
+			}
+			self::assertSame( 7, $refused );
+		} finally {
+			$_POST = $previous;
+		}
+	}
+
 	public function test_saved_credential_choices_consume_the_real_provider_projection(): void {
 		$profiles = array(
 			array(
@@ -1300,7 +1453,8 @@ final class PortabilityControllerTest extends TestCase {
 		);
 	}
 
-	private function preview_controller( SecretsFile $secrets, bool $installed = false, string $type = 'plugin' ): PortabilityController {
+	/** @param-out TemporaryCredentialProvider $provider */
+	private function preview_controller( SecretsFile $secrets, bool $installed = false, string $type = 'plugin', ?TemporaryCredentialProvider &$provider = null ): PortabilityController {
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
 		$plugins->method( 'is_installed' )->willReturn( $installed && 'plugin' === $type );

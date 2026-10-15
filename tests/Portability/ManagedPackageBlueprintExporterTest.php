@@ -51,6 +51,26 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		self::assertStringNotContainsString( 'credential-id-canary', $blueprint->canonical_json() );
 	}
 
+	public function test_unavailable_optional_headers_are_reported_without_preventing_export(): void {
+		$plugins = $this->createStub( PluginRepository::class );
+		$themes  = $this->createStub( ThemeRepository::class );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array() );
+		$themes->method( 'all_deployment_themes' )->willReturn( array( $this->package( 'missing-theme', 'example', 'id' ) ) );
+		$report    = null;
+		$blueprint = ( new ManagedPackageBlueprintExporter( $plugins, $themes, new SecretsFile( null, array() ) ) )->export( report: $report );
+		self::assertNull( $blueprint->packages[0]->requirements );
+		self::assertSame(
+			array(
+				array(
+					'type'       => 'theme',
+					'identifier' => 'missing-theme',
+					'issues'     => array( 'headers' => 'unavailable' ),
+				),
+			),
+			$report
+		);
+	}
+
 	public function test_package_only_export_remains_available_when_encrypted_secrets_runtime_is_unavailable(): void {
 		$plugin  = $this->package( 'plugin/example.php', 'example', 'plugin-repository-id' );
 		$plugins = $this->createStub( PluginRepository::class );

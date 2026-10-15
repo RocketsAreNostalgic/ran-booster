@@ -392,6 +392,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 			}
 		}
 		self::assertNull( $context->review_refusal( array_reverse( $expectation, true ) ) );
+		self::assertSame( $expectation, GitHubProviderSelection::normalize_expectation( array_reverse( $expectation, true ) ) );
 	}
 
 	public function test_native_marker_invalidates_captured_request_but_is_not_generic_read_authority(): void {

@@ -241,6 +241,8 @@ return static function ( wpdb $database ): void {
 		$context->complete_collection();
 		$incomplete_registry->seal();
 		$expect( $context->operation_allowed(), 'installed approved bundled context is usable after actual registry publication' );
+		$lock_proof = require __DIR__ . '/github-selection-lock-smoke.php';
+		$lock_proof( $database, $table, $context, $plugin_root );
 
 		$fake_active = static fn (): array => array( 'not-installed.php' );
 		add_filter( 'pre_option_active_plugins', $fake_active );

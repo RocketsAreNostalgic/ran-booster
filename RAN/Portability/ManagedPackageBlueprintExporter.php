@@ -26,15 +26,19 @@ final readonly class ManagedPackageBlueprintExporter {
 		private PluginRepository $plugins,
 		private ThemeRepository $themes,
 		private SecretsFile $secrets,
-		private ManagedReleaseStore $releases = new ManagedReleaseStore()
+		private ManagedReleaseStore $releases = new ManagedReleaseStore(),
+		private BlueprintRequirements $requirements = new BlueprintRequirements()
 	) {
 	}
 
 	/**
 	 * @param array<string, list<string>>                     $credential_selection
 	 * @param list<array{type:string,identifier:string}>|null $package_selection
+	 * @param list<array{type:string,identifier:string,issues:array<string,string>}>|null $report
+	 * @param-out list<array{type:string,identifier:string,issues:array<string,string>}> $report
 	 */
-	public function export( array $credential_selection = array(), ?array $package_selection = null ): PackageBlueprint {
+	public function export( array $credential_selection = array(), ?array $package_selection = null, ?array &$report = null ): PackageBlueprint {
+		$report      = array();
 		$packages    = array();
 		$managed     = array();
 		$selected    = $this->selection( $package_selection );
@@ -56,8 +60,21 @@ final readonly class ManagedPackageBlueprintExporter {
 					? $this->releases->configuration( $type, (string) $package->get_identifier() )
 					: null;
 				$blueprint     = BlueprintPackage::from_managed_package( $type, $package, $configuration );
-				$packages[]    = $blueprint;
-				$managed[]     = array(
+				$observation   = $this->requirements->installed( $blueprint );
+				if ( array() !== $observation['issues'] ) {
+					$report[] = array(
+						'type'       => $type,
+						'identifier' => $blueprint->identifier,
+						'issues'     => $observation['issues'],
+					);
+				}
+				if ( null !== $observation['requirements'] ) {
+					$record                 = $blueprint->to_array();
+					$record['requirements'] = $observation['requirements'];
+					$blueprint              = BlueprintPackage::from_array( $record );
+				}
+				$packages[] = $blueprint;
+				$managed[]  = array(
 					'package'   => $package,
 					'blueprint' => $blueprint,
 				);

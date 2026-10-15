@@ -83,15 +83,25 @@ final class GitHubProviderSelection {
 	 * Malformed/absent input requires a new review, never inferred current authority.
 	 */
 	public function review_refusal( mixed $expectation ): ?string {
-		$keys = array( 'provider_code', 'selection_generation', 'implementation_fingerprint' );
-		if ( ! is_array( $expectation ) || count( $expectation ) !== 3 || array_diff( $keys, array_keys( $expectation ) ) || 'gh' !== $expectation['provider_code'] || ! is_int( $expectation['selection_generation'] ) || $expectation['selection_generation'] < 0 || ! is_string( $expectation['implementation_fingerprint'] ) || 1 !== preg_match( '/\A[a-f0-9]{64}\z/D', $expectation['implementation_fingerprint'] ) ) {
-			throw new \InvalidArgumentException( 'Fresh provider review is required.' );
-		}
-		$current = $this->expectation();
+		$expectation = self::normalize_expectation( $expectation );
+		$current     = $this->expectation();
 		if ( null === $current ) {
 			return 'provider_unavailable';
 		}
 		return $current['selection_generation'] === $expectation['selection_generation'] && $current['implementation_fingerprint'] === $expectation['implementation_fingerprint'] ? null : 'provider_selection_changed';
+	}
+
+	/** @return array{provider_code:'gh',selection_generation:int,implementation_fingerprint:string} Canonical structure only, never live authority. */
+	public static function normalize_expectation( mixed $expectation ): array {
+		$keys = array( 'provider_code', 'selection_generation', 'implementation_fingerprint' );
+		if ( ! is_array( $expectation ) || count( $expectation ) !== 3 || array_diff( $keys, array_keys( $expectation ) ) || 'gh' !== $expectation['provider_code'] || ! is_int( $expectation['selection_generation'] ) || $expectation['selection_generation'] < 0 || ! is_string( $expectation['implementation_fingerprint'] ) || 1 !== preg_match( '/\A[a-f0-9]{64}\z/D', $expectation['implementation_fingerprint'] ) ) {
+			throw new \InvalidArgumentException( 'Fresh provider review is required.' );
+		}
+		return array(
+			'provider_code'              => 'gh',
+			'selection_generation'       => $expectation['selection_generation'],
+			'implementation_fingerprint' => $expectation['implementation_fingerprint'],
+		);
 	}
 
 	public function operation_allowed(): bool {

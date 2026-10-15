@@ -114,7 +114,10 @@ function get_user_meta( int $user_id, string $key, bool $single ): mixed {
 }
 
 function wp_unslash( mixed $value ): mixed {
-	return $value;
+	if ( is_array( $value ) ) {
+		return array_map( __NAMESPACE__ . '\\wp_unslash', $value );
+	}
+	return is_string( $value ) ? stripslashes( $value ) : $value;
 }
 
 function sanitize_key( mixed $value ): string {

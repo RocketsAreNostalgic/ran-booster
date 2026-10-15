@@ -241,6 +241,8 @@ $has_credential_decisions         = array() !== array_filter(
 				$credential_ordinal = isset( $row['credential_ordinal'] ) ? max( 0, (int) $row['credential_ordinal'] ) : null;
 				?>
 				<tr data-portability-row="<?php echo esc_attr( (string) $row_index ); ?>" data-portability-action="<?php echo esc_attr( $review_action ); ?>"
+					<?php if ( isset( $row['provider_expectation'] ) ) : ?>
+					data-portability-provider-expectation="<?php echo esc_attr( (string) wp_json_encode( $row['provider_expectation'] ) ); ?>"<?php endif; ?>
 				<?php
 				if ( true === ( $row['credential_recovery'] ?? false ) ) :
 					?>

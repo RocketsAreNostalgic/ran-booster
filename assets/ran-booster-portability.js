@@ -1055,6 +1055,12 @@
 			const selectedIndexes = rows.map((row) =>
 				row.getAttribute('data-portability-row')
 			);
+			const providerExpectations = new Map(
+				rows.map((row) => [
+					row,
+					row.getAttribute('data-portability-provider-expectation'),
+				])
+			);
 			setApplyBusy(true);
 			try {
 				let appliedEverySelection = true;
@@ -1074,6 +1080,10 @@
 					selectedIndexes.forEach((index) =>
 						data.append('selected_rows[]', index)
 					);
+					const providerExpectation = providerExpectations.get(row);
+					if (providerExpectation !== null) {
+						data.set('provider_expectation', providerExpectation);
+					}
 					data.set('action', 'ran_booster_apply_blueprint');
 					data.set('nonce', form.dataset.portabilityApplyNonce || '');
 					data.set(

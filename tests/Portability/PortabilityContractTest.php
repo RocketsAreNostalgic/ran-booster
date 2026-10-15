@@ -16,8 +16,25 @@ use ReflectionClass;
 
 final class PortabilityContractTest extends TestCase {
 
-	public function test_api_three_preserves_api_two_candidate_review_and_nonce_bytes(): void {
-		// Captured from pre-migration Core d5b35ac, not derived from API_VERSION.
+	public function test_selection_context_is_canonical_and_changes_nonce_scope(): void {
+		$facade      = $this->facade();
+		$candidate   = $this->candidate();
+		$expectation = $this->expectation();
+		$fingerprint = $this->review( $candidate )->fingerprint;
+		$action      = $facade->nonce_action( 'apply', $candidate, $fingerprint, $expectation );
+		self::assertSame( $action, $facade->nonce_action( 'apply', $candidate, $fingerprint, array_reverse( $expectation, true ) ) );
+		$changed                          = $expectation;
+		$changed['selection_generation'] += 1;
+		self::assertNotSame( $action, $facade->nonce_action( 'apply', $candidate, $fingerprint, $changed ) );
+		$changed                               = $expectation;
+		$changed['implementation_fingerprint'] = str_repeat( 'b', 64 );
+		self::assertNotSame( $action, $facade->nonce_action( 'apply', $candidate, $fingerprint, $changed ) );
+		$this->expectException( InvalidArgumentException::class );
+		$facade->nonce_action( 'apply', $this->candidate( array( 'provider_code' => 'bb' ) ), $fingerprint, $expectation );
+	}
+
+	public function test_api_four_binds_destination_expectation_without_changing_portable_candidate_bytes(): void {
+		// Exact API 4 wire bytes; portable candidate fields remain source-only.
 		$candidate = $this->candidate();
 		$review    = $this->review( $candidate );
 		$facade    = $this->facade();
@@ -28,16 +45,16 @@ final class PortabilityContractTest extends TestCase {
 			json_encode( $candidate->to_array(), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE )
 		);
 		self::assertSame(
-			'v1:9eb772cacefcb6e282a09a5485d3c3a5cb59820f869233ff3a7befcc16de42c7',
+			'v1:897718ba1040e4499a8cd992a9ad689a256c853b4585016a1e6bebb0af851a19',
 			$review->fingerprint
 		);
 		self::assertSame(
-			'ran-booster-portability-review-v1-da2854f0934e0516ffb0b65b4930c7a611bba3b6049aaf798eafff752992a1a5',
-			$facade->nonce_action( 'review', $candidate )
+			'ran-booster-portability-review-v1-1641d74f5dc75d2858b214ff88948f9adfffec15c422166ab6540b796b310b9e',
+			$facade->nonce_action( 'review', $candidate, null, null )
 		);
 		self::assertSame(
-			'ran-booster-portability-apply-v1-da2854f0934e0516ffb0b65b4930c7a611bba3b6049aaf798eafff752992a1a5-9eb772cacefcb6e282a09a5485d3c3a5cb59820f869233ff3a7befcc16de42c7',
-			$facade->nonce_action( 'apply', $candidate, $review->fingerprint )
+			'ran-booster-portability-apply-v1-dfb303925573bf4a63679902adf6417314e5e43618852533d0ccf79f862067ef-897718ba1040e4499a8cd992a9ad689a256c853b4585016a1e6bebb0af851a19',
+			$facade->nonce_action( 'apply', $candidate, $review->fingerprint, $this->expectation() )
 		);
 	}
 
@@ -68,8 +85,8 @@ final class PortabilityContractTest extends TestCase {
 		self::assertTrue( $result->target_verified );
 		self::assertSame( $this->candidate()->to_array(), $candidate->to_array() );
 		self::assertSame(
-			$this->facade()->nonce_action( 'apply', $candidate, $review->fingerprint ),
-			$this->facade()->nonce_action( operation: 'apply', candidate: $candidate, expected_fingerprint: $review->fingerprint )
+			$this->facade()->nonce_action( 'apply', $candidate, $review->fingerprint, $this->expectation() ),
+			$this->facade()->nonce_action( operation: 'apply', candidate: $candidate, expected_fingerprint: $review->fingerprint, provider_expectation: $this->expectation() )
 		);
 		foreach ( array( PortabilityFacade::class, PortabilityCandidate::class, PortabilityReviewResult::class, PortabilityApplyResult::class, \RAN\AddOn\Portability\NativePortabilityFacade::class ) as $class ) {
 			$reflection = new ReflectionClass( $class );
@@ -223,7 +240,7 @@ final class PortabilityContractTest extends TestCase {
 		);
 		sort( $methods );
 
-		self::assertSame( 3, PortabilityFacade::API_VERSION );
+		self::assertSame( 4, PortabilityFacade::API_VERSION );
 		self::assertSame( array( 'apply', 'nonce_action', 'review' ), $methods );
 		self::assertFalse( $reflection->hasMethod( 'prepare' ) );
 		self::assertFalse( $reflection->hasMethod( 'cancel' ) );
@@ -233,14 +250,14 @@ final class PortabilityContractTest extends TestCase {
 		$facade      = $this->facade();
 		$candidate   = $this->candidate();
 		$fingerprint = 'v1:' . str_repeat( 'a', 64 );
-		$review      = $facade->nonce_action( 'review', $candidate );
-		$apply       = $facade->nonce_action( 'apply', $candidate, $fingerprint );
+		$review      = $facade->nonce_action( 'review', $candidate, null, null );
+		$apply       = $facade->nonce_action( 'apply', $candidate, $fingerprint, $this->expectation() );
 
 		self::assertMatchesRegularExpression( '/\Aran-booster-portability-review-v1-[a-f0-9]{64}\z/D', $review );
 		self::assertMatchesRegularExpression( '/\Aran-booster-portability-apply-v1-[a-f0-9]{64}-[a-f0-9]{64}\z/D', $apply );
 		self::assertNotSame( $review, $apply );
 		self::assertStringNotContainsString( 'owner/example', $apply );
-		self::assertNotSame( $review, $facade->nonce_action( 'review', $this->candidate( array( 'branch' => 'develop' ) ) ) );
+		self::assertNotSame( $review, $facade->nonce_action( 'review', $this->candidate( array( 'branch' => 'develop' ) ), null, null ) );
 
 		foreach (
 			array(
@@ -251,7 +268,7 @@ final class PortabilityContractTest extends TestCase {
 			) as [ $operation, $expected ]
 		) {
 			try {
-				$facade->nonce_action( $operation, $candidate, $expected );
+				$facade->nonce_action( $operation, $candidate, $expected, $this->expectation() );
 				self::fail( 'Invalid nonce scope was accepted.' );
 			} catch ( InvalidArgumentException ) {
 				$this->addToAssertionCount( 1 );
@@ -322,6 +339,15 @@ final class PortabilityContractTest extends TestCase {
 		);
 	}
 
+	/** @return array{provider_code:string,selection_generation:int,implementation_fingerprint:string} */
+	private function expectation(): array {
+		return array(
+			'provider_code'              => 'gh',
+			'selection_generation'       => 0,
+			'implementation_fingerprint' => str_repeat( 'a', 64 ),
+		);
+	}
+
 	private function facade(): PortabilityFacade {
 		return new class() extends PortabilityFacade {
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of review retains the production method contract; these inputs do not affect this controlled result.
@@ -330,7 +356,7 @@ final class PortabilityContractTest extends TestCase {
 			}
 
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The fixture implementation of apply retains the production method contract; these inputs do not affect this controlled result.
-			public function apply( PortabilityCandidate $candidate, string $expected_fingerprint, string $nonce ): PortabilityApplyResult {
+			public function apply( PortabilityCandidate $candidate, string $expected_fingerprint, string $nonce, ?array $provider_expectation ): PortabilityApplyResult {
 				throw new \LogicException();
 			}
 		};

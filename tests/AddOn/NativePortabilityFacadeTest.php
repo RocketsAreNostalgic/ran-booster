@@ -23,6 +23,7 @@ use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use ReflectionClass;
 use RAN\Tests\Portability\TemporaryCredentialProvider;
+use RAN\Tests\Portability\GitHubSelectionTestFixture;
 
 require_once __DIR__ . '/../Support/PackageOperationGlobalWordPressFunctions.php';
 require_once __DIR__ . '/../Runtime/RuntimeSupportWordPressFunctions.php';
@@ -50,7 +51,7 @@ final class NativePortabilityFacadeTest extends TestCase {
 		$bootstrap = file_get_contents( dirname( __DIR__, 2 ) . '/ran-booster.php' );
 
 		self::assertIsString( $bootstrap );
-		self::assertSame( 3, NativePortabilityFacade::API_VERSION );
+		self::assertSame( 4, NativePortabilityFacade::API_VERSION );
 		self::assertStringContainsString( "'RAN_BOOSTER_PORTABILITY_API_VERSION'", $bootstrap );
 		self::assertStringContainsString(
 			"do_action( 'ran_booster_portability_ready', \$portability )",
@@ -96,7 +97,7 @@ final class NativePortabilityFacadeTest extends TestCase {
 		$exact  = $this->managed_plugin( false );
 		$facade = $this->facade( true, true, $exact );
 		$review = $facade->review( $this->candidate(), 'valid-nonce' );
-		$result = $facade->apply( $this->candidate(), $review->fingerprint, 'valid-nonce' );
+		$result = $facade->apply( $this->candidate(), $review->fingerprint, 'valid-nonce', $review->provider_expectation );
 
 		self::assertSame( PortabilityReviewResult::MANAGED, $review->action );
 		self::assertSame( PortabilityApplyResult::UNCHANGED, $result->status );
@@ -113,7 +114,8 @@ final class NativePortabilityFacadeTest extends TestCase {
 		$result = $facade->apply(
 			$this->candidate( array( 'branch' => 'develop' ) ),
 			$review->fingerprint,
-			'valid-nonce'
+			'valid-nonce',
+			$review->provider_expectation
 		);
 
 		self::assertSame( PortabilityApplyResult::BLOCKED, $result->status );
@@ -176,7 +178,7 @@ final class NativePortabilityFacadeTest extends TestCase {
 		$registry       = new ProviderRegistry( array( $this->provider ), $catalog );
 		$service        = new PortabilityApplicationService(
 			new BlueprintReviewer( $plugins, $themes ),
-			new BlueprintRepositoryVerifier( $registry, $secrets ),
+			new BlueprintRepositoryVerifier( $registry, $secrets, GitHubSelectionTestFixture::bind( $registry ) ),
 			( new ReflectionClass( PackageOperationService::class ) )->newInstanceWithoutConstructor(),
 			$secrets
 		);

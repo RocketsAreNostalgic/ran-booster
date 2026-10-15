@@ -16,6 +16,7 @@ enum TargetPackageReason: string {
 	case REPOSITORY_ACCESS_FAILED         = 'repository_access_failed';
 	case REPOSITORY_IDENTITY_MISMATCH     = 'repository_identity_mismatch';
 	case DESTINATION_CONFLICT             = 'destination_conflict';
+	case PROVIDER_SELECTION_CHANGED       = 'provider_selection_changed';
 	case PROVIDER_UNAVAILABLE             = 'provider_unavailable';
 	case PROVIDER_TEMPORARILY_UNAVAILABLE = 'provider_temporarily_unavailable';
 
@@ -38,6 +39,7 @@ enum TargetPackageReason: string {
 			self::REPOSITORY_ACCESS_FAILED => __( 'Booster could not confirm repository access.', 'ran-booster' ),
 			self::REPOSITORY_IDENTITY_MISMATCH => __( 'The repository does not match this Transporter Blueprint.', 'ran-booster' ),
 			self::DESTINATION_CONFLICT => __( 'The destination package conflicts with this Transporter Blueprint.', 'ran-booster' ),
+			self::PROVIDER_SELECTION_CHANGED => __( 'The selected repository provider changed. Review again before applying.', 'ran-booster' ),
 			self::PROVIDER_UNAVAILABLE => __( 'This repository provider is not available on the target.', 'ran-booster' ),
 			self::PROVIDER_TEMPORARILY_UNAVAILABLE => __( 'The repository provider is temporarily unavailable.', 'ran-booster' ),
 		};

@@ -392,3 +392,8 @@ even when configuration or version labels match. Source access and package
 inspection are not checked by the local comparison; the existing operational
 review remains separate. No credentials or provider calls are needed for these
 observations, and they carry no Apply expectation.
+
+Review displays any requested initial commit or release artifact separately from
+management differences. Those submitted identities do not establish installed
+equality or a permanent update lock. Without an exact selection, the current
+branch head or newest eligible release remains unresolved by local comparison.

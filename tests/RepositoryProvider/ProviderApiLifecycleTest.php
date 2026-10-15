@@ -75,7 +75,19 @@ final class ProviderApiLifecycleTest extends TestCase {
 		$parameters = $registry->getConstructor()?->getParameters() ?? array();
 
 		self::assertFalse( $registry->hasMethod( 'logging' ) );
-		self::assertCount( 6, $parameters );
+		self::assertCount( 9, $parameters );
+		foreach ( array(
+			6 => array( 'github_selection_guard', 'callable', null ),
+			7 => array( 'github_candidates', 'array', array() ),
+			8 => array( 'bundled_github_factory', 'callable', null ),
+		) as $index => $expected ) {
+			self::assertSame( $expected[0], $parameters[ $index ]->getName() );
+			self::assertTrue( $parameters[ $index ]->isOptional() );
+			self::assertSame( $expected[2], $parameters[ $index ]->getDefaultValue() );
+			self::assertInstanceOf( ReflectionNamedType::class, $parameters[ $index ]->getType() );
+			self::assertSame( $expected[1], $parameters[ $index ]->getType()->getName() );
+			self::assertSame( null === $expected[2], $parameters[ $index ]->allowsNull() );
+		}
 		self::assertSame( 'activity_reporter_factory', $parameters[5]->getName() );
 		self::assertTrue( $parameters[5]->isOptional() );
 		self::assertSame( 'registration_context', $parameters[4]->getName() );

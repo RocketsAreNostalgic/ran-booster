@@ -262,4 +262,114 @@ final class GitHubReplacementRegistrationTest extends TestCase {
 			self::assertSame( array(), $registry->all() );
 		}
 	}
+	public function test_validation_callback_drift_publishes_neither_provider_nor_policy(): void {
+		foreach ( array( 'metadata', 'diagnostics', 'policy', 'policy_identity' ) as $phase ) {
+			$manifest           = $this->manifest();
+			$manifest['facets'] = array( \RAN\RepositoryProvider\ProviderCredentialPolicySupplier::class );
+			$declaration        = new GitHubReplacementDeclaration( $manifest );
+			$selection          = array(
+				'provider_code'              => 'gh',
+				'selection_generation'       => 1,
+				'implementation_fingerprint' => $declaration->implementation_fingerprint,
+				'plugin_basename'            => $declaration->plugin_basename,
+			);
+			$provider           = $this->createMockForIntersectionOfInterfaces( array( RepositoryProvider::class, \RAN\RepositoryProvider\ProviderCredentialPolicySupplier::class ) );
+			self::assertInstanceOf( RepositoryProvider::class, $provider );
+			$policy = $this->createMock( \RAN\RepositoryProvider\ProviderCredentialPolicy::class );
+			$policy->method( 'get_provider' )->willReturnCallback(
+				static function () use ( &$selection, $phase ): ProviderCode {
+					if ( 'policy_identity' === $phase ) {
+						++$selection['selection_generation']; }
+					return ProviderCode::parse( 'gh' );
+				}
+			);
+			$provider->method( 'get_credential_policy' )->willReturnCallback(
+				static function () use ( &$selection, $phase, $policy ): \RAN\RepositoryProvider\ProviderCredentialPolicy {
+					if ( 'policy' === $phase ) {
+						++$selection['selection_generation']; }
+					return $policy;
+				}
+			);
+			$provider->method( 'get_metadata' )->willReturnCallback(
+				static function () use ( &$selection, $phase ): ProviderMetadata {
+					if ( 'metadata' === $phase ) {
+						++$selection['selection_generation']; }
+					return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
+				}
+			);
+			$diagnostics = $this->createMock( ProviderDiagnostics::class );
+			$provider->method( 'get_provider_diagnostics' )->willReturnCallback(
+				static function () use ( &$selection, $phase, $diagnostics ): ProviderDiagnostics {
+					if ( 'diagnostics' === $phase ) {
+						++$selection['selection_generation']; }
+					return $diagnostics;
+				}
+			);
+			$store = $this->createMock( ProviderCredentialStore::class );
+			$store->expects( self::never() )->method( 'credential_material' );
+			$reader   = $this->createMock( AuthenticatedWebhookDeliveryEvidenceReader::class );
+			$catalog  = new \RAN\RepositoryProvider\ProviderSecretPolicyCatalog();
+			$registry = new ProviderRegistry(
+				secret_policies: $catalog,
+				credential_store_factory: static fn (): ProviderCredentialStore => $store,
+				delivery_evidence_reader_factory: static fn (): AuthenticatedWebhookDeliveryEvidenceReader => $reader,
+				github_selection_guard: static function () use ( &$selection ): array {
+					return $selection; },
+				github_candidates: array( $declaration->plugin_basename => $declaration )
+			);
+			$registry->declare_github_replacement(
+				$declaration,
+				static function ( ProviderCredentialStore $credentials, AuthenticatedWebhookDeliveryEvidenceReader $evidence, ProviderRegistrationContext $context ) use ( $provider ): RepositoryProvider {
+					unset( $credentials, $evidence, $context );
+					return $provider;
+				}
+			);
+			$registry->seal();
+			self::assertSame( array(), $registry->all(), $phase );
+			self::assertNull( $catalog->find_credential_policy( 'gh' ), $phase );
+			self::assertNull( $catalog->find_webhook_policy( 'gh' ), $phase );
+		}
+	}
+	public function test_passive_discovery_refreshes_a_directory_symlink_changed_by_another_process(): void {
+		$root = sys_get_temp_dir() . '/ran-github-symlink-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated passive-discovery fixture root.
+		self::assertTrue( mkdir( $root, 0700 ) );
+		$manifest                    = $this->manifest();
+		$manifest['plugin_basename'] = 'plugin/main.php';
+		try {
+			foreach ( array(
+				'old' => '1',
+				'new' => '2',
+			) as $directory => $revision ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated symlink target owned by this test.
+				self::assertTrue( mkdir( $root . '/' . $directory, 0700 ) );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write passive plugin fixture, never executable registration code.
+				file_put_contents( $root . '/' . $directory . '/main.php', "<?php\n/* RAN Booster GitHub Replacement: 1 */" );
+				$manifest['compatibility_revision'] = $revision;
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write this isolated adjacent passive manifest.
+				file_put_contents( $root . '/' . $directory . '/main.gh-replacement.json', $this->encode_manifest( $manifest ) );
+			}
+			self::assertTrue( symlink( $root . '/old', $root . '/plugin' ) );
+			self::assertSame( '1', GitHubReplacementDeclaration::from_plugin_file( $root, 'plugin/main.php' )?->compatibility_revision );
+			// PHP in this process would invalidate its own realpath cache on unlink.
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open -- A separate local PHP process must change the test-owned symlink without clearing this process's realpath cache.
+			$process = proc_open( array( PHP_BINARY, '-r', 'exit(unlink($argv[1]) && symlink($argv[2], $argv[1]) ? 0 : 1);', $root . '/plugin', $root . '/new' ), array(), $pipes );
+			self::assertIsResource( $process );
+			self::assertSame( 0, proc_close( $process ) );
+			self::assertSame( '2', GitHubReplacementDeclaration::from_plugin_file( $root, 'plugin/main.php' )->compatibility_revision );
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove this test-owned symlink, never its destination.
+			unlink( $root . '/plugin' );
+			foreach ( array( 'old', 'new' ) as $directory ) {
+				foreach ( array( 'main.php', 'main.gh-replacement.json' ) as $file ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this isolated fixture's files.
+					unlink( $root . '/' . $directory . '/' . $file );
+				}
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only this test-owned target directory.
+				rmdir( $root . '/' . $directory );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove this isolated fixture root.
+			rmdir( $root );
+		}
+	}
 }

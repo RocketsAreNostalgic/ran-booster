@@ -10,7 +10,7 @@ use Closure;
  * Bounded host policy exposed while a repository provider is registered.
  *
  * This context deliberately exposes provider-neutral scalar policy only. Its
- * single private resolver preserves Core's operation-level validation boundary;
+ * private resolvers preserve Core's operation-level validation boundary;
  * it is not a service locator and exposes no Core implementation service.
  */
 final readonly class ProviderRegistrationContext {

@@ -231,7 +231,16 @@ final class ProviderRegistry {
 
 		// Policy registration performs every provider callback before publishing
 		// its validated record. No registry state changes before it succeeds.
-		$this->secret_policies->register( $code, $credential_policy, $webhook_policy );
+		$this->secret_policies->register(
+			$code,
+			$credential_policy,
+			$webhook_policy,
+			$this->github_finalizing ? function (): void {
+				if ( ! $this->registration_context->operation_allowed() ) {
+					throw new LogicException( 'GitHub selection changed during provider validation.' );
+				}
+			} : null
+		);
 
 		$this->providers[ $code->value ]         = $provider;
 		$this->provider_metadata[ $code->value ] = $metadata;

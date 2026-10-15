@@ -108,6 +108,8 @@ final readonly class GitHubReplacementDeclaration {
 		if ( ! preg_match( '/\A(?:[a-zA-Z0-9][a-zA-Z0-9_.-]*\/)?[a-zA-Z0-9][a-zA-Z0-9_.-]*\.php\z/D', $basename ) ) {
 			throw new \InvalidArgumentException( 'Invalid plugin basename.' );
 		}
+		// A plugin-directory symlink may have changed in another process since Preview.
+		clearstatcache( true );
 		$root = realpath( $plugin_root );
 		if ( false === $root ) {
 			throw new \InvalidArgumentException( 'Plugin root is unavailable.' );

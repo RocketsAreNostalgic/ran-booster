@@ -589,6 +589,7 @@ final class ReleaseManagementDisplay {
 			<input type="hidden" name="release_id" value="">
 			<input type="hidden" name="release_tag" value="">
 			<input type="hidden" name="release_fingerprint" value="">
+			<input type="hidden" name="provider_expectation" value="">
 			<input type="hidden" name="release_channel" value="stable">
 			<?php
 			$this->render_release_track(

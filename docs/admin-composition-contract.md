@@ -175,8 +175,8 @@ one registered provider aggregate supplies the complete release capability set
 required by the operation. It does not publish a prospective-release marker or
 deliver the internal facade to another plugin.
 
-The internal `ProspectiveReleaseFacade::API_VERSION` is **8** for this naming
-composition; this is not a public plugin-delivery marker.
+The internal `ProspectiveReleaseFacade::API_VERSION` is **9** for destination selection
+continuity; this is not a public plugin-delivery marker.
 
 The facade accepts exactly:
 
@@ -191,7 +191,8 @@ $prospective->install(
 	$tag,
 	$expected_fingerprint,
 	$channel,
-	$nonce
+	$nonce,
+	$provider_expectation
 );
 ```
 
@@ -599,3 +600,11 @@ local unavailable message.
 
 Deactivating an add-on removes its contributions on the next request; every
 Core route and administration surface remains usable.
+
+Prospective API9 carries the destination-local `provider_expectation` from exact
+inspection to installation. GitHub uses Core's provider code, selection generation
+and implementation fingerprint; unaffected providers carry null. Installation
+requires this argument and an install nonce bound to the same context. Core checks
+it before repository resolution or credential/provider work. Inspection rechecks
+its captured selection before returning evidence. Review transport never invents
+a current context or exports this destination authority.

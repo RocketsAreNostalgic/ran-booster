@@ -170,7 +170,7 @@ try {
 			'credential_id' => '',
 			'branch'        => 'main',
 		);
-		$ran_booster_nonce   = static fn ( string $operation ): string => wp_create_nonce( $ran_booster_facade->nonce_action( $operation, $type ) );
+		$ran_booster_nonce   = static fn ( string $operation ): string => wp_create_nonce( $ran_booster_facade->nonce_action( $operation, $type, null ) );
 		$ran_booster_before  = $ran_booster_counts;
 		$ran_booster_list    = $ran_booster_facade->list_candidates( $type, $ran_booster_request, 'stable', $ran_booster_nonce( 'list_candidates' ) );
 		$ran_booster_successful( $ran_booster_list, 'release_candidates_available' );
@@ -185,7 +185,7 @@ try {
 		$ran_booster_veto       = static fn (): WP_Error => new WP_Error( 'c4_post_acquisition_veto' );
 		add_filter( 'upgrader_pre_install', $ran_booster_veto, PHP_INT_MIN, 2 ); // @phpstan-ignore arguments.count (WordPress supplies the documented hook arguments; this controlled callback deliberately consumes only the needed subset.)
 		try {
-			$ran_booster_failed = $ran_booster_facade->install( $type, $ran_booster_request, '42', 'v2.0.0', $ran_booster_fingerprint, 'stable', $ran_booster_nonce( 'install' ) ); } finally {
+			$ran_booster_failed = $ran_booster_facade->install( $type, $ran_booster_request, '42', 'v2.0.0', $ran_booster_fingerprint, 'stable', wp_create_nonce( $ran_booster_facade->nonce_action( 'install', $type, $ran_booster_inspection->data()['provider_expectation'] ) ), $ran_booster_inspection->data()['provider_expectation'] ); } finally {
 			remove_filter( 'upgrader_pre_install', $ran_booster_veto, PHP_INT_MIN ); }
 			$ran_booster_assert( ! $ran_booster_failed->successful() && $ran_booster_counts['zip'] === $ran_booster_before['zip'] + 2 && ! file_exists( $ran_booster_fixture['directory'] ) && ! is_link( $ran_booster_fixture['directory'] ), 'Post-acquisition failure mutated or reused inspection bytes.' );
 			global $wpdb;
@@ -194,7 +194,7 @@ try {
 			// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Capture the expected fixture value before WordPress filters can mutate global test state.
 			$ran_booster_assert( $ran_booster_selected_theme === get_stylesheet() && ! ( 'plugin' === $type && is_plugin_active( $ran_booster_identifier ) ), 'Failed first install changed activation.' );
 			$ran_booster_clean_streams();
-			$ran_booster_result = $ran_booster_facade->install( $type, $ran_booster_request, '42', 'v2.0.0', $ran_booster_fingerprint, 'stable', $ran_booster_nonce( 'install' ) );
+			$ran_booster_result = $ran_booster_facade->install( $type, $ran_booster_request, '42', 'v2.0.0', $ran_booster_fingerprint, 'stable', wp_create_nonce( $ran_booster_facade->nonce_action( 'install', $type, $ran_booster_inspection->data()['provider_expectation'] ) ), $ran_booster_inspection->data()['provider_expectation'] );
 			$ran_booster_successful( $ran_booster_result, 'installed' );
 			$ran_booster_assert( $ran_booster_counts['zip'] === $ran_booster_before['zip'] + 3, 'Installation must acquire exactly one fresh ZIP without pre-inspection.' );
 			$ran_booster_assert( hash_equals( hash( 'sha256', $ran_booster_fixture['contents'] ), (string) hash_file( 'sha256', $ran_booster_fixture['directory'] . '/' . $ran_booster_fixture['metadata'] ) ), 'Installed prospective bytes differ from the verified ZIP.' );

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\AddOn\ReleaseTracking;
 
 use InvalidArgumentException;
+use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\Admin\PackageRepositoryRequestResolver;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\ReleaseArtifactCleanupFailure;
@@ -65,6 +66,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		private ThemeRepository $themes,
 		private WordPressUpdaterLock $updater_lock,
 		private ProviderRegistry $providers,
+		private \RAN\RepositoryProvider\GitHubProviderSelection $github_selection,
 		?callable $can_manage = null,
 		?callable $verify_nonce = null,
 		?callable $current_user_id = null,
@@ -92,13 +94,18 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 	}
 
 
-	public function nonce_action( string $operation, string $type ): string {
+	/** @param array<string,mixed>|null $provider_expectation */
+	public function nonce_action( string $operation, string $type, ?array $provider_expectation ): string {
 		if ( ! in_array( $operation, array( 'list_candidates', 'inspect', 'install' ), true )
 			|| ! in_array( $type, array( 'plugin', 'theme' ), true ) ) {
 			throw new InvalidArgumentException( 'The prospective release nonce scope is invalid.' );
 		}
 
-		return 'ran-booster-prospective-release-' . $operation . '-' . $type;
+		$context = null === $provider_expectation ? null : GitHubProviderSelection::normalize_expectation( $provider_expectation );
+		if ( 'install' !== $operation && null !== $context ) {
+			throw new InvalidArgumentException( 'The prospective review scope is invalid.' );
+		}
+		return 'ran-booster-prospective-release-' . $operation . '-' . $type . ( 'install' === $operation ? '-' . hash( 'sha256', (string) wp_json_encode( $context ) ) : '' );
 	}
 
 
@@ -161,6 +168,10 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			return ProspectiveReleaseResult::failure( 'forbidden' );
 		}
 
+		$expectation = 'gh' === ( $repository_request['provider'] ?? null ) ? $this->github_selection->expectation() : null;
+		if ( 'gh' === ( $repository_request['provider'] ?? null ) && null === $expectation ) {
+			return ProspectiveReleaseResult::failure( 'provider_unavailable' );
+		}
 		$capabilities = $this->release_inspection_capabilities( $repository_request );
 		if ( null === $capabilities ) {
 			return ProspectiveReleaseResult::failure( 'unsupported_provider' );
@@ -182,22 +193,28 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 				throw RepositoryReleaseInspectionRejected::invalid_release();
 			}
 
+			$details_url = $capabilities['metadata']->release_details_url( $repository, $inspection->tag );
+			$refusal     = null === $expectation ? null : $this->github_selection->review_refusal( $expectation );
+			if ( null !== $refusal ) {
+				return ProspectiveReleaseResult::failure( $refusal );
+			}
 			return ProspectiveReleaseResult::success(
 				'release_ready',
 				array(
 
-					'release_id'   => $release_id,
-					'tag'          => $inspection->tag,
-					'version'      => $inspection->version,
+					'release_id'           => $release_id,
+					'tag'                  => $inspection->tag,
+					'version'              => $inspection->version,
 
-					'commit'       => $inspection->provider_commit_id,
-					'details_url'  => $capabilities['metadata']->release_details_url( $repository, $inspection->tag ),
+					'commit'               => $inspection->provider_commit_id,
+					'details_url'          => $details_url,
+					'provider_expectation' => $expectation,
 
-					'package_root' => $inspection->package_root,
+					'package_root'         => $inspection->package_root,
 
-					'main_file'    => $inspection->main_file,
-					'fingerprint'  => $inspection->fingerprint,
-					'channel'      => $channel,
+					'main_file'            => $inspection->main_file,
+					'fingerprint'          => $inspection->fingerprint,
+					'channel'              => $channel,
 				)
 			);
 		} catch ( RepositoryReleaseInspectionRejected $rejection ) {
@@ -214,6 +231,10 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		}
 	}
 
+	/** @param array<string,mixed> $repository_request
+	 * @param 'stable'|'prerelease' $channel
+	 * @param array<string,mixed>|null $provider_expectation
+	 */
 	public function install(
 		string $type,
 		array $repository_request,
@@ -221,19 +242,29 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		string $tag,
 		string $expected_fingerprint,
 		string $channel,
-		string $nonce
+		string $nonce,
+		?array $provider_expectation
 	): ProspectiveReleaseResult {
 		if ( ! RuntimeSupport::current()->allows_managed_operations() ) {
 			return ProspectiveReleaseResult::failure( UnsupportedRuntimeException::ERROR_CODE );
 		}
 
 		if ( ! $this->valid_channel( $channel )
-			|| ! $this->authorized( 'install', $type, $nonce )
+			|| ! $this->authorized( 'install', $type, $nonce, $provider_expectation )
 
 			|| ! $this->valid_exact_release( $release_id, $tag )
 
 			|| ! $this->valid_fingerprint( $expected_fingerprint ) ) {
 			return ProspectiveReleaseResult::failure( 'forbidden' );
+		}
+
+		try {
+			$refusal = 'gh' === ( $repository_request['provider'] ?? null ) ? $this->github_selection->review_refusal( $provider_expectation ) : ( null === $provider_expectation ? null : 'invalid_request' );
+		} catch ( InvalidArgumentException ) {
+			return ProspectiveReleaseResult::failure( 'invalid_request' );
+		}
+		if ( null !== $refusal ) {
+			return ProspectiveReleaseResult::failure( $refusal );
 		}
 
 		$acquirer = $this->release_acquirer( $repository_request );
@@ -301,12 +332,17 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 	): ProspectiveReleaseResult {
 		$artifact            = null;
 		$lock_token          = null;
+		$native_owner        = null;
+		$identifier          = '';
 		$outcome             = ProspectiveReleaseResult::failure( 'install_failed' );
 		$finalization_failed = false;
 
 		try {
-			$identifier = $release->identifier( $type );
-			$repository = $this->managed_repository( $repository );
+			$identifier    = $release->identifier( $type );
+			$package_root  = $release->package_root();
+			$metadata_file = $release->main_file();
+			$version       = $release->version();
+			$repository    = $this->managed_repository( $repository );
 			do {
 				$availability = $this->release_source_available( $type, $identifier, $repository );
 				if ( true !== $availability ) {
@@ -314,8 +350,8 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 					break;
 				}
 				$configuration = new ManagedReleaseConfiguration(
-					$release->package_root(),
-					$release->main_file(),
+					$package_root,
+					$metadata_file,
 					$channel
 				);
 				$user_id       = ( $this->current_user_id )();
@@ -333,10 +369,27 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 					$outcome = ProspectiveReleaseResult::failure( 'package_already_exists' );
 				} else {
 					PackageMutationGuard::assert_filesystem_mutation_allowed();
-					$artifact             = ReleaseArtifactCustodian::claim( $release->handoff_to_core() );
+					$artifact = ReleaseArtifactCustodian::claim( $release->handoff_to_core() );
+					// Handoff is foreign code: repeat admission after custody with only captured scalars.
+					if ( $lock_token !== $this->updater_lock->current_token() ) {
+						throw new \RuntimeException( 'The prospective release updater lock changed.' );
+					}
+					PackageMutationGuard::assert_filesystem_mutation_allowed();
+					$availability = $this->release_source_available( $type, $identifier, $repository );
+					if ( true !== $availability ) {
+						$outcome = ProspectiveReleaseResult::failure( false === $availability ? 'release_repository_conflict' : 'release_unavailable' );
+						break;
+					}
+					if ( $this->is_installed( $type, $identifier ) || $this->has_management_record( $type, $identifier ) || $this->is_active( $type, $identifier ) ) {
+						$outcome = ProspectiveReleaseResult::failure( 'package_already_exists' );
+						break;
+					}
+					if ( 'gh' === (string) $repository->provider ) {
+						$native_owner = $this->github_selection->begin_native_mutation( $type, $identifier, fn (): bool => $lock_token === $this->updater_lock->current_token() );
+					}
 					$result               = 'plugin' === $type
-						? $this->executor->install_plugin( $artifact, $release->package_root(), null )
-						: $this->executor->install_theme( $artifact, $release->package_root(), null );
+						? $this->executor->install_plugin( $artifact, $package_root, null )
+						: $this->executor->install_theme( $artifact, $package_root, null );
 					$exists               = $this->installed_state_or_null( $type, $identifier );
 					$package              = true === $exists ? $this->installed_package_or_null( $type, $identifier ) : null;
 					$is_active            = $this->active_state_or_null( $type, $identifier );
@@ -349,7 +402,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 					} elseif ( null !== $package ) {
 						$actual_version = $package->get_version();
 						if ( ! $result->is_successful()
-							|| ! hash_equals( $release->version(), $actual_version )
+							|| ! hash_equals( $version, $actual_version )
 							|| ! $activation_unchanged ) {
 							$outcome = $this->installed_but_unmanaged( $identifier, $actual_version );
 						} else {
@@ -368,7 +421,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 									'installed',
 									array(
 										'identifier' => $identifier,
-										'version'    => $release->version(),
+										'version'    => $version,
 									)
 								)
 								: $this->installed_but_unmanaged( $identifier, $actual_version );
@@ -387,7 +440,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 							'management_state_uncertain',
 							array(
 								'identifier' => $identifier,
-								'version'    => $release->version(),
+								'version'    => $version,
 							)
 						);
 					}
@@ -422,6 +475,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 					array( 'step' => 'prospective_release_cleanup' )
 				);
 			}
+
 			if ( null !== $lock_token ) {
 				try {
 
@@ -439,6 +493,13 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 						$failure,
 						array( 'step' => 'prospective_release_lock_release' )
 					);
+				}
+			}
+			if ( null !== $native_owner ) {
+				try {
+					$this->github_selection->complete_native_mutation( $native_owner, $type, $identifier, ! $finalization_failed && $outcome->successful() ? 'verified_success' : 'uncertain' );
+				} catch ( Throwable ) {
+					$finalization_failed = true;
 				}
 			}
 		}
@@ -517,12 +578,14 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			: $this->themes->installed_theme_from_stylesheet( $identifier );
 	}
 
+	/** @phpstan-impure Current installed state can change during foreign artifact callbacks. */
 	private function is_installed( string $type, string $identifier ): bool {
 		return 'plugin' === $type
 			? $this->plugins->is_installed( $identifier )
 			: $this->themes->is_installed( $identifier );
 	}
 
+	/** @phpstan-impure Current adoption state can change during foreign artifact callbacks. */
 	private function has_management_record( string $type, string $identifier ): bool {
 		return 'plugin' === $type
 			? $this->plugins->has_management_record( $identifier )
@@ -593,14 +656,18 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		return false;
 	}
 
-	private function authorized( string $operation, string $type, string $nonce ): bool {
+	/** @param array<string,mixed>|null $provider_expectation */
+	private function authorized( string $operation, string $type, string $nonce, ?array $provider_expectation = null ): bool {
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true )
 			|| ! ( $this->can_manage )( $type ) ) {
 			return false;
 		}
 
-		return '' !== $nonce
-			&& ( $this->verify_nonce )( $nonce, $this->nonce_action( $operation, $type ) );
+		try {
+			return '' !== $nonce && ( $this->verify_nonce )( $nonce, $this->nonce_action( $operation, $type, $provider_expectation ) );
+		} catch ( InvalidArgumentException ) {
+			return false;
+		}
 	}
 
 

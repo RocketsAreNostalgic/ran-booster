@@ -22,15 +22,22 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		'tests/RepositoryProvider/GitHubArchiveHostIntegrationTest.php',
 		'tests/RepositoryProvider/GitHubCredentialPolicyHostIntegrationTest.php',
 		'tests/RepositoryProvider/GitHubExternalExtensionParityTest.php',
+		// Host composition retains the actual provider's bundled compatibility baseline.
+		'tests/RepositoryProvider/HostSelectionDatabase.php',
 		'tests/RepositoryProvider/Support/ShippedSecretPolicyCatalog.php',
 		'tests/Runtime/ReleaseManagementCutoverBootstrapTest.php',
 		// Exercises Core's disclosure fence against the actual locked credential policy.
 		'tests/Secrets/GitHubAccessPolicySpy.php',
+		// Package persistence fixtures initialize the actual bundled selection contract.
+		'tests/Storage/PackagePersistenceFailureTest.php',
+		'tests/Storage/PackageProviderIdentityTest.php',
 		'tests/Webhook/SignedWebhookVerifierTest.php',
 		'tests/Webhook/WebhookProcessorTest.php',
 		'tests/WordPress/ManagedReleaseRuntimeTest.php',
 		'tests/WordPress/github-provider-installed-readback.php',
 		'tests/WordPress/native-lifecycle-installed-smoke.php',
+		// Fresh lifecycle proof binds the actual bundled package contract, without vendor operation calls.
+		'tests/WordPress/selection-install-lifecycle-proof.php',
 		'tests/fixtures/ran-booster-github-provider-extension/src/Plugin.php',
 	);
 
@@ -95,8 +102,14 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 			$source = file_get_contents( $path );
 			self::assertIsString( $source );
 			self::assertStringNotContainsString( 'RAN\\BoosterGitHubProvider\\V1', $source, $path );
-			self::assertStringNotContainsString( 'GitHubProvider', $source, $path );
-			self::assertDoesNotMatchRegularExpression( "/(?:===|!==)\\s*['\"]gh['\"]|['\"]gh['\"]\\s*(?:===|!==)/", $source, $path );
+			self::assertDoesNotMatchRegularExpression( '/\\bGitHubProvider\\b/', $source, $path );
+			// These two Core owners enforce the approved GitHub selection/native authority;
+			// vendor implementation imports and generic dispatch remain prohibited above/below.
+			if ( in_array( $path, array( $root . '/RAN/WordPress/ManagedReleaseTargetRegistrar.php', $root . '/RAN/AddOn/ReleaseTracking/NativeProspectiveReleaseFacade.php' ), true ) ) {
+				self::assertStringContainsString( 'RAN\\RepositoryProvider\\GitHubProviderSelection', $source, $path );
+			} else {
+				self::assertDoesNotMatchRegularExpression( "/(?:===|!==)\\s*['\"]gh['\"]|['\"]gh['\"]\\s*(?:===|!==)/", $source, $path );
+			}
 			self::assertStringNotContainsString( 'dispatchCapability', $source, $path );
 			self::assertStringNotContainsString( 'executeCapability', $source, $path );
 			self::assertStringNotContainsString( 'capabilityDescriptors', $source, $path );

@@ -65,6 +65,8 @@ use RAN\Storage\RepositorySourceGuard;
 
 
 final class NativeProspectiveReleaseFacadeTest extends TestCase {
+	use \RAN\Tests\Support\GitHubSelectionFixture;
+
 
 	private const FINGERPRINT = 'v2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
@@ -73,7 +75,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	private ?ProspectiveSourceGuardDatabase $source_guard_database = null;
 
 	public function test_prospective_facade_api_version_tracks_the_opaque_release_id_contract(): void {
-		self::assertSame( 8, ProspectiveReleaseFacade::API_VERSION );
+		self::assertSame( 9, ProspectiveReleaseFacade::API_VERSION );
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
@@ -83,6 +85,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		ProspectiveRepositoryProvider::$inspection_calls  = 0;
 		ProspectiveRepositoryProvider::$acquisition_calls = 0;
 		ProspectiveRepositoryProvider::$metadata_calls    = 0;
+		ProspectiveRepositoryProvider::$on_inspect        = null;
 		ProspectiveRepositoryProvider::$inspection_input  = array();
 		ProspectiveRepositoryProvider::$acquisition_input = array();
 		ProspectiveRepositoryProvider::$acquisition       = null;
@@ -193,7 +196,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$facade = $this->facade( new ProspectivePluginRepository(), new ProspectiveExecutor() );
 
 		$this->expectException( \InvalidArgumentException::class );
-		$facade->nonce_action( 'discover', 'plugin' );
+		$facade->nonce_action( 'discover', 'plugin', null );
 	}
 
 	public function test_existing_release_owner_stops_prospective_acquisition_before_filesystem_mutation(): void {
@@ -229,7 +232,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			source_guard: new RepositorySourceGuard( $database, $this->createStub( Database::class ) )
 		);
 
-		$result = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce' );
+		$result = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce', $this->expectation_for( $this->repository_request() ) );
 
 		self::assertSame( 'release_repository_conflict', $result->code() );
 		self::assertSame( 0, ProspectiveRepositoryProvider::$acquisition_calls );
@@ -262,7 +265,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			source_guard: new RepositorySourceGuard( $database, $this->createStub( Database::class ) )
 		);
 
-		$result = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce' );
+		$result = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce', $this->expectation_for( $this->repository_request() ) );
 
 		self::assertSame( 'release_unavailable', $result->code() );
 		self::assertSame( 0, ProspectiveRepositoryProvider::$acquisition_calls );
@@ -287,7 +290,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 				'v1.2.3',
 				self::FINGERPRINT,
 				'stable',
-				'valid-nonce'
+				'valid-nonce',
+				$this->expectation_for( $repository )
 			),
 		);
 
@@ -347,7 +351,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 				'v1.2.3',
 				self::FINGERPRINT,
 				'stable',
-				'valid-nonce'
+				'valid-nonce',
+				$this->expectation_for( $repository )
 			),
 		);
 
@@ -396,7 +401,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertFalse( $result->successful() );
@@ -573,7 +579,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( array( 'gh' ), $facade->supported_provider_codes( 'plugin' ) );
 		self::assertSame(
 			'ran-booster-prospective-release-list_candidates-plugin',
-			$facade->nonce_action( 'list_candidates', 'plugin' )
+			$facade->nonce_action( 'list_candidates', 'plugin', null )
 		);
 		$result = $facade->list_candidates(
 			'plugin',
@@ -657,7 +663,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 				'v1.2.3',
 				self::FINGERPRINT,
 				'preview', // @phpstan-ignore argument.type (Deliberately invalid channel proves rejection before prospective release work.)
-				'valid-nonce'
+				'valid-nonce',
+				$this->expectation_for( $this->repository_request() )
 			),
 		);
 
@@ -680,7 +687,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertFalse( $result->successful() );
@@ -703,7 +711,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertFalse( $result->successful() );
@@ -728,7 +737,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertFalse( $result->successful() );
@@ -753,7 +763,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertFalse( $result->successful() );
@@ -764,6 +775,55 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 1, $this->acquisition->discard_calls );
 		self::assertSame( 1, $lock->release_calls );
 		self::assertFileDoesNotExist( (string) $this->artifact_path );
+	}
+
+	public function test_handoff_source_conflict_refuses_before_marker_and_executor_and_cleans_custody(): void {
+		$plugins  = new ProspectivePluginRepository();
+		$executor = new ProspectiveExecutor();
+		$lock     = new ProspectiveUpdaterLock();
+		$facade   = $this->facade( $plugins, $executor, updater_lock: $lock );
+		$this->set_ready_release();
+		self::assertNotNull( $this->acquisition );
+		$this->acquisition->on_handoff = function (): void {
+			self::assertNotNull( $this->source_guard_database );
+			$this->source_guard_database->rows = array(
+				(object) array(
+					'type'                   => 2,
+					'package'                => 'other-theme',
+					'source'                 => PackageSource::RELEASE_ASSET->value,
+					'provider'               => 'gh',
+					'provider_repository_id' => '123456789',
+				),
+			);
+		};
+		$result                        = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce' );
+		self::assertSame( 'release_repository_conflict', $result->code() );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 0, $plugins->adoption_calls );
+		self::assertSame( 1, $lock->release_calls );
+		self::assertFileDoesNotExist( (string) $this->artifact_path );
+		self::assertNotNull( $this->native_selection_store );
+		self::assertArrayNotHasKey( 'native_mutation', $this->native_selection_store->read() );
+	}
+
+	public function test_handoff_target_creation_refuses_before_marker_and_executor_and_cleans_custody(): void {
+		$plugins  = new ProspectivePluginRepository();
+		$executor = new ProspectiveExecutor();
+		$lock     = new ProspectiveUpdaterLock();
+		$facade   = $this->facade( $plugins, $executor, updater_lock: $lock );
+		$this->set_ready_release();
+		self::assertNotNull( $this->acquisition );
+		$this->acquisition->on_handoff = static function () use ( $plugins ): void {
+			$plugins->installed = true;
+		};
+		$result                        = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce' );
+		self::assertSame( 'package_already_exists', $result->code() );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 0, $plugins->adoption_calls );
+		self::assertSame( 1, $lock->release_calls );
+		self::assertFileDoesNotExist( (string) $this->artifact_path );
+		self::assertNotNull( $this->native_selection_store );
+		self::assertArrayNotHasKey( 'native_mutation', $this->native_selection_store->read() );
 	}
 
 	public function test_successful_install_uses_core_executor_and_adopts_release_asset_with_manual_policy(): void {
@@ -780,7 +840,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			self::FINGERPRINT,
 			'prerelease',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertTrue( $result->successful() );
@@ -823,6 +884,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 1, $lock->acquire_calls );
 		self::assertSame( 1, $lock->release_calls );
 		self::assertFileDoesNotExist( (string) $this->artifact_path );
+		self::assertNotNull( $this->native_selection_store );
+		self::assertArrayNotHasKey( 'native_mutation', $this->native_selection_store->read() );
 	}
 
 	public function test_opaque_release_id_propagates_exactly_through_facade_inspection_and_installation(): void {
@@ -852,7 +915,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			(string) ( $inspection->data()['fingerprint'] ?? '' ),
 			'stable',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertTrue( $installation->successful() );
@@ -877,15 +941,16 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 'release_ready', $result->code() );
 		self::assertSame(
 			array(
-				'release_id'   => '42',
-				'tag'          => 'v1.2.3',
-				'version'      => '1.2.3',
-				'commit'       => str_repeat( 'a', 40 ),
-				'details_url'  => 'https://github.com/owner/example/releases/tag/v1.2.3',
-				'package_root' => 'example',
-				'main_file'    => 'example.php',
-				'fingerprint'  => self::FINGERPRINT,
-				'channel'      => 'stable',
+				'release_id'           => '42',
+				'tag'                  => 'v1.2.3',
+				'version'              => '1.2.3',
+				'commit'               => str_repeat( 'a', 40 ),
+				'details_url'          => 'https://github.com/owner/example/releases/tag/v1.2.3',
+				'provider_expectation' => $this->github_selection()->expectation(),
+				'package_root'         => 'example',
+				'main_file'            => 'example.php',
+				'fingerprint'          => self::FINGERPRINT,
+				'channel'              => 'stable',
 			),
 			$result->data()
 		);
@@ -1048,7 +1113,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			'v2:' . str_repeat( 'b', 64 ),
 			'stable',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertFalse( $result->successful() );
@@ -1074,7 +1140,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertFalse( $result->successful() );
@@ -1102,7 +1169,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertFalse( $result->successful() );
@@ -1144,7 +1212,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertFalse( $result->successful() );
@@ -1187,7 +1256,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertFalse( $result->successful() );
@@ -1210,7 +1280,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$this->set_ready_release();
 		$facade = $this->facade( $plugins, $executor, 7, $lock, null, $source_guard );
 
-		$result = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce' );
+		$result = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce', $this->expectation_for( $this->repository_request() ) );
 
 		self::assertSame( 'release_unavailable', $result->code() );
 		self::assertSame( 0, $lock->acquire_calls );
@@ -1226,7 +1296,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$this->set_ready_release();
 		$facade = $this->facade( $plugins, $executor, 7, $lock, null, $source_guard );
 
-		$result = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce' );
+		$result = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce', $this->expectation_for( $this->repository_request() ) );
 
 		self::assertSame( 'release_unavailable', $result->code() );
 		self::assertSame( 1, $lock->acquire_calls );
@@ -1250,7 +1320,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertTrue( $result->successful() );
@@ -1275,7 +1346,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertFalse( $result->successful() );
@@ -1298,7 +1370,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertFalse( $result->successful() );
@@ -1330,7 +1403,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertFalse( $result->successful() );
@@ -1354,12 +1428,15 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'installed_but_unmanaged', $result->code() );
 		self::assertSame( 0, $plugins->adoption_calls );
+		self::assertNotNull( $this->native_selection_store );
+		self::assertArrayHasKey( 'native_mutation', $this->native_selection_store->read() );
 	}
 
 	public function test_core_failure_returns_ordinary_failure_only_when_target_is_proven_absent(): void {
@@ -1377,7 +1454,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertFalse( $result->successful() );
@@ -1403,7 +1481,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertFalse( $result->successful() );
@@ -1426,7 +1505,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertFalse( $result->successful() );
@@ -1450,7 +1530,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertFalse( $result->successful() );
@@ -1481,7 +1562,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertFalse( $result->successful() );
@@ -1515,7 +1597,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			'v1.2.3',
 			self::FINGERPRINT,
 			'stable',
-			'valid-nonce'
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
 		);
 
 		self::assertFalse( $result->successful() );
@@ -1532,6 +1615,66 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( PackageSource::RELEASE_ASSET, $plugins->adopted_package?->get_source() );
 		self::assertSame( DeploymentPolicy::MANUAL, $plugins->adopted_package->get_deployment_policy() );
 		self::assertFileDoesNotExist( (string) $this->artifact_path );
+	}
+
+	public function test_new_request_selection_change_refuses_before_resolution_or_acquisition(): void {
+		$selection = $this->github_selection();
+		$reviewed  = $selection->expectation();
+		self::assertNotNull( $this->native_selection_store );
+		$state = $this->native_selection_store->read();
+		$next  = $state;
+		++$next['selection_generation'];
+		$next['declaration']['implementation_id'] = 'native-test-b';
+		self::assertTrue( $this->native_selection_store->compare_and_swap( $state, $next ) );
+		$this->native_selection = new \RAN\RepositoryProvider\GitHubProviderSelection( $this->native_selection_store, dirname( __DIR__ ) . '/WordPress/fixtures/ran-booster-managed-active', new \RAN\RepositoryProvider\GitHubReplacementDeclaration( $next['declaration'] ) );
+		$registry               = new ProviderRegistry( array( new ProspectiveRepositoryProvider() ) );
+		$this->native_selection->bind_registry( $registry );
+		$this->native_selection->complete_collection();
+		$registry->seal();
+		$facade = $this->facade( new ProspectivePluginRepository(), new ProspectiveExecutor() );
+		$result = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce', $reviewed );
+		self::assertSame( 'provider_selection_changed', $result->code() );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$resolve_calls + ProspectiveRepositoryProvider::$acquisition_calls );
+	}
+
+	public function test_missing_or_malformed_context_refuses_before_provider_work(): void {
+		$facade = $this->facade( new ProspectivePluginRepository(), new ProspectiveExecutor() );
+		foreach ( array( null, array(), array( 'provider_code' => 'bb' ) ) as $expectation ) {
+			$result = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce', $expectation );
+			self::assertFalse( $result->successful() );
+		}
+		self::assertSame( 0, ProspectiveRepositoryProvider::$resolve_calls + ProspectiveRepositoryProvider::$acquisition_calls );
+	}
+
+	public function test_inspection_selection_drift_never_publishes_ready_evidence(): void {
+		$facade                                    = $this->facade( new ProspectivePluginRepository(), new ProspectiveExecutor() );
+		ProspectiveRepositoryProvider::$on_inspect = function (): void {
+			self::assertNotNull( $this->native_selection_store );
+			$state = $this->native_selection_store->read();
+			$next  = $state;
+			++$next['selection_generation'];
+			$this->native_selection_store->compare_and_swap( $state, $next );
+		};
+		$result                                    = $facade->inspect( 'plugin', $this->repository_request(), '42', 'v1.2.3', 'stable', 'valid-nonce' );
+		self::assertSame( 'provider_unavailable', $result->code() );
+		self::assertSame( array(), $result->data() );
+	}
+
+	public function test_install_nonce_binds_exact_review_expectation(): void {
+		$facade = $this->facade( new ProspectivePluginRepository(), new ProspectiveExecutor() );
+		$first  = $this->github_selection()->expectation();
+		self::assertNotNull( $first );
+		$second = $first;
+		++$second['selection_generation'];
+		self::assertNotSame( $facade->nonce_action( 'install', 'plugin', $first ), $facade->nonce_action( 'install', 'plugin', $second ) );
+		self::assertNotSame( $facade->nonce_action( 'install', 'plugin', $first ), $facade->nonce_action( 'install', 'plugin', null ) );
+	}
+
+	/** @param array<string,mixed> $repository
+	 * @return array<string,mixed>|null
+	 */
+	private function expectation_for( array $repository ): ?array {
+		return 'gh' === ( $repository['provider'] ?? null ) ? $this->github_selection()->expectation() : null;
 	}
 
 	private function set_ready_release(): void {
@@ -1576,6 +1719,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			new ProspectiveThemeRepository(),
 			$updater_lock ?? new ProspectiveUpdaterLock(),
 			$registry,
+			$this->github_selection(),
 			static fn ( string $type ): bool => 'plugin' === $type,
 			static fn ( string $nonce, string $action ): bool => 'valid-nonce' === $nonce
 					&& str_starts_with( $action, 'ran-booster-prospective-release-' ),
@@ -1605,6 +1749,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 final class ProspectiveRepositoryProvider implements RepositoryProvider, RepositoryReleaseCandidateListing, RepositoryReleaseInspector, RepositoryReleaseAcquirer, RepositoryReleaseMetadata, RepositoryReleaseNativeTargets {
 	private const EXPECTED_FINGERPRINT = 'v2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
+	public static ?\Closure $on_inspect                                 = null;
 	public static int $resolve_calls                                    = 0;
 	public static int $listing_calls                                    = 0;
 	public static int $inspection_calls                                 = 0;
@@ -1726,6 +1871,7 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 		string $channel
 	): RepositoryReleaseInspection {
 		++self::$inspection_calls;
+		self::$on_inspect?->__invoke();
 		self::$inspection_input = array(
 			'package_type' => $package_type,
 			'repository'   => $repository,
@@ -2014,6 +2160,7 @@ final class ProspectiveRepositoryReleaseArtifact implements RepositoryReleaseArt
 	public int $discard_calls          = 0;
 	public bool $discard_result        = true;
 	public ?Throwable $handoff_failure = null;
+	public ?\Closure $on_handoff       = null;
 	private bool $handed_off           = false;
 	private bool $discarded            = false;
 
@@ -2049,6 +2196,9 @@ final class ProspectiveRepositoryReleaseArtifact implements RepositoryReleaseArt
 			throw new RuntimeException( 'The release artifact is unavailable.' );
 		}
 		++$this->handoff_calls;
+		if ( null !== $this->on_handoff ) {
+			( $this->on_handoff )();
+		}
 		if ( null !== $this->handoff_failure ) {
 			throw $this->handoff_failure;
 		}
@@ -2202,6 +2352,10 @@ final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 	public bool $throw_on_acquire = false;
 	public bool $throw_on_release = false;
 	public ?\Closure $on_acquire  = null;
+
+	public function current_token(): ?string {
+		return $this->acquire_calls > $this->release_calls ? 'test-lock-token' : null;
+	}
 
 	public function acquire(): string {
 		++$this->acquire_calls;

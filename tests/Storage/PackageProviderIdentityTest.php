@@ -11,6 +11,8 @@ use RAN\Package;
 use RAN\PackageSource;
 use RAN\Storage\AbstractPackageRepository;
 use RAN\Storage\Database;
+use RAN\BoosterGitHubProvider\V1\GitHubProvider;
+use RAN\RepositoryProvider\GitHubReplacementDeclaration;
 use RAN\Storage\PackageMutationResult;
 use RAN\Storage\PackageMutationStatus;
 use RAN\Storage\PackageStorageFailure;
@@ -21,6 +23,12 @@ use Throwable;
 require_once __DIR__ . '/StorageTestEnvironment.php';
 
 final class PackageProviderIdentityTest extends RANBoosterTestCase {
+
+	private function install_fixture(): void {
+		$GLOBALS['ran_booster_storage_test_options'][ Database::VERSION_OPTION ] = false;
+		$declaration = new GitHubReplacementDeclaration( array_merge( array( 'plugin_basename' => 'ran-booster/ran-booster.php' ), GitHubProvider::compatibility_contract() ) );
+		( new Database( bundled_declaration: $declaration ) )->install();
+	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
@@ -686,7 +694,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 
 	public function test_unhealthy_schema_refuses_recovery_before_guard_or_deletion(): void {
 		global $wpdb;
-		( new Database() )->install();
+		$this->install_fixture();
 		$storage = new ProviderIdentityTestRepository( new Database() );
 		$package = $this->package( 'example/example.php' );
 		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', '123', 'main' ) );

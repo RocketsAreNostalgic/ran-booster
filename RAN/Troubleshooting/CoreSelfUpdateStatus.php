@@ -30,17 +30,16 @@ final class CoreSelfUpdateStatus {
 		return array_merge(
 			$status,
 			array(
-				'updater_state'    => $this->safe_key( $updater_diagnostics['state'] ?? null ),
-				'updater_code'     => $this->safe_key( $updater_diagnostics['code'] ?? null ),
-				'selected_version' => $this->safe_version( $updater_diagnostics['selected_version'] ?? null ),
-				'offered_version'  => $this->safe_version( $updater_diagnostics['offered_version'] ?? null ),
-				'last_check'       => $this->safe_timestamp( $updater_diagnostics['last_check'] ?? null ),
-				'next_check'       => $this->safe_timestamp( $updater_diagnostics['next_check'] ?? null ),
+				'updater_state'   => $updater_diagnostics['state'] ?? null,
+				'updater_code'    => '' === ( $updater_diagnostics['code'] ?? '' ) ? null : $updater_diagnostics['code'],
+				'offered_version' => $this->safe_version( $updater_diagnostics['offered_version'] ?? null ),
+				'last_check'      => $updater_diagnostics['last_check'] ?? null,
+				'next_check'      => $updater_diagnostics['next_check'] ?? null,
 			)
 		);
 	}
 
-	/** @return array<string, mixed> */
+	/** @return array{state?:string,code?:string,offered_version?:string,last_check?:?int,next_check?:?int} */
 	private function target_diagnostics(): array {
 		if ( null === $this->target ) {
 			return $this->policy->allows_native_discovery()
@@ -73,20 +72,10 @@ final class CoreSelfUpdateStatus {
 		);
 	}
 
-	private function safe_key( mixed $value ): ?string {
-		return is_string( $value ) && 1 === preg_match( '/\A[a-z0-9_-]{1,80}\z/D', $value )
-			? $value
-			: null;
-	}
-
 	private function safe_version( mixed $value ): ?string {
 		return is_string( $value )
 			&& 1 === preg_match( '/\A[0-9A-Za-z][0-9A-Za-z.+-]{0,79}\z/D', $value )
 				? $value
 				: null;
-	}
-
-	private function safe_timestamp( mixed $value ): ?int {
-		return is_int( $value ) && 0 < $value ? $value : null;
 	}
 }

@@ -152,17 +152,16 @@ final class TroubleshootingViewTest extends TestCase {
 			'partial_reason'         => null,
 			'report'                 => '',
 			'core_self_update'       => array(
-				'requested_mode'   => 'auto',
-				'effective_mode'   => 'disabled',
-				'reason'           => 'source_checkout',
-				'marker_version'   => null,
-				'marker_commit'    => null,
-				'updater_state'    => 'inactive',
-				'updater_code'     => 'native_discovery_disabled',
-				'selected_version' => '1.5.0-beta.9',
-				'offered_version'  => null,
-				'last_check'       => null,
-				'next_check'       => null,
+				'requested_mode'  => 'auto',
+				'effective_mode'  => 'disabled',
+				'reason'          => 'source_checkout',
+				'marker_version'  => null,
+				'marker_commit'   => null,
+				'updater_state'   => 'inactive',
+				'updater_code'    => 'native_discovery_disabled',
+				'offered_version' => null,
+				'last_check'      => null,
+				'next_check'      => null,
 			),
 		);
 
@@ -195,17 +194,16 @@ final class TroubleshootingViewTest extends TestCase {
 			'partial_reason'         => null,
 			'report'                 => '',
 			'core_self_update'       => array(
-				'requested_mode'   => 'auto',
-				'effective_mode'   => 'enabled',
-				'reason'           => 'verified_release',
-				'marker_version'   => '1.2.3',
-				'marker_commit'    => str_repeat( 'a', 40 ),
-				'updater_state'    => 'unavailable',
-				'updater_code'     => 'github_updater_github_http_error',
-				'selected_version' => '1.5.0-beta.9',
-				'offered_version'  => null,
-				'last_check'       => 1_700_000_000,
-				'next_check'       => 1_700_000_900,
+				'requested_mode'  => 'auto',
+				'effective_mode'  => 'enabled',
+				'reason'          => 'verified_release',
+				'marker_version'  => '1.2.3',
+				'marker_commit'   => str_repeat( 'a', 40 ),
+				'updater_state'   => 'unavailable',
+				'updater_code'    => 'github_updater_github_http_error',
+				'offered_version' => null,
+				'last_check'      => 1_700_000_000,
+				'next_check'      => 1_700_000_900,
 			),
 		);
 
@@ -1490,8 +1488,8 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'data-credential-delete-modal', $html );
 		self::assertStringContainsString( 'aria-describedby="ran-booster-delete-access-modal-description"', $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="delete-access-profile"', $html );
-		self::assertStringContainsString( 'data-ran-booster-interaction-operation="core:save-access-profile"', $html );
-		self::assertStringContainsString( 'data-ran-booster-interaction-operation="core:delete-access-profile"', $html );
+		self::assertStringContainsString( 'hx-vals="{&quot;ran_booster_interaction[operation]&quot;:&quot;core:save-access-profile&quot;,&quot;ran_booster_interaction[target]&quot;:&quot;core_provider_profiles&quot;}"', $html );
+		self::assertStringContainsString( 'hx-vals="{&quot;ran_booster_interaction[operation]&quot;:&quot;core:delete-access-profile&quot;,&quot;ran_booster_interaction[target]&quot;:&quot;core_provider_profiles&quot;}"', $html );
 		self::assertSame( 2, substr_count( $html, 'hx-target="#ran-booster-provider-profile-region"' ) );
 		self::assertSame( 2, substr_count( $html, 'hx-select="#ran-booster-provider-profile-region"' ) );
 		self::assertStringContainsString( 'data-ran-booster-error-target="#ran-booster-access-profile-error"', $html );
@@ -1753,8 +1751,8 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Owner · workspace', $html );
 		self::assertStringContainsString( '>2 packages</td>', $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="delete-webhook-profile"', $html );
-		self::assertStringContainsString( 'data-ran-booster-interaction-operation="core:save-webhook-profile"', $html );
-		self::assertStringContainsString( 'data-ran-booster-interaction-operation="core:delete-webhook-profile"', $html );
+		self::assertStringContainsString( 'hx-vals="{&quot;ran_booster_interaction[operation]&quot;:&quot;core:save-webhook-profile&quot;,&quot;ran_booster_interaction[target]&quot;:&quot;core_provider_profiles&quot;}"', $html );
+		self::assertStringContainsString( 'hx-vals="{&quot;ran_booster_interaction[operation]&quot;:&quot;core:delete-webhook-profile&quot;,&quot;ran_booster_interaction[target]&quot;:&quot;core_provider_profiles&quot;}"', $html );
 		self::assertSame( 3, substr_count( $html, 'hx-target="#ran-booster-provider-profile-region"' ) );
 		self::assertSame( 3, substr_count( $html, 'hx-select="#ran-booster-provider-profile-region"' ) );
 		self::assertStringContainsString( 'data-ran-booster-error-target="#ran-booster-webhook-profile-error"', $html );

@@ -7,6 +7,7 @@ namespace RAN\Tests\AddOn\ReleaseTracking;
 use PHPUnit\Framework\TestCase;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingEligibility;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
+use RAN\RepositoryProvider\RepositoryReleaseWorkflowPreflight;
 
 final class ReleaseTrackingEligibilityTest extends TestCase {
 
@@ -76,6 +77,46 @@ final class ReleaseTrackingEligibilityTest extends TestCase {
 			'example',
 			reason_code: 'provider_secret_detail'
 		);
+	}
+
+	public function test_named_preflight_arguments_preserve_parent_and_package_facts(): void {
+		$preflight = new ReleaseTrackingPreflight(
+			reason_code: 'release_version_mismatch',
+			package_header_version: '1.2.0',
+			release_tag: 'v2.0.0',
+			release_url: 'https://example.com/releases/tag/v2.0.0',
+			latest_version: '2.0.0',
+			package_root: 'example',
+			code: ReleaseTrackingPreflight::RELEASE_VERSION_MISMATCH,
+			version_relationship: 'newer'
+		);
+
+		self::assertInstanceOf( RepositoryReleaseWorkflowPreflight::class, $preflight );
+		$this->assert_parent_preflight_facts( $preflight, 'release_version_mismatch', 'release_version_mismatch' );
+		self::assertFalse( $preflight->ready() );
+		self::assertSame( 'example', $preflight->package_root() );
+		self::assertSame( '2.0.0', $preflight->latest_version() );
+		self::assertSame( 'https://example.com/releases/tag/v2.0.0', $preflight->release_url() );
+		self::assertSame( 'v2.0.0', $preflight->release_tag() );
+		self::assertSame( '1.2.0', $preflight->package_header_version() );
+		self::assertSame( 'newer', $preflight->version_relationship() );
+	}
+
+	public function test_default_preflight_arguments_preserve_parent_facts_and_readiness(): void {
+		$preflight = new ReleaseTrackingPreflight( code: ReleaseTrackingPreflight::READY, package_root: 'example' );
+
+		$this->assert_parent_preflight_facts( $preflight, 'ready', '' );
+		self::assertTrue( $preflight->ready() );
+		self::assertSame( '', $preflight->latest_version() );
+		self::assertSame( '', $preflight->release_url() );
+		self::assertSame( '', $preflight->release_tag() );
+		self::assertSame( '', $preflight->package_header_version() );
+		self::assertSame( '', $preflight->version_relationship() );
+	}
+
+	private function assert_parent_preflight_facts( RepositoryReleaseWorkflowPreflight $preflight, string $code, string $reason_code ): void {
+		self::assertSame( $code, $preflight->code() );
+		self::assertSame( $reason_code, $preflight->reason_code() );
 	}
 
 	public function test_preflight_rejects_unsafe_release_urls(): void {

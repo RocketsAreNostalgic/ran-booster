@@ -26,9 +26,6 @@ final readonly class AdminInteractionOutcome {
 		private string $kind,
 		private string $message
 	) {
-		if ( ! in_array( $kind, array( self::SUCCESS, self::ACCEPTED, self::VALIDATION_FAILURE, self::UNEXPECTED_FAILURE ), true ) ) {
-			throw new InvalidArgumentException( 'Administration interaction outcome type is invalid.' );
-		}
 		if ( '' === trim( $message )
 			|| strlen( $message ) > 255
 			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $message ) ) {

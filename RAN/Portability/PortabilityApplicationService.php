@@ -106,9 +106,7 @@ final readonly class PortabilityApplicationService {
 			null,
 			null === $candidate->credential_id ? null : 'target',
 			$candidate->credential_id,
-			$context['private'],
-			true,
-			true
+			$context['private']
 		);
 
 		return new PortabilityApplyResult(
@@ -132,10 +130,11 @@ final readonly class PortabilityApplicationService {
 		bool $adopt,
 		bool $can_install
 	): array {
-		$item = $this->reviewer->review( $blueprint )[ $row ] ?? null;
-		if ( ! $item instanceof BlueprintPlanItem ) {
+		$package = $blueprint->packages[ $row ] ?? null;
+		if ( ! $package instanceof BlueprintPackage ) {
 			throw new InvalidArgumentException();
 		}
+		$item                 = $this->reviewer->review_package( $package );
 		$ordinal              = null;
 		$credential           = $this->credential_for( $blueprint, $item, $ordinal );
 		$decision             = null === $ordinal ? null : ( $credential_decisions[ $ordinal ] ?? null );
@@ -169,7 +168,9 @@ final readonly class PortabilityApplicationService {
 			);
 		}
 
-		return $this->apply_item( $blueprint, $item, $credential, $credential_action?->value, $target_credential_id, $repository_private, $adopt, $can_install );
+		$source = $credential_action->value ?? ( null !== $target_credential_id && '' !== $target_credential_id ? 'target' : null );
+
+		return $this->apply_item( $blueprint, $item, $credential, $source, $target_credential_id, $repository_private );
 	}
 
 	/** @return array{status:string,message:string,credential_state:string} */
@@ -179,9 +180,7 @@ final readonly class PortabilityApplicationService {
 		?BlueprintCredential $credential,
 		?string $source,
 		?string $target_credential_id,
-		?bool $repository_private,
-		bool $adopt,
-		bool $can_install
+		?bool $repository_private
 	): array {
 		if ( TargetPackageAction::MANAGED === $item->action ) {
 			if ( 'import' !== $source || null === $credential || ! is_bool( $repository_private ) ) {
@@ -207,13 +206,6 @@ final readonly class PortabilityApplicationService {
 		if ( ! $this->is_actionable( $item ) ) {
 			return $this->result( 'skipped', __( 'This package changed or cannot be applied. Review the Transporter Blueprint again.', 'ran-booster' ) );
 		}
-		if ( ! $can_install ) {
-			return $this->result( 'failed', __( 'You do not have permission to apply this package type.', 'ran-booster' ) );
-		}
-		if ( TargetPackageAction::ADOPT === $item->action && ! $adopt ) {
-			return $this->result( 'skipped', __( 'This installed package was not selected for adoption.', 'ran-booster' ) );
-		}
-
 		$credential_state = in_array( $source, array( 'import', 'target' ), true ) ? 'unavailable' : 'none';
 		try {
 			$credential_id    = $this->credential_id( $blueprint, $credential, $source, $target_credential_id );

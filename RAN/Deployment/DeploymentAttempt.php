@@ -10,6 +10,11 @@ use RAN\AdoptionIdentity;
 /** A validated projection of the 22-column deployment-attempt row. */
 final readonly class DeploymentAttempt {
 
+	/**
+	 * @param 'manual'|'webhook' $source
+	 * @param 'install'|'update' $operation
+	 * @param 'plugin'|'theme' $package_type
+	 */
 	private function __construct(
 		private int $id,
 		private string $correlation_id,
@@ -158,7 +163,30 @@ final readonly class DeploymentAttempt {
 		);
 	}
 
-	/** @return array<string, bool|int|string|null> */
+	/**
+	 * @return array{
+	 *     id: int,
+	 *     correlation_id: string,
+	 *     source: 'manual'|'webhook',
+	 *     operation: 'install'|'update',
+	 *     package_type: 'plugin'|'theme',
+	 *     package_slug: string,
+	 *     package_source: string,
+	 *     package_source_revision: int,
+	 *     provider: string,
+	 *     provider_repository_id: string,
+	 *     requested_ref: string,
+	 *     resolved_ref: string|null,
+	 *     delivery_id: string|null,
+	 *     state: string,
+	 *     mutation_started_at: string|null,
+	 *     outcome_code: string|null,
+	 *     created_at: string,
+	 *     finished_at: string|null,
+	 *     resolved_at: string|null,
+	 *     resolved_by: int|null
+	 * }
+	 */
 	public function safe_data(): array {
 		return array(
 			'id'                      => $this->id,
@@ -204,7 +232,11 @@ final readonly class DeploymentAttempt {
 		return null === $value ? null : self::positive_int( $value );
 	}
 
-	/** @param list<string> $allowed */
+	/**
+	 * @template TValue of string
+	 * @param list<TValue> $allowed
+	 * @return TValue
+	 */
 	private static function one_of( mixed $value, array $allowed ): string {
 		if ( ! is_string( $value ) || ! in_array( $value, $allowed, true ) ) {
 			throw new InvalidArgumentException( 'A deployment attempt field is not recognised.' );

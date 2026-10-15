@@ -64,10 +64,6 @@ final readonly class WebhookProcessor {
 				hash( 'sha256', $webhook->get_body() )
 			);
 
-			if ( 'conflict' === $result['status'] ) {
-				return $this->response( 409, 'Webhook delivery conflict.', $result );
-			}
-
 			return $this->response( 202, 'Webhook accepted.', $result );
 		} catch ( WebhookRejected $exception ) {
 			$status = $this->rejection_status( $exception->get_status_code() );

@@ -935,56 +935,65 @@
 			}
 
 			++polls;
-			const body = new window.URLSearchParams();
-			body.set('action', settings.action);
-			body.set('nonce', settings.nonce);
-			body.set(
-				'package_type',
-				document
-					.querySelector('[data-ran-booster-bulk-form]')
-					?.getAttribute('data-package-type-singular') || ''
-			);
-			tracked.forEach(function ({ reference }, id) {
-				body.set('attempts[' + id + ']', reference);
-			});
-
-			try {
-				const response = await window.fetch(settings.ajaxUrl, {
-					method: 'POST',
-					credentials: 'same-origin',
-					headers: {
-						'Content-Type':
-							'application/x-www-form-urlencoded; charset=UTF-8',
-					},
-					body: body.toString(),
+			const entries = Array.from(tracked);
+			for (let offset = 0; offset < entries.length; offset += 20) {
+				const batch = entries.slice(offset, offset + 20);
+				const body = new window.URLSearchParams();
+				body.set('action', settings.action);
+				body.set('nonce', settings.nonce);
+				body.set(
+					'package_type',
+					document
+						.querySelector('[data-ran-booster-bulk-form]')
+						?.getAttribute('data-package-type-singular') || ''
+				);
+				batch.forEach(function ([id, { reference }]) {
+					body.set('attempts[' + id + ']', reference);
 				});
-				const payload = await response.json();
-				if (!response.ok || !payload.success || !payload.data?.items) {
-					throw new Error('Package update progress failed.');
-				}
 
-				failures = 0;
-				tracked.forEach(function (entry, id) {
-					const item = payload.data.items[id];
+				try {
+					const response = await window.fetch(settings.ajaxUrl, {
+						method: 'POST',
+						credentials: 'same-origin',
+						headers: {
+							'Content-Type':
+								'application/x-www-form-urlencoded; charset=UTF-8',
+						},
+						body: body.toString(),
+					});
+					const payload = await response.json();
 					if (
-						!item ||
-						String(item.attempt_id) !== id ||
-						item.reference !== entry.reference
+						!response.ok ||
+						!payload.success ||
+						!payload.data?.items
 					) {
-						return;
+						throw new Error('Package update progress failed.');
 					}
-					if (updateRow(entry.row, item.state)) {
-						tracked.delete(id);
+
+					batch.forEach(function ([id, entry]) {
+						const item = payload.data.items[id];
+						if (
+							!item ||
+							String(item.attempt_id) !== id ||
+							item.reference !== entry.reference
+						) {
+							return;
+						}
+						if (updateRow(entry.row, item.state)) {
+							tracked.delete(id);
+						}
+					});
+					updateSummary();
+				} catch {
+					++failures;
+					if (failures >= 3) {
+						stopWithMessage(settings.labels.unavailableMessage);
 					}
-				});
-				updateSummary();
-			} catch {
-				++failures;
-				if (failures >= 3) {
-					stopWithMessage(settings.labels.unavailableMessage);
+					schedule();
+					return;
 				}
 			}
-
+			failures = 0;
 			schedule();
 		}
 

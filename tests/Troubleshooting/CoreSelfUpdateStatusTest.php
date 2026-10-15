@@ -50,7 +50,7 @@ final class CoreSelfUpdateStatusTest extends TestCase {
 		self::assertSame( 'disabled', $status['effective_mode'] );
 		self::assertSame( 'active', $status['updater_state'] );
 		self::assertSame( 'neutral_target_unavailable', $status['updater_code'] );
-		self::assertNull( $status['selected_version'] );
+		self::assertSame( 1_700_000_900, $status['next_check'] );
 		self::assertSame( '1.2.4', $status['offered_version'] );
 		self::assertSame( 1_700_000_000, $status['last_check'] );
 
@@ -136,7 +136,7 @@ final class CoreSelfUpdateStatusTest extends TestCase {
 		self::assertSame( 'active', $status['updater_state'] );
 		self::assertNull( $status['updater_code'] );
 		self::assertSame( '1.2.4', $status['offered_version'] );
-		self::assertNull( $status['selected_version'] );
+		self::assertNull( $status['last_check'] );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Disposable focused fixture cleanup.
 		rmdir( $directory );

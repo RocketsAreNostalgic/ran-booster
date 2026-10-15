@@ -114,6 +114,47 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		parent::tearDown();
 	}
 
+	public function test_actual_lock_rejects_invalid_options_host_before_sidecar_save(): void {
+		$interaction = new CapturingProviderProfileInteraction();
+		$dashboard   = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' );
+		$this->updater_lock = new WordPressUpdaterLock();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Compare the encrypted fixture bytes without exposing credential material.
+		$before = file_get_contents( $this->path );
+		self::assertIsString( $before );
+		$_GET['view']         = 'credentials';
+		$_POST['ran_booster'] = array(
+			'action'        => 'save-access-profile',
+			'provider'      => 'fixture',
+			'label'         => 'Rejected before sidecar mutation',
+			'kind'          => 'api-key',
+			'configuration' => array( 'tenant' => 'deployment' ),
+			'secret'        => 'test-only-rejected-profile',
+		);
+		$had_database         = array_key_exists( 'wpdb', $GLOBALS );
+		$database             = $GLOBALS['wpdb'] ?? null;
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Supply the invalid database boundary for this isolated sidecar-admission test.
+		$GLOBALS['wpdb'] = new \stdClass();
+		try {
+			$response = $interaction->dispatch(
+				$this->dispatcher( $dashboard, $this->secrets, $interaction, new InMemoryPublicRepositoryLookupProfileStore() )
+			);
+			self::assertSame( 'unexpected_failure', $response->kind );
+			self::assertSame( 'We could not complete that request. Please try again.', $response->feedback_message );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Compare the encrypted fixture bytes without exposing credential material.
+			self::assertSame( $before, file_get_contents( $this->path ) );
+			self::assertNotContains( 'Rejected before sidecar mutation', array_column( $this->secrets->credential_profiles( 'fixture' ), 'label' ) );
+		} finally {
+			if ( $had_database ) {
+				// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the database boundary saved before the isolated invalid-host test.
+				$GLOBALS['wpdb'] = $database;
+			} else {
+				unset( $GLOBALS['wpdb'] );
+			}
+		}
+	}
+
 	/** @return array<string, array{array<string, mixed>, string}> */
 	public static function successful_mutations(): array {
 		return array(

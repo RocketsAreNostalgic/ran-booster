@@ -776,7 +776,7 @@ final class PackageAdminController {
 			),
 			'management_state_uncertain' => sprintf(
 				/* translators: %s: package type, such as Plugin or Theme. */
-				__( '%s files were deleted, but Booster could not verify removal of its management record.', 'ran-booster' ),
+				__( '%s removal could not be verified. Review its files and Booster management before retrying.', 'ran-booster' ),
 				$type
 			),
 			'operation_in_progress' => sprintf(

@@ -13,14 +13,14 @@ use ReflectionNamedType;
  * @internal This is not an extension API or a confidentiality boundary.
  */
 final class CoreContainer {
-	/** @var array<string, callable|string|object> */
+	/** @var array<string, callable|object> */
 	private array $services = array();
 
 	/**
 	 * @internal Core composition only; this is not an extension API.
 	 *
 	 * @param string $alias Service lookup key.
-	 * @param callable|string|object $concrete Factory, class name or instance.
+	 * @param callable|object $concrete Factory or instance.
 	 */
 	public function bind( $alias, $concrete ): void {
 		$this->services[ $alias ] = $concrete;
@@ -40,10 +40,6 @@ final class CoreContainer {
 
 		if ( is_object( $concrete ) ) {
 			return $concrete;
-		}
-
-		if ( null !== $concrete && class_exists( $concrete ) ) {
-			return $this->resolve( $concrete );
 		}
 
 		return $this->resolve( $alias );

@@ -81,9 +81,9 @@ final class ModalLocalisationTest extends TestCase {
 		self::assertStringContainsString( 'name="ran_booster[action]" value="delete-access-profile"', $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="save-webhook-profile"', $html );
 		self::assertSame( 3, substr_count( $html, 'name="_wpnonce" value="ran-booster-save-secrets"' ) );
-		self::assertStringContainsString( 'data-ran-booster-interaction-operation="core:save-access-profile"', $html );
-		self::assertStringContainsString( 'data-ran-booster-interaction-operation="core:delete-access-profile"', $html );
-		self::assertStringContainsString( 'data-ran-booster-interaction-operation="core:save-webhook-profile"', $html );
+		self::assertStringContainsString( 'hx-vals="{&quot;ran_booster_interaction[operation]&quot;:&quot;core:save-access-profile&quot;,&quot;ran_booster_interaction[target]&quot;:&quot;core_provider_profiles&quot;}"', $html );
+		self::assertStringContainsString( 'hx-vals="{&quot;ran_booster_interaction[operation]&quot;:&quot;core:delete-access-profile&quot;,&quot;ran_booster_interaction[target]&quot;:&quot;core_provider_profiles&quot;}"', $html );
+		self::assertStringContainsString( 'hx-vals="{&quot;ran_booster_interaction[operation]&quot;:&quot;core:save-webhook-profile&quot;,&quot;ran_booster_interaction[target]&quot;:&quot;core_provider_profiles&quot;}"', $html );
 		self::assertSame( 3, substr_count( $html, 'hx-target="#ran-booster-provider-profile-region"' ) );
 		self::assertSame( 3, substr_count( $html, 'hx-sync="this:drop"' ) );
 	}

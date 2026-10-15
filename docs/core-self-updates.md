@@ -185,7 +185,7 @@ RAN Booster → Troubleshooting → Diagnostics → Core updates
 ```
 
 The ordinary message explains whether Core updates are available or safely off.
-Updater state, diagnostic code, selected runtime, offered version, check times,
+Updater state, diagnostic code, offered version, check times,
 and release-marker provenance remain collapsed under **Technical details**.
 Opening the page and expanding those details performs no remote request.
 

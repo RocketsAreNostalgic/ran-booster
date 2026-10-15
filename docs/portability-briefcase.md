@@ -150,6 +150,11 @@ against the exact repository, including for a public repository. A package with
 no carried credential retains the package-only target or anonymous verification
 path.
 
+When package-only repository access requires a credential, choose a saved
+credential in that package's review row. Booster keeps the explicit choice
+through review and Apply and rechecks it before mutation. A removed or invalid
+choice blocks the package instead of falling back to anonymous access.
+
 An explicit import choice also makes a matching `managed` row eligible for
 credential-only recovery. Transporter validates the decoded credential with the
 provider's submitted-secret policy, verifies access to that row's exact stable

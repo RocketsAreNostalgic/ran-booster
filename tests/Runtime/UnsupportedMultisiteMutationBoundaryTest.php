@@ -84,8 +84,6 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		$results    = array(
 			$executor->install_plugin( $artifact, 'example', null ),
 			$executor->install_theme( $artifact, 'example', null ),
-			$executor->update_plugin( $artifact, 'example', null, 'example/example.php' ),
-			$executor->update_theme( $artifact, 'example', null, 'example' ),
 		);
 
 		foreach ( $results as $result ) {
@@ -221,7 +219,6 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 				static fn (): mixed => $controller->handle_export(),
 				static fn (): mixed => $controller->handle_preview(),
 				static fn (): mixed => $controller->handle_apply(),
-				static fn (): mixed => $controller->preview_file( '/not-readable' ),
 			) as $entry_point
 		) {
 			try {
@@ -235,7 +232,14 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 
 	public function test_lowest_storage_and_attempt_mutation_seams_reject_direct_calls(): void {
 		$entry_points = array(
-			static fn (): mixed => ( new PluginRepository() )->unlink( 'example/example.php' ),
+			static fn (): mixed => ( new PluginRepository() )->recover_unlink(
+				'example/example.php',
+				'gh:repository-id:12345678-1234-4234-8234-123456789abc',
+				'unused-digest',
+				static function (): void {
+				self::fail( 'Unsupported runtime reached the storage guard.' );
+				}
+			),
 			fn (): mixed => $this->blank( DeploymentAttemptRepository::class )->claim_next(),
 			function (): void {
 				$this->blank( Database::class )->maybe_upgrade();

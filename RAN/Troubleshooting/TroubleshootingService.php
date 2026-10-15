@@ -21,8 +21,7 @@ use RAN\Secrets\SecretsFile;
  */
 final class TroubleshootingService {
 
-	private const MAX_RESULTS   = 8;
-	private const LOCAL_RESULTS = 5;
+	private const MAX_RESULTS = 8;
 
 	private const PARTIAL_PRIORITY = array(
 		'local_incomplete'         => 0,
@@ -46,7 +45,7 @@ final class TroubleshootingService {
 	/**
 	 * Build the read-only GET payload from provider metadata and safe credential labels.
 	 *
-	 * @return array<string, mixed>
+	 * @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>}
 	 */
 
 	public function form_payload(): array {
@@ -66,7 +65,7 @@ final class TroubleshootingService {
 	/**
 	 * Run local checks and exactly one selected provider in the current request.
 	 *
-	 * @return array<string, mixed>
+	 * @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>}
 	 */
 
 	public function diagnose( string $provider, ?string $credential_id, ?string $repository ): array {
@@ -100,7 +99,7 @@ final class TroubleshootingService {
 		return $payload;
 	}
 
-	/** @param array<string,mixed> $payload */
+	/** @param array{results: list<array{status: string}>, partial_reason: string|null} $payload */
 	private function record_outcome( ?int $id, array $payload ): void {
 		if ( null === $this->activity || null === $id ) {
 			return;
@@ -111,13 +110,12 @@ final class TroubleshootingService {
 			'fail'           => 0,
 			'not_configured' => 0,
 		);
-		foreach ( is_array( $payload['results'] ?? null ) ? $payload['results'] : array() as $result ) {
-			$status = is_array( $result ) ? $result['status'] ?? null : null;
-			if ( is_string( $status ) && isset( $counts[ $status ] ) ) {
-				++$counts[ $status ];
+		foreach ( $payload['results'] as $result ) {
+			if ( isset( $counts[ $result['status'] ] ) ) {
+				++$counts[ $result['status'] ];
 			}
 		}
-		$partial           = is_string( $payload['partial_reason'] ?? null ) ? $payload['partial_reason'] : null;
+		$partial           = $payload['partial_reason'];
 		[$status, $reason] = match ( true ) {
 			null !== $partial => array( 'failed', 'diagnostics.partial' ),
 			$counts['fail'] > 0 => array( 'failed', 'diagnostics.failed' ),
@@ -141,7 +139,7 @@ final class TroubleshootingService {
 		);
 	}
 
-	/** @return array<string,mixed> */
+	/** @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>} */
 	private function run_diagnostics( string $provider, ?string $credential_id, ?string $repository ): array {
 		$input_invalid = false;
 		try {
@@ -162,20 +160,13 @@ final class TroubleshootingService {
 
 		$options       = $this->provider_options();
 		$local_payload = $this->local->diagnose();
-		$results       = $this->valid_local_results( $local_payload['results'] ?? array() );
+		$results       = $local_payload['results'];
 		$partial       = null;
 
-		if ( ! empty( $local_payload['partial'] )
-			|| self::LOCAL_RESULTS !== count( $results )
-			|| count( $results ) !== count( $local_payload['results'] ?? array() )
-		) {
-			$partial = 'local_incomplete';
-		}
-
-		if ( null !== $partial || count( $results ) >= self::MAX_RESULTS ) {
+		if ( $local_payload['partial'] ) {
 			$safe_provider = isset( $options[ $provider ] ) ? $provider : '';
 
-			return $this->payload( $safe_provider, $credential_id, $repository, $results, $partial ?? 'local_incomplete', true, $options );
+			return $this->payload( $safe_provider, $credential_id, $repository, $results, 'local_incomplete', true, $options );
 		}
 
 		if ( $request->remaining_seconds() <= 0.0 ) {
@@ -376,33 +367,6 @@ final class TroubleshootingService {
 		return $choices;
 	}
 
-	/**
-	 * @param mixed $results Untrusted local payload boundary.
-	 * @return list<ProviderDiagnosticResult>
-	 */
-	private function valid_local_results( mixed $results ): array {
-		if ( ! is_array( $results ) ) {
-			return array();
-		}
-
-		$valid = array();
-		$seen  = array();
-		foreach ( $results as $result ) {
-			if ( count( $valid ) >= self::LOCAL_RESULTS
-				|| ! $result instanceof ProviderDiagnosticResult
-				|| ! str_starts_with( $result->code, 'local.' )
-				|| isset( $seen[ $result->code ] )
-			) {
-				break;
-			}
-
-			$seen[ $result->code ] = true;
-			$valid[]               = $result;
-		}
-
-		return $valid;
-	}
-
 	/** @param array<string, bool> $seen */
 	private function valid_provider_result( mixed $result, ProviderCode $provider, array $seen ): bool {
 		return $result instanceof ProviderDiagnosticResult
@@ -431,7 +395,7 @@ final class TroubleshootingService {
 	/**
 	 * @param list<ProviderDiagnosticResult> $results
 	 * @param array<string, string>           $providers
-	 * @return array<string, mixed>
+	 * @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>}
 	 */
 	private function payload(
 		string $provider,

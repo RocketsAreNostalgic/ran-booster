@@ -1533,7 +1533,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertTrue( $data['package_source']['unavailable'] );
 	}
 
-	public function test_release_package_retains_current_branch_readiness_without_provider_operations(): void {
+	/** @return list<array{bool}> */
+	public static function retained_readiness_sidecar_provider(): array {
+		return array( array( false ), array( true ) );
+	}
+
+	#[DataProvider( 'retained_readiness_sidecar_provider' )]
+	public function test_release_package_retains_current_branch_readiness_without_provider_operations( bool $secrets_unavailable ): void {
 		$package  = $this->managed_package(
 			'release/release.php',
 			'Release Package',
@@ -1544,6 +1550,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'owner/repository'
 		);
 		$plugins  = new class( $package ) extends PluginRepository {
+			public int $inventory_reads = 0;
+
 			public function __construct( private Package $package ) {
 			}
 
@@ -1559,10 +1567,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_plugins retains the production method contract; these inputs do not affect this controlled result.
 			public function all_deployment_plugins( ?\RAN\PackageSource $source = null ): array {
+				++$this->inventory_reads;
 				return array( 'release/release.php' => $this->package );
 			}
 		};
 		$themes   = new class() extends ThemeRepository {
+			public int $inventory_reads = 0;
+
 			public function __construct() {
 			}
 
@@ -1572,11 +1583,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_themes retains the production method contract; these inputs do not affect this controlled result.
 			public function all_deployment_themes( ?\RAN\PackageSource $source = null ): array {
+				++$this->inventory_reads;
 				return array();
 			}
 		};
-		$secrets  = new class() extends SecretsFile {
-			public function __construct() {
+		$secrets  = new class( $secrets_unavailable ) extends SecretsFile {
+			public function __construct( private bool $unavailable ) {
 				parent::__construct( '/unused/test-secrets.php', array() );
 			}
 
@@ -1585,6 +1597,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of webhook_profiles retains the production method contract; these inputs do not affect this controlled result.
 			public function webhook_profiles( ProviderCode|string $provider ): array {
+				if ( $this->unavailable ) {
+					throw new RuntimeException( 'Controlled sidecar failure.' );
+				}
 				return array(
 					'webhook-profile' => array(
 						'scope'        => 'repository',
@@ -1611,7 +1626,6 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertInstanceOf( \RAN\RepositoryProvider\WebhookNormalizer::class, $provider );
 		self::assertInstanceOf( RepositoryProvider::class, $provider );
 		$evaluator = new WebhookAssistanceReadinessEvaluator( $plugins, $themes, $secrets, new ReadyDashboardDatabase(), static fn (): bool => true );
-		self::assertSame( 'ready', $evaluator->evaluate( 'gh', rest_url( 'ran-booster/v1/webhooks/gh' ) )->to_array()['site']['status'] );
 		$dashboard = $this->dashboard(
 			$secrets,
 			plugins: $plugins,
@@ -1630,9 +1644,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertIsArray( $readiness );
 		self::assertArrayHasKey( 'retained', $readiness );
 		self::assertTrue( $readiness['retained'] );
-		self::assertSame( 'ready', $readiness['site']['status'] );
+		self::assertSame( $secrets_unavailable ? 'blocked' : 'ready', $readiness['site']['status'] );
 		self::assertSame( '101', $readiness['repository']['repository_id'] );
-		self::assertSame( 'repository', $readiness['repository']['local_secret_coverage'] );
+		self::assertSame( $secrets_unavailable ? 'unknown' : 'repository', $readiness['repository']['local_secret_coverage'] );
+		self::assertSame( 1, $plugins->inventory_reads, 'The receiver projection is the only inventory reader needed by this package page.' );
+		self::assertSame( 1, $themes->inventory_reads );
 	}
 
 	public function test_troubleshooting_results_render_only_in_the_same_dashboard_request(): void {
@@ -2647,17 +2663,27 @@ final class DashboardIndexRoutingTest extends TestCase {
 		unset( $GLOBALS['ran_booster_storage_test_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ] );
 	}
 
-	public function test_deployment_history_filters_the_exact_installed_plugin_identifier(): void {
+	public function test_activity_history_filters_the_exact_installed_plugin_identifier(): void {
+		require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
+		$GLOBALS['ran_booster_activity_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ] = '1';
 		$database = new DashboardActivityWpdb();
-		foreach ( array( 'example/first.php', 'example/second.php' ) as $index => $identifier ) {
-			$row                 = DashboardActivityWpdb::attempt( $index + 1, 'succeeded' );
-			$row['request_json'] = ( new DeploymentRequest( 'org/example', null, false, 'main', 'example', null, \RAN\Deployment\DeploymentPolicy::AUTOMATIC, 1, installed_identifier: $identifier, adoption_token: 'gh:repository-1:123e4567-e89b-42d3-a456-426614174000' ) )->to_json();
-			$database->rows[]    = $row;
+		foreach ( array( 'example/first.php', 'example/second.php', 'example/Second.php' ) as $index => $identifier ) {
+			$database->activity_rows[] = array(
+				'id'               => $index + 1,
+				'sort_at'          => '2026-10-12 17:00:00',
+				'status'           => 'succeeded',
+				'subject_type'     => 'plugin',
+				'subject_identity' => $identifier,
+				'correlation'      => str_repeat( 'a', 32 ),
+			);
 		}
-		$records = $this->deployment_attempts( $database )->activity_history( array( 'subject_identity' => 'example/second.php' ), null );
-		self::assertCount( 1, $records );
-		self::assertSame( 'example/second.php', $records[0]->get_request()->installed_identifier );
-		self::assertStringNotContainsString( "`package_slug` = 'example/second.php'", implode( "\n", $database->reads ) );
+		$_GET = array( 'activity_subject_identity' => 'example/second.php' );
+		$page = ( new DeploymentAdminPresenter( attempts: $this->deployment_attempts( $database ), activity_store: new \RAN\Activity\ActivityStore( $database, 'wp_ran_booster_activity' ) ) )->activity();
+		self::assertFalse( $page['unavailable'] );
+		self::assertCount( 1, $page['items'] );
+		self::assertSame( 'example/second.php', $page['items'][0]['subject_identity'] );
+		self::assertStringContainsString( "BINARY subject_identity = 'example/second.php'", implode( "\n", $database->reads ) );
+		self::assertStringNotContainsString( 'package_type IN', implode( "\n", $database->reads ) );
 	}
 
 	public function test_missing_activity_store_does_not_fall_back_to_deployment_only_history(): void {
@@ -3101,6 +3127,9 @@ final class DashboardActivityWpdb implements \RAN\Storage\DeploymentWriteConnect
 		$this->reads[] = $query;
 		if ( str_contains( $query, 'FROM wp_ran_booster_activity ' ) ) {
 			$rows = $this->activity_rows;
+			if ( preg_match( "/BINARY subject_identity = '([^']+)'/", $query, $filter ) ) {
+				$rows = array_values( array_filter( $rows, static fn ( array $row ): bool => $row['subject_identity'] === $filter[1] ) );
+			}
 			if ( preg_match( '/sort_at = \'([^\']+)\' AND id < (\d+)/', $query, $boundary ) ) {
 				$rows = array_values( array_filter( $rows, static fn ( array $row ): bool => $row['sort_at'] < $boundary[1] || ( $row['sort_at'] === $boundary[1] && $row['id'] < (int) $boundary[2] ) ) );
 			}

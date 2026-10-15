@@ -18,7 +18,13 @@ $attempt                = $deployment_activity['detail'] ?? null;
 $unavailable            = true === ( $deployment_activity['unavailable'] ?? false );
 $later_verified_attempt = $deployment_activity['later_verified_attempt'] ?? null;
 $back_url               = $troubleshooting_base . '&panel=activity';
-$item                   = $attempt instanceof DeploymentAttempt ? $attempt->safe_data() : array();
+
+if ( $attempt instanceof DeploymentAttempt ) {
+	$item = $attempt->safe_data();
+} else {
+	$item = array();
+}
+
 $package_type           = is_string( $item['package_type'] ?? null ) ? $item['package_type'] : '';
 $package_slug           = is_string( $item['package_slug'] ?? null ) ? $item['package_slug'] : '';
 $settings_urls          = is_array( $deployment_activity['package_settings_urls'] ?? null )

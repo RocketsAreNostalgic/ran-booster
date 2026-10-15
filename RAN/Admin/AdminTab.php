@@ -88,10 +88,6 @@ final readonly class AdminTab {
 		return $this->view;
 	}
 
-	public function get_kind(): AdminTabKind {
-		return $this->kind;
-	}
-
 	public function get_provider(): ?ProviderCode {
 		return $this->provider;
 	}

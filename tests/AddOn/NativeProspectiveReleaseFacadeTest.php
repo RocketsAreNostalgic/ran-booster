@@ -2157,6 +2157,7 @@ final class ProspectivePluginRepository extends PluginRepository {
 		return $this->installed;
 	}
 
+	/** @phpstan-pure */
 	public function has_management_record( mixed $identifier ): bool {
 		unset( $identifier );
 

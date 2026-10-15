@@ -269,6 +269,34 @@ final class PackagePagePresenter {
 		);
 	}
 
+	/** @return array<string, array<string, mixed>> */
+	public function get_source_choice_defaults( string $page_url, bool $fallback = false ): array {
+		return array(
+			'branch'        => array(
+				'key'               => 'branch',
+				'heading'           => __( 'Branch', 'ran-booster' ),
+				'description'       => __( 'Deploy the saved branch manually or on a signed push.', 'ran-booster' ),
+				'meta'              => __( 'Included with Booster', 'ran-booster' ),
+				'url'               => add_query_arg( 'source_view', 'branch', $page_url ),
+				'disabled'          => false,
+				'hydrated'          => true,
+				'client_hydratable' => false,
+			),
+			'release_asset' => array(
+				'key'               => 'release_asset',
+				'heading'           => __( 'Releases', 'ran-booster' ),
+				'description'       => $fallback
+					? __( 'Install verified packages from a supported provider\'s published releases.', 'ran-booster' )
+					: __( 'Install published releases through WordPress.', 'ran-booster' ),
+				'meta'              => $fallback ? __( 'Provider capability required', 'ran-booster' ) : __( 'Included with Booster', 'ran-booster' ),
+				'url'               => '',
+				'disabled'          => true,
+				'hydrated'          => false,
+				'client_hydratable' => false,
+			),
+		);
+	}
+
 	/**
 	 * @return array{
 	 *   choices: array<string, array<string, mixed>>,
@@ -290,28 +318,7 @@ final class PackagePagePresenter {
 		$page_url   = null === $projection
 			? add_query_arg( 'page', $this->get_create_page_slug(), $this->get_admin_url() )
 			: $projection->settings_url();
-		$base       = array(
-			'branch'        => array(
-				'key'               => 'branch',
-				'heading'           => __( 'Branch', 'ran-booster' ),
-				'description'       => __( 'Deploy the saved branch manually or on a signed push.', 'ran-booster' ),
-				'meta'              => __( 'Included with Booster', 'ran-booster' ),
-				'url'               => add_query_arg( 'source_view', 'branch', $page_url ),
-				'disabled'          => false,
-				'hydrated'          => true,
-				'client_hydratable' => false,
-			),
-			'release_asset' => array(
-				'key'               => 'release_asset',
-				'heading'           => __( 'Releases', 'ran-booster' ),
-				'description'       => __( 'Install published releases through WordPress.', 'ran-booster' ),
-				'meta'              => __( 'Included with Booster', 'ran-booster' ),
-				'url'               => '',
-				'disabled'          => true,
-				'hydrated'          => false,
-				'client_hydratable' => false,
-			),
-		);
+		$base       = $this->get_source_choice_defaults( $page_url );
 
 		try {
 			$choices = ( new AdminPackageSourceChoiceNormalizer() )->normalize(

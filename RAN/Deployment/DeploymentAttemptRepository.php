@@ -92,31 +92,23 @@ final class DeploymentAttemptRepository {
 				}
 
 				$this->reserve_capacity( 1 );
-				$queued = $this->insert_and_read(
-					$this->row_data(
-						'manual',
-						$operation,
-						$package_type,
-						$provider,
-						$provider_repository_id,
-						$request,
-						$requested_ref,
-						$package_source,
-						$package_source_revision,
-						null,
-						null
-					)
+				$data          = $this->row_data(
+					'manual',
+					$operation,
+					$package_type,
+					$provider,
+					$provider_repository_id,
+					$request,
+					$requested_ref,
+					$package_source,
+					$package_source_revision,
+					null,
+					null
 				);
-				$query  = $this->update_query( $queued->get_id(), DeploymentState::QUEUED, array( 'state' => DeploymentState::RUNNING->value ) );
-				if ( 1 !== $this->write_connection()->query( $query ) ) {
-					throw DeploymentStorageFailure::unavailable();
-				}
-				$running = $this->require_exact( $queued->get_id() );
-				if ( DeploymentState::RUNNING !== $running->get_state() ) {
-					throw DeploymentStorageFailure::inconsistent();
-				}
+				$data['state'] = DeploymentState::RUNNING->value;
+				$running       = $this->insert_and_read( $data );
 				$this->record_activity_start( $running, 'deployment.running' );
-				BoosterLogger::log( 'attempt queued and claimed (manual)', $running->log_context() + array( 'transition' => 'queued->running' ) );
+				BoosterLogger::log( 'attempt admitted (manual)', $running->log_context() + array( 'transition' => 'new->running' ) );
 
 				return $running;
 			},
@@ -549,35 +541,6 @@ final class DeploymentAttemptRepository {
 	}
 
 	/**
-	 * Read a bounded deployment contribution to the shared activity page.
-	 *
-	 * @param array<string, string> $filters
-	 * @param array{time: string, source: string, id: int}|null $cursor
-	 * @return list<DeploymentAttempt>
-	 */
-	public function activity_history( array $filters, ?array $cursor, int $limit = 26 ): array {
-		$query = $this->prepare( "SELECT * FROM %i WHERE package_type IN ('plugin', 'theme')", $this->table_name );
-		foreach ( array(
-			'provider'     => 'provider',
-			'subject_type' => 'package_type',
-			'operation'    => 'operation',
-			'outcome'      => 'state',
-		) as $key => $column ) {
-			if ( isset( $filters[ $key ] ) ) {
-				$query .= $this->prepare( ' AND %i = %s', $column, $filters[ $key ] );
-			}
-		}
-		if ( isset( $filters['subject_identity'] ) ) {
-			$query .= $this->prepare( " AND BINARY JSON_UNQUOTE(JSON_EXTRACT(request_json, '$.installed_identifier')) = %s", $filters['subject_identity'] );
-		}
-		if ( null !== $cursor ) {
-			$query .= $this->prepare( " AND (created_at < %s OR (created_at = %s AND ('deployment' < %s OR ('deployment' = %s AND id < %d))))", $cursor['time'], $cursor['time'], $cursor['source'], $cursor['source'], $cursor['id'] );
-		}
-		$query .= $this->prepare( ' ORDER BY created_at DESC, id DESC LIMIT %d', $this->history_limit( $limit ) );
-		return array_map( array( DeploymentAttempt::class, 'from_database' ), $this->read_rows( $query ) );
-	}
-
-	/**
 	 * Read the newest attempt and newest successful attempt for one package.
 	 *
 	 * The two scalar subqueries keep this to one bounded database read even when
@@ -766,9 +729,6 @@ final class DeploymentAttemptRepository {
 		}
 		$data    = $attempt->safe_data();
 		$request = $attempt->get_request();
-		if ( ! is_string( $data['provider'] ) || ! is_string( $data['provider_repository_id'] ) || ! in_array( $data['package_type'], array( 'plugin', 'theme' ), true ) || ! is_string( $data['operation'] ) || ! is_string( $data['correlation_id'] ) ) {
-			throw DeploymentStorageFailure::inconsistent();
-		}
 		$repo    = new \RAN\RepositoryProvider\RepositoryReference( $request->repository, $data['provider_repository_id'], $request->is_private, $request->credential_id );
 		$target  = $request->installed_identifier ?? $request->package_slug;
 		$capture = array(
@@ -788,8 +748,8 @@ final class DeploymentAttemptRepository {
 
 	private function require_activity_progress( DeploymentAttempt $attempt, string $stage ): void {
 		if ( null !== $this->activity ) {
-			$correlation = $attempt->safe_data()['correlation_id'];
-			if ( ! is_string( $correlation ) || ! $this->activity->progress_by_correlation( $correlation, $stage, '', $this->activity_facts( $attempt ) ) ) {
+			$correlation = $attempt->get_correlation_id();
+			if ( ! $this->activity->progress_by_correlation( $correlation, $stage, '', $this->activity_facts( $attempt ) ) ) {
 				throw DeploymentStorageFailure::unavailable();
 			}
 		}
@@ -799,16 +759,12 @@ final class DeploymentAttemptRepository {
 		if ( null === $this->activity ) {
 			return;
 		}
-		$data = $attempt->safe_data();
 		if ( DeploymentState::NEEDS_ATTENTION === $outcome->get_state() ) {
 			$this->require_activity_progress( $attempt, 'deployment.needs_attention' );
 			return;
 		}
-		if ( ! is_string( $data['correlation_id'] ) ) {
-			throw DeploymentStorageFailure::inconsistent();
-		}
 		$status = DeploymentState::SUCCEEDED === $outcome->get_state() ? 'succeeded' : 'failed';
-		if ( ! $this->activity->complete_by_correlation( $data['correlation_id'], $status, $outcome->get_code(), $outcome->get_code(), facts: $this->activity_facts( $attempt ) ) ) {
+		if ( ! $this->activity->complete_by_correlation( $attempt->get_correlation_id(), $status, $outcome->get_code(), $outcome->get_code(), facts: $this->activity_facts( $attempt ) ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
 	}
@@ -816,9 +772,6 @@ final class DeploymentAttemptRepository {
 	/** @return array{deployment_attempt_id:int, deployment_package_slug:string, deployment_source:'manual'|'webhook', deployment_state:string, deployment_requested_ref:string, deployment_resolved_ref:?string, deployment_mutation_started_at:?string, deployment_finished_at:?string, deployment_outcome:?string, deployment_resolved_at:?string, deployment_resolved_by:?int} */
 	private function activity_facts( DeploymentAttempt $attempt ): array {
 		$data = $attempt->safe_data();
-		if ( ! is_int( $data['id'] ) || ! is_string( $data['package_slug'] ) || ! in_array( $data['source'], array( 'manual', 'webhook' ), true ) || ! is_string( $data['state'] ) || ! is_string( $data['requested_ref'] ) || ( null !== $data['resolved_ref'] && ! is_string( $data['resolved_ref'] ) ) || ( null !== $data['mutation_started_at'] && ! is_string( $data['mutation_started_at'] ) ) || ( null !== $data['finished_at'] && ! is_string( $data['finished_at'] ) ) || ( null !== $data['outcome_code'] && ! is_string( $data['outcome_code'] ) ) || ( null !== $data['resolved_at'] && ! is_string( $data['resolved_at'] ) ) || ( null !== $data['resolved_by'] && ! is_int( $data['resolved_by'] ) ) ) {
-			throw DeploymentStorageFailure::inconsistent();
-		}
 		return array(
 			'deployment_attempt_id'          => $data['id'],
 			'deployment_package_slug'        => $data['package_slug'],

@@ -58,8 +58,11 @@ final class PackageControlContractTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-enhanced-mutation', $source );
 		self::assertStringContainsString( 'data-ran-booster-error-target="#ran-booster-package-mutation-error"', $source );
 		self::assertStringContainsString( 'type="button"', $source );
-		self::assertStringContainsString( "'heading'           => __( 'Releases', 'ran-booster' )", $source );
-		self::assertStringContainsString( 'Provider capability required', $source );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Direct local default-copy conformance read.
+		$defaults = file_get_contents( dirname( __DIR__, 2 ) . '/RAN/Admin/PackagePagePresenter.php' );
+		self::assertIsString( $defaults );
+		self::assertStringContainsString( "'heading'           => __( 'Releases', 'ran-booster' )", $defaults );
+		self::assertStringContainsString( 'Provider capability required', $defaults );
 		self::assertStringNotContainsString( 'Subscriber', $source );
 		self::assertStringNotContainsString( 'Release Deployments', $source );
 		self::assertStringContainsString( 'form="ran-booster-package-edit-form"', $readiness );

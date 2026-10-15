@@ -18,7 +18,7 @@ $package_activity_payload     = isset( $package_activity ) && is_array( $package
 $package_activity_unavailable = true === ( $package_activity_payload['unavailable'] ?? false );
 $package_activity             = isset( $package_activity_payload['items'] ) && is_array( $package_activity_payload['items'] )
 	? $package_activity_payload['items']
-	: $package_activity_payload;
+	: array();
 $package_extension_rows       = isset( $package_extension_rows ) && is_array( $package_extension_rows )
 	? $package_extension_rows
 	: array();
@@ -292,7 +292,7 @@ echo esc_url(
 				? $last_successful_activity['finished_at']
 				: '';
 			$installed_version         = $package->get_version();
-			$credential_profiles       = is_array( $package_provider['credentials'] ?? null ) ? $package_provider['credentials'] : array();
+			$credential_profiles       = is_array( $package_provider['credential_profiles'] ?? null ) ? $package_provider['credential_profiles'] : array();
 			$credentials_by_id         = array_column( $credential_profiles, null, 'id' );
 			$stored_credential_id      = $package->get_credential_id();
 			$effective_credential_id   = '' !== $stored_credential_id

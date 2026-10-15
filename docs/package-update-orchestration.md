@@ -530,7 +530,7 @@ fail closed. Native Update does not create a Booster deployment attempt.
    `auto_updater.lock`, and repeats the source snapshot and artifact-integrity
    checks.
 9. Booster marks the mutation fence and hands the local ZIP to
-   `CorePackageExecutor`.
+   `RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor`.
 10. WordPress installs or updates the package and emits its completion result.
 11. Booster verifies maintenance-mode cleanup, installed version, unchanged
     activation state, and managed-package identity.
@@ -572,7 +572,7 @@ sequenceDiagram
     B->>P: Prepare authenticated immutable archive
     P-->>B: URL, auth, resolved ref, and expected-head verifier
     B->>B: Download once, preflight, lock, and recheck target/head/artifact
-    B->>W: Local ZIP through CorePackageExecutor
+    B->>W: Local ZIP through Branch WordPressCorePackageExecutor
     W-->>B: Upgrader result and completion callback
     B->>D: Persist terminal outcome
     B->>C: Schedule next run if queued work remains
@@ -616,7 +616,7 @@ running attempt
   → WordPress auto_updater.lock
   → post-lock source/applicable-head/artifact rechecks
   → mutation fence
-  → CorePackageExecutor
+  → Branch WordPressCorePackageExecutor
   → WordPress upgrader
   → Booster postconditions
   → artifact cleanup and lock release
@@ -630,9 +630,12 @@ The difference is admission timing:
 - bulk Manual actions and Push-to-Deploy insert queued attempts, then the
   WordPress cron worker claims them one at a time.
 
-At the installer boundary, `CorePackageExecutor` presents the already-local
-archive through a request-only native offer and pre-download hook. WordPress
-does not download the repository ZIP again.
+At the tracked-branch installer boundary, Branch Updater’s
+`WordPressCorePackageExecutor` presents the already-local archive through a
+request-only native offer and pre-download hook. WordPress does not download
+the repository ZIP again. Core’s `CorePackageExecutor` serves prospective
+release installations only; it supplies the local archive directly to the
+plugin or theme installer.
 
 The selected release updater does not accept that earlier local path. It admits
 only an updater-owned, freshly reacquired release artifact and rejects any

@@ -17,7 +17,7 @@ use RAN\Portability\TargetPackageReason;
 #[CoversClass( TargetPackageAction::class )]
 #[CoversClass( TargetPackageReason::class )]
 final class TargetPackagePlanningTest extends TestCase {
-	public function test_contract_uses_only_the_five_actions_and_fourteen_reasons(): void {
+	public function test_contract_uses_only_the_declared_actions_and_reasons(): void {
 		self::assertSame(
 			array( 'install', 'adopt', 'managed', 'protected', 'blocked' ),
 			array_column( TargetPackageAction::cases(), 'value' )
@@ -34,6 +34,7 @@ final class TargetPackagePlanningTest extends TestCase {
 				'repository_access_failed',
 				'repository_identity_mismatch',
 				'destination_conflict',
+				'provider_selection_changed',
 				'provider_unavailable',
 				'provider_temporarily_unavailable',
 				'preview_rate_limited',

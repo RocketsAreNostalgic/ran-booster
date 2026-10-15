@@ -30,11 +30,13 @@ use RAN\Portability\PackageBlueprint;
 use RAN\Portability\PortabilityApplicationService;
 use RAN\Portability\TargetPackageAction;
 use RAN\Portability\TargetPackageReason;
+use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\PackageMutationResult;
 use RAN\Storage\PackageStorageFailure;
+use RAN\Tests\Portability\GitHubSelectionTestFixture;
 use RAN\Storage\PackageStorageOperation;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
@@ -75,12 +77,13 @@ final class PortabilityControllerTest extends TestCase {
 		$plugins->method( 'booster_plugin_from_file' )->willReturn( $this->managed_plugin( DeploymentPolicy::DISABLED, branch: 'old<branch>' ) );
 		$secrets = $this->createMock( SecretsFile::class );
 		$secrets->expects( self::never() )->method( 'credential_material' );
+		$registry   = new ProviderRegistry();
 		$controller = new PortabilityController(
 			( new ReflectionClass( ManagedPackageBlueprintExporter::class ) )->newInstanceWithoutConstructor(),
 			new BlueprintArchive(),
 			new PortabilityApplicationService(
 				new BlueprintReviewer( $plugins, $this->createStub( ThemeRepository::class ) ),
-				new BlueprintRepositoryVerifier( new ProviderRegistry(), $secrets ),
+				new BlueprintRepositoryVerifier( $registry, $secrets, GitHubSelectionTestFixture::bind( $registry ) ),
 				( new ReflectionClass( PackageOperationService::class ) )->newInstanceWithoutConstructor(),
 				$secrets
 			),
@@ -176,6 +179,55 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertStringContainsString( 'installation and activation are not verified', $html );
 		self::assertStringContainsString( '&lt;script&gt;parent&lt;/script&gt;', $html );
 		self::assertStringNotContainsString( '<script>', $html );
+	}
+
+	public function test_provider_expectation_transport_is_bounded_and_uses_canonical_validation(): void {
+		$method      = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'provider_expectation' );
+		$expectation = array(
+			'provider_code'              => 'gh',
+			'selection_generation'       => 4,
+			'implementation_fingerprint' => str_repeat( 'a', 64 ),
+		);
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Test-owned request snapshot restored after parser controls.
+		$previous = $_POST;
+		try {
+			$_POST = array();
+			self::assertNull( $method->invoke( $this->controller() ) );
+			$_POST = array( 'provider_expectation' => addslashes( (string) wp_json_encode( $expectation ) ) );
+			self::assertSame( $expectation, $method->invoke( $this->controller() ) );
+			$refused = 0;
+			foreach ( array( '', 'null', '[]', '{broken', str_repeat( ' ', 257 ), array(), '{"provider_code":"bb"}', (string) wp_json_encode( $expectation + array( 'approved' => true ) ) ) as $invalid ) {
+				$_POST = array( 'provider_expectation' => $invalid );
+				try {
+					$method->invoke( $this->controller() );
+					self::fail( 'Forged provider context was accepted.' );
+				} catch ( InvalidArgumentException ) {
+					++$refused;
+				}
+			}
+			self::assertSame( 8, $refused );
+		} finally {
+			$_POST = $previous;
+		}
+	}
+
+	public function test_provider_expectation_is_projected_only_as_escaped_destination_context(): void {
+		$expectation = array(
+			'provider_code'              => 'gh',
+			'selection_generation'       => 4,
+			'implementation_fingerprint' => str_repeat( 'a', 64 ),
+		);
+		$package     = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', 'main', null );
+		$item        = new BlueprintPlanItem( $package, TargetPackageAction::INSTALL, TargetPackageReason::NONE, $expectation );
+		$controller  = $this->controller();
+		$row_method  = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'row' );
+		$row         = $row_method->invoke( $controller, $item );
+		self::assertSame( $expectation, $row['provider_expectation'] );
+		$render = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'render_review' );
+		$html   = $render->invoke( $controller, array( $row ) );
+		self::assertStringContainsString( 'data-portability-provider-expectation="{&quot;provider_code&quot;:&quot;gh&quot;', $html );
+		$row['provider_expectation'] = null;
+		self::assertStringNotContainsString( 'data-portability-provider-expectation', $render->invoke( $controller, array( $row ) ) );
 	}
 
 	public function test_selected_row_input_is_bounded_and_strictly_typed(): void {
@@ -344,7 +396,7 @@ final class PortabilityControllerTest extends TestCase {
 		);
 		$application = new PortabilityApplicationService(
 			new BlueprintReviewer( $plugins, $themes ),
-			new BlueprintRepositoryVerifier( $registry, $authority_secrets ),
+			new BlueprintRepositoryVerifier( $registry, $authority_secrets, GitHubSelectionTestFixture::bind( $registry ) ),
 			( new ReflectionClass( PackageOperationService::class ) )->newInstanceWithoutConstructor(),
 			$authority_secrets
 		);
@@ -515,6 +567,67 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertStringNotContainsString( '"success"', $output );
 	}
 
+	#[DataProvider( 'refused_provider_contexts' )]
+	public function test_apply_refuses_provider_context_before_credential_provider_or_mutation_work( string $context ): void {
+		$secrets = $this->createMock( SecretsFile::class );
+		foreach ( array( 'credential_material', 'with_temporary_credential', 'import_credentials_if_absent', 'assert_managed_storage_ready' ) as $method ) {
+			$secrets->expects( self::never() )->method( $method );
+		}
+		$provider    = new TemporaryCredentialProvider( $secrets->credentials_for( 'gh' ), 0, 'repository-id' );
+		$registry    = new ProviderRegistry( array( $provider ) );
+		$selection   = GitHubSelectionTestFixture::bind( $registry );
+		$expectation = $selection->expectation();
+		self::assertNotNull( $expectation );
+		self::assertNull( $selection->review_refusal( $expectation ) );
+		$plugins = $this->createMock( PluginRepository::class );
+		$themes  = $this->createMock( ThemeRepository::class );
+		foreach ( array( $plugins, $themes ) as $repository ) {
+			foreach ( array( 'is_installed', 'has_management_record', 'store', 'adopt' ) as $method ) {
+				$repository->expects( self::never() )->method( $method );
+			}
+		}
+		$coordinator = $this->createMock( \RAN\Deployment\DeploymentCoordinator::class );
+		$coordinator->expects( self::never() )->method( 'execute_manual' );
+		$lock = $this->createMock( \RAN\WordPress\WordPressUpdaterLock::class );
+		$lock->expects( self::never() )->method( 'acquire' );
+		$operations  = new PackageOperationService( $plugins, $themes, $coordinator, ( new ReflectionClass( \RAN\PackageRemoval\PackageRemovalService::class ) )->newInstanceWithoutConstructor(), $lock, new \RAN\Storage\RepositorySourceGuard( new \RAN\Tests\Support\RepositorySourceGuardDatabase(), $this->createStub( \RAN\Storage\Database::class ) ) );
+		$application = new PortabilityApplicationService( new BlueprintReviewer( $plugins, $themes ), new BlueprintRepositoryVerifier( $registry, $secrets, $selection ), $operations, $secrets );
+		$controller  = new PortabilityController( ( new ReflectionClass( ManagedPackageBlueprintExporter::class ) )->newInstanceWithoutConstructor(), new BlueprintArchive(), $application, ( new ReflectionClass( ProviderSettingsPresenter::class ) )->newInstanceWithoutConstructor() );
+		$file        = $this->blueprint_archive( $this->credential_blueprint(), 'correct-horse-battery-staple' );
+		$this->set_uploaded_blueprint( $file );
+		$_POST['row']                  = '0';
+		$_POST['review_action']        = 'install';
+		$_POST['selected_rows']        = array( '0' );
+		$_POST['password']             = 'correct-horse-battery-staple';
+		$_POST['credential_decisions'] = array( array( 'action' => 'import' ) );
+		if ( 'stale' === $context ) {
+			++$expectation['selection_generation'];
+			$_POST['provider_expectation'] = addslashes( (string) wp_json_encode( $expectation ) );
+		} elseif ( 'malformed' === $context ) {
+			$_POST['provider_expectation'] = '{broken';
+		}
+		try {
+			$result = $controller->handle_apply();
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test archive is outside WordPress media handling.
+			unlink( $file );
+		}
+		self::assertTrue( $result['success'] );
+		self::assertSame( 'stale' === $context ? 'skipped' : 'failed', $result['data']['status'] );
+		if ( 'stale' === $context ) {
+			self::assertSame( TargetPackageReason::PROVIDER_SELECTION_CHANGED->message(), $result['data']['message'] );
+		}
+		self::assertSame( array(), $provider->credential_ids );
+		self::assertNull( $provider->temporary_credential_id );
+	}
+
+	/** @return iterable<string,array{string}> */
+	public static function refused_provider_contexts(): iterable {
+		yield 'stale selection generation' => array( 'stale' );
+		yield 'missing review context' => array( 'missing' );
+		yield 'malformed transport JSON' => array( 'malformed' );
+	}
+
 	public function test_apply_recomputes_and_skips_astale_submitted_action(): void {
 		$file                   = $this->blueprint_archive( new PackageBlueprint( array( $this->blueprint_package() ) ) );
 		$_POST['row']           = '0';
@@ -522,7 +635,10 @@ final class PortabilityControllerTest extends TestCase {
 		$this->set_uploaded_blueprint( $file );
 
 		try {
-			$result = $this->preview_controller( new PortabilityReadinessSpySecretsFile( true ) )->handle_apply();
+			$controller = $this->preview_controller( new PortabilityReadinessSpySecretsFile( true ), provider: $provider, selection: $selection );
+			self::assertNotNull( $selection );
+			$_POST['provider_expectation'] = addslashes( (string) wp_json_encode( $selection->expectation() ) );
+			$result                        = $controller->handle_apply();
 		} finally {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test temporary file is outside WordPress media handling.
 			unlink( $file );
@@ -641,7 +757,10 @@ final class PortabilityControllerTest extends TestCase {
 		$this->set_uploaded_blueprint( $file );
 
 		try {
-			$result = $this->preview_controller( $secrets )->handle_apply();
+			$controller = $this->preview_controller( $secrets, provider: $provider, selection: $selection );
+			self::assertNotNull( $selection );
+			$_POST['provider_expectation'] = addslashes( (string) wp_json_encode( $selection->expectation() ) );
+			$result                        = $controller->handle_apply();
 		} finally {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test temporary file is outside WordPress media handling.
 			unlink( $file );
@@ -965,12 +1084,21 @@ final class PortabilityControllerTest extends TestCase {
 	}
 
 	public function test_apply_recognises_amanaged_package_without_mutation(): void {
-		$package   = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', 'main', null );
-		$blueprint = new PackageBlueprint( array( $package ) );
-		$item      = new BlueprintPlanItem( $package, TargetPackageAction::MANAGED, TargetPackageReason::ALREADY_MANAGED );
-		$method    = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'apply_item' );
+		$package     = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', 'main', null );
+		$blueprint   = new PackageBlueprint( array( $package ) );
+		$secrets     = new PortabilityReadinessSpySecretsFile( false );
+		$registry    = new ProviderRegistry( array( new TemporaryCredentialProvider( $secrets->credentials_for( 'gh' ), 0, 'repository-id' ) ) );
+		$selection   = GitHubSelectionTestFixture::bind( $registry );
+		$item        = new BlueprintPlanItem( $package, TargetPackageAction::MANAGED, TargetPackageReason::ALREADY_MANAGED, $selection->expectation() );
+		$application = new PortabilityApplicationService(
+			( new ReflectionClass( BlueprintReviewer::class ) )->newInstanceWithoutConstructor(),
+			new BlueprintRepositoryVerifier( $registry, $secrets, $selection ),
+			( new ReflectionClass( PackageOperationService::class ) )->newInstanceWithoutConstructor(),
+			$secrets
+		);
+		$method      = ( new ReflectionClass( PortabilityApplicationService::class ) )->getMethod( 'apply_item' );
 
-		$result = $method->invoke( $this->application(), $blueprint, $item, null, null, null, null );
+		$result = $method->invoke( $application, $blueprint, $item, null, null, null, null );
 
 		self::assertSame(
 			array(
@@ -991,10 +1119,12 @@ final class PortabilityControllerTest extends TestCase {
 		$package     = $this->blueprint_package();
 		$credential  = $this->credential_blueprint()->credentials[0];
 		$blueprint   = new PackageBlueprint( array( $package ), array( $credential ) );
-		$item        = new BlueprintPlanItem( $package, $action, $reason );
+		$registry    = new ProviderRegistry( array( new TemporaryCredentialProvider( $secrets->credentials_for( 'gh' ), 0, 'repository-id' ) ) );
+		$selection   = GitHubSelectionTestFixture::bind( $registry );
+		$item        = new BlueprintPlanItem( $package, $action, $reason, $selection->expectation() );
 		$application = new PortabilityApplicationService(
 			( new ReflectionClass( BlueprintReviewer::class ) )->newInstanceWithoutConstructor(),
-			( new ReflectionClass( BlueprintRepositoryVerifier::class ) )->newInstanceWithoutConstructor(),
+			new BlueprintRepositoryVerifier( $registry, $secrets, $selection ),
 			( new ReflectionClass( PackageOperationService::class ) )->newInstanceWithoutConstructor(),
 			$secrets
 		);
@@ -1020,7 +1150,10 @@ final class PortabilityControllerTest extends TestCase {
 		$this->set_uploaded_blueprint( $file );
 
 		try {
-			$result = $this->preview_controller( new PortabilityReadinessSpySecretsFile( true ), true )->handle_apply();
+			$controller = $this->preview_controller( new PortabilityReadinessSpySecretsFile( true ), true, provider: $provider, selection: $selection );
+			self::assertNotNull( $selection );
+			$_POST['provider_expectation'] = addslashes( (string) wp_json_encode( $selection->expectation() ) );
+			$result                        = $controller->handle_apply();
 		} finally {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test temporary file is outside WordPress media handling.
 			unlink( $file );
@@ -1044,7 +1177,10 @@ final class PortabilityControllerTest extends TestCase {
 		$this->set_uploaded_blueprint( $file );
 
 		try {
-			$result = $this->preview_controller( new PortabilityReadinessSpySecretsFile( true ) )->handle_apply();
+			$controller = $this->preview_controller( new PortabilityReadinessSpySecretsFile( true ), provider: $provider, selection: $selection );
+			self::assertNotNull( $selection );
+			$_POST['provider_expectation'] = addslashes( (string) wp_json_encode( $selection->expectation() ) );
+			$result                        = $controller->handle_apply();
 		} finally {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test temporary file is outside WordPress media handling.
 			unlink( $file );
@@ -1157,17 +1293,19 @@ final class PortabilityControllerTest extends TestCase {
 		$lock->method( 'release' )->willReturn( true );
 		$operations = new PackageOperationService( $plugins, $themes, $coordinator, ( new ReflectionClass( \RAN\PackageRemoval\PackageRemovalService::class ) )->newInstanceWithoutConstructor(), $lock, new \RAN\Storage\RepositorySourceGuard( new \RAN\Tests\Support\RepositorySourceGuardDatabase(), $this->createStub( \RAN\Storage\Database::class ) ) );
 
-		$application = new PortabilityApplicationService( new BlueprintReviewer( $plugins, $themes ), new BlueprintRepositoryVerifier( $registry, $secrets ), $operations, $secrets );
+		$selection   = GitHubSelectionTestFixture::bind( $registry );
+		$application = new PortabilityApplicationService( new BlueprintReviewer( $plugins, $themes ), new BlueprintRepositoryVerifier( $registry, $secrets, $selection ), $operations, $secrets );
 		$controller  = new PortabilityController( ( new ReflectionClass( ManagedPackageBlueprintExporter::class ) )->newInstanceWithoutConstructor(), new BlueprintArchive(), $application, new ProviderSettingsPresenter( $registry, $secrets, new \RAN\Storage\CredentialUsageReader(), new \RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore(), new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore() ) );
 		$blueprint   = new PackageBlueprint( array( new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', 'main', null ) ) );
 		$file        = $this->blueprint_archive( $blueprint );
 		$this->set_uploaded_blueprint( $file );
 		try {
-			$_POST['row']                = '0';
-			$_POST['review_action']      = $installed ? 'adopt' : 'install';
-			$_POST['adopt']              = $installed ? '1' : '0';
-			$_POST['target_credentials'] = array( 0 => SecretsFile::CONSTANT_PROFILE );
-			$constant_preview            = $controller->handle_preview();
+			$_POST['provider_expectation'] = addslashes( (string) wp_json_encode( $selection->expectation() ) );
+			$_POST['row']                  = '0';
+			$_POST['review_action']        = $installed ? 'adopt' : 'install';
+			$_POST['adopt']                = $installed ? '1' : '0';
+			$_POST['target_credentials']   = array( 0 => SecretsFile::CONSTANT_PROFILE );
+			$constant_preview              = $controller->handle_preview();
 			self::assertFalse( $constant_preview['success'] );
 			self::assertSame( 400, $constant_preview['status'] );
 			$constant_apply = $controller->handle_apply();
@@ -1453,8 +1591,11 @@ final class PortabilityControllerTest extends TestCase {
 		);
 	}
 
-	/** @param-out TemporaryCredentialProvider $provider */
-	private function preview_controller( SecretsFile $secrets, bool $installed = false, string $type = 'plugin', ?TemporaryCredentialProvider &$provider = null ): PortabilityController {
+	/**
+	 * @param-out TemporaryCredentialProvider $provider
+	 * @param-out GitHubProviderSelection $selection
+	 */
+	private function preview_controller( SecretsFile $secrets, bool $installed = false, string $type = 'plugin', ?TemporaryCredentialProvider &$provider = null, ?GitHubProviderSelection &$selection = null ): PortabilityController {
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
 		$plugins->method( 'is_installed' )->willReturn( $installed && 'plugin' === $type );
@@ -1465,9 +1606,10 @@ final class PortabilityControllerTest extends TestCase {
 		$provider = new TemporaryCredentialProvider( $secrets->credentials_for( 'gh' ), 0, 'repository-id' );
 		$registry = new ProviderRegistry( array( $provider ), $catalog );
 
+		$selection   = GitHubSelectionTestFixture::bind( $registry );
 		$application = new PortabilityApplicationService(
 			new BlueprintReviewer( $plugins, $themes ),
-			new BlueprintRepositoryVerifier( $registry, $secrets ),
+			new BlueprintRepositoryVerifier( $registry, $secrets, $selection ),
 			( new ReflectionClass( PackageOperationService::class ) )->newInstanceWithoutConstructor(),
 			$secrets
 		);

@@ -97,6 +97,9 @@ function row(
 	const item = {
 		choice,
 		getAttribute(attribute) {
+			if (attribute === 'data-portability-provider-expectation') {
+				return item.providerExpectation ?? null;
+			}
 			if (attribute === 'data-portability-row') {
 				return String(index);
 			}
@@ -1509,6 +1512,7 @@ test('each Apply request carries its complete selected subset and later Apply re
 			submitted.push({
 				row: data.get('row'),
 				selected: data.getAll('selected_rows[]'),
+				expectation: data.get('provider_expectation') ?? null,
 			});
 			if (submitted.length === 1) {
 				return new Promise((resolve) => {
@@ -1533,23 +1537,37 @@ test('each Apply request carries its complete selected subset and later Apply re
 		await tick();
 		state.rows()[1].choice.checked = false;
 		state.listeners.get('root:change')({ target: state.rows()[1].choice });
+		const expectation = JSON.stringify({
+			provider_code: 'gh',
+			selection_generation: 4,
+			implementation_fingerprint: 'a'.repeat(64),
+		});
+		state.rows()[2].providerExpectation = expectation;
 		const applying = state.listeners.get('apply:click')();
-		assert.deepEqual(submitted, [{ row: '2', selected: ['2', '9'] }]);
+		assert.deepEqual(submitted, [
+			{ row: '2', selected: ['2', '9'], expectation: null },
+		]);
+		state.rows()[2].providerExpectation = 'changed-after-apply-start';
 		// Changing a checkbox during the batch cannot change its declared subset.
 		state.rows()[2].choice.checked = false;
 		finishFirst();
 		await applying;
 		assert.deepEqual(submitted, [
-			{ row: '2', selected: ['2', '9'] },
-			{ row: '9', selected: ['2', '9'] },
+			{ row: '2', selected: ['2', '9'], expectation: null },
+			{ row: '9', selected: ['2', '9'], expectation },
 		]);
 
 		state.rows().forEach((item, index) => {
 			item.choice.checked = index === 1;
 		});
+		state.rows()[1].providerExpectation = expectation;
 		state.listeners.get('root:change')({ target: state.rows()[1].choice });
 		await state.listeners.get('apply:click')();
-		assert.deepEqual(submitted.at(-1), { row: '5', selected: ['5'] });
+		assert.deepEqual(submitted.at(-1), {
+			row: '5',
+			selected: ['5'],
+			expectation,
+		});
 		assert.equal(submitted.length, 3);
 	} finally {
 		cleanup();

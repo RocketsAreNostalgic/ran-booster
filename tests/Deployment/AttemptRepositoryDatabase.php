@@ -32,10 +32,28 @@ namespace {
 namespace RAN\Tests\Deployment {
 
 	// phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- The fixture pairs WordPress function doubles with its database class for one isolated test environment.
-	final class AttemptRepositoryDatabase implements \RAN\Storage\DeploymentWriteConnection {
+	final class AttemptRepositoryDatabase extends \RAN\Storage\SchemaConnection implements \RAN\Storage\DeploymentWriteConnection {
 
 		public string $options    = 'wp_options';
-		public string $last_error = '';
+		public \RAN\Tests\RepositoryProvider\SelectionContextDatabase $selection;
+		/** @var array<string, array<string, mixed>> */
+		public array $management_rows = array();
+
+		public function __construct() {
+			$this->selection = new \RAN\Tests\RepositoryProvider\SelectionContextDatabase();
+		}
+
+		public function get_charset_collate(): string {
+			return '';
+		}
+
+		public function esc_like( string $value ): string {
+			return $value;
+		}
+
+		public function get_row( string $query ): mixed {
+			return $this->selection->get_row( $query );
+		}
 		/** @var array<int, array<string, mixed>> */
 		public array $rows = array();
 		/** @var array<string, string> Exact installed identifier to stored lifetime. */
@@ -66,6 +84,9 @@ namespace RAN\Tests\Deployment {
 		}
 
 		public function prepare( string $query, mixed ...$arguments ): string {
+			if ( in_array( \RAN\Storage\GitHubSelectionStore::OPTION, $arguments, true ) || in_array( 'active_plugins', $arguments, true ) || str_starts_with( $query, 'SHOW ' ) ) {
+				return $this->selection->prepare( $query, ...$arguments );
+			}
 			foreach ( $arguments as $argument ) {
 				$query = (string) preg_replace_callback(
 					'/%[dis]/',
@@ -115,6 +136,11 @@ namespace RAN\Tests\Deployment {
 		}
 
 		public function query( string $query ): int|false {
+			if ( str_starts_with( $query, '[' ) ) {
+				$result = $this->selection->query( $query );
+				$this->last_error = $this->selection->last_error;
+				return false === $result ? false : (int) $result;
+			}
 			$this->queries[] = $query;
 			if ( null !== $this->fail_query_contains && str_contains( $query, $this->fail_query_contains ) ) {
 				$this->last_error = 'database details must not escape';
@@ -247,6 +273,11 @@ namespace RAN\Tests\Deployment {
 
 		/** @return list<object>|null */
 		public function get_results( string $query ): ?array {
+			if ( str_starts_with( $query, '[' ) ) {
+				$result = $this->selection->get_results( $query );
+				$this->last_error = $this->selection->last_error;
+				return $result;
+			}
 			if ( 'SHOW ENGINES' === $query ) {
 				++$this->capability_reads;
 
@@ -263,13 +294,13 @@ namespace RAN\Tests\Deployment {
 
 				return null;
 			}
-			if ( str_starts_with( $query, 'SELECT package, adoption_token' ) && preg_match( "/BINARY package = BINARY '([^']+)'/", $query, $match ) === 1 ) {
+			if ( ( str_starts_with( $query, 'SELECT package, adoption_token' ) || str_starts_with( $query, 'SELECT *' ) ) && preg_match( "/BINARY package = BINARY '([^']+)'/", $query, $match ) === 1 ) {
 				$identifier = stripslashes( $match[1] );
 				return isset( $this->management[ $identifier ] ) ? array(
-					(object) array(
+					(object) array_merge( $this->management_rows[ $identifier ] ?? array(), array(
 						'package'        => $identifier,
 						'adoption_token' => $this->management[ $identifier ],
-					),
+					) ),
 				) : array();
 			}
 			if ( str_contains( $query, 'COUNT(*) AS total' ) && str_contains( $query, 'GROUP BY state' ) ) {

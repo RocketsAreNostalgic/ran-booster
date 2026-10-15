@@ -106,6 +106,38 @@ final class GitHubProviderSelection {
 		);
 	}
 
+	public function webhook_access_allowed(): bool {
+		if ( ! $this->operation_allowed() || 'github-hmac-sha256-v1' !== ( $this->state['declaration']['webhook_signing_format'] ?? null ) ) {
+			return false;
+		}
+		try {
+			return $this->registry?->get( 'gh' ) instanceof WebhookNormalizer;
+		} catch ( \Throwable ) {
+			return false;
+		}
+	}
+
+	public function uses_connection( object $connection ): bool {
+		return $this->store->uses_connection( $connection );
+	}
+
+	/** Current authority, also acquiring the first admission lock in caller's transaction. */
+	public function deployment_refusal( ?int $generation, string $type, string $identity ): ?string {
+		try {
+			$state = $this->store->read( true );
+			if ( null === $generation || $generation !== $state['selection_generation'] ) {
+				return 'provider_selection_changed';
+			}
+			$marker = $state['native_mutation'] ?? null;
+			if ( ! $this->operation_allowed() || ( is_array( $marker ) && $marker['target_type'] === $type && $marker['installed_identity'] === $identity ) ) {
+				return 'provider_unavailable';
+			}
+			return null;
+		} catch ( \Throwable ) {
+			return 'provider_unavailable';
+		}
+	}
+
 	public function operation_allowed(): bool {
 		return null !== $this->expectation();
 	}

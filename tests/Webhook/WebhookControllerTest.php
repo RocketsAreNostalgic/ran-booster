@@ -23,6 +23,8 @@ use RAN\Tests\RepositoryProvider\Support\InertWebhookPolicy;
 require_once __DIR__ . '/WebhookControllerTestEnvironment.php';
 
 final class WebhookControllerTest extends TestCase {
+	use \RAN\Tests\Support\QueuedSelectionFixture;
+
 	public const WEBHOOK_SECRET = 'controller-test-webhook-secret-001';
 	private const NO_STORE      = 'no-store, no-cache, must-revalidate, max-age=0';
 
@@ -186,8 +188,9 @@ final class WebhookControllerTest extends TestCase {
 	}
 
 	private function processor( WebhookControllerProvider $provider, WebhookControllerCoordinator $coordinator ): WebhookProcessor {
+		$registry = new ProviderRegistry( array( $provider ) );
 		return new WebhookProcessor(
-			new ProviderRegistry( array( $provider ) ),
+			$registry,
 			$coordinator,
 			new SignedWebhookVerifier(
 				new class() extends SecretsFile {
@@ -207,7 +210,8 @@ final class WebhookControllerTest extends TestCase {
 						);
 					}
 				}
-			)
+			),
+			$this->queued_selection( new \RAN\Tests\Deployment\AttemptRepositoryDatabase(), $registry )
 		);
 	}
 }

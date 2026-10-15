@@ -73,7 +73,7 @@ use RAN\WordPress\WordPressUpdaterLock;
 final class BoosterServiceProvider {
 	private readonly ?\Closure $secrets_factory;
 
-	/** @param callable(ProviderSecretPolicyCatalog, callable): SecretsFile|null $secrets_factory */
+	/** @param callable(ProviderSecretPolicyCatalog, callable, callable): SecretsFile|null $secrets_factory */
 	public function __construct( ?callable $secrets_factory = null ) {
 		$this->secrets_factory = null === $secrets_factory ? null : \Closure::fromCallable( $secrets_factory );
 	}
@@ -90,8 +90,8 @@ final class BoosterServiceProvider {
 		$secrets_runtime = new SecretsRuntimeAvailability();
 		$secret_policies = new ProviderSecretPolicyCatalog();
 		$secrets         = null === $this->secrets_factory
-			? new SecretsFile( provider_policies: $secret_policies, availability: $secrets_runtime, github_credential_access: $github_selection->credential_access_allowed( ... ) )
-			: ( $this->secrets_factory )( $secret_policies, $github_selection->credential_access_allowed( ... ) );
+			? new SecretsFile( provider_policies: $secret_policies, availability: $secrets_runtime, github_credential_access: $github_selection->credential_access_allowed( ... ), github_webhook_access: $github_selection->webhook_access_allowed( ... ) )
+			: ( $this->secrets_factory )( $secret_policies, $github_selection->credential_access_allowed( ... ), $github_selection->webhook_access_allowed( ... ) );
 		if ( ! $secrets instanceof SecretsFile ) {
 			throw new \LogicException( 'The Booster secrets factory must return a SecretsFile.' );
 		}
@@ -190,7 +190,8 @@ final class BoosterServiceProvider {
 					null,
 					null,
 					$container->make( Database::class ),
-					activity: $container->make( \RAN\Activity\ActivityStore::class )
+					activity: $container->make( \RAN\Activity\ActivityStore::class ),
+					selection: $container->make( GitHubProviderSelection::class )
 				);
 			}
 		);

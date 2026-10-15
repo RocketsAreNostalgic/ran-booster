@@ -30,8 +30,12 @@ final readonly class DeploymentRequest {
 		public ?int $initiating_user_id,
 		?int $maximum_artifact_bytes = null,
 		public ?string $installed_identifier = null,
-		public ?string $adoption_token = null
+		public ?string $adoption_token = null,
+		public ?int $provider_selection_generation = null
 	) {
+		if ( null !== $provider_selection_generation && $provider_selection_generation < 0 ) {
+			throw new InvalidArgumentException( 'The provider selection generation must be nonnegative.' );
+		}
 		if ( ( null === $installed_identifier ) !== ( null === $adoption_token ) ) {
 			throw new InvalidArgumentException( 'The adoption snapshot is incomplete.' );
 		}
@@ -56,7 +60,7 @@ final readonly class DeploymentRequest {
 		}
 	}
 
-	/** @return array{repository: string, credential_id: ?string, private: bool, configured_branch: string, package_slug: string, subdirectory: ?string, deployment_policy: string, initiating_user_id: ?int, maximum_artifact_bytes: int, installed_identifier?: string, adoption_token?: string} */
+	/** @return array{repository: string, credential_id: ?string, private: bool, configured_branch: string, package_slug: string, subdirectory: ?string, deployment_policy: string, initiating_user_id: ?int, maximum_artifact_bytes: int, installed_identifier?: string, adoption_token?: string, provider_selection_generation?: int} */
 	public function to_array(): array {
 		$data = array(
 			'repository'             => $this->repository,
@@ -72,6 +76,9 @@ final readonly class DeploymentRequest {
 		if ( null !== $this->adoption_token && null !== $this->installed_identifier ) {
 			$data['installed_identifier'] = $this->installed_identifier;
 			$data['adoption_token']       = $this->adoption_token;
+		}
+		if ( null !== $this->provider_selection_generation ) {
+			$data['provider_selection_generation'] = $this->provider_selection_generation;
 		}
 		return $data;
 	}
@@ -108,6 +115,9 @@ final readonly class DeploymentRequest {
 			$expected_keys[] = 'installed_identifier';
 			$expected_keys[] = 'adoption_token';
 		}
+		if ( is_array( $data ) && array_key_exists( 'provider_selection_generation', $data ) ) {
+			$expected_keys[] = 'provider_selection_generation';
+		}
 		$keys = is_array( $data ) ? array_keys( $data ) : array();
 		if ( $keys !== $expected_keys
 			|| ! is_array( $data )
@@ -120,6 +130,7 @@ final readonly class DeploymentRequest {
 			|| ! is_string( $data['deployment_policy'] )
 			|| ( null !== $data['initiating_user_id'] && ! is_int( $data['initiating_user_id'] ) )
 			|| ! is_int( $data['maximum_artifact_bytes'] )
+			|| ( array_key_exists( 'provider_selection_generation', $data ) && ! is_int( $data['provider_selection_generation'] ) )
 			|| ( isset( $data['adoption_token'] ) && ( ! is_string( $data['adoption_token'] ) || ! is_string( $data['installed_identifier'] ?? null ) ) ) ) {
 			throw new InvalidArgumentException( 'The stored deployment request is invalid.' );
 		}
@@ -135,7 +146,8 @@ final readonly class DeploymentRequest {
 			$data['initiating_user_id'],
 			$data['maximum_artifact_bytes'],
 			$data['installed_identifier'] ?? null,
-			$data['adoption_token'] ?? null
+			$data['adoption_token'] ?? null,
+			$data['provider_selection_generation'] ?? null
 		);
 		if ( ! hash_equals( $request->to_json(), $json ) ) {
 			throw new InvalidArgumentException( 'The stored deployment request is not canonical.' );

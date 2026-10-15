@@ -72,10 +72,14 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		$selection = $container->make( \RAN\RepositoryProvider\GitHubProviderSelection::class );
 		$registry  = $container->make( ProviderRegistry::class );
 		$secrets   = $container->make( SecretsFile::class );
-		foreach ( array( array( $registry, 'github_selection_guard' ), array( $secrets, 'github_credential_access' ) ) as $binding ) {
+		foreach ( array( array( $registry, 'github_selection_guard' ), array( $secrets, 'github_credential_access' ), array( $secrets, 'github_webhook_access' ) ) as $binding ) {
 			$guard = ( new \ReflectionProperty( $binding[0], $binding[1] ) )->getValue( $binding[0] );
 			self::assertInstanceOf( \Closure::class, $guard );
 			self::assertSame( $selection, ( new \ReflectionFunction( $guard ) )->getClosureThis() );
+		}
+		foreach ( array( \RAN\Deployment\DeploymentAttemptRepository::class, \RAN\Webhook\WebhookProcessor::class ) as $consumer_type ) {
+			$consumer = $container->make( $consumer_type );
+			self::assertSame( $selection, ( new \ReflectionProperty( $consumer, 'selection' ) )->getValue( $consumer ) );
 		}
 		$verifier           = $container->make( \RAN\Portability\BlueprintRepositoryVerifier::class );
 		$selection_property = new \ReflectionProperty( $verifier, 'selection' );
@@ -179,8 +183,8 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		$GLOBALS['wpdb'] = new \RAN\Tests\RepositoryProvider\HostSelectionDatabase();
 
 		( new BoosterServiceProvider(
-			static function ( ProviderSecretPolicyCatalog $policies, callable $guard ) use ( &$secrets ): RegistrationTrackingSecretsFile {
-				$secrets = new RegistrationTrackingSecretsFile( $policies, $guard );
+			static function ( ProviderSecretPolicyCatalog $policies, callable $guard, callable $webhook_guard ) use ( &$secrets ): RegistrationTrackingSecretsFile {
+				$secrets = new RegistrationTrackingSecretsFile( $policies, $guard, $webhook_guard );
 
 				return $secrets;
 			}
@@ -281,8 +285,8 @@ final class RegistrationTrackingSecretsFile extends SecretsFile {
 	public int $credential_stores_issued = 0;
 	public RegistrationTrackingCredentialStore $credential_store;
 
-	public function __construct( ProviderSecretPolicyCatalog $policies, callable $guard ) {
-		parent::__construct( '/unused/github-registration-secrets.php', array(), $policies, github_credential_access: $guard );
+	public function __construct( ProviderSecretPolicyCatalog $policies, callable $guard, callable $webhook_guard ) {
+		parent::__construct( '/unused/github-registration-secrets.php', array(), $policies, github_credential_access: $guard, github_webhook_access: $webhook_guard );
 		$this->credential_store = new RegistrationTrackingCredentialStore();
 	}
 

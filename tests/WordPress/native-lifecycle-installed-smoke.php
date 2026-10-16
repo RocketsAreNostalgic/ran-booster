@@ -1,6 +1,6 @@
 <?php
 
-// A fresh WP-CLI request proves the installed Core's eager managed-target scan.
+// A fresh WP-CLI request proves the full managed-target scan and one native update.
 
 use RAN\BoosterGitHubProvider\V1\GitHubProvider;
 use RAN\RepositoryProvider\ProviderRegistry;
@@ -12,10 +12,15 @@ if ( ! defined( 'WP_CLI' ) || ! WP_CLI || '1' !== getenv( 'RAN_BOOSTER_RELEASE_C
 }
 
 $ran_booster_scale    = getenv( 'RAN_BOOSTER_NATIVE_LIFECYCLE_SCALE' );
+$ran_booster_index    = getenv( 'RAN_BOOSTER_NATIVE_LIFECYCLE_INDEX' );
 $ran_booster_items    = get_option( 'ran_booster_c4_native_items', null );
 $ran_booster_archives = get_option( 'ran_booster_c4_native_archives', null );
-if ( ! is_string( $ran_booster_scale ) || ! in_array( $ran_booster_scale, array( '1', '5', '10', '20' ), true ) || ! is_array( $ran_booster_items ) || ! is_array( $ran_booster_archives ) || count( $ran_booster_items ) !== (int) $ran_booster_scale ) {
+if ( ! is_string( $ran_booster_scale ) || ! in_array( $ran_booster_scale, array( '1', '5', '10', '20' ), true ) || ! is_array( $ran_booster_items ) || ! array_is_list( $ran_booster_items ) || ! is_array( $ran_booster_archives ) || count( $ran_booster_items ) !== (int) $ran_booster_scale ) {
 	throw new RuntimeException( 'The native lifecycle fixture state is invalid.' );
+}
+
+if ( ! is_string( $ran_booster_index ) || ! preg_match( '/\A(?:[1-9]|1[0-9]|20)\z/D', $ran_booster_index ) || (int) $ran_booster_index > (int) $ran_booster_scale ) {
+	throw new RuntimeException( 'The native lifecycle target index is invalid.' );
 }
 
 $ran_booster_bootstrap_probe = $GLOBALS['ran_booster_c4_bootstrap_probe'] ?? null;
@@ -182,6 +187,10 @@ foreach ( array( 'RAN\\WPReleaseUpdater\\V1\\WordPress\\NativePackageUpdater', '
 	}
 }
 $ran_booster_container = require __DIR__ . '/core-container-fixture.php';
+$ran_booster_selection = $ran_booster_container->make( RAN\Storage\GitHubSelectionStore::class )->read();
+if ( isset( $ran_booster_selection['native_mutation'] ) ) {
+	throw new RuntimeException( 'The preceding native request did not finalize its mutation.' );
+}
 $ran_booster_registry  = $ran_booster_container->make( ProviderRegistry::class );
 $ran_booster_provider  = $ran_booster_registry->require_capability( 'gh', RepositoryReleaseNativeTargets::class );
 if ( ! $ran_booster_provider instanceof GitHubProvider ) {
@@ -225,7 +234,7 @@ if ( 2 !== $ran_booster_counts['wordpress_org'] ) {
 $ran_booster_plugin_updates = get_site_transient( 'update_plugins' );
 $ran_booster_theme_updates  = get_site_transient( 'update_themes' );
 $ran_booster_active         = 0;
-foreach ( $ran_booster_items as $ran_booster_item ) {
+foreach ( $ran_booster_items as $ran_booster_item_index => $ran_booster_item ) {
 	if ( ! is_array( $ran_booster_item ) || ! is_string( $ran_booster_item['type'] ?? null ) || ! is_string( $ran_booster_item['identifier'] ?? null ) || ! is_string( $ran_booster_item['policy'] ?? null ) ) {
 		throw new RuntimeException( 'The native lifecycle item is malformed.' );
 	}
@@ -241,6 +250,11 @@ foreach ( $ran_booster_items as $ran_booster_item ) {
 	$status = $ran_booster_target->status();
 	if ( ! $status->active ) {
 		throw new RuntimeException( 'The beta.4 public registrar did not activate an exact target.' );
+	}
+	++$ran_booster_active;
+	// Earlier targets completed in previous requests and no longer have update offers.
+	if ( $ran_booster_item_index < (int) $ran_booster_index - 1 ) {
+		continue;
 	}
 	$ran_booster_expected_release_id = (string) hexdec( substr( sha1( (string) $ran_booster_item['repository'] ), 0, 6 ) );
 	if ( '2.0.0' !== $status->offered_version || ! hash_equals( $ran_booster_expected_release_id, $status->candidate_provider_release_id ) ) {
@@ -270,11 +284,11 @@ foreach ( $ran_booster_items as $ran_booster_item ) {
 		|| 'established' !== ( $ran_booster_check['effect'] ?? null ) || '' === ( $ran_booster_check['adoption_token'] ?? '' ) ) {
 		throw new RuntimeException( 'Actual installed native discovery did not record its managed check outcome.' );
 	}
-	++$ran_booster_active;
 }
 
 
-foreach ( $ran_booster_items as $ran_booster_item ) {
+// Each mutation gets a real request shutdown before another target can start.
+foreach ( array( $ran_booster_items[ (int) $ran_booster_index - 1 ] ) as $ran_booster_item ) {
 	// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
 	$type                = $ran_booster_item['type'];
 	$ran_booster_updates = 'plugin' === $type ? $ran_booster_plugin_updates : $ran_booster_theme_updates;
@@ -370,12 +384,16 @@ if ( ! is_wp_error( $ran_booster_bulk ) || 'ran_booster_native_update_unsupporte
 // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 if ( ! unlink( $ran_booster_self_archive ) ) {
 	throw new RuntimeException( 'Self-offer archive cleanup failed.' ); }
-require __DIR__ . '/native-lifecycle-installed-cleanup.php';
+// Leave the installed target intact for the updater's private shutdown verification.
+// A later request verifies all final results before the guarded cleanup.
 
 WP_CLI::success( // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)
 	wp_json_encode(
 		array(
 			'scale'             => (int) $ran_booster_scale,
+			'target_index'      => (int) $ran_booster_index,
+			'finalization'      => 'pending_request_shutdown',
+			'metrics_scope'     => 'full_inventory_discovery_and_one_update',
 			'active'            => $ran_booster_active,
 			'bootstrap'         => $ran_booster_bootstrap_probe,
 			'operation_seconds' => microtime( true ) - $ran_booster_started,

@@ -54,8 +54,8 @@ final class SelectionQueuedWorkTest extends TestCase {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Exact canonical storage bytes and malformed negative controls must bypass sanitization.
 				DeploymentRequest::from_json( json_encode( $data, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION ) );
 				self::fail( 'Invalid generation was accepted.' );
-			} catch ( \InvalidArgumentException ) {
-				self::assertTrue( true );
+			} catch ( \InvalidArgumentException $exception ) {
+				self::assertContains( $exception->getMessage(), array( 'The provider selection generation must be nonnegative.', 'The stored deployment request is invalid.' ) );
 			}
 		}
 	}
@@ -165,7 +165,7 @@ final class SelectionQueuedWorkTest extends TestCase {
 		self::assertSame( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED, $coordinator->execute_claimed( $claimed )->get_code() );
 		$finished = $this->attempts->find_exact( $claimed->get_id() );
 		self::assertSame( DeploymentState::FAILED, $finished?->get_state() );
-		self::assertNull( $finished?->safe_data()['mutation_started_at'] );
+		self::assertNull( $finished->safe_data()['mutation_started_at'] );
 	}
 
 	public function test_revocation_during_locked_adoption_read_refuses_mutation(): void {

@@ -56,6 +56,35 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 	}
 
+	public function test_initial_target_identity_is_exact_and_only_allowed_for_real_installs(): void {
+		$command = PackageOperation::from_input( 'install-plugin', $this->input( 'install-plugin', array( 'expected_identifier' => 'example/Main.php' ) ) );
+		self::assertSame( 'example/Main.php', $command->expected_identifier );
+		self::assertNull( $command->identifier );
+		self::assertSame( 'example', PackageOperation::from_input( 'install-theme', $this->input( 'install-theme', array( 'expected_identifier' => 'example' ) ) )->expected_identifier );
+		foreach ( array(
+			array( 'install-plugin', array( 'expected_identifier' => 'other/main.php' ) ),
+			array( 'install-plugin', array( 'expected_identifier' => 'example' ) ),
+			array( 'install-theme', array( 'expected_identifier' => 'example/main.php' ) ),
+			array(
+				'install-plugin',
+				array(
+					'expected_identifier' => 'example/main.php',
+					'dry-run'             => '1',
+				),
+			),
+			array( 'edit-plugin', array( 'expected_identifier' => 'example/main.php' ) ),
+			array( 'update-plugin', array( 'expected_identifier' => 'example/main.php' ) ),
+			array( 'install-plugin', array( 'expected_identifier' => array( 'example/main.php' ) ) ),
+		) as [$action, $input] ) {
+			try {
+				PackageOperation::from_input( $action, $this->input( $action, $input ) );
+				self::fail( 'An invalid initial identity must refuse.' );
+			} catch ( \InvalidArgumentException $failure ) {
+				self::assertNotSame( '', $failure->getMessage() );
+			}
+		}
+	}
+
 	#[DataProvider( 'operation_matrix' )]
 	public function test_the_explicit_operation_matrix_classifies_deployments( string $action, bool $deployment ): void {
 		$operation = PackageOperation::from_input( action: $action, input: $this->input( $action ) );

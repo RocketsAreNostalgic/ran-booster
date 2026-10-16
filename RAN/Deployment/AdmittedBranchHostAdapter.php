@@ -76,6 +76,9 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	/** Construct the immutable package declaration from Booster's admitted snapshot. */
 	public function declaration(): BranchDeploymentDeclaration {
+		if ( null !== $this->attempt->get_request()->expected_identifier && ( ! defined( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ) || 3 !== constant( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ) ) ) {
+			$this->stage( DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE );
+		}
 		if ( null === $this->attempt->safe_data()['mutation_started_at'] ) {
 			$this->assert_provider_current();
 		}
@@ -86,7 +89,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			if ( 'webhook' === $data['source'] || $data['requested_ref'] !== $request->selected_commit ) {
 				$this->stage( DeploymentOutcome::CODE_PROVIDER_REQUEST_INVALID );
 			}
-			if ( ! defined( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ) || 2 !== constant( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ) || 2 !== ( $this->providers->metadata()[ (string) $data['provider'] ]->archive_api_version ?? 1 ) ) {
+			if ( ! defined( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ) || ! in_array( constant( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ), array( 2, 3 ), true ) || 2 !== ( $this->providers->metadata()[ (string) $data['provider'] ]->archive_api_version ?? 1 ) ) {
 				$this->stage( DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE );
 			}
 		}
@@ -121,7 +124,8 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			(string) $data['operation'],
 			$request->subdirectory,
 			$identifier,
-			...( null === $request->selected_commit ? array() : array( 'selected_commit' => $request->selected_commit ) )
+			...( null === $request->selected_commit ? array() : array( 'selected_commit' => $request->selected_commit ) ),
+			...( null === $request->expected_identifier ? array() : array( 'expected_identifier' => $request->expected_identifier ) )
 		);
 	}
 
@@ -333,7 +337,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		$this->assert_declaration( $deployment );
 		$package    = $this->installed_package( $deployment->package_type, $deployment->slug );
 		$identifier = (string) $package->get_identifier();
-		if ( '' === $identifier ) {
+		if ( '' === $identifier || ( null !== $this->attempt->get_request()->expected_identifier && $identifier !== $this->attempt->get_request()->expected_identifier ) ) {
 			throw new RuntimeException( 'The installed package identity is unavailable.' );
 		}
 		return array( 'identifier' => $identifier ) + $this->package_runtime_state( $package );
@@ -350,8 +354,11 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	public function adopt( BranchDeploymentDeclaration $deployment ): bool {
 		$this->assert_declaration( $deployment );
-		$installed  = $this->installed_package( $deployment->package_type, $deployment->slug );
-		$request    = $this->attempt->get_request();
+		$installed = $this->installed_package( $deployment->package_type, $deployment->slug );
+		$request   = $this->attempt->get_request();
+		if ( null !== $request->expected_identifier && $installed->get_identifier() !== $request->expected_identifier ) {
+			return false;
+		}
 		$data       = $this->attempt->safe_data();
 		$repository = new ManagedRepository(
 			(string) $data['provider'],

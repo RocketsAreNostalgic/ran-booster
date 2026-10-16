@@ -93,6 +93,14 @@ switch ( $ran_booster_phase ) {
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Machine-readable redacted Core status on authenticated WP-CLI only.
 		echo wp_json_encode( $ran_booster_selection->status() ) . "\n";
 		break;
+	case 'expect-bundled':
+		$ran_booster_status = $ran_booster_selection->status();
+		$ran_booster_assert( $ran_booster_status['available'] && 'bundled' === ( $ran_booster_status['current']['selected'] ?? null ) && array() === $ran_booster_status['candidates'] );
+		$ran_booster_assert( $ran_booster_registry->get( 'gh' ) instanceof \RAN\BoosterGitHubProvider\V1\GitHubProvider );
+		foreach ( Fixture::counters() as $ran_booster_count ) {
+			$ran_booster_assert( 0 === $ran_booster_count );
+		}
+		break;
 	case 'expect-unavailable':
 		$ran_booster_assert( ! $ran_booster_selection->status()['available'] );
 		$ran_booster_counts = Fixture::counters();

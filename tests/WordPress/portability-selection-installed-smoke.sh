@@ -13,10 +13,10 @@ switch_phase() { "$php_bin" "$wp_cli" eval-file "$replacement" "$@" --user=fixtu
 # Explicit separate mode: never silently skip missing Migrator prerequisites.
 if [[ "${1:-core}" == migrator ]]; then
   migrator_source="${RAN_MIGRATOR_SOURCE_PATH:?Set exact source helper checkout.}"
-  : "${RAN_MIGRATOR_ARCHIVE:?Set verified Migrator source75 ZIP.}"
-  : "${RAN_MIGRATOR_WP_PUSHER_ARCHIVE:?Set retained exact WP Pusher 3.0.13 ZIP.}"
+  : "${RAN_MIGRATOR_ARCHIVE:?Set verified Migrator source78 (1823347) ZIP.}"
+  : "${RAN_MIGRATOR_WP_PUSHER_ARCHIVE:?Set verified official WP Pusher 3.0.18 ZIP.}"
   : "${RAN_MIGRATOR_WP_CLI_BIN:?Set executable WP-CLI launcher for satellite helper.}"
-  [[ "$(git -C "$migrator_source" rev-parse HEAD)" == 3c9c78b242188304596e175f9257e2315a2bed1c ]] || { echo 'Exact reviewed Migrator helper source required.' >&2; exit 2; }
+  [[ "$(git -C "$migrator_source" rev-parse HEAD)" == 9c99fb0df2e7859b0c376d188fff50bde7f25722 ]] || { echo 'Exact reviewed Migrator helper source required.' >&2; exit 2; }
   git -C "$migrator_source" diff --quiet HEAD -- tests/installed-candidate scripts
   export RAN_MIGRATOR_PROOF_DISPOSABLE=1
   export RAN_MIGRATOR_WORDPRESS_PATH="$wordpress"

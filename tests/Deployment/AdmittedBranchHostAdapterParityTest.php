@@ -9,6 +9,7 @@ require_once __DIR__ . '/AttemptRepositoryDatabase.php';
 require_once __DIR__ . '/AdmittedBranchHostAdapterWordPressFunctions.php';
 require_once __DIR__ . '/PackageMutationGuardWordPressFunctions.php';
 require_once __DIR__ . '/DeploymentWorkerPhpFunctions.php';
+require_once __DIR__ . '/../Storage/StorageTestEnvironment.php';
 
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
@@ -53,6 +54,8 @@ use RAN\Tests\Support\RepositorySourceGuardDatabase;
 use ZipArchive;
 
 final class AdmittedBranchHostAdapterParityTest extends TestCase {
+	use \RAN\Tests\Support\QueuedSelectionFixture;
+
 	private const MAXIMUM_ARTIFACT_BYTES = 1048576;
 
 	private AttemptRepositoryDatabase $database;
@@ -67,6 +70,8 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
+		$GLOBALS['ran_booster_storage_test_options'] = array();
+		unset( $GLOBALS['ran_booster_admitted_http_request_args'], $GLOBALS['ran_booster_admitted_http_guards'] );
 		$GLOBALS['ran_booster_worker_doing_cron']                = true;
 		$GLOBALS['ran_booster_package_mutation_guard_multisite'] = false;
 		$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = true;
@@ -94,7 +99,8 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			function ( int $length ): string {
 				return str_repeat( chr( $this->random_byte++ ), $length );
 			},
-			$this->createStub( \RAN\Storage\Database::class )
+			$this->createStub( \RAN\Storage\Database::class ),
+			selection: $this->queued_selection( $this->database )
 		);
 		$this->plugins          = new ParityPluginRepository();
 		$this->themes           = new ParityThemeRepository();
@@ -143,6 +149,73 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		self::assertSame( self::MAXIMUM_ARTIFACT_BYTES + 1, $arguments['limit_response_size'] );
 		self::assertSame( 1, $archive->cleanup_calls );
 		$artifact->cleanup();
+	}
+
+	public function test_redirect_argument_callback_revocation_refuses_second_transport_and_cleans(): void {
+		$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+		$provider = new ParityRepositoryProvider( $archive );
+		$adapter  = $this->adapter( $this->running_update(), $provider );
+		$this->download_fixture( 'example' );
+		$GLOBALS['ran_booster_admitted_http_responses']    = array(
+			array(
+				'response' => array( 'code' => 302 ),
+				'headers'  => array( 'location' => 'https://example.test/redirected.zip' ),
+			),
+			200,
+		);
+		$GLOBALS['ran_booster_admitted_http_request_args'] = function ( string $url ): void {
+			if ( 'https://example.test/redirected.zip' === $url ) {
+				$this->database->selection->active_bytes = 'a:0:{}';
+			}
+		};
+		try {
+			$adapter->prepare( $adapter->declaration(), $this->update_baseline() );
+			self::fail( 'A late redirected-hop revocation must refuse before transport.' );
+		} catch ( AdmittedBranchStageFailure $failure ) {
+			self::assertSame( DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE, $failure->outcome_code );
+		}
+		self::assertCount( 1, $GLOBALS['ran_booster_admitted_http_calls'] );
+		self::assertSame( 0, $GLOBALS['ran_booster_admitted_http_calls'][0]['arguments']['redirection'] );
+		self::assertSame( array(), $GLOBALS['ran_booster_admitted_http_guards'] );
+		self::assertSame( 1, $archive->cleanup_calls );
+	}
+
+	public function test_changed_generation_refuses_before_changed_package_or_provider_preparation(): void {
+		$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+		$provider = new ParityRepositoryProvider( $archive );
+		$attempt  = $this->running_update();
+		$state    = json_decode( $this->database->selection->selection->rows[0]->option_value, true, 8, JSON_THROW_ON_ERROR );
+		self::assertIsArray( $state );
+		$state['selection_generation'] = 1;
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Exact authority race fixture bypasses sanitization.
+		$this->database->selection->selection->rows[0]->option_value = json_encode( $state, JSON_THROW_ON_ERROR );
+		$this->plugins->managed                                      = array();
+		$adapter = $this->adapter( $attempt, $provider );
+		try {
+			$adapter->declaration();
+			self::fail( 'Stale queued work must require a fresh submission.' );
+		} catch ( AdmittedBranchStageFailure $failure ) {
+			self::assertSame( DeploymentOutcome::CODE_PROVIDER_SELECTION_CHANGED, $failure->outcome_code );
+		}
+		self::assertSame( 0, $provider->prepare_calls );
+		self::assertCount( 0, $GLOBALS['ran_booster_admitted_http_calls'] );
+	}
+
+	public function test_selection_loss_after_mutation_preserves_captured_completion_and_cleanup(): void {
+		$archive                  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+		$provider                 = new ParityRepositoryProvider( $archive );
+		$executor                 = new ParityCoreExecutor();
+		$adapter                  = $this->adapter( $this->running_update(), $provider, executor: $executor );
+		$this->plugins->installed = $this->plugin( version: '2.0.0' );
+		$this->download_fixture( 'example' );
+		$executor->after_execution = function (): void {
+			$this->database->selection->active_bytes = 'a:0:{}';
+		};
+		self::assertSame( DeploymentOutcome::CODE_DEPLOYED, $this->deploy( $adapter ) );
+		self::assertSame( 1, $executor->calls );
+		self::assertSame( 1, $archive->cleanup_calls );
+		self::assertSame( DeploymentState::SUCCEEDED->value, $this->database->rows[0]['state'] );
+		self::assertSame( array(), $this->database->option_rows );
 	}
 
 	public function test_concrete_provider_download_retries_transient_status_before_success(): void {
@@ -413,9 +486,21 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 	}
 
 	private function running_update(): DeploymentAttempt {
-		$identifier                                = (string) $this->plugins->managed['fixture']->get_identifier();
-		$this->database->management[ $identifier ] = 'gh:R_example:11111111-1111-4111-8111-111111111111';
-		$request                                   = new DeploymentRequest(
+		$identifier                                     = (string) $this->plugins->managed['fixture']->get_identifier();
+		$this->database->management[ $identifier ]      = 'gh:R_example:11111111-1111-4111-8111-111111111111';
+		$this->database->management_rows[ $identifier ] = array(
+			'provider'               => 'gh',
+			'provider_repository_id' => 'R_example',
+			'repository'             => 'owner/example',
+			'branch'                 => 'main',
+			'private'                => 0,
+			'credential_id'          => null,
+			'subdirectory'           => null,
+			'deployment_policy'      => DeploymentPolicy::AUTOMATIC->value,
+			'source'                 => 'branch',
+			'source_revision'        => 1,
+		);
+		$request                                        = new DeploymentRequest(
 			'owner/example',
 			null,
 			false,
@@ -467,9 +552,21 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 	}
 
 	private function running_webhook_update(): DeploymentAttempt {
-		$identifier                                = (string) $this->plugins->managed['fixture']->get_identifier();
-		$this->database->management[ $identifier ] = 'gh:R_example:11111111-1111-4111-8111-111111111111';
-		$request                                   = new DeploymentRequest(
+		$identifier                                     = (string) $this->plugins->managed['fixture']->get_identifier();
+		$this->database->management[ $identifier ]      = 'gh:R_example:11111111-1111-4111-8111-111111111111';
+		$this->database->management_rows[ $identifier ] = array(
+			'provider'               => 'gh',
+			'provider_repository_id' => 'R_example',
+			'repository'             => 'owner/example',
+			'branch'                 => 'main',
+			'private'                => 0,
+			'credential_id'          => null,
+			'subdirectory'           => null,
+			'deployment_policy'      => DeploymentPolicy::AUTOMATIC->value,
+			'source'                 => 'branch',
+			'source_revision'        => 1,
+		);
+		$request                                        = new DeploymentRequest(
 			'owner/example',
 			null,
 			false,

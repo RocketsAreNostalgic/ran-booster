@@ -22,6 +22,10 @@ final class GitHubSelectionStore {
 	public function __construct( private \wpdb|SchemaConnection $connection, private string $table ) {
 	}
 
+	public function uses_connection( object $connection ): bool {
+		return $this->connection === $connection;
+	}
+
 	/**
 	 * Authoritative current read: option filters and object caches are not authority.
 	 * Only WordPress's bounded serialized list of plugin basenames is accepted.

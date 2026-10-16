@@ -55,6 +55,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	private const DOWNLOAD_ATTEMPTS = 2;
 
 	private ?ProviderPreparedArchive $provider_archive = null;
+	private ?string $mutation_lock_token               = null;
 	private bool $provider_archive_cleaned             = false;
 
 	public function __construct(
@@ -75,6 +76,9 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	/** Construct the immutable package declaration from Booster's admitted snapshot. */
 	public function declaration(): BranchDeploymentDeclaration {
+		if ( null === $this->attempt->safe_data()['mutation_started_at'] ) {
+			$this->assert_provider_current();
+		}
 		$data       = $this->attempt->safe_data();
 		$request    = $this->attempt->get_request();
 		$identifier = null;
@@ -123,7 +127,11 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	public function mark_mutation_started(): void {
 		try {
-			$this->attempt = $this->attempts->mark_mutation_started( $this->attempt->get_id() );
+			$result = $this->attempts->mark_mutation_started( $this->attempt->get_id(), owns_lock: fn (): bool => null !== $this->mutation_lock_token && $this->mutation_lock_token === $this->updater_lock->current_token() );
+			if ( $result instanceof DeploymentOutcome ) {
+				$this->stage( $result->get_code() );
+			}
+			$this->attempt = $result;
 		} catch ( DeploymentStorageFailure $failure ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed failure text and chained exceptions preserve durable failure mapping; they are not output.
 			throw new AdmittedBranchDurabilityFailure( previous: $failure );
@@ -149,6 +157,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed -- AdmittedArchiveSource requires the baseline parameter; this host prepares from its already-admitted deployment attempt.
 	public function prepare( BranchDeploymentDeclaration $deployment, ?array $baseline ): AdmittedBranchArtifact {
 		$this->assert_declaration( $deployment );
+		$this->assert_provider_current();
 		if ( null !== $this->provider_archive ) {
 			throw new RuntimeException( 'The admitted archive source is already consumed.' );
 		}
@@ -178,6 +187,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 		$provider_archive = $this->provider_archive;
 		try {
+			$this->assert_provider_current();
 			$resolved_ref = $provider_archive->get_resolved_ref();
 			if ( '' === $resolved_ref || trim( $resolved_ref ) !== $resolved_ref || strlen( $resolved_ref ) > 191 || preg_match( '/[[:cntrl:]]/', $resolved_ref ) === 1 ) {
 				$this->stage( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID );
@@ -224,6 +234,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 				$maximum_artifact_bytes
 			);
 			$this->assert_artifact_capacity( $artifact, $deployment );
+			$this->assert_provider_current();
 			return $artifact;
 		} catch ( AdmittedBranchStageFailure $failure ) {
 			$this->cleanup_provider_archive( $provider_archive );
@@ -248,6 +259,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	}
 
 	public function assert_mutation_allowed(): void {
+		$this->assert_provider_current();
 		PackageMutationGuard::assert_filesystem_mutation_allowed();
 	}
 
@@ -384,9 +396,11 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			throw new BranchDeploymentLockStorageFailure( 'The WordPress updater lock storage is uncertain.', 0, $failure );
 		}
 
+		$this->mutation_lock_token = $token;
 		try {
 			return $operation();
 		} finally {
+			$this->mutation_lock_token = null;
 			try {
 				$released = $this->updater_lock->release( $token );
 			} catch ( DeploymentStorageFailure $failure ) {
@@ -406,22 +420,55 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 	}
 
+	private function assert_provider_current(): void {
+		$refusal = $this->attempts->provider_refusal( $this->attempt );
+		if ( null !== $refusal ) {
+			$this->stage( $refusal );
+		}
+	}
+
 	private function download_provider_archive( ProviderPreparedArchive $archive, string $destination, int $maximum_artifact_bytes ): void {
 		try {
 			$url = $archive->get_url();
 			$this->assert_safe_https_url( $url );
 			for ( $attempt = 1; $attempt <= self::DOWNLOAD_ATTEMPTS; ++$attempt ) {
-				$response = wp_safe_remote_get(
-					$url,
-					array(
-						'timeout'             => self::DOWNLOAD_TIMEOUT,
-						'redirection'         => 3,
-						'reject_unsafe_urls'  => true,
-						'stream'              => true,
-						'filename'            => $destination,
-						'limit_response_size' => $maximum_artifact_bytes + 1,
-					)
-				);
+				for ( $redirect = 0; 3 >= $redirect; ++$redirect ) {
+					$this->assert_provider_current();
+					$guard = function ( mixed $preempt, array $arguments, string $request_url ) use ( $url, $destination ): mixed {
+						if ( $url === $request_url && true === ( $arguments['stream'] ?? null ) && ( $arguments['filename'] ?? null ) === $destination ) {
+							$this->assert_provider_current();
+						}
+						return $preempt;
+					};
+					add_filter( 'pre_http_request', $guard, PHP_INT_MAX, 3 );
+					try {
+						$response = wp_safe_remote_get(
+							$url,
+							array(
+								'timeout'             => self::DOWNLOAD_TIMEOUT,
+								'redirection'         => 0,
+								'reject_unsafe_urls'  => true,
+								'stream'              => true,
+								'filename'            => $destination,
+								'limit_response_size' => $maximum_artifact_bytes + 1,
+							)
+						);
+					} finally {
+						remove_filter( 'pre_http_request', $guard, PHP_INT_MAX );
+					}
+					$this->assert_provider_current();
+					$status = (int) wp_remote_retrieve_response_code( $response );
+					if ( ! in_array( $status, array( 301, 302, 303, 307, 308 ), true ) ) {
+						break;
+					}
+					$location = wp_remote_retrieve_header( $response, 'location' );
+					if ( ! is_string( $location ) ) {
+						$this->stage( DeploymentOutcome::CODE_ARCHIVE_URL_INVALID );
+					}
+					$this->assert_safe_https_url( $location );
+					$url = $location;
+				}
+
 				if ( is_wp_error( $response ) ) {
 					$this->stage( DeploymentOutcome::CODE_ARCHIVE_DOWNLOAD_FAILED );
 				}
@@ -444,7 +491,11 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	private function verify_provider_head( ProviderPreparedArchive $archive ): void {
 		try {
+			$this->assert_provider_current();
 			$archive->verify_current_head();
+			$this->assert_provider_current();
+		} catch ( AdmittedBranchStageFailure $failure ) {
+			throw $failure;
 		} catch ( StaleDeployment ) {
 			$this->stage( DeploymentOutcome::CODE_STALE_EVENT );
 		} catch ( Throwable $failure ) {

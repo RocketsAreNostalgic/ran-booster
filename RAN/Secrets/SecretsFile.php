@@ -57,6 +57,8 @@ class SecretsFile {
 	private bool $validate_configured_path;
 	/** @var \Closure(array{kind:mixed,configuration:mixed}|null): bool|null */
 	private ?\Closure $github_credential_access;
+	/** @var \Closure(): bool|null */
+	private ?\Closure $github_webhook_access;
 
 
 	/** @var array<string, array<string, array<string, mixed>>> */
@@ -67,6 +69,7 @@ class SecretsFile {
 	 * @param array<string, mixed>|null        $constants        Test-only constant values. Null reads PHP constants.
 	 * @param ProviderSecretPolicyCatalog|null $provider_policies Registered provider-owned secret policies.
 	 * @param callable(array{kind:mixed,configuration:mixed}|null): bool|null $github_credential_access Core-owned approval bound to the request generation/fingerprint; null metadata checks availability only.
+	 * @param callable(): bool|null $github_webhook_access Core-owned signing access bound to the current selection.
 	 */
 	public function __construct(
 		?string $path = null,
@@ -76,7 +79,8 @@ class SecretsFile {
 		?EncryptedSecretsEnvelopeCodec $codec = null,
 		?PrivateLocationCandidateResolver $location_resolver = null,
 		?SecretsRuntimeAvailability $availability = null,
-		?callable $github_credential_access = null
+		?callable $github_credential_access = null,
+		?callable $github_webhook_access = null
 	) {
 		$this->validate_configured_path = null === $path;
 		$this->path                     = null === $path ? $this->default_path() : $path;
@@ -87,6 +91,7 @@ class SecretsFile {
 		$this->location_resolver        = $location_resolver ?? new PrivateLocationCandidateResolver();
 		$this->availability             = $availability ?? new SecretsRuntimeAvailability();
 		$this->github_credential_access = null === $github_credential_access ? null : \Closure::fromCallable( $github_credential_access );
+		$this->github_webhook_access    = null === $github_webhook_access ? null : \Closure::fromCallable( $github_webhook_access );
 	}
 
 	/**
@@ -766,7 +771,8 @@ class SecretsFile {
 		$profiles      = array();
 		$provider_code = $this->provider_value( $provider );
 		$records       = array();
-		$constant      = $this->constant_webhook(
+		// Bound GitHub has no signing constants; display local metadata without provider callbacks.
+		$constant = 'gh' === $provider_code && null !== $this->github_webhook_access ? null : $this->constant_webhook(
 			$provider_code,
 			$this->provider_policies->webhook_policy( $provider )
 		);
@@ -817,8 +823,9 @@ class SecretsFile {
 		$this->assert_available();
 		$policy        = $this->provider_policies->webhook_policy( $provider );
 		$provider_code = $this->provider_value( $provider );
-		$records       = array();
-		$constant      = $this->constant_webhook( $provider_code, $policy );
+		$this->assert_webhook_access( $provider_code );
+		$records  = array();
+		$constant = $this->constant_webhook( $provider_code, $policy );
 
 		if ( null !== $constant ) {
 			$records[ self::CONSTANT_PROFILE ] = array(
@@ -856,6 +863,7 @@ class SecretsFile {
 			);
 		}
 
+		$this->assert_webhook_access( $provider_code );
 		return $records;
 	}
 
@@ -872,9 +880,10 @@ class SecretsFile {
 	): string {
 		$this->assert_available();
 		$provider_code = $this->provider_value( $provider );
-		$id            = $this->writable_id( $id, 'wh' );
-		$document      = $this->file_document();
-		$existing      = $document[ self::WEBHOOKS ][ $provider_code ][ $id ] ?? null;
+		$this->assert_webhook_access( $provider_code );
+		$id       = $this->writable_id( $id, 'wh' );
+		$document = $this->file_document();
+		$existing = $document[ self::WEBHOOKS ][ $provider_code ][ $id ] ?? null;
 		if ( ( null === $secret || '' === $secret ) && is_array( $existing ) ) {
 			$secret = $existing['secret'];
 		}
@@ -902,7 +911,8 @@ class SecretsFile {
 				$document[ self::WEBHOOKS ][ $provider_code ] = $records;
 
 				return array( $document, $id );
-			}
+			},
+			fn () => $this->assert_webhook_access( $provider_code )
 		);
 	}
 
@@ -1119,6 +1129,20 @@ class SecretsFile {
 		}
 	}
 
+	private function assert_webhook_access( string $provider ): void {
+		if ( 'gh' !== $provider || null === $this->github_webhook_access ) {
+			return;
+		}
+		try {
+			$allowed = true === ( $this->github_webhook_access )();
+		} catch ( \Throwable ) {
+			$allowed = false;
+		}
+		if ( ! $allowed ) {
+			throw new RuntimeException( 'GitHub webhook access is unavailable.' );
+		}
+	}
+
 	private function provider_value( ProviderCode|string $provider ): string {
 		try {
 			return $provider instanceof ProviderCode ? $provider->value : ProviderCode::parse( $provider )->value;
@@ -1195,8 +1219,19 @@ class SecretsFile {
 
 	/** @return StoredWebhook|null */
 	private function constant_webhook( string $provider, ProviderWebhookPolicy $policy ): ?array {
+		$this->assert_webhook_access( $provider );
+		$bound = 'gh' === $provider && null !== $this->github_webhook_access;
 		try {
-			$record = $policy->webhook_from_constants( $this->declared_constants( $policy->get_constant_names() ) );
+			$names = $policy->get_constant_names();
+			$this->assert_webhook_access( $provider );
+			if ( $bound && array() !== $names ) {
+				throw new RuntimeException( 'Bound GitHub webhook constants are unsupported.' );
+			}
+			$record = $policy->webhook_from_constants( $this->declared_constants( $names ) );
+			$this->assert_webhook_access( $provider );
+			if ( $bound && null !== $record ) {
+				throw new RuntimeException( 'Bound GitHub webhook constants are unsupported.' );
+			}
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'Provider webhook constants could not be validated.' );
 		}
@@ -1412,6 +1447,7 @@ class SecretsFile {
 		#[\SensitiveParameter] mixed $secret,
 		bool $submitted = false
 	): array {
+		$this->assert_webhook_access( $provider );
 		$policy      = $this->provider_policies->find_webhook_policy( $provider );
 		$policy_data = array_intersect_key(
 			$metadata,
@@ -1430,6 +1466,7 @@ class SecretsFile {
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'Provider webhook material could not be validated.' );
 		}
+		$this->assert_webhook_access( $provider );
 		$this->assert_only_keys( $record, array( 'label', 'scope', 'target', 'authority_id', 'secret' ), 'Provider webhook policy returned unsupported fields.' );
 		$revision = $metadata['revision'] ?? 1;
 		$origin   = $metadata['origin'] ?? 'manual';

@@ -80,6 +80,7 @@ require_once __DIR__ . '/DashboardRoutingWordPressFunctions.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Dashboard.php';
 
 final class DashboardIndexRoutingTest extends TestCase {
+	use \RAN\Tests\Support\QueuedSelectionFixture;
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
@@ -2807,7 +2808,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'wp_ran_booster_deployment_attempts',
 			static fn (): \DateTimeImmutable => new \DateTimeImmutable( '2026-07-27 12:00:00 UTC' ),
 			static fn ( int $length ): string => str_repeat( "\x0b", $length ),
-			new ReadyDashboardDatabase()
+			new ReadyDashboardDatabase(),
+			selection: $this->queued_selection( $attempt_database )
 		);
 		$plugins                 = $this->createMock( PluginRepository::class );
 		$plugins->expects( self::never() )->method( 'from_slug' );

@@ -57,6 +57,40 @@ change; a subset is a valid version 2 blueprint.
 The codebase currently treats Transporter as a strict single-site feature. The
 mutation guard rejects multisite before deployment work proceeds.
 
+## Requirements and selected-set review
+
+Exports include normalized requirements observed in readable installed plugin
+headers or theme stylesheets. Their basis is `installed_headers`; they describe
+the source site's installed package, not an unseen branch head or newest release.
+A missing declaration is explicit (`null`, or an empty dependency list). An
+unreadable or malformed declaration is omitted and reported separately by the
+exporter. The download response carries only the affected-package count in
+`X-RAN-Blueprint-Requirement-Warnings`; enhanced export displays an omission
+warning. No credential or private path enters that header.
+
+Destination review reports PHP and WordPress declared minimums, local declared
+dependency status, and the aggregate declared floors for the proposed set.
+Unknown, not declared, not supplied and not checked are distinct. Passing these
+checks does not prove runtime compatibility or installed artifact equality.
+Installed-header failures warn about the observation; they cannot establish what
+a moving branch head requires. Installation still validates its freshly acquired
+package. A missing or inactive dependency concerns activation and does not by
+itself prohibit an otherwise supported inactive installation.
+
+The dashboard summary covers all proposed rows before checkbox selection. Each
+Apply request carries the complete checkbox selection captured for that batch.
+Core validates that subset and applies the existing repository-source rule before
+credential or provider access: multiple Branch packages or one Release package,
+never both. Unselected entries do not reserve repositories. Each later Apply
+starts with a fresh selection and fresh destination checks; this adds no durable
+plan, session or batch-atomicity promise. A caller omitting the batch selection
+requests only its individual row, still subject to live storage admission.
+
+Requirements observations alone no longer make an ordinary unpinned Branch row
+unsupported. Release-source and exact-selection execution remain blocked until
+their separate acquisition, provider safeguard and adoption contracts qualify.
+Abilities and whole-site V3 are deferred; this is a dashboard/domain V2 slice.
+
 ## Core classes
 
 The main runtime types are:
@@ -103,15 +137,16 @@ that the ZipArchive AES-256 API is available.
 Configuration export includes mixed branch and release packages using their actual
 managed settings. Missing release configuration rejects the export; no package
 is silently omitted. Export does not claim installed artifact equality or
-populate exact selections from a remote latest release. Requirements observation
-export, exact export and destination comparison reports remain separate work.
+populate exact selections from a remote latest release. Installed requirements
+observations and local comparison reports are available; verified exact export
+remains separate work.
 
 The reader validates source-aware V2 records, exact selections and attributed
 requirements. This first runtime slice deliberately blocks applying release
-records or records carrying selection/requirements with
+records or records carrying exact selection with
 `unsupported_blueprint_operation`. It does not ignore those fields and run the
 old branch handler. Existing unpinned branch operations retain their fresh checks.
-Release installation/adoption, exact acquisition, requirements comparison and
+Release installation/adoption, exact acquisition and
 explicit reconciliation require their separately qualified operations.
 
 V2 object keys are recursively sorted for canonical JSON. Valid V1 input must
@@ -341,3 +376,19 @@ Use the following mapping when a Transporter operation fails:
 - [Deployment execution](deployment-execution.md)
 - [Provider extension contract](provider-extension-contract.md)
 - [Custom git vendor setup](custom-git-vendors.md)
+
+### Local management comparison
+
+The package review also compares requested management configuration with this
+site's current branch or release configuration. It distinguishes absent,
+unmanaged, matching, different and unavailable configuration, and names the
+changed configuration fields. Display names and carried selection or requirement
+observations do not change management equality. Missing or unreadable release
+configuration remains unavailable rather than being guessed.
+
+These local observations do not authorize installation or reconciliation and do
+not replace the existing action checks. Installed file equality remains unknown,
+even when configuration or version labels match. Source access and package
+inspection are not checked by the local comparison; the existing operational
+review remains separate. No credentials or provider calls are needed for these
+observations, and they carry no Apply expectation.

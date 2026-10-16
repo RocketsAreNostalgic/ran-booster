@@ -410,7 +410,7 @@ class Database {
 	 *     indexes: array<string, array{0: bool, 1: list<string>}>
 	 * }
 	 */
-	private function inspect_table( string $table_name ): array {
+	private function inspect_table( string $table_name, bool $ignore_prefix_indexes = false ): array {
 		$wpdb = $this->schema_connection();
 
 		$status_query     = $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', $table_name );
@@ -420,9 +420,15 @@ class Database {
 		// Schema installation must inspect the authoritative database.
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The preceding prepare() binds the table name as %s; inspect the live engine metadata before accepting the schema.
 		$status = $wpdb->get_row( $status_query );
+		if ( $this->identity_read_failed() ) {
+			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+		}
 		// Schema installation must inspect the authoritative database.
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The preceding prepare() binds the table identifier as %i; inspect live column definitions before accepting the schema.
 		$column_rows = $wpdb->get_results( $columns_query );
+		if ( $this->identity_read_failed() ) {
+			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+		}
 		// Schema installation must inspect the authoritative database.
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The preceding prepare() binds the table identifier as %i; inspect live index definitions before accepting the schema.
 		$index_rows = $wpdb->get_results( $indexes_query );
@@ -472,7 +478,8 @@ class Database {
 			);
 		}
 
-		$indexes = array();
+		$indexes        = array();
+		$prefix_indexes = array();
 		foreach ( $index_rows as $row ) {
 			if ( ! is_object( $row )
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
@@ -486,7 +493,11 @@ class Database {
 			}
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 			if ( null !== $row->Sub_part ) {
-				throw new DatabaseLifecycleFailure( 'incompatible_schema' );
+				if ( ! $ignore_prefix_indexes ) {
+					throw new DatabaseLifecycleFailure( 'incompatible_schema' );
+				}
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Native database metadata.
+				$prefix_indexes[ (string) $row->Key_name ] = true;
 			}
 
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
@@ -505,6 +516,7 @@ class Database {
 			$indexes[ $name ][0]              = $unique;
 			$indexes[ $name ][1][ $sequence ] = $column;
 		}
+		$indexes = array_diff_key( $indexes, $prefix_indexes );
 		foreach ( $indexes as &$index ) {
 			ksort( $index[1], SORT_NUMERIC );
 			$index[1] = array_values( $index[1] );
@@ -518,6 +530,22 @@ class Database {
 			'columns' => $columns,
 			'indexes' => $indexes,
 		);
+	}
+
+	/** Verify only the options invariants needed by the selection row, without altering WordPress tables. */
+	public function require_selection_storage( string $table ): void {
+		$shape = $this->inspect_table( $table, true );
+		foreach ( array( 'option_name', 'option_value', 'autoload' ) as $column ) {
+			if ( ! isset( $shape['columns'][ $column ] ) ) {
+				throw new DatabaseLifecycleFailure( 'selection_storage_unsupported' );
+			}
+		}
+		foreach ( $shape['indexes'] as $index ) {
+			if ( array( true, array( 'option_name' ) ) === $index ) {
+				return;
+			}
+		}
+		throw new DatabaseLifecycleFailure( 'selection_storage_unsupported' );
 	}
 
 	/**

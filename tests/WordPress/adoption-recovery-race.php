@@ -41,6 +41,20 @@ $ran_booster_race_plugins    = $ran_booster_race_container->make( PluginReposito
 $ran_booster_race_removal    = $ran_booster_race_container->make( PackageRemovalService::class );
 $ran_booster_race_attempts   = $ran_booster_race_container->make( DeploymentAttemptRepository::class );
 global $wpdb;
+// Complete real bootstrap before the owner can hold selection authority. Otherwise
+// the peer blocks before this fixture can observe its intended transaction boundary.
+if ( str_ends_with( $ran_booster_race_action, '-peer' ) ) {
+	if ( ! $ran_booster_race_filesystem->put_contents( $ran_booster_race_dir . '/bootstrapped', 'ready', 0600 ) ) {
+		throw new RuntimeException( 'Race peer bootstrap barrier unavailable.' );
+	}
+	$ran_booster_race_deadline = microtime( true ) + 20;
+	while ( ! is_file( $ran_booster_race_dir . '/start-peer' ) ) {
+		if ( microtime( true ) > $ran_booster_race_deadline ) {
+			throw new RuntimeException( 'Race peer bootstrap barrier timed out.' );
+		}
+		usleep( 20000 );
+	}
+}
 if ( in_array( $ran_booster_race_action, array( 'prepare', 'prepare-native' ), true ) ) {
 	if ( file_exists( $ran_booster_race_path ) || is_link( $ran_booster_race_path ) || ! wp_mkdir_p( $ran_booster_race_path )
 		|| ! $ran_booster_race_filesystem->put_contents( $ran_booster_race_path . '/entry.php', "<?php\n/* Plugin Name: RAN recovery race\nVersion: 1.0\n*/\n", 0644 ) ) {

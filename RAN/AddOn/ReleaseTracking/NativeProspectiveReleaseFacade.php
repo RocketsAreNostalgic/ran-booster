@@ -95,17 +95,21 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 
 
 	/** @param array<string,mixed>|null $provider_expectation */
-	public function nonce_action( string $operation, string $type, ?array $provider_expectation ): string {
+	public function nonce_action( string $operation, string $type, ?array $provider_expectation, ?string $expected_identifier = null, DeploymentPolicy $initial_policy = DeploymentPolicy::MANUAL ): string {
 		if ( ! in_array( $operation, array( 'list_candidates', 'inspect', 'install' ), true )
 			|| ! in_array( $type, array( 'plugin', 'theme' ), true ) ) {
 			throw new InvalidArgumentException( 'The prospective release nonce scope is invalid.' );
 		}
 
+		$this->assert_install_intent( $type, $expected_identifier, $initial_policy );
+		if ( 'install' !== $operation && ( null !== $expected_identifier || DeploymentPolicy::MANUAL !== $initial_policy ) ) {
+			throw new InvalidArgumentException( 'The prospective review scope is invalid.' );
+		}
 		$context = null === $provider_expectation ? null : GitHubProviderSelection::normalize_expectation( $provider_expectation );
 		if ( 'install' !== $operation && null !== $context ) {
 			throw new InvalidArgumentException( 'The prospective review scope is invalid.' );
 		}
-		return 'ran-booster-prospective-release-' . $operation . '-' . $type . ( 'install' === $operation ? '-' . hash( 'sha256', (string) wp_json_encode( $context ) ) : '' );
+		return 'ran-booster-prospective-release-' . $operation . '-' . $type . ( 'install' === $operation ? '-' . hash( 'sha256', (string) wp_json_encode( array( $context, $expected_identifier, $initial_policy->value ) ) ) : '' );
 	}
 
 
@@ -243,14 +247,16 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		string $expected_fingerprint,
 		string $channel,
 		string $nonce,
-		?array $provider_expectation
+		?array $provider_expectation,
+		?string $expected_identifier = null,
+		DeploymentPolicy $initial_policy = DeploymentPolicy::MANUAL
 	): ProspectiveReleaseResult {
 		if ( ! RuntimeSupport::current()->allows_managed_operations() ) {
 			return ProspectiveReleaseResult::failure( UnsupportedRuntimeException::ERROR_CODE );
 		}
 
 		if ( ! $this->valid_channel( $channel )
-			|| ! $this->authorized( 'install', $type, $nonce, $provider_expectation )
+			|| ! $this->authorized( 'install', $type, $nonce, $provider_expectation, $expected_identifier, $initial_policy )
 
 			|| ! $this->valid_exact_release( $release_id, $tag )
 
@@ -308,7 +314,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			return ProspectiveReleaseResult::failure( 'unable_to_check' );
 		}
 
-		return $this->install_exact( $type, $repository, $release, $channel );
+		return $this->install_exact( $type, $repository, $release, $channel, $expected_identifier, $initial_policy );
 	}
 
 	/** @param array<string, mixed> $request
@@ -328,7 +334,9 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		string $type,
 		array $repository,
 		RepositoryReleaseArtifact $release,
-		string $channel
+		string $channel,
+		?string $expected_identifier,
+		DeploymentPolicy $initial_policy
 	): ProspectiveReleaseResult {
 		$artifact            = null;
 		$lock_token          = null;
@@ -344,6 +352,10 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			$version       = $release->version();
 			$repository    = $this->managed_repository( $repository );
 			do {
+				if ( null !== $expected_identifier && ! hash_equals( $expected_identifier, $identifier ) ) {
+					$outcome = ProspectiveReleaseResult::failure( 'package_identity_mismatch' );
+					break;
+				}
 				$availability = $this->release_source_available( $type, $identifier, $repository );
 				if ( true !== $availability ) {
 					$outcome = ProspectiveReleaseResult::failure( false === $availability ? 'release_repository_conflict' : 'release_unavailable' );
@@ -408,7 +420,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 						} else {
 							$package->set_repository( $repository );
 							$package->set_subdirectory( null );
-							$package->set_deployment_policy( DeploymentPolicy::MANUAL );
+							$package->set_deployment_policy( $initial_policy );
 							$package->set_source( PackageSource::RELEASE_ASSET, 1 );
 							$adoption = $this->adopt_release(
 								$type,
@@ -657,14 +669,14 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 	}
 
 	/** @param array<string,mixed>|null $provider_expectation */
-	private function authorized( string $operation, string $type, string $nonce, ?array $provider_expectation = null ): bool {
+	private function authorized( string $operation, string $type, string $nonce, ?array $provider_expectation = null, ?string $expected_identifier = null, DeploymentPolicy $initial_policy = DeploymentPolicy::MANUAL ): bool {
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true )
 			|| ! ( $this->can_manage )( $type ) ) {
 			return false;
 		}
 
 		try {
-			return '' !== $nonce && ( $this->verify_nonce )( $nonce, $this->nonce_action( $operation, $type, $provider_expectation ) );
+			return '' !== $nonce && ( $this->verify_nonce )( $nonce, $this->nonce_action( $operation, $type, $provider_expectation, $expected_identifier, $initial_policy ) );
 		} catch ( InvalidArgumentException ) {
 			return false;
 		}
@@ -724,6 +736,22 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			'1' === ( $repository['private'] ?? null ),
 			is_string( $credential_id ) && '' !== $credential_id ? $credential_id : null
 		);
+	}
+
+	private function assert_install_intent( string $type, ?string $identifier, DeploymentPolicy $policy ): void {
+		if ( ! in_array( $policy, array( DeploymentPolicy::MANUAL, DeploymentPolicy::DISABLED ), true )
+			|| ( DeploymentPolicy::DISABLED === $policy && null === $identifier ) ) {
+			throw new InvalidArgumentException( 'The initial deployment policy is invalid.' );
+		}
+		if ( null === $identifier ) {
+			return;
+		}
+		$parts = explode( '/', $identifier );
+		if ( ( 'plugin' === $type && ( 2 !== count( $parts ) || ! str_ends_with( $parts[1], '.php' ) ) )
+			|| ( 'theme' === $type && 1 !== count( $parts ) ) ) {
+			throw new InvalidArgumentException( 'The expected package identity is invalid.' );
+		}
+		new ManagedReleaseConfiguration( $parts[0], 'plugin' === $type ? $parts[1] : 'style.css' );
 	}
 
 	private function valid_exact_release( string $release_id, string $tag ): bool {

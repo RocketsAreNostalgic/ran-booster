@@ -22,6 +22,7 @@ require_once __DIR__ . '/../Support/ProviderCredentialDispatcherWordPressFunctio
 require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
 require_once __DIR__ . '/../Support/ProviderProfileAdminControllerWordPressFunctions.php';
 require_once __DIR__ . '/../Support/WPError.php';
+require_once __DIR__ . '/../Deployment/PackageMutationGuardWordPressFunctions.php';
 
 final class GitHubAdoptionTransitionTest extends TestCase {
 	private string $root;
@@ -176,9 +177,9 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 		self::assertSame( 'bb', $presenter->build( 'bb' )['selected_provider'] );
 	}
 
-	private function admin_controller(): \RAN\Admin\ProviderProfileAdminController {
+	private function admin_controller( ?\RAN\PackageRemoval\PackageRemovalService $recovery = null, ?\RAN\Dashboard $dashboard = null ): \RAN\Admin\ProviderProfileAdminController {
 		return new \RAN\Admin\ProviderProfileAdminController(
-			$this->createStub( \RAN\Dashboard::class ),
+			$dashboard ?? $this->createStub( \RAN\Dashboard::class ),
 			new \RAN\RepositoryProvider\ProviderRegistry(),
 			$this->secrets,
 			new \RAN\Admin\ManagedPackageWebhookAuthorityResolver( $this->createStub( \RAN\Storage\PluginRepository::class ), $this->createStub( \RAN\Storage\ThemeRepository::class ) ),
@@ -187,8 +188,92 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 			new \RAN\Admin\PublicRepositoryLookupProfileStore(),
 			new \RAN\Admin\CredentialExpiryObservationStore(),
 			github_selection: $this->selection,
-			deployment_attempts: $this->attempts
+			deployment_attempts: $this->attempts,
+			package_removal: $recovery
 		);
+	}
+
+	public function test_native_recovery_admin_permissions_nonce_and_explicit_confirmations(): void {
+		$service   = $this->native_recovery_service();
+		$review    = $service->native_recovery_confirmation();
+		$input     = array(
+			'review_digest'     => $review['digest'],
+			'confirmed_stopped' => '1',
+			'confirmed_removal' => '1',
+		);
+		$dashboard = $this->createMock( \RAN\Dashboard::class );
+		$dashboard->expects( self::exactly( 9 ) )->method( 'add_message' )->with( self::callback( static fn ( mixed $message ): bool => $message instanceof \WP_Error && 'ran_booster_github_recovery' === $message->get_error_code() ) );
+		$controller = $this->admin_controller( $service, $dashboard );
+		foreach ( array( 'manage_options', 'activate_plugins' ) as $capability ) {
+			$GLOBALS['ran_booster_test_capabilities'] = array( $capability => false );
+			$GLOBALS['ran_booster_test_nonce_checks'] = array();
+			$this->refused( fn () => $controller->recover_github_native( $input ) );
+			self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
+		}
+		$GLOBALS['ran_booster_test_capabilities'] = array();
+		$GLOBALS['ran_booster_test_nonce_valid']  = false;
+		$this->refused( fn () => $controller->recover_github_native( $input ) );
+		self::assertSame( array( 'ran-booster-recover-github-' . $review['digest'] ), $GLOBALS['ran_booster_test_nonce_checks'] );
+		$GLOBALS['ran_booster_test_nonce_valid'] = true;
+		foreach ( array( 'confirmed_stopped', 'confirmed_removal' ) as $field ) {
+			foreach ( array( null, true, array( '1' ), '0' ) as $invalid ) {
+				$request           = $input;
+				$request[ $field ] = $invalid;
+				$controller->recover_github_native( $request );
+				self::assertArrayHasKey( 'native_mutation', ( new GitHubSelectionStore( $this->db, 'wp_options' ) )->read() );
+			}
+		}
+		$controller->recover_github_native( array_replace( $input, array( 'review_digest' => str_repeat( 'f', 64 ) ) ) );
+		self::assertArrayHasKey( 'native_mutation', $this->store->read() );
+		self::assertArrayNotHasKey( 'auto_updater.lock', $this->db->option_rows );
+	}
+
+	public function test_native_recovery_admin_reports_verified_removal_and_unverified_private_cleanup(): void {
+		$service   = $this->native_recovery_service();
+		$review    = $service->native_recovery_confirmation();
+		$dashboard = $this->createMock( \RAN\Dashboard::class );
+		$dashboard->expects( self::once() )->method( 'add_message' )->with( self::callback( static fn ( mixed $message ): bool => is_string( $message ) && str_contains( $message, 'block is cleared' ) && str_contains( $message, 'temporary files from the interrupted process is unverified' ) ) );
+		$this->admin_controller( $service, $dashboard )->recover_github_native(
+			array(
+				'review_digest'     => $review['digest'],
+				'confirmed_stopped' => '1',
+				'confirmed_removal' => '1',
+			)
+		);
+		self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
+		self::assertSame( 0, $this->store->read()['selection_generation'] );
+	}
+
+	public function test_native_recovery_presenter_exposes_only_redacted_confirmation_without_provider(): void {
+		$service   = $this->native_recovery_service();
+		$presenter = new \RAN\Admin\ProviderSettingsPresenter( new \RAN\RepositoryProvider\ProviderRegistry(), $this->secrets, new \RAN\Storage\CredentialUsageReader(), github_selection: $this->selection, package_removal: $service );
+		$data      = $presenter->build( 'gh' );
+		self::assertSame( 'recovery_required', $data['github_selection']['status']['state'] );
+		self::assertSame( array( 'digest', 'type', 'identifier', 'managed' ), array_keys( $data['github_selection']['recovery'] ) );
+		self::assertSame( 'target/main.php', $data['github_selection']['recovery']['identifier'] );
+		self::assertNull( $data['github_selection']['review'] );
+		self::assertSame( array(), $data['credential_profiles'] );
+		self::assertSame( array(), $data['webhook_profiles'] );
+	}
+
+	private function native_recovery_service(): \RAN\PackageRemoval\PackageRemovalService {
+		$state                     = $this->store->read();
+		$marked                    = $state;
+		$marked['native_mutation'] = array(
+			'selection_generation' => 0,
+			'owner_tag'            => str_repeat( 'a', 32 ),
+			'target_type'          => 'plugin',
+			'installed_identity'   => 'target/main.php',
+			'phase'                => 'started',
+		);
+		self::assertTrue( $this->store->compare_and_swap( $state, $marked ) );
+		$plugins = $this->createMock( \RAN\Storage\PluginRepository::class );
+		$plugins->method( 'native_recovery_record' )->willReturn( null );
+		$gateway = $this->createMock( \RAN\PackageRemoval\PackageRemovalGateway::class );
+		$gateway->method( 'deletion_postcondition' )->willReturn( static fn (): bool => true );
+		$gateway->expects( self::never() )->method( 'delete_plugin' );
+		$gateway->expects( self::never() )->method( 'delete_theme' );
+		return new \RAN\PackageRemoval\PackageRemovalService( $plugins, $this->createStub( \RAN\Storage\ThemeRepository::class ), $gateway, $this->attempts, new WordPressUpdaterLock(), github_selection: $this->selection );
 	}
 
 	public function test_empty_adoption_and_return_increment_generation_without_creating_credentials(): void {

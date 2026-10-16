@@ -1181,6 +1181,19 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		self::assertTrue( $this->repository->has_unresolved_target_attempt( 'plugin', 'example' ) );
 	}
 
+	public function test_native_recovery_blocks_queued_directory_siblings_without_affecting_exact_unlink(): void {
+		$this->webhook( 'other' );
+		foreach ( array( 'target/other.php', 'target/nested/other.php', 'TARGET/other.php' ) as $identifier ) {
+			$request                         = json_decode( $this->database->rows[0]['request_json'], true, 512, JSON_THROW_ON_ERROR );
+			$request['installed_identifier'] = $identifier;
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Exact persisted request fixture, retaining every other captured field.
+			$this->database->rows[0]['request_json'] = json_encode( $request, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES );
+			self::assertFalse( $this->repository->has_unresolved_target_attempt( 'plugin', 'target/main.php' ) );
+			self::assertTrue( $this->repository->has_unresolved_target_attempt( 'plugin', 'target/main.php', true ) );
+			self::assertFalse( $this->repository->has_unresolved_target_attempt( 'plugin', 'target-other/main.php', true ) );
+		}
+	}
+
 	public function test_recovery_refuses_malformed_unresolved_attempts(): void {
 		$this->webhook( 'other' );
 		$this->database->rows[0]['request_json'] = '{}';

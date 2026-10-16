@@ -571,6 +571,15 @@ namespace RAN\Tests\Storage {
 						return false;
 					}
 
+					if ( preg_match( "/\((LOWER\(package\)|package) = '([^']+)' OR (LOWER\(package\)|package) LIKE '([^']+)'\)/", $query, $scope_matches ) === 1 ) {
+						$prefix  = stripslashes( substr( $scope_matches[4], 0, -1 ) );
+						$package = (string) ( $row['package'] ?? '' );
+						// Model a case-sensitive table: only explicit SQL LOWER folds the stored value.
+						$exact = 'LOWER(package)' === $scope_matches[1] ? strtolower( $package ) : $package;
+						$like  = 'LOWER(package)' === $scope_matches[3] ? strtolower( $package ) : $package;
+						return stripslashes( $scope_matches[2] ) === $exact || str_starts_with( $like, $prefix );
+					}
+
 					if ( preg_match( "/package = '([^']+)'/", $query, $package_matches ) === 1
 						&& (string) ( $row['package'] ?? '' ) !== stripslashes( $package_matches[1] )
 					) {

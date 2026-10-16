@@ -86,6 +86,10 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 			$consumer = $container->make( $type );
 			self::assertSame( $selection, ( new \ReflectionProperty( $consumer, 'github_selection' ) )->getValue( $consumer ) );
 			self::assertSame( $secrets, ( new \ReflectionProperty( $consumer, 'secrets' ) )->getValue( $consumer ) );
+			$recovery = ( new \ReflectionProperty( $consumer, 'package_removal' ) )->getValue( $consumer );
+			self::assertInstanceOf( \RAN\PackageRemoval\PackageRemovalService::class, $recovery );
+			self::assertSame( $selection, ( new \ReflectionProperty( $recovery, 'github_selection' ) )->getValue( $recovery ) );
+			self::assertSame( $container->make( \RAN\WordPress\WordPressUpdaterLock::class ), ( new \ReflectionProperty( $recovery, 'updater_lock' ) )->getValue( $recovery ) );
 		}
 		$profiles          = $container->make( \RAN\Admin\ProviderProfileAdminController::class );
 		$adoption_attempts = ( new \ReflectionProperty( $profiles, 'deployment_attempts' ) )->getValue( $profiles );

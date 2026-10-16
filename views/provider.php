@@ -255,6 +255,23 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 				<p role="status"><?php echo esc_html( $github_selection['error'] ); ?></p>
 			<?php } ?>
 			<p><?php echo esc_html( is_array( $github_selection['package_counts'] ) ? sprintf( /* translators: 1: managed Branch packages, 2: managed release packages. */ __( 'Affected GitHub packages: %1$d Branch, %2$d Published release.', 'ran-booster' ), $github_selection['package_counts']['branch'], $github_selection['package_counts']['release_asset'] ) : __( 'Affected package inventory could not be checked.', 'ran-booster' ) ); ?></p>
+			<?php $native_recovery = $github_selection['recovery'] ?? null; ?>
+			<?php if ( is_array( $native_recovery ) ) { ?>
+				<h4><?php esc_html_e( 'Recover an interrupted native installation', 'ran-booster' ); ?></h4>
+				<p><code><?php echo esc_html( $native_recovery['type'] . ': ' . $native_recovery['identifier'] ); ?></code></p>
+				<p><?php esc_html_e( 'First confirm that the interrupted process has stopped and remove the entire target plugin or theme. A missing main file alone is insufficient. This action verifies removal and disconnects its management record; it does not delete files or repair an installation.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'An occupied updater lock prevents recovery. Booster will not clear it based on its age. Cleanup of temporary files from the interrupted process remains unverified.', 'ran-booster' ); ?></p>
+				<?php if ( current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) { ?>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>" data-hx-boost="false">
+						<?php wp_nonce_field( 'ran-booster-recover-github-' . $native_recovery['digest'] ); ?>
+						<input type="hidden" name="ran_booster[action]" value="recover-github-native">
+						<input type="hidden" name="ran_booster[review_digest]" value="<?php echo esc_attr( $native_recovery['digest'] ); ?>">
+						<p><label><input type="checkbox" name="ran_booster[confirmed_stopped]" value="1" required> <?php esc_html_e( 'I have confirmed that the interrupted installation process has stopped.', 'ran-booster' ); ?></label></p>
+						<p><label><input type="checkbox" name="ran_booster[confirmed_removal]" value="1" required> <?php esc_html_e( 'I have removed the entire target and approve disconnecting its management record.', 'ran-booster' ); ?></label></p>
+						<button type="submit" class="button"><?php esc_html_e( 'Verify removal and clear installation block', 'ran-booster' ); ?></button>
+					</form>
+				<?php } ?>
+			<?php } ?>
 			<?php $adoption_review = $github_selection['review']; ?>
 			<?php if ( is_array( $adoption_review ) ) { ?>
 				<p><?php esc_html_e( 'Review target', 'ran-booster' ); ?>: <code><?php echo esc_html( $adoption_review['target']['implementation_id'] ); ?></code> · <code><?php echo esc_html( $adoption_review['target']['plugin_basename'] ); ?></code></p>

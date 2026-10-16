@@ -15,7 +15,7 @@ interface PackageRemovalGateway {
 	public function installed_fingerprint( string $type, string $identifier ): string;
 
 	/** @return \Closure(): bool Fresh physical absence of the exact pre-deletion target. */
-	public function deletion_postcondition( string $type, string $identifier ): \Closure;
+	public function deletion_postcondition( string $type, string $identifier, bool $allow_absent = false ): \Closure;
 
 	public function invalidate_native_target( string $type, string $identifier ): void;
 

@@ -403,3 +403,10 @@ if ( ! function_exists( 'esc_textarea' ) ) {
 		return htmlspecialchars( (string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' );
 	}
 }
+
+if ( ! function_exists( 'current_user_can' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Global WordPress capability boundary used by included administration views.
+	function current_user_can( string $capability ): bool {
+		return $GLOBALS['ran_booster_test_capabilities'][ $capability ] ?? true;
+	}
+}

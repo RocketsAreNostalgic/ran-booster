@@ -33,6 +33,62 @@ final class WordPressPackageRemovalGatewayTest extends TestCase {
 		);
 	}
 
+	public function test_recovery_accepts_initial_absence_but_refuses_residual_roots_and_links(): void {
+		$root = sys_get_temp_dir() . '/ran-native-absence-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable physical absence fixture.
+		mkdir( $root, 0700 );
+		define( 'WP_PLUGIN_DIR', $root );
+		$gateway = new WordPressPackageRemovalGateway();
+		try {
+			foreach ( array( array( 'plugin', 'target/main.php' ), array( 'plugin', 'single.php' ), array( 'theme', 'target' ) ) as list( $type, $identifier ) ) {
+				$absent = $gateway->deletion_postcondition( $type, $identifier, true );
+				self::assertTrue( $absent() );
+				$target = $root . '/' . ( 'single.php' === $identifier ? 'single.php' : 'target' );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Empty directory still counts as physical target material.
+				mkdir( $target, 0700 );
+				self::assertFalse( $absent() );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable test-owned directory.
+				rmdir( $target );
+				symlink( $root . '/missing', $target );
+				self::assertFalse( $absent() );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable test-owned link.
+				unlink( $target );
+				self::assertTrue( $absent() );
+			}
+			$absent = $gateway->deletion_postcondition( 'theme', 'target', true );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Case-alias control on the real filesystem.
+			mkdir( $root . '/TARGET', 0700 );
+			self::assertFalse( $absent() );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable case-alias fixture.
+			rmdir( $root . '/TARGET' );
+			foreach ( array( '../outside', '/outside', 'target/../outside', './target' ) as $unsafe ) {
+				try {
+					$gateway->deletion_postcondition( 'theme', $unsafe, true );
+					self::fail( 'Unsafe absent target accepted.' );
+				} catch ( RuntimeException $failure ) {
+					self::assertStringContainsString( 'unsafe', $failure->getMessage() );
+				}
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- Verify the captured root cannot be replaced even when the new root is empty.
+			rename( $root, $root . '.old' );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable replacement root.
+			mkdir( $root, 0700 );
+			try {
+				$absent();
+				self::fail( 'Changed root accepted.' );
+			} catch ( RuntimeException $failure ) {
+				self::assertStringContainsString( 'changed', $failure->getMessage() );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable replacement root.
+			rmdir( $root );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- Restore test-owned root for cleanup.
+			rename( $root . '.old', $root );
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable test-owned root.
+			rmdir( $root );
+		}
+	}
+
 	public function test_physical_deletion_observation_preserves_directory_and_parent_identity(): void {
 		$root = sys_get_temp_dir() . '/ran-booster-deletion-target-' . bin2hex( random_bytes( 8 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Exact disposable filesystem observation requires native inode, directory and link operations.

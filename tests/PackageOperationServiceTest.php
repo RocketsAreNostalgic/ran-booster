@@ -1684,7 +1684,8 @@ final class OperationRemovalGateway implements PackageRemovalGateway {
 		return hash( 'sha256', $type . '|' . $identifier );
 	}
 	/** @return \Closure(): bool */
-	public function deletion_postcondition( string $type, string $identifier ): \Closure {
+	public function deletion_postcondition( string $type, string $identifier, bool $allow_absent = false ): \Closure {
+		unset( $allow_absent );
 		unset( $type, $identifier );
 		return static fn (): bool => true;
 	}

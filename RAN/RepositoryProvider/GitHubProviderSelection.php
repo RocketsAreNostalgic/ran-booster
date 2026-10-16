@@ -457,6 +457,36 @@ final class GitHubProviderSelection {
 		);
 	}
 
+	/** @return array<string,mixed> Internal recovery authority; never expose the native owner in public status. */
+	public function native_recovery_state(): array {
+		$state = $this->store->read( true );
+		if ( ! isset( $state['native_mutation'] ) ) {
+			throw new \RuntimeException( 'No interrupted native mutation requires recovery.' );
+		}
+		return $state;
+	}
+
+	/**
+	 * @param array<string,mixed> $expected Exact reviewed state, including marker and approval.
+	 * @param callable():void $verify Core-only physical absence/management/attempt/lock checks; no permission filters.
+	 */
+	public function recover_native_removal( array $expected, callable $verify ): void {
+		$this->store->selection_transaction(
+			function () use ( $expected, $verify ): void {
+				$state = $this->native_recovery_state();
+				if ( $state !== $expected ) {
+					throw new \RuntimeException( 'Native recovery authority changed.' );
+				}
+				$verify();
+				$next = $state;
+				unset( $next['native_mutation'] );
+				if ( ! $this->store->compare_and_swap( $state, $next ) ) {
+					throw new \RuntimeException( 'Native recovery could not be verified.' );
+				}
+			}
+		);
+	}
+
 	/** @param array{kind:mixed,configuration:mixed}|null $metadata */
 	public function credential_access_allowed( ?array $metadata ): bool {
 		if ( null === $this->registry_selection() ) {

@@ -134,6 +134,95 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		);
 	}
 
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_initial_identity_refuses_old_branch_api_before_provider_or_admission(): void {
+		require_once __DIR__ . '/../Support/PackageOperationWordPressFunctions.php';
+		$old_runtime = new class() {
+			public const ADMITTED_API_VERSION = 2;
+		};
+		class_alias( $old_runtime::class, BranchUpdater::class );
+		$provider = new ParityRepositoryProvider( null );
+		$command  = \RAN\PackageOperation::from_input(
+			'install-plugin',
+			array(
+				'provider'               => 'gh',
+				'provider_repository_id' => 'repo-id',
+				'repository'             => 'owner/example',
+				'branch'                 => 'main',
+				'package_slug'           => 'example',
+				'expected_identifier'    => 'example/main.php',
+			)
+		);
+		try {
+			$this->coordinator( $provider )->execute_manual( $command );
+			self::fail( 'An old updater must refuse initial identity requests.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertSame( 'The branch updater cannot verify the expected initial package identity.', $failure->getMessage() );
+		}
+		self::assertSame( array(), $this->database->rows );
+		$adapter = $this->adapter( $this->running_install( 'example', expected_identifier: 'example/main.php' ), $provider );
+		try {
+			$adapter->declaration();
+			self::fail( 'Queued work must also refuse an old updater.' );
+		} catch ( AdmittedBranchStageFailure $failure ) {
+			self::assertSame( DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE, $failure->outcome_code );
+		}
+		self::assertSame( 0, $provider->prepare_calls );
+	}
+
+	public function test_coordinator_preserves_initial_identity_and_refuses_wrong_archive_main(): void {
+		require_once __DIR__ . '/../Support/PackageOperationWordPressFunctions.php';
+		$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+		$provider = new ParityRepositoryProvider( $archive );
+		$this->download_fixture( 'example' );
+		$command = \RAN\PackageOperation::from_input(
+			'install-plugin',
+			array(
+				'provider'               => 'gh',
+				'provider_repository_id' => 'repo-id',
+				'repository'             => 'owner/example',
+				'branch'                 => 'main',
+				'package_slug'           => 'example',
+				'expected_identifier'    => 'example/Main.php',
+			)
+		);
+		$result  = $this->coordinator( $provider )->execute_manual( $command );
+		self::assertSame( 'failed', $result['status'] );
+		self::assertSame( 'example/Main.php', DeploymentRequest::from_json( (string) $this->database->rows[0]['request_json'] )->expected_identifier );
+		self::assertSame( 0, $this->plugins->adopt_calls );
+		self::assertSame( 1, $archive->cleanup_calls );
+	}
+
+	public function test_initial_identity_survives_admission_and_blocks_wrong_installed_main_file(): void {
+		$attempt = $this->running_install( 'example', expected_identifier: 'example/Main.php' );
+		self::assertSame( 'example/Main.php', $attempt->get_request()->expected_identifier );
+		self::assertNotNull( $attempt->get_request()->provider_selection_generation );
+		self::assertNull( $attempt->get_request()->installed_identifier );
+		$adapter     = $this->adapter( $attempt, new ParityRepositoryProvider( null ) );
+		$declaration = $adapter->declaration();
+		self::assertSame( 'example/Main.php', $declaration->expected_identifier );
+		$this->plugins->installed = $this->plugin();
+		try {
+			$adapter->installed( $declaration );
+			self::fail( 'A different installed main file must refuse.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertSame( 'The installed package identity is unavailable.', $failure->getMessage() );
+		}
+		self::assertFalse( $adapter->adopt( $declaration ) );
+		self::assertSame( 0, $this->plugins->adopt_calls );
+	}
+
+	public function test_initial_identity_is_rechecked_when_it_changes_after_installed_observation(): void {
+		$adapter                  = $this->adapter( $this->running_install( 'example', expected_identifier: 'example/Main.php' ), new ParityRepositoryProvider( null ) );
+		$declaration              = $adapter->declaration();
+		$this->plugins->installed = $this->plugin( identifier: 'example/Main.php' );
+		self::assertSame( 'example/Main.php', $adapter->installed( $declaration )['identifier'] );
+		$this->plugins->installed = $this->plugin( identifier: 'example/other.php' );
+		self::assertFalse( $adapter->adopt( $declaration ) );
+		self::assertSame( 0, $this->plugins->adopt_calls );
+	}
+
 	public function test_webhook_admission_rejects_explicit_historical_selection_without_acknowledgement(): void {
 		$request = new DeploymentRequest( 'owner/repo', null, false, 'main', 'repo', null, DeploymentPolicy::AUTOMATIC, null, selected_commit: str_repeat( 'a', 40 ) );
 		$before  = $this->database->rows;
@@ -612,7 +701,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		);
 	}
 
-	private function running_install( string $slug, DeploymentPolicy $policy = DeploymentPolicy::AUTOMATIC ): DeploymentAttempt {
+	private function running_install( string $slug, DeploymentPolicy $policy = DeploymentPolicy::AUTOMATIC, ?string $expected_identifier = null ): DeploymentAttempt {
 		$request = new DeploymentRequest(
 			'owner/install-plugin',
 			null,
@@ -622,7 +711,8 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			null,
 			$policy,
 			7,
-			self::MAXIMUM_ARTIFACT_BYTES
+			self::MAXIMUM_ARTIFACT_BYTES,
+			expected_identifier: $expected_identifier
 		);
 
 		return $this->attempts->admit_and_claim_manual(

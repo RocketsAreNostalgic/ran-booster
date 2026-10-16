@@ -70,6 +70,9 @@ class DeploymentCoordinator {
 			if ( null === $command->provider_code || null === $command->repository || null === $command->branch || null === $command->package_slug ) {
 				throw new RuntimeException( 'The package request is incomplete.' );
 			}
+			if ( null !== $command->expected_identifier && ( ! defined( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ) || 3 !== constant( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ) ) ) {
+				throw new RuntimeException( 'The branch updater cannot verify the expected initial package identity.' );
+			}
 			$this->source_guard->assert_allowed( $command->provider_code, $provider_id, 'plugin' === $type ? 1 : 2, $command->identifier ?? $command->package_slug, PackageSource::BRANCH );
 			$this->providers->get( ProviderCode::parse( $command->provider_code ) );
 			$request = new DeploymentRequest(
@@ -81,7 +84,8 @@ class DeploymentCoordinator {
 				$command->subdirectory,
 				$command->deployment_policy,
 				$user_id > 0 ? $user_id : null,
-				selected_commit: $command->selected_commit
+				selected_commit: $command->selected_commit,
+				expected_identifier: $command->expected_identifier
 			);
 			$attempt = $this->attempts->admit_and_claim_manual(
 				'install',

@@ -32,8 +32,12 @@ final readonly class DeploymentRequest {
 		public ?string $installed_identifier = null,
 		public ?string $adoption_token = null,
 		public ?int $provider_selection_generation = null,
-		public ?string $selected_commit = null
+		public ?string $selected_commit = null,
+		public ?string $expected_identifier = null
 	) {
+		if ( null !== $expected_identifier && ( null !== $installed_identifier || null !== $adoption_token || strlen( $expected_identifier ) > 191 || 1 !== preg_match( '#\A[a-z0-9][a-z0-9._-]*(?:/[a-zA-Z0-9][a-zA-Z0-9._-]*\.php)?\z#D', $expected_identifier ) || explode( '/', $expected_identifier )[0] !== $package_slug ) ) {
+			throw new InvalidArgumentException( 'The expected initial package identity is invalid.' );
+		}
 		if ( null !== $selected_commit && 1 !== preg_match( '/\A(?:[a-f0-9]{40}|[a-f0-9]{64})\z/D', $selected_commit ) ) {
 			throw new InvalidArgumentException( 'The historical commit is invalid.' );
 		}
@@ -64,7 +68,7 @@ final readonly class DeploymentRequest {
 		}
 	}
 
-	/** @return array{repository: string, credential_id: ?string, private: bool, configured_branch: string, package_slug: string, subdirectory: ?string, deployment_policy: string, initiating_user_id: ?int, maximum_artifact_bytes: int, installed_identifier?: string, adoption_token?: string, provider_selection_generation?: int, selected_commit?: string} */
+	/** @return array{repository: string, credential_id: ?string, private: bool, configured_branch: string, package_slug: string, subdirectory: ?string, deployment_policy: string, initiating_user_id: ?int, maximum_artifact_bytes: int, installed_identifier?: string, adoption_token?: string, provider_selection_generation?: int, selected_commit?: string, expected_identifier?: string} */
 	public function to_array(): array {
 		$data = array(
 			'repository'             => $this->repository,
@@ -86,6 +90,9 @@ final readonly class DeploymentRequest {
 		}
 		if ( null !== $this->selected_commit ) {
 			$data['selected_commit'] = $this->selected_commit;
+		}
+		if ( null !== $this->expected_identifier ) {
+			$data['expected_identifier'] = $this->expected_identifier;
 		}
 		return $data;
 	}
@@ -128,6 +135,9 @@ final readonly class DeploymentRequest {
 		if ( is_array( $data ) && array_key_exists( 'selected_commit', $data ) ) {
 			$expected_keys[] = 'selected_commit';
 		}
+		if ( is_array( $data ) && array_key_exists( 'expected_identifier', $data ) ) {
+			$expected_keys[] = 'expected_identifier';
+		}
 		$keys = is_array( $data ) ? array_keys( $data ) : array();
 		if ( $keys !== $expected_keys
 			|| ! is_array( $data )
@@ -140,6 +150,7 @@ final readonly class DeploymentRequest {
 			|| ! is_string( $data['deployment_policy'] )
 			|| ( null !== $data['initiating_user_id'] && ! is_int( $data['initiating_user_id'] ) )
 			|| ! is_int( $data['maximum_artifact_bytes'] )
+			|| ( array_key_exists( 'expected_identifier', $data ) && ! is_string( $data['expected_identifier'] ) )
 			|| ( array_key_exists( 'selected_commit', $data ) && ! is_string( $data['selected_commit'] ) )
 			|| ( array_key_exists( 'provider_selection_generation', $data ) && ! is_int( $data['provider_selection_generation'] ) )
 			|| ( isset( $data['adoption_token'] ) && ( ! is_string( $data['adoption_token'] ) || ! is_string( $data['installed_identifier'] ?? null ) ) ) ) {
@@ -159,7 +170,8 @@ final readonly class DeploymentRequest {
 			$data['installed_identifier'] ?? null,
 			$data['adoption_token'] ?? null,
 			$data['provider_selection_generation'] ?? null,
-			$data['selected_commit'] ?? null
+			$data['selected_commit'] ?? null,
+			$data['expected_identifier'] ?? null
 		);
 		if ( ! hash_equals( $request->to_json(), $json ) ) {
 			throw new InvalidArgumentException( 'The stored deployment request is not canonical.' );

@@ -10,6 +10,52 @@ proof="$root/tests/WordPress/portability-selection-installed-smoke.php"
 replacement="$root/tests/WordPress/github-replacement-installed-smoke.php"
 run_phase() { "$php_bin" "$wp_cli" eval-file "$proof" "$@" --use-include --user=fixture-admin --path="$wordpress"; }
 switch_phase() { "$php_bin" "$wp_cli" eval-file "$replacement" "$@" --user=fixture-admin --path="$wordpress"; }
+# Explicit separate mode: never silently skip missing Migrator prerequisites.
+if [[ "${1:-core}" == migrator ]]; then
+  migrator_source="${RAN_MIGRATOR_SOURCE_PATH:?Set exact source helper checkout.}"
+  : "${RAN_MIGRATOR_ARCHIVE:?Set verified Migrator source75 ZIP.}"
+  : "${RAN_MIGRATOR_WP_PUSHER_ARCHIVE:?Set retained exact WP Pusher 3.0.13 ZIP.}"
+  : "${RAN_MIGRATOR_WP_CLI_BIN:?Set executable WP-CLI launcher for satellite helper.}"
+  [[ "$(git -C "$migrator_source" rev-parse HEAD)" == 3c9c78b242188304596e175f9257e2315a2bed1c ]] || { echo 'Exact reviewed Migrator helper source required.' >&2; exit 2; }
+  git -C "$migrator_source" diff --quiet HEAD -- tests/installed-candidate scripts
+  export RAN_MIGRATOR_PROOF_DISPOSABLE=1
+  export RAN_MIGRATOR_WORDPRESS_PATH="$wordpress"
+  export RAN_MIGRATOR_EXPECTED_SITE_URL=http://localhost
+  export RAN_MIGRATOR_WP_USER=fixture-admin
+  helper="$migrator_source/tests/installed-candidate/current-source-fixture.sh"
+  run_phase migrator-preflight
+  umask 077
+  migrator_state="$(mktemp /tmp/ran-migrator-http-XXXXXXXX)"
+  migrator_readback="$(mktemp /tmp/ran-migrator-readback-XXXXXXXX)"
+  export RAN_BOOSTER_MIGRATOR_HTTP_STATE="$migrator_state"
+  export RAN_BOOSTER_MIGRATOR_READBACK="$migrator_readback"
+  trap 'rm -f -- "$migrator_state" "$migrator_readback"' EXIT
+  source_phase() { bash "$helper" "$1" | tail -n 1 > "$migrator_readback"; }
+  source_phase setup
+  mkdir -m 0755 "$wordpress/wp-content/plugins/ran-migrator-fixture"
+  printf '%s\n' '<?php' '/* Plugin Name: Migrator fixture' 'Version: 1.0.0' '*/' > "$wordpress/wp-content/plugins/ran-migrator-fixture/plugin.php"
+  chmod 0644 "$wordpress/wp-content/plugins/ran-migrator-fixture/plugin.php"
+  source_phase seed
+  switch_phase activate-a
+  switch_phase select
+  run_phase migrator-session
+  run_phase migrator-review
+  switch_phase activate-b
+  switch_phase select
+  switch_phase reset-counters
+  run_phase migrator-stale
+  source_phase readback
+  run_phase migrator-retained
+  run_phase migrator-review
+  switch_phase reset-counters
+  run_phase migrator-apply
+  source_phase readback
+  run_phase migrator-complete
+  source_phase cleanup
+  echo 'Installed Migrator real HTTP stale refusal, fresh Disabled adoption and exact source cleanup passed.'
+  exit 0
+fi
+[[ "${1:-core}" == core ]] || { echo 'Expected core or migrator proof mode.' >&2; exit 2; }
 # Fixture::guard validates exact marker, ABSPATH, content/plugins roots and URL
 # before creating this one previously absent inactive fixture target.
 run_phase setup

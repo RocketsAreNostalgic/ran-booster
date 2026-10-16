@@ -691,6 +691,32 @@ jobs:
                 RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
             run: bash tests/WordPress/adoption-recovery-smoke.sh
 
+          - name: Prove installed GitHub replacement and historical selection
+            if: ${{ matrix.suite == 'critical' }}
+            env:
+                RAN_BOOSTER_GITHUB_HISTORICAL_DISPOSABLE: '1'
+                RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
+            run: |
+                printf '%s\n' 'RAN Booster disposable test site' > build/wordpress/.ran-booster-disposable-test-site
+                wp user create fixture-admin fixture-admin@example.invalid --role=administrator --porcelain --path="$RAN_BOOSTER_WORDPRESS_PATH"
+                export PHP_BIN="$(command -v php)"
+                export WP_CLI_BIN="$(command -v wp)"
+                bash tests/WordPress/github-historical-installed-smoke.sh
+
+          - name: Prove immutable Bitbucket remains operational during GitHub switching
+            if: ${{ matrix.suite == 'critical' }}
+            env:
+                RAN_BOOSTER_BITBUCKET_TEST_DISPOSABLE: '1'
+                RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
+                RAN_BOOSTER_BITBUCKET_ARCHIVE: ${{ github.workspace }}/build/ran-booster-bitbucket-0.1.0-beta.17.zip
+            run: |
+                curl --fail --location --silent --show-error \
+                    'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket/releases/download/v0.1.0-beta.17/ran-booster-bitbucket-0.1.0-beta.17.zip' \
+                    --output "$RAN_BOOSTER_BITBUCKET_ARCHIVE"
+                export PHP_BIN="$(command -v php)"
+                export WP_CLI_BIN="$(command -v wp)"
+                bash tests/WordPress/bitbucket-selection-installed-smoke.sh
+
           - name: Prove native updater-lock election
             if: ${{ matrix.suite == 'critical' }}
             env:

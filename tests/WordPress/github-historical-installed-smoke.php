@@ -10,7 +10,9 @@ use RAN\Storage\PluginRepository;
 use RAN\WPBranchUpdater\V1\Runtime\BranchUpdater;
 use RAN_Booster_GitHubReplacementFixture\Fixture;
 
-require_once dirname( __DIR__ ) . '/fixtures/github-replacement/fixture.php';
+if ( ! class_exists( Fixture::class, false ) ) {
+	require_once dirname( __DIR__ ) . '/fixtures/github-replacement/fixture.php';
+}
 require_once __DIR__ . '/disposable-management-cleanup.php';
 Fixture::guard();
 $ran_booster_root = realpath( (string) getenv( 'RAN_BOOSTER_WORDPRESS_PATH' ) );
@@ -21,9 +23,9 @@ if ( ! defined( 'WP_CLI' ) || ! WP_CLI || '1' !== getenv( 'RAN_BOOSTER_GITHUB_HI
 	throw new RuntimeException( 'Historical proof requires the exact disposable installed Core administrator.' );
 }
 $ran_booster_branch_path = WP_PLUGIN_DIR . '/ran-booster/vendor/ran/wp-branch-updater/src/Runtime/BranchUpdater.php';
-if ( 2 !== constant( BranchUpdater::class . '::ADMITTED_API_VERSION' ) || realpath( $ran_booster_branch_path ) !== $ran_booster_branch_path
+if ( ! in_array( constant( BranchUpdater::class . '::ADMITTED_API_VERSION' ), array( 2, 3 ), true ) || realpath( $ran_booster_branch_path ) !== $ran_booster_branch_path
 	|| ( new ReflectionClass( BranchUpdater::class ) )->getFileName() !== $ran_booster_branch_path ) {
-	throw new RuntimeException( 'Historical proof requires the installed Branch admitted API 2.' );
+	throw new RuntimeException( 'Historical proof requires the installed Branch admitted API 2 or 3.' );
 }
 require_once ABSPATH . 'wp-admin/includes/file.php';
 require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';

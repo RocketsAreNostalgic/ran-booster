@@ -34,7 +34,8 @@ $ran_booster_facade    = $ran_booster_container->make( PortabilityFacade::class 
 $ran_booster_secrets   = $ran_booster_container->make( SecretsFile::class );
 $ran_booster_plugins   = $ran_booster_container->make( PluginRepository::class );
 $ran_booster_phase     = $args[0] ?? '';
-$ran_booster_identity  = 'portability-consumer-proof/plugin.php';
+$ran_booster_migrator  = str_starts_with( $ran_booster_phase, 'migrator-' );
+$ran_booster_identity  = $ran_booster_migrator ? 'ran-migrator-fixture/plugin.php' : 'portability-consumer-proof/plugin.php';
 $ran_booster_path      = WP_PLUGIN_DIR . '/' . $ran_booster_identity;
 $ran_booster_assert    = static function ( bool $condition, string $reason ): void {
 	if ( ! $condition ) {
@@ -45,10 +46,10 @@ $ran_booster_assert    = static function ( bool $condition, string $reason ): vo
 $ran_booster_assert( defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' ) && 4 === RAN_BOOSTER_PORTABILITY_API_VERSION, 'expected public API 4' );
 $ran_booster_assert( ! is_link( dirname( $ran_booster_path ) ) && ! is_link( $ran_booster_path ), 'non-symlinked target' );
 $ran_booster_candidate = new PortabilityCandidate( 'plugin', $ran_booster_identity, 'Consumer proof', 'gh', 'fixtures/consumer', 'main', null, 'consumer-proof' );
-$ran_booster_snapshot  = static function () use ( $ran_booster_secrets, $ran_booster_plugins, $ran_booster_identity, $ran_booster_path ): array {
+$ran_booster_snapshot  = static function () use ( $ran_booster_secrets, $ran_booster_plugins, $ran_booster_identity, $ran_booster_path, $ran_booster_migrator ): array {
 	global $wpdb;
 	$tables = array();
-	foreach ( array( ran_booster_table_name(), Database::attempt_table_name() ) as $table ) {
+	foreach ( array_merge( array( ran_booster_table_name(), Database::attempt_table_name() ), $ran_booster_migrator ? array( $wpdb->prefix . 'wppusher_packages' ) : array() ) as $table ) {
 		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i ORDER BY id', $table ), ARRAY_A );
 		if ( ! is_array( $rows ) || '' !== $wpdb->last_error ) {
 			throw new RuntimeException( 'Cannot snapshot installed package and attempt records.' );
@@ -158,6 +159,151 @@ $ran_booster_dashboard = static function ( bool $apply, ?array $expectation ) us
 		unset( $_COOKIE[ LOGGED_IN_COOKIE ] );
 	}
 };
+
+
+// Optional current Migrator consumer. The satellite wrapper owns source setup;
+// this block owns only HTTP requests and readback on the same disposable site.
+if ( $ran_booster_migrator ) {
+	$ran_booster_assert( defined( 'WP_HTTP_BLOCK_EXTERNAL' ) && true === WP_HTTP_BLOCK_EXTERNAL && defined( 'WP_ACCESSIBLE_HOSTS' ) && 'localhost' === WP_ACCESSIBLE_HOSTS, 'site must block external HTTP and allow only localhost' );
+	if ( 'migrator-preflight' === $ran_booster_phase ) {
+		$ran_booster_assert( ! file_exists( dirname( $ran_booster_path ) ), 'fresh Migrator target required' );
+		return;
+	}
+	$ran_booster_state_path    = getenv( 'RAN_BOOSTER_MIGRATOR_HTTP_STATE' );
+	$ran_booster_readback_path = getenv( 'RAN_BOOSTER_MIGRATOR_READBACK' );
+	foreach ( array( $ran_booster_state_path, $ran_booster_readback_path ) as $ran_booster_private_path ) {
+		if ( ! is_string( $ran_booster_private_path ) || ! is_file( $ran_booster_private_path ) || is_link( $ran_booster_private_path ) || realpath( $ran_booster_private_path ) !== $ran_booster_private_path ) {
+			throw new RuntimeException( 'Runner-owned private Migrator state/readback files required.' );
+		}
+	}
+	if ( ! is_string( $ran_booster_state_path ) || ! is_string( $ran_booster_readback_path ) ) {
+		throw new RuntimeException( 'Migrator proof paths are unavailable.' );
+	}
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Exact runner-owned private HTTP session state, never logged.
+	$ran_booster_bytes = file_get_contents( $ran_booster_state_path );
+	$ran_booster_state = is_string( $ran_booster_bytes ) && '' !== $ran_booster_bytes ? json_decode( $ran_booster_bytes, true ) : array();
+	if ( ! is_array( $ran_booster_state ) ) {
+		throw new RuntimeException( 'Invalid Migrator session state.' );
+	}
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read only the mandatory satellite wrapper's final JSON output.
+	$ran_booster_bytes    = file_get_contents( $ran_booster_readback_path );
+	$ran_booster_readback = is_string( $ran_booster_bytes ) ? json_decode( $ran_booster_bytes, true ) : null;
+	if ( ! is_array( $ran_booster_readback ) || 734001 !== ( $ran_booster_readback['source_id'] ?? null ) || true !== ( $ran_booster_readback['route_composed'] ?? null ) ) {
+		throw new RuntimeException( 'Qualified current-source wrapper readback required.' );
+	}
+	$ran_booster_sessions = WP_Session_Tokens::get_instance( get_current_user_id() );
+	if ( 'migrator-session' === $ran_booster_phase ) {
+		$ran_booster_assert( array() === $ran_booster_state && true === $ran_booster_readback['present'] && is_string( $ran_booster_readback['source_fingerprint'] ), 'fresh seeded Migrator source required' );
+		$ran_booster_state = array(
+			'token'              => $ran_booster_sessions->create( time() + 1800 ),
+			'expiry'             => time() + 1800,
+			'user'               => get_current_user_id(),
+			'source_fingerprint' => $ran_booster_readback['source_fingerprint'],
+		);
+	}
+	if ( ! is_string( $ran_booster_state['token'] ?? null ) || ! is_int( $ran_booster_state['expiry'] ?? null ) || get_current_user_id() !== ( $ran_booster_state['user'] ?? null ) ) {
+		throw new RuntimeException( 'Migrator HTTP session prerequisite is missing.' );
+	}
+	$ran_booster_http = static function ( ?array $form = null ) use ( $ran_booster_state, $ran_booster_assert ): array {
+		$headers = array( 'Cookie' => LOGGED_IN_COOKIE . '=' . wp_generate_auth_cookie( get_current_user_id(), $ran_booster_state['expiry'], 'logged_in', $ran_booster_state['token'] ) . '; ' . AUTH_COOKIE . '=' . wp_generate_auth_cookie( get_current_user_id(), $ran_booster_state['expiry'], 'auth', $ran_booster_state['token'] ) );
+		$options = array(
+			'timeout'     => 30,
+			'redirection' => 0,
+			'headers'     => $headers,
+		);
+		if ( null !== $form ) {
+			$options['headers']['HX-Request'] = 'true';
+			$options['headers']['HX-Target']  = $form['target'];
+			$options['body']                  = $form['fields'];
+			$response                         = wp_remote_post( 'http://localhost/wp-admin/admin-post.php', $options );
+		} else {
+			$response = wp_remote_get( 'http://localhost/wp-admin/admin.php?page=ran-booster&tab=portability', $options );
+		}
+		$ran_booster_assert( ! is_wp_error( $response ), 'Migrator authenticated HTTP transport' );
+		return array(
+			'status' => wp_remote_retrieve_response_code( $response ),
+			'body'   => wp_remote_retrieve_body( $response ),
+		);
+	};
+	$ran_booster_form = static function ( string $html, string $operation ) use ( $ran_booster_assert ): array {
+		$document = new DOMDocument();
+		$document->loadHTML( '<?xml encoding="UTF-8"><table>' . $html . '</table>', LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new DOMXPath( $document );
+		$forms = $xpath->query( '//form[input[@name="source_id" and @value="734001"] and input[@name="ran_booster_wp_pusher_migrator_action" and @value="' . $operation . '"]]' );
+		$form  = false === $forms ? null : $forms->item( 0 );
+		if ( ! $form instanceof DOMElement ) {
+			throw new RuntimeException( 'Actual actionable Migrator form is missing.' );
+		}
+		$fields = json_decode( $form->getAttribute( 'hx-vals' ), true );
+		if ( ! is_array( $fields ) ) {
+			throw new RuntimeException( 'Actual enhanced Migrator transport fields are missing.' );
+		}
+		foreach ( $form->getElementsByTagName( 'input' ) as $input ) {
+			if ( '' !== $input->getAttribute( 'name' ) ) {
+				$fields[ $input->getAttribute( 'name' ) ] = $input->getAttribute( 'value' );
+			}
+		}
+		$ran_booster_assert( 'ran_booster_wp_pusher_migrator_package' === ( $fields['action'] ?? null ) && is_string( $fields['_wpnonce'] ?? null ), 'actual authorized Migrator form' );
+		$fields['credential_id'] = ''; // This helper's exact retained source row is public.
+		return array(
+			'target' => ltrim( $form->getAttribute( 'hx-target' ), '#' ),
+			'fields' => $fields,
+		);
+	};
+	switch ( $ran_booster_phase ) {
+		case 'migrator-session':
+			break;
+		case 'migrator-review':
+			$ran_booster_page = $ran_booster_http();
+			$ran_booster_assert( 200 === $ran_booster_page['status'], 'real Transporter page' );
+			$ran_booster_request = $ran_booster_form( $ran_booster_page['body'], 'review' );
+			$ran_booster_assert( ( $ran_booster_request['fields']['source_fingerprint'] ?? null ) === $ran_booster_state['source_fingerprint'], 'form retains actual source fingerprint' );
+			$ran_booster_review = $ran_booster_http( $ran_booster_request );
+			$ran_booster_assert( 200 === $ran_booster_review['status'], 'actual Migrator review response' );
+			$ran_booster_state['apply'] = $ran_booster_form( $ran_booster_review['body'], 'apply' );
+			break;
+		case 'migrator-stale':
+		case 'migrator-apply':
+			if ( ! is_array( $ran_booster_state['apply'] ?? null ) ) {
+				throw new RuntimeException( 'Actual reviewed Migrator Apply form is required.' );
+			}
+			$ran_booster_before   = $ran_booster_snapshot();
+			$ran_booster_response = $ran_booster_http( $ran_booster_state['apply'] );
+			if ( 'migrator-stale' === $ran_booster_phase ) {
+				$ran_booster_assert( 422 === $ran_booster_response['status'] && str_contains( $ran_booster_response['body'], esc_html( TargetPackageReason::PROVIDER_SELECTION_CHANGED->message() ) ), 'specific stale Migrator refusal' );
+				$ran_booster_assert( ! $ran_booster_before['managed'] && $ran_booster_before === $ran_booster_snapshot(), 'stale Migrator preserves source, target, attempts and ciphertext' );
+				wp_cache_delete( Fixture::COUNTERS, 'options' );
+				$ran_booster_no_calls();
+			} else {
+				$ran_booster_assert( 200 === $ran_booster_response['status'] && str_contains( $ran_booster_response['body'], 'data-ran-booster-wp-pusher-migration-complete="true"' ), 'fresh Migrator completes verified adoption and cleanup' );
+				wp_cache_delete( Fixture::COUNTERS, 'options' );
+				$ran_booster_counts = Fixture::counters();
+				$ran_booster_assert( $ran_booster_counts['b.provider_calls'] > 0 && 0 === $ran_booster_counts['a.provider_calls'], 'fresh Migrator Apply checks the selected provider' );
+				$ran_booster_after = $ran_booster_snapshot();
+				$ran_booster_assert( $ran_booster_before['target'] === $ran_booster_after['target'] && $ran_booster_before['ciphertext'] === $ran_booster_after['ciphertext'], 'Migrator does not replace package bytes or credentials' );
+			}
+			break;
+		case 'migrator-retained':
+			$ran_booster_assert( true === $ran_booster_readback['present'] && $ran_booster_state['source_fingerprint'] === $ran_booster_readback['source_fingerprint'], 'stale Apply retains exact source row' );
+			break;
+		case 'migrator-complete':
+			$ran_booster_assert( false === $ran_booster_readback['present'] && null === $ran_booster_readback['source_fingerprint'], 'successful Apply removes exact source row' );
+			$ran_booster_package = $ran_booster_plugins->booster_plugin_from_file( $ran_booster_identity );
+			$ran_booster_assert( DeploymentPolicy::DISABLED === $ran_booster_package->get_deployment_policy(), 'Migrator adoption persists Disabled' );
+			$ran_booster_comparison = $ran_booster_container->make( PortabilityApplicationService::class )->compare_local( new BlueprintPackage( 'plugin', $ran_booster_identity, 'Migrator fixture', 'gh', 'replacement-fixture:fixtures/ran-migrator-fixture', 'fixtures/ran-migrator-fixture', 'main', null ) );
+			$ran_booster_assert( 'matching' === $ran_booster_comparison['state'] && 'unknown' === $ran_booster_comparison['installed_equality'], 'Migrator adoption is configuration equality only' );
+			$ran_booster_sessions->destroy( $ran_booster_state['token'] );
+			$ran_booster_state = array();
+			break;
+		default:
+			throw new RuntimeException( 'Unknown Migrator consumer phase.' );
+	}
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Persist only this disposable proof's private bounded HTTP session/form state; no production session store.
+	if ( false === file_put_contents( $ran_booster_state_path, wp_json_encode( $ran_booster_state, JSON_THROW_ON_ERROR ), LOCK_EX ) ) {
+		throw new RuntimeException( 'Cannot retain private Migrator HTTP state.' );
+	}
+	return;
+}
 
 switch ( $ran_booster_phase ) {
 	case 'setup':

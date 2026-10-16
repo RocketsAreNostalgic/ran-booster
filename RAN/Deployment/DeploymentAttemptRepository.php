@@ -255,7 +255,8 @@ final class DeploymentAttemptRepository {
 				|| ! is_string( $target['requested_ref'] )
 				|| ! is_string( $target['package_source'] )
 				|| ! is_int( $target['package_source_revision'] )
-				|| ! $target['request'] instanceof DeploymentRequest ) {
+				|| ! $target['request'] instanceof DeploymentRequest
+				|| null !== $target['request']->selected_commit ) {
 				throw DeploymentStorageFailure::invalid_record();
 			}
 			$this->assert_operation( $target['operation'] );
@@ -414,7 +415,7 @@ final class DeploymentAttemptRepository {
 		if ( null === $this->selection || null !== $this->selection->deployment_refusal( $generation, $type, $request->installed_identifier ?? $request->package_slug ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
-		return new DeploymentRequest( $request->repository, $request->credential_id, $request->is_private, $request->configured_branch, $request->package_slug, $request->subdirectory, $request->deployment_policy, $request->initiating_user_id, $request->maximum_artifact_bytes, $request->installed_identifier, $request->adoption_token, $generation );
+		return new DeploymentRequest( $request->repository, $request->credential_id, $request->is_private, $request->configured_branch, $request->package_slug, $request->subdirectory, $request->deployment_policy, $request->initiating_user_id, $request->maximum_artifact_bytes, $request->installed_identifier, $request->adoption_token, $generation, $request->selected_commit );
 	}
 	public function record_resolved_ref( int $attempt_id, string $resolved_ref ): DeploymentAttempt {
 		RuntimeSupport::assert_managed_operations_allowed();
@@ -941,6 +942,10 @@ final class DeploymentAttemptRepository {
 		?string $delivery_id,
 		?string $delivery_digest
 	): array {
+		if ( null !== $request->selected_commit && ( $requested_ref !== $request->selected_commit || 'webhook' === $source ) ) {
+			throw DeploymentStorageFailure::invalid_record();
+		}
+
 		return array(
 			'correlation_id'          => bin2hex( ( $this->random_bytes )( 16 ) ),
 			'source'                  => $source,

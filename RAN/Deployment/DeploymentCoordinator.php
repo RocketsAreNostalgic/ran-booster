@@ -80,7 +80,8 @@ class DeploymentCoordinator {
 				$command->package_slug,
 				$command->subdirectory,
 				$command->deployment_policy,
-				$user_id > 0 ? $user_id : null
+				$user_id > 0 ? $user_id : null,
+				selected_commit: $command->selected_commit
 			);
 			$attempt = $this->attempts->admit_and_claim_manual(
 				'install',
@@ -88,7 +89,7 @@ class DeploymentCoordinator {
 				$command->provider_code,
 				$provider_id,
 				$request,
-				(string) $command->branch,
+				$command->selected_commit ?? (string) $command->branch,
 				PackageSource::BRANCH->value,
 				0
 			);
@@ -101,8 +102,8 @@ class DeploymentCoordinator {
 			if ( ! $package->get_deployment_policy()->allows_manual_mutation() ) {
 				throw new RuntimeException( 'The package is disabled for Booster deployments.' );
 			}
-			$request       = $this->request_from_package( $package, $user_id > 0 ? $user_id : null );
-			$requested_ref = null !== $command->ref ? $command->ref : $request->configured_branch;
+			$request       = $this->request_from_package( $package, $user_id > 0 ? $user_id : null, $command->selected_commit );
+			$requested_ref = $command->selected_commit ?? $command->ref ?? $request->configured_branch;
 			$attempt       = $this->attempts->admit_and_claim_manual(
 				'update',
 				$type,
@@ -354,7 +355,7 @@ class DeploymentCoordinator {
 		return $status;
 	}
 
-	private function request_from_package( Package $package, ?int $user_id ): DeploymentRequest {
+	private function request_from_package( Package $package, ?int $user_id, ?string $selected_commit = null ): DeploymentRequest {
 		$this->assert_branch_source( $package );
 		$provider = $package->get_provider_code();
 		if ( null === $provider || null === $package->get_provider_repository_id() ) {
@@ -372,7 +373,8 @@ class DeploymentCoordinator {
 			$user_id,
 			PackageArtifactLimit::resolve(),
 			(string) $package->get_identifier(),
-			AdoptionIdentity::of( $package ) ?? throw new RuntimeException( 'The adoption identity is unavailable.' )
+			AdoptionIdentity::of( $package ) ?? throw new RuntimeException( 'The adoption identity is unavailable.' ),
+			selected_commit: $selected_commit
 		);
 	}
 

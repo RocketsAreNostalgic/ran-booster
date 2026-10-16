@@ -82,6 +82,14 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		$data       = $this->attempt->safe_data();
 		$request    = $this->attempt->get_request();
 		$identifier = null;
+		if ( null !== $request->selected_commit ) {
+			if ( 'webhook' === $data['source'] || $data['requested_ref'] !== $request->selected_commit ) {
+				$this->stage( DeploymentOutcome::CODE_PROVIDER_REQUEST_INVALID );
+			}
+			if ( ! defined( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ) || 2 !== constant( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ) || 2 !== ( $this->providers->metadata()[ (string) $data['provider'] ]->archive_api_version ?? 1 ) ) {
+				$this->stage( DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE );
+			}
+		}
 
 		if ( 'update' === $data['operation'] ) {
 			if ( null === $request->adoption_token || null === $request->installed_identifier ) {
@@ -112,7 +120,8 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			'webhook' === $data['source'] ? (string) $data['requested_ref'] : null,
 			(string) $data['operation'],
 			$request->subdirectory,
-			$identifier
+			$identifier,
+			...( null === $request->selected_commit ? array() : array( 'selected_commit' => $request->selected_commit ) )
 		);
 	}
 
@@ -178,7 +187,8 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 				new ArchiveRequest(
 					$reference,
 					(string) $data['requested_ref'],
-					'webhook' === $data['source'] ? $request->configured_branch : null
+					'webhook' === $data['source'] ? $request->configured_branch : null,
+					selected_commit: $request->selected_commit
 				)
 			);
 		} catch ( Throwable $failure ) {
@@ -192,7 +202,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			if ( '' === $resolved_ref || trim( $resolved_ref ) !== $resolved_ref || strlen( $resolved_ref ) > 191 || preg_match( '/[[:cntrl:]]/', $resolved_ref ) === 1 ) {
 				$this->stage( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID );
 			}
-			if ( null !== $deployment->expected_head && ! hash_equals( $deployment->expected_head, $resolved_ref ) ) {
+			if ( ( null !== $deployment->expected_head && ! hash_equals( $deployment->expected_head, $resolved_ref ) ) || ( null !== $request->selected_commit && ! hash_equals( $request->selected_commit, $resolved_ref ) ) ) {
 				$this->stage( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID );
 			}
 		} catch ( AdmittedBranchStageFailure $failure ) {

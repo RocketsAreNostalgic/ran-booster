@@ -17,10 +17,15 @@ final class AdminTabRegistry {
 
 	private string $default_key;
 
-	public function __construct( ProviderRegistry $providers ) {
+	public function __construct( ProviderRegistry $providers, ?\RAN\RepositoryProvider\GitHubProviderSelection $github_selection = null ) {
 		$this->add( AdminTab::page( 'overview', 'Overview', 'onboarding.php' ) );
 
-		foreach ( $providers->administration_metadata() as $metadata ) {
+		$metadata_rows = $providers->administration_metadata();
+		if ( null !== $github_selection && ! in_array( 'gh', array_map( static fn ( \RAN\RepositoryProvider\ProviderMetadata $metadata ): string => $metadata->code->value, $metadata_rows ), true ) ) {
+			$this->add( AdminTab::provider( new \RAN\RepositoryProvider\ProviderMetadata( \RAN\RepositoryProvider\ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' ) ) );
+		}
+
+		foreach ( $metadata_rows as $metadata ) {
 			$this->add( AdminTab::provider( $metadata ) );
 		}
 

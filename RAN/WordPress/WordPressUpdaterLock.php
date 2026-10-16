@@ -58,6 +58,14 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 		}
 	}
 
+	public function try_acquire_without_reclaim(): ?string {
+		try {
+			return parent::try_acquire_without_reclaim();
+		} catch ( BranchDeploymentLockStorageFailure ) {
+			throw DeploymentStorageFailure::unavailable();
+		}
+	}
+
 	public function acquire(): string {
 		try {
 			return parent::acquire();

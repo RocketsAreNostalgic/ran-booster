@@ -131,6 +131,11 @@ class Dispatcher {
 				return;
 			}
 
+			if ( 'adopt-github' === $action ) {
+				$this->provider_profiles->adopt_github( $request );
+				$this->redirect_to( admin_url( 'admin.php?page=ran-booster&tab=gh' ) );
+			}
+
 			if ( 'save-public-lookup-profile' === $action ) {
 				$this->provider_profiles->manage_public_lookup_profile( $request, $this->is_htmx_request() );
 

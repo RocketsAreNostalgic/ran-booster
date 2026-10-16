@@ -197,7 +197,7 @@ final class GitHubSelectionStoreTest extends TestCase {
 			$db->throw_commit             = true;
 			$db->commit_applied           = $applied;
 			try {
-				$store->native_mutation_transaction( fn (): bool => $store->compare_and_swap( $old, $next ) );
+				$store->selection_transaction( fn (): bool => $store->compare_and_swap( $old, $next ) );
 				self::fail( 'Thrown commit reported success.' );
 			} catch ( \RuntimeException $failure ) {
 				self::assertSame( 'commit threw', $failure->getMessage() );
@@ -216,7 +216,7 @@ final class GitHubSelectionStoreTest extends TestCase {
 			$db->throw_rollback = 'throw' === $mode;
 			$db->boundary_error = 'last_error' === $mode ? 'ROLLBACK' : null;
 			try {
-				$store->native_mutation_transaction( static fn (): never => throw new \RuntimeException( 'original' ) );
+				$store->selection_transaction( static fn (): never => throw new \RuntimeException( 'original' ) );
 			} catch ( \RuntimeException $failure ) {
 				self::assertSame( 'original', $failure->getMessage() );
 			}
@@ -228,13 +228,13 @@ final class GitHubSelectionStoreTest extends TestCase {
 		$db             = new SelectionDatabase();
 		$store          = new GitHubSelectionStore( $db, 'wp_options' );
 		$db->last_error = 'prior query';
-		self::assertSame( 'success', $store->native_mutation_transaction( static fn (): string => 'success' ) );
+		self::assertSame( 'success', $store->selection_transaction( static fn (): string => 'success' ) );
 		foreach ( array( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', 'START TRANSACTION', 'COMMIT' ) as $statement ) {
 			$db                 = new SelectionDatabase();
 			$store              = new GitHubSelectionStore( $db, 'wp_options' );
 			$db->boundary_error = $statement;
 			try {
-				$store->native_mutation_transaction( static fn (): string => 'never returned' );
+				$store->selection_transaction( static fn (): string => 'never returned' );
 				self::fail( $statement );
 			} catch ( DatabaseLifecycleFailure ) {
 				self::assertContains( $statement, $db->queries );
@@ -245,7 +245,7 @@ final class GitHubSelectionStoreTest extends TestCase {
 	private function assert_paused( GitHubSelectionStore $store, SelectionDatabase $db ): void {
 		$queries = $db->queries;
 		try {
-			$store->native_mutation_transaction( static fn (): bool => true );
+			$store->selection_transaction( static fn (): bool => true );
 			self::fail( 'Uncertain connection reused.' );
 		} catch ( DatabaseLifecycleFailure ) {
 			self::assertSame( $queries, $db->queries );

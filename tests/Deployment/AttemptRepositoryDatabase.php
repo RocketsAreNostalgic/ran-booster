@@ -366,6 +366,10 @@ namespace RAN\Tests\Deployment {
 
 				return array_map( static fn ( array $row ): object => (object) $row, $selected );
 			}
+			if ( str_contains( $query, "WHERE provider = 'gh' AND (state = 'running' OR (state = 'needs_attention' AND (resolved_at IS NULL OR resolved_by IS NULL)))" ) ) {
+				$blocked = array_filter( $this->rows, static fn ( array $row ): bool => 'gh' === $row['provider'] && ( 'running' === $row['state'] || ( 'needs_attention' === $row['state'] && ( null === ( $row['resolved_at'] ?? null ) || null === ( $row['resolved_by'] ?? null ) ) ) ) );
+				return array_map( static fn ( array $row ): object => (object) array( 'id' => $row['id'] ), array_slice( array_values( $blocked ), 0, 1 ) );
+			}
 			$rows = $this->rows;
 			if ( preg_match( "/correlation_id = '([^']+)'/", $query, $matches ) === 1 ) {
 				$rows = array_filter( $rows, static fn ( array $row ): bool => stripslashes( $matches[1] ) === $row['correlation_id'] );

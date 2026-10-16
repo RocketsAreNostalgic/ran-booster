@@ -1,0 +1,15 @@
+{
+  "plugin_basename": "github-replacement/incompatible.php",
+  "implementation_id": "installed-fixture-incompatible",
+  "compatibility_revision": "1",
+  "provider_api_version": 14,
+  "api_credential_formats": [
+    "github-classic-pat-v1",
+    "github-fine-grained-pat-v1"
+  ],
+  "webhook_signing_format": null,
+  "facets": [
+    "RAN\\RepositoryProvider\\RepositoryPathInspector",
+    "RAN\\RepositoryProvider\\ProviderCredentialPolicySupplier"
+  ]
+}

@@ -87,8 +87,12 @@ final class GitHubProviderSelection {
 		try {
 			$secrets->with_github_adoption_inventory(
 				function ( array $inventory ) use ( $digest, $reuse_existing, $acknowledge_incompatible, $attempts, $lock, $token, $authorized ): void {
+					// Capability filters may start their own transaction: finish callbacks before owning selection locks.
+					if ( true !== $authorized() ) {
+						throw new \RuntimeException( 'GitHub adoption authority changed before confirmation.' );
+					}
 					$this->store->selection_transaction(
-						function () use ( $inventory, $digest, $reuse_existing, $acknowledge_incompatible, $attempts, $lock, $token, $authorized ): void {
+						function () use ( $inventory, $digest, $reuse_existing, $acknowledge_incompatible, $attempts, $lock, $token ): void {
 							$review = $this->adoption_projection( $inventory );
 							if ( ! hash_equals( $review['digest'], $digest ) || ( $review['compatible_count'] > 0 && ! $reuse_existing ) || ( 0 === $review['compatible_count'] && $review['incompatible_count'] > 0 && ! $acknowledge_incompatible ) ) {
 								throw new \RuntimeException( 'GitHub adoption review or credential reuse consent changed.' );
@@ -102,7 +106,7 @@ final class GitHubProviderSelection {
 							unset( $next['declaration']['implementation_fingerprint'] );
 							$next['approval']             = 'approved';
 							$next['approved_api_formats'] = $review['target']['api_credential_formats'];
-							if ( true !== $authorized() || $this->adoption_projection( $inventory ) !== $review || $lock->current_token() !== $token || ! $this->store->compare_and_swap( $state, $next ) ) {
+							if ( $this->adoption_projection( $inventory ) !== $review || $lock->current_token() !== $token || ! $this->store->compare_and_swap( $state, $next ) ) {
 								throw new \RuntimeException( 'GitHub adoption authority changed before confirmation.' );
 							}
 						}

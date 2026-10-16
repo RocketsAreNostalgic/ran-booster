@@ -282,6 +282,42 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 		self::assertSame( 1, $this->store->read()['selection_generation'] );
 	}
 
+	public function test_authority_callback_starts_github_attempt_before_cas_and_refuses(): void {
+		$this->candidate();
+		$review                      = $this->selection->adoption_review( $this->secrets );
+		$calls                       = 0;
+		$callback_before_transaction = false;
+		$this->db->queries           = array();
+		$this->refused(
+			function () use ( $review, &$calls, &$callback_before_transaction ): void {
+				$this->selection->transition_selection(
+					$review['digest'],
+					true,
+					false,
+					false,
+					$this->secrets,
+					$this->attempts,
+					new WordPressUpdaterLock(),
+					function () use ( &$calls, &$callback_before_transaction ): bool {
+						if ( 2 === ++$calls ) {
+							$callback_before_transaction = ! in_array( 'START TRANSACTION', $this->db->queries, true );
+							$this->db->rows[]            = array(
+								'id'       => 1,
+								'provider' => 'gh',
+								'state'    => 'running',
+							);
+						}
+						return true;
+					}
+				);
+			}
+		);
+		self::assertSame( 2, $calls );
+		self::assertTrue( $callback_before_transaction );
+		self::assertSame( 0, $this->store->read()['selection_generation'] );
+		self::assertArrayNotHasKey( 'auto_updater.lock', $this->db->option_rows );
+	}
+
 	public function test_authority_callback_changes_target_before_cas_and_refuses(): void {
 		$this->candidate();
 		$review = $this->selection->adoption_review( $this->secrets );

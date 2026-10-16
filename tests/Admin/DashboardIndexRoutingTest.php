@@ -602,6 +602,47 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( $expected, $predicate->invoke( $this->dashboard( $this->throwing_secrets() ), $view, $development_environment_detected ) );
 	}
 
+	public function test_paused_github_route_renders_passive_status_without_provider_and_preserves_bitbucket(): void {
+		$bundled   = new \RAN\RepositoryProvider\GitHubReplacementDeclaration(
+			array(
+				'plugin_basename'        => 'booster.php',
+				'implementation_id'      => 'bundled',
+				'compatibility_revision' => '1',
+				'provider_api_version'   => 15,
+				'api_credential_formats' => array(),
+				'webhook_signing_format' => null,
+				'facets'                 => array(),
+			)
+		);
+		$selection = new \RAN\RepositoryProvider\GitHubProviderSelection( new \RAN\Storage\GitHubSelectionStore( new \RAN\Tests\RepositoryProvider\SelectionContextDatabase(), 'wp_options' ), '/unused/plugins', $bundled );
+		$providers = new ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'bb' ) ) );
+		$directory = sys_get_temp_dir() . '/adoption-route-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable private sidecar fixture.
+		mkdir( $directory, 0700 );
+		$dashboard   = $this->dashboard( new SecretsFile( $directory . '/secrets', array(), ShippedSecretPolicyCatalog::create() ), providers: $providers, github_selection: $selection );
+		$_GET['tab'] = 'gh';
+		$data        = $dashboard->get_index()['data'];
+		self::assertSame( 'gh', $data['selected_provider'] );
+		self::assertSame( 'provider.php', $data['tab_view'] );
+		self::assertFalse( $data['github_selection']['available'] );
+		self::assertSame( array(), $data['credential_profiles'] );
+		self::assertArrayNotHasKey( 'gh', $providers->all() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard model to its production view.
+		extract( $data );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'GitHub operations are paused.', $html );
+		self::assertStringContainsString( 'Selection storage is unavailable.', $html );
+		self::assertStringNotContainsString( 'name="ran_booster[action]" value="adopt-github"', $html );
+		$_GET['tab'] = 'bb';
+		self::assertSame( 'bb', $dashboard->get_index()['data']['selected_provider'] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable fixture lock.
+		unlink( $directory . '/secrets.lock' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Disposable private sidecar fixture.
+		rmdir( $directory );
+	}
+
 	public function test_provider_tab_builds_only_the_selected_provider_settings(): void {
 		$_GET['tab'] = 'bb';
 
@@ -2908,7 +2949,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		?PublicRepositoryLookupProfileStore $public_lookup_profiles = null,
 		?RepositoryBranchCheckEvidenceStore $branch_check_evidence = null,
 		?WebhookAssistanceReadinessEvaluator $webhook_assistance = null,
-		?WordPressUpdaterLock $branch_check_lock = null
+		?WordPressUpdaterLock $branch_check_lock = null,
+		?\RAN\RepositoryProvider\GitHubProviderSelection $github_selection = null
 	): RoutingDashboard {
 		$providers         = $providers ?? $this->providers( $provider_credentials );
 		$branch_check_lock = $branch_check_lock ?? new DashboardBranchCheckUpdaterLock();
@@ -2947,9 +2989,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$plugin_repository,
 			new Booster(),
 			$theme_repository,
-			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), $public_lookup_profiles ?? new InMemoryPublicRepositoryLookupProfileStore(), new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore(), null, $plugin_repository, $theme_repository, $webhook_assistance, $branch_check_evidence ?? new DashboardBranchCheckEvidenceStore(), $branch_check_lock ),
+			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), $public_lookup_profiles ?? new InMemoryPublicRepositoryLookupProfileStore(), new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore(), null, $plugin_repository, $theme_repository, $webhook_assistance, $branch_check_evidence ?? new DashboardBranchCheckEvidenceStore(), $branch_check_lock, $github_selection ),
 			$troubleshooting ?? new TroubleshootingService( new LocalTroubleshootingService( $secrets ), $providers ),
-			new AdminTabRegistry( $providers ),
+			new AdminTabRegistry( $providers, $github_selection ),
 			new ProviderDocumentationPresenter( $providers ),
 			$package_operations,
 			$deployment_attempts,

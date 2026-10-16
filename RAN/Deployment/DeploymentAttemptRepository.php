@@ -65,6 +65,22 @@ final class DeploymentAttemptRepository {
 		$this->random_bytes       = $random_bytes ?? random_bytes( ... );
 		$this->database_lifecycle = $database_lifecycle ?? new Database( $this->database );
 	}
+	/** Caller already owns the same selection row transaction, before attempt locks. */
+	public function assert_selection_transition_idle( GitHubProviderSelection $selection ): void {
+		if ( null === $this->database || ! $selection->uses_connection( $this->database ) ) {
+			throw DeploymentStorageFailure::unavailable();
+		}
+		$rows = $this->read_rows(
+			$this->prepare(
+				"SELECT id FROM %i WHERE provider = 'gh' AND (state = 'running' OR (state = 'needs_attention' AND (resolved_at IS NULL OR resolved_by IS NULL))) LIMIT 1 FOR UPDATE",
+				$this->table_name
+			)
+		);
+		if ( array() !== $rows ) {
+			throw new \RuntimeException( 'GitHub deployment recovery or completion is required before switching.' );
+		}
+	}
+
 	public function admit_and_claim_manual(
 		string $operation,
 		string $package_type,

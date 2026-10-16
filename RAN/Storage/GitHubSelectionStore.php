@@ -9,15 +9,15 @@ use RAN\RepositoryProvider\GitHubReplacementDeclaration;
 /**
  * One durable authority row. Callers own transactions and acquire this row before
  * adoption/attempt locks. Ordinary reads/CAS never own or repair transactions;
- * native_mutation_transaction() is the explicit non-nesting native lifecycle owner.
+ * selection_transaction() is the explicit non-nesting selection lifecycle owner.
  * Transaction owners must invalidate_cache() after COMMIT/ROLLBACK or unknown outcomes.
  * Inside an existing transaction, authority reads require read(true), because
  * nonlocking reads can inherit an older REPEATABLE READ snapshot.
  * Native-marker clearing requires the caller's exact verified completion or protected recovery.
  */
 final class GitHubSelectionStore {
-	public const OPTION                   = 'ran_booster_github_selection';
-	private bool $native_commit_uncertain = false;
+	public const OPTION            = 'ran_booster_github_selection';
+	private bool $commit_uncertain = false;
 
 	public function __construct( private \wpdb|SchemaConnection $connection, private string $table ) {
 	}
@@ -221,33 +221,33 @@ final class GitHubSelectionStore {
 	}
 
 	/**
-	 * Internal native-marker lifecycle only; never nest inside an admission transaction.
+	 * Internal selection transitions and native markers; never nest inside an admission transaction.
 	 * SET TRANSACTION rejects an already active transaction without committing it.
 	 *
 	 * @template T
 	 * @param callable():T $operation No credentials, provider I/O or filesystem mutation.
 	 * @return T
 	 */
-	public function native_mutation_transaction( callable $operation ): mixed {
-		if ( $this->native_commit_uncertain ) {
+	public function selection_transaction( callable $operation ): mixed {
+		if ( $this->commit_uncertain ) {
 			throw new DatabaseLifecycleFailure( 'selection_transaction_failed' );
 		}
-		$this->native_transaction_boundary( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', 'selection_transaction_failed' );
+		$this->transaction_boundary( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', 'selection_transaction_failed' );
 		try {
-			$this->native_commit_uncertain = true;
-			$this->native_transaction_boundary( 'START TRANSACTION', 'selection_transaction_failed' );
-			$this->native_commit_uncertain = false;
-			$result                        = $operation();
+			$this->commit_uncertain = true;
+			$this->transaction_boundary( 'START TRANSACTION', 'selection_transaction_failed' );
+			$this->commit_uncertain = false;
+			$result                 = $operation();
 			// Latch before COMMIT: thrown errors and false replies are equally uncertain.
-			$this->native_commit_uncertain = true;
-			$this->native_transaction_boundary( 'COMMIT', 'selection_commit_uncertain' );
-			$this->native_commit_uncertain = false;
+			$this->commit_uncertain = true;
+			$this->transaction_boundary( 'COMMIT', 'selection_commit_uncertain' );
+			$this->commit_uncertain = false;
 			return $result;
 		} catch ( \Throwable $failure ) {
 			try {
-				$this->native_transaction_boundary( 'ROLLBACK', 'selection_rollback_uncertain' );
+				$this->transaction_boundary( 'ROLLBACK', 'selection_rollback_uncertain' );
 			} catch ( \Throwable ) {
-				$this->native_commit_uncertain = true;
+				$this->commit_uncertain = true;
 			}
 			throw $failure;
 		} finally {
@@ -255,7 +255,7 @@ final class GitHubSelectionStore {
 		}
 	}
 
-	private function native_transaction_boundary( string $statement, string $reason ): void {
+	private function transaction_boundary( string $statement, string $reason ): void {
 		$this->connection->last_error = '';
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Only fixed transaction statements supplied by the private lifecycle above.
 		if ( false === $this->connection->query( $statement ) || $this->read_failed() ) {

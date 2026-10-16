@@ -101,6 +101,72 @@ final class GitHubProviderSelectionTest extends TestCase {
 		self::assertTrue( $this->store->compare_and_swap( $old, $next ) );
 	}
 
+	public function test_status_is_passive_before_candidate_adoption_and_reports_claimed_headers(): void {
+		$this->candidate( 'replacement.php' );
+		$this->write( 'replacement.php', "<?php throw new \\LogicException( 'Never execute discovery.' );\n/*\nPlugin Name: Claimed provider\nVersion: 2.3\nRAN Booster GitHub Replacement: 1\n*/" );
+		$this->activate( array( 'booster.php', 'replacement.php' ) );
+		$context  = new GitHubProviderSelection( $this->store, $this->root, $this->bundled );
+		$factory  = static function ( ProviderCredentialStore $credentials, AuthenticatedWebhookDeliveryEvidenceReader $evidence, ProviderRegistrationContext $registration_context ): RepositoryProvider {
+			unset( $credentials, $evidence, $registration_context );
+			self::fail( 'Passive status must not construct a provider.' );
+		};
+		$registry = new ProviderRegistry(
+			github_selection_guard: $context->registry_selection( ... ),
+			github_candidates: $context->candidates(),
+			bundled_github_factory: $factory
+		);
+		$context->bind_registry( $registry );
+		$registry->declare_github_replacement( $this->declaration( 'replacement.php' ), $factory );
+		$context->complete_collection();
+		$registry->seal();
+		$status = $context->status();
+		self::assertSame( 'decision_required', $status['state'] );
+		self::assertFalse( $status['available'] );
+		self::assertSame( 'Claimed provider', $status['candidates']['replacement.php']['display_name'] );
+		self::assertSame( '2.3', $status['candidates']['replacement.php']['display_version'] );
+		self::assertSame( array( 'selection_generation', 'selected', 'declaration', 'approval' ), array_keys( $status['current'] ) );
+	}
+
+	public function test_status_refuses_conflict_malformed_candidate_and_missing_selected_plugin(): void {
+		$context = $this->context();
+		self::assertTrue( $context->status()['available'] );
+		$this->candidate( 'one.php' );
+		$this->candidate( 'two.php' );
+		$this->activate( array( 'booster.php', 'one.php', 'two.php' ) );
+		self::assertSame( 'conflict', $context->status()['state'] );
+		$this->activate( array( 'booster.php', 'missing.php' ) );
+		self::assertSame( 'incompatible', $context->status()['state'] );
+		self::assertNull( $context->status()['candidates']['missing.php'] );
+		$this->activate( array() );
+		self::assertSame( 'missing', $context->status()['state'] );
+		$this->db->fail_active = true;
+		self::assertSame(
+			array(
+				'state'      => 'storage_unavailable',
+				'available'  => false,
+				'current'    => null,
+				'candidates' => array(),
+			),
+			$context->status()
+		);
+	}
+
+	public function test_status_detects_fingerprint_drift_and_redacts_native_owner(): void {
+		$candidate = $this->candidate( 'replacement.php' );
+		$this->activate( array( 'booster.php', 'replacement.php' ) );
+		$this->adopt( $candidate );
+		$context = $this->context();
+		$owner   = $context->begin_native_mutation( 'plugin', 'target/main.php', static fn (): bool => true );
+		$status  = $context->status();
+		self::assertSame( 'recovery_required', $status['state'] );
+		self::assertTrue( $status['available'] );
+		self::assertArrayNotHasKey( 'native_mutation', $status['current'] );
+		$context->complete_native_mutation( $owner, 'plugin', 'target/main.php', 'verified_success' );
+		$this->candidate( 'replacement.php', '2' );
+		self::assertSame( 'decision_required', $context->status()['state'] );
+		self::assertFalse( $context->status()['available'] );
+	}
+
 	private function context(): GitHubProviderSelection {
 		$context  = new GitHubProviderSelection( $this->store, $this->root, $this->bundled );
 		$registry = $this->registry( $context );

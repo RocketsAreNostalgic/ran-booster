@@ -81,6 +81,18 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 			$consumer = $container->make( $consumer_type );
 			self::assertSame( $selection, ( new \ReflectionProperty( $consumer, 'selection' ) )->getValue( $consumer ) );
 		}
+		$container->bind( \RAN\Dashboard::class, $this->createStub( \RAN\Dashboard::class ) );
+		foreach ( array( \RAN\Admin\ProviderSettingsPresenter::class, \RAN\Admin\ProviderProfileAdminController::class ) as $type ) {
+			$consumer = $container->make( $type );
+			self::assertSame( $selection, ( new \ReflectionProperty( $consumer, 'github_selection' ) )->getValue( $consumer ) );
+			self::assertSame( $secrets, ( new \ReflectionProperty( $consumer, 'secrets' ) )->getValue( $consumer ) );
+		}
+		$profiles          = $container->make( \RAN\Admin\ProviderProfileAdminController::class );
+		$adoption_attempts = ( new \ReflectionProperty( $profiles, 'deployment_attempts' ) )->getValue( $profiles );
+		self::assertInstanceOf( \RAN\Deployment\DeploymentAttemptRepository::class, $adoption_attempts );
+		self::assertSame( $selection, ( new \ReflectionProperty( $adoption_attempts, 'selection' ) )->getValue( $adoption_attempts ) );
+		self::assertSame( $container->make( \RAN\WordPress\WordPressUpdaterLock::class ), ( new \ReflectionProperty( $profiles, 'updater_lock' ) )->getValue( $profiles ) );
+		self::assertTrue( $container->make( \RAN\Admin\AdminTabRegistry::class )->resolve( 'gh' )->is_provider() );
 		$verifier           = $container->make( \RAN\Portability\BlueprintRepositoryVerifier::class );
 		$selection_property = new \ReflectionProperty( $verifier, 'selection' );
 		self::assertSame( $selection, $selection_property->getValue( $verifier ) );

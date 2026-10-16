@@ -353,7 +353,31 @@ class SecretsFile {
 	 * @return array<string, array{id:string,label:string,kind:string,format:string|null,configuration:array{owner:string}|null,source:'constant'|'file',self_destruct:bool,destroy_on:string|null,destroyed:bool}>
 	 */
 	public function github_adoption_inventory(): array {
-		$document = $this->file_document();
+		return $this->adoption_inventory( $this->file_document() );
+	}
+
+	/**
+	 * @template T
+	 * @param callable(array<string,array<string,mixed>>):T $operation Host-only; no provider callbacks or nested sidecar access.
+	 * @return T
+	 */
+	public function with_github_adoption_inventory( callable $operation ): mixed {
+		$this->assert_available();
+		return $this->with_lock(
+			LOCK_EX,
+			true,
+			function () use ( $operation ): mixed {
+				$document = $this->document_for_locked_state( $this->load_key(), $this->has_file() );
+				return $operation( $this->adoption_inventory( $document ) );
+			}
+		);
+	}
+
+	/**
+	 * @param SecretsDocument $document
+	 * @return array<string, array{id:string,label:string,kind:string,format:string|null,configuration:array{owner:string}|null,source:'constant'|'file',self_destruct:bool,destroy_on:string|null,destroyed:bool}>
+	 */
+	private function adoption_inventory( #[\SensitiveParameter] array $document ): array {
 		$profiles = array();
 		foreach ( $document[ self::CREDENTIALS ]['gh'] ?? array() as $id => $record ) {
 			$format          = GitHubProviderSelection::credential_format( $record );

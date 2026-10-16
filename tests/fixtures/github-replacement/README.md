@@ -24,6 +24,9 @@ entry, which intentionally has no registration callback. `core-first`
 and `replacement-first` reorder the real active plugin list for the next process.
 `reset-counters`, `counters` and `status` reset/read instrumentation or read Core's
 redacted status. `expect-unavailable` requires unavailable Core and zero counters.
+`expect-bundled` requires an available bundled selection, no active candidates,
+the actual bundled provider instance and zero replacement counters. It makes no
+network request and does not establish live GitHub acceptance.
 `exercise` performs one real provider repository lookup; `exercise-temporary`
 uses `SecretsFile::with_temporary_credential()` and asserts one actual bound
 credential call and one non-null material return, without persisting the secret.

@@ -46,6 +46,8 @@ run_phase reset-counters
 run_phase expect-unavailable
 # Return to bundled requires the same explicit review and protected transition.
 run_phase select
+run_phase reset-counters
+run_phase expect-bundled
 run_phase status
 # Keep inert fixture files for subsequent consumer phases; never delete unknown targets.
 echo 'Installed replacement A/B declaration and transition proof passed.'

@@ -122,8 +122,11 @@ final class GitHubProviderSelectionTest extends TestCase {
 		$status = $context->status();
 		self::assertSame( 'decision_required', $status['state'] );
 		self::assertFalse( $status['available'] );
+		self::assertArrayHasKey( 'replacement.php', $status['candidates'] );
+		self::assertIsArray( $status['candidates']['replacement.php'] );
 		self::assertSame( 'Claimed provider', $status['candidates']['replacement.php']['display_name'] );
 		self::assertSame( '2.3', $status['candidates']['replacement.php']['display_version'] );
+		self::assertIsArray( $status['current'] );
 		self::assertSame( array( 'selection_generation', 'selected', 'declaration', 'approval' ), array_keys( $status['current'] ) );
 	}
 
@@ -160,6 +163,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 		$status  = $context->status();
 		self::assertSame( 'recovery_required', $status['state'] );
 		self::assertTrue( $status['available'] );
+		self::assertIsArray( $status['current'] );
 		self::assertArrayNotHasKey( 'native_mutation', $status['current'] );
 		$context->complete_native_mutation( $owner, 'plugin', 'target/main.php', 'verified_success' );
 		$this->candidate( 'replacement.php', '2' );

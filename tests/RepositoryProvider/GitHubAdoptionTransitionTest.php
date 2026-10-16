@@ -122,7 +122,8 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 					'reuse_existing' => $reuse,
 				)
 			);
-			self::assertSame( 0, $this->store->read()['selection_generation'] );
+			$fresh_store = new GitHubSelectionStore( $this->db, 'wp_options' );
+			self::assertSame( 0, $fresh_store->read()['selection_generation'] );
 		}
 		$this->admin_controller()->adopt_github(
 			array(

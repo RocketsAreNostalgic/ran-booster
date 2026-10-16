@@ -38,7 +38,11 @@ final class HistoricalArchiveContractTest extends TestCase {
 				)
 			);
 			self::assertSame( $commit, $operation->selected_commit );
-			self::assertSame( 'main', $operation->expected_package['branch'] );
+			$snapshot = $operation->expected_package;
+			if ( ! array_key_exists( 'branch', $snapshot ) ) {
+				self::fail( 'Historical updates must retain a tracking branch snapshot.' );
+			}
+			self::assertSame( 'main', $snapshot['branch'] );
 		}
 	}
 
@@ -66,8 +70,8 @@ final class HistoricalArchiveContractTest extends TestCase {
 			try {
 				$operation();
 				self::fail( 'Malformed historical input must refuse.' );
-			} catch ( InvalidArgumentException ) {
-				self::assertTrue( true );
+			} catch ( InvalidArgumentException $failure ) {
+				self::assertStringContainsString( 'historical', strtolower( $failure->getMessage() ) );
 			}
 		}
 	}
@@ -78,8 +82,8 @@ final class HistoricalArchiveContractTest extends TestCase {
 			try {
 				new ArchiveRequest( new RepositoryReference( 'owner/repo', 'repo-id', false, null ), $ref, $branch, selected_commit: $commit );
 				self::fail( 'Conflicting historical archive constraints must refuse.' );
-			} catch ( InvalidArgumentException ) {
-				self::assertTrue( true );
+			} catch ( InvalidArgumentException $failure ) {
+				self::assertStringContainsString( 'historical', strtolower( $failure->getMessage() ) );
 			}
 		}
 	}

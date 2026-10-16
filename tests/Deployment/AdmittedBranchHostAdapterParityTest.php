@@ -185,9 +185,10 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		self::assertSame( $commit, $declaration->selected_commit );
 		self::assertNull( $declaration->expected_head );
 		$artifact = $adapter->prepare( $declaration, $this->update_baseline() );
-		self::assertSame( $commit, $provider->last_request?->selected_commit );
-		self::assertSame( $commit, $provider->last_request?->ref );
-		self::assertNull( $provider->last_request?->expected_branch );
+		self::assertNotNull( $provider->last_request );
+		self::assertSame( $commit, $provider->last_request->selected_commit );
+		self::assertSame( $commit, $provider->last_request->ref );
+		self::assertNull( $provider->last_request->expected_branch );
 		$artifact->cleanup();
 	}
 

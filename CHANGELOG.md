@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0-beta.37](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.36...v1.0.0-beta.37) (2026-10-16)
+
+
+### Features
+
+* integrate Blueprint V2 configuration and bounded previews ([#424](https://github.com/RocketsAreNostalgic/ran-booster/issues/424)) ([c7d9bca](https://github.com/RocketsAreNostalgic/ran-booster/commit/c7d9bcad65c8def809f15dea7dd0e7158f605f7b))
+
 ## [1.0.0-beta.36](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.35...v1.0.0-beta.36) (2026-10-15)
 
 

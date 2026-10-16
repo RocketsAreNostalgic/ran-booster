@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 namespace RAN\AddOn\ReleaseTracking;
 
+use RAN\Deployment\DeploymentPolicy;
+
 /**
  * Versioned Core boundary for installing a not-yet-managed published release.
  */
 interface ProspectiveReleaseFacade {
 
-	public const API_VERSION = 9;
+	public const API_VERSION = 10;
 
 	/** @param array<string,mixed>|null $provider_expectation */
-	public function nonce_action( string $operation, string $type, ?array $provider_expectation ): string;
+	public function nonce_action( string $operation, string $type, ?array $provider_expectation, ?string $expected_identifier = null, DeploymentPolicy $initial_policy = DeploymentPolicy::MANUAL ): string;
 
 	/**
 	 * Return the bounded provider codes supporting the complete prospective workflow.
@@ -61,6 +63,8 @@ interface ProspectiveReleaseFacade {
 		string $expected_fingerprint,
 		string $channel,
 		string $nonce,
-		?array $provider_expectation
+		?array $provider_expectation,
+		?string $expected_identifier = null,
+		DeploymentPolicy $initial_policy = DeploymentPolicy::MANUAL
 	): ProspectiveReleaseResult;
 }

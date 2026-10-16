@@ -175,8 +175,8 @@ one registered provider aggregate supplies the complete release capability set
 required by the operation. It does not publish a prospective-release marker or
 deliver the internal facade to another plugin.
 
-The internal `ProspectiveReleaseFacade::API_VERSION` is **9** for destination selection
-continuity; this is not a public plugin-delivery marker.
+The internal `ProspectiveReleaseFacade::API_VERSION` is **10** for destination selection
+continuity and explicit initial installation intent; this is not a public plugin-delivery marker.
 
 The facade accepts exactly:
 
@@ -195,6 +195,22 @@ $prospective->install(
 	$provider_expectation
 );
 ```
+
+`install()` and `nonce_action()` additionally accept optional `$expected_identifier`
+and `$initial_policy` arguments, defaulting to `null` and `DeploymentPolicy::MANUAL`.
+Only Manual and Disabled are supported; Disabled requires a valid explicit plugin
+or theme identifier. Both values are bound into the installation nonce. Non-install
+nonce operations reject nondefault installation intent. Existing dashboard calls
+retain Manual adoption.
+
+The acquired identifier must match the expected identifier before updater locking,
+artifact handoff or filesystem mutation. A mismatch returns
+`package_identity_mismatch` and still discards the acquisition. Successful adoption
+persists the requested policy through the existing verified release repository
+operation. This does not enable Blueprint release execution or exact artifact
+selection. A future Blueprint caller must also compare inspected package-root and
+metadata-file configuration; a theme identifier alone does not prove its metadata
+filename. Installation remains inactive and this initial selection is no update lock.
 
 `supported_provider_codes()` returns the bounded complete-product provider list
 for `plugin` or `theme` using request-local configuration only. It performs no

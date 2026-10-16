@@ -157,6 +157,16 @@ final class BlueprintRepositoryVerifier {
 			return $item;
 		}
 
+		if ( null !== $item->package->selection
+			&& ( TargetPackageAction::INSTALL !== $item->action
+				|| null !== $item->package->release_configuration
+				|| ! defined( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' )
+				|| 3 !== constant( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' )
+				|| 2 !== ( $this->providers->metadata()[ $item->package->provider ]->archive_api_version ?? 1 )
+				|| ( 'gh' === $item->package->provider && 40 !== strlen( (string) $item->package->selection['commit'] ) ) ) ) {
+			return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION );
+		}
+
 		if ( null !== $credential ) {
 			if ( BlueprintCredentialAction::IMPORT !== $credential_action || ! $this->can_transfer( $item, $credential ) ) {
 				if ( BlueprintCredentialAction::TARGET !== $credential_action

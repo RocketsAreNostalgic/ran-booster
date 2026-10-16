@@ -57,6 +57,10 @@ final readonly class PortabilityApplicationService {
 		$verifier = $this->verifier->for_preview();
 
 		foreach ( $items as $index => $item ) {
+			if ( ! $this->selected_operation_supported( $item ) ) {
+				$verified[] = new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION );
+				continue;
+			}
 			$expectation = $verifier->provider_expectation( $item->package->provider );
 			if ( 'gh' === $item->package->provider && null === $expectation ) {
 				$verified[] = new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::PROVIDER_UNAVAILABLE );
@@ -194,8 +198,8 @@ final readonly class PortabilityApplicationService {
 			return $this->result( 'skipped', __( 'The selected packages conflict: a repository can supply multiple branch packages or one release package, but not both. Select a compatible subset and review again.', 'ran-booster' ) );
 		}
 		$item = $this->reviewer->review_package( $package );
-		if ( TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION === $item->reason ) {
-			return $this->result( 'skipped', $item->reason->message() );
+		if ( TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION === $item->reason || ! $this->selected_operation_supported( $item ) ) {
+			return $this->result( 'skipped', TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION->message() );
 		}
 		$item                 = new BlueprintPlanItem( $package, $item->action, $item->reason, $provider_expectation );
 		$ordinal              = null;
@@ -462,6 +466,19 @@ final readonly class PortabilityApplicationService {
 		return $this->secrets->import_credentials_if_absent( $blueprint, $credential )[0] ?? throw new InvalidArgumentException();
 	}
 
+	private function selected_operation_supported( BlueprintPlanItem $item ): bool {
+		if ( null === $item->package->selection || TargetPackageAction::INSTALL !== $item->action ) {
+			return true;
+		}
+		try {
+			// Validate requested identity before any credential import or provider work.
+			PackageOperation::from_input( 'install-' . $item->package->type, $this->operation_input( $item, null, false ) );
+			return true;
+		} catch ( InvalidArgumentException ) {
+			return false;
+		}
+	}
+
 	/** @return array<string, string> */
 	private function operation_input( BlueprintPlanItem $item, ?string $credential_id, bool $repository_private ): array {
 		$package = $item->package;
@@ -477,6 +494,10 @@ final readonly class PortabilityApplicationService {
 			'package_slug'                        => 'plugin' === $package->type ? explode( '/', $package->identifier, 2 )[0] : $package->identifier,
 			'subdirectory'                        => $package->subdirectory ?? '',
 		);
+		if ( TargetPackageAction::INSTALL === $item->action && null !== $package->selection ) {
+			$input['selected_commit']     = (string) $package->selection['commit'];
+			$input['expected_identifier'] = $package->identifier;
+		}
 		if ( TargetPackageAction::ADOPT === $item->action ) {
 			$input['dry-run']          = '1';
 			$input['exact_identifier'] = '1';

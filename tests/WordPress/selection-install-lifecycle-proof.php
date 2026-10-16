@@ -8,9 +8,15 @@ use RAN\Storage\GitHubSelectionStore;
 
 // Caller has verified the disposable root, marker and exact current schema.
 return static function ( wpdb $database ): void {
-	$store = new GitHubSelectionStore( $database, $database->options );
-	$saved = get_option( GitHubSelectionStore::OPTION );
-	$store->read( true );
+	$store       = new GitHubSelectionStore( $database, $database->options );
+	$saved_state = $store->read( true );
+	// Snapshot authority directly: option filters and caches can report a missing row.
+	$query = $database->prepare( 'SELECT option_value FROM %i WHERE option_name = %s FOR UPDATE', $database->options, GitHubSelectionStore::OPTION );
+	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Both table and option name are bound immediately above.
+	$saved = $database->get_var( $query );
+	if ( ! is_string( $saved ) || '' !== $database->last_error ) {
+		throw new RuntimeException( 'Could not snapshot selection authority.' );
+	}
 	$declaration      = new GitHubReplacementDeclaration( array_merge( array( 'plugin_basename' => 'ran-booster/ran-booster.php' ), GitHubProvider::compatibility_contract() ) );
 	$version_observed = false;
 	$observe          = static function ( mixed $value ) use ( $store, &$version_observed ): mixed {
@@ -53,8 +59,21 @@ return static function ( wpdb $database ): void {
 	} finally {
 		remove_filter( 'pre_update_option_' . Database::VERSION_OPTION, $observe );
 		remove_filter( 'query', $record );
-		update_option( GitHubSelectionStore::OPTION, $saved, false );
-		update_option( Database::VERSION_OPTION, Database::$booster_db_version, false );
+		// Restore the exact SQL contract; update_option() can no-op on cached absence
+		// and WordPress's false autoload value need not persist the literal 'no'.
+		$restored = $database->replace(
+			$database->options,
+			array(
+				'option_name'  => GitHubSelectionStore::OPTION,
+				'option_value' => $saved,
+				'autoload'     => 'no',
+			),
+			array( '%s', '%s', '%s' )
+		);
 		$store->invalidate_cache();
+		if ( false === $restored || $saved_state !== $store->read( true ) ) {
+			throw new RuntimeException( 'Could not restore selection authority.' );
+		}
+		update_option( Database::VERSION_OPTION, Database::$booster_db_version, false );
 	}
 };

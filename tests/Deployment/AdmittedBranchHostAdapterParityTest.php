@@ -134,6 +134,90 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		);
 	}
 
+	public function test_webhook_admission_rejects_explicit_historical_selection_without_acknowledgement(): void {
+		$request = new DeploymentRequest( 'owner/repo', null, false, 'main', 'repo', null, DeploymentPolicy::AUTOMATIC, null, selected_commit: str_repeat( 'a', 40 ) );
+		$before  = $this->database->rows;
+		try {
+			$this->attempts->admit_webhook_batch(
+				'gh',
+				'historical-delivery',
+				str_repeat( 'b', 64 ),
+				array(
+					array(
+						'operation'               => 'update',
+						'package_type'            => 'plugin',
+						'provider_repository_id'  => 'repo-id',
+						'requested_ref'           => str_repeat( 'a', 40 ),
+						'package_source'          => 'branch',
+						'package_source_revision' => 1,
+						'request'                 => $request,
+					),
+				)
+			);
+			self::fail( 'Webhooks cannot request historical acquisition.' );
+		} catch ( \RAN\Deployment\DeploymentStorageFailure ) {
+			self::assertSame( $before, $this->database->rows );
+		}
+	}
+
+	public function test_historical_mode_refuses_version_one_provider_before_preparation(): void {
+		$provider = new ParityRepositoryProvider( null );
+		$adapter  = $this->adapter( $this->running_update( str_repeat( 'a', 40 ) ), $provider );
+		try {
+			$adapter->declaration();
+			self::fail( 'Unsupported historical acquisition must refuse.' );
+		} catch ( AdmittedBranchStageFailure $failure ) {
+			self::assertSame( DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE, $failure->outcome_code );
+		}
+		self::assertSame( 0, $provider->prepare_calls );
+	}
+
+	public function test_historical_archive_keeps_tracking_branch_and_requires_exact_resolved_commit(): void {
+		$commit   = str_repeat( 'a', 40 );
+		$archive  = new ParityProviderArchive( $commit );
+		$provider = new ParityRepositoryProvider( $archive, 2 );
+		$attempt  = $this->running_update( $commit );
+		self::assertSame( $commit, $attempt->get_request()->selected_commit );
+		self::assertSame( 'main', $attempt->get_request()->configured_branch );
+		$adapter = $this->adapter( $attempt, $provider );
+		$this->download_fixture( 'example' );
+		$declaration = $adapter->declaration();
+		self::assertSame( $commit, $declaration->selected_commit );
+		self::assertNull( $declaration->expected_head );
+		$artifact = $adapter->prepare( $declaration, $this->update_baseline() );
+		self::assertSame( $commit, $provider->last_request?->selected_commit );
+		self::assertSame( $commit, $provider->last_request?->ref );
+		self::assertNull( $provider->last_request?->expected_branch );
+		$artifact->cleanup();
+	}
+
+	public function test_coordinator_preserves_historical_selection_and_checks_installed_postconditions(): void {
+		$commit   = str_repeat( 'a', 40 );
+		$archive  = new ParityProviderArchive( $commit );
+		$provider = new ParityRepositoryProvider( $archive, 2 );
+		$attempt  = $this->running_update( $commit );
+		$this->download_fixture( 'example' );
+		$outcome = $this->coordinator( $provider )->execute_claimed( $attempt );
+		self::assertSame( 'installed_version_mismatch', $outcome->get_code() );
+		self::assertSame( $commit, $provider->last_request?->selected_commit );
+		self::assertSame( 'main', (string) $this->plugins->managed['fixture']->get_branch() );
+		self::assertSame( 1, $archive->cleanup_calls );
+	}
+
+	public function test_historical_wrong_resolved_commit_cleans_before_download(): void {
+		$archive  = new ParityProviderArchive( str_repeat( 'b', 40 ) );
+		$provider = new ParityRepositoryProvider( $archive, 2 );
+		$adapter  = $this->adapter( $this->running_update( str_repeat( 'a', 40 ) ), $provider );
+		try {
+			$adapter->prepare( $adapter->declaration(), $this->update_baseline() );
+			self::fail( 'A different resolved commit must refuse.' );
+		} catch ( AdmittedBranchStageFailure $failure ) {
+			self::assertSame( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID, $failure->outcome_code );
+		}
+		self::assertSame( 1, $archive->cleanup_calls );
+		self::assertSame( array(), $GLOBALS['ran_booster_admitted_http_calls'] );
+	}
+
 	public function test_concrete_provider_download_is_bounded_and_cleans_after_success(): void {
 		$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
 		$provider = new ParityRepositoryProvider( $archive );
@@ -485,7 +569,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		);
 	}
 
-	private function running_update(): DeploymentAttempt {
+	private function running_update( ?string $selected_commit = null ): DeploymentAttempt {
 		$identifier                                     = (string) $this->plugins->managed['fixture']->get_identifier();
 		$this->database->management[ $identifier ]      = 'gh:R_example:11111111-1111-4111-8111-111111111111';
 		$this->database->management_rows[ $identifier ] = array(
@@ -511,7 +595,8 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			7,
 			self::MAXIMUM_ARTIFACT_BYTES,
 			$identifier,
-			'gh:R_example:11111111-1111-4111-8111-111111111111'
+			'gh:R_example:11111111-1111-4111-8111-111111111111',
+			selected_commit: $selected_commit
 		);
 
 		return $this->attempts->admit_and_claim_manual(
@@ -520,7 +605,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			'gh',
 			'R_example',
 			$request,
-			'main',
+			$selected_commit ?? 'main',
 			PackageSource::BRANCH->value,
 			1
 		);
@@ -783,10 +868,11 @@ final class ParityRepositoryProvider implements RepositoryProvider {
 	public int $prepare_calls                 = 0;
 	public ?RuntimeException $prepare_failure = null;
 
-	public function __construct( private ?ParityProviderArchive $archive ) {}
+	public ?ArchiveRequest $last_request = null;
+	public function __construct( private ?ParityProviderArchive $archive, private int $archive_api_version = 1 ) {}
 
 	public function get_metadata(): ProviderMetadata {
-		return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
+		return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner', archive_api_version: $this->archive_api_version );
 	}
 
 	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
@@ -795,6 +881,7 @@ final class ParityRepositoryProvider implements RepositoryProvider {
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterface -- The fixture implementation of prepare_archive retains the production method contract; these inputs do not affect this controlled result.
 	public function prepare_archive( ArchiveRequest $request ): ProviderPreparedArchive {
+		$this->last_request = $request;
 		++$this->prepare_calls;
 		if ( null !== $this->prepare_failure ) {
 			throw $this->prepare_failure;

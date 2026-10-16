@@ -48,7 +48,8 @@ final readonly class PackageOperation {
 		public ?string $subdirectory,
 		public ?string $package_slug,
 		public ?string $ref,
-		public array $expected_package
+		public array $expected_package,
+		public ?string $selected_commit = null
 	) {
 	}
 
@@ -60,8 +61,12 @@ final readonly class PackageOperation {
 		}
 
 		[$operation, $package_type] = $parts;
-		$link_only                  = 'install' === $operation && isset( $input['dry-run'] );
-		$identifier                 = 'install' === $operation
+		$selected_commit            = $input['selected_commit'] ?? null;
+		if ( null !== $selected_commit && ( ! is_string( $selected_commit ) || 1 !== preg_match( '/\A(?:[a-f0-9]{40}|[a-f0-9]{64})\z/D', $selected_commit ) || ! in_array( $operation, array( 'install', 'update' ), true ) || isset( $input['dry-run'] ) || isset( $input['expected_head'] ) || ( isset( $input['ref'] ) && $input['ref'] !== $selected_commit ) ) ) {
+			throw new InvalidArgumentException( 'Choose one valid historical commit without a current-head constraint.' );
+		}
+		$link_only  = 'install' === $operation && isset( $input['dry-run'] );
+		$identifier = 'install' === $operation
 			? ( $link_only && '1' === (string) ( $input['exact_identifier'] ?? '' )
 				? self::nullable_scalar( $input[ 'plugin' === $package_type ? 'file' : 'stylesheet' ] ?? null )
 				: null )
@@ -117,7 +122,8 @@ final readonly class PackageOperation {
 				null,
 				null,
 				self::nullable_scalar( $input['ref'] ?? null ),
-				self::expected_package( $input )
+				self::expected_package( $input ),
+				$selected_commit
 			);
 		}
 
@@ -165,7 +171,8 @@ final readonly class PackageOperation {
 			$subdirectory,
 			$package_slug,
 			null,
-			'edit' === $operation ? self::expected_package( $input ) : array()
+			'edit' === $operation ? self::expected_package( $input ) : array(),
+			$selected_commit
 		);
 	}
 

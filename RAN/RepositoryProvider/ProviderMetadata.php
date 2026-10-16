@@ -18,8 +18,12 @@ final readonly class ProviderMetadata {
 		string $label,
 		string $repository_url_base,
 		string $owner_label,
-		public ?ProviderAdminMetadata $admin = null
+		public ?ProviderAdminMetadata $admin = null,
+		public int $archive_api_version = 1
 	) {
+		if ( ! in_array( $archive_api_version, array( 1, 2 ), true ) ) {
+			throw new \InvalidArgumentException( 'Unsupported provider archive API version.' );
+		}
 		try {
 			$label = MetadataRules::required_text( $label, MetadataRules::LABEL_LENGTH );
 		} catch ( \InvalidArgumentException ) {

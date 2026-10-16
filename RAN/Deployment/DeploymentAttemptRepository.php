@@ -1077,7 +1077,7 @@ final class DeploymentAttemptRepository {
 	}
 
 	/** Called inside the management-row transaction; unknown legacy targets remain a hard stop. */
-	public function has_unresolved_target_attempt( string $package_type, string $identifier ): bool {
+	public function has_unresolved_target_attempt( string $package_type, string $identifier, bool $directory_scope = false ): bool {
 		$this->assert_package_type( $package_type );
 		$this->assert_safe_text( $identifier, 255 );
 		$rows = $this->read_rows(
@@ -1094,6 +1094,12 @@ final class DeploymentAttemptRepository {
 		foreach ( $rows as $row ) {
 			$request = DeploymentAttempt::from_database( $row )->get_request();
 			$blocked = $blocked || null === $request->installed_identifier || $identifier === $request->installed_identifier;
+			if ( $directory_scope && null !== $request->installed_identifier ) {
+				// Native plugin recovery concerns the whole supplying directory, including nested siblings.
+				$target  = 'plugin' === $package_type ? explode( '/', $identifier )[0] : $identifier;
+				$other   = 'plugin' === $package_type ? explode( '/', $request->installed_identifier )[0] : $request->installed_identifier;
+				$blocked = $blocked || 0 === strcasecmp( $target, $other ) || str_starts_with( strtolower( $other ), strtolower( $target ) . '/' );
+			}
 		}
 		return $blocked;
 	}

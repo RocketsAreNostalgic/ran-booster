@@ -131,6 +131,11 @@ class Dispatcher {
 				return;
 			}
 
+			if ( 'recover-github-native' === $action ) {
+				$this->provider_profiles->recover_github_native( $request );
+				$this->redirect_to( admin_url( 'admin.php?page=ran-booster&tab=gh' ) );
+			}
+
 			if ( 'adopt-github' === $action ) {
 				$this->provider_profiles->adopt_github( $request );
 				$this->redirect_to( admin_url( 'admin.php?page=ran-booster&tab=gh' ) );

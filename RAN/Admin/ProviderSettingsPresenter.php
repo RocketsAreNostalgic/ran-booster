@@ -70,7 +70,8 @@ final readonly class ProviderSettingsPresenter {
 		private ?WebhookAssistanceReadinessEvaluator $webhook_assistance = null,
 		?RepositoryBranchCheckEvidenceStore $branch_check_evidence = null,
 		?WordPressUpdaterLock $branch_check_lock = null,
-		private ?GitHubProviderSelection $github_selection = null
+		private ?GitHubProviderSelection $github_selection = null,
+		private ?\RAN\PackageRemoval\PackageRemovalService $package_removal = null
 	) {
 
 		$this->public_lookup_profiles = $public_lookup_profiles ?? new PublicRepositoryLookupProfileStore();
@@ -206,6 +207,14 @@ final readonly class ProviderSettingsPresenter {
 		} catch ( Throwable ) {
 			$error = __( 'GitHub adoption is unavailable. Resolve conflicting or incompatible plugins and any outstanding operation or recovery first.', 'ran-booster' );
 		}
+		$recovery = null;
+		if ( 'recovery_required' === $status['state'] && null !== $this->package_removal ) {
+			try {
+				$recovery = $this->package_removal->native_recovery_confirmation();
+			} catch ( Throwable ) {
+				$error = __( 'Native recovery details could not be verified. Restore access to selection and management storage before continuing.', 'ran-booster' );
+			}
+		}
 		$package_counts = null;
 		try {
 			if ( null !== $this->plugins && null !== $this->themes ) {
@@ -223,6 +232,7 @@ final readonly class ProviderSettingsPresenter {
 			$package_counts = null;
 		}
 		return array(
+			'recovery'       => $recovery,
 			'package_counts' => $package_counts,
 			'review'         => $review,
 			'error'          => $error,

@@ -643,6 +643,63 @@ final class DashboardIndexRoutingTest extends TestCase {
 		rmdir( $directory );
 	}
 
+	/** @return iterable<string,array{bool}> */
+	public static function native_recovery_permissions(): iterable {
+		yield 'authorized' => array( true );
+		yield 'denied' => array( false );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	#[DataProvider( 'native_recovery_permissions' )]
+	public function test_provider_view_renders_bounded_native_recovery_confirmation( bool $authorized ): void {
+		$_GET['tab']                              = 'bb';
+		$GLOBALS['ran_booster_test_capabilities'] = array( 'activate_plugins' => $authorized );
+		$data                                     = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
+		$data['github_selection']                 = array(
+			'available'      => true,
+			'status'         => array(
+				'state'      => 'recovery_required',
+				'candidates' => array(),
+				'current'    => null,
+			),
+			'error'          => '',
+			'package_counts' => null,
+			'review'         => null,
+			'recovery'       => array(
+				'digest'     => str_repeat( 'b', 64 ),
+				'type'       => 'plugin',
+				'identifier' => '<target>/main.php',
+				'managed'    => false,
+			),
+		);
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard model to its production view.
+		extract( $data );
+		ob_start();
+		try {
+			require dirname( __DIR__, 2 ) . '/views/provider.php';
+			$html = (string) ob_get_contents();
+		} finally {
+			ob_end_clean();
+			unset( $GLOBALS['ran_booster_test_capabilities'] );
+		}
+		self::assertStringContainsString( 'Recover an interrupted native installation', $html );
+		self::assertStringContainsString( '&lt;target&gt;/main.php', $html );
+		self::assertStringNotContainsString( '<target>/main.php', $html );
+		if ( ! $authorized ) {
+			self::assertStringNotContainsString( 'value="recover-github-native"', $html );
+			return;
+		}
+		self::assertStringContainsString( 'ran-booster-recover-github-' . str_repeat( 'b', 64 ), $html );
+		self::assertStringContainsString( 'name="ran_booster[action]" value="recover-github-native"', $html );
+		self::assertStringContainsString( 'name="ran_booster[confirmed_stopped]" value="1" required', $html );
+		self::assertStringContainsString( 'name="ran_booster[confirmed_removal]" value="1" required', $html );
+		self::assertStringContainsString( 'A missing main file alone is insufficient.', $html );
+		self::assertStringContainsString( 'does not delete files or repair an installation', $html );
+		self::assertStringContainsString( 'Cleanup of temporary files from the interrupted process remains unverified.', $html );
+		self::assertStringNotContainsString( 'name="ran_booster[action]" value="adopt-github"', $html );
+	}
+
 	public function test_provider_tab_builds_only_the_selected_provider_settings(): void {
 		$_GET['tab'] = 'bb';
 

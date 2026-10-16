@@ -13,7 +13,10 @@ wp_cli="$(command -v "$wp_cli")"
 "$php_bin" "$wp_cli" eval-file "$root/tests/WordPress/adoption-recovery-smoke.php" --path="$wordpress"
 
 race="$root/tests/WordPress/adoption-recovery-race.php"
-for winner in recovery admission; do
+for winner in recovery admission native-recovery native-sibling native-commit-lost; do
+	prepare=prepare
+	cleanup_action=cleanup
+	[[ "$winner" == native-* ]] && prepare=prepare-native && cleanup_action=cleanup-native
 	run_id="$("$php_bin" -r 'echo bin2hex(random_bytes(6));')"
 	temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/ran-recovery-race.XXXXXXXX")"
 	owner_pid=''
@@ -27,12 +30,20 @@ for winner in recovery admission; do
 				wait "$pid" 2>/dev/null || true
 			fi
 		done
-		"$php_bin" "$wp_cli" eval-file "$race" cleanup "$run_id" "$temp_dir" --path="$wordpress" || status=1
+		"$php_bin" "$wp_cli" eval-file "$race" "$cleanup_action" "$run_id" "$temp_dir" --path="$wordpress" || status=1
 		rm -rf -- "$temp_dir"
 		exit "$status"
 	}
 	trap cleanup EXIT INT TERM
-	"$php_bin" "$wp_cli" eval-file "$race" prepare "$run_id" "$temp_dir" --path="$wordpress"
+	"$php_bin" "$wp_cli" eval-file "$race" "$prepare" "$run_id" "$temp_dir" --path="$wordpress"
+	if [[ "$winner" == native-commit-lost ]]; then
+		"$php_bin" "$wp_cli" eval-file "$race" native-commit-lost "$run_id" "$temp_dir" --path="$wordpress"
+		"$php_bin" "$wp_cli" eval-file "$race" assert-native-commit-lost "$run_id" "$temp_dir" --path="$wordpress"
+		"$php_bin" "$wp_cli" eval-file "$race" "$cleanup_action" "$run_id" "$temp_dir" --path="$wordpress"
+		trap - EXIT INT TERM
+		rm -rf -- "$temp_dir"
+		continue
+	fi
 	"$php_bin" "$wp_cli" eval-file "$race" "$winner-owner" "$run_id" "$temp_dir" --path="$wordpress" >"$temp_dir/owner-log" 2>&1 &
 	owner_pid=$!
 	deadline=$((SECONDS + 20))
@@ -42,6 +53,8 @@ for winner in recovery admission; do
 	done
 	loser=admission
 	[[ "$winner" == admission ]] && loser=recovery
+	[[ "$winner" == native-recovery ]] && loser=native-sibling
+	[[ "$winner" == native-sibling ]] && loser=native-recovery
 	"$php_bin" "$wp_cli" eval-file "$race" "$loser-peer" "$run_id" "$temp_dir" --path="$wordpress" >"$temp_dir/peer-log" 2>&1 &
 	peer_pid=$!
 	until [[ -f "$temp_dir/attempting" ]]; do
@@ -55,7 +68,7 @@ for winner in recovery admission; do
 	owner_pid=''
 	peer_pid=''
 	"$php_bin" "$wp_cli" eval-file "$race" "assert-$winner" "$run_id" "$temp_dir" --path="$wordpress"
-	"$php_bin" "$wp_cli" eval-file "$race" cleanup "$run_id" "$temp_dir" --path="$wordpress"
+	"$php_bin" "$wp_cli" eval-file "$race" "$cleanup_action" "$run_id" "$temp_dir" --path="$wordpress"
 	trap - EXIT INT TERM
 	rm -rf -- "$temp_dir"
 done

@@ -315,7 +315,8 @@ final class BoosterServiceProvider {
 				$container->make( PackageRemovalGateway::class ),
 				$container->make( DeploymentAttemptRepository::class ),
 				$container->make( WordPressUpdaterLock::class ),
-				$container->make( RepositoryBranchCheckEvidenceStore::class )
+				$container->make( RepositoryBranchCheckEvidenceStore::class ),
+				$container->make( GitHubProviderSelection::class )
 			)
 		);
 		$container->bind(

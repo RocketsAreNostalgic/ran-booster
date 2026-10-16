@@ -562,6 +562,56 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		}
 	}
 
+	public function test_native_recovery_inventory_distinguishes_absence_from_invalid_management(): void {
+		global $wpdb;
+		$storage = $this->storage();
+		self::assertNull( $storage->native_recovery_record( 'example/example.php' ) );
+		self::assertNull( $storage->native_recovery_record( 'example/example.php', true ) );
+		$package = $this->package( 'example/example.php' );
+		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', '123', 'main' ) );
+		self::assertTrue( $storage->store_for_test( $package )->is_successful() );
+		self::assertSame( $storage->recovery_record( 'example/example.php' ), $storage->native_recovery_record( 'example/example.php', true ) );
+		$wpdb->rows[0]['adoption_token'] = 'invalid';
+		foreach ( array( false, true ) as $locked ) {
+			try {
+				$storage->native_recovery_record( 'example/example.php', $locked );
+				self::fail( 'Malformed management was interpreted as absence.' );
+			} catch ( PackageStorageFailure $failure ) {
+				self::assertSame( 'ran_booster_storage_invalid_provider_identity', $failure->get_diagnostic_id() );
+			}
+		}
+	}
+
+	public function test_native_recovery_refuses_initial_and_late_directory_siblings(): void {
+		global $wpdb;
+		foreach ( array( 'target/other.php', 'target/nested/other.php', 'TARGET/other.php' ) as $sibling ) {
+			$wpdb->rows = array();
+			$storage    = $this->storage();
+			self::assertNull( $storage->native_recovery_record( 'target/main.php' ) );
+			$package = $this->package( $sibling );
+			$package->set_repository( new ManagedRepository( 'bb', 'owner/example', '123', 'main' ) );
+			self::assertTrue( $storage->store_for_test( $package )->is_successful() );
+			foreach ( array( false, true ) as $locked ) {
+				try {
+					$storage->native_recovery_record( 'target/main.php', $locked );
+					self::fail( 'Unreviewed sibling management was interpreted as absence.' );
+				} catch ( PackageStorageFailure ) {
+					self::assertCount( 1, $wpdb->stored_rows() );
+				}
+			}
+			self::assertNull( $storage->native_recovery_record( 'target-other/main.php', true ) );
+			$exact = $this->package( 'target/main.php' );
+			$exact->set_repository( new ManagedRepository( 'gh', 'owner/exact', '456', 'main' ) );
+			self::assertTrue( $storage->store_for_test( $exact )->is_successful() );
+			try {
+				$storage->native_recovery_record( 'target/main.php', true );
+				self::fail( 'The exact row concealed ambiguous sibling management.' );
+			} catch ( PackageStorageFailure ) {
+				self::assertCount( 2, $wpdb->stored_rows() );
+			}
+		}
+	}
+
 	public function test_recovery_rejects_changed_confirmation_and_guard_failure_without_deletion(): void {
 		global $wpdb;
 		$storage = $this->storage();

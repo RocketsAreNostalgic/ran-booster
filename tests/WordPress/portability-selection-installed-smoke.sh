@@ -83,5 +83,19 @@ run_phase dashboard-review
 switch_phase reset-counters
 run_phase api-adopt
 run_phase adoption-readback
-echo 'Installed public API and HTTP dashboard stale-selection refusal proof passed.'
+# A distinct target keeps successful HTTP adoption independent of API adoption.
+run_phase dashboard-success-setup
+dashboard_archive="$(mktemp /tmp/ran-dashboard-XXXXXXXX.zip)"
+export RAN_BOOSTER_CONSUMER_ARCHIVE="$dashboard_archive"
+trap 'rm -f -- "$consumer_archive" "$dashboard_archive"' EXIT
+mkdir -m 0755 "$wordpress/wp-content/plugins/portability-dashboard-proof"
+printf '%s\n' '<?php' '/* Plugin Name: Portability dashboard proof' 'Version: 1.0.0' '*/' > "$wordpress/wp-content/plugins/portability-dashboard-proof/plugin.php"
+chmod 0644 "$wordpress/wp-content/plugins/portability-dashboard-proof/plugin.php"
+run_phase dashboard-success-review
+switch_phase reset-counters
+run_phase dashboard-success-no-consent
+switch_phase reset-counters
+run_phase dashboard-success-apply
+run_phase dashboard-success-readback
+echo 'Installed public API and HTTP dashboard refusal, consent and Disabled adoption proofs passed.'
 echo 'Migrator controller, Bitbucket and browser acceptance are separate proofs.'

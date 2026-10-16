@@ -35,9 +35,13 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		'tests/Webhook/WebhookProcessorTest.php',
 		'tests/WordPress/ManagedReleaseRuntimeTest.php',
 		'tests/WordPress/github-provider-installed-readback.php',
+		// The installed return proof verifies that Core constructs the real bundled implementation.
+		'tests/WordPress/github-replacement-installed-smoke.php',
 		'tests/WordPress/native-lifecycle-installed-smoke.php',
 		// Fresh lifecycle proof binds the actual bundled package contract, without vendor operation calls.
 		'tests/WordPress/selection-install-lifecycle-proof.php',
+		// The replacement fixture exercises Core's credential boundary using the shipped GitHub policy.
+		'tests/fixtures/github-replacement/provider.php',
 		'tests/fixtures/ran-booster-github-provider-extension/src/Plugin.php',
 	);
 

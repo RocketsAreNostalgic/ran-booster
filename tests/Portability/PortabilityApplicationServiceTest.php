@@ -71,7 +71,6 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$service = $this->service( $plugins, $themes, $provider );
 		foreach ( array(
 			new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', '', null, new \RAN\WordPress\ManagedReleaseConfiguration( 'example', 'example.php' ) ),
-			new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', 'main', null, null, array( 'commit' => str_repeat( 'a', 40 ) ) ),
 		) as $package ) {
 			$blueprint = new PackageBlueprint( array( $package ) );
 			$item      = $service->review( $blueprint )[0];
@@ -80,6 +79,88 @@ final class PortabilityApplicationServiceTest extends TestCase {
 				self::assertSame( 'skipped', $service->apply( $blueprint, 0, $forged_action, array(), null, true, true, null, $this->provider_expectation )['status'] );
 			}
 		}
+	}
+
+	public function test_selected_initial_target_appearing_after_review_never_becomes_adoption(): void {
+		$plugins = $this->createMock( PluginRepository::class );
+		$plugins->expects( self::exactly( 2 ) )->method( 'is_installed' )->willReturn( false, true );
+		$plugins->method( 'has_management_record' )->willReturn( false );
+		$provider = $this->provider();
+		$provider->expects( self::never() )->method( 'resolve_repository' );
+		$service   = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider );
+		$package   = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', 'main', null, null, array( 'commit' => str_repeat( 'a', 40 ) ) );
+		$blueprint = new PackageBlueprint( array( $package ) );
+		$service->review( $blueprint );
+		self::assertSame( 'skipped', $service->apply( $blueprint, 0, 'install', array(), null, true, true, null, $this->provider_expectation )['status'] );
+	}
+
+	#[DataProvider( 'unsupported_initial_identifiers' )]
+	public function test_selected_initial_identity_refuses_before_provider_work( string $identifier ): void {
+		$provider = $this->provider();
+		$provider->expects( self::never() )->method( 'resolve_repository' );
+		$service   = $this->service( $this->createStub( PluginRepository::class ), $this->createStub( ThemeRepository::class ), $provider );
+		$package   = new BlueprintPackage( 'plugin', $identifier, 'Example', 'gh', 'repository-id', 'owner/repository', 'main', null, null, array( 'commit' => str_repeat( 'a', 40 ) ) );
+		$blueprint = new PackageBlueprint( array( $package ) );
+		self::assertSame( 'unsupported_blueprint_operation', $service->review( $blueprint )[0]->reason->value );
+		self::assertSame( 'skipped', $service->apply( $blueprint, 0, 'install', array(), null, false, true, null, $this->provider_expectation )['status'] );
+	}
+
+	/** @return iterable<string,array{string}> */
+	public static function unsupported_initial_identifiers(): iterable {
+		yield 'single file' => array( 'example.php' );
+		yield 'nested main file' => array( 'example/includes/main.php' );
+		yield 'unsupported root' => array( 'Example/main.php' );
+		yield 'too long for producer' => array( 'example/' . str_repeat( 'a', 180 ) . '.php' );
+	}
+
+	#[DataProvider( 'selected_initial_packages' )]
+	public function test_selected_initial_install_uses_exact_domain_intent_or_refuses_unsupported_runtime( string $type, string $provider_code, int $commit_length ): void {
+		$plugins  = $this->createStub( PluginRepository::class );
+		$themes   = $this->createStub( ThemeRepository::class );
+		$provider = $this->createMock( RepositoryProvider::class );
+		$provider->method( 'get_metadata' )->willReturn( new ProviderMetadata( ProviderCode::parse( $provider_code ), 'Provider', 'https://provider.example.test/', 'Owner', archive_api_version: 2 ) );
+		$capable = defined( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' )
+			&& 3 === constant( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' )
+			&& ( 'gh' !== $provider_code || 40 === $commit_length );
+		$provider->expects( $capable ? self::exactly( 2 ) : self::never() )->method( 'resolve_repository' )->willReturn(
+			new RepositoryDescriptor( ProviderCode::parse( $provider_code ), 'owner/repository', 'example', 'repository-id', false, 'main', null )
+		);
+		$identifier  = 'plugin' === $type ? 'example/example.php' : 'example';
+		$commit      = str_repeat( 'a', $commit_length );
+		$coordinator = $this->createMock( DeploymentCoordinator::class );
+		$coordinator->expects( $capable ? self::once() : self::never() )->method( 'execute_manual' )->willReturnCallback(
+			static function ( \RAN\PackageOperation $operation ) use ( $identifier, $commit ): array {
+				self::assertSame( $commit, $operation->selected_commit );
+				self::assertSame( $identifier, $operation->expected_identifier );
+				self::assertSame( 'main', $operation->branch );
+				self::assertSame( 'packages/example', $operation->subdirectory );
+				self::assertSame( \RAN\Deployment\DeploymentPolicy::DISABLED, $operation->deployment_policy );
+				self::assertNull( $operation->ref );
+				return array(
+					'status'         => 'failed',
+					'correlation_id' => str_repeat( 'b', 32 ),
+					'outcome_code'   => \RAN\Deployment\DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE,
+				);
+			}
+		);
+		$operations = new PackageOperationService( $plugins, $themes, $coordinator, ( new ReflectionClass( PackageRemovalService::class ) )->newInstanceWithoutConstructor(), $this->createStub( WordPressUpdaterLock::class ), new RepositorySourceGuard( new \stdClass(), $this->createStub( Database::class ) ) );
+		$service    = $this->service( $plugins, $themes, $provider, $operations );
+		$package    = new BlueprintPackage( $type, $identifier, 'Example', $provider_code, 'repository-id', 'owner/repository', 'main', 'packages/example', null, array( 'commit' => $commit ) );
+		$blueprint  = new PackageBlueprint( array( $package ) );
+		$review     = $service->review( $blueprint )[0];
+		self::assertSame( $capable ? 'install' : 'blocked', $review->action->value );
+		$result = $service->apply( $blueprint, 0, 'install', array(), null, false, true, null, $review->provider_expectation ?? $this->provider_expectation );
+		self::assertSame( $capable ? 'failed' : 'skipped', $result['status'] );
+		self::assertSame( 'unknown', $service->compare_local( $package )['installed_equality'] );
+	}
+
+	/** @return iterable<string,array{string,string,int}> */
+	public static function selected_initial_packages(): iterable {
+		yield 'GitHub plugin' => array( 'plugin', 'gh', 40 );
+		yield 'GitHub theme' => array( 'theme', 'gh', 40 );
+		yield 'GitHub SHA256 refuses early' => array( 'plugin', 'gh', 64 );
+		yield 'neutral SHA256 plugin' => array( 'plugin', 'bb', 64 );
+		yield 'neutral theme' => array( 'theme', 'bb', 40 );
 	}
 
 	public function test_selected_repository_conflict_refuses_before_any_local_or_provider_probe(): void {

@@ -1,0 +1,260 @@
+<?php
+
+declare(strict_types=1);
+
+// Real installed consumers. Every phase is a fresh request; no production override
+// or fake uploaded-file predicate. The dashboard phase requires a localhost HTTP host.
+
+use RAN\AddOn\Portability\PortabilityCandidate;
+use RAN\AddOn\Portability\PortabilityFacade;
+use RAN\AddOn\Portability\PortabilityReviewResult;
+use RAN\Admin\PortabilityController;
+use RAN\Portability\BlueprintArchive;
+use RAN\Portability\BlueprintCredential;
+use RAN\Portability\BlueprintPackage;
+use RAN\Portability\PackageBlueprint;
+use RAN\Portability\PortabilityApplicationService;
+use RAN\Deployment\DeploymentPolicy;
+use RAN\Storage\Database;
+use RAN\Portability\TargetPackageReason;
+use RAN\Secrets\SecretsFile;
+use RAN\Storage\PluginNotFound;
+use RAN\Storage\PluginRepository;
+use RAN_Booster_GitHubReplacementFixture\Fixture;
+
+if ( ! class_exists( Fixture::class, false ) ) {
+	require_once dirname( __DIR__ ) . '/fixtures/github-replacement/fixture.php';
+}
+Fixture::guard();
+if ( ! defined( 'LOGGED_IN_COOKIE' ) || ! defined( 'AUTH_COOKIE' ) || ! defined( 'WP_CLI' ) || ! WP_CLI || ! current_user_can( 'manage_options' ) || ! current_user_can( 'install_plugins' ) ) {
+	throw new RuntimeException( 'Consumer proof requires the disposable-site administrator.' );
+}
+$ran_booster_container = require __DIR__ . '/core-container-fixture.php';
+$ran_booster_facade    = $ran_booster_container->make( PortabilityFacade::class );
+$ran_booster_secrets   = $ran_booster_container->make( SecretsFile::class );
+$ran_booster_plugins   = $ran_booster_container->make( PluginRepository::class );
+$ran_booster_phase     = $args[0] ?? '';
+$ran_booster_identity  = 'portability-consumer-proof/plugin.php';
+$ran_booster_path      = WP_PLUGIN_DIR . '/' . $ran_booster_identity;
+$ran_booster_assert    = static function ( bool $condition, string $reason ): void {
+	if ( ! $condition ) {
+		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed developer-authored CLI assertion, not HTML.
+		throw new RuntimeException( 'Installed consumer proof: ' . $reason );
+	}
+};
+$ran_booster_assert( defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' ) && 4 === RAN_BOOSTER_PORTABILITY_API_VERSION, 'expected public API 4' );
+$ran_booster_assert( ! is_link( dirname( $ran_booster_path ) ) && ! is_link( $ran_booster_path ), 'non-symlinked target' );
+$ran_booster_candidate = new PortabilityCandidate( 'plugin', $ran_booster_identity, 'Consumer proof', 'gh', 'fixtures/consumer', 'main', null, 'consumer-proof' );
+$ran_booster_snapshot  = static function () use ( $ran_booster_secrets, $ran_booster_plugins, $ran_booster_identity, $ran_booster_path ): array {
+	global $wpdb;
+	$tables = array();
+	foreach ( array( ran_booster_table_name(), Database::attempt_table_name() ) as $table ) {
+		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i ORDER BY id', $table ), ARRAY_A );
+		if ( ! is_array( $rows ) || '' !== $wpdb->last_error ) {
+			throw new RuntimeException( 'Cannot snapshot installed package and attempt records.' );
+		}
+		$tables[] = hash( 'sha256', (string) wp_json_encode( $rows ) );
+	}
+	$path = $ran_booster_secrets->path();
+	try {
+		$ran_booster_plugins->booster_plugin_from_file( $ran_booster_identity );
+		$managed = true;
+	} catch ( PluginNotFound ) {
+		$managed = false;
+	}
+	return array(
+		'ciphertext' => null !== $path && is_file( $path ) ? hash_file( 'sha256', $path ) : null,
+		'target'     => is_file( $ran_booster_path ) ? hash_file( 'sha256', $ran_booster_path ) : null,
+		'managed'    => $managed,
+		'tables'     => $tables,
+	);
+};
+$ran_booster_no_calls  = static function () use ( $ran_booster_assert ): void {
+	foreach ( Fixture::counters() as $key => $count ) {
+		// Fresh bootstrap may construct the approved provider, but must not call it.
+		if ( ! str_ends_with( $key, '.factory_calls' ) ) {
+			$ran_booster_assert( 0 === $count, 'stale consumer disclosed credentials or called provider' );
+		}
+	}
+};
+
+// Send a genuine authenticated multipart request through WordPress admin-ajax.
+// A new session is used only for this request and destroyed afterwards.
+$ran_booster_dashboard = static function ( bool $apply, ?array $expectation ) use ( $ran_booster_identity, $ran_booster_assert ): array {
+	$blueprint = new PackageBlueprint(
+		array( new BlueprintPackage( 'plugin', $ran_booster_identity, 'Consumer proof', 'gh', 'replacement-fixture:fixtures/consumer', 'fixtures/consumer', 'main', null ) ),
+		array(
+			new BlueprintCredential(
+				'gh',
+				'Consumer import proof',
+				'classic',
+				array(),
+				'ghp_' . str_repeat( 'c', 40 ),
+				array(
+					array(
+						'type'       => 'plugin',
+						'identifier' => $ran_booster_identity,
+					),
+				)
+			),
+		)
+	);
+	$archive   = getenv( 'RAN_BOOSTER_CONSUMER_ARCHIVE' );
+	if ( ! is_string( $archive ) || ! is_file( $archive ) || is_link( $archive ) || realpath( $archive ) !== $archive ) {
+		throw new RuntimeException( 'Private runner-owned archive required.' );
+	}
+	$sessions                    = WP_Session_Tokens::get_instance( get_current_user_id() );
+	$expiry                      = time() + 600;
+	$token                       = $sessions->create( $expiry );
+	$logged                      = wp_generate_auth_cookie( get_current_user_id(), $expiry, 'logged_in', $token );
+	$_COOKIE[ LOGGED_IN_COOKIE ] = $logged;
+	try {
+		if ( 0 === filesize( $archive ) ) {
+			( new BlueprintArchive() )->write_to( $archive, $blueprint, 'consumer-proof-password' );
+		}
+		$fields = array(
+			'action'                          => $apply ? PortabilityController::APPLY_ACTION : PortabilityController::PREVIEW_ACTION,
+			'nonce'                           => wp_create_nonce( $apply ? PortabilityController::APPLY_NONCE_ACTION : PortabilityController::PREVIEW_NONCE_ACTION ),
+			'password'                        => 'consumer-proof-password',
+			'credential_decisions[0][action]' => 'import',
+			'row'                             => '0',
+			'review_action'                   => 'adopt',
+			'adopt'                           => '1',
+			'selected_rows[]'                 => '0',
+		);
+		if ( null !== $expectation ) {
+			$fields['provider_expectation'] = (string) wp_json_encode( $expectation );
+		}
+		$boundary = 'ran-consumer-' . bin2hex( random_bytes( 12 ) );
+		$body     = '';
+		foreach ( $fields as $name => $value ) {
+			$body .= '--' . $boundary . "\r\nContent-Disposition: form-data; name=\"" . $name . "\"\r\n\r\n" . $value . "\r\n";
+		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads only this request's generated encrypted proof ZIP.
+		$bytes = file_get_contents( $archive );
+		$ran_booster_assert( is_string( $bytes ), 'read generated archive' );
+		$body    .= '--' . $boundary . "\r\nContent-Disposition: form-data; name=\"blueprint\"; filename=\"blueprint.zip\"\r\nContent-Type: application/zip\r\n\r\n" . $bytes . "\r\n--" . $boundary . "--\r\n";
+		$response = wp_remote_post(
+			'http://localhost/wp-admin/admin-ajax.php',
+			array(
+				'timeout'     => 30,
+				'redirection' => 0,
+				'headers'     => array(
+					'Content-Type' => 'multipart/form-data; boundary=' . $boundary,
+					'Cookie'       => LOGGED_IN_COOKIE . '=' . $logged . '; ' . AUTH_COOKIE . '=' . wp_generate_auth_cookie( get_current_user_id(), $expiry, 'auth', $token ),
+				),
+				'body'        => $body,
+			)
+		);
+		$ran_booster_assert( ! is_wp_error( $response ) && 200 === wp_remote_retrieve_response_code( $response ), 'authenticated dashboard HTTP response' );
+		$decoded = json_decode( wp_remote_retrieve_body( $response ), true );
+		$ran_booster_assert( is_array( $decoded ) && true === ( $decoded['success'] ?? null ) && is_array( $decoded['data'] ?? null ), 'dashboard JSON success envelope' );
+		if ( ! is_array( $decoded ) || ! is_array( $decoded['data'] ?? null ) ) {
+			throw new RuntimeException( 'Dashboard response is invalid.' );
+		}
+		return $decoded['data'];
+	} finally {
+		$sessions->destroy( $token );
+		unset( $_COOKIE[ LOGGED_IN_COOKIE ] );
+	}
+};
+
+switch ( $ran_booster_phase ) {
+	case 'setup':
+		$ran_booster_assert( ! file_exists( dirname( $ran_booster_path ) ), 'fresh target required' );
+		$ran_booster_assert( null !== $ran_booster_secrets->path(), 'configured encrypted credential storage required' );
+		break;
+	case 'seed-credential':
+		$ran_booster_assert( ! isset( $ran_booster_secrets->credential_profiles( 'gh' )['consumer-proof'] ), 'fresh credential required' );
+		$ran_booster_secrets->save_credential(
+			'gh',
+			'consumer-proof',
+			array(
+				'label'         => 'Consumer proof',
+				'kind'          => 'classic',
+				'configuration' => array(),
+			),
+			'ghp_' . str_repeat( 'd', 40 )
+		);
+		break;
+	case 'api-review':
+		$ran_booster_review = $ran_booster_facade->review( $ran_booster_candidate, wp_create_nonce( $ran_booster_facade->nonce_action( 'review', $ran_booster_candidate, null, null ) ) );
+		$ran_booster_assert( PortabilityReviewResult::ADOPT === $ran_booster_review->action && null !== $ran_booster_review->provider_expectation, 'actionable public review required' );
+		update_option(
+			'ran_booster_consumer_api_review',
+			array(
+				'fingerprint' => $ran_booster_review->fingerprint,
+				'expectation' => $ran_booster_review->provider_expectation,
+			),
+			false
+		);
+		break;
+	case 'api-stale':
+		$ran_booster_saved = get_option( 'ran_booster_consumer_api_review' );
+		if ( ! is_array( $ran_booster_saved ) || ! is_string( $ran_booster_saved['fingerprint'] ?? null ) || ! is_array( $ran_booster_saved['expectation'] ?? null ) ) {
+			throw new RuntimeException( 'Public review prerequisite is missing.' );
+		}
+		$ran_booster_before = $ran_booster_snapshot();
+		$ran_booster_result = $ran_booster_facade->apply( $ran_booster_candidate, $ran_booster_saved['fingerprint'], wp_create_nonce( $ran_booster_facade->nonce_action( 'apply', $ran_booster_candidate, $ran_booster_saved['fingerprint'], $ran_booster_saved['expectation'] ) ), $ran_booster_saved['expectation'] );
+		$ran_booster_assert( 'blocked' === $ran_booster_result->status && 'provider_selection_changed' === $ran_booster_result->reason && ! $ran_booster_result->target_verified, 'stale public Apply must refuse specifically' );
+		$ran_booster_assert( ! $ran_booster_before['managed'] && $ran_booster_before === $ran_booster_snapshot(), 'public refusal must preserve target and ciphertext' );
+		$ran_booster_no_calls();
+		break;
+	case 'api-adopt':
+		$ran_booster_saved = get_option( 'ran_booster_consumer_api_review' );
+		if ( ! is_array( $ran_booster_saved ) || ! is_string( $ran_booster_saved['fingerprint'] ?? null ) || ! is_array( $ran_booster_saved['expectation'] ?? null ) ) {
+			throw new RuntimeException( 'Fresh public review prerequisite is missing.' );
+		}
+		$ran_booster_before = $ran_booster_snapshot();
+		$ran_booster_result = $ran_booster_facade->apply( $ran_booster_candidate, $ran_booster_saved['fingerprint'], wp_create_nonce( $ran_booster_facade->nonce_action( 'apply', $ran_booster_candidate, $ran_booster_saved['fingerprint'], $ran_booster_saved['expectation'] ) ), $ran_booster_saved['expectation'] );
+		$ran_booster_assert( 'adopted' === $ran_booster_result->status && $ran_booster_result->target_verified, 'fresh public adoption must succeed' );
+		$ran_booster_counts = Fixture::counters();
+		$ran_booster_assert( $ran_booster_counts['b.provider_calls'] > 0 && $ran_booster_counts['b.credential_material_returns'] > 0, 'fresh Apply must recheck current provider and credential' );
+		$ran_booster_after = $ran_booster_snapshot();
+		$ran_booster_assert( $ran_booster_before['target'] === $ran_booster_after['target'] && $ran_booster_before['ciphertext'] === $ran_booster_after['ciphertext'], 'adoption must not replace installed bytes or credential' );
+		break;
+	case 'adoption-readback':
+		$ran_booster_package = $ran_booster_plugins->booster_plugin_from_file( $ran_booster_identity );
+		$ran_booster_assert( DeploymentPolicy::DISABLED === $ran_booster_package->get_deployment_policy(), 'fresh request must observe Disabled adoption' );
+		$ran_booster_comparison = $ran_booster_container->make( PortabilityApplicationService::class )->compare_local( new BlueprintPackage( 'plugin', $ran_booster_identity, 'Consumer proof', 'gh', 'replacement-fixture:fixtures/consumer', 'fixtures/consumer', 'main', null ) );
+		$ran_booster_assert( 'matching' === $ran_booster_comparison['state'] && 'unknown' === $ran_booster_comparison['installed_equality'], 'matching configuration is not verified installed equality' );
+		break;
+	case 'dashboard-review':
+		$ran_booster_counts_before = Fixture::counters();
+		$ran_booster_data          = $ran_booster_dashboard( false, null );
+		$ran_booster_html          = $ran_booster_data['html'] ?? null;
+		$ran_booster_assert( is_string( $ran_booster_html ), 'dashboard HTML review required' );
+		if ( ! is_string( $ran_booster_html ) ) {
+			throw new RuntimeException( 'Missing dashboard review.' );
+		}
+		$ran_booster_document = new DOMDocument();
+		$ran_booster_document->loadHTML( '<?xml encoding="UTF-8">' . $ran_booster_html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$ran_booster_rows = ( new DOMXPath( $ran_booster_document ) )->query( '//tr[@data-portability-row="0"]' );
+		$ran_booster_row  = false === $ran_booster_rows ? null : $ran_booster_rows->item( 0 );
+		$ran_booster_assert( $ran_booster_row instanceof DOMElement && 'adopt' === $ran_booster_row->getAttribute( 'data-portability-action' ), 'actionable uploaded dashboard review required' );
+		if ( ! $ran_booster_row instanceof DOMElement ) {
+			throw new RuntimeException( 'Missing dashboard row.' );
+		}
+		$ran_booster_expectation = json_decode( $ran_booster_row->getAttribute( 'data-portability-provider-expectation' ), true );
+		$ran_booster_assert( is_array( $ran_booster_expectation ), 'real dashboard context required' );
+		update_option( 'ran_booster_consumer_dashboard_review', $ran_booster_expectation, false );
+		wp_cache_delete( Fixture::COUNTERS, 'options' );
+		$ran_booster_counts_after = Fixture::counters();
+		$ran_booster_assert( $ran_booster_counts_after['a.credential_material_returns'] + $ran_booster_counts_after['b.credential_material_returns'] > $ran_booster_counts_before['a.credential_material_returns'] + $ran_booster_counts_before['b.credential_material_returns'], 'dashboard preview really used the temporary imported credential' );
+		break;
+	case 'dashboard-stale':
+		$ran_booster_saved = get_option( 'ran_booster_consumer_dashboard_review' );
+		if ( ! is_array( $ran_booster_saved ) ) {
+			throw new RuntimeException( 'Dashboard review prerequisite is missing.' );
+		}
+		$ran_booster_before = $ran_booster_snapshot();
+		$ran_booster_data   = $ran_booster_dashboard( true, $ran_booster_saved );
+		$ran_booster_assert( 'skipped' === ( $ran_booster_data['status'] ?? null ) && TargetPackageReason::PROVIDER_SELECTION_CHANGED->message() === ( $ran_booster_data['message'] ?? null ), 'stale dashboard Apply must refuse specifically' );
+		$ran_booster_assert( ! $ran_booster_before['managed'] && $ran_booster_before === $ran_booster_snapshot(), 'dashboard refusal must preserve target and ciphertext before credential import' );
+		// Counter reads in this CLI process must bypass its pre-HTTP option cache.
+		wp_cache_delete( Fixture::COUNTERS, 'options' );
+		$ran_booster_no_calls();
+		break;
+	default:
+		throw new RuntimeException( 'Unknown consumer proof phase.' );
+}

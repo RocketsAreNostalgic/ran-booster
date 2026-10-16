@@ -826,6 +826,28 @@ jobs:
                     exit 1
                 fi
 
+          - name: Prove installed HTTP and public API selection refusal
+            if: ${{ matrix.suite == 'critical' }}
+            env:
+                RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
+            run: |
+                export PHP_BIN="$(command -v php)"
+                export WP_CLI_BIN="$(command -v wp)"
+                "$PHP_BIN" -S localhost:80 -t "$RAN_BOOSTER_WORDPRESS_PATH" > build/portability-http.log 2>&1 &
+                server_pid=$!
+                trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' EXIT
+                ready=0
+                for attempt in {1..20}; do
+                    kill -0 "$server_pid"
+                    if curl --fail --silent --show-error --connect-timeout 1 --max-time 2 http://localhost/wp-login.php > /dev/null; then
+                        ready=1
+                        break
+                    fi
+                    sleep 0.5
+                done
+                test "$ready" = 1
+                bash tests/WordPress/portability-selection-installed-smoke.sh
+
           - name: Upload Plugin Check results
             if: ${{ always() && matrix.plugin_check }}
             uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

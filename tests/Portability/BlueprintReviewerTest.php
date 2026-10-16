@@ -198,8 +198,8 @@ final class BlueprintReviewerTest extends TestCase {
 
 	public function test_installed_header_observations_do_not_block_ordinary_branch_review(): void {
 		$plugins = $this->createMock( PluginRepository::class );
-		$plugins->expects( self::once() )->method( 'is_installed' )->willReturn( false );
-		$plugins->expects( self::once() )->method( 'has_management_record' )->willReturn( false );
+		$plugins->expects( self::exactly( 2 ) )->method( 'is_installed' )->willReturn( false );
+		$plugins->expects( self::exactly( 2 ) )->method( 'has_management_record' )->willReturn( false );
 		$record                 = $this->blueprint_package()->to_array();
 		$record['requirements'] = array(
 			'basis'             => 'installed_headers',
@@ -211,7 +211,31 @@ final class BlueprintReviewerTest extends TestCase {
 		self::assertSame( TargetPackageAction::INSTALL, $item->action );
 		self::assertSame( TargetPackageReason::NONE, $item->reason );
 		$record['selection'] = array( 'commit' => str_repeat( 'a', 40 ) );
-		self::assertSame( TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION, $reviewer->review_package( BlueprintPackage::from_array( $record ) )->reason );
+		self::assertSame( TargetPackageAction::INSTALL, $reviewer->review_package( BlueprintPackage::from_array( $record ) )->action );
+	}
+
+	#[DataProvider( 'selected_local_states' )]
+	public function test_exact_selection_only_allows_absent_unmanaged_initial_targets(
+		bool $installed,
+		bool $managed
+	): void {
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'is_installed' )->willReturn( $installed );
+		$plugins->method( 'has_management_record' )->willReturn( $managed );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $this->managed_package( 'repository-id' ) );
+		$record              = $this->blueprint_package()->to_array();
+		$record['selection'] = array( 'commit' => str_repeat( 'a', 40 ) );
+		$item                = ( new BlueprintReviewer( $plugins, $this->createStub( ThemeRepository::class ) ) )->review_package( BlueprintPackage::from_array( $record ) );
+		self::assertSame( ! $installed && ! $managed ? TargetPackageAction::INSTALL : TargetPackageAction::BLOCKED, $item->action );
+		self::assertSame( ! $installed && ! $managed ? TargetPackageReason::NONE : TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION, $item->reason );
+	}
+
+	/** @return iterable<string,array{bool,bool}> */
+	public static function selected_local_states(): iterable {
+		yield 'absent unmanaged' => array( false, false );
+		yield 'installed unmanaged' => array( true, false );
+		yield 'absent managed' => array( false, true );
+		yield 'installed managed' => array( true, true );
 	}
 
 	#[DataProvider( 'selected_repository_groups' )]

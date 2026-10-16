@@ -87,8 +87,9 @@ plan, session or batch-atomicity promise. A caller omitting the batch selection
 requests only its individual row, still subject to live storage admission.
 
 Requirements observations alone no longer make an ordinary unpinned Branch row
-unsupported. Release-source and exact-selection execution remain blocked until
-their separate acquisition, provider safeguard and adoption contracts qualify.
+unsupported. Exact Branch selection may install an absent unmanaged target when
+Branch admitted API 3 and provider archive API 2 are available. Release-source
+execution and selected adoption/reconciliation remain blocked.
 Abilities and whole-site V3 are deferred; this is a dashboard/domain V2 slice.
 
 ## Core classes
@@ -142,12 +143,16 @@ observations and local comparison reports are available; verified exact export
 remains separate work.
 
 The reader validates source-aware V2 records, exact selections and attributed
-requirements. This first runtime slice deliberately blocks applying release
-records or records carrying exact selection with
-`unsupported_blueprint_operation`. It does not ignore those fields and run the
-old branch handler. Existing unpinned branch operations retain their fresh checks.
-Release installation/adoption, exact acquisition and
-explicit reconciliation require their separately qualified operations.
+requirements. A selected Branch initial installation forwards the exact commit
+and requested plugin main-file/theme identity through the existing deployment
+operation. Missing capability, unsupported GitHub SHA-256 selections, release
+records and selected installed/adoption targets refuse rather than falling back.
+Review establishes repository access, not historical package availability or
+installed equality. Apply freshly reacquires and verifies the exact selected
+archive and target identity; successful management remains Disabled. The initial
+selection does not lock future updates. Existing unpinned branch operations
+retain their fresh checks. Release installation/adoption, verified exact export
+and explicit reconciliation require their separately qualified operations.
 
 V2 object keys are recursively sorted for canonical JSON. Valid V1 input must
 first satisfy its original shape and canonical bytes; it enters the same model

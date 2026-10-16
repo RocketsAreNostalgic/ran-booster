@@ -53,6 +53,31 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		}
 	}
 
+	#[DataProvider( 'unsupported_selected_installs' )]
+	public function test_selected_install_capability_refuses_before_credential_or_provider_access( int $archive_api, int $commit_length ): void {
+		$provider = $this->createMock( \RAN\RepositoryProvider\RepositoryProvider::class );
+		$provider->method( 'get_metadata' )->willReturn( new \RAN\RepositoryProvider\ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://example.test/', 'Owner', archive_api_version: $archive_api ) );
+		$provider->expects( self::never() )->method( 'resolve_repository' );
+		$provider->expects( self::never() )->method( 'prepare_archive' );
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::never() )->method( 'credential_material' );
+		$secrets->expects( self::never() )->method( 'credential_profiles' );
+		$secrets->expects( self::never() )->method( 'with_temporary_credential' );
+		$registry = new ProviderRegistry( array( $provider ) );
+		$verifier = new BlueprintRepositoryVerifier( $registry, $secrets, GitHubSelectionTestFixture::bind( $registry ) );
+		$package  = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', 'main', null, null, array( 'commit' => str_repeat( 'a', $commit_length ) ) );
+		$item     = new BlueprintPlanItem( $package, TargetPackageAction::INSTALL, TargetPackageReason::NONE );
+		foreach ( array( $verifier->for_preview(), $verifier ) as $verification ) {
+			self::assertSame( TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION, $verification->verify( $item, $this->credential(), BlueprintCredentialAction::IMPORT )->reason );
+		}
+	}
+
+	/** @return iterable<string,array{int,int}> */
+	public static function unsupported_selected_installs(): iterable {
+		yield 'provider lacks historical archive' => array( 1, 40 );
+		yield 'GitHub cannot accept SHA256' => array( 2, 64 );
+	}
+
 	public function test_it_retries_only_an_access_failure_with_atemporary_credential(): void {
 		[$verifier, $provider, $secrets] = $this->verifier( 404, 'repository-id' );
 

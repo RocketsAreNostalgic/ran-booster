@@ -177,6 +177,7 @@ final class BlueprintReviewerTest extends TestCase {
 		$report                 = ( new BlueprintReviewer( $plugins, $this->createStub( ThemeRepository::class ) ) )->compare_local( BlueprintPackage::from_array( $record ) );
 		self::assertSame( 'matching', $report['state'] );
 		self::assertSame( 'unknown', $report['installed_equality'] );
+		self::assertSame( $record['selection'], $report['requested_selection'] );
 		self::assertArrayNotHasKey( 'selection', $report['requested'] );
 		self::assertArrayNotHasKey( 'requirements', $report['requested'] );
 	}
@@ -189,7 +190,9 @@ final class BlueprintReviewerTest extends TestCase {
 		$themes->expects( self::exactly( 2 ) )->method( 'has_management_record' )->with( 'example' )->willReturn( false );
 		$package  = new BlueprintPackage( 'theme', 'example', 'Example', 'gh', 'repository-id', 'owner/repository', 'main', null );
 		$reviewer = new BlueprintReviewer( $plugins, $themes );
-		self::assertSame( 'absent', $reviewer->compare_local( $package )['state'] );
+		$absent   = $reviewer->compare_local( $package );
+		self::assertSame( 'absent', $absent['state'] );
+		self::assertNull( $absent['requested_selection'] );
 		self::assertSame( 'unmanaged', $reviewer->compare_local( $package )['state'] );
 	}
 

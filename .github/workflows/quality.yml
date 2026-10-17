@@ -954,14 +954,24 @@ jobs:
                 trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' EXIT
                 ready=0
                 for attempt in {1..20}; do
-                    kill -0 "$server_pid"
+                    if ! kill -0 "$server_pid" 2>/dev/null; then
+                        server_status=0
+                        wait "$server_pid" || server_status=$?
+                        printf 'HTTP fixture server exited before readiness (status %s).\n' "$server_status" >&2
+                        cat build/portability-http.log >&2
+                        exit 1
+                    fi
                     if curl --fail --silent --show-error --connect-timeout 1 --max-time 2 http://localhost/wp-login.php > /dev/null; then
                         ready=1
                         break
                     fi
                     sleep 0.5
                 done
-                test "$ready" = 1
+                if [[ "$ready" != 1 ]]; then
+                    printf 'HTTP fixture server did not become ready.\n' >&2
+                    cat build/portability-http.log >&2
+                    exit 1
+                fi
                 bash tests/WordPress/portability-selection-installed-smoke.sh
                 if [[ "$RAN_PRIVATE_MIGRATOR" == true ]]; then
                     export RAN_MIGRATOR_WP_CLI_BIN="$(command -v wp)"

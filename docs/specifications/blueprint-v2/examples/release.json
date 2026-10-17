@@ -1,0 +1,21 @@
+{
+  "format": "ran-booster-package-blueprint",
+  "version": 2,
+  "packages": [
+    {
+      "type": "plugin",
+      "identifier": "example/example.php",
+      "display_name": "Example",
+      "provider": "github",
+      "provider_repository_id": "67890",
+      "repository": "acme/release-example",
+      "source": {
+        "kind": "release_asset",
+        "channel": "stable",
+        "package_root": "example",
+        "metadata_file": "example.php"
+      }
+    }
+  ],
+  "credentials": []
+}

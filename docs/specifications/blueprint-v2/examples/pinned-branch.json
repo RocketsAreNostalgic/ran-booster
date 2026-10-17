@@ -1,0 +1,35 @@
+{
+  "format": "ran-booster-package-blueprint",
+  "version": 2,
+  "packages": [
+    {
+      "type": "plugin",
+      "identifier": "example/example.php",
+      "display_name": "Example",
+      "provider": "github",
+      "provider_repository_id": "12345",
+      "repository": "acme/example",
+      "source": {
+        "kind": "branch",
+        "branch": "main",
+        "subdirectory": null
+      },
+      "selection": {
+        "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "requirements": {
+        "basis": "selected_package",
+        "observed_identity": {
+          "version": "1.2.0",
+          "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "declarations": {
+          "requires_php": "8.2",
+          "requires_wordpress": "6.9",
+          "requires_plugins": []
+        }
+      }
+    }
+  ],
+  "credentials": []
+}

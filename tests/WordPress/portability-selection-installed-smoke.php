@@ -29,15 +29,20 @@ Fixture::guard();
 if ( ! defined( 'LOGGED_IN_COOKIE' ) || ! defined( 'AUTH_COOKIE' ) || ! defined( 'WP_CLI' ) || ! WP_CLI || ! current_user_can( 'manage_options' ) || ! current_user_can( 'install_plugins' ) ) {
 	throw new RuntimeException( 'Consumer proof requires the disposable-site administrator.' );
 }
-$ran_booster_container = require __DIR__ . '/core-container-fixture.php';
-$ran_booster_facade    = $ran_booster_container->make( PortabilityFacade::class );
-$ran_booster_secrets   = $ran_booster_container->make( SecretsFile::class );
-$ran_booster_plugins   = $ran_booster_container->make( PluginRepository::class );
-$ran_booster_phase     = $args[0] ?? '';
-$ran_booster_migrator  = str_starts_with( $ran_booster_phase, 'migrator-' );
-$ran_booster_identity  = $ran_booster_migrator ? 'ran-migrator-fixture/plugin.php' : 'portability-consumer-proof/plugin.php';
-$ran_booster_path      = WP_PLUGIN_DIR . '/' . $ran_booster_identity;
-$ran_booster_assert    = static function ( bool $condition, string $reason ): void {
+$ran_booster_container         = require __DIR__ . '/core-container-fixture.php';
+$ran_booster_facade            = $ran_booster_container->make( PortabilityFacade::class );
+$ran_booster_secrets           = $ran_booster_container->make( SecretsFile::class );
+$ran_booster_plugins           = $ran_booster_container->make( PluginRepository::class );
+$ran_booster_phase             = $args[0] ?? '';
+$ran_booster_migrator          = str_starts_with( $ran_booster_phase, 'migrator-' );
+$ran_booster_dashboard_success = str_starts_with( $ran_booster_phase, 'dashboard-success-' );
+$ran_booster_identity          = $ran_booster_migrator ? 'ran-migrator-fixture/plugin.php' : 'portability-consumer-proof/plugin.php';
+if ( $ran_booster_dashboard_success ) {
+	$ran_booster_identity = 'portability-dashboard-proof/plugin.php';
+}
+$ran_booster_repository = $ran_booster_dashboard_success ? 'fixtures/dashboard-consumer' : 'fixtures/consumer';
+$ran_booster_path       = WP_PLUGIN_DIR . '/' . $ran_booster_identity;
+$ran_booster_assert     = static function ( bool $condition, string $reason ): void {
 	if ( ! $condition ) {
 		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed developer-authored CLI assertion, not HTML.
 		throw new RuntimeException( 'Installed consumer proof: ' . $reason );
@@ -81,9 +86,9 @@ $ran_booster_no_calls  = static function () use ( $ran_booster_assert ): void {
 
 // Send a genuine authenticated multipart request through WordPress admin-ajax.
 // A new session is used only for this request and destroyed afterwards.
-$ran_booster_dashboard = static function ( bool $apply, ?array $expectation ) use ( $ran_booster_identity, $ran_booster_assert ): array {
+$ran_booster_dashboard = static function ( bool $apply, ?array $expectation, string $credential_action = 'import', bool $adopt = true ) use ( $ran_booster_identity, $ran_booster_repository, $ran_booster_assert ): array {
 	$blueprint = new PackageBlueprint(
-		array( new BlueprintPackage( 'plugin', $ran_booster_identity, 'Consumer proof', 'gh', 'replacement-fixture:fixtures/consumer', 'fixtures/consumer', 'main', null ) ),
+		array( new BlueprintPackage( 'plugin', $ran_booster_identity, 'Consumer proof', 'gh', 'replacement-fixture:' . $ran_booster_repository, $ran_booster_repository, 'main', null ) ),
 		array(
 			new BlueprintCredential(
 				'gh',
@@ -117,10 +122,10 @@ $ran_booster_dashboard = static function ( bool $apply, ?array $expectation ) us
 			'action'                          => $apply ? PortabilityController::APPLY_ACTION : PortabilityController::PREVIEW_ACTION,
 			'nonce'                           => wp_create_nonce( $apply ? PortabilityController::APPLY_NONCE_ACTION : PortabilityController::PREVIEW_NONCE_ACTION ),
 			'password'                        => 'consumer-proof-password',
-			'credential_decisions[0][action]' => 'import',
+			'credential_decisions[0][action]' => $credential_action,
 			'row'                             => '0',
 			'review_action'                   => 'adopt',
-			'adopt'                           => '1',
+			'adopt'                           => $adopt ? '1' : '0',
 			'selected_rows[]'                 => '0',
 		);
 		if ( null !== $expectation ) {
@@ -307,6 +312,7 @@ if ( $ran_booster_migrator ) {
 
 switch ( $ran_booster_phase ) {
 	case 'setup':
+	case 'dashboard-success-setup':
 		$ran_booster_assert( ! file_exists( dirname( $ran_booster_path ) ), 'fresh target required' );
 		$ran_booster_assert( null !== $ran_booster_secrets->path(), 'configured encrypted credential storage required' );
 		break;
@@ -360,12 +366,21 @@ switch ( $ran_booster_phase ) {
 		$ran_booster_assert( $ran_booster_before['target'] === $ran_booster_after['target'] && $ran_booster_before['ciphertext'] === $ran_booster_after['ciphertext'], 'adoption must not replace installed bytes or credential' );
 		break;
 	case 'adoption-readback':
+	case 'dashboard-success-readback':
 		$ran_booster_package = $ran_booster_plugins->booster_plugin_from_file( $ran_booster_identity );
 		$ran_booster_assert( DeploymentPolicy::DISABLED === $ran_booster_package->get_deployment_policy(), 'fresh request must observe Disabled adoption' );
-		$ran_booster_comparison = $ran_booster_container->make( PortabilityApplicationService::class )->compare_local( new BlueprintPackage( 'plugin', $ran_booster_identity, 'Consumer proof', 'gh', 'replacement-fixture:fixtures/consumer', 'fixtures/consumer', 'main', null ) );
+		$ran_booster_comparison = $ran_booster_container->make( PortabilityApplicationService::class )->compare_local( new BlueprintPackage( 'plugin', $ran_booster_identity, 'Consumer proof', 'gh', 'replacement-fixture:' . $ran_booster_repository, $ran_booster_repository, 'main', null ) );
 		$ran_booster_assert( 'matching' === $ran_booster_comparison['state'] && 'unknown' === $ran_booster_comparison['installed_equality'], 'matching configuration is not verified installed equality' );
+		if ( $ran_booster_dashboard_success ) {
+			$ran_booster_imported = get_option( 'ran_booster_consumer_dashboard_import' );
+			$ran_booster_assert( is_string( $ran_booster_imported ) && $ran_booster_imported === $ran_booster_package->get_credential_id(), 'fresh request retains the explicitly imported credential binding' );
+			$ran_booster_material = $ran_booster_secrets->credential_material( 'gh', $ran_booster_package->get_credential_id() );
+			$ran_booster_assert( 'ghp_' . str_repeat( 'c', 40 ) === ( $ran_booster_material['secret'] ?? null ), 'fresh request reads the exact synthetic imported credential' );
+			unset( $ran_booster_material );
+		}
 		break;
 	case 'dashboard-review':
+	case 'dashboard-success-review':
 		$ran_booster_counts_before = Fixture::counters();
 		$ran_booster_data          = $ran_booster_dashboard( false, null );
 		$ran_booster_html          = $ran_booster_data['html'] ?? null;
@@ -387,6 +402,39 @@ switch ( $ran_booster_phase ) {
 		wp_cache_delete( Fixture::COUNTERS, 'options' );
 		$ran_booster_counts_after = Fixture::counters();
 		$ran_booster_assert( $ran_booster_counts_after['a.credential_material_returns'] + $ran_booster_counts_after['b.credential_material_returns'] > $ran_booster_counts_before['a.credential_material_returns'] + $ran_booster_counts_before['b.credential_material_returns'], 'dashboard preview really used the temporary imported credential' );
+		break;
+	case 'dashboard-success-no-consent':
+	case 'dashboard-success-apply':
+		$ran_booster_saved = get_option( 'ran_booster_consumer_dashboard_review' );
+		if ( ! is_array( $ran_booster_saved ) ) {
+			throw new RuntimeException( 'Fresh dashboard review prerequisite is missing.' );
+		}
+		$ran_booster_before = $ran_booster_snapshot();
+		$ran_booster_assert( ! $ran_booster_before['managed'], 'dashboard success needs a distinct unmanaged target' );
+		if ( 'dashboard-success-no-consent' === $ran_booster_phase ) {
+			foreach ( array( array( 'leave', true ), array( 'import', false ) ) as [ $ran_booster_decision, $ran_booster_adopt ] ) {
+				$ran_booster_data = $ran_booster_dashboard( true, $ran_booster_saved, $ran_booster_decision, $ran_booster_adopt );
+				$ran_booster_assert( 'skipped' === ( $ran_booster_data['status'] ?? null ) && 'none' === ( $ran_booster_data['credential_state'] ?? null ), 'missing import or adoption consent must skip' );
+				$ran_booster_assert( $ran_booster_before === $ran_booster_snapshot(), 'unconsented dashboard action must preserve bytes, ciphertext and rows' );
+			}
+			wp_cache_delete( Fixture::COUNTERS, 'options' );
+			$ran_booster_no_calls();
+			break;
+		}
+		$ran_booster_profiles_before = array_keys( $ran_booster_secrets->credential_profiles( 'gh' ) );
+		$ran_booster_data            = $ran_booster_dashboard( true, $ran_booster_saved );
+		$ran_booster_assert( 'adopted' === ( $ran_booster_data['status'] ?? null ) && 'transferred_available' === ( $ran_booster_data['credential_state'] ?? null ), 'real dashboard Apply must adopt and import the selected credential' );
+		$ran_booster_after = $ran_booster_snapshot();
+		$ran_booster_assert( $ran_booster_after['managed'] && $ran_booster_before['target'] === $ran_booster_after['target'] && $ran_booster_before['ciphertext'] !== $ran_booster_after['ciphertext'], 'dashboard adoption preserves package bytes and persists credential import' );
+		$ran_booster_assert( $ran_booster_before['tables'][1] === $ran_booster_after['tables'][1] && ! is_plugin_active( $ran_booster_identity ), 'dashboard adoption neither deploys nor activates the target' );
+		$ran_booster_added = array_values( array_diff( array_keys( $ran_booster_secrets->credential_profiles( 'gh' ) ), $ran_booster_profiles_before ) );
+		$ran_booster_assert( 1 === count( $ran_booster_added ), 'dashboard imports exactly one new credential profile' );
+		$ran_booster_package = $ran_booster_plugins->booster_plugin_from_file( $ran_booster_identity );
+		$ran_booster_assert( ( $ran_booster_added[0] ?? null ) === $ran_booster_package->get_credential_id(), 'dashboard binds the imported profile to its target' );
+		update_option( 'ran_booster_consumer_dashboard_import', $ran_booster_package->get_credential_id(), false );
+		wp_cache_delete( Fixture::COUNTERS, 'options' );
+		$ran_booster_counts = Fixture::counters();
+		$ran_booster_assert( $ran_booster_counts['b.provider_calls'] > 0 && $ran_booster_counts['b.credential_material_returns'] > 0 && 0 === $ran_booster_counts['a.provider_calls'], 'dashboard Apply freshly verifies through B with the imported material' );
 		break;
 	case 'dashboard-stale':
 		$ran_booster_saved = get_option( 'ran_booster_consumer_dashboard_review' );

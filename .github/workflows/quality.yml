@@ -638,6 +638,22 @@ jobs:
                 "$runtime_wordpress_floor" "$booster_requires_wordpress" \
                 || { echo 'Neutral updater WordPress floor exceeds Booster support.' >&2; exit 1; }
               grep -Fq 'RAN\WPReleaseUpdater\V1\WordPress\NativePackageUpdater' "$runtime_file"
+          - name: Mark the verified disposable database site
+            shell: bash
+            run: |
+                set -euo pipefail
+                wordpress="$GITHUB_WORKSPACE/build/wordpress"
+                test ! -L "$wordpress"
+                test "$(realpath "$wordpress")" = "$wordpress"
+                wp eval '
+                  $site = getenv( "GITHUB_WORKSPACE" ) . "/build/wordpress";
+                  if ( realpath( ABSPATH ) !== $site || is_link( WP_CONTENT_DIR ) || is_link( WP_PLUGIN_DIR ) || realpath( WP_CONTENT_DIR ) !== $site . "/wp-content" || realpath( WP_PLUGIN_DIR ) !== $site . "/wp-content/plugins" || get_option( "siteurl" ) !== "http://localhost" ) {
+                    throw new RuntimeException( "The disposable site boundaries do not match." );
+                  }
+                ' --path="$wordpress"
+                test ! -L "$wordpress/.ran-booster-disposable-test-site"
+                printf '%s\n' 'RAN Booster disposable test site' > "$wordpress/.ran-booster-disposable-test-site"
+
           - name: Prove database activation and storage
             env:
                 RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
@@ -690,6 +706,33 @@ jobs:
                 RAN_BOOSTER_RECOVERY_TEST_URL: 'http://localhost'
                 RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
             run: bash tests/WordPress/adoption-recovery-smoke.sh
+
+          - name: Provision private storage for connected proofs
+            if: ${{ matrix.suite == 'critical' }}
+            shell: bash
+            run: |
+                set -euo pipefail
+                wp eval '
+                  $result = ( new RAN\Secrets\SecretsStorageProvisioner() )->provision();
+                  if ( ! $result->requires_next_request_verification() ) {
+                    throw new RuntimeException( "Private storage provisioning failed: " . $result->code() );
+                  }
+                ' --path=build/wordpress
+                # A fresh request reads the persisted wp-config setting, also used by HTTP.
+                # Empty storage is initialized by the first normal credential write.
+                wp eval '
+                  $secrets = new RAN\Secrets\SecretsFile();
+                  $result = ( new RAN\Secrets\SecretsStorageProvisioner( secrets: $secrets ) )->status();
+                  if ( RAN\Secrets\SecretsStorageProvisioningResult::PATH_CONFIGURED !== $result->status() ) {
+                    throw new RuntimeException( "Private storage verification failed: " . $result->code() );
+                  }
+                  $secrets->assert_managed_storage_ready();
+                  $secrets->with_github_adoption_inventory( static function ( array $inventory ): void {
+                    if ( array() !== $inventory ) {
+                      throw new RuntimeException( "Expected an empty disposable credential inventory." );
+                    }
+                  } );
+                ' --path=build/wordpress
 
           - name: Prove installed GitHub replacement and historical selection
             if: ${{ matrix.suite == 'critical' }}

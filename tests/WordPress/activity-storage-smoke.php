@@ -11,6 +11,8 @@ use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\DeploymentRequest;
 use RAN\Deployment\DeploymentState;
 use RAN\Deployment\DeploymentStorageFailure;
+use RAN\Internal\CoreContainer;
+use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\RepositoryProvider\RepositoryReference;
 use RAN\Storage\Database;
 
@@ -18,6 +20,14 @@ use RAN\Storage\Database;
 return static function ( wpdb $database ): void {
 	if ( ! defined( 'DB_USER' ) || ! defined( 'DB_PASSWORD' ) || ! defined( 'DB_NAME' ) || ! defined( 'DB_HOST' ) ) {
 		throw new RuntimeException( 'The activity SQL proof requires installed WordPress database configuration.' );
+	}
+	$container = require __DIR__ . '/core-container-fixture.php';
+	if ( ! $container instanceof CoreContainer ) {
+		throw new RuntimeException( 'The activity SQL proof requires the installed Core container.' );
+	}
+	$selection = $container->make( GitHubProviderSelection::class );
+	if ( ! $selection->uses_connection( $database ) || null === $selection->expectation() ) {
+		throw new RuntimeException( 'The activity SQL proof requires current selection on its database connection.' );
 	}
 	$table         = $database->prefix . 'ran_activity_smoke_' . bin2hex( random_bytes( 6 ) );
 	$journal_table = $table . '_attempts';
@@ -166,7 +176,7 @@ return static function ( wpdb $database ): void {
 		}
 
 		$query( $database->prepare( 'CREATE TABLE %i LIKE %i', $journal_table, Database::attempt_table_name() ) );
-		$journal = new DeploymentAttemptRepository( $database, $journal_table, activity: $store );
+		$journal = new DeploymentAttemptRepository( $database, $journal_table, activity: $store, selection: $selection );
 		$deploy  = new DeploymentRequest( 'ran/activity-proof', null, false, 'main', 'activity-proof', null, DeploymentPolicy::MANUAL, 1 );
 		$before  = (int) $database->get_var( $database->prepare( 'SELECT COUNT(*) FROM %i', $table ) );
 		$query( $database->prepare( 'ALTER TABLE %i ENGINE=MyISAM', $table ) );

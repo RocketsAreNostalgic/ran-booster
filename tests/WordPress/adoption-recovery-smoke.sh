@@ -44,27 +44,51 @@ for winner in recovery admission native-recovery native-sibling native-commit-lo
 		rm -rf -- "$temp_dir"
 		continue
 	fi
-	"$php_bin" "$wp_cli" eval-file "$race" "$winner-owner" "$run_id" "$temp_dir" --path="$wordpress" >"$temp_dir/owner-log" 2>&1 &
-	owner_pid=$!
-	deadline=$((SECONDS + 20))
-	until [[ -f "$temp_dir/locked" ]]; do
-		if ! kill -0 "$owner_pid" 2>/dev/null || (( SECONDS >= deadline )); then cat "$temp_dir/owner-log"; exit 1; fi
-		sleep 0.05
-	done
 	loser=admission
 	[[ "$winner" == admission ]] && loser=recovery
 	[[ "$winner" == native-recovery ]] && loser=native-sibling
 	[[ "$winner" == native-sibling ]] && loser=native-recovery
+	race_failure() {
+		echo "Recovery race $winner failed at $1." >&2
+		for log in owner-log peer-log; do
+			if [[ -f "$temp_dir/$log" ]]; then
+				echo "$log:" >&2
+				cat "$temp_dir/$log" >&2
+			fi
+		done
+		exit 1
+	}
+	# Bootstrap the peer before the owner acquires the selection row. Its actual
+	# transaction still starts only after the owner reaches the existing lock barrier.
 	"$php_bin" "$wp_cli" eval-file "$race" "$loser-peer" "$run_id" "$temp_dir" --path="$wordpress" >"$temp_dir/peer-log" 2>&1 &
 	peer_pid=$!
-	until [[ -f "$temp_dir/attempting" ]]; do
-		if ! kill -0 "$peer_pid" 2>/dev/null || (( SECONDS >= deadline )); then cat "$temp_dir/peer-log"; exit 1; fi
+	deadline=$((SECONDS + 20))
+	until [[ -f "$temp_dir/bootstrapped" ]]; do
+		if ! kill -0 "$peer_pid" 2>/dev/null || (( SECONDS >= deadline )); then race_failure peer-bootstrap; fi
 		sleep 0.05
 	done
-	[[ ! -f "$temp_dir/peer-result" ]]
+	"$php_bin" "$wp_cli" eval-file "$race" "$winner-owner" "$run_id" "$temp_dir" --path="$wordpress" >"$temp_dir/owner-log" 2>&1 &
+	owner_pid=$!
+	deadline=$((SECONDS + 20))
+	until [[ -f "$temp_dir/locked" ]]; do
+		if ! kill -0 "$owner_pid" 2>/dev/null || (( SECONDS >= deadline )); then race_failure owner-lock; fi
+		sleep 0.05
+	done
+	touch "$temp_dir/start-peer"
+	deadline=$((SECONDS + 20))
+	until [[ -f "$temp_dir/attempting" ]]; do
+		if ! kill -0 "$peer_pid" 2>/dev/null || (( SECONDS >= deadline )); then race_failure peer-contention; fi
+		sleep 0.05
+	done
+	[[ ! -f "$temp_dir/peer-result" ]] || race_failure premature-peer-completion
 	touch "$temp_dir/release"
-	wait "$owner_pid" || { cat "$temp_dir/owner-log"; exit 1; }
-	wait "$peer_pid" || { cat "$temp_dir/peer-log"; exit 1; }
+	deadline=$((SECONDS + 20))
+	while kill -0 "$owner_pid" 2>/dev/null || kill -0 "$peer_pid" 2>/dev/null; do
+		if (( SECONDS >= deadline )); then race_failure transaction-completion; fi
+		sleep 0.05
+	done
+	wait "$owner_pid" || race_failure owner-completion
+	wait "$peer_pid" || race_failure peer-completion
 	owner_pid=''
 	peer_pid=''
 	"$php_bin" "$wp_cli" eval-file "$race" "assert-$winner" "$run_id" "$temp_dir" --path="$wordpress"

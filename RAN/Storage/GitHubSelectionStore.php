@@ -267,6 +267,7 @@ final class GitHubSelectionStore {
 		$this->connection->last_error = '';
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Only fixed transaction statements supplied by the private lifecycle above.
 		if ( false === $this->connection->query( $statement ) || $this->read_failed() ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- DatabaseLifecycleFailure displays fixed REQUIREMENT text; this private caller supplies only internal reason codes.
 			throw new DatabaseLifecycleFailure( $reason );
 		}
 	}

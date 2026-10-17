@@ -108,6 +108,15 @@ try {
 	} else {
 		$ran_booster_check( 'success' === $ran_booster_phase && 'succeeded' === $ran_booster_result['status'], 'historical native installation succeeds' );
 		$ran_booster_check( is_array( $ran_booster_archive ) && ( $ran_booster_archive['selected_commit'] ?? null ) === $ran_booster_commit && ( $ran_booster_archive['ref'] ?? null ) === $ran_booster_commit && null === ( $ran_booster_archive['expected_branch'] ?? null ) && true === ( $ran_booster_archive['verified'] ?? false ) && true === ( $ran_booster_archive['cleaned'] ?? false ), 'exact selected commit and final verification despite advanced fixture branch' );
+		$ran_booster_installed = $ran_booster_result['package'] ?? null;
+		if ( ! $ran_booster_installed instanceof \RAN\Plugin ) {
+			throw new RuntimeException( 'Historical installed proof: successful install must return a plugin.' );
+		}
+		$ran_booster_actual_id = (string) $ran_booster_installed->get_identifier();
+		$ran_booster_check( $ran_booster_id === $ran_booster_actual_id, 'exact installed identifier; actual=' . $ran_booster_actual_id );
+		$ran_booster_check( is_file( $ran_booster_target . '/proof.php' ), 'expected installed main file exists' );
+		$ran_booster_check( $ran_booster_plugins->is_installed( $ran_booster_id ), 'expected identifier remains in WordPress inventory' );
+		$ran_booster_check( $ran_booster_plugins->has_management_record( $ran_booster_id ), 'expected identifier has a durable management record' );
 		$ran_booster_package = $ran_booster_plugins->booster_plugin_from_file( $ran_booster_id );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read actual installed bytes to prove exact historical archive installation.
 		$ran_booster_check( file_get_contents( $ran_booster_target . '/commit.txt' ) === $ran_booster_commit && ! file_exists( $ran_booster_target . '/outside.txt' ) && ! is_plugin_active( $ran_booster_id ), 'exact source relocation and inactive installation' );

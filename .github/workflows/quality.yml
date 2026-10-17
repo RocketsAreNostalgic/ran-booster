@@ -404,6 +404,8 @@ jobs:
       if: ${{ needs.runtime-archive.outputs.lane == 'full' }}
       runs-on: ubuntu-24.04
       timeout-minutes: 10
+      env:
+          RAN_PRIVATE_MIGRATOR: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/integration/171-github-blueprint' && matrix.suite == 'critical' }}
       strategy:
           fail-fast: false
           matrix: ${{ fromJSON(needs.runtime-archive.outputs.wordpress-matrix) }}
@@ -421,6 +423,55 @@ jobs:
                   --health-timeout=5s
                   --health-retries=10
       steps:
+          # No repository code executes while the private installation token is live.
+          - name: Create read-only upstream fixture token
+            if: ${{ env.RAN_PRIVATE_MIGRATOR == 'true' }}
+            id: upstream-fixtures
+            uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+            with:
+                client-id: ${{ vars.UPSTREAM_FIXTURES_CLIENT_ID }}
+                private-key: ${{ secrets.UPSTREAM_FIXTURES_PRIVATE_KEY }}
+                owner: RocketsAreNostalgic
+                repositories: ran-booster-upstream-fixtures
+                permission-contents: read
+
+          - name: Retrieve and verify pinned WP Pusher fixture
+            if: ${{ env.RAN_PRIVATE_MIGRATOR == 'true' }}
+            shell: bash
+            env:
+                FIXTURE_TOKEN: ${{ steps.upstream-fixtures.outputs.token }}
+            run: |
+                set -euo pipefail
+                umask 077
+                fixture_dir="$RUNNER_TEMP/upstream-fixtures"
+                mkdir -m 0700 "$fixture_dir"
+                archive="$fixture_dir/wppusher-3.0.18.zip"
+                curl --fail --silent --show-error --connect-timeout 10 --max-time 60 \
+                    -H "Authorization: Bearer $FIXTURE_TOKEN" \
+                    -H 'Accept: application/vnd.github.raw+json' \
+                    'https://api.github.com/repos/RocketsAreNostalgic/ran-booster-upstream-fixtures/contents/fixtures/wppusher/3.0.18/245b029e3ad0758ac817be0a8af715efd03c143fc66aadb1527abdec0daa681c/wppusher-3.0.18.zip?ref=6abb78a287e8aa50a0c534067815447db706c090' \
+                    --output "$archive"
+                test "$(wc -c < "$archive" | tr -d '[:space:]')" = 100006
+                printf '%s  %s\n' '245b029e3ad0758ac817be0a8af715efd03c143fc66aadb1527abdec0daa681c' "$archive" | sha256sum --check --strict
+                unzip -tqq "$archive"
+                version="$(unzip -p "$archive" wppusher/wppusher.php | sed -nE 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*([^[:space:]]+).*/\1/p')"
+                test "$version" = 3.0.18
+                printf 'RAN_MIGRATOR_WP_PUSHER_ARCHIVE=%s\n' "$archive" >> "$GITHUB_ENV"
+                echo 'Private fixture access verified: commit6abb78a, 100006 bytes, SHA256 matched, ZIP valid, WP Pusher3.0.18.'
+
+          - name: Revoke private fixture token before source execution
+            if: ${{ always() && steps.upstream-fixtures.outputs.token != '' }}
+            shell: bash
+            env:
+                FIXTURE_TOKEN: ${{ steps.upstream-fixtures.outputs.token }}
+            run: |
+                set -euo pipefail
+                curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
+                    --request DELETE -H "Authorization: Bearer $FIXTURE_TOKEN" \
+                    -H 'Accept: application/vnd.github+json' \
+                    https://api.github.com/installation/token
+                echo 'Private fixture token revoked before repository checkout.'
+
           - name: Check out repository
             uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
             with:
@@ -441,6 +492,22 @@ jobs:
                 coverage: none
                 extensions: mysqli, zip
                 tools: composer:v2, wp-cli:2.12.0
+
+          - name: Build the exact reviewed Migrator source archive
+            if: ${{ env.RAN_PRIVATE_MIGRATOR == 'true' }}
+            shell: bash
+            run: |
+                set -euo pipefail
+                migrator_source="$RUNNER_TEMP/migrator-source"
+                git clone --no-checkout https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator.git "$migrator_source"
+                git -C "$migrator_source" checkout --detach 9c99fb0df2e7859b0c376d188fff50bde7f25722
+                test "$(git -C "$migrator_source" rev-parse HEAD)" = 9c99fb0df2e7859b0c376d188fff50bde7f25722
+                ( cd "$migrator_source" && bash scripts/build-release.sh 1823347da7f651341567278ccfe1bc644d728d43 )
+                archive="$migrator_source/dist/ran-booster-wp-pusher-migrator-0.1.0-beta.10.zip"
+                test "$(wc -c < "$archive" | tr -d '[:space:]')" = 22820
+                printf '%s  %s\n' 'f94c5a348ea7fff4b30c934e86b014aa83f26c2596b1aa7e4f3b8eb912b761f0' "$archive" | sha256sum --check --strict
+                unzip -tqq "$archive"
+                printf 'RAN_MIGRATOR_SOURCE_PATH=%s\nRAN_MIGRATOR_ARCHIVE=%s\n' "$migrator_source" "$archive" >> "$GITHUB_ENV"
 
           - name: Download the verified runtime archive
             uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -876,6 +943,10 @@ jobs:
             env:
                 RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
             run: |
+                if [[ "$RAN_PRIVATE_MIGRATOR" == true ]]; then
+                    wp config set WP_HTTP_BLOCK_EXTERNAL true --raw --path="$RAN_BOOSTER_WORDPRESS_PATH"
+                    wp config set WP_ACCESSIBLE_HOSTS localhost --path="$RAN_BOOSTER_WORDPRESS_PATH"
+                fi
                 export PHP_BIN="$(command -v php)"
                 export WP_CLI_BIN="$(command -v wp)"
                 "$PHP_BIN" -S localhost:80 -t "$RAN_BOOSTER_WORDPRESS_PATH" > build/portability-http.log 2>&1 &
@@ -892,6 +963,18 @@ jobs:
                 done
                 test "$ready" = 1
                 bash tests/WordPress/portability-selection-installed-smoke.sh
+                if [[ "$RAN_PRIVATE_MIGRATOR" == true ]]; then
+                    export RAN_MIGRATOR_WP_CLI_BIN="$(command -v wp)"
+                    test -x "$RAN_MIGRATOR_WP_CLI_BIN"
+                    bash tests/WordPress/portability-selection-installed-smoke.sh migrator
+                fi
+
+          - name: Remove private upstream fixture bytes
+            if: ${{ always() && env.RAN_PRIVATE_MIGRATOR == 'true' }}
+            shell: bash
+            run: |
+                set -euo pipefail
+                rm -f -- "$RUNNER_TEMP/upstream-fixtures/wppusher-3.0.18.zip"
 
           - name: Upload Plugin Check results
             if: ${{ always() && matrix.plugin_check }}

@@ -712,12 +712,14 @@ jobs:
             shell: bash
             run: |
                 set -euo pipefail
-                wp eval '
+                # Normal bootstrap includes wp-config.php for the constrained setup writer.
+                php -r '
+                  require getenv( "GITHUB_WORKSPACE" ) . "/build/wordpress/wp-load.php";
                   $result = ( new RAN\Secrets\SecretsStorageProvisioner() )->provision();
                   if ( ! $result->requires_next_request_verification() ) {
                     throw new RuntimeException( "Private storage provisioning failed: " . $result->code() );
                   }
-                ' --path=build/wordpress
+                '
                 # A fresh request reads the persisted wp-config setting, also used by HTTP.
                 # Empty storage is initialized by the first normal credential write.
                 wp eval '

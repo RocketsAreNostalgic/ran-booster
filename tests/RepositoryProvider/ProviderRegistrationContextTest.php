@@ -32,7 +32,7 @@ final class ProviderRegistrationContextTest extends TestCase {
 		self::assertSame( 0, $resolutions );
 		self::assertSame( 52_428_800, $context->maximum_artifact_bytes() );
 		self::assertSame( 1, $resolutions );
-		self::assertSame( array( '__construct', 'maximum_artifact_bytes' ), $methods );
+		self::assertSame( array( '__construct', 'maximum_artifact_bytes', 'operation_allowed' ), $methods );
 		self::assertSame( array(), ( new \ReflectionClass( ProviderRegistrationContext::class ) )->getProperties( \ReflectionProperty::IS_PUBLIC ) );
 	}
 

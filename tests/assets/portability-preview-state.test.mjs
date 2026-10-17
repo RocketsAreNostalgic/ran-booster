@@ -97,6 +97,9 @@ function row(
 	const item = {
 		choice,
 		getAttribute(attribute) {
+			if (attribute === 'data-portability-provider-expectation') {
+				return item.providerExpectation ?? null;
+			}
 			if (attribute === 'data-portability-row') {
 				return String(index);
 			}
@@ -649,22 +652,26 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 	globalThis.FormData = class {
 		constructor() {
 			this.values = new Map([
-				['action', 'ran_booster_preview_blueprint'],
-				['nonce', 'preview-nonce'],
+				['action', ['ran_booster_preview_blueprint']],
+				['nonce', ['preview-nonce']],
 			]);
 			forms.push(this);
 		}
 
 		append(name, value) {
-			this.values.set(name, value);
+			this.values.set(name, [...(this.values.get(name) || []), value]);
 		}
 
 		get(name) {
-			return this.values.get(name);
+			return this.values.get(name)?.[0];
+		}
+
+		getAll(name) {
+			return this.values.get(name) || [];
 		}
 
 		set(name, value) {
-			this.values.set(name, value);
+			this.values.set(name, [value]);
 		}
 	};
 	globalThis.window = {
@@ -1489,6 +1496,79 @@ test('apply sends only selected rows serially and preserves choices on review', 
 			false
 		);
 		assert.equal(state.applyLabel.textContent, 'Apply selected changes');
+	} finally {
+		cleanup();
+	}
+});
+
+test('each Apply request carries its complete selected subset and later Apply reads a fresh selection', async () => {
+	const submitted = [];
+	let finishFirst;
+	const state = importFixture(
+		(data) => {
+			if (data.get('action') !== 'ran_booster_apply_blueprint') {
+				return success('<table>review</table>');
+			}
+			submitted.push({
+				row: data.get('row'),
+				selected: data.getAll('selected_rows[]'),
+				expectation: data.get('provider_expectation') ?? null,
+			});
+			if (submitted.length === 1) {
+				return new Promise((resolve) => {
+					finishFirst = () =>
+						resolve(success('', { status: 'installed' }));
+				});
+			}
+			return success('', { status: 'installed' });
+		},
+		{
+			'<table>review</table>': [
+				['2', 'install', true],
+				['5', 'install', true],
+				['9', 'adopt', true],
+			],
+		}
+	);
+
+	try {
+		loadFunction('initPortabilityPreview')();
+		await state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		state.rows()[1].choice.checked = false;
+		state.listeners.get('root:change')({ target: state.rows()[1].choice });
+		const expectation = JSON.stringify({
+			provider_code: 'gh',
+			selection_generation: 4,
+			implementation_fingerprint: 'a'.repeat(64),
+		});
+		state.rows()[2].providerExpectation = expectation;
+		const applying = state.listeners.get('apply:click')();
+		assert.deepEqual(submitted, [
+			{ row: '2', selected: ['2', '9'], expectation: null },
+		]);
+		state.rows()[2].providerExpectation = 'changed-after-apply-start';
+		// Changing a checkbox during the batch cannot change its declared subset.
+		state.rows()[2].choice.checked = false;
+		finishFirst();
+		await applying;
+		assert.deepEqual(submitted, [
+			{ row: '2', selected: ['2', '9'], expectation: null },
+			{ row: '9', selected: ['2', '9'], expectation },
+		]);
+
+		state.rows().forEach((item, index) => {
+			item.choice.checked = index === 1;
+		});
+		state.rows()[1].providerExpectation = expectation;
+		state.listeners.get('root:change')({ target: state.rows()[1].choice });
+		await state.listeners.get('apply:click')();
+		assert.deepEqual(submitted.at(-1), {
+			row: '5',
+			selected: ['5'],
+			expectation,
+		});
+		assert.equal(submitted.length, 3);
 	} finally {
 		cleanup();
 	}

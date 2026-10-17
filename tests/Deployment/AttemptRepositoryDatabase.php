@@ -32,10 +32,30 @@ namespace {
 namespace RAN\Tests\Deployment {
 
 	// phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- The fixture pairs WordPress function doubles with its database class for one isolated test environment.
-	final class AttemptRepositoryDatabase implements \RAN\Storage\DeploymentWriteConnection {
+	final class AttemptRepositoryDatabase extends \RAN\Storage\SchemaConnection implements \RAN\Storage\DeploymentWriteConnection {
 
-		public string $options    = 'wp_options';
-		public string $last_error = '';
+		/** @var \Closure():void|null */
+		public ?\Closure $on_management_read = null;
+		public string $options               = 'wp_options';
+		public \RAN\Tests\RepositoryProvider\SelectionContextDatabase $selection;
+		/** @var array<string, array<string, mixed>> */
+		public array $management_rows = array();
+
+		public function __construct() {
+			$this->selection = new \RAN\Tests\RepositoryProvider\SelectionContextDatabase();
+		}
+
+		public function get_charset_collate(): string {
+			return '';
+		}
+
+		public function esc_like( string $value ): string {
+			return $value;
+		}
+
+		public function get_row( string $query ): mixed {
+			return $this->selection->get_row( $query );
+		}
 		/** @var array<int, array<string, mixed>> */
 		public array $rows = array();
 		/** @var array<string, string> Exact installed identifier to stored lifetime. */
@@ -66,6 +86,9 @@ namespace RAN\Tests\Deployment {
 		}
 
 		public function prepare( string $query, mixed ...$arguments ): string {
+			if ( in_array( \RAN\Storage\GitHubSelectionStore::OPTION, $arguments, true ) || in_array( 'active_plugins', $arguments, true ) || str_starts_with( $query, 'SHOW ' ) ) {
+				return $this->selection->prepare( $query, ...$arguments );
+			}
 			foreach ( $arguments as $argument ) {
 				$query = (string) preg_replace_callback(
 					'/%[dis]/',
@@ -83,7 +106,7 @@ namespace RAN\Tests\Deployment {
 		}
 
 		/** @param array<string, mixed> $data */
-		// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- Preserve the wpdb insert signature; this fixture owns one in-memory table.
+		// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassBeforeLastUsed -- Preserve the wpdb insert signature; this fixture owns one in-memory table.
 		public function insert( string $table, array $data ): int|false {
 			++$this->insert_calls;
 			if ( $this->fail_insert || $this->insert_calls === $this->fail_insert_number ) {
@@ -115,6 +138,11 @@ namespace RAN\Tests\Deployment {
 		}
 
 		public function query( string $query ): int|false {
+			if ( str_starts_with( $query, '[' ) ) {
+				$result           = $this->selection->query( $query );
+				$this->last_error = $this->selection->last_error;
+				return false === $result ? false : (int) $result;
+			}
 			$this->queries[] = $query;
 			if ( null !== $this->fail_query_contains && str_contains( $query, $this->fail_query_contains ) ) {
 				$this->last_error = 'database details must not escape';
@@ -125,6 +153,7 @@ namespace RAN\Tests\Deployment {
 				return 0;
 			}
 			if ( 'START TRANSACTION' === $query ) {
+				$this->selection->query( $query );
 				$this->snapshot = array(
 					'rows'    => $this->rows,
 					'options' => $this->option_rows,
@@ -136,11 +165,13 @@ namespace RAN\Tests\Deployment {
 				if ( $this->fail_commit ) {
 					return false;
 				}
+				$this->selection->query( $query );
 				$this->snapshot = null;
 
 				return 1;
 			}
 			if ( 'ROLLBACK' === $query ) {
+				$this->selection->query( $query );
 				if ( null !== $this->snapshot ) {
 					$this->rows        = $this->snapshot['rows'];
 					$this->option_rows = $this->snapshot['options'];
@@ -247,6 +278,11 @@ namespace RAN\Tests\Deployment {
 
 		/** @return list<object>|null */
 		public function get_results( string $query ): ?array {
+			if ( str_starts_with( $query, '[' ) ) {
+				$result           = $this->selection->get_results( $query );
+				$this->last_error = $this->selection->last_error;
+				return $result;
+			}
 			if ( 'SHOW ENGINES' === $query ) {
 				++$this->capability_reads;
 
@@ -263,12 +299,21 @@ namespace RAN\Tests\Deployment {
 
 				return null;
 			}
-			if ( str_starts_with( $query, 'SELECT package, adoption_token' ) && preg_match( "/BINARY package = BINARY '([^']+)'/", $query, $match ) === 1 ) {
+			if ( preg_match( '/^SELECT \* FROM `[^`]+` WHERE package_type = [12] FOR UPDATE$/', $query ) === 1 ) {
+				return array_map( static fn ( string $package, array $row ): object => (object) array_merge( $row, array( 'package' => $package ) ), array_keys( $this->management_rows ), array_values( $this->management_rows ) );
+			}
+			if ( ( str_starts_with( $query, 'SELECT package, adoption_token' ) || str_starts_with( $query, 'SELECT *' ) ) && preg_match( "/BINARY package = BINARY '([^']+)'/", $query, $match ) === 1 ) {
 				$identifier = stripslashes( $match[1] );
+				if ( null !== $this->on_management_read ) {
+					( $this->on_management_read )();
+				}
 				return isset( $this->management[ $identifier ] ) ? array(
-					(object) array(
-						'package'        => $identifier,
-						'adoption_token' => $this->management[ $identifier ],
+					(object) array_merge(
+						$this->management_rows[ $identifier ] ?? array(),
+						array(
+							'package'        => $identifier,
+							'adoption_token' => $this->management[ $identifier ],
+						)
 					),
 				) : array();
 			}
@@ -320,6 +365,10 @@ namespace RAN\Tests\Deployment {
 				}
 
 				return array_map( static fn ( array $row ): object => (object) $row, $selected );
+			}
+			if ( str_contains( $query, "WHERE provider = 'gh' AND (state = 'running' OR (state = 'needs_attention' AND (resolved_at IS NULL OR resolved_by IS NULL)))" ) ) {
+				$blocked = array_filter( $this->rows, static fn ( array $row ): bool => 'gh' === $row['provider'] && ( 'running' === $row['state'] || ( 'needs_attention' === $row['state'] && ( null === ( $row['resolved_at'] ?? null ) || null === ( $row['resolved_by'] ?? null ) ) ) ) );
+				return array_map( static fn ( array $row ): object => (object) array( 'id' => $row['id'] ), array_slice( array_values( $blocked ), 0, 1 ) );
 			}
 			$rows = $this->rows;
 			if ( preg_match( "/correlation_id = '([^']+)'/", $query, $matches ) === 1 ) {

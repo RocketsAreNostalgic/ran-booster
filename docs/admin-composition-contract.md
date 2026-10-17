@@ -72,8 +72,8 @@ internal typed coordinators after resolving the selected provider's exact
 release facets. A plugin must not treat those internal coordinators as a public
 service-delivery API.
 
-Portability API 3 is an independently versioned adoption-only contract for a
-trusted source bridge. Its consumer checks exact Portability API 3, not Add-on
+Portability API 4 is an independently versioned adoption-only contract for a
+trusted source bridge. Its consumer checks exact Portability API 4, not Add-on
 API 17. The separate
 [Portability API contract](portability-api.md) documents its candidate, nonce,
 review, Apply, source-ownership, recovery, and cleanup boundaries.
@@ -175,8 +175,8 @@ one registered provider aggregate supplies the complete release capability set
 required by the operation. It does not publish a prospective-release marker or
 deliver the internal facade to another plugin.
 
-The internal `ProspectiveReleaseFacade::API_VERSION` is **8** for this naming
-composition; this is not a public plugin-delivery marker.
+The internal `ProspectiveReleaseFacade::API_VERSION` is **10** for destination selection
+continuity and explicit initial installation intent; this is not a public plugin-delivery marker.
 
 The facade accepts exactly:
 
@@ -191,9 +191,26 @@ $prospective->install(
 	$tag,
 	$expected_fingerprint,
 	$channel,
-	$nonce
+	$nonce,
+	$provider_expectation
 );
 ```
+
+`install()` and `nonce_action()` additionally accept optional `$expected_identifier`
+and `$initial_policy` arguments, defaulting to `null` and `DeploymentPolicy::MANUAL`.
+Only Manual and Disabled are supported; Disabled requires a valid explicit plugin
+or theme identifier. Both values are bound into the installation nonce. Non-install
+nonce operations reject nondefault installation intent. Existing dashboard calls
+retain Manual adoption.
+
+The acquired identifier must match the expected identifier before updater locking,
+artifact handoff or filesystem mutation. A mismatch returns
+`package_identity_mismatch` and still discards the acquisition. Successful adoption
+persists the requested policy through the existing verified release repository
+operation. This does not enable Blueprint release execution or exact artifact
+selection. A future Blueprint caller must also compare inspected package-root and
+metadata-file configuration; a theme identifier alone does not prove its metadata
+filename. Installation remains inactive and this initial selection is no update lock.
 
 `supported_provider_codes()` returns the bounded complete-product provider list
 for `plugin` or `theme` using request-local configuration only. It performs no
@@ -599,3 +616,34 @@ local unavailable message.
 
 Deactivating an add-on removes its contributions on the next request; every
 Core route and administration surface remains usable.
+
+Prospective API9 carries the destination-local `provider_expectation` from exact
+inspection to installation. GitHub uses Core's provider code, selection generation
+and implementation fingerprint; unaffected providers carry null. Installation
+requires this argument and an install nonce bound to the same context. Core checks
+it before repository resolution or credential/provider work. Inspection rechecks
+its captured selection before returning evidence. Review transport never invents
+a current context or exports this destination authority.
+
+### Interrupted GitHub native installation
+
+The GitHub settings page exposes Core's protected removal recovery while an
+uncertain native mutation blocks further installation or implementation switching.
+It shows only the target type and installed identifier. Recovery requires both
+`manage_options` and `activate_plugins`, a fresh review-bound nonce, and explicit
+confirmation that the interrupted process stopped and the whole target was removed.
+A missing plugin entry file alone is insufficient. Core does not delete files or
+certify a retained installation through this action.
+
+Recovery takes the existing updater lock without reclaiming an occupied lock,
+verifies physical absence, disconnects only the reviewed management record, and
+clears only the exact reviewed native marker after fresh storage and operation
+checks. Ambiguous management or queued work within the affected plugin folder
+refuses recovery. Selection generation, implementation approval and credential
+material are preserved. Changed authority, uncertain storage outcomes, failed cache
+invalidation or lost lock ownership do not produce a success notice.
+
+Successful removal recovery does not verify cleanup of temporary files left by the
+interrupted process. Current provider availability and fresh installation review
+remain mandatory before another operation. Browser acceptance and installed
+qualification against the feature-bearing immutable dependencies are separate gates.

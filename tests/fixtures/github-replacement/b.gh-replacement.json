@@ -1,0 +1,15 @@
+{
+  "plugin_basename": "github-replacement/b.php",
+  "implementation_id": "installed-fixture-b",
+  "compatibility_revision": "1",
+  "provider_api_version": 15,
+  "api_credential_formats": [
+    "github-classic-pat-v1",
+    "github-fine-grained-pat-v1"
+  ],
+  "webhook_signing_format": null,
+  "facets": [
+    "RAN\\RepositoryProvider\\RepositoryPathInspector",
+    "RAN\\RepositoryProvider\\ProviderCredentialPolicySupplier"
+  ]
+}

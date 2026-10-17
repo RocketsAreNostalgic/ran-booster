@@ -394,6 +394,31 @@ Providers may enforce stricter vendor syntax and archive-origin policy. They
 must not weaken the shared authentication cleanup lifecycle or reproduce Core's
 storage or deployment machinery.
 
+Historical acquisition is an explicit archive contract, separate from future Branch
+tracking. `ProviderMetadata::$archive_api_version` defaults to `1`; Core recognizes
+only `1` and `2`. Version `2` promises support for `ArchiveRequest::$selected_commit`,
+appended after `progress`. A historical request carries a canonical lowercase full
+40- or 64-hex commit, has `ref === selected_commit`, and has no `expected_branch`
+current-head constraint. A provider may reject a vendor-unsupported hash length
+before credential or network access. GitHub accepts only 40-hex commits.
+
+Core appends the same optional field to `PackageOperation` and `DeploymentRequest`
+and preserves it through admission, queued request JSON and selection binding.
+Historical mode retains `PackageOperation::expected_package['branch']` as the
+unchanged destination management snapshot. It does not change the saved tracking
+branch or infer that installed files already equal the selected commit. Webhook
+admission rejects historical requests; webhook expected-head checks are unchanged.
+
+Core requires archive contract `2` and Branch admitted API `2` before historical
+provider preparation. Unsupported implementations refuse without falling back to
+current head. The prepared `resolved_ref` must equal the exact selected commit;
+Core and Branch both check this and retain captured cleanup. Providers must repeat
+fresh repository identity, credential/access and exact-commit verification at the
+existing final archive verifier even though no current-head constraint is present.
+Ordinary version-1 providers, including Bitbucket, keep ordinary Branch operations.
+GitHub's compatibility revision must change when this capability is introduced,
+so existing replacement consent cannot silently authorize a changed implementation.
+
 `prepare_archive()` resolves the requested branch, tag or commit exactly once to
 an immutable commit and builds the archive URL from that resolved value.
 `PreparedArchive::get_resolved_ref()` exposes it to the deployment journal. For an

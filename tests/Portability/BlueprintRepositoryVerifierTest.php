@@ -53,6 +53,31 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		}
 	}
 
+	#[DataProvider( 'unsupported_selected_installs' )]
+	public function test_selected_install_capability_refuses_before_credential_or_provider_access( int $archive_api, int $commit_length ): void {
+		$provider = $this->createMock( \RAN\RepositoryProvider\RepositoryProvider::class );
+		$provider->method( 'get_metadata' )->willReturn( new \RAN\RepositoryProvider\ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://example.test/', 'Owner', archive_api_version: $archive_api ) );
+		$provider->expects( self::never() )->method( 'resolve_repository' );
+		$provider->expects( self::never() )->method( 'prepare_archive' );
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::never() )->method( 'credential_material' );
+		$secrets->expects( self::never() )->method( 'credential_profiles' );
+		$secrets->expects( self::never() )->method( 'with_temporary_credential' );
+		$registry = new ProviderRegistry( array( $provider ) );
+		$verifier = new BlueprintRepositoryVerifier( $registry, $secrets, GitHubSelectionTestFixture::bind( $registry ) );
+		$package  = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', 'main', null, null, array( 'commit' => str_repeat( 'a', $commit_length ) ) );
+		$item     = new BlueprintPlanItem( $package, TargetPackageAction::INSTALL, TargetPackageReason::NONE );
+		foreach ( array( $verifier->for_preview(), $verifier ) as $verification ) {
+			self::assertSame( TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION, $verification->verify( $item, $this->credential(), BlueprintCredentialAction::IMPORT )->reason );
+		}
+	}
+
+	/** @return iterable<string,array{int,int}> */
+	public static function unsupported_selected_installs(): iterable {
+		yield 'provider lacks historical archive' => array( 1, 40 );
+		yield 'GitHub cannot accept SHA256' => array( 2, 64 );
+	}
+
 	public function test_it_retries_only_an_access_failure_with_atemporary_credential(): void {
 		[$verifier, $provider, $secrets] = $this->verifier( 404, 'repository-id' );
 
@@ -179,9 +204,13 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		[$verifier, $provider] = $this->verifier( 502, 'repository-id' );
 		$managed               = new BlueprintPlanItem( $this->package(), TargetPackageAction::MANAGED, TargetPackageReason::ALREADY_MANAGED );
 
-		self::assertSame( $managed, $verifier->verify( $managed, $this->credential() ) );
-		self::assertSame( $managed, $verifier->verify( $managed, $this->credential(), BlueprintCredentialAction::LEAVE ) );
-		self::assertSame( $managed, $verifier->verify( $managed, $this->credential(), BlueprintCredentialAction::TARGET, 'target-pat' ) );
+		$result = $verifier->verify( $managed, $this->credential() );
+		self::assertSame( $managed->package, $result->package );
+		self::assertSame( $managed->action, $result->action );
+		self::assertSame( $managed->reason, $result->reason );
+		self::assertNotNull( $result->provider_expectation );
+		self::assertEquals( $result, $verifier->verify( $managed, $this->credential(), BlueprintCredentialAction::LEAVE ) );
+		self::assertEquals( $result, $verifier->verify( $managed, $this->credential(), BlueprintCredentialAction::TARGET, 'target-pat' ) );
 		self::assertSame( array(), $provider->credential_ids );
 	}
 
@@ -192,7 +221,10 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		$repository_private = null;
 		$result             = $verifier->verify( $managed, $this->credential(), BlueprintCredentialAction::IMPORT, null, $repository_private );
 
-		self::assertSame( $managed, $result );
+		self::assertSame( $managed->package, $result->package );
+		self::assertSame( $managed->action, $result->action );
+		self::assertSame( $managed->reason, $result->reason );
+		self::assertNotNull( $result->provider_expectation );
 		self::assertFalse( $repository_private );
 		self::assertSame( array( $provider->temporary_credential_id ), $provider->credential_ids );
 		self::assertSame( array(), $secrets->credential_profiles( 'gh' ) );
@@ -285,7 +317,8 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 			'sentinel-bitbucket-portability-token'
 		);
 
-		$result = ( new BlueprintRepositoryVerifier( $registry, $secrets ) )->verify(
+		$verifier = new BlueprintRepositoryVerifier( $registry, $secrets, GitHubSelectionTestFixture::bind( $registry ) );
+		$result   = $verifier->verify(
 			$this->install_item(),
 			$this->credential(),
 			BlueprintCredentialAction::TARGET,
@@ -296,7 +329,7 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		self::assertSame( TargetPackageReason::CREDENTIAL_REQUIRED, $result->reason );
 		self::assertSame( array(), $provider->credential_ids );
 
-		$package_only = ( new BlueprintRepositoryVerifier( $registry, $secrets ) )->verify( $this->install_item(), null, null, 'wrong-provider-profile' );
+		$package_only = $verifier->verify( $this->install_item(), null, null, 'wrong-provider-profile' );
 		self::assertSame( TargetPackageReason::CREDENTIAL_REQUIRED, $package_only->reason );
 		self::assertSame( array(), $provider->credential_ids );
 	}
@@ -386,7 +419,8 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 				return new \RAN\RepositoryProvider\RepositoryDescriptor( ProviderCode::parse( 'gh' ), 'owner/repository', 'example', 'repository-id', true, 'main', $request->credential_id );
 			}
 		);
-		$verifier = new BlueprintRepositoryVerifier( new ProviderRegistry( array( $provider ) ), $secrets );
+		$registry = new ProviderRegistry( array( $provider ) );
+		$verifier = new BlueprintRepositoryVerifier( $registry, $secrets, GitHubSelectionTestFixture::bind( $registry ) );
 		$result   = $verifier->resolve_candidate( new \RAN\AddOn\Portability\PortabilityCandidate( 'plugin', 'example/example.php', 'Example', 'gh', 'owner/repository', 'main', null, SecretsFile::CONSTANT_PROFILE ) );
 		self::assertNotNull( $result['package'] );
 		self::assertTrue( $result['private'] );
@@ -397,7 +431,8 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		$catalog = new ProviderSecretPolicyCatalog();
 		$catalog->register( ProviderCode::parse( 'gh' ), new GitHubCredentialPolicy(), null );
 		$secrets  = SecretsFileTestFactory::create( $this->path, array(), $catalog );
-		$verifier = new BlueprintRepositoryVerifier( new ProviderRegistry(), $secrets );
+		$registry = new ProviderRegistry();
+		$verifier = new BlueprintRepositoryVerifier( $registry, $secrets, GitHubSelectionTestFixture::bind( $registry ) );
 
 		$result = $verifier->verify( $this->install_item(), $this->credential(), BlueprintCredentialAction::IMPORT );
 
@@ -573,7 +608,8 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		$secrets   = SecretsFileTestFactory::create( $this->path, array(), $catalog );
 		$github    = new TemporaryCredentialProvider( $secrets->credentials_for( 'gh' ), 429, 'repository-id' );
 		$bitbucket = new TemporaryCredentialProvider( $secrets->credentials_for( 'bb' ), 0, 'repository-id', false, 'bb' );
-		$preview   = ( new BlueprintRepositoryVerifier( new ProviderRegistry( array( $github, $bitbucket ), $catalog ), $secrets ) )->for_preview();
+		$registry  = new ProviderRegistry( array( $github, $bitbucket ), $catalog );
+		$preview   = ( new BlueprintRepositoryVerifier( $registry, $secrets, GitHubSelectionTestFixture::bind( $registry ) ) )->for_preview();
 		$preview->verify( $this->install_item() );
 		self::assertSame( TargetPackageAction::INSTALL, $preview->verify( $this->install_item( 'bb' ) )->action );
 		self::assertCount( 1, $github->credential_ids );
@@ -591,7 +627,8 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 				return new \RAN\RepositoryProvider\RepositoryDescriptor( ProviderCode::parse( 'gh' ), 'owner/accessible', 'example', 'repository-id', false, 'main', null );
 			}
 		);
-		$preview = ( new BlueprintRepositoryVerifier( new ProviderRegistry( array( $provider ) ), $this->createStub( SecretsFile::class ) ) )->for_preview();
+		$registry = new ProviderRegistry( array( $provider ) );
+		$preview  = ( new BlueprintRepositoryVerifier( $registry, $this->createStub( SecretsFile::class ), GitHubSelectionTestFixture::bind( $registry ) ) )->for_preview();
 		self::assertSame( TargetPackageReason::CREDENTIAL_REQUIRED, $preview->verify( $this->install_item() )->reason );
 		$item = new BlueprintPlanItem( new BlueprintPackage( 'plugin', 'other/other.php', 'Other', 'gh', 'repository-id', 'owner/accessible', 'main', null ), TargetPackageAction::INSTALL, TargetPackageReason::NONE );
 		self::assertSame( TargetPackageAction::INSTALL, $preview->verify( $item )->action );
@@ -600,7 +637,8 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 	public function test_preview_stops_after_a_transport_failure_consumes_the_elapsed_budget(): void {
 		$provider = $this->createMock( \RAN\RepositoryProvider\RepositoryProvider::class );
 		$provider->method( 'get_metadata' )->willReturn( new \RAN\RepositoryProvider\ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://example.test/', 'Owner' ) );
-		$preview = ( new BlueprintRepositoryVerifier( new ProviderRegistry( array( $provider ) ), $this->createStub( SecretsFile::class ) ) )->for_preview();
+		$registry = new ProviderRegistry( array( $provider ) );
+		$preview  = ( new BlueprintRepositoryVerifier( $registry, $this->createStub( SecretsFile::class ), GitHubSelectionTestFixture::bind( $registry ) ) )->for_preview();
 		$provider->expects( self::once() )->method( 'resolve_repository' )->willReturnCallback(
 			static function () use ( $preview ): never {
 				// Simulate a slow transport boundary without sleeping or claiming latency.
@@ -636,7 +674,7 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		);
 		$registry = new ProviderRegistry( array( $provider ), $catalog );
 
-		return array( new BlueprintRepositoryVerifier( $registry, $secrets ), $provider, $secrets );
+		return array( new BlueprintRepositoryVerifier( $registry, $secrets, GitHubSelectionTestFixture::bind( $registry ) ), $provider, $secrets );
 	}
 
 	private function package( string $provider = 'gh' ): BlueprintPackage {

@@ -36,9 +36,7 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 		$GLOBALS['ran_booster_get_test_actions'] = array();
 		$GLOBALS['ran_booster_test_capability_checks'] = array();
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The integration fixture must provide WordPress's global database prefix.
-		$GLOBALS['wpdb'] = new class() {
-			public string $prefix = 'wp_';
-		};
+		$GLOBALS['wpdb'] = new \RAN\Tests\RepositoryProvider\HostSelectionDatabase();
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
@@ -267,12 +265,12 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 		);
 
 		( new BoosterServiceProvider(
-			static function ( ProviderSecretPolicyCatalog $policies ) use ( &$secrets ): TrackingSecretsFile {
-				$secrets = new TrackingSecretsFile( $policies );
+			static function ( ProviderSecretPolicyCatalog $policies, callable $guard ) use ( &$secrets ): TrackingSecretsFile {
+				$secrets = new TrackingSecretsFile( $policies, $guard );
 
 				return $secrets;
 			}
-		) )->register( $container, $booster, new \stdClass(), 'ran-booster.php' );
+		) )->register( $container, $booster, new \stdClass(), $GLOBALS['wpdb']->basename );
 		$container->bind( 'RAN\\Storage\\Database', $database );
 		$container->bind( 'RAN\\Storage\\PluginRepository', $plugins );
 		self::assertInstanceOf( CredentialUsageReader::class, $container->make( CredentialUsageReader::class ) );
@@ -310,8 +308,8 @@ final class TrackingSecretsFile extends SecretsFile {
 	public int $purges                     = 0;
 	public ?\Throwable $validation_failure = null;
 
-	public function __construct( ProviderSecretPolicyCatalog $policies ) {
-		parent::__construct( '/unused/troubleshooting-get-secrets.php', array(), $policies );
+	public function __construct( ProviderSecretPolicyCatalog $policies, callable $guard ) {
+		parent::__construct( '/unused/troubleshooting-get-secrets.php', array(), $policies, github_credential_access: $guard );
 	}
 
 	public function verify_and_secure(): bool {

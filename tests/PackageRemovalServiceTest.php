@@ -957,7 +957,8 @@ final class RemovalGateway implements PackageRemovalGateway {
 	public ?\Closure $physical_presence = null;
 	public bool $capture_fails          = false;
 	/** @return \Closure(): bool */
-	public function deletion_postcondition( string $type, string $identifier ): \Closure {
+	public function deletion_postcondition( string $type, string $identifier, bool $allow_absent = false ): \Closure {
+		unset( $allow_absent );
 		unset( $identifier );
 		if ( $this->capture_fails ) {
 			throw new \RuntimeException( 'Physical capture unavailable.' );

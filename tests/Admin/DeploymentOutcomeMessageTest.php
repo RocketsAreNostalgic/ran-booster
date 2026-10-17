@@ -37,6 +37,7 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 			'provider_repository_missing'       => 'Check that it exists',
 			'provider_reference_unavailable'    => 'Review the configured branch or reference',
 			'provider_rate_limited'             => 'Wait for its quota to reset',
+			'provider_selection_changed'        => 'submit a new deployment',
 			'provider_unavailable'              => 'Try again later',
 			'archive_compressed_too_large'      => 'Reduce the repository size',
 			'archive_expanded_too_large'        => 'Reduce the repository contents',

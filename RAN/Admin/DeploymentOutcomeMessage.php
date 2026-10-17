@@ -99,6 +99,7 @@ final class DeploymentOutcomeMessage {
 			'provider_repository_missing'    => __( 'The repository provider could not find the repository or revision. Check that it exists and that the selected credential can access it.', 'ran-booster' ),
 			'provider_reference_unavailable' => __( 'The requested repository revision is no longer available. Review the configured branch or reference.', 'ran-booster' ),
 			'provider_rate_limited'          => __( 'The repository provider rate limit was reached. Wait for its quota to reset or use an authenticated credential.', 'ran-booster' ),
+			'provider_selection_changed'     => __( 'The GitHub implementation changed after this deployment was requested. Review the current provider and submit a new deployment.', 'ran-booster' ),
 			'provider_unavailable'           => __( 'The repository provider could not be reached or returned an invalid response. Try again later.', 'ran-booster' ),
 			'archive_compressed_too_large'   => __( 'The repository ZIP exceeds this site\'s configured archive download limit. Reduce the repository size or raise RAN_BOOSTER_MAX_ARCHIVE_BYTES in wp-config.php.', 'ran-booster' ),
 			'archive_expanded_too_large'     => __( 'The repository ZIP expands beyond this site\'s configured archive safety limit. Reduce the repository contents or raise RAN_BOOSTER_MAX_ARCHIVE_BYTES in wp-config.php.', 'ran-booster' ),

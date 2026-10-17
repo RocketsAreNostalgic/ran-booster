@@ -7,6 +7,7 @@ namespace RAN\Tests\Admin\ReleaseManagement\Support;
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult;
 use RuntimeException;
+use RAN\Deployment\DeploymentPolicy;
 
 final class ProspectiveReleaseFacadeDouble implements ProspectiveReleaseFacade {
 	/** @var list<list<mixed>> */
@@ -20,7 +21,8 @@ final class ProspectiveReleaseFacadeDouble implements ProspectiveReleaseFacade {
 
 	public string $nonce_failure = '';
 
-	public function nonce_action( string $operation, string $type ): string {
+	/** @param array<string,mixed>|null $provider_expectation */
+	public function nonce_action( string $operation, string $type, ?array $provider_expectation, ?string $expected_identifier = null, DeploymentPolicy $initial_policy = DeploymentPolicy::MANUAL ): string {
 		if ( 'throw' === $this->nonce_failure ) {
 			throw new RuntimeException( 'nonce-failure' );
 		}
@@ -28,6 +30,7 @@ final class ProspectiveReleaseFacadeDouble implements ProspectiveReleaseFacade {
 			return '';
 		}
 
+		unset( $provider_expectation, $expected_identifier, $initial_policy );
 		return 'prospective-release-' . $operation . '-' . $type;
 	}
 
@@ -49,8 +52,10 @@ final class ProspectiveReleaseFacadeDouble implements ProspectiveReleaseFacade {
 		return $this->result( 'inspect' );
 	}
 
-	public function install( string $type, array $repository_request, string $release_id, string $tag, string $expected_fingerprint, string $channel, string $nonce ): ProspectiveReleaseResult {
-		$this->calls[] = array( 'install', $type, $repository_request, $release_id, $tag, $expected_fingerprint, $channel, $nonce );
+	/** @param array<string,mixed>|null $provider_expectation */
+	public function install( string $type, array $repository_request, string $release_id, string $tag, string $expected_fingerprint, string $channel, string $nonce, ?array $provider_expectation, ?string $expected_identifier = null, DeploymentPolicy $initial_policy = DeploymentPolicy::MANUAL ): ProspectiveReleaseResult {
+		unset( $expected_identifier, $initial_policy );
+		$this->calls[] = array( 'install', $type, $repository_request, $release_id, $tag, $expected_fingerprint, $channel, $nonce, $provider_expectation );
 
 		return $this->result( 'install' );
 	}

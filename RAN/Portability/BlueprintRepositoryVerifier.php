@@ -6,6 +6,7 @@ namespace RAN\Portability;
 
 use RAN\AddOn\Portability\PortabilityCandidate;
 use RAN\RepositoryProvider\InvalidCredentialInput;
+use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryLookupRequest;
@@ -26,7 +27,7 @@ final class BlueprintRepositoryVerifier {
 
 	/** A new, non-persistent observation lifetime; ordinary verification stays fresh. */
 	public function for_preview(): self {
-		$preview                  = new self( $this->providers, $this->secrets );
+		$preview                  = new self( $this->providers, $this->secrets, $this->selection );
 		$preview->observations    = array();
 		$preview->preview_started = hrtime( true ) / 1e9;
 		return $preview;
@@ -34,8 +35,24 @@ final class BlueprintRepositoryVerifier {
 
 	public function __construct(
 		private readonly ProviderRegistry $providers,
-		private readonly SecretsFile $secrets
+		private readonly SecretsFile $secrets,
+		private readonly GitHubProviderSelection $selection
 	) {
+	}
+
+	/** @return array{provider_code:string,selection_generation:int,implementation_fingerprint:string}|null */
+	public function provider_expectation( string $provider ): ?array {
+		return 'gh' === $provider ? $this->selection->expectation() : null;
+	}
+
+	public function provider_review_refusal( string $provider, mixed $expectation ): ?string {
+		if ( 'gh' === $provider ) {
+			return $this->selection->review_refusal( $expectation );
+		}
+		if ( null !== $expectation ) {
+			throw new \InvalidArgumentException( 'This provider does not accept selection context.' );
+		}
+		return null;
 	}
 
 	/**
@@ -45,6 +62,14 @@ final class BlueprintRepositoryVerifier {
 	 * @return array{package:BlueprintPackage|null,private:bool|null,reason:TargetPackageReason}
 	 */
 	public function resolve_candidate( PortabilityCandidate $candidate ): array {
+		$expectation = $this->provider_expectation( $candidate->provider_code );
+		if ( 'gh' === $candidate->provider_code && null === $expectation ) {
+			return array(
+				'package' => null,
+				'private' => null,
+				'reason'  => TargetPackageReason::PROVIDER_UNAVAILABLE,
+			);
+		}
 		if ( null !== $candidate->credential_id
 			&& ! $this->has_target_credential( $candidate->provider_code, $candidate->credential_id ) ) {
 			return array(
@@ -55,10 +80,26 @@ final class BlueprintRepositoryVerifier {
 		}
 
 		try {
+			$refusal = $this->provider_review_refusal( $candidate->provider_code, $expectation );
+			if ( null !== $refusal ) {
+				return array(
+					'package' => null,
+					'private' => null,
+					'reason'  => TargetPackageReason::from( $refusal ),
+				);
+			}
 			$provider   = ProviderCode::parse( $candidate->provider_code );
 			$descriptor = $this->providers->get( $provider )->resolve_repository(
 				new RepositoryLookupRequest( $candidate->repository, $candidate->credential_id )
 			);
+			$refusal    = $this->provider_review_refusal( $candidate->provider_code, $expectation );
+			if ( null !== $refusal ) {
+				return array(
+					'package' => null,
+					'private' => null,
+					'reason'  => TargetPackageReason::from( $refusal ),
+				);
+			}
 			if ( ! $descriptor->provider->equals( $provider )
 				|| $descriptor->credential_id !== $candidate->credential_id
 				|| ( $descriptor->private && null === $candidate->credential_id ) ) {
@@ -102,11 +143,28 @@ final class BlueprintRepositoryVerifier {
 		?bool &$repository_private = null
 	): BlueprintPlanItem {
 		$repository_private = null;
-		$managed_import     = TargetPackageAction::MANAGED === $item->action
+		$expectation        = $item->provider_expectation ?? $this->provider_expectation( $item->package->provider );
+		$refusal            = 'gh' === $item->package->provider && null === $expectation
+			? 'provider_unavailable' : $this->provider_review_refusal( $item->package->provider, $expectation );
+		if ( null !== $refusal ) {
+			return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::from( $refusal ) );
+		}
+		$item           = new BlueprintPlanItem( $item->package, $item->action, $item->reason, $expectation );
+		$managed_import = TargetPackageAction::MANAGED === $item->action
 			&& null !== $credential
 			&& BlueprintCredentialAction::IMPORT === $credential_action;
 		if ( ! $managed_import && ! in_array( $item->action, array( TargetPackageAction::INSTALL, TargetPackageAction::ADOPT ), true ) ) {
 			return $item;
+		}
+
+		if ( null !== $item->package->selection
+			&& ( TargetPackageAction::INSTALL !== $item->action
+				|| null !== $item->package->release_configuration
+				|| ! defined( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' )
+				|| 3 !== constant( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' )
+				|| 2 !== ( $this->providers->metadata()[ $item->package->provider ]->archive_api_version ?? 1 )
+				|| ( 'gh' === $item->package->provider && 40 !== strlen( (string) $item->package->selection['commit'] ) ) ) ) {
+			return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION );
 		}
 
 		if ( null !== $credential ) {
@@ -190,6 +248,10 @@ final class BlueprintRepositoryVerifier {
 
 	/** @param-out bool $repository_private */
 	private function verified_item( BlueprintPlanItem $item, ?string $credential_id, ?bool &$repository_private ): BlueprintPlanItem {
+		$refusal = $this->provider_review_refusal( $item->package->provider, $item->provider_expectation );
+		if ( null !== $refusal ) {
+			return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::from( $refusal ) );
+		}
 		$package  = $item->package;
 		$provider = ProviderCode::parse( $package->provider );
 		$adapter  = $this->providers->get( $provider );
@@ -233,6 +295,10 @@ final class BlueprintRepositoryVerifier {
 				'id'      => $descriptor->provider_repository_id,
 				'private' => $descriptor->private,
 			);
+		}
+		$refusal = $this->provider_review_refusal( $package->provider, $item->provider_expectation );
+		if ( null !== $refusal ) {
+			return new BlueprintPlanItem( $package, TargetPackageAction::BLOCKED, TargetPackageReason::from( $refusal ) );
 		}
 		$repository_private = $observation['private'];
 		$matches            = hash_equals( $package->provider_repository_id, $observation['id'] );

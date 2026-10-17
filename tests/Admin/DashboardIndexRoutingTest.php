@@ -80,6 +80,7 @@ require_once __DIR__ . '/DashboardRoutingWordPressFunctions.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Dashboard.php';
 
 final class DashboardIndexRoutingTest extends TestCase {
+	use \RAN\Tests\Support\QueuedSelectionFixture;
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
@@ -599,6 +600,104 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$predicate = new ReflectionMethod( Dashboard::class, 'should_show_development_safety_notice' );
 
 		self::assertSame( $expected, $predicate->invoke( $this->dashboard( $this->throwing_secrets() ), $view, $development_environment_detected ) );
+	}
+
+	public function test_paused_github_route_renders_passive_status_without_provider_and_preserves_bitbucket(): void {
+		$bundled   = new \RAN\RepositoryProvider\GitHubReplacementDeclaration(
+			array(
+				'plugin_basename'        => 'booster.php',
+				'implementation_id'      => 'bundled',
+				'compatibility_revision' => '1',
+				'provider_api_version'   => 15,
+				'api_credential_formats' => array(),
+				'webhook_signing_format' => null,
+				'facets'                 => array(),
+			)
+		);
+		$selection = new \RAN\RepositoryProvider\GitHubProviderSelection( new \RAN\Storage\GitHubSelectionStore( new \RAN\Tests\RepositoryProvider\SelectionContextDatabase(), 'wp_options' ), '/unused/plugins', $bundled );
+		$providers = new ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'bb' ) ) );
+		$directory = sys_get_temp_dir() . '/adoption-route-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable private sidecar fixture.
+		mkdir( $directory, 0700 );
+		$dashboard   = $this->dashboard( new SecretsFile( $directory . '/secrets', array(), ShippedSecretPolicyCatalog::create() ), providers: $providers, github_selection: $selection );
+		$_GET['tab'] = 'gh';
+		$data        = $dashboard->get_index()['data'];
+		self::assertSame( 'gh', $data['selected_provider'] );
+		self::assertSame( 'provider.php', $data['tab_view'] );
+		self::assertFalse( $data['github_selection']['available'] );
+		self::assertSame( array(), $data['credential_profiles'] );
+		self::assertArrayNotHasKey( 'gh', $providers->all() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard model to its production view.
+		extract( $data );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'GitHub operations are paused.', $html );
+		self::assertStringContainsString( 'Selection storage is unavailable.', $html );
+		self::assertStringNotContainsString( 'name="ran_booster[action]" value="adopt-github"', $html );
+		$_GET['tab'] = 'bb';
+		self::assertSame( 'bb', $dashboard->get_index()['data']['selected_provider'] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable fixture lock.
+		unlink( $directory . '/secrets.lock' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Disposable private sidecar fixture.
+		rmdir( $directory );
+	}
+
+	/** @return iterable<string,array{bool}> */
+	public static function native_recovery_permissions(): iterable {
+		yield 'authorized' => array( true );
+		yield 'denied' => array( false );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	#[DataProvider( 'native_recovery_permissions' )]
+	public function test_provider_view_renders_bounded_native_recovery_confirmation( bool $authorized ): void {
+		$_GET['tab']                              = 'bb';
+		$GLOBALS['ran_booster_test_capabilities'] = array( 'activate_plugins' => $authorized );
+		$data                                     = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
+		$data['github_selection']                 = array(
+			'available'      => true,
+			'status'         => array(
+				'state'      => 'recovery_required',
+				'candidates' => array(),
+				'current'    => null,
+			),
+			'error'          => '',
+			'package_counts' => null,
+			'review'         => null,
+			'recovery'       => array(
+				'digest'     => str_repeat( 'b', 64 ),
+				'type'       => 'plugin',
+				'identifier' => '<target>/main.php',
+				'managed'    => false,
+			),
+		);
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard model to its production view.
+		extract( $data );
+		ob_start();
+		try {
+			require dirname( __DIR__, 2 ) . '/views/provider.php';
+			$html = (string) ob_get_contents();
+		} finally {
+			ob_end_clean();
+			unset( $GLOBALS['ran_booster_test_capabilities'] );
+		}
+		self::assertStringContainsString( 'Recover an interrupted native installation', $html );
+		self::assertStringContainsString( '&lt;target&gt;/main.php', $html );
+		self::assertStringNotContainsString( '<target>/main.php', $html );
+		if ( ! $authorized ) {
+			self::assertStringNotContainsString( 'value="recover-github-native"', $html );
+			return;
+		}
+		self::assertStringContainsString( 'ran-booster-recover-github-' . str_repeat( 'b', 64 ), $html );
+		self::assertStringContainsString( 'name="ran_booster[action]" value="recover-github-native"', $html );
+		self::assertStringContainsString( 'name="ran_booster[confirmed_stopped]" value="1" required', $html );
+		self::assertStringContainsString( 'name="ran_booster[confirmed_removal]" value="1" required', $html );
+		self::assertStringContainsString( 'A missing main file alone is insufficient.', $html );
+		self::assertStringContainsString( 'does not delete files or repair an installation', $html );
+		self::assertStringContainsString( 'Cleanup of temporary files from the interrupted process remains unverified.', $html );
+		self::assertStringNotContainsString( 'name="ran_booster[action]" value="adopt-github"', $html );
 	}
 
 	public function test_provider_tab_builds_only_the_selected_provider_settings(): void {
@@ -2807,7 +2906,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'wp_ran_booster_deployment_attempts',
 			static fn (): \DateTimeImmutable => new \DateTimeImmutable( '2026-07-27 12:00:00 UTC' ),
 			static fn ( int $length ): string => str_repeat( "\x0b", $length ),
-			new ReadyDashboardDatabase()
+			new ReadyDashboardDatabase(),
+			selection: $this->queued_selection( $attempt_database )
 		);
 		$plugins                 = $this->createMock( PluginRepository::class );
 		$plugins->expects( self::never() )->method( 'from_slug' );
@@ -2906,7 +3006,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		?PublicRepositoryLookupProfileStore $public_lookup_profiles = null,
 		?RepositoryBranchCheckEvidenceStore $branch_check_evidence = null,
 		?WebhookAssistanceReadinessEvaluator $webhook_assistance = null,
-		?WordPressUpdaterLock $branch_check_lock = null
+		?WordPressUpdaterLock $branch_check_lock = null,
+		?\RAN\RepositoryProvider\GitHubProviderSelection $github_selection = null
 	): RoutingDashboard {
 		$providers         = $providers ?? $this->providers( $provider_credentials );
 		$branch_check_lock = $branch_check_lock ?? new DashboardBranchCheckUpdaterLock();
@@ -2945,9 +3046,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$plugin_repository,
 			new Booster(),
 			$theme_repository,
-			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), $public_lookup_profiles ?? new InMemoryPublicRepositoryLookupProfileStore(), new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore(), null, $plugin_repository, $theme_repository, $webhook_assistance, $branch_check_evidence ?? new DashboardBranchCheckEvidenceStore(), $branch_check_lock ),
+			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), $public_lookup_profiles ?? new InMemoryPublicRepositoryLookupProfileStore(), new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore(), null, $plugin_repository, $theme_repository, $webhook_assistance, $branch_check_evidence ?? new DashboardBranchCheckEvidenceStore(), $branch_check_lock, $github_selection ),
 			$troubleshooting ?? new TroubleshootingService( new LocalTroubleshootingService( $secrets ), $providers ),
-			new AdminTabRegistry( $providers ),
+			new AdminTabRegistry( $providers, $github_selection ),
 			new ProviderDocumentationPresenter( $providers ),
 			$package_operations,
 			$deployment_attempts,

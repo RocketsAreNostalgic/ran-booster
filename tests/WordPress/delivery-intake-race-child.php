@@ -45,7 +45,7 @@ $ran_booster_result     = array(
 );
 try {
 	global $wpdb;
-	$ran_booster_database = new class( $wpdb, $ran_booster_ready_marker, $ran_booster_release_marker ) implements \RAN\Storage\DeploymentWriteConnection {
+	$ran_booster_database = new class( $wpdb, $ran_booster_ready_marker, $ran_booster_release_marker, $ran_booster_identifier ) implements \RAN\Storage\DeploymentWriteConnection {
 		public string $last_error = '';
 		public string $options;
 		private bool $barrier_reached = false;
@@ -54,7 +54,8 @@ try {
 		public function __construct(
 			private object $database,
 			private string $ready_marker,
-			private string $release_marker
+			private string $release_marker,
+			private string $identifier
 		) {
 			$this->options = $database->options;
 		}
@@ -95,7 +96,7 @@ try {
 		/** @return array<array-key, mixed>|null */
 		public function get_results( string $query ): ?array {
 			// Both workers pause before acquiring the management-row lock, then genuinely contend on that lock.
-			if ( ! $this->barrier_reached && str_contains( $query, 'SELECT package, adoption_token' ) && str_contains( $query, 'FOR UPDATE' ) ) {
+			if ( ! $this->barrier_reached && $query === $this->prepare( 'SELECT * FROM %i WHERE package_type = %d AND BINARY package = BINARY %s LIMIT 2 FOR UPDATE', ran_booster_table_name(), 1, $this->identifier ) ) {
 				$this->barrier_reached = true;
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 				$ready = fopen( $this->ready_marker, 'x' );
@@ -136,6 +137,9 @@ try {
 			),
 		)
 	);
+	if ( ! is_file( $ran_booster_ready_marker ) ) {
+		throw new RuntimeException( 'The delivery-intake admission completed without reaching the management-row lock barrier.' );
+	}
 	if ( 1 !== count( $ran_booster_attempts ) ) {
 		throw new RuntimeException( 'The concurrent admission did not return one target.' );
 	}

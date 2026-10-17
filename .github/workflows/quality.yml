@@ -404,6 +404,8 @@ jobs:
       if: ${{ needs.runtime-archive.outputs.lane == 'full' }}
       runs-on: ubuntu-24.04
       timeout-minutes: 10
+      env:
+          RAN_PRIVATE_MIGRATOR: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/integration/171-github-blueprint' && matrix.suite == 'critical' }}
       strategy:
           fail-fast: false
           matrix: ${{ fromJSON(needs.runtime-archive.outputs.wordpress-matrix) }}
@@ -421,6 +423,55 @@ jobs:
                   --health-timeout=5s
                   --health-retries=10
       steps:
+          # No repository code executes while the private installation token is live.
+          - name: Create read-only upstream fixture token
+            if: ${{ env.RAN_PRIVATE_MIGRATOR == 'true' }}
+            id: upstream-fixtures
+            uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+            with:
+                client-id: ${{ vars.UPSTREAM_FIXTURES_CLIENT_ID }}
+                private-key: ${{ secrets.UPSTREAM_FIXTURES_PRIVATE_KEY }}
+                owner: RocketsAreNostalgic
+                repositories: ran-booster-upstream-fixtures
+                permission-contents: read
+
+          - name: Retrieve and verify pinned WP Pusher fixture
+            if: ${{ env.RAN_PRIVATE_MIGRATOR == 'true' }}
+            shell: bash
+            env:
+                FIXTURE_TOKEN: ${{ steps.upstream-fixtures.outputs.token }}
+            run: |
+                set -euo pipefail
+                umask 077
+                fixture_dir="$RUNNER_TEMP/upstream-fixtures"
+                mkdir -m 0700 "$fixture_dir"
+                archive="$fixture_dir/wppusher-3.0.18.zip"
+                curl --fail --silent --show-error --connect-timeout 10 --max-time 60 \
+                    -H "Authorization: Bearer $FIXTURE_TOKEN" \
+                    -H 'Accept: application/vnd.github.raw+json' \
+                    'https://api.github.com/repos/RocketsAreNostalgic/ran-booster-upstream-fixtures/contents/fixtures/wppusher/3.0.18/245b029e3ad0758ac817be0a8af715efd03c143fc66aadb1527abdec0daa681c/wppusher-3.0.18.zip?ref=6abb78a287e8aa50a0c534067815447db706c090' \
+                    --output "$archive"
+                test "$(wc -c < "$archive" | tr -d '[:space:]')" = 100006
+                printf '%s  %s\n' '245b029e3ad0758ac817be0a8af715efd03c143fc66aadb1527abdec0daa681c' "$archive" | sha256sum --check --strict
+                unzip -tqq "$archive"
+                version="$(unzip -p "$archive" wppusher/wppusher.php | sed -nE 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*([^[:space:]]+).*/\1/p')"
+                test "$version" = 3.0.18
+                printf 'RAN_MIGRATOR_WP_PUSHER_ARCHIVE=%s\n' "$archive" >> "$GITHUB_ENV"
+                echo 'Private fixture access verified: commit6abb78a, 100006 bytes, SHA256 matched, ZIP valid, WP Pusher3.0.18.'
+
+          - name: Revoke private fixture token before source execution
+            if: ${{ always() && steps.upstream-fixtures.outputs.token != '' }}
+            shell: bash
+            env:
+                FIXTURE_TOKEN: ${{ steps.upstream-fixtures.outputs.token }}
+            run: |
+                set -euo pipefail
+                curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
+                    --request DELETE -H "Authorization: Bearer $FIXTURE_TOKEN" \
+                    -H 'Accept: application/vnd.github+json' \
+                    https://api.github.com/installation/token
+                echo 'Private fixture token revoked before repository checkout.'
+
           - name: Check out repository
             uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
             with:
@@ -441,6 +492,22 @@ jobs:
                 coverage: none
                 extensions: mysqli, zip
                 tools: composer:v2, wp-cli:2.12.0
+
+          - name: Build the exact reviewed Migrator source archive
+            if: ${{ env.RAN_PRIVATE_MIGRATOR == 'true' }}
+            shell: bash
+            run: |
+                set -euo pipefail
+                migrator_source="$RUNNER_TEMP/migrator-source"
+                git clone --no-checkout https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator.git "$migrator_source"
+                git -C "$migrator_source" checkout --detach 9c99fb0df2e7859b0c376d188fff50bde7f25722
+                test "$(git -C "$migrator_source" rev-parse HEAD)" = 9c99fb0df2e7859b0c376d188fff50bde7f25722
+                ( cd "$migrator_source" && bash "$migrator_source/scripts/build-release.sh" 1823347da7f651341567278ccfe1bc644d728d43 )
+                archive="$migrator_source/dist/ran-booster-wp-pusher-migrator-0.1.0-beta.10.zip"
+                test "$(wc -c < "$archive" | tr -d '[:space:]')" = 22820
+                printf '%s  %s\n' 'f94c5a348ea7fff4b30c934e86b014aa83f26c2596b1aa7e4f3b8eb912b761f0' "$archive" | sha256sum --check --strict
+                unzip -tqq "$archive"
+                printf 'RAN_MIGRATOR_SOURCE_PATH=%s\nRAN_MIGRATOR_ARCHIVE=%s\n' "$migrator_source" "$archive" >> "$GITHUB_ENV"
 
           - name: Download the verified runtime archive
             uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -638,6 +705,22 @@ jobs:
                 "$runtime_wordpress_floor" "$booster_requires_wordpress" \
                 || { echo 'Neutral updater WordPress floor exceeds Booster support.' >&2; exit 1; }
               grep -Fq 'RAN\WPReleaseUpdater\V1\WordPress\NativePackageUpdater' "$runtime_file"
+          - name: Mark the verified disposable database site
+            shell: bash
+            run: |
+                set -euo pipefail
+                wordpress="$GITHUB_WORKSPACE/build/wordpress"
+                test ! -L "$wordpress"
+                test "$(realpath "$wordpress")" = "$wordpress"
+                wp eval '
+                  $site = getenv( "GITHUB_WORKSPACE" ) . "/build/wordpress";
+                  if ( realpath( ABSPATH ) !== $site || is_link( WP_CONTENT_DIR ) || is_link( WP_PLUGIN_DIR ) || realpath( WP_CONTENT_DIR ) !== $site . "/wp-content" || realpath( WP_PLUGIN_DIR ) !== $site . "/wp-content/plugins" || get_option( "siteurl" ) !== "http://localhost" ) {
+                    throw new RuntimeException( "The disposable site boundaries do not match." );
+                  }
+                ' --path="$wordpress"
+                test ! -L "$wordpress/.ran-booster-disposable-test-site"
+                printf '%s\n' 'RAN Booster disposable test site' > "$wordpress/.ran-booster-disposable-test-site"
+
           - name: Prove database activation and storage
             env:
                 RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
@@ -690,6 +773,61 @@ jobs:
                 RAN_BOOSTER_RECOVERY_TEST_URL: 'http://localhost'
                 RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
             run: bash tests/WordPress/adoption-recovery-smoke.sh
+
+          - name: Provision private storage for connected proofs
+            if: ${{ matrix.suite == 'critical' }}
+            shell: bash
+            run: |
+                set -euo pipefail
+                # Normal bootstrap includes wp-config.php for the constrained setup writer.
+                php -r '
+                  require getenv( "GITHUB_WORKSPACE" ) . "/build/wordpress/wp-load.php";
+                  $result = ( new RAN\Secrets\SecretsStorageProvisioner() )->provision();
+                  if ( ! $result->requires_next_request_verification() ) {
+                    throw new RuntimeException( "Private storage provisioning failed: " . $result->code() );
+                  }
+                '
+                # A fresh request reads the persisted wp-config setting, also used by HTTP.
+                # Empty storage is initialized by the first normal credential write.
+                wp eval '
+                  $secrets = new RAN\Secrets\SecretsFile();
+                  $result = ( new RAN\Secrets\SecretsStorageProvisioner( secrets: $secrets ) )->status();
+                  if ( RAN\Secrets\SecretsStorageProvisioningResult::PATH_CONFIGURED !== $result->status() ) {
+                    throw new RuntimeException( "Private storage verification failed: " . $result->code() );
+                  }
+                  $secrets->assert_managed_storage_ready();
+                  $secrets->with_github_adoption_inventory( static function ( array $inventory ): void {
+                    if ( array() !== $inventory ) {
+                      throw new RuntimeException( "Expected an empty disposable credential inventory." );
+                    }
+                  } );
+                ' --path=build/wordpress
+
+          - name: Prove installed GitHub replacement and historical selection
+            if: ${{ matrix.suite == 'critical' }}
+            env:
+                RAN_BOOSTER_GITHUB_HISTORICAL_DISPOSABLE: '1'
+                RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
+            run: |
+                printf '%s\n' 'RAN Booster disposable test site' > build/wordpress/.ran-booster-disposable-test-site
+                wp user create fixture-admin fixture-admin@example.invalid --role=administrator --porcelain --path="$RAN_BOOSTER_WORDPRESS_PATH"
+                export PHP_BIN="$(command -v php)"
+                export WP_CLI_BIN="$(command -v wp)"
+                bash tests/WordPress/github-historical-installed-smoke.sh
+
+          - name: Prove immutable Bitbucket remains operational during GitHub switching
+            if: ${{ matrix.suite == 'critical' }}
+            env:
+                RAN_BOOSTER_BITBUCKET_TEST_DISPOSABLE: '1'
+                RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
+                RAN_BOOSTER_BITBUCKET_ARCHIVE: ${{ github.workspace }}/build/ran-booster-bitbucket-0.1.0-beta.17.zip
+            run: |
+                curl --fail --location --silent --show-error \
+                    'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket/releases/download/v0.1.0-beta.17/ran-booster-bitbucket-0.1.0-beta.17.zip' \
+                    --output "$RAN_BOOSTER_BITBUCKET_ARCHIVE"
+                export PHP_BIN="$(command -v php)"
+                export WP_CLI_BIN="$(command -v wp)"
+                bash tests/WordPress/bitbucket-selection-installed-smoke.sh
 
           - name: Prove native updater-lock election
             if: ${{ matrix.suite == 'critical' }}
@@ -799,6 +937,56 @@ jobs:
                 if (( errors > 0 )); then
                     exit 1
                 fi
+
+          - name: Prove installed HTTP and public API selection refusal
+            if: ${{ matrix.suite == 'critical' }}
+            env:
+                RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
+            run: |
+                if [[ "$RAN_PRIVATE_MIGRATOR" == true ]]; then
+                    wp config set WP_HTTP_BLOCK_EXTERNAL true --raw --path="$RAN_BOOSTER_WORDPRESS_PATH"
+                    wp config set WP_ACCESSIBLE_HOSTS localhost --path="$RAN_BOOSTER_WORDPRESS_PATH"
+                fi
+                export PHP_BIN="$(command -v php)"
+                export WP_CLI_BIN="$(command -v wp)"
+                # The disposable runner must allow PHP to serve the fixed localhost:80 fixture URL.
+                sudo setcap 'cap_net_bind_service=+ep' "$(readlink -f "$PHP_BIN")"
+                "$PHP_BIN" -S localhost:80 -t "$RAN_BOOSTER_WORDPRESS_PATH" > build/portability-http.log 2>&1 &
+                server_pid=$!
+                trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' EXIT
+                ready=0
+                for attempt in {1..20}; do
+                    if ! kill -0 "$server_pid" 2>/dev/null; then
+                        server_status=0
+                        wait "$server_pid" || server_status=$?
+                        printf 'HTTP fixture server exited before readiness (status %s).\n' "$server_status" >&2
+                        cat build/portability-http.log >&2
+                        exit 1
+                    fi
+                    if curl --fail --silent --show-error --connect-timeout 1 --max-time 2 http://localhost/wp-login.php > /dev/null; then
+                        ready=1
+                        break
+                    fi
+                    sleep 0.5
+                done
+                if [[ "$ready" != 1 ]]; then
+                    printf 'HTTP fixture server did not become ready.\n' >&2
+                    cat build/portability-http.log >&2
+                    exit 1
+                fi
+                bash tests/WordPress/portability-selection-installed-smoke.sh
+                if [[ "$RAN_PRIVATE_MIGRATOR" == true ]]; then
+                    export RAN_MIGRATOR_WP_CLI_BIN="$(command -v wp)"
+                    test -x "$RAN_MIGRATOR_WP_CLI_BIN"
+                    bash tests/WordPress/portability-selection-installed-smoke.sh migrator
+                fi
+
+          - name: Remove private upstream fixture bytes
+            if: ${{ always() && env.RAN_PRIVATE_MIGRATOR == 'true' }}
+            shell: bash
+            run: |
+                set -euo pipefail
+                rm -f -- "$RUNNER_TEMP/upstream-fixtures/wppusher-3.0.18.zip"
 
           - name: Upload Plugin Check results
             if: ${{ always() && matrix.plugin_check }}

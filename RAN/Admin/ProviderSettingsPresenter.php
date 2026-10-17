@@ -8,6 +8,7 @@ use RAN\AddOn\WebhookAssistance\WebhookAssistanceReadinessEvaluator;
 use RAN\Package;
 use RAN\PackageSource;
 use RAN\RepositoryProvider\ArchiveRequest;
+use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\RepositoryProvider\Admin\CredentialFieldMetadata;
 use RAN\RepositoryProvider\Admin\CredentialKindMetadata;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
@@ -68,7 +69,9 @@ final readonly class ProviderSettingsPresenter {
 		private ?ThemeRepository $themes = null,
 		private ?WebhookAssistanceReadinessEvaluator $webhook_assistance = null,
 		?RepositoryBranchCheckEvidenceStore $branch_check_evidence = null,
-		?WordPressUpdaterLock $branch_check_lock = null
+		?WordPressUpdaterLock $branch_check_lock = null,
+		private ?GitHubProviderSelection $github_selection = null,
+		private ?\RAN\PackageRemoval\PackageRemovalService $package_removal = null
 	) {
 
 		$this->public_lookup_profiles = $public_lookup_profiles ?? new PublicRepositoryLookupProfileStore();
@@ -92,6 +95,33 @@ final readonly class ProviderSettingsPresenter {
 
 	public function build( ?string $selected_provider = null ): array {
 		$available = $this->admin_providers();
+		$selection = null === $selected_provider || 'gh' === $selected_provider ? $this->github_selection_review() : null;
+		if ( null !== $selection && ! $selection['available'] ) {
+			unset( $available['gh'] );
+		}
+		if ( null !== $selection && ( 'gh' === $selected_provider || ( null === $selected_provider && array() === $available ) ) && ! isset( $available['gh'] ) ) {
+			return array(
+				'selected_provider'            => 'gh',
+				'providers'                    => $this->tabs( $available, 'gh' ),
+				'provider'                     => array(
+					'code'             => 'gh',
+					'label'            => 'GitHub',
+					'owner_label'      => 'Owner',
+					'credential_kinds' => array(),
+					'webhook_scopes'   => array(),
+					'webhook_setup'    => null,
+					'capabilities'     => array(),
+				),
+				'credential_profiles'          => array(),
+				'webhook_profiles'             => array(),
+				'managed_webhook_repositories' => array(),
+				'provider_repositories'        => array(),
+				'public_lookup_profile'        => null,
+				'secrets_storage_unavailable'  => false,
+				'webhook_assistance_readiness' => null,
+				'github_selection'             => $selection,
+			);
+		}
 		if ( array() === $available ) {
 			throw new RuntimeException( 'No repository provider settings are available.' );
 		}
@@ -147,6 +177,7 @@ final readonly class ProviderSettingsPresenter {
 
 		return array(
 
+			'github_selection'             => 'gh' === $selected_provider ? $selection : null,
 			'selected_provider'            => $selected_provider,
 
 			'providers'                    => $this->tabs( $available, $selected_provider ),
@@ -158,6 +189,55 @@ final readonly class ProviderSettingsPresenter {
 			'public_lookup_profile'        => $public_lookup_profile,
 			'secrets_storage_unavailable'  => $storage_unavailable,
 			'webhook_assistance_readiness' => $webhook_readiness,
+		);
+	}
+
+	/** @return array<string,mixed>|null */
+	private function github_selection_review(): ?array {
+		if ( null === $this->github_selection ) {
+			return null;
+		}
+		$status = $this->github_selection->status();
+		$review = null;
+		$error  = '';
+		try {
+			$review = $this->github_selection->adoption_review( $this->secrets );
+		} catch ( SecretsStorageUnavailable ) {
+			$error = __( 'Set up secure credential storage from Overview before reviewing GitHub adoption.', 'ran-booster' );
+		} catch ( Throwable ) {
+			$error = __( 'GitHub adoption is unavailable. Resolve conflicting or incompatible plugins and any outstanding operation or recovery first.', 'ran-booster' );
+		}
+		$recovery = null;
+		if ( 'recovery_required' === $status['state'] && null !== $this->package_removal ) {
+			try {
+				$recovery = $this->package_removal->native_recovery_confirmation();
+			} catch ( Throwable ) {
+				$error = __( 'Native recovery details could not be verified. Restore access to selection and management storage before continuing.', 'ran-booster' );
+			}
+		}
+		$package_counts = null;
+		try {
+			if ( null !== $this->plugins && null !== $this->themes ) {
+				$package_counts = array(
+					'branch'        => 0,
+					'release_asset' => 0,
+				);
+				foreach ( array_merge( array_values( $this->plugins->all_deployment_plugins() ), array_values( $this->themes->all_deployment_themes() ) ) as $package ) {
+					if ( 'gh' === $package->get_provider_code() ) {
+						++$package_counts[ $package->get_source()->value ];
+					}
+				}
+			}
+		} catch ( Throwable ) {
+			$package_counts = null;
+		}
+		return array(
+			'recovery'       => $recovery,
+			'package_counts' => $package_counts,
+			'review'         => $review,
+			'error'          => $error,
+			'available'      => $status['available'],
+			'status'         => $status,
 		);
 	}
 
@@ -750,7 +830,7 @@ final readonly class ProviderSettingsPresenter {
 		foreach ( $providers as $code => $provider ) {
 			$tabs[] = array(
 				'code'   => $code,
-				'label'  => $provider->get_metadata()->label,
+				'label'  => $this->providers->metadata()[ $code ]->label,
 				'active' => $code === $selected_provider,
 			);
 		}

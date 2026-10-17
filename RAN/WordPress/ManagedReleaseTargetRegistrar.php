@@ -40,7 +40,7 @@ final class ManagedReleaseTargetRegistrar {
 	private ?string $core_self_update_plugin_identifier = null;
 	private RepositorySourceGuard $source_guard;
 
-	/** @var array<string, array{authority: array<string, int|string>, automatic: bool, lock: ?string, restore: bool}> */
+	/** @var array<string, array{authority: array<string, int|string>, automatic: bool, lock: ?string, restore: bool, native_owner?:string}> */
 	private array $native_updates = array();
 
 	/** @var array<string, int> */
@@ -52,6 +52,7 @@ final class ManagedReleaseTargetRegistrar {
 		private ManagedReleaseStore $store,
 		private WordPressUpdaterLock $updater_lock,
 		private ProviderRegistry $providers,
+		private \RAN\RepositoryProvider\GitHubProviderSelection $github_selection,
 		?RepositorySourceGuard $source_guard = null,
 		private readonly ?string $bulk_forbidden_plugin_identifier = null,
 		private ?\RAN\Activity\ActivityStore $activity = null
@@ -290,6 +291,43 @@ final class ManagedReleaseTargetRegistrar {
 		}
 	}
 
+	/** Called only by the bound GitHub registrar after private staging verification. */
+	public function begin_provider_native_mutation( string $type, string $identity ): string {
+		$pending = $this->native_updates[ self::key( $type, $identity ) ] ?? null;
+		if ( null === $pending || 'gh' !== $pending['authority']['provider'] || null === $pending['lock'] ) {
+			throw new \RuntimeException( 'GitHub native lock ownership is unavailable.' );
+		}
+		if ( $pending['lock'] !== $this->updater_lock->current_token()
+			|| ( $pending['automatic'] && ( ! function_exists( 'doing_action' ) || ! doing_action( 'wp_maybe_auto_update' ) ) ) ) {
+			throw new \RuntimeException( 'GitHub native authority is unavailable.' );
+		}
+		$snapshot = $this->native_authority_snapshot( $type, $identity );
+		if ( ! $snapshot['release'] || $pending['authority'] !== $snapshot['authority'] || ! $this->native_target_is_active( $type, $identity ) ) {
+			throw new \RuntimeException( 'The managed release authority changed after staging.' );
+		}
+		PackageMutationGuard::assert_package_mutation_allowed();
+		$owner = $this->github_selection->begin_native_mutation( $type, $identity, fn (): bool => $pending['lock'] === $this->updater_lock->current_token() );
+		$this->native_updates[ self::key( $type, $identity ) ]['native_owner'] = $owner;
+		return $owner;
+	}
+
+	/** Private updater completion, never the public WordPress diagnostic event. */
+	public function complete_provider_native_mutation( string $owner, string $type, string $identity, string $outcome ): void {
+		$key     = self::key( $type, $identity );
+		$pending = $this->native_updates[ $key ] ?? null;
+		if ( null === $pending || ( $pending['native_owner'] ?? null ) !== $owner ) {
+			throw new \RuntimeException( 'GitHub native completion owner changed.' );
+		}
+		try {
+			if ( ! $pending['automatic'] && null !== $pending['lock'] && ! $this->updater_lock->release( $pending['lock'] ) ) {
+				throw new \RuntimeException( 'GitHub native lock release failed.' );
+			}
+			$this->github_selection->complete_native_mutation( $owner, $type, $identity, $outcome );
+		} finally {
+			unset( $this->native_updates[ $key ] );
+		}
+	}
+
 	/** @param array<string, mixed> $hook_extra */
 	public function complete_native_mutation( object $upgrader, array $hook_extra ): void {
 		$target = $this->native_target( $hook_extra, ( true === ( $hook_extra['bulk'] ?? false ) ) );
@@ -298,6 +336,10 @@ final class ManagedReleaseTargetRegistrar {
 		}
 		$key     = self::key( $target['type'], $target['identifier'] );
 		$pending = $this->native_updates[ $key ] ?? null;
+		if ( 'gh' === ( $pending['authority']['provider'] ?? null ) ) {
+			// Release's private shutdown finalization owns completion and exact lock release.
+			return;
+		}
 		unset( $this->native_updates[ $key ] );
 		if ( null === $pending
 			|| $pending['automatic']

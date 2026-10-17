@@ -13,6 +13,7 @@ use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
 use RAN\RepositoryProvider\ProviderWebhookPolicy;
 use RAN\RepositoryProvider\SignedWebhookVerification;
 use RAN\Secrets\SecretsFile;
+use RAN\Secrets\SiteKeyStore;
 use RuntimeException;
 use RAN\Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
 
@@ -204,6 +205,185 @@ final class WebhookProfileStorageTest extends TestCase {
 				self::assertSame( 'Webhook secret scope must be owner or repository.', $exception->getMessage() );
 			}
 		}
+	}
+
+	public function test_paused_signing_keeps_local_metadata_without_provider_callbacks(): void {
+		$id     = $this->secrets->save_webhook( 'gh', null, $this->owner( 'Owner', 'owner' ), str_repeat( 'a', 32 ) );
+		$policy = $this->createMock( ProviderWebhookPolicy::class );
+		$policy->method( 'get_provider' )->willReturn( ProviderCode::parse( 'gh' ) );
+		$policy->expects( self::never() )->method( 'get_constant_names' );
+		$policy->expects( self::never() )->method( 'webhook_from_constants' );
+		$policy->expects( self::never() )->method( 'normalize_webhook' );
+		$secrets = $this->bound_secrets( $policy, static fn (): bool => false );
+		$profile = $secrets->webhook_profiles( 'gh' )[ $id ];
+		self::assertSame( 'Owner', $profile['label'] );
+		self::assertArrayNotHasKey( 'secret', $profile );
+		foreach ( array( 'read', 'edit' ) as $operation ) {
+			try {
+				if ( 'read' === $operation ) {
+					$secrets->webhook_materials( 'gh' );
+				} else {
+					$secrets->save_webhook( 'gh', $id, $this->owner( 'Edited', 'owner' ), null );
+				}
+				self::fail( 'Paused signing must refuse secret access.' );
+			} catch ( RuntimeException $failure ) {
+				self::assertSame( 'GitHub webhook access is unavailable.', $failure->getMessage() );
+			}
+		}
+		self::assertSame( 'Owner', $this->secrets->webhook_profiles( 'gh' )[ $id ]['label'] );
+	}
+
+	public function test_revocation_during_normalization_refuses_read_and_retained_secret_edit(): void {
+		$id     = $this->secrets->save_webhook( 'gh', null, $this->owner( 'Owner', 'owner' ), str_repeat( 'a', 32 ) );
+		$before = hash_file( 'sha256', $this->path );
+		$real   = ShippedSecretPolicyCatalog::create()->webhook_policy( 'gh' );
+		foreach ( array( 'read', 'edit' ) as $operation ) {
+			$allowed = true;
+			$policy  = $this->createMock( ProviderWebhookPolicy::class );
+			$policy->method( 'get_provider' )->willReturn( ProviderCode::parse( 'gh' ) );
+			$policy->method( 'get_constant_names' )->willReturn( array() );
+			$policy->method( 'webhook_from_constants' )->willReturn( null );
+			$policy->expects( self::once() )->method( 'normalize_webhook' )->willReturnCallback(
+				static function ( array $metadata, mixed $secret ) use ( &$allowed, $real ): array {
+					$allowed = false;
+					return $real->normalize_webhook( $metadata, $secret );
+				}
+			);
+			$secrets = $this->bound_secrets(
+				$policy,
+				static function () use ( &$allowed ): bool {
+					return $allowed;
+				}
+			);
+			try {
+				if ( 'read' === $operation ) {
+					$secrets->webhook_materials( 'gh' );
+				} else {
+					$secrets->save_webhook( 'gh', $id, $this->owner( 'Edited', 'owner' ), null );
+				}
+				self::fail( 'Revoked signing authority must discard normalized material.' );
+			} catch ( RuntimeException $failure ) {
+				self::assertSame( 'GitHub webhook access is unavailable.', $failure->getMessage() );
+			}
+			self::assertSame( $before, hash_file( 'sha256', $this->path ) );
+		}
+	}
+
+	public function test_signing_policy_cannot_request_api_token_constant(): void {
+		$policy = $this->createMock( ProviderWebhookPolicy::class );
+		$policy->method( 'get_provider' )->willReturn( ProviderCode::parse( 'gh' ) );
+		$policy->expects( self::once() )->method( 'get_constant_names' )->willReturn( array( 'RAN_BOOSTER_GITHUB_TOKEN' ) );
+		$policy->expects( self::never() )->method( 'webhook_from_constants' );
+		$policy->expects( self::never() )->method( 'normalize_webhook' );
+		$secrets = $this->bound_secrets( $policy, static fn (): bool => true );
+		$this->expectException( RuntimeException::class );
+		$this->expectExceptionMessage( 'Provider webhook constants could not be validated.' );
+		$secrets->webhook_materials( 'gh' );
+	}
+
+	public function test_bound_signing_policy_cannot_invent_constant_material(): void {
+		$policy = $this->createMock( ProviderWebhookPolicy::class );
+		$policy->method( 'get_provider' )->willReturn( ProviderCode::parse( 'gh' ) );
+		$policy->method( 'get_constant_names' )->willReturn( array() );
+		$policy->method( 'webhook_from_constants' )->willReturn( array( 'secret' => str_repeat( 'a', 32 ) ) );
+		$policy->expects( self::never() )->method( 'normalize_webhook' );
+		$secrets = $this->bound_secrets( $policy, static fn (): bool => true );
+		$this->expectException( RuntimeException::class );
+		$secrets->webhook_materials( 'gh' );
+	}
+
+	public function test_signing_access_is_independent_of_api_credential_approval_and_survives_clone(): void {
+		$id      = $this->secrets->save_webhook( 'gh', null, $this->owner( 'Owner', 'owner' ), str_repeat( 'a', 32 ) );
+		$allowed = true;
+		$secrets = $this->bound_secrets(
+			ShippedSecretPolicyCatalog::create()->webhook_policy( 'gh' ),
+			static function () use ( &$allowed ): bool {
+				return $allowed; }
+		);
+		$clone   = clone $secrets;
+		self::assertSame( str_repeat( 'a', 32 ), $clone->webhook_materials( 'gh' )[ $id ]['secret'] );
+		$allowed = false;
+		$this->expectException( RuntimeException::class );
+		$clone->webhook_materials( 'gh' );
+	}
+
+	public function test_revocation_after_normalization_before_ciphertext_write_preserves_stored_record(): void {
+		$id         = $this->secrets->save_webhook( 'gh', null, $this->owner( 'Owner', 'owner' ), str_repeat( 'a', 32 ) );
+		$before     = hash_file( 'sha256', $this->path );
+		$allowed    = true;
+		$normalized = false;
+		$real       = ShippedSecretPolicyCatalog::create()->webhook_policy( 'gh' );
+		$policy     = $this->createMock( ProviderWebhookPolicy::class );
+		$policy->method( 'get_provider' )->willReturn( ProviderCode::parse( 'gh' ) );
+		$policy->expects( self::once() )->method( 'normalize_webhook' )->willReturnCallback(
+			static function ( array $metadata, mixed $secret ) use ( &$normalized, $real ): array {
+				$normalized = true;
+				return $real->normalize_webhook( $metadata, $secret );
+			}
+		);
+		$catalog = new ProviderSecretPolicyCatalog();
+		$catalog->register( ProviderCode::parse( 'gh' ), null, $policy );
+		$store      = $this->createMock( SiteKeyStore::class );
+		$real_store = SecretsFileTestFactory::key_store( $this->path );
+		$store->method( 'load' )->willReturnCallback(
+			static function () use ( &$allowed, &$normalized, $real_store ): ?string {
+				if ( $normalized ) {
+					$allowed = false;
+				}
+				return $real_store->load();
+			}
+		);
+		$secrets = new SecretsFile(
+			$this->path,
+			array(),
+			$catalog,
+			$store,
+			github_webhook_access: static function () use ( &$allowed ): bool {
+				return $allowed; }
+		);
+		try {
+			$secrets->save_webhook( 'gh', $id, $this->owner( 'Edited', 'owner' ), null );
+			self::fail( 'Authority must remain current after key-store callbacks.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertSame( 'GitHub webhook access is unavailable.', $failure->getMessage() );
+		}
+		self::assertSame( $before, hash_file( 'sha256', $this->path ) );
+		self::assertSame( 'Owner', $this->secrets->webhook_profiles( 'gh' )[ $id ]['label'] );
+	}
+
+	public function test_paused_github_signing_does_not_block_bitbucket_storage(): void {
+		$policy = $this->createMock( ProviderWebhookPolicy::class );
+		$policy->method( 'get_provider' )->willReturn( ProviderCode::parse( 'bb' ) );
+		$policy->method( 'get_constant_names' )->willReturn( array() );
+		$policy->method( 'webhook_from_constants' )->willReturn( null );
+		$policy->expects( self::exactly( 2 ) )->method( 'normalize_webhook' )->willReturn(
+			array_diff_key( $this->owner( 'Bitbucket', 'workspace' ), array( 'origin' => true ) ) + array( 'secret' => str_repeat( 'b', 32 ) )
+		);
+		$catalog = new ProviderSecretPolicyCatalog();
+		$catalog->register( ProviderCode::parse( 'bb' ), null, $policy );
+		$secrets = new SecretsFile(
+			$this->path,
+			array(),
+			$catalog,
+			SecretsFileTestFactory::key_store( $this->path ),
+			github_webhook_access: static fn (): bool => false
+		);
+		$id      = $secrets->save_webhook( 'bb', null, $this->owner( 'Bitbucket', 'workspace' ), str_repeat( 'b', 32 ) );
+		self::assertSame( str_repeat( 'b', 32 ), $secrets->webhook_materials( 'bb' )[ $id ]['secret'] );
+	}
+
+	/** @param callable(): bool $access */
+	private function bound_secrets( ProviderWebhookPolicy $policy, callable $access ): SecretsFile {
+		$catalog = new ProviderSecretPolicyCatalog();
+		$catalog->register( ProviderCode::parse( 'gh' ), null, $policy );
+		return new SecretsFile(
+			$this->path,
+			array( 'RAN_BOOSTER_GITHUB_TOKEN' => 'test-token-must-not-reach-signing-policy' ),
+			$catalog,
+			SecretsFileTestFactory::key_store( $this->path ),
+			github_credential_access: static fn (): bool => false,
+			github_webhook_access: $access
+		);
 	}
 
 	/** @return array<string, mixed> */

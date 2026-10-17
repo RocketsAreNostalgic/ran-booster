@@ -949,6 +949,8 @@ jobs:
                 fi
                 export PHP_BIN="$(command -v php)"
                 export WP_CLI_BIN="$(command -v wp)"
+                # The disposable runner must allow PHP to serve the fixed localhost:80 fixture URL.
+                sudo setcap 'cap_net_bind_service=+ep' "$(readlink -f "$PHP_BIN")"
                 "$PHP_BIN" -S localhost:80 -t "$RAN_BOOSTER_WORDPRESS_PATH" > build/portability-http.log 2>&1 &
                 server_pid=$!
                 trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' EXIT

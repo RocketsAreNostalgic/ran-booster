@@ -33,6 +33,32 @@ proposals may link here, but this register must remain self-contained.
 
 ## Current decisions
 
+### Bounded replacement-authority reconsideration — 15 October 2026
+
+Ben approved one optional `native_mutation` member in the existing GitHub
+selection row for issues #407–409. This records a different invariant from
+PU-002 and PU-017: releasing the native updater lock after an uncertain
+filesystem mutation does not establish that switching provider authority is
+safe. The marker covers updater-native and Core prospective exact installation.
+
+The earlier rationales below remain: do not restore exact-Reinstall receipts,
+create another reservation broker or lock, or duplicate Branch attempt journals.
+The marker binds the captured selection generation, random operation owner,
+target and started phase. A survivor blocks switching and further GitHub native
+mutations, including a second target, until verified completion or protected
+recovery of that exact owner and target. Age, an absent lock and diagnostic
+events are not completion evidence.
+
+This is an approved design boundary, not delivered runtime. The Release owner
+must qualify the begin/completion callbacks and verified-success postconditions;
+the Branch owner must qualify non-stealing acquisition of the existing lock.
+Core must prove transactional selection writes, captured cleanup after mutation,
+and uncertain-outcome refusal with those immutable dependencies before enabling
+replacement. See [#409](https://github.com/RocketsAreNostalgic/ran-booster/issues/409)
+and the [shared contract](https://github.com/RocketsAreNostalgic/ran-booster/issues/411).
+
+### Preserved decision history
+
 Evidence baseline: RAN Booster Core `v0.1.0-alpha.22` at `481b91a` and
 `ran/wp-github-release-updater` `v1.5.0-beta.4` at
 `92e230313ee680cd1d738ec3f2ff464a417c7869`, reviewed 2026-07-29.

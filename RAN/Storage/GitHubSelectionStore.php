@@ -28,7 +28,7 @@ final class GitHubSelectionStore {
 
 	/**
 	 * Authoritative current read: option filters and object caches are not authority.
-	 * Only WordPress's bounded serialized list of plugin basenames is accepted.
+	 * Only WordPress's bounded serialized integer-keyed array of plugin basenames is accepted.
 	 *
 	 * @return list<string>
 	 */
@@ -48,12 +48,20 @@ final class GitHubSelectionStore {
 		$count   = (int) $match[1];
 		$offset  = strlen( $match[0] );
 		$plugins = array();
+		// Native deactivation unsets entries without renumbering the surviving keys.
+		$keys        = array();
+		$maximum_key = (string) PHP_INT_MAX;
 		for ( $index = 0; $index < $count; ++$index ) {
-			if ( ! preg_match( '/\Gi:' . $index . ';s:([1-9][0-9]{0,2}):"/', $bytes, $item, 0, $offset ) || (int) $item[1] > 191 ) {
+			if ( ! preg_match( '/\Gi:(0|[1-9][0-9]{0,18});s:([1-9][0-9]{0,2}):"/', $bytes, $item, 0, $offset ) || (int) $item[2] > 191 ) {
 				throw new DatabaseLifecycleFailure( 'active_plugins_invalid' );
 			}
+			if ( strlen( $item[1] ) > strlen( $maximum_key ) || ( strlen( $item[1] ) === strlen( $maximum_key ) && strcmp( $item[1], $maximum_key ) > 0 ) || isset( $keys[ $item[1] ] ) ) {
+				throw new DatabaseLifecycleFailure( 'active_plugins_invalid' );
+			}
+			$keys[ $item[1] ] = true;
+
 			$offset  += strlen( $item[0] );
-			$length   = (int) $item[1];
+			$length   = (int) $item[2];
 			$basename = substr( $bytes, $offset, $length );
 			$offset  += $length;
 			if ( ! preg_match( '/\A(?:[a-zA-Z0-9][a-zA-Z0-9_.-]*\/)?[a-zA-Z0-9][a-zA-Z0-9_.-]*\.php\z/D', $basename ) || '";' !== substr( $bytes, $offset, 2 ) || in_array( $basename, $plugins, true ) ) {

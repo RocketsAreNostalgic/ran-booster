@@ -60,7 +60,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 		file_put_contents( $this->root . '/' . $name, $bytes );
 	}
 
-	/** @param list<string> $plugins */
+	/** @param array<int, string> $plugins */
 	private function activate( array $plugins ): void {
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Exact WordPress option storage bytes under test.
 		$this->db->active_bytes = serialize( $plugins );
@@ -268,8 +268,51 @@ final class GitHubProviderSelectionTest extends TestCase {
 		self::assertTrue( $this->context()->operation_allowed() );
 	}
 
+	public function test_native_deactivation_gaps_preserve_authoritative_membership(): void {
+		$this->write( 'ordinary.php', '<?php' );
+		foreach ( array( array( 0 ), array( 2 ), array( 0, 2 ) ) as $removed ) {
+			$plugins = array( 'first.php', 'booster.php', 'middle.php', 'ordinary.php' );
+			foreach ( $removed as $key ) {
+				// WordPress deactivate_plugins() persists this array without reindexing.
+				unset( $plugins[ $key ] );
+			}
+			$this->activate( $plugins );
+			$bytes    = $this->db->active_bytes;
+			$expected = array_values( $plugins );
+			sort( $expected, SORT_STRING );
+			self::assertSame( $expected, $this->store->active_plugins() );
+			self::assertSame( $bytes, $this->db->active_bytes );
+		}
+		foreach ( array(
+			array( 1 => 'booster.php' ),
+			array( PHP_INT_MAX => 'booster.php' ),
+			array(
+				9 => 'ordinary.php',
+				2 => 'booster.php',
+			),
+		) as $plugins ) {
+			$this->activate( $plugins );
+			$bytes = $this->db->active_bytes;
+			self::assertTrue( $this->context()->operation_allowed() );
+			self::assertSame( $bytes, $this->db->active_bytes );
+		}
+	}
+
 	public function test_strict_active_bytes_and_storage_errors_refuse_without_unserialization(): void {
-		foreach ( array( 'a:1:{i:0;s:11:"booster.php";}trailing', 'O:8:"stdClass":0:{}', 'a:1:{i:1;s:11:"booster.php";}', 'a:2:{i:0;s:11:"booster.php";i:1;s:11:"booster.php";}', 'a:1:{i:0;s:9:"../a.php";}', 'a:1025:{}' ) as $bad ) {
+		foreach ( array(
+			'a:1:{i:0;s:11:"booster.php";}trailing',
+			'O:8:"stdClass":0:{}',
+			'a:1:{i:-1;s:11:"booster.php";}',
+			'a:1:{i:01;s:11:"booster.php";}',
+			'a:1:{i:+1;s:11:"booster.php";}',
+			'a:1:{s:1:"1";s:11:"booster.php";}',
+			'a:1:{i:' . PHP_INT_MAX . '0;s:11:"booster.php";}',
+			'a:1:{i:9223372036854775808;s:11:"booster.php";}',
+			'a:2:{i:2;s:11:"booster.php";i:2;s:12:"ordinary.php";}',
+			'a:2:{i:0;s:11:"booster.php";i:1;s:11:"booster.php";}',
+			'a:1:{i:0;s:9:"../a.php";}',
+			'a:1025:{}',
+		) as $bad ) {
 			$this->db->active_bytes = $bad;
 			try {
 				$this->store->active_plugins();

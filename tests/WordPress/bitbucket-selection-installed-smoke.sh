@@ -36,6 +36,24 @@ selection_changed=0
 restore_selection() {
  run_phase missing && run_phase select && assert_bundled
 }
+restore_active_plugins() {
+ local current_active current_members baseline_members
+ current_active="$(wp option get active_plugins --format=json)" || return 1
+ current_members="$(jq -ce '[.[]] | sort' <<< "$current_active")" || return 1
+ baseline_members="$(jq -ce '[.[]] | sort' <<< "$baseline_active")" || return 1
+ if [[ "$current_members" != "$baseline_members" ]]; then
+  printf 'Active plugin membership changed; refusing baseline restoration.\n' >&2
+  return 1
+ fi
+ # Native activation/deactivation can sort or leave sparse keys. Restore the
+ # exact snapshot only after ruling out added, removed or duplicate entries.
+ wp option update active_plugins "$baseline_active" --format=json >/dev/null || return 1
+ current_active="$(wp option get active_plugins --format=json)" || return 1
+ if [[ "$current_active" != "$baseline_active" ]]; then
+  printf 'Exact active plugin baseline restoration failed.\n' >&2
+  return 1
+ fi
+}
 cleanup() {
  local status=$?
  trap - EXIT INT TERM
@@ -50,7 +68,7 @@ cleanup() {
    status=1
   fi
  fi
- [[ "$(wp option get active_plugins --format=json)" == "$baseline_active" ]] || status=1
+ restore_active_plugins || status=1
  if (( status == 0 )); then rm -rf -- "$temporary"; else printf 'Proof failed; retained exact archive extraction: %s\n' "$temporary" >&2; fi
  exit "$status"
 }

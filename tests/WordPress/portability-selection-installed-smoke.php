@@ -94,7 +94,7 @@ $ran_booster_dashboard = static function ( bool $apply, ?array $expectation, str
 				'gh',
 				'Consumer import proof',
 				'classic',
-				array(),
+				array( 'owner' => '' ),
 				'ghp_' . str_repeat( 'c', 40 ),
 				array(
 					array(
@@ -324,7 +324,7 @@ switch ( $ran_booster_phase ) {
 			array(
 				'label'         => 'Consumer proof',
 				'kind'          => 'classic',
-				'configuration' => array(),
+				'configuration' => array( 'owner' => '' ),
 			),
 			'ghp_' . str_repeat( 'd', 40 )
 		);

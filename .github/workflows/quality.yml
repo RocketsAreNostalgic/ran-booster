@@ -502,7 +502,7 @@ jobs:
                 git clone --no-checkout https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator.git "$migrator_source"
                 git -C "$migrator_source" checkout --detach 9c99fb0df2e7859b0c376d188fff50bde7f25722
                 test "$(git -C "$migrator_source" rev-parse HEAD)" = 9c99fb0df2e7859b0c376d188fff50bde7f25722
-                ( cd "$migrator_source" && bash scripts/build-release.sh 1823347da7f651341567278ccfe1bc644d728d43 )
+                ( cd "$migrator_source" && bash "$migrator_source/scripts/build-release.sh" 1823347da7f651341567278ccfe1bc644d728d43 )
                 archive="$migrator_source/dist/ran-booster-wp-pusher-migrator-0.1.0-beta.10.zip"
                 test "$(wc -c < "$archive" | tr -d '[:space:]')" = 22820
                 printf '%s  %s\n' 'f94c5a348ea7fff4b30c934e86b014aa83f26c2596b1aa7e4f3b8eb912b761f0' "$archive" | sha256sum --check --strict

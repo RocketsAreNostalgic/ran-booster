@@ -114,7 +114,7 @@ switch ( $ran_booster_phase ) {
 			array(
 				'label'         => 'Disposable fixture',
 				'kind'          => 'classic',
-				'configuration' => array(),
+				'configuration' => array( 'owner' => '' ),
 			),
 			'ghp_' . str_repeat( 'a', 40 ),
 			static fn ( string $id ) => $ran_booster_registry->get( 'gh' )->resolve_repository( new RepositoryLookupRequest( 'fixtures/example', $id ) )

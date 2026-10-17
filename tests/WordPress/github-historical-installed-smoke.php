@@ -46,8 +46,8 @@ $ran_booster_check( ! file_exists( $ran_booster_target ) && ! is_link( $ran_boos
 $ran_booster_zip_path = wp_tempnam( 'ran-gh-historical.zip' );
 $ran_booster_zip      = new ZipArchive();
 $ran_booster_check( true === $ran_booster_zip->open( $ran_booster_zip_path, ZipArchive::CREATE | ZipArchive::OVERWRITE ), 'create controlled archive' );
-$ran_booster_zip->addFromString( 'repository/packages/target/proof.php', "<?php\n/*\nPlugin Name: Historical fixture\nVersion: 1.0.0\n*/\n" );
-$ran_booster_zip->addFromString( 'repository/packages/target/commit.txt', $ran_booster_commit );
+$ran_booster_zip->addFromString( 'repository/packages/ran-gh-historical-proof/proof.php', "<?php\n/*\nPlugin Name: Historical fixture\nVersion: 1.0.0\n*/\n" );
+$ran_booster_zip->addFromString( 'repository/packages/ran-gh-historical-proof/commit.txt', $ran_booster_commit );
 $ran_booster_zip->addFromString( 'repository/outside.txt', 'excluded source' );
 $ran_booster_zip->close();
 $ran_booster_downloads    = 0;
@@ -94,7 +94,8 @@ try {
 		'provider_repository_identity_source' => 'resolved',
 		'branch'                              => 'main',
 		'package_slug'                        => $ran_booster_slug,
-		'subdirectory'                        => 'packages/target',
+		'expected_identifier'                 => $ran_booster_id,
+		'subdirectory'                        => 'packages/ran-gh-historical-proof',
 		'selected_commit'                     => $ran_booster_commit,
 		'deployment_policy'                   => 'disabled',
 	);
@@ -132,7 +133,7 @@ try {
 			'repository'             => (string) $ran_booster_package->get_repository(),
 			'branch'                 => 'main',
 			'credential_id'          => '',
-			'subdirectory'           => 'packages/target',
+			'subdirectory'           => 'packages/ran-gh-historical-proof',
 			'private'                => false,
 			'package_slug'           => $ran_booster_slug,
 			'deployment_policy'      => 'disabled',

@@ -283,7 +283,14 @@ final class GitHubProviderSelectionTest extends TestCase {
 			self::assertSame( $expected, $this->store->active_plugins() );
 			self::assertSame( $bytes, $this->db->active_bytes );
 		}
-		foreach ( array( array( 1 => 'booster.php' ), array( PHP_INT_MAX => 'booster.php' ), array( 9 => 'ordinary.php', 2 => 'booster.php' ) ) as $plugins ) {
+		foreach ( array(
+			array( 1 => 'booster.php' ),
+			array( PHP_INT_MAX => 'booster.php' ),
+			array(
+				9 => 'ordinary.php',
+				2 => 'booster.php',
+			),
+		) as $plugins ) {
 			$this->activate( $plugins );
 			$bytes = $this->db->active_bytes;
 			self::assertTrue( $this->context()->operation_allowed() );

@@ -500,12 +500,12 @@ jobs:
                 set -euo pipefail
                 migrator_source="$RUNNER_TEMP/migrator-source"
                 git clone --no-checkout https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator.git "$migrator_source"
-                git -C "$migrator_source" checkout --detach 9c99fb0df2e7859b0c376d188fff50bde7f25722
-                test "$(git -C "$migrator_source" rev-parse HEAD)" = 9c99fb0df2e7859b0c376d188fff50bde7f25722
-                ( cd "$migrator_source" && bash "$migrator_source/scripts/build-release.sh" 1823347da7f651341567278ccfe1bc644d728d43 )
+                git -C "$migrator_source" checkout --detach 1a159eb2f51dc77c4e053ff784e655d27538b9a7
+                test "$(git -C "$migrator_source" rev-parse HEAD)" = 1a159eb2f51dc77c4e053ff784e655d27538b9a7
+                ( cd "$migrator_source" && bash "$migrator_source/scripts/build-release.sh" ef225f13134bbca33bf910fd1ed5941f42ec9c46 )
                 archive="$migrator_source/dist/ran-booster-wp-pusher-migrator-0.1.0-beta.10.zip"
-                test "$(wc -c < "$archive" | tr -d '[:space:]')" = 22820
-                printf '%s  %s\n' 'f94c5a348ea7fff4b30c934e86b014aa83f26c2596b1aa7e4f3b8eb912b761f0' "$archive" | sha256sum --check --strict
+                test "$(wc -c < "$archive" | tr -d '[:space:]')" = 22842
+                printf '%s  %s\n' '005df2efc9a999b2e99b69d5c63eb3f62a40fed61db0477442894d8bb2dd6163' "$archive" | sha256sum --check --strict
                 unzip -tqq "$archive"
                 printf 'RAN_MIGRATOR_SOURCE_PATH=%s\nRAN_MIGRATOR_ARCHIVE=%s\n' "$migrator_source" "$archive" >> "$GITHUB_ENV"
 

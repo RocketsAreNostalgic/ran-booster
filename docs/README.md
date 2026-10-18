@@ -3,6 +3,8 @@
 This directory is the canonical home for durable Booster documentation and
 sanitized Booster-specific evidence.
 
+- [Administration composition contract](admin-composition-contract.md) covers
+  Admin Shell continuity, page-local navigation and supported extension surfaces.
 - [Translating RAN Booster](translating.md) explains how to create, build, test,
   and submit PHP and JavaScript translations.
 - [Runtime dependency packaging policy](runtime-packaging-policy.md) records the

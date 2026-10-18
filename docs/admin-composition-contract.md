@@ -30,9 +30,15 @@ composition hook or authorization boundary described here.
 ## Admin Shell continuity and page navigation
 
 Booster's Admin Shell provides continuous product branding and navigation across
-its administration pages, including standalone WordPress submenu destinations
+its normal administration pages, including standalone WordPress submenu destinations
 such as Extensions. Keep the shell's logo, header navigation and footer consistent
 when a page supplies its own content or local navigation.
+
+Failure and recovery output may use a minimal heading, explanation and recovery
+links when the normal administration stack cannot safely render. Examples include
+the Extensions fallback error screen and the standalone unsupported-Multisite
+recovery guide. These paths must remain usable without initializing the full
+shell or operational services; this exception does not apply to ordinary pages.
 
 A standalone destination does not automatically become a shell navigation item.
 The WordPress submenu identifies that destination; the page heading identifies

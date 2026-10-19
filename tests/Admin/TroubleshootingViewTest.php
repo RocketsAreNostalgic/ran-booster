@@ -832,6 +832,9 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '>local.runtime.ready</code>', $html );
 		self::assertStringContainsString( '<textarea', $html );
 		self::assertStringContainsString( 'RAN Booster troubleshooting report', $html );
+		self::assertStringContainsString( '<button type="button" class="button" data-support-report-copy>Copy report</button>', $html );
+		self::assertStringContainsString( 'data-support-report-status role="status" aria-live="polite" aria-atomic="true"', $html );
+		self::assertStringContainsString( 'readonly>RAN Booster troubleshooting report', $html );
 	}
 
 	public function test_escapes_every_submitted_and_result_field(): void {

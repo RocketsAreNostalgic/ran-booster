@@ -7302,7 +7302,7 @@ msgstr ""
 
 #. translators: %s is the item being edited.
 #: views/packages/edit.php:252
-#: assets/ran-booster-secure-inputs.js:926
+#: assets/ran-booster-secure-inputs.js:957
 #, php-format,js-format
 msgid "Edit %s"
 msgstr ""
@@ -9139,7 +9139,7 @@ msgid "Enter the provider expiry date, or choose an earlier one. If automatic re
 msgstr ""
 
 #: views/provider/modals.php:89
-#: assets/ran-booster-secure-inputs.js:1078
+#: assets/ran-booster-secure-inputs.js:1109
 msgid "Credential secret"
 msgstr ""
 
@@ -9200,7 +9200,7 @@ msgid "e.g. Organisation webhooks"
 msgstr ""
 
 #: views/provider/modals.php:163
-#: assets/ran-booster-secure-inputs.js:1148
+#: assets/ran-booster-secure-inputs.js:1179
 msgid "Target"
 msgstr ""
 
@@ -9481,11 +9481,23 @@ msgstr ""
 msgid "Core updates are off for this source installation. Booster will not check for or replace itself."
 msgstr ""
 
-#: views/troubleshooting.php:316
+#: views/troubleshooting.php:317
 msgid "Support report"
 msgstr ""
 
-#: views/troubleshooting.php:318
+#: views/troubleshooting.php:317
+msgid "Copy report"
+msgstr ""
+
+#: views/troubleshooting.php:319
+msgid "Support report copied to the clipboard."
+msgstr ""
+
+#: views/troubleshooting.php:319
+msgid "Clipboard access failed. The report is selected; use your browser copy command."
+msgstr ""
+
+#: views/troubleshooting.php:320
 msgid "This report includes the displayed installation details and diagnostic results. Local declarations and standing Core update status are not diagnostic test results. Review it before sharing."
 msgstr ""
 
@@ -10141,18 +10153,18 @@ msgstr ""
 msgid "Repositories could not be loaded. Check the selected access profile and try again."
 msgstr ""
 
-#: assets/ran-booster-secure-inputs.js:834
+#: assets/ran-booster-secure-inputs.js:865
 msgid "this credential"
 msgstr ""
 
 #. translators: %s: credential label.
-#: assets/ran-booster-secure-inputs.js:874
+#: assets/ran-booster-secure-inputs.js:905
 #, js-format
 msgid "“%s”"
 msgstr ""
 
 #. translators: %d: number of managed packages using this credential.
-#: assets/ran-booster-secure-inputs.js:883
+#: assets/ran-booster-secure-inputs.js:914
 #, js-format
 msgid "This credential is still used by %d managed package. Assign another credential, or public access where appropriate, to every package listed under Usage and save those settings before deleting it."
 msgid_plural "This credential is still used by %d managed packages. Assign another credential, or public access where appropriate, to every package listed under Usage and save those settings before deleting it."
@@ -10160,23 +10172,23 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: provider label.
-#: assets/ran-booster-secure-inputs.js:919
+#: assets/ran-booster-secure-inputs.js:950
 #, js-format
 msgid "%s repository credential"
 msgstr ""
 
-#: assets/ran-booster-secure-inputs.js:922
+#: assets/ran-booster-secure-inputs.js:953
 msgid "Push-to-Deploy secret"
 msgstr ""
 
 #. translators: %s: credential type.
-#: assets/ran-booster-secure-inputs.js:931
+#: assets/ran-booster-secure-inputs.js:962
 #, js-format
 msgid "Add %s"
 msgstr ""
 
 #. translators: %s: webhook target.
-#: assets/ran-booster-secure-inputs.js:1051
+#: assets/ran-booster-secure-inputs.js:1082
 #, js-format
 msgid "%s — already configured"
 msgstr ""

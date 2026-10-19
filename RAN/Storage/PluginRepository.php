@@ -77,6 +77,7 @@ class PluginRepository extends AbstractPackageRepository {
 	 * @return Plugin $plugin
 	 * @throws PluginNotFound
 	 * @throws PackageStorageFailure
+	 * @throws \InvalidArgumentException When saved management settings are invalid.
 	 */
 	public function booster_plugin_from_file( $file ) {
 		include_once ABSPATH . 'wp-admin/includes/plugin.php';

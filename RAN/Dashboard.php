@@ -521,37 +521,51 @@ class Dashboard {
 		( $this->package_admin ?? throw new \Error( 'The package administration controller is unavailable.' ) )->add_success_notice( $this, $type );
 		$this->add_bulk_package_notice( $type );
 
-		// Read-only package selection; mutations use separately nonce-protected forms.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Select the package presentation only; branch checks and form mutations verify their own action nonce.
-		if ( isset( $_GET['package'] ) ) {
+		// Read-only package selection; malformed navigation never diagnoses damaged settings.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only package navigation; mutations verify their own action nonce.
+		if ( isset( $_GET['package'] ) && is_string( $_GET['package'] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only package navigation.
+			$identifier = sanitize_text_field( wp_unslash( $_GET['package'] ) );
 			try {
-				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only package selection.
-				$identifier                                    = sanitize_text_field( wp_unslash( $_GET['package'] ) );
-				$package                                       = 'plugin' === $type
-					? $this->plugins->booster_plugin_from_file( $identifier )
-					: $this->themes->booster_theme_from_stylesheet( $identifier );
-				$repository_branch_check_outcome               = $this->requested_package_repository_branch_check( $package, $type );
-				$repository_branch_check_evidence              = null === $repository_branch_check_outcome
-					? $this->provider_settings->package_repository_branch_evidence( $type, $package )
-					: null;
-				$edit_data                                     = $package_view->edit(
-					$package,
-					$this->provider_settings->build_existing_package_form( (string) ( $package->get_provider_code() ?? '' ) ),
-					$this->provider_settings->build_package_branch_readiness( $package ),
-					$this->requested_package_source_view(),
-					$this->requested_advanced_settings_open()
-				);
-				$edit_data['repository_branch_check_outcome']  = $repository_branch_check_outcome;
-				$edit_data['repository_branch_check_evidence'] = $repository_branch_check_evidence;
-				return $this->render(
-					'packages/edit',
-					$edit_data
-				);
-			// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- A missing package intentionally falls back to the index.
-			} catch ( PluginNotFound | ThemeNotFound $missing ) {
-				// The selected package is absent, so show the matching index instead.
-			} catch ( PackageStorageFailure | \InvalidArgumentException $failure ) {
-				return $this->package_storage_failure_index( $package_view, $type, $failure );
+				new \RAN\Storage\PackageModel( array( 'package' => $identifier ) );
+			} catch ( \InvalidArgumentException ) {
+				$identifier = '';
+			}
+			$package = null;
+			if ( '' !== $identifier ) {
+				try {
+					$package = 'plugin' === $type
+						? $this->plugins->booster_plugin_from_file( $identifier )
+						: $this->themes->booster_theme_from_stylesheet( $identifier );
+				// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- A missing package intentionally falls back to the index.
+				} catch ( PluginNotFound | ThemeNotFound ) {
+					// An absent package returns to the matching list.
+				} catch ( PackageStorageFailure | \InvalidArgumentException $failure ) {
+					return $this->package_storage_failure_index( $package_view, $type, $failure );
+				}
+			}
+			if ( null !== $package ) {
+				try {
+					$repository_branch_check_outcome               = $this->requested_package_repository_branch_check( $package, $type );
+					$repository_branch_check_evidence              = null === $repository_branch_check_outcome
+						? $this->provider_settings->package_repository_branch_evidence( $type, $package )
+						: null;
+					$edit_data                                     = $package_view->edit(
+						$package,
+						$this->provider_settings->build_existing_package_form( (string) ( $package->get_provider_code() ?? '' ) ),
+						$this->provider_settings->build_package_branch_readiness( $package ),
+						$this->requested_package_source_view(),
+						$this->requested_advanced_settings_open()
+					);
+					$edit_data['repository_branch_check_outcome']  = $repository_branch_check_outcome;
+					$edit_data['repository_branch_check_evidence'] = $repository_branch_check_evidence;
+					return $this->render(
+						'packages/edit',
+						$edit_data
+					);
+				} catch ( PackageStorageFailure $failure ) {
+					return $this->package_storage_failure_index( $package_view, $type, $failure );
+				}
 			}
 		}
 

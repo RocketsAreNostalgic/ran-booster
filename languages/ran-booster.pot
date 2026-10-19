@@ -1313,7 +1313,7 @@ msgid "RAN Booster automatic deployment failed."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:63
-#: RAN/Dashboard.php:1151
+#: RAN/Dashboard.php:1165
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
@@ -1322,7 +1322,7 @@ msgid "Booster could not confirm safe management removal. Refresh this page and 
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:164
-#: RAN/Dashboard.php:572
+#: RAN/Dashboard.php:586
 msgid "You do not have sufficient permissions to manage these packages."
 msgstr ""
 
@@ -4623,11 +4623,11 @@ msgstr ""
 msgid "Booster could not validate the credentials sidecar."
 msgstr ""
 
-#: RAN/Dashboard.php:586
+#: RAN/Dashboard.php:600
 msgid "Booster cannot safely stop managing this selection. The installed target, management identity, or storage could not be verified. Resolve that uncertainty before trying again."
 msgstr ""
 
-#: RAN/Dashboard.php:836
+#: RAN/Dashboard.php:850
 msgid "Booster could not open a package’s saved management settings. No package changes were made."
 msgstr ""
 

@@ -1968,6 +1968,165 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertFalse( $this->dashboard( $secrets, $service )->get_index()['data']['troubleshooting']['ran'] );
 	}
 
+	/** @return iterable<string,array{string}> */
+	public static function diagnostics_selection_states(): iterable {
+		foreach ( array( 'available', 'unavailable', 'unknown' ) as $state ) {
+			yield $state => array( $state );
+		}
+	}
+
+	#[DataProvider( 'diagnostics_selection_states' )]
+	public function test_diagnostics_full_and_enhanced_submissions_preserve_one_safe_installation_snapshot( string $state ): void {
+		$_GET      = array(
+			'tab'   => 'troubleshooting',
+			'panel' => 'diagnostics',
+		);
+		$secrets   = new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() );
+		$providers = $this->providers();
+		$selection = null;
+		if ( 'unknown' !== $state ) {
+			$selection = $this->queued_selection( new AttemptRepositoryDatabase(), $providers );
+			if ( 'unavailable' === $state ) {
+				$selection = new \RAN\RepositoryProvider\GitHubProviderSelection(
+					new \RAN\Storage\GitHubSelectionStore( new \RAN\Tests\RepositoryProvider\SelectionContextDatabase(), 'wp_options' ),
+					'/unused/plugins',
+					new \RAN\RepositoryProvider\GitHubReplacementDeclaration(
+						array(
+							'plugin_basename'        => 'index.php',
+							'implementation_id'      => 'queued-test',
+							'compatibility_revision' => '1',
+							'provider_api_version'   => 15,
+							'api_credential_formats' => array(),
+							'webhook_signing_format' => null,
+							'facets'                 => array(),
+						)
+					)
+				);
+			}
+		}
+		$local   = new class( $secrets ) extends LocalTroubleshootingService {
+			public int $runs = 0;
+			public function diagnose(): array {
+				++$this->runs;
+				return array(
+					'results' => array( new ProviderDiagnosticResult( ProviderDiagnosticResult::PASSED, 'local.submission_' . $this->runs, 'Current local result.', 'No action is required.' ) ),
+					'partial' => false,
+				);
+			}
+		};
+		$service = new TroubleshootingService( $local, $providers );
+		$initial = $this->dashboard( $secrets, $service, providers: $providers, github_selection: $selection )->get_index()['data'];
+		$page    = $this->diagnostics_document( $this->render_diagnostics_page( $initial ) );
+		$this->assert_diagnostics_snapshot( $page, $initial['troubleshooting'], $state, null );
+
+		for ( $submission = 1; $submission <= 3; ++$submission ) {
+			$dashboard = $this->dashboard( $secrets, $service, providers: $providers, github_selection: $selection );
+			$dashboard->post_run_troubleshooting( array( 'provider' => 'gh' ) );
+			$data = $dashboard->get_index()['data'];
+			$page = $this->diagnostics_document( $this->render_diagnostics_page( $data ) );
+			$this->assert_diagnostics_snapshot( $page, $data['troubleshooting'], $state, $submission );
+		}
+
+		for ( $submission = 4; $submission <= 6; ++$submission ) {
+			$dashboard = $this->dashboard( $secrets, $service, providers: $providers, github_selection: $selection );
+			$dashboard->post_run_troubleshooting( array( 'provider' => 'gh' ) );
+			$response = $this->diagnostics_document( $dashboard->render_troubleshooting_diagnostics_region() );
+			$target   = $this->diagnostics_nodes( new \DOMXPath( $page ), '//*[@id="ran-booster-troubleshooting-diagnostics-region"]' )->item( 0 );
+			self::assertInstanceOf( \DOMElement::class, $target );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
+			$parent = $target->parentNode;
+			self::assertNotNull( $parent );
+			$body = $response->getElementsByTagName( 'body' )->item( 0 );
+			self::assertInstanceOf( \DOMElement::class, $body );
+			// Apply the complete response, including any accidentally returned siblings.
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
+			foreach ( iterator_to_array( $body->childNodes ) as $child ) {
+				$parent->insertBefore( $page->importNode( $child, true ), $target );
+			}
+			$parent->removeChild( $target );
+			$this->assert_diagnostics_snapshot( $page, $dashboard->get_index()['data']['troubleshooting'], $state, $submission );
+		}
+	}
+
+	/** @param array<string,mixed> $data */
+	private function render_diagnostics_page( array $data ): string {
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the actual Dashboard payload to its production view.
+		extract( $data );
+		ob_start();
+		try {
+			require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+			return (string) ob_get_contents();
+		} finally {
+			ob_end_clean();
+		}
+	}
+
+	private function diagnostics_document( string $html ): \DOMDocument {
+		$document = new \DOMDocument();
+		$previous = libxml_use_internal_errors( true );
+		try {
+			self::assertTrue( $document->loadHTML( '<!doctype html><html><body>' . $html . '</body></html>' ) );
+		} finally {
+			libxml_clear_errors();
+			libxml_use_internal_errors( $previous );
+		}
+		return $document;
+	}
+
+	/** @return \DOMNodeList<\DOMNode|\DOMNameSpaceNode> */
+	private function diagnostics_nodes( \DOMXPath $xpath, string $query ): \DOMNodeList {
+		$nodes = $xpath->query( $query );
+		self::assertNotFalse( $nodes );
+		return $nodes;
+	}
+
+	/** @param array{report:string,installation_details:array<string,array<string,string>>} $payload */
+	private function assert_diagnostics_snapshot( \DOMDocument $page, array $payload, string $state, ?int $submission ): void {
+		$xpath = new \DOMXPath( $page );
+		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-troubleshooting-diagnostics-region"]' )->length );
+		self::assertSame( 0, $this->diagnostics_nodes( $xpath, '//p[contains(., "Recover management without changing installed files")]' )->length );
+		self::assertSame( 0, $this->diagnostics_nodes( $xpath, '//a[contains(@href,"recovery=1")]' )->length );
+		self::assertSame( null === $submission ? 0 : 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-troubleshooting-results"]' )->length );
+		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-github-provider-diagnostics"]' )->length );
+		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//h3[normalize-space(.)="Run diagnostics"]' )->length );
+		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//h3[normalize-space(.)="Installation details"]' )->length );
+		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//h4[normalize-space(.)="Booster Core updates"]' )->length );
+		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-installation-details"]/preceding-sibling::h3[normalize-space(.)="Run diagnostics"]' )->length );
+		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-installation-details"]/preceding-sibling::form[@hx-target="#ran-booster-troubleshooting-diagnostics-region"]' )->length );
+		self::assertSame( 2, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-installation-details"]/section[contains(concat(" ",@class," ")," ran-booster-panel ")]/header/h4' )->length );
+		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-github-provider-diagnostics"]/details/summary[normalize-space(.)="Technical details"]' )->length );
+		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-core-updates-heading"]/../following-sibling::div/details/summary[normalize-space(.)="Technical details"]' )->length );
+		$installation = $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-installation-details"]' )->item( 0 );
+		$report       = $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-troubleshooting-report"]' )->item( 0 );
+		self::assertInstanceOf( \DOMElement::class, $installation );
+		self::assertInstanceOf( \DOMElement::class, $report );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
+		self::assertSame( $payload['report'], $report->textContent );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
+		self::assertStringContainsString( 'unknown' === $state ? 'Unknown' : $state, $report->textContent );
+		foreach ( $payload['installation_details'] as $heading => $fields ) {
+			if ( 'Diagnostic provider' === $heading ) {
+				continue;
+			}
+			foreach ( $fields as $value ) {
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
+				self::assertStringContainsString( $value, $installation->textContent );
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
+				self::assertStringContainsString( $value, $report->textContent );
+			}
+		}
+		if ( null !== $submission ) {
+			$results = $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-troubleshooting-results"]' )->item( 0 );
+			self::assertInstanceOf( \DOMElement::class, $results );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
+			self::assertStringContainsString( 'local.submission_' . $submission, $results->textContent );
+			if ( $submission > 1 ) {
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
+				self::assertStringNotContainsString( 'local.submission_' . ( $submission - 1 ), $page->textContent );
+			}
+		}
+	}
+
 	public function test_deployment_activity_uses_its_own_read_payload_without_diagnostics_results(): void {
 		$_GET = array(
 			'tab'   => 'troubleshooting',

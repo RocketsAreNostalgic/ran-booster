@@ -63,6 +63,120 @@ final class TroubleshootingService {
 	}
 
 	/**
+	 * Add one captured, passive installation snapshot to both display and support report.
+	 *
+	 * @param array{providers:array<string,string>,provider_locator_hints:array<string,string>,credentials:array<string,list<array{id:string,label:string}>>,selected_provider:string,credential_id:string,repository:string,ran:bool,results:list<array{status:string,code:string,message:string,remediation:string}>,partial:bool,partial_reason:?string,report:string,core_self_update:array<string,mixed>} $payload
+	 * @param array<string,mixed>|null $github_selection
+	 * @return array{providers:array<string,string>,provider_locator_hints:array<string,string>,credentials:array<string,list<array{id:string,label:string}>>,selected_provider:string,credential_id:string,repository:string,ran:bool,results:list<array{status:string,code:string,message:string,remediation:string}>,partial:bool,partial_reason:?string,report:string,core_self_update:array<string,mixed>,installation_details:array<string,array<string,string>>}
+	 */
+	public function with_installation_context( array $payload, ?array $github_selection ): array {
+		$selected = $payload['selected_provider'];
+		$current  = is_array( $github_selection['current'] ?? null ) ? $github_selection['current'] : array();
+		$source   = match ( true ) {
+			'bundled' === ( $current['selected'] ?? null ) => __( 'Bundled with Booster', 'ran-booster' ),
+			is_array( $current['declaration'] ?? null ) => __( 'External replacement', 'ran-booster' ),
+			default => __( 'Unknown', 'ran-booster' ),
+		};
+		$sections = array(
+			__( 'Diagnostic provider', 'ran-booster' ) => array(
+				__( 'Provider', 'ran-booster' )      => $this->installation_text( $payload['providers'][ $selected ] ?? null ),
+				__( 'Provider code', 'ran-booster' ) => $this->installation_text( $selected ),
+			),
+			__( 'GitHub provider', 'ran-booster' )     => array(
+				__( 'Source', 'ran-booster' )          => $source,
+				__( 'Selection state', 'ran-booster' ) => $this->installation_text( $github_selection['state'] ?? null ),
+				__( 'Operational availability', 'ran-booster' ) => match ( $github_selection['available'] ?? null ) {
+					true => __( 'Available', 'ran-booster' ),
+					false => __( 'Unavailable', 'ran-booster' ),
+					default => __( 'Unknown', 'ran-booster' ),
+				},
+			) + $this->installation_declaration( $current['declaration'] ?? null ),
+		);
+		$candidates = is_array( $github_selection['candidates'] ?? null ) ? $github_selection['candidates'] : array();
+		foreach ( array_values( array_slice( $candidates, 0, 4 ) ) as $index => $candidate ) {
+			$sections[ sprintf( /* translators: %d: enabled replacement candidate number. */ __( 'GitHub candidate %d', 'ran-booster' ), $index + 1 ) ] = $this->installation_declaration( $candidate );
+		}
+		$sections[ __( 'GitHub provider', 'ran-booster' ) ][ __( 'Enabled candidates', 'ran-booster' ) ] = (string) count( $candidates );
+		$core        = $payload['core_self_update'];
+		$core_fields = array(
+			'requested_mode'  => __( 'Requested mode', 'ran-booster' ),
+			'effective_mode'  => __( 'Effective mode', 'ran-booster' ),
+			'reason'          => __( 'Policy reason', 'ran-booster' ),
+			'updater_state'   => __( 'Updater state', 'ran-booster' ),
+			'updater_code'    => __( 'Updater code', 'ran-booster' ),
+			'offered_version' => __( 'Offered version', 'ran-booster' ),
+			'marker_version'  => __( 'Marker version', 'ran-booster' ),
+			'marker_commit'   => __( 'Marker commit', 'ran-booster' ),
+		);
+		foreach ( $core_fields as $key => $label ) {
+			$sections[ __( 'Booster Core updates', 'ran-booster' ) ][ $label ] = $this->installation_text( $core[ $key ] ?? null );
+		}
+		foreach ( array(
+			'last_check' => __( 'Last check (UTC)', 'ran-booster' ),
+			'next_check' => __( 'Next check (UTC)', 'ran-booster' ),
+		) as $key => $label ) {
+			$timestamp = $core[ $key ] ?? null;
+			$sections[ __( 'Booster Core updates', 'ran-booster' ) ][ $label ] = is_int( $timestamp ) && $timestamp >= 0 && $timestamp <= 253402300799 ? gmdate( 'c', $timestamp ) : __( 'Unavailable', 'ran-booster' );
+		}
+		$payload['installation_details'] = $sections;
+		$lines                           = array( 'RAN Booster installation context', __( 'Local declarations only; these claims do not verify publisher identity or remote access.', 'ran-booster' ) );
+		foreach ( $sections as $heading => $rows ) {
+			$lines[] = '';
+			$lines[] = $heading;
+			foreach ( $rows as $label => $value ) {
+				$lines[] = $label . ': ' . $value;
+			}
+		}
+		$lines[]           = '';
+		$lines[]           = __( 'Diagnostic checks', 'ran-booster' );
+		$lines[]           = $payload['ran'] ? $this->report( $payload['results'], $payload['partial'], $payload['partial_reason'] ) : __( 'Not run', 'ran-booster' );
+		$payload['report'] = implode( "\n", $lines );
+		return $payload;
+	}
+
+	/** @return array<string,string> */
+	private function installation_declaration( mixed $declaration ): array {
+		$declaration = is_array( $declaration ) ? $declaration : array();
+		$rows        = array();
+		foreach ( array(
+			'display_name'           => __( 'Name', 'ran-booster' ),
+			'display_version'        => __( 'Version', 'ran-booster' ),
+			'implementation_id'      => __( 'Implementation', 'ran-booster' ),
+			'provider_api_version'   => __( 'Provider API', 'ran-booster' ),
+			'compatibility_revision' => __( 'Compatibility revision', 'ran-booster' ),
+			'webhook_signing_format' => __( 'Webhook signing format', 'ran-booster' ),
+		) as $key => $label ) {
+			$value          = $declaration[ $key ] ?? null;
+			$rows[ $label ] = $this->installation_text( 'provider_api_version' === $key ? ( is_int( $value ) && $value >= 0 && $value <= 999 ? (string) $value : null ) : $value );
+		}
+		foreach ( array(
+			/* translators: %d: locally declared capability number. */
+			'facets'                 => __( 'Capability %d', 'ran-booster' ),
+			/* translators: %d: locally declared credential format number. */
+			'api_credential_formats' => __( 'API credential format %d', 'ran-booster' ),
+		) as $key => $label ) {
+			$values = $declaration[ $key ] ?? null;
+			if ( is_array( $values ) && array_is_list( $values ) && count( $values ) <= 32 ) {
+				foreach ( $values as $index => $value ) {
+					$rows[ sprintf( $label, $index + 1 ) ] = $this->installation_text( $value );
+				}
+			}
+		}
+		return $rows;
+	}
+
+	private function installation_text( mixed $value ): string {
+		if ( is_string( $value ) && strlen( $value ) <= 256 ) {
+			try {
+				return ( new ProviderDiagnosticResult( 'pass', 'local.installation', $value, 'No action required.' ) )->message;
+			} catch ( \InvalidArgumentException ) {
+				return __( 'Unavailable', 'ran-booster' );
+			}
+		}
+		return __( 'Unavailable', 'ran-booster' );
+	}
+
+	/**
 	 * Run local checks and exactly one selected provider in the current request.
 	 *
 	 * @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>}

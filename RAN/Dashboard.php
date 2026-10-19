@@ -309,8 +309,7 @@ class Dashboard {
 				}
 				$data['deployment_activity'] = $this->deployment_admin->activity( $provider_labels );
 			} else {
-				$data['troubleshooting']              = $this->troubleshooting_payload ?? $this->troubleshooting->form_payload();
-				$data['github_selection_diagnostics'] = $this->provider_settings->github_selection_diagnostics();
+				$data = array_merge( $data, $this->troubleshooting_view_data() );
 			}
 		}
 
@@ -442,12 +441,21 @@ class Dashboard {
 	public function render_troubleshooting_diagnostics_region(): string {
 
 		$troubleshooting_panel = 'diagnostics';
-		$troubleshooting       = $this->troubleshooting_payload ?? $this->troubleshooting->form_payload();
+		$troubleshooting       = $this->troubleshooting_view_data()['troubleshooting'];
 
 		ob_start();
 		require __DIR__ . '/../views/troubleshooting.php';
 
 		return (string) ob_get_clean();
+	}
+
+	/** @return array{troubleshooting:array<string,mixed>,github_selection_diagnostics:array<string,mixed>|null} */
+	private function troubleshooting_view_data(): array {
+		$selection = $this->provider_settings->github_selection_diagnostics();
+		return array(
+			'troubleshooting'              => $this->troubleshooting->with_installation_context( $this->troubleshooting_payload ?? $this->troubleshooting->form_payload(), $selection ),
+			'github_selection_diagnostics' => $selection,
+		);
 	}
 
 	/** Whether the most recent diagnostics result completed without a warning or failure. */

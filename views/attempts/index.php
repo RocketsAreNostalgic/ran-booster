@@ -73,9 +73,9 @@ $origin_labels = array(
 					<?php } ?>
 				<?php } ?>
 			</select>
-			<label class="screen-reader-text" for="ran-booster-activity-package"><?php esc_html_e( 'Package', 'ran-booster' ); ?></label>
+			<label class="screen-reader-text" for="ran-booster-activity-package"><?php esc_html_e( 'Activity subject', 'ran-booster' ); ?></label>
 			<select id="ran-booster-activity-package" name="activity_package">
-				<option value=""><?php esc_html_e( 'All activity', 'ran-booster' ); ?></option>
+				<option value=""><?php esc_html_e( 'All subjects', 'ran-booster' ); ?></option>
 				<?php foreach ( $filter_options['packages'] ?? array() as $option ) { ?>
 					<?php if ( is_array( $option ) && is_string( $option['value'] ?? null ) && is_string( $option['label'] ?? null ) ) { ?>
 						<option value="<?php echo esc_attr( $option['value'] ); ?>" <?php selected( $option['value'], $selected_package ); ?>><?php echo esc_html( $option['label'] ); ?></option>

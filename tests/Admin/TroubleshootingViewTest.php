@@ -109,33 +109,37 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'panel=diagnostics" aria-current="page"', $html );
 	}
 
-	public function test_github_diagnostics_escape_local_claims_and_link_to_core_owned_recovery(): void {
-		$troubleshooting_panel        = 'diagnostics';
-		$troubleshooting              = array( 'providers' => array() );
-		$declaration                  = array(
-			'display_name'           => '<Untrusted plugin>',
-			'display_version'        => '1.0',
-			'plugin_basename'        => 'provider/<plugin>.php',
-			'implementation_id'      => '<implementation>',
-			'provider_api_version'   => 15,
-			'compatibility_revision' => '<revision>',
-			'facets'                 => array( '<capability>' ),
-			'api_credential_formats' => array( '<format>' ),
-			'webhook_signing_format' => null,
-		);
-		$github_selection_diagnostics = array(
-			'state'      => 'missing',
-			'available'  => false,
-			'current'    => array( 'declaration' => $declaration ),
-			'candidates' => array( 'invalid/<candidate>.php' => null ),
+	public function test_installation_details_escape_local_claims_and_link_to_core_owned_provider_management(): void {
+		$troubleshooting_panel = 'diagnostics';
+		$troubleshooting       = array(
+			'providers'            => array(),
+			'installation_details' => array(
+				'GitHub provider'    => array(
+					'Name'                     => '<Untrusted plugin>',
+					'Version'                  => '1.0',
+					'Source'                   => 'External plugin',
+					'Selection state'          => 'missing',
+					'Operational availability' => 'Unavailable',
+					'Implementation'           => '<implementation>',
+					'Provider API'             => '15',
+					'Compatibility revision'   => '<revision>',
+					'Declared capabilities'    => '<capability>',
+					'Credential formats'       => '<format>',
+				),
+				'GitHub candidate 1' => array(
+					'Name'        => '<candidate>',
+					'Declaration' => 'Unavailable',
+				),
+			),
 		);
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 		$html = (string) ob_get_clean();
-		self::assertStringContainsString( '<details id="ran-booster-github-provider-diagnostics">', $html );
+		self::assertStringContainsString( 'id="ran-booster-github-provider-diagnostics"', $html );
+		self::assertStringContainsString( 'GitHub provider details', $html );
 		self::assertStringContainsString( 'Local declarations only;', $html );
-		self::assertStringContainsString( 'No compatible declaration is available.', $html );
-		foreach ( array( '<Untrusted plugin>', '<plugin>', '<implementation>', '<revision>', '<capability>', '<format>', '<candidate>' ) as $claim ) {
+		self::assertStringContainsString( '<summary>Technical details</summary>', $html );
+		foreach ( array( '<Untrusted plugin>', '<implementation>', '<revision>', '<capability>', '<format>', '<candidate>' ) as $claim ) {
 			self::assertStringNotContainsString( $claim, $html );
 			self::assertStringContainsString( htmlspecialchars( $claim, ENT_QUOTES ), $html );
 		}
@@ -143,6 +147,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Manage GitHub provider', $html );
 		self::assertStringNotContainsString( 'value="adopt-github"', $html );
 		self::assertStringNotContainsString( 'value="recover-github-native"', $html );
+		self::assertStringNotContainsString( 'Recover management without changing installed files:', $html );
 	}
 
 	public function test_logging_follows_deployment_activity_in_accessible_secondary_navigation(): void {
@@ -201,11 +206,13 @@ final class TroubleshootingViewTest extends TestCase {
 			),
 		);
 
+		$troubleshooting['installation_details'] = array( 'Booster Core updates' => array( 'Updater code' => 'native_discovery_disabled' ) );
+
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '<strong>Core updates</strong>', $html );
+		self::assertStringContainsString( '>Booster Core updates</h4>', $html );
 		self::assertStringContainsString( 'ran-booster-troubleshooting__core-updates', $html );
 		self::assertStringContainsString(
 			'Core updates are off for this source installation. Booster will not check for or replace itself.',
@@ -242,6 +249,8 @@ final class TroubleshootingViewTest extends TestCase {
 				'next_check'      => 1_700_000_900,
 			),
 		);
+
+		$troubleshooting['installation_details'] = array( 'Booster Core updates' => array( 'Updater code' => 'github_updater_github_http_error' ) );
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
@@ -380,6 +389,10 @@ final class TroubleshootingViewTest extends TestCase {
 				),
 				'packages'  => array(
 					array(
+						'value' => 'non-package',
+						'label' => 'Non-package events',
+					),
+					array(
 						'value' => '["gh","plugin","example/example.php"]',
 						'label' => 'GitHub · Plugin: Example (example/example.php)',
 					),
@@ -405,6 +418,9 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<select id="ran-booster-activity-provider" name="activity_provider">', $html );
 		self::assertStringContainsString( '<option value="">All providers</option>', $html );
 		self::assertStringContainsString( 'value="gh"  selected="selected">GitHub</option>', $html );
+		self::assertStringContainsString( '<label class="screen-reader-text" for="ran-booster-activity-package">Activity subject</label>', $html );
+		self::assertStringContainsString( '<option value="">All subjects</option>', $html );
+		self::assertStringContainsString( '<option value="non-package" >Non-package events</option>', $html );
 		self::assertStringContainsString( 'value="[&quot;gh&quot;,&quot;plugin&quot;,&quot;example/example.php&quot;]"  selected="selected">GitHub · Plugin: Example (example/example.php)</option>', $html );
 		self::assertStringContainsString( '>Clear filters</a>', $html );
 		self::assertStringContainsString( 'activity_provider=gh&amp;activity_package=%5B%22gh%22%2C%22plugin%22%2C%22example%2Fexample.php%22%5D&amp;before=v1%7Ccursor', $html );
@@ -813,7 +829,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'for="ran-booster-troubleshooting-repository"', $html );
 		self::assertStringContainsString( '<caption class="screen-reader-text">', $html );
 		self::assertStringContainsString( 'The five-request provider budget was reached.', $html );
-		self::assertStringContainsString( '<code>local.runtime.ready</code>', $html );
+		self::assertStringContainsString( '>local.runtime.ready</code>', $html );
 		self::assertStringContainsString( '<textarea', $html );
 		self::assertStringContainsString( 'RAN Booster troubleshooting report', $html );
 	}

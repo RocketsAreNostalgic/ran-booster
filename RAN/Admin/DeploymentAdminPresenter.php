@@ -257,25 +257,25 @@ final class DeploymentAdminPresenter {
 
 	/**
 	 * Normalize the two browse controls against retained choices before querying history.
-	 * @param list<string> $providers
+	 * @param list<array{provider:string,has_non_package:bool}> $providers
 	 * @param list<array{provider:string,subject_type:string,subject_identity:string}> $packages
 	 * @param array<string, string> $provider_labels
 	 * @param array<string, string> $package_labels
-	 * @return array{filters:array<string,string>,options:array{providers:list<array{value:string,label:string}>,packages:list<array{value:string,label:string,provider:string,subject_type:string,subject_identity:string}>},state:array{provider:string,package:string},notice:?string,reset_cursor:bool}
+	 * @return array{filters:array<string,string>,options:array{providers:list<array{value:string,label:string}>,packages:list<array<string,string>>},state:array{provider:string,package:string},notice:?string,reset_cursor:bool}
 	 */
 	private function activity_filter_selection( array $providers, array $packages, array $provider_labels, array $package_labels ): array {
 		$notice = null;
 		foreach ( array( 'activity_subject_type', 'activity_subject_identity', 'activity_operation', 'activity_outcome' ) as $legacy ) {
 			if ( $this->query_has_key( $legacy ) ) {
-				$notice = __( 'Older activity filters were cleared. Use Provider and Package to filter activity.', 'ran-booster' );
+				$notice = __( 'Older activity filters were cleared. Use Provider and Activity subject to filter activity.', 'ran-booster' );
 				break;
 			}
 		}
 		$provider_options = array();
 		foreach ( $providers as $provider ) {
 			$provider_options[] = array(
-				'value' => $provider,
-				'label' => $provider_labels[ $provider ] ?? ( 'gh' === $provider ? __( 'GitHub', 'ran-booster' ) : ( 'bb' === $provider ? __( 'Bitbucket', 'ran-booster' ) : $provider ) ),
+				'value' => $provider['provider'],
+				'label' => $provider_labels[ $provider['provider'] ] ?? ( 'gh' === $provider['provider'] ? __( 'GitHub', 'ran-booster' ) : ( 'bb' === $provider['provider'] ? __( 'Bitbucket', 'ran-booster' ) : $provider['provider'] ) ),
 			);
 		}
 		$package_options = array();
@@ -295,14 +295,39 @@ final class DeploymentAdminPresenter {
 		$provider = $this->activity_filter_value( 'activity_provider' );
 		if ( $this->query_has_key( 'activity_provider' ) && null === $provider && '' !== $this->query_value( 'activity_provider' ) ) {
 			$notice = __( 'That provider filter was cleared.', 'ran-booster' );
-		} elseif ( null !== $provider && ! in_array( $provider, $providers, true ) ) {
+		} elseif ( null !== $provider && ! in_array( $provider, array_column( $providers, 'provider' ), true ) ) {
 			$provider = null;
 			$notice   = __( 'That provider is no longer available in retained activity.', 'ran-booster' );
 		}
-		$package          = $this->activity_filter_value( 'activity_package' );
-		$selected_package = null;
+		$visible_packages = null === $provider
+			? $package_options
+			: array_values( array_filter( $package_options, static fn ( array $option ): bool => $provider === $option['provider'] ) );
+		$has_non_package  = count(
+			array_filter(
+				$providers,
+				static fn ( array $choice ): bool => ( null === $provider || $provider === $choice['provider'] ) && $choice['has_non_package']
+			)
+		) > 0;
+		if ( $has_non_package ) {
+			array_unshift(
+				$visible_packages,
+				array(
+					'value' => 'non-package',
+					'label' => __( 'Non-package events', 'ran-booster' ),
+				)
+			);
+		}
+		$package              = $this->activity_filter_value( 'activity_package' );
+		$selected_package     = null;
+		$selected_non_package = false;
 		if ( $this->query_has_key( 'activity_package' ) && null === $package && '' !== $this->query_value( 'activity_package' ) ) {
-			$notice = __( 'That package filter was cleared.', 'ran-booster' );
+			$notice = __( 'That Activity subject filter was cleared.', 'ran-booster' );
+		} elseif ( 'non-package' === $package ) {
+			if ( ! $has_non_package ) {
+				$notice = __( 'That Activity subject is no longer available in retained activity.', 'ran-booster' );
+			} else {
+				$selected_non_package = true;
+			}
 		} elseif ( null !== $package ) {
 			$decoded = json_decode( $package, true );
 			foreach ( $package_options as $option ) {
@@ -312,10 +337,10 @@ final class DeploymentAdminPresenter {
 				}
 			}
 			if ( null === $selected_package ) {
-				$notice = __( 'That package is no longer available in retained activity.', 'ran-booster' );
+				$notice = __( 'That Activity subject is no longer available in retained activity.', 'ran-booster' );
 			} elseif ( null !== $provider && $provider !== $selected_package['provider'] ) {
 				$selected_package = null;
-				$notice           = __( 'The package filter was cleared because it does not match the selected provider.', 'ran-booster' );
+				$notice           = __( 'The Activity subject filter was cleared because it does not match the selected provider.', 'ran-booster' );
 			}
 		}
 		$reset_cursor = null !== $notice;
@@ -323,14 +348,13 @@ final class DeploymentAdminPresenter {
 		if ( null !== $provider ) {
 			$filters['provider'] = $provider;
 		}
-		if ( null !== $selected_package ) {
+		if ( $selected_non_package ) {
+			$filters['non_package'] = '1';
+		} elseif ( null !== $selected_package ) {
 			$filters['provider']         = $selected_package['provider'];
 			$filters['subject_type']     = $selected_package['subject_type'];
 			$filters['subject_identity'] = $selected_package['subject_identity'];
 		}
-		$visible_packages = null === $provider
-			? $package_options
-			: array_values( array_filter( $package_options, static fn ( array $option ): bool => $provider === $option['provider'] ) );
 		return array(
 			'filters'      => $filters,
 			'options'      => array(
@@ -339,7 +363,7 @@ final class DeploymentAdminPresenter {
 			),
 			'state'        => array(
 				'provider' => $provider ?? '',
-				'package'  => $selected_package['value'] ?? '',
+				'package'  => $selected_non_package ? 'non-package' : ( $selected_package['value'] ?? '' ),
 			),
 			'notice'       => $notice,
 			'reset_cursor' => $reset_cursor,

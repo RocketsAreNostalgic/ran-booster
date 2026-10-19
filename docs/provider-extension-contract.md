@@ -873,10 +873,16 @@ that is missing or incompatible still shows actionable guidance, even when no
 candidate remains enabled. Interrupted installations retain their protected
 recovery confirmations; absence never causes silent fallback.
 
-Troubleshooting → Diagnostics contains the passive **GitHub provider diagnostics**
-disclosure: local plugin declarations, technical identities, API revisions and
-capability/credential-format names. These are claims, not publisher or remote-access
-verification, and contain no credential values. Provider configuration links to
-these details while retaining operational actions in Core. This presentation does
-not depend on the proposed Settings screen or the separate unused-GitHub hiding
-preference.
+Troubleshooting → Diagnostics puts explicit diagnostic checks and their current
+results first. Secondary **Installation details** contains **GitHub provider
+details** and standing **Booster Core updates** information; nested **Technical
+details** contains bounded local declarations, implementation identities, API
+revisions and capability/credential-format names. These are claims, not publisher
+or remote-access verification, and contain no credential values or private paths.
+The copyable Support report uses the same safe installation snapshot as the page,
+separately headed from diagnostic results. Initial and repeated full-page/enhanced
+renders retain this context without generic recovery links. Legitimate explicitly
+triggered recovery remains available through Core-owned operational routes.
+Provider configuration links to these details while retaining operational actions
+in Core. This presentation does not depend on the proposed Settings screen or the
+separate unused-GitHub hiding preference.

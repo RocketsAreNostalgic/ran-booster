@@ -106,6 +106,9 @@ msgstr ""
 
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:87
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:128
+#: RAN/Troubleshooting/TroubleshootingService.php:142
+#: views/troubleshooting.php:246
+#: views/troubleshooting.php:251
 msgid "Name"
 msgstr ""
 
@@ -171,8 +174,8 @@ msgstr ""
 #: views/extensions.php:138
 #: views/provider.php:452
 #: views/provider.php:472
-#: views/troubleshooting.php:269
-#: views/troubleshooting.php:297
+#: views/troubleshooting.php:183
+#: views/troubleshooting.php:211
 msgid "Status"
 msgstr ""
 
@@ -230,7 +233,6 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:149
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:352
 #: views/attempts/detail.php:84
-#: views/attempts/index.php:76
 #: views/attempts/index.php:191
 #: views/portability-review.php:241
 #: views/portability-review.php:262
@@ -240,9 +242,12 @@ msgid "Package"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:149
+#: RAN/Troubleshooting/TroubleshootingService.php:86
 #: views/attempts/index.php:116
 #: views/attempts/index.php:163
 #: views/portability-review.php:24
+#: views/troubleshooting.php:246
+#: views/troubleshooting.php:251
 msgid "Source"
 msgstr ""
 
@@ -731,7 +736,7 @@ msgid "Bitbucket"
 msgstr ""
 
 #: RAN/Admin/DeploymentAdminPresenter.php:270
-msgid "Older activity filters were cleared. Use Provider and Package to filter activity."
+msgid "Older activity filters were cleared. Use Provider and Activity subject to filter activity."
 msgstr ""
 
 #: RAN/Admin/DeploymentAdminPresenter.php:292
@@ -770,16 +775,21 @@ msgstr ""
 msgid "That provider is no longer available in retained activity."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:305
-msgid "That package filter was cleared."
+#: RAN/Admin/DeploymentAdminPresenter.php:316
+msgid "Non-package events"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:315
-msgid "That package is no longer available in retained activity."
+#: RAN/Admin/DeploymentAdminPresenter.php:324
+msgid "That Activity subject filter was cleared."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:318
-msgid "The package filter was cleared because it does not match the selected provider."
+#: RAN/Admin/DeploymentAdminPresenter.php:327
+#: RAN/Admin/DeploymentAdminPresenter.php:340
+msgid "That Activity subject is no longer available in retained activity."
+msgstr ""
+
+#: RAN/Admin/DeploymentAdminPresenter.php:343
+msgid "The Activity subject filter was cleared because it does not match the selected provider."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:12
@@ -944,8 +954,10 @@ msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:79
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:241
+#: RAN/Troubleshooting/TroubleshootingService.php:78
+#: RAN/Troubleshooting/TroubleshootingService.php:91
 #: views/portability-review.php:93
-#: views/troubleshooting.php:297
+#: views/troubleshooting.php:211
 #: assets/ran-booster-portability.js:714
 msgid "Unknown"
 msgstr ""
@@ -966,7 +978,7 @@ msgstr ""
 #: RAN/Booster.php:725
 #: views/attempts/index.php:49
 #: views/packages/index.php:64
-#: views/troubleshooting.php:43
+#: views/troubleshooting.php:42
 msgid "Failed"
 msgstr ""
 
@@ -1313,7 +1325,7 @@ msgid "RAN Booster automatic deployment failed."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:63
-#: RAN/Dashboard.php:1145
+#: RAN/Dashboard.php:1153
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
@@ -1322,7 +1334,7 @@ msgid "Booster could not confirm safe recovery. Refresh this page and review the
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:164
-#: RAN/Dashboard.php:572
+#: RAN/Dashboard.php:580
 msgid "You do not have sufficient permissions to manage these packages."
 msgstr ""
 
@@ -2225,7 +2237,7 @@ msgid "Stored · Validity checked on use"
 msgstr ""
 
 #: RAN/Admin/ProviderSettingsPresenter.php:1598
-#: views/troubleshooting.php:44
+#: views/troubleshooting.php:43
 msgid "Not configured"
 msgstr ""
 
@@ -2548,6 +2560,10 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:166
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:345
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:494
+#: RAN/Troubleshooting/TroubleshootingService.php:90
+#: RAN/Troubleshooting/TroubleshootingService.php:119
+#: RAN/Troubleshooting/TroubleshootingService.php:173
+#: RAN/Troubleshooting/TroubleshootingService.php:176
 #: views/debug-capture.php:43
 #: views/onboarding.php:29
 msgid "Unavailable"
@@ -4456,7 +4472,6 @@ msgstr ""
 
 #: RAN/Booster.php:224
 #: views/base.php:43
-#: views/troubleshooting.php:83
 msgid "Plugins"
 msgstr ""
 
@@ -4470,7 +4485,6 @@ msgstr ""
 
 #: RAN/Booster.php:226
 #: views/base.php:48
-#: views/troubleshooting.php:84
 msgid "Themes"
 msgstr ""
 
@@ -4623,7 +4637,7 @@ msgstr ""
 msgid "Booster could not validate the credentials sidecar."
 msgstr ""
 
-#: RAN/Dashboard.php:586
+#: RAN/Dashboard.php:594
 msgid "Booster cannot offer removal for this selection. The installed target, management identity, or storage could not be verified. No recovery action is available until that uncertainty is resolved."
 msgstr ""
 
@@ -5315,6 +5329,161 @@ msgstr ""
 msgid "Booster could not verify package management data after a database change. The saved state may have changed; review it before retrying."
 msgstr ""
 
+#: RAN/Troubleshooting/TroubleshootingService.php:76
+msgid "Bundled with Booster"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:77
+msgid "External replacement"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:81
+#: views/troubleshooting.php:270
+msgid "Diagnostic provider"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:82
+#: views/attempts/detail.php:93
+#: views/attempts/index.php:67
+#: views/packages/index.php:506
+#: views/portability-review.php:21
+#: views/troubleshooting.php:122
+msgid "Provider"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:83
+msgid "Provider code"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:85
+#: RAN/Troubleshooting/TroubleshootingService.php:99
+#: views/troubleshooting.php:245
+#: views/troubleshooting.php:249
+#: views/troubleshooting.php:270
+msgid "GitHub provider"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:87
+#: views/troubleshooting.php:246
+msgid "Selection state"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:88
+#: views/troubleshooting.php:246
+#: views/troubleshooting.php:251
+msgid "Operational availability"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:89
+msgid "Available"
+msgstr ""
+
+#. translators: %d: enabled replacement candidate number.
+#: RAN/Troubleshooting/TroubleshootingService.php:97
+#, php-format
+msgid "GitHub candidate %d"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:99
+msgid "Enabled candidates"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:102
+msgid "Requested mode"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:103
+msgid "Effective mode"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:104
+msgid "Policy reason"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:105
+msgid "Updater state"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:106
+msgid "Updater code"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:107
+msgid "Offered version"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:108
+msgid "Marker version"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:109
+msgid "Marker commit"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:112
+#: RAN/Troubleshooting/TroubleshootingService.php:119
+#: views/troubleshooting.php:270
+#: views/troubleshooting.php:303
+#: views/troubleshooting.php:309
+msgid "Booster Core updates"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:115
+msgid "Last check (UTC)"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:116
+msgid "Next check (UTC)"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:122
+#: views/troubleshooting.php:254
+msgid "Local declarations only; these claims do not verify publisher identity or remote access."
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:131
+msgid "Diagnostic checks"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:132
+msgid "Not run"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:143
+#: views/packages/index.php:510
+#: views/portability-review.php:35
+#: views/troubleshooting.php:246
+msgid "Version"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:144
+msgid "Implementation"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:145
+msgid "Provider API"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:146
+msgid "Compatibility revision"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:147
+msgid "Webhook signing format"
+msgstr ""
+
+#. translators: %d: locally declared capability number.
+#: RAN/Troubleshooting/TroubleshootingService.php:154
+#, php-format
+msgid "Capability %d"
+msgstr ""
+
+#. translators: %d: locally declared credential format number.
+#: RAN/Troubleshooting/TroubleshootingService.php:156
+#, php-format
+msgid "API credential format %d"
+msgstr ""
+
 #. translators: %s: stable uninstall diagnostic code.
 #: uninstall.php:38
 #, php-format
@@ -5413,14 +5582,6 @@ msgstr ""
 msgid "Origin"
 msgstr ""
 
-#: views/attempts/detail.php:93
-#: views/attempts/index.php:67
-#: views/packages/index.php:506
-#: views/portability-review.php:21
-#: views/troubleshooting.php:209
-msgid "Provider"
-msgstr ""
-
 #: views/attempts/detail.php:94
 #: views/attempts/index.php:193
 msgid "Requested reference"
@@ -5501,7 +5662,7 @@ msgstr ""
 #: views/attempts/index.php:59
 #: views/attempts/index.php:117
 #: views/attempts/index.php:164
-#: views/troubleshooting.php:30
+#: views/troubleshooting.php:29
 msgid "Activity"
 msgstr ""
 
@@ -5514,8 +5675,12 @@ msgstr ""
 msgid "All providers"
 msgstr ""
 
+#: views/attempts/index.php:76
+msgid "Activity subject"
+msgstr ""
+
 #: views/attempts/index.php:78
-msgid "All activity"
+msgid "All subjects"
 msgstr ""
 
 #: views/attempts/index.php:85
@@ -5564,7 +5729,7 @@ msgstr ""
 
 #: views/attempts/index.php:136
 #: views/portability-review.php:23
-#: views/troubleshooting.php:248
+#: views/troubleshooting.php:161
 msgid "Repository"
 msgstr ""
 
@@ -5657,7 +5822,7 @@ msgid "File needs attention"
 msgstr ""
 
 #: views/debug-capture.php:56
-#: views/troubleshooting.php:35
+#: views/troubleshooting.php:34
 msgid "Logging"
 msgstr ""
 
@@ -6494,8 +6659,8 @@ msgid "with your version of Booster"
 msgstr ""
 
 #: views/extensions.php:112
-#: views/troubleshooting.php:271
-#: views/troubleshooting.php:299
+#: views/troubleshooting.php:185
+#: views/troubleshooting.php:228
 msgid "Details"
 msgstr ""
 
@@ -7222,6 +7387,7 @@ msgstr ""
 #: views/packages/fields/credential.php:24
 #: views/provider.php:206
 #: views/provider.php:371
+#: views/troubleshooting.php:223
 msgid "Repository access"
 msgstr ""
 
@@ -7589,11 +7755,6 @@ msgstr ""
 
 #: views/packages/index.php:493
 msgid "Edit settings"
-msgstr ""
-
-#: views/packages/index.php:510
-#: views/portability-review.php:35
-msgid "Version"
 msgstr ""
 
 #: views/packages/index.php:511
@@ -7974,7 +8135,7 @@ msgstr ""
 
 #: views/portability-review.php:197
 #: views/portability-review.php:345
-#: views/troubleshooting.php:223
+#: views/troubleshooting.php:136
 msgid "Saved credential"
 msgstr ""
 
@@ -8494,7 +8655,7 @@ msgstr ""
 
 #. translators: %s: selected provider plugin name.
 #: views/provider.php:236
-#: views/troubleshooting.php:145
+#: views/troubleshooting.php:280
 msgid "Manage GitHub provider"
 msgstr ""
 
@@ -8638,7 +8799,6 @@ msgid "Adopt GitHub implementation"
 msgstr ""
 
 #: views/provider.php:321
-#: views/troubleshooting.php:119
 msgid "GitHub provider diagnostics"
 msgstr ""
 
@@ -9116,226 +9276,205 @@ msgstr ""
 msgid "Save webhook secret"
 msgstr ""
 
-#: views/troubleshooting.php:25
-#: views/troubleshooting.php:88
+#: views/troubleshooting.php:24
+#: views/troubleshooting.php:83
 msgid "Diagnostics"
 msgstr ""
 
-#: views/troubleshooting.php:41
+#: views/troubleshooting.php:40
 msgid "Passed"
 msgstr ""
 
-#: views/troubleshooting.php:42
+#: views/troubleshooting.php:41
 msgid "Warning"
 msgstr ""
 
-#: views/troubleshooting.php:53
+#: views/troubleshooting.php:52
 msgid "Local checks could not finish, so provider checks were not started."
 msgstr ""
 
-#: views/troubleshooting.php:54
+#: views/troubleshooting.php:53
 msgid "The ten-second diagnostic deadline was reached. Completed checks are shown below."
 msgstr ""
 
-#: views/troubleshooting.php:55
+#: views/troubleshooting.php:54
 msgid "The five-request provider budget was reached. Completed checks are shown below."
 msgstr ""
 
-#: views/troubleshooting.php:56
+#: views/troubleshooting.php:55
 msgid "The selected provider could not complete diagnostics. Local results are still available."
 msgstr ""
 
-#: views/troubleshooting.php:57
+#: views/troubleshooting.php:56
 msgid "The provider returned an unsafe or invalid diagnostic result, which Booster omitted."
 msgstr ""
 
-#: views/troubleshooting.php:58
+#: views/troubleshooting.php:57
 msgid "The eight-result limit was reached. Earlier results are shown below."
 msgstr ""
 
-#: views/troubleshooting.php:78
+#: views/troubleshooting.php:77
 msgid "account/repository"
 msgstr ""
 
-#: views/troubleshooting.php:82
-msgid "Recover management without changing installed files:"
-msgstr ""
-
-#: views/troubleshooting.php:89
+#: views/troubleshooting.php:84
 msgid "Troubleshooting"
 msgstr ""
 
-#: views/troubleshooting.php:90
+#: views/troubleshooting.php:85
 msgid "Run protected checks, temporarily capture Booster events, or review recent update activity."
 msgstr ""
 
-#: views/troubleshooting.php:94
+#: views/troubleshooting.php:89
 msgid "Troubleshooting views"
 msgstr ""
 
-#: views/troubleshooting.php:120
-msgid "Local declarations only; these claims do not verify publisher identity or remote access."
+#: views/troubleshooting.php:112
+msgid "Run diagnostics"
 msgstr ""
 
-#: views/troubleshooting.php:121
-msgid "Selection state"
+#: views/troubleshooting.php:113
+msgid "Choose a provider and run checks. Results below describe only this diagnostic run."
 msgstr ""
 
-#: views/troubleshooting.php:123
-msgid "Currently selected"
-msgstr ""
-
-#. translators: %s: enabled candidate plugin path.
-#: views/troubleshooting.php:125
-#, php-format
-msgid "Candidate: %s"
-msgstr ""
-
-#: views/troubleshooting.php:132
-msgid "Implementation"
-msgstr ""
-
-#: views/troubleshooting.php:133
-msgid "Claimed provider API and compatibility revision"
-msgstr ""
-
-#: views/troubleshooting.php:134
-msgid "Declared capabilities and credential formats"
-msgstr ""
-
-#: views/troubleshooting.php:142
-msgid "No compatible declaration is available."
-msgstr ""
-
-#: views/troubleshooting.php:156
-msgid "RAN Booster could not check for Core updates. The installed version will keep working, and Booster will retry automatically."
-msgstr ""
-
-#: views/troubleshooting.php:159
-msgid "Core updates are available manually for this verified release installation. Background Core updates remain off."
-msgstr ""
-
-#: views/troubleshooting.php:161
-msgid "Core updates are off because this site explicitly disables them. Booster will not check for or replace itself."
-msgstr ""
-
-#: views/troubleshooting.php:164
-msgid "Core updates are off because this installation has an invalid self-update setting. Booster will not check for or replace itself."
-msgstr ""
-
-#: views/troubleshooting.php:166
-msgid "Core updates are off for this source installation. Booster will not check for or replace itself."
-msgstr ""
-
-#: views/troubleshooting.php:169
-msgid "Requested mode"
-msgstr ""
-
-#: views/troubleshooting.php:170
-msgid "Effective mode"
-msgstr ""
-
-#: views/troubleshooting.php:171
-msgid "Policy reason"
-msgstr ""
-
-#: views/troubleshooting.php:172
-msgid "Updater state"
-msgstr ""
-
-#: views/troubleshooting.php:173
-msgid "Updater code"
-msgstr ""
-
-#: views/troubleshooting.php:174
-msgid "Offered version"
-msgstr ""
-
-#: views/troubleshooting.php:175
-msgid "Last check (UTC)"
-msgstr ""
-
-#: views/troubleshooting.php:178
-msgid "Next check (UTC)"
-msgstr ""
-
-#: views/troubleshooting.php:181
-msgid "Marker version"
-msgstr ""
-
-#: views/troubleshooting.php:182
-msgid "Marker commit"
-msgstr ""
-
-#: views/troubleshooting.php:186
-msgid "Core updates"
-msgstr ""
-
-#: views/troubleshooting.php:189
-msgid "Technical details"
-msgstr ""
-
-#: views/troubleshooting.php:217
+#: views/troubleshooting.php:130
 msgid "Start with a provider to run a general health check. The optional fields below check only credential and repository access; they do not scope Push-to-Deploy delivery results."
 msgstr ""
 
-#: views/troubleshooting.php:220
+#: views/troubleshooting.php:133
 msgid "Check credential or repository access (optional)"
 msgstr ""
 
-#: views/troubleshooting.php:223
-#: views/troubleshooting.php:248
+#: views/troubleshooting.php:136
+#: views/troubleshooting.php:161
 msgid "(optional)"
 msgstr ""
 
-#: views/troubleshooting.php:225
+#: views/troubleshooting.php:138
 msgid "No saved credential (check public access)"
 msgstr ""
 
-#: views/troubleshooting.php:244
+#: views/troubleshooting.php:157
 msgid "Choose a saved credential only to check private-repository access. This is a credential reference, not the credential secret; Booster never displays the credential secret here."
 msgstr ""
 
-#: views/troubleshooting.php:245
+#: views/troubleshooting.php:158
 msgid "The active provider can read every credential saved under its provider code, not only the selected diagnostic profile. Booster does not authenticate a third-party publisher."
 msgstr ""
 
-#: views/troubleshooting.php:250
+#: views/troubleshooting.php:163
 msgid "Enter a repository only when diagnosing a particular access issue. Without a saved credential, Booster checks whether it is publicly available."
 msgstr ""
 
-#: views/troubleshooting.php:255
+#: views/troubleshooting.php:168
 msgid "The full check makes temporary local marker files and up to five provider requests. Markers are removed immediately. Booster does not install packages, trigger webhooks or save a report."
 msgstr ""
 
-#: views/troubleshooting.php:256
+#: views/troubleshooting.php:169
 msgid "Run full diagnostics"
 msgstr ""
 
-#: views/troubleshooting.php:262
+#: views/troubleshooting.php:174
+msgid "Diagnostic results"
+msgstr ""
+
+#: views/troubleshooting.php:176
 msgid "Diagnostics finished with partial results."
 msgstr ""
 
-#: views/troubleshooting.php:267
+#: views/troubleshooting.php:181
 msgid "RAN Booster diagnostic results"
 msgstr ""
 
-#: views/troubleshooting.php:270
-#: views/troubleshooting.php:298
+#: views/troubleshooting.php:184
+#: views/troubleshooting.php:212
 msgid "Check"
 msgstr ""
 
-#: views/troubleshooting.php:272
-#: views/troubleshooting.php:300
+#: views/troubleshooting.php:186
+#: views/troubleshooting.php:229
 msgid "Action"
 msgstr ""
 
-#: views/troubleshooting.php:308
+#: views/troubleshooting.php:216
+msgid "WordPress runtime"
+msgstr ""
+
+#: views/troubleshooting.php:217
+msgid "Database storage"
+msgstr ""
+
+#: views/troubleshooting.php:218
+msgid "Filesystem access"
+msgstr ""
+
+#: views/troubleshooting.php:219
+msgid "Package destinations"
+msgstr ""
+
+#: views/troubleshooting.php:220
+msgid "Deployment history"
+msgstr ""
+
+#: views/troubleshooting.php:221
+msgid "Deployment worker"
+msgstr ""
+
+#: views/troubleshooting.php:222
+msgid "Credential access"
+msgstr ""
+
+#: views/troubleshooting.php:225
+msgid "Provider check"
+msgstr ""
+
+#: views/troubleshooting.php:241
+msgid "Installation details"
+msgstr ""
+
+#: views/troubleshooting.php:242
+msgid "Standing installation information, separate from the checks above."
+msgstr ""
+
+#: views/troubleshooting.php:253
+msgid "GitHub provider details"
+msgstr ""
+
+#: views/troubleshooting.php:261
+#: views/troubleshooting.php:306
+msgid "Technical details"
+msgstr ""
+
+#: views/troubleshooting.php:289
+msgid "Core update status is unavailable."
+msgstr ""
+
+#: views/troubleshooting.php:291
+msgid "RAN Booster could not check for Core updates. The installed version will keep working, and Booster will retry automatically."
+msgstr ""
+
+#: views/troubleshooting.php:293
+msgid "Core updates are available manually for this verified release installation. Background Core updates remain off."
+msgstr ""
+
+#: views/troubleshooting.php:295
+msgid "Core updates are off because this site explicitly disables them. Booster will not check for or replace itself."
+msgstr ""
+
+#: views/troubleshooting.php:297
+msgid "Core updates are off because this installation has an invalid self-update setting. Booster will not check for or replace itself."
+msgstr ""
+
+#: views/troubleshooting.php:299
+msgid "Core updates are off for this source installation. Booster will not check for or replace itself."
+msgstr ""
+
+#: views/troubleshooting.php:316
 msgid "Support report"
 msgstr ""
 
-#: views/troubleshooting.php:310
-msgid "This report contains only the safe, displayed result fields. Review it before sharing."
+#: views/troubleshooting.php:318
+msgid "This report includes the displayed installation details and diagnostic results. Local declarations and standing Core update status are not diagnostic test results. Review it before sharing."
 msgstr ""
 
 #: assets/ran-booster-packages.js:565

@@ -59,12 +59,12 @@ $origin_labels = array(
 		<h3 id="ran-booster-activity-heading"><?php esc_html_e( 'Activity', 'ran-booster' ); ?></h3>
 		<p><?php esc_html_e( 'Review recorded checks and deployments. Activity is recorded independently of diagnostic logging.', 'ran-booster' ); ?></p>
 	</header>
-	<form class="ran-booster-provider-list-controls" method="get">
-		<input type="hidden" name="page" value="ran-booster">
-		<input type="hidden" name="tab" value="troubleshooting">
-		<input type="hidden" name="panel" value="activity">
-		<div>
-			<label for="ran-booster-activity-provider"><?php esc_html_e( 'Provider', 'ran-booster' ); ?></label>
+	<div class="ran-booster-package-list-controls">
+		<form class="ran-booster-package-list-filters" method="get">
+			<input type="hidden" name="page" value="ran-booster">
+			<input type="hidden" name="tab" value="troubleshooting">
+			<input type="hidden" name="panel" value="activity">
+			<label class="screen-reader-text" for="ran-booster-activity-provider"><?php esc_html_e( 'Provider', 'ran-booster' ); ?></label>
 			<select id="ran-booster-activity-provider" name="activity_provider">
 				<option value=""><?php esc_html_e( 'All providers', 'ran-booster' ); ?></option>
 				<?php foreach ( $filter_options['providers'] ?? array() as $option ) { ?>
@@ -73,7 +73,7 @@ $origin_labels = array(
 					<?php } ?>
 				<?php } ?>
 			</select>
-			<label for="ran-booster-activity-package"><?php esc_html_e( 'Package', 'ran-booster' ); ?></label>
+			<label class="screen-reader-text" for="ran-booster-activity-package"><?php esc_html_e( 'Package', 'ran-booster' ); ?></label>
 			<select id="ran-booster-activity-package" name="activity_package">
 				<option value=""><?php esc_html_e( 'All activity', 'ran-booster' ); ?></option>
 				<?php foreach ( $filter_options['packages'] ?? array() as $option ) { ?>
@@ -82,15 +82,12 @@ $origin_labels = array(
 					<?php } ?>
 				<?php } ?>
 			</select>
-		</div>
-		<div>
 			<button type="submit" class="button"><?php esc_html_e( 'Filter', 'ran-booster' ); ?></button>
-			<?php
-			if ( '' !== $selected_provider || '' !== $selected_package ) {
-				?>
-				<a class="ran-booster-package-list-filters__clear" href="<?php echo esc_url( $troubleshooting_base . '&panel=activity' ); ?>"><?php esc_html_e( 'Clear filters', 'ran-booster' ); ?></a><?php } ?>
-		</div>
-	</form>
+			<?php if ( '' !== $selected_provider || '' !== $selected_package ) { ?>
+				<a class="ran-booster-package-list-filters__clear" href="<?php echo esc_url( $troubleshooting_base . '&panel=activity' ); ?>"><?php esc_html_e( 'Clear filters', 'ran-booster' ); ?></a>
+			<?php } ?>
+		</form>
+	</div>
 	<?php
 	if ( is_string( $deployment_activity['filter_notice'] ?? null ) ) {
 		?>

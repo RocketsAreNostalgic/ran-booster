@@ -114,6 +114,58 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		parent::tearDown();
 	}
 
+	public function test_actual_classic_form_saves_and_edits_with_canonical_format_guard(): void {
+		$policies = new ProviderSecretPolicyCatalog();
+		$secrets  = new SecretsFile(
+			$this->path,
+			array(),
+			$policies,
+			new InMemorySiteKeyStore( $this->path ),
+			github_credential_access: static fn ( ?array $metadata ): bool => null === $metadata
+				|| 'github-classic-pat-v1' === \RAN\RepositoryProvider\GitHubProviderSelection::credential_format( $metadata )
+		);
+		$provider = \RAN\BoosterGitHubProvider\V1\GitHubProvider::create(
+			$secrets->credentials_for( 'gh' ),
+			$this->createStub( \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader::class ),
+			new \stdClass()
+		);
+		$this->providers = new ProviderRegistry( array( $provider ), $policies );
+		$admin = $provider->get_metadata()->admin;
+		self::assertNotNull( $admin );
+		self::assertSame( array(), $admin->get_credential_kind( 'classic' )?->fields );
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::never() )->method( 'add_failure_message' );
+		$_GET['view']         = 'credentials';
+		$_POST['ran_booster'] = array(
+			'action'     => 'save-access-profile',
+			'provider'   => 'gh',
+			'label'      => 'Classic form',
+			'kind'       => 'classic',
+			'secret'     => 'ghp_' . str_repeat( 'a', 36 ),
+			'expires_on' => '',
+		);
+		$interaction = new CapturingProviderProfileInteraction();
+		$response    = $interaction->dispatch( $this->dispatcher( $dashboard, $secrets, $interaction, new InMemoryPublicRepositoryLookupProfileStore() ) );
+		self::assertSame( 'success', $response?->kind );
+		$profiles = $secrets->credential_profiles( 'gh' );
+		self::assertCount( 1, $profiles );
+		$id       = array_key_first( $profiles );
+		$original = $secrets->credential_material( 'gh', $id );
+		self::assertSame( array( 'owner' => '' ), $original['configuration'] ?? null );
+		self::assertSame( 'Classic form', $original['label'] ?? null );
+
+		$_POST['ran_booster']['id']     = $id;
+		$_POST['ran_booster']['label']  = 'Renamed classic form';
+		$_POST['ran_booster']['secret'] = '';
+		$interaction = new CapturingProviderProfileInteraction();
+		$response    = $interaction->dispatch( $this->dispatcher( $dashboard, $secrets, $interaction, new InMemoryPublicRepositoryLookupProfileStore() ) );
+		self::assertSame( 'success', $response?->kind );
+		$edited = $secrets->credential_material( 'gh', $id );
+		self::assertSame( 'Renamed classic form', $edited['label'] ?? null );
+		self::assertSame( $original['secret'] ?? null, $edited['secret'] ?? null );
+		self::assertCount( 1, $secrets->credential_profiles( 'gh' ) );
+	}
+
 	public function test_actual_lock_rejects_invalid_options_host_before_sidecar_save(): void {
 		$interaction = new CapturingProviderProfileInteraction();
 		$dashboard   = $this->createMock( Dashboard::class );

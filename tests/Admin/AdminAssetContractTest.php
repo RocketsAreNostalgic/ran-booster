@@ -611,9 +611,11 @@ final class AdminAssetContractTest extends TestCase {
 		);
 		foreach ( array( 'ran-booster-provider-management__header', 'ran-booster-provider-list-controls' ) as $flat_class ) {
 			self::assertSame( 1, preg_match( '/\\.' . preg_quote( $flat_class, '/' ) . ' \\{([^}]+)\\}/', $css, $flat_rule ) );
-			self::assertStringNotContainsString( 'background:', $flat_rule[1] );
-			self::assertStringNotContainsString( 'border:', $flat_rule[1] );
-			self::assertStringNotContainsString( 'padding:', $flat_rule[1] );
+			$flat_body = $flat_rule[1] ?? '';
+			self::assertNotSame( '', $flat_body );
+			self::assertStringNotContainsString( 'background:', $flat_body );
+			self::assertStringNotContainsString( 'border:', $flat_body );
+			self::assertStringNotContainsString( 'padding:', $flat_body );
 		}
 		self::assertMatchesRegularExpression(
 			'/\\.ran-booster-provider-list-controls \\{[\\s\\S]+flex-wrap: wrap;/',

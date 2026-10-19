@@ -225,82 +225,94 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 
 
 	<?php if ( isset( $github_selection ) && is_array( $github_selection ) ) { ?>
-		<section class="notice notice-info inline" aria-labelledby="ran-booster-github-selection-heading">
-			<h3 id="ran-booster-github-selection-heading"><?php esc_html_e( 'GitHub implementation', 'ran-booster' ); ?></h3>
-			<p><?php echo esc_html( $github_selection['available'] ? __( 'The selected GitHub implementation is available.', 'ran-booster' ) : __( 'GitHub operations are paused. Local records remain available and Bitbucket is unaffected.', 'ran-booster' ) ); ?></p>
-			<p><?php esc_html_e( 'Repository authority: github.com. Plugin names and compatibility claims do not verify publisher identity.', 'ran-booster' ); ?></p>
-			<?php foreach ( $github_selection['status']['candidates'] as $basename => $candidate ) { ?>
-				<p><code><?php echo esc_html( $basename ); ?></code> <?php echo esc_html( is_array( $candidate ) ? $candidate['display_name'] . ' ' . $candidate['display_version'] : __( 'Incompatible declaration', 'ran-booster' ) ); ?></p>
-			<?php } ?>
-			<?php $current_implementation = $github_selection['status']['current']['declaration'] ?? null; ?>
-			<?php if ( is_array( $current_implementation ) ) { ?>
-				<p><?php esc_html_e( 'Currently selected', 'ran-booster' ); ?>: <?php echo esc_html( $current_implementation['display_name'] . ' ' . $current_implementation['display_version'] ); ?> · <code><?php echo esc_html( $current_implementation['plugin_basename'] ); ?></code></p>
-			<?php } ?>
-			<p>
-			<?php
-			echo esc_html(
-				match ( $github_selection['status']['state'] ) {
-				'conflict' => __( 'Multiple GitHub candidates are active. Deactivate the extras before choosing an implementation.', 'ran-booster' ),
-				'incompatible' => __( 'An active GitHub candidate declares an incompatible contract.', 'ran-booster' ),
-				'missing' => __( 'The selected implementation is missing. Restore it or disable every candidate before reviewing a return to bundled GitHub.', 'ran-booster' ),
-				'recovery_required' => __( 'An interrupted native installation requires protected recovery before changing implementation.', 'ran-booster' ),
-				'storage_unavailable' => __( 'Selection storage is unavailable. Restore it before continuing.', 'ran-booster' ),
-				'decision_required' => __( 'Explicit approval is required before this implementation can access GitHub or saved credentials.', 'ran-booster' ),
-				default => '',
-				}
-			);
-			?>
-			</p>
-			<?php if ( '' !== $github_selection['error'] ) { ?>
-				<p role="status"><?php echo esc_html( $github_selection['error'] ); ?></p>
-			<?php } ?>
-			<p><?php echo esc_html( is_array( $github_selection['package_counts'] ) ? sprintf( /* translators: 1: managed Branch packages, 2: managed release packages. */ __( 'Affected GitHub packages: %1$d Branch, %2$d Published release.', 'ran-booster' ), $github_selection['package_counts']['branch'], $github_selection['package_counts']['release_asset'] ) : __( 'Affected package inventory could not be checked.', 'ran-booster' ) ); ?></p>
-			<?php $native_recovery = $github_selection['recovery'] ?? null; ?>
-			<?php if ( is_array( $native_recovery ) ) { ?>
-				<h4><?php esc_html_e( 'Recover an interrupted native installation', 'ran-booster' ); ?></h4>
-				<p><code><?php echo esc_html( $native_recovery['type'] . ': ' . $native_recovery['identifier'] ); ?></code></p>
-				<p><?php esc_html_e( 'First confirm that the interrupted process has stopped and remove the entire target plugin or theme. A missing main file alone is insufficient. This action verifies removal and disconnects its management record; it does not delete files or repair an installation.', 'ran-booster' ); ?></p>
-				<p><?php esc_html_e( 'An occupied updater lock prevents recovery. Booster will not clear it based on its age. Cleanup of temporary files from the interrupted process remains unverified.', 'ran-booster' ); ?></p>
-				<?php if ( current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) { ?>
-					<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>" data-hx-boost="false">
-						<?php wp_nonce_field( 'ran-booster-recover-github-' . $native_recovery['digest'] ); ?>
-						<input type="hidden" name="ran_booster[action]" value="recover-github-native">
-						<input type="hidden" name="ran_booster[review_digest]" value="<?php echo esc_attr( $native_recovery['digest'] ); ?>">
-						<p><label><input type="checkbox" name="ran_booster[confirmed_stopped]" value="1" required> <?php esc_html_e( 'I have confirmed that the interrupted installation process has stopped.', 'ran-booster' ); ?></label></p>
-						<p><label><input type="checkbox" name="ran_booster[confirmed_removal]" value="1" required> <?php esc_html_e( 'I have removed the entire target and approve disconnecting its management record.', 'ran-booster' ); ?></label></p>
-						<button type="submit" class="button"><?php esc_html_e( 'Verify removal and clear installation block', 'ran-booster' ); ?></button>
-					</form>
+		<?php
+		$selection_status       = $github_selection['status'];
+		$current_implementation = $selection_status['current']['declaration'] ?? null;
+		$healthy_replacement    = 'available' === $selection_status['state'] && $github_selection['available'];
+		?>
+		<section aria-label="<?php esc_attr_e( 'GitHub provider management', 'ran-booster' ); ?>"<?php echo $healthy_replacement ? '' : ' class="notice notice-warning inline"'; ?>>
+			<?php if ( $healthy_replacement && is_array( $current_implementation ) ) { ?>
+				<p><?php echo esc_html( sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provided by %s', 'ran-booster' ), $current_implementation['display_name'] ) ); ?></p>
+				<details><summary><?php esc_html_e( 'Manage GitHub provider', 'ran-booster' ); ?></summary>
+				<p><?php esc_html_e( 'To change provider, deactivate the current replacement plugin and enable only the replacement you want to use. To return to bundled GitHub, deactivate all replacement plugins. Then return here to review and approve the change. GitHub operations pause until you complete that review.', 'ran-booster' ); ?></p>
+			<?php } else { ?>
+				<?php if ( 'decision_required' === $selection_status['state'] && 1 === count( $selection_status['candidates'] ) ) { ?>
+					<?php $review_candidate = reset( $selection_status['candidates'] ); ?>
+					<?php if ( is_array( $review_candidate ) ) { ?>
+						<p><?php echo esc_html( sprintf( /* translators: %s: candidate provider plugin name. */ __( 'Use GitHub support provided by %s?', 'ran-booster' ), $review_candidate['display_name'] ) ); ?></p>
+					<?php } ?>
+				<?php } ?>
+				<?php if ( ! $github_selection['available'] ) { ?>
+					<p><?php esc_html_e( 'GitHub operations are paused. Local records remain available and Bitbucket is unaffected.', 'ran-booster' ); ?></p>
+				<?php } ?>
+				<p>
+				<?php
+				echo esc_html(
+					match ( $github_selection['status']['state'] ) {
+					'conflict' => __( 'Multiple GitHub candidates are active. Deactivate the extras before choosing an implementation.', 'ran-booster' ),
+					'incompatible' => __( 'An active GitHub candidate declares an incompatible contract.', 'ran-booster' ),
+					'missing' => __( 'The selected GitHub plugin is unavailable. Restore it or deactivate every replacement plugin, then review a return to bundled GitHub.', 'ran-booster' ),
+					'recovery_required' => __( 'An interrupted native installation requires protected recovery before changing implementation.', 'ran-booster' ),
+					'storage_unavailable' => __( 'Selection storage is unavailable. Restore it before continuing.', 'ran-booster' ),
+					'decision_required' => __( 'Explicit approval is required before this implementation can access GitHub or saved credentials.', 'ran-booster' ),
+					default => '',
+					}
+				);
+				?>
+				</p>
+				<?php if ( in_array( $selection_status['state'], array( 'conflict', 'incompatible' ), true ) ) { ?>
+					<ul><?php foreach ( $selection_status['candidates'] as $basename => $candidate ) { ?>
+						<li><?php echo esc_html( is_array( $candidate ) ? $candidate['display_name'] : $basename ); ?></li>
+					<?php } ?></ul>
+				<?php } ?>
+				<?php if ( '' !== $github_selection['error'] ) { ?>
+					<p role="status"><?php echo esc_html( $github_selection['error'] ); ?></p>
+				<?php } ?>
+				<?php $native_recovery = $github_selection['recovery'] ?? null; ?>
+				<?php if ( is_array( $native_recovery ) ) { ?>
+					<h4><?php esc_html_e( 'Recover an interrupted native installation', 'ran-booster' ); ?></h4>
+					<p><code><?php echo esc_html( $native_recovery['type'] . ': ' . $native_recovery['identifier'] ); ?></code></p>
+					<p><?php esc_html_e( 'First confirm that the interrupted process has stopped and remove the entire target plugin or theme. A missing main file alone is insufficient. This action verifies removal and disconnects its management record; it does not delete files or repair an installation.', 'ran-booster' ); ?></p>
+					<p><?php esc_html_e( 'An occupied updater lock prevents recovery. Booster will not clear it based on its age. Cleanup of temporary files from the interrupted process remains unverified.', 'ran-booster' ); ?></p>
+					<?php if ( current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) { ?>
+						<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>" data-hx-boost="false">
+							<?php wp_nonce_field( 'ran-booster-recover-github-' . $native_recovery['digest'] ); ?>
+							<input type="hidden" name="ran_booster[action]" value="recover-github-native">
+							<input type="hidden" name="ran_booster[review_digest]" value="<?php echo esc_attr( $native_recovery['digest'] ); ?>">
+							<p><label><input type="checkbox" name="ran_booster[confirmed_stopped]" value="1" required> <?php esc_html_e( 'I have confirmed that the interrupted installation process has stopped.', 'ran-booster' ); ?></label></p>
+							<p><label><input type="checkbox" name="ran_booster[confirmed_removal]" value="1" required> <?php esc_html_e( 'I have removed the entire target and approve disconnecting its management record.', 'ran-booster' ); ?></label></p>
+							<button type="submit" class="button"><?php esc_html_e( 'Verify removal and clear installation block', 'ran-booster' ); ?></button>
+						</form>
+					<?php } ?>
+				<?php } ?>
+				<?php $adoption_review = $github_selection['review']; ?>
+				<?php if ( is_array( $adoption_review ) ) { ?>
+					<details><summary><?php echo esc_html( 'bundled' === $adoption_review['selected'] ? __( 'Review return to bundled GitHub', 'ran-booster' ) : __( 'Review GitHub provider', 'ran-booster' ) ); ?></summary>
+					<p><?php esc_html_e( 'Plugin names and compatibility claims do not verify publisher identity. Approve only a plugin you trust.', 'ran-booster' ); ?></p>
+				<p><?php echo esc_html( is_array( $github_selection['package_counts'] ) ? sprintf( /* translators: 1: managed Branch packages, 2: managed release packages. */ __( 'Affected GitHub packages: %1$d Branch, %2$d Published release.', 'ran-booster' ), $github_selection['package_counts']['branch'], $github_selection['package_counts']['release_asset'] ) : __( 'Affected package inventory could not be checked.', 'ran-booster' ) ); ?></p>
+					<p><?php echo esc_html( sprintf( /* translators: 1: compatible profile count, 2: incompatible profile count. */ __( 'API credential material: %1$d compatible, %2$d incompatible. Counts include any configured constant overlay.', 'ran-booster' ), $adoption_review['compatible_count'], $adoption_review['incompatible_count'] ) ); ?></p>
+					<p><?php esc_html_e( 'Incompatible profiles remain unchanged and unavailable. Packages using them stay paused; Booster will not substitute another credential. Missing provider capabilities also keep affected operations unavailable.', 'ran-booster' ); ?></p>
+					<?php if ( ! $github_selection['available'] && current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) { ?>
+						<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>" data-hx-boost="false">
+							<?php wp_nonce_field( 'ran-booster-adopt-github-' . $adoption_review['digest'] ); ?>
+							<input type="hidden" name="ran_booster[action]" value="adopt-github">
+							<input type="hidden" name="ran_booster[review_digest]" value="<?php echo esc_attr( $adoption_review['digest'] ); ?>">
+							<p><label><input type="checkbox" name="ran_booster[confirmed]" value="1" required> <?php esc_html_e( 'I approve this implementation and future normal credential setup within its declared compatible formats.', 'ran-booster' ); ?></label></p>
+							<p><?php echo esc_html( $adoption_review['signing_reuse'] ? __( 'This approval also permits reuse of compatible existing webhook signing secrets.', 'ran-booster' ) : __( 'Existing webhook signing secrets remain stored but webhook verification is unavailable with this implementation.', 'ran-booster' ) ); ?></p>
+							<?php if ( $adoption_review['compatible_count'] > 0 ) { ?>
+								<p><label><input type="checkbox" name="ran_booster[reuse_existing]" value="1" required> <?php esc_html_e( 'Allow this implementation to read and use all compatible existing GitHub API credentials, including any constant overlay.', 'ran-booster' ); ?></label></p>
+								<p><?php esc_html_e( 'Declining reuse cancels this adoption. GitHub remains paused until you complete an approved selection or restore the previously approved implementation.', 'ran-booster' ); ?></p>
+							<?php } elseif ( $adoption_review['has_material'] ) { ?>
+								<p><label><input type="checkbox" name="ran_booster[acknowledge_incompatible]" value="1" required> <?php esc_html_e( 'I understand that none of the existing API credentials can be reused. Compatible credentials must be configured afterward.', 'ran-booster' ); ?></label></p>
+							<?php } ?>
+							<button type="submit" class="button button-primary"><?php echo esc_html( 'bundled' === $adoption_review['selected'] ? __( 'Return to bundled GitHub', 'ran-booster' ) : __( 'Adopt GitHub implementation', 'ran-booster' ) ); ?></button>
+						</form>
+					<?php } ?>
+					</details>
 				<?php } ?>
 			<?php } ?>
-			<?php $adoption_review = $github_selection['review']; ?>
-			<?php if ( is_array( $adoption_review ) ) { ?>
-				<p><?php esc_html_e( 'Review target', 'ran-booster' ); ?>: <code><?php echo esc_html( $adoption_review['target']['implementation_id'] ); ?></code> · <code><?php echo esc_html( $adoption_review['target']['plugin_basename'] ); ?></code></p>
-				<p><?php esc_html_e( 'Claimed provider API and compatibility revision', 'ran-booster' ); ?>: <?php echo esc_html( (string) $adoption_review['target']['provider_api_version'] . ' / ' . $adoption_review['target']['compatibility_revision'] ); ?></p>
-				<details><summary><?php esc_html_e( 'Declared capabilities and credential formats', 'ran-booster' ); ?></summary><ul>
-					<?php
-					foreach ( array_merge( $adoption_review['target']['facets'], $adoption_review['target']['api_credential_formats'] ) as $claim ) {
-						?>
-						<li><code><?php echo esc_html( $claim ); ?></code></li><?php } ?>
-				</ul></details>
-				<p><?php echo esc_html( sprintf( /* translators: 1: compatible profile count, 2: incompatible profile count. */ __( 'API credential material: %1$d compatible, %2$d incompatible. Counts include any configured constant overlay.', 'ran-booster' ), $adoption_review['compatible_count'], $adoption_review['incompatible_count'] ) ); ?></p>
-				<p><?php esc_html_e( 'Incompatible profiles remain unchanged and unavailable. Packages using them stay paused; Booster will not substitute another credential. Missing provider capabilities also keep affected operations unavailable.', 'ran-booster' ); ?></p>
-				<?php if ( ! $github_selection['available'] && current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) { ?>
-					<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>" data-hx-boost="false">
-						<?php wp_nonce_field( 'ran-booster-adopt-github-' . $adoption_review['digest'] ); ?>
-						<input type="hidden" name="ran_booster[action]" value="adopt-github">
-						<input type="hidden" name="ran_booster[review_digest]" value="<?php echo esc_attr( $adoption_review['digest'] ); ?>">
-						<p><label><input type="checkbox" name="ran_booster[confirmed]" value="1" required> <?php esc_html_e( 'I approve this implementation and future normal credential setup within its declared compatible formats.', 'ran-booster' ); ?></label></p>
-						<p><?php echo esc_html( $adoption_review['signing_reuse'] ? __( 'This approval also permits reuse of compatible existing webhook signing secrets.', 'ran-booster' ) : __( 'Existing webhook signing secrets remain stored but webhook verification is unavailable with this implementation.', 'ran-booster' ) ); ?></p>
-						<?php if ( $adoption_review['compatible_count'] > 0 ) { ?>
-							<p><label><input type="checkbox" name="ran_booster[reuse_existing]" value="1" required> <?php esc_html_e( 'Allow this implementation to read and use all compatible existing GitHub API credentials, including any constant overlay.', 'ran-booster' ); ?></label></p>
-							<p><?php esc_html_e( 'Declining reuse cancels this adoption. GitHub remains paused until you complete an approved selection or restore the previously approved implementation.', 'ran-booster' ); ?></p>
-						<?php } elseif ( $adoption_review['has_material'] ) { ?>
-							<p><label><input type="checkbox" name="ran_booster[acknowledge_incompatible]" value="1" required> <?php esc_html_e( 'I understand that none of the existing API credentials can be reused. Compatible credentials must be configured afterward.', 'ran-booster' ); ?></label></p>
-						<?php } ?>
-						<button type="submit" class="button button-primary"><?php echo esc_html( 'bundled' === $adoption_review['selected'] ? __( 'Return to bundled GitHub', 'ran-booster' ) : __( 'Adopt GitHub implementation', 'ran-booster' ) ); ?></button>
-					</form>
-				<?php } ?>
-			<?php } ?>
+			<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=diagnostics#ran-booster-github-provider-diagnostics' ) ); ?>"><?php esc_html_e( 'GitHub provider diagnostics', 'ran-booster' ); ?></a></p>
+			<?php if ( $healthy_replacement ) { ?></details><?php } ?>
 		</section>
 	<?php } ?>
 

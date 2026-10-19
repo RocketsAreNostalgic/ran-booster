@@ -23,6 +23,7 @@ use RAN\Tests\Secrets\GitHubAccessPolicySpy;
 use RAN\Tests\Secrets\InMemorySiteKeyStore;
 
 require_once dirname( __DIR__ ) . '/Deployment/AttemptRepositoryDatabase.php';
+require_once dirname( __DIR__ ) . '/Admin/AdminViewWordPressFunctions.php';
 
 final class GitHubProviderSelectionTest extends TestCase {
 	private string $root;
@@ -128,6 +129,56 @@ final class GitHubProviderSelectionTest extends TestCase {
 		self::assertSame( '2.3', $status['candidates']['replacement.php']['display_version'] );
 		self::assertIsArray( $status['current'] );
 		self::assertSame( array( 'selection_generation', 'selected', 'declaration', 'approval' ), array_keys( $status['current'] ) );
+	}
+
+	public function test_healthy_provider_presentation_never_reviews_credential_adoption(): void {
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::never() )->method( 'with_github_adoption_inventory' );
+		$providers = new ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'gh' ) ) );
+		$usage     = new \RAN\Storage\CredentialUsageReader( new \RAN\Tests\Support\CredentialUsageDatabase(), 'wp_packages' );
+		$context   = $this->context();
+		$presenter = new \RAN\Admin\ProviderSettingsPresenter( $providers, $secrets, $usage, github_selection: $context );
+		self::assertNull( $presenter->build( 'gh' )['github_selection'] );
+		$diagnostics = $presenter->github_selection_diagnostics();
+		self::assertNotNull( $diagnostics );
+		self::assertSame( 'available', $diagnostics['state'] );
+
+		$candidate = $this->candidate( 'replacement.php' );
+		$this->activate( array( 'booster.php', 'replacement.php' ) );
+		$this->adopt( $candidate );
+		$context   = $this->context();
+		$presenter = new \RAN\Admin\ProviderSettingsPresenter( $providers, $secrets, $usage, github_selection: $context );
+		$selection = $presenter->build( 'gh' )['github_selection'];
+		self::assertIsArray( $selection );
+		self::assertTrue( $selection['available'] );
+		self::assertSame( 'replacement', $selection['status']['current']['selected'] );
+		self::assertNull( $selection['review'] );
+		self::assertNull( $selection['package_counts'] );
+		self::assertNull( $selection['recovery'] );
+	}
+
+	public function test_missing_selected_replacement_without_candidates_keeps_return_review_visible(): void {
+		$candidate = $this->candidate( 'replacement.php' );
+		$this->activate( array( 'booster.php', 'replacement.php' ) );
+		$this->adopt( $candidate );
+		$this->activate( array( 'booster.php' ) );
+		$context = $this->context();
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::once() )->method( 'with_github_adoption_inventory' )->willReturnCallback( static fn ( callable $operation ): mixed => $operation( array() ) );
+		$presenter = new \RAN\Admin\ProviderSettingsPresenter(
+			new ProviderRegistry(),
+			$secrets,
+			new \RAN\Storage\CredentialUsageReader( new \RAN\Tests\Support\CredentialUsageDatabase(), 'wp_packages' ),
+			github_selection: $context
+		);
+		$data = $presenter->build( 'gh' );
+		self::assertSame( 'gh', $data['selected_provider'] );
+		self::assertFalse( $data['github_selection']['available'] );
+		self::assertSame( 'missing', $data['github_selection']['status']['state'] );
+		self::assertSame( array(), $data['github_selection']['status']['candidates'] );
+		self::assertSame( '', $data['github_selection']['error'] );
+		self::assertSame( 'bundled', $data['github_selection']['review']['selected'] );
+		self::assertSame( 'replacement', $this->store->read()['selected'] );
 	}
 
 	public function test_status_refuses_conflict_malformed_candidate_and_missing_selected_plugin(): void {

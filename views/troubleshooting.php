@@ -3,6 +3,7 @@
 /**
  * View locals supplied by Dashboard::render().
  *
+ * @var array<string, mixed>|null $github_selection_diagnostics
  * @var array<string, mixed> $troubleshooting
  */
 
@@ -113,6 +114,34 @@ $repository_placeholder = array() === $locator_examples
 		}
 		?>
 	<?php } else { ?>
+		<?php if ( isset( $github_selection_diagnostics ) && is_array( $github_selection_diagnostics ) ) { ?>
+			<details id="ran-booster-github-provider-diagnostics">
+				<summary><?php esc_html_e( 'GitHub provider diagnostics', 'ran-booster' ); ?></summary>
+				<p><?php esc_html_e( 'Local declarations only; these claims do not verify publisher identity or remote access.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'Selection state', 'ran-booster' ); ?>: <code><?php echo esc_html( $github_selection_diagnostics['state'] ); ?></code></p>
+				<?php
+				$selection_declarations = array( __( 'Currently selected', 'ran-booster' ) => $github_selection_diagnostics['current']['declaration'] ?? null );
+				foreach ( $github_selection_diagnostics['candidates'] as $basename => $declaration ) {
+					$selection_declarations[ sprintf( /* translators: %s: enabled candidate plugin path. */ __( 'Candidate: %s', 'ran-booster' ), $basename ) ] = $declaration;
+				}
+				foreach ( $selection_declarations as $label => $declaration ) {
+					?>
+					<h3><?php echo esc_html( $label ); ?></h3>
+					<?php if ( is_array( $declaration ) ) { ?>
+						<p><?php echo esc_html( $declaration['display_name'] . ' ' . $declaration['display_version'] ); ?> · <code><?php echo esc_html( $declaration['plugin_basename'] ); ?></code></p>
+						<p><?php esc_html_e( 'Implementation', 'ran-booster' ); ?>: <code><?php echo esc_html( $declaration['implementation_id'] ); ?></code></p>
+						<p><?php esc_html_e( 'Claimed provider API and compatibility revision', 'ran-booster' ); ?>: <?php echo esc_html( (string) $declaration['provider_api_version'] . ' / ' . $declaration['compatibility_revision'] ); ?></p>
+						<p><?php esc_html_e( 'Declared capabilities and credential formats', 'ran-booster' ); ?></p>
+						<ul><?php foreach ( array_merge( $declaration['facets'], $declaration['api_credential_formats'], array( $declaration['webhook_signing_format'] ?? '' ) ) as $claim ) { ?>
+							<?php if ( '' !== $claim ) { ?><li><code><?php echo esc_html( $claim ); ?></code></li><?php } ?>
+						<?php } ?></ul>
+					<?php } else { ?>
+						<p><?php esc_html_e( 'No compatible declaration is available.', 'ran-booster' ); ?></p>
+					<?php } ?>
+				<?php } ?>
+				<p><a href="<?php echo esc_url( $admin_base . '?page=ran-booster&tab=gh' ); ?>"><?php esc_html_e( 'Manage GitHub provider', 'ran-booster' ); ?></a></p>
+			</details>
+		<?php } ?>
 		<?php if ( array() !== $core_self_update ) { ?>
 			<?php
 			$self_update_mode   = $core_self_update['effective_mode'] ?? 'disabled';

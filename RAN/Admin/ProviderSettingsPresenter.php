@@ -192,12 +192,30 @@ final readonly class ProviderSettingsPresenter {
 		);
 	}
 
+	/** @return array<string,mixed>|null Passive local claims; never credential material. */
+	public function github_selection_diagnostics(): ?array {
+		return $this->github_selection?->status();
+	}
+
 	/** @return array<string,mixed>|null */
 	private function github_selection_review(): ?array {
 		if ( null === $this->github_selection ) {
 			return null;
 		}
 		$status = $this->github_selection->status();
+		if ( 'available' === $status['state'] && $status['available'] ) {
+			if ( 'bundled' === ( $status['current']['selected'] ?? null ) && array() === $status['candidates'] ) {
+				return null;
+			}
+			return array(
+				'status'         => $status,
+				'available'      => true,
+				'review'         => null,
+				'error'          => '',
+				'recovery'       => null,
+				'package_counts' => null,
+			);
+		}
 		$review = null;
 		$error  = '';
 		try {

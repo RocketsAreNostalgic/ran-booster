@@ -5,6 +5,7 @@ declare(strict_types=1);
 use RAN\Activity\ActivityRequest;
 use RAN\Activity\ActivityStore;
 use RAN\AdoptionIdentity;
+use RAN\Admin\DeploymentAdminPresenter;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentOutcome;
 use RAN\Deployment\DeploymentPolicy;
@@ -60,81 +61,6 @@ return static function ( wpdb $database ): void {
 		$engine = $database->get_row( $database->prepare( 'SHOW TABLE STATUS WHERE Name = %s', $table ) );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- MySQL SHOW TABLE STATUS returns the Engine field.
 		$expect( is_object( $engine ) && 'InnoDB' === ( $engine->Engine ?? null ), 'InnoDB storage' );
-		$view            = dirname( (string) ( new ReflectionClass( ActivityStore::class ) )->getFileName(), 3 ) . '/views/attempts/index.php';
-		$render_activity = static function ( array $activity ) use ( $view ): string {
-			$deployment_activity  = $activity;
-			$troubleshooting_base = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
-			ob_start();
-			require $view;
-			return (string) ob_get_clean();
-		};
-		$package         = wp_json_encode( array( 'gh&+%', 'plugin', 'naïve & + %# "quoted"/plugin.php' ) );
-		$expect( is_string( $package ), 'rendered activity package fixture' );
-		$activity = array(
-			'items'        => array(
-				array(
-					'state'         => 'succeeded',
-					'record_source' => 'activity',
-				),
-			),
-			'filter_state' => array(
-				'provider' => 'gh&+%',
-				'package'  => $package,
-			),
-			'next_cursor'  => 'v1|cursor&+%#',
-		);
-		$rendered = $render_activity( $activity );
-		$expect( 1 === preg_match( '/<a class="button" href="([^"]+)">Load older activity<\\/a>/', $rendered, $matches ), 'rendered older activity link' );
-		$older_href = $matches[1] ?? null;
-		if ( ! is_string( $older_href ) ) {
-			throw new RuntimeException( 'Activity SQL proof: rendered older activity href.' );
-		}
-		parse_str( (string) wp_parse_url( html_entity_decode( $older_href, ENT_QUOTES, 'UTF-8' ), PHP_URL_QUERY ), $older_query );
-		$expect(
-			array(
-				'page'              => 'ran-booster',
-				'tab'               => 'troubleshooting',
-				'panel'             => 'activity',
-				'activity_provider' => 'gh&+%',
-				'activity_package'  => $package,
-				'before'            => 'v1|cursor&+%#',
-			) === $older_query,
-			'older activity link preserves the exact route, filters, and cursor'
-		);
-		$expect( 1 === preg_match( '/class="ran-booster-package-list-filters__clear" href="([^"]+)"/', $rendered, $matches ), 'rendered clear activity link' );
-		$clear_href = $matches[1] ?? null;
-		if ( ! is_string( $clear_href ) ) {
-			throw new RuntimeException( 'Activity SQL proof: rendered clear activity href.' );
-		}
-		parse_str( (string) wp_parse_url( html_entity_decode( $clear_href, ENT_QUOTES, 'UTF-8' ), PHP_URL_QUERY ), $clear_query );
-		$expect(
-			array(
-				'page'  => 'ran-booster',
-				'tab'   => 'troubleshooting',
-				'panel' => 'activity',
-			) === $clear_query,
-			'clear activity link excludes filters and cursor'
-		);
-		$activity['items']      = array();
-		$activity['has_cursor'] = true;
-		unset( $activity['next_cursor'] );
-		$rendered = $render_activity( $activity );
-		$expect( 1 === preg_match( '/<a class="button" href="([^"]+)">View latest activity<\\/a>/', $rendered, $matches ), 'rendered latest activity link' );
-		$latest_href = $matches[1] ?? null;
-		if ( ! is_string( $latest_href ) ) {
-			throw new RuntimeException( 'Activity SQL proof: rendered latest activity href.' );
-		}
-		parse_str( (string) wp_parse_url( html_entity_decode( $latest_href, ENT_QUOTES, 'UTF-8' ), PHP_URL_QUERY ), $latest_query );
-		$expect(
-			array(
-				'page'              => 'ran-booster',
-				'tab'               => 'troubleshooting',
-				'panel'             => 'activity',
-				'activity_provider' => 'gh&+%',
-				'activity_package'  => $package,
-			) === $latest_query,
-			'latest activity link preserves filters and removes the cursor'
-		);
 		$older = $store->begin( 'gh', $request, $capture );
 		$newer = $second->begin( 'gh', $request, $capture );
 		$expect( null !== $older && null !== $newer, 'two connection admission' );
@@ -330,8 +256,142 @@ return static function ( wpdb $database ): void {
 
 		$query( $database->prepare( 'CREATE TABLE %i LIKE %i', $journal_table, Database::attempt_table_name() ) );
 		$journal = new DeploymentAttemptRepository( $database, $journal_table, activity: $store, selection: $selection );
-		$deploy  = new DeploymentRequest( 'ran/activity-proof', null, false, 'main', 'activity-proof', null, DeploymentPolicy::MANUAL, 1 );
-		$before  = (int) $database->get_var( $database->prepare( 'SELECT COUNT(*) FROM %i', $table ) );
+		// Subject modes are based on retained rows, not operation names or managed-package state.
+		$query( $database->prepare( 'DELETE FROM %i', $table ) );
+		$provider           = 'gh&+%';
+		$identity           = 'naïve & + %# "quoted"/plugin.php';
+		$credential_request = new ActivityRequest( 'credential.validate' );
+		$credential_capture = array(
+			'subject_type'     => 'provider',
+			'subject_identity' => 'gh',
+			'adoption_token'   => null,
+			'context'          => 'credential-diagnostic',
+			'purpose'          => null,
+			'provenance'       => 'core',
+		);
+		for ( $index = 0; $index < 26; ++$index ) {
+			$package_id = $store->begin( 'gh', $request, $capture );
+			$expect( null !== $package_id, 'package subject pagination fixture' );
+			if ( null === $package_id ) {
+				return;
+			}
+			$query( $database->prepare( 'UPDATE %i SET provider = %s, subject_identity = %s WHERE id = %d', $table, $provider, $identity, $package_id ) );
+			$non_package = $store->begin( 'gh', $index < 13 ? $request : $credential_request, $index < 13 ? $capture : $credential_capture );
+			$expect( null !== $non_package, 'non-package subject pagination fixture' );
+			if ( null === $non_package ) {
+				return;
+			}
+			$query( $database->prepare( 'UPDATE %i SET provider = %s, subject_type = %s, subject_identity = %s WHERE id = %d', $table, $provider, $index < 13 ? 'repository' : 'provider', $index < 13 ? 'gh:diagnostic-' . $index : 'gh', $non_package ) );
+		}
+		$bb = $store->begin( 'gh', $request, $capture );
+		$expect( null !== $bb, 'provider-only package fixture' );
+		if ( null === $bb ) {
+			return;
+		}
+		$query( $database->prepare( 'UPDATE %i SET provider = %s WHERE id = %d', $table, 'bb', $bb ) );
+		$all_subjects = $store->activity_history( limit: 101 );
+		$non_packages = $store->activity_history(
+			array(
+				'provider'    => $provider,
+				'non_package' => '1',
+			),
+			limit: 101
+		);
+		$packages     = $store->activity_history(
+			array(
+				'provider'         => $provider,
+				'subject_type'     => 'plugin',
+				'subject_identity' => $identity,
+			),
+			limit: 101
+		);
+		$expect( $all_subjects['available'] && 53 === count( $all_subjects['records'] ), 'all subjects includes every retained event' );
+		$expect( $non_packages['available'] && 26 === count( $non_packages['records'] ), 'non-package subject is the complete non-package complement' );
+		$expect( $packages['available'] && 26 === count( $packages['records'] ), 'exact package subject remains provider scoped' );
+		$view            = dirname( (string) ( new ReflectionClass( ActivityStore::class ) )->getFileName(), 3 ) . '/views/attempts/index.php';
+		$render_activity = static function ( array $activity ) use ( $view ): string {
+			$deployment_activity  = $activity;
+			$troubleshooting_base = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+			ob_start();
+			require $view;
+			return (string) ob_get_clean();
+		};
+		$link_query      = static function ( string $html, string $label ) use ( $expect ): array {
+			$pattern = 'Clear filters' === $label
+				? '/class="ran-booster-package-list-filters__clear" href="([^"]+)"/'
+				: '/<a class="button" href="([^"]+)">' . preg_quote( $label, '/' ) . '<\\/a>/';
+			$expect( 1 === preg_match( $pattern, $html, $matches ), 'rendered ' . $label . ' link' );
+			$href = $matches[1] ?? null;
+			if ( ! is_string( $href ) ) {
+				throw new RuntimeException( 'Activity SQL proof: rendered activity href.' );
+			}
+			parse_str( (string) wp_parse_url( html_entity_decode( $href, ENT_QUOTES, 'UTF-8' ), PHP_URL_QUERY ), $query );
+			return $query;
+		};
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Exercises the read-only WordPress request boundary used by the presenter.
+		$original_get = $_GET;
+		try {
+			$presenter = new DeploymentAdminPresenter( attempts: $journal, activity_store: $store );
+			$exact     = wp_json_encode( array( $provider, 'plugin', $identity ) );
+			$expect( is_string( $exact ), 'exact package subject encoding' );
+			foreach ( array( $exact, 'non-package' ) as $subject ) {
+				$_GET = wp_slash(
+					array(
+						'activity_provider' => $provider,
+						'activity_package'  => $subject,
+					)
+				);
+				$page = $presenter->activity();
+				$expect( 25 === count( $page['items'] ?? array() ) && is_string( $page['next_cursor'] ?? null ), 'subject pagination returns 25 rows and a cursor' );
+				$older_query = $link_query( $render_activity( $page ), 'Load older activity' );
+				$expect( 'ran-booster' === ( $older_query['page'] ?? null ) && 'troubleshooting' === ( $older_query['tab'] ?? null ) && 'activity' === ( $older_query['panel'] ?? null ) && ( $older_query['activity_provider'] ?? null ) === $provider && ( $older_query['activity_package'] ?? null ) === $subject && ( $page['next_cursor'] ?? null ) === ( $older_query['before'] ?? null ), 'older activity preserves exact route, provider, and subject' );
+				$clear_query = $link_query( $render_activity( $page ), 'Clear filters' );
+				$expect(
+					array(
+						'page'  => 'ran-booster',
+						'tab'   => 'troubleshooting',
+						'panel' => 'activity',
+					) === $clear_query,
+					'clear filters removes subject and cursor'
+				);
+				$_GET       = wp_slash( $older_query );
+				$older_page = $presenter->activity();
+				$expect( 1 === count( $older_page['items'] ?? array() ), 'older activity loads the remaining subject row' );
+				$older_item = $older_page['items'][0] ?? null;
+				$cursor_id  = is_array( $older_item ) ? $older_item['activity_record_id'] ?? null : null;
+				$valid_id   = is_int( $cursor_id ) || ( is_string( $cursor_id ) && 1 === preg_match( '/^[1-9][0-9]*$/D', $cursor_id ) );
+				$expect( is_array( $older_item ) && is_string( $older_item['created_at'] ?? null ) && $valid_id, 'older subject item has a stable cursor identity' );
+				if ( ! is_array( $older_item ) || ! is_string( $older_item['created_at'] ?? null ) || ! $valid_id ) {
+					throw new RuntimeException( 'Activity SQL proof: subject cursor item.' );
+				}
+				$cursor_parts = explode( '|', (string) $page['next_cursor'] );
+				$_GET         = wp_slash(
+					array(
+						'activity_provider' => $provider,
+						'activity_package'  => $subject,
+						'before'            => $cursor_parts[0] . '|' . $cursor_parts[1] . '|' . $older_item['created_at'] . '|activity|' . $cursor_id,
+					)
+				);
+				$empty        = $presenter->activity();
+				$expect( array() === ( $empty['items'] ?? null ) && true === ( $empty['has_cursor'] ?? false ), 'empty subject cursor stays on its filtered history' );
+				$latest_query = $link_query( $render_activity( $empty ), 'View latest activity' );
+				$expect( ( $latest_query['activity_provider'] ?? null ) === $provider && ( $latest_query['activity_package'] ?? null ) === $subject && ! array_key_exists( 'before', $latest_query ), 'latest activity preserves subject and clears cursor' );
+			}
+			$_GET  = wp_slash(
+				array(
+					'activity_provider' => 'bb',
+					'activity_package'  => 'non-package',
+					'before'            => 'v1|' . str_repeat( '0', 64 ) . '|2026-01-01 00:00:00|activity|1',
+				)
+			);
+			$stale = $presenter->activity();
+			$expect( '' === ( $stale['filter_state']['package'] ?? null ) && false === ( $stale['has_cursor'] ?? true ) && is_string( $stale['filter_notice'] ?? null ), 'unavailable non-package subject clears selection and cursor' );
+		} finally {
+			$_GET = $original_get;
+		}
+		$query( $database->prepare( 'DELETE FROM %i', $table ) );
+		$deploy = new DeploymentRequest( 'ran/activity-proof', null, false, 'main', 'activity-proof', null, DeploymentPolicy::MANUAL, 1 );
+		$before = (int) $database->get_var( $database->prepare( 'SELECT COUNT(*) FROM %i', $table ) );
 		$query( $database->prepare( 'ALTER TABLE %i ENGINE=MyISAM', $table ) );
 		$expect( ! $store->install(), 'installation rejects an existing nontransactional table' );
 		try {

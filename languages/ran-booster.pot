@@ -230,7 +230,6 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:149
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:352
 #: views/attempts/detail.php:84
-#: views/attempts/index.php:76
 #: views/attempts/index.php:191
 #: views/portability-review.php:241
 #: views/portability-review.php:262
@@ -731,7 +730,7 @@ msgid "Bitbucket"
 msgstr ""
 
 #: RAN/Admin/DeploymentAdminPresenter.php:270
-msgid "Older activity filters were cleared. Use Provider and Package to filter activity."
+msgid "Older activity filters were cleared. Use Provider and Activity subject to filter activity."
 msgstr ""
 
 #: RAN/Admin/DeploymentAdminPresenter.php:292
@@ -770,16 +769,21 @@ msgstr ""
 msgid "That provider is no longer available in retained activity."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:305
-msgid "That package filter was cleared."
+#: RAN/Admin/DeploymentAdminPresenter.php:316
+msgid "Non-package events"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:315
-msgid "That package is no longer available in retained activity."
+#: RAN/Admin/DeploymentAdminPresenter.php:324
+msgid "That Activity subject filter was cleared."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:318
-msgid "The package filter was cleared because it does not match the selected provider."
+#: RAN/Admin/DeploymentAdminPresenter.php:327
+#: RAN/Admin/DeploymentAdminPresenter.php:340
+msgid "That Activity subject is no longer available in retained activity."
+msgstr ""
+
+#: RAN/Admin/DeploymentAdminPresenter.php:343
+msgid "The Activity subject filter was cleared because it does not match the selected provider."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:12
@@ -5514,8 +5518,12 @@ msgstr ""
 msgid "All providers"
 msgstr ""
 
+#: views/attempts/index.php:76
+msgid "Activity subject"
+msgstr ""
+
 #: views/attempts/index.php:78
-msgid "All activity"
+msgid "All subjects"
 msgstr ""
 
 #: views/attempts/index.php:85

@@ -250,6 +250,13 @@ final class ActivityStore {
 		}
 		$where = $this->history_scope_where();
 		foreach ( $filters as $key => $value ) {
+			if ( 'non_package' === $key ) {
+				if ( '1' !== $value ) {
+					return $unavailable;
+				}
+				$where[] = "NOT (BINARY subject_type IN ('plugin','theme') AND BINARY subject_identity <> '')";
+				continue;
+			}
 			$outcome_filter = 'outcome' === $key;
 			$key            = $outcome_filter ? 'status' : $key;
 			if ( ! in_array( $key, array( 'subject_type', 'subject_identity', 'provider', 'operation', 'status', 'adoption_token', 'context', 'purpose' ), true ) || strlen( $value ) > 2048 ) {
@@ -280,7 +287,7 @@ final class ActivityStore {
 
 	/**
 	 * Choices remain available for retained historical records, including protected deployments.
-	 * @return array{available:bool,providers:list<string>,packages:list<array{provider:string,subject_type:string,subject_identity:string}>}
+	 * @return array{available:bool,providers:list<array{provider:string,has_non_package:bool}>,packages:list<array{provider:string,subject_type:string,subject_identity:string}>}
 	 */
 	public function activity_filter_choices(): array {
 		$unavailable = array(
@@ -296,7 +303,7 @@ final class ActivityStore {
 			return $unavailable;
 		}
 		$scope     = implode( ' AND ', $where );
-		$providers = $this->rows( "SELECT DISTINCT BINARY provider AS provider FROM {$this->table} WHERE $scope ORDER BY BINARY provider" );
+		$providers = $this->rows( "SELECT BINARY provider AS provider, MAX(CASE WHEN BINARY subject_type IN ('plugin','theme') AND BINARY subject_identity <> '' THEN 0 ELSE 1 END) AS has_non_package FROM {$this->table} WHERE $scope GROUP BY BINARY provider ORDER BY BINARY provider" );
 		$packages  = $this->rows( "SELECT DISTINCT BINARY provider AS provider, BINARY subject_type AS subject_type, BINARY subject_identity AS subject_identity FROM {$this->table} WHERE $scope AND BINARY subject_type IN ('plugin','theme') AND BINARY subject_identity <> '' ORDER BY BINARY provider,BINARY subject_type,BINARY subject_identity" );
 		if ( null === $providers || null === $packages ) {
 			return $unavailable;
@@ -304,7 +311,10 @@ final class ActivityStore {
 		$provider_choices = array();
 		foreach ( $providers as $provider ) {
 			if ( is_string( $provider['provider'] ?? null ) && '' !== $provider['provider'] ) {
-				$provider_choices[] = $provider['provider'];
+				$provider_choices[] = array(
+					'provider'        => $provider['provider'],
+					'has_non_package' => 1 === (int) ( $provider['has_non_package'] ?? 0 ),
+				);
 			}
 		}
 		$package_choices = array();

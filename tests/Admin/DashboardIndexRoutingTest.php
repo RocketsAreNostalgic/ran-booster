@@ -2872,6 +2872,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 			array( 'gh', 'plugin', 'same/Package.php' ),
 			array( 'bb', 'theme', 'same/package.php' ),
 			array( 'bb', 'repository', 'org/example' ),
+			array( 'bb', 'provider', 'bb' ),
+			array( 'bb', 'provider', 'bb' ),
 		) as $index => $row ) {
 			$database->activity_rows[] = array(
 				'id'               => $index + 1,
@@ -2881,6 +2883,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 				'subject_identity' => $row[2],
 				'status'           => 'succeeded',
 				'correlation'      => str_repeat( 'a', 32 ),
+				'operation'        => 4 === $index ? 'credential.validate' : ( 5 === $index ? 'diagnostics.run' : 'repository.check' ),
 			);
 		}
 		$presenter = new DeploymentAdminPresenter( attempts: $this->deployment_attempts( $database ), activity_store: new \RAN\Activity\ActivityStore( $database, 'wp_ran_booster_activity' ) );
@@ -2892,9 +2895,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 			)
 		);
 		self::assertSame( array( 'GitHub', 'Bitbucket' ), array_column( $page['filter_options']['providers'], 'label' ) );
-		self::assertCount( 3, $page['filter_options']['packages'] );
-		self::assertSame( 'GitHub · Plugin: same/package.php', $page['filter_options']['packages'][0]['label'] );
-		self::assertStringContainsString( 'SELECT DISTINCT BINARY provider AS provider', $database->reads[0] );
+		self::assertCount( 4, $page['filter_options']['packages'] );
+		self::assertSame( 'Non-package events', $page['filter_options']['packages'][0]['label'] );
+		self::assertSame( 'GitHub · Plugin: same/package.php', $page['filter_options']['packages'][1]['label'] );
+		self::assertSame( array( 'same/package.php', 'same/Package.php', 'same/package.php', 'org/example', 'bb', 'bb' ), array_column( $page['items'], 'subject_identity' ) );
+		self::assertSame( array( 'credential.validate', 'diagnostics.run' ), array_slice( array_column( $page['items'], 'operation' ), 4 ) );
+		self::assertStringContainsString( 'SELECT BINARY provider AS provider, MAX(CASE WHEN BINARY subject_type IN', $database->reads[0] );
 		self::assertStringNotContainsString( 'SELECT *', $database->reads[0] );
 		$_GET = array( 'activity_package' => wp_json_encode( array( 'gh', 'plugin', 'same/Package.php' ) ) );
 		$page = $presenter->activity();
@@ -2912,7 +2918,36 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( '', $page['filter_state']['package'] );
 		self::assertFalse( $page['has_cursor'] );
 		self::assertStringContainsString( 'does not match', (string) $page['filter_notice'] );
-		self::assertCount( 1, $page['filter_options']['packages'] );
+		self::assertCount( 2, $page['filter_options']['packages'] );
+		$_GET = array(
+			'activity_provider' => 'bb',
+			'activity_package'  => 'non-package',
+			'before'            => 'v1|' . str_repeat( 'a', 64 ) . '|2026-10-12 17:00:00|activity|1',
+		);
+		$page = $presenter->activity();
+		self::assertSame(
+			array(
+				'non_package' => '1',
+				'provider'    => 'bb',
+			),
+			$page['filters']
+		);
+		self::assertSame( array( 'org/example', 'bb', 'bb' ), array_column( $page['items'], 'subject_identity' ) );
+		self::assertFalse( $page['has_cursor'] );
+		$_GET = array( 'activity_package' => 'non-package' );
+		$page = $presenter->activity();
+		self::assertSame( array( 'non_package' => '1' ), $page['filters'] );
+		self::assertSame( array( 'org/example', 'bb', 'bb' ), array_column( $page['items'], 'subject_identity' ) );
+		$_GET = array(
+			'activity_provider' => 'gh',
+			'activity_package'  => 'non-package',
+			'before'            => 'v1|' . str_repeat( 'b', 64 ) . '|2026-10-12 17:00:00|activity|1',
+		);
+		$page = $presenter->activity();
+		self::assertSame( array( 'provider' => 'gh' ), $page['filters'] );
+		self::assertSame( '', $page['filter_state']['package'] );
+		self::assertFalse( $page['has_cursor'] );
+		self::assertStringContainsString( 'no longer available', (string) $page['filter_notice'] );
 		$_GET = array( 'activity_package' => array( 'malformed' ) );
 		$page = $presenter->activity();
 		self::assertSame( array(), $page['filters'] );
@@ -2923,6 +2958,57 @@ final class DashboardIndexRoutingTest extends TestCase {
 			self::assertSame( array(), $page['filters'] );
 			self::assertStringContainsString( 'Older activity filters were cleared', (string) $page['filter_notice'] );
 		}
+	}
+
+	public function test_non_package_subject_keeps_a_matching_cursor_and_resets_when_changed(): void {
+		require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
+		$GLOBALS['ran_booster_activity_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ] = '1';
+		$database = new DashboardActivityWpdb();
+		foreach ( range( 26, 1 ) as $id ) {
+			$database->activity_rows[] = array(
+				'id'               => $id,
+				'sort_at'          => '2026-10-12 17:00:00',
+				'provider'         => 'bb',
+				'subject_type'     => 'provider',
+				'subject_identity' => 'bb',
+				'status'           => 'succeeded',
+				'correlation'      => str_repeat( 'b', 32 ),
+				'operation'        => 0 === $id % 2 ? 'credential.validate' : 'diagnostics.run',
+			);
+		}
+		$database->activity_rows[] = array(
+			'id'               => 27,
+			'sort_at'          => '2026-10-12 17:00:00',
+			'provider'         => 'bb',
+			'subject_type'     => 'plugin',
+			'subject_identity' => 'example/example.php',
+			'status'           => 'succeeded',
+			'correlation'      => str_repeat( 'c', 32 ),
+		);
+		$presenter                 = new DeploymentAdminPresenter( attempts: $this->deployment_attempts( $database ), activity_store: new \RAN\Activity\ActivityStore( $database, 'wp_ran_booster_activity' ) );
+		$_GET                      = array( 'activity_package' => 'non-package' );
+		$first                     = $presenter->activity();
+
+		self::assertCount( 25, $first['items'] );
+		self::assertNotNull( $first['next_cursor'] );
+		self::assertContains( 'credential.validate', array_column( $first['items'], 'operation' ) );
+		self::assertContains( 'diagnostics.run', array_column( $first['items'], 'operation' ) );
+		$_GET  = array(
+			'activity_package' => 'non-package',
+			'before'           => $first['next_cursor'],
+		);
+		$older = $presenter->activity();
+		self::assertFalse( $older['unavailable'] );
+		self::assertTrue( $older['has_cursor'] );
+		self::assertSame( array( 'bb' ), array_column( $older['items'], 'subject_identity' ) );
+		$_GET    = array(
+			'activity_package' => wp_json_encode( array( 'bb', 'plugin', 'example/example.php' ) ),
+			'before'           => $first['next_cursor'],
+		);
+		$changed = $presenter->activity();
+		self::assertFalse( $changed['unavailable'] );
+		self::assertFalse( $changed['has_cursor'] );
+		self::assertSame( array( 'example/example.php' ), array_column( $changed['items'], 'subject_identity' ) );
 	}
 
 	public function test_missing_activity_store_does_not_fall_back_to_deployment_only_history(): void {
@@ -3368,6 +3454,9 @@ final class DashboardActivityWpdb implements \RAN\Storage\DeploymentWriteConnect
 		$this->reads[] = $query;
 		if ( str_contains( $query, 'FROM wp_ran_booster_activity ' ) ) {
 			$rows = $this->activity_rows;
+			if ( str_contains( $query, "NOT (BINARY subject_type IN ('plugin','theme') AND BINARY subject_identity <> '')" ) ) {
+				$rows = array_values( array_filter( $rows, static fn ( array $row ): bool => ! in_array( $row['subject_type'], array( 'plugin', 'theme' ), true ) || '' === $row['subject_identity'] ) );
+			}
 			if ( preg_match( "/BINARY provider = '([^']+)'/", $query, $filter ) ) {
 				$rows = array_values( array_filter( $rows, static fn ( array $row ): bool => ( $row['provider'] ?? null ) === $filter[1] ) );
 			}
@@ -3387,10 +3476,17 @@ final class DashboardActivityWpdb implements \RAN\Storage\DeploymentWriteConnect
 				}
 				return array_map( static fn ( array $row ): object => (object) $row, array_values( $packages ) );
 			}
-			if ( str_contains( $query, 'SELECT DISTINCT BINARY provider AS provider' ) ) {
+			if ( str_contains( $query, 'SELECT BINARY provider AS provider, MAX(CASE WHEN BINARY subject_type IN' ) ) {
 				$providers = array();
 				foreach ( $rows as $row ) {
-					$providers[ (string) ( $row['provider'] ?? '' ) ] = array( 'provider' => $row['provider'] ?? '' );
+					$key                 = (string) ( $row['provider'] ?? '' );
+					$providers[ $key ] ??= array(
+						'provider'        => $key,
+						'has_non_package' => '0',
+					);
+					if ( ! in_array( $row['subject_type'], array( 'plugin', 'theme' ), true ) || '' === $row['subject_identity'] ) {
+						$providers[ $key ]['has_non_package'] = '1';
+					}
 				}
 				return array_map( static fn ( array $row ): object => (object) $row, array_values( $providers ) );
 			}

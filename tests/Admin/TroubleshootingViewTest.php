@@ -344,6 +344,10 @@ final class TroubleshootingViewTest extends TestCase {
 				),
 				'packages'  => array(
 					array(
+						'value' => 'non-package',
+						'label' => 'Non-package events',
+					),
+					array(
 						'value' => '["gh","plugin","example/example.php"]',
 						'label' => 'GitHub · Plugin: Example (example/example.php)',
 					),
@@ -369,6 +373,9 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<select id="ran-booster-activity-provider" name="activity_provider">', $html );
 		self::assertStringContainsString( '<option value="">All providers</option>', $html );
 		self::assertStringContainsString( 'value="gh"  selected="selected">GitHub</option>', $html );
+		self::assertStringContainsString( '<label class="screen-reader-text" for="ran-booster-activity-package">Activity subject</label>', $html );
+		self::assertStringContainsString( '<option value="">All subjects</option>', $html );
+		self::assertStringContainsString( '<option value="non-package" >Non-package events</option>', $html );
 		self::assertStringContainsString( 'value="[&quot;gh&quot;,&quot;plugin&quot;,&quot;example/example.php&quot;]"  selected="selected">GitHub · Plugin: Example (example/example.php)</option>', $html );
 		self::assertStringContainsString( '>Clear filters</a>', $html );
 		self::assertStringContainsString( 'activity_provider=gh&amp;activity_package=%5B%22gh%22%2C%22plugin%22%2C%22example%2Fexample.php%22%5D&amp;before=v1%7Ccursor', $html );

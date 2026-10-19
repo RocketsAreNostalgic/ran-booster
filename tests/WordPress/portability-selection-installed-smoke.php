@@ -141,7 +141,7 @@ $ran_booster_dashboard = static function ( bool $apply, ?array $expectation, str
 		$ran_booster_assert( is_string( $bytes ), 'read generated archive' );
 		$body    .= '--' . $boundary . "\r\nContent-Disposition: form-data; name=\"blueprint\"; filename=\"blueprint.zip\"\r\nContent-Type: application/zip\r\n\r\n" . $bytes . "\r\n--" . $boundary . "--\r\n";
 		$response = wp_remote_post(
-			'http://localhost/wp-admin/admin-ajax.php',
+			Fixture::expected_origin() . '/wp-admin/admin-ajax.php',
 			array(
 				'timeout'     => 30,
 				'redirection' => 0,
@@ -220,9 +220,9 @@ if ( $ran_booster_migrator ) {
 			$options['headers']['HX-Request'] = 'true';
 			$options['headers']['HX-Target']  = $form['target'];
 			$options['body']                  = $form['fields'];
-			$response                         = wp_remote_post( 'http://localhost/wp-admin/admin-post.php', $options );
+			$response                         = wp_remote_post( Fixture::expected_origin() . '/wp-admin/admin-post.php', $options );
 		} else {
-			$response = wp_remote_get( 'http://localhost/wp-admin/admin.php?page=ran-booster&tab=portability', $options );
+			$response = wp_remote_get( Fixture::expected_origin() . '/wp-admin/admin.php?page=ran-booster&tab=portability', $options );
 		}
 		$ran_booster_assert( ! is_wp_error( $response ), 'Migrator authenticated HTTP transport' );
 		return array(

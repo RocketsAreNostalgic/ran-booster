@@ -5,6 +5,12 @@
 use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryLookupRequest;
+use RAN_Booster_GitHubReplacementFixture\Fixture;
+
+if ( ! class_exists( Fixture::class, false ) ) {
+	require_once dirname( __DIR__ ) . '/fixtures/github-replacement/fixture.php';
+}
+Fixture::guard();
 
 $ran_booster_bb_site     = realpath( (string) getenv( 'RAN_BOOSTER_WORDPRESS_PATH' ) );
 $ran_booster_bb_expected = getenv( 'RAN_BOOSTER_BITBUCKET_EXPECT_GH' );
@@ -14,7 +20,7 @@ if ( ! defined( 'WP_CLI' ) || ! WP_CLI || ! current_user_can( 'manage_options' )
 	|| false === $ran_booster_bb_site || rtrim( ABSPATH, '/' ) !== $ran_booster_bb_site
 	|| WP_CONTENT_DIR !== $ran_booster_bb_site . '/wp-content'
 	|| WP_PLUGIN_DIR !== $ran_booster_bb_site . '/wp-content/plugins'
-	|| 'http://localhost' !== get_option( 'siteurl' ) ) {
+	|| Fixture::expected_origin() !== get_option( 'siteurl' ) ) {
 	throw new RuntimeException( 'Bitbucket selection proof requires the marked disposable CI site and explicit GH availability.' );
 }
 $ran_booster_bb_marker = $ran_booster_bb_site . '/.ran-booster-disposable-test-site';

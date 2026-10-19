@@ -115,8 +115,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	}
 
 	public function test_actual_classic_form_saves_and_edits_with_canonical_format_guard(): void {
-		$policies = new ProviderSecretPolicyCatalog();
-		$secrets  = new SecretsFile(
+		$policies        = new ProviderSecretPolicyCatalog();
+		$secrets         = new SecretsFile(
 			$this->path,
 			array(),
 			$policies,
@@ -124,13 +124,13 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			github_credential_access: static fn ( ?array $metadata ): bool => null === $metadata
 				|| 'github-classic-pat-v1' === \RAN\RepositoryProvider\GitHubProviderSelection::credential_format( $metadata )
 		);
-		$provider = \RAN\BoosterGitHubProvider\V1\GitHubProvider::create(
+		$provider        = \RAN\BoosterGitHubProvider\V1\GitHubProvider::create(
 			$secrets->credentials_for( 'gh' ),
 			$this->createStub( \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader::class ),
 			new \stdClass()
 		);
 		$this->providers = new ProviderRegistry( array( $provider ), $policies );
-		$admin = $provider->get_metadata()->admin;
+		$admin           = $provider->get_metadata()->admin;
 		self::assertNotNull( $admin );
 		self::assertSame( array(), $admin->get_credential_kind( 'classic' )?->fields );
 		$dashboard = $this->createMock( Dashboard::class );
@@ -144,9 +144,9 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			'secret'     => 'ghp_' . str_repeat( 'a', 36 ),
 			'expires_on' => '',
 		);
-		$interaction = new CapturingProviderProfileInteraction();
-		$response    = $interaction->dispatch( $this->dispatcher( $dashboard, $secrets, $interaction, new InMemoryPublicRepositoryLookupProfileStore() ) );
-		self::assertSame( 'success', $response?->kind );
+		$interaction          = new CapturingProviderProfileInteraction();
+		$response             = $interaction->dispatch( $this->dispatcher( $dashboard, $secrets, $interaction, new InMemoryPublicRepositoryLookupProfileStore() ) );
+		self::assertSame( 'success', $response->kind );
 		$profiles = $secrets->credential_profiles( 'gh' );
 		self::assertCount( 1, $profiles );
 		$id       = array_key_first( $profiles );
@@ -157,9 +157,9 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$_POST['ran_booster']['id']     = $id;
 		$_POST['ran_booster']['label']  = 'Renamed classic form';
 		$_POST['ran_booster']['secret'] = '';
-		$interaction = new CapturingProviderProfileInteraction();
-		$response    = $interaction->dispatch( $this->dispatcher( $dashboard, $secrets, $interaction, new InMemoryPublicRepositoryLookupProfileStore() ) );
-		self::assertSame( 'success', $response?->kind );
+		$interaction                    = new CapturingProviderProfileInteraction();
+		$response                       = $interaction->dispatch( $this->dispatcher( $dashboard, $secrets, $interaction, new InMemoryPublicRepositoryLookupProfileStore() ) );
+		self::assertSame( 'success', $response->kind );
 		$edited = $secrets->credential_material( 'gh', $id );
 		self::assertSame( 'Renamed classic form', $edited['label'] ?? null );
 		self::assertSame( $original['secret'] ?? null, $edited['secret'] ?? null );

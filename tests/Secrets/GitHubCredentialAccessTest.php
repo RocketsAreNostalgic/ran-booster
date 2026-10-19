@@ -72,7 +72,11 @@ final class GitHubCredentialAccessTest extends TestCase {
 
 	public function test_classic_form_input_still_requires_available_and_approved_format_before_policy(): void {
 		$store    = $this->store();
-		$metadata = array( 'label' => 'Form', 'kind' => 'classic', 'configuration' => array() );
+		$metadata = array(
+			'label'         => 'Form',
+			'kind'          => 'classic',
+			'configuration' => array(),
+		);
 		foreach ( array( array( false, true ), array( true, false ) ) as list( $this->available, $this->classic ) ) {
 			try {
 				$store->save_credential( 'gh', null, $metadata, 'fixture-secret', true );
@@ -88,7 +92,17 @@ final class GitHubCredentialAccessTest extends TestCase {
 		$store = $this->store();
 		foreach ( array( null, '', array( 'owner' => null ), array( 'owner' => 'unexpected' ), array( 'extra' => '' ) ) as $configuration ) {
 			try {
-				$store->save_credential( 'gh', null, array( 'label' => 'Form', 'kind' => 'classic', 'configuration' => $configuration ), 'fixture-secret', true );
+				$store->save_credential(
+					'gh',
+					null,
+					array(
+						'label'         => 'Form',
+						'kind'          => 'classic',
+						'configuration' => $configuration,
+					),
+					'fixture-secret',
+					true
+				);
 				self::fail( 'Malformed Classic configuration must not reach the policy.' );
 			} catch ( \RuntimeException ) {
 				self::assertSame( 0, $this->policy->normalizations );
@@ -103,7 +117,11 @@ final class GitHubCredentialAccessTest extends TestCase {
 		try {
 			$store->with_temporary_credential(
 				'gh',
-				array( 'label' => 'Temporary', 'kind' => 'classic', 'configuration' => array() ),
+				array(
+					'label'         => 'Temporary',
+					'kind'          => 'classic',
+					'configuration' => array(),
+				),
 				'fixture-secret',
 				static function () use ( &$called ): void {
 					$called = true;
@@ -254,9 +272,14 @@ final class GitHubCredentialAccessTest extends TestCase {
 			'classic',
 			array(),
 			'fixture-secret',
-			array( array( 'type' => 'plugin', 'identifier' => 'fixture/fixture.php' ) )
+			array(
+				array(
+					'type'       => 'plugin',
+					'identifier' => 'fixture/fixture.php',
+				),
+			)
 		);
-		$blueprint = new \RAN\Portability\PackageBlueprint(
+		$blueprint  = new \RAN\Portability\PackageBlueprint(
 			array( new \RAN\Portability\BlueprintPackage( 'plugin', 'fixture/fixture.php', 'Fixture', 'gh', '42', 'owner/repository', 'main', null ) ),
 			array( $credential )
 		);

@@ -25,12 +25,12 @@ final class DocumentationViewTest extends TestCase {
 		unset( $GLOBALS['ran_booster_documentation_test_actions'], $GLOBALS['ran_booster_documentation_test_filters'], $GLOBALS['ran_booster_admin_view_filters'] );
 	}
 
-	public function test_translates_the_guidance_eyebrow_without_changing_documentation_navigation(): void {
+	public function test_omits_redundant_page_eyebrow_without_changing_documentation_navigation(): void {
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Guidance'] = 'Conseils';
 
 		$html = $this->render_view( $this->provider_documentation() );
 
-		self::assertStringContainsString( '<p class="ran-booster-eyebrow">Conseils</p>', $html );
+		self::assertStringNotContainsString( '<p class="ran-booster-eyebrow">Conseils</p>', $html );
 		self::assertStringContainsString( 'class="ran-booster-documentation__index-link"', $html );
 		self::assertStringContainsString( 'id="ran-booster-documentation-heading"', $html );
 	}

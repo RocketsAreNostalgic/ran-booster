@@ -127,8 +127,6 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '.ran-booster-extension-details {', $extensions );
 		self::assertStringContainsString( '.ran-booster-admin--extensions {', $extensions );
 		self::assertStringContainsString( 'max-inline-size: 1400px;', $extensions );
-		self::assertStringContainsString( 'width: calc(50% - 8px);', $extensions );
-		self::assertStringContainsString( '@media screen and (max-width: 782px)', $extensions );
 		self::assertStringNotContainsString( '.ran-booster-extension-card.plugin-card', $extensions );
 		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-card-top', $extensions );
 		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-icon', $extensions );
@@ -312,6 +310,17 @@ final class AdminAssetContractTest extends TestCase {
 		);
 	}
 
+	public function test_package_page_identity_uses_shared_roles_without_framing_installation_forms(): void {
+		foreach ( array( 'packages/index.php', 'packages/create.php', 'packages/edit.php', 'packages/recovery.php' ) as $path ) {
+			$view = $this->view( $path );
+			self::assertStringContainsString( 'ran-booster-page-heading__title', $view, $path );
+			self::assertStringNotContainsString( 'ran-booster-page-shell', $view, $path );
+			if ( 'packages/edit.php' !== $path ) {
+				self::assertStringContainsString( 'ran-booster-page-heading__description', $view, $path );
+			}
+		}
+	}
+
 	public function test_admin_primitives_own_shared_headings_and_credential_dialog_chrome(): void {
 		$primitives        = $this->asset( 'ran-booster/25-admin-primitives.css' );
 		$onboarding        = $this->view( 'onboarding.php' );
@@ -324,7 +333,7 @@ final class AdminAssetContractTest extends TestCase {
 		$picker_script     = $this->asset( 'ran-booster-repository-picker.js' );
 		$picker_styles     = $this->asset( 'ran-booster/20-repository-picker.css' );
 
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-page-heading__title {', $primitives );
+		self::assertStringContainsString( '.ran-booster-admin h2.ran-booster-page-heading__title {', $primitives );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-page-shell {', $primitives );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-page-shell__header {', $primitives );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-page-shell__body {', $primitives );

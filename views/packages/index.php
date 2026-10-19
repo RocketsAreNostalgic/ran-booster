@@ -102,13 +102,13 @@ $policy_labels = array(
 	\RAN\Deployment\DeploymentPolicy::AUTOMATIC->value => __( 'Automatic', 'ran-booster' ),
 );
 
-?><h2 class="wp-heading-inline ran-booster-package-heading"><?php echo esc_html( sprintf( /* translators: %s: Managed package type plural label, such as Plugins or Themes. */ __( 'Managed %s', 'ran-booster' ), $package_view->get_plural_label() ) ); ?></h2>
+?><h2 class="wp-heading-inline ran-booster-package-heading ran-booster-page-heading__title"><?php echo esc_html( sprintf( /* translators: %s: Managed package type plural label, such as Plugins or Themes. */ __( 'Managed %s', 'ran-booster' ), $package_view->get_plural_label() ) ); ?></h2>
 <?php if ( $package_list_total > 0 ) { ?>
 	<a class="page-title-action" href="<?php echo esc_url( $install_another_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
 <?php } ?>
 
 <div class="ran-booster-package-intro">
-	<p class="description">
+	<p class="ran-booster-page-heading__description">
 		<?php esc_html_e( 'Review package health, deploy saved branches and hand published releases to WordPress.', 'ran-booster' ); ?>
 	</p>
 

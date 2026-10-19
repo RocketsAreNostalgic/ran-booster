@@ -17,9 +17,9 @@ $recovery_url  = add_query_arg(
 	$package_view->get_admin_url()
 );
 ?>
-<h2><?php esc_html_e( 'Stop managing an installed package', 'ran-booster' ); ?></h2>
+<h2 class="ran-booster-page-heading__title"><?php esc_html_e( 'Stop managing an installed package', 'ran-booster' ); ?></h2>
 <?php require dirname( __DIR__ ) . '/notices.php'; ?>
-<p><?php esc_html_e( 'Stop managing an installed package when its management settings cannot be opened. This keeps installed files, activation, package data, shared credentials and deployment history. Running or unresolved operations prevent removal.', 'ran-booster' ); ?></p>
+<p class="ran-booster-package-settings__intro ran-booster-page-heading__description"><?php esc_html_e( 'Stop managing an installed package when its management settings cannot be opened. This keeps installed files, activation, package data, shared credentials and deployment history. Running or unresolved operations prevent removal.', 'ran-booster' ); ?></p>
 <form method="get" action="<?php echo esc_url( $package_view->get_admin_url() ); ?>">
 	<input type="hidden" name="page" value="<?php echo esc_attr( $package_view->get_page_slug() ); ?>">
 	<input type="hidden" name="recovery" value="1">

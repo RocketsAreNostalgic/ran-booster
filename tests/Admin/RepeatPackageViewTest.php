@@ -84,10 +84,10 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'ran-booster-page-shell', $html );
 		self::assertStringContainsString( 'Back to Managed ' . $package_view->get_plural_label(), $html );
 		self::assertStringContainsString(
-			'<h2 id="ran-booster-package-create-heading" class="ran-booster-package-settings__heading">Install New ' . $package_view->get_singular_label() . '</h2>',
+			'<h2 id="ran-booster-package-create-heading" class="ran-booster-package-settings__heading ran-booster-page-heading__title">Install New ' . $package_view->get_singular_label() . '</h2>',
 			$html
 		);
-		self::assertStringContainsString( 'class="ran-booster-package-settings__intro"', $html );
+		self::assertStringContainsString( 'class="ran-booster-package-settings__intro ran-booster-page-heading__description"', $html );
 		self::assertStringContainsString( 'ran-booster-package-settings--create', $html );
 		self::assertStringContainsString( 'ran-booster-settings-section', $html );
 		self::assertStringContainsString( '>Repository configuration</h3>', $html );
@@ -260,7 +260,7 @@ final class RepeatPackageViewTest extends TestCase {
 
 		self::assertStringNotContainsString( 'ran-booster-package-settings__install-another', $html );
 		self::assertStringNotContainsString( '>Cancel</a>', $html );
-		self::assertStringNotContainsString( 'class="ran-booster-package-settings__intro"', $html );
+		self::assertStringNotContainsString( 'class="ran-booster-package-settings__intro ran-booster-page-heading__description"', $html );
 		self::assertStringNotContainsString( 'WordPress disabled', $html );
 		self::assertStringContainsString( '<p class="ran-booster-package-summary__value">Branch · main</p>', $html );
 		$save_actions = $this->action_group_by_class( $html, 'ran-booster-package-settings__save-actions' );

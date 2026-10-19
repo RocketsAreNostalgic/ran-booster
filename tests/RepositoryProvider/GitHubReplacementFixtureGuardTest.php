@@ -41,46 +41,50 @@ final class GitHubReplacementFixtureGuardTest extends TestCase {
 
 	/** @return iterable<string,array{string}> */
 	public static function site_cases(): iterable {
-		foreach ( array( 'valid', 'wrong-home', 'wrong-siteurl', 'wrong-marker', 'missing-marker', 'symlink-marker', 'symlink-plugin' ) as $case ) {
-			yield $case => array( $case );
+		foreach ( array( 'valid', 'wrong-home', 'wrong-siteurl', 'wrong-marker', 'missing-marker', 'symlink-marker', 'symlink-plugin' ) as $scenario ) {
+			yield $scenario => array( $scenario );
 		}
 	}
 
 	#[DataProvider( 'site_cases' )]
-	public function test_guard_preserves_exact_site_and_marker_requirements( string $case ): void {
+	public function test_guard_preserves_exact_site_and_marker_requirements( string $scenario ): void {
 		$root = sys_get_temp_dir() . '/ran-replacement-guard-' . bin2hex( random_bytes( 8 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Exact random test-owned fixture path; no WordPress site is mutated.
 		mkdir( $root . '/wp-content/plugins', 0700, true );
 		$marker = $root . '/.ran-booster-disposable-test-site';
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Exact random test-owned fixture path; no WordPress site is mutated.
 		file_put_contents( $marker, 'RAN Booster disposable test site' );
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exact WordPress root constant required by the fixture guard under test.
 		define( 'ABSPATH', $root . '/' );
 		define( 'WP_CONTENT_DIR', $root . '/wp-content' );
 		define( 'WP_PLUGIN_DIR', $root . '/wp-content/plugins' );
 		define( 'RAN_BOOSTER_REPLACEMENT_FIXTURE_ORIGIN', 'http://localhost:10013' );
-		$GLOBALS['ran_booster_fixture_guard_options'] = array( 'home' => 'http://localhost:10013', 'siteurl' => 'http://localhost:10013' );
-		if ( 'wrong-home' === $case || 'wrong-siteurl' === $case ) {
-			$GLOBALS['ran_booster_fixture_guard_options'][ substr( $case, 6 ) ] = 'http://localhost';
-		} elseif ( 'wrong-marker' === $case ) {
+		$GLOBALS['ran_booster_fixture_guard_options'] = array(
+			'home'    => 'http://localhost:10013',
+			'siteurl' => 'http://localhost:10013',
+		);
+		if ( 'wrong-home' === $scenario || 'wrong-siteurl' === $scenario ) {
+			$GLOBALS['ran_booster_fixture_guard_options'][ substr( $scenario, 6 ) ] = 'http://localhost';
+		} elseif ( 'wrong-marker' === $scenario ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Exact random test-owned fixture path; no WordPress site is mutated.
 			file_put_contents( $marker, 'not disposable' );
-		} elseif ( 'missing-marker' === $case || 'symlink-marker' === $case ) {
+		} elseif ( 'missing-marker' === $scenario || 'symlink-marker' === $scenario ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Exact random test-owned fixture path; no WordPress site is mutated.
 			unlink( $marker );
-			if ( 'symlink-marker' === $case ) {
+			if ( 'symlink-marker' === $scenario ) {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Exact random test-owned fixture path; no WordPress site is mutated.
 				file_put_contents( $root . '/marker-source', 'RAN Booster disposable test site' );
 				symlink( $root . '/marker-source', $marker );
 			}
-		} elseif ( 'symlink-plugin' === $case ) {
+		} elseif ( 'symlink-plugin' === $scenario ) {
 			symlink( $root, WP_PLUGIN_DIR . '/github-replacement' );
 		}
 		try {
-			if ( 'valid' !== $case ) {
+			if ( 'valid' !== $scenario ) {
 				$this->expectException( \RuntimeException::class );
 			}
 			Fixture::guard();
-			self::assertSame( 'valid', $case );
+			self::assertSame( 'valid', $scenario );
 		} finally {
 			foreach ( array( $marker, $root . '/marker-source', WP_PLUGIN_DIR . '/github-replacement' ) as $path ) {
 				if ( file_exists( $path ) || is_link( $path ) ) {

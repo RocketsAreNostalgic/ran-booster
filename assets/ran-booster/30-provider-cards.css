@@ -10,6 +10,27 @@
 	box-sizing: border-box;
 }
 
+/* Separate existing overview tasks without changing their interior layout. */
+.ran-booster-admin
+	.ran-booster-provider--overview
+	> .ran-booster-provider-section {
+	margin-block-end: var(--ran-booster-space-20);
+	border: 1px solid var(--ran-booster-border);
+	background: var(--ran-booster-surface);
+}
+
+.ran-booster-admin
+	.ran-booster-provider--overview
+	> .ran-booster-provider__footer {
+	border: 1px solid var(--ran-booster-border);
+}
+
+.ran-booster-admin
+	.ran-booster-provider-management__back
+	+ .ran-booster-provider {
+	margin-block-start: 0;
+}
+
 .ran-booster-admin .ran-booster-provider__notice {
 	margin-block: 0 var(--ran-booster-space-20);
 	margin-inline: var(--ran-booster-space-24);
@@ -663,7 +684,7 @@
 }
 
 .ran-booster-admin .ran-booster-repository-detail__header p {
-	margin-block: var(--ran-booster-space-4) 0;
+	margin-block: var(--ran-booster-space-6) 0;
 }
 
 .ran-booster-admin .ran-booster-repository-detail__receiver {

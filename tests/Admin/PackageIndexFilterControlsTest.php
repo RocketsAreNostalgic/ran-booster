@@ -68,7 +68,7 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		);
 
 		self::assertStringContainsString(
-			'<h2 class="wp-heading-inline ran-booster-package-heading">Managed ' . ucfirst( $plural ) . '</h2>',
+			'<h2 class="wp-heading-inline ran-booster-package-heading ran-booster-page-heading__title">Managed ' . ucfirst( $plural ) . '</h2>',
 			$html
 		);
 		self::assertStringContainsString(

@@ -59,6 +59,37 @@ Extensions contribute inside that layout rather than replace the product chrome.
 Breadcrumbs are optional when deeper navigation needs them; they are unnecessary
 when the submenu, heading and local navigation already establish location.
 
+Page identity uses `ran-booster-page-heading__title` (23px, semibold,
+1.3 line height) and `ran-booster-page-heading__description` (base 14px,
+1.5 line height, muted, 6px after the title). Managed Plugins/Themes and
+Install/Edit variants use the same roles as dashboard pages. Keep heading
+alignment relative to its content grid, existing page actions beside the title
+where space permits, and a 20px heading-to-task separation. Do not invent
+missing descriptions or shorten existing copy. Remove redundant page decoration
+(Ignition, Guidance, Add-ons and Diagnostics above Troubleshooting); retain
+useful provider, repository and Transporter context and all panel-interior labels.
+
+Containment follows the task. Install Plugin/Theme keeps its separate white
+Repository configuration, Advanced settings and Package operation sections on
+the grey page. Provider overview tasks use separate white groups with 20px grey
+gutters. Do not add a universal white outer wrapper. Keep each group's wording,
+controls, statuses, help, disclosures, internal borders, columns and arrangement
+intact; outer separation does not authorize an interior redesign.
+
+A subordinate **Back to…** link belongs above the page heading and outside white
+content panels. Keep it within its existing enhanced replacement boundary when
+required, with ordinary keyboard/no-JavaScript navigation. Do not move forms,
+IDs, protected operations, safety notices or state to achieve visual consistency.
+Page identity rules do not change headers inside Diagnostics panels. Normal
+package recovery uses the shared title/description roles; the minimal failure
+paths described above retain their independent rendering contract.
+
+These rules refine [Core #478](https://github.com/RocketsAreNostalgic/ran-booster/issues/478)
+and the continuity guidance delivered through
+[Core #462](https://github.com/RocketsAreNostalgic/ran-booster/pull/462).
+Apply them when the future #461 Settings design is implemented; this change
+adds no Settings page, tab API or navigation destination.
+
 This is a product composition rule, not a new shell API. Reuse the generated
 Admin Shell through its existing integration and source workflow; do not hand-edit
 generated output or change the shared shell package merely to add a local page.

@@ -88,7 +88,7 @@ $origin_labels = array(
 			<?php
 			if ( '' !== $selected_provider || '' !== $selected_package ) {
 				?>
-				<a class="button" href="<?php echo esc_url( $troubleshooting_base . '&panel=activity' ); ?>"><?php esc_html_e( 'Clear filters', 'ran-booster' ); ?></a><?php } ?>
+				<a class="ran-booster-package-list-filters__clear" href="<?php echo esc_url( $troubleshooting_base . '&panel=activity' ); ?>"><?php esc_html_e( 'Clear filters', 'ran-booster' ); ?></a><?php } ?>
 		</div>
 	</form>
 	<?php
@@ -135,6 +135,7 @@ $origin_labels = array(
 				$subject_label    = match ( $package_type ) {
 					'plugin' => __( 'Plugin', 'ran-booster' ) . ': ' . $subject_identity,
 					'theme' => __( 'Theme', 'ran-booster' ) . ': ' . $subject_identity,
+					'provider' => $provider_label,
 					default => $provider_label . ' · ' . __( 'Repository', 'ran-booster' ) . ': ' . $subject_identity,
 				};
 				$package_settings_url   = is_string( $settings_urls[ $package_type ][ $project_label ] ?? null )

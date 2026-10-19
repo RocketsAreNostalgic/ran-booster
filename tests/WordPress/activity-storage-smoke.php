@@ -222,6 +222,7 @@ return static function ( wpdb $database ): void {
 			) === $packages,
 			'package choices retain exact provider type and case while excluding nonpackages'
 		);
+		$query( $database->prepare( 'DELETE FROM %i', $table ) );
 
 		// The live table definition must remain stable until a coupled transaction ends.
 		$raced = false;

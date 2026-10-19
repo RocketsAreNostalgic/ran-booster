@@ -384,6 +384,41 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Open plugin settings', $html );
 	}
 
+	public function test_activity_subjects_keep_provider_and_repository_records_distinct(): void {
+		$deployment_activity  = array(
+			'items'       => array(
+				array(
+					'record_source'    => 'activity',
+					'state'            => 'succeeded',
+					'operation'        => 'provider.check',
+					'provider'         => 'gh',
+					'provider_label'   => 'GitHub',
+					'package_type'     => 'provider',
+					'subject_identity' => 'gh',
+				),
+				array(
+					'record_source'    => 'activity',
+					'state'            => 'succeeded',
+					'operation'        => 'repository.check',
+					'provider'         => 'gh',
+					'provider_label'   => 'GitHub',
+					'package_type'     => 'repository',
+					'subject_identity' => 'rockets/booster',
+				),
+			),
+			'unavailable' => false,
+		);
+		$troubleshooting_base = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '>GitHub</span>', $html );
+		self::assertStringContainsString( 'GitHub · Repository: rockets/booster', $html );
+		self::assertStringNotContainsString( 'GitHub · Repository: gh', $html );
+	}
+
 	public function test_deployment_activity_renders_known_package_version_failure_in_index_and_detail(): void {
 		$attempt              = DeploymentAttempt::from_database(
 			array(

@@ -1000,7 +1000,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-data-table-wrap ran-booster-attempt-table', $view );
 		self::assertStringContainsString( 'ran-booster-badge ran-booster-badge--', $view );
 		self::assertStringContainsString( 'data-label="<?php esc_attr_e( \'Time\'', $view );
-		self::assertStringContainsString( 'data-label="<?php esc_attr_e( \'Project\'', $view );
+		self::assertStringContainsString( 'data-label="<?php esc_attr_e( \'Subject\'', $view );
 		self::assertStringContainsString( 'data-label="<?php esc_attr_e( \'Source\'', $view );
 		self::assertStringContainsString( 'data-label="<?php esc_attr_e( \'Activity\'', $view );
 		self::assertStringContainsString( 'data-label="<?php esc_attr_e( \'Outcome\'', $view );

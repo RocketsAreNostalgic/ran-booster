@@ -2525,11 +2525,92 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertSame( 'packages/index', $result['view'] );
 		self::assertSame( array(), $result['data']['packages'] );
+		self::assertTrue( $result['data']['management_removal_help'] );
+		self::assertTrue( $result['data']['package_list_unavailable'] );
 		self::assertCount( 1, $dashboard->messages );
 		self::assertSame( 'error', $dashboard->messages[0]['type'] );
 		self::assertSame( 'ran_booster_storage_invalid_provider_identity', $dashboard->messages[0]['code'] );
 		self::assertSame( array( 'recovery_required' => false ), $dashboard->messages[0]['data'] );
 		self::assertStringNotContainsString( 'upstream-provider-canary', $dashboard->messages[0]['message'] );
+	}
+
+	#[DataProvider( 'package_type_provider' )]
+	public function test_malformed_package_navigation_keeps_ahealthy_list_without_management_removal_help( string $type ): void {
+		foreach ( array( '', array( 'corrupt' ), str_repeat( 'x', 256 ) ) as $identifier ) {
+			$_GET    = array( 'package' => $identifier );
+			$plugins = $this->createMock( PluginRepository::class );
+			$themes  = $this->createMock( ThemeRepository::class );
+			$plugins->expects( self::never() )->method( 'booster_plugin_from_file' );
+			$themes->expects( self::never() )->method( 'booster_theme_from_stylesheet' );
+			$plugins->expects( 'plugin' === $type ? self::once() : self::never() )->method( 'all_booster_plugins' )->willReturn( array() );
+			$themes->expects( 'theme' === $type ? self::once() : self::never() )->method( 'all_booster_themes' )->willReturn( array() );
+			$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes );
+			$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
+
+			self::assertSame( 'packages/index', $result['view'] );
+			self::assertSame( array(), $dashboard->messages );
+			self::assertArrayNotHasKey( 'management_removal_help', $result['data'] );
+			self::assertArrayNotHasKey( 'package_list_unavailable', $result['data'] );
+			$package_view      = $result['data']['package_view'];
+			$packages          = $result['data']['packages'];
+			$package_providers = $result['data']['package_providers'];
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+			$html = (string) ob_get_clean();
+			self::assertStringNotContainsString( 'recovery=1', $html );
+			self::assertStringNotContainsString( 'Review management removal', $html );
+		}
+	}
+
+	#[DataProvider( 'package_storage_read_provider' )]
+	public function test_presentation_validation_failure_is_not_diagnosed_as_unreadable_saved_package_settings( string $type, bool $detail ): void {
+		$_GET    = $detail ? array( 'package' => 'example' ) : array();
+		$package = $this->managed_package( 'example', 'Example package', 'repository-id' );
+		$plugins = $this->createMock( PluginRepository::class );
+		$themes  = $this->createMock( ThemeRepository::class );
+		$plugins->expects( 'plugin' === $type ? self::once() : self::never() )
+			->method( $detail ? 'booster_plugin_from_file' : 'all_booster_plugins' )->willReturn( $detail ? $package : array( $package ) );
+		$themes->expects( 'theme' === $type ? self::once() : self::never() )
+			->method( $detail ? 'booster_theme_from_stylesheet' : 'all_booster_themes' )->willReturn( $detail ? $package : array( $package ) );
+		$failure = new \InvalidArgumentException( 'Presentation-only validation failure.' );
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::once() )->method( 'credential_profiles' )->willThrowException( $failure );
+		$dashboard = $this->dashboard( $secrets, plugins: $plugins, themes: $themes, provider_credentials: true );
+
+		try {
+			'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
+			self::fail( 'Presentation validation must not become a saved-settings failure.' );
+		} catch ( \InvalidArgumentException $actual ) {
+			self::assertSame( $failure, $actual );
+			self::assertSame( array(), $dashboard->messages );
+		}
+	}
+
+	#[DataProvider( 'package_storage_read_provider' )]
+	public function test_management_removal_help_distinguishes_unreadable_settings_from_storage_failures( string $type, bool $detail ): void {
+		foreach ( array(
+			new \InvalidArgumentException( 'Saved package settings are invalid.' ),
+			PackageStorageFailure::query_failed(),
+			PackageStorageFailure::unsupported_database(),
+			PackageStorageFailure::duplicate_package_rows(),
+		) as $failure ) {
+			$_GET    = $detail ? array( 'package' => 'corrupt' ) : array();
+			$plugins = $this->createMock( PluginRepository::class );
+			$themes  = $this->createMock( ThemeRepository::class );
+			$plugins->expects( 'plugin' === $type ? self::once() : self::never() )
+				->method( $detail ? 'booster_plugin_from_file' : 'all_booster_plugins' )->willThrowException( $failure );
+			$themes->expects( 'theme' === $type ? self::once() : self::never() )
+				->method( $detail ? 'booster_theme_from_stylesheet' : 'all_booster_themes' )->willThrowException( $failure );
+			$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes );
+			$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
+
+			self::assertSame( 'packages/index', $result['view'] );
+			self::assertSame( array(), $result['data']['packages'] );
+			self::assertSame( $failure instanceof \InvalidArgumentException, $result['data']['management_removal_help'] );
+			self::assertTrue( $result['data']['package_list_unavailable'] );
+			self::assertCount( 1, $dashboard->messages );
+			self::assertSame( 'error', $dashboard->messages[0]['type'] );
+		}
 	}
 
 	#[DataProvider( 'package_type_provider' )]

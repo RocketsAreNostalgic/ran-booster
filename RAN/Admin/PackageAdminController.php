@@ -130,7 +130,7 @@ final class PackageAdminController {
 				is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' )
 			);
 		} catch ( Throwable $failure ) {
-			$dashboard->add_failure_message( new WP_Error( 'ran_booster_recovery_failed', __( 'Booster could not confirm safe recovery. Refresh this page and review the current management and operation state before trying again.', 'ran-booster' ) ), $failure, array( 'step' => 'package_recovery' ) );
+			$dashboard->add_failure_message( new WP_Error( 'ran_booster_recovery_failed', __( 'Booster could not confirm safe management removal. Refresh this page and review the current management and operation state before trying again.', 'ran-booster' ) ), $failure, array( 'step' => 'package_recovery' ) );
 		}
 		return false;
 	}

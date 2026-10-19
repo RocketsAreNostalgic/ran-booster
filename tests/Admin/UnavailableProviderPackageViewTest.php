@@ -154,6 +154,9 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'owner/exact-repository', $html );
 		self::assertStringContainsString( 'temporarily-offline', $html );
 		self::assertStringContainsString( 'ran-booster-badge--error">Provider unavailable</span>', $html );
+		self::assertStringNotContainsString( 'Recover package management', $html );
+		self::assertStringNotContainsString( 'recovery=1', $html );
+		self::assertStringNotContainsString( 'Review management removal', $html );
 		self::assertStringContainsString( 'stable-provider-id', $html );
 		self::assertStringContainsString( 'button-update-package"  disabled="disabled"', $html );
 		foreach ( array(

@@ -192,7 +192,10 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 
 <div id="ran-booster-provider-profile-region" data-ran-booster-admin-mutation-region="provider-profiles">
 <?php settings_errors(); ?>
-<section class="ran-booster-page-shell ran-booster-provider<?php echo $is_repository_detail ? ' ran-booster-repository-page' : ' ran-booster-panel'; ?>" aria-labelledby="ran-booster-provider-heading">
+<?php if ( 'overview' !== $provider_view ) { ?>
+<a class="ran-booster-provider-management__back" href="<?php echo esc_url( $overview_url ); ?>">&larr; <?php echo esc_html( $provider_back_label ); ?></a>
+<?php } ?>
+<section class="ran-booster-page-shell ran-booster-provider<?php echo $is_repository_detail ? ' ran-booster-repository-page' : ( 'overview' === $provider_view ? ' ran-booster-panel' : '' ); ?>" aria-labelledby="ran-booster-provider-heading">
 	<?php if ( 'overview' === $provider_view && ! $is_repository_detail ) { ?>
 		<header class="ran-booster-page-shell__header ran-booster-provider__header">
 			<p class="ran-booster-provider__eyebrow ran-booster-eyebrow"><?php esc_html_e( 'Repository provider', 'ran-booster' ); ?></p>
@@ -200,8 +203,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 			<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Manage repository access, integrations and the packages connected to this site.', 'ran-booster' ); ?></p>
 		</header>
 	<?php } elseif ( 'overview' !== $provider_view ) { ?>
-		<a class="ran-booster-provider-management__back" href="<?php echo esc_url( $overview_url ); ?>">&larr; <?php echo esc_html( $provider_back_label ); ?></a>
-		<header class="ran-booster-provider-management__header">
+		<header class="ran-booster-action-row ran-booster-provider-management__header">
 			<div>
 				<p class="ran-booster-provider__eyebrow ran-booster-eyebrow"><?php echo esc_html( 'credentials' === $provider_view ? __( 'Repository access', 'ran-booster' ) : __( 'Push-to-Deploy prerequisite', 'ran-booster' ) ); ?></p>
 				<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1"><?php echo esc_html( 'credentials' === $provider_view ? __( 'Credentials', 'ran-booster' ) : __( 'Webhook secrets', 'ran-booster' ) ); ?></h2>

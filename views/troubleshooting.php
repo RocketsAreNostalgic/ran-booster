@@ -314,8 +314,11 @@ $repository_placeholder = array() === $locator_examples
 			</section>
 		</section>
 		<div data-support-report-tools>
-			<p><label for="ran-booster-troubleshooting-report"><strong><?php esc_html_e( 'Support report', 'ran-booster' ); ?></strong></label> <button type="button" class="button" data-support-report-copy><?php esc_html_e( 'Copy report', 'ran-booster' ); ?></button></p>
-			<textarea id="ran-booster-troubleshooting-report" class="large-text code" rows="<?php echo esc_attr( (string) min( 16, max( 5, count( $results ) + 4 ) ) ); ?>" readonly><?php echo esc_textarea( $troubleshooting['report'] ?? '' ); ?></textarea>
+			<p><label for="ran-booster-troubleshooting-report"><strong><?php esc_html_e( 'Support report', 'ran-booster' ); ?></strong></label></p>
+			<div class="ran-booster-troubleshooting__report-field">
+				<textarea id="ran-booster-troubleshooting-report" class="large-text code" rows="<?php echo esc_attr( (string) min( 16, max( 5, count( $results ) + 4 ) ) ); ?>" readonly><?php echo esc_textarea( $troubleshooting['report'] ?? '' ); ?></textarea>
+				<button type="button" class="button-link ran-booster-troubleshooting__report-copy hide-if-no-js" data-support-report-copy aria-label="<?php esc_attr_e( 'Copy report', 'ran-booster' ); ?>"><span class="dashicons dashicons-admin-page" aria-hidden="true"></span></button>
+			</div>
 			<p data-support-report-status role="status" aria-live="polite" aria-atomic="true" data-copied-message="<?php esc_attr_e( 'Support report copied to the clipboard.', 'ran-booster' ); ?>" data-copy-failed-message="<?php esc_attr_e( 'Clipboard access failed. The report is selected; use your browser copy command.', 'ran-booster' ); ?>"></p>
 			<p class="description"><?php esc_html_e( 'This report includes the displayed installation details and diagnostic results. Local declarations and standing Core update status are not diagnostic test results. Review it before sharing.', 'ran-booster' ); ?></p>
 		</div>

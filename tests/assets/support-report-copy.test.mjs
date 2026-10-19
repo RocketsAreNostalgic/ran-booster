@@ -10,6 +10,8 @@ const source = fs.readFileSync(
 
 function fixture(clipboard) {
 	const listeners = new Map();
+	const timers = new Map();
+	let nextTimer = 0;
 	vm.runInNewContext(source, {
 		wp: { i18n: {} },
 		document: {
@@ -18,9 +20,22 @@ function fixture(clipboard) {
 				listeners.set(name, callback);
 			},
 		},
-		window: { navigator: { clipboard } },
+		window: {
+			navigator: { clipboard },
+			setTimeout(callback, delay) {
+				assert.equal(delay, 2000);
+				nextTimer += 1;
+				timers.set(nextTimer, callback);
+				return nextTimer;
+			},
+			clearTimeout(id) {
+				timers.delete(id);
+			},
+		},
 	});
-	return listeners.get('click');
+	const click = listeners.get('click');
+	click.timers = timers;
+	return click;
 }
 
 function report(value) {
@@ -49,8 +64,28 @@ function report(value) {
 			return selector === 'textarea' ? input : status;
 		},
 	};
-	const copy = { disabled: false, closest: () => root };
-	return { input, status, copy, event: { target: { closest: () => copy } } };
+	const classes = new Set(['dashicons', 'dashicons-admin-page']);
+	const icon = {
+		classList: {
+			replace(before, after) {
+				if (classes.delete(before)) {
+					classes.add(after);
+				}
+			},
+		},
+	};
+	const copy = {
+		disabled: false,
+		closest: () => root,
+		querySelector: () => icon,
+	};
+	return {
+		input,
+		status,
+		copy,
+		classes,
+		event: { target: { closest: () => copy } },
+	};
 }
 
 test('only an explicit copy action writes the current multiline report after repeated replacements', async () => {
@@ -92,11 +127,44 @@ test('copy reads the textarea at activation and announces success only after cli
 	assert.equal(copied, 'current\nreport');
 	assert.equal(current.status.textContent, '');
 	assert.equal(current.copy.disabled, true);
+	assert.equal(current.classes.has('dashicons-yes'), false);
+	assert.equal(click.timers.size, 0);
 	finish();
 	await pending;
 	assert.equal(
 		current.status.textContent,
 		current.status.dataset.copiedMessage
+	);
+	assert.equal(current.classes.has('dashicons-yes'), true);
+	assert.equal(current.classes.has('dashicons-admin-page'), false);
+	const reset = [...click.timers.values()][0];
+	reset();
+	assert.equal(current.classes.has('dashicons-admin-page'), true);
+	assert.equal(current.classes.has('dashicons-yes'), false);
+});
+
+test('a repeat copy cancels the prior checkmark reset and resets before a denied retry', async () => {
+	let denied = false;
+	const click = fixture({
+		writeText: async () => {
+			if (denied) {
+				throw new Error('denied');
+			}
+		},
+	});
+	const current = report('current\nreport');
+	await click(current.event);
+	assert.equal(current.classes.has('dashicons-yes'), true);
+	await click(current.event);
+	assert.equal(click.timers.size, 1);
+	denied = true;
+	await click(current.event);
+	assert.equal(click.timers.size, 0);
+	assert.equal(current.classes.has('dashicons-admin-page'), true);
+	assert.equal(current.classes.has('dashicons-yes'), false);
+	assert.equal(
+		current.status.textContent,
+		current.status.dataset.copyFailedMessage
 	);
 });
 
@@ -129,6 +197,8 @@ test('unavailable, denied and synchronously failing clipboard select the unchang
 			current.status.dataset.copyFailedMessage
 		);
 		assert.equal(current.copy.disabled, false);
+		assert.equal(current.classes.has('dashicons-yes'), false);
+		assert.equal(click.timers.size, 0);
 	}
 });
 
@@ -148,6 +218,9 @@ test('completion for a replaced report cannot announce success or move focus in 
 		finish();
 		await pending;
 		assert.equal(current.status.textContent, '');
+		assert.equal(old.status.textContent, '');
+		assert.equal(old.classes.has('dashicons-yes'), false);
+		assert.equal(click.timers.size, 0);
 		assert.equal(old.input.focused, false);
 		assert.equal(current.input.focused, false);
 	}

@@ -248,10 +248,7 @@ final class ActivityStore {
 		if ( ! $this->available() || $limit < 1 || $limit > 101 ) {
 			return $unavailable;
 		}
-		$retention         = self::retention_policy();
-		$maximum_rows      = $retention['maximum_rows'];
-		$deployment_safety = $this->deployment_safety_sql();
-		$where             = array( $this->prepare( "(started_at >= %s OR $deployment_safety)", gmdate( 'Y-m-d H:i:s', time() - $retention['maximum_days'] * 86400 ) ) );
+		$where = $this->history_scope_where();
 		foreach ( $filters as $key => $value ) {
 			$outcome_filter = 'outcome' === $key;
 			$key            = $outcome_filter ? 'status' : $key;
@@ -274,11 +271,56 @@ final class ActivityStore {
 		if ( in_array( null, $where, true ) ) {
 			return $unavailable;
 		}
-		$where[] = "(id IN (SELECT id FROM (SELECT id FROM {$this->table} ORDER BY id DESC LIMIT $maximum_rows) AS recent_activity) OR $deployment_safety)";
 		$records = $this->rows( "SELECT * FROM {$this->table} WHERE " . implode( ' AND ', $where ) . ' ORDER BY sort_at DESC,id DESC LIMIT ' . $limit );
 		return array(
 			'available' => null !== $records,
 			'records'   => $records ?? array(),
+		);
+	}
+
+	/**
+	 * Choices remain available for retained historical records, including protected deployments.
+	 * @return array{available:bool,providers:list<string>,packages:list<array{provider:string,subject_type:string,subject_identity:string}>}
+	 */
+	public function activity_filter_choices(): array {
+		$unavailable = array(
+			'available' => false,
+			'providers' => array(),
+			'packages'  => array(),
+		);
+		if ( ! $this->available() ) {
+			return $unavailable;
+		}
+		$where = $this->history_scope_where();
+		if ( in_array( null, $where, true ) ) {
+			return $unavailable;
+		}
+		$scope     = implode( ' AND ', $where );
+		$providers = $this->rows( "SELECT DISTINCT BINARY provider AS provider FROM {$this->table} WHERE $scope ORDER BY BINARY provider" );
+		$packages  = $this->rows( "SELECT DISTINCT BINARY provider AS provider, BINARY subject_type AS subject_type, BINARY subject_identity AS subject_identity FROM {$this->table} WHERE $scope AND BINARY subject_type IN ('plugin','theme') AND BINARY subject_identity <> '' ORDER BY BINARY provider,BINARY subject_type,BINARY subject_identity" );
+		if ( null === $providers || null === $packages ) {
+			return $unavailable;
+		}
+		$provider_choices = array();
+		foreach ( $providers as $provider ) {
+			if ( is_string( $provider['provider'] ?? null ) && '' !== $provider['provider'] ) {
+				$provider_choices[] = $provider['provider'];
+			}
+		}
+		$package_choices = array();
+		foreach ( $packages as $package ) {
+			if ( is_string( $package['provider'] ?? null ) && is_string( $package['subject_type'] ?? null ) && is_string( $package['subject_identity'] ?? null ) && '' !== $package['provider'] && '' !== $package['subject_identity'] ) {
+				$package_choices[] = array(
+					'provider'         => $package['provider'],
+					'subject_type'     => $package['subject_type'],
+					'subject_identity' => $package['subject_identity'],
+				);
+			}
+		}
+		return array(
+			'available' => true,
+			'providers' => $provider_choices,
+			'packages'  => $package_choices,
 		);
 	}
 
@@ -373,6 +415,17 @@ final class ActivityStore {
 	private function deployment_safety_sql(): string {
 		$state = "JSON_UNQUOTE(JSON_EXTRACT(facts, '$.deployment_state'))";
 		return "(JSON_EXTRACT(facts, '$.deployment_attempt_id') IS NOT NULL AND ($state IN ('queued','running') OR ($state = 'needs_attention' AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(facts, '$.deployment_resolved_at')), 'null') = 'null')))";
+	}
+
+	/** @return list<string|null> */
+	private function history_scope_where(): array {
+		$retention         = self::retention_policy();
+		$maximum_rows      = $retention['maximum_rows'];
+		$deployment_safety = $this->deployment_safety_sql();
+		return array(
+			$this->prepare( "(started_at >= %s OR $deployment_safety)", gmdate( 'Y-m-d H:i:s', time() - $retention['maximum_days'] * 86400 ) ),
+			"(id IN (SELECT id FROM (SELECT id FROM {$this->table} ORDER BY id DESC LIMIT $maximum_rows) AS recent_activity) OR $deployment_safety)",
+		);
 	}
 
 	/** Coupled callers hold a transaction: the first read pins engine and indexes until it ends. */

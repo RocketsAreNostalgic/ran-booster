@@ -329,11 +329,29 @@ final class TroubleshootingViewTest extends TestCase {
 			'items'                 => array( $attempt->safe_data() ),
 			'unavailable'           => false,
 			'has_cursor'            => false,
-			'next_cursor'           => null,
+			'next_cursor'           => 'v1|cursor|2026-07-23 06:00:00|activity|1',
 			'package_settings_urls' => array(
 				'plugin' => array(
 					'example' => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php',
 				),
+			),
+			'filter_options'        => array(
+				'providers' => array(
+					array(
+						'value' => 'gh',
+						'label' => 'GitHub',
+					),
+				),
+				'packages'  => array(
+					array(
+						'value' => '["gh","plugin","example/example.php"]',
+						'label' => 'GitHub · Plugin: Example (example/example.php)',
+					),
+				),
+			),
+			'filter_state'          => array(
+				'provider' => 'gh',
+				'package'  => '["gh","plugin","example/example.php"]',
 			),
 		);
 		$troubleshooting_base = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
@@ -342,12 +360,18 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '<span role="columnheader">Project</span>', $html );
+		self::assertStringContainsString( '<span role="columnheader">Subject</span>', $html );
 		self::assertStringContainsString( '<span role="columnheader">Source</span>', $html );
 		self::assertStringContainsString( '<span role="columnheader">Activity</span>', $html );
 		self::assertStringContainsString( '<span role="columnheader">Outcome</span>', $html );
 		self::assertStringNotContainsString( '<span role="columnheader">Details</span>', $html );
-		self::assertStringContainsString( 'data-label="Project"', $html );
+		self::assertStringContainsString( 'data-label="Subject"', $html );
+		self::assertStringContainsString( '<select id="ran-booster-activity-provider" name="activity_provider">', $html );
+		self::assertStringContainsString( '<option value="">All providers</option>', $html );
+		self::assertStringContainsString( 'value="gh"  selected="selected">GitHub</option>', $html );
+		self::assertStringContainsString( 'value="[&quot;gh&quot;,&quot;plugin&quot;,&quot;example/example.php&quot;]"  selected="selected">GitHub · Plugin: Example (example/example.php)</option>', $html );
+		self::assertStringContainsString( '>Clear filters</a>', $html );
+		self::assertStringContainsString( 'activity_provider=gh&amp;activity_package=%5B%22gh%22%2C%22plugin%22%2C%22example%2Fexample.php%22%5D&amp;before=v1%7Ccursor', $html );
 		self::assertStringContainsString( 'data-label="Source"', $html );
 		self::assertStringContainsString( 'data-label="Activity"', $html );
 		self::assertStringContainsString( 'data-label="Outcome"', $html );

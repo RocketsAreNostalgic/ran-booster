@@ -230,8 +230,8 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:149
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:352
 #: views/attempts/detail.php:84
-#: views/attempts/index.php:63
-#: views/attempts/index.php:158
+#: views/attempts/index.php:76
+#: views/attempts/index.php:193
 #: views/portability-review.php:241
 #: views/portability-review.php:262
 #: views/portability.php:232
@@ -240,8 +240,8 @@ msgid "Package"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:149
-#: views/attempts/index.php:91
-#: views/attempts/index.php:130
+#: views/attempts/index.php:119
+#: views/attempts/index.php:165
 #: views/portability-review.php:24
 msgid "Source"
 msgstr ""
@@ -718,6 +718,70 @@ msgstr ""
 msgid "Booster is already tracking the %1$s %2$s in state %3$s. <a href=\"%4$s\">Review this deployment activity record</a> before trying again."
 msgstr ""
 
+#: RAN/Admin/DeploymentAdminPresenter.php:242
+#: RAN/Admin/DeploymentAdminPresenter.php:278
+#: RAN/Admin/DeploymentAdminPresenter.php:292
+msgid "GitHub"
+msgstr ""
+
+#: RAN/Admin/DeploymentAdminPresenter.php:242
+#: RAN/Admin/DeploymentAdminPresenter.php:278
+#: RAN/Admin/DeploymentAdminPresenter.php:292
+msgid "Bitbucket"
+msgstr ""
+
+#: RAN/Admin/DeploymentAdminPresenter.php:270
+msgid "Older activity filters were cleared. Use Provider and Package to filter activity."
+msgstr ""
+
+#: RAN/Admin/DeploymentAdminPresenter.php:292
+#: RAN/Admin/PackageAdminController.php:347
+#: RAN/Admin/PackageAdminController.php:367
+#: RAN/Admin/PortabilityController.php:483
+#: RAN/Admin/PortabilityController.php:606
+#: RAN/Admin/ProviderRepositoryRowsNormalizer.php:345
+#: RAN/Admin/ProviderSettingsPresenter.php:1516
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
+#: views/attempts/index.php:137
+#: views/portability.php:170
+#: views/portability.php:251
+msgid "Theme"
+msgstr ""
+
+#: RAN/Admin/DeploymentAdminPresenter.php:292
+#: RAN/Admin/PackageAdminController.php:347
+#: RAN/Admin/PackageAdminController.php:367
+#: RAN/Admin/PortabilityController.php:483
+#: RAN/Admin/PortabilityController.php:606
+#: RAN/Admin/ProviderRepositoryRowsNormalizer.php:345
+#: RAN/Admin/ProviderSettingsPresenter.php:1515
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
+#: views/attempts/index.php:136
+#: views/portability.php:170
+#: views/portability.php:251
+msgid "Plugin"
+msgstr ""
+
+#: RAN/Admin/DeploymentAdminPresenter.php:297
+msgid "That provider filter was cleared."
+msgstr ""
+
+#: RAN/Admin/DeploymentAdminPresenter.php:300
+msgid "That provider is no longer available in retained activity."
+msgstr ""
+
+#: RAN/Admin/DeploymentAdminPresenter.php:305
+msgid "That package filter was cleared."
+msgstr ""
+
+#: RAN/Admin/DeploymentAdminPresenter.php:315
+msgid "That package is no longer available in retained activity."
+msgstr ""
+
+#: RAN/Admin/DeploymentAdminPresenter.php:318
+msgid "The package filter was cleared because it does not match the selected provider."
+msgstr ""
+
 #: RAN/Admin/DeploymentOutcomeMessage.php:12
 msgid "Completion not recorded"
 msgstr ""
@@ -900,7 +964,7 @@ msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:80
 #: RAN/Booster.php:725
-#: views/attempts/index.php:42
+#: views/attempts/index.php:49
 #: views/packages/index.php:64
 #: views/troubleshooting.php:42
 msgid "Failed"
@@ -1249,7 +1313,7 @@ msgid "RAN Booster automatic deployment failed."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:63
-#: RAN/Dashboard.php:1138
+#: RAN/Dashboard.php:1144
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
@@ -1258,7 +1322,7 @@ msgid "Booster could not confirm safe recovery. Refresh this page and review the
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:164
-#: RAN/Dashboard.php:565
+#: RAN/Dashboard.php:571
 msgid "You do not have sufficient permissions to manage these packages."
 msgstr ""
 
@@ -1278,30 +1342,6 @@ msgstr ""
 #: RAN/Admin/PackageAdminController.php:346
 #, php-format
 msgid "%s is already installed and managed by Booster. No package settings were changed."
-msgstr ""
-
-#: RAN/Admin/PackageAdminController.php:347
-#: RAN/Admin/PackageAdminController.php:367
-#: RAN/Admin/PortabilityController.php:483
-#: RAN/Admin/PortabilityController.php:606
-#: RAN/Admin/ProviderRepositoryRowsNormalizer.php:345
-#: RAN/Admin/ProviderSettingsPresenter.php:1515
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
-#: views/portability.php:170
-#: views/portability.php:251
-msgid "Plugin"
-msgstr ""
-
-#: RAN/Admin/PackageAdminController.php:347
-#: RAN/Admin/PackageAdminController.php:367
-#: RAN/Admin/PortabilityController.php:483
-#: RAN/Admin/PortabilityController.php:606
-#: RAN/Admin/ProviderRepositoryRowsNormalizer.php:345
-#: RAN/Admin/ProviderSettingsPresenter.php:1516
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
-#: views/portability.php:170
-#: views/portability.php:251
-msgid "Theme"
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:355
@@ -2731,7 +2771,7 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:701
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:339
 #: RAN/Booster.php:726
-#: views/attempts/index.php:43
+#: views/attempts/index.php:50
 #: views/onboarding.php:28
 #: views/packages/branch-readiness.php:200
 #: views/packages/index.php:65
@@ -4336,7 +4376,7 @@ msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:471
 #: views/attempts/detail.php:57
-#: views/attempts/index.php:47
+#: views/attempts/index.php:54
 msgid "Repository webhook"
 msgstr ""
 
@@ -4528,19 +4568,19 @@ msgid "Manage with RAN Booster"
 msgstr ""
 
 #: RAN/Booster.php:722
-#: views/attempts/index.php:38
+#: views/attempts/index.php:45
 #: views/packages/index.php:61
 msgid "Queued"
 msgstr ""
 
 #: RAN/Booster.php:723
-#: views/attempts/index.php:39
+#: views/attempts/index.php:46
 #: views/packages/index.php:62
 msgid "Running"
 msgstr ""
 
 #: RAN/Booster.php:724
-#: views/attempts/index.php:40
+#: views/attempts/index.php:47
 #: views/packages/index.php:63
 msgid "Succeeded"
 msgstr ""
@@ -4583,7 +4623,7 @@ msgstr ""
 msgid "Booster could not validate the credentials sidecar."
 msgstr ""
 
-#: RAN/Dashboard.php:579
+#: RAN/Dashboard.php:585
 msgid "Booster cannot offer removal for this selection. The installed target, management identity, or storage could not be verified. No recovery action is available until that uncertainty is resolved."
 msgstr ""
 
@@ -5286,12 +5326,12 @@ msgid "RAN Booster uninstall stopped"
 msgstr ""
 
 #: views/attempts/detail.php:37
-#: views/attempts/index.php:109
+#: views/attempts/index.php:144
 msgid "Open theme settings"
 msgstr ""
 
 #: views/attempts/detail.php:38
-#: views/attempts/index.php:110
+#: views/attempts/index.php:145
 msgid "Open plugin settings"
 msgstr ""
 
@@ -5312,20 +5352,19 @@ msgid "That deployment record was not found."
 msgstr ""
 
 #: views/attempts/detail.php:56
-#: views/attempts/index.php:46
+#: views/attempts/index.php:53
 msgid "Manual administrator action"
 msgstr ""
 
 #: views/attempts/detail.php:60
-#: views/attempts/index.php:156
+#: views/attempts/index.php:191
 msgid "Failure reason"
 msgstr ""
 
 #: views/attempts/detail.php:61
-#: views/attempts/index.php:65
-#: views/attempts/index.php:93
-#: views/attempts/index.php:132
-#: views/attempts/index.php:156
+#: views/attempts/index.php:121
+#: views/attempts/index.php:167
+#: views/attempts/index.php:191
 msgid "Outcome"
 msgstr ""
 
@@ -5356,8 +5395,8 @@ msgid "Checking the box only clears the retry block. It does not change the pack
 msgstr ""
 
 #: views/attempts/detail.php:78
-#: views/attempts/index.php:144
-#: views/attempts/index.php:157
+#: views/attempts/index.php:179
+#: views/attempts/index.php:192
 msgid "Support reference"
 msgstr ""
 
@@ -5370,12 +5409,12 @@ msgid "State"
 msgstr ""
 
 #: views/attempts/detail.php:83
-#: views/attempts/index.php:159
+#: views/attempts/index.php:194
 msgid "Origin"
 msgstr ""
 
 #: views/attempts/detail.php:93
-#: views/attempts/index.php:61
+#: views/attempts/index.php:67
 #: views/packages/index.php:506
 #: views/portability-review.php:21
 #: views/troubleshooting.php:177
@@ -5383,48 +5422,48 @@ msgid "Provider"
 msgstr ""
 
 #: views/attempts/detail.php:94
-#: views/attempts/index.php:160
+#: views/attempts/index.php:195
 msgid "Requested reference"
 msgstr ""
 
 #: views/attempts/detail.php:95
-#: views/attempts/index.php:161
+#: views/attempts/index.php:196
 msgid "Resolved reference"
 msgstr ""
 
 #: views/attempts/detail.php:95
-#: views/attempts/index.php:161
+#: views/attempts/index.php:196
 msgid "Not resolved"
 msgstr ""
 
 #: views/attempts/detail.php:96
-#: views/attempts/index.php:162
+#: views/attempts/index.php:197
 msgid "Mutation began"
 msgstr ""
 
 #: views/attempts/detail.php:96
-#: views/attempts/index.php:162
+#: views/attempts/index.php:197
 msgid "No"
 msgstr ""
 
 #: views/attempts/detail.php:97
-#: views/attempts/index.php:163
+#: views/attempts/index.php:198
 msgid "Finished"
 msgstr ""
 
 #: views/attempts/detail.php:97
-#: views/attempts/index.php:163
+#: views/attempts/index.php:198
 msgid "Not finished"
 msgstr ""
 
 #: views/attempts/detail.php:99
-#: views/attempts/index.php:165
+#: views/attempts/index.php:200
 msgid "Operator review"
 msgstr ""
 
 #. translators: 1: review date and time, 2: WordPress user ID.
 #: views/attempts/detail.php:99
-#: views/attempts/index.php:165
+#: views/attempts/index.php:200
 #, php-format
 msgid "Resolved %1$s by user #%2$d"
 msgstr ""
@@ -5446,123 +5485,143 @@ msgid "Allow retry and return to plugin settings"
 msgstr ""
 
 #: views/attempts/detail.php:128
-#: views/attempts/index.php:177
+#: views/attempts/index.php:212
 msgid "I have confirmed that the deployment worker has stopped."
 msgstr ""
 
 #: views/attempts/detail.php:129
-#: views/attempts/index.php:178
+#: views/attempts/index.php:213
 msgid "Reconcile stopped worker"
 msgstr ""
 
-#: views/attempts/index.php:41
+#: views/attempts/index.php:48
 msgid "Updated"
 msgstr ""
 
-#: views/attempts/index.php:52
-#: views/attempts/index.php:64
-#: views/attempts/index.php:92
-#: views/attempts/index.php:131
+#: views/attempts/index.php:59
+#: views/attempts/index.php:120
+#: views/attempts/index.php:166
 #: views/troubleshooting.php:29
 msgid "Activity"
 msgstr ""
 
-#: views/attempts/index.php:53
+#: views/attempts/index.php:60
 msgid "Review recorded checks and deployments. Activity is recorded independently of diagnostic logging."
 msgstr ""
 
-#: views/attempts/index.php:62
-msgid "Package type"
+#: views/attempts/index.php:69
+#: views/packages/index.php:140
+msgid "All providers"
 msgstr ""
 
-#: views/attempts/index.php:70
-msgid "Filter activity"
+#: views/attempts/index.php:78
+msgid "All activity"
 msgstr ""
 
-#: views/attempts/index.php:76
+#: views/attempts/index.php:87
+#: views/packages/index.php:158
+msgid "Filter"
+msgstr ""
+
+#: views/attempts/index.php:91
+#: views/packages/index.php:160
+msgid "Clear filters"
+msgstr ""
+
+#: views/attempts/index.php:102
 msgid "Request deployment runner"
 msgstr ""
 
-#: views/attempts/index.php:80
+#: views/attempts/index.php:106
 msgid "Activity is temporarily unavailable."
 msgstr ""
 
-#: views/attempts/index.php:82
+#: views/attempts/index.php:108
 msgid "No older activity is available."
 msgstr ""
 
-#: views/attempts/index.php:83
+#: views/attempts/index.php:109
 msgid "View latest activity"
 msgstr ""
 
-#: views/attempts/index.php:85
-msgid "No activity has been recorded yet."
-msgstr ""
-
-#: views/attempts/index.php:89
-#: views/attempts/index.php:120
-msgid "Time"
-msgstr ""
-
-#: views/attempts/index.php:90
-#: views/attempts/index.php:121
-msgid "Project"
-msgstr ""
-
-#: views/attempts/index.php:112
-msgid "Branch check"
+#: views/attempts/index.php:111
+msgid "No activity matches these filters."
 msgstr ""
 
 #: views/attempts/index.php:113
+msgid "No activity has been recorded yet."
+msgstr ""
+
+#: views/attempts/index.php:117
+#: views/attempts/index.php:155
+msgid "Time"
+msgstr ""
+
+#: views/attempts/index.php:118
+#: views/attempts/index.php:156
+msgid "Subject"
+msgstr ""
+
+#: views/attempts/index.php:138
+#: views/portability-review.php:23
+#: views/troubleshooting.php:216
+msgid "Repository"
+msgstr ""
+
+#: views/attempts/index.php:147
+msgid "Branch check"
+msgstr ""
+
+#: views/attempts/index.php:148
 msgid "Release check"
 msgstr ""
 
-#: views/attempts/index.php:114
+#: views/attempts/index.php:149
 msgid "Workflow assessment"
 msgstr ""
 
-#: views/attempts/index.php:130
+#: views/attempts/index.php:165
 msgid "Branch deployment"
 msgstr ""
 
-#: views/attempts/index.php:135
+#: views/attempts/index.php:170
 #: views/packages/index.php:557
 msgid "View details"
 msgstr ""
 
-#: views/attempts/index.php:138
+#: views/attempts/index.php:173
 msgid "Reported by"
 msgstr ""
 
-#: views/attempts/index.php:138
+#: views/attempts/index.php:173
 msgid "Recorded by Core"
 msgstr ""
 
-#: views/attempts/index.php:138
+#: views/attempts/index.php:173
 msgid "Provider-reported"
 msgstr ""
 
-#: views/attempts/index.php:141
+#: views/attempts/index.php:176
 msgid "Last recorded stage"
 msgstr ""
 
-#: views/attempts/index.php:142
+#: views/attempts/index.php:177
 msgid "Reason"
 msgstr ""
 
-#: views/attempts/index.php:143
+#: views/attempts/index.php:178
 msgid "Remediation"
 msgstr ""
 
-#: views/attempts/index.php:145
+#: views/attempts/index.php:180
 msgid "Completed (UTC)"
 msgstr ""
 
-#: views/attempts/index.php:168
+#: views/attempts/index.php:203
 msgid "Package settings"
 msgstr ""
 
-#: views/attempts/index.php:191
+#: views/attempts/index.php:226
 msgid "Load older activity"
 msgstr ""
 
@@ -7297,10 +7356,6 @@ msgstr ""
 msgid "Filter by repository provider"
 msgstr ""
 
-#: views/packages/index.php:140
-msgid "All providers"
-msgstr ""
-
 #: views/packages/index.php:145
 msgid "Filter by update source"
 msgstr ""
@@ -7315,14 +7370,6 @@ msgstr ""
 
 #: views/packages/index.php:153
 msgid "All updates"
-msgstr ""
-
-#: views/packages/index.php:158
-msgid "Filter"
-msgstr ""
-
-#: views/packages/index.php:160
-msgid "Clear filters"
 msgstr ""
 
 #. translators: %s is plugins or themes.
@@ -7733,11 +7780,6 @@ msgstr ""
 
 #: views/portability-review.php:22
 msgid "Repository identity"
-msgstr ""
-
-#: views/portability-review.php:23
-#: views/troubleshooting.php:216
-msgid "Repository"
 msgstr ""
 
 #: views/portability-review.php:26

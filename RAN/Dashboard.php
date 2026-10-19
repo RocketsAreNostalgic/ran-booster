@@ -300,8 +300,14 @@ class Dashboard {
 				$data['troubleshooting'] = array();
 				$data['debug_capture']   = $this->debug_capture_payload();
 			} elseif ( 'activity' === $panel ) {
-				$data['troubleshooting']     = array();
-				$data['deployment_activity'] = $this->deployment_admin->activity();
+				$data['troubleshooting'] = array();
+				$provider_labels         = array();
+				foreach ( $this->admin_tabs?->all() ?? array() as $tab ) {
+					if ( $tab->is_provider() ) {
+						$provider_labels[ $tab->get_key() ] = $tab->get_label();
+					}
+				}
+				$data['deployment_activity'] = $this->deployment_admin->activity( $provider_labels );
 			} else {
 				$data['troubleshooting'] = $this->troubleshooting_payload ?? $this->troubleshooting->form_payload();
 			}

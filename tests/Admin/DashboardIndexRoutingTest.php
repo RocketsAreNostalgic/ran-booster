@@ -2768,6 +2768,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 				'id'               => $id,
 				'sort_at'          => $time,
 				'status'           => 'failed',
+				'provider'         => 'gh',
 				'subject_type'     => 'plugin',
 				'subject_identity' => 'example/example.php',
 				'correlation'      => str_repeat( 'a', 32 ),
@@ -2798,6 +2799,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'example', $page['items'][0]['package_slug'] );
 		self::assertSame( 'example/example.php', $page['items'][0]['subject_identity'] );
 		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php', $page['package_settings_urls']['plugin']['example'] );
+		self::assertSame( 'GitHub · Plugin: Example Plugin (example/example.php)', $page['filter_options']['packages'][0]['label'] );
 		self::assertSame( 'webhook', $page['items'][0]['source'] );
 		self::assertSame( 'running', $page['items'][0]['state'] );
 		self::assertSame( $requested_ref, $page['items'][0]['requested_ref'] );
@@ -2845,13 +2847,82 @@ final class DashboardIndexRoutingTest extends TestCase {
 				'correlation'      => str_repeat( 'a', 32 ),
 			);
 		}
-		$_GET = array( 'activity_subject_identity' => 'example/second.php' );
+		foreach ( $database->activity_rows as &$row ) {
+			$row['provider'] = 'gh';
+		}
+		unset( $row );
+		$_GET = array( 'activity_package' => wp_json_encode( array( 'gh', 'plugin', 'example/second.php' ) ) );
 		$page = ( new DeploymentAdminPresenter( attempts: $this->deployment_attempts( $database ), activity_store: new \RAN\Activity\ActivityStore( $database, 'wp_ran_booster_activity' ) ) )->activity();
 		self::assertFalse( $page['unavailable'] );
 		self::assertCount( 1, $page['items'] );
 		self::assertSame( 'example/second.php', $page['items'][0]['subject_identity'] );
 		self::assertStringContainsString( "BINARY subject_identity = 'example/second.php'", implode( "\n", $database->reads ) );
+		self::assertStringContainsString( 'SELECT DISTINCT BINARY provider AS provider', implode( "\n", $database->reads ) );
+		self::assertStringContainsString( 'SELECT DISTINCT BINARY provider AS provider, BINARY subject_type AS subject_type, BINARY subject_identity AS subject_identity', implode( "\n", $database->reads ) );
+		self::assertStringNotContainsString( 'SELECT * FROM wp_ran_booster_activity WHERE', implode( "\n", array_slice( $database->reads, 0, 2 ) ) );
 		self::assertStringNotContainsString( 'package_type IN', implode( "\n", $database->reads ) );
+	}
+
+	public function test_activity_filter_choices_are_exact_retained_tuples_and_reset_stale_controls(): void {
+		require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
+		$GLOBALS['ran_booster_activity_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ] = '1';
+		$database = new DashboardActivityWpdb();
+		foreach ( array(
+			array( 'gh', 'plugin', 'same/package.php' ),
+			array( 'gh', 'plugin', 'same/Package.php' ),
+			array( 'bb', 'theme', 'same/package.php' ),
+			array( 'bb', 'repository', 'org/example' ),
+		) as $index => $row ) {
+			$database->activity_rows[] = array(
+				'id'               => $index + 1,
+				'sort_at'          => '2026-10-12 17:00:00',
+				'provider'         => $row[0],
+				'subject_type'     => $row[1],
+				'subject_identity' => $row[2],
+				'status'           => 'succeeded',
+				'correlation'      => str_repeat( 'a', 32 ),
+			);
+		}
+		$presenter = new DeploymentAdminPresenter( attempts: $this->deployment_attempts( $database ), activity_store: new \RAN\Activity\ActivityStore( $database, 'wp_ran_booster_activity' ) );
+		$_GET      = array();
+		$page      = $presenter->activity(
+			array(
+				'gh' => 'GitHub',
+				'bb' => 'Bitbucket',
+			)
+		);
+		self::assertSame( array( 'GitHub', 'Bitbucket' ), array_column( $page['filter_options']['providers'], 'label' ) );
+		self::assertCount( 3, $page['filter_options']['packages'] );
+		self::assertSame( 'GitHub · Plugin: same/package.php', $page['filter_options']['packages'][0]['label'] );
+		self::assertStringContainsString( 'SELECT DISTINCT BINARY provider AS provider', $database->reads[0] );
+		self::assertStringNotContainsString( 'SELECT *', $database->reads[0] );
+		$_GET = array( 'activity_package' => wp_json_encode( array( 'gh', 'plugin', 'same/Package.php' ) ) );
+		$page = $presenter->activity();
+		self::assertSame( 'gh', $page['filters']['provider'] );
+		self::assertSame( 'plugin', $page['filters']['subject_type'] );
+		self::assertSame( 'same/Package.php', $page['filters']['subject_identity'] );
+		self::assertSame( array( 'same/Package.php' ), array_column( $page['items'], 'subject_identity' ) );
+		$_GET = array(
+			'activity_provider' => 'bb',
+			'activity_package'  => wp_json_encode( array( 'gh', 'plugin', 'same/package.php' ) ),
+			'before'            => 'v1|' . hash( 'sha256', '' ) . '|2026-10-12 17:00:00|activity|1',
+		);
+		$page = $presenter->activity();
+		self::assertSame( array( 'provider' => 'bb' ), $page['filters'] );
+		self::assertSame( '', $page['filter_state']['package'] );
+		self::assertFalse( $page['has_cursor'] );
+		self::assertStringContainsString( 'does not match', (string) $page['filter_notice'] );
+		self::assertCount( 1, $page['filter_options']['packages'] );
+		$_GET = array( 'activity_package' => array( 'malformed' ) );
+		$page = $presenter->activity();
+		self::assertSame( array(), $page['filters'] );
+		self::assertStringContainsString( 'cleared', (string) $page['filter_notice'] );
+		foreach ( array( 'activity_subject_type', 'activity_subject_identity', 'activity_operation', 'activity_outcome' ) as $legacy ) {
+			$_GET = array( $legacy => 'ignored' );
+			$page = $presenter->activity();
+			self::assertSame( array(), $page['filters'] );
+			self::assertStringContainsString( 'Older activity filters were cleared', (string) $page['filter_notice'] );
+		}
 	}
 
 	public function test_missing_activity_store_does_not_fall_back_to_deployment_only_history(): void {
@@ -3297,8 +3368,31 @@ final class DashboardActivityWpdb implements \RAN\Storage\DeploymentWriteConnect
 		$this->reads[] = $query;
 		if ( str_contains( $query, 'FROM wp_ran_booster_activity ' ) ) {
 			$rows = $this->activity_rows;
+			if ( preg_match( "/BINARY provider = '([^']+)'/", $query, $filter ) ) {
+				$rows = array_values( array_filter( $rows, static fn ( array $row ): bool => ( $row['provider'] ?? null ) === $filter[1] ) );
+			}
+			if ( preg_match( "/BINARY subject_type = '([^']+)'/", $query, $filter ) ) {
+				$rows = array_values( array_filter( $rows, static fn ( array $row ): bool => $row['subject_type'] === $filter[1] ) );
+			}
 			if ( preg_match( "/BINARY subject_identity = '([^']+)'/", $query, $filter ) ) {
 				$rows = array_values( array_filter( $rows, static fn ( array $row ): bool => $row['subject_identity'] === $filter[1] ) );
+			}
+			if ( str_contains( $query, 'SELECT DISTINCT BINARY provider AS provider, BINARY subject_type AS subject_type, BINARY subject_identity AS subject_identity' ) ) {
+				$packages = array();
+				foreach ( $rows as $row ) {
+					if ( ! in_array( $row['subject_type'], array( 'plugin', 'theme' ), true ) || '' === $row['subject_identity'] ) {
+						continue;
+					}
+					$packages[ $row['provider'] . "\0" . $row['subject_type'] . "\0" . $row['subject_identity'] ] = array_intersect_key( $row, array_flip( array( 'provider', 'subject_type', 'subject_identity' ) ) );
+				}
+				return array_map( static fn ( array $row ): object => (object) $row, array_values( $packages ) );
+			}
+			if ( str_contains( $query, 'SELECT DISTINCT BINARY provider AS provider' ) ) {
+				$providers = array();
+				foreach ( $rows as $row ) {
+					$providers[ (string) ( $row['provider'] ?? '' ) ] = array( 'provider' => $row['provider'] ?? '' );
+				}
+				return array_map( static fn ( array $row ): object => (object) $row, array_values( $providers ) );
 			}
 			if ( preg_match( '/sort_at = \'([^\']+)\' AND id < (\d+)/', $query, $boundary ) ) {
 				$rows = array_values( array_filter( $rows, static fn ( array $row ): bool => $row['sort_at'] < $boundary[1] || ( $row['sort_at'] === $boundary[1] && $row['id'] < (int) $boundary[2] ) ) );

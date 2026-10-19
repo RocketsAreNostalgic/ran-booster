@@ -85,7 +85,11 @@ return static function ( wpdb $database ): void {
 		);
 		$rendered = $render_activity( $activity );
 		$expect( 1 === preg_match( '/<a class="button" href="([^"]+)">Load older activity<\\/a>/', $rendered, $matches ), 'rendered older activity link' );
-		parse_str( (string) wp_parse_url( html_entity_decode( $matches[1], ENT_QUOTES, 'UTF-8' ), PHP_URL_QUERY ), $older_query );
+		$older_href = $matches[1] ?? null;
+		if ( ! is_string( $older_href ) ) {
+			throw new RuntimeException( 'Activity SQL proof: rendered older activity href.' );
+		}
+		parse_str( (string) wp_parse_url( html_entity_decode( $older_href, ENT_QUOTES, 'UTF-8' ), PHP_URL_QUERY ), $older_query );
 		$expect(
 			array(
 				'page'              => 'ran-booster',
@@ -98,7 +102,11 @@ return static function ( wpdb $database ): void {
 			'older activity link preserves the exact route, filters, and cursor'
 		);
 		$expect( 1 === preg_match( '/class="ran-booster-package-list-filters__clear" href="([^"]+)"/', $rendered, $matches ), 'rendered clear activity link' );
-		parse_str( (string) wp_parse_url( html_entity_decode( $matches[1], ENT_QUOTES, 'UTF-8' ), PHP_URL_QUERY ), $clear_query );
+		$clear_href = $matches[1] ?? null;
+		if ( ! is_string( $clear_href ) ) {
+			throw new RuntimeException( 'Activity SQL proof: rendered clear activity href.' );
+		}
+		parse_str( (string) wp_parse_url( html_entity_decode( $clear_href, ENT_QUOTES, 'UTF-8' ), PHP_URL_QUERY ), $clear_query );
 		$expect(
 			array(
 				'page'  => 'ran-booster',
@@ -112,7 +120,11 @@ return static function ( wpdb $database ): void {
 		unset( $activity['next_cursor'] );
 		$rendered = $render_activity( $activity );
 		$expect( 1 === preg_match( '/<a class="button" href="([^"]+)">View latest activity<\\/a>/', $rendered, $matches ), 'rendered latest activity link' );
-		parse_str( (string) wp_parse_url( html_entity_decode( $matches[1], ENT_QUOTES, 'UTF-8' ), PHP_URL_QUERY ), $latest_query );
+		$latest_href = $matches[1] ?? null;
+		if ( ! is_string( $latest_href ) ) {
+			throw new RuntimeException( 'Activity SQL proof: rendered latest activity href.' );
+		}
+		parse_str( (string) wp_parse_url( html_entity_decode( $latest_href, ENT_QUOTES, 'UTF-8' ), PHP_URL_QUERY ), $latest_query );
 		$expect(
 			array(
 				'page'              => 'ran-booster',

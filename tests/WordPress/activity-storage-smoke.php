@@ -207,7 +207,9 @@ return static function ( wpdb $database ): void {
 		$expect( null === $database->get_var( $database->prepare( 'SELECT id FROM %i WHERE id = %d', $table, $outside ) ), 'ordinary aged report is pruned' );
 		$filter_choices = $store->activity_filter_choices();
 		$expect( $filter_choices['available'], 'filter choices available after retention pruning' );
-		$expect( in_array( 'api', $filter_choices['providers'], true ) && in_array( 'deploy', $filter_choices['providers'], true ) && ! in_array( 'obsolete', $filter_choices['providers'], true ), 'providers follow retained history and include nonpackages' );
+		$provider_choices = array_column( $filter_choices['providers'], 'has_non_package', 'provider' );
+		$expect( array_key_exists( 'api', $provider_choices ) && array_key_exists( 'deploy', $provider_choices ) && ! array_key_exists( 'obsolete', $provider_choices ), 'providers follow retained history and include nonpackages' );
+		$expect( true === ( $provider_choices['api'] ?? null ) && false === ( $provider_choices['deploy'] ?? null ), 'provider choices carry retained non-package availability' );
 		$packages = array_map(
 			static fn ( array $package ): string => implode( '|', $package ),
 			array_values( array_filter( $filter_choices['packages'], static fn ( array $package ): bool => in_array( $package['provider'], array( 'Gh', 'bb', 'deploy', 'gh' ), true ) ) )

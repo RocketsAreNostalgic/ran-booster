@@ -12,6 +12,8 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		'tests/Runtime/Support/GitHubWorkflowAssistanceWordPressFunctions.php',
 		'tests/Uninstall/LocalDataRemoverTest.php',
 		'tests/Admin/Support/ExpiryReminderProvider.php',
+		// Actual admin form metadata/policy must cross Core's canonical credential-access guard.
+		'tests/Admin/CredentialProfileInteractionDispatcherTest.php',
 		'tests/Logging/GitHubDiagnosticsLoggingTest.php',
 		'tests/Portability/BlueprintRepositoryVerifierTest.php',
 		'tests/Portability/EncryptedStoreBlueprintIntegrationTest.php',

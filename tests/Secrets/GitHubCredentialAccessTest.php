@@ -47,7 +47,7 @@ final class GitHubCredentialAccessTest extends TestCase {
 					return $this->available;
 				}
 				self::assertSame( array( 'kind', 'configuration' ), array_keys( $metadata ) );
-				return $this->available && match ( $metadata['kind'] ) {
+				return $this->available && null !== \RAN\RepositoryProvider\GitHubProviderSelection::credential_format( $metadata ) && match ( $metadata['kind'] ) {
 					'classic' => $this->classic,
 					'fine-grained' => $this->fine_grained,
 					default => false,
@@ -68,6 +68,70 @@ final class GitHubCredentialAccessTest extends TestCase {
 			'fixture-secret'
 		);
 		$this->policy->normalizations = 0;
+	}
+
+	public function test_classic_form_input_still_requires_available_and_approved_format_before_policy(): void {
+		$store    = $this->store();
+		$metadata = array(
+			'label'         => 'Form',
+			'kind'          => 'classic',
+			'configuration' => array(),
+		);
+		foreach ( array( array( false, true ), array( true, false ) ) as list( $this->available, $this->classic ) ) {
+			try {
+				$store->save_credential( 'gh', null, $metadata, 'fixture-secret', true );
+				self::fail( 'Unavailable or unapproved Classic input must not reach the policy.' );
+			} catch ( \RuntimeException ) {
+				self::assertSame( 0, $this->policy->normalizations );
+				self::assertFileDoesNotExist( $this->path );
+			}
+		}
+	}
+
+	public function test_save_does_not_canonicalize_other_noncanonical_configurations(): void {
+		$store = $this->store();
+		foreach ( array( null, '', array( 'owner' => null ), array( 'owner' => 'unexpected' ), array( 'extra' => '' ) ) as $configuration ) {
+			try {
+				$store->save_credential(
+					'gh',
+					null,
+					array(
+						'label'         => 'Form',
+						'kind'          => 'classic',
+						'configuration' => $configuration,
+					),
+					'fixture-secret',
+					true
+				);
+				self::fail( 'Malformed Classic configuration must not reach the policy.' );
+			} catch ( \RuntimeException ) {
+				self::assertSame( 0, $this->policy->normalizations );
+				self::assertFileDoesNotExist( $this->path );
+			}
+		}
+	}
+
+	public function test_empty_configuration_is_not_admitted_for_temporary_credentials(): void {
+		$store  = $this->store();
+		$called = false;
+		try {
+			$store->with_temporary_credential(
+				'gh',
+				array(
+					'label'         => 'Temporary',
+					'kind'          => 'classic',
+					'configuration' => array(),
+				),
+				'fixture-secret',
+				static function () use ( &$called ): void {
+					$called = true;
+				}
+			);
+			self::fail( 'Temporary credentials must already have canonical configuration.' );
+		} catch ( \RuntimeException ) {
+			self::assertFalse( $called );
+			self::assertSame( 0, $this->policy->normalizations );
+		}
 	}
 
 	public function test_mixed_inventory_filters_before_policy_without_default_substitution(): void {
@@ -194,6 +258,34 @@ final class GitHubCredentialAccessTest extends TestCase {
 		try {
 			$store->import_credentials_if_absent( $blueprint, $credential );
 			self::fail( 'Import must refuse before policy disclosure.' );
+		} catch ( \RuntimeException ) {
+			self::assertSame( 0, $this->policy->normalizations );
+			self::assertFileDoesNotExist( $this->path );
+		}
+	}
+
+	public function test_import_requires_canonical_configuration_even_when_classic_is_approved(): void {
+		$store      = $this->store();
+		$credential = new \RAN\Portability\BlueprintCredential(
+			'gh',
+			'Portable',
+			'classic',
+			array(),
+			'fixture-secret',
+			array(
+				array(
+					'type'       => 'plugin',
+					'identifier' => 'fixture/fixture.php',
+				),
+			)
+		);
+		$blueprint  = new \RAN\Portability\PackageBlueprint(
+			array( new \RAN\Portability\BlueprintPackage( 'plugin', 'fixture/fixture.php', 'Fixture', 'gh', '42', 'owner/repository', 'main', null ) ),
+			array( $credential )
+		);
+		try {
+			$store->import_credentials_if_absent( $blueprint, $credential );
+			self::fail( 'Raw Classic form configuration is not a portable canonical record.' );
 		} catch ( \RuntimeException ) {
 			self::assertSame( 0, $this->policy->normalizations );
 			self::assertFileDoesNotExist( $this->path );

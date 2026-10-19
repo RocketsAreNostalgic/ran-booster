@@ -692,6 +692,11 @@ class SecretsFile {
 				}
 			}
 		}
+		// The Classic PAT form has no configuration fields. Canonicalize only this save input,
+		// before the format guard; retained records and imports must already be canonical.
+		if ( 'gh' === $provider_code && 'classic' === ( $metadata['kind'] ?? null ) && array() === ( $metadata['configuration'] ?? null ) ) {
+			$metadata['configuration'] = array( 'owner' => '' );
+		}
 		$record = $this->validate_credential( $provider_code, $metadata, $secret, $submitted && ! $retain_secret );
 
 		return $this->mutate(

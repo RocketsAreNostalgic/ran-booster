@@ -107,25 +107,28 @@ $policy_labels = array(
 	<a class="page-title-action" href="<?php echo esc_url( $install_another_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
 <?php } ?>
 
-<p><a href="
-<?php
-echo esc_url(
-	add_query_arg(
-		array(
-			'page'     => $package_view->get_page_slug(),
-			'recovery' => '1',
-		),
-		$package_admin_url
-	)
-);
-?>
-"><?php esc_html_e( 'Recover package management', 'ran-booster' ); ?></a></p>
 <div class="ran-booster-package-intro">
 	<p class="description">
 		<?php esc_html_e( 'Review package health, deploy saved branches and hand published releases to WordPress.', 'ran-booster' ); ?>
 	</p>
 
 	<?php require dirname( __DIR__ ) . '/notices.php'; ?>
+	<?php if ( ! empty( $management_removal_help ) ) { ?>
+		<p class="description"><?php esc_html_e( 'Can’t open a package’s settings? Review whether Booster can safely stop managing it while keeping its installed files. This does not repair the package or its data.', 'ran-booster' ); ?>
+		<a href="
+		<?php
+		echo esc_url(
+			add_query_arg(
+				array(
+					'page'     => $package_view->get_page_slug(),
+					'recovery' => '1',
+				),
+				$package_admin_url
+			)
+		);
+		?>
+					"><?php esc_html_e( 'Review management removal', 'ran-booster' ); ?></a></p>
+	<?php } ?>
 </div>
 
 <?php if ( $package_list_total > 0 ) { ?>
@@ -237,7 +240,9 @@ echo esc_url(
 	<tbody id="the-list">
 		<?php if ( count( $packages ) < 1 ) { ?>
 			<tr>
-				<?php if ( $package_list_total > 0 ) { ?>
+				<?php if ( ! empty( $package_list_unavailable ) ) { ?>
+					<td colspan="4"><?php esc_html_e( 'Package settings could not be loaded. Review the notice above.', 'ran-booster' ); ?></td>
+				<?php } elseif ( $package_list_total > 0 ) { ?>
 					<td></td>
 					<td colspan="3">
 						<?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( 'No managed %s match the current filters.', 'ran-booster' ), strtolower( $package_view->get_plural_label() ) ) ); ?>

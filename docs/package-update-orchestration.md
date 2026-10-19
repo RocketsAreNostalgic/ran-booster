@@ -92,8 +92,23 @@ Blueprints do not export lifetime identity. Faithful database moves preserve
 stored identity; exact clones and restores also copy it and its associated work.
 There is no restore-proof invalidation promise.
 
-The **Recover management** links in package lists and Troubleshooting open an
-installed-target selector before managed inventory hydration. Confirmation
+### Emergency management removal
+
+Healthy package lists and normal Diagnostics do not show recovery prompts.
+If saved package settings cannot be opened, **Review management removal** offers
+an installed-target selector before managed inventory hydration. The action is
+**Stop managing an installed package**: it disconnects Booster management, rather
+than repairing files or restoring a backup. Ordinary package settings offer the
+same **Stop managing** outcome in their Danger zone; deletion is a separate action.
+
+For advanced support when the list itself cannot load, open the WordPress admin
+route `admin.php?page=ran-booster-plugins&recovery=1` or
+`admin.php?page=ran-booster-themes&recovery=1`. The selector does not require the
+broken management settings to load. Opening it changes nothing and does not
+promise the selected package is eligible. Generic database errors or a missing
+provider alone do not trigger a removal invitation.
+
+Confirmation
 binds the exact management row and installed plugin main file or theme
 `style.css`. Management-only removal accepts stable symlinked installations;
 confirmation also captures their link identity and resolved target. Link

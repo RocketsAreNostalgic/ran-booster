@@ -132,7 +132,7 @@ msgstr ""
 
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:117
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:152
-#: views/packages/index.php:233
+#: views/packages/index.php:236
 msgid "Actions"
 msgstr ""
 
@@ -182,7 +182,7 @@ msgstr ""
 #: RAN/Admin/PackagePagePresenter.php:447
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:478
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:468
-#: views/packages/index.php:148
+#: views/packages/index.php:151
 #: views/portability-review.php:25
 #: views/portability-review.php:328
 msgid "Branch"
@@ -199,9 +199,9 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:275
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:282
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:475
-#: views/packages/index.php:149
-#: views/packages/index.php:332
-#: views/packages/index.php:402
+#: views/packages/index.php:152
+#: views/packages/index.php:337
+#: views/packages/index.php:407
 #: assets/ran-booster-release-management.js:805
 #: assets/ran-booster-release-management.js:811
 msgid "Releases"
@@ -250,7 +250,7 @@ msgstr ""
 #: views/packages/edit.php:366
 #: views/packages/fields/deployment-policy.php:27
 #: views/packages/fields/deployment-policy.php:30
-#: views/packages/index.php:462
+#: views/packages/index.php:467
 msgid "Updates"
 msgstr ""
 
@@ -481,8 +481,8 @@ msgstr[1] ""
 #: views/documentation.php:255
 #: views/packages/edit.php:246
 #: views/packages/index.php:102
-#: views/packages/index.php:154
-#: views/packages/index.php:397
+#: views/packages/index.php:157
+#: views/packages/index.php:402
 msgid "Automatic"
 msgstr ""
 
@@ -493,8 +493,8 @@ msgstr ""
 #: views/documentation.php:254
 #: views/packages/edit.php:247
 #: views/packages/index.php:101
-#: views/packages/index.php:155
-#: views/packages/index.php:399
+#: views/packages/index.php:158
+#: views/packages/index.php:404
 msgid "Manual"
 msgstr ""
 
@@ -507,9 +507,9 @@ msgstr ""
 #: views/packages/edit.php:208
 #: views/packages/edit.php:245
 #: views/packages/index.php:100
-#: views/packages/index.php:156
-#: views/packages/index.php:398
-#: views/packages/index.php:458
+#: views/packages/index.php:159
+#: views/packages/index.php:403
+#: views/packages/index.php:463
 msgid "Disabled"
 msgstr ""
 
@@ -1313,12 +1313,12 @@ msgid "RAN Booster automatic deployment failed."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:63
-#: RAN/Dashboard.php:1145
+#: RAN/Dashboard.php:1151
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:133
-msgid "Booster could not confirm safe recovery. Refresh this page and review the current management and operation state before trying again."
+msgid "Booster could not confirm safe management removal. Refresh this page and review the current management and operation state before trying again."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:164
@@ -1437,7 +1437,7 @@ msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:496
 #: views/packages/edit.php:208
-#: views/packages/index.php:458
+#: views/packages/index.php:463
 msgid "Enabled"
 msgstr ""
 
@@ -1657,7 +1657,7 @@ msgstr ""
 
 #: RAN/Admin/PackagePagePresenter.php:408
 #: views/packages/edit.php:240
-#: views/packages/index.php:406
+#: views/packages/index.php:411
 #: assets/ran-booster-release-management.js:732
 msgid "provider default"
 msgstr ""
@@ -2775,7 +2775,7 @@ msgstr ""
 #: views/onboarding.php:28
 #: views/packages/branch-readiness.php:200
 #: views/packages/index.php:65
-#: views/packages/index.php:327
+#: views/packages/index.php:332
 #: views/provider.php:666
 msgid "Needs attention"
 msgstr ""
@@ -4586,12 +4586,12 @@ msgid "Succeeded"
 msgstr ""
 
 #: RAN/Booster.php:727
-#: views/packages/index.php:323
+#: views/packages/index.php:328
 msgid "Reinstall queued"
 msgstr ""
 
 #: RAN/Booster.php:728
-#: views/packages/index.php:325
+#: views/packages/index.php:330
 msgid "Reinstall in progress…"
 msgstr ""
 
@@ -4624,7 +4624,11 @@ msgid "Booster could not validate the credentials sidecar."
 msgstr ""
 
 #: RAN/Dashboard.php:586
-msgid "Booster cannot offer removal for this selection. The installed target, management identity, or storage could not be verified. No recovery action is available until that uncertainty is resolved."
+msgid "Booster cannot safely stop managing this selection. The installed target, management identity, or storage could not be verified. Resolve that uncertainty before trying again."
+msgstr ""
+
+#: RAN/Dashboard.php:836
+msgid "Booster could not open a package’s saved management settings. No package changes were made."
 msgstr ""
 
 #: RAN/Dispatcher.php:257
@@ -5415,7 +5419,7 @@ msgstr ""
 
 #: views/attempts/detail.php:93
 #: views/attempts/index.php:67
-#: views/packages/index.php:506
+#: views/packages/index.php:511
 #: views/portability-review.php:21
 #: views/troubleshooting.php:209
 msgid "Provider"
@@ -5510,7 +5514,7 @@ msgid "Review recorded checks and deployments. Activity is recorded independentl
 msgstr ""
 
 #: views/attempts/index.php:69
-#: views/packages/index.php:140
+#: views/packages/index.php:143
 msgid "All providers"
 msgstr ""
 
@@ -5519,12 +5523,12 @@ msgid "All activity"
 msgstr ""
 
 #: views/attempts/index.php:85
-#: views/packages/index.php:158
+#: views/packages/index.php:161
 msgid "Filter"
 msgstr ""
 
 #: views/attempts/index.php:87
-#: views/packages/index.php:160
+#: views/packages/index.php:163
 msgid "Clear filters"
 msgstr ""
 
@@ -5585,7 +5589,7 @@ msgid "Branch deployment"
 msgstr ""
 
 #: views/attempts/index.php:168
-#: views/packages/index.php:557
+#: views/packages/index.php:562
 msgid "View details"
 msgstr ""
 
@@ -7080,7 +7084,7 @@ msgstr ""
 #. translators: %s is plugin or theme.
 #: views/packages/danger-zone.php:40
 #, php-format
-msgid "Unlink %s"
+msgid "Stop managing %s"
 msgstr ""
 
 #. translators: %s is plugin or theme.
@@ -7092,7 +7096,7 @@ msgstr ""
 #. translators: %s is plugin or theme.
 #: views/packages/danger-zone.php:58
 #, php-format
-msgid "Unlink and delete %s"
+msgid "Stop managing and delete %s"
 msgstr ""
 
 #: views/packages/edit.php:220
@@ -7117,7 +7121,7 @@ msgstr ""
 
 #. translators: %s is the repository branch name.
 #: views/packages/edit.php:239
-#: views/packages/index.php:405
+#: views/packages/index.php:410
 #: assets/ran-booster-release-management.js:730
 #, php-format,js-format
 msgid "Branch · %s"
@@ -7343,302 +7347,314 @@ msgstr[1] ""
 msgid "Managed %s"
 msgstr ""
 
-#: views/packages/index.php:122
-#: views/packages/recovery.php:20
-msgid "Recover package management"
-msgstr ""
-
-#: views/packages/index.php:125
+#: views/packages/index.php:112
 msgid "Review package health, deploy saved branches and hand published releases to WordPress."
 msgstr ""
 
-#: views/packages/index.php:138
+#: views/packages/index.php:117
+msgid "Can’t open a package’s settings? Review whether Booster can safely stop managing it while keeping its installed files. This does not repair the package or its data."
+msgstr ""
+
+#: views/packages/index.php:130
+#: views/packages/recovery.php:33
+msgid "Review management removal"
+msgstr ""
+
+#: views/packages/index.php:141
 msgid "Filter by repository provider"
 msgstr ""
 
-#: views/packages/index.php:145
+#: views/packages/index.php:148
 msgid "Filter by update source"
 msgstr ""
 
-#: views/packages/index.php:147
+#: views/packages/index.php:150
 msgid "All update sources"
 msgstr ""
 
-#: views/packages/index.php:151
+#: views/packages/index.php:154
 msgid "Filter by updates"
 msgstr ""
 
-#: views/packages/index.php:153
+#: views/packages/index.php:156
 msgid "All updates"
 msgstr ""
 
 #. translators: %s is plugins or themes.
-#: views/packages/index.php:172
+#: views/packages/index.php:175
 #, php-format
 msgid "Search managed %s"
 msgstr ""
 
-#: views/packages/index.php:174
+#: views/packages/index.php:177
 #: views/provider.php:646
 #: views/provider.php:666
 #: assets/ran-booster-repository-picker.js:806
 msgid "Search"
 msgstr ""
 
-#: views/packages/index.php:192
+#: views/packages/index.php:195
 msgid "Reinstall the selected branch and overwrite local changes?"
 msgstr ""
 
-#: views/packages/index.php:193
+#: views/packages/index.php:196
 msgid "Reinstall {count} selected branches and overwrite local changes?"
 msgstr ""
 
-#: views/packages/index.php:197
+#: views/packages/index.php:200
 msgid "Select bulk action"
 msgstr ""
 
-#: views/packages/index.php:199
+#: views/packages/index.php:202
 msgid "Bulk actions"
 msgstr ""
 
-#: views/packages/index.php:200
+#: views/packages/index.php:203
 msgid "Reinstall selected branches"
 msgstr ""
 
-#: views/packages/index.php:201
+#: views/packages/index.php:204
 msgid "Set updates: Manual"
 msgstr ""
 
-#: views/packages/index.php:202
+#: views/packages/index.php:205
 msgid "Set updates: Disabled"
 msgstr ""
 
-#: views/packages/index.php:203
+#: views/packages/index.php:206
 msgid "Set updates: Automatic"
 msgstr ""
 
-#: views/packages/index.php:205
+#: views/packages/index.php:208
 msgid "Enable in WordPress"
 msgstr ""
 
-#: views/packages/index.php:206
+#: views/packages/index.php:209
 msgid "Disable in WordPress"
 msgstr ""
 
-#: views/packages/index.php:209
+#: views/packages/index.php:212
 msgid "Apply"
 msgstr ""
 
 #. translators: %s is plugins or themes.
-#: views/packages/index.php:210
+#: views/packages/index.php:213
 #: assets/ran-booster-packages.js:579
 #, php-format,js-format
 msgid "0 %s selected"
 msgstr ""
 
 #. translators: %s is plugins or themes.
-#: views/packages/index.php:226
+#: views/packages/index.php:229
 #, php-format
 msgid "Select all %s"
 msgstr ""
 
-#: views/packages/index.php:228
+#: views/packages/index.php:231
 msgid "Selection"
 msgstr ""
 
-#: views/packages/index.php:232
+#: views/packages/index.php:235
 msgid "Management"
 msgstr ""
 
-#. translators: %s is plugins or themes.
-#: views/packages/index.php:243
-#, php-format
-msgid "No managed %s match the current filters."
-msgstr ""
-
-#. translators: %s is plugin or theme.
-#: views/packages/index.php:247
-#: views/packages/index.php:249
-#, php-format
-msgid "Add your first %s"
+#: views/packages/index.php:244
+msgid "Package settings could not be loaded. Review the notice above."
 msgstr ""
 
 #. translators: %s is plugins or themes.
 #: views/packages/index.php:248
 #, php-format
+msgid "No managed %s match the current filters."
+msgstr ""
+
+#. translators: %s is plugin or theme.
+#: views/packages/index.php:252
+#: views/packages/index.php:254
+#, php-format
+msgid "Add your first %s"
+msgstr ""
+
+#. translators: %s is plugins or themes.
+#: views/packages/index.php:253
+#, php-format
 msgid "No %s are managed by RAN Booster yet."
 msgstr ""
 
-#: views/packages/index.php:311
+#: views/packages/index.php:316
 msgid "Deployment disabled"
 msgstr ""
 
-#: views/packages/index.php:313
-#: views/packages/index.php:356
+#: views/packages/index.php:318
+#: views/packages/index.php:361
 msgid "Provider unavailable"
 msgstr ""
 
-#: views/packages/index.php:315
-#: views/packages/index.php:366
+#: views/packages/index.php:320
+#: views/packages/index.php:371
 msgid "Credential unavailable"
 msgstr ""
 
 #. translators: %s is the managed package type, such as plugin or theme.
-#: views/packages/index.php:318
+#: views/packages/index.php:323
 #, php-format
 msgid "Reinstall %s"
 msgstr ""
 
-#: views/packages/index.php:320
-#: views/packages/index.php:488
+#: views/packages/index.php:325
+#: views/packages/index.php:493
 #: views/packages/reinstall.php:30
 #: views/packages/reinstall.php:39
 msgid "Reinstall"
 msgstr ""
 
 #. translators: %s is the repository branch name.
-#: views/packages/index.php:335
+#: views/packages/index.php:340
 #, php-format
 msgid "Branch: %s"
 msgstr ""
 
-#: views/packages/index.php:338
+#: views/packages/index.php:343
 msgid "Public repository"
 msgstr ""
 
-#: views/packages/index.php:341
+#: views/packages/index.php:346
 msgid "Private; provider unavailable"
 msgstr ""
 
 #. translators: %s is the saved credential label.
-#: views/packages/index.php:345
+#: views/packages/index.php:350
 #, php-format
 msgid "Private via %s"
 msgstr ""
 
-#: views/packages/index.php:349
+#: views/packages/index.php:354
 msgid "Private; credential missing"
 msgstr ""
 
-#: views/packages/index.php:361
+#: views/packages/index.php:366
 msgid "Integration unavailable"
 msgstr ""
 
-#: views/packages/index.php:409
+#: views/packages/index.php:414
 msgid "The saved provider is unavailable. Restore it before deploying this package."
 msgstr ""
 
-#: views/packages/index.php:411
+#: views/packages/index.php:416
 msgid "The saved repository credential is unavailable."
 msgstr ""
 
-#: views/packages/index.php:415
+#: views/packages/index.php:420
 msgid "Booster will not overwrite this package or respond to repository pushes."
 msgstr ""
 
-#: views/packages/index.php:418
+#: views/packages/index.php:423
 msgid "WordPress controls when validated published releases are installed."
 msgstr ""
 
-#: views/packages/index.php:419
+#: views/packages/index.php:424
 msgid "Installed package is current. Release checks run only when requested."
 msgstr ""
 
-#: views/packages/index.php:421
+#: views/packages/index.php:426
 msgid "A prior branch deployment is awaiting operator review. It is not running. Open deployment activity and record the review before retrying."
 msgstr ""
 
-#: views/packages/index.php:423
+#: views/packages/index.php:428
 msgid "The latest branch deployment failed. Open deployment activity for details before retrying."
 msgstr ""
 
-#: views/packages/index.php:425
+#: views/packages/index.php:430
 msgid "Signed repository pushes deploy automatically. Review setup if pushes are not arriving."
 msgstr ""
 
-#: views/packages/index.php:427
+#: views/packages/index.php:432
 msgid "Ready. Deployments run only when an administrator requests one."
 msgstr ""
 
-#: views/packages/index.php:430
+#: views/packages/index.php:435
 msgid "Release details"
 msgstr ""
 
-#: views/packages/index.php:431
+#: views/packages/index.php:436
 msgid "Package details"
 msgstr ""
 
-#: views/packages/index.php:431
+#: views/packages/index.php:436
 msgid "Deployment activity"
 msgstr ""
 
 #. translators: %s is a package name.
-#: views/packages/index.php:447
+#: views/packages/index.php:452
 #, php-format
 msgid "Select %s"
 msgstr ""
 
-#: views/packages/index.php:457
+#: views/packages/index.php:462
 msgid "WordPress"
 msgstr ""
 
-#: views/packages/index.php:487
+#: views/packages/index.php:492
 #: views/packages/reinstall.php:32
 msgid "Reinstall from the saved branch and overwrite local changes?"
 msgstr ""
 
-#: views/packages/index.php:493
+#: views/packages/index.php:498
 msgid "Edit settings"
 msgstr ""
 
-#: views/packages/index.php:510
+#: views/packages/index.php:515
 #: views/portability-review.php:35
 msgid "Version"
 msgstr ""
 
-#: views/packages/index.php:511
+#: views/packages/index.php:516
 msgid "Not available"
 msgstr ""
 
-#: views/packages/index.php:514
+#: views/packages/index.php:519
 msgid "Access"
 msgstr ""
 
-#: views/packages/index.php:520
+#: views/packages/index.php:525
 msgid "Last recorded check"
 msgstr ""
 
-#: views/packages/index.php:523
-#: views/packages/index.php:553
+#: views/packages/index.php:528
+#: views/packages/index.php:558
 msgid "Temporarily unavailable"
 msgstr ""
 
-#: views/packages/index.php:527
+#: views/packages/index.php:532
 msgid "No check recorded for the current settings"
 msgstr ""
 
-#: views/packages/index.php:541
+#: views/packages/index.php:546
 msgid "View activity"
 msgstr ""
 
-#: views/packages/index.php:545
+#: views/packages/index.php:550
 msgid "Last established result"
 msgstr ""
 
-#: views/packages/index.php:550
+#: views/packages/index.php:555
 msgid "Last activity"
 msgstr ""
 
-#: views/packages/index.php:559
+#: views/packages/index.php:564
 msgid "No activity recorded"
 msgstr ""
 
-#: views/packages/index.php:564
+#: views/packages/index.php:569
 msgid "Last succeeded"
 msgstr ""
 
-#: views/packages/index.php:565
+#: views/packages/index.php:570
 msgid "Not recorded"
+msgstr ""
+
+#: views/packages/recovery.php:20
+msgid "Stop managing an installed package"
 msgstr ""
 
 #: views/packages/recovery.php:22
@@ -7653,12 +7669,8 @@ msgstr ""
 msgid "Choose an exact installed target"
 msgstr ""
 
-#: views/packages/recovery.php:33
-msgid "Review recovery"
-msgstr ""
-
 #: views/packages/recovery.php:36
-msgid "Confirm management removal"
+msgid "Confirm stop managing"
 msgstr ""
 
 #: views/packages/recovery.php:38
@@ -7674,11 +7686,11 @@ msgid "Stop managing"
 msgstr ""
 
 #: views/packages/recovery.php:50
-msgid "Adopt again"
+msgid "Link the package again"
 msgstr ""
 
 #: views/packages/recovery.php:51
-msgid "After removal, link the installed package again using verified repository and branch settings. For published releases, then enable release tracking from the package settings. Restore any unavailable repository provider before adopting again. Re-adoption starts a new management lifetime."
+msgid "After stopping management, you can link the installed package again using verified repository and branch settings. For published releases, then enable release tracking from the package settings. Restore any unavailable repository provider before adopting again. Re-adoption starts a new management lifetime."
 msgstr ""
 
 #: views/packages/recovery.php:65

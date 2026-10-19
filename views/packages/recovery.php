@@ -17,7 +17,7 @@ $recovery_url  = add_query_arg(
 	$package_view->get_admin_url()
 );
 ?>
-<h2><?php esc_html_e( 'Recover package management', 'ran-booster' ); ?></h2>
+<h2><?php esc_html_e( 'Stop managing an installed package', 'ran-booster' ); ?></h2>
 <?php require dirname( __DIR__ ) . '/notices.php'; ?>
 <p><?php esc_html_e( 'Stop managing an installed package when its management settings cannot be opened. This keeps installed files, activation, package data, shared credentials and deployment history. Running or unresolved operations prevent removal.', 'ran-booster' ); ?></p>
 <form method="get" action="<?php echo esc_url( $package_view->get_admin_url() ); ?>">
@@ -30,10 +30,10 @@ $recovery_url  = add_query_arg(
 			<option value="<?php echo esc_attr( $target_identifier ); ?>" <?php selected( $recovery_identifier, $target_identifier ); ?>><?php echo esc_html( $target_name . ' — ' . $target_identifier ); ?></option>
 		<?php } ?>
 	</select>
-	<button type="submit" class="button"><?php esc_html_e( 'Review recovery', 'ran-booster' ); ?></button>
+	<button type="submit" class="button"><?php esc_html_e( 'Review management removal', 'ran-booster' ); ?></button>
 </form>
 <?php if ( null !== $recovery_confirmation ) { ?>
-	<h3><?php esc_html_e( 'Confirm management removal', 'ran-booster' ); ?></h3>
+	<h3><?php esc_html_e( 'Confirm stop managing', 'ran-booster' ); ?></h3>
 	<p><code><?php echo esc_html( $recovery_identifier ); ?></code></p>
 	<p><?php esc_html_e( 'This confirmation applies only to the installed target and management record checked on this page. Changes before submission require a fresh review.', 'ran-booster' ); ?></p>
 	<form method="post" action="<?php echo esc_url( add_query_arg( 'recovery_target', $recovery_identifier, $recovery_url ) ); ?>">
@@ -47,8 +47,8 @@ $recovery_url  = add_query_arg(
 		<button type="submit" class="button"><?php esc_html_e( 'Stop managing', 'ran-booster' ); ?></button>
 	</form>
 <?php } ?>
-<h3><?php esc_html_e( 'Adopt again', 'ran-booster' ); ?></h3>
-<p><?php esc_html_e( 'After removal, link the installed package again using verified repository and branch settings. For published releases, then enable release tracking from the package settings. Restore any unavailable repository provider before adopting again. Re-adoption starts a new management lifetime.', 'ran-booster' ); ?></p>
+<h3><?php esc_html_e( 'Link the package again', 'ran-booster' ); ?></h3>
+<p><?php esc_html_e( 'After stopping management, you can link the installed package again using verified repository and branch settings. For published releases, then enable release tracking from the package settings. Restore any unavailable repository provider before adopting again. Re-adoption starts a new management lifetime.', 'ran-booster' ); ?></p>
 <?php if ( isset( $recovery_targets[ $recovery_identifier ] ) ) { ?>
 	<p><a class="button" href="
 	<?php

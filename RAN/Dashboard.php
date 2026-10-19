@@ -550,7 +550,7 @@ class Dashboard {
 			// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- A missing package intentionally falls back to the index.
 			} catch ( PluginNotFound | ThemeNotFound $missing ) {
 				// The selected package is absent, so show the matching index instead.
-			} catch ( PackageStorageFailure $failure ) {
+			} catch ( PackageStorageFailure | \InvalidArgumentException $failure ) {
 				return $this->package_storage_failure_index( $package_view, $type, $failure );
 			}
 		}
@@ -559,7 +559,7 @@ class Dashboard {
 			$packages = 'plugin' === $type
 				? $this->plugins->all_booster_plugins()
 				: $this->themes->all_booster_themes();
-		} catch ( PackageStorageFailure $failure ) {
+		} catch ( PackageStorageFailure | \InvalidArgumentException $failure ) {
 			return $this->package_storage_failure_index( $package_view, $type, $failure );
 		}
 
@@ -583,7 +583,7 @@ class Dashboard {
 				$confirmation = $removals->recovery_confirmation( $type, $identifier );
 			}
 		} catch ( Throwable $failure ) {
-			$this->add_failure_message( new WP_Error( 'ran_booster_recovery_unavailable', __( 'Booster cannot offer removal for this selection. The installed target, management identity, or storage could not be verified. No recovery action is available until that uncertainty is resolved.', 'ran-booster' ) ), $failure, array( 'step' => 'package_recovery_confirmation' ) );
+			$this->add_failure_message( new WP_Error( 'ran_booster_recovery_unavailable', __( 'Booster cannot safely stop managing this selection. The installed target, management identity, or storage could not be verified. Resolve that uncertainty before trying again.', 'ran-booster' ) ), $failure, array( 'step' => 'package_recovery_confirmation' ) );
 		}
 		return $this->render(
 			'packages/recovery',
@@ -829,9 +829,11 @@ class Dashboard {
 		);
 	}
 
-	private function package_storage_failure_index( PackagePagePresenter $package_view, string $type, PackageStorageFailure $failure ): mixed {
+	private function package_storage_failure_index( PackagePagePresenter $package_view, string $type, PackageStorageFailure|\InvalidArgumentException $failure ): mixed {
 		$this->add_failure_message(
-			$this->package_storage_error( $failure ),
+			$failure instanceof PackageStorageFailure
+				? $this->package_storage_error( $failure )
+				: new WP_Error( 'ran_booster_package_settings_unreadable', __( 'Booster could not open a package’s saved management settings. No package changes were made.', 'ran-booster' ) ),
 			$failure,
 			array(
 				'operation' => 'read-' . $type . '-packages',
@@ -840,7 +842,11 @@ class Dashboard {
 		);
 		$packages = array();
 
-		return $this->render( 'packages/index', $this->package_index_data( $packages, $package_view ) );
+		$data                             = $this->package_index_data( $packages, $package_view );
+		$data['package_list_unavailable'] = true;
+		$data['management_removal_help']  = $failure instanceof \InvalidArgumentException
+			|| 'ran_booster_storage_invalid_provider_identity' === $failure->get_diagnostic_id();
+		return $this->render( 'packages/index', $data );
 	}
 
 	private function database_unavailable_create( PackagePagePresenter $package_view, string $type ): mixed {

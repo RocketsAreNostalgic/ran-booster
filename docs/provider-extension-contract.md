@@ -851,3 +851,32 @@ remote/local results stated explicitly; a test request does not verify delivery.
 Diagnostic history contains only bounded status counts and partial-run reasons,
 not diagnostic messages or credentials. Expanded activity details show these
 safe facts. The existing operational stores and debug capture remain separate.
+
+## GitHub replacement presentation
+
+Core owns replacement decisions and recovery independently of provider-supplied
+administration metadata. A healthy bundled GitHub selection with no enabled
+replacement has no adoption panel, even when GitHub packages are managed. A
+healthy selected replacement shows its plugin attribution and **Manage GitHub
+provider** disclosure. Neither resting state needs an adoption inventory read.
+
+Enabling a candidate does not approve it. The GitHub page explains paused
+operations and offers **Review GitHub provider**. Review reveals affected package
+counts, credential compatibility and signing consequences before the existing
+explicit approvals. Declining consent leaves authority unchanged. Multiple enabled
+candidates still require deactivating the unwanted candidates before a fresh
+review; this UI does not elect a winner or change the single-candidate contract.
+
+To return to bundled GitHub, deactivate all replacement candidates and explicitly
+review and approve the return on the Core-owned GitHub page. A selected replacement
+that is missing or incompatible still shows actionable guidance, even when no
+candidate remains enabled. Interrupted installations retain their protected
+recovery confirmations; absence never causes silent fallback.
+
+Troubleshooting → Diagnostics contains the passive **GitHub provider diagnostics**
+disclosure: local plugin declarations, technical identities, API revisions and
+capability/credential-format names. These are claims, not publisher or remote-access
+verification, and contain no credential values. Provider configuration links to
+these details while retaining operational actions in Core. This presentation does
+not depend on the proposed Settings screen or the separate unused-GitHub hiding
+preference.

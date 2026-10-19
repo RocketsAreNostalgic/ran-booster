@@ -109,6 +109,42 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'panel=diagnostics" aria-current="page"', $html );
 	}
 
+	public function test_github_diagnostics_escape_local_claims_and_link_to_core_owned_recovery(): void {
+		$troubleshooting_panel        = 'diagnostics';
+		$troubleshooting              = array( 'providers' => array() );
+		$declaration                  = array(
+			'display_name'           => '<Untrusted plugin>',
+			'display_version'        => '1.0',
+			'plugin_basename'        => 'provider/<plugin>.php',
+			'implementation_id'      => '<implementation>',
+			'provider_api_version'   => 15,
+			'compatibility_revision' => '<revision>',
+			'facets'                 => array( '<capability>' ),
+			'api_credential_formats' => array( '<format>' ),
+			'webhook_signing_format' => null,
+		);
+		$github_selection_diagnostics = array(
+			'state'      => 'missing',
+			'available'  => false,
+			'current'    => array( 'declaration' => $declaration ),
+			'candidates' => array( 'invalid/<candidate>.php' => null ),
+		);
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( '<details id="ran-booster-github-provider-diagnostics">', $html );
+		self::assertStringContainsString( 'Local declarations only;', $html );
+		self::assertStringContainsString( 'No compatible declaration is available.', $html );
+		foreach ( array( '<Untrusted plugin>', '<plugin>', '<implementation>', '<revision>', '<capability>', '<format>', '<candidate>' ) as $claim ) {
+			self::assertStringNotContainsString( $claim, $html );
+			self::assertStringContainsString( htmlspecialchars( $claim, ENT_QUOTES ), $html );
+		}
+		self::assertStringContainsString( 'page=ran-booster&amp;tab=gh', $html );
+		self::assertStringContainsString( 'Manage GitHub provider', $html );
+		self::assertStringNotContainsString( 'value="adopt-github"', $html );
+		self::assertStringNotContainsString( 'value="recover-github-native"', $html );
+	}
+
 	public function test_logging_follows_deployment_activity_in_accessible_secondary_navigation(): void {
 		$troubleshooting_panel = 'debug-capture';
 		$troubleshooting       = array();

@@ -419,6 +419,54 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'GitHub · Repository: gh', $html );
 	}
 
+	public function test_activity_pagination_encodes_selected_package_json_before_escaping_urls(): void {
+		$package              = '["gh","plugin","example/a&b=1?x#quote\\".php"]';
+		$troubleshooting_base = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+		$render               = static function ( array $activity ) use ( $troubleshooting_base ): string {
+			$deployment_activity = $activity;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
+			return (string) ob_get_clean();
+		};
+		$filters              = array(
+			'filter_state' => array(
+				'provider' => 'gh',
+				'package'  => $package,
+			),
+			'unavailable'  => false,
+		);
+		$next                 = $render(
+			array_merge(
+				$filters,
+				array(
+					'items'       => array(
+						array(
+							'record_source' => 'activity',
+							'state'         => 'succeeded',
+						),
+					),
+					'next_cursor' => 'v1|fingerprint|2026-10-12 17:00:00|activity|7',
+				)
+			)
+		);
+		$latest               = $render(
+			array_merge(
+				$filters,
+				array(
+					'items'      => array(),
+					'has_cursor' => true,
+				)
+			)
+		);
+		$encoded_package      = '%5B%22gh%22%2C%22plugin%22%2C%22example%2Fa%26b%3D1%3Fx%23quote%5C%22.php%22%5D';
+		$selected_url         = 'page=ran-booster&amp;tab=troubleshooting&amp;panel=activity&amp;activity_provider=gh&amp;activity_package=' . $encoded_package;
+
+		self::assertStringContainsString( $selected_url . '&amp;before=v1%7Cfingerprint%7C2026-10-12%2017%3A00%3A00%7Cactivity%7C7', $next );
+		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=troubleshooting&amp;panel=activity">Clear filters</a>', $next );
+		self::assertStringContainsString( $selected_url . '">View latest activity</a>', $latest );
+		self::assertStringNotContainsString( '&amp;before=', $latest );
+	}
+
 	public function test_deployment_activity_renders_known_package_version_failure_in_index_and_detail(): void {
 		$attempt              = DeploymentAttempt::from_database(
 			array(

@@ -60,6 +60,69 @@ return static function ( wpdb $database ): void {
 		$engine = $database->get_row( $database->prepare( 'SHOW TABLE STATUS WHERE Name = %s', $table ) );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- MySQL SHOW TABLE STATUS returns the Engine field.
 		$expect( is_object( $engine ) && 'InnoDB' === ( $engine->Engine ?? null ), 'InnoDB storage' );
+		$view            = dirname( (string) ( new ReflectionClass( ActivityStore::class ) )->getFileName(), 3 ) . '/views/attempts/index.php';
+		$render_activity = static function ( array $activity ) use ( $view ): string {
+			$deployment_activity  = $activity;
+			$troubleshooting_base = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+			ob_start();
+			require $view;
+			return (string) ob_get_clean();
+		};
+		$package         = wp_json_encode( array( 'gh&+%', 'plugin', 'naïve & + %# "quoted"/plugin.php' ) );
+		$expect( is_string( $package ), 'rendered activity package fixture' );
+		$activity = array(
+			'items'        => array(
+				array(
+					'state'         => 'succeeded',
+					'record_source' => 'activity',
+				),
+			),
+			'filter_state' => array(
+				'provider' => 'gh&+%',
+				'package'  => $package,
+			),
+			'next_cursor'  => 'v1|cursor&+%#',
+		);
+		$rendered = $render_activity( $activity );
+		$expect( 1 === preg_match( '/<a class="button" href="([^"]+)">Load older activity<\\/a>/', $rendered, $matches ), 'rendered older activity link' );
+		parse_str( (string) wp_parse_url( html_entity_decode( $matches[1], ENT_QUOTES, 'UTF-8' ), PHP_URL_QUERY ), $older_query );
+		$expect(
+			array(
+				'page'              => 'ran-booster',
+				'tab'               => 'troubleshooting',
+				'panel'             => 'activity',
+				'activity_provider' => 'gh&+%',
+				'activity_package'  => $package,
+				'before'            => 'v1|cursor&+%#',
+			) === $older_query,
+			'older activity link preserves the exact route, filters, and cursor'
+		);
+		$expect( 1 === preg_match( '/class="ran-booster-package-list-filters__clear" href="([^"]+)"/', $rendered, $matches ), 'rendered clear activity link' );
+		parse_str( (string) wp_parse_url( html_entity_decode( $matches[1], ENT_QUOTES, 'UTF-8' ), PHP_URL_QUERY ), $clear_query );
+		$expect(
+			array(
+				'page'  => 'ran-booster',
+				'tab'   => 'troubleshooting',
+				'panel' => 'activity',
+			) === $clear_query,
+			'clear activity link excludes filters and cursor'
+		);
+		$activity['items']      = array();
+		$activity['has_cursor'] = true;
+		unset( $activity['next_cursor'] );
+		$rendered = $render_activity( $activity );
+		$expect( 1 === preg_match( '/<a class="button" href="([^"]+)">View latest activity<\\/a>/', $rendered, $matches ), 'rendered latest activity link' );
+		parse_str( (string) wp_parse_url( html_entity_decode( $matches[1], ENT_QUOTES, 'UTF-8' ), PHP_URL_QUERY ), $latest_query );
+		$expect(
+			array(
+				'page'              => 'ran-booster',
+				'tab'               => 'troubleshooting',
+				'panel'             => 'activity',
+				'activity_provider' => 'gh&+%',
+				'activity_package'  => $package,
+			) === $latest_query,
+			'latest activity link preserves filters and removes the cursor'
+		);
 		$older = $store->begin( 'gh', $request, $capture );
 		$newer = $second->begin( 'gh', $request, $capture );
 		$expect( null !== $older && null !== $newer, 'two connection admission' );

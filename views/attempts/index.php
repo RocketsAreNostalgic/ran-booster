@@ -23,10 +23,10 @@ $base_url          = $troubleshooting_base . '&panel=activity';
 $selected_provider = is_string( $filter_state['provider'] ?? null ) ? $filter_state['provider'] : '';
 $selected_package  = is_string( $filter_state['package'] ?? null ) ? $filter_state['package'] : '';
 if ( '' !== $selected_provider ) {
-	$base_url = add_query_arg( 'activity_provider', $selected_provider, $base_url );
+	$base_url .= '&activity_provider=' . rawurlencode( $selected_provider );
 }
 if ( '' !== $selected_package ) {
-	$base_url = add_query_arg( 'activity_package', $selected_package, $base_url );
+	$base_url .= '&activity_package=' . rawurlencode( $selected_package );
 }
 $settings_urls = is_array( $deployment_activity['package_settings_urls'] ?? null )
 	? $deployment_activity['package_settings_urls']

@@ -110,9 +110,9 @@ final class TroubleshootingViewTest extends TestCase {
 	}
 
 	public function test_github_diagnostics_escape_local_claims_and_link_to_core_owned_recovery(): void {
-		$troubleshooting_panel = 'diagnostics';
-		$troubleshooting       = array( 'providers' => array() );
-		$declaration           = array(
+		$troubleshooting_panel        = 'diagnostics';
+		$troubleshooting              = array( 'providers' => array() );
+		$declaration                  = array(
 			'display_name'           => '<Untrusted plugin>',
 			'display_version'        => '1.0',
 			'plugin_basename'        => 'provider/<plugin>.php',

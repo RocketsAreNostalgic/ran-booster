@@ -288,6 +288,13 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 				<?php $adoption_review = $github_selection['review']; ?>
 				<?php if ( is_array( $adoption_review ) ) { ?>
 					<details><summary><?php echo esc_html( 'bundled' === $adoption_review['selected'] ? __( 'Review return to bundled GitHub', 'ran-booster' ) : __( 'Review GitHub provider', 'ran-booster' ) ); ?></summary>
+					<?php
+					$review_target = $selection_status['candidates'][ $adoption_review['target']['plugin_basename'] ] ?? null;
+					$review_name   = 'bundled' === $adoption_review['selected']
+						? __( 'Bundled GitHub', 'ran-booster' )
+						: ( is_array( $review_target ) ? $review_target['display_name'] : $adoption_review['target']['implementation_id'] );
+					?>
+					<p><?php echo esc_html( sprintf( /* translators: %s: the implementation being reviewed for approval. */ __( 'Reviewing GitHub support provided by %s', 'ran-booster' ), $review_name ) ); ?></p>
 					<p><?php esc_html_e( 'Plugin names and compatibility claims do not verify publisher identity. Approve only a plugin you trust.', 'ran-booster' ); ?></p>
 				<p><?php echo esc_html( is_array( $github_selection['package_counts'] ) ? sprintf( /* translators: 1: managed Branch packages, 2: managed release packages. */ __( 'Affected GitHub packages: %1$d Branch, %2$d Published release.', 'ran-booster' ), $github_selection['package_counts']['branch'], $github_selection['package_counts']['release_asset'] ) : __( 'Affected package inventory could not be checked.', 'ran-booster' ) ); ?></p>
 					<p><?php echo esc_html( sprintf( /* translators: 1: compatible profile count, 2: incompatible profile count. */ __( 'API credential material: %1$d compatible, %2$d incompatible. Counts include any configured constant overlay.', 'ran-booster' ), $adoption_review['compatible_count'], $adoption_review['incompatible_count'] ) ); ?></p>
@@ -312,7 +319,10 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 				<?php } ?>
 			<?php } ?>
 			<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=diagnostics#ran-booster-github-provider-diagnostics' ) ); ?>"><?php esc_html_e( 'GitHub provider diagnostics', 'ran-booster' ); ?></a></p>
-			<?php if ( $healthy_replacement ) { ?></details><?php } ?>
+			<?php
+			if ( $healthy_replacement ) {
+				?>
+				</details><?php } ?>
 		</section>
 	<?php } ?>
 

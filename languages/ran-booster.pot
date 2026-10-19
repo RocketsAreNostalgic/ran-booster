@@ -141,8 +141,8 @@ msgid "Rows"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:41
-#: views/provider.php:342
-#: views/provider.php:575
+#: views/provider.php:364
+#: views/provider.php:597
 msgid "Back to repositories"
 msgstr ""
 
@@ -161,7 +161,7 @@ msgid "Booster could not load that repository view. The current view is unchange
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:54
-#: views/provider.php:427
+#: views/provider.php:449
 msgid "Repository integration views"
 msgstr ""
 
@@ -169,10 +169,10 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:40
 #: views/debug-capture.php:67
 #: views/extensions.php:138
-#: views/provider.php:430
-#: views/provider.php:450
-#: views/troubleshooting.php:237
-#: views/troubleshooting.php:265
+#: views/provider.php:452
+#: views/provider.php:472
+#: views/troubleshooting.php:269
+#: views/troubleshooting.php:297
 msgid "Status"
 msgstr ""
 
@@ -586,7 +586,7 @@ msgid "The encrypted sidecar and its site key are missing, incomplete, or do not
 msgstr ""
 
 #: RAN/Admin/CredentialExpiryNotice.php:134
-#: views/provider.php:309
+#: views/provider.php:331
 msgid "Restore the matching sidecar and site key from the same backup before changing credentials."
 msgstr ""
 
@@ -881,7 +881,7 @@ msgstr ""
 #: RAN/Admin/DeploymentOutcomeMessage.php:79
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:241
 #: views/portability-review.php:93
-#: views/troubleshooting.php:265
+#: views/troubleshooting.php:297
 #: assets/ran-booster-portability.js:714
 msgid "Unknown"
 msgstr ""
@@ -902,7 +902,7 @@ msgstr ""
 #: RAN/Booster.php:725
 #: views/attempts/index.php:42
 #: views/packages/index.php:64
-#: views/troubleshooting.php:42
+#: views/troubleshooting.php:43
 msgid "Failed"
 msgstr ""
 
@@ -1249,7 +1249,7 @@ msgid "RAN Booster automatic deployment failed."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:63
-#: RAN/Dashboard.php:1138
+#: RAN/Dashboard.php:1139
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
@@ -1258,7 +1258,7 @@ msgid "Booster could not confirm safe recovery. Refresh this page and review the
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:164
-#: RAN/Dashboard.php:565
+#: RAN/Dashboard.php:566
 msgid "You do not have sufficient permissions to manage these packages."
 msgstr ""
 
@@ -1285,7 +1285,7 @@ msgstr ""
 #: RAN/Admin/PortabilityController.php:483
 #: RAN/Admin/PortabilityController.php:606
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:345
-#: RAN/Admin/ProviderSettingsPresenter.php:1515
+#: RAN/Admin/ProviderSettingsPresenter.php:1533
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
 #: views/portability.php:170
 #: views/portability.php:251
@@ -1297,7 +1297,7 @@ msgstr ""
 #: RAN/Admin/PortabilityController.php:483
 #: RAN/Admin/PortabilityController.php:606
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:345
-#: RAN/Admin/ProviderSettingsPresenter.php:1516
+#: RAN/Admin/ProviderSettingsPresenter.php:1534
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
 #: views/portability.php:170
 #: views/portability.php:251
@@ -1938,7 +1938,7 @@ msgid "Repository provider settings are unavailable."
 msgstr ""
 
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:30
-#: RAN/Admin/ProviderSettingsPresenter.php:1464
+#: RAN/Admin/ProviderSettingsPresenter.php:1482
 msgid "Owner"
 msgstr ""
 
@@ -2141,31 +2141,31 @@ msgstr ""
 msgid "No managed %s repositories are available yet. Install a package to add its repository."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:206
+#: RAN/Admin/ProviderSettingsPresenter.php:224
 msgid "Set up secure credential storage from Overview before reviewing GitHub adoption."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:208
+#: RAN/Admin/ProviderSettingsPresenter.php:226
 msgid "GitHub adoption is unavailable. Resolve conflicting or incompatible plugins and any outstanding operation or recovery first."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:215
+#: RAN/Admin/ProviderSettingsPresenter.php:233
 msgid "Native recovery details could not be verified. Restore access to selection and management storage before continuing."
 msgstr ""
 
 #. translators: 1: repository provider name, 2: repository provider code.
-#: RAN/Admin/ProviderSettingsPresenter.php:1513
+#: RAN/Admin/ProviderSettingsPresenter.php:1531
 #, php-format
 msgid "The active %1$s provider can read every credential saved under provider code %2$s. Install and activate only providers you trust; Booster does not authenticate a third-party publisher."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1567
+#: RAN/Admin/ProviderSettingsPresenter.php:1585
 msgid "Account"
 msgstr ""
 
 #. translators: %d: number of packages using the credential.
-#: RAN/Admin/ProviderSettingsPresenter.php:1576
-#: RAN/Admin/ProviderSettingsPresenter.php:1626
+#: RAN/Admin/ProviderSettingsPresenter.php:1594
+#: RAN/Admin/ProviderSettingsPresenter.php:1644
 #: views/portability-review.php:127
 #, php-format
 msgctxt "Packages using a credential"
@@ -2175,30 +2175,30 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: Label shown when package usage cannot be determined.
-#: RAN/Admin/ProviderSettingsPresenter.php:1577
-#: RAN/Admin/ProviderSettingsPresenter.php:1626
+#: RAN/Admin/ProviderSettingsPresenter.php:1595
+#: RAN/Admin/ProviderSettingsPresenter.php:1644
 msgid "Usage unavailable"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1579
+#: RAN/Admin/ProviderSettingsPresenter.php:1597
 msgid "Stored · Validity checked on use"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1580
-#: views/troubleshooting.php:43
+#: RAN/Admin/ProviderSettingsPresenter.php:1598
+#: views/troubleshooting.php:44
 msgid "Not configured"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1630
+#: RAN/Admin/ProviderSettingsPresenter.php:1648
 msgid "Saved · Remote delivery not verified by Core"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1630
+#: RAN/Admin/ProviderSettingsPresenter.php:1648
 msgid "Local secret not configured"
 msgstr ""
 
 #. translators: %d is the number of managed packages that use the local secret.
-#: RAN/Admin/ProviderSettingsPresenter.php:1632
+#: RAN/Admin/ProviderSettingsPresenter.php:1650
 #, php-format
 msgid "Remove this local secret? %d managed package may be affected. Remote provider webhooks will not be removed."
 msgid_plural "Remove this local secret? %d managed packages may be affected. Remote provider webhooks will not be removed."
@@ -2206,20 +2206,20 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d is the number of managed packages that use the local secret.
-#: RAN/Admin/ProviderSettingsPresenter.php:1633
+#: RAN/Admin/ProviderSettingsPresenter.php:1651
 msgid "Remove this local secret? Remote provider webhooks will not be removed."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1709
+#: RAN/Admin/ProviderSettingsPresenter.php:1727
 msgid "Repository access needs attention"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1709
+#: RAN/Admin/ProviderSettingsPresenter.php:1727
 msgid "No credential saved"
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1709
+#: RAN/Admin/ProviderSettingsPresenter.php:1727
 #, php-format
 msgid "Ready · %d credential"
 msgid_plural "Ready · %d credentials"
@@ -2227,55 +2227,55 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1710
+#: RAN/Admin/ProviderSettingsPresenter.php:1728
 msgid "Restore encrypted credential storage before reviewing or changing saved repository access."
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1710
+#: RAN/Admin/ProviderSettingsPresenter.php:1728
 msgid "Review saved credentials that are incomplete, expired, or approaching expiry."
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1710
+#: RAN/Admin/ProviderSettingsPresenter.php:1728
 msgid "Public repositories remain available through anonymous lookup. Add a credential only for private access or steadier API limits."
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1710
+#: RAN/Admin/ProviderSettingsPresenter.php:1728
 msgid "Private repository access is available. Open credential management to validate, replace, or review usage."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1714
+#: RAN/Admin/ProviderSettingsPresenter.php:1732
 msgid "Webhook signing · Needs attention"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1714
+#: RAN/Admin/ProviderSettingsPresenter.php:1732
 msgid "Webhook signing · No secret saved"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1714
+#: RAN/Admin/ProviderSettingsPresenter.php:1732
 msgid "Webhook signing · Ready locally"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1715
+#: RAN/Admin/ProviderSettingsPresenter.php:1733
 msgid "Restore encrypted credential storage before Push-to-Deploy can verify signed deliveries."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1715
+#: RAN/Admin/ProviderSettingsPresenter.php:1733
 msgid "Review saved signing material whose configuration or managed-package usage could not be confirmed."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1715
+#: RAN/Admin/ProviderSettingsPresenter.php:1733
 msgid "Automatic branch deployments require local signing material before provider webhooks can be used safely."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1715
+#: RAN/Admin/ProviderSettingsPresenter.php:1733
 msgid "Add local signing material before configuring a provider webhook."
 msgstr ""
 
 #. translators: %d is the number of local secrets that can verify signed deliveries.
-#: RAN/Admin/ProviderSettingsPresenter.php:1715
+#: RAN/Admin/ProviderSettingsPresenter.php:1733
 #, php-format
 msgid "%d local secret can verify signed deliveries. This does not prove a matching remote webhook exists."
 msgid_plural "%d local secrets can verify signed deliveries. This does not prove matching remote webhooks exist."
@@ -2283,7 +2283,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: item count.
-#: RAN/Admin/ProviderSettingsPresenter.php:1774
+#: RAN/Admin/ProviderSettingsPresenter.php:1792
 #: views/packages/index.php:96
 #, php-format
 msgid "%d item"
@@ -2292,25 +2292,25 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: current page number, 2: total page count.
-#: RAN/Admin/ProviderSettingsPresenter.php:1775
+#: RAN/Admin/ProviderSettingsPresenter.php:1793
 #, php-format
 msgid "Page %1$d of %2$d"
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ProviderSettingsPresenter.php:1806
+#: RAN/Admin/ProviderSettingsPresenter.php:1824
 #, php-format
 msgid "Back to %s overview"
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ProviderSettingsPresenter.php:1807
+#: RAN/Admin/ProviderSettingsPresenter.php:1825
 #, php-format
 msgid "Manage saved credentials used for %s repository access."
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ProviderSettingsPresenter.php:1808
+#: RAN/Admin/ProviderSettingsPresenter.php:1826
 #, php-format
 msgid "Manage local signing material used to verify %s webhook deliveries."
 msgstr ""
@@ -2736,7 +2736,7 @@ msgstr ""
 #: views/packages/branch-readiness.php:200
 #: views/packages/index.php:65
 #: views/packages/index.php:327
-#: views/provider.php:644
+#: views/provider.php:666
 msgid "Needs attention"
 msgstr ""
 
@@ -3221,7 +3221,7 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:359
 #: RAN/Admin/WebhookManagement/views/panel.php:39
-#: views/provider.php:365
+#: views/provider.php:387
 #: assets/ran-booster-repository-picker.js:789
 msgid "Manage credentials"
 msgstr ""
@@ -4372,7 +4372,7 @@ msgstr ""
 
 #: RAN/Admin/WebhookManagement/views/panel.php:54
 #: views/packages/branch-readiness.php:231
-#: views/provider.php:398
+#: views/provider.php:420
 msgid "Manage signing secrets"
 msgstr ""
 
@@ -4416,7 +4416,7 @@ msgstr ""
 
 #: RAN/Booster.php:224
 #: views/base.php:43
-#: views/troubleshooting.php:82
+#: views/troubleshooting.php:83
 msgid "Plugins"
 msgstr ""
 
@@ -4430,7 +4430,7 @@ msgstr ""
 
 #: RAN/Booster.php:226
 #: views/base.php:48
-#: views/troubleshooting.php:83
+#: views/troubleshooting.php:84
 msgid "Themes"
 msgstr ""
 
@@ -4583,7 +4583,7 @@ msgstr ""
 msgid "Booster could not validate the credentials sidecar."
 msgstr ""
 
-#: RAN/Dashboard.php:579
+#: RAN/Dashboard.php:580
 msgid "Booster cannot offer removal for this selection. The installed target, management identity, or storage could not be verified. No recovery action is available until that uncertainty is resolved."
 msgstr ""
 
@@ -5378,7 +5378,7 @@ msgstr ""
 #: views/attempts/index.php:61
 #: views/packages/index.php:506
 #: views/portability-review.php:21
-#: views/troubleshooting.php:177
+#: views/troubleshooting.php:209
 msgid "Provider"
 msgstr ""
 
@@ -5463,7 +5463,7 @@ msgstr ""
 #: views/attempts/index.php:64
 #: views/attempts/index.php:92
 #: views/attempts/index.php:131
-#: views/troubleshooting.php:29
+#: views/troubleshooting.php:30
 msgid "Activity"
 msgstr ""
 
@@ -5598,7 +5598,7 @@ msgid "File needs attention"
 msgstr ""
 
 #: views/debug-capture.php:56
-#: views/troubleshooting.php:34
+#: views/troubleshooting.php:35
 msgid "Logging"
 msgstr ""
 
@@ -5795,7 +5795,7 @@ msgstr ""
 #: views/documentation.php:167
 #: views/documentation.php:359
 #: views/onboarding.php:79
-#: views/provider.php:593
+#: views/provider.php:615
 msgid "Install a plugin"
 msgstr ""
 
@@ -6125,7 +6125,7 @@ msgstr ""
 
 #: views/documentation.php:360
 #: views/onboarding.php:80
-#: views/provider.php:594
+#: views/provider.php:616
 msgid "Install a theme"
 msgstr ""
 
@@ -6241,17 +6241,17 @@ msgid "Provider location"
 msgstr ""
 
 #: views/documentation.php:423
-#: views/provider.php:516
+#: views/provider.php:538
 msgid "Payload URL"
 msgstr ""
 
 #: views/documentation.php:425
-#: views/provider.php:519
+#: views/provider.php:541
 msgid "Content type"
 msgstr ""
 
 #: views/documentation.php:427
-#: views/provider.php:523
+#: views/provider.php:545
 msgid "Event"
 msgstr ""
 
@@ -6260,7 +6260,7 @@ msgid "Webhook setup instructions"
 msgstr ""
 
 #: views/documentation.php:433
-#: views/provider.php:531
+#: views/provider.php:553
 msgid "Delivery troubleshooting"
 msgstr ""
 
@@ -6435,8 +6435,8 @@ msgid "with your version of Booster"
 msgstr ""
 
 #: views/extensions.php:112
-#: views/troubleshooting.php:239
-#: views/troubleshooting.php:267
+#: views/troubleshooting.php:271
+#: views/troubleshooting.php:299
 msgid "Details"
 msgstr ""
 
@@ -6775,7 +6775,7 @@ msgid "Booster could not confirm the local webhook receiver. Manual deployments 
 msgstr ""
 
 #: views/packages/branch-readiness.php:99
-#: views/provider.php:497
+#: views/provider.php:519
 msgid "Review WordPress URLs"
 msgstr ""
 
@@ -7162,7 +7162,7 @@ msgstr ""
 #: views/packages/fields/credential.php:21
 #: views/packages/fields/credential.php:24
 #: views/provider.php:206
-#: views/provider.php:349
+#: views/provider.php:371
 msgid "Repository access"
 msgstr ""
 
@@ -7332,8 +7332,8 @@ msgid "Search managed %s"
 msgstr ""
 
 #: views/packages/index.php:174
-#: views/provider.php:624
-#: views/provider.php:644
+#: views/provider.php:646
+#: views/provider.php:666
 #: assets/ran-booster-repository-picker.js:806
 msgid "Search"
 msgstr ""
@@ -7736,7 +7736,7 @@ msgid "Repository identity"
 msgstr ""
 
 #: views/portability-review.php:23
-#: views/troubleshooting.php:216
+#: views/troubleshooting.php:248
 msgid "Repository"
 msgstr ""
 
@@ -7932,7 +7932,7 @@ msgstr ""
 
 #: views/portability-review.php:197
 #: views/portability-review.php:345
-#: views/troubleshooting.php:191
+#: views/troubleshooting.php:223
 msgid "Saved credential"
 msgstr ""
 
@@ -8431,214 +8431,236 @@ msgid "Webhook secrets"
 msgstr ""
 
 #: views/provider.php:219
-#: views/provider.php:361
+#: views/provider.php:383
 msgid "Add credential"
 msgstr ""
 
 #: views/provider.php:221
-#: views/provider.php:394
+#: views/provider.php:416
 msgid "Add webhook secret"
 msgstr ""
 
-#: views/provider.php:229
-msgid "GitHub implementation"
-msgstr ""
-
-#: views/provider.php:230
-msgid "The selected GitHub implementation is available."
-msgstr ""
-
-#: views/provider.php:230
-msgid "GitHub operations are paused. Local records remain available and Bitbucket is unaffected."
-msgstr ""
-
-#: views/provider.php:231
-msgid "Repository authority: github.com. Plugin names and compatibility claims do not verify publisher identity."
-msgstr ""
-
 #: views/provider.php:233
-msgid "Incompatible declaration"
+msgid "GitHub provider management"
+msgstr ""
+
+#. translators: %s: selected provider plugin name.
+#: views/provider.php:235
+#, php-format
+msgid "Provided by %s"
+msgstr ""
+
+#. translators: %s: selected provider plugin name.
+#: views/provider.php:236
+#: views/troubleshooting.php:145
+msgid "Manage GitHub provider"
 msgstr ""
 
 #: views/provider.php:237
-msgid "Currently selected"
+msgid "To change provider, deactivate the current replacement plugin and enable only the replacement you want to use. To return to bundled GitHub, deactivate all replacement plugins. Then return here to review and approve the change. GitHub operations pause until you complete that review."
 msgstr ""
 
-#: views/provider.php:243
-msgid "Multiple GitHub candidates are active. Deactivate the extras before choosing an implementation."
-msgstr ""
-
-#: views/provider.php:244
-msgid "An active GitHub candidate declares an incompatible contract."
-msgstr ""
-
-#: views/provider.php:245
-msgid "The selected implementation is missing. Restore it or disable every candidate before reviewing a return to bundled GitHub."
+#. translators: %s: candidate provider plugin name.
+#: views/provider.php:242
+#, php-format
+msgid "Use GitHub support provided by %s?"
 msgstr ""
 
 #: views/provider.php:246
+msgid "GitHub operations are paused. Local records remain available and Bitbucket is unaffected."
+msgstr ""
+
+#: views/provider.php:252
+msgid "Multiple GitHub candidates are active. Deactivate the extras before choosing an implementation."
+msgstr ""
+
+#: views/provider.php:253
+msgid "An active GitHub candidate declares an incompatible contract."
+msgstr ""
+
+#: views/provider.php:254
+msgid "The selected GitHub plugin is unavailable. Restore it or deactivate every replacement plugin, then review a return to bundled GitHub."
+msgstr ""
+
+#: views/provider.php:255
 msgid "An interrupted native installation requires protected recovery before changing implementation."
 msgstr ""
 
-#: views/provider.php:247
+#: views/provider.php:256
 msgid "Selection storage is unavailable. Restore it before continuing."
 msgstr ""
 
-#: views/provider.php:248
+#: views/provider.php:257
 msgid "Explicit approval is required before this implementation can access GitHub or saved credentials."
 msgstr ""
 
+#: views/provider.php:273
+msgid "Recover an interrupted native installation"
+msgstr ""
+
+#: views/provider.php:275
+msgid "First confirm that the interrupted process has stopped and remove the entire target plugin or theme. A missing main file alone is insufficient. This action verifies removal and disconnects its management record; it does not delete files or repair an installation."
+msgstr ""
+
+#: views/provider.php:276
+msgid "An occupied updater lock prevents recovery. Booster will not clear it based on its age. Cleanup of temporary files from the interrupted process remains unverified."
+msgstr ""
+
+#: views/provider.php:282
+msgid "I have confirmed that the interrupted installation process has stopped."
+msgstr ""
+
+#: views/provider.php:283
+msgid "I have removed the entire target and approve disconnecting its management record."
+msgstr ""
+
+#: views/provider.php:284
+msgid "Verify removal and clear installation block"
+msgstr ""
+
+#: views/provider.php:290
+msgid "Review return to bundled GitHub"
+msgstr ""
+
+#: views/provider.php:290
+msgid "Review GitHub provider"
+msgstr ""
+
+#: views/provider.php:294
+msgid "Bundled GitHub"
+msgstr ""
+
+#. translators: %s: the implementation being reviewed for approval.
+#: views/provider.php:297
+#, php-format
+msgid "Reviewing GitHub support provided by %s"
+msgstr ""
+
+#. translators: %s: the implementation being reviewed for approval.
+#: views/provider.php:298
+msgid "Plugin names and compatibility claims do not verify publisher identity. Approve only a plugin you trust."
+msgstr ""
+
 #. translators: 1: managed Branch packages, 2: managed release packages.
-#: views/provider.php:257
+#: views/provider.php:299
 #, php-format
 msgid "Affected GitHub packages: %1$d Branch, %2$d Published release."
 msgstr ""
 
 #. translators: 1: managed Branch packages, 2: managed release packages.
-#: views/provider.php:257
+#: views/provider.php:299
 msgid "Affected package inventory could not be checked."
 msgstr ""
 
-#: views/provider.php:260
-msgid "Recover an interrupted native installation"
-msgstr ""
-
-#: views/provider.php:262
-msgid "First confirm that the interrupted process has stopped and remove the entire target plugin or theme. A missing main file alone is insufficient. This action verifies removal and disconnects its management record; it does not delete files or repair an installation."
-msgstr ""
-
-#: views/provider.php:263
-msgid "An occupied updater lock prevents recovery. Booster will not clear it based on its age. Cleanup of temporary files from the interrupted process remains unverified."
-msgstr ""
-
-#: views/provider.php:269
-msgid "I have confirmed that the interrupted installation process has stopped."
-msgstr ""
-
-#: views/provider.php:270
-msgid "I have removed the entire target and approve disconnecting its management record."
-msgstr ""
-
-#: views/provider.php:271
-msgid "Verify removal and clear installation block"
-msgstr ""
-
-#: views/provider.php:277
-msgid "Review target"
-msgstr ""
-
-#: views/provider.php:278
-msgid "Claimed provider API and compatibility revision"
-msgstr ""
-
-#: views/provider.php:279
-msgid "Declared capabilities and credential formats"
-msgstr ""
-
 #. translators: 1: compatible profile count, 2: incompatible profile count.
-#: views/provider.php:285
+#: views/provider.php:300
 #, php-format
 msgid "API credential material: %1$d compatible, %2$d incompatible. Counts include any configured constant overlay."
 msgstr ""
 
 #. translators: 1: compatible profile count, 2: incompatible profile count.
-#: views/provider.php:286
+#: views/provider.php:301
 msgid "Incompatible profiles remain unchanged and unavailable. Packages using them stay paused; Booster will not substitute another credential. Missing provider capabilities also keep affected operations unavailable."
 msgstr ""
 
-#: views/provider.php:292
+#: views/provider.php:307
 msgid "I approve this implementation and future normal credential setup within its declared compatible formats."
 msgstr ""
 
-#: views/provider.php:293
+#: views/provider.php:308
 msgid "This approval also permits reuse of compatible existing webhook signing secrets."
 msgstr ""
 
-#: views/provider.php:293
+#: views/provider.php:308
 msgid "Existing webhook signing secrets remain stored but webhook verification is unavailable with this implementation."
 msgstr ""
 
-#: views/provider.php:295
+#: views/provider.php:310
 msgid "Allow this implementation to read and use all compatible existing GitHub API credentials, including any constant overlay."
 msgstr ""
 
-#: views/provider.php:296
+#: views/provider.php:311
 msgid "Declining reuse cancels this adoption. GitHub remains paused until you complete an approved selection or restore the previously approved implementation."
 msgstr ""
 
-#: views/provider.php:298
+#: views/provider.php:313
 msgid "I understand that none of the existing API credentials can be reused. Compatible credentials must be configured afterward."
 msgstr ""
 
-#: views/provider.php:300
+#: views/provider.php:315
 msgid "Return to bundled GitHub"
 msgstr ""
 
-#: views/provider.php:300
+#: views/provider.php:315
 msgid "Adopt GitHub implementation"
 msgstr ""
 
-#: views/provider.php:309
+#: views/provider.php:321
+#: views/troubleshooting.php:119
+msgid "GitHub provider diagnostics"
+msgstr ""
+
+#: views/provider.php:331
 msgid "Encrypted credential storage is unavailable."
 msgstr ""
 
-#: views/provider.php:323
-#: views/provider.php:556
+#: views/provider.php:345
+#: views/provider.php:578
 msgid "This site can receive provider webhook deliveries."
 msgstr ""
 
-#: views/provider.php:343
-#: views/provider.php:576
+#: views/provider.php:365
+#: views/provider.php:598
 msgid "That managed repository is no longer available. Return to the repository list and choose a current repository."
 msgstr ""
 
-#: views/provider.php:350
+#: views/provider.php:372
 msgid "Saved credentials enable private repository access; public repository discovery does not require one."
 msgstr ""
 
-#: views/provider.php:350
+#: views/provider.php:372
 msgid "Saved credentials enable access to private repositories entered manually."
 msgstr ""
 
-#: views/provider.php:382
+#: views/provider.php:404
 msgid "Signing secrets"
 msgstr ""
 
-#: views/provider.php:383
+#: views/provider.php:405
 msgid "Signing secrets verify repository webhook deliveries."
 msgstr ""
 
-#: views/provider.php:411
+#: views/provider.php:433
 msgid "Repository integrations"
 msgstr ""
 
-#: views/provider.php:413
+#: views/provider.php:435
 msgid "Manage repositories, webhooks and release workflows."
 msgstr ""
 
-#: views/provider.php:431
+#: views/provider.php:453
 msgid "Repositories"
 msgstr ""
 
-#: views/provider.php:432
-#: views/provider.php:505
+#: views/provider.php:454
+#: views/provider.php:527
 msgid "Webhook receiver"
 msgstr ""
 
-#: views/provider.php:439
+#: views/provider.php:461
 msgid "Loading provider details…"
 msgstr ""
 
-#: views/provider.php:443
+#: views/provider.php:465
 msgid "Booster could not load that provider view. The current view is unchanged; choose the task again to retry."
 msgstr ""
 
-#: views/provider.php:451
+#: views/provider.php:473
 msgid "Local records only; no provider request is made."
 msgstr ""
 
 #. translators: %d is the number of packages using releases.
-#: views/provider.php:458
+#: views/provider.php:480
 #, php-format
 msgctxt "Packages using releases"
 msgid "%d package"
@@ -8647,7 +8669,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d is the number of repositories.
-#: views/provider.php:460
+#: views/provider.php:482
 #: assets/ran-booster-repository-picker.js:85
 #, php-format,js-format
 msgid "%d repository"
@@ -8656,41 +8678,41 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: lower-bound package count label, 2: repository count label.
-#: views/provider.php:464
+#: views/provider.php:486
 #, php-format
 msgid "At least %1$s across %2$s · exact totals unavailable while a repository inventory is incomplete"
 msgstr ""
 
 #. translators: 1: number of Published release packages, 2: number of repositories.
-#: views/provider.php:471
+#: views/provider.php:493
 #, php-format
 msgid "%1$d packages in %2$d repositories · workflow state unavailable while a repository inventory is incomplete"
 msgstr ""
 
 #. translators: 1: number of Published release packages, 2: number of repositories, 3: number of release workflows needing review.
-#: views/provider.php:477
+#: views/provider.php:499
 #, php-format
 msgid "%1$d packages in %2$d repositories · %3$d workflows need review"
 msgstr ""
 
-#: views/provider.php:485
+#: views/provider.php:507
 msgid "Site webhook delivery"
 msgstr ""
 
-#: views/provider.php:485
+#: views/provider.php:507
 msgid "Ready for public HTTPS delivery"
 msgstr ""
 
-#: views/provider.php:485
+#: views/provider.php:507
 msgid "Not ready for provider delivery"
 msgstr ""
 
-#: views/provider.php:486
+#: views/provider.php:508
 msgid "Signing profiles"
 msgstr ""
 
 #. translators: %d is the number of locally ready signing profiles.
-#: views/provider.php:486
+#: views/provider.php:508
 #, php-format
 msgid "%d ready locally"
 msgid_plural "%d ready locally"
@@ -8698,164 +8720,164 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d is the number of locally ready signing profiles.
-#: views/provider.php:487
+#: views/provider.php:509
 msgid "Repository hooks"
 msgstr ""
 
 #. translators: 1: number of locally recorded hooks, 2: number of hook records needing review.
-#: views/provider.php:487
+#: views/provider.php:509
 #, php-format
 msgid "%1$d recorded locally · %2$d need review"
 msgstr ""
 
 #. translators: 1: number of locally recorded hooks, 2: number of hook records needing review.
-#: views/provider.php:488
+#: views/provider.php:510
 msgctxt "Provider integration status label"
 msgid "Releases"
 msgstr ""
 
-#: views/provider.php:492
+#: views/provider.php:514
 msgid "Webhook delivery is not ready."
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: views/provider.php:492
+#: views/provider.php:514
 #, php-format
 msgid "%s does not provide Booster with assisted webhook management. Repository inventory remains available."
 msgstr ""
 
-#: views/provider.php:496
+#: views/provider.php:518
 msgid "Review repositories"
 msgstr ""
 
-#: views/provider.php:498
+#: views/provider.php:520
 msgid "View Activity"
 msgstr ""
 
-#: views/provider.php:506
+#: views/provider.php:528
 msgid "This provider uses one shared receiver on this site. Configure and check each repository from Repositories."
 msgstr ""
 
-#: views/provider.php:512
+#: views/provider.php:534
 msgid "Manage repositories"
 msgstr ""
 
-#: views/provider.php:513
+#: views/provider.php:535
 msgid "Webhook signatures authorize deployment; they do not protect your host from traffic."
 msgstr ""
 
-#: views/provider.php:513
+#: views/provider.php:535
 msgid "Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback. For timeouts and failed responses, compare provider delivery history with the Provider request ID in Booster Activity."
 msgstr ""
 
-#: views/provider.php:513
+#: views/provider.php:535
 msgid "Read the webhook operations guide"
 msgstr ""
 
-#: views/provider.php:517
+#: views/provider.php:539
 msgid "Copy URL"
 msgstr ""
 
-#: views/provider.php:517
+#: views/provider.php:539
 msgid "URL copied"
 msgstr ""
 
-#: views/provider.php:517
+#: views/provider.php:539
 msgid "Payload URL copied to the clipboard."
 msgstr ""
 
-#: views/provider.php:517
+#: views/provider.php:539
 msgid "Clipboard access failed. The payload URL is selected; use your browser copy command."
 msgstr ""
 
-#: views/provider.php:527
+#: views/provider.php:549
 msgid "Detailed manual setup and troubleshooting"
 msgstr ""
 
-#: views/provider.php:530
+#: views/provider.php:552
 msgid "Paste the payload URL and a matching signing secret."
 msgstr ""
 
-#: views/provider.php:530
+#: views/provider.php:552
 msgid "Keep SSL verification enabled and select the push event."
 msgstr ""
 
-#: views/provider.php:530
+#: views/provider.php:552
 msgid "Trigger a delivery and confirm the provider records a successful response."
 msgstr ""
 
-#: views/provider.php:541
+#: views/provider.php:563
 #: views/provider/modals.php:174
 msgid "Managed repositories"
 msgstr ""
 
-#: views/provider.php:580
+#: views/provider.php:602
 msgid "Search managed repositories"
 msgstr ""
 
-#: views/provider.php:581
+#: views/provider.php:603
 msgid "Search managed repositories…"
 msgstr ""
 
-#: views/provider.php:597
+#: views/provider.php:619
 msgid "Managed repository status is temporarily unavailable."
 msgstr ""
 
-#: views/provider.php:611
+#: views/provider.php:633
 msgid "Filter by credential type"
 msgstr ""
 
-#: views/provider.php:612
+#: views/provider.php:634
 msgid "All credential types"
 msgstr ""
 
-#: views/provider.php:617
-#: views/provider.php:640
+#: views/provider.php:639
+#: views/provider.php:662
 msgid "Filter by scope"
 msgstr ""
 
-#: views/provider.php:618
 #: views/provider.php:640
+#: views/provider.php:662
 msgid "All scopes"
 msgstr ""
 
-#: views/provider.php:624
+#: views/provider.php:646
 msgid "Search credentials"
 msgstr ""
 
-#: views/provider.php:624
+#: views/provider.php:646
 msgid "Search credentials…"
 msgstr ""
 
-#: views/provider.php:630
+#: views/provider.php:652
 msgid "No credentials match the current filters."
 msgstr ""
 
-#: views/provider.php:644
+#: views/provider.php:666
 msgid "Filter by status"
 msgstr ""
 
-#: views/provider.php:644
+#: views/provider.php:666
 msgid "All statuses"
 msgstr ""
 
-#: views/provider.php:644
+#: views/provider.php:666
 msgid "Ready locally"
 msgstr ""
 
-#: views/provider.php:644
+#: views/provider.php:666
 msgid "Search webhook secrets"
 msgstr ""
 
-#: views/provider.php:644
+#: views/provider.php:666
 msgid "Search secrets…"
 msgstr ""
 
-#: views/provider.php:649
+#: views/provider.php:671
 msgid "No webhook secrets match the current filters."
 msgstr ""
 
-#: views/provider.php:659
+#: views/provider.php:681
 msgid "Saved credentials use Booster encrypted local storage outside the plugin directory and WordPress database. Deployment constants appear as immutable profiles and always take precedence."
 msgstr ""
 
@@ -9052,191 +9074,225 @@ msgstr ""
 msgid "Save webhook secret"
 msgstr ""
 
-#: views/troubleshooting.php:24
-#: views/troubleshooting.php:87
+#: views/troubleshooting.php:25
+#: views/troubleshooting.php:88
 msgid "Diagnostics"
 msgstr ""
 
-#: views/troubleshooting.php:40
+#: views/troubleshooting.php:41
 msgid "Passed"
 msgstr ""
 
-#: views/troubleshooting.php:41
+#: views/troubleshooting.php:42
 msgid "Warning"
 msgstr ""
 
-#: views/troubleshooting.php:52
+#: views/troubleshooting.php:53
 msgid "Local checks could not finish, so provider checks were not started."
 msgstr ""
 
-#: views/troubleshooting.php:53
+#: views/troubleshooting.php:54
 msgid "The ten-second diagnostic deadline was reached. Completed checks are shown below."
 msgstr ""
 
-#: views/troubleshooting.php:54
+#: views/troubleshooting.php:55
 msgid "The five-request provider budget was reached. Completed checks are shown below."
 msgstr ""
 
-#: views/troubleshooting.php:55
+#: views/troubleshooting.php:56
 msgid "The selected provider could not complete diagnostics. Local results are still available."
 msgstr ""
 
-#: views/troubleshooting.php:56
+#: views/troubleshooting.php:57
 msgid "The provider returned an unsafe or invalid diagnostic result, which Booster omitted."
 msgstr ""
 
-#: views/troubleshooting.php:57
+#: views/troubleshooting.php:58
 msgid "The eight-result limit was reached. Earlier results are shown below."
 msgstr ""
 
-#: views/troubleshooting.php:77
+#: views/troubleshooting.php:78
 msgid "account/repository"
 msgstr ""
 
-#: views/troubleshooting.php:81
+#: views/troubleshooting.php:82
 msgid "Recover management without changing installed files:"
 msgstr ""
 
-#: views/troubleshooting.php:88
+#: views/troubleshooting.php:89
 msgid "Troubleshooting"
 msgstr ""
 
-#: views/troubleshooting.php:89
+#: views/troubleshooting.php:90
 msgid "Run protected checks, temporarily capture Booster events, or review recent update activity."
 msgstr ""
 
-#: views/troubleshooting.php:93
+#: views/troubleshooting.php:94
 msgid "Troubleshooting views"
 msgstr ""
 
-#: views/troubleshooting.php:124
-msgid "RAN Booster could not check for Core updates. The installed version will keep working, and Booster will retry automatically."
+#: views/troubleshooting.php:120
+msgid "Local declarations only; these claims do not verify publisher identity or remote access."
 msgstr ""
 
-#: views/troubleshooting.php:127
-msgid "Core updates are available manually for this verified release installation. Background Core updates remain off."
+#: views/troubleshooting.php:121
+msgid "Selection state"
 msgstr ""
 
-#: views/troubleshooting.php:129
-msgid "Core updates are off because this site explicitly disables them. Booster will not check for or replace itself."
+#: views/troubleshooting.php:123
+msgid "Currently selected"
+msgstr ""
+
+#. translators: %s: enabled candidate plugin path.
+#: views/troubleshooting.php:125
+#, php-format
+msgid "Candidate: %s"
 msgstr ""
 
 #: views/troubleshooting.php:132
-msgid "Core updates are off because this installation has an invalid self-update setting. Booster will not check for or replace itself."
+msgid "Implementation"
+msgstr ""
+
+#: views/troubleshooting.php:133
+msgid "Claimed provider API and compatibility revision"
 msgstr ""
 
 #: views/troubleshooting.php:134
-msgid "Core updates are off for this source installation. Booster will not check for or replace itself."
-msgstr ""
-
-#: views/troubleshooting.php:137
-msgid "Requested mode"
-msgstr ""
-
-#: views/troubleshooting.php:138
-msgid "Effective mode"
-msgstr ""
-
-#: views/troubleshooting.php:139
-msgid "Policy reason"
-msgstr ""
-
-#: views/troubleshooting.php:140
-msgid "Updater state"
-msgstr ""
-
-#: views/troubleshooting.php:141
-msgid "Updater code"
+msgid "Declared capabilities and credential formats"
 msgstr ""
 
 #: views/troubleshooting.php:142
+msgid "No compatible declaration is available."
+msgstr ""
+
+#: views/troubleshooting.php:156
+msgid "RAN Booster could not check for Core updates. The installed version will keep working, and Booster will retry automatically."
+msgstr ""
+
+#: views/troubleshooting.php:159
+msgid "Core updates are available manually for this verified release installation. Background Core updates remain off."
+msgstr ""
+
+#: views/troubleshooting.php:161
+msgid "Core updates are off because this site explicitly disables them. Booster will not check for or replace itself."
+msgstr ""
+
+#: views/troubleshooting.php:164
+msgid "Core updates are off because this installation has an invalid self-update setting. Booster will not check for or replace itself."
+msgstr ""
+
+#: views/troubleshooting.php:166
+msgid "Core updates are off for this source installation. Booster will not check for or replace itself."
+msgstr ""
+
+#: views/troubleshooting.php:169
+msgid "Requested mode"
+msgstr ""
+
+#: views/troubleshooting.php:170
+msgid "Effective mode"
+msgstr ""
+
+#: views/troubleshooting.php:171
+msgid "Policy reason"
+msgstr ""
+
+#: views/troubleshooting.php:172
+msgid "Updater state"
+msgstr ""
+
+#: views/troubleshooting.php:173
+msgid "Updater code"
+msgstr ""
+
+#: views/troubleshooting.php:174
 msgid "Offered version"
 msgstr ""
 
-#: views/troubleshooting.php:143
+#: views/troubleshooting.php:175
 msgid "Last check (UTC)"
 msgstr ""
 
-#: views/troubleshooting.php:146
+#: views/troubleshooting.php:178
 msgid "Next check (UTC)"
 msgstr ""
 
-#: views/troubleshooting.php:149
+#: views/troubleshooting.php:181
 msgid "Marker version"
 msgstr ""
 
-#: views/troubleshooting.php:150
+#: views/troubleshooting.php:182
 msgid "Marker commit"
 msgstr ""
 
-#: views/troubleshooting.php:154
+#: views/troubleshooting.php:186
 msgid "Core updates"
 msgstr ""
 
-#: views/troubleshooting.php:157
+#: views/troubleshooting.php:189
 msgid "Technical details"
 msgstr ""
 
-#: views/troubleshooting.php:185
+#: views/troubleshooting.php:217
 msgid "Start with a provider to run a general health check. The optional fields below check only credential and repository access; they do not scope Push-to-Deploy delivery results."
 msgstr ""
 
-#: views/troubleshooting.php:188
+#: views/troubleshooting.php:220
 msgid "Check credential or repository access (optional)"
 msgstr ""
 
-#: views/troubleshooting.php:191
-#: views/troubleshooting.php:216
+#: views/troubleshooting.php:223
+#: views/troubleshooting.php:248
 msgid "(optional)"
 msgstr ""
 
-#: views/troubleshooting.php:193
+#: views/troubleshooting.php:225
 msgid "No saved credential (check public access)"
 msgstr ""
 
-#: views/troubleshooting.php:212
+#: views/troubleshooting.php:244
 msgid "Choose a saved credential only to check private-repository access. This is a credential reference, not the credential secret; Booster never displays the credential secret here."
 msgstr ""
 
-#: views/troubleshooting.php:213
+#: views/troubleshooting.php:245
 msgid "The active provider can read every credential saved under its provider code, not only the selected diagnostic profile. Booster does not authenticate a third-party publisher."
 msgstr ""
 
-#: views/troubleshooting.php:218
+#: views/troubleshooting.php:250
 msgid "Enter a repository only when diagnosing a particular access issue. Without a saved credential, Booster checks whether it is publicly available."
 msgstr ""
 
-#: views/troubleshooting.php:223
+#: views/troubleshooting.php:255
 msgid "The full check makes temporary local marker files and up to five provider requests. Markers are removed immediately. Booster does not install packages, trigger webhooks or save a report."
 msgstr ""
 
-#: views/troubleshooting.php:224
+#: views/troubleshooting.php:256
 msgid "Run full diagnostics"
 msgstr ""
 
-#: views/troubleshooting.php:230
+#: views/troubleshooting.php:262
 msgid "Diagnostics finished with partial results."
 msgstr ""
 
-#: views/troubleshooting.php:235
+#: views/troubleshooting.php:267
 msgid "RAN Booster diagnostic results"
 msgstr ""
 
-#: views/troubleshooting.php:238
-#: views/troubleshooting.php:266
+#: views/troubleshooting.php:270
+#: views/troubleshooting.php:298
 msgid "Check"
 msgstr ""
 
-#: views/troubleshooting.php:240
-#: views/troubleshooting.php:268
+#: views/troubleshooting.php:272
+#: views/troubleshooting.php:300
 msgid "Action"
 msgstr ""
 
-#: views/troubleshooting.php:276
+#: views/troubleshooting.php:308
 msgid "Support report"
 msgstr ""
 
-#: views/troubleshooting.php:278
+#: views/troubleshooting.php:310
 msgid "This report contains only the safe, displayed result fields. Review it before sharing."
 msgstr ""
 

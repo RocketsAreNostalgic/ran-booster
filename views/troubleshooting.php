@@ -133,7 +133,10 @@ $repository_placeholder = array() === $locator_examples
 						<p><?php esc_html_e( 'Claimed provider API and compatibility revision', 'ran-booster' ); ?>: <?php echo esc_html( (string) $declaration['provider_api_version'] . ' / ' . $declaration['compatibility_revision'] ); ?></p>
 						<p><?php esc_html_e( 'Declared capabilities and credential formats', 'ran-booster' ); ?></p>
 						<ul><?php foreach ( array_merge( $declaration['facets'], $declaration['api_credential_formats'], array( $declaration['webhook_signing_format'] ?? '' ) ) as $claim ) { ?>
-							<?php if ( '' !== $claim ) { ?><li><code><?php echo esc_html( $claim ); ?></code></li><?php } ?>
+							<?php
+							if ( '' !== $claim ) {
+								?>
+								<li><code><?php echo esc_html( $claim ); ?></code></li><?php } ?>
 						<?php } ?></ul>
 					<?php } else { ?>
 						<p><?php esc_html_e( 'No compatible declaration is available.', 'ran-booster' ); ?></p>

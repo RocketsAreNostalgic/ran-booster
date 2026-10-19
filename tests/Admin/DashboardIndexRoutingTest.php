@@ -637,8 +637,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringNotContainsString( 'name="ran_booster[action]" value="adopt-github"', $html );
 		$_GET['tab'] = 'bb';
 		self::assertSame( 'bb', $dashboard->get_index()['data']['selected_provider'] );
-		$_GET       = array( 'tab' => 'troubleshooting', 'panel' => 'diagnostics' );
-		$diagnostics = $this->dashboard( $this->throwing_secrets(), providers: $providers, github_selection: $selection )->get_index()['data'];
+		$_GET        = array(
+			'tab'   => 'troubleshooting',
+			'panel' => 'diagnostics',
+		);
+		$diagnostics = $this->dashboard( $this->throwing_secrets(), providers: new ProviderRegistry(), github_selection: $selection )->get_index()['data'];
 		self::assertSame( $selection->status(), $diagnostics['github_selection_diagnostics'] );
 		self::assertArrayNotHasKey( 'github_selection', $diagnostics );
 
@@ -648,18 +651,19 @@ final class DashboardIndexRoutingTest extends TestCase {
 		rmdir( $directory );
 	}
 
-	/** @return iterable<string,array{string}> */
+	/** @return iterable<string,array{string,bool}> */
 	public static function replacement_presentations(): iterable {
 		foreach ( array( 'available', 'decision_required', 'missing', 'conflict', 'incompatible' ) as $state ) {
-			yield $state => array( $state );
+			yield $state => array( $state, false );
 		}
+		yield 'missing A with B enabled' => array( 'missing', true );
 	}
 
 	#[DataProvider( 'replacement_presentations' )]
-	public function test_provider_replacement_presentation_keeps_decisions_and_diagnostics_separate( string $state ): void {
-		$_GET['tab'] = 'bb';
-		$data        = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
-		$declaration = array(
+	public function test_provider_replacement_presentation_keeps_decisions_and_diagnostics_separate( string $state, bool $switch_replacement ): void {
+		$_GET['tab']              = 'bb';
+		$data                     = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
+		$declaration              = array(
 			'plugin_basename'        => 'private-path/replacement.php',
 			'implementation_id'      => 'vendor/internal-implementation',
 			'display_name'           => '<Replacement>',
@@ -670,9 +674,16 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'webhook_signing_format' => null,
 			'facets'                 => array(),
 		);
-		$review = in_array( $state, array( 'decision_required', 'missing' ), true ) ? array(
+		$current_declaration      = $switch_replacement ? array_replace(
+			$declaration,
+			array(
+				'display_name'    => 'Previous provider A',
+				'plugin_basename' => 'previous/a.php',
+			)
+		) : $declaration;
+		$review                   = in_array( $state, array( 'decision_required', 'missing' ), true ) ? array(
 			'target'             => $declaration,
-			'selected'           => 'missing' === $state ? 'bundled' : 'replacement',
+			'selected'           => 'missing' === $state && ! $switch_replacement ? 'bundled' : 'replacement',
 			'compatible_count'   => 2,
 			'incompatible_count' => 1,
 			'signing_reuse'      => false,
@@ -683,13 +694,19 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'available'      => 'available' === $state,
 			'status'         => array(
 				'state'      => $state,
-				'current'    => array( 'selected' => 'replacement', 'declaration' => $declaration ),
-				'candidates' => 'missing' === $state ? array() : array( 'private-path/replacement.php' => $declaration ),
+				'current'    => array(
+					'selected'    => 'replacement',
+					'declaration' => $current_declaration,
+				),
+				'candidates' => 'missing' === $state && ! $switch_replacement ? array() : array( 'private-path/replacement.php' => $declaration ),
 			),
 			'review'         => $review,
 			'error'          => '',
 			'recovery'       => null,
-			'package_counts' => array( 'branch' => 2, 'release_asset' => 1 ),
+			'package_counts' => array(
+				'branch'        => 2,
+				'release_asset' => 1,
+			),
 		);
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard model to its production view.
 		extract( $data );
@@ -712,13 +729,17 @@ final class DashboardIndexRoutingTest extends TestCase {
 			self::assertStringNotContainsString( 'value="adopt-github"', $html );
 			return;
 		}
+		if ( $switch_replacement ) {
+			self::assertStringNotContainsString( 'Previous provider A', $html );
+			self::assertStringContainsString( 'Reviewing GitHub support provided by &lt;Replacement&gt;', $html );
+		}
 		self::assertStringContainsString( 'Affected GitHub packages: 2 Branch, 1 Published release.', $html );
 		self::assertStringContainsString( 'name="ran_booster[review_digest]" value="' . str_repeat( 'c', 64 ) . '"', $html );
 		self::assertStringContainsString( 'name="ran_booster[confirmed]" value="1" required', $html );
 		self::assertStringContainsString( 'name="ran_booster[reuse_existing]" value="1" required', $html );
 		self::assertStringContainsString( 'ran-booster-adopt-github-' . str_repeat( 'c', 64 ), $html );
-		self::assertStringContainsString( 'missing' === $state ? '<summary>Review return to bundled GitHub</summary>' : '<summary>Review GitHub provider</summary>', $html );
-		self::assertStringContainsString( 'missing' === $state ? 'Return to bundled GitHub' : 'Use GitHub support provided by &lt;Replacement&gt;?', $html );
+		self::assertStringContainsString( 'missing' === $state && ! $switch_replacement ? '<summary>Review return to bundled GitHub</summary>' : '<summary>Review GitHub provider</summary>', $html );
+		self::assertStringContainsString( 'missing' === $state && ! $switch_replacement ? 'Return to bundled GitHub' : 'Reviewing GitHub support provided by &lt;Replacement&gt;', $html );
 	}
 
 	/** @return iterable<string,array{bool}> */

@@ -171,7 +171,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 			new \RAN\Storage\CredentialUsageReader( new \RAN\Tests\Support\CredentialUsageDatabase(), 'wp_packages' ),
 			github_selection: $context
 		);
-		$data = $presenter->build( 'gh' );
+		$data      = $presenter->build( 'gh' );
 		self::assertSame( 'gh', $data['selected_provider'] );
 		self::assertFalse( $data['github_selection']['available'] );
 		self::assertSame( 'missing', $data['github_selection']['status']['state'] );

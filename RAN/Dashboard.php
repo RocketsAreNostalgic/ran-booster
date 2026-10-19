@@ -304,7 +304,7 @@ class Dashboard {
 				$data['deployment_activity'] = $this->deployment_admin->activity();
 			} else {
 				$data['troubleshooting']              = $this->troubleshooting_payload ?? $this->troubleshooting->form_payload();
-				$data['github_selection_diagnostics'] = $this->provider_settings?->github_selection_diagnostics();
+				$data['github_selection_diagnostics'] = $this->provider_settings->github_selection_diagnostics();
 			}
 		}
 

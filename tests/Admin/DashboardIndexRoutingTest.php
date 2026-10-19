@@ -651,19 +651,27 @@ final class DashboardIndexRoutingTest extends TestCase {
 		rmdir( $directory );
 	}
 
-	/** @return iterable<string,array{string,bool}> */
+	/** @return iterable<string,array{string,bool,bool,bool}> */
 	public static function replacement_presentations(): iterable {
 		foreach ( array( 'available', 'decision_required', 'missing', 'conflict', 'incompatible' ) as $state ) {
-			yield $state => array( $state, false );
+			yield $state => array( $state, false, true, true );
 		}
-		yield 'missing A with B enabled' => array( 'missing', true );
+		yield 'missing A with B enabled' => array( 'missing', true, true, true );
+		yield 'without plugin activation permission' => array( 'decision_required', false, true, false );
+		yield 'without settings permission' => array( 'decision_required', false, false, true );
 	}
 
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
 	#[DataProvider( 'replacement_presentations' )]
-	public function test_provider_replacement_presentation_keeps_decisions_and_diagnostics_separate( string $state, bool $switch_replacement ): void {
-		$_GET['tab']              = 'bb';
-		$data                     = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
-		$declaration              = array(
+	public function test_provider_replacement_presentation_keeps_decisions_and_diagnostics_separate( string $state, bool $switch_replacement, bool $manage_options, bool $activate_plugins ): void {
+		$GLOBALS['ran_booster_test_capabilities'] = array(
+			'manage_options'   => $manage_options,
+			'activate_plugins' => $activate_plugins,
+		);
+		$_GET['tab']                              = 'bb';
+		$data                                     = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
+		$declaration                              = array(
 			'plugin_basename'        => 'private-path/replacement.php',
 			'implementation_id'      => 'vendor/internal-implementation',
 			'display_name'           => '<Replacement>',
@@ -674,14 +682,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'webhook_signing_format' => null,
 			'facets'                 => array(),
 		);
-		$current_declaration      = $switch_replacement ? array_replace(
+		$current_declaration                      = $switch_replacement ? array_replace(
 			$declaration,
 			array(
 				'display_name'    => 'Previous provider A',
 				'plugin_basename' => 'previous/a.php',
 			)
 		) : $declaration;
-		$review                   = in_array( $state, array( 'decision_required', 'missing' ), true ) ? array(
+		$review                                   = in_array( $state, array( 'decision_required', 'missing' ), true ) ? array(
 			'target'             => $declaration,
 			'selected'           => 'missing' === $state && ! $switch_replacement ? 'bundled' : 'replacement',
 			'compatible_count'   => 2,
@@ -690,7 +698,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'has_material'       => true,
 			'digest'             => str_repeat( 'c', 64 ),
 		) : null;
-		$data['github_selection'] = array(
+		$data['github_selection']                 = array(
 			'available'      => 'available' === $state,
 			'status'         => array(
 				'state'      => $state,
@@ -711,8 +719,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard model to its production view.
 		extract( $data );
 		ob_start();
-		require dirname( __DIR__, 2 ) . '/views/provider.php';
-		$html = (string) ob_get_clean();
+		try {
+			require dirname( __DIR__, 2 ) . '/views/provider.php';
+			$html = (string) ob_get_contents();
+		} finally {
+			ob_end_clean();
+			unset( $GLOBALS['ran_booster_test_capabilities'] );
+		}
 		self::assertStringContainsString( 'GitHub provider diagnostics', $html );
 		foreach ( array( 'private-path', 'vendor/internal-implementation', 'internal-revision', 'internal-credential-format', '<Replacement>' ) as $private_detail ) {
 			self::assertStringNotContainsString( $private_detail, $html );
@@ -734,6 +747,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 			self::assertStringContainsString( 'Reviewing GitHub support provided by &lt;Replacement&gt;', $html );
 		}
 		self::assertStringContainsString( 'Affected GitHub packages: 2 Branch, 1 Published release.', $html );
+		if ( ! $manage_options || ! $activate_plugins ) {
+			self::assertStringNotContainsString( 'value="adopt-github"', $html );
+			self::assertStringNotContainsString( 'name="ran_booster[review_digest]"', $html );
+			return;
+		}
 		self::assertStringContainsString( 'name="ran_booster[review_digest]" value="' . str_repeat( 'c', 64 ) . '"', $html );
 		self::assertStringContainsString( 'name="ran_booster[confirmed]" value="1" required', $html );
 		self::assertStringContainsString( 'name="ran_booster[reuse_existing]" value="1" required', $html );

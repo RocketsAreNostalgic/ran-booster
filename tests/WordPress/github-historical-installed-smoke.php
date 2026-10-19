@@ -17,7 +17,7 @@ require_once __DIR__ . '/disposable-management-cleanup.php';
 Fixture::guard();
 $ran_booster_root = realpath( (string) getenv( 'RAN_BOOSTER_WORDPRESS_PATH' ) );
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI || '1' !== getenv( 'RAN_BOOSTER_GITHUB_HISTORICAL_DISPOSABLE' )
-	|| rtrim( ABSPATH, '/' ) !== $ran_booster_root || 'http://localhost' !== get_option( 'home' )
+	|| rtrim( ABSPATH, '/' ) !== $ran_booster_root || Fixture::expected_origin() !== get_option( 'home' )
 	|| ! current_user_can( 'install_plugins' ) || ! current_user_can( 'manage_options' )
 	|| ! is_plugin_active( 'github-replacement/a.php' ) || ! is_plugin_active( 'ran-booster/ran-booster.php' ) ) {
 	throw new RuntimeException( 'Historical proof requires the exact disposable installed Core administrator.' );

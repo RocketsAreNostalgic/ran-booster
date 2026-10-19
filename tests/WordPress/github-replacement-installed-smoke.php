@@ -30,6 +30,10 @@ $ran_booster_assert    = static function ( bool $condition ): void {
 };
 
 switch ( $ran_booster_phase ) {
+	case 'expected-origin':
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Validated local origin on authenticated WP-CLI only, consumed by the paired runner.
+		echo Fixture::expected_origin() . "\n";
+		break;
 	case 'setup':
 		$ran_booster_assert( ! is_plugin_active( 'github-replacement/a.php' ) && ! is_plugin_active( 'github-replacement/b.php' ) && ! is_plugin_active( 'github-replacement/incompatible.php' ) );
 		delete_option( Fixture::COUNTERS );

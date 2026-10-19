@@ -20,7 +20,8 @@ if [[ "${1:-core}" == migrator ]]; then
   git -C "$migrator_source" diff --quiet HEAD -- tests/installed-candidate scripts
   export RAN_MIGRATOR_PROOF_DISPOSABLE=1
   export RAN_MIGRATOR_WORDPRESS_PATH="$wordpress"
-  export RAN_MIGRATOR_EXPECTED_SITE_URL=http://localhost
+  RAN_MIGRATOR_EXPECTED_SITE_URL="$(switch_phase expected-origin)"
+  export RAN_MIGRATOR_EXPECTED_SITE_URL
   export RAN_MIGRATOR_WP_USER=fixture-admin
   helper="$migrator_source/tests/installed-candidate/current-source-fixture.sh"
   run_phase migrator-preflight

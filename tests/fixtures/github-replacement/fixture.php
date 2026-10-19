@@ -15,11 +15,21 @@ use RAN\RepositoryProvider\RepositoryProvider;
 final class Fixture {
 	public const COUNTERS = 'ran_booster_replacement_fixture_counts';
 
+	/** Exact test-only origin shared by browser requests and CLI phases. */
+	public static function expected_origin(): string {
+		$origin = defined( 'RAN_BOOSTER_REPLACEMENT_FIXTURE_ORIGIN' ) ? constant( 'RAN_BOOSTER_REPLACEMENT_FIXTURE_ORIGIN' ) : 'http://localhost';
+		if ( ! is_string( $origin ) || 1 !== preg_match( '/\Ahttp:\/\/localhost(?::([1-9][0-9]{0,4}))?\z/', $origin, $matches )
+			|| ( isset( $matches[1] ) && (int) $matches[1] > 65535 ) ) {
+			throw new \RuntimeException( 'Replacement fixture requires an exact HTTP localhost origin with an optional valid port.' );
+		}
+		return $origin;
+	}
+
 	public static function guard(): void {
 		$root = realpath( ABSPATH );
 		if ( false === $root || rtrim( ABSPATH, '/' ) !== $root
 			|| WP_CONTENT_DIR !== $root . '/wp-content' || WP_PLUGIN_DIR !== WP_CONTENT_DIR . '/plugins'
-			|| 'http://localhost' !== get_option( 'siteurl' )
+			|| self::expected_origin() !== get_option( 'siteurl' ) || self::expected_origin() !== get_option( 'home' )
 			|| is_link( $root ) || is_link( WP_CONTENT_DIR ) || is_link( WP_PLUGIN_DIR )
 			|| is_link( WP_PLUGIN_DIR . '/github-replacement' )
 			|| is_link( $root . '/.ran-booster-disposable-test-site' )

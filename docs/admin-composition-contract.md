@@ -27,6 +27,45 @@ updater. The separately versioned
 documents that transport and presentation contract; it does not expand any
 composition hook or authorization boundary described here.
 
+## Admin Shell continuity and page navigation
+
+Booster's Admin Shell provides continuous product branding and navigation across
+its normal administration pages, including standalone WordPress submenu destinations
+such as Extensions. Keep the shell's logo, header navigation and footer consistent
+when a page supplies its own content or local navigation.
+
+Failure and recovery output may use a minimal heading, explanation and recovery
+links when the normal administration stack cannot safely render. Examples include
+the Extensions fallback error screen and the standalone unsupported-Multisite
+recovery guide. These paths must remain usable without initializing the full
+shell or operational services; this exception does not apply to ordinary pages.
+
+A standalone destination does not automatically become a shell navigation item.
+The WordPress submenu identifies that destination; the page heading identifies
+its content. When the destination is outside the shell menu, leave that menu
+without a selected item rather than marking an unrelated section as current.
+Existing provider availability and visibility rules still apply.
+
+A page that needs local navigation places it below its heading, visually
+subordinate to and distinct from the shell navigation. Use ordinary links with
+stable URLs and an accessible current-page indication. For a settings page,
+folder-style tabs may connect the selected destination to its content panel.
+Do not label navigation links as an ARIA tab widget unless the full associated
+keyboard and interaction behaviour is implemented. Keep navigation usable on
+narrow screens.
+
+Use the shared page panels, typography, spacing, controls and feedback patterns.
+Extensions contribute inside that layout rather than replace the product chrome.
+Breadcrumbs are optional when deeper navigation needs them; they are unnecessary
+when the submenu, heading and local navigation already establish location.
+
+This is a product composition rule, not a new shell API. Reuse the generated
+Admin Shell through its existing integration and source workflow; do not hand-edit
+generated output or change the shared shell package merely to add a local page.
+The proposed Settings screen and settings-tab API are specified separately in
+[Core #461](https://github.com/RocketsAreNostalgic/ran-booster/issues/461); this
+document does not declare those features implemented.
+
 ## Add-on generation and service delivery
 
 An administration add-on must check the exact Add-on API generation before

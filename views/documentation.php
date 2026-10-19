@@ -54,6 +54,7 @@ $reserved_documentation_ids = array_fill_keys(
 		'ran-booster-documentation-heading',
 		'ran-booster-documentation-index-heading',
 		'ran-booster-quick-start',
+		'ran-booster-requirements',
 		'ran-booster-portability-guidance',
 		'ran-booster-wp-pusher-migration',
 		'ran-booster-file-protection',
@@ -87,6 +88,7 @@ $add_documentation_item = static function ( string $id, string $summary ) use ( 
 };
 
 $add_documentation_item( 'ran-booster-quick-start', __( 'Quick start', 'ran-booster' ) );
+$add_documentation_item( 'ran-booster-requirements', __( 'Requirements', 'ran-booster' ) );
 $add_documentation_item( 'ran-booster-portability-guidance', __( 'Move packages between sites', 'ran-booster' ) );
 $add_documentation_item( 'ran-booster-wp-pusher-migration', __( 'Migrate from WP Pusher', 'ran-booster' ) );
 $add_documentation_item( 'ran-booster-file-protection', __( 'Protect your files and know what actually moves', 'ran-booster' ) );
@@ -157,10 +159,7 @@ $add_documentation_item( 'ran-booster-about', __( 'About RAN Booster', 'ran-boos
 		<details id="ran-booster-quick-start" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section open>
 			<summary><?php esc_html_e( 'Quick start', 'ran-booster' ); ?></summary>
 			<div class="ran-booster-documentation__content">
-				<p><strong><?php esc_html_e( 'Current limitation:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'This plugin currently supports single-site WordPress installations only. Multisite and network activation are not yet supported.', 'ran-booster' ); ?></p>
-				<p><strong><?php esc_html_e( 'Database:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Use MySQL 8.0 or newer or MariaDB 10.11 or newer with InnoDB available. MySQL 8.4 LTS is recommended for production. SQLite, PostgreSQL and unverified database-translation drop-ins are not supported.', 'ran-booster' ); ?></p>
-				<p><?php esc_html_e( 'If an active site moves outside that database envelope, Booster leaves its stored data unchanged and pauses package storage, Transporter and deployments. Restore a supported database, then use read-only Troubleshooting to confirm compatibility. For planned moves, keep the normal site backup and a current Transporter Blueprint; Booster does not convert custom tables between database engines.', 'ran-booster' ); ?></p>
-				<p><strong><?php esc_html_e( 'PHP:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'PHP 8.2 or newer is required, 8.4 LTS or newer recommended.', 'ran-booster' ); ?></p>
+				<p><a href="#ran-booster-requirements"><?php esc_html_e( 'Check the requirements before you start.', 'ran-booster' ); ?></a></p>
 				<ol>
 					<li>
 						<strong><?php esc_html_e( 'Install a package.', 'ran-booster' ); ?></strong>
@@ -187,6 +186,16 @@ $add_documentation_item( 'ran-booster-about', __( 'About RAN Booster', 'ran-boos
 						<a href="<?php echo esc_url( $troubleshooting_url ); ?>"><?php esc_html_e( 'Open Troubleshooting', 'ran-booster' ); ?></a>.
 					</li>
 				</ol>
+			</div>
+		</details>
+
+		<details id="ran-booster-requirements" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section>
+			<summary><?php esc_html_e( 'Requirements', 'ran-booster' ); ?></summary>
+			<div class="ran-booster-documentation__content">
+				<p><strong><?php esc_html_e( 'Current limitation:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'This plugin currently supports single-site WordPress installations only. Multisite and network activation are not yet supported.', 'ran-booster' ); ?></p>
+				<p><strong><?php esc_html_e( 'Database:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Use MySQL 8.0 or newer or MariaDB 10.11 or newer with InnoDB available. MySQL 8.4 LTS is recommended for production. SQLite, PostgreSQL and unverified database-translation drop-ins are not supported.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'If an active site moves outside that database envelope, Booster leaves its stored data unchanged and pauses package storage, Transporter and deployments. Restore a supported database, then use read-only Troubleshooting to confirm compatibility. For planned moves, keep the normal site backup and a current Transporter Blueprint; Booster does not convert custom tables between database engines.', 'ran-booster' ); ?></p>
+				<p><strong><?php esc_html_e( 'PHP:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'PHP 8.2 or newer is required, 8.4 LTS or newer recommended.', 'ran-booster' ); ?></p>
 			</div>
 		</details>
 

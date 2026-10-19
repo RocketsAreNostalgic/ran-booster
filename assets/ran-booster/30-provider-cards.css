@@ -910,17 +910,13 @@
 	display: block;
 	margin: 0;
 	padding-block: var(--ran-booster-space-18) var(--ran-booster-space-12);
-	padding-inline: var(--ran-booster-space-20);
+	padding-inline: 0;
 }
 
 .ran-booster-admin .ran-booster-provider-management__header {
-	display: flex;
 	align-items: flex-start;
 	justify-content: space-between;
 	gap: var(--ran-booster-space-20);
-	padding: var(--ran-booster-space-18) var(--ran-booster-space-20);
-	border: 1px solid var(--ran-booster-divider);
-	background: var(--ran-booster-surface);
 }
 
 .ran-booster-admin .ran-booster-provider-list-controls {
@@ -929,11 +925,7 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: var(--ran-booster-space-14);
-	margin-block-start: var(--ran-booster-space-18);
-	padding: var(--ran-booster-space-12);
-	border: 1px solid var(--ran-booster-divider);
-	border-block-end: 0;
-	background: var(--ran-booster-surface-subtle);
+	margin-block: var(--ran-booster-space-18) var(--ran-booster-space-12);
 }
 
 .ran-booster-admin .ran-booster-provider-list-controls > div {
@@ -956,6 +948,14 @@
 
 .ran-booster-admin .ran-booster-provider-management-table {
 	margin-block-start: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-data-table.ran-booster-provider-management-table
+	> thead
+	> tr
+	> th {
+	background: transparent;
 }
 
 .ran-booster-admin

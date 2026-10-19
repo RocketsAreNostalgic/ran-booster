@@ -832,6 +832,9 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '>local.runtime.ready</code>', $html );
 		self::assertStringContainsString( '<textarea', $html );
 		self::assertStringContainsString( 'RAN Booster troubleshooting report', $html );
+		self::assertStringContainsString( '<button type="button" class="button" data-support-report-copy>Copy report</button>', $html );
+		self::assertStringContainsString( 'data-support-report-status role="status" aria-live="polite" aria-atomic="true"', $html );
+		self::assertStringContainsString( 'readonly>RAN Booster troubleshooting report', $html );
 	}
 
 	public function test_escapes_every_submitted_and_result_field(): void {
@@ -1629,6 +1632,7 @@ final class TroubleshootingViewTest extends TestCase {
 
 		self::assertStringContainsString( '>2 packages</td>', $html );
 		self::assertStringContainsString( 'Back to Fixture overview', $html );
+		$this->assert_flat_profile_layout( $html );
 		self::assertStringContainsString( 'id="ran-booster-provider-profile-region"', $html );
 		self::assertStringContainsString( '<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1">Credentials</h2>', $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="validate-access-profile"', $html );
@@ -1901,6 +1905,7 @@ final class TroubleshootingViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'Back to Bitbucket overview', $html );
+		$this->assert_flat_profile_layout( $html );
 		self::assertStringContainsString( 'id="ran-booster-provider-profile-region"', $html );
 		self::assertStringContainsString( '<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1">Webhook secrets</h2>', $html );
 		self::assertStringContainsString( 'Manage local signing material used to verify Bitbucket webhook deliveries.', $html );
@@ -1923,6 +1928,55 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<option value="workspace/two">workspace/two</option>', $html );
 		self::assertStringContainsString( 'Remote provider webhooks will not be removed.', $html );
 		self::assertStringNotContainsString( 'GitHub', $html );
+	}
+
+	public function test_empty_credential_and_secret_lists_retain_flat_controls_and_add_actions(): void {
+		foreach ( array( 'credentials', 'secrets' ) as $provider_view ) {
+			$provider                                = $this->provider_without_optional_settings();
+			$provider['credential_kinds']            = array(
+				array(
+					'code'               => 'token',
+					'label'              => 'Token',
+					'secret_label'       => 'Token',
+					'secret_placeholder' => '',
+					'fields'             => array(),
+				),
+			);
+			$provider['webhook_scopes']              = $this->webhook_scopes();
+			$provider['capabilities']['credentials'] = true;
+			$provider['capabilities']['webhooks']    = true;
+			$credential_profiles                     = array();
+			$webhook_profiles                        = array();
+			$provider_view_data                      = $this->provider_view_data( get_defined_vars() );
+			// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+			extract( $provider_view_data );
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/provider.php';
+			$html = (string) ob_get_clean();
+
+			$this->assert_flat_profile_layout( $html );
+			self::assertStringContainsString( 'credentials' === $provider_view ? 'No credentials match the current filters.' : 'No webhook secrets match the current filters.', $html );
+			self::assertStringContainsString( 'credentials' === $provider_view ? '>Add credential</button>' : '>Add webhook secret</button>', $html );
+		}
+	}
+
+	private function assert_flat_profile_layout( string $html ): void {
+		$document        = new \DOMDocument();
+		$previous_errors = libxml_use_internal_errors( true );
+		try {
+			self::assertTrue( $document->loadHTML( $html ) );
+		} finally {
+			libxml_clear_errors();
+			libxml_use_internal_errors( $previous_errors );
+		}
+		$xpath   = new \DOMXPath( $document );
+		$region  = '//*[@id="ran-booster-provider-profile-region"]';
+		$section = $region . '/section[@aria-labelledby="ran-booster-provider-heading"]';
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/preceding-sibling::a[@class="ran-booster-provider-management__back"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '[contains(@class,"ran-booster-panel")])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/header[contains(@class,"ran-booster-action-row")]/div/h2[@tabindex="-1"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/form[@class="ran-booster-provider-list-controls"]/following-sibling::table[contains(@class,"striped")])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/footer)' ) );
 	}
 
 	/** @return array<string, mixed> */

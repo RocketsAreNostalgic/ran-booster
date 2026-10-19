@@ -35,14 +35,14 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( 'id="ran-booster-documentation-heading"', $html );
 	}
 
-	public function test_renders_ten_native_disclosure_sections_with_only_quick_start_open(): void {
+	public function test_renders_eleven_native_disclosure_sections_with_only_quick_start_open(): void {
 		$html = $this->render_view( $this->provider_documentation() );
 
 		self::assertStringContainsString( 'class="ran-booster-documentation ran-booster-documentation__layout"', $html );
 		self::assertStringContainsString( 'class="ran-booster-page-shell ran-booster-panel ran-booster-documentation__main"', $html );
 		self::assertStringContainsString( 'class="ran-booster-page-shell__header ran-booster-documentation__header"', $html );
 		self::assertStringContainsString( 'class="ran-booster-page-shell__body"', $html );
-		self::assertSame( 10, preg_match_all( '/<details\b/', $html ) );
+		self::assertSame( 11, preg_match_all( '/<details\b/', $html ) );
 		self::assertSame( 1, preg_match_all( '/<details\b[^>]*\bopen\b/', $html ) );
 		self::assertMatchesRegularExpression( '/<details\b[^>]*\bopen\b[^>]*>\s*<summary>Quick start<\/summary>/', $html );
 		self::assertMatchesRegularExpression( '/<summary>\s*GitHub credentials and access\s*<\/summary>/', $html );
@@ -113,7 +113,7 @@ final class DocumentationViewTest extends TestCase {
 		$GLOBALS['ran_booster_admin_view_filters']['ran_booster_documentation_sections_before_about'][]         = $global_filter;
 		$html = $this->render_view( $this->provider_documentation() );
 
-		self::assertSame( 12, preg_match_all( '/<details\b/', $html ) );
+		self::assertSame( 13, preg_match_all( '/<details\b/', $html ) );
 		self::assertStringContainsString( 'id="fixture-gh-guide"', $html );
 		self::assertStringContainsString( 'GitHub fixture guide', $html );
 		self::assertStringNotContainsString( '<script>', $html );
@@ -202,6 +202,92 @@ final class DocumentationViewTest extends TestCase {
 		self::assertLessThan( strpos( $html, 'href="#addon-guide"' ), strpos( $html, 'href="#ran-booster-documentation-provider-gh"' ) );
 		self::assertLessThan( strpos( $html, 'href="#ran-booster-documentation-provider-bb"' ), strpos( $html, 'href="#addon-guide"' ) );
 		self::assertLessThan( strpos( $html, 'ran-booster-page-shell ran-booster-panel ran-booster-documentation' ), strpos( $html, 'data-ran-booster-documentation-index' ) );
+	}
+
+	public function test_keeps_quick_start_actionable_and_moves_unchanged_requirements_into_the_next_chapter(): void {
+		$html     = $this->render_view( $this->provider_documentation() );
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath        = new \DOMXPath( $document );
+		$quick_start  = $document->getElementById( 'ran-booster-quick-start' );
+		$requirements = $document->getElementById( 'ran-booster-requirements' );
+		self::assertInstanceOf( \DOMElement::class, $quick_start );
+		self::assertInstanceOf( \DOMElement::class, $requirements );
+		self::assertSame( 'details', $xpath->evaluate( 'local-name(.)', $requirements ) );
+		self::assertFalse( $requirements->hasAttribute( 'open' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(following-sibling::*[1][@id="ran-booster-requirements"])', $quick_start ) );
+		self::assertSame( 3.0, $xpath->evaluate( 'count(div/ol/li)', $quick_start ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(div/p)', $quick_start ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(div/p/a[@href="#ran-booster-requirements"])', $quick_start ) );
+		$quick_start_text  = $xpath->evaluate( 'string(.)', $quick_start );
+		$requirements_text = $xpath->evaluate( 'string(.)', $requirements );
+		self::assertIsString( $quick_start_text );
+		self::assertIsString( $requirements_text );
+		self::assertStringContainsString( 'Install a package.', $quick_start_text );
+		self::assertStringContainsString( 'Add private access only if needed.', $quick_start_text );
+		self::assertStringContainsString( 'Verify the result.', $quick_start_text );
+
+		$prerequisites = array(
+			'This plugin currently supports single-site WordPress installations only. Multisite and network activation are not yet supported.',
+			'Use MySQL 8.0 or newer or MariaDB 10.11 or newer with InnoDB available. MySQL 8.4 LTS is recommended for production. SQLite, PostgreSQL and unverified database-translation drop-ins are not supported.',
+			'If an active site moves outside that database envelope, Booster leaves its stored data unchanged and pauses package storage, Transporter and deployments. Restore a supported database, then use read-only Troubleshooting to confirm compatibility. For planned moves, keep the normal site backup and a current Transporter Blueprint; Booster does not convert custom tables between database engines.',
+			'PHP 8.2 or newer is required, 8.4 LTS or newer recommended.',
+		);
+		foreach ( $prerequisites as $prerequisite ) {
+			self::assertStringContainsString( $prerequisite, $requirements_text );
+			self::assertStringNotContainsString( $prerequisite, $quick_start_text );
+		}
+	}
+
+	public function test_navigation_matches_chapter_order_and_every_local_link_has_one_target(): void {
+		$html     = $this->render_view( $this->provider_documentation() );
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath         = new \DOMXPath( $document );
+		$chapter_ids   = array();
+		$index_targets = array();
+		$chapters      = $xpath->query( '//details[@data-ran-booster-documentation-section]' );
+		$index_links   = $xpath->query( '//aside//nav//a' );
+		$local_links   = $xpath->query( '//a[starts-with(@href, "#")]' );
+		self::assertInstanceOf( \DOMNodeList::class, $chapters );
+		self::assertInstanceOf( \DOMNodeList::class, $index_links );
+		self::assertInstanceOf( \DOMNodeList::class, $local_links );
+		foreach ( $chapters as $chapter ) {
+			self::assertInstanceOf( \DOMElement::class, $chapter );
+			$chapter_ids[] = $chapter->getAttribute( 'id' );
+		}
+		foreach ( $index_links as $index_link ) {
+			self::assertInstanceOf( \DOMElement::class, $index_link );
+			$index_targets[] = substr( $index_link->getAttribute( 'href' ), 1 );
+		}
+		self::assertSame( $chapter_ids, $index_targets );
+		self::assertSame( array( 'ran-booster-quick-start', 'ran-booster-requirements' ), array_slice( $chapter_ids, 0, 2 ) );
+		foreach ( $local_links as $local_link ) {
+			self::assertInstanceOf( \DOMElement::class, $local_link );
+			$target_id = substr( $local_link->getAttribute( 'href' ), 1 );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="' . $target_id . '"])' ), $target_id );
+		}
+	}
+
+	public function test_addon_contributions_cannot_take_the_requirements_anchor(): void {
+		foreach ( array( 'ran_booster_documentation_sections_after_provider_gh', 'ran_booster_documentation_sections_before_about' ) as $hook ) {
+			$GLOBALS['ran_booster_documentation_test_filters'][ $hook ][] =
+				static function ( array $sections ): array {
+					$sections[] = array(
+						'id'      => 'ran-booster-requirements',
+						'summary' => 'Conflicting requirements',
+						'content' => '<p>Replacement prerequisites.</p>',
+					);
+
+					return $sections;
+				};
+		}
+		$html = $this->render_view( $this->provider_documentation() );
+
+		self::assertSame( 1, substr_count( $html, 'id="ran-booster-requirements"' ) );
+		self::assertSame( 1, substr_count( $html, 'class="ran-booster-documentation__index-link" href="#ran-booster-requirements"' ) );
+		self::assertStringNotContainsString( 'Conflicting requirements', $html );
+		self::assertStringNotContainsString( 'Replacement prerequisites.', $html );
 	}
 
 	public function test_states_the_current_single_site_support_boundary_without_beta_or_version_jargon(): void {

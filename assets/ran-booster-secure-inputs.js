@@ -40,10 +40,41 @@
 	);
 
 	document.addEventListener('htmx:afterSwap', handleProviderProfileSwap);
+	document.addEventListener('click', copySupportReport);
 	document.addEventListener(
 		'ran-booster:admin-mutation-success',
 		handleProviderProfileSuccess
 	);
+
+	async function copySupportReport(event) {
+		const copy = event.target.closest?.('[data-support-report-copy]');
+		if (!copy || copy.disabled) {
+			return;
+		}
+		const root = copy.closest('[data-support-report-tools]');
+		const input = root?.querySelector('textarea');
+		const status = root?.querySelector('[data-support-report-status]');
+		if (!input || !status) {
+			return;
+		}
+		copy.disabled = true;
+		status.textContent = '';
+		try {
+			if (typeof window.navigator?.clipboard?.writeText !== 'function') {
+				throw new Error();
+			}
+			await window.navigator.clipboard.writeText(input.value);
+			status.textContent = status.dataset.copiedMessage;
+		} catch {
+			if (input.isConnected) {
+				input.focus();
+				input.select();
+			}
+			status.textContent = status.dataset.copyFailedMessage;
+		} finally {
+			copy.disabled = false;
+		}
+	}
 
 	function handleProviderProfileSwap(event) {
 		const target = event.detail?.target;

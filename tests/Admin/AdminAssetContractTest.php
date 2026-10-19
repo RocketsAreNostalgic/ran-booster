@@ -602,9 +602,21 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'td.ran-booster-actions {', $css );
 		self::assertStringContainsString( 'inline-size: auto !important;', $css );
 		self::assertMatchesRegularExpression(
-			'/\\.ran-booster-provider-management__back \\{[\\s\\S]+display: block;[\\s\\S]+padding-inline: var\\(--ran-booster-space-20\\);/',
+			'/\\.ran-booster-provider-management__back \\{[^}]+padding-inline: 0;/',
 			$css
 		);
+		self::assertMatchesRegularExpression(
+			'/\\.ran-booster-data-table\\.ran-booster-provider-management-table\\s+> thead\\s+> tr\\s+> th \\{\\s+background: transparent;\\s+\\}/',
+			$css
+		);
+		foreach ( array( 'ran-booster-provider-management__header', 'ran-booster-provider-list-controls' ) as $flat_class ) {
+			self::assertSame( 1, preg_match( '/\\.' . preg_quote( $flat_class, '/' ) . ' \\{([^}]+)\\}/', $css, $flat_rule ) );
+			$flat_body = $flat_rule[1] ?? '';
+			self::assertNotSame( '', $flat_body );
+			self::assertStringNotContainsString( 'background:', $flat_body );
+			self::assertStringNotContainsString( 'border:', $flat_body );
+			self::assertStringNotContainsString( 'padding:', $flat_body );
+		}
 		self::assertMatchesRegularExpression(
 			'/\\.ran-booster-provider-list-controls \\{[\\s\\S]+flex-wrap: wrap;/',
 			$css

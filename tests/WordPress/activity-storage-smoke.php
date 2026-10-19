@@ -60,6 +60,81 @@ return static function ( wpdb $database ): void {
 		$engine = $database->get_row( $database->prepare( 'SHOW TABLE STATUS WHERE Name = %s', $table ) );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- MySQL SHOW TABLE STATUS returns the Engine field.
 		$expect( is_object( $engine ) && 'InnoDB' === ( $engine->Engine ?? null ), 'InnoDB storage' );
+		$view            = dirname( (string) ( new ReflectionClass( ActivityStore::class ) )->getFileName(), 3 ) . '/views/attempts/index.php';
+		$render_activity = static function ( array $activity ) use ( $view ): string {
+			$deployment_activity  = $activity;
+			$troubleshooting_base = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+			ob_start();
+			require $view;
+			return (string) ob_get_clean();
+		};
+		$package         = wp_json_encode( array( 'gh&+%', 'plugin', 'naïve & + %# "quoted"/plugin.php' ) );
+		$expect( is_string( $package ), 'rendered activity package fixture' );
+		$activity = array(
+			'items'        => array(
+				array(
+					'state'         => 'succeeded',
+					'record_source' => 'activity',
+				),
+			),
+			'filter_state' => array(
+				'provider' => 'gh&+%',
+				'package'  => $package,
+			),
+			'next_cursor'  => 'v1|cursor&+%#',
+		);
+		$rendered = $render_activity( $activity );
+		$expect( 1 === preg_match( '/<a class="button" href="([^"]+)">Load older activity<\\/a>/', $rendered, $matches ), 'rendered older activity link' );
+		$older_href = $matches[1] ?? null;
+		if ( ! is_string( $older_href ) ) {
+			throw new RuntimeException( 'Activity SQL proof: rendered older activity href.' );
+		}
+		parse_str( (string) wp_parse_url( html_entity_decode( $older_href, ENT_QUOTES, 'UTF-8' ), PHP_URL_QUERY ), $older_query );
+		$expect(
+			array(
+				'page'              => 'ran-booster',
+				'tab'               => 'troubleshooting',
+				'panel'             => 'activity',
+				'activity_provider' => 'gh&+%',
+				'activity_package'  => $package,
+				'before'            => 'v1|cursor&+%#',
+			) === $older_query,
+			'older activity link preserves the exact route, filters, and cursor'
+		);
+		$expect( 1 === preg_match( '/class="ran-booster-package-list-filters__clear" href="([^"]+)"/', $rendered, $matches ), 'rendered clear activity link' );
+		$clear_href = $matches[1] ?? null;
+		if ( ! is_string( $clear_href ) ) {
+			throw new RuntimeException( 'Activity SQL proof: rendered clear activity href.' );
+		}
+		parse_str( (string) wp_parse_url( html_entity_decode( $clear_href, ENT_QUOTES, 'UTF-8' ), PHP_URL_QUERY ), $clear_query );
+		$expect(
+			array(
+				'page'  => 'ran-booster',
+				'tab'   => 'troubleshooting',
+				'panel' => 'activity',
+			) === $clear_query,
+			'clear activity link excludes filters and cursor'
+		);
+		$activity['items']      = array();
+		$activity['has_cursor'] = true;
+		unset( $activity['next_cursor'] );
+		$rendered = $render_activity( $activity );
+		$expect( 1 === preg_match( '/<a class="button" href="([^"]+)">View latest activity<\\/a>/', $rendered, $matches ), 'rendered latest activity link' );
+		$latest_href = $matches[1] ?? null;
+		if ( ! is_string( $latest_href ) ) {
+			throw new RuntimeException( 'Activity SQL proof: rendered latest activity href.' );
+		}
+		parse_str( (string) wp_parse_url( html_entity_decode( $latest_href, ENT_QUOTES, 'UTF-8' ), PHP_URL_QUERY ), $latest_query );
+		$expect(
+			array(
+				'page'              => 'ran-booster',
+				'tab'               => 'troubleshooting',
+				'panel'             => 'activity',
+				'activity_provider' => 'gh&+%',
+				'activity_package'  => $package,
+			) === $latest_query,
+			'latest activity link preserves filters and removes the cursor'
+		);
 		$older = $store->begin( 'gh', $request, $capture );
 		$newer = $second->begin( 'gh', $request, $capture );
 		$expect( null !== $older && null !== $newer, 'two connection admission' );
@@ -145,6 +220,84 @@ return static function ( wpdb $database ): void {
 		$expect( (int) ( $summary['latest']['id'] ?? 0 ) === $latest && (int) ( $summary['observation']['id'] ?? 0 ) === $late, 'ordinary writes do not evict protected summaries' );
 		$expect( false !== $store->prune( array() ), 'departed context pruning' );
 		$expect( null === $store->summary( 'plugin', 'activity-proof/plugin.php', $capture['adoption_token'], $capture['context'], 'release.check' )['latest'], 'departed pins lose protection' );
+
+		// Filter choices use the same age/capacity scope as history, except unresolved deployments remain visible.
+		$query( $database->prepare( 'DELETE FROM %i', $table ) );
+		$deployment_correlation = str_repeat( 'd', 32 );
+		$deployment             = $store->begin( 'gh', $request, $capture, $deployment_correlation );
+		$outside                = $store->begin( 'gh', $request, $capture );
+		$expect( null !== $deployment && null !== $outside, 'filter choice aged fixture admission' );
+		if ( null === $deployment || null === $outside ) {
+			return;
+		}
+		$expect(
+			$store->progress_by_correlation(
+				$deployment_correlation,
+				'deployment.running',
+				facts: array(
+					'deployment_attempt_id' => 1,
+					'deployment_source'     => 'manual',
+					'deployment_state'      => 'running',
+				)
+			),
+			'unresolved deployment fixture'
+		);
+		$query( $database->prepare( 'UPDATE %i SET provider = %s, subject_identity = %s, started_at = %s WHERE id = %d', $table, 'deploy', 'protected/plugin.php', '2026-01-01 00:00:00', $deployment ) );
+		$query( $database->prepare( 'UPDATE %i SET provider = %s, subject_identity = %s, started_at = %s WHERE id = %d', $table, 'obsolete', 'outside/plugin.php', '2026-01-01 00:00:00', $outside ) );
+		$digits  = '(SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9)';
+		$numbers = "(SELECT a.n + 10*b.n + 100*c.n + 1000*d.n AS n FROM $digits a CROSS JOIN $digits b CROSS JOIN $digits c CROSS JOIN $digits d)";
+		$query(
+			$database->prepare(
+				"INSERT INTO %i (correlation,sort_at,started_at,provider,subject_type,subject_identity,context,context_key,operation,provenance,actor,status,message,remediation,facts,effect) SELECT CONCAT('a',LPAD(HEX(n+1),31,'0')),NOW(),NOW(),'bulk','plugin','bulk/plugin.php','fixture',REPEAT('b',64),'release.check','core',1,'succeeded','','','{}','none' FROM $numbers numbers WHERE n < 2000",
+				$table
+			)
+		);
+		foreach ( array(
+			array( 'Gh', 'plugin', 'Case/plugin.php' ),
+			array( 'bb', 'plugin', 'Case/plugin.php' ),
+			array( 'gh', 'plugin', 'Case/plugin.php' ),
+			array( 'gh', 'plugin', 'case/plugin.php' ),
+			array( 'gh', 'theme', 'case/plugin.php' ),
+			array( 'api', 'repository', 'owner/repository' ),
+		) as list( $provider, $type, $identity ) ) {
+			$id = $store->begin( 'gh', $request, $capture );
+			$expect( null !== $id, 'filter choice collision fixture admission' );
+			if ( null === $id ) {
+				return;
+			}
+			$query( $database->prepare( 'UPDATE %i SET provider = %s, subject_type = %s, subject_identity = %s WHERE id = %d', $table, $provider, $type, $identity, $id ) );
+		}
+		$exact_collision = $store->activity_history(
+			array(
+				'provider'         => 'gh',
+				'subject_type'     => 'plugin',
+				'subject_identity' => 'Case/plugin.php',
+			)
+		);
+		$expect( $exact_collision['available'] && 1 === count( $exact_collision['records'] ), 'history filters retain exact provider and identity case' );
+		$history = $store->activity_history();
+		$expect( $history['available'] && ! in_array( $deployment, array_map( static fn ( array $record ): int => (int) $record['id'], $history['records'] ), true ), 'aged protected deployment remains outside the ordinary history page' );
+		$expect( false !== $store->prune( array() ), 'age and capacity pruning removes ordinary reports' );
+		$expect( null === $database->get_var( $database->prepare( 'SELECT id FROM %i WHERE id = %d', $table, $outside ) ), 'ordinary aged report is pruned' );
+		$filter_choices = $store->activity_filter_choices();
+		$expect( $filter_choices['available'], 'filter choices available after retention pruning' );
+		$expect( in_array( 'api', $filter_choices['providers'], true ) && in_array( 'deploy', $filter_choices['providers'], true ) && ! in_array( 'obsolete', $filter_choices['providers'], true ), 'providers follow retained history and include nonpackages' );
+		$packages = array_map(
+			static fn ( array $package ): string => implode( '|', $package ),
+			array_values( array_filter( $filter_choices['packages'], static fn ( array $package ): bool => in_array( $package['provider'], array( 'Gh', 'bb', 'deploy', 'gh' ), true ) ) )
+		);
+		$expect(
+			array(
+				'Gh|plugin|Case/plugin.php',
+				'bb|plugin|Case/plugin.php',
+				'deploy|plugin|protected/plugin.php',
+				'gh|plugin|Case/plugin.php',
+				'gh|plugin|case/plugin.php',
+				'gh|theme|case/plugin.php',
+			) === $packages,
+			'package choices retain exact provider type and case while excluding nonpackages'
+		);
+		$query( $database->prepare( 'DELETE FROM %i', $table ) );
 
 		// The live table definition must remain stable until a coupled transaction ends.
 		$raced = false;

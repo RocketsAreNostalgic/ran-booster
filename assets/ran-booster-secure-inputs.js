@@ -60,7 +60,7 @@
 			return;
 		}
 		window.clearTimeout(supportReportCopyResets.get(copy));
-		icon.classList.replace('dashicons-yes', 'dashicons-admin-page');
+		icon.classList.replace('dashicons-yes', 'dashicons-clipboard');
 		copy.disabled = true;
 		status.textContent = '';
 		try {
@@ -71,14 +71,14 @@
 			if (!input.isConnected) {
 				return;
 			}
-			icon.classList.replace('dashicons-admin-page', 'dashicons-yes');
+			icon.classList.replace('dashicons-clipboard', 'dashicons-yes');
 			status.textContent = status.dataset.copiedMessage;
 			supportReportCopyResets.set(
 				copy,
 				window.setTimeout(() => {
 					icon.classList.replace(
 						'dashicons-yes',
-						'dashicons-admin-page'
+						'dashicons-clipboard'
 					);
 					supportReportCopyResets.delete(copy);
 				}, 2000)

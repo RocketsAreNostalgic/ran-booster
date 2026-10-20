@@ -5880,7 +5880,7 @@ msgid "Start 60-minute capture"
 msgstr ""
 
 #: views/debug-capture.php:116
-#: views/debug-capture.php:120
+#: views/debug-capture.php:121
 msgid "Captured Booster events"
 msgstr ""
 
@@ -5888,39 +5888,51 @@ msgstr ""
 msgid "Newest activity is shown in a bounded, read-only excerpt."
 msgstr ""
 
-#: views/debug-capture.php:123
+#: views/debug-capture.php:124
+msgid "Copy captured events"
+msgstr ""
+
+#: views/debug-capture.php:126
+msgid "Captured events copied to the clipboard."
+msgstr ""
+
+#: views/debug-capture.php:126
+msgid "Clipboard access failed. The captured events are selected; use your browser copy command."
+msgstr ""
+
+#: views/debug-capture.php:129
 msgid "No Booster events have been captured yet."
 msgstr ""
 
-#: views/debug-capture.php:123
+#: views/debug-capture.php:129
 msgid "No Booster events were captured."
 msgstr ""
 
-#: views/debug-capture.php:127
+#: views/debug-capture.php:133
 msgid "Logging capture actions"
 msgstr ""
 
-#: views/debug-capture.php:132
+#: views/debug-capture.php:138
 msgid "Refresh"
 msgstr ""
 
-#: views/debug-capture.php:133
+#: views/debug-capture.php:139
 msgid "Stop capture"
 msgstr ""
 
-#: views/debug-capture.php:135
+#: views/debug-capture.php:141
 msgid "Start new capture"
 msgstr ""
 
-#: views/debug-capture.php:141
+#: views/debug-capture.php:147
 msgid "Delete capture"
 msgstr ""
 
-#: views/debug-capture.php:146
+#: views/debug-capture.php:152
 msgid "The temporary capture file could not be read safely. Booster left it unchanged."
 msgstr ""
 
-#: views/debug-capture.php:150
+#: views/debug-capture.php:156
 msgid "Temporary logging capture is unavailable because Booster cannot safely use its capture file location."
 msgstr ""
 

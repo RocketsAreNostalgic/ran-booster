@@ -64,7 +64,7 @@ function report(value) {
 			return selector === 'textarea' ? input : status;
 		},
 	};
-	const classes = new Set(['dashicons', 'dashicons-admin-page']);
+	const classes = new Set(['dashicons', 'dashicons-clipboard']);
 	const icon = {
 		classList: {
 			replace(before, after) {
@@ -87,6 +87,46 @@ function report(value) {
 		event: { target: { closest: () => copy } },
 	};
 }
+
+test('copy scopes each control to its current report field and message', async () => {
+	const copied = [];
+	const click = fixture({ writeText: async (value) => copied.push(value) });
+	const diagnostic = report('diagnostic\nreport');
+	const capture = report('captured\nevents');
+	capture.status.dataset.copiedMessage =
+		'Captured events copied to the clipboard.';
+	await click(capture.event);
+	await click(diagnostic.event);
+	assert.deepEqual(copied, ['captured\nevents', 'diagnostic\nreport']);
+	assert.equal(
+		capture.status.textContent,
+		'Captured events copied to the clipboard.'
+	);
+	assert.equal(
+		diagnostic.status.textContent,
+		diagnostic.status.dataset.copiedMessage
+	);
+});
+
+test('a denied captured-events copy selects only its own field', async () => {
+	const click = fixture({
+		writeText: async () => {
+			throw new Error('denied');
+		},
+	});
+	const diagnostic = report('diagnostic report');
+	const capture = report('captured events');
+	capture.status.dataset.copyFailedMessage =
+		'Clipboard access failed. The captured events are selected; use your browser copy command.';
+	await click(capture.event);
+	assert.equal(capture.input.selected, true);
+	assert.equal(
+		capture.status.textContent,
+		capture.status.dataset.copyFailedMessage
+	);
+	assert.equal(diagnostic.input.selected, false);
+	assert.equal(diagnostic.status.textContent, '');
+});
 
 test('only an explicit copy action writes the current multiline report after repeated replacements', async () => {
 	const copied = [];
@@ -136,10 +176,10 @@ test('copy reads the textarea at activation and announces success only after cli
 		current.status.dataset.copiedMessage
 	);
 	assert.equal(current.classes.has('dashicons-yes'), true);
-	assert.equal(current.classes.has('dashicons-admin-page'), false);
+	assert.equal(current.classes.has('dashicons-clipboard'), false);
 	const reset = [...click.timers.values()][0];
 	reset();
-	assert.equal(current.classes.has('dashicons-admin-page'), true);
+	assert.equal(current.classes.has('dashicons-clipboard'), true);
 	assert.equal(current.classes.has('dashicons-yes'), false);
 });
 
@@ -160,7 +200,7 @@ test('a repeat copy cancels the prior checkmark reset and resets before a denied
 	denied = true;
 	await click(current.event);
 	assert.equal(click.timers.size, 0);
-	assert.equal(current.classes.has('dashicons-admin-page'), true);
+	assert.equal(current.classes.has('dashicons-clipboard'), true);
 	assert.equal(current.classes.has('dashicons-yes'), false);
 	assert.equal(
 		current.status.textContent,

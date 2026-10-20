@@ -28,8 +28,9 @@ if [[ -L "$disposable_marker" || ! -f "$disposable_marker" ]] ||
 	echo "The native-lock proof requires $disposable_marker with the expected disposable-site marker." >&2
 	exit 2
 fi
-if [[ "$("$php_bin" -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')" != '8.2' ]]; then
-	echo 'The native-lock race proof requires PHP 8.2.' >&2
+expected_php="${RAN_BOOSTER_TEST_PHP_VERSION-8.2}"
+if [[ ! "$expected_php" =~ ^[0-9]+\.[0-9]+$ ]] || ! actual_php="$("$php_bin" -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')" || [[ "$actual_php" != "$expected_php" ]]; then
+	echo "The native-lock race proof requires PHP $expected_php (major.minor)." >&2
 	exit 2
 fi
 

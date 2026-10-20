@@ -92,3 +92,5 @@ set -e
 [[ "$output" == *'exact active RAN Booster target'* ]] || fail 'the external custom content directory reached a later gate.'
 [[ ! -e "$mutation" ]] || fail 'the rejected external custom content directory mutated WPLANG.'
 [[ ! -e "$wordpress/wp-content/plugins/ran-booster/languages/ran-booster-fr_FR.mo" ]] || fail 'the rejected custom runtime copied fixtures into the conventional plugin tree.'
+
+bash "$root/tests/installed-runtime-expectations-contract.sh"

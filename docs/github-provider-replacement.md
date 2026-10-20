@@ -35,8 +35,9 @@ Plugin names and compatibility declarations do not verify the publisher.
    credentials exist, also confirm **Allow this implementation to read and use
    all compatible existing GitHub API credentials, including any constant
    overlay.** This is all compatible retained material, not a per-profile picker.
-   Declining reuse cancels adoption. If none can be reused, acknowledge that
-   compatible credentials must be configured afterward.
+   Declining reuse cancels adoption. If retained API material exists but none
+   can be reused, acknowledge that compatible credentials must be configured
+   afterward. With no retained API material, no reuse acknowledgement is needed.
 4. Choose **Adopt GitHub implementation**. On the refreshed page, confirm
    **Provided by …** identifies the intended plugin. **Manage GitHub provider**
    contains switching guidance; **GitHub provider diagnostics** links to the

@@ -30,8 +30,10 @@ The [Blueprint reference](portability-briefcase.md) retains format and policy de
    Provider permissions have not been assessed. Choosing packages alone never
    silently selects their credentials.
 4. If credentials are selected, use **Generate password** or supply a high-entropy
-   **Transporter Blueprint password** of 20–256 characters. Keep it separately
-   from the ZIP; the supported encrypted briefcase requires AES-256 ZIP support.
+   **Transporter Blueprint password** of 20–256 ASCII characters and repeat it in
+   **Confirm password**. The generator fills both fields. Keep the password
+   separately from the ZIP; the supported encrypted briefcase requires AES-256
+   ZIP support.
    With no credentials selected, the download is a package-only, **unencrypted**
    Blueprint and a password has no effect. Treat repository configuration as
    potentially sensitive even without credentials.
@@ -138,10 +140,11 @@ the blueprint again.**, a timeout, or a lost response:
 1. Check authoritative current package management, WordPress installed files and
    activation, and the matching Activity/deployment result/support reference.
    Do not assume the failed request made no change or rerun the whole batch.
-2. If an attempt is running or needs attention, confirm the process has stopped
-   and inspect package and maintenance state before using the protected
-   **Reconcile stopped worker**, then the applicable **Allow retry** control
-   only after checking the package's current state, as described in
+2. For a **running** attempt, confirm the worker has stopped before using
+   **Reconcile stopped worker**. For a **needs_attention** attempt, inspect the
+   package, activation and maintenance state before confirming the displayed
+   **Allow retry** action (which may also return to plugin/theme settings).
+   Neither control reruns the deployment. Follow
    [deployment recovery](package-update-orchestration.md#state-failure-and-retry-rules).
    Never delete updater locks or markers to make a retry proceed. A protected
    native installation has its own [removal-verification procedure](github-provider-replacement.md#recover-an-interrupted-native-installation).
@@ -168,20 +171,26 @@ Once a compatible pair is available:
 1. Back up the site and deactivate WP Pusher, keeping its retained records.
    Use supported single-site WordPress/PHP and the required Core API markers;
    install/activate the compatible Bitbucket Cloud add-on for Bitbucket rows.
+   Follow the maintained Migrator installation/checksum steps to install and
+   activate the compatible bridge beside Core; otherwise its mode is absent.
 2. Configure replacement repository credentials in Booster for private
    repositories. The bridge does not import WP Pusher credentials. Public
    repositories can use supported public access. Complete GitHub replacement
    consent separately if relevant.
-3. Open **Transporter** → **Migrate from WP Pusher**. Check/review one retained
-   package at a time. Apply only when the installed package and stable repository
-   identity match the fresh review. A changed provider choice requires review
-   again. The bridge adopts existing files with deployment **Disabled**; it does
-   not download replacement package files.
-4. Confirm the adopted Booster target. Source-row cleanup requires Core's verified
-   target and the exact unchanged retained source row; it is not deletion of the
-   whole source table. If cleanup is refused, inspect the current source and
-   target before reviewing again. Already-managed rows still need the bridge's
-   verified cleanup path, not a manual bulk SQL deletion.
+3. Open **Transporter** → **Migrate from WP Pusher**. For private repositories,
+   enter the existing Booster profile ID in **Booster credential**; this is a text
+   field, not a credential import or picker. Choose **Check** for one retained
+   package at a time. Choose **Adopt** only when the installed package and stable
+   repository identity match the fresh review. A changed provider choice requires
+   review again. Adoption keeps existing files and starts deployment **Disabled**;
+   it does not download replacement package files.
+4. Inspect the adopted Booster target and source-row result. Successful adoption
+   normally removes its exact unchanged WP Pusher row in the same request, only
+   after Core verifies the target. If a source row remains, inspect current source
+   and target, then **Check** again. A verified already-managed row shows
+   **Adoption incomplete** and offers **Finish** for the guarded cleanup path;
+   this is not an extra step required after every successful Adopt. Cleanup is
+   never bulk table deletion. Do not bypass a refusal with manual SQL.
 5. **Cannot adopt** rows, including GitLab, remain for manual migration. Resolve
    or deliberately retain those packages before deleting WP Pusher. Do not take
    a partial migration as permission to discard remaining records.

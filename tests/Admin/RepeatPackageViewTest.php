@@ -728,7 +728,7 @@ final class RepeatPackageViewTest extends TestCase {
 	): void {
 		$GLOBALS['ran_booster_package_view_multisite'] = $multisite;
 		$recovery_identifier                           = $managed_package_identifier;
-		$recovery_name                                 = 'Example <package>';
+		$recovery_name                                 = 'Example <package> ' . str_repeat( 'long-package-name-', 12 );
 		$recovery_reason                               = 'The saved update revision is invalid.';
 		$recovery_state                                = 'damaged';
 		$recovery_blocker                              = null;
@@ -745,7 +745,7 @@ final class RepeatPackageViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/recovery.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Example &lt;package&gt;', $html );
+		self::assertStringContainsString( esc_html( $recovery_name ), $html );
 		self::assertStringContainsString( $recovery_reason, $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="recover-' . $package_view->get_type() . '"', $html );
 		self::assertStringContainsString( 'name="ran_booster[identifier]" value="' . $recovery_identifier . '"', $html );
@@ -766,10 +766,13 @@ final class RepeatPackageViewTest extends TestCase {
 			libxml_use_internal_errors( $previous );
 		}
 		$xpath             = new \DOMXPath( $document );
+		$padded_task       = $xpath->query( '//div[@class="ran-booster-package-recovery"]/h2/following-sibling::section[contains(@class,"ran-booster-settings-section__body")]//form[@method="post"]' );
 		$forms             = $xpath->query( '//form[@method="post"]' );
 		$unrelated_choices = $xpath->query( '//select|//form[@method="get"]' );
 		self::assertInstanceOf( \DOMNodeList::class, $forms );
 		self::assertInstanceOf( \DOMNodeList::class, $unrelated_choices );
+		self::assertInstanceOf( \DOMNodeList::class, $padded_task );
+		self::assertSame( 1, $padded_task->length );
 		self::assertSame( 1, $forms->length );
 		self::assertSame( 0, $unrelated_choices->length );
 		self::assertStringNotContainsString( 'relink=', $html );
@@ -786,7 +789,7 @@ final class RepeatPackageViewTest extends TestCase {
 		$GLOBALS['ran_booster_package_view_multisite'] = $multisite;
 		foreach ( array( 'healthy', 'blocked', 'unknown' ) as $recovery_state ) {
 			$recovery_identifier   = 'unknown' === $recovery_state ? '' : $managed_package_identifier;
-			$recovery_name         = 'Example package';
+			$recovery_name         = 'Example package ' . str_repeat( 'long-package-name-', 12 );
 			$recovery_reason       = 'A safely bounded <explanation>.';
 			$recovery_confirmation = null;
 			$recovery_blocker      = null;
@@ -795,6 +798,7 @@ final class RepeatPackageViewTest extends TestCase {
 			$html = (string) ob_get_clean();
 
 			self::assertStringContainsString( 'Back to Managed ' . $package_view->get_plural_label(), $html, $recovery_state );
+			self::assertStringContainsString( esc_html( $recovery_name ), $html, $recovery_state );
 			self::assertStringNotContainsString( '<form', $html, $recovery_state );
 			self::assertStringNotContainsString( '<select', $html, $recovery_state );
 			self::assertStringNotContainsString( 'relink=', $html, $recovery_state );

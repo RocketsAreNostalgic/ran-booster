@@ -29,8 +29,8 @@ $troubleshooting_url  = add_query_arg(
 );
 ?>
 <p class="ran-booster-package-settings__back"><a href="<?php echo esc_url( $package_list_url ); ?>">&larr; <?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $package_view->get_plural_label() ) ); ?></a></p>
-<div data-ran-booster-package-failure-state="<?php echo esc_attr( $recovery_state ); ?>" data-ran-booster-package-identifier="<?php echo esc_attr( $recovery_identifier ); ?>">
-	<h2 class="ran-booster-page-heading__title">
+<div class="ran-booster-package-recovery" data-ran-booster-package-failure-state="<?php echo esc_attr( $recovery_state ); ?>" data-ran-booster-package-identifier="<?php echo esc_attr( $recovery_identifier ); ?>">
+	<h2 class="ran-booster-package-settings__heading ran-booster-page-heading__title">
 	<?php
 	if ( 'healthy' === $recovery_state ) {
 		echo esc_html( sprintf( /* translators: %s is an installed plugin or theme name. */ __( 'Management settings are available for %s', 'ran-booster' ), $recovery_name ) );
@@ -42,7 +42,7 @@ $troubleshooting_url  = add_query_arg(
 	?>
 	</h2>
 	<?php require dirname( __DIR__ ) . '/notices.php'; ?>
-	<section class="ran-booster-settings-section">
+	<section class="ran-booster-settings-section ran-booster-settings-section__body">
 		<p class="ran-booster-page-heading__description"><?php echo esc_html( $recovery_reason ); ?></p>
 		<?php if ( '' !== $recovery_identifier ) { ?>
 			<p><code><?php echo esc_html( $recovery_identifier ); ?></code></p>

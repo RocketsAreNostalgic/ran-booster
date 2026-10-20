@@ -865,7 +865,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'RAN Booster troubleshooting report', $html );
 		self::assertStringContainsString( 'class="ran-booster-troubleshooting__report-field"', $html );
 		self::assertStringContainsString( 'data-support-report-copy aria-label="Copy report"', $html );
-		self::assertStringContainsString( '<span class="dashicons dashicons-admin-page" aria-hidden="true"></span></button>', $html );
+		self::assertStringContainsString( '<span class="dashicons dashicons-clipboard" aria-hidden="true"></span></button>', $html );
 		self::assertStringContainsString( 'data-support-report-status role="status" aria-live="polite" aria-atomic="true"', $html );
 		self::assertStringContainsString( 'readonly>RAN Booster troubleshooting report', $html );
 	}

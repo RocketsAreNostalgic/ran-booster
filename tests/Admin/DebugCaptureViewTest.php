@@ -41,6 +41,7 @@ final class DebugCaptureViewTest extends TestCase {
 		self::assertStringNotContainsString( 'inactive-secret-canary', $html );
 		self::assertStringNotContainsString( 'ignored-time', $html );
 		self::assertStringNotContainsString( 'ignored-delete-time', $html );
+		self::assertStringNotContainsString( 'data-support-report-copy', $html );
 	}
 
 	public function test_active_state_escapes_content_and_provides_refresh_stop_and_delete(): void {
@@ -59,6 +60,11 @@ final class DebugCaptureViewTest extends TestCase {
 		self::assertStringContainsString( 'for="ran-booster-debug-capture-content"', $html );
 		self::assertStringContainsString( 'id="ran-booster-debug-capture-content"', $html );
 		self::assertStringContainsString( 'readonly', $html );
+		self::assertStringContainsString( 'data-support-report-tools', $html );
+		self::assertStringContainsString( 'data-support-report-copy aria-label="Copy captured events"', $html );
+		self::assertStringContainsString( 'dashicons dashicons-clipboard', $html );
+		self::assertStringContainsString( 'data-copied-message="Captured events copied to the clipboard."', $html );
+		self::assertStringContainsString( 'data-copy-failed-message="Clipboard access failed. The captured events are selected; use your browser copy command."', $html );
 		self::assertStringContainsString( '[ran-booster] safe &lt;event&gt;', $html );
 		self::assertStringContainsString( 'next &amp; event', $html );
 		self::assertStringContainsString( 'panel=debug-capture', $html );
@@ -98,11 +104,27 @@ final class DebugCaptureViewTest extends TestCase {
 		self::assertStringContainsString( 'until 24 July &lt;18:30&gt;.', $html );
 		self::assertStringContainsString( '[ran-booster] first &lt;event&gt;', $html );
 		self::assertStringContainsString( '[ran-booster] second &amp; event', $html );
+		self::assertStringContainsString( 'data-support-report-copy aria-label="Copy captured events"', $html );
 		self::assertStringContainsString( '>Start new capture</button>', $html );
 		self::assertStringContainsString( 'name="ran_booster[operation]" value="start"', $html );
 		self::assertStringContainsString( 'name="ran_booster[operation]" value="delete"', $html );
 		self::assertStringNotContainsString( 'name="ran_booster[operation]" value="stop"', $html );
 		self::assertSame( 2, substr_count( $html, '<form' ) );
+	}
+
+
+	public function test_empty_active_and_retained_captures_do_not_offer_copy_controls(): void {
+		foreach ( array( 'active', 'retained' ) as $state ) {
+			$html = $this->render_view(
+				array(
+					'state'   => $state,
+					'content' => '',
+				)
+			);
+
+			self::assertStringNotContainsString( 'data-support-report-copy', $html );
+			self::assertStringNotContainsString( 'ran-booster-debug-capture-content', $html );
+		}
 	}
 
 	public function test_unsafe_states_expose_no_payload_or_management_controls(): void {
@@ -130,6 +152,7 @@ final class DebugCaptureViewTest extends TestCase {
 			self::assertStringNotContainsString( 'unsafe-secret-canary', $html );
 			self::assertStringNotContainsString( '<form', $html );
 			self::assertStringNotContainsString( 'ran_booster[operation]', $html );
+			self::assertStringNotContainsString( 'data-support-report-copy', $html );
 		}
 	}
 

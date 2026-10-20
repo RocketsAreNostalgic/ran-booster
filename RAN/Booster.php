@@ -376,8 +376,13 @@ class Booster {
 		}
 
 		$repository = $this->service( 'RAN\Storage\PluginRepository' );
-		$plugins    = $repository->all_booster_plugins();
-		$url        = is_multisite()
+		try {
+			$plugins = $repository->all_booster_plugins();
+		} catch ( \RAN\Storage\PackageStorageFailure | \InvalidArgumentException ) {
+			// Optional links must not prevent access to damaged-settings review and removal.
+			return;
+		}
+		$url = is_multisite()
 			? network_admin_url( 'admin.php?page=ran-booster-plugins' )
 			: get_admin_url( null, 'admin.php?page=ran-booster-plugins' );
 

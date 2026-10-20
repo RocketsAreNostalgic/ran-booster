@@ -974,6 +974,11 @@ jobs:
                     cat build/portability-http.log >&2
                     exit 1
                 fi
+                RAN_BOOSTER_RECOVERY_TEST_DISPOSABLE=1 \
+                RAN_BOOSTER_RECOVERY_TEST_URL=http://localhost \
+                RAN_BOOSTER_RECOVERY_HTTP=1 \
+                    "$PHP_BIN" "$WP_CLI_BIN" eval-file tests/WordPress/adoption-recovery-smoke.php \
+                    --path="$RAN_BOOSTER_WORDPRESS_PATH"
                 bash tests/WordPress/portability-selection-installed-smoke.sh
                 if [[ "$RAN_PRIVATE_MIGRATOR" == true ]]; then
                     export RAN_MIGRATOR_WP_CLI_BIN="$(command -v wp)"

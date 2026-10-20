@@ -975,7 +975,7 @@ msgid "Completed"
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:80
-#: RAN/Booster.php:725
+#: RAN/Booster.php:730
 #: views/attempts/index.php:49
 #: views/packages/index.php:64
 #: views/troubleshooting.php:42
@@ -2786,7 +2786,7 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:701
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:339
-#: RAN/Booster.php:726
+#: RAN/Booster.php:731
 #: views/attempts/index.php:50
 #: views/onboarding.php:28
 #: views/packages/branch-readiness.php:200
@@ -4577,59 +4577,59 @@ msgstr ""
 msgid "Existing Booster credentials for private repositories; GitLab packages are not supported."
 msgstr ""
 
-#: RAN/Booster.php:388
+#: RAN/Booster.php:393
 msgid "Manage with RAN Booster"
 msgstr ""
 
-#: RAN/Booster.php:722
+#: RAN/Booster.php:727
 #: views/attempts/index.php:45
 #: views/packages/index.php:61
 msgid "Queued"
 msgstr ""
 
-#: RAN/Booster.php:723
+#: RAN/Booster.php:728
 #: views/attempts/index.php:46
 #: views/packages/index.php:62
 msgid "Running"
 msgstr ""
 
-#: RAN/Booster.php:724
+#: RAN/Booster.php:729
 #: views/attempts/index.php:47
 #: views/packages/index.php:63
 msgid "Succeeded"
 msgstr ""
 
-#: RAN/Booster.php:727
+#: RAN/Booster.php:732
 #: views/packages/index.php:328
 msgid "Reinstall queued"
 msgstr ""
 
-#: RAN/Booster.php:728
+#: RAN/Booster.php:733
 #: views/packages/index.php:330
 msgid "Reinstall in progress…"
 msgstr ""
 
-#: RAN/Booster.php:729
+#: RAN/Booster.php:734
 msgid "Package reinstalled."
 msgstr ""
 
-#: RAN/Booster.php:730
+#: RAN/Booster.php:735
 msgid "Package reinstall failed. Review deployment activity."
 msgstr ""
 
-#: RAN/Booster.php:731
+#: RAN/Booster.php:736
 msgid "Package reinstall needs attention. Review deployment activity before retrying."
 msgstr ""
 
-#: RAN/Booster.php:732
+#: RAN/Booster.php:737
 msgid "Live reinstall progress is unavailable. Refresh this page to check the latest state."
 msgstr ""
 
-#: RAN/Booster.php:733
+#: RAN/Booster.php:738
 msgid "Booster reinstalls are in progress. Queued: {queued}. Reinstalling: {running}. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster.php:734
+#: RAN/Booster.php:739
 msgid "Booster reinstalls have finished. Review the package statuses below. Skipped: {skipped}."
 msgstr ""
 

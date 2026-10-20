@@ -1,6 +1,8 @@
 <?php
 
 use RAN\AdoptionIdentity;
+use RAN\Admin\PackageAdminController;
+use RAN\Dashboard;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentRequest;
 use RAN\Deployment\DeploymentPolicy;
@@ -52,6 +54,7 @@ if ( ! $ran_booster_recovery_container instanceof CoreContainer ) {
 
 /** Installed storage/service proof; provider network validation and browser UI remain separate. */
 final class RAN_Booster_AdoptionRecoveryProof {
+	private CoreContainer $container;
 	private PluginRepository $plugins;
 	private ThemeRepository $themes;
 	private PackageRemovalService $removal;
@@ -71,6 +74,7 @@ final class RAN_Booster_AdoptionRecoveryProof {
 	private array $fixtures = array();
 
 	public function __construct( CoreContainer $container, private string $run_id ) {
+		$this->container        = $container;
 		$this->plugins          = $container->make( PluginRepository::class );
 		$provider               = new class() extends \RAN_Booster_ReleaseCapabilityFixture\BaseProvider {
 			public function __construct() {
@@ -113,12 +117,32 @@ final class RAN_Booster_AdoptionRecoveryProof {
 	}
 
 	public function run(): void {
-		foreach ( array( 'plugin', 'theme' ) as $type ) {
-			foreach ( array( 'branch', 'release' ) as $source ) {
-				$this->exercise( $type, $source );
-			}
+		$administrators = get_users(
+			array(
+				'role'   => 'administrator',
+				'number' => 1,
+			)
+		);
+		$administrator  = $administrators[0] ?? null;
+		$this->check( $administrator instanceof WP_User, 'installed administrator required for real admin hooks and views' );
+		if ( ! $administrator instanceof WP_User ) {
+			throw new RuntimeException( 'The recovery administrator is unavailable.' );
 		}
-		echo esc_html( 'Four installed recovery combinations preserve files, activation and package data; stale record/file confirmations and native settings authority are rejected.' ) . PHP_EOL;
+		$original_user = get_current_user_id();
+		wp_set_current_user( $administrator->ID );
+		try {
+			foreach ( array( 'plugin', 'theme' ) as $type ) {
+				foreach ( array( 'branch', 'release' ) as $source ) {
+					$this->exercise( $type, $source );
+				}
+			}
+		} finally {
+			wp_set_current_user( $original_user );
+		}
+		echo esc_html( 'Four installed recovery combinations preserve files, activation and package data; real admin_init and package views remain reachable; stale record/file confirmations and native settings authority are rejected.' ) . PHP_EOL;
+		if ( '1' === getenv( 'RAN_BOOSTER_RECOVERY_HTTP' ) ) {
+			echo esc_html( 'Authenticated HTTP package/recovery GETs and admin-ajax heartbeat passed with healthy and corrupt management rows.' ) . PHP_EOL;
+		}
 	}
 
 	private function exercise( string $type, string $source ): void {
@@ -162,6 +186,7 @@ final class RAN_Booster_AdoptionRecoveryProof {
 			$this->attempts->finish( $attempt->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_NO_CHANGE ) );
 			$this->check( $this->release->transition( $type, $id, PackageSource::BRANCH, 1, PackageSource::RELEASE_ASSET, $configuration, 0, $old_token ), 'enable release after link' );
 		}
+		$this->assert_admin_pages( $type, $id, false );
 		$this->check(
 			1 === $wpdb->update(
 				ran_booster_table_name(),
@@ -174,6 +199,8 @@ final class RAN_Booster_AdoptionRecoveryProof {
 			'corrupt stored revision'
 		);
 		$this->expect_failure( fn () => $this->package( $type, $id ), 'ordinary hydration rejects corruption' );
+		$this->assert_admin_pages( $type, $id, true );
+		$this->expect_failure( fn () => $this->package( $type, $id ), 'admin presentation must not repair corrupt hydration' );
 		$this->check( isset( $this->removal->recovery_targets( $type )[ $id ] ), 'recovery inventory remains reachable' );
 		$confirmation = $this->removal->recovery_confirmation( $type, $id );
 		if ( 'branch' === $source ) {
@@ -239,6 +266,120 @@ final class RAN_Booster_AdoptionRecoveryProof {
 		} finally {
 			set_site_transient( $transient_name, $before_transient );
 			delete_option( $data_key );
+		}
+	}
+
+	private function assert_admin_pages( string $type, string $id, bool $damaged ): void {
+		global $wpdb;
+		$before = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE package = %s', ran_booster_table_name(), $id ), ARRAY_A );
+		$this->check( is_array( $before ), 'capture exact management row before read-only admin requests' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Preserve the installed proof process's original navigation; no request is trusted for mutation.
+		$original_get = $_GET;
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Preserve and clear the CLI proof's original POST; every actual mutation retains its production nonce.
+		$original_post = $_POST;
+		try {
+			$_POST = array();
+			foreach ( array( false, true ) as $recovery ) {
+				$_GET = array( 'page' => 'ran-booster-' . $type . 's' );
+				if ( $recovery ) {
+					$_GET['recovery']        = '1';
+					$_GET['recovery_target'] = $id;
+				}
+				$html = '';
+				ob_start();
+				try {
+					// Execute the active plugin's actual global callbacks before its real page renderer.
+					// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Invoke the real WordPress lifecycle, including the active plugin's registered callbacks.
+					do_action( 'admin_init' );
+					$dashboard = $this->container->make( Dashboard::class );
+					'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
+				} finally {
+					$html = (string) ob_get_clean();
+				}
+				$this->assert_admin_html( $html, $type, $id, $damaged, $recovery );
+				if ( ! $damaged && 'plugin' === $type ) {
+					// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise WordPress's actual installed-plugin action-link filter.
+					$links = apply_filters( 'plugin_action_links_' . $id, array() );
+					$this->check( str_contains( (string) wp_json_encode( $links ), 'Manage with RAN Booster' ), 'healthy managed-plugin action link still registered' );
+				}
+			}
+			if ( '1' === getenv( 'RAN_BOOSTER_RECOVERY_HTTP' ) ) {
+				$this->assert_admin_http( $type, $id, $damaged );
+			}
+		} finally {
+			$_GET  = $original_get;
+			$_POST = $original_post;
+		}
+		$this->check( $before === $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE package = %s', ran_booster_table_name(), $id ), ARRAY_A ), 'admin bootstrap and read-only pages preserve the exact management row' );
+	}
+
+	private function assert_admin_html( string $html, string $type, string $id, bool $damaged, bool $recovery ): void {
+		if ( ! $recovery ) {
+			$this->check( str_contains( $html, 'Review management removal' ) === $damaged, 'contextual review invitation appears only for damaged settings' );
+			return;
+		}
+		$confirmation = $this->removal->recovery_confirmation( $type, $id );
+		$this->check( str_contains( $html, 'Stop managing an installed package' ) && str_contains( $html, 'name="ran_booster[identifier]" value="' . esc_attr( $id ) . '"' ), 'real recovery page and exact target remain reachable before hydration' );
+		foreach ( array( 'adoption_token', 'digest', 'installed_digest' ) as $field ) {
+			$this->check( str_contains( $html, 'name="ran_booster[' . $field . ']" value="' . esc_attr( $confirmation[ $field ] ) . '"' ), 'real bound recovery confirmation fields' );
+		}
+		$this->check( 1 === preg_match( '/name="_wpnonce" value="([^"]+)"/', $html, $nonce ) && false !== wp_verify_nonce( $nonce[1], PackageAdminController::recovery_action( $type, $id, $confirmation['adoption_token'], $confirmation['digest'], $confirmation['installed_digest'] ) ), 'real recovery nonce remains bound to the reviewed record and installed bytes' );
+	}
+
+	private function assert_admin_http( string $type, string $id, bool $damaged ): void {
+		$origin = (string) getenv( 'RAN_BOOSTER_RECOVERY_TEST_URL' );
+		$parts  = wp_parse_url( $origin );
+		if ( ! defined( 'LOGGED_IN_COOKIE' ) || ! defined( 'AUTH_COOKIE' ) || ! is_array( $parts )
+			|| 'http' !== ( $parts['scheme'] ?? null ) || 'localhost' !== ( $parts['host'] ?? null )
+			|| array() !== array_diff( array_keys( $parts ), array( 'scheme', 'host', 'port' ) )
+			|| ( isset( $parts['port'] ) && ( 1 > $parts['port'] || 65535 < $parts['port'] ) )
+			|| get_option( 'siteurl' ) !== $origin || get_option( 'home' ) !== $origin ) {
+			throw new RuntimeException( 'HTTP proof requires the exact marked disposable localhost origin.' );
+		}
+		$sessions                    = WP_Session_Tokens::get_instance( get_current_user_id() );
+		$expiry                      = time() + 600;
+		$token                       = $sessions->create( $expiry );
+		$original_cookie             = $_COOKIE[ LOGGED_IN_COOKIE ] ?? null;
+		$_COOKIE[ LOGGED_IN_COOKIE ] = wp_generate_auth_cookie( get_current_user_id(), $expiry, 'logged_in', $token );
+		$options                     = array(
+			'timeout'     => 30,
+			'redirection' => 0,
+			'headers'     => array( 'Cookie' => LOGGED_IN_COOKIE . '=' . $_COOKIE[ LOGGED_IN_COOKIE ] . '; ' . AUTH_COOKIE . '=' . wp_generate_auth_cookie( get_current_user_id(), $expiry, 'auth', $token ) ),
+		);
+		try {
+			$heartbeat = wp_remote_post(
+				$origin . '/wp-admin/admin-ajax.php',
+				array_merge(
+					$options,
+					array(
+						'body' => array(
+							'action'    => 'heartbeat',
+							'_nonce'    => wp_create_nonce( 'heartbeat-nonce' ),
+							'screen_id' => 'dashboard',
+						),
+					)
+				)
+			);
+			$this->check( ! is_wp_error( $heartbeat ) && 200 === wp_remote_retrieve_response_code( $heartbeat ), 'real authenticated admin-ajax bootstrap remains available' );
+			$decoded = json_decode( wp_remote_retrieve_body( $heartbeat ), true );
+			$this->check( is_array( $decoded ) && isset( $decoded['server_time'] ), 'real heartbeat response proves authenticated AJAX execution' );
+			foreach ( array( false, true ) as $recovery ) {
+				$query = array( 'page' => 'ran-booster-' . $type . 's' );
+				if ( $recovery ) {
+					$query['recovery']        = '1';
+					$query['recovery_target'] = $id;
+				}
+				$response = wp_remote_get( add_query_arg( $query, $origin . '/wp-admin/admin.php' ), $options );
+				$this->check( ! is_wp_error( $response ) && 200 === wp_remote_retrieve_response_code( $response ), 'real authenticated package/recovery GET remains available' );
+				$this->assert_admin_html( wp_remote_retrieve_body( $response ), $type, $id, $damaged, $recovery );
+			}
+		} finally {
+			$sessions->destroy( $token );
+			if ( null === $original_cookie ) {
+				unset( $_COOKIE[ LOGGED_IN_COOKIE ] );
+			} else {
+				$_COOKIE[ LOGGED_IN_COOKIE ] = $original_cookie;
+			}
 		}
 	}
 

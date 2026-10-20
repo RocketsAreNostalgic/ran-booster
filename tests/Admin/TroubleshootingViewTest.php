@@ -345,7 +345,7 @@ final class TroubleshootingViewTest extends TestCase {
 	}
 
 	public function test_deployment_activity_shows_the_recorded_failure_reason(): void {
-		$attempt              = DeploymentAttempt::from_database(
+		$attempt             = DeploymentAttempt::from_database(
 			array(
 				'id'                      => 1,
 				'correlation_id'          => str_repeat( 'a', 32 ),
@@ -370,10 +370,11 @@ final class TroubleshootingViewTest extends TestCase {
 				'finished_at'             => '2026-07-23 06:00:01',
 			)
 		);
-		$deployment_activity  = array(
+		$deployment_activity = array(
 			'items'                 => array( $attempt->safe_data() ),
 			'unavailable'           => false,
 			'has_cursor'            => false,
+			'activity_filter_key'   => str_repeat( 'a', 64 ),
 			'next_cursor'           => 'v1|cursor|2026-07-23 06:00:00|activity|1',
 			'package_settings_urls' => array(
 				'plugin' => array(
@@ -403,12 +404,21 @@ final class TroubleshootingViewTest extends TestCase {
 				'package'  => '["gh","plugin","example/example.php"]',
 			),
 		);
-		$troubleshooting_base = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+		$deployment_activity['items'][0]['activity_record_id'] = '9007199254740993';
+		$troubleshooting_base                                  = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
 		$html = (string) ob_get_clean();
 
+		self::assertStringContainsString( '<section class="ran-booster-activity" aria-labelledby="ran-booster-activity-heading" data-ran-booster-activity', $html );
+		self::assertStringContainsString( 'data-ran-booster-activity-filter="' . str_repeat( 'a', 64 ) . '"', $html );
+		self::assertStringContainsString( 'data-ran-booster-activity-list', $html );
+		self::assertStringContainsString( 'data-ran-booster-activity-row="9007199254740993"', $html );
+		self::assertStringContainsString( 'data-ran-booster-activity-load-older', $html );
+		self::assertStringContainsString( 'data-ran-booster-activity-progress', $html );
+		self::assertStringContainsString( 'data-ran-booster-activity-announcement', $html );
+		self::assertStringContainsString( 'data-ran-booster-activity-error role="alert" tabindex="-1"', $html );
 		self::assertStringContainsString( '<span role="columnheader">Subject</span>', $html );
 		self::assertStringContainsString( '<span role="columnheader">Source</span>', $html );
 		self::assertStringContainsString( '<span role="columnheader">Activity</span>', $html );
@@ -497,6 +507,7 @@ final class TroubleshootingViewTest extends TestCase {
 							'state'         => 'succeeded',
 						),
 					),
+					'has_cursor'  => true,
 					'next_cursor' => 'v1|fingerprint|2026-10-12 17:00:00|activity|7',
 				)
 			)
@@ -514,9 +525,28 @@ final class TroubleshootingViewTest extends TestCase {
 		$selected_url         = 'page=ran-booster&amp;tab=troubleshooting&amp;panel=activity&amp;activity_provider=gh&amp;activity_package=' . $encoded_package;
 
 		self::assertStringContainsString( $selected_url . '&amp;before=v1%7Cfingerprint%7C2026-10-12%2017%3A00%3A00%7Cactivity%7C7', $next );
+		self::assertStringContainsString( '>View older activity</a>', $next );
+		self::assertSame( 1, substr_count( $next, '>View latest activity</a>' ) );
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=troubleshooting&amp;panel=activity">Clear filters</a>', $next );
 		self::assertStringContainsString( $selected_url . '">View latest activity</a>', $latest );
 		self::assertStringNotContainsString( '&amp;before=', $latest );
+	}
+
+
+	public function test_activity_runner_form_retains_its_native_post_contract(): void {
+		$deployment_activity  = array(
+			'items'       => array( array( 'state' => 'queued' ) ),
+			'unavailable' => false,
+		);
+		$troubleshooting_base = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '<form method="post" data-ran-booster-activity-runner>', $html );
+		self::assertStringContainsString( 'name="_wpnonce"', $html );
+		self::assertStringContainsString( 'name="ran_booster[action]" value="request-deployment-runner"', $html );
 	}
 
 	public function test_deployment_activity_renders_known_package_version_failure_in_index_and_detail(): void {
@@ -739,7 +769,8 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'No older activity is available.', $html );
+		self::assertStringContainsString( '<p data-ran-booster-activity-exhausted>No older activity is available.</p>', $html );
+		self::assertSame( 1, substr_count( $html, '>View latest activity</a>' ) );
 		self::assertStringContainsString( '>View latest activity</a>', $html );
 		self::assertStringContainsString( 'panel=activity', $html );
 		self::assertStringNotContainsString( 'No activity has been recorded yet.', $html );

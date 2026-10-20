@@ -723,23 +723,23 @@ msgstr ""
 msgid "Booster is already tracking the %1$s %2$s in state %3$s. <a href=\"%4$s\">Review this deployment activity record</a> before trying again."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:242
-#: RAN/Admin/DeploymentAdminPresenter.php:278
-#: RAN/Admin/DeploymentAdminPresenter.php:292
+#: RAN/Admin/DeploymentAdminPresenter.php:244
+#: RAN/Admin/DeploymentAdminPresenter.php:280
+#: RAN/Admin/DeploymentAdminPresenter.php:294
 msgid "GitHub"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:242
-#: RAN/Admin/DeploymentAdminPresenter.php:278
-#: RAN/Admin/DeploymentAdminPresenter.php:292
+#: RAN/Admin/DeploymentAdminPresenter.php:244
+#: RAN/Admin/DeploymentAdminPresenter.php:280
+#: RAN/Admin/DeploymentAdminPresenter.php:294
 msgid "Bitbucket"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:270
+#: RAN/Admin/DeploymentAdminPresenter.php:272
 msgid "Older activity filters were cleared. Use Provider and Activity subject to filter activity."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:292
+#: RAN/Admin/DeploymentAdminPresenter.php:294
 #: RAN/Admin/PackageAdminController.php:347
 #: RAN/Admin/PackageAdminController.php:367
 #: RAN/Admin/PortabilityController.php:483
@@ -753,7 +753,7 @@ msgstr ""
 msgid "Theme"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:292
+#: RAN/Admin/DeploymentAdminPresenter.php:294
 #: RAN/Admin/PackageAdminController.php:347
 #: RAN/Admin/PackageAdminController.php:367
 #: RAN/Admin/PortabilityController.php:483
@@ -767,28 +767,28 @@ msgstr ""
 msgid "Plugin"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:297
+#: RAN/Admin/DeploymentAdminPresenter.php:299
 msgid "That provider filter was cleared."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:300
+#: RAN/Admin/DeploymentAdminPresenter.php:302
 msgid "That provider is no longer available in retained activity."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:316
+#: RAN/Admin/DeploymentAdminPresenter.php:318
 msgid "Non-package events"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:324
+#: RAN/Admin/DeploymentAdminPresenter.php:326
 msgid "That Activity subject filter was cleared."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:327
-#: RAN/Admin/DeploymentAdminPresenter.php:340
+#: RAN/Admin/DeploymentAdminPresenter.php:329
+#: RAN/Admin/DeploymentAdminPresenter.php:342
 msgid "That Activity subject is no longer available in retained activity."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:343
+#: RAN/Admin/DeploymentAdminPresenter.php:345
 msgid "The Activity subject filter was cleared because it does not match the selected provider."
 msgstr ""
 
@@ -976,7 +976,7 @@ msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:80
 #: RAN/Booster.php:725
-#: views/attempts/index.php:49
+#: views/attempts/index.php:50
 #: views/packages/index.php:64
 #: views/troubleshooting.php:42
 msgid "Failed"
@@ -2008,7 +2008,7 @@ msgstr ""
 
 #. translators: %d is the number of repositories shown.
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:133
-#: assets/ran-booster.js:282
+#: assets/ran-booster.js:560
 #, php-format,js-format
 msgctxt "Provider table repository count"
 msgid "%d repository shown"
@@ -2787,7 +2787,7 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:701
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:339
 #: RAN/Booster.php:726
-#: views/attempts/index.php:50
+#: views/attempts/index.php:51
 #: views/onboarding.php:28
 #: views/packages/branch-readiness.php:200
 #: views/packages/index.php:65
@@ -4392,7 +4392,7 @@ msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:471
 #: views/attempts/detail.php:57
-#: views/attempts/index.php:54
+#: views/attempts/index.php:55
 msgid "Repository webhook"
 msgstr ""
 
@@ -4582,19 +4582,19 @@ msgid "Manage with RAN Booster"
 msgstr ""
 
 #: RAN/Booster.php:722
-#: views/attempts/index.php:45
+#: views/attempts/index.php:46
 #: views/packages/index.php:61
 msgid "Queued"
 msgstr ""
 
 #: RAN/Booster.php:723
-#: views/attempts/index.php:46
+#: views/attempts/index.php:47
 #: views/packages/index.php:62
 msgid "Running"
 msgstr ""
 
 #: RAN/Booster.php:724
-#: views/attempts/index.php:47
+#: views/attempts/index.php:48
 #: views/packages/index.php:63
 msgid "Succeeded"
 msgstr ""
@@ -5348,7 +5348,7 @@ msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:82
 #: views/attempts/detail.php:93
-#: views/attempts/index.php:67
+#: views/attempts/index.php:68
 #: views/packages/index.php:511
 #: views/portability-review.php:21
 #: views/troubleshooting.php:121
@@ -5525,7 +5525,7 @@ msgid "That deployment record was not found."
 msgstr ""
 
 #: views/attempts/detail.php:56
-#: views/attempts/index.php:53
+#: views/attempts/index.php:54
 msgid "Manual administrator action"
 msgstr ""
 
@@ -5659,58 +5659,55 @@ msgstr ""
 msgid "Reconcile stopped worker"
 msgstr ""
 
-#: views/attempts/index.php:48
+#: views/attempts/index.php:49
 msgid "Updated"
 msgstr ""
 
-#: views/attempts/index.php:59
+#: views/attempts/index.php:60
 #: views/attempts/index.php:117
 #: views/attempts/index.php:164
 #: views/troubleshooting.php:29
 msgid "Activity"
 msgstr ""
 
-#: views/attempts/index.php:60
+#: views/attempts/index.php:61
 msgid "Review recorded checks and deployments. Activity is recorded independently of diagnostic logging."
 msgstr ""
 
-#: views/attempts/index.php:69
+#: views/attempts/index.php:70
 #: views/packages/index.php:143
 msgid "All providers"
 msgstr ""
 
-#: views/attempts/index.php:76
+#: views/attempts/index.php:77
 msgid "Activity subject"
 msgstr ""
 
-#: views/attempts/index.php:78
+#: views/attempts/index.php:79
 msgid "All subjects"
 msgstr ""
 
-#: views/attempts/index.php:85
+#: views/attempts/index.php:86
 #: views/packages/index.php:161
 msgid "Filter"
 msgstr ""
 
-#: views/attempts/index.php:87
+#: views/attempts/index.php:88
 #: views/packages/index.php:163
 msgid "Clear filters"
 msgstr ""
 
-#: views/attempts/index.php:99
+#: views/attempts/index.php:100
 msgid "Request deployment runner"
 msgstr ""
 
-#: views/attempts/index.php:103
+#: views/attempts/index.php:104
 msgid "Activity is temporarily unavailable."
 msgstr ""
 
-#: views/attempts/index.php:105
-msgid "No older activity is available."
-msgstr ""
-
 #: views/attempts/index.php:106
-msgid "View latest activity"
+#: assets/ran-booster.js:277
+msgid "No older activity is available."
 msgstr ""
 
 #: views/attempts/index.php:108
@@ -5790,8 +5787,20 @@ msgstr ""
 msgid "Package settings"
 msgstr ""
 
-#: views/attempts/index.php:224
-msgid "Load older activity"
+#: views/attempts/index.php:222
+msgid "View latest activity"
+msgstr ""
+
+#: views/attempts/index.php:225
+msgid "View older activity"
+msgstr ""
+
+#: views/attempts/index.php:226
+msgid "Loading older activity…"
+msgstr ""
+
+#: views/attempts/index.php:227
+msgid "Older activity could not be loaded. Try again."
 msgstr ""
 
 #: views/base.php:74
@@ -10187,4 +10196,12 @@ msgstr ""
 #: assets/ran-booster-secure-inputs.js:1100
 #, js-format
 msgid "%s — already configured"
+msgstr ""
+
+#: assets/ran-booster.js:102
+msgid "Load older activity"
+msgstr ""
+
+#: assets/ran-booster.js:281
+msgid "Older activity loaded."
 msgstr ""

@@ -109,6 +109,7 @@ final class DeploymentAdminPresenter {
 		$unavailable            = null === $this->attempts;
 		$has_cursor             = false;
 		$next_cursor            = null;
+		$activity_filter_key    = null;
 		$later_verified_attempt = null;
 		$package_settings_urls  = array();
 		$package_labels         = array();
@@ -121,7 +122,7 @@ final class DeploymentAdminPresenter {
 			'package'  => '',
 		);
 		$filter_notice          = null;
-		$base                   = compact( 'mode', 'items', 'unavailable', 'has_cursor', 'next_cursor', 'later_verified_attempt', 'package_settings_urls', 'package_labels', 'filter_options', 'filter_state', 'filter_notice' );
+		$base                   = compact( 'mode', 'items', 'unavailable', 'has_cursor', 'next_cursor', 'activity_filter_key', 'later_verified_attempt', 'package_settings_urls', 'package_labels', 'filter_options', 'filter_state', 'filter_notice' );
 		$has_attempt            = $this->query_has_key( 'attempt' );
 		$has_ref                = $this->query_has_key( 'reference' );
 		$base['mode']           = $has_attempt || $has_ref ? 'detail' : 'list';
@@ -181,8 +182,9 @@ final class DeploymentAdminPresenter {
 				$base['has_cursor'] = false;
 			}
 			ksort( $base['filters'], SORT_STRING );
-			$filter_key = hash( 'sha256', http_build_query( $base['filters'], '', '&', PHP_QUERY_RFC3986 ) );
-			$cursor     = null;
+			$filter_key                  = hash( 'sha256', http_build_query( $base['filters'], '', '&', PHP_QUERY_RFC3986 ) );
+			$base['activity_filter_key'] = $filter_key;
+			$cursor                      = null;
 			if ( $base['has_cursor'] ) {
 				$raw = $this->query_value( 'before' );
 				if ( null === $raw || 1 !== preg_match( '/\Av1\|([a-f0-9]{64})\|(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\|(activity|deployment)\|([1-9][0-9]*)\z/', $raw, $parts ) || null === $this->positive_integer( $parts[4] ) ) {

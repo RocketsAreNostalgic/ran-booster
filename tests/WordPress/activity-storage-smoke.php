@@ -271,18 +271,22 @@ return static function ( wpdb $database ): void {
 			'purpose'          => null,
 			'provenance'       => 'core',
 		);
-		for ( $index = 0; $index < 26; ++$index ) {
+		$package_ids        = array();
+		$non_package_ids    = array();
+		for ( $index = 0; $index < 55; ++$index ) {
 			$package_id = $store->begin( 'gh', $request, $capture );
 			$expect( null !== $package_id, 'package subject pagination fixture' );
 			if ( null === $package_id ) {
 				return;
 			}
+			$package_ids[] = $package_id;
 			$query( $database->prepare( 'UPDATE %i SET provider = %s, subject_identity = %s WHERE id = %d', $table, $provider, $identity, $package_id ) );
 			$non_package = $store->begin( 'gh', $index < 13 ? $request : $credential_request, $index < 13 ? $capture : $credential_capture );
 			$expect( null !== $non_package, 'non-package subject pagination fixture' );
 			if ( null === $non_package ) {
 				return;
 			}
+			$non_package_ids[] = $non_package;
 			$query( $database->prepare( 'UPDATE %i SET provider = %s, subject_type = %s, subject_identity = %s WHERE id = %d', $table, $provider, $index < 13 ? 'repository' : 'provider', $index < 13 ? 'gh:diagnostic-' . $index : 'gh', $non_package ) );
 		}
 		$bb = $store->begin( 'gh', $request, $capture );
@@ -291,15 +295,30 @@ return static function ( wpdb $database ): void {
 			return;
 		}
 		$query( $database->prepare( 'UPDATE %i SET provider = %s WHERE id = %d', $table, 'bb', $bb ) );
-		$all_subjects = $store->activity_history( limit: 101 );
-		$non_packages = $store->activity_history(
+		$all_subjects  = $store->activity_history( limit: 101 );
+		$all_last      = $all_subjects['records'][100] ?? null;
+		$all_remaining = is_array( $all_last )
+			? $store->activity_history(
+				array(),
+				array(
+					'time'   => (string) ( $all_last['sort_at'] ?? '' ),
+					'source' => 'activity',
+					'id'     => (int) ( $all_last['id'] ?? 0 ),
+				),
+				101
+			)
+			: array(
+				'available' => false,
+				'records'   => array(),
+			);
+		$non_packages  = $store->activity_history(
 			array(
 				'provider'    => $provider,
 				'non_package' => '1',
 			),
 			limit: 101
 		);
-		$packages     = $store->activity_history(
+		$packages      = $store->activity_history(
 			array(
 				'provider'         => $provider,
 				'subject_type'     => 'plugin',
@@ -307,9 +326,9 @@ return static function ( wpdb $database ): void {
 			),
 			limit: 101
 		);
-		$expect( $all_subjects['available'] && 53 === count( $all_subjects['records'] ), 'all subjects includes every retained event' );
-		$expect( $non_packages['available'] && 26 === count( $non_packages['records'] ), 'non-package subject is the complete non-package complement' );
-		$expect( $packages['available'] && 26 === count( $packages['records'] ), 'exact package subject remains provider scoped' );
+		$expect( $all_subjects['available'] && 101 === count( $all_subjects['records'] ) && $all_remaining['available'] && 10 === count( $all_remaining['records'] ), 'all subjects remains bounded while including every retained event' );
+		$expect( $non_packages['available'] && 55 === count( $non_packages['records'] ), 'non-package subject is the complete non-package complement' );
+		$expect( $packages['available'] && 55 === count( $packages['records'] ), 'exact package subject remains provider scoped' );
 		$view            = dirname( (string) ( new ReflectionClass( ActivityStore::class ) )->getFileName(), 3 ) . '/views/attempts/index.php';
 		$render_activity = static function ( array $activity ) use ( $view ): string {
 			$deployment_activity  = $activity;
@@ -321,7 +340,7 @@ return static function ( wpdb $database ): void {
 		$link_query      = static function ( string $html, string $label ) use ( $expect ): array {
 			$pattern = 'Clear filters' === $label
 				? '/class="ran-booster-package-list-filters__clear" href="([^"]+)"/'
-				: '/<a class="button" href="([^"]+)">' . preg_quote( $label, '/' ) . '<\\/a>/';
+				: '/<a class="button"[^>]* href="([^"]+)">' . preg_quote( $label, '/' ) . '<\\/a>/';
 			$expect( 1 === preg_match( $pattern, $html, $matches ), 'rendered ' . $label . ' link' );
 			$href = $matches[1] ?? null;
 			if ( ! is_string( $href ) ) {
@@ -345,7 +364,19 @@ return static function ( wpdb $database ): void {
 				);
 				$page = $presenter->activity();
 				$expect( 25 === count( $page['items'] ?? array() ) && is_string( $page['next_cursor'] ?? null ), 'subject pagination returns 25 rows and a cursor' );
-				$older_query = $link_query( $render_activity( $page ), 'Load older activity' );
+				$filter_fields = 'non-package' === $subject
+					? array(
+						'non_package' => '1',
+						'provider'    => $provider,
+					)
+					: array(
+						'provider'         => $provider,
+						'subject_identity' => $identity,
+						'subject_type'     => 'plugin',
+					);
+				ksort( $filter_fields, SORT_STRING );
+				$expect( hash( 'sha256', http_build_query( $filter_fields, '', '&', PHP_QUERY_RFC3986 ) ) === ( $page['activity_filter_key'] ?? null ), 'activity response carries the validated filter identity' );
+				$older_query = $link_query( $render_activity( $page ), 'View older activity' );
 				$expect( 'ran-booster' === ( $older_query['page'] ?? null ) && 'troubleshooting' === ( $older_query['tab'] ?? null ) && 'activity' === ( $older_query['panel'] ?? null ) && ( $older_query['activity_provider'] ?? null ) === $provider && ( $older_query['activity_package'] ?? null ) === $subject && ( $page['next_cursor'] ?? null ) === ( $older_query['before'] ?? null ), 'older activity preserves exact route, provider, and subject' );
 				$clear_query = $link_query( $render_activity( $page ), 'Clear filters' );
 				$expect(
@@ -358,8 +389,22 @@ return static function ( wpdb $database ): void {
 				);
 				$_GET       = wp_slash( $older_query );
 				$older_page = $presenter->activity();
-				$expect( 1 === count( $older_page['items'] ?? array() ), 'older activity loads the remaining subject row' );
-				$older_item = $older_page['items'][0] ?? null;
+				$expect( 25 === count( $older_page['items'] ?? array() ) && is_string( $older_page['next_cursor'] ?? null ), 'second bounded subject page has a cursor' );
+				$expect( is_string( $page['activity_filter_key'] ?? null ) && is_string( $older_page['activity_filter_key'] ?? null ) && hash_equals( $page['activity_filter_key'], $older_page['activity_filter_key'] ), 'older activity keeps the validated filter identity' );
+				$latest_query = $link_query( $render_activity( $older_page ), 'View latest activity' );
+				$expect( ( $latest_query['activity_provider'] ?? null ) === $provider && ( $latest_query['activity_package'] ?? null ) === $subject && ! array_key_exists( 'before', $latest_query ), 'populated older activity offers the filtered latest route' );
+				$second_query = $link_query( $render_activity( $older_page ), 'View older activity' );
+				$expect( is_string( $older_page['next_cursor'] ?? null ) && is_string( $second_query['before'] ?? null ) && hash_equals( $older_page['next_cursor'], $second_query['before'] ), 'second bounded page advances its cursor' );
+				$_GET        = wp_slash( $second_query );
+				$oldest_page = $presenter->activity();
+				$expect( 5 === count( $oldest_page['items'] ?? array() ) && null === ( $oldest_page['next_cursor'] ?? null ), 'third bounded subject page exhausts the history' );
+				$ids          = array_map(
+					static fn ( array $item ): int => (int) $item['activity_record_id'],
+					array_merge( $page['items'], $older_page['items'], $oldest_page['items'] )
+				);
+				$expected_ids = array_reverse( 'non-package' === $subject ? $non_package_ids : $package_ids );
+				$expect( $expected_ids === $ids && 55 === count( array_unique( $ids ) ), 'three keyset pages return every subject row once in order' );
+				$older_item = $oldest_page['items'][4] ?? null;
 				$cursor_id  = is_array( $older_item ) ? $older_item['activity_record_id'] ?? null : null;
 				$valid_id   = is_int( $cursor_id ) || ( is_string( $cursor_id ) && 1 === preg_match( '/^[1-9][0-9]*$/D', $cursor_id ) );
 				$expect( is_array( $older_item ) && is_string( $older_item['created_at'] ?? null ) && $valid_id, 'older subject item has a stable cursor identity' );
